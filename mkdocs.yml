@@ -1,0 +1,12 @@
+site_name: MyMoolah Documentation
+nav:
+  - Home: index.md
+  - Requirements: docs/requirements.md
+  - Session Summary: docs/session-summary.md
+  - README: README.md
+  - API Reference: docs/openapi.md
+  - Changelog: CHANGELOG.md
+  - Contributing: CONTRIBUTING.md
+  - Security: SECURITY.md
+theme:
+  name: material
