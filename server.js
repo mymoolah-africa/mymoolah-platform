@@ -1,12 +1,30 @@
-const express = require('express');
-const app = express();
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection:', reason);
+});
+process.on('SIGINT', () => {
+  console.log('Shutting down server...');
+  process.exit();
+});
 
+console.log("Starting server...");
+const express = require('express');
+const cors = require('cors');
+const app = express();
+const port = process.env.PORT || 5050;
+
+app.use(cors());
 app.use(express.json());
 
-// Register your routes
-app.use('/api/clients', require('./routes/clients'));
+// Define Routes
+app.use('/api/v1/users', require('./routes/users'));
 
-// ...add other routes as needed
+app.get('/', (req, res) => {
+  res.send('Hello World!');
+});
+app.post('/test', (req, res) => {
+  res.json({ message: "Test route works!" });
+});
 
-const PORT = process.env.PORT || 5050;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
