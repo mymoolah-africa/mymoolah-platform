@@ -17,7 +17,7 @@ app.use(express.json());
 
 // Define Routes
 app.use('/api/v1/users', require('./routes/users'));
-<<<<<<< HEAD
+
 app.use('/api/v1/clients', require('./routes/clients'));
 app.use('/api/v1/wallets', require('./routes/wallets'));
 app.use('/api/v1/transactions', require('./routes/transactions'));
@@ -29,9 +29,9 @@ app.use('/api/v1/vas', require('./routes/vas'));
 app.use('/api/v1/support', require('./routes/support'));
 app.use('/api/v1/serviceproviders', require('./routes/serviceproviders'));
 app.use('/api/v1/merchants', require('./routes/merchants'));
-=======
+
 app.use('/api/v1/vouchers', require('./routes/vouchers'));
->>>>>>> d0a5e652ac99ef29ec2d653c3e0024003b20b6ec
+
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
