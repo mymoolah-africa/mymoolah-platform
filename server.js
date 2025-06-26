@@ -17,6 +17,7 @@ app.use(express.json());
 
 // Define Routes
 app.use('/api/v1/users', require('./routes/users'));
+app.use('/api/v1/vouchers', require('./routes/vouchers'));
 
 app.get('/', (req, res) => {
   res.send('Hello World!');
