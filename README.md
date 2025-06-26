@@ -15,33 +15,45 @@ A cloud-native, Mojaloop-inspired banking and wallet platform for Africa, design
 - Modular, API-driven, and cloud-native architecture.
 - Follows Mojaloop and open banking best practices.
 
+## Current Status
+- Project code and documentation are versioned in GitHub and developed in GitHub Codespaces.
+- MySQL database (Google Cloud SQL) is set up with core tables: clients, users, wallets, transactions, vouchers.
+- Node.js backend is running and connected to the database (pending user privilege troubleshooting for remote access).
+- API endpoint `/api/clients` is implemented for listing clients.
+- Documentation is maintained in `README.md`, `docs/requirements.md`, and `docs/session-summary.md`.
+
+## Next Steps
+- Resolve MySQL user privilege issues for remote access from Codespaces.
+- Add more API endpoints (create client, user registration, wallet funding, etc.).
+- Implement authentication, KYC, and VAS integrations.
+- Continue documenting all features and decisions.
+
+## Documentation
+- See `docs/requirements.md` for detailed requirements and design notes.
+- See `docs/session-summary.md` for a running summary and handover notes.
+
+## Contact & Support
+- For questions, see the `docs/` folder or contact the project maintainer.
+
 ## Technology Stack
 - Node.js (Express)
-- MySQL (Google Cloud SQL)
-- mysql2 (Node.js MySQL client)
-- dotenv (for environment variables)
-- cors (for cross-origin requests)
+- MongoDB Atlas (cloud database)
+- Mongoose (ODM)
+- Environment variables for configuration
+- Ready for Google Cloud deployment
 
-## Project Structure
-```
-mymoolah-backend/
-  |-- config/
-  |-- routes/
-  |-- server.js
-  |-- .env
-  |-- package.json
-  |-- README.md
-  |-- docs/
-      |-- requirements.md
-      |-- session-summary.md
-```
+## Mojaloop-Inspired Goals
+- Modular, API-driven architecture
+- Support for user onboarding, wallet creation, and transactions
+- Secure, auditable, and extensible design
+- Follows open banking and Mojaloop best practices
 
 ## Setup Instructions
 
 ### Prerequisites
 - Node.js (v18 or later)
 - npm
-- MySQL database (Google Cloud SQL or local)
+- MongoDB Atlas account (or local MongoDB for development)
 - Google Cloud account (for deployment)
 
 ### Local Development
@@ -56,11 +68,8 @@ mymoolah-backend/
    ```
 3. Create a `.env` file in the root directory with the following content:
    ```env
-   DB_HOST=your-mysql-host
-   DB_USER=your-mysql-user
-   DB_PASSWORD=your-mysql-password
-   DB_NAME=your-mysql-db
    PORT=5050
+   MONGO_URI=your-mongodb-atlas-uri
    ```
 4. Start the server:
    ```bash
@@ -73,40 +82,23 @@ mymoolah-backend/
 - Ensure all secrets are managed via environment variables.
 - Follow GCP deployment guides for Node.js apps.
 
-## API Endpoints & Implementation Status (as of July 2024)
+## Project Structure
+```
+mymoolah-backend/
+  |-- config/
+  |-- controllers/
+  |-- models/
+  |-- routes/
+  |-- utils/
+  |-- server.js
+  |-- .env
+  |-- package.json
+  |-- README.md
+```
 
-### Implemented Endpoints
-- **POST /api/users/register**: User registration with input validation, password hashing, and duplicate checking. Saves users to MySQL.
-- **GET /api/clients**: Lists all registered B2B clients from the database.
-
-### Planned/Upcoming Endpoints
-- Wallet funding (EFT, PayShap, voucher)
-- Transaction history (user and client)
-- Voucher generation, redemption, and management
-- KYC document upload and approval
-- Authentication (login, JWT)
-- VAS integrations (airtime, data, bill payments, etc.)
-- Notifications and support ticket management
-
-## Current Status
-- Codebase is fully cleaned up: **Node.js + Express + MySQL only** (no MongoDB/Mongoose).
-- `.gitignore` excludes `node_modules/` and `.env`.
-- All documentation is up to date and in sync with the codebase.
-- User registration and client listing endpoints are live and tested.
-- Database schema is robust and documented.
-- GitHub repo is clean, up to date, and ready for further development.
-
-## Git Workflow & Documentation Practices
-- All code and documentation are versioned in GitHub.
-- Always commit and push before switching environments (e.g., Codespaces/local).
-- Always pull before starting work elsewhere to avoid divergence.
-- Resolve merge conflicts promptly and keep the main branch clean.
-- Documentation is maintained in `README.md`, `docs/requirements.md`, and `docs/session-summary.md` and should be updated after each major session or decision.
-
-## Documentation
-- See `docs/requirements.md` for detailed requirements and design notes.
-- See `docs/session-summary.md` for a running summary and handover notes.
+## Documentation & Notes
+- All major decisions, requirements, and architecture notes are kept in the `docs/` folder.
+- This project references Mojaloop public documentation and best practices.
 
 ## Contact & Support
 - For questions, see the `docs/` folder or contact the project maintainer. 
-
