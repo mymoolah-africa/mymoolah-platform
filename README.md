@@ -15,6 +15,26 @@ A cloud-native, Mojaloop-inspired banking and wallet platform for Africa, design
 - Modular, API-driven, and cloud-native architecture.
 - Follows Mojaloop and open banking best practices.
 
+## Current Status
+- Project code and documentation are versioned in GitHub and developed in GitHub Codespaces.
+- MySQL database (Google Cloud SQL) is set up with core tables: clients, users, wallets, transactions, vouchers.
+- Node.js backend is running and connected to the database (pending user privilege troubleshooting for remote access).
+- API endpoint `/api/clients` is implemented for listing clients.
+- Documentation is maintained in `README.md`, `docs/requirements.md`, and `docs/session-summary.md`.
+
+## Next Steps
+- Resolve MySQL user privilege issues for remote access from Codespaces.
+- Add more API endpoints (create client, user registration, wallet funding, etc.).
+- Implement authentication, KYC, and VAS integrations.
+- Continue documenting all features and decisions.
+
+## Documentation
+- See `docs/requirements.md` for detailed requirements and design notes.
+- See `docs/session-summary.md` for a running summary and handover notes.
+
+## Contact & Support
+- For questions, see the `docs/` folder or contact the project maintainer.
+
 ## Technology Stack
 - Node.js (Express)
 - MySQL (Google Cloud SQL)
@@ -24,21 +44,16 @@ A cloud-native, Mojaloop-inspired banking and wallet platform for Africa, design
 
 ## Project Structure
 ```
-controllers/           # Business logic for each resource
-models/                # Database models and schema logic
-routes/                # Express route definitions
-services/              # External integrations and business services
-utils/                 # Utility functions and helpers
-config/                # Configuration files (DB, env, etc.)
-docs/                  # Project documentation (requirements, onboarding, session notes)
-  |-- requirements.md
-  |-- session-summary.md
-  |-- PROJECT_ONBOARDING.md
-  |-- session_decision_notes.md
-server.js              # Main Express app entry point
-package.json           # Project dependencies and scripts
-mkdocs.yml             # MkDocs config for publishing docs
-README.md              # This file
+mymoolah-backend/
+  |-- config/
+  |-- routes/
+  |-- server.js
+  |-- .env
+  |-- package.json
+  |-- README.md
+  |-- docs/
+      |-- requirements.md
+      |-- session-summary.md
 ```
 
 ## Setup Instructions
@@ -46,7 +61,7 @@ README.md              # This file
 ### Prerequisites
 - Node.js (v18 or later)
 - npm
-- MySQL database (Google Cloud SQL or local)
+- MongoDB Atlas account (or local MongoDB for development)
 - Google Cloud account (for deployment)
 
 ### Local Development
@@ -61,11 +76,8 @@ README.md              # This file
    ```
 3. Create a `.env` file in the root directory with the following content:
    ```env
-   DB_HOST=your-mysql-host
-   DB_USER=your-mysql-user
-   DB_PASSWORD=your-mysql-password
-   DB_NAME=your-mysql-db
    PORT=5050
+   MONGO_URI=your-mongodb-atlas-uri
    ```
 4. Start the server:
    ```bash
@@ -81,46 +93,37 @@ README.md              # This file
 ## API Endpoints & Implementation Status (as of July 2024)
 
 ### Implemented Endpoints
-- **User**
-  - `POST /api/users/register`: User registration with input validation, password hashing, and duplicate checking. Saves users to MySQL.
-- **Client**
-  - `GET /api/clients`: Lists all registered B2B clients from the database.
-- **Wallet**
-  - `POST /api/wallets`: Create a wallet for a user/client.
-  - `GET /api/wallets/:id/balance`: Get wallet balance.
-  - `POST /api/wallets/:id/credit`: Credit a wallet.
-  - `POST /api/wallets/:id/debit`: Debit a wallet.
-  - `GET /api/wallets/:id/transactions`: List wallet transactions.
-- **Voucher**
-  - `POST /api/vouchers/issue`: Issue a voucher (with min/max value, brand-locking, config).
-  - `POST /api/vouchers/redeem`: Redeem or partially redeem a voucher.
+- **POST /api/users/register**: User registration with input validation, password hashing, and duplicate checking. Saves users to MySQL.
+- **GET /api/clients**: Lists all registered B2B clients from the database.
 
 ### Planned/Upcoming Endpoints
 - Wallet funding (EFT, PayShap, voucher)
 - Transaction history (user and client)
+- Voucher generation, redemption, and management
 - KYC document upload and approval
 - Authentication (login, JWT)
 - VAS integrations (airtime, data, bill payments, etc.)
 - Notifications and support ticket management
 
-## Database
-- MySQL schema is aligned with the API and business rules.
-- Issues (missing columns, types, enums) are debugged and fixed as part of the workflow.
-- See `docs/requirements.md` for schema details.
+## Current Status
+- Codebase is fully cleaned up: **Node.js + Express + MySQL only** (no MongoDB/Mongoose).
+- `.gitignore` excludes `node_modules/` and `.env`.
+- All documentation is up to date and in sync with the codebase.
+- User registration and client listing endpoints are live and tested.
+- Database schema is robust and documented.
+- GitHub repo is clean, up to date, and ready for further development.
 
-## Documentation & Workflow
+## Git Workflow & Documentation Practices
 - All code and documentation are versioned in GitHub.
 - Always commit and push before switching environments (e.g., Codespaces/local).
 - Always pull before starting work elsewhere to avoid divergence.
 - Resolve merge conflicts promptly and keep the main branch clean.
-- Documentation is maintained in `README.md`, `docs/requirements.md`, `docs/session-summary.md`, `docs/PROJECT_ONBOARDING.md`, and `docs/session_decision_notes.md`.
-- Update documentation after each major session or decision.
+- Documentation is maintained in `README.md`, `docs/requirements.md`, and `docs/session-summary.md` and should be updated after each major session or decision.
 
-## Onboarding & Session Continuity
-- New developers/agents should start with `PROJECT_ONBOARDING.md` for a high-level overview and setup steps.
-- Key decisions, requirements, and session notes are tracked in `session_decision_notes.md` and `docs/session-summary.md`.
-- This ensures smooth handover and continuity across sessions and contributors.
+## Documentation
+- See `docs/requirements.md` for detailed requirements and design notes.
+- See `docs/session-summary.md` for a running summary and handover notes.
 
 ## Contact & Support
-- For questions, see the `docs/` folder or contact the project maintainer.
+- For questions, see the `docs/` folder or contact the project maintainer. 
 
