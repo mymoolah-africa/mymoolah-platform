@@ -16,7 +16,7 @@
     
     
       
-        <title>PROJECT ONBOARDING - MyMoolah Documentation</title>
+        <title>MyMoolah Project Onboarding Guide - MyMoolah Documentation</title>
       
     
     
@@ -57,6 +57,11 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
+        
+        <a href="#mymoolah-project-onboarding-guide" class="md-skip">
+          Skip to content
+        </a>
+      
     </div>
     <div data-md-component="announce">
       
@@ -89,7 +94,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              PROJECT ONBOARDING
+              MyMoolah Project Onboarding Guide
             
           </span>
         </div>
@@ -349,6 +354,94 @@
   
   
   
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#project-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Project Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      Getting Started
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Getting Started">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-codespaces-setup-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      1. Codespaces Setup (Recommended)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-local-development-optional" class="md-nav__link">
+    <span class="md-ellipsis">
+      2. Local Development (Optional)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-files-folders" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Files &amp; Folders
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#git-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Git &amp; Workflow
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      Documentation
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#support" class="md-nav__link">
+    <span class="md-ellipsis">
+      Support
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -364,9 +457,81 @@
 
 
 
-  <h1>PROJECT ONBOARDING</h1>
-
-
+<h1 id="mymoolah-project-onboarding-guide">MyMoolah Project Onboarding Guide</h1>
+<p>Welcome to the MyMoolah platform! This guide will help you get started as a developer or contributor.</p>
+<hr />
+<h2 id="project-overview">Project Overview</h2>
+<p>MyMoolah is a Mojaloop-inspired, modular banking and wallet platform for Africa, built with Node.js/Express and MySQL. The project is API-driven, cloud-native, and designed for security, compliance, and extensibility.</p>
+<hr />
+<h2 id="getting-started">Getting Started</h2>
+<h3 id="1-codespaces-setup-recommended">1. Codespaces Setup (Recommended)</h3>
+<ul>
+<li>Use GitHub Codespaces for a consistent, cloud-based development environment.</li>
+<li>Open the repository in Codespaces from GitHub.</li>
+<li>All dependencies and environment setup are managed in Codespaces.</li>
+</ul>
+<h3 id="2-local-development-optional">2. Local Development (Optional)</h3>
+<ul>
+<li>Clone the repository:
+  <code>bash
+  git clone &lt;your-repo-url&gt;
+  cd mymoolah</code></li>
+<li>Install dependencies:
+  <code>bash
+  npm install</code></li>
+<li>Create a <code>.env</code> file in the root directory:
+  <code>env
+  DB_HOST=your-mysql-host
+  DB_USER=your-mysql-user
+  DB_PASSWORD=your-mysql-password
+  DB_NAME=your-mysql-db
+  PORT=5050</code></li>
+<li>Start the server:
+  <code>bash
+  npm start</code></li>
+</ul>
+<hr />
+<h2 id="key-files-folders">Key Files &amp; Folders</h2>
+<ul>
+<li><code>server.js</code> – Main Express app entry point</li>
+<li><code>config/db.js</code> – MySQL connection pool setup</li>
+<li><code>routes/</code> – API route definitions</li>
+<li><code>controllers/</code> – Business logic for each resource</li>
+<li><code>models/</code> – Database models and schema logic</li>
+<li><code>docs/</code> – Project documentation (requirements, onboarding, session notes)</li>
+<li><code>.env</code> – Environment variables (never commit this file)</li>
+<li><code>package.json</code> – Project dependencies and scripts</li>
+</ul>
+<hr />
+<h2 id="git-workflow">Git &amp; Workflow</h2>
+<ul>
+<li>Always work in Codespaces unless you have a specific reason to work locally.</li>
+<li>Before starting work:<br />
+<code>bash
+  git pull origin main</code></li>
+<li>After making changes and testing:<br />
+<code>bash
+  git add .
+  git commit -m "Describe your change"
+  git push origin &lt;your-branch&gt;</code></li>
+<li>Use backup branches before major changes.</li>
+<li>Keep documentation up to date after each session or major change.</li>
+</ul>
+<hr />
+<h2 id="documentation">Documentation</h2>
+<ul>
+<li>Main docs: <code>README.md</code>, <code>docs/requirements.md</code>, <code>docs/session-summary.md</code>, <code>docs/PROJECT_ONBOARDING.md</code></li>
+<li>API reference: <code>openapi.yaml</code> and published docs at <a href="https://mymoolah-africa.github.io/mymoolah-platform/">https://mymoolah-africa.github.io/mymoolah-platform/</a></li>
+<li>Session logs: <code>docs/session-summary.md</code></li>
+<li>Handover: <code>AGENT_HANDOVER.md</code></li>
+</ul>
+<hr />
+<h2 id="support">Support</h2>
+<ul>
+<li>For questions, see the <code>docs/</code> folder or contact the project maintainer.</li>
+</ul>
+<hr />
+<p><strong>Welcome to the team! Please read all referenced docs for full context.</strong></p>
 
 
 
