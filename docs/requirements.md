@@ -1,5 +1,14 @@
-# Requirements
+## Implemented API Endpoints (as of June 2025)
+- **User**: POST /api/v1/users/register
+- **Client**: GET /api/v1/clients
+- **Wallet**: POST /api/v1/wallets, GET /api/v1/wallets/:id, GET /api/v1/wallets/:id/balance, POST /api/v1/wallets/:id/credit, POST /api/v1/wallets/:id/debit, GET /api/v1/wallets/:id/transactions
+- **Voucher**: POST /api/v1/vouchers/issue, POST /api/v1/vouchers/redeem, GET /api/v1/vouchers
+- **KYC**: POST /api/v1/kyc/upload, GET /api/v1/kyc/:user_id
+- **Notifications**: POST /api/v1/notifications, GET /api/v1/notifications/:user_id, POST /api/v1/notifications/:id/read
+- **Support**: POST /api/v1/support, GET /api/v1/support/:user_id
 
+**Documentation Rule:**  
+All documentation must be written, updated, and maintained by the developer/agent—not the product owner. The agent is responsible for updating all docs, committing, and pushing to GitHub after every major change or session. The product owner should only review, approve, or request changes, not manually edit documentation files.
 
 ---
 
