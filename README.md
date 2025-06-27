@@ -127,3 +127,10 @@ mymoolah-backend/
 
 ## Contact & Support
 - For questions, see the `docs/` folder or contact the project maintainer.
+
+### Implemented Endpoints (as of June 2025)
+- **Wallets:** Create, get details, get balance, credit, debit, list transactions
+- **Vouchers:** Issue, redeem, list
+- **KYC:** Upload document, get status
+- **Notifications:** Create, list for user, mark as read
+- **Support:** Create ticket, list tickets for user

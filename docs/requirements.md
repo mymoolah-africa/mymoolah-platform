@@ -147,5 +147,9 @@ MyMoolah is a cloud-native, Mojaloop-inspired banking and wallet platform for Af
 
 ---
 
-**Copy and paste this into your `docs/requirements.md` file, save, and redeploy your docs.**  
-Let me know when you’re ready for the next file, or if you want a custom version for your needs!
+### Implemented Endpoints (as of June 2025)
+- **Wallets:** Create, get details, get balance, credit, debit, list transactions
+- **Vouchers:** Issue, redeem, list
+- **KYC:** Upload document, get status
+- **Notifications:** Create, list for user, mark as read
+- **Support:** Create ticket, list tickets for user
