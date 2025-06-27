@@ -3,6 +3,8 @@ nav:
   - Home: index.md
   - Requirements: requirements.md
   - Session Summary: session-summary.md
+  - Session Decision Notes: session_decision_notes.md
+  - Project Onboarding: PROJECT_ONBOARDING.md
   - API Reference: openapi.md
   - Changelog: CHANGELOG.md
   - Contributing: CONTRIBUTING.md
