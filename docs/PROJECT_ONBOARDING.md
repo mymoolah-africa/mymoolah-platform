@@ -91,3 +91,10 @@ MyMoolah is a Mojaloop-inspired, modular banking and wallet platform for Africa,
 ---
 
 **Welcome to the team! Please read all referenced docs for full context.**
+
+### Implemented Endpoints (as of June 2025)
+- **Wallets:** Create, get details, get balance, credit, debit, list transactions
+- **Vouchers:** Issue, redeem, list
+- **KYC:** Upload document, get status
+- **Notifications:** Create, list for user, mark as read
+- **Support:** Create ticket, list tickets for user
