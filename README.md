@@ -18,12 +18,11 @@ A cloud-native, Mojaloop-inspired banking and wallet platform for Africa, design
 ## Current Status
 - Project code and documentation are versioned in GitHub and developed in GitHub Codespaces.
 - MySQL database (Google Cloud SQL) is set up with core tables: clients, users, wallets, transactions, vouchers.
-- Node.js backend is running and connected to the database (pending user privilege troubleshooting for remote access).
-- API endpoint `/api/clients` is implemented for listing clients.
+- Node.js backend is running and connected to the database.
+- API endpoint `/api/v1/clients` is implemented for listing clients.
 - Documentation is maintained in `README.md`, `docs/requirements.md`, and `docs/session-summary.md`.
 
 ## Next Steps
-- Resolve MySQL user privilege issues for remote access from Codespaces.
 - Add more API endpoints (create client, user registration, wallet funding, etc.).
 - Implement authentication, KYC, and VAS integrations.
 - Continue documenting all features and decisions.
@@ -43,25 +42,24 @@ A cloud-native, Mojaloop-inspired banking and wallet platform for Africa, design
 - cors (for cross-origin requests)
 
 ## Project Structure
-```
-mymoolah-backend/
-  |-- config/
-  |-- routes/
-  |-- server.js
-  |-- .env
-  |-- package.json
-  |-- README.md
-  |-- docs/
-      |-- requirements.md
-      |-- session-summary.md
-```
 
-## Setup Instructions
+mymoolah-backend/
+|-- config/
+|-- routes/
+|-- server.js
+|-- .env
+|-- package.json
+|-- README.md
+|-- docs/
+|-- requirements.md
+|-- session-summary.md
+
+ Setup Instructions
 
 ### Prerequisites
 - Node.js (v18 or later)
 - npm
-- MongoDB Atlas account (or local MongoDB for development)
+- MySQL database (Google Cloud SQL or local)
 - Google Cloud account (for deployment)
 
 ### Local Development
@@ -76,8 +74,11 @@ mymoolah-backend/
    ```
 3. Create a `.env` file in the root directory with the following content:
    ```env
+   DB_HOST=your-mysql-host
+   DB_USER=your-mysql-user
+   DB_PASSWORD=your-mysql-password
+   DB_NAME=your-mysql-db
    PORT=5050
-   MONGO_URI=your-mongodb-atlas-uri
    ```
 4. Start the server:
    ```bash
@@ -94,7 +95,7 @@ mymoolah-backend/
 
 ### Implemented Endpoints
 - **POST /api/users/register**: User registration with input validation, password hashing, and duplicate checking. Saves users to MySQL.
-- **GET /api/clients**: Lists all registered B2B clients from the database.
+- **GET /api/v1/clients**: Lists all registered B2B clients from the database.
 
 ### Planned/Upcoming Endpoints
 - Wallet funding (EFT, PayShap, voucher)
@@ -125,5 +126,4 @@ mymoolah-backend/
 - See `docs/session-summary.md` for a running summary and handover notes.
 
 ## Contact & Support
-- For questions, see the `docs/` folder or contact the project maintainer. 
-
+- For questions, see the `docs/` folder or contact the project maintainer.
