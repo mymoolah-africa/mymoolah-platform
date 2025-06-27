@@ -5,6 +5,7 @@
 
 ```markdown
 # MyMoolah Platform Requirements
+- All endpoints are versioned and use the `/api/v1/` prefix for consistency and future-proofing.
 
 ## Project Overview
 MyMoolah is a cloud-native, Mojaloop-inspired banking and wallet platform for Africa, designed for cost efficiency, scalability, and compliance with international banking standards.
@@ -78,6 +79,8 @@ MyMoolah is a cloud-native, Mojaloop-inspired banking and wallet platform for Af
 - Documentation portal is live at [https://mymoolah-africa.github.io/mymoolah-platform/](https://mymoolah-africa.github.io/mymoolah-platform/).
 - OpenAPI spec (`openapi.yaml`) is included for API reference and can be viewed in Swagger Editor or Redoc.
 - **Note:** The documentation site is static and separate from the backend API, which runs locally or in Codespaces.
+- The codebase is now fully Node.js + Express + MySQL only (all MongoDB/Mongoose code has been removed).
+- Regular backup branches and cleanup are used before major changes, following best practice for safe recovery.
 
 ---
 
