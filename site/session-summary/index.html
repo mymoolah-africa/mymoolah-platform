@@ -12,7 +12,7 @@
         <link rel="prev" href="../requirements/">
       
       
-        <link rel="next" href="../openapi/">
+        <link rel="next" href="../session_decision_notes/">
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -288,6 +288,24 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#2025-06-27-major-api-expansion-documentation-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      [2025-06-27] Major API Expansion &amp; Documentation Rule
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implemented-api-endpoints-as-of-june-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implemented API Endpoints (as of June 2025)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#2024-07-12-cleanup-verification-documentation-session" class="md-nav__link">
     <span class="md-ellipsis">
       [2024-07-12] Cleanup, Verification &amp; Documentation Session
@@ -324,6 +342,50 @@
   
 </nav>
       
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session_decision_notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Session Decision Notes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT_ONBOARDING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Project Onboarding
+    
+  </span>
+  
+
+      </a>
     </li>
   
 
@@ -379,7 +441,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CONTRIBUTING.md" class="md-nav__link">
+      <a href="../CONTRIBUTING/" class="md-nav__link">
         
   
   
@@ -443,6 +505,24 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#2025-06-27-major-api-expansion-documentation-rule" class="md-nav__link">
+    <span class="md-ellipsis">
+      [2025-06-27] Major API Expansion &amp; Documentation Rule
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#implemented-api-endpoints-as-of-june-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implemented API Endpoints (as of June 2025)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#2024-07-12-cleanup-verification-documentation-session" class="md-nav__link">
     <span class="md-ellipsis">
       [2024-07-12] Cleanup, Verification &amp; Documentation Session
@@ -492,7 +572,27 @@
 
 
 <h1 id="session-summary">Session Summary</h1>
-<p>[2024-07-12] Cleanup &amp; Verification Session
+<h2 id="2025-06-27-major-api-expansion-documentation-rule">[2025-06-27] Major API Expansion &amp; Documentation Rule</h2>
+<ul>
+<li>Implemented and tested all wallet, voucher, KYC, notifications, and support endpoints.</li>
+<li>Committed and pushed after every major step.</li>
+<li>All endpoints are working and returning correct data.</li>
+<li>Documentation rule: All documentation is written, updated, and maintained by the developer/agent, not the product owner, as per project rules.</li>
+<li>Ready to proceed with authentication, VAS, and admin endpoints.</li>
+</ul>
+<h2 id="implemented-api-endpoints-as-of-june-2025">Implemented API Endpoints (as of June 2025)</h2>
+<ul>
+<li><strong>User</strong>: POST /api/v1/users/register</li>
+<li><strong>Client</strong>: GET /api/v1/clients</li>
+<li><strong>Wallet</strong>: POST /api/v1/wallets, GET /api/v1/wallets/:id, GET /api/v1/wallets/:id/balance, POST /api/v1/wallets/:id/credit, POST /api/v1/wallets/:id/debit, GET /api/v1/wallets/:id/transactions</li>
+<li><strong>Voucher</strong>: POST /api/v1/vouchers/issue, POST /api/v1/vouchers/redeem, GET /api/v1/vouchers</li>
+<li><strong>KYC</strong>: POST /api/v1/kyc/upload, GET /api/v1/kyc/:user_id</li>
+<li><strong>Notifications</strong>: POST /api/v1/notifications, GET /api/v1/notifications/:user_id, POST /api/v1/notifications/:id/read</li>
+<li><strong>Support</strong>: POST /api/v1/support, GET /api/v1/support/:user_id</li>
+</ul>
+<p><strong>Documentation Rule:</strong><br />
+All documentation must be written, updated, and maintained by the developer/agent—not the product owner. The agent is responsible for updating all docs, committing, and pushing to GitHub after every major change or session. The product owner should only review, approve, or request changes, not manually edit documentation files.
+[2024-07-12] Cleanup &amp; Verification Session
 Created a backup branch (cleanup-backup) before making any changes.
 Removed unnecessary dependencies (e.g., mongoose) and files (.DS_Store, .viminfo, server_js.code-search, .mariadb_history).
 Installed and verified all required dependencies (express, mysql2, dotenv, cors).
