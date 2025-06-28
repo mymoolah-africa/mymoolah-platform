@@ -62,7 +62,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#requirements" class="md-skip">
+        <a href="#implemented-api-endpoints-as-of-june-2025" class="md-skip">
           Skip to content
         </a>
       
@@ -222,8 +222,6 @@
       <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
       
       
-        
-      
       
         <label class="md-nav__link md-nav__link--active" for="__toc">
           
@@ -256,8 +254,6 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -266,11 +262,26 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#implemented-api-endpoints-as-of-june-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implemented API Endpoints (as of June 2025)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implemented API Endpoints (as of June 2025)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#implemented-endpoints-as-of-june-2025" class="md-nav__link">
     <span class="md-ellipsis">
       Implemented Endpoints (as of June 2025)
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -295,6 +306,50 @@
   
   <span class="md-ellipsis">
     Session Summary
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session_decision_notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Session Decision Notes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT_ONBOARDING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Project Onboarding
     
   </span>
   
@@ -355,7 +410,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../CONTRIBUTING.md" class="md-nav__link">
+      <a href="../CONTRIBUTING/" class="md-nav__link">
         
   
   
@@ -409,8 +464,6 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -419,11 +472,26 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#implemented-api-endpoints-as-of-june-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implemented API Endpoints (as of June 2025)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implemented API Endpoints (as of June 2025)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
   <a href="#implemented-endpoints-as-of-june-2025" class="md-nav__link">
     <span class="md-ellipsis">
       Implemented Endpoints (as of June 2025)
     </span>
   </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -443,7 +511,20 @@
 
 
 
-<h1 id="requirements">Requirements</h1>
+  <h1>Requirements</h1>
+
+<h2 id="implemented-api-endpoints-as-of-june-2025">Implemented API Endpoints (as of June 2025)</h2>
+<ul>
+<li><strong>User</strong>: POST /api/v1/users/register</li>
+<li><strong>Client</strong>: GET /api/v1/clients</li>
+<li><strong>Wallet</strong>: POST /api/v1/wallets, GET /api/v1/wallets/:id, GET /api/v1/wallets/:id/balance, POST /api/v1/wallets/:id/credit, POST /api/v1/wallets/:id/debit, GET /api/v1/wallets/:id/transactions</li>
+<li><strong>Voucher</strong>: POST /api/v1/vouchers/issue, POST /api/v1/vouchers/redeem, GET /api/v1/vouchers</li>
+<li><strong>KYC</strong>: POST /api/v1/kyc/upload, GET /api/v1/kyc/:user_id</li>
+<li><strong>Notifications</strong>: POST /api/v1/notifications, GET /api/v1/notifications/:user_id, POST /api/v1/notifications/:id/read</li>
+<li><strong>Support</strong>: POST /api/v1/support, GET /api/v1/support/:user_id</li>
+</ul>
+<p><strong>Documentation Rule:</strong><br />
+All documentation must be written, updated, and maintained by the developer/agent—not the product owner. The agent is responsible for updating all docs, committing, and pushing to GitHub after every major change or session. The product owner should only review, approve, or request changes, not manually edit documentation files.</p>
 <hr />
 <pre><code class="language-markdown"># MyMoolah Platform Requirements
 - All endpoints are versioned and use the `/api/v1/` prefix for consistency and future-proofing.

@@ -1,0 +1,13 @@
+services:
+  mysqltest:
+    image: mysql:5.7
+    environment:
+      - MYSQL_ROOT_PASSWORD=mysql
+      - MYSQL_DATABASE=fineract_default
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysqltest_data:/var/lib/mysql
+
+volumes:
+  mysqltest_data:
