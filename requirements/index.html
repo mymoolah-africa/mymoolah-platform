@@ -1,0 +1,733 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="..">
+      
+      
+        <link rel="next" href="../session-summary/">
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.14">
+    
+    
+      
+        <title>Requirements - MyMoolah Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.342714a4.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    <body dir="ltr">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#implemented-api-endpoints-as-of-june-2025" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="MyMoolah Documentation" class="md-header__button md-logo" aria-label="MyMoolah Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MyMoolah Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Requirements
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="MyMoolah Documentation" class="md-nav__button md-logo" aria-label="MyMoolah Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    MyMoolah Documentation
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Home
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Requirements
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    Requirements
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#implemented-api-endpoints-as-of-june-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implemented API Endpoints (as of June 2025)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implemented API Endpoints (as of June 2025)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#implemented-endpoints-as-of-june-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implemented Endpoints (as of June 2025)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session-summary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Session Summary
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../session_decision_notes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Session Decision Notes
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT_ONBOARDING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Project Onboarding
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../openapi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CHANGELOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Changelog
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTRIBUTING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../SECURITY/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Security
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#implemented-api-endpoints-as-of-june-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implemented API Endpoints (as of June 2025)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Implemented API Endpoints (as of June 2025)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#implemented-endpoints-as-of-june-2025" class="md-nav__link">
+    <span class="md-ellipsis">
+      Implemented Endpoints (as of June 2025)
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+  <h1>Requirements</h1>
+
+<h2 id="implemented-api-endpoints-as-of-june-2025">Implemented API Endpoints (as of June 2025)</h2>
+<ul>
+<li><strong>User</strong>: POST /api/v1/users/register</li>
+<li><strong>Client</strong>: GET /api/v1/clients</li>
+<li><strong>Wallet</strong>: POST /api/v1/wallets, GET /api/v1/wallets/:id, GET /api/v1/wallets/:id/balance, POST /api/v1/wallets/:id/credit, POST /api/v1/wallets/:id/debit, GET /api/v1/wallets/:id/transactions</li>
+<li><strong>Voucher</strong>: POST /api/v1/vouchers/issue, POST /api/v1/vouchers/redeem, GET /api/v1/vouchers</li>
+<li><strong>KYC</strong>: POST /api/v1/kyc/upload, GET /api/v1/kyc/:user_id</li>
+<li><strong>Notifications</strong>: POST /api/v1/notifications, GET /api/v1/notifications/:user_id, POST /api/v1/notifications/:id/read</li>
+<li><strong>Support</strong>: POST /api/v1/support, GET /api/v1/support/:user_id</li>
+</ul>
+<p><strong>Documentation Rule:</strong><br />
+All documentation must be written, updated, and maintained by the developer/agent—not the product owner. The agent is responsible for updating all docs, committing, and pushing to GitHub after every major change or session. The product owner should only review, approve, or request changes, not manually edit documentation files.</p>
+<hr />
+<pre><code class="language-markdown"># MyMoolah Platform Requirements
+- All endpoints are versioned and use the `/api/v1/` prefix for consistency and future-proofing.
+
+## Project Overview
+MyMoolah is a cloud-native, Mojaloop-inspired banking and wallet platform for Africa, designed for cost efficiency, scalability, and compliance with international banking standards.
+
+---
+
+## Business &amp; Technical Goals
+
+- Serve B2B clients and enable them to manage prefunded float accounts for millions of end users.
+- Support low-income individuals in Africa with affordable, accessible digital financial services.
+- Integrate with multiple VAS and payment service providers (e.g., DT Mercury for PayShap, Mobilemart, Flash).
+- Provide a secure, auditable, and compliant platform for all transactions.
+- Modular Node.js/Express backend with MySQL (Google Cloud SQL).
+- RESTful API, documented with OpenAPI/Swagger.
+- KYC onboarding for B2B and B2C (document upload, approval workflow).
+- Voucher system for secure generation, distribution, and redemption.
+- Real-time transaction processing (1000+ TPS target).
+- Scalable, cloud-native deployment (Google Cloud, Codespaces for dev).
+- Security: PCI DSS compliance, OAuth2/JWT, encryption, audit logging.
+
+---
+
+## Account Types &amp; Requirements
+
+### Client Accounts (B2B)
+- Onboarding, KYC, compliance.
+- Float account management (ZAR, multi-currency future).
+- Automated float notifications (80/90/95%).
+- Secure client portal for reporting.
+- Each client can have millions of customers, each with an internal wallet managed by the client.
+- Compliance, security, auditability.
+
+### Service Provider Accounts
+- Modular API integration (e.g., DT Mercury for PayShap, Mobilemart, Flash).
+- Float management, notifications, KYC, compliance.
+- Transaction journey, pricing/on-selling, reporting, VAT handling, security, audit.
+
+### User Accounts (B2C)
+- KYC (SA ID or passport), document upload, proof of address.
+- Funding via EFT, PayShap, vouchers.
+- Voucher system, transaction history, reporting.
+- Mobile number as account number, unique backend ID.
+- Security, simplicity.
+
+### Internal/Operational Accounts
+- System float, fee collection, VAT holding, suspense/settlement.
+- Full transaction history, audit trail, reconciliation, segregation of funds.
+
+### Agent/Merchant/API Accounts (Future)
+- For field agents, merchants, and third-party integrations.
+- KYC, float/commission management, POS/e-commerce support.
+
+---
+
+## API &amp; Data Model
+
+- **Implemented Endpoints:**
+  - `POST /api/v1/users/register` (user registration, validation, hashing, duplicate check)
+- **Planned Endpoints:**
+  - Wallet funding, transaction history, voucher management, KYC upload, authentication, VAS integrations, notifications, support tickets.
+- **Data Model:**
+  - Robust ERD with tables for clients, users, wallets, transactions, vouchers, KYC, VAT, audit logs, notifications, support tickets.
+
+---
+
+## Backend Implementation Status (as of July 2024)
+
+- User registration API (`/api/v1/users/register`) is implemented with validation, password hashing, and MySQL integration.
+- `server.js` is configured with CORS, error handling, and user route registration.
+- Environment variables in `.env` manage database credentials securely.
+- Documentation portal is live at [https://mymoolah-africa.github.io/mymoolah-platform/](https://mymoolah-africa.github.io/mymoolah-platform/).
+- OpenAPI spec (`openapi.yaml`) is included for API reference and can be viewed in Swagger Editor or Redoc.
+- **Note:** The documentation site is static and separate from the backend API, which runs locally or in Codespaces.
+- The codebase is now fully Node.js + Express + MySQL only (all MongoDB/Mongoose code has been removed).
+- Regular backup branches and cleanup are used before major changes, following best practice for safe recovery.
+
+---
+
+## Configuration &amp; Environment Files
+
+- `.env`: Stores environment variables for database credentials and other secrets.
+- `config/db.js`: Sets up the MySQL connection pool using environment variables.
+- `server.js`: Main entry point for the backend server, configures middleware, routes, and error handling.
+- `routes/users.js`: Handles user registration and related API endpoints.
+
+---
+
+## Git Workflow: Moving Folders/Files from Local Development to GitHub
+
+**Best Practice:**
+- Always copy your new or updated files/folders into your local clone of the GitHub repo (not directly into the remote via the web interface).
+- Use git to track, commit, and push your changes. This ensures version control, collaboration, and triggers any automations (like documentation deployment).
+
+**Step-by-Step Instructions:**
+
+1. **Copy your files/folders into your local repo directory.**
+   - Example: Drag and drop, or use the `cp` command in your terminal.
+
+2. **Check the status of your repo:**
+   ```bash
+   git status
+   ```
+   - This shows new, modified, or deleted files/folders.
+
+3. **Stage your changes:**
+   - To add everything (recommended):
+     ```bash
+     git add .
+     ```
+   - To add a specific folder:
+     ```bash
+     git add path/to/your-folder
+     ```
+   - To add a specific file:
+     ```bash
+     git add path/to/your-file
+     ```
+
+4. **Commit your changes:**
+   ```bash
+   git commit -m &quot;Add/update files and folders from local development&quot;
+   ```
+
+5. **Push to GitHub:**
+   ```bash
+   git push
+   ```
+
+6. **Check your repo on GitHub** to confirm the changes are there.
+
+**Notes:**
+- Git will track all files inside folders you add, except those listed in `.gitignore`.
+- If you delete a folder locally and run `git add .`, Git will stage the deletion as well.
+- Use `git status` to review what will be added, modified, or deleted before you commit.
+
+---
+
+</code></pre>
+<hr />
+<h3 id="implemented-endpoints-as-of-june-2025">Implemented Endpoints (as of June 2025)</h3>
+<ul>
+<li><strong>Wallets:</strong> Create, get details, get balance, credit, debit, list transactions</li>
+<li><strong>Vouchers:</strong> Issue, redeem, list</li>
+<li><strong>KYC:</strong> Upload document, get status</li>
+<li><strong>Notifications:</strong> Create, list for user, mark as read</li>
+<li><strong>Support:</strong> Create ticket, list tickets for user</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": [], "search": "../assets/javascripts/workers/search.d50fe291.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.13a4f30d.min.js"></script>
+      
+    
+  </body>
+</html>

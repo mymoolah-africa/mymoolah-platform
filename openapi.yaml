@@ -1,0 +1,233 @@
+openapi: 3.0.3
+info:
+  title: MyMoolah API
+  version: 1.0.0
+  description: |
+    RESTful API for the MyMoolah banking and wallet platform.
+servers:
+  - url: https://api.mymoolah.com
+paths:
+  /api/wallets:
+    post:
+      summary: Create a new wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletCreateRequest'
+      responses:
+        '201':
+          description: Wallet created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/wallets/{id}:
+    get:
+      summary: Get wallet details by ID
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Wallet ID
+      responses:
+        '200':
+          description: Wallet details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '404':
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/wallets/{id}/balance:
+    get:
+      summary: Get wallet balance by ID
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Wallet ID
+      responses:
+        '200':
+          description: Wallet balance
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  balance:
+                    type: number
+                    format: float
+        '404':
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/wallets/{id}/credit:
+    post:
+      summary: Credit wallet
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Wallet ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletTransactionRequest'
+      responses:
+        '200':
+          description: Wallet credited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/wallets/{id}/debit:
+    post:
+      summary: Debit wallet
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Wallet ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WalletTransactionRequest'
+      responses:
+        '200':
+          description: Wallet debited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Wallet'
+        '400':
+          description: Invalid input or insufficient funds
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/wallets/{id}/transactions:
+    get:
+      summary: List wallet transactions
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: Wallet ID
+      responses:
+        '200':
+          description: List of transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Transaction'
+        '404':
+          description: Wallet not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    Wallet:
+      type: object
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        account_number:
+          type: string
+        balance:
+          type: number
+          format: float
+    WalletCreateRequest:
+      type: object
+      required:
+        - user_id
+        - account_number
+      properties:
+        user_id:
+          type: integer
+        account_number:
+          type: string
+    WalletTransactionRequest:
+      type: object
+      required:
+        - amount
+      properties:
+        amount:
+          type: number
+          format: float
+        description:
+          type: string
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        wallet_id:
+          type: integer
+        amount:
+          type: number
+          format: float
+        type:
+          type: string
+          enum: [credit, debit]
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
