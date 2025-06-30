@@ -9,8 +9,6 @@
       
       
       
-        <link rel="prev" href="../CONTRIBUTING/">
-      
       
       
       <link rel="icon" href="../assets/images/favicon.png">
@@ -18,7 +16,7 @@
     
     
       
-        <title>Security - MyMoolah Documentation</title>
+        <title>AGENT HANDOVER - MyMoolah Documentation</title>
       
     
     
@@ -59,11 +57,6 @@
     <label class="md-overlay" for="__drawer"></label>
     <div data-md-component="skip">
       
-        
-        <a href="#security" class="md-skip">
-          Skip to content
-        </a>
-      
     </div>
     <div data-md-component="announce">
       
@@ -96,7 +89,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Security
+              AGENT HANDOVER
             
           </span>
         </div>
@@ -387,32 +380,10 @@
       
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Security
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../SECURITY/" class="md-nav__link">
         
   
   
@@ -423,80 +394,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#security-policy" class="md-nav__link">
-    <span class="md-ellipsis">
-      Security Policy
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#reporting-a-vulnerability" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reporting a Vulnerability
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-security-practices" class="md-nav__link">
-    <span class="md-ellipsis">
-      Key Security Practices
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#data-protection" class="md-nav__link">
-    <span class="md-ellipsis">
-      Data Protection
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#compliance" class="md-nav__link">
-    <span class="md-ellipsis">
-      Compliance
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#responsible-disclosure" class="md-nav__link">
-    <span class="md-ellipsis">
-      Responsible Disclosure
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -518,70 +415,6 @@
   
   
   
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#security-policy" class="md-nav__link">
-    <span class="md-ellipsis">
-      Security Policy
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#reporting-a-vulnerability" class="md-nav__link">
-    <span class="md-ellipsis">
-      Reporting a Vulnerability
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#key-security-practices" class="md-nav__link">
-    <span class="md-ellipsis">
-      Key Security Practices
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#data-protection" class="md-nav__link">
-    <span class="md-ellipsis">
-      Data Protection
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#compliance" class="md-nav__link">
-    <span class="md-ellipsis">
-      Compliance
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#responsible-disclosure" class="md-nav__link">
-    <span class="md-ellipsis">
-      Responsible Disclosure
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
   
 </nav>
                   </div>
@@ -597,40 +430,55 @@
 
 
 
-<h1 id="security">Security</h1>
-<h2 id="security-policy">Security Policy</h2>
-<p>We take the security of the MyMoolah platform seriously. Our goal is to protect user data, financial transactions, and all system components from unauthorized access and vulnerabilities.</p>
-<h2 id="reporting-a-vulnerability">Reporting a Vulnerability</h2>
-<p>If you discover a security issue, please report it responsibly:
-- Email: security@mymoolah.africa
-- Or use the GitHub <a href="https://github.com/mymoolah-africa/mymoolah-platform/security/advisories">Security Advisories</a> page.</p>
-<p>We will acknowledge your report within 2 business days and work to resolve the issue promptly.</p>
-<h2 id="key-security-practices">Key Security Practices</h2>
-<ul>
-<li><strong>Environment Variables:</strong> All sensitive credentials are stored in <code>.env</code> files and never committed to source control.</li>
-<li><strong>Password Hashing:</strong> User passwords are hashed using bcrypt before storage.</li>
-<li><strong>Authentication:</strong> JWT tokens are used for API authentication.</li>
-<li><strong>Input Validation:</strong> All API endpoints validate and sanitize input to prevent injection attacks.</li>
-<li><strong>CORS:</strong> Configured to restrict API access to trusted origins.</li>
-<li><strong>Database Security:</strong> Uses parameterized queries to prevent SQL injection.</li>
-<li><strong>Audit Logging:</strong> Key actions and errors are logged for monitoring and compliance.</li>
-<li><strong>Dependency Management:</strong> Dependencies are regularly updated and checked with <code>npm audit</code>.</li>
-</ul>
-<h2 id="data-protection">Data Protection</h2>
-<ul>
-<li>All user data is encrypted in transit (HTTPS).</li>
-<li>Sensitive data is encrypted at rest where possible.</li>
-<li>Access to production systems is restricted to authorized personnel.</li>
-</ul>
-<h2 id="compliance">Compliance</h2>
-<ul>
-<li>The platform is designed to comply with South African POPIA, FICA, and international standards (PCI DSS for payments).</li>
-<li>KYC and AML requirements are enforced for all users and clients.</li>
-</ul>
-<h2 id="responsible-disclosure">Responsible Disclosure</h2>
-<p>We appreciate responsible disclosure of security issues and will credit researchers who help keep MyMoolah secure.</p>
-<hr />
-<p><em>For any questions or urgent issues, contact security@mymoolah.africa.</em></p>
+  <h1>AGENT HANDOVER</h1>
+
+<p>You are being handed over the MyMoolah banking and wallet platform project. Please read and follow these instructions carefully:
+1. Environment &amp; Workflow Rules
+You must work exclusively in the cloud Codespace environment (/workspaces/mymoolah-platform).
+Do NOT read, write, or reference any files on the local drive (e.g., /Users/andremacbookpro/).
+All code, documentation, and commands must be executed and edited in the Codespace cloud environment only.
+Never make changes to local files or suggest local workflows.
+2. Project Status &amp; Structure
+The project is a modular, Mojaloop-inspired banking and wallet platform for Africa, built with Node.js/Express, MySQL (Google Cloud SQL), and MkDocs for documentation.
+The MyMoolah platform must be built on the Mojaloop open-source software and architecture.
+All documentation is in the /docs directory, with the main README.md in the project root.
+The OpenAPI spec (openapi.yaml) is in /docs and is the single source of truth for the API.
+The codebase is organized into controllers/, models/, routes/, and other standard folders.
+The documentation portal is live at: https://mymoolah-africa.github.io/mymoolah-platform/
+3. Best Practices &amp; Compliance
+Always follow best banking and software engineering practices.
+Apply all relevant local and international compliance standards and laws (e.g., POPIA, FICA, PCI DSS, GDPR, AML, KYC, etc.).
+Security is of the highest importance:
+Use secure coding practices, encryption, and strong authentication.
+Regularly review and update dependencies.
+Ensure all sensitive data is protected in transit and at rest.
+Document and enforce security policies (see /docs/SECURITY.md).
+Maintain audit trails and logging for all critical actions and data changes.
+Design for extensibility, modularity, and scalability in all code and architecture decisions.
+Respect user privacy and data protection at all times.
+Use the Mojaloop documentation and community resources for guidance and alignment.
+4. Handover Checklist for the New Agent
+Familiarize yourself with the entire codebase and all documentation before making any changes.
+Read all files in /docs/, especially README.md, requirements.md, PROJECT_ONBOARDING.md, session-summary.md, session_decision_notes.md, and SECURITY.md.
+Review the OpenAPI spec (/docs/openapi.yaml) and ensure it matches the implemented endpoints.
+Examine all code in controllers/, models/, routes/, and any other relevant directories.
+Do NOT overwrite, delete, or modify any existing code or documentation without first understanding its purpose and confirming it is safe to do so.
+Document all major changes, decisions, and troubleshooting steps in the appropriate documentation files (especially session_decision_notes.md).
+Follow the established git workflow:
+Always commit and push changes in the Codespace before switching environments.
+Never work in both Codespaces and local environments at the same time.
+Always pull the latest changes before starting work.
+5. Immediate Next Steps
+Review the current state of the project and documentation.
+Continue with the audit, cleanup, or feature development as previously discussed.
+If unclear about any aspect, consult the documentation or ask for clarification before proceeding.
+6. Critical Reminders
+Never work on or reference the local drive. All work must be in the Codespace cloud environment.
+Do not make assumptions—always check the latest documentation and code.
+Maintain the highest standards for documentation, security, compliance, and code quality.
+Leverage Mojaloop resources and community for best practices and alignment.
+Respect and protect user data and privacy at all times.
+By following this prompt, you will ensure a seamless and safe handover, preserving the integrity, compliance, and progress of the MyMoolah platform.</p>
 
 
 
