@@ -162,3 +162,17 @@ MyMoolah is a cloud-native, Mojaloop-inspired banking and wallet platform for Af
 - **KYC:** Upload document, get status
 - **Notifications:** Create, list for user, mark as read
 - **Support:** Create ticket, list tickets for user
+
+
+## Salary & Wages Disbursement Portal (Standalone, Planned)
+
+- Companies can register and upload all required business KYC documents (registration, tax, proof of address, etc.).
+- After KYC approval, companies can upload employee details in bulk via Excel/CSV.
+- The system validates and processes the file, then initiates salary/wage payments as follows:
+  - If the payment is to a bank account, the system uses DtMercury API integration.
+  - If the payment is to a MyMoolah wallet (bank name = "mymoolah"):
+    - If the wallet exists (matched by mobile/account number), the payment is credited to the wallet.
+    - If the wallet does not exist, the platform creates a new wallet for the employee using their mobile number, and sends an SMS prompting the employee to register and access their funds.
+- Payment status and audit logs are available in the portal.
+- All actions are compliant with FICA, AML, and other relevant regulations.
+- This feature will be developed after the core wallet and KYC flows are complete.

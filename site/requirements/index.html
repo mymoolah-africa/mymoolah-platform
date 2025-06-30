@@ -285,6 +285,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#salary-wages-disbursement-portal-standalone-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      Salary &amp; Wages Disbursement Portal (Standalone, Planned)
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -517,6 +526,15 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#salary-wages-disbursement-portal-standalone-planned" class="md-nav__link">
+    <span class="md-ellipsis">
+      Salary &amp; Wages Disbursement Portal (Standalone, Planned)
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -696,6 +714,21 @@ MyMoolah is a cloud-native, Mojaloop-inspired banking and wallet platform for Af
 <li><strong>KYC:</strong> Upload document, get status</li>
 <li><strong>Notifications:</strong> Create, list for user, mark as read</li>
 <li><strong>Support:</strong> Create ticket, list tickets for user</li>
+</ul>
+<h2 id="salary-wages-disbursement-portal-standalone-planned">Salary &amp; Wages Disbursement Portal (Standalone, Planned)</h2>
+<ul>
+<li>Companies can register and upload all required business KYC documents (registration, tax, proof of address, etc.).</li>
+<li>After KYC approval, companies can upload employee details in bulk via Excel/CSV.</li>
+<li>The system validates and processes the file, then initiates salary/wage payments as follows:</li>
+<li>If the payment is to a bank account, the system uses DtMercury API integration.</li>
+<li>If the payment is to a MyMoolah wallet (bank name = "mymoolah"):<ul>
+<li>If the wallet exists (matched by mobile/account number), the payment is credited to the wallet.</li>
+<li>If the wallet does not exist, the platform creates a new wallet for the employee using their mobile number, and sends an SMS prompting the employee to register and access their funds.</li>
+</ul>
+</li>
+<li>Payment status and audit logs are available in the portal.</li>
+<li>All actions are compliant with FICA, AML, and other relevant regulations.</li>
+<li>This feature will be developed after the core wallet and KYC flows are complete.</li>
 </ul>
 
 

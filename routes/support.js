@@ -1,33 +1,23 @@
 const express = require('express');
 const router = express.Router();
+const supportController = require('../controllers/supportController');
 
-// In-memory support tickets store for demo purposes
-let tickets = [];
-let nextTicketId = 1;
+// Create a new support ticket
+router.post('/', supportController.createTicket);
 
-// Create a support ticket
-router.post('/', (req, res) => {
-  const { user_id, subject, message } = req.body;
-  if (!user_id || !subject || !message) {
-    return res.status(400).json({ error: 'user_id, subject, and message are required' });
-  }
-  const ticket = {
-    id: nextTicketId++,
-    user_id,
-    subject,
-    message,
-    status: 'open',
-    created_at: new Date().toISOString()
-  };
-  tickets.push(ticket);
-  res.status(201).json({ ticket });
-});
+// List all tickets for a user
+router.get('/', supportController.listTicketsByUser);
 
-// List support tickets for a user
-router.get('/:user_id', (req, res) => {
-  const { user_id } = req.params;
-  const userTickets = tickets.filter(t => t.user_id == user_id);
-  res.json({ tickets: userTickets });
-});
+// Get a ticket and its messages
+router.get('/:id', supportController.getTicketWithMessages);
+
+// Post a message to a ticket
+router.post('/:id/message', supportController.postMessage);
+
+// Update ticket status
+router.patch('/:id/status', supportController.updateStatus);
+
+// Escalate ticket to external platform
+router.post('/:id/escalate', supportController.escalate);
 
 module.exports = router;
