@@ -307,7 +307,29 @@
   
   
   <span class="md-ellipsis">
-    API Reference
+    API Reference (Markdown)
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../openapi.yaml" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference (Swagger UI)
     
   </span>
   
@@ -377,6 +399,19 @@
         
       
       
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Security
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
       <a href="./" class="md-nav__link md-nav__link--active">
         
   
@@ -388,6 +423,79 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#security-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security Policy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reporting-a-vulnerability" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reporting a Vulnerability
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-security-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Security Practices
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Protection
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compliance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Compliance
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#responsible-disclosure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Responsible Disclosure
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
       
     </li>
   
@@ -413,6 +521,68 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#security-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      Security Policy
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reporting-a-vulnerability" class="md-nav__link">
+    <span class="md-ellipsis">
+      Reporting a Vulnerability
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-security-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      Key Security Practices
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-protection" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Protection
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#compliance" class="md-nav__link">
+    <span class="md-ellipsis">
+      Compliance
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#responsible-disclosure" class="md-nav__link">
+    <span class="md-ellipsis">
+      Responsible Disclosure
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -428,6 +598,39 @@
 
 
 <h1 id="security">Security</h1>
+<h2 id="security-policy">Security Policy</h2>
+<p>We take the security of the MyMoolah platform seriously. Our goal is to protect user data, financial transactions, and all system components from unauthorized access and vulnerabilities.</p>
+<h2 id="reporting-a-vulnerability">Reporting a Vulnerability</h2>
+<p>If you discover a security issue, please report it responsibly:
+- Email: security@mymoolah.africa
+- Or use the GitHub <a href="https://github.com/mymoolah-africa/mymoolah-platform/security/advisories">Security Advisories</a> page.</p>
+<p>We will acknowledge your report within 2 business days and work to resolve the issue promptly.</p>
+<h2 id="key-security-practices">Key Security Practices</h2>
+<ul>
+<li><strong>Environment Variables:</strong> All sensitive credentials are stored in <code>.env</code> files and never committed to source control.</li>
+<li><strong>Password Hashing:</strong> User passwords are hashed using bcrypt before storage.</li>
+<li><strong>Authentication:</strong> JWT tokens are used for API authentication.</li>
+<li><strong>Input Validation:</strong> All API endpoints validate and sanitize input to prevent injection attacks.</li>
+<li><strong>CORS:</strong> Configured to restrict API access to trusted origins.</li>
+<li><strong>Database Security:</strong> Uses parameterized queries to prevent SQL injection.</li>
+<li><strong>Audit Logging:</strong> Key actions and errors are logged for monitoring and compliance.</li>
+<li><strong>Dependency Management:</strong> Dependencies are regularly updated and checked with <code>npm audit</code>.</li>
+</ul>
+<h2 id="data-protection">Data Protection</h2>
+<ul>
+<li>All user data is encrypted in transit (HTTPS).</li>
+<li>Sensitive data is encrypted at rest where possible.</li>
+<li>Access to production systems is restricted to authorized personnel.</li>
+</ul>
+<h2 id="compliance">Compliance</h2>
+<ul>
+<li>The platform is designed to comply with South African POPIA, FICA, and international standards (PCI DSS for payments).</li>
+<li>KYC and AML requirements are enforced for all users and clients.</li>
+</ul>
+<h2 id="responsible-disclosure">Responsible Disclosure</h2>
+<p>We appreciate responsible disclosure of security issues and will credit researchers who help keep MyMoolah secure.</p>
+<hr />
+<p><em>For any questions or urgent issues, contact security@mymoolah.africa.</em></p>
 
 
 
