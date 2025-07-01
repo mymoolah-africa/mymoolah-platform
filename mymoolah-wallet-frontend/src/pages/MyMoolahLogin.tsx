@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 
 export default function MyMoolahLogin() {
-  const [username, setUsername] = useState("");
+  const [mobile, setMobile] = useState("");
   const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -17,27 +17,27 @@ export default function MyMoolahLogin() {
         {/* Logo */}
         <div className="mb-8">
           <img
-              src="/MyMoolahLogo1.svg"
-              alt="MyMoolah Logo"
-              className="mx-auto h-16 w-auto"
+            src="/MyMoolahLogo1.svg"
+            alt="MyMoolah Logo"
+            className="mx-auto h-16 w-auto"
           />
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Username Input */}
+          {/* Mobile Number Input */}
           <div className="text-left">
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-              Username
+            <label htmlFor="mobile" className="block text-sm font-medium text-gray-700 mb-1">
+              Mobile Number
             </label>
             <input
-              id="username"
-              name="username"
+              id="mobile"
+              name="mobile"
               type="text"
-              autoComplete="username"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#86BE41]"
-              aria-label="Username"
+              autoComplete="tel"
+              value={mobile}
+              onChange={e => setMobile(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#86BE41]"
+              aria-label="Mobile Number"
               required
             />
           </div>
@@ -54,7 +54,7 @@ export default function MyMoolahLogin() {
               autoComplete="current-password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-[#86BE41]"
+              className="w-full px-4 py-2 border border-gray-300 rounded bg-white text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-[#86BE41]"
               aria-label="Password"
               required
             />
@@ -69,6 +69,12 @@ export default function MyMoolahLogin() {
             Login
           </button>
         </form>
+
+        {/* Register Link */}
+        <div className="mt-4 text-center">
+          <span className="text-gray-600">Don’t have an account? </span>
+          <Link to="/register" className="text-[#2D8CCA] underline hover:text-[#86BE41]">Register</Link>
+        </div>
 
         {/* Forgot Password Link */}
         <div className="mt-3">

@@ -5,6 +5,12 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 import MyMoolahLogin from './pages/MyMoolahLogin';
+import ForgotPassword from './pages/ForgotPassword';
+import Terms from './pages/Terms';
+import FAQ from './pages/FAQ';
+import Contact from './pages/Contact';
+import Register from './pages/Register';
+import TransactionHistory from './pages/TransactionHistory';
 
 function AppContent() {
   const location = useLocation();
@@ -21,6 +27,12 @@ function AppContent() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="*" element={<NotFound />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/terms" element={<Terms />} />
+        <Route path="/faq" element={<FAQ />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/transactions" element={<TransactionHistory />} />
       </Routes>
     </div>
   );
