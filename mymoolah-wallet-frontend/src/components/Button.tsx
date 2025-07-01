@@ -13,6 +13,7 @@ function Button({ children, className = '', ...props }: ButtonProps) {
       {children}
     </button>
   );
+
 }
 
 export default Button;

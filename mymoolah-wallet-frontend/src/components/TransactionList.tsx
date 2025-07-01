@@ -1,0 +1,21 @@
+import React from "react";
+import TransactionItem from "./TransactionItem";
+
+export default function TransactionList({ transactions, onSelect, formatDateTime, formatRand }) {
+  if (!transactions.length) {
+    return <div className="text-gray-500">No transactions found.</div>;
+  }
+  return (
+    <div className="divide-y">
+      {transactions.map((txn) => (
+        <TransactionItem
+          key={txn.id}
+          transaction={txn}
+          onClick={() => onSelect(txn)}
+          formatDateTime={formatDateTime}
+          formatRand={formatRand}
+        />
+      ))}
+    </div>
+  );
+}
