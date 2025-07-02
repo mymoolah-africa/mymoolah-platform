@@ -1,136 +1,48 @@
-# MyMoolah Backend
 
-## Project Purpose
-A cloud-native, Mojaloop-inspired banking and wallet platform for Africa, designed for cost efficiency, scalability, and compliance with international banking standards. The platform targets both low-income individuals and B2B clients, providing a secure, modular, and API-driven solution for digital wallets and banking services.
+---
 
-## Objectives & Requirements
-- Serve low-income individuals and B2B clients in Africa with a secure, scalable wallet and banking platform.
-- Each client has a prefunded float account; each client can have millions of customers, each with an internal wallet.
-- Support for VAS (Value-Added Services) purchases, voucher generation/redemption, bill payments, cash-in/cash-out, and cross-border remittances.
-- Integrate with multiple VAS providers (e.g., Mobilemart, Flash, EasyPay, DT Mercury).
-- KYC for both B2B and B2C onboarding, including document upload (ID/passport, proof of address).
-- Client portal for reporting, user management, and notifications (e.g., low float balance).
-- REST API with UAT and production credentials, documented with OpenAPI/Swagger.
-- Designed for 1000+ transactions per second (TPS).
-- Modular, API-driven, and cloud-native architecture.
-- Follows Mojaloop and open banking best practices.
+## Quick Start
 
-## Current Status
-- Project code and documentation are versioned in GitHub and developed in GitHub Codespaces.
-- MySQL database (Google Cloud SQL) is set up with core tables: clients, users, wallets, transactions, vouchers.
-- Node.js backend is running and connected to the database.
-- API endpoint `/api/v1/clients` is implemented for listing clients.
-- Documentation is maintained in `README.md`, `docs/requirements.md`, and `docs/session-summary.md`.
+### 1. Clone the Repository
 
-## Next Steps
-- Add more API endpoints (create client, user registration, wallet funding, etc.).
-- Implement authentication, KYC, and VAS integrations.
-- Continue documenting all features and decisions.
+```sh
+git clone https://github.com/mymoolah-africa/mymoolah-platform.git
+cd mymoolah-platform
+```
 
-## Documentation
-- See `docs/requirements.md` for detailed requirements and design notes.
-- See `docs/session-summary.md` for a running summary and handover notes.
+### 2. Setup the Backend
 
-## Contact & Support
-- For questions, see the `docs/` folder or contact the project maintainer.
+See [mymoolah-backend/README.md](./mymoolah-backend/README.md) for backend setup, environment variables, and database instructions.
 
-## Technology Stack
-- Node.js (Express)
-- MySQL (Google Cloud SQL)
-- mysql2 (Node.js MySQL client)
-- dotenv (for environment variables)
-- cors (for cross-origin requests)
+### 3. Setup the Frontend
 
-## Project Structure
+See [mymoolah-wallet-frontend/README.md](./mymoolah-wallet-frontend/README.md) for frontend setup and development workflow.
 
-mymoolah-backend/
-|-- config/
-|-- routes/
-|-- server.js
-|-- .env
-|-- package.json
-|-- README.md
-|-- docs/
-|-- requirements.md
-|-- session-summary.md
+### 4. Documentation
 
- Setup Instructions
+See [docs/](./docs/) or the published MkDocs site for API, architecture, and compliance documentation.
 
-### Prerequisites
-- Node.js (v18 or later)
-- npm
-- MySQL database (Google Cloud SQL or local)
-- Google Cloud account (for deployment)
+---
 
-### Local Development
-1. Clone the repository and navigate to the backend folder:
-   ```bash
-   git clone <your-repo-url>
-   cd mymoolah
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Create a `.env` file in the root directory with the following content:
-   ```env
-   DB_HOST=your-mysql-host
-   DB_USER=your-mysql-user
-   DB_PASSWORD=your-mysql-password
-   DB_NAME=your-mysql-db
-   PORT=5050
-   ```
-4. Start the server:
-   ```bash
-   npm start
-   ```
-5. The API will be available at `http://localhost:5050/`
+## Contribution Guidelines
 
-### Google Cloud Deployment
-- Prepare an `app.yaml` for App Engine or a Dockerfile for Cloud Run.
-- Ensure all secrets are managed via environment variables.
-- Follow GCP deployment guides for Node.js apps.
+- Use feature branches and clear commit messages.
+- Keep documentation and code comments up to date.
+- Follow security and compliance best practices.
+- See [mymoolah-wallet-frontend/README.md](./mymoolah-wallet-frontend/README.md) and [mymoolah-backend/README.md](./mymoolah-backend/README.md) for detailed contribution guidelines.
 
-## API Endpoints & Implementation Status (as of July 2024)
+---
 
-### Implemented Endpoints
-- **POST /api/users/register**: User registration with input validation, password hashing, and duplicate checking. Saves users to MySQL.
-- **GET /api/v1/clients**: Lists all registered B2B clients from the database.
+## Resources
 
-### Planned/Upcoming Endpoints
-- Wallet funding (EFT, PayShap, voucher)
-- Transaction history (user and client)
-- Voucher generation, redemption, and management
-- KYC document upload and approval
-- Authentication (login, JWT)
-- VAS integrations (airtime, data, bill payments, etc.)
-- Notifications and support ticket management
+- [Mojaloop](https://mojaloop.io/)
+- [React](https://react.dev/)
+- [Vite](https://vitejs.dev/)
+- [Node.js](https://nodejs.org/)
+- [Express](https://expressjs.com/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [MkDocs](https://www.mkdocs.org/)
 
-## Current Status
-- Codebase is fully cleaned up: **Node.js + Express + MySQL only** (no MongoDB/Mongoose).
-- `.gitignore` excludes `node_modules/` and `.env`.
-- All documentation is up to date and in sync with the codebase.
-- User registration and client listing endpoints are live and tested.
-- Database schema is robust and documented.
-- GitHub repo is clean, up to date, and ready for further development.
+---
 
-## Git Workflow & Documentation Practices
-- All code and documentation are versioned in GitHub.
-- Always commit and push before switching environments (e.g., Codespaces/local).
-- Always pull before starting work elsewhere to avoid divergence.
-- Resolve merge conflicts promptly and keep the main branch clean.
-- Documentation is maintained in `README.md`, `docs/requirements.md`, and `docs/session-summary.md` and should be updated after each major session or decision.
-
-## Documentation
-- See `docs/requirements.md` for detailed requirements and design notes.
-- See `docs/session-summary.md` for a running summary and handover notes.
-
-## Contact & Support
-- For questions, see the `docs/` folder or contact the project maintainer.
-
-### Implemented Endpoints (as of June 2025)
-- **Wallets:** Create, get details, get balance, credit, debit, list transactions
-- **Vouchers:** Issue, redeem, list
-- **KYC:** Upload document, get status
-- **Notifications:** Create, list for user, mark as read
-- **Support:** Create ticket, list tickets for user
+**Let’s build the best wallet and banking platform for Africa—together!**
