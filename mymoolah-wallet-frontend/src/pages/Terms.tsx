@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import './Terms.css';
 // If you have a logo component, import it. Otherwise, use an <img> tag below.
 // import { MyMoolahLogo2 } from '../components/MyMoolahLogo2';

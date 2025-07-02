@@ -1,7 +1,13 @@
-import React from "react";
-import TransactionItem from "./TransactionItem";
+import TransactionItem, { type Transaction } from "./TransactionItem";
 
-export default function TransactionList({ transactions, onSelect, formatDateTime, formatRand }) {
+interface TransactionListProps {
+  transactions: Transaction[];
+  onSelect: (txn: Transaction) => void;
+  formatDateTime: (date: string) => string;
+  formatRand: (amount: number) => string;
+}
+
+export default function TransactionList({ transactions, onSelect, formatDateTime, formatRand }: TransactionListProps) {
   if (!transactions.length) {
     return <div className="text-gray-500">No transactions found.</div>;
   }

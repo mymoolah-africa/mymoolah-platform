@@ -1,6 +1,22 @@
-import React from "react";
+export interface Transaction {
+  id: string;
+  date: string;
+  type: 'credit' | 'debit' | 'voucher' | 'transfer';
+  amount: number;
+  status: 'success' | 'pending' | 'failed';
+  description: string;
+  reference: string;
+  details?: Record<string, unknown>;
+}
 
-export default function TransactionItem({ transaction, onClick, formatDateTime, formatRand }) {
+interface TransactionItemProps {
+  transaction: Transaction;
+  onClick: () => void;
+  formatDateTime: (date: string) => string;
+  formatRand: (amount: number) => string;
+}
+
+export default function TransactionItem({ transaction, onClick, formatDateTime, formatRand }: TransactionItemProps) {
   const isDebit = transaction.type === "debit";
   const amountString = isDebit
     ? `-` + formatRand(transaction.amount)

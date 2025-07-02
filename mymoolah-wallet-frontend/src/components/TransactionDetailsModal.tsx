@@ -1,6 +1,13 @@
-import React from "react";
+import { type Transaction } from "./TransactionItem";
 
-export default function TransactionDetailsModal({ transaction, onClose, formatDateTime, formatRand }) {
+interface TransactionDetailsModalProps {
+  transaction: Transaction;
+  onClose: () => void;
+  formatDateTime: (date: string) => string;
+  formatRand: (amount: number) => string;
+}
+
+export default function TransactionDetailsModal({ transaction, onClose, formatDateTime, formatRand }: TransactionDetailsModalProps) {
   const isDebit = transaction.type === "debit";
   const amountString = isDebit
     ? `-` + formatRand(transaction.amount)

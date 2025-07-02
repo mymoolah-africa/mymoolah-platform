@@ -11,11 +11,18 @@ import FAQ from './pages/FAQ';
 import Contact from './pages/Contact';
 import Register from './pages/Register';
 import TransactionHistory from './pages/TransactionHistory';
+import ChangeMobileNumber from './pages/ChangeMobileNumber';
 
 function AppContent() {
   const location = useLocation();
-  // Add any other routes you want to hide the NavBar on
-  const hideNavBar = location.pathname === "/login";
+  // Hide NavBar on authentication and onboarding pages
+  const hideNavBar = [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/change-mobile",
+    "/home" // Add this line to hide NavBar on Home page
+  ].includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -26,13 +33,14 @@ function AppContent() {
         <Route path="/home" element={<Home />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/profile" element={<Profile />} />
-        <Route path="*" element={<NotFound />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/faq" element={<FAQ />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/register" element={<Register />} />
         <Route path="/transactions" element={<TransactionHistory />} />
+        <Route path="/change-mobile" element={<ChangeMobileNumber />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </div>
   );
