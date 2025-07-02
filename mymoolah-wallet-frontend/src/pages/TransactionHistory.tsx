@@ -269,7 +269,7 @@ export default function TransactionHistory() {
         formatRand={formatRand}
       />
       {/* View More / View Less Button */}
-      {sortedTransactions.length > 10 && (
+      {sortedTransactions.length > 5 && (
         <div className="flex justify-center mt-4">
           <button
             onClick={() => setShowAll(!showAll)}
