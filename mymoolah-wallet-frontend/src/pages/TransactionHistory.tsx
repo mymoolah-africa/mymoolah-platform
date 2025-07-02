@@ -181,10 +181,10 @@ export default function TransactionHistory() {
     (a, b) => new Date(b.date) - new Date(a.date)
   );
 
-  // Show last 10 by default, all if showAll is true
+  // Show last 5 by default, all if showAll is true
   const displayedTransactions = showAll
     ? sortedTransactions
-    : sortedTransactions.slice(0, 10);
+    : sortedTransactions.slice(0, 5);
 
   // Clear all filters and reset to default
   const handleClearFilters = () => {
