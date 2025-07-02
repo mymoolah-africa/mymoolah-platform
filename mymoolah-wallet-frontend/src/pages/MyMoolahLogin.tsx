@@ -1,5 +1,5 @@
-import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { useState } from 'react';
 
 export default function MyMoolahLogin() {
   const [mobile, setMobile] = useState("");
@@ -72,7 +72,7 @@ export default function MyMoolahLogin() {
 
         {/* Register Link */}
         <div className="mt-4 text-center">
-          <span className="text-gray-600">Don’t have an account? </span>
+          <span className="text-gray-600">Don't have an account? </span>
           <Link to="/register" className="text-[#2D8CCA] underline hover:text-[#86BE41]">Register</Link>
         </div>
 
@@ -97,6 +97,13 @@ export default function MyMoolahLogin() {
             FAQ
           </Link>
         </div>
+
+        {/* Change Mobile Number Link */}
+        <p className="mt-4 text-sm text-center">
+          <Link to="/change-mobile" className="text-[#2D8CCA] underline hover:text-[#86BE41]">
+            Change my Mobile Number
+          </Link>
+        </p>
       </div>
     </div>
   );

@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Button from '../components/Button';
+import { useNavigate, Link } from 'react-router-dom';
 
 const generateOTP = () => Math.floor(1000 + Math.random() * 9000).toString();
 
 function Register() {
+  const navigate = useNavigate();
   const [step, setStep] = useState<'form' | 'otp' | 'success'>('form');
   const [form, setForm] = useState({
-    fullName: '',
+    firstName: '',
+    surname: '',
     email: '',
     mobile: '',
     dob: '',
@@ -19,6 +22,12 @@ function Register() {
   const [enteredOtp, setEnteredOtp] = useState('');
   const [error, setError] = useState('');
 
+  useEffect(() => {
+    if (localStorage.getItem('isRegistered')) {
+      navigate('/login');
+    }
+  }, [navigate]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
     setForm(f => ({ ...f, [name]: type === 'checkbox' ? checked : value }));
@@ -29,7 +38,7 @@ function Register() {
     setError('');
     if (!form.terms) return setError('You must accept the Terms & Conditions.');
     if (form.password !== form.confirmPassword) return setError('Passwords do not match.');
-    if (!form.fullName || !form.email || !form.mobile || !form.dob || !form.idNumber || !form.password) return setError('All fields are required.');
+    if (!form.firstName || !form.surname || !form.email || !form.mobile || !form.dob || !form.idNumber || !form.password) return setError('All fields are required.');
     // SA ID validation: 13 digits, all numbers
     if (/^\d+$/.test(form.idNumber) && form.idNumber.length !== 13) {
       return setError('South African ID numbers must be exactly 13 digits.');
@@ -44,15 +53,24 @@ function Register() {
     setError('');
     if (enteredOtp !== otp) return setError('Incorrect OTP.');
     setStep('success');
+    localStorage.setItem('isRegistered', 'true');
+    // Redirect to login after a short delay (optional)
+    setTimeout(() => {
+      navigate('/login');
+    }, 1500); // 1.5 seconds for user to see the success message
   };
 
   return (
     <div className="max-w-md mx-auto mt-10 bg-white p-8 rounded shadow-md font-sans" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+      <Link to="/">
+        <img src="/MyMoolahLogo1.svg" alt="MyMoolah Logo" className="h-16 w-auto mx-auto mb-6 cursor-pointer" />
+      </Link>
       {step === 'form' && (
         <form onSubmit={handleSubmit}>
           <h3 className="text-2xl font-bold mb-4 text-[#2D8CCA]">Register</h3>
           <div className="mb-3">
-            <input name="fullName" value={form.fullName} onChange={handleChange} placeholder="Full Name" className="w-full p-2 border rounded mb-2" />
+            <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="First Name" className="w-full p-2 border rounded mb-2" />
+            <input name="surname" value={form.surname} onChange={handleChange} placeholder="Surname" className="w-full p-2 border rounded mb-2" />
             <input name="email" type="email" value={form.email} onChange={handleChange} placeholder="Email" className="w-full p-2 border rounded mb-2" />
             <input name="mobile" value={form.mobile} onChange={handleChange} placeholder="Mobile Number" className="w-full p-2 border rounded mb-2" />
             <input name="dob" type="date" value={form.dob} onChange={handleChange} placeholder="Date of Birth" className="w-full p-2 border rounded mb-2" />

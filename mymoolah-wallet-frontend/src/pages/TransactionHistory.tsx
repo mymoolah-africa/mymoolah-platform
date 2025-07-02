@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import TransactionList from "../components/TransactionList";
 import TransactionDetailsModal from "../components/TransactionDetailsModal";
 import { formatRand } from "../components/utils"; // Adjust path if needed
+import { type Transaction } from "../components/TransactionItem";
 
 // Local utility function (do NOT export)
 function formatDateTime(dateString: string) {
@@ -25,7 +26,7 @@ function formatDateTime(dateString: string) {
 }
 
 // Mock data for demonstration (with ISO timestamps)
-const mockTransactions = [
+const mockTransactions: Transaction[] = [
   {
     id: "1",
     date: "2024-07-10T14:23:00Z",
@@ -154,7 +155,7 @@ const statusOptions = [
 ];
 
 export default function TransactionHistory() {
-  const [selected, setSelected] = useState(null);
+  const [selected, setSelected] = useState<Transaction | null>(null);
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -178,7 +179,7 @@ export default function TransactionHistory() {
 
   // Sort by date descending
   const sortedTransactions = [...filteredTransactions].sort(
-    (a, b) => new Date(b.date) - new Date(a.date)
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 
   // Show last 5 by default, all if showAll is true

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 // If you have a logo component, import it. Otherwise, use an <img> tag below.
 // import { MyMoolahLogo1 } from '../components/MyMoolahLogo1';
 import './ForgotPassword.css';

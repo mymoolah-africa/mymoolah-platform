@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import './Contact.css';
 
 const Contact = () => {
@@ -23,7 +23,7 @@ const Contact = () => {
         </div>
         <div className="contact-header">
           <h1>Contact Support</h1>
-          <p>We’re here to help! Please fill out the form below and our team will get back to you.</p>
+          <p>We're here to help! Please fill out the form below and our team will get back to you.</p>
         </div>
         {submitted ? (
           <div className="contact-confirmation">
