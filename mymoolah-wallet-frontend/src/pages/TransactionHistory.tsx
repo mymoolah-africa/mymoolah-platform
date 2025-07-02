@@ -184,7 +184,7 @@ export default function TransactionHistory() {
   // Show last 5 by default, all if showAll is true
   const displayedTransactions = showAll
     ? sortedTransactions
-    : sortedTransactions.slice(0, );
+    : sortedTransactions.slice(0, 5);
 
   // Clear all filters and reset to default
   const handleClearFilters = () => {
