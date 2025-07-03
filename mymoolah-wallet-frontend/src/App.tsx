@@ -21,7 +21,8 @@ function AppContent() {
     "/register",
     "/forgot-password",
     "/change-mobile",
-    "/home" // Add this line to hide NavBar on Home page
+    "/home",
+    "/dashboard"
   ].includes(location.pathname);
 
   return (
