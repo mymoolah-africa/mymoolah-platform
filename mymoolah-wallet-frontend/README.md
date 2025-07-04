@@ -1,44 +1,69 @@
-# MyMoolah Wallet Frontend
+# React + TypeScript + Vite
 
-A modern, scalable, mobile-first digital wallet web app for Africa, built with React, Vite, TypeScript, and Tailwind CSS.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Project Overview
+Currently, two official plugins are available:
 
-- **Purpose:** Provide a sleek, intuitive, and data-efficient wallet experience for African users.
-- **Platform:** Responsive web app (PWA-ready), with future plans for Android/iOS SDKs.
-- **Branding:** Matches [mymoolah.africa](https://www.mymoolah.africa) and uses official logos and color schemes.
-- **Data Efficiency:** Optimized for low data usage and fast performance, especially on mobile.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
 
-## Tech Stack
+## Expanding the ESLint configuration
 
-- [React](https://react.dev/) + [Vite](https://vitejs.dev/) (TypeScript)
-- [Tailwind CSS](https://tailwindcss.com/) for styling
-- [React Query](https://tanstack.com/query/latest) for API state (recommended)
-- [Axios](https://axios-http.com/) for HTTP requests
-- [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/) for testing
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-## Type Safety & Linting
+```js
+export default tseslint.config([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-- **TypeScript:** All components and business logic are fully typed for safety and maintainability.
-- **Shared Interfaces:** The `Transaction` interface is used across transaction-related components for consistency and type safety.
-- **Linting:** The project uses ESLint with TypeScript rules. Run `npm run lint` to check for issues.
-- **Build:** The project builds cleanly with `npm run build` (no errors or warnings).
+      // Remove tseslint.configs.recommended and replace with this
+      ...tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      ...tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      ...tseslint.configs.stylisticTypeChecked,
 
-## Build & Test
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
 
-- `npm run lint` — Check for code and type issues
-- `npm run build` — Build the project for production
-- `npm test` — Run tests (if implemented)
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
 
-## Troubleshooting
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
 
-- **TypeScript errors:** Ensure all interfaces are up to date and utility functions have type declarations (see `src/components/utils.d.ts`).
-- **Lint errors:** Remove unused imports and avoid using `any`—prefer `unknown` or specific types.
-- **Directory issues:** Always run commands from the `mymoolah-wallet-frontend` directory.
-
-## Status
-
-- ✅ All code is type-safe and passes lint/build checks as of July 2024.
-- 🚀 Ready for further development and deployment.
-
-## Folder Structure
+export default tseslint.config([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
