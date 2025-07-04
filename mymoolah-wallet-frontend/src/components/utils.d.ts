@@ -1,1 +1,0 @@
-export function formatRand(amount: number): string; 
