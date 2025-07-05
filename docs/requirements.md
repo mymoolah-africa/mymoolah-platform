@@ -176,3 +176,30 @@ MyMoolah is a cloud-native, Mojaloop-inspired banking and wallet platform for Af
 - Payment status and audit logs are available in the portal.
 - All actions are compliant with FICA, AML, and other relevant regulations.
 - This feature will be developed after the core wallet and KYC flows are complete.
+
+## Mojaloop Integration Roadmap
+
+### Strategic Importance
+Mojaloop integration is essential for achieving true interoperability, regulatory alignment, and industry best practice for the MyMoolah wallet. This roadmap outlines the steps to become a Mojaloop-enabled platform.
+
+### Short-Term Actions
+- Study Mojaloop's official documentation and architecture.
+- Map MyMoolah's API/data model to Mojaloop's Open API.
+- Identify required Mojaloop components (Central Ledger, ALS, Scheme Adapter, etc.).
+- Document all findings and decisions in project docs.
+
+### Medium-Term Actions
+- Deploy a Mojaloop sandbox/test hub (locally or in the cloud using Docker/Kubernetes).
+- Register MyMoolah as a Mojaloop participant (FSP) in the test environment.
+- Build and test scheme adapters/connectors to bridge MyMoolah's wallet to Mojaloop APIs.
+- Engage with the Mojaloop community for support and best practices.
+
+### Long-Term Actions
+- Certify integration with Mojaloop (if required by local regulators).
+- Go live with Mojaloop for real-time, interoperable payments.
+- Maintain compliance, security, and documentation as Mojaloop evolves.
+
+### Resources
+- [Mojaloop Official Documentation](https://mojaloop.io/documentation/)
+- [Mojaloop GitHub](https://github.com/mojaloop/)
+- [Mojaloop Community](https://community.mojaloop.io/)
