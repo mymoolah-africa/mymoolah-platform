@@ -24,4 +24,11 @@ This file is a running log of key decisions, design choices, and important conte
 
 ---
 
+## [2024-07-13] Mojaloop Integration Decision
+- Decided to prioritize full Mojaloop integration for MyMoolah wallet to achieve interoperability and industry best practice.
+- Action plan: Document roadmap, update requirements, and begin research and sandbox deployment.
+- All major steps and findings will be documented in requirements.md and new Mojaloop integration docs as needed.
+
+---
+
 *Add new entries below for each session or major decision/change.*

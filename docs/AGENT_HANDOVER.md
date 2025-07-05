@@ -76,3 +76,16 @@ Maintain the highest standards for documentation, security, compliance, and code
 Leverage Mojaloop resources and community for best practices and alignment.
 Respect and protect user data and privacy at all times.
 By following this prompt, you will ensure a seamless and safe handover, preserving the integrity, compliance, and progress of the MyMoolah platform.
+
+Strategic Direction: Mojaloop Integration
+----------------------------------------
+MyMoolah is strategically committed to full integration with the Mojaloop open-source platform. This decision is based on Mojaloop's proven ability to deliver interoperability, regulatory alignment, and industry best practice for digital financial services in Africa and beyond.
+
+All agents and contributors must:
+- Prioritize Mojaloop compatibility and integration in all technical and architectural decisions.
+- Follow the Mojaloop Integration Roadmap as documented in requirements.md and mojaloop-integration.md.
+- Stay informed about Mojaloop community updates, best practices, and regulatory developments.
+
+For detailed planning, technical notes, and progress tracking, see docs/mojaloop-integration.md.
+
+By following this direction, MyMoolah will be positioned as a leading, interoperable, and future-proof digital wallet and treasury platform.
