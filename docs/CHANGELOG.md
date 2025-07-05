@@ -11,3 +11,8 @@
 - Major API expansion: wallets, vouchers, KYC, notifications, support endpoints
 - Updated requirements and onboarding docs
 - Improved security and compliance documentation
+
+## [2024-07-12]
+- Updated all documentation to reflect urgent wallet launch, closed-loop REST API integration for clients and service providers, and Mojaloop-first dual-rail strategy.
+- Emphasized that all new features and flows should use Mojaloop APIs and best practices, even for closed-loop.
+- Session decisions and strategy logged in all key docs.

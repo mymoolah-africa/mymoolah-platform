@@ -1,5 +1,11 @@
 # MyMoolah Project Onboarding Guide
 
+## [2024-07-12] Wallet-First, Closed-Loop, and Mojaloop-First Strategy
+- MyMoolah's urgent business requirement: launch its own wallet for individuals, and provide REST API integration for closed-loop clients (with millions of wallets/accounts) and service providers (VAS, payments) using pre-funded ledger accounts.
+- All new features and integrations must use Mojaloop APIs and best practices, even for closed-loop (internal/partner) flows, to ensure future-proofing, compliance, and interoperability.
+- The platform is architected as a dual-rail (closed-loop + Mojaloop) solution, with a "Mojaloop-first" policy for all transaction flows.
+- Documentation updated across all key files to reflect this strategy and session decisions.
+
 Welcome to the MyMoolah platform! This guide will help you get started as a developer or contributor.
 
 ---
