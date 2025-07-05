@@ -1,5 +1,11 @@
 # Mojaloop Integration for MyMoolah
 
+## [2024-07-12] Session Update: Wallet-First, Closed-Loop, and Mojaloop-First Strategy
+- MyMoolah's urgent business requirement: launch its own wallet for individuals, and provide REST API integration for closed-loop clients (with millions of wallets/accounts) and service providers (VAS, payments) using pre-funded ledger accounts.
+- All new features and integrations must use Mojaloop APIs and best practices, even for closed-loop (internal/partner) flows, to ensure future-proofing, compliance, and interoperability.
+- The platform is architected as a dual-rail (closed-loop + Mojaloop) solution, with a "Mojaloop-first" policy for all transaction flows.
+- This session's decisions and strategy are reflected throughout this document and all supporting docs.
+
 ## Introduction
 Mojaloop is an open-source platform designed to enable interoperable, real-time digital payments between banks, fintechs, and mobile money providers. Integrating MyMoolah with Mojaloop is a strategic priority to achieve industry-leading interoperability, regulatory alignment, and financial inclusion.
 
