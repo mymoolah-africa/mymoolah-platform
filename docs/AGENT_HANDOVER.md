@@ -98,3 +98,107 @@ For detailed planning, technical notes, and progress tracking, see docs/mojaloop
 By following this direction, MyMoolah will be positioned as a leading, interoperable, and future-proof digital wallet and treasury platform.
 
 - For B2B clients (e.g., betting operators), MyMoolah only tracks and manages the main prefunded float account for each client. The client is responsible for tracking and managing their own sub-wallets/customers; MyMoolah does not track or manage these sub-wallets.
+
+Infrastructure & Database Setup
+------------------------------
+
+**Database:**
+- Type: MySQL 8.0 (Google Cloud SQL)
+- Instance/Connection Name: mymoolah-db:africa-south1:mymoolah-instance
+- Region: africa-south1
+- Private IP: 35.0.0.3 (enabled, for VPC-connected resources)
+- Public IP: 34.35.9.169 (enabled, for external/dev access)
+- Networking: Only trusted networks allowed (no 0.0.0.0/0), private services access enabled, VPC: default, authorized networks configured
+- Security: SSL/TLS encryption enforced (allow only SSL connections: Enabled), server CA is Google-managed internal certificate authority (expires 22 Jun 2035), no client certificates required (can be added later), App Engine authorization enabled, Google Cloud services authorization disabled
+
+**How to Connect:**
+- All clients must use SSL/TLS to connect (no unencrypted traffic allowed)
+- Download server-ca.pem from Cloud SQL for client verification
+- For Codespaces, use Cloud SQL Auth Proxy (recommended for secure, dynamic access)
+- For local dev, connect using public IP and SSL
+- Credentials are stored securely in Google Secret Manager (or 1Password vault) — never in documentation
+- For access, request credentials from the project maintainer
+
+**Compliance Notes:**
+- Review and update security settings regularly for POPIA, PCI DSS, and banking compliance
+- Only authorized networks and users should have access
+- See infrastructure.md for technical details, diagrams, and change history
+
+**Change Log:**
+- [2024-07-13] Restricted authorized networks, enabled 'allow only SSL connections', documented server CA, and updated connection instructions.
+
+Cloud SQL Secure Connection Guide
+-------------------------------
+
+**Overview:**
+All database access (local and Codespaces/cloud) must use the Cloud SQL Auth Proxy and the official MySQL client for secure, compliant, and reliable connections. This ensures SSL/TLS encryption, avoids hostname verification issues, and supports Google Cloud's best practices.
+
+**Local Setup:**
+1. Download Cloud SQL Auth Proxy v2 (recommended):
+   curl -Lo cloud-sql-proxy https://dl.google.com/cloudsql/cloud-sql-proxy.darwin.amd64
+   chmod +x cloud-sql-proxy
+2. Authenticate with Google Cloud:
+   gcloud auth login
+   gcloud config set project mymoolah-db
+3. Start the proxy:
+   ./cloud-sql-proxy --address 127.0.0.1 --port 3306 mymoolah-db:africa-south1:mymoolah-instance &
+4. Install the official MySQL client (Homebrew):
+   brew install mysql-client
+   echo 'export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"' >> ~/.zshrc
+   source ~/.zshrc
+5. Connect (no SSL flags needed):
+   mysql --host=127.0.0.1 --user=mymoolah_user --password --database=mymoolah_db -e 'SHOW TABLES;'
+
+**Codespaces/Cloud Setup:**
+- Use the Linux version of the proxy and follow the same steps (see PROJECT_ONBOARDING.md for details).
+
+**Troubleshooting:**
+- If you see 'TLS/SSL error: Hostname verification failed', do not use the public IP; use the proxy.
+- If you see 'SSL is required, but the server does not support it', ensure you are using the official MySQL client, not MariaDB.
+- If the proxy fails to start, check Google Cloud authentication (gcloud auth login).
+- Always use the latest v2 proxy for best compatibility.
+
+**Change Log:**
+- [2024-07-13] Added detailed Cloud SQL secure connection and troubleshooting guide for local and Codespaces/cloud environments.
+
+---
+
+Handover Checklist for Future Agents
+------------------------------------
+
+**Documentation & Context**
+- [ ] Read all documentation in the /docs directory, especially:
+    - AGENT_HANDOVER.md (this file)
+    - PROJECT_ONBOARDING.md
+    - requirements.md
+    - session-summary.md
+    - session_decision_notes.md
+    - SECURITY.md
+    - infrastructure.md (if present)
+- [ ] Review the OpenAPI spec (openapi.yaml) and ensure it matches implemented endpoints.
+- [ ] Review all session logs and decision notes for recent changes and context.
+
+**Infrastructure & Database**
+- [ ] Review the 'Infrastructure & Database Setup' section in AGENT_HANDOVER.md and PROJECT_ONBOARDING.md.
+- [ ] Confirm current MySQL (Google Cloud SQL) instance details, networking, and security settings.
+- [ ] Know where credentials are stored (Google Secret Manager, 1Password vault, etc.)—never in documentation.
+- [ ] Review compliance notes and ensure all access and security settings are up to date.
+
+**Codebase & Workflow**
+- [ ] Familiarize yourself with the codebase structure (controllers/, models/, routes/, etc.).
+- [ ] Always pull the latest changes from GitHub before starting work.
+- [ ] Commit and push all changes to GitHub after every session or major change.
+- [ ] Update documentation after every major development, infrastructure, or compliance change.
+- [ ] Use Codespaces for cloud-based development and testing unless otherwise specified.
+
+**Compliance & Security**
+- [ ] Follow all compliance requirements (POPIA, FICA, PCI DSS, GDPR, AML, KYC, etc.).
+- [ ] Never store or share passwords or sensitive credentials in documentation or code.
+- [ ] Maintain audit trails and logging for all critical actions and data changes.
+- [ ] Regularly review and update dependencies and security policies.
+
+**Support & Escalation**
+- [ ] If unclear about any aspect, consult the documentation or ask for clarification before proceeding.
+- [ ] Document all major changes, decisions, and troubleshooting steps in the appropriate documentation files.
+
+**By following this checklist, you will ensure a seamless, secure, and compliant handover, preserving the integrity and progress of the MyMoolah platform.**
