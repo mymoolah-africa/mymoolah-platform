@@ -57,3 +57,6 @@ Ready for further development, testing, or merging into main.
 - **KYC:** Upload document, get status
 - **Notifications:** Create, list for user, mark as read
 - **Support:** Create ticket, list tickets for user
+
+## [2024-07-13] Client Float Account Clarification
+- For B2B clients (e.g., betting operators), MyMoolah only tracks and manages the main prefunded float account for each client. The client is responsible for tracking and managing their own sub-wallets/customers; MyMoolah does not track or manage these sub-wallets.
