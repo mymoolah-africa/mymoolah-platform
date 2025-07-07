@@ -96,3 +96,5 @@ All agents and contributors must:
 For detailed planning, technical notes, and progress tracking, see docs/mojaloop-integration.md.
 
 By following this direction, MyMoolah will be positioned as a leading, interoperable, and future-proof digital wallet and treasury platform.
+
+- For B2B clients (e.g., betting operators), MyMoolah only tracks and manages the main prefunded float account for each client. The client is responsible for tracking and managing their own sub-wallets/customers; MyMoolah does not track or manage these sub-wallets.

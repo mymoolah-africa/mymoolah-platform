@@ -151,7 +151,7 @@ MyMoolah is a cloud-native, Mojaloop-inspired banking and wallet platform for Af
 - Float account management (ZAR, multi-currency future).
 - Automated float notifications (80/90/95%).
 - Secure client portal for reporting.
-- Each client can have millions of customers, each with an internal wallet managed by the client.
+- Each client can have millions of customers, each with an internal wallet managed by the client (MyMoolah only tracks and manages the main prefunded float account; the client is responsible for tracking and managing their own sub-wallets/customers).
 - Compliance, security, auditability.
 
 ### Service Provider Accounts

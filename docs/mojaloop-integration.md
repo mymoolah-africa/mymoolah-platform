@@ -46,6 +46,12 @@ Mojaloop is an open-source platform designed to enable interoperable, real-time 
 - [Mojaloop Community](https://community.mojaloop.io/)
 - [Mifos Wallet Solution](https://mifos.gitbook.io/docs/mifos-mojaloop/mifos-wallet-solution)
 
+## Client Integration (B2B Float Accounts)
+- Each client (e.g., betting operator) is a participant (DFSP) with a prefunded float account in MyMoolah.
+- MyMoolah only tracks and manages the main prefunded float account for each client.
+- The client is responsible for tracking and managing their own sub-wallets/customers; MyMoolah does not track or manage these sub-wallets.
+- All settlements for products/services are debited from the client's float account.
+
 ---
 
 *This file is the living document for all Mojaloop integration planning, research, and implementation for MyMoolah.* 

@@ -35,6 +35,9 @@ This file is a running log of key decisions, design choices, and important conte
 - Action plan: Document roadmap, update requirements, and begin research and sandbox deployment.
 - All major steps and findings will be documented in requirements.md and new Mojaloop integration docs as needed.
 
+## [2024-07-13] Client Float Account Clarification
+- For B2B clients (e.g., betting operators), MyMoolah only tracks and manages the main prefunded float account for each client. The client is responsible for tracking and managing their own sub-wallets/customers; MyMoolah does not track or manage these sub-wallets.
+
 ---
 
 *Add new entries below for each session or major decision/change.*
