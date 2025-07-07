@@ -41,3 +41,5 @@ Desktop.ini
 *.tmp
 *.swp
 *~ml-core-test-harness/
+mymoolah-wallet-frontend/src/App.css.old
+mymoolah-wallet-frontend/src/components/
