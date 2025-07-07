@@ -1,71 +1,205 @@
-const userModel = require('../models/userModel');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const { User, Wallet } = require('../models');
 
-exports.registerUser = async (req, res) => {
-  // Extract and validate input, call userModel, handle errors, return response
-};
-
-exports.loginUser = async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required.' });
+class UserController {
+  constructor() {
+    // No need to instantiate - Sequelize models are static
   }
-  try {
-    // Find user by email
-    const user = await userModel.findUserByEmailOrMobile(email, null);
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials.' });
+
+  // Get all users
+  async getAllUsers(req, res) {
+    try {
+      const users = await User.findAll({
+        attributes: ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'accountNumber', 'balance', 'status', 'kycStatus', 'createdAt'],
+        include: [{
+          model: Wallet,
+          as: 'wallet',
+          attributes: ['walletId', 'balance', 'currency', 'status']
+        }]
+      });
+      
+      res.json({ 
+        success: true,
+        message: 'Users retrieved successfully',
+        data: { users }
+      });
+    } catch (error) {
+      console.error('❌ Error in getAllUsers:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Internal server error', 
+        details: error.message 
+      });
     }
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials.' });
+  }
+
+  // Get user by ID
+  async getUserById(req, res) {
+    try {
+      const { id } = req.params;
+      const user = await User.findByPk(id, {
+        include: [{
+          model: Wallet,
+          as: 'wallet',
+          attributes: ['walletId', 'balance', 'currency', 'status']
+        }]
+      });
+      
+      if (!user) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'User not found' 
+        });
+      }
+      
+      res.json({ 
+        success: true,
+        message: 'User retrieved successfully',
+        data: { user }
+      });
+    } catch (error) {
+      console.error('❌ Error in getUserById:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Internal server error', 
+        details: error.message 
+      });
     }
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET || 'changeme',
-      { expiresIn: '1d' }
-    );
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
   }
-};
 
-// Assign a role to a user
-exports.assignRoleToUser = async (req, res) => {
-  try {
-    const { userId, roleId } = req.body;
-    const result = await userModel.assignRoleToUser(userId, roleId);
-    res.status(201).json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to assign role' });
+  // Update user profile
+  async updateUser(req, res) {
+    try {
+      const { id } = req.params;
+      const { firstName, lastName, phoneNumber } = req.body;
+      
+      const user = await User.findByPk(id);
+      
+      if (!user) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'User not found' 
+        });
+      }
+      
+      await user.update({
+        firstName,
+        lastName,
+        phoneNumber
+      });
+      
+      res.json({ 
+        success: true,
+        message: 'User updated successfully',
+        data: { userId: id }
+      });
+    } catch (error) {
+      console.error('❌ Error in updateUser:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Internal server error', 
+        details: error.message 
+      });
+    }
   }
-};
 
-// Get all roles for a user
-exports.getUserRoles = async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const roles = await userModel.getUserRoles(userId);
-    res.json(roles);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to get user roles' });
+  // Get user statistics
+  async getUserStats(req, res) {
+    try {
+      const totalUsers = await User.count();
+      const activeUsers = await User.count({ where: { status: 'active' } });
+      const verifiedUsers = await User.count({ where: { kycStatus: 'verified' } });
+      
+      const stats = {
+        totalUsers,
+        activeUsers,
+        verifiedUsers,
+        pendingKYC: totalUsers - verifiedUsers
+      };
+      
+      res.json({ 
+        success: true,
+        message: 'User statistics retrieved successfully',
+        data: { stats }
+      });
+    } catch (error) {
+      console.error('❌ Error in getUserStats:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Internal server error', 
+        details: error.message 
+      });
+    }
   }
-};
 
-// Create a notification (for OTP, info, etc.)
-exports.createNotification = async (req, res) => {
-  try {
-    const { userId, type, message } = req.body;
-    const result = await userModel.createNotification(userId, type, message);
-    res.status(201).json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to create notification' });
+  // Update user status
+  async updateUserStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      const user = await User.findByPk(id);
+      
+      if (!user) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'User not found' 
+        });
+      }
+      
+      await user.update({ status });
+      
+      res.json({ 
+        success: true,
+        message: 'User status updated successfully',
+        data: { userId: id, status }
+      });
+    } catch (error) {
+      console.error('❌ Error in updateUserStatus:', error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Internal server error', 
+        details: error.message 
+      });
+    }
   }
-}; 
+
+  // Get authenticated user's profile
+  async getMe(req, res) {
+    try {
+      const userId = req.user.id;
+      const user = await User.findByPk(userId, {
+        include: [{
+          model: Wallet,
+          as: 'wallet',
+          attributes: ['walletId', 'balance', 'currency', 'status']
+        }]
+      });
+      
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      
+      // Only return safe fields
+      const { id, email, firstName, lastName, phoneNumber, accountNumber, balance, status, kycStatus, createdAt, updatedAt, wallet } = user;
+      res.json({
+        success: true,
+        data: { id, email, firstName, lastName, phoneNumber, accountNumber, balance, status, kycStatus, createdAt, updatedAt, wallet }
+      });
+    } catch (error) {
+      console.error('❌ Error in getMe:', error);
+      res.status(500).json({ success: false, error: 'Internal server error', details: error.message });
+    }
+  }
+}
+
+// Create instance and export methods
+const userController = new UserController();
+
+module.exports = {
+  getAllUsers: userController.getAllUsers.bind(userController),
+  getUserById: userController.getUserById.bind(userController),
+  updateUser: userController.updateUser.bind(userController),
+  getUserStats: userController.getUserStats.bind(userController),
+  updateUserStatus: userController.updateUserStatus.bind(userController),
+  getMe: userController.getMe.bind(userController)
+};

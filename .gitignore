@@ -41,3 +41,11 @@ Desktop.ini
 *.tmp
 *.swp
 *~ml-core-test-harness/
+
+# Ignore backups (large files)
+backups/**
+!backups/.gitkeep
+
+# Ignore backups (large files)
+backups/**
+!backups/.gitkeep

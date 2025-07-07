@@ -1,54 +1,125 @@
-const db = require('../config/db');
+// mymoolah/models/voucherModel.js
 
-// Issue a new voucher
-exports.issueVoucher = async (voucherData) => {
-  // voucherData: { original_amount, issued_to, issued_by, brand_locked, locked_to_id, type, config }
-  const [result] = await db.query(
-    `INSERT INTO vouchers (voucher_code, original_amount, balance, status, issued_to, issued_by, brand_locked, locked_to_id, type, config, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-    [voucherData.voucher_code, voucherData.original_amount, voucherData.original_amount, 'active', voucherData.issued_to, voucherData.issued_by, voucherData.brand_locked, voucherData.locked_to_id, voucherData.type, JSON.stringify(voucherData.config || {})]
-  );
-  return { voucherId: result.insertId, voucher_code: voucherData.voucher_code };
-};
+const { DataTypes } = require('sequelize');
 
-// Redeem a voucher (partial or full)
-exports.redeemVoucher = async (voucher_code, amount, redeemer_id, merchant_id, service_provider_id) => {
-  // Start transaction
-  const conn = await db.getConnection();
-  try {
-    await conn.beginTransaction();
-    // Fetch voucher
-    const [rows] = await conn.query('SELECT * FROM vouchers WHERE voucher_code = ? FOR UPDATE', [voucher_code]);
-    const voucher = rows[0];
-    if (!voucher) throw new Error('Voucher not found');
-    if (voucher.status !== 'active' || voucher.balance <= 0) throw new Error('Voucher not active or already redeemed');
-    // Brand lock check
-    if (voucher.brand_locked && ((voucher.locked_to_id && (voucher.locked_to_id !== merchant_id && voucher.locked_to_id !== service_provider_id)))) {
-      throw new Error('Voucher is brand-locked and cannot be redeemed here');
+module.exports = (sequelize) => {
+  const Voucher = sequelize.define('Voucher', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id'
+      }
+    },
+    voucherCode: {
+      type: DataTypes.STRING(255),
+      allowNull: false,
+      unique: true
+    },
+    easyPayCode: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: true
+    },
+    originalAmount: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false
+    },
+    balance: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
+      defaultValue: 0
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'active', 'redeemed', 'expired', 'cancelled'),
+      allowNull: false,
+      defaultValue: 'pending'
+    },
+    voucherType: {
+      type: DataTypes.ENUM('standard', 'premium', 'business', 'corporate', 'student', 'senior', 'easypay_pending', 'easypay_active'),
+      allowNull: false,
+      defaultValue: 'standard'
+    },
+    expiresAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    redemptionCount: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
+    maxRedemptions: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1
+    },
+    metadata: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW
     }
-    // Partial redemption logic
-    if (amount > voucher.balance) throw new Error('Redemption amount exceeds voucher balance');
-    const newBalance = voucher.balance - amount;
-    const newStatus = newBalance === 0 ? 'fully_redeemed' : 'active';
-    // Update voucher
-    await conn.query('UPDATE vouchers SET balance = ?, status = ?, updated_at = NOW() WHERE voucher_code = ?', [newBalance, newStatus, voucher_code]);
-    // Log redemption (optional: create a voucher_redemptions table for history)
-    await conn.query(
-      'INSERT INTO voucher_redemptions (voucher_id, redeemer_id, amount, merchant_id, service_provider_id, redeemed_at) VALUES (?, ?, ?, ?, ?, NOW())',
-      [voucher.voucher_id, redeemer_id, amount, merchant_id, service_provider_id]
-    );
-    await conn.commit();
-    return { success: true, newBalance, status: newStatus };
-  } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
-  }
-};
+  }, {
+    tableName: 'vouchers',
+    timestamps: true,
+    indexes: [
+      {
+        fields: ['userId']
+      },
+      {
+        fields: ['status']
+      },
+      {
+        fields: ['voucherType']
+      },
+      {
+        fields: ['easyPayCode']
+      },
+      {
+        fields: ['expiresAt']
+      }
+    ]
+  });
 
-// List all active vouchers with positive balance for a user/wallet
-exports.listActiveVouchers = async (userId) => {
-  const [rows] = await db.query('SELECT * FROM vouchers WHERE issued_to = ? AND balance > 0 AND status = \"active\"', [userId]);
-  return rows;
+  // Instance methods
+  Voucher.prototype.isExpired = function() {
+    return this.expiresAt && new Date() > this.expiresAt;
+  };
+
+  Voucher.prototype.canRedeem = function() {
+    return this.status === 'active' && !this.isExpired() && this.balance > 0;
+  };
+
+  Voucher.prototype.isEasyPayVoucher = function() {
+    return this.voucherType === 'easypay_pending' || this.voucherType === 'easypay_active';
+  };
+
+  Voucher.prototype.isPendingEasyPay = function() {
+    return this.voucherType === 'easypay_pending' && this.status === 'pending';
+  };
+
+  Voucher.prototype.isActiveEasyPay = function() {
+    return this.voucherType === 'easypay_active' && this.status === 'active';
+  };
+
+  Voucher.prototype.isRedeemedEasyPay = function() {
+    return this.voucherType === 'easypay_active' && this.status === 'redeemed';
+  };
+
+  return Voucher;
 };

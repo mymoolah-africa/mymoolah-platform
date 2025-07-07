@@ -1,31 +1,24 @@
-const { body, validationResult } = require('express-validator');
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
+const authMiddleware = require('../middleware/auth');
 
-// Place this at the top level, not inside any function:
-router.get('/test', (req, res) => res.json({ ok: true }));
+// Get all users (admin only)
+router.get('/', authMiddleware, userController.getAllUsers);
 
-// ... your other routes ...
-router.post(
-  '/register',
-  [
-    // ... your validation rules ...
-  ],
-  (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    // ... registration logic ...
-    res.json({
-      success: true,
-      user_id: 12345,
-      message: "Registration successful. Please complete KYC."
-    });
-  }
-);
+// Get user by ID
+router.get('/:id', authMiddleware, userController.getUserById);
 
-// ... more routes ...
+// Update user
+router.put('/:id', authMiddleware, userController.updateUser);
+
+// Update user status
+router.patch('/:id/status', authMiddleware, userController.updateUserStatus);
+
+// Get user statistics
+router.get('/stats', authMiddleware, userController.getUserStats);
+
+// Get authenticated user's profile
+router.get('/me', authMiddleware, userController.getMe);
 
 module.exports = router;

@@ -1,48 +1,48 @@
 const express = require('express');
 const router = express.Router();
-
-// In-memory store for demo purposes
-let vouchers = [];
-let nextVoucherId = 1;
+const voucherController = require('../controllers/voucherController');
+const authMiddleware = require('../middleware/auth');
 
 // Issue a new voucher
-router.post('/issue', (req, res) => {
-  const { value, brand, issued_to } = req.body;
-  if (!value || typeof value !== 'number' || value <= 0) {
-    return res.status(400).json({ error: 'Voucher value must be a positive number' });
-  }
-  if (!brand) {
-    return res.status(400).json({ error: 'Brand is required' });
-  }
-  const voucher = {
-    id: nextVoucherId++,
-    code: `VOUCHER${Date.now()}${Math.floor(Math.random() * 1000)}`,
-    value,
-    brand,
-    issued_to: issued_to || null,
-    redeemed: false,
-    redeemed_at: null
-  };
-  vouchers.push(voucher);
-  res.status(201).json({ voucher });
-});
+router.post('/issue', authMiddleware, voucherController.issueVoucher);
+
+// Issue EasyPay voucher
+router.post('/easypay/issue', authMiddleware, voucherController.issueEasyPayVoucher);
+
+// Process EasyPay settlement callback
+router.post('/easypay/settlement', voucherController.processEasyPaySettlement);
+
 // Redeem a voucher
-router.post('/redeem', (req, res) => {
-  const { code } = req.body;
-  const voucher = vouchers.find(v => v.code === code);
-  if (!voucher) {
-    return res.status(404).json({ error: 'Voucher not found' });
-  }
-  if (voucher.redeemed) {
-    return res.status(400).json({ error: 'Voucher already redeemed' });
-  }
-  voucher.redeemed = true;
-  voucher.redeemed_at = new Date().toISOString();
-  res.status(200).json({ voucher });
-});
-// List all vouchers (for demo/testing)
-router.get('/', (req, res) => {
-  res.json({ vouchers });
-});
+router.post('/redeem', voucherController.redeemVoucher);
+
+// List all active vouchers for a user
+router.get('/user/:userId', voucherController.listActiveVouchers);
+
+// GET /api/v1/vouchers/active - List active vouchers for authenticated user
+router.get('/active', authMiddleware, voucherController.listActiveVouchersForMe);
+
+// GET /api/v1/vouchers/balance - Get total voucher balance for authenticated user
+router.get('/balance', authMiddleware, voucherController.getVoucherBalance);
+
+// GET /api/v1/vouchers/balance-summary - Get detailed voucher balance summary for authenticated user
+router.get('/balance-summary', authMiddleware, voucherController.getVoucherBalanceSummary);
+
+// GET /api/v1/vouchers/ - List all vouchers for authenticated user (for dashboard)
+router.get('/', authMiddleware, voucherController.listAllVouchersForMe);
+
+// Get voucher by code
+router.get('/code/:voucher_code', voucherController.getVoucherByCode);
+
+// Get voucher redemption history
+router.get('/:voucher_id/redemptions', voucherController.getVoucherRedemptions);
+
+// GET /api/v1/vouchers/redeemed - List redeemed vouchers for authenticated user
+router.get('/redeemed', authMiddleware, voucherController.listRedeemedVouchersForMe);
+
+// POST /api/v1/vouchers/trigger-expiration - Manual trigger for EasyPay expiration handler (admin only)
+router.post('/trigger-expiration', authMiddleware, voucherController.triggerExpirationHandler);
+
+// POST /api/v1/vouchers/:voucherId/cancel - Cancel EasyPay voucher with full refund
+router.post('/:voucherId/cancel', authMiddleware, voucherController.cancelEasyPayVoucher);
 
 module.exports = router;
