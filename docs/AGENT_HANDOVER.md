@@ -161,6 +161,92 @@ All database access (local and Codespaces/cloud) must use the Cloud SQL Auth Pro
 **Change Log:**
 - [2024-07-13] Added detailed Cloud SQL secure connection and troubleshooting guide for local and Codespaces/cloud environments.
 
+Cloud SQL Access from Codespaces: Step-by-Step Guide
+---------------------------------------------------
+
+**Overview:**
+This guide details how to securely connect to Google Cloud SQL from GitHub Codespaces using the Cloud SQL Auth Proxy, Google Cloud SDK, and Application Default Credentials (ADC). It covers both manual and automated setup, troubleshooting, and best practices for future agents and developers.
+
+### 1. Prerequisites
+- Codespace with Ubuntu/Linux environment
+- Cloud SQL instance details (project, region, instance name)
+- MySQL user credentials
+- Owner or IAM permissions to enable APIs and manage service accounts
+
+### 2. One-Time Google Cloud Setup (Admin)
+- Ensure Cloud SQL Admin API is enabled for the project
+- Create a service account with the Cloud SQL Client role (for CI/CD federation)
+- For interactive dev, user login is sufficient (see below)
+
+### 3. Codespaces Setup (Manual, for Interactive Dev)
+1. **Install Google Cloud SDK:**
+   ```sh
+   curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-470.0.0-linux-x86_64.tar.gz
+   tar -xzf google-cloud-sdk-470.0.0-linux-x86_64.tar.gz
+   ./google-cloud-sdk/install.sh --quiet
+   source ./google-cloud-sdk/path.bash.inc
+   ```
+2. **Authenticate with your Google account:**
+   ```sh
+   gcloud auth login
+   gcloud config set project mymoolah-db
+   gcloud auth application-default login
+   ```
+   - Follow the browser prompts and paste the code as instructed.
+3. **Download and run the Cloud SQL Auth Proxy (v2):**
+   ```sh
+   curl -Lo cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.10.1/cloud-sql-proxy.linux.amd64
+   chmod +x cloud-sql-proxy
+   ./cloud-sql-proxy --address 127.0.0.1 --port 3306 mymoolah-db:africa-south1:mymoolah-instance &
+   ```
+4. **Install MySQL client:**
+   ```sh
+   sudo apt-get update && sudo apt-get install mysql-client
+   ```
+5. **Connect to the database:**
+   ```sh
+   mysql --host=127.0.0.1 --user=mymoolah_user --password --database=mymoolah_db -e 'SHOW TABLES;'
+   ```
+
+### 4. Automation Recommendations
+- **Create a setup script** (e.g., `setup-cloudsql-codespaces.sh`) that:
+  - Installs Google Cloud SDK if not present
+  - Installs MySQL client if not present
+  - Downloads the latest Cloud SQL Auth Proxy
+  - Prompts the user to authenticate (`gcloud auth login` and `gcloud auth application-default login`)
+  - Starts the proxy on a free port
+- **Add checks** for port conflicts and kill old proxy processes automatically
+- **Document all environment variables and config files**
+
+### 5. CI/CD (Federation) vs. Interactive Dev
+- **Federation (Workload Identity Federation):**
+  - Used for GitHub Actions/CI/CD, not interactive Codespaces
+  - Requires OIDC token from GitHub Actions
+  - No service account keys needed
+- **Interactive Dev:**
+  - Use `gcloud auth login` and `gcloud auth application-default login`
+  - No OIDC token available in Codespaces terminal
+
+### 6. Troubleshooting
+- **Port 3306 in use:** Kill old proxy processes (`lsof -i :3306` and `kill <PID>`)
+- **404 errors:** Ensure Cloud SQL Admin API is enabled, project/instance names are correct, and permissions are set
+- **Auth errors:** Re-run `gcloud auth login` and `gcloud auth application-default login`
+- **Federation errors in Codespaces:** Use user login for interactive dev; federation is for CI/CD only
+
+### 7. Security & Best Practices
+- Never commit credentials or config files to git
+- Remove unused service accounts
+- Use federation for CI/CD, user login for dev
+- Document all changes in AGENT_HANDOVER.md and PROJECT_ONBOARDING.md
+
+### 8. References
+- [Cloud SQL Auth Proxy Docs](https://cloud.google.com/sql/docs/mysql/connect-auth-proxy)
+- [Workload Identity Federation](https://cloud.google.com/iam/docs/workload-identity-federation)
+- [Google Cloud SDK Quickstart](https://cloud.google.com/sdk/docs/quickstarts)
+
+**Change Log:**
+- [2024-07-13] Added detailed Codespaces Cloud SQL access, troubleshooting, and automation guide.
+
 ---
 
 Handover Checklist for Future Agents
