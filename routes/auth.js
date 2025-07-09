@@ -26,4 +26,12 @@ router.get('/profile',
   authController.getProfile.bind(authController)
 );
 
+// Test endpoint
+router.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Auth API is working!',
+    timestamp: new Date().toISOString()
+  });
+});
+
 module.exports = router;
