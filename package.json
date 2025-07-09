@@ -1,19 +1,28 @@
 {
   "name": "mymoolah-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "MyMoolah South African Fintech Wallet Platform Backend",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "prepare": "husky install",
-    "test": "jest"
+    "dev": "nodemon server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint .",
+    "prepare": "if [ \"$NODE_ENV\" != \"production\" ] && [ -f ./node_modules/.bin/husky ]; then husky install; fi"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "fintech",
+    "wallet",
+    "mojaloop",
+    "south-africa",
+    "digital-payments"
+  ],
+  "author": "MyMoolah Team",
   "license": "ISC",
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
+    "axios": "^1.10.0",
     "bcrypt": "^6.0.0",
-    "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
@@ -22,12 +31,16 @@
     "mysql2": "^3.14.1",
     "nodemailer": "^7.0.3",
     "openai": "^5.8.2",
+    "sqlite3": "^5.1.7",
     "uuid": "^11.1.0"
   },
-  "description": "",
   "devDependencies": {
     "husky": "^9.1.7",
     "jest": "^30.0.3",
+    "nodemon": "^3.0.0",
     "supertest": "^7.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

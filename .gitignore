@@ -1,20 +1,32 @@
 # macOS system files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 
 # Node modules
 node_modules/
+*/node_modules/
 
 # Environment variables
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+logs/
+*.log
 
 # Build output
 dist/
 build/
+out/
 
 # VS Code settings
 .vscode/
@@ -24,6 +36,7 @@ build/
 
 # Coverage reports
 coverage/
+.nyc_output/
 
 # OS generated files
 Thumbs.db
@@ -40,4 +53,25 @@ Desktop.ini
 *.bak
 *.tmp
 *.swp
-*~ml-core-test-harness/
+*~
+*.tar.gz
+*.gz
+
+# Docker
+.dockerignore
+
+# Temporary files
+*.tmp
+*.temp
+
+# Large files
+*.tar
+*.zip
+*.rar
+*.7z
+
+# Cloud SDK files
+google-cloud-sdk-*
+
+# Backup archives
+*-backup-*.tar.gz
