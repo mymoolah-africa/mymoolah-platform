@@ -1,22 +1,38 @@
-# Sandbox Best Practices - MyMoolah Platform
+# MyMoolah Development Guide
 
-## 🚀 Current Best Practices (July 2025)
+## 🚀 Current Development Practices (July 2025)
 
 **Status**: ✅ **VALIDATED** - All practices tested and working
 
-## 📋 Development Environment Setup
+## 📋 Development Environment
 
-### **Local Development Environment**
-- **Database**: SQLite for simplicity and speed
-- **Server**: Node.js with Express.js on port 5050
-- **Testing**: Comprehensive manual and automated testing
-- **Documentation**: Real-time updates after every change
+### **Local Development Setup**
+```bash
+# Clone repository
+git clone <repository-url>
+cd mymoolah
 
-### **Cloud Development (Codespaces)**
-- **Database**: MySQL for production-like environment
-- **Server**: Same Node.js/Express.js setup
-- **Testing**: Full integration testing
-- **Deployment**: Automated deployment pipeline ready
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Server runs on http://localhost:5050
+```
+
+### **Environment Configuration**
+```bash
+# Create .env file
+PORT=5050
+JWT_SECRET=your-secret-key
+NODE_ENV=development
+```
+
+### **Database Setup**
+- **Local**: SQLite database at `data/mymoolah.db`
+- **Cloud**: MySQL database in Codespaces
+- **Tables**: Automatically created on server startup
 
 ## 🔧 Development Workflow
 
@@ -54,9 +70,9 @@ node test-api-endpoints.js
 - **Process**: Agent updates docs, commits, and pushes to GitHub
 - **Review**: Product owner reviews and approves
 
-## 🧪 Testing Best Practices
+## 🧪 Testing Strategy
 
-### **Comprehensive Testing Strategy**
+### **Comprehensive Testing**
 - ✅ **Unit Testing**: Individual component testing
 - ✅ **Integration Testing**: API endpoint testing
 - ✅ **End-to-End Testing**: Complete workflow testing
@@ -98,14 +114,38 @@ node test-database.js
 # Check all tables have expected data
 ```
 
-## 📊 Quality Assurance
+## 📊 Code Quality Standards
 
-### **Code Quality Standards**
-- ✅ **Consistent Formatting**: Use Prettier for code formatting
-- ✅ **Error Handling**: Comprehensive error handling across all endpoints
-- ✅ **Input Validation**: Sanitization and validation of all inputs
-- ✅ **Security**: JWT authentication and rate limiting
-- ✅ **Documentation**: Inline comments and comprehensive docs
+### **Code Structure**
+```javascript
+// Controllers - Business logic
+controllers/
+├── authController.js      // Authentication logic
+├── userController.js      // User management
+├── walletController.js    // Wallet operations
+├── transactionController.js // Transaction processing
+└── kycController.js       // KYC document management
+
+// Models - Database models
+models/
+├── User.js               // User model (SQLite)
+├── walletModel.js        // Wallet model
+├── transactionModel.js   // Transaction model
+└── userModel.js          // User model (MySQL)
+
+// Routes - API endpoints
+routes/
+├── auth.js               // Authentication routes
+├── users.js              // User management routes
+├── wallets.js            // Wallet operation routes
+├── transactions.js       // Transaction routes
+└── kyc.js               // KYC management routes
+
+// Middleware - Express middleware
+middleware/
+├── auth.js               // JWT authentication
+└── rateLimiter.js        // Rate limiting
+```
 
 ### **API Response Standards**
 ```json
@@ -127,7 +167,7 @@ node test-database.js
 }
 ```
 
-## 🔐 Security Best Practices
+## 🔐 Security Implementation
 
 ### **Authentication**
 - ✅ **JWT Tokens**: Secure token generation and validation
@@ -141,7 +181,42 @@ node test-database.js
 - ✅ **CORS Configuration**: Proper cross-origin resource sharing
 - ✅ **Input Sanitization**: Prevent injection attacks
 
-## 📚 Documentation Best Practices
+## 🗄️ Database Development
+
+### **SQLite (Local Development)**
+```bash
+# Database file location
+data/mymoolah.db
+
+# Check database tables
+sqlite3 data/mymoolah.db ".tables"
+
+# Check table schemas
+sqlite3 data/mymoolah.db ".schema users"
+sqlite3 data/mymoolah.db ".schema wallets"
+sqlite3 data/mymoolah.db ".schema transactions"
+sqlite3 data/mymoolah.db ".schema kyc"
+
+# Check data counts
+sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM users;"
+sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM wallets;"
+sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM transactions;"
+sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM kyc;"
+```
+
+### **Database Operations**
+```bash
+# Initialize new tables
+node scripts/init-kyc-table.js
+
+# Backup database
+cp data/mymoolah.db data/mymoolah.db.backup
+
+# Restore database
+cp data/mymoolah.db.backup data/mymoolah.db
+```
+
+## 📚 Documentation Standards
 
 ### **Documentation Rule**
 - **Responsibility**: Agent must write, update, and maintain ALL documentation
@@ -166,45 +241,7 @@ node test-database.js
 - **Examples**: Include curl commands and code examples
 - **Status**: Always indicate current status (working/not working)
 
-## 🗄️ Database Best Practices
-
-### **SQLite (Local Development)**
-- ✅ **Automatic Creation**: Tables created automatically on startup
-- ✅ **Data Integrity**: Foreign key relationships working
-- ✅ **Backup Strategy**: Regular database backups
-- ✅ **Migration Strategy**: Ready for MySQL migration
-
-### **Database Operations**
-```bash
-# Initialize new tables
-node scripts/init-kyc-table.js
-
-# Backup database
-cp data/mymoolah.db data/mymoolah.db.backup
-
-# Restore database
-cp data/mymoolah.db.backup data/mymoolah.db
-```
-
-### **Data Verification**
-```bash
-# Check database tables
-sqlite3 data/mymoolah.db ".tables"
-
-# Check table schemas
-sqlite3 data/mymoolah.db ".schema users"
-sqlite3 data/mymoolah.db ".schema wallets"
-sqlite3 data/mymoolah.db ".schema transactions"
-sqlite3 data/mymoolah.db ".schema kyc"
-
-# Check data counts
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM users;"
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM wallets;"
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM transactions;"
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM kyc;"
-```
-
-## 🚀 Deployment Best Practices
+## 🚀 Deployment Process
 
 ### **Local Deployment**
 ```bash
@@ -228,15 +265,7 @@ npm start
 curl http://localhost:5050/test
 ```
 
-### **Environment Configuration**
-```bash
-# Create .env file
-PORT=5050
-JWT_SECRET=your-secret-key
-NODE_ENV=development
-```
-
-## 📈 Performance Best Practices
+## 📈 Performance Optimization
 
 ### **Current Performance**
 - ✅ **Response Time**: < 200ms for most endpoints
@@ -256,7 +285,7 @@ sqlite3 data/mymoolah.db "PRAGMA stats;"
 time curl http://localhost:5050/api/v1/users
 ```
 
-## 🔄 Version Control Best Practices
+## 🔄 Version Control
 
 ### **Git Workflow**
 ```bash
@@ -283,9 +312,16 @@ git push origin main
 cp data/mymoolah.db data/mymoolah.db.$(date +%Y%m%d)
 ```
 
-## 🎯 Testing Best Practices
+## 🎯 Development Best Practices
 
-### **Comprehensive Testing**
+### **Code Quality**
+- ✅ **Consistent Formatting**: Use Prettier for code formatting
+- ✅ **Error Handling**: Comprehensive error handling across all endpoints
+- ✅ **Input Validation**: Sanitization and validation of all inputs
+- ✅ **Security**: JWT authentication and rate limiting
+- ✅ **Documentation**: Inline comments and comprehensive docs
+
+### **Testing Best Practices**
 - ✅ **Authentication Testing**: Register, login, JWT validation
 - ✅ **Wallet Testing**: Credit, debit, balance, transactions
 - ✅ **Data Testing**: Users, transactions, KYC records
@@ -324,7 +360,7 @@ curl http://localhost:5050/api/v1/users
 - ✅ **Performance Logging**: Response time logging
 - ✅ **Security Logging**: Authentication and authorization logging
 
-## 🚨 Troubleshooting Best Practices
+## 🚨 Troubleshooting
 
 ### **Common Issues**
 ```bash
@@ -386,6 +422,6 @@ curl -v http://localhost:5050/api/v1/users
 
 ---
 
-**Best Practices Updated**: July 10, 2025  
+**Development Guide Updated**: July 10, 2025  
 **Status**: ✅ **ALL PRACTICES VALIDATED**  
 **Next Review**: After major platform changes 

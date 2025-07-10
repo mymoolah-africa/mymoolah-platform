@@ -1,71 +1,113 @@
-const userModel = require('../models/userModel');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const { User } = require('../models/User');
 
-exports.registerUser = async (req, res) => {
-  // Extract and validate input, call userModel, handle errors, return response
+// Get all users
+exports.getAllUsers = async (req, res) => {
+  try {
+    const db = require('../models/User').db;
+    db.all('SELECT id, firstName, lastName, email, walletId, createdAt FROM users', [], (err, rows) => {
+      if (err) {
+        console.error('❌ Error getting users:', err);
+        return res.status(500).json({ 
+          success: false,
+          error: 'Database error', 
+          details: err.message 
+        });
+      }
+      res.json({ 
+        success: true,
+        message: 'Users retrieved successfully',
+        data: { users: rows }
+      });
+    });
+  } catch (error) {
+    console.error('❌ Error in getAllUsers:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error', 
+      details: error.message 
+    });
+  }
 };
 
-exports.loginUser = async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ message: 'Email and password are required.' });
-  }
+// Get user by ID
+exports.getUserById = async (req, res) => {
   try {
-    // Find user by email
-    const user = await userModel.findUserByEmailOrMobile(email, null);
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials.' });
-    }
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(401).json({ message: 'Invalid credentials.' });
-    }
-    // Generate JWT
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET || 'changeme',
-      { expiresIn: '1d' }
+    const { id } = req.params;
+    const db = require('../models/User').db;
+    
+    db.get('SELECT id, firstName, lastName, email, walletId, createdAt FROM users WHERE id = ?', [id], (err, row) => {
+      if (err) {
+        console.error('❌ Error getting user:', err);
+        return res.status(500).json({ 
+          success: false,
+          error: 'Database error', 
+          details: err.message 
+        });
+      }
+      
+      if (!row) {
+        return res.status(404).json({ 
+          success: false,
+          message: 'User not found' 
+        });
+      }
+      
+      res.json({ 
+        success: true,
+        message: 'User retrieved successfully',
+        data: { user: row }
+      });
+    });
+  } catch (error) {
+    console.error('❌ Error in getUserById:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error', 
+      details: error.message 
+    });
+  }
+};
+
+// Update user profile
+exports.updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { firstName, lastName, email } = req.body;
+    const db = require('../models/User').db;
+    
+    db.run(
+      'UPDATE users SET firstName = ?, lastName = ?, email = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
+      [firstName, lastName, email, id],
+      function(err) {
+        if (err) {
+          console.error('❌ Error updating user:', err);
+          return res.status(500).json({ 
+            success: false,
+            error: 'Database error', 
+            details: err.message 
+          });
+        }
+        
+        if (this.changes === 0) {
+          return res.status(404).json({ 
+            success: false,
+            message: 'User not found' 
+          });
+        }
+        
+        res.json({ 
+          success: true,
+          message: 'User updated successfully',
+          data: { userId: id }
+        });
+      }
     );
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+  } catch (error) {
+    console.error('❌ Error in updateUser:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error', 
+      details: error.message 
+    });
   }
 };
-
-// Assign a role to a user
-exports.assignRoleToUser = async (req, res) => {
-  try {
-    const { userId, roleId } = req.body;
-    const result = await userModel.assignRoleToUser(userId, roleId);
-    res.status(201).json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to assign role' });
-  }
-};
-
-// Get all roles for a user
-exports.getUserRoles = async (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const roles = await userModel.getUserRoles(userId);
-    res.json(roles);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to get user roles' });
-  }
-};
-
-// Create a notification (for OTP, info, etc.)
-exports.createNotification = async (req, res) => {
-  try {
-    const { userId, type, message } = req.body;
-    const result = await userModel.createNotification(userId, type, message);
-    res.status(201).json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to create notification' });
-  }
-}; 

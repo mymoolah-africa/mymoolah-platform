@@ -3,252 +3,203 @@ const path = require('path');
 
 class Transaction {
   constructor() {
-    // SQLite database file path
-    this.dbPath = path.join(__dirname, '..', 'data', 'mymoolah.db');
-    this.db = null;
+    this.dbPath = path.join(__dirname, '../data/mymoolah.db');
+    this.db = new sqlite3.Database(this.dbPath);
+    this.initTable();
   }
 
-  async getConnection() {
-    if (!this.db) {
-      this.db = new sqlite3.Database(this.dbPath);
-    }
-    return this.db;
-  }
+  // Initialize transactions table
+  initTable() {
+    const createTableSQL = `
+      CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transactionId TEXT UNIQUE NOT NULL,
+        senderWalletId TEXT,
+        receiverWalletId TEXT,
+        amount REAL NOT NULL,
+        type TEXT NOT NULL CHECK(type IN ('send', 'receive', 'deposit', 'withdraw')),
+        status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'completed', 'failed', 'cancelled')),
+        description TEXT,
+        fee REAL DEFAULT 0.00,
+        currency TEXT DEFAULT 'ZAR',
+        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (senderWalletId) REFERENCES users (wallet_id),
+        FOREIGN KEY (receiverWalletId) REFERENCES users (wallet_id)
+      )
+    `;
 
-  async createTable() {
-    const db = await this.getConnection();
-    
-    return new Promise((resolve, reject) => {
-      db.run(`
-        CREATE TABLE IF NOT EXISTS transactions (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id INTEGER NOT NULL,
-          wallet_id TEXT NOT NULL,
-          transaction_type TEXT NOT NULL,
-          transaction_category TEXT NOT NULL,
-          amount REAL NOT NULL,
-          currency TEXT DEFAULT 'ZAR',
-          status TEXT DEFAULT 'pending',
-          reference_number TEXT UNIQUE,
-          description TEXT,
-          
-          -- Transaction Details
-          recipient_name TEXT,
-          recipient_account TEXT,
-          recipient_bank TEXT,
-          recipient_wallet_id TEXT,
-          
-          -- Voucher Details
-          voucher_code TEXT,
-          voucher_provider TEXT,
-          voucher_limit REAL,
-          
-          -- Integration Details
-          integration_provider TEXT,
-          integration_reference TEXT,
-          integration_status TEXT,
-          
-          -- Metadata
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          processed_at DATETIME,
-          
-          -- Foreign Key
-          FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-      `, (err) => {
-        if (err) {
-          console.error('❌ Error creating transactions table:', err);
-          reject(err);
-        } else {
-          console.log('✅ Transactions table created successfully');
-          resolve();
-        }
-      });
-    });
-  }
-
-  async createTransaction(transactionData) {
-    const db = await this.getConnection();
-    
-    return new Promise((resolve, reject) => {
-      try {
-        // Generate unique reference number
-        const referenceNumber = `TXN${Date.now()}${Math.random().toString(36).substr(2, 9)}`;
-        
-        const insertSQL = `
-          INSERT INTO transactions (
-            user_id, wallet_id, transaction_type, transaction_category,
-            amount, currency, status, reference_number, description,
-            recipient_name, recipient_account, recipient_bank, recipient_wallet_id,
-            voucher_code, voucher_provider, voucher_limit,
-            integration_provider, integration_reference, integration_status
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        
-        db.run(insertSQL, [
-          transactionData.userId,
-          transactionData.walletId,
-          transactionData.transactionType,
-          transactionData.transactionCategory,
-          transactionData.amount,
-          transactionData.currency || 'ZAR',
-          transactionData.status || 'pending',
-          referenceNumber,
-          transactionData.description,
-          transactionData.recipientName,
-          transactionData.recipientAccount,
-          transactionData.recipientBank,
-          transactionData.recipientWalletId,
-          transactionData.voucherCode,
-          transactionData.voucherProvider,
-          transactionData.voucherLimit,
-          transactionData.integrationProvider,
-          transactionData.integrationReference,
-          transactionData.integrationStatus
-        ], function(err) {
-          if (err) {
-            console.error('❌ Error creating transaction:', err);
-            reject(err);
-          } else {
-            resolve({
-              id: this.lastID,
-              referenceNumber: referenceNumber,
-              ...transactionData
-            });
-          }
-        });
-      } catch (error) {
-        reject(error);
+    this.db.run(createTableSQL, (err) => {
+      if (err) {
+        console.error('❌ Error creating transactions table:', err.message);
+      } else {
+        console.log('✅ Transactions table ready');
       }
     });
   }
 
-  async getTransactionById(id) {
-    const db = await this.getConnection();
-    
+  // Generate unique transaction ID
+  generateTransactionId() {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    return `TXN${timestamp}${random}`;
+  }
+
+  // Create a new transaction
+  async createTransaction(transactionData) {
     return new Promise((resolve, reject) => {
-      const selectSQL = 'SELECT * FROM transactions WHERE id = ?';
-      db.get(selectSQL, [id], (err, row) => {
+      const {
+        senderWalletId,
+        receiverWalletId,
+        amount,
+        type,
+        description = '',
+        fee = 0.00,
+        currency = 'ZAR'
+      } = transactionData;
+
+      const transactionId = this.generateTransactionId();
+      const sql = `
+        INSERT INTO transactions (
+          transactionId, senderWalletId, receiverWalletId, 
+          amount, type, description, fee, currency
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `;
+
+      this.db.run(sql, [
+        transactionId, senderWalletId, receiverWalletId,
+        amount, type, description, fee, currency
+      ], function(err) {
         if (err) {
-          console.error('❌ Error finding transaction by ID:', err);
+          console.error('❌ Error creating transaction:', err.message);
           reject(err);
         } else {
-          resolve(row || null);
+          resolve({
+            id: this.lastID,
+            transactionId,
+            senderWalletId,
+            receiverWalletId,
+            amount,
+            type,
+            status: 'pending',
+            description,
+            fee,
+            currency,
+            createdAt: new Date().toISOString()
+          });
         }
       });
     });
   }
 
-  async getTransactionByReference(referenceNumber) {
-    const db = await this.getConnection();
-    
+  // Get transaction by ID
+  async getTransactionById(transactionId) {
     return new Promise((resolve, reject) => {
-      const selectSQL = 'SELECT * FROM transactions WHERE reference_number = ?';
-      db.get(selectSQL, [referenceNumber], (err, row) => {
+      const sql = 'SELECT * FROM transactions WHERE transactionId = ?';
+      
+      this.db.get(sql, [transactionId], (err, row) => {
         if (err) {
-          console.error('❌ Error finding transaction by reference:', err);
+          console.error('❌ Error getting transaction:', err.message);
           reject(err);
         } else {
-          resolve(row || null);
+          resolve(row);
         }
       });
     });
   }
 
-  async getTransactionsByUserId(userId, limit = 50, offset = 0) {
-    const db = await this.getConnection();
-    
+  // Get transactions for a wallet
+  async getWalletTransactions(walletId, limit = 50, offset = 0) {
     return new Promise((resolve, reject) => {
-      const selectSQL = `
+      const sql = `
         SELECT * FROM transactions 
-        WHERE user_id = ? 
-        ORDER BY created_at DESC 
+        WHERE senderWalletId = ? OR receiverWalletId = ?
+        ORDER BY createdAt DESC
         LIMIT ? OFFSET ?
       `;
-      db.all(selectSQL, [userId, limit, offset], (err, rows) => {
+      
+      this.db.all(sql, [walletId, walletId, limit, offset], (err, rows) => {
         if (err) {
-          console.error('❌ Error finding transactions by user ID:', err);
+          console.error('❌ Error getting wallet transactions:', err.message);
           reject(err);
         } else {
-          resolve(rows || []);
+          resolve(rows);
         }
       });
     });
   }
 
-  async getTransactionsByWalletId(walletId, limit = 50, offset = 0) {
-    const db = await this.getConnection();
-    
+  // Update transaction status
+  async updateTransactionStatus(transactionId, status) {
     return new Promise((resolve, reject) => {
-      const selectSQL = `
-        SELECT * FROM transactions 
-        WHERE wallet_id = ? 
-        ORDER BY created_at DESC 
-        LIMIT ? OFFSET ?
-      `;
-      db.all(selectSQL, [walletId, limit, offset], (err, rows) => {
-        if (err) {
-          console.error('❌ Error finding transactions by wallet ID:', err);
-          reject(err);
-        } else {
-          resolve(rows || []);
-        }
-      });
-    });
-  }
-
-  async updateTransactionStatus(id, status, processedAt = null) {
-    const db = await this.getConnection();
-    
-    return new Promise((resolve, reject) => {
-      const updateSQL = `
+      const sql = `
         UPDATE transactions 
-        SET status = ?, processed_at = ?, updated_at = CURRENT_TIMESTAMP 
-        WHERE id = ?
+        SET status = ?, updatedAt = CURRENT_TIMESTAMP 
+        WHERE transactionId = ?
       `;
-      db.run(updateSQL, [status, processedAt, id], (err) => {
+      
+      this.db.run(sql, [status, transactionId], function(err) {
         if (err) {
-          console.error('❌ Error updating transaction status:', err);
+          console.error('❌ Error updating transaction status:', err.message);
           reject(err);
         } else {
-          resolve(true);
+          resolve({ changes: this.changes });
         }
       });
     });
   }
 
-  async getTransactionSummary(userId) {
-    const db = await this.getConnection();
-    
+  // Get transaction statistics for a wallet
+  async getWalletStats(walletId) {
     return new Promise((resolve, reject) => {
-      const selectSQL = `
+      const sql = `
         SELECT 
-          transaction_type,
-          transaction_category,
-          COUNT(*) as count,
-          SUM(amount) as total_amount,
-          AVG(amount) as avg_amount
+          COUNT(*) as totalTransactions,
+          SUM(CASE WHEN type = 'send' THEN amount ELSE 0 END) as totalSent,
+          SUM(CASE WHEN type = 'receive' THEN amount ELSE 0 END) as totalReceived,
+          SUM(CASE WHEN type = 'deposit' THEN amount ELSE 0 END) as totalDeposited,
+          SUM(CASE WHEN type = 'withdraw' THEN amount ELSE 0 END) as totalWithdrawn,
+          SUM(fee) as totalFees
         FROM transactions 
-        WHERE user_id = ? 
-        GROUP BY transaction_type, transaction_category
+        WHERE (senderWalletId = ? OR receiverWalletId = ?) 
+        AND status = 'completed'
       `;
-      db.all(selectSQL, [userId], (err, rows) => {
+      
+      this.db.get(sql, [walletId, walletId], (err, row) => {
         if (err) {
-          console.error('❌ Error getting transaction summary:', err);
+          console.error('❌ Error getting wallet stats:', err.message);
           reject(err);
         } else {
-          resolve(rows || []);
+          resolve(row);
         }
       });
     });
   }
 
-  async closeConnection() {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-    }
+  // Get recent transactions (for dashboard)
+  async getRecentTransactions(walletId, limit = 10) {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT * FROM transactions 
+        WHERE senderWalletId = ? OR receiverWalletId = ?
+        ORDER BY createdAt DESC
+        LIMIT ?
+      `;
+      
+      this.db.all(sql, [walletId, walletId, limit], (err, rows) => {
+        if (err) {
+          console.error('❌ Error getting recent transactions:', err.message);
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  // Close database connection
+  close() {
+    this.db.close();
   }
 }
 

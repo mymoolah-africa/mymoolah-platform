@@ -8,8 +8,9 @@ async function testAuth() {
   try {
     // Test 1: Register a new user
     console.log('1️⃣ Testing User Registration...');
+    const timestamp = Date.now();
     const registerData = {
-      email: 'test@mymoolah.com',
+      email: `test${timestamp}@mymoolah.com`,
       password: 'password123',
       firstName: 'John',
       lastName: 'Doe',
@@ -23,11 +24,12 @@ async function testAuth() {
     console.log('   Token received:', registerResponse.data.data.token ? 'Yes' : 'No');
 
     const token = registerResponse.data.data.token;
+    const userEmail = registerData.email;
 
     // Test 2: Login with the same user
     console.log('\n2️⃣ Testing User Login...');
     const loginData = {
-      email: 'test@mymoolah.com',
+      email: userEmail,
       password: 'password123'
     };
 

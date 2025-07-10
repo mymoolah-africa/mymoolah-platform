@@ -11,12 +11,17 @@ process.on('SIGINT', () => {
 
 const express = require('express');
 const cors = require('cors');
+const { authLimiter, apiLimiter } = require('./middleware/rateLimiter');
 const app = express();
 const port = process.env.PORT || 5050;
 const supportRoutes = require('./routes/support');
 
 app.use(cors());
 app.use(express.json());
+
+// Apply rate limiting
+app.use('/api/v1/auth', authLimiter); // Stricter rate limiting for auth endpoints
+app.use('/api/v1', apiLimiter); // General rate limiting for all API endpoints
 
 app.use('/api/v1/users', require('./routes/users'));
 app.use('/api/v1/clients', require('./routes/clients'));
@@ -30,6 +35,7 @@ app.use('/api/v1/vas', require('./routes/vas'));
 app.use('/api/v1/serviceproviders', require('./routes/serviceproviders'));
 app.use('/api/v1/merchants', require('./routes/merchants'));
 app.use('/api/v1/support', supportRoutes);
+app.use('/api/v1/mercury', require('./routes/mercury'));
 
 app.get('/', (req, res) => {
   res.send('Hello World!');

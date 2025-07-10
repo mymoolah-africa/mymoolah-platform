@@ -1,111 +1,116 @@
+const userModel = require('../models/User');
+const walletModel = require('../models/walletModel');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { body, validationResult } = require('express-validator');
-const User = require('../models/User');
+const crypto = require('crypto');
+const { validationResult, body } = require('express-validator');
 
 class AuthController {
   constructor() {
-    this.userModel = new User();
-    this.jwtSecret = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+    this.userModel = userModel;
+    this.initialize();
   }
 
-  // Initialize database table
-  async initialize() {
-    try {
-      await this.userModel.createTable();
-      console.log('✅ Auth system initialized');
-    } catch (error) {
-      console.error('❌ Error initializing auth system:', error);
-    }
+  initialize() {
+    console.log('✅ Auth system initialized');
   }
 
-  // Validation rules for registration
+  // Validation middleware for registration
   validateRegistration() {
     return [
-      body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+      body('firstName').notEmpty().withMessage('First name is required'),
+      body('lastName').notEmpty().withMessage('Last name is required'),
+      body('email').isEmail().withMessage('Valid email is required'),
       body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-      body('firstName').notEmpty().trim().withMessage('First name is required'),
-      body('lastName').notEmpty().trim().withMessage('Last name is required'),
       body('phoneNumber').optional().isMobilePhone().withMessage('Valid phone number is required')
     ];
   }
 
-  // Validation rules for login
+  // Validation middleware for login
   validateLogin() {
     return [
-      body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+      body('email').isEmail().withMessage('Valid email is required'),
       body('password').notEmpty().withMessage('Password is required')
     ];
   }
 
-  // Register new user
+  // Register a new user
   async register(req, res) {
     try {
-      // Check for validation errors
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          message: 'Validation failed',
+          message: 'Validation errors',
           errors: errors.array()
         });
       }
 
       const { email, password, firstName, lastName, phoneNumber } = req.body;
 
+      // Validate input
+      if (!email || !password || !firstName || !lastName) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email, password, firstName, and lastName are required'
+        });
+      }
+
       // Check if user already exists
       const existingUser = await this.userModel.findUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({
           success: false,
-          message: 'User with this email already exists'
+          message: 'Email already exists'
         });
       }
 
-      // Create new user
-      const userData = {
+      // Create user
+      const user = await this.userModel.createUser({
         email,
         password,
         firstName,
         lastName,
         phoneNumber
-      };
+      });
 
-      const newUser = await this.userModel.createUser(userData);
+      // Create wallet for user
+      const wallet = await walletModel.createWallet(user.id, user.walletId);
 
       // Generate JWT token
       const token = jwt.sign(
         { 
-          userId: newUser.id, 
-          email: newUser.email,
-          walletId: newUser.walletId 
+          userId: user.id, 
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName
         },
-        this.jwtSecret,
+        process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: '24h' }
       );
 
-      // Return success response (without password)
       res.status(201).json({
         success: true,
         message: 'User registered successfully',
         data: {
           user: {
-            id: newUser.id,
-            email: newUser.email,
-            firstName: newUser.firstName,
-            lastName: newUser.lastName,
-            phoneNumber: newUser.phoneNumber,
-            walletId: newUser.walletId,
-            balance: newUser.balance
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            walletId: user.walletId,
+            balance: 0.00 // Wallet starts with 0 balance
           },
           token
         }
       });
 
     } catch (error) {
-      console.error('❌ Registration error:', error);
+      console.error('❌ Error registering user:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error during registration'
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
       });
     }
   }
@@ -113,41 +118,40 @@ class AuthController {
   // Login user
   async login(req, res) {
     try {
-      // Check for validation errors
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
           success: false,
-          message: 'Validation failed',
+          message: 'Validation errors',
           errors: errors.array()
         });
       }
 
       const { email, password } = req.body;
 
+      // Validate input
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email and password are required'
+        });
+      }
+
       // Find user by email
       const user = await this.userModel.findUserByEmail(email);
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid email or password'
+          message: 'Invalid credentials'
         });
       }
 
-      // Check if user is active
-      if (user.status !== 'active') {
-        return res.status(401).json({
-          success: false,
-          message: 'Account is not active'
-        });
-      }
-
-      // Validate password
+      // Verify password
       const isValidPassword = await this.userModel.validatePassword(user, password);
       if (!isValidPassword) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid email or password'
+          message: 'Invalid credentials'
         });
       }
 
@@ -156,24 +160,23 @@ class AuthController {
         { 
           userId: user.id, 
           email: user.email,
-          walletId: user.wallet_id 
+          walletId: user.walletId
         },
-        this.jwtSecret,
+        process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: '24h' }
       );
 
-      // Return success response
-      res.status(200).json({
+      res.json({
         success: true,
         message: 'Login successful',
         data: {
           user: {
             id: user.id,
             email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            phoneNumber: user.phone_number,
-            walletId: user.wallet_id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phoneNumber: user.phoneNumber,
+            walletId: user.walletId,
             balance: user.balance
           },
           token
@@ -181,15 +184,245 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('❌ Login error:', error);
+      console.error('❌ Error logging in:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error during login'
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
       });
     }
   }
 
-  // Get current user profile
+  // Request password reset
+  async requestPasswordReset(req, res) {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Email is required'
+        });
+      }
+
+      // Find user by email
+      const user = await this.userModel.findUserByEmail(email);
+      if (!user) {
+        // Don't reveal if user exists or not for security
+        return res.json({
+          success: true,
+          message: 'If the email exists, a password reset link has been sent'
+        });
+      }
+
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+
+      // Store reset token in user record
+      await this.userModel.updateResetToken(user.id, resetToken, resetTokenExpiry);
+
+      // In a real application, you would send an email here
+      // For now, we'll return the token for testing purposes
+      res.json({
+        success: true,
+        message: 'Password reset link sent successfully',
+        data: {
+          resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined,
+          expiresAt: resetTokenExpiry
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Error requesting password reset:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+      });
+    }
+  }
+
+  // Validate reset token
+  async validateResetToken(req, res) {
+    try {
+      const { resetToken } = req.body;
+
+      if (!resetToken) {
+        return res.status(400).json({
+          success: false,
+          message: 'Reset token is required'
+        });
+      }
+
+      // Find user by reset token
+      const user = await this.userModel.findUserByResetToken(resetToken);
+      if (!user) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid or expired reset token'
+        });
+      }
+
+      // Check if token is expired
+      if (new Date() > new Date(user.resetTokenExpiry)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Reset token has expired'
+        });
+      }
+
+      res.json({
+        success: true,
+        message: 'Reset token is valid',
+        data: {
+          email: user.email
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Error validating reset token:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+      });
+    }
+  }
+
+  // Reset password
+  async resetPassword(req, res) {
+    try {
+      const { resetToken, newPassword } = req.body;
+
+      if (!resetToken || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Reset token and new password are required'
+        });
+      }
+
+      // Validate password strength
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 6 characters long'
+        });
+      }
+
+      // Find user by reset token
+      const user = await this.userModel.findUserByResetToken(resetToken);
+      if (!user) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid or expired reset token'
+        });
+      }
+
+      // Check if token is expired
+      if (new Date() > new Date(user.resetTokenExpiry)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Reset token has expired'
+        });
+      }
+
+      // Update password and clear reset token
+      await this.userModel.updatePassword(user.id, newPassword);
+      await this.userModel.clearResetToken(user.id);
+
+      res.json({
+        success: true,
+        message: 'Password reset successfully'
+      });
+
+    } catch (error) {
+      console.error('❌ Error resetting password:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+      });
+    }
+  }
+
+  // Change password (for authenticated users)
+  async changePassword(req, res) {
+    try {
+      const userId = req.user.userId;
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current password and new password are required'
+        });
+      }
+
+      // Validate password strength
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 6 characters long'
+        });
+      }
+
+      // Get user
+      const user = await this.userModel.findUserById(userId);
+      if (!user) {
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      // Verify current password
+      const isValidPassword = await this.userModel.validatePassword(user, currentPassword);
+      if (!isValidPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current password is incorrect'
+        });
+      }
+
+      // Update password
+      await this.userModel.updatePassword(userId, newPassword);
+
+      res.json({
+        success: true,
+        message: 'Password changed successfully'
+      });
+
+    } catch (error) {
+      console.error('❌ Error changing password:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+      });
+    }
+  }
+
+  // Logout (optional - for session management)
+  async logout(req, res) {
+    try {
+      // In a real application, you might want to blacklist the token
+      // For now, we'll just return a success message
+      res.json({
+        success: true,
+        message: 'Logged out successfully'
+      });
+    } catch (error) {
+      console.error('❌ Error logging out:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+      });
+    }
+  }
+
+  // Get user profile (protected route)
   async getProfile(req, res) {
     try {
       const userId = req.user.userId;
@@ -202,30 +435,31 @@ class AuthController {
         });
       }
 
-      res.status(200).json({
+      res.json({
         success: true,
+        message: 'Profile retrieved successfully',
         data: {
           user: {
             id: user.id,
             email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            phoneNumber: user.phone_number,
-            walletId: user.wallet_id,
-            balance: user.balance,
-            status: user.status
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phoneNumber: user.phoneNumber,
+            walletId: user.walletId,
+            balance: user.balance
           }
         }
       });
 
     } catch (error) {
-      console.error('❌ Get profile error:', error);
+      console.error('❌ Error getting profile:', error);
       res.status(500).json({
         success: false,
-        message: 'Internal server error'
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
       });
     }
   }
 }
 
-module.exports = AuthController; 
+module.exports = AuthController;
