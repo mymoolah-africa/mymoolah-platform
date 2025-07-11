@@ -32,6 +32,34 @@ class Wallet {
     });
   }
 
+  // Add this async createTable method for compatibility
+  async createTable() {
+    return new Promise((resolve, reject) => {
+      const createTableSQL = `
+        CREATE TABLE IF NOT EXISTS wallets (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          userId INTEGER NOT NULL,
+          walletId TEXT UNIQUE NOT NULL,
+          balance REAL DEFAULT 0.00,
+          currency TEXT DEFAULT 'ZAR',
+          status TEXT DEFAULT 'active',
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY(userId) REFERENCES users(id)
+        )
+      `;
+      this.db.run(createTableSQL, (err) => {
+        if (err) {
+          console.error('❌ Error creating wallets table:', err.message);
+          reject(err);
+        } else {
+          console.log('✅ Wallets table created successfully');
+          resolve();
+        }
+      });
+    });
+  }
+
   // Create a wallet for a user
   async createWallet(userId, walletId) {
     return new Promise((resolve, reject) => {

@@ -1,4 +1,7 @@
-const voucherModel = require('../models/voucherModel');
+const VoucherModel = require('../models/voucherModel');
+
+// Create a single instance of VoucherModel
+const voucherModel = new VoucherModel();
 
 exports.issueVoucher = async (req, res) => {
   try {
@@ -46,5 +49,30 @@ exports.listActiveVouchers = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to list vouchers' });
+  }
+};
+
+exports.getVoucherByCode = async (req, res) => {
+  try {
+    const { voucher_code } = req.params;
+    const voucher = await voucherModel.getVoucherByCode(voucher_code);
+    if (!voucher) {
+      return res.status(404).json({ error: 'Voucher not found' });
+    }
+    res.json(voucher);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to get voucher' });
+  }
+};
+
+exports.getVoucherRedemptions = async (req, res) => {
+  try {
+    const { voucher_id } = req.params;
+    const redemptions = await voucherModel.getVoucherRedemptions(voucher_id);
+    res.json(redemptions);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to get voucher redemptions' });
   }
 };

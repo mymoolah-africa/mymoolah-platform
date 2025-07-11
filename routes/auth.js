@@ -5,40 +5,32 @@ const authenticateToken = require('../middleware/auth');
 
 const authController = new AuthController();
 
-// Initialize auth system when routes are loaded
-authController.initialize();
-
-// Register user
-router.post('/register', authController.register.bind(authController));
-
-// Login user
-router.post('/login', authController.login.bind(authController));
-
-// Request password reset
-router.post('/request-reset', authController.requestPasswordReset.bind(authController));
-
-// Validate reset token
-router.post('/validate-reset-token', authController.validateResetToken.bind(authController));
-
-// Reset password
-router.post('/reset-password', authController.resetPassword.bind(authController));
-
-// Change password (protected route)
-router.post('/change-password', 
-  authenticateToken,
-  authController.changePassword.bind(authController)
+// Register new user
+router.post('/register', 
+  authController.validateRegistration(),
+  authController.register.bind(authController)
 );
 
-// Logout (protected route)
-router.post('/logout', 
-  authenticateToken,
-  authController.logout.bind(authController)
+// Login user
+router.post('/login', 
+  authController.validateLogin(),
+  authController.login.bind(authController)
 );
 
 // Get user profile (protected route)
 router.get('/profile', 
   authenticateToken,
-  authController.getProfile.bind(authController)
+  authController.profile.bind(authController)
+);
+
+// Forgot password
+router.post('/forgot-password', 
+  authController.forgotPassword.bind(authController)
+);
+
+// Reset password
+router.post('/reset-password', 
+  authController.resetPassword.bind(authController)
 );
 
 // Test endpoint

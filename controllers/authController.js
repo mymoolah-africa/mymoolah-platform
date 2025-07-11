@@ -1,18 +1,26 @@
-const userModel = require('../models/User');
-const walletModel = require('../models/walletModel');
-const bcrypt = require('bcrypt');
+const User = require('../models/User');
+const Wallet = require('../models/Wallet');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
 const { validationResult, body } = require('express-validator');
 
 class AuthController {
   constructor() {
-    this.userModel = userModel;
+    this.userModel = new User();
+    this.walletModel = new Wallet();
     this.initialize();
   }
 
-  initialize() {
-    console.log('✅ Auth system initialized');
+  async initialize() {
+    try {
+      // Initialize the users table
+      await this.userModel.createTable();
+      // Initialize the wallets table
+      await this.walletModel.createTable();
+      console.log('✅ Auth system initialized');
+    } catch (error) {
+      console.error('❌ Error initializing auth system:', error);
+    }
   }
 
   // Validation middleware for registration
@@ -46,44 +54,32 @@ class AuthController {
         });
       }
 
-      const { email, password, firstName, lastName, phoneNumber } = req.body;
-
-      // Validate input
-      if (!email || !password || !firstName || !lastName) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email, password, firstName, and lastName are required'
-        });
-      }
+      const { firstName, lastName, email, password, phoneNumber } = req.body;
 
       // Check if user already exists
-      const existingUser = await this.userModel.findUserByEmail(email);
+      const existingUser = await this.userModel.getUserByEmail(email);
       if (existingUser) {
         return res.status(400).json({
           success: false,
-          message: 'Email already exists'
+          message: 'User with this email already exists'
         });
       }
 
-      // Create user
-      const user = await this.userModel.createUser({
-        email,
-        password,
+      // Create new user (this also creates the wallet)
+      const newUser = await this.userModel.createUser({
         firstName,
         lastName,
+        email,
+        password,
         phoneNumber
       });
 
-      // Create wallet for user
-      const wallet = await walletModel.createWallet(user.id, user.walletId);
-
       // Generate JWT token
       const token = jwt.sign(
-        { 
-          userId: user.id, 
-          email: user.email,
-          firstName: user.firstName,
-          lastName: user.lastName
+        {
+          userId: newUser.id,
+          email: newUser.email,
+          walletId: newUser.walletId
         },
         process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: '24h' }
@@ -94,12 +90,12 @@ class AuthController {
         message: 'User registered successfully',
         data: {
           user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            walletId: user.walletId,
-            balance: 0.00 // Wallet starts with 0 balance
+            id: newUser.id,
+            email: newUser.email,
+            firstName: newUser.firstName,
+            lastName: newUser.lastName,
+            walletId: newUser.walletId,
+            balance: newUser.balance
           },
           token
         }
@@ -129,38 +125,37 @@ class AuthController {
 
       const { email, password } = req.body;
 
-      // Validate input
-      if (!email || !password) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email and password are required'
-        });
-      }
-
       // Find user by email
-      const user = await this.userModel.findUserByEmail(email);
+      const user = await this.userModel.getUserByEmail(email);
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials'
+          message: 'Invalid email or password'
         });
       }
 
-      // Verify password
-      const isValidPassword = await this.userModel.validatePassword(user, password);
+      // Verify password using bcrypt directly
+      const isValidPassword = bcrypt.compareSync(password, user.password_hash);
       if (!isValidPassword) {
         return res.status(401).json({
           success: false,
-          message: 'Invalid credentials'
+          message: 'Invalid email or password'
         });
+      }
+
+      // Get walletId from wallets table
+      let walletId = null;
+      if (this.walletModel && user.id) {
+        const wallet = await this.walletModel.getWalletByUserId(user.id);
+        if (wallet) walletId = wallet.walletId;
       }
 
       // Generate JWT token
       const token = jwt.sign(
-        { 
-          userId: user.id, 
+        {
+          userId: user.id,
           email: user.email,
-          walletId: user.walletId
+          walletId: walletId
         },
         process.env.JWT_SECRET || 'your-secret-key',
         { expiresIn: '24h' }
@@ -176,7 +171,7 @@ class AuthController {
             firstName: user.firstName,
             lastName: user.lastName,
             phoneNumber: user.phoneNumber,
-            walletId: user.walletId,
+            walletId: walletId,
             balance: user.balance
           },
           token
@@ -193,48 +188,39 @@ class AuthController {
     }
   }
 
-  // Request password reset
-  async requestPasswordReset(req, res) {
+  // Get user profile (protected route)
+  async profile(req, res) {
     try {
-      const { email } = req.body;
-
-      if (!email) {
-        return res.status(400).json({
-          success: false,
-          message: 'Email is required'
-        });
-      }
-
-      // Find user by email
-      const user = await this.userModel.findUserByEmail(email);
+      const userId = req.user.userId;
+      const user = await this.userModel.getUserById(userId);
       if (!user) {
-        // Don't reveal if user exists or not for security
-        return res.json({
-          success: true,
-          message: 'If the email exists, a password reset link has been sent'
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
         });
       }
-
-      // Generate reset token
-      const resetToken = crypto.randomBytes(32).toString('hex');
-      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
-
-      // Store reset token in user record
-      await this.userModel.updateResetToken(user.id, resetToken, resetTokenExpiry);
-
-      // In a real application, you would send an email here
-      // For now, we'll return the token for testing purposes
+      // Get walletId from wallets table
+      let walletId = null;
+      if (this.walletModel && user.id) {
+        const wallet = await this.walletModel.getWalletByUserId(user.id);
+        if (wallet) walletId = wallet.walletId;
+      }
       res.json({
         success: true,
-        message: 'Password reset link sent successfully',
         data: {
-          resetToken: process.env.NODE_ENV === 'development' ? resetToken : undefined,
-          expiresAt: resetTokenExpiry
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phoneNumber: user.phoneNumber,
+            walletId: walletId,
+            balance: user.balance
+          }
         }
       });
-
     } catch (error) {
-      console.error('❌ Error requesting password reset:', error);
+      console.error('❌ Error fetching profile:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',
@@ -243,45 +229,36 @@ class AuthController {
     }
   }
 
-  // Validate reset token
-  async validateResetToken(req, res) {
+  // Forgot password
+  async forgotPassword(req, res) {
     try {
-      const { resetToken } = req.body;
+      const { email } = req.body;
 
-      if (!resetToken) {
-        return res.status(400).json({
-          success: false,
-          message: 'Reset token is required'
-        });
-      }
-
-      // Find user by reset token
-      const user = await this.userModel.findUserByResetToken(resetToken);
+      const user = await this.userModel.getUserByEmail(email);
       if (!user) {
-        return res.status(400).json({
+        return res.status(404).json({
           success: false,
-          message: 'Invalid or expired reset token'
+          message: 'User not found'
         });
       }
 
-      // Check if token is expired
-      if (new Date() > new Date(user.resetTokenExpiry)) {
-        return res.status(400).json({
-          success: false,
-          message: 'Reset token has expired'
-        });
-      }
+      // Generate reset token
+      const resetToken = require('crypto').randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
+      await this.userModel.updateResetToken(user.id, resetToken, resetTokenExpiry);
+
+      // In a real application, you would send this via email
       res.json({
         success: true,
-        message: 'Reset token is valid',
+        message: 'Password reset token sent to email',
         data: {
-          email: user.email
+          resetToken: resetToken // Remove this in production
         }
       });
 
     } catch (error) {
-      console.error('❌ Error validating reset token:', error);
+      console.error('❌ Error in forgot password:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',
@@ -295,23 +272,7 @@ class AuthController {
     try {
       const { resetToken, newPassword } = req.body;
 
-      if (!resetToken || !newPassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'Reset token and new password are required'
-        });
-      }
-
-      // Validate password strength
-      if (newPassword.length < 6) {
-        return res.status(400).json({
-          success: false,
-          message: 'Password must be at least 6 characters long'
-        });
-      }
-
-      // Find user by reset token
-      const user = await this.userModel.findUserByResetToken(resetToken);
+      const user = await this.userModel.getUserByResetToken(resetToken);
       if (!user) {
         return res.status(400).json({
           success: false,
@@ -327,8 +288,10 @@ class AuthController {
         });
       }
 
-      // Update password and clear reset token
+      // Update password
       await this.userModel.updatePassword(user.id, newPassword);
+      
+      // Clear reset token
       await this.userModel.clearResetToken(user.id);
 
       res.json({
@@ -337,122 +300,7 @@ class AuthController {
       });
 
     } catch (error) {
-      console.error('❌ Error resetting password:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
-      });
-    }
-  }
-
-  // Change password (for authenticated users)
-  async changePassword(req, res) {
-    try {
-      const userId = req.user.userId;
-      const { currentPassword, newPassword } = req.body;
-
-      if (!currentPassword || !newPassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'Current password and new password are required'
-        });
-      }
-
-      // Validate password strength
-      if (newPassword.length < 6) {
-        return res.status(400).json({
-          success: false,
-          message: 'Password must be at least 6 characters long'
-        });
-      }
-
-      // Get user
-      const user = await this.userModel.findUserById(userId);
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-
-      // Verify current password
-      const isValidPassword = await this.userModel.validatePassword(user, currentPassword);
-      if (!isValidPassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'Current password is incorrect'
-        });
-      }
-
-      // Update password
-      await this.userModel.updatePassword(userId, newPassword);
-
-      res.json({
-        success: true,
-        message: 'Password changed successfully'
-      });
-
-    } catch (error) {
-      console.error('❌ Error changing password:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
-      });
-    }
-  }
-
-  // Logout (optional - for session management)
-  async logout(req, res) {
-    try {
-      // In a real application, you might want to blacklist the token
-      // For now, we'll just return a success message
-      res.json({
-        success: true,
-        message: 'Logged out successfully'
-      });
-    } catch (error) {
-      console.error('❌ Error logging out:', error);
-      res.status(500).json({
-        success: false,
-        message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
-      });
-    }
-  }
-
-  // Get user profile (protected route)
-  async getProfile(req, res) {
-    try {
-      const userId = req.user.userId;
-      const user = await this.userModel.findUserById(userId);
-
-      if (!user) {
-        return res.status(404).json({
-          success: false,
-          message: 'User not found'
-        });
-      }
-
-      res.json({
-        success: true,
-        message: 'Profile retrieved successfully',
-        data: {
-          user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            phoneNumber: user.phoneNumber,
-            walletId: user.walletId,
-            balance: user.balance
-          }
-        }
-      });
-
-    } catch (error) {
-      console.error('❌ Error getting profile:', error);
+      console.error('❌ Error in reset password:', error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',
