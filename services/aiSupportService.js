@@ -1,22 +1,60 @@
-const OpenAI = require('openai');
+const OpenAI = require("openai");
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize OpenAI client only if API key is available
+let openai = null;
+try {
+  if (process.env.OPENAI_API_KEY) {
+    openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+  }
+} catch (error) {
+  console.log("OpenAI not initialized - API key missing or invalid");
+}
 
-exports.getAIResponse = async (subject, message, language = 'en') => {
-  const prompt = `You are a helpful support assistant for MyMoolah. Answer the following user support request in ${language} if possible. If you cannot answer, reply with "HUMAN ESCALATION REQUIRED".\n\nSubject: ${subject}\nMessage: ${message}\n\nAnswer:`;
+const getAIResponse = async (subject, message, language = "en") => {
+  try {
+    // Check if OpenAI is available
+    if (!openai) {
+      return {
+        success: false,
+        message: "AI support is not available - OpenAI API key not configured",
+        ai_response: null
+      };
+    }
 
-  const completion = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo', // or 'gpt-4o' if your key has access
-    messages: [
-      { role: 'system', content: 'You are a helpful support assistant for MyMoolah.' },
-      { role: 'user', content: prompt }
-    ],
-    max_tokens: 200,
-    temperature: 0.2,
-  });
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        {
+          role: "system",
+          content: `You are a helpful customer support assistant for MyMoolah wallet platform. 
+          Respond in ${language} language. Be concise, professional, and helpful.`
+        },
+        {
+          role: "user",
+          content: `Subject: ${subject}
+Message: ${message}`
+        }
+      ],
+      max_tokens: 200
+    });
 
-  // The answer is in completion.choices[0].message.content
-  return completion.choices[0].message.content.trim();
+    return {
+      success: true,
+      message: "AI response generated successfully",
+      ai_response: completion.choices[0].message.content
+    };
+  } catch (error) {
+    console.error("AI Support Error:", error.message);
+    return {
+      success: false,
+      message: "AI support temporarily unavailable",
+      ai_response: null
+    };
+  }
+};
+
+module.exports = {
+  getAIResponse
 };

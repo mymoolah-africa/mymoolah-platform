@@ -14,19 +14,47 @@ const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 5050;
 
-// Import routes
+// Import core routes
 const authRoutes = require('./routes/auth.js');
 const walletRoutes = require('./routes/wallets.js');
-const easyPayRoutes = require('./routes/easypay.js');
+const transactionRoutes = require('./routes/transactionRoutes.js');
+const userRoutes = require('./routes/users.js');
+const kycRoutes = require('./routes/kyc.js');
+const supportRoutes = require('./routes/support.js');
+const notificationRoutes = require('./routes/notifications.js');
+const voucherRoutes = require('./routes/vouchers.js');
+const voucherTypeRoutes = require('./routes/voucherTypes.js');
+const vasRoutes = require('./routes/vas.js');
+const merchantRoutes = require('./routes/merchants.js');
+const serviceProviderRoutes = require('./routes/serviceproviders.js');
+
+// Import problematic routes (commented out as requested)
+// const easyPayRoutes = require('./routes/easypay.js');
+// const mercuryRoutes = require('./routes/mercury.js');
+// const easyPayVoucherRoutes = require('./routes/easypayVouchers.js');
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// API Routes
+// Core API Routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/wallets', walletRoutes);
-app.use('/billpayment/v1', easyPayRoutes);
+app.use('/api/v1/transactions', transactionRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/kyc', kycRoutes);
+app.use('/api/v1/support', supportRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/vouchers', voucherRoutes);
+app.use('/api/v1/voucher-types', voucherTypeRoutes);
+app.use('/api/v1/vas', vasRoutes);
+app.use('/api/v1/merchants', merchantRoutes);
+app.use('/api/v1/service-providers', serviceProviderRoutes);
+
+// Commented out problematic routes as requested
+// app.use('/billpayment/v1', easyPayRoutes);
+// app.use('/api/v1/mercury', mercuryRoutes);
+// app.use('/api/v1/easypay-vouchers', easyPayVoucherRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -45,7 +73,16 @@ app.get('/test', (req, res) => {
     endpoints: {
       auth: '/api/v1/auth',
       wallets: '/api/v1/wallets',
-      easyPay: '/billpayment/v1',
+      transactions: '/api/v1/transactions',
+      users: '/api/v1/users',
+      kyc: '/api/v1/kyc',
+      support: '/api/v1/support',
+      notifications: '/api/v1/notifications',
+      vouchers: '/api/v1/vouchers',
+      voucherTypes: '/api/v1/voucher-types',
+      vas: '/api/v1/vas',
+      merchants: '/api/v1/merchants',
+      serviceProviders: '/api/v1/service-providers',
       health: '/health',
       test: '/test'
     }
@@ -60,7 +97,16 @@ app.get('/', (req, res) => {
     endpoints: {
       auth: '/api/v1/auth',
       wallets: '/api/v1/wallets',
-      easyPay: '/billpayment/v1',
+      transactions: '/api/v1/transactions',
+      users: '/api/v1/users',
+      kyc: '/api/v1/kyc',
+      support: '/api/v1/support',
+      notifications: '/api/v1/notifications',
+      vouchers: '/api/v1/vouchers',
+      voucherTypes: '/api/v1/voucher-types',
+      vas: '/api/v1/vas',
+      merchants: '/api/v1/merchants',
+      serviceProviders: '/api/v1/service-providers',
       health: '/health',
       test: '/test'
     }
@@ -94,7 +140,16 @@ app.use('*', (req, res) => {
     availableEndpoints: {
       auth: '/api/v1/auth',
       wallets: '/api/v1/wallets',
-      easyPay: '/billpayment/v1',
+      transactions: '/api/v1/transactions',
+      users: '/api/v1/users',
+      kyc: '/api/v1/kyc',
+      support: '/api/v1/support',
+      notifications: '/api/v1/notifications',
+      vouchers: '/api/v1/vouchers',
+      voucherTypes: '/api/v1/voucher-types',
+      vas: '/api/v1/vas',
+      merchants: '/api/v1/merchants',
+      serviceProviders: '/api/v1/service-providers',
       health: '/health',
       test: '/test'
     }
@@ -107,9 +162,21 @@ if (require.main === module) {
   app.listen(port, () => {
     console.log(`🚀 MyMoolah Wallet API server running on port ${port}`);
     console.log(`📡 API Base URL: http://localhost:${port}/api/v1`);
-    console.log(`💰 EasyPay API: http://localhost:${port}/billpayment/v1`);
     console.log(`🔗 Health Check: http://localhost:${port}/health`);
     console.log(`🧪 Test Endpoint: http://localhost:${port}/test`);
+    console.log(`📋 Available endpoints:`);
+    console.log(`   - Auth: /api/v1/auth`);
+    console.log(`   - Wallets: /api/v1/wallets`);
+    console.log(`   - Transactions: /api/v1/transactions`);
+    console.log(`   - Users: /api/v1/users`);
+    console.log(`   - KYC: /api/v1/kyc`);
+    console.log(`   - Support: /api/v1/support`);
+    console.log(`   - Notifications: /api/v1/notifications`);
+    console.log(`   - Vouchers: /api/v1/vouchers`);
+    console.log(`   - Voucher Types: /api/v1/voucher-types`);
+    console.log(`   - VAS: /api/v1/vas`);
+    console.log(`   - Merchants: /api/v1/merchants`);
+    console.log(`   - Service Providers: /api/v1/service-providers`);
   });
 }
 

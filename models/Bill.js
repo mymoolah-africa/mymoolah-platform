@@ -282,4 +282,4 @@ class Bill {
   }
 }
 
-module.exports = new Bill();
+module.exports = Bill;

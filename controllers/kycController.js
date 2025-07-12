@@ -1,8 +1,10 @@
+const Kyc = require('../models/Kyc');
+const kycModel = new Kyc();
+
 // Get all KYC records
 exports.getAllKyc = async (req, res) => {
   try {
-    const db = require('../models/User').db;
-    db.all(`
+    kycModel.db.all(`
       SELECT 
         k.id,
         k.userId,
@@ -30,7 +32,7 @@ exports.getAllKyc = async (req, res) => {
       res.json({ 
         success: true,
         message: 'KYC records retrieved successfully',
-        data: { kyc: rows }
+        data: { kyc: rows || [] }
       });
     });
   } catch (error) {
@@ -47,28 +49,12 @@ exports.getAllKyc = async (req, res) => {
 exports.submitKyc = async (req, res) => {
   try {
     const { userId, documentType, documentNumber } = req.body;
-    const db = require('../models/User').db;
-    
-    db.run(
-      'INSERT INTO kyc (userId, documentType, documentNumber, status, submittedAt) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)',
-      [userId, documentType, documentNumber, 'pending'],
-      function(err) {
-        if (err) {
-          console.error('❌ Error submitting KYC:', err);
-          return res.status(500).json({ 
-            success: false,
-            error: 'Database error', 
-            details: err.message 
-          });
-        }
-        
-        res.json({ 
-          success: true,
-          message: 'KYC document submitted successfully',
-          data: { kycId: this.lastID }
-        });
-      }
-    );
+    const result = await kycModel.submitKyc({ userId, documentType, documentNumber });
+    res.json({ 
+      success: true,
+      message: 'KYC document submitted successfully',
+      data: { kycId: result.id }
+    });
   } catch (error) {
     console.error('❌ Error in submitKyc:', error);
     res.status(500).json({ 
@@ -83,30 +69,17 @@ exports.submitKyc = async (req, res) => {
 exports.getKycStatus = async (req, res) => {
   try {
     const { userId } = req.params;
-    const db = require('../models/User').db;
-    
-    db.get('SELECT * FROM kyc WHERE userId = ? ORDER BY submittedAt DESC LIMIT 1', [userId], (err, row) => {
-      if (err) {
-        console.error('❌ Error getting KYC status:', err);
-        return res.status(500).json({ 
-          success: false,
-          error: 'Database error', 
-          details: err.message 
-        });
-      }
-      
-      if (!row) {
-        return res.status(404).json({ 
-          success: false,
-          message: 'KYC record not found' 
-        });
-      }
-      
-      res.json({ 
-        success: true,
-        message: 'KYC status retrieved successfully',
-        data: { kyc: row }
+    const row = await kycModel.getKycStatus(userId);
+    if (!row) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'KYC record not found' 
       });
+    }
+    res.json({ 
+      success: true,
+      message: 'KYC status retrieved successfully',
+      data: { kyc: row }
     });
   } catch (error) {
     console.error('❌ Error in getKycStatus:', error);
@@ -122,35 +95,18 @@ exports.getKycStatus = async (req, res) => {
 exports.updateKycStatus = async (req, res) => {
   try {
     const { kycId, status, reviewerNotes } = req.body;
-    const db = require('../models/User').db;
-    
-    db.run(
-      'UPDATE kyc SET status = ?, reviewerNotes = ?, reviewedAt = CURRENT_TIMESTAMP WHERE id = ?',
-      [status, reviewerNotes, kycId],
-      function(err) {
-        if (err) {
-          console.error('❌ Error updating KYC status:', err);
-          return res.status(500).json({ 
-            success: false,
-            error: 'Database error', 
-            details: err.message 
-          });
-        }
-        
-        if (this.changes === 0) {
-          return res.status(404).json({ 
-            success: false,
-            message: 'KYC record not found' 
-          });
-        }
-        
-        res.json({ 
-          success: true,
-          message: 'KYC status updated successfully',
-          data: { kycId }
-        });
-      }
-    );
+    const result = await kycModel.updateKycStatus(kycId, status, reviewerNotes);
+    if (result.changes === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'KYC record not found' 
+      });
+    }
+    res.json({ 
+      success: true,
+      message: 'KYC status updated successfully',
+      data: { kycId }
+    });
   } catch (error) {
     console.error('❌ Error in updateKycStatus:', error);
     res.status(500).json({ 
@@ -159,4 +115,4 @@ exports.updateKycStatus = async (req, res) => {
       details: error.message 
     });
   }
-};
+}; 

@@ -1,55 +1,76 @@
-const db = require('../config/db');
+const sqlite3 = require('sqlite3').verbose();
+const path = require('path');
 
-// Create a new support ticket
-exports.createTicket = async (ticket) => {
-  const [result] = await db.query(
-    `INSERT INTO support_tickets (user_id, subject, message, status, language, created_at, updated_at)
-     VALUES (?, ?, ?, 'open', ?, NOW(), NOW())`,
-    [ticket.user_id, ticket.subject, ticket.message, ticket.language || 'en']
-  );
-  return { id: result.insertId };
-};
+class SupportTicketModel {
+  constructor() {
+    this.dbPath = path.join(__dirname, '../data/mymoolah.db');
+    this.db = new sqlite3.Database(this.dbPath);
+    this.initTable();
+  }
 
-// Get all tickets for a user
-exports.getTicketsByUser = async (user_id) => {
-  const [rows] = await db.query(
-    `SELECT * FROM support_tickets WHERE user_id = ? ORDER BY created_at DESC`,
-    [user_id]
-  );
-  return rows;
-};
+  initTable() {
+    this.db.run(`
+      CREATE TABLE IF NOT EXISTS support_tickets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        subject TEXT NOT NULL,
+        status TEXT DEFAULT 'open',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  }
 
-// Get a ticket by ID
-exports.getTicketById = async (id) => {
-  const [rows] = await db.query(
-    `SELECT * FROM support_tickets WHERE id = ?`,
-    [id]
-  );
-  return rows[0];
-};
+  createTicket(userId, subject) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'INSERT INTO support_tickets (user_id, subject, status) VALUES (?, ?, ?)',
+        [userId, subject, 'open'],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ id: this.lastID });
+        }
+      );
+    });
+  }
 
-// Update ticket status
-exports.updateTicketStatus = async (id, status) => {
-  const [result] = await db.query(
-    `UPDATE support_tickets SET status = ?, updated_at = NOW() WHERE id = ?`,
-    [status, id]
-  );
-  return { updated: result.affectedRows > 0 };
-};
+  getTicketsByUser(userId) {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        'SELECT * FROM support_tickets WHERE user_id = ? ORDER BY created_at DESC',
+        [userId],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows);
+        }
+      );
+    });
+  }
 
-// Update AI response field
-exports.updateAIResponse = async (id, ai_response) => {
-  await db.query(
-    `UPDATE support_tickets SET ai_response = ? WHERE id = ?`,
-    [ai_response, id]
-  );
-};
+  updateStatus(ticketId, status) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'UPDATE support_tickets SET status = ? WHERE id = ?',
+        [status, ticketId],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ changes: this.changes });
+        }
+      );
+    });
+  }
 
-// Escalate ticket to external platform
-exports.escalateTicket = async (id, external_id, external_platform) => {
-  const [result] = await db.query(
-    `UPDATE support_tickets SET status = 'escalated', external_id = ?, external_platform = ?, escalated_at = NOW(), updated_at = NOW() WHERE id = ?`,
-    [external_id, external_platform, id]
-  );
-  return { escalated: result.affectedRows > 0 };
-};
+  deleteTicket(ticketId) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        'DELETE FROM support_tickets WHERE id = ?',
+        [ticketId],
+        function(err) {
+          if (err) reject(err);
+          else resolve({ changes: this.changes });
+        }
+      );
+    });
+  }
+}
+
+module.exports = SupportTicketModel; 

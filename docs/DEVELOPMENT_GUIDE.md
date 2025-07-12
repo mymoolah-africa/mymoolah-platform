@@ -1,427 +1,761 @@
 # MyMoolah Development Guide
 
-## 🚀 Current Development Practices (July 2025)
+**Version**: 1.0.0  
+**Last Updated**: July 12, 2025  
+**Project Status**: Production Ready
 
-**Status**: ✅ **VALIDATED** - All practices tested and working
+## 🎯 Overview
 
-## 📋 Development Environment
+This guide provides comprehensive development guidelines for the MyMoolah Wallet Platform. The system is built on Node.js with Express.js, using SQLite for data persistence and JWT for authentication.
 
-### **Local Development Setup**
+## 🏗️ Architecture Overview
+
+### Technology Stack
+- **Backend**: Node.js + Express.js
+- **Database**: SQLite3
+- **Authentication**: JWT (JSON Web Tokens)
+- **Security**: bcrypt, express-validator, CORS
+- **Testing**: Jest, Supertest
+- **Documentation**: Markdown + OpenAPI
+
+### Project Structure
+```
+mymoolah/
+├── controllers/     # Business logic controllers
+├── models/         # Database models and schemas
+├── routes/         # API route definitions
+├── middleware/     # Custom middleware (auth, validation)
+├── services/       # External service integrations
+├── docs/          # Comprehensive documentation
+├── scripts/       # Utility scripts
+├── data/          # SQLite database files
+├── server.js      # Main application entry point
+├── package.json   # Dependencies and scripts
+└── README.md      # Project overview
+```
+
+## 🔧 Development Environment Setup
+
+### Prerequisites
 ```bash
-# Clone repository
-git clone <repository-url>
-cd mymoolah
+# Required Node.js version
+node --version  # Should be v18.0.0 or higher
+
+# Required npm version
+npm --version   # Should be v8.0.0 or higher
+```
+
+### Local Development Setup
+```bash
+# Navigate to project directory
+cd /Users/andremacbookpro/mymoolah
 
 # Install dependencies
 npm install
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
+
+# Initialize database
+npm run init-db
 
 # Start development server
 npm start
-
-# Server runs on http://localhost:5050
 ```
 
-### **Environment Configuration**
+### Environment Variables
 ```bash
-# Create .env file
+# Required for development
 PORT=5050
-JWT_SECRET=your-secret-key
 NODE_ENV=development
+JWT_SECRET=your-development-jwt-secret
+DATABASE_URL=sqlite:./data/mymoolah.db
+
+# Optional
+LOG_LEVEL=debug
+CORS_ORIGIN=http://localhost:3000
 ```
 
-### **Database Setup**
-- **Local**: SQLite database at `data/mymoolah.db`
-- **Cloud**: MySQL database in Codespaces
-- **Tables**: Automatically created on server startup
+## 📁 Code Organization
 
-## 🔧 Development Workflow
+### Controllers (`/controllers`)
+Controllers handle business logic and HTTP request/response processing.
 
-### **1. Code Changes**
-```bash
-# Always start with latest code
-git pull origin main
-
-# Make changes to code
-# Test changes immediately
-npm start
-
-# Test affected endpoints
-curl http://localhost:5050/test
-```
-
-### **2. Testing Protocol**
-```bash
-# Test authentication
-node test-auth.js
-
-# Test wallet operations
-node test-wallet.js
-
-# Test transactions
-node test-transactions.js
-
-# Test all endpoints
-node test-api-endpoints.js
-```
-
-### **3. Documentation Updates**
-- **Rule**: Update ALL documentation after every major change
-- **Files**: README.md, session-summary.md, PROJECT_STATUS.md, etc.
-- **Process**: Agent updates docs, commits, and pushes to GitHub
-- **Review**: Product owner reviews and approves
-
-## 🧪 Testing Strategy
-
-### **Comprehensive Testing**
-- ✅ **Unit Testing**: Individual component testing
-- ✅ **Integration Testing**: API endpoint testing
-- ✅ **End-to-End Testing**: Complete workflow testing
-- ✅ **Security Testing**: Authentication and authorization testing
-- ✅ **Performance Testing**: Response time and load testing
-
-### **Testing Checklist**
-```bash
-# 1. Test server startup
-npm start
-
-# 2. Test basic connectivity
-curl http://localhost:5050/test
-
-# 3. Test authentication endpoints
-curl -X POST http://localhost:5050/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"firstName":"Test","lastName":"User","email":"test@example.com","password":"password123"}'
-
-# 4. Test wallet endpoints (with JWT token)
-curl -X GET http://localhost:5050/api/v1/wallets/1 \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-
-# 5. Test data management endpoints
-curl -X GET http://localhost:5050/api/v1/users
-curl -X GET http://localhost:5050/api/v1/transactions
-curl -X GET http://localhost:5050/api/v1/kyc
-```
-
-### **Database Testing**
-```bash
-# Test database connectivity
-node test-sqlite.js
-
-# Test database operations
-node test-database.js
-
-# Verify data integrity
-# Check all tables have expected data
-```
-
-## 📊 Code Quality Standards
-
-### **Code Structure**
+#### Controller Structure
 ```javascript
-// Controllers - Business logic
-controllers/
-├── authController.js      // Authentication logic
-├── userController.js      // User management
-├── walletController.js    // Wallet operations
-├── transactionController.js // Transaction processing
-└── kycController.js       // KYC document management
+// Example: authController.js
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+const User = require('../models/User');
 
-// Models - Database models
-models/
-├── User.js               // User model (SQLite)
-├── walletModel.js        // Wallet model
-├── transactionModel.js   // Transaction model
-└── userModel.js          // User model (MySQL)
-
-// Routes - API endpoints
-routes/
-├── auth.js               // Authentication routes
-├── users.js              // User management routes
-├── wallets.js            // Wallet operation routes
-├── transactions.js       // Transaction routes
-└── kyc.js               // KYC management routes
-
-// Middleware - Express middleware
-middleware/
-├── auth.js               // JWT authentication
-└── rateLimiter.js        // Rate limiting
-```
-
-### **API Response Standards**
-```json
-{
-  "success": true,
-  "message": "Operation successful",
-  "data": {
-    // Response data
+class AuthController {
+  async register(req, res) {
+    try {
+      // Business logic here
+      res.json({ success: true, data: result });
+    } catch (error) {
+      res.status(500).json({ success: false, error: error.message });
+    }
   }
 }
+
+module.exports = new AuthController();
 ```
 
-### **Error Response Standards**
-```json
-{
-  "success": false,
-  "message": "Error description",
-  "error": "Technical error details"
+#### Controller Guidelines
+- Use async/await for database operations
+- Implement proper error handling
+- Return consistent response format
+- Validate input data
+- Use appropriate HTTP status codes
+
+### Models (`/models`)
+Models define database schema and provide data access methods.
+
+#### Model Structure
+```javascript
+// Example: User.js
+const sqlite3 = require('sqlite3').verbose();
+const bcrypt = require('bcrypt');
+
+class User {
+  static async create(userData) {
+    // Database operation
+  }
+
+  static async findByEmail(email) {
+    // Database query
+  }
+
+  static async update(id, data) {
+    // Update operation
+  }
 }
+
+module.exports = User;
 ```
 
-## 🔐 Security Implementation
+#### Model Guidelines
+- Use static methods for database operations
+- Implement proper error handling
+- Use parameterized queries to prevent SQL injection
+- Include data validation
+- Follow consistent naming conventions
 
-### **Authentication**
-- ✅ **JWT Tokens**: Secure token generation and validation
-- ✅ **Password Hashing**: bcryptjs with salt rounds
-- ✅ **Rate Limiting**: Per-endpoint rate limiting
-- ✅ **Input Validation**: Sanitization and validation
+### Routes (`/routes`)
+Routes define API endpoints and connect them to controllers.
 
-### **API Security**
-- ✅ **Protected Routes**: JWT authentication on sensitive endpoints
-- ✅ **Error Handling**: Secure error responses without information leakage
-- ✅ **CORS Configuration**: Proper cross-origin resource sharing
-- ✅ **Input Sanitization**: Prevent injection attacks
+#### Route Structure
+```javascript
+// Example: auth.js
+const express = require('express');
+const router = express.Router();
+const authController = require('../controllers/authController');
+const { body } = require('express-validator');
+
+// GET /api/v1/auth/profile
+router.get('/profile', authMiddleware, authController.getProfile);
+
+// POST /api/v1/auth/register
+router.post('/register', [
+  body('email').isEmail(),
+  body('password').isLength({ min: 6 })
+], authController.register);
+
+module.exports = router;
+```
+
+#### Route Guidelines
+- Use descriptive route names
+- Implement input validation
+- Apply appropriate middleware
+- Group related endpoints
+- Use RESTful conventions
+
+### Middleware (`/middleware`)
+Middleware provides cross-cutting concerns like authentication and validation.
+
+#### Middleware Structure
+```javascript
+// Example: auth.js
+const jwt = require('jsonwebtoken');
+
+const authMiddleware = (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Access token required' });
+    }
+    
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+};
+
+module.exports = authMiddleware;
+```
+
+## 🔐 Authentication & Security
+
+### JWT Implementation
+```javascript
+// Token generation
+const token = jwt.sign(
+  { userId: user.id, email: user.email },
+  process.env.JWT_SECRET,
+  { expiresIn: '24h' }
+);
+
+// Token verification
+const decoded = jwt.verify(token, process.env.JWT_SECRET);
+```
+
+### Password Security
+```javascript
+// Password hashing
+const hashedPassword = await bcrypt.hash(password, 10);
+
+// Password verification
+const isValid = await bcrypt.compare(password, hashedPassword);
+```
+
+### Input Validation
+```javascript
+// Using express-validator
+const { body, validationResult } = require('express-validator');
+
+const validateUser = [
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 6 }),
+  body('firstName').notEmpty().trim(),
+  body('lastName').notEmpty().trim()
+];
+```
 
 ## 🗄️ Database Development
 
-### **SQLite (Local Development)**
-```bash
-# Database file location
-data/mymoolah.db
+### SQLite Schema
+```sql
+-- Users table
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  firstName TEXT NOT NULL,
+  lastName TEXT NOT NULL,
+  phoneNumber TEXT,
+  status TEXT DEFAULT 'active',
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
-# Check database tables
-sqlite3 data/mymoolah.db ".tables"
-
-# Check table schemas
-sqlite3 data/mymoolah.db ".schema users"
-sqlite3 data/mymoolah.db ".schema wallets"
-sqlite3 data/mymoolah.db ".schema transactions"
-sqlite3 data/mymoolah.db ".schema kyc"
-
-# Check data counts
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM users;"
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM wallets;"
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM transactions;"
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM kyc;"
+-- Wallets table
+CREATE TABLE wallets (
+  id TEXT PRIMARY KEY,
+  userId INTEGER NOT NULL,
+  balance DECIMAL(10,2) DEFAULT 0.00,
+  currency TEXT DEFAULT 'USD',
+  status TEXT DEFAULT 'active',
+  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (userId) REFERENCES users(id)
+);
 ```
 
-### **Database Operations**
-```bash
-# Initialize new tables
-node scripts/init-kyc-table.js
+### Database Operations
+```javascript
+// Example database operation
+const db = new sqlite3.Database('./data/mymoolah.db');
 
-# Backup database
-cp data/mymoolah.db data/mymoolah.db.backup
-
-# Restore database
-cp data/mymoolah.db.backup data/mymoolah.db
+const createUser = (userData) => {
+  return new Promise((resolve, reject) => {
+    const query = `
+      INSERT INTO users (email, password, firstName, lastName)
+      VALUES (?, ?, ?, ?)
+    `;
+    
+    db.run(query, [userData.email, userData.password, userData.firstName, userData.lastName], function(err) {
+      if (err) reject(err);
+      else resolve({ id: this.lastID });
+    });
+  });
+};
 ```
 
-## 📚 Documentation Standards
+## 🧪 Testing Strategy
 
-### **Documentation Rule**
-- **Responsibility**: Agent must write, update, and maintain ALL documentation
-- **Process**: Update docs after every major change
-- **Commit**: Commit and push documentation changes to GitHub
-- **Review**: Product owner reviews and approves, doesn't edit
+### Unit Testing
+```javascript
+// Example test: test-auth.js
+const request = require('supertest');
+const app = require('../server');
 
-### **Required Documentation Updates**
-- ✅ **README.md**: Main project documentation
-- ✅ **session-summary.md**: Session summaries
-- ✅ **PROJECT_STATUS.md**: Current platform status
-- ✅ **CHANGELOG.md**: Version history
-- ✅ **API_DOCUMENTATION.md**: API endpoint documentation
-- ✅ **SETUP_GUIDE.md**: Installation instructions
-- ✅ **architecture.md**: System architecture
-- ✅ **file-inventory.md**: File structure documentation
-
-### **Documentation Standards**
-- **Completeness**: Include all working features and endpoints
-- **Accuracy**: Reflect current state of the platform
-- **Clarity**: Clear and understandable for non-technical users
-- **Examples**: Include curl commands and code examples
-- **Status**: Always indicate current status (working/not working)
-
-## 🚀 Deployment Process
-
-### **Local Deployment**
-```bash
-# Install dependencies
-npm install
-
-# Start server
-npm start
-
-# Verify deployment
-curl http://localhost:5050/test
+describe('Authentication Endpoints', () => {
+  test('POST /api/v1/auth/register - should register new user', async () => {
+    const response = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        firstName: 'Test',
+        lastName: 'User',
+        email: 'test@example.com',
+        password: 'password123'
+      });
+    
+    expect(response.status).toBe(200);
+    expect(response.body.success).toBe(true);
+  });
+});
 ```
 
-### **Cloud Deployment (Codespaces)**
-```bash
-# Same commands as local
-npm install
-npm start
+### Integration Testing
+```javascript
+// Example integration test
+describe('Wallet Operations', () => {
+  let authToken;
+  let walletId;
 
-# Test in cloud environment
-curl http://localhost:5050/test
+  beforeAll(async () => {
+    // Setup: Create user and get token
+    const loginResponse = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: 'test@example.com', password: 'password123' });
+    
+    authToken = loginResponse.body.data.token;
+  });
+
+  test('Complete wallet workflow', async () => {
+    // Create wallet
+    const createResponse = await request(app)
+      .post('/api/v1/wallets')
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ currency: 'USD' });
+    
+    walletId = createResponse.body.data.id;
+    expect(createResponse.status).toBe(200);
+
+    // Credit wallet
+    const creditResponse = await request(app)
+      .put(`/api/v1/wallets/${walletId}/credit`)
+      .set('Authorization', `Bearer ${authToken}`)
+      .send({ amount: 100.00 });
+    
+    expect(creditResponse.status).toBe(200);
+    expect(creditResponse.body.data.newBalance).toBe(100.00);
+  });
+});
 ```
 
-## 📈 Performance Optimization
-
-### **Current Performance**
-- ✅ **Response Time**: < 200ms for most endpoints
-- ✅ **Database Performance**: Optimized SQLite queries
-- ✅ **Memory Usage**: Efficient memory management
-- ✅ **Error Handling**: Graceful error handling and recovery
-
-### **Performance Monitoring**
-```bash
-# Monitor server performance
-top -p $(pgrep node)
-
-# Monitor database performance
-sqlite3 data/mymoolah.db "PRAGMA stats;"
-
-# Monitor API response times
-time curl http://localhost:5050/api/v1/users
-```
-
-## 🔄 Version Control
-
-### **Git Workflow**
-```bash
-# Always pull before starting work
-git pull origin main
-
-# Make changes and test
-# Update documentation
-
-# Commit changes with descriptive messages
-git add .
-git commit -m "Fix: Implement missing route handlers and update documentation"
-
-# Push to GitHub
-git push origin main
-```
-
-### **Backup Strategy**
-```bash
-# Regular backups
-./backup-mymoolah.sh
-
-# Database backups
-cp data/mymoolah.db data/mymoolah.db.$(date +%Y%m%d)
-```
-
-## 🎯 Development Best Practices
-
-### **Code Quality**
-- ✅ **Consistent Formatting**: Use Prettier for code formatting
-- ✅ **Error Handling**: Comprehensive error handling across all endpoints
-- ✅ **Input Validation**: Sanitization and validation of all inputs
-- ✅ **Security**: JWT authentication and rate limiting
-- ✅ **Documentation**: Inline comments and comprehensive docs
-
-### **Testing Best Practices**
-- ✅ **Authentication Testing**: Register, login, JWT validation
-- ✅ **Wallet Testing**: Credit, debit, balance, transactions
-- ✅ **Data Testing**: Users, transactions, KYC records
-- ✅ **Security Testing**: Rate limiting, input validation
-- ✅ **Error Testing**: Invalid inputs, missing tokens, database errors
-
-### **Test Scripts**
+### Running Tests
 ```bash
 # Run all tests
 npm test
 
-# Run specific tests
-node test-auth.js
-node test-wallet.js
-node test-transactions.js
-node test-api-endpoints.js
+# Run specific test suites
+npm run test:auth
+npm run test:wallets
+npm run test:transactions
+
+# Run with coverage
+npm run test:coverage
+
+# Run tests in watch mode
+npm run test:watch
 ```
 
-## 📊 Monitoring and Maintenance
+## 🔄 API Development
 
-### **Health Checks**
-```bash
-# Server health
-curl http://localhost:5050/test
+### Adding New Endpoints
 
-# Database health
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM users;"
-
-# API health
-curl http://localhost:5050/api/v1/users
+#### 1. Create Controller Method
+```javascript
+// controllers/userController.js
+async getUsers(req, res) {
+  try {
+    const users = await User.findAll();
+    res.json({ success: true, data: users });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
 ```
 
-### **Logging**
-- ✅ **Error Logging**: Comprehensive error logging
-- ✅ **Access Logging**: API access logging
-- ✅ **Performance Logging**: Response time logging
-- ✅ **Security Logging**: Authentication and authorization logging
+#### 2. Create Route
+```javascript
+// routes/users.js
+router.get('/', authMiddleware, userController.getUsers);
+```
 
-## 🚨 Troubleshooting
+#### 3. Register Route in Server
+```javascript
+// server.js
+const userRoutes = require('./routes/users.js');
+app.use('/api/v1/users', userRoutes);
+```
 
-### **Common Issues**
+#### 4. Add Documentation
+```markdown
+### Get All Users
+**GET** `/api/v1/users`
+
+Get list of all users.
+
+**Headers:**
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "users": [...]
+  }
+}
+```
+```
+
+### API Response Standards
+```javascript
+// Success response
+{
+  "success": true,
+  "message": "Operation completed successfully",
+  "data": { /* response data */ }
+}
+
+// Error response
+{
+  "success": false,
+  "message": "Error description",
+  "error": "Detailed error information"
+}
+```
+
+## 🚀 Deployment Guidelines
+
+### Development Deployment
 ```bash
-# Port already in use
-lsof -i :5050
-kill -9 <PID>
-
-# Database issues
-rm data/mymoolah.db
+# Start development server
 npm start
 
-# Dependencies issues
-rm -rf node_modules package-lock.json
-npm install
+# Or with nodemon for auto-restart
+npm run dev
 ```
 
-### **Debugging**
+### Production Deployment
+```bash
+# Set production environment
+NODE_ENV=production
+
+# Install production dependencies
+npm install --production
+
+# Start with PM2
+pm2 start server.js --name mymoolah-api
+
+# Monitor application
+pm2 monit
+```
+
+### Environment Configuration
+```bash
+# Production environment variables
+NODE_ENV=production
+PORT=5050
+JWT_SECRET=your-production-secret
+DATABASE_URL=sqlite:/path/to/production/mymoolah.db
+LOG_LEVEL=error
+```
+
+## 🔧 Debugging & Troubleshooting
+
+### Common Issues
+
+#### 1. Port Already in Use
+```bash
+# Kill processes on port 5050
+pkill -f "node server.js"
+
+# Or use different port
+PORT=5051 npm start
+```
+
+#### 2. Database Connection Issues
+```bash
+# Check database file
+ls -la data/mymoolah.db
+
+# Reinitialize database
+rm data/mymoolah.db
+npm run init-db
+```
+
+#### 3. JWT Token Issues
+```bash
+# Verify JWT secret
+echo $JWT_SECRET
+
+# Generate new secret
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+```
+
+### Debug Mode
 ```bash
 # Enable debug logging
 DEBUG=* npm start
 
-# Check server logs
-tail -f logs/app.log
-
-# Test specific endpoints
-curl -v http://localhost:5050/api/v1/users
+# Set log level
+LOG_LEVEL=debug npm start
 ```
 
-## 📋 Quality Checklist
+## 📊 Performance Optimization
 
-### **Before Committing Code**
-- ✅ **Functionality**: All features working correctly
-- ✅ **Testing**: All tests passing
-- ✅ **Documentation**: All docs updated
-- ✅ **Security**: Security features verified
-- ✅ **Performance**: Response times acceptable
+### Database Optimization
+```javascript
+// Use prepared statements
+const stmt = db.prepare('SELECT * FROM users WHERE id = ?');
+stmt.get(userId);
 
-### **Before Deployment**
-- ✅ **Environment**: Correct environment configuration
-- ✅ **Database**: Database integrity verified
-- ✅ **API**: All endpoints tested
-- ✅ **Security**: Security features tested
-- ✅ **Documentation**: Documentation current
+// Use transactions for multiple operations
+db.serialize(() => {
+  db.run('BEGIN TRANSACTION');
+  // Multiple operations
+  db.run('COMMIT');
+});
+```
 
-## 🎉 Success Metrics
+### Caching Strategy
+```javascript
+// Simple in-memory cache
+const cache = new Map();
 
-### **Current Achievements**
-- ✅ **API Endpoints**: 14/14 working (100%)
-- ✅ **Database Tables**: 4/4 functional (100%)
-- ✅ **Documentation**: 20+ files updated (100%)
-- ✅ **Testing**: Comprehensive testing completed (100%)
-- ✅ **Security**: All security features working (100%)
+const getCachedData = (key) => {
+  if (cache.has(key)) {
+    return cache.get(key);
+  }
+  // Fetch from database and cache
+};
+```
 
-### **Platform Status**
-- ✅ **Production Ready**: All core features complete
-- ✅ **Secure**: JWT authentication and rate limiting
-- ✅ **Scalable**: Architecture supports future scaling
-- ✅ **Maintainable**: Clean code structure and documentation
+### Rate Limiting
+```javascript
+const rateLimit = require('express-rate-limit');
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5 // limit each IP to 5 requests per windowMs
+});
+
+app.use('/api/v1/auth', authLimiter);
+```
+
+## 🔒 Security Best Practices
+
+### Input Validation
+```javascript
+// Always validate input
+const { body, validationResult } = require('express-validator');
+
+const validateInput = [
+  body('email').isEmail().normalizeEmail(),
+  body('password').isLength({ min: 6 }),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  }
+];
+```
+
+### SQL Injection Prevention
+```javascript
+// Use parameterized queries
+const query = 'SELECT * FROM users WHERE email = ?';
+db.get(query, [email], (err, row) => {
+  // Handle result
+});
+```
+
+### XSS Prevention
+```javascript
+// Sanitize output
+const sanitizeHtml = require('sanitize-html');
+
+const cleanData = sanitizeHtml(userInput, {
+  allowedTags: [],
+  allowedAttributes: {}
+});
+```
+
+## 📚 Code Style Guidelines
+
+### Naming Conventions
+- **Files**: camelCase (e.g., `userController.js`)
+- **Classes**: PascalCase (e.g., `UserController`)
+- **Functions**: camelCase (e.g., `getUserById`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_RETRY_ATTEMPTS`)
+- **Database tables**: snake_case (e.g., `user_profiles`)
+
+### Code Organization
+```javascript
+// File structure
+const express = require('express');
+const router = express.Router();
+
+// Import dependencies
+const authController = require('../controllers/authController');
+const authMiddleware = require('../middleware/auth');
+
+// Route definitions
+router.post('/register', authController.register);
+router.post('/login', authController.login);
+
+// Export
+module.exports = router;
+```
+
+### Error Handling
+```javascript
+// Consistent error handling
+const handleError = (res, error, statusCode = 500) => {
+  console.error('Error:', error);
+  res.status(statusCode).json({
+    success: false,
+    message: error.message || 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+  });
+};
+```
+
+## 🔄 Version Control
+
+### Git Workflow
+```bash
+# Create feature branch
+git checkout -b feature/new-wallet-feature
+
+# Make changes and commit
+git add .
+git commit -m "Add new wallet balance tracking feature"
+
+# Push to remote
+git push origin feature/new-wallet-feature
+
+# Create pull request
+# Merge after review
+```
+
+### Commit Message Convention
+```
+type(scope): description
+
+Examples:
+feat(auth): add JWT token refresh endpoint
+fix(wallet): resolve balance calculation bug
+docs(api): update authentication documentation
+test(transactions): add integration tests
+```
+
+## 📖 Documentation Standards
+
+### Code Documentation
+```javascript
+/**
+ * Create a new wallet for the authenticated user
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with wallet details
+ */
+async createWallet(req, res) {
+  // Implementation
+}
+```
+
+### API Documentation
+```markdown
+### Create Wallet
+**POST** `/api/v1/wallets`
+
+Create a new wallet for the authenticated user.
+
+**Headers:**
+```
+Authorization: Bearer <jwt-token>
+```
+
+**Request Body:**
+```json
+{
+  "currency": "USD",
+  "initialBalance": 0
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Wallet created successfully",
+  "data": {
+    "id": "WAL123456",
+    "balance": 0,
+    "currency": "USD"
+  }
+}
+```
+```
+
+## 🎯 Development Checklist
+
+### Before Starting
+- [ ] Read the [API Documentation](./API_DOCUMENTATION.md)
+- [ ] Review the [Project Status](./PROJECT_STATUS.md)
+- [ ] Set up development environment
+- [ ] Initialize database
+- [ ] Run existing tests
+
+### During Development
+- [ ] Follow coding standards
+- [ ] Write tests for new features
+- [ ] Update documentation
+- [ ] Test API endpoints
+- [ ] Check error handling
+
+### Before Committing
+- [ ] Run all tests
+- [ ] Check code formatting
+- [ ] Update documentation
+- [ ] Test API functionality
+- [ ] Review changes
+
+### Before Deploying
+- [ ] Run production tests
+- [ ] Check security measures
+- [ ] Verify environment variables
+- [ ] Test database migrations
+- [ ] Monitor application logs
+
+## 🆘 Getting Help
+
+### Resources
+- [API Documentation](./API_DOCUMENTATION.md)
+- [Setup Guide](./SETUP_GUIDE.md)
+- [Testing Guide](./TESTING_GUIDE.md)
+- [Security Guide](./SECURITY.md)
+
+### Support Channels
+1. Check the troubleshooting section
+2. Review error logs
+3. Test with curl commands
+4. Open an issue for bugs
 
 ---
 
-**Development Guide Updated**: July 10, 2025  
-**Status**: ✅ **ALL PRACTICES VALIDATED**  
-**Next Review**: After major platform changes 
+**MyMoolah Development Guide v1.0.0** - Comprehensive development guidelines for the MyMoolah Wallet Platform. 

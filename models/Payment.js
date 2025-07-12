@@ -313,4 +313,4 @@ class Payment {
   }
 }
 
-module.exports = new Payment();
+module.exports = Payment;

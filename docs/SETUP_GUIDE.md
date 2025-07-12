@@ -1,291 +1,410 @@
-# MyMoolah Platform Setup Guide
+# MyMoolah Setup Guide
 
-## 🚀 Quick Start (July 2025)
+**Version**: 1.0.0  
+**Last Updated**: July 12, 2025  
+**Project Status**: Production Ready
 
-**Status**: ✅ **PRODUCTION READY** - All systems working and tested
+## 🎯 Overview
 
-### **Prerequisites**
-- Node.js 18+ 
-- npm or yarn
-- Git
+This guide provides comprehensive setup instructions for the MyMoolah Wallet Platform. The system is now fully functional with all core routes registered and operational.
 
-### **Installation Steps**
+## 📋 Prerequisites
 
-#### **1. Clone Repository**
+### System Requirements
+- **Node.js**: v18.0.0 or higher
+- **npm**: v8.0.0 or higher (or yarn v1.22.0+)
+- **SQLite3**: Built into Node.js (no separate installation needed)
+- **Operating System**: macOS, Linux, or Windows
+- **Memory**: Minimum 2GB RAM
+- **Storage**: Minimum 1GB free space
+
+### Development Tools (Optional)
+- **Git**: For version control
+- **Postman/Insomnia**: For API testing
+- **VS Code**: Recommended IDE
+- **Docker**: For containerized deployment
+
+## 🚀 Quick Setup
+
+### 1. Clone Repository
 ```bash
+# Navigate to your development directory
+cd /path/to/your/projects
+
+# Clone the repository (replace with actual URL)
 git clone <repository-url>
 cd mymoolah
 ```
 
-#### **2. Install Dependencies**
+### 2. Install Dependencies
 ```bash
+# Install all dependencies
 npm install
+
+# Verify installation
+npm list --depth=0
 ```
 
-#### **3. Start Server**
+### 3. Environment Configuration
 ```bash
+# Create environment file
+cp .env.example .env
+
+# Edit environment variables
+nano .env
+```
+
+**Required Environment Variables:**
+```bash
+# Server Configuration
+PORT=5050
+NODE_ENV=development
+
+# Database Configuration
+DATABASE_URL=sqlite:./data/mymoolah.db
+
+# Security Configuration
+JWT_SECRET=your-super-secret-jwt-key-here
+JWT_EXPIRES_IN=24h
+
+# Optional: Logging
+LOG_LEVEL=info
+```
+
+### 4. Initialize Database
+```bash
+# Initialize the database with all tables
+npm run init-db
+
+# Verify database creation
+ls -la data/
+```
+
+### 5. Start the Server
+```bash
+# Start the development server
 npm start
+
+# Or run directly
+node server.js
 ```
 
-Server will start on `http://localhost:5050`
-
-#### **4. Verify Installation**
+### 6. Verify Installation
 ```bash
+# Test health endpoint
+curl http://localhost:5050/health
+
+# Test API endpoints
 curl http://localhost:5050/test
 ```
-Should return: `{"message":"Test route works!"}`
 
-## 📋 Detailed Setup Instructions
+## 🔧 Detailed Setup Instructions
 
-### **Environment Setup**
+### Database Setup
 
-#### **Local Development**
-1. **Database**: SQLite (automatically created)
-2. **Port**: 5050
-3. **Environment**: Development
+The system uses SQLite for simplicity and development. The database is automatically created when you run the initialization script.
 
-#### **Cloud Development (Codespaces)**
-1. **Database**: MySQL
-2. **Port**: 5050  
-3. **Environment**: Production-like
+#### Database Schema
+The following tables are created:
+- **users**: User accounts and authentication
+- **wallets**: Digital wallet management
+- **transactions**: Payment transaction records
+- **kyc**: Know Your Customer data
+- **support**: Customer support tickets
+- **notifications**: System notifications
+- **vouchers**: Digital voucher system
+- **voucher_types**: Voucher type configuration
 
-### **Database Initialization**
+#### Database Location
+- **Development**: `./data/mymoolah.db`
+- **Production**: Configure via `DATABASE_URL` environment variable
 
-The platform automatically creates all necessary database tables:
+### API Routes Setup
 
-- ✅ **Users table** - User accounts and authentication
-- ✅ **Wallets table** - Wallet management and balances
-- ✅ **Transactions table** - Transaction history and recording
-- ✅ **KYC table** - Know Your Customer records
+All core routes are automatically registered in `server.js`:
 
-#### **Manual Database Setup (if needed)**
+#### Registered Routes
+- ✅ `/api/v1/auth` - Authentication endpoints
+- ✅ `/api/v1/wallets` - Wallet management
+- ✅ `/api/v1/transactions` - Transaction processing
+- ✅ `/api/v1/users` - User management
+- ✅ `/api/v1/kyc` - KYC processing
+- ✅ `/api/v1/support` - Support ticket system
+- ✅ `/api/v1/notifications` - Notification system
+- ✅ `/api/v1/vouchers` - Voucher management
+- ✅ `/api/v1/voucher-types` - Voucher type management
+- ✅ `/api/v1/vas` - Value Added Services
+- ✅ `/api/v1/merchants` - Merchant management
+- ✅ `/api/v1/service-providers` - Service provider management
+
+#### Temporarily Disabled Routes
+- ❌ `/billpayment/v1` - EasyPay integration (commented out)
+- ❌ `/api/v1/mercury` - Mercury integration (commented out)
+- ❌ `/api/v1/easypay-vouchers` - EasyPay vouchers (commented out)
+
+### Security Configuration
+
+#### JWT Authentication
 ```bash
-# Initialize KYC table
-node scripts/init-kyc-table.js
+# Generate a secure JWT secret
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
+
+# Add to your .env file
+JWT_SECRET=your-generated-secret-here
 ```
 
-### **Configuration**
+#### CORS Configuration
+CORS is configured for development. For production, update the allowed origins in `server.js`:
 
-#### **Environment Variables**
-Create `.env` file in project root:
-```env
-PORT=5050
-JWT_SECRET=your-secret-key
-NODE_ENV=development
+```javascript
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://yourdomain.com'],
+  credentials: true
+}));
 ```
 
-#### **Database Configuration**
-- **Local**: SQLite database at `data/mymoolah.db`
-- **Cloud**: MySQL connection string in environment variables
+#### Rate Limiting
+Rate limiting is configured to prevent abuse:
+- Authentication endpoints: 5 requests/minute
+- Wallet operations: 10 requests/minute
+- Transaction endpoints: 20 requests/minute
+- Other endpoints: 30 requests/minute
 
-## 🧪 Testing the Platform
+## 🧪 Testing Setup
 
-### **1. Test Authentication**
+### Run All Tests
 ```bash
-# Register a new user
+# Run complete test suite
+npm test
+
+# Run with coverage
+npm run test:coverage
+```
+
+### API Testing
+```bash
+# Test health endpoint
+curl http://localhost:5050/health
+
+# Test authentication
 curl -X POST http://localhost:5050/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{
-    "firstName": "Test",
-    "lastName": "User",
-    "email": "test@example.com",
-    "password": "password123"
-  }'
-```
+  -d '{"firstName":"Test","lastName":"User","email":"test@example.com","password":"password123"}'
 
-### **2. Test Wallet Operations**
-```bash
-# Get wallet details (use token from registration)
-curl -X GET http://localhost:5050/api/v1/wallets/1 \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-
-# Credit wallet
-curl -X POST http://localhost:5050/api/v1/wallets/1/credit \
+# Test login
+curl -X POST http://localhost:5050/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{"amount": 100}'
+  -d '{"email":"test@example.com","password":"password123"}'
 ```
 
-### **3. Test Data Management**
+### Database Testing
 ```bash
-# List all users
-curl -X GET http://localhost:5050/api/v1/users
+# Test database connection
+npm run test:db
 
-# List all transactions
-curl -X GET http://localhost:5050/api/v1/transactions
+# Test models
+npm run test:models
 
-# List all KYC records
-curl -X GET http://localhost:5050/api/v1/kyc
+# Test controllers
+npm run test:controllers
 ```
 
-## 📊 Platform Features
+## 🚀 Production Deployment
 
-### **✅ Working Features**
+### 1. Environment Setup
+```bash
+# Set production environment
+NODE_ENV=production
 
-#### **Authentication System**
-- User registration with email/password
-- User login with JWT token generation
-- Password hashing with bcryptjs
-- JWT token validation middleware
-- Rate limiting on auth endpoints
+# Configure production database
+DATABASE_URL=sqlite:/path/to/production/mymoolah.db
 
-#### **Wallet Management**
-- Automatic wallet creation on user registration
-- Wallet balance tracking
-- Credit operations with transaction recording
-- Debit operations with transaction recording
-- Transaction history with pagination
-- Wallet details retrieval
+# Set secure JWT secret
+JWT_SECRET=your-production-jwt-secret
 
-#### **Transaction System**
-- Automatic transaction recording
-- Transaction history retrieval
-- Transaction details by ID
-- Wallet-specific transaction lists
-- Transaction status tracking
+# Configure logging
+LOG_LEVEL=error
+```
 
-#### **KYC System**
-- KYC table with proper schema
-- KYC record submission
-- KYC status tracking (pending, approved, rejected)
-- KYC record retrieval with user details
-- Sample data for testing
+### 2. Security Hardening
+```bash
+# Install security dependencies
+npm install helmet express-rate-limit
 
-#### **Database System**
-- SQLite database with proper schemas
-- Users table: 36 registered users
-- Wallets table: 36 wallets (one per user)
-- Transactions table: 15+ transactions
-- KYC table: 3 sample records
-- Foreign key relationships working
+# Configure HTTPS (recommended)
+# Set up SSL certificates
+# Configure reverse proxy (nginx/Apache)
+```
 
-#### **API Security**
-- JWT authentication on protected routes
-- Rate limiting implementation
-- Input validation and sanitization
-- Error handling and logging
+### 3. Process Management
+```bash
+# Install PM2 for process management
+npm install -g pm2
+
+# Start with PM2
+pm2 start server.js --name mymoolah-api
+
+# Monitor the application
+pm2 monit
+```
+
+### 4. Monitoring Setup
+```bash
+# Install monitoring tools
+npm install express-status-monitor
+
+# Configure logging
+npm install winston
+```
 
 ## 🔧 Troubleshooting
 
-### **Common Issues**
+### Common Issues
 
-#### **Port Already in Use**
+#### Port Already in Use
 ```bash
-# Find process using port 5050
-lsof -i :5050
+# Kill processes using port 5050
+pkill -f "node server.js"
 
-# Kill the process
-kill -9 <PID>
+# Or use a different port
+PORT=5051 npm start
 ```
 
-#### **Database Issues**
+#### Database Connection Issues
 ```bash
-# Remove existing database
+# Check database file permissions
+ls -la data/mymoolah.db
+
+# Reinitialize database
 rm data/mymoolah.db
-
-# Restart server (will recreate database)
-npm start
+npm run init-db
 ```
 
-#### **Dependencies Issues**
+#### Module Not Found Errors
 ```bash
-# Clear npm cache
-npm cache clean --force
-
-# Remove node_modules and reinstall
+# Clear node_modules and reinstall
 rm -rf node_modules package-lock.json
 npm install
 ```
 
-#### **KYC Table Missing**
+#### JWT Token Issues
 ```bash
-# Initialize KYC table
-node scripts/init-kyc-table.js
+# Verify JWT secret is set
+echo $JWT_SECRET
+
+# Generate new JWT secret
+node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
 ```
 
-### **Verification Commands**
-
-#### **Check Server Status**
+### Debug Mode
 ```bash
+# Enable debug logging
+DEBUG=* npm start
+
+# Or set log level
+LOG_LEVEL=debug npm start
+```
+
+## 📊 System Verification
+
+### Health Check
+```bash
+# Verify server is running
+curl http://localhost:5050/health
+
+# Expected response:
+{
+  "status": "OK",
+  "timestamp": "2025-07-12T18:50:55.677Z",
+  "service": "MyMoolah Wallet API",
+  "version": "1.0.0"
+}
+```
+
+### API Endpoint Test
+```bash
+# Test all registered endpoints
 curl http://localhost:5050/test
+
+# Expected response includes all 12 core routes
 ```
 
-#### **Check Database Tables**
+### Database Verification
 ```bash
-# The server will log table creation on startup
+# Check database tables
+sqlite3 data/mymoolah.db ".tables"
+
+# Expected output:
+# users wallets transactions kyc support notifications vouchers voucher_types
+```
+
+## 🔄 Development Workflow
+
+### 1. Start Development Server
+```bash
+# Navigate to project directory
+cd /Users/andremacbookpro/mymoolah
+
+# Start server
 npm start
 ```
 
-#### **Test All Endpoints**
+### 2. Make Changes
+- Edit files in the project directory
+- Server will restart automatically (if using nodemon)
+- Test changes immediately
+
+### 3. Test Changes
 ```bash
-# Run comprehensive test
-node test-api-endpoints.js
+# Run tests
+npm test
+
+# Test specific functionality
+npm run test:auth
+npm run test:wallets
 ```
 
-## 📁 Project Structure
-
-```
-mymoolah/
-├── controllers/          # Business logic
-│   ├── authController.js
-│   ├── userController.js
-│   ├── walletController.js
-│   ├── transactionController.js
-│   └── kycController.js
-├── models/              # Database models
-│   ├── User.js
-│   ├── walletModel.js
-│   └── transactionModel.js
-├── routes/              # API endpoints
-│   ├── auth.js
-│   ├── users.js
-│   ├── wallets.js
-│   ├── transactions.js
-│   └── kyc.js
-├── middleware/          # Authentication & validation
-│   ├── auth.js
-│   └── rateLimiter.js
-├── scripts/            # Database initialization
-│   └── init-kyc-table.js
-├── docs/               # Documentation
-├── tests/              # Test files
-├── data/               # SQLite database
-└── server.js           # Main application
-```
-
-## 🚀 Deployment
-
-### **Local Development**
+### 4. Commit Changes
 ```bash
-npm start
-```
+# Add changes
+git add .
 
-### **Production**
-```bash
-NODE_ENV=production npm start
-```
+# Commit with descriptive message
+git commit -m "Add new feature: wallet balance tracking"
 
-### **Docker (if available)**
-```bash
-docker-compose up
+# Push to repository
+git push origin main
 ```
 
 ## 📚 Additional Resources
 
-- [API Documentation](api.md)
-- [Architecture Guide](architecture.md)
-- [Security Guide](SECURITY.md)
-- [Session Summary](session-summary.md)
+### Documentation
+- [API Documentation](./API_DOCUMENTATION.md)
+- [Development Guide](./DEVELOPMENT_GUIDE.md)
+- [Testing Guide](./TESTING_GUIDE.md)
+- [Security Guide](./SECURITY.md)
 
-## 🎯 Next Steps
+### External Resources
+- [Express.js Documentation](https://expressjs.com/)
+- [SQLite Documentation](https://www.sqlite.org/docs.html)
+- [JWT.io](https://jwt.io/) - JWT token debugging
+- [Mojaloop Documentation](https://docs.mojaloop.io/)
 
-1. **Frontend Development** - React-based user interface
-2. **Mojaloop Integration** - Inter-bank transfer capabilities
-3. **Mobile App** - Native mobile application
-4. **Advanced Features** - Multi-currency, limits, 2FA
+## 🆘 Support
+
+### Getting Help
+1. Check the [troubleshooting section](#-troubleshooting)
+2. Review the [API documentation](./API_DOCUMENTATION.md)
+3. Check the [project status](./PROJECT_STATUS.md)
+4. Open an issue for bugs or feature requests
+
+### System Status
+- ✅ **Server**: Running on port 5050
+- ✅ **Database**: SQLite operational
+- ✅ **Authentication**: JWT system working
+- ✅ **Routes**: All 12 core routes registered
+- ✅ **Security**: Rate limiting and validation active
 
 ---
 
-**Setup Guide Updated**: July 10, 2025  
-**Status**: ✅ **PRODUCTION READY** - All systems working  
-**Last Tested**: Comprehensive testing completed 
+**MyMoolah Setup Guide v1.0.0** - Complete setup instructions for the MyMoolah Wallet Platform. 
