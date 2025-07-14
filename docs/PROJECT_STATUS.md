@@ -118,39 +118,63 @@ MyMoolah is a comprehensive fintech wallet platform built on Mojaloop software, 
 - **Memory Usage**: Stable and within limits
 - **Error Rate**: < 1% for core endpoints
 
-## 🚫 Temporarily Disabled Features
+## 🚀 Integrations (Current Status)
 
-The following integrations have been temporarily disabled due to integration issues:
+### Flash Integration
+- Dynamic, OAuth2-based, fully compliant with Flash Partner API v4
+- Endpoints: `/api/v1/flash` (health, product listing, purchase, etc.)
+- Conditional loading: Only enabled if credentials are present in `.env`
 
-### EasyPay Integration
-- ❌ **EasyPay Routes**: `/billpayment/v1` - Commented out
-- ❌ **EasyPay Vouchers**: `/api/v1/easypay-vouchers` - Commented out
-- **Reason**: Controller method issues and model dependencies
-- **Status**: Ready for re-enabling once fixes are applied
+### MobileMart Integration
+- Dynamic, OAuth2-based, robust for fast-changing VAS products
+- Endpoints: `/api/v1/mobilemart` (health, product listing, purchase, etc.)
+- Conditional loading: Only enabled if credentials are present in `.env`
 
-### Mercury Integration
-- ❌ **Mercury Routes**: `/api/v1/mercury` - Commented out
-- **Reason**: Integration complexity and testing requirements
-- **Status**: Can be re-enabled when integration is complete
+### EasyPay & Mercury
+- Temporarily disabled (masked in code, ready for future re-enabling)
+- All code and docs preserved for future work
 
-## 🔄 Recent Updates (July 12, 2025)
+## 🛠️ Environment Variables
 
-### Major Accomplishments
-1. **Complete Route Registration**: All 12 core routes now properly registered in server.js
-2. **Server Stability**: Fixed all startup issues and port conflicts
-3. **Database Integration**: Complete SQLite database setup with all tables
-4. **Authentication System**: Fully functional JWT-based authentication
-5. **Wallet Operations**: Complete wallet CRUD operations with balance tracking
-6. **Error Handling**: Comprehensive error handling and validation
-7. **Documentation**: Updated all documentation files
+Add these to your `.env` file as needed:
 
-### Technical Improvements
-- Fixed server.js route registration issues
-- Resolved port 5050 conflicts
-- Updated all controller imports
-- Improved error handling middleware
-- Enhanced API response consistency
-- Updated database schema validation
+```env
+# Flash API
+FLASH_API_URL=https://api.flashswitch.flash-group.com
+FLASH_CONSUMER_KEY=your_flash_consumer_key_here
+FLASH_CONSUMER_SECRET=your_flash_consumer_secret_here
+
+# MobileMart API
+MOBILEMART_API_URL=https://api.mobilemart.co.za
+MOBILEMART_CLIENT_ID=your_mobilemart_client_id_here
+MOBILEMART_CLIENT_SECRET=your_mobilemart_client_secret_here
+```
+
+## 📝 Troubleshooting
+- If you see a warning about missing Flash or MobileMart credentials, those endpoints will be unavailable until you add the required variables and restart the server.
+- All other features remain available.
+
+## 📋 Available Endpoints (Core + Integrations)
+- `/api/v1/auth` - Authentication
+- `/api/v1/wallets` - Wallet management
+- `/api/v1/transactions` - Transaction processing
+- `/api/v1/users` - User management
+- `/api/v1/kyc` - KYC
+- `/api/v1/support` - Support
+- `/api/v1/notifications` - Notifications
+- `/api/v1/vouchers` - Vouchers
+- `/api/v1/voucher-types` - Voucher types
+- `/api/v1/vas` - Value Added Services
+- `/api/v1/merchants` - Merchants
+- `/api/v1/service-providers` - Service providers
+- `/api/v1/flash` - Flash integration (if enabled)
+- `/api/v1/mobilemart` - MobileMart integration (if enabled)
+
+## 🔄 Recent Updates (July 2025)
+- ✅ Flash and MobileMart integrations: dynamic, robust, production-ready
+- ✅ All endpoints and docs updated
+- ✅ EasyPay and Mercury integrations masked, ready for future
+- ✅ All documentation and troubleshooting up to date
 
 ## 🐛 Known Issues
 

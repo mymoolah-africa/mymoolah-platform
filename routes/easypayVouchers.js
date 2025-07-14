@@ -1,26 +1,26 @@
 const express = require('express');
 const router = express.Router();
-const easypayVoucherController = require('../controllers/easypayVoucherController');
+const easyPayVoucherController = require('../controllers/easypayVoucherController');
 
-// Issue EasyPay voucher
-router.post('/issue', easypayVoucherController.issueEasyPayVoucher);
+// Issue a new EasyPay voucher
+router.post('/', easyPayVoucherController.issueEasyPayVoucher);
 
 // Process EasyPay settlement callback
-router.post('/settlement-callback', easypayVoucherController.processSettlementCallback);
+router.post('/settlement', easyPayVoucherController.processSettlementCallback);
 
 // Get EasyPay voucher status
-router.get('/status/:easypay_code', easypayVoucherController.getEasyPayVoucherStatus);
+router.get('/status/:easypay_code', easyPayVoucherController.getEasyPayVoucherStatus);
 
-// Get pending EasyPay vouchers for user
-router.get('/pending/:userId', easypayVoucherController.getPendingEasyPayVouchers);
+// Get pending EasyPay vouchers for a user
+router.get('/pending/:userId', easyPayVoucherController.getPendingEasyPayVouchers);
 
-// Get settled MM vouchers for user
-router.get('/settled/:userId', easypayVoucherController.getSettledMMVouchers);
+// Get settled MM vouchers for a user
+router.get('/settled/:userId', easyPayVoucherController.getSettledMMVouchers);
 
-// Resend SMS (for testing)
-router.post('/resend-sms/:easypay_code', easypayVoucherController.resendSMS);
+// Resend SMS (disabled, returns error)
+router.post('/resend/:easypay_code', easyPayVoucherController.resendSMS);
 
 // Cleanup expired vouchers (admin)
-router.post('/cleanup-expired', easypayVoucherController.cleanupExpiredVouchers);
+router.post('/cleanup', easyPayVoucherController.cleanupExpiredVouchers);
 
-module.exports = router; 
+module.exports = router;

@@ -408,3 +408,39 @@ git push origin main
 ---
 
 **MyMoolah Setup Guide v1.0.0** - Complete setup instructions for the MyMoolah Wallet Platform. 
+
+## 🚀 Integrations
+
+### Flash Integration
+- Dynamic, OAuth2-based, fully compliant with Flash Partner API v4
+- Endpoints: `/api/v1/flash` (health, product listing, purchase, etc.)
+- Conditional loading: Only enabled if credentials are present in `.env`
+
+### MobileMart Integration
+- Dynamic, OAuth2-based, robust for fast-changing VAS products
+- Endpoints: `/api/v1/mobilemart` (health, product listing, purchase, etc.)
+- Conditional loading: Only enabled if credentials are present in `.env`
+
+### EasyPay & Mercury
+- Temporarily disabled (masked in code, ready for future re-enabling)
+- All code and docs preserved for future work
+
+## 🛠️ Environment Variables
+
+Add these to your `.env` file as needed:
+
+```env
+# Flash API
+FLASH_API_URL=https://api.flashswitch.flash-group.com
+FLASH_CONSUMER_KEY=your_flash_consumer_key_here
+FLASH_CONSUMER_SECRET=your_flash_consumer_secret_here
+
+# MobileMart API
+MOBILEMART_API_URL=https://api.mobilemart.co.za
+MOBILEMART_CLIENT_ID=your_mobilemart_client_id_here
+MOBILEMART_CLIENT_SECRET=your_mobilemart_client_secret_here
+```
+
+## 📝 Troubleshooting
+- If you see a warning about missing Flash or MobileMart credentials, those endpoints will be unavailable until you add the required variables and restart the server.
+- All other features remain available. 

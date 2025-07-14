@@ -1,44 +1,22 @@
 const express = require('express');
 const router = express.Router();
-const AuthController = require('../controllers/authController');
-const authenticateToken = require('../middleware/auth');
+const authController = require('../controllers/authController');
+const authMiddleware = require('../middleware/auth');
+const { body } = require('express-validator');
 
-const authController = new AuthController();
+// GET /api/v1/auth/profile
+router.get('/profile', authMiddleware, authController.getProfile);
 
-// Register new user
-router.post('/register', 
-  authController.validateRegistration(),
-  authController.register.bind(authController)
-);
+// POST /api/v1/auth/register
+router.post('/register', [
+  body('email').isEmail(),
+  body('password').isLength({ min: 6 })
+], authController.register);
 
-// Login user
-router.post('/login', 
-  authController.validateLogin(),
-  authController.login.bind(authController)
-);
-
-// Get user profile (protected route)
-router.get('/profile', 
-  authenticateToken,
-  authController.profile.bind(authController)
-);
-
-// Forgot password
-router.post('/forgot-password', 
-  authController.forgotPassword.bind(authController)
-);
-
-// Reset password
-router.post('/reset-password', 
-  authController.resetPassword.bind(authController)
-);
-
-// Test endpoint
-router.get('/test', (req, res) => {
-  res.json({ 
-    message: 'Auth API is working!',
-    timestamp: new Date().toISOString()
-  });
-});
+// POST /api/v1/auth/login
+router.post('/login', [
+  body('email').isEmail(),
+  body('password').isLength({ min: 6 })
+], authController.login);
 
 module.exports = router;

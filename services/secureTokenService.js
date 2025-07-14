@@ -47,7 +47,8 @@ class SecureTokenService {
         let requestBodyString = JSON.stringify(payloadWithoutToken);
         
         // Step 3: Remove quotes and spaces as per specification
-        requestBodyString = requestBodyString.replace(/"/g, '').replace(/\s/g, '');
+        // Step 3: Remove quotes, backslashes, and spaces as per specification
+        requestBodyString = requestBodyString.replace(/"/g, '').replace(/\\/g, '').replace(/\s/g, '');
         
         // Step 4: Prepend subscriber key and trim
         const sourceString = this.subscriberKey + requestBodyString;

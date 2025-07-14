@@ -1,175 +1,87 @@
 /**
- * EasyPay Utility Functions
- * Helper functions for EasyPay number validation and processing
+ * EasyPay Utility Functions (14-digit version)
  */
 
-/**
- * Validate EasyPay number format
- * Format: 9XXXXNNNNNNNNNNNNNNNN (9 + 4-digit receiver ID + account number + check digit)
- * @param {string} easyPayNumber - The EasyPay number to validate
- * @returns {boolean} - True if valid, false otherwise
- */
+// Validate EasyPay number format and check digit (14 digits only)
 function validateEasyPayNumber(easyPayNumber) {
   try {
-    // Check if it's a string
-    if (typeof easyPayNumber !== 'string') {
-      return false;
-    }
+    if (typeof easyPayNumber !== 'string') return false;
+    if (!/^\d{14}$/.test(easyPayNumber)) return false; // 14 digits only
+    if (!easyPayNumber.startsWith('9')) return false;
 
-    // Check length (should be 20 digits)
-    if (easyPayNumber.length !== 20) {
-      return false;
-    }
-
-    // Check if it starts with '9'
-    if (!easyPayNumber.startsWith('9')) {
-      return false;
-    }
-
-    // Check if all characters are digits
-    if (!/^\d+$/.test(easyPayNumber)) {
-      return false;
-    }
-
-    // Extract receiver ID (positions 2-5)
+    // Extract receiverId (4 digits after the 9)
     const receiverId = easyPayNumber.substring(1, 5);
-    
-    // Validate receiver ID (should be 4 digits)
-    if (receiverId.length !== 4 || !/^\d{4}$/.test(receiverId)) {
-      return false;
-    }
+    if (!/^\d{4}$/.test(receiverId)) return false;
 
-    // Extract account number (positions 6-19)
-    const accountNumber = easyPayNumber.substring(5, 19);
-    
-    // Validate account number (should be 13 digits)
-    if (accountNumber.length !== 13 || !/^\d{13}$/.test(accountNumber)) {
-      return false;
-    }
+    // Account number is 8 digits after receiverId, up to the last digit (check digit)
+    const accountNumber = easyPayNumber.substring(5, 13);
+    if (!/^\d{8}$/.test(accountNumber)) return false;
 
-    // Extract check digit (position 20)
-    const checkDigit = easyPayNumber.substring(19, 20);
-    
-    // Validate check digit (should be 1 digit)
-    if (checkDigit.length !== 1 || !/^\d{1}$/.test(checkDigit)) {
-      return false;
-    }
+    const checkDigit = easyPayNumber.slice(-1);
+    if (!/^\d$/.test(checkDigit)) return false;
 
-    // TODO: Implement proper check digit validation algorithm
-    // For now, we'll accept any valid format
-
-    return true;
-
+    // Validate Luhn check digit
+    const calculatedCheck = calculateLuhnCheckDigit(receiverId + accountNumber);
+    return checkDigit === calculatedCheck;
   } catch (error) {
     console.error('❌ EasyPay number validation error:', error);
     return false;
   }
 }
 
-/**
- * Extract receiver ID from EasyPay number
- * @param {string} easyPayNumber - The EasyPay number
- * @returns {string} - The 4-digit receiver ID
- */
+// Calculate Luhn Modulus 10 check digit (excluding the leading 9)
+function calculateLuhnCheckDigit(number) {
+  let sum = 0;
+  let shouldDouble = true;
+  for (let i = number.length - 1; i >= 0; i--) {
+    let digit = parseInt(number[i], 10);
+    if (shouldDouble) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    shouldDouble = !shouldDouble;
+  }
+  const mod10 = sum % 10;
+  return mod10 === 0 ? '0' : String(10 - mod10);
+}
+
+// Extract receiver ID from EasyPay number
 function extractReceiverId(easyPayNumber) {
-  try {
-    if (!validateEasyPayNumber(easyPayNumber)) {
-      throw new Error('Invalid EasyPay number format');
-    }
-    
-    // Receiver ID is positions 2-5 (after the leading '9')
-    return easyPayNumber.substring(1, 5);
-    
-  } catch (error) {
-    console.error('❌ Error extracting receiver ID:', error);
-    return null;
-  }
+  if (!validateEasyPayNumber(easyPayNumber)) return null;
+  return easyPayNumber.substring(1, 5);
 }
 
-/**
- * Extract account number from EasyPay number
- * @param {string} easyPayNumber - The EasyPay number
- * @returns {string} - The account number
- */
+// Extract account number from EasyPay number
 function extractAccountNumber(easyPayNumber) {
-  try {
-    if (!validateEasyPayNumber(easyPayNumber)) {
-      throw new Error('Invalid EasyPay number format');
-    }
-    
-    // Account number is positions 6-19
-    return easyPayNumber.substring(5, 19);
-    
-  } catch (error) {
-    console.error('❌ Error extracting account number:', error);
-    return null;
-  }
+  if (!validateEasyPayNumber(easyPayNumber)) return null;
+  return easyPayNumber.substring(5, 13);
 }
 
-/**
- * Extract check digit from EasyPay number
- * @param {string} easyPayNumber - The EasyPay number
- * @returns {string} - The check digit
- */
+// Extract check digit from EasyPay number
 function extractCheckDigit(easyPayNumber) {
-  try {
-    if (!validateEasyPayNumber(easyPayNumber)) {
-      throw new Error('Invalid EasyPay number format');
-    }
-    
-    // Check digit is position 20
-    return easyPayNumber.substring(19, 20);
-    
-  } catch (error) {
-    console.error('❌ Error extracting check digit:', error);
-    return null;
-  }
+  if (!validateEasyPayNumber(easyPayNumber)) return null;
+  return easyPayNumber.slice(-1);
 }
 
-/**
- * Parse EasyPay number into components
- * @param {string} easyPayNumber - The EasyPay number
- * @returns {object} - Object with receiverId, accountNumber, and checkDigit
- */
+// Parse EasyPay number into components
 function parseEasyPayNumber(easyPayNumber) {
-  try {
-    if (!validateEasyPayNumber(easyPayNumber)) {
-      throw new Error('Invalid EasyPay number format');
-    }
-    
-    return {
-      receiverId: extractReceiverId(easyPayNumber),
-      accountNumber: extractAccountNumber(easyPayNumber),
-      checkDigit: extractCheckDigit(easyPayNumber),
-      fullNumber: easyPayNumber
-    };
-    
-  } catch (error) {
-    console.error('❌ Error parsing EasyPay number:', error);
-    return null;
-  }
+  if (!validateEasyPayNumber(easyPayNumber)) return null;
+  return {
+    receiverId: extractReceiverId(easyPayNumber),
+    accountNumber: extractAccountNumber(easyPayNumber),
+    checkDigit: extractCheckDigit(easyPayNumber),
+    fullNumber: easyPayNumber
+  };
 }
 
-/**
- * Generate a test EasyPay number for development
- * @param {string} receiverId - 4-digit receiver ID
- * @param {string} accountNumber - 13-digit account number
- * @returns {string} - Valid EasyPay number
- */
-function generateTestEasyPayNumber(receiverId = '2021', accountNumber = '0000000000001') {
-  try {
-    // Pad account number to 13 digits
-    const paddedAccountNumber = accountNumber.padStart(13, '0');
-    
-    // Generate a simple check digit (for testing only)
-    const checkDigit = '0';
-    
-    return `9${receiverId}${paddedAccountNumber}${checkDigit}`;
-    
-  } catch (error) {
-    console.error('❌ Error generating test EasyPay number:', error);
-    return null;
-  }
+// Generate a valid 14-digit EasyPay number for testing
+function generateTestEasyPayNumber(receiverId = '2021', accountNumber = '12345678') {
+  if (!/^\d{4}$/.test(receiverId)) throw new Error('Receiver ID must be 4 digits');
+  if (!/^\d{1,8}$/.test(accountNumber)) throw new Error('Account number must be 1-8 digits');
+  const paddedAccount = accountNumber.padStart(8, '0');
+  const checkDigit = calculateLuhnCheckDigit(receiverId + paddedAccount);
+  return `9${receiverId}${paddedAccount}${checkDigit}`;
 }
 
 module.exports = {
@@ -178,5 +90,6 @@ module.exports = {
   extractAccountNumber,
   extractCheckDigit,
   parseEasyPayNumber,
-  generateTestEasyPayNumber
-}; 
+  generateTestEasyPayNumber,
+  calculateLuhnCheckDigit
+};

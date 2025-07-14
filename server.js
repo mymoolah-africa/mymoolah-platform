@@ -27,6 +27,30 @@ const voucherTypeRoutes = require('./routes/voucherTypes.js');
 const vasRoutes = require('./routes/vas.js');
 const merchantRoutes = require('./routes/merchants.js');
 const serviceProviderRoutes = require('./routes/serviceproviders.js');
+const easyPayRoutes = require('./routes/easypay.js'); // <-- ADD THIS
+const easyPayVoucherRoutes = require('./routes/easypayVouchers');
+
+// Conditionally load Flash routes
+let flashRoutesLoaded = false;
+let flashRoutes;
+if (process.env.FLASH_CONSUMER_KEY && process.env.FLASH_CONSUMER_SECRET) {
+  flashRoutes = require('./routes/flash.js');
+  flashRoutesLoaded = true;
+  console.log('✅ Flash routes loaded');
+} else {
+  console.warn('⚠️  Flash credentials not set. Flash API endpoints will be unavailable.');
+}
+
+// Conditionally load MobileMart routes
+let mobilemartRoutesLoaded = false;
+let mobilemartRoutes;
+if (process.env.MOBILEMART_CLIENT_ID && process.env.MOBILEMART_CLIENT_SECRET) {
+  mobilemartRoutes = require('./routes/mobilemart.js');
+  mobilemartRoutesLoaded = true;
+  console.log('✅ MobileMart routes loaded');
+} else {
+  console.warn('⚠️  MobileMart credentials not set. MobileMart API endpoints will be unavailable.');
+}
 
 // Import problematic routes (commented out as requested)
 // const easyPayRoutes = require('./routes/easypay.js');
@@ -50,6 +74,14 @@ app.use('/api/v1/voucher-types', voucherTypeRoutes);
 app.use('/api/v1/vas', vasRoutes);
 app.use('/api/v1/merchants', merchantRoutes);
 app.use('/api/v1/service-providers', serviceProviderRoutes);
+app.use('/api/v1/easypay-vouchers', easyPayVoucherRoutes);
+app.use('/billpayment/v1', easyPayRoutes);
+if (flashRoutesLoaded) {
+  app.use('/api/v1/flash', flashRoutes);
+}
+if (mobilemartRoutesLoaded) {
+  app.use('/api/v1/mobilemart', mobilemartRoutes);
+}
 
 // Commented out problematic routes as requested
 // app.use('/billpayment/v1', easyPayRoutes);
@@ -83,6 +115,8 @@ app.get('/test', (req, res) => {
       vas: '/api/v1/vas',
       merchants: '/api/v1/merchants',
       serviceProviders: '/api/v1/service-providers',
+      ...(flashRoutesLoaded ? { flash: '/api/v1/flash' } : {}),
+      ...(mobilemartRoutesLoaded ? { mobilemart: '/api/v1/mobilemart' } : {}),
       health: '/health',
       test: '/test'
     }
@@ -107,6 +141,8 @@ app.get('/', (req, res) => {
       vas: '/api/v1/vas',
       merchants: '/api/v1/merchants',
       serviceProviders: '/api/v1/service-providers',
+      ...(flashRoutesLoaded ? { flash: '/api/v1/flash' } : {}),
+      ...(mobilemartRoutesLoaded ? { mobilemart: '/api/v1/mobilemart' } : {}),
       health: '/health',
       test: '/test'
     }
@@ -150,6 +186,8 @@ app.use('*', (req, res) => {
       vas: '/api/v1/vas',
       merchants: '/api/v1/merchants',
       serviceProviders: '/api/v1/service-providers',
+      ...(flashRoutesLoaded ? { flash: '/api/v1/flash' } : {}),
+      ...(mobilemartRoutesLoaded ? { mobilemart: '/api/v1/mobilemart' } : {}),
       health: '/health',
       test: '/test'
     }
@@ -177,6 +215,12 @@ if (require.main === module) {
     console.log(`   - VAS: /api/v1/vas`);
     console.log(`   - Merchants: /api/v1/merchants`);
     console.log(`   - Service Providers: /api/v1/service-providers`);
+    if (flashRoutesLoaded) {
+      console.log(`   - Flash: /api/v1/flash`);
+    }
+    if (mobilemartRoutesLoaded) {
+      console.log(`   - MobileMart: /api/v1/mobilemart`);
+    }
   });
 }
 

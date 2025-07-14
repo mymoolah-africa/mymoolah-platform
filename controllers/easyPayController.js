@@ -313,4 +313,4 @@ class EasyPayController {
   }
 }
 
-module.exports = EasyPayController; 
+module.exports = new EasyPayController();

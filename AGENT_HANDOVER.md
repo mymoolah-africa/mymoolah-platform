@@ -430,3 +430,61 @@ The platform successfully demonstrates Mojaloop integration principles and provi
 **Remember**: Always use `/Users/andremacbookpro/mymoolah/` as the project root directory!
 
 **MyMoolah Platform v1.0.0** - Comprehensive fintech wallet platform built on Mojaloop software. 
+
+## 🚀 Integrations (Current Session)
+
+### Flash Integration
+- Dynamic, OAuth2-based, fully compliant with Flash Partner API v4
+- Endpoints: `/api/v1/flash` (health, product listing, purchase, etc.)
+- Conditional loading: Only enabled if credentials are present in `.env`
+
+### MobileMart Integration
+- Dynamic, OAuth2-based, robust for fast-changing VAS products
+- Endpoints: `/api/v1/mobilemart` (health, product listing, purchase, etc.)
+- Conditional loading: Only enabled if credentials are present in `.env`
+
+### EasyPay & Mercury
+- Temporarily disabled (masked in code, ready for future re-enabling)
+- All code and docs preserved for future work
+
+## 🛠️ Environment Variables
+
+Add these to your `.env` file as needed:
+
+```env
+# Flash API
+FLASH_API_URL=https://api.flashswitch.flash-group.com
+FLASH_CONSUMER_KEY=your_flash_consumer_key_here
+FLASH_CONSUMER_SECRET=your_flash_consumer_secret_here
+
+# MobileMart API
+MOBILEMART_API_URL=https://api.mobilemart.co.za
+MOBILEMART_CLIENT_ID=your_mobilemart_client_id_here
+MOBILEMART_CLIENT_SECRET=your_mobilemart_client_secret_here
+```
+
+## 📝 Troubleshooting
+- If you see a warning about missing Flash or MobileMart credentials, those endpoints will be unavailable until you add the required variables and restart the server.
+- All other features remain available.
+
+## 📋 Available Endpoints (Core + Integrations)
+- `/api/v1/auth` - Authentication
+- `/api/v1/wallets` - Wallet management
+- `/api/v1/transactions` - Transaction processing
+- `/api/v1/users` - User management
+- `/api/v1/kyc` - KYC
+- `/api/v1/support` - Support
+- `/api/v1/notifications` - Notifications
+- `/api/v1/vouchers` - Vouchers
+- `/api/v1/voucher-types` - Voucher types
+- `/api/v1/vas` - Value Added Services
+- `/api/v1/merchants` - Merchants
+- `/api/v1/service-providers` - Service providers
+- `/api/v1/flash` - Flash integration (if enabled)
+- `/api/v1/mobilemart` - MobileMart integration (if enabled)
+
+## 🔄 Recent Updates (July 2025)
+- ✅ Flash and MobileMart integrations: dynamic, robust, production-ready
+- ✅ All endpoints and docs updated
+- ✅ EasyPay and Mercury integrations masked, ready for future
+- ✅ All documentation and troubleshooting up to date 

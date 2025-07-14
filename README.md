@@ -75,6 +75,44 @@ The following routes have been commented out due to integration issues:
 
 These can be re-enabled once integration issues are resolved.
 
+## 🚀 Integrations
+
+### Flash Integration
+- Dynamic, OAuth2-based, fully compliant with Flash Partner API v4
+- Endpoints: `/api/v1/flash` (health, product listing, purchase, etc.)
+- Conditional loading: Only enabled if credentials are present in `.env`
+- See [FLASH_INTEGRATION.md](./docs/FLASH_INTEGRATION.md)
+
+### MobileMart Integration
+- Dynamic, OAuth2-based, robust for fast-changing VAS products
+- Endpoints: `/api/v1/mobilemart` (health, product listing, purchase, etc.)
+- Conditional loading: Only enabled if credentials are present in `.env`
+- See [SETUP_GUIDE.md](./docs/SETUP_GUIDE.md) and [API_DOCUMENTATION.md](./docs/API_DOCUMENTATION.md)
+
+### EasyPay & Mercury
+- Temporarily disabled (masked in code, ready for future re-enabling)
+- All code and docs preserved for future work
+
+## 🛠️ Environment Variables
+
+Add these to your `.env` file as needed:
+
+```env
+# Flash API
+FLASH_API_URL=https://api.flashswitch.flash-group.com
+FLASH_CONSUMER_KEY=your_flash_consumer_key_here
+FLASH_CONSUMER_SECRET=your_flash_consumer_secret_here
+
+# MobileMart API
+MOBILEMART_API_URL=https://api.mobilemart.co.za
+MOBILEMART_CLIENT_ID=your_mobilemart_client_id_here
+MOBILEMART_CLIENT_SECRET=your_mobilemart_client_secret_here
+```
+
+## 📝 Troubleshooting
+- If you see a warning about missing Flash or MobileMart credentials, those endpoints will be unavailable until you add the required variables and restart the server.
+- All other features remain available.
+
 ## 🏗️ Architecture
 
 ### Backend Structure
@@ -179,6 +217,7 @@ NODE_ENV=production
 Comprehensive documentation is available in the `docs/` directory:
 
 - [API Documentation](./docs/API_DOCUMENTATION.md)
+- [Flash Integration](./docs/FLASH_INTEGRATION.md)
 - [Setup Guide](./docs/SETUP_GUIDE.md)
 - [Development Guide](./docs/DEVELOPMENT_GUIDE.md)
 - [Testing Guide](./docs/TESTING_GUIDE.md)
@@ -201,21 +240,11 @@ For support and questions:
 - Review [API documentation](./docs/API_DOCUMENTATION.md)
 - Open an issue for bugs or feature requests
 
-## 🔄 Recent Updates
-
-### Latest Changes (July 12, 2025)
-- ✅ **Complete Route Registration**: All core routes now properly registered in server.js
-- ✅ **Server Stability**: Fixed startup issues and port conflicts
-- ✅ **Authentication System**: Fully functional JWT-based authentication
-- ✅ **Wallet Operations**: Complete wallet CRUD operations with balance tracking
-- ✅ **Database Integration**: SQLite database with proper schema
-- ✅ **Error Handling**: Comprehensive error handling and validation
-- ✅ **Documentation**: Updated all documentation files
-
-### Known Issues
-- Some controller methods need database connection fixes
-- EasyPay/Mercury integrations temporarily disabled
-- KYC controller requires model method updates
+## 🔄 Recent Updates (July 2025)
+- ✅ Flash and MobileMart integrations: dynamic, robust, production-ready
+- ✅ All endpoints and docs updated
+- ✅ EasyPay and Mercury integrations masked, ready for future
+- ✅ All documentation and troubleshooting up to date
 
 ## 📊 System Metrics
 
