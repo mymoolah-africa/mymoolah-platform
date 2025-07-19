@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem('mymoolah_token');
       if (token) {
         // Validate token with backend
-        const response = await fetch('/api/auth/verify', {
+        const response = await fetch('/api/v1/auth/profile', {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -69,19 +69,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(credentials)
+        body: JSON.stringify({
+          identifier: credentials.phoneNumber,
+          password: credentials.pin
+        })
       });
 
       if (!response.ok) {
-        throw new Error('Login failed');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Login failed');
       }
 
       const { user, token } = await response.json();
       localStorage.setItem('mymoolah_token', token);
       setUser(user);
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -97,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const token = localStorage.getItem('mymoolah_token');
       if (!token) return;
 
-      const response = await fetch('/api/auth/refresh', {
+      const response = await fetch('/api/v1/auth/refresh', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });

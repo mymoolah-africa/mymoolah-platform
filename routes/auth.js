@@ -53,10 +53,9 @@ router.post('/register', [
 
 // POST /api/v1/auth/login
 router.post('/login', [
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Please provide a valid email address'),
+  body('identifier')
+    .isLength({ min: 1 })
+    .withMessage('Identifier is required'),
   body('password')
     .isLength({ min: 1 })
     .withMessage('Password is required'),

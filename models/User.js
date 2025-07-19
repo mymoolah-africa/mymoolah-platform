@@ -136,6 +136,38 @@ class User {
     });
   }
 
+  // Get user by phone number
+  async getUserByPhone(phone) {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT * FROM users WHERE phoneNumber = ?';
+      
+      this.db.get(sql, [phone], (err, row) => {
+        if (err) {
+          console.error('❌ Error getting user by phone:', err.message);
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      });
+    });
+  }
+
+  // Get user by username (using email as username for now)
+  async getUserByUsername(username) {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT * FROM users WHERE email = ?';
+      
+      this.db.get(sql, [username], (err, row) => {
+        if (err) {
+          console.error('❌ Error getting user by username:', err.message);
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      });
+    });
+  }
+
   // Alias for getUserByEmail (for compatibility)
   async findUserByEmail(email) {
     return this.getUserByEmail(email);
