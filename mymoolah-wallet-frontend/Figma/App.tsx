@@ -6,11 +6,16 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Pages
 import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SendMoneyPage } from './pages/SendMoneyPage';
 import { TransactPage } from './pages/TransactPage';
 import { VouchersPage } from './pages/VouchersPage';
 import { ProfilePage } from './pages/ProfilePage';
+
+// KYC Pages
+import { KYCDocumentsPage } from './pages/KYCDocumentsPage';
+import { KYCStatusPage } from './pages/KYCStatusPage';
 
 // Layout Components
 import { MobileLayout } from './layouts/MobileLayout';
@@ -21,12 +26,18 @@ export default function App() {
       <AuthProvider>
         <MoolahProvider>
           <Router>
-            <div className="min-h-screen bg-gray-50">
+            <div className="min-h-screen bg-white">
               <Routes>
-                {/* Public Routes */}
+                {/* Public Routes - Both keep gradient backgrounds */}
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
                 
-                {/* Protected Routes with Mobile Layout */}
+                {/* KYC Routes - Gradient background like auth pages */}
+                <Route path="/kyc" element={<ProtectedRoute><KYCDocumentsPage /></ProtectedRoute>} />
+                <Route path="/kyc/documents" element={<ProtectedRoute><KYCDocumentsPage /></ProtectedRoute>} />
+                <Route path="/kyc/status" element={<ProtectedRoute><KYCStatusPage /></ProtectedRoute>} />
+                
+                {/* Protected Routes with Clean White Mobile Layout */}
                 <Route path="/" element={<ProtectedRoute><MobileLayout /></ProtectedRoute>}>
                   <Route index element={<Navigate to="/dashboard" replace />} />
                   <Route path="dashboard" element={<DashboardPage />} />

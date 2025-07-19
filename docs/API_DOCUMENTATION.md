@@ -6,7 +6,7 @@
 **Base URL:** `http://localhost:5050/api/v1`  
 **Security Level:** Enterprise-Grade  
 **Status:** ✅ **PRODUCTION READY**  
-**Last Updated:** July 16, 2025  
+**Last Updated:** July 19, 2025  
 
 ---
 
@@ -58,11 +58,15 @@ curl -s -X POST http://localhost:5050/api/v1/auth/register -H "Content-Type: app
 - **Status:** ✅ Fully operational
 - **Security:** JWT-based authentication
 - **Rate Limiting:** 50 requests per 15 minutes
+- **Multi-Input Support:** Phone numbers, account numbers, usernames
+- **Complex Password:** 8+ chars, uppercase, lowercase, number, special char
 - **Endpoints:**
-  - `POST /api/v1/auth/register` - User registration
-  - `POST /api/v1/auth/login` - User login
+  - `POST /api/v1/auth/register` - User registration with KYC
+  - `POST /api/v1/auth/login` - Multi-input authentication
   - `POST /api/v1/auth/logout` - User logout
   - `GET /api/v1/auth/profile` - Get user profile
+  - `POST /api/v1/auth/refresh` - Token refresh
+  - `GET /api/v1/auth/verify` - Token verification
 
 #### **2. Wallet Management** - `/api/v1/wallets`
 - **Status:** ✅ Fully operational
@@ -104,6 +108,9 @@ curl -s -X POST http://localhost:5050/api/v1/auth/register -H "Content-Type: app
   - `POST /api/v1/kyc` - Submit KYC documents
   - `GET /api/v1/kyc/:id` - Get KYC details
   - `PUT /api/v1/kyc/:id/status` - Update KYC status
+  - `POST /api/v1/kyc/upload-documents` - Document upload with validation
+  - `GET /api/v1/kyc/status` - KYC status check
+  - `PUT /api/v1/kyc/update-status` - Status updates
 
 #### **6. Support System** - `/api/v1/support`
 - **Status:** ✅ Fully operational

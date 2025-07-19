@@ -1,797 +1,988 @@
-# MyMoolah Development Guide
+# MyMoolah Platform - Development Guide
 
-**Version**: 1.0.0  
-**Last Updated**: July 12, 2025  
-**Project Status**: Production Ready
+## 📋 **DEVELOPMENT OVERVIEW**
 
-## 🎯 Overview
+**Project:** MyMoolah Digital Wallet Platform  
+**Current Version:** 2.0.0 - Enhanced Authentication & KYC System  
+**Last Updated:** July 19, 2025  
+**Development Status:** ✅ **PRODUCTION READY**
 
-This guide provides comprehensive development guidelines for the MyMoolah Wallet Platform. The system is built on Node.js with Express.js, using SQLite for data persistence and JWT for authentication.
+---
 
-## 🏗️ Architecture Overview
+## 🏗️ **ARCHITECTURE OVERVIEW**
 
-### Technology Stack
-- **Backend**: Node.js + Express.js
-- **Database**: SQLite3
-- **Authentication**: JWT (JSON Web Tokens)
-- **Security**: bcrypt, express-validator, CORS
-- **Testing**: Jest, Supertest
-- **Documentation**: Markdown + OpenAPI
+### **Technology Stack**
 
-### Project Structure
-```
-mymoolah/
-├── controllers/     # Business logic controllers
-├── models/         # Database models and schemas
-├── routes/         # API route definitions
-├── middleware/     # Custom middleware (auth, validation)
-├── services/       # External service integrations
-├── docs/          # Comprehensive documentation
-├── scripts/       # Utility scripts
-├── data/          # SQLite database files
-├── server.js      # Main application entry point
-├── package.json   # Dependencies and scripts
-└── README.md      # Project overview
-```
+#### **Frontend (React 18 + TypeScript)**
+- **Framework:** React 18 with TypeScript
+- **Styling:** Tailwind CSS for responsive design
+- **Build Tool:** Vite for fast development
+- **State Management:** React Context API
+- **UI Components:** shadcn/ui + Custom components
+- **Design System:** Figma AI integration
 
-## 🔧 Development Environment Setup
+#### **Backend (Node.js + Express)**
+- **Runtime:** Node.js with Express.js
+- **Database:** SQLite for development, PostgreSQL for production
+- **Authentication:** JWT with secure token management
+- **Security:** Helmet.js, rate limiting, input validation
+- **API:** RESTful API with comprehensive endpoints
 
-### Prerequisites
+#### **Development Tools**
+- **Version Control:** Git with feature branch workflow
+- **Testing:** Jest for unit testing, Cypress for E2E
+- **Linting:** ESLint + Prettier for code quality
+- **Documentation:** Comprehensive .md documentation
+- **Security:** Regular security audits and testing
+
+---
+
+## 🚀 **QUICK START DEVELOPMENT**
+
+### **1. Environment Setup**
 ```bash
-# Required Node.js version
-node --version  # Should be v18.0.0 or higher
-
-# Required npm version
-npm --version   # Should be v8.0.0 or higher
-```
-
-### Local Development Setup
-```bash
-# Navigate to project directory
-cd /Users/andremacbookpro/mymoolah
+# Clone repository
+git clone <repository-url>
+cd mymoolah
 
 # Install dependencies
 npm install
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your configuration
+# Copy environment template
+cp env.template .env
 
 # Initialize database
 npm run init-db
-
-# Start development server
-npm start
 ```
 
-### Environment Variables
+### **2. Start Development Servers**
 ```bash
-# Required for development
-PORT=5050
-NODE_ENV=development
-JWT_SECRET=your-development-jwt-secret
-DATABASE_URL=sqlite:./data/mymoolah.db
-
-# Optional
-LOG_LEVEL=debug
-CORS_ORIGIN=http://localhost:3000
-```
-
-## 📁 Code Organization
-
-### Controllers (`/controllers`)
-Controllers handle business logic and HTTP request/response processing.
-
-#### Controller Structure
-```javascript
-// Example: authController.js
-const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const User = require('../models/User');
-
-class AuthController {
-  async register(req, res) {
-    try {
-      // Business logic here
-      res.json({ success: true, data: result });
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
-    }
-  }
-}
-
-module.exports = new AuthController();
-```
-
-#### Controller Guidelines
-- Use async/await for database operations
-- Implement proper error handling
-- Return consistent response format
-- Validate input data
-- Use appropriate HTTP status codes
-
-### Models (`/models`)
-Models define database schema and provide data access methods.
-
-#### Model Structure
-```javascript
-// Example: User.js
-const sqlite3 = require('sqlite3').verbose();
-const bcrypt = require('bcrypt');
-
-class User {
-  static async create(userData) {
-    // Database operation
-  }
-
-  static async findByEmail(email) {
-    // Database query
-  }
-
-  static async update(id, data) {
-    // Update operation
-  }
-}
-
-module.exports = User;
-```
-
-#### Model Guidelines
-- Use static methods for database operations
-- Implement proper error handling
-- Use parameterized queries to prevent SQL injection
-- Include data validation
-- Follow consistent naming conventions
-
-### Routes (`/routes`)
-Routes define API endpoints and connect them to controllers.
-
-#### Route Structure
-```javascript
-// Example: auth.js
-const express = require('express');
-const router = express.Router();
-const authController = require('../controllers/authController');
-const { body } = require('express-validator');
-
-// GET /api/v1/auth/profile
-router.get('/profile', authMiddleware, authController.getProfile);
-
-// POST /api/v1/auth/register
-router.post('/register', [
-  body('email').isEmail(),
-  body('password').isLength({ min: 6 })
-], authController.register);
-
-module.exports = router;
-```
-
-#### Route Guidelines
-- Use descriptive route names
-- Implement input validation
-- Apply appropriate middleware
-- Group related endpoints
-- Use RESTful conventions
-
-### Middleware (`/middleware`)
-Middleware provides cross-cutting concerns like authentication and validation.
-
-#### Middleware Structure
-```javascript
-// Example: auth.js
-const jwt = require('jsonwebtoken');
-
-const authMiddleware = (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      return res.status(401).json({ success: false, message: 'Access token required' });
-    }
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    res.status(401).json({ success: false, message: 'Invalid token' });
-  }
-};
-
-module.exports = authMiddleware;
-```
-
-## 🔐 Authentication & Security
-
-### JWT Implementation
-```javascript
-// Token generation
-const token = jwt.sign(
-  { userId: user.id, email: user.email },
-  process.env.JWT_SECRET,
-  { expiresIn: '24h' }
-);
-
-// Token verification
-const decoded = jwt.verify(token, process.env.JWT_SECRET);
-```
-
-### Password Security
-```javascript
-// Password hashing
-const hashedPassword = await bcrypt.hash(password, 10);
-
-// Password verification
-const isValid = await bcrypt.compare(password, hashedPassword);
-```
-
-### Input Validation
-```javascript
-// Using express-validator
-const { body, validationResult } = require('express-validator');
-
-const validateUser = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
-  body('firstName').notEmpty().trim(),
-  body('lastName').notEmpty().trim()
-];
-```
-
-## 🗄️ Database Development
-
-### SQLite Schema
-```sql
--- Users table
-CREATE TABLE users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  email TEXT UNIQUE NOT NULL,
-  password TEXT NOT NULL,
-  firstName TEXT NOT NULL,
-  lastName TEXT NOT NULL,
-  phoneNumber TEXT,
-  status TEXT DEFAULT 'active',
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-);
-
--- Wallets table
-CREATE TABLE wallets (
-  id TEXT PRIMARY KEY,
-  userId INTEGER NOT NULL,
-  balance DECIMAL(10,2) DEFAULT 0.00,
-  currency TEXT DEFAULT 'USD',
-  status TEXT DEFAULT 'active',
-  createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (userId) REFERENCES users(id)
-);
-```
-
-### Database Operations
-```javascript
-// Example database operation
-const db = new sqlite3.Database('./data/mymoolah.db');
-
-const createUser = (userData) => {
-  return new Promise((resolve, reject) => {
-    const query = `
-      INSERT INTO users (email, password, firstName, lastName)
-      VALUES (?, ?, ?, ?)
-    `;
-    
-    db.run(query, [userData.email, userData.password, userData.firstName, userData.lastName], function(err) {
-      if (err) reject(err);
-      else resolve({ id: this.lastID });
-    });
-  });
-};
-```
-
-## 🧪 Testing Strategy
-
-### Unit Testing
-```javascript
-// Example test: test-auth.js
-const request = require('supertest');
-const app = require('../server');
-
-describe('Authentication Endpoints', () => {
-  test('POST /api/v1/auth/register - should register new user', async () => {
-    const response = await request(app)
-      .post('/api/v1/auth/register')
-      .send({
-        firstName: 'Test',
-        lastName: 'User',
-        email: 'test@example.com',
-        password: 'password123'
-      });
-    
-    expect(response.status).toBe(200);
-    expect(response.body.success).toBe(true);
-  });
-});
-```
-
-### Integration Testing
-```javascript
-// Example integration test
-describe('Wallet Operations', () => {
-  let authToken;
-  let walletId;
-
-  beforeAll(async () => {
-    // Setup: Create user and get token
-    const loginResponse = await request(app)
-      .post('/api/v1/auth/login')
-      .send({ email: 'test@example.com', password: 'password123' });
-    
-    authToken = loginResponse.body.data.token;
-  });
-
-  test('Complete wallet workflow', async () => {
-    // Create wallet
-    const createResponse = await request(app)
-      .post('/api/v1/wallets')
-      .set('Authorization', `Bearer ${authToken}`)
-      .send({ currency: 'USD' });
-    
-    walletId = createResponse.body.data.id;
-    expect(createResponse.status).toBe(200);
-
-    // Credit wallet
-    const creditResponse = await request(app)
-      .put(`/api/v1/wallets/${walletId}/credit`)
-      .set('Authorization', `Bearer ${authToken}`)
-      .send({ amount: 100.00 });
-    
-    expect(creditResponse.status).toBe(200);
-    expect(creditResponse.body.data.newBalance).toBe(100.00);
-  });
-});
-```
-
-### Running Tests
-```bash
-# Run all tests
-npm test
-
-# Run specific test suites
-npm run test:auth
-npm run test:wallets
-npm run test:transactions
-
-# Run with coverage
-npm run test:coverage
-
-# Run tests in watch mode
-npm run test:watch
-```
-
-## 🔄 API Development
-
-### Adding New Endpoints
-
-#### 1. Create Controller Method
-```javascript
-// controllers/userController.js
-async getUsers(req, res) {
-  try {
-    const users = await User.findAll();
-    res.json({ success: true, data: users });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-}
-```
-
-#### 2. Create Route
-```javascript
-// routes/users.js
-router.get('/', authMiddleware, userController.getUsers);
-```
-
-#### 3. Register Route in Server
-```javascript
-// server.js
-const userRoutes = require('./routes/users.js');
-app.use('/api/v1/users', userRoutes);
-```
-
-#### 4. Add Documentation
-```markdown
-### Get All Users
-**GET** `/api/v1/users`
-
-Get list of all users.
-
-**Headers:**
-```
-Authorization: Bearer <jwt-token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "users": [...]
-  }
-}
-```
-```
-
-### API Response Standards
-```javascript
-// Success response
-{
-  "success": true,
-  "message": "Operation completed successfully",
-  "data": { /* response data */ }
-}
-
-// Error response
-{
-  "success": false,
-  "message": "Error description",
-  "error": "Detailed error information"
-}
-```
-
-## 🚀 Integrations (Development)
-
-### Flash Integration
-- Dynamic, OAuth2-based, fully compliant with Flash Partner API v4
-- Endpoints: `/api/v1/flash` (health, product listing, purchase, etc.)
-- Conditional loading: Only enabled if credentials are present in `.env`
-
-### MobileMart Integration
-- Dynamic, OAuth2-based, robust for fast-changing VAS products
-- Endpoints: `/api/v1/mobilemart` (health, product listing, purchase, etc.)
-- Conditional loading: Only enabled if credentials are present in `.env`
-
-### EasyPay & Mercury
-- Temporarily disabled (masked in code, ready for future re-enabling)
-- All code and docs preserved for future work
-
-## 🛠️ Environment Variables
-
-Add these to your `.env` file as needed:
-
-```env
-# Flash API
-FLASH_API_URL=https://api.flashswitch.flash-group.com
-FLASH_CONSUMER_KEY=your_flash_consumer_key_here
-FLASH_CONSUMER_SECRET=your_flash_consumer_secret_here
-
-# MobileMart API
-MOBILEMART_API_URL=https://api.mobilemart.co.za
-MOBILEMART_CLIENT_ID=your_mobilemart_client_id_here
-MOBILEMART_CLIENT_SECRET=your_mobilemart_client_secret_here
-```
-
-## 📝 Troubleshooting
-- If you see a warning about missing Flash or MobileMart credentials, those endpoints will be unavailable until you add the required variables and restart the server.
-- All other features remain available.
-
-## 🚀 Deployment Guidelines
-
-### Development Deployment
-```bash
-# Start development server
+# Start backend (Port 5050)
 npm start
 
-# Or with nodemon for auto-restart
+# Start frontend (Port 3000)
+cd mymoolah-wallet-frontend
+npm install
 npm run dev
 ```
 
-### Production Deployment
+### **3. Verify Installation**
 ```bash
-# Set production environment
-NODE_ENV=production
+# Backend health check
+curl http://localhost:5050/health
 
-# Install production dependencies
-npm install --production
-
-# Start with PM2
-pm2 start server.js --name mymoolah-api
-
-# Monitor application
-pm2 monit
+# Frontend check
+open http://localhost:3000
 ```
 
-### Environment Configuration
+---
+
+## 🔐 **AUTHENTICATION SYSTEM DEVELOPMENT**
+
+### **Multi-Input Authentication**
+
+#### **Supported Input Types**
+```typescript
+type InputType = 'phone' | 'account' | 'username';
+
+// Phone number validation (SA format)
+const phonePattern = /^(\+27|27|0)?[6-8][0-9]{8}$/;
+
+// Account number validation
+const accountPattern = /^[0-9]{8,12}$/;
+
+// Username validation
+const usernamePattern = /^[a-zA-Z0-9._]{4,32}$/;
+```
+
+#### **Implementation Example**
+```typescript
+// LoginPage.tsx - Multi-input authentication
+const detectInputType = (input: string): InputType => {
+  const cleanInput = input.trim();
+  
+  if (phonePattern.test(cleanInput.replace(/\s/g, ''))) {
+    return 'phone';
+  }
+  
+  if (accountPattern.test(cleanInput)) {
+    return 'account';
+  }
+  
+  if (usernamePattern.test(cleanInput)) {
+    return 'username';
+  }
+  
+  return 'unknown';
+};
+```
+
+### **Complex Password System**
+
+#### **Password Requirements**
+```typescript
+const passwordRequirements = {
+  minLength: 8,
+  requireUppercase: true,
+  requireLowercase: true,
+  requireNumber: true,
+  requireSpecialChar: true,
+  allowedSpecialChars: '!@#$%^&*(),.?":{}|<>'
+};
+```
+
+#### **Validation Implementation**
+```typescript
+const validatePassword = (password: string) => {
+  const minLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasLowercase = /[a-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  
+  return {
+    minLength,
+    hasUppercase,
+    hasLowercase,
+    hasNumber,
+    hasSpecialChar,
+    isValid: minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar
+  };
+};
+```
+
+### **Demo Credentials**
+```typescript
+// Demo mode configuration
+const demoCredentials = {
+  phone: {
+    identifier: '27821234567',
+    password: 'Demo123!'
+  },
+  account: {
+    identifier: '123456789',
+    password: 'Account789$'
+  },
+  username: {
+    identifier: 'demo_user',
+    password: 'User123@'
+  }
+};
+```
+
+---
+
+## 📋 **KYC SYSTEM DEVELOPMENT**
+
+### **KYC Status Management**
+
+#### **Status Types**
+```typescript
+type KYCStatus = 'pending' | 'documents_uploaded' | 'processing' | 'verified' | 'rejected';
+
+interface User {
+  id: string;
+  name: string;
+  phoneNumber: string;
+  walletId: string;
+  kycStatus: KYCStatus;
+  email?: string;
+  phone?: string;
+}
+```
+
+#### **Status Flow**
+```typescript
+// KYC Status progression
+const kycFlow = {
+  pending: 'Initial state, requires document upload',
+  documents_uploaded: 'Files uploaded, ready for verification',
+  processing: 'Verification in progress (24-48 hours)',
+  verified: 'KYC complete, full access granted',
+  rejected: 'Verification failed, requires new documents'
+};
+```
+
+### **Document Upload System**
+
+#### **File Validation**
+```typescript
+const validateFile = (file: File) => {
+  // File type validation
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error('Please upload a JPG, PNG, or PDF file');
+  }
+
+  // File size validation (max 10MB)
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error('File size must be less than 10MB');
+  }
+
+  return true;
+};
+```
+
+#### **Camera Capture Implementation**
+```typescript
+const handleCameraCapture = async (type: DocumentType) => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { 
+        facingMode: 'environment',  // Prefer back camera
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      } 
+    });
+    
+    // Camera capture logic
+    setShowCamera(true);
+    
+    // Stop stream after capture
+    stream.getTracks().forEach(track => track.stop());
+    
+  } catch (error) {
+    setError('Camera not available. Please use file upload instead.');
+  }
+};
+```
+
+### **Document Upload Components**
+
+#### **KYCDocumentsPage.tsx**
+```typescript
+interface DocumentUpload {
+  type: DocumentType;
+  file: File | null;
+  preview: string | null;
+  status: DocumentStatus;
+  error?: string;
+}
+
+const [documents, setDocuments] = useState<{
+  identity: DocumentUpload;
+  address: DocumentUpload;
+}>({
+  identity: { type: 'identity', file: null, preview: null, status: 'pending' },
+  address: { type: 'address', file: null, preview: null, status: 'pending' }
+});
+```
+
+#### **KYCStatusPage.tsx**
+```typescript
+const getKYCSteps = (): KYCStep[] => [
+  {
+    id: 'account-created',
+    title: 'Account Created',
+    description: 'Your MyMoolah account has been successfully created',
+    status: 'completed',
+    icon: <CheckCircle className="w-5 h-5 text-green-500" />
+  },
+  {
+    id: 'documents-upload',
+    title: 'Upload Documents',
+    description: 'Upload your ID and proof of address',
+    status: user.kycStatus === 'pending' ? 'current' : 'completed',
+    icon: user.kycStatus === 'pending' ? <Upload className="w-5 h-5 text-blue-500" /> : <CheckCircle className="w-5 h-5 text-green-500" />
+  },
+  // ... more steps
+];
+```
+
+---
+
+## 🎨 **FIGMA AI INTEGRATION DEVELOPMENT**
+
+### **Enhanced Components**
+
+#### **ImageWithFallback Component**
+```typescript
+// components/figma/ImageWithFallback.tsx
+interface ImageWithFallbackProps {
+  src: string;
+  alt: string;
+  className?: string;
+  fallbackSrc?: string;
+}
+
+export function ImageWithFallback({ 
+  src, 
+  alt, 
+  className, 
+  fallbackSrc = '/src/assets/error-image.svg' 
+}: ImageWithFallbackProps) {
+  const [imgSrc, setImgSrc] = useState(src);
+  const [hasError, setHasError] = useState(false);
+
+  const handleError = () => {
+    if (!hasError) {
+      setImgSrc(fallbackSrc);
+      setHasError(true);
+    }
+  };
+
+  return (
+    <img
+      src={imgSrc}
+      alt={alt}
+      className={className}
+      onError={handleError}
+    />
+  );
+}
+```
+
+#### **Real-time Validation**
+```typescript
+// Real-time input validation with visual feedback
+const [showPasswordValidation, setShowPasswordValidation] = useState(false);
+const [passwordFocused, setPasswordFocused] = useState(false);
+
+const handlePasswordFocus = () => {
+  setPasswordFocused(true);
+  setShowPasswordValidation(true);
+};
+
+const handlePasswordBlur = () => {
+  setPasswordFocused(false);
+  if (formData.password.length === 0) {
+    setShowPasswordValidation(false);
+  }
+};
+```
+
+### **Design System Implementation**
+
+#### **Color Scheme**
+```css
+/* MyMoolah Brand Colors */
+:root {
+  --mymoolah-green: #86BE41;
+  --mymoolah-blue: #2D8CCA;
+  --mymoolah-green-hover: #7AB139;
+  --mymoolah-blue-hover: #2680B8;
+}
+```
+
+#### **Typography**
+```css
+/* Montserrat Font Family */
+body {
+  font-family: 'Montserrat', sans-serif;
+}
+
+/* Font Weights */
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-bold { font-weight: 700; }
+```
+
+#### **Mobile-First Design**
+```css
+/* Mobile-first responsive design */
+.container {
+  max-width: 24rem; /* 384px - mobile width */
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+/* Touch-friendly buttons */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+```
+
+---
+
+## 📱 **MOBILE OPTIMIZATION DEVELOPMENT**
+
+### **Performance Features**
+
+#### **Lazy Loading**
+```typescript
+// Lazy load components for better performance
+const KYCDocumentsPage = lazy(() => import('./pages/KYCDocumentsPage'));
+const KYCStatusPage = lazy(() => import('./pages/KYCStatusPage'));
+
+// Suspense wrapper
+<Suspense fallback={<LoadingSpinner />}>
+  <Route path="/kyc/documents" element={<KYCDocumentsPage />} />
+  <Route path="/kyc/status" element={<KYCStatusPage />} />
+</Suspense>
+```
+
+#### **Image Optimization**
+```typescript
+// Optimized image loading with fallback
+const OptimizedImage = ({ src, alt, className }: ImageProps) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [hasError, setHasError] = useState(false);
+
+  return (
+    <div className={`image-container ${className}`}>
+      {!isLoaded && !hasError && <ImageSkeleton />}
+      <img
+        src={src}
+        alt={alt}
+        className={`optimized-image ${isLoaded ? 'loaded' : ''}`}
+        onLoad={() => setIsLoaded(true)}
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+};
+```
+
+### **PWA Capabilities**
+
+#### **Service Worker Registration**
+```typescript
+// Register service worker for offline functionality
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('SW registered: ', registration);
+      })
+      .catch(registrationError => {
+        console.log('SW registration failed: ', registrationError);
+      });
+  });
+}
+```
+
+#### **Offline Support**
+```typescript
+// Offline detection and handling
+const useOfflineStatus = () => {
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return isOffline;
+};
+```
+
+---
+
+## 🔒 **SECURITY DEVELOPMENT**
+
+### **Enhanced AuthContext**
+
+#### **Updated Interface**
+```typescript
+interface AuthContextType {
+  user: User | null;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => void;
+  isLoading: boolean;
+  isAuthenticated: boolean;
+  loading: boolean;
+  refreshToken: () => Promise<void>;
+  updateKYCStatus: (status: User['kycStatus']) => void; // NEW
+}
+```
+
+#### **KYC Status Management**
+```typescript
+const updateKYCStatus = (status: User['kycStatus']) => {
+  if (user) {
+    setUser({ ...user, kycStatus: status });
+  }
+};
+```
+
+### **File Upload Security**
+
+#### **Validation Implementation**
+```typescript
+const validateUploadedFile = (file: File, type: DocumentType) => {
+  // File type validation
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+  if (!allowedTypes.includes(file.type)) {
+    throw new Error('Invalid file type. Please upload JPG, PNG, or PDF files only.');
+  }
+
+  // File size validation
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    throw new Error('File size exceeds 10MB limit.');
+  }
+
+  // File name validation
+  const fileName = file.name.toLowerCase();
+  if (fileName.includes('script') || fileName.includes('javascript')) {
+    throw new Error('Invalid file name.');
+  }
+
+  return true;
+};
+```
+
+#### **Secure Upload Process**
+```typescript
+const handleSecureUpload = async (file: File, type: DocumentType) => {
+  try {
+    // Validate file
+    validateUploadedFile(file, type);
+
+    // Create FormData with secure headers
+    const formData = new FormData();
+    formData.append('document', file);
+    formData.append('type', type);
+    formData.append('userId', user?.id || '');
+
+    // Upload with progress tracking
+    const response = await fetch('/api/kyc/upload-documents', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Authorization': `Bearer ${getAuthToken()}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Upload failed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Upload error:', error);
+    throw error;
+  }
+};
+```
+
+---
+
+## 📊 **API DEVELOPMENT**
+
+### **New Endpoints**
+
+#### **Authentication Endpoints**
+```typescript
+// POST /api/auth/register - User registration with KYC
+interface RegisterRequest {
+  firstName: string;
+  lastName: string;
+  identifier: string; // phone/account/username
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+// POST /api/auth/login - Multi-input authentication
+interface LoginRequest {
+  identifier: string; // phone/account/username
+  password: string;
+}
+```
+
+#### **KYC Endpoints**
+```typescript
+// POST /api/kyc/upload-documents - Document upload
+interface DocumentUploadRequest {
+  identityDocument: File;
+  addressDocument: File;
+  userId: string;
+}
+
+// GET /api/kyc/status - KYC status check
+interface KYCStatusResponse {
+  status: KYCStatus;
+  progress: number;
+  message: string;
+  documents: {
+    identity: DocumentInfo;
+    address: DocumentInfo;
+  };
+}
+
+// PUT /api/kyc/update-status - Status updates
+interface KYCStatusUpdate {
+  userId: string;
+  status: KYCStatus;
+  reason?: string;
+}
+```
+
+### **Enhanced Endpoints**
+
+#### **Updated Login Endpoint**
+```typescript
+// Enhanced login with multi-input support
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { identifier, password } = req.body;
+
+    // Detect input type
+    const inputType = detectInputType(identifier);
+    
+    // Validate based on input type
+    const validation = validateInput(identifier, inputType);
+    if (!validation.isValid) {
+      return res.status(400).json({ error: validation.message });
+    }
+
+    // Find user by identifier type
+    const user = await findUserByIdentifier(identifier, inputType);
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Verify password
+    const isValidPassword = await verifyPassword(password, user.password);
+    if (!isValidPassword) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    // Generate JWT token
+    const token = generateJWT(user);
+    
+    res.json({ user, token });
+  } catch (error) {
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+```
+
+---
+
+## 🧪 **TESTING DEVELOPMENT**
+
+### **Component Testing**
+
+#### **Authentication Testing**
+```typescript
+// LoginPage.test.tsx
+describe('LoginPage', () => {
+  test('should validate phone number format', () => {
+    render(<LoginPage />);
+    
+    const input = screen.getByPlaceholderText('Phone Number');
+    fireEvent.change(input, { target: { value: '27821234567' } });
+    
+    expect(screen.getByText('South African mobile number')).toBeInTheDocument();
+  });
+
+  test('should validate complex password requirements', () => {
+    render(<LoginPage />);
+    
+    const passwordInput = screen.getByPlaceholderText('Enter your password');
+    fireEvent.change(passwordInput, { target: { value: 'weak' } });
+    
+    expect(screen.getByText('At least 8 characters')).toBeInTheDocument();
+    expect(screen.getByText('One uppercase letter (A-Z)')).toBeInTheDocument();
+  });
+});
+```
+
+#### **KYC Testing**
+```typescript
+// KYCDocumentsPage.test.tsx
+describe('KYCDocumentsPage', () => {
+  test('should validate file upload', () => {
+    render(<KYCDocumentsPage />);
+    
+    const file = new File(['test'], 'test.txt', { type: 'text/plain' });
+    const input = screen.getByLabelText('Upload Identity Document');
+    
+    fireEvent.change(input, { target: { files: [file] } });
+    
+    expect(screen.getByText('Please upload a JPG, PNG, or PDF file')).toBeInTheDocument();
+  });
+
+  test('should handle camera capture', async () => {
+    // Mock camera access
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: {
+        getUserMedia: jest.fn().mockResolvedValue({
+          getTracks: () => [{ stop: jest.fn() }]
+        })
+      }
+    });
+
+    render(<KYCDocumentsPage />);
+    
+    const cameraButton = screen.getByText('Camera');
+    fireEvent.click(cameraButton);
+    
+    // Verify camera functionality
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalled();
+  });
+});
+```
+
+### **Integration Testing**
+
+#### **KYC Flow Testing**
+```typescript
+// KYC flow integration test
+describe('KYC Flow', () => {
+  test('should complete full KYC process', async () => {
+    // Start registration
+    render(<RegisterPage />);
+    
+    // Fill registration form
+    fireEvent.change(screen.getByPlaceholderText('First Name'), { target: { value: 'John' } });
+    fireEvent.change(screen.getByPlaceholderText('Last Name'), { target: { value: 'Doe' } });
+    fireEvent.change(screen.getByPlaceholderText('Phone Number'), { target: { value: '27821234567' } });
+    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'john@example.com' } });
+    fireEvent.change(screen.getByPlaceholderText('Create a strong password'), { target: { value: 'SecurePass123!' } });
+    fireEvent.change(screen.getByPlaceholderText('Confirm your password'), { target: { value: 'SecurePass123!' } });
+    
+    // Submit registration
+    fireEvent.click(screen.getByText('Create Account'));
+    
+    // Verify KYC status page
+    await waitFor(() => {
+      expect(screen.getByText('KYC Verification')).toBeInTheDocument();
+    });
+    
+    // Upload documents
+    const identityFile = new File(['test'], 'id.pdf', { type: 'application/pdf' });
+    const addressFile = new File(['test'], 'address.pdf', { type: 'application/pdf' });
+    
+    fireEvent.change(screen.getByLabelText('Upload Identity Document'), { target: { files: [identityFile] } });
+    fireEvent.change(screen.getByLabelText('Upload Proof of Address'), { target: { files: [addressFile] } });
+    
+    // Submit documents
+    fireEvent.click(screen.getByText('Submit Documents'));
+    
+    // Verify status update
+    await waitFor(() => {
+      expect(screen.getByText('Documents uploaded successfully!')).toBeInTheDocument();
+    });
+  });
+});
+```
+
+---
+
+## 📚 **DOCUMENTATION DEVELOPMENT**
+
+### **Code Documentation**
+
+#### **Component Documentation**
+```typescript
+/**
+ * ImageWithFallback Component
+ * 
+ * A robust image component that handles loading errors gracefully
+ * by providing a fallback image when the primary image fails to load.
+ * 
+ * @param src - The primary image source URL
+ * @param alt - Alt text for accessibility
+ * @param className - CSS classes for styling
+ * @param fallbackSrc - Fallback image URL (optional)
+ * 
+ * @example
+ * <ImageWithFallback
+ *   src="/src/assets/logo2.svg"
+ *   alt="MyMoolah Logo"
+ *   className="w-16 h-16"
+ * />
+ */
+export function ImageWithFallback({ src, alt, className, fallbackSrc }: ImageWithFallbackProps) {
+  // Implementation...
+}
+```
+
+#### **API Documentation**
+```typescript
+/**
+ * Multi-input Authentication Endpoint
+ * 
+ * Handles user authentication using phone numbers, account numbers, or usernames.
+ * Supports complex password validation and real-time feedback.
+ * 
+ * @route POST /api/auth/login
+ * @param {string} identifier - Phone number, account number, or username
+ * @param {string} password - Complex password meeting requirements
+ * 
+ * @returns {Object} User data and JWT token
+ * @throws {401} Invalid credentials
+ * @throws {400} Invalid input format
+ * 
+ * @example
+ * POST /api/auth/login
+ * {
+ *   "identifier": "27821234567",
+ *   "password": "SecurePass123!"
+ * }
+ */
+app.post('/api/auth/login', async (req, res) => {
+  // Implementation...
+});
+```
+
+---
+
+## 🚀 **DEPLOYMENT DEVELOPMENT**
+
+### **Production Configuration**
+
+#### **Environment Variables**
 ```bash
 # Production environment variables
 NODE_ENV=production
 PORT=5050
-JWT_SECRET=your-production-secret
-DATABASE_URL=sqlite:/path/to/production/mymoolah.db
-LOG_LEVEL=error
+JWT_SECRET=your-secure-jwt-secret
+DATABASE_URL=postgresql://user:pass@host:port/db
+MOJALOOP_API_URL=https://api.mojaloop.io
+FSCA_COMPLIANCE=true
+DEMO_MODE=false
 ```
 
-## 🔧 Debugging & Troubleshooting
-
-### Common Issues
-
-#### 1. Port Already in Use
-```bash
-# Kill processes on port 5050
-pkill -f "node server.js"
-
-# Or use different port
-PORT=5051 npm start
-```
-
-#### 2. Database Connection Issues
-```bash
-# Check database file
-ls -la data/mymoolah.db
-
-# Reinitialize database
-rm data/mymoolah.db
-npm run init-db
-```
-
-#### 3. JWT Token Issues
-```bash
-# Verify JWT secret
-echo $JWT_SECRET
-
-# Generate new secret
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-```
-
-### Debug Mode
-```bash
-# Enable debug logging
-DEBUG=* npm start
-
-# Set log level
-LOG_LEVEL=debug npm start
-```
-
-## 📊 Performance Optimization
-
-### Database Optimization
-```javascript
-// Use prepared statements
-const stmt = db.prepare('SELECT * FROM users WHERE id = ?');
-stmt.get(userId);
-
-// Use transactions for multiple operations
-db.serialize(() => {
-  db.run('BEGIN TRANSACTION');
-  // Multiple operations
-  db.run('COMMIT');
-});
-```
-
-### Caching Strategy
-```javascript
-// Simple in-memory cache
-const cache = new Map();
-
-const getCachedData = (key) => {
-  if (cache.has(key)) {
-    return cache.get(key);
+#### **Build Configuration**
+```json
+// package.json build scripts
+{
+  "scripts": {
+    "build": "vite build",
+    "build:prod": "NODE_ENV=production vite build",
+    "preview": "vite preview",
+    "test": "jest",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext ts,tsx",
+    "type-check": "tsc --noEmit"
   }
-  // Fetch from database and cache
-};
+}
 ```
 
-### Rate Limiting
-```javascript
-const rateLimit = require('express-rate-limit');
+### **Security Deployment**
 
+#### **Security Headers**
+```typescript
+// Enhanced security headers for production
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://api.mojaloop.io"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      objectSrc: ["'none'"],
+      mediaSrc: ["'self'"],
+      frameSrc: ["'none'"]
+    }
+  },
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+```
+
+#### **Rate Limiting**
+```typescript
+// Production rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // limit each IP to 1000 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Stricter limits for auth endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5 // limit each IP to 5 requests per windowMs
-});
-
-app.use('/api/v1/auth', authLimiter);
-```
-
-## 🔒 Security Best Practices
-
-### Input Validation
-```javascript
-// Always validate input
-const { body, validationResult } = require('express-validator');
-
-const validateInput = [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-  }
-];
-```
-
-### SQL Injection Prevention
-```javascript
-// Use parameterized queries
-const query = 'SELECT * FROM users WHERE email = ?';
-db.get(query, [email], (err, row) => {
-  // Handle result
+  max: 50, // limit each IP to 50 requests per windowMs
+  message: 'Too many authentication attempts, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 ```
-
-### XSS Prevention
-```javascript
-// Sanitize output
-const sanitizeHtml = require('sanitize-html');
-
-const cleanData = sanitizeHtml(userInput, {
-  allowedTags: [],
-  allowedAttributes: {}
-});
-```
-
-## 📚 Code Style Guidelines
-
-### Naming Conventions
-- **Files**: camelCase (e.g., `userController.js`)
-- **Classes**: PascalCase (e.g., `UserController`)
-- **Functions**: camelCase (e.g., `getUserById`)
-- **Constants**: UPPER_SNAKE_CASE (e.g., `MAX_RETRY_ATTEMPTS`)
-- **Database tables**: snake_case (e.g., `user_profiles`)
-
-### Code Organization
-```javascript
-// File structure
-const express = require('express');
-const router = express.Router();
-
-// Import dependencies
-const authController = require('../controllers/authController');
-const authMiddleware = require('../middleware/auth');
-
-// Route definitions
-router.post('/register', authController.register);
-router.post('/login', authController.login);
-
-// Export
-module.exports = router;
-```
-
-### Error Handling
-```javascript
-// Consistent error handling
-const handleError = (res, error, statusCode = 500) => {
-  console.error('Error:', error);
-  res.status(statusCode).json({
-    success: false,
-    message: error.message || 'Internal server error',
-    error: process.env.NODE_ENV === 'development' ? error.stack : undefined
-  });
-};
-```
-
-## 🔄 Version Control
-
-### Git Workflow
-```bash
-# Create feature branch
-git checkout -b feature/new-wallet-feature
-
-# Make changes and commit
-git add .
-git commit -m "Add new wallet balance tracking feature"
-
-# Push to remote
-git push origin feature/new-wallet-feature
-
-# Create pull request
-# Merge after review
-```
-
-### Commit Message Convention
-```
-type(scope): description
-
-Examples:
-feat(auth): add JWT token refresh endpoint
-fix(wallet): resolve balance calculation bug
-docs(api): update authentication documentation
-test(transactions): add integration tests
-```
-
-## 📖 Documentation Standards
-
-### Code Documentation
-```javascript
-/**
- * Create a new wallet for the authenticated user
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @returns {Object} JSON response with wallet details
- */
-async createWallet(req, res) {
-  // Implementation
-}
-```
-
-### API Documentation
-```markdown
-### Create Wallet
-**POST** `/api/v1/wallets`
-
-Create a new wallet for the authenticated user.
-
-**Headers:**
-```
-Authorization: Bearer <jwt-token>
-```
-
-**Request Body:**
-```json
-{
-  "currency": "USD",
-  "initialBalance": 0
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "Wallet created successfully",
-  "data": {
-    "id": "WAL123456",
-    "balance": 0,
-    "currency": "USD"
-  }
-}
-```
-```
-
-## 🎯 Development Checklist
-
-### Before Starting
-- [ ] Read the [API Documentation](./API_DOCUMENTATION.md)
-- [ ] Review the [Project Status](./PROJECT_STATUS.md)
-- [ ] Set up development environment
-- [ ] Initialize database
-- [ ] Run existing tests
-
-### During Development
-- [ ] Follow coding standards
-- [ ] Write tests for new features
-- [ ] Update documentation
-- [ ] Test API endpoints
-- [ ] Check error handling
-
-### Before Committing
-- [ ] Run all tests
-- [ ] Check code formatting
-- [ ] Update documentation
-- [ ] Test API functionality
-- [ ] Review changes
-
-### Before Deploying
-- [ ] Run production tests
-- [ ] Check security measures
-- [ ] Verify environment variables
-- [ ] Test database migrations
-- [ ] Monitor application logs
-
-## 🆘 Getting Help
-
-### Resources
-- [API Documentation](./API_DOCUMENTATION.md)
-- [Setup Guide](./SETUP_GUIDE.md)
-- [Testing Guide](./TESTING_GUIDE.md)
-- [Security Guide](./SECURITY.md)
-
-### Support Channels
-1. Check the troubleshooting section
-2. Review error logs
-3. Test with curl commands
-4. Open an issue for bugs
 
 ---
 
-**MyMoolah Development Guide v1.0.0** - Comprehensive development guidelines for the MyMoolah Wallet Platform. 
+## 🎯 **BEST PRACTICES**
+
+### **Code Quality**
+- **TypeScript** - Use strict type checking
+- **ESLint** - Enforce code style and quality
+- **Prettier** - Consistent code formatting
+- **Jest** - Comprehensive unit testing
+- **Cypress** - End-to-end testing
+
+### **Security Practices**
+- **Input Validation** - Validate all user inputs
+- **Output Sanitization** - Sanitize all outputs
+- **Authentication** - Secure JWT implementation
+- **Authorization** - Role-based access control
+- **Encryption** - Encrypt sensitive data
+
+### **Performance Practices**
+- **Lazy Loading** - Load components on demand
+- **Image Optimization** - Optimize images for web
+- **Caching** - Implement appropriate caching
+- **Code Splitting** - Split code for faster loading
+- **Bundle Optimization** - Optimize bundle size
+
+### **Accessibility Practices**
+- **WCAG 2.1 AA** - Follow accessibility guidelines
+- **Keyboard Navigation** - Support keyboard-only users
+- **Screen Readers** - Provide proper alt text
+- **Color Contrast** - Ensure sufficient contrast
+- **Focus Management** - Proper focus handling
+
+---
+
+## 🔄 **RECENT UPDATES (July 19, 2025)**
+
+### **Logo System Development** ✅ **COMPLETE**
+- **LoginPage Logo**: Updated to use `logo3.svg` with proper error handling
+- **RegisterPage Logo**: Enhanced `logo2.svg` to 60% larger size (w-26 h-26)
+- **Fallback System**: Implemented robust error handling with "M" logo fallback
+- **Asset Management**: All logos properly organized in `/src/assets/` directory
+- **Error Handling**: Custom error handling for logo loading failures
+
+### **Development Server Status** ✅ **OPERATIONAL**
+- **Frontend Server**: Successfully running on `http://localhost:3000/` with Vite v4.5.14
+- **Hot Reload**: Enabled for real-time development
+- **TypeScript**: Full type safety with strict mode enabled
+- **Asset Loading**: All logos loading correctly with proper paths
+
+### **Technical Improvements** ✅ **COMPLETE**
+- **Image Component**: Replaced ImageWithFallback with native img tag for better control
+- **Error Handling**: Custom error handling for logo loading failures
+- **CSS Classes**: Updated logo sizing classes (w-26 h-26 for RegisterPage)
+- **Path Resolution**: Fixed asset paths to use `/src/assets/` structure
+
+### **UI/UX Development** ✅ **MAINTAINED**
+- **Visual Consistency**: Maintained exact Figma design fidelity
+- **Mobile Optimization**: Touch-friendly interfaces preserved
+- **Accessibility**: WCAG 2.1 AA compliance maintained
+- **Performance**: Optimized for low-cost devices
+
+---
+
+## 📞 **SUPPORT & CONTACT**
+
+### **Development Support**
+- **Technical Issues:** dev@mymoolah.com
+- **Security Issues:** security@mymoolah.com
+- **Documentation:** docs@mymoolah.com
+
+### **Company Information**
+- **Company:** MyMoolah Digital Solutions
+- **Location:** Johannesburg, South Africa
+- **Website:** https://mymoolah.com
+- **Phone:** +27 (0) 11 XXX XXXX
+
+---
+
+*This development guide provides comprehensive information for developing and maintaining the MyMoolah platform with enhanced authentication, KYC verification, and Figma AI integration.* 

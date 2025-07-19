@@ -1,4 +1,114 @@
-**Add your own guidelines here**
+# MyMoolah Frontend Development Guidelines
+
+## 🎨 **DESIGN SYSTEM GUIDELINES**
+
+### **Logo System**
+- **LoginPage**: Use `logo3.svg` with proper error handling
+- **RegisterPage**: Use `logo2.svg` at 60% larger size (w-26 h-26)
+- **Fallback**: Display "M" logo when SVG fails to load
+- **Asset Path**: Always use `/src/assets/` for logo references
+
+### **Color Scheme**
+- **Primary Green**: #86BE41
+- **Primary Blue**: #2D8CCA
+- **White**: #FFFFFF
+- **Gray Scale**: Use Tailwind gray classes for consistency
+
+### **Typography**
+- **Font Family**: Montserrat, sans-serif
+- **Base Font Size**: 14px (mobile-first)
+- **Font Weights**: Use CSS variables for consistency
+- **Responsive**: Use clamp() for fluid typography
+
+### **Layout Guidelines**
+- **Mobile-First**: Design for mobile devices first
+- **Touch Targets**: Minimum 44px for interactive elements
+- **Spacing**: Use CSS variables for consistent spacing
+- **Border Radius**: Use mobile-optimized border radius
+
+### **Component Guidelines**
+- **ImageWithFallback**: Use for robust image handling
+- **Real-time Validation**: Provide instant user feedback
+- **Progress Indicators**: Visual status tracking
+- **Accessibility**: WCAG 2.1 AA compliance required
+
+### **Performance Guidelines**
+- **Lazy Loading**: Implement for image-heavy pages
+- **Image Optimization**: Use appropriate formats and sizes
+- **Caching**: Implement for offline support
+- **Low-Cost Devices**: Optimize for affordable devices
+
+---
+
+## 🔧 **TECHNICAL GUIDELINES**
+
+### **Code Organization**
+- **Components**: Keep file sizes small and focused
+- **Helper Functions**: Extract to separate files
+- **Types**: Use TypeScript for type safety
+- **Imports**: Use absolute paths when possible
+
+### **State Management**
+- **Context API**: Use for global state
+- **Local State**: Use useState for component state
+- **Form State**: Use controlled components
+- **Validation**: Real-time validation with visual feedback
+
+### **Error Handling**
+- **Graceful Degradation**: Provide fallbacks for failures
+- **User-Friendly Messages**: Clear, actionable error text
+- **Loading States**: Show progress for async operations
+- **Network Errors**: Handle offline scenarios
+
+### **Security Guidelines**
+- **Input Validation**: Sanitize all user inputs
+- **File Uploads**: Validate type, size, and content
+- **Authentication**: Secure token management
+- **Data Protection**: Encrypt sensitive information
+
+---
+
+## 📱 **MOBILE OPTIMIZATION**
+
+### **Touch Interface**
+- **Touch Targets**: Minimum 44px for buttons and links
+- **Gesture Support**: Implement swipe and pinch gestures
+- **Keyboard Handling**: Optimize for mobile keyboards
+- **Orientation**: Support portrait and landscape modes
+
+### **Performance**
+- **Loading Speed**: Optimize for slow connections
+- **Battery Life**: Minimize CPU and network usage
+- **Memory Usage**: Efficient component lifecycle
+- **Offline Support**: Cache essential resources
+
+### **Accessibility**
+- **Screen Readers**: Proper ARIA labels
+- **Color Contrast**: WCAG 2.1 AA compliance
+- **Keyboard Navigation**: Full keyboard support
+- **Focus Management**: Clear focus indicators
+
+---
+
+## 🎯 **QUALITY ASSURANCE**
+
+### **Testing Requirements**
+- **Unit Tests**: Test individual components
+- **Integration Tests**: Test component interactions
+- **Accessibility Tests**: Verify WCAG compliance
+- **Performance Tests**: Monitor loading times
+
+### **Code Review Checklist**
+- [ ] TypeScript types are correct
+- [ ] Error handling is implemented
+- [ ] Accessibility features are present
+- [ ] Performance is optimized
+- [ ] Mobile responsiveness is verified
+- [ ] Security measures are in place
+
+---
+
+*These guidelines ensure consistent, high-quality development of the MyMoolah frontend platform with focus on mobile optimization, accessibility, and performance.*
 <!--
 
 System Guidelines

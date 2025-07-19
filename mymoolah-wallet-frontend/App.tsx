@@ -6,11 +6,14 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 // Pages
 import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SendMoneyPage } from './pages/SendMoneyPage';
 import { TransactPage } from './pages/TransactPage';
 import { VouchersPage } from './pages/VouchersPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { KYCStatusPage } from './pages/KYCStatusPage';
+import { KYCDocumentsPage } from './pages/KYCDocumentsPage';
 
 // Layout Components
 import { MobileLayout } from './layouts/MobileLayout';
@@ -25,6 +28,7 @@ export default function App() {
               <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
                 
                 {/* Protected Routes with Mobile Layout */}
                 <Route path="/" element={<ProtectedRoute><MobileLayout /></ProtectedRoute>}>
@@ -35,6 +39,10 @@ export default function App() {
                   <Route path="vouchers" element={<VouchersPage />} />
                   <Route path="profile" element={<ProfilePage />} />
                 </Route>
+
+                {/* KYC Routes */}
+                <Route path="/kyc/status" element={<KYCStatusPage />} />
+                <Route path="/kyc/documents" element={<KYCDocumentsPage />} />
                 
                 {/* Catch-all redirect */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />

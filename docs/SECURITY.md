@@ -1,5 +1,7 @@
 # Security
 
+**Last Updated:** July 19, 2025
+
 ## Security Policy
 
 We take the security of the MyMoolah platform seriously. Our goal is to protect user data, financial transactions, and all system components from unauthorized access and vulnerabilities.
@@ -16,10 +18,16 @@ We will acknowledge your report within 2 business days and work to resolve the i
 
 - **Environment Variables:** All sensitive credentials are stored in `.env` files and never committed to source control.
 - **Password Hashing:** User passwords are hashed using bcrypt before storage.
-- **Authentication:** JWT tokens are used for API authentication.
+- **Multi-Input Authentication:** Support for phone numbers, account numbers, and usernames with complex validation.
+- **Complex Password System:** 8+ characters, uppercase, lowercase, number, and special character requirements.
+- **JWT Authentication:** Secure token-based authentication with refresh capabilities.
 - **Input Validation:** All API endpoints validate and sanitize input to prevent injection attacks.
 - **CORS:** Configured to restrict API access to trusted origins.
 - **Database Security:** Uses parameterized queries to prevent SQL injection.
+- **KYC Document Security:** Bank-grade encryption for document storage with FSCA compliance.
+- **File Upload Security:** Type and size validation for document uploads with secure handling.
+- **Rate Limiting:** DDoS and brute force protection (1000 req/15min general, 50 req/15min auth).
+- **Security Headers:** Helmet.js implementation for complete HTTP security protection.
 - **Audit Logging:** Key actions and errors are logged for monitoring and compliance.
 - **Dependency Management:** Dependencies are regularly updated and checked with `npm audit`.
 

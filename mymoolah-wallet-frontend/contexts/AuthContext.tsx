@@ -5,7 +5,7 @@ interface User {
   name: string;
   phoneNumber: string;
   walletId: string;
-  kycStatus: 'pending' | 'verified' | 'rejected';
+  kycStatus: 'pending' | 'documents_uploaded' | 'processing' | 'verified' | 'rejected';
   email?: string;
   phone?: string;
 }
@@ -18,6 +18,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   refreshToken: () => Promise<void>;
+  updateKYCStatus: (status: User['kycStatus']) => void;
 }
 
 interface LoginCredentials {
@@ -113,6 +114,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateKYCStatus = (status: User['kycStatus']) => {
+    if (user) {
+      setUser({ ...user, kycStatus: status });
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -121,7 +128,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isLoading, 
       isAuthenticated: !!user,
       loading: isLoading,
-      refreshToken 
+      refreshToken,
+      updateKYCStatus
     }}>
       {children}
     </AuthContext.Provider>

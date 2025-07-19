@@ -26,8 +26,32 @@ export function DashboardPage() {
     hideBalance, 
     toggleBalanceVisibility, 
     recentTransactions,
-    todayActivity 
+    todayActivity,
+    isLoading
   } = useMoolah();
+
+  // Safely format numbers with fallback values
+  const formatCurrency = (amount: number | undefined | null) => {
+    if (amount === undefined || amount === null || isNaN(amount)) {
+      return '0.00';
+    }
+    return amount.toLocaleString('en-ZA', { minimumFractionDigits: 2 });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="pb-20 animate-pulse">
+        <div className="bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] px-6 py-6">
+          <div className="h-20 bg-white/20 rounded-lg mb-4"></div>
+          <div className="h-32 bg-white/20 rounded-lg"></div>
+        </div>
+        <div className="px-6 py-6">
+          <div className="h-24 bg-gray-200 rounded-lg mb-4"></div>
+          <div className="h-40 bg-gray-200 rounded-lg"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pb-20">
@@ -59,7 +83,7 @@ export function DashboardPage() {
                     <div className="text-3xl font-bold text-gray-900">••••••</div>
                   ) : (
                     <div className="text-3xl font-bold text-gray-900">
-                      R {balance.toLocaleString('en-ZA', { minimumFractionDigits: 2 })}
+                      R {formatCurrency(balance)}
                     </div>
                   )}
                   <Button
@@ -146,7 +170,7 @@ export function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-green-800 font-medium text-sm">Received</p>
-                  <p className="text-green-900 font-bold">R {todayActivity.received.toLocaleString()}</p>
+                  <p className="text-green-900 font-bold">R {formatCurrency(todayActivity?.received)}</p>
                 </div>
               </div>
             </CardContent>
@@ -160,7 +184,7 @@ export function DashboardPage() {
                 </div>
                 <div>
                   <p className="text-blue-800 font-medium text-sm">Sent</p>
-                  <p className="text-blue-900 font-bold">R {todayActivity.sent.toLocaleString()}</p>
+                  <p className="text-blue-900 font-bold">R {formatCurrency(todayActivity?.sent)}</p>
                 </div>
               </div>
             </CardContent>
@@ -173,43 +197,50 @@ export function DashboardPage() {
             <CardTitle className="text-base">Recent Transactions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {recentTransactions.slice(0, 3).map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className={`rounded-full p-2 ${
-                    transaction.type === 'received' 
-                      ? 'bg-green-100' 
-                      : transaction.type === 'sent' 
-                        ? 'bg-blue-100' 
-                        : 'bg-purple-100'
-                  }`}>
-                    {transaction.type === 'received' ? (
-                      <ArrowDownLeft className="w-4 h-4 text-green-600" />
-                    ) : transaction.type === 'sent' ? (
-                      <ArrowUpRight className="w-4 h-4 text-blue-600" />
-                    ) : (
-                      <Receipt className="w-4 h-4 text-purple-600" />
-                    )}
+            {recentTransactions && recentTransactions.length > 0 ? (
+              recentTransactions.slice(0, 3).map((transaction) => (
+                <div key={transaction.id} className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className={`rounded-full p-2 ${
+                      transaction.type === 'received' 
+                        ? 'bg-green-100' 
+                        : transaction.type === 'sent' 
+                          ? 'bg-blue-100' 
+                          : 'bg-purple-100'
+                    }`}>
+                      {transaction.type === 'received' ? (
+                        <ArrowDownLeft className="w-4 h-4 text-green-600" />
+                      ) : transaction.type === 'sent' ? (
+                        <ArrowUpRight className="w-4 h-4 text-blue-600" />
+                      ) : (
+                        <Receipt className="w-4 h-4 text-purple-600" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm text-gray-900">{transaction.description}</p>
+                      <p className="text-xs text-gray-500">{transaction.date}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium text-sm text-gray-900">{transaction.description}</p>
-                    <p className="text-xs text-gray-500">{transaction.date}</p>
+                  <div className="text-right">
+                    <p className={`font-medium text-sm ${
+                      transaction.type === 'received' 
+                        ? 'text-green-600' 
+                        : 'text-gray-900'
+                    }`}>
+                      {transaction.type === 'received' ? '+' : '-'}R {formatCurrency(Math.abs(transaction.amount))}
+                    </p>
+                    <Badge variant="outline" className="text-xs">
+                      {transaction.status}
+                    </Badge>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className={`font-medium text-sm ${
-                    transaction.type === 'received' 
-                      ? 'text-green-600' 
-                      : 'text-gray-900'
-                  }`}>
-                    {transaction.type === 'received' ? '+' : '-'}R {Math.abs(transaction.amount).toLocaleString()}
-                  </p>
-                  <Badge variant="outline" className="text-xs">
-                    {transaction.status}
-                  </Badge>
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                <p className="text-sm">No recent transactions</p>
+                <p className="text-xs mt-1">Your transactions will appear here</p>
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
       </div>
