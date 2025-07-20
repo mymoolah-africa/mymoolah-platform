@@ -38,6 +38,7 @@ const merchantRoutes = require('./routes/merchants.js');
 const serviceProviderRoutes = require('./routes/serviceproviders.js');
 const easyPayRoutes = require('./routes/easypay.js'); // <-- ADD THIS
 const easyPayVoucherRoutes = require('./routes/easypayVouchers');
+const sendMoneyRoutes = require('./routes/sendMoney.js');
 
 // Validate external service credentials
 const validCredentials = securityConfig.validateExternalCredentials();
@@ -206,6 +207,7 @@ app.use('/api/v1/wallets', walletRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/kyc', kycRoutes);
+app.use('/api/v1/send-money', sendMoneyRoutes);
 app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/vouchers', voucherRoutes);
@@ -247,6 +249,7 @@ app.get('/test', (req, res) => {
       transactions: '/api/v1/transactions',
       users: '/api/v1/users',
       kyc: '/api/v1/kyc',
+      sendMoney: '/api/v1/send-money',
       support: '/api/v1/support',
       notifications: '/api/v1/notifications',
       vouchers: '/api/v1/vouchers',
@@ -273,6 +276,7 @@ app.get('/', (req, res) => {
       transactions: '/api/v1/transactions',
       users: '/api/v1/users',
       kyc: '/api/v1/kyc',
+      sendMoney: '/api/v1/send-money',
       support: '/api/v1/support',
       notifications: '/api/v1/notifications',
       vouchers: '/api/v1/vouchers',

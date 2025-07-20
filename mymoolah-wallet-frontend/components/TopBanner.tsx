@@ -22,7 +22,9 @@ export function TopBanner() {
             }}
             aria-label="Profile and Settings"
           >
-            <Icons.User style={{ width: '1.25rem', height: '1.25rem' }} />
+            <div style={{ width: '1.25rem', height: '1.25rem' }}>
+              <Icons.User />
+            </div>
           </button>
 
           {/* Center: MyMoolah Logo - 50% Smaller */}
@@ -47,7 +49,9 @@ export function TopBanner() {
             }}
             aria-label="Notifications"
           >
-            <Icons.Bell style={{ width: '1.25rem', height: '1.25rem' }} />
+            <div style={{ width: '1.25rem', height: '1.25rem' }}>
+              <Icons.Bell />
+            </div>
             {/* Notification badge - Smaller */}
             <span 
               className="absolute bg-red-500 rounded-full"

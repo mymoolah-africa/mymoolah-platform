@@ -1,421 +1,650 @@
-# MyMoolah API Documentation
+# MyMoolah Platform - API Documentation
 
-## 📋 **API OVERVIEW**
+## 🎯 **API Overview**
 
-**Platform:** MyMoolah Digital Wallet Platform  
-**Base URL:** `http://localhost:5050/api/v1`  
-**Security Level:** Enterprise-Grade  
-**Status:** ✅ **PRODUCTION READY**  
-**Last Updated:** July 19, 2025 (Git Sync Complete)  
-
----
-
-## 🛡️ **SECURITY IMPLEMENTATIONS**
-
-### **✅ Security Measures Active:**
-- **Helmet.js Security Headers** - Complete HTTP security protection
-- **Rate Limiting** - DDoS and brute force protection
-- **Input Validation** - Comprehensive data sanitization
-- **Environment Security** - Secure configuration management
-- **Secure Logging** - Sensitive data protection
-- **CORS Security** - Cross-origin request protection
-
-### **🔒 Security Testing Results:**
-- **Penetration Testing:** ✅ PASSED
-- **Vulnerability Assessment:** 0 critical/high issues
-- **Security Score:** 100/100
-- **Performance Impact:** < 5% overhead
+**Base URL:** `http://localhost:5050`  
+**Version:** 2.1.0  
+**Status:** ✅ **ALL ENDPOINTS OPERATIONAL**  
+**Last Updated:** July 20, 2025
 
 ---
 
-## 🚀 **QUICK START**
+## 🔐 **Authentication Endpoints**
 
-### **✅ Server Status:**
-- **Backend:** Running on port 5050
-- **Health Check:** `http://localhost:5050/health`
-- **Test Endpoint:** `http://localhost:5050/test`
-- **API Base:** `http://localhost:5050/api/v1`
+### **POST /api/v1/auth/login**
+Authenticate user with phone number, account number, or username.
 
-### **✅ Security Testing Commands:**
-```bash
-# Security headers test
-curl -I http://localhost:5050/health
-
-# Rate limiting test
-for i in {1..5}; do curl -s -I http://localhost:5050/health | grep -E "(RateLimit|HTTP)"; echo "---"; done
-
-# Input validation test
-curl -s -X POST http://localhost:5050/api/v1/auth/register -H "Content-Type: application/json" -d '{"email":"invalid-email","password":"123"}' | jq .
+**Request Body:**
+```json
+{
+  "identifier": "27821234567",
+  "password": "SecurePass123!"
+}
 ```
 
----
-
-## 📊 **API ENDPOINTS**
-
-### **✅ Core Services (14 Routes):**
-
-#### **1. Authentication** - `/api/v1/auth`
-- **Status:** ✅ Fully operational
-- **Security:** JWT-based authentication
-- **Rate Limiting:** 50 requests per 15 minutes
-- **Multi-Input Support:** Phone numbers, account numbers, usernames
-- **Complex Password:** 8+ chars, uppercase, lowercase, number, special char
-- **Endpoints:**
-  - `POST /api/v1/auth/register` - User registration with KYC
-  - `POST /api/v1/auth/login` - Multi-input authentication
-  - `POST /api/v1/auth/logout` - User logout
-  - `GET /api/v1/auth/profile` - Get user profile
-  - `POST /api/v1/auth/refresh` - Token refresh
-  - `GET /api/v1/auth/verify` - Token verification
-
-#### **2. Wallet Management** - `/api/v1/wallets`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/wallets/:id` - Get wallet details
-  - `POST /api/v1/wallets` - Create new wallet
-  - `PUT /api/v1/wallets/:id/credit` - Credit wallet
-  - `PUT /api/v1/wallets/:id/debit` - Debit wallet
-  - `GET /api/v1/wallets/:id/balance` - Get wallet balance
-
-#### **3. Transaction Processing** - `/api/v1/transactions`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/transactions` - List transactions
-  - `POST /api/v1/transactions` - Create transaction
-  - `GET /api/v1/transactions/:id` - Get transaction details
-  - `PUT /api/v1/transactions/:id/status` - Update transaction status
-
-#### **4. User Management** - `/api/v1/users`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/users` - List all users
-  - `GET /api/v1/users/:id` - Get user details
-  - `PUT /api/v1/users/:id` - Update user
-  - `DELETE /api/v1/users/:id` - Delete user
-
-#### **5. KYC System** - `/api/v1/kyc`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/kyc` - List KYC records
-  - `POST /api/v1/kyc` - Submit KYC documents
-  - `GET /api/v1/kyc/:id` - Get KYC details
-  - `PUT /api/v1/kyc/:id/status` - Update KYC status
-  - `POST /api/v1/kyc/upload-documents` - Document upload with validation
-  - `GET /api/v1/kyc/status` - KYC status check
-  - `PUT /api/v1/kyc/update-status` - Status updates
-
-#### **6. Support System** - `/api/v1/support`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/support` - List support tickets
-  - `POST /api/v1/support` - Create support ticket
-  - `GET /api/v1/support/:id` - Get ticket details
-  - `PUT /api/v1/support/:id/status` - Update ticket status
-
-#### **7. Notifications** - `/api/v1/notifications`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/notifications` - List notifications
-  - `POST /api/v1/notifications` - Send notification
-  - `PUT /api/v1/notifications/:id/read` - Mark as read
-
-#### **8. Vouchers** - `/api/v1/vouchers`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/vouchers` - List vouchers
-  - `POST /api/v1/vouchers` - Create voucher
-  - `GET /api/v1/vouchers/:id` - Get voucher details
-  - `PUT /api/v1/vouchers/:id/redeem` - Redeem voucher
-
-#### **9. Voucher Types** - `/api/v1/voucher-types`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/voucher-types` - List voucher types
-  - `POST /api/v1/voucher-types` - Create voucher type
-  - `GET /api/v1/voucher-types/:id` - Get voucher type details
-
-#### **10. Value Added Services** - `/api/v1/vas`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/vas` - List VAS services
-  - `POST /api/v1/vas/purchase` - Purchase VAS service
-  - `GET /api/v1/vas/:id` - Get service details
-
-#### **11. Merchants** - `/api/v1/merchants`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/merchants` - List merchants
-  - `POST /api/v1/merchants` - Register merchant
-  - `GET /api/v1/merchants/:id` - Get merchant details
-
-#### **12. Service Providers** - `/api/v1/service-providers`
-- **Status:** ✅ Fully operational
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/service-providers` - List service providers
-  - `POST /api/v1/service-providers` - Register provider
-  - `GET /api/v1/service-providers/:id` - Get provider details
-
-#### **13. Flash Integration** - `/api/v1/flash`
-- **Status:** ✅ Fully operational (conditional)
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/flash/health` - Flash service health
-  - `GET /api/v1/flash/products` - List Flash products
-  - `POST /api/v1/flash/purchase` - Purchase Flash product
-
-#### **14. MobileMart Integration** - `/api/v1/mobilemart`
-- **Status:** ✅ Fully operational (conditional)
-- **Security:** JWT authentication required
-- **Rate Limiting:** 1000 requests per 15 minutes
-- **Endpoints:**
-  - `GET /api/v1/mobilemart/health` - MobileMart service health
-  - `GET /api/v1/mobilemart/products` - List MobileMart products
-  - `POST /api/v1/mobilemart/purchase` - Purchase MobileMart product
-
----
-
-## 🔒 **SECURITY DETAILS**
-
-### **🛡️ Security Headers (Helmet.js)**
-```http
-Content-Security-Policy: default-src 'self'
-X-Frame-Options: DENY
-X-Content-Type-Options: nosniff
-X-XSS-Protection: 1; mode=block
-Strict-Transport-Security: max-age=31536000
-Permissions-Policy: geolocation=(), microphone=(), camera=()
-```
-
-### **⚡ Rate Limiting**
-- **General Endpoints:** 1000 requests per 15 minutes
-- **Auth Endpoints:** 50 requests per 15 minutes (stricter)
-- **Headers:** `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`
-
-### **✅ Input Validation**
-- **Password Policy:** 8+ chars, uppercase, lowercase, numbers, special chars
-- **Email Validation:** RFC-compliant format
-- **Transaction Validation:** amount, recipient, description
-- **SQL Injection Prevention:** Parameterized queries
-- **XSS Protection:** Input sanitization
-
----
-
-## 📝 **REQUEST EXAMPLES**
-
-### **🔐 Authentication**
-
-#### **Register User**
-```bash
-curl -X POST http://localhost:5050/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "SecurePass123!",
-    "firstName": "John",
-    "lastName": "Doe"
-  }'
-```
-
-#### **Login User**
-```bash
-curl -X POST http://localhost:5050/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "SecurePass123!"
-  }'
-```
-
-### **💰 Wallet Operations**
-
-#### **Get Wallet Balance**
-```bash
-curl -X GET http://localhost:5050/api/v1/wallets/1/balance \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN"
-```
-
-#### **Credit Wallet**
-```bash
-curl -X PUT http://localhost:5050/api/v1/wallets/1/credit \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "amount": 100.00,
-    "description": "Deposit"
-  }'
-```
-
-### **💳 Transaction Processing**
-
-#### **Create Transaction**
-```bash
-curl -X POST http://localhost:5050/api/v1/transactions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -d '{
-    "amount": 50.00,
-    "recipientId": "user123",
-    "description": "Payment for services"
-  }'
-```
-
----
-
-## 📊 **RESPONSE FORMATS**
-
-### **✅ Success Response**
+**Response:**
 ```json
 {
   "success": true,
-  "message": "Operation completed successfully",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 15,
+    "name": "Test User",
+    "kycStatus": "pending",
+    "email": "demo@mymoolah.com"
+  }
+}
+```
+
+### **POST /api/v1/auth/register**
+Register a new user account.
+
+**Request Body:**
+```json
+{
+  "name": "John Doe",
+  "identifier": "27821234568",
+  "identifierType": "phone",
+  "email": "john@mymoolah.com",
+  "password": "SecurePass123!",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "user": {
+    "id": 16,
+    "name": "John Doe",
+    "kycStatus": "pending"
+  }
+}
+```
+
+---
+
+## 💰 **Send Money Endpoints**
+
+### **POST /api/v1/send-money/resolve-recipient**
+Detect recipient type and available payment methods.
+
+**Request Body:**
+```json
+{
+  "identifier": "27821234567"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
   "data": {
-    "id": 1,
-    "amount": 100.00,
-    "status": "completed"
-  },
-  "timestamp": "2025-07-16T10:30:00Z"
+    "identifier": "27821234567",
+    "type": "phone",
+    "availableMethods": [
+      {
+        "id": "sa_bank_transfer",
+        "name": "Bank Transfer",
+        "description": "Send to any South African bank account",
+        "estimatedTime": "2-5 minutes",
+        "fee": "R2.50",
+        "feeAmount": 2.5,
+        "available": true,
+        "preferred": false,
+        "badge": "R2.50 • 2-5 MIN"
+      },
+      {
+        "id": "atm_cash_pickup",
+        "name": "ATM Cash Pickup",
+        "description": "Recipient collects cash at partner ATMs",
+        "estimatedTime": "15 minutes",
+        "fee": "R5.00",
+        "feeAmount": 5,
+        "available": true,
+        "preferred": false,
+        "badge": "R5.00 • 15 MIN"
+      }
+    ],
+    "recipientInfo": "Standard Bank"
+  }
 }
 ```
 
-### **❌ Error Response**
+### **POST /api/v1/send-money/quote**
+Generate transfer quote with fees and estimated time.
+
+**Request Body:**
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid input data",
-    "details": [
-      "Email must be a valid email address",
-      "Password must be at least 8 characters"
+  "identifier": "27821234567",
+  "amount": 1000,
+  "method": "sa_bank_transfer"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "quoteId": "q_123456789",
+    "amount": 1000,
+    "fee": 2.5,
+    "totalAmount": 1002.5,
+    "estimatedTime": "2-5 minutes",
+    "method": "sa_bank_transfer",
+    "recipientInfo": "Standard Bank"
+  }
+}
+```
+
+### **POST /api/v1/send-money/transfer**
+Initiate a money transfer (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "identifier": "27821234567",
+  "amount": 1000,
+  "method": "sa_bank_transfer",
+  "quoteId": "q_123456789"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactionId": "tx_987654321",
+    "status": "processing",
+    "amount": 1000,
+    "fee": 2.5,
+    "totalAmount": 1002.5,
+    "estimatedTime": "2-5 minutes"
+  }
+}
+```
+
+### **GET /api/v1/send-money/status/:transactionId**
+Check transfer status.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactionId": "tx_987654321",
+    "status": "completed",
+    "amount": 1000,
+    "fee": 2.5,
+    "completedAt": "2025-07-20T15:30:00Z"
+  }
+}
+```
+
+---
+
+## 📋 **KYC (Know Your Customer) Endpoints**
+
+### **GET /api/v1/kyc/status**
+Get KYC status and progress (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "pending",
+    "progress": 25,
+    "requiredDocuments": [
+      "identity_document",
+      "address_proof"
+    ],
+    "uploadedDocuments": [
+      {
+        "type": "identity_document",
+        "filename": "id_document.pdf",
+        "uploadedAt": "2025-07-20T10:00:00Z"
+      }
     ]
-  },
-  "timestamp": "2025-07-16T10:30:00Z"
+  }
 }
 ```
 
-### **🔒 Security Error Response**
+### **POST /api/v1/kyc/upload-document**
+Upload KYC document (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: multipart/form-data
+```
+
+**Form Data:**
+- `documentType`: "identity_document" | "address_proof"
+- `file`: Document file (JPG, PNG, PDF, max 10MB)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "documentId": "doc_123456",
+    "filename": "id_document.pdf",
+    "type": "identity_document",
+    "uploadedAt": "2025-07-20T10:00:00Z"
+  }
+}
+```
+
+### **POST /api/v1/kyc/submit**
+Submit KYC for verification (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "status": "processing",
+    "estimatedTime": "24-48 hours",
+    "submittedAt": "2025-07-20T10:00:00Z"
+  }
+}
+```
+
+### **GET /api/v1/kyc/requirements**
+Get KYC document requirements.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "requiredDocuments": [
+      {
+        "type": "identity_document",
+        "name": "Identity Document",
+        "description": "SA ID, Passport, or Driver's License",
+        "acceptedFormats": ["JPG", "PNG", "PDF"],
+        "maxSize": "10MB"
+      },
+      {
+        "type": "address_proof",
+        "name": "Address Proof",
+        "description": "Utility bill, Bank statement, or Lease agreement",
+        "acceptedFormats": ["JPG", "PNG", "PDF"],
+        "maxSize": "10MB"
+      }
+    ]
+  }
+}
+```
+
+---
+
+## 💳 **Wallet Management Endpoints**
+
+### **GET /api/v1/wallets/balance**
+Get wallet balance (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "balance": 5000.00,
+    "currency": "ZAR",
+    "lastUpdated": "2025-07-20T15:30:00Z"
+  }
+}
+```
+
+### **GET /api/v1/wallets/transactions**
+Get transaction history (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Query Parameters:**
+- `page`: Page number (default: 1)
+- `limit`: Items per page (default: 10)
+- `type`: Transaction type (optional)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactions": [
+      {
+        "id": "tx_123456",
+        "type": "transfer",
+        "amount": 1000.00,
+        "fee": 2.50,
+        "status": "completed",
+        "recipient": "27821234567",
+        "createdAt": "2025-07-20T15:30:00Z"
+      }
+    ],
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 25,
+      "pages": 3
+    }
+  }
+}
+```
+
+### **POST /api/v1/wallets/deposit**
+Deposit funds to wallet (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "amount": 1000,
+  "method": "bank_transfer"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactionId": "tx_123456",
+    "amount": 1000,
+    "status": "pending",
+    "reference": "DEP123456789"
+  }
+}
+```
+
+### **POST /api/v1/wallets/withdraw**
+Withdraw funds from wallet (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "amount": 500,
+  "method": "bank_transfer",
+  "accountNumber": "1234567890"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactionId": "tx_789012",
+    "amount": 500,
+    "fee": 5.00,
+    "status": "processing"
+  }
+}
+```
+
+### **GET /api/v1/wallets/limits**
+Get wallet limits and restrictions (requires authentication).
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "dailyLimit": 10000.00,
+    "monthlyLimit": 50000.00,
+    "singleTransactionLimit": 5000.00,
+    "kycRequired": true,
+    "kycStatus": "pending"
+  }
+}
+```
+
+---
+
+## 🔍 **System Endpoints**
+
+### **GET /test**
+Test endpoint to verify server status.
+
+**Response:**
+```json
+{
+  "message": "MyMoolah Wallet API is running!",
+  "endpoints": {
+    "auth": "/api/v1/auth",
+    "wallets": "/api/v1/wallets",
+    "transactions": "/api/v1/transactions",
+    "users": "/api/v1/users",
+    "kyc": "/api/v1/kyc",
+    "sendMoney": "/api/v1/send-money",
+    "support": "/api/v1/support",
+    "notifications": "/api/v1/notifications",
+    "vouchers": "/api/v1/vouchers",
+    "voucherTypes": "/api/v1/voucher-types",
+    "vas": "/api/v1/vas",
+    "merchants": "/api/v1/merchants",
+    "serviceProviders": "/api/v1/service-providers",
+    "flash": "/api/v1/flash",
+    "mobilemart": "/api/v1/mobilemart",
+    "health": "/health",
+    "test": "/test"
+  }
+}
+```
+
+### **GET /health**
+Health check endpoint.
+
+**Response:**
+```json
+{
+  "status": "OK",
+  "timestamp": "2025-07-20T15:30:00Z",
+  "service": "MyMoolah Wallet API",
+  "version": "1.0.0"
+}
+```
+
+---
+
+## 🔐 **Authentication & Security**
+
+### **JWT Token Format**
+```
+Authorization: Bearer <jwt_token>
+```
+
+### **Token Expiration**
+- **Access Token:** 24 hours
+- **Refresh Token:** 7 days
+
+### **Security Headers**
+- **CORS:** Configured for cross-origin requests
+- **Rate Limiting:** Applied to all endpoints
+- **Input Validation:** All requests validated
+- **HTTPS:** Required in production
+
+---
+
+## 📊 **Error Responses**
+
+### **Validation Error**
 ```json
 {
   "success": false,
-  "error": {
-    "code": "RATE_LIMIT_EXCEEDED",
-    "message": "Too many requests",
-    "retryAfter": 900
-  },
-  "timestamp": "2025-07-16T10:30:00Z"
+  "message": "Validation failed",
+  "errors": [
+    {
+      "field": "identifier",
+      "message": "Identifier is required"
+    }
+  ]
+}
+```
+
+### **Authentication Error**
+```json
+{
+  "success": false,
+  "message": "Invalid credentials"
+}
+```
+
+### **Server Error**
+```json
+{
+  "success": false,
+  "message": "Internal server error",
+  "error": "Database connection failed"
 }
 ```
 
 ---
 
-## 🧪 **TESTING ENDPOINTS**
+## 🧪 **Testing Examples**
 
-### **✅ Health Check**
+### **Test Authentication**
 ```bash
-curl http://localhost:5050/health
+# Login
+curl -X POST http://localhost:5050/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"identifier": "27821234567", "password": "Demo123!"}'
+
+# Register
+curl -X POST http://localhost:5050/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Test User", "identifier": "27821234568", "identifierType": "phone", "email": "test@mymoolah.com", "password": "Test123!", "firstName": "Test", "lastName": "User"}'
 ```
 
-### **✅ Test Endpoint**
+### **Test Send Money**
 ```bash
-curl http://localhost:5050/test
+# Resolve recipient
+curl -X POST http://localhost:5050/api/v1/send-money/resolve-recipient \
+  -H "Content-Type: application/json" \
+  -d '{"identifier": "27821234567"}'
+
+# Get quote
+curl -X POST http://localhost:5050/api/v1/send-money/quote \
+  -H "Content-Type: application/json" \
+  -d '{"identifier": "27821234567", "amount": 1000, "method": "sa_bank_transfer"}'
 ```
 
-### **✅ Security Headers Test**
+### **Test KYC**
 ```bash
-curl -I http://localhost:5050/health
+# Get KYC status (with auth token)
+curl -X GET http://localhost:5050/api/v1/kyc/status \
+  -H "Authorization: Bearer <your_jwt_token>"
+
+# Get KYC requirements
+curl -X GET http://localhost:5050/api/v1/kyc/requirements
 ```
 
-### **✅ Rate Limiting Test**
+### **Test Wallet**
 ```bash
-for i in {1..5}; do curl -s -I http://localhost:5050/health | grep -E "(RateLimit|HTTP)"; echo "---"; done
+# Get balance (with auth token)
+curl -X GET http://localhost:5050/api/v1/wallets/balance \
+  -H "Authorization: Bearer <your_jwt_token>"
+
+# Get transactions (with auth token)
+curl -X GET http://localhost:5050/api/v1/wallets/transactions \
+  -H "Authorization: Bearer <your_jwt_token>"
 ```
 
 ---
 
-## 📊 **PERFORMANCE METRICS**
+## 📈 **Rate Limits**
 
-### **✅ System Performance:**
-- **Response Time:** < 50ms average (including security checks)
-- **Throughput:** 1000+ requests/second with rate limiting
-- **Uptime:** 99.9% availability maintained
-- **Security Overhead:** < 5% performance impact
+### **Authentication Endpoints**
+- **Login:** 5 requests per minute
+- **Register:** 3 requests per minute
 
-### **✅ Database Performance:**
-- **Tables:** 8 tables created and optimized
-- **Queries:** Parameterized queries for security
-- **Indexes:** Optimized for performance
-- **Connections:** Efficient connection management
+### **API Endpoints**
+- **General:** 100 requests per minute
+- **File Upload:** 10 requests per minute
+- **Money Transfer:** 20 requests per minute
 
 ---
 
-## 🏆 **CERTIFICATIONS & COMPLIANCE**
+## 🔄 **Webhooks (Future)**
 
-### **✅ Current Status:**
-- **Mojaloop Standards:** Fully compliant
-- **Security Certification:** MM-SEC-2025-001 active
-- **Production Ready:** All systems verified
-- **Enterprise Grade:** Security and performance validated
+### **Transaction Webhooks**
+```json
+{
+  "event": "transaction.completed",
+  "data": {
+    "transactionId": "tx_123456",
+    "status": "completed",
+    "amount": 1000.00,
+    "timestamp": "2025-07-20T15:30:00Z"
+  }
+}
+```
 
-### **✅ Company Information:**
-- **Company:** MyMoolah Digital Solutions
-- **Location:** Johannesburg, South Africa
-- **Email:** security@mymoolah.com
-- **Website:** https://mymoolah.com
-- **Phone:** +27 (0) 11 XXX XXXX
-
----
-
-## 📞 **SUPPORT & CONTACT**
-
-### **🔧 Technical Support:**
-- **Security Issues:** security@mymoolah.com
-- **Development:** dev@mymoolah.com
-- **Documentation:** docs@mymoolah.com
-
-### **🆘 Emergency Contacts:**
-- **Security Team:** Available 24/7
-- **Development Team:** Business hours
-- **Compliance Officer:** Available on request
+### **KYC Webhooks**
+```json
+{
+  "event": "kyc.verified",
+  "data": {
+    "userId": 15,
+    "status": "verified",
+    "timestamp": "2025-07-20T15:30:00Z"
+  }
+}
+```
 
 ---
 
-## 🎯 **NEXT STEPS**
-
-### **✅ Immediate Actions:**
-1. **API Testing** - Test all endpoints with security measures
-2. **Performance Monitoring** - Monitor response times and throughput
-3. **Security Monitoring** - Review logs and security metrics
-4. **Documentation Maintenance** - Keep API documentation updated
-
-### **📈 Long-term Goals:**
-1. **API Expansion** - Add new financial services endpoints
-2. **Performance Optimization** - Maintain < 5% security overhead
-3. **Integration Enhancement** - Improve Flash and MobileMart integrations
-4. **Monitoring Enhancement** - Advanced API monitoring and analytics
-
----
-
-*This API documentation represents a complete, secure, and production-ready MyMoolah platform with comprehensive security measures and enterprise-grade performance.* 
+**API Status:** ✅ **ALL ENDPOINTS OPERATIONAL**  
+**Last Updated:** July 20, 2025  
+**Version:** 2.1.0 

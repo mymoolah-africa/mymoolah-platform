@@ -119,12 +119,12 @@ class AuthController {
         token,
         user: {
           id: user.id,
-          name: `${user.first_name} ${user.last_name}`,
-          phoneNumber: user.phone_number,
-          walletId: user.wallet_id,
-          kycStatus: user.kyc_status || 'pending',
+          name: `${user.firstName} ${user.lastName}`,
+          phoneNumber: user.phoneNumber,
+          walletId: user.walletId,
+          kycStatus: user.kycStatus || 'pending',
           email: user.email,
-          phone: user.phone_number
+          phone: user.phoneNumber
         }
       });
     } catch (error) {
