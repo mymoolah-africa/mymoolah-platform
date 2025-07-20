@@ -48,9 +48,9 @@ class User {
       const {
         email,
         password,
-        firstName,
-        lastName,
-        phoneNumber
+        name,
+        identifier,
+        identifierType
       } = userData;
 
       // Hash password
@@ -60,16 +60,28 @@ class User {
       // Generate wallet ID before database operation
       const walletId = this.generateWalletId();
 
+      // Set phone number based on identifier type
+      let phoneNumber = '';
+      if (identifierType === 'phone') {
+        phoneNumber = identifier;
+      }
+
       const sql = `
         INSERT INTO users (
           email, password_hash, firstName, lastName, 
-          phoneNumber, balance
-        ) VALUES (?, ?, ?, ?, ?, 0.00)
+          phoneNumber, balance, username, accountNumber
+        ) VALUES (?, ?, ?, ?, ?, 0.00, ?, ?)
       `;
+
+      // Set firstName to name and lastName to empty for now
+      const firstName = name;
+      const lastName = '';
+      const username = identifierType === 'username' ? identifier : null;
+      const accountNumber = identifierType === 'account' ? identifier : null;
 
       this.db.run(sql, [
         email, passwordHash, firstName, lastName, 
-        phoneNumber
+        phoneNumber, username, accountNumber
       ], function(err) {
         if (err) {
           console.error('❌ Error creating user:', err.message);
@@ -78,20 +90,21 @@ class User {
           const userId = this.lastID;
           
           // Create wallet record
-          const Wallet = require('./Wallet');
-          const walletModel = new Wallet();
+          const walletModel = require('./Wallet');
           
           walletModel.createWallet(userId, walletId)
             .then(() => {
               resolve({
                 id: userId,
                 email,
-                firstName,
-                lastName,
-                phoneNumber,
+                name: firstName,
+                phone: phoneNumber,
+                username,
+                accountNumber,
                 walletId,
                 balance: 0.00,
                 status: 'active',
+                kycStatus: 'pending',
                 createdAt: new Date().toISOString()
               });
             })
@@ -128,6 +141,51 @@ class User {
       this.db.get(sql, [email], (err, row) => {
         if (err) {
           console.error('❌ Error getting user by email:', err.message);
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      });
+    });
+  }
+
+  async getUserByPhone(phone) {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT * FROM users WHERE phoneNumber = ?';
+      
+      this.db.get(sql, [phone], (err, row) => {
+        if (err) {
+          console.error('❌ Error getting user by phone:', err.message);
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      });
+    });
+  }
+
+  async getUserByUsername(username) {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT * FROM users WHERE username = ?';
+      
+      this.db.get(sql, [username], (err, row) => {
+        if (err) {
+          console.error('❌ Error getting user by username:', err.message);
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      });
+    });
+  }
+
+  async getUserByAccount(accountNumber) {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT * FROM users WHERE accountNumber = ?';
+      
+      this.db.get(sql, [accountNumber], (err, row) => {
+        if (err) {
+          console.error('❌ Error getting user by account:', err.message);
           reject(err);
         } else {
           resolve(row);

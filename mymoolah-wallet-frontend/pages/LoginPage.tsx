@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { Eye, EyeOff, Phone, User, Hash, Check, X, AlertTriangle, FileText, Shield, HelpCircle } from 'lucide-react';
 
 // Import logo from src/assets/
-import logo2 from '../src/assets/logo2.svg';
+import logo2 from '../assets/logo2.svg';
 
 // Multi-input detection utilities (same as authentication)
 const detectInputType = (input: string): 'phone' | 'account' | 'username' | 'unknown' => {
@@ -114,7 +114,7 @@ export function LoginPage() {
   const handleDemoFill = () => {
     setCredentials({
       identifier: '27821234567',
-      password: 'MyWallet2024!'
+      password: 'Demo123!'
     });
   };
 

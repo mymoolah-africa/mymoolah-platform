@@ -18,7 +18,6 @@ interface User {
 interface AuthContextType {
   user: User | null;
   login: (credentials: LoginCredentials) => Promise<void>;
-  register: (credentials: RegisterCredentials) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   refreshToken: () => Promise<void>;
@@ -30,14 +29,6 @@ interface AuthContextType {
 interface LoginCredentials {
   identifier: string; // Updated to support phone/account/username 
   password: string; // Updated from 'pin' to 'password'
-}
-
-interface RegisterCredentials {
-  name: string;
-  identifier: string;
-  email: string;
-  password: string;
-  identifierType: 'phone' | 'account' | 'username';
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -192,57 +183,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       throw error; // Re-throw to be handled by LoginPage
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const register = async (credentials: RegisterCredentials) => {
-    setIsLoading(true);
-    try {
-      // Simulate API call delay for realistic UX
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      if (isDemoMode()) {
-        // Demo registration - create mock user
-        const mockUser: User = {
-          id: 'demo-user-001',
-          name: credentials.name,
-          identifier: credentials.identifier,
-          identifierType: credentials.identifierType,
-          phoneNumber: credentials.identifierType === 'phone' ? credentials.identifier : undefined,
-          walletId: 'wallet-demo-001',
-          kycStatus: 'not_started',
-          kycVerified: false
-        };
-        
-        const mockToken = 'demo-token-' + Date.now();
-        localStorage.setItem('mymoolah_token', mockToken);
-        setUser(mockUser);
-      } else {
-        // Production registration with backend
-        const response = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(credentials),
-        });
-
-        if (response.ok) {
-          const { user: userData, token } = await response.json();
-          localStorage.setItem('mymoolah_token', token);
-          setUser({
-            ...userData,
-            kycVerified: userData.kycStatus === 'verified'
-          });
-        } else {
-          const error = await response.json();
-          throw new Error(error.message || 'Registration failed. Please try again.');
-        }
-      }
-    } catch (error) {
-      throw error; // Re-throw to be handled by RegisterPage
     } finally {
       setIsLoading(false);
     }
@@ -410,7 +350,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{ 
       user, 
       login, 
-      register,
       logout, 
       isLoading, 
       refreshToken,
@@ -432,4 +371,4 @@ export function useAuth() {
 }
 
 // Export types for use in other components
-export type { User, LoginCredentials, RegisterCredentials, AuthContextType, KYCStatus };
+export type { User, LoginCredentials, AuthContextType, KYCStatus };

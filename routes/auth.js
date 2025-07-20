@@ -34,20 +34,17 @@ router.post('/register', [
     .isLength({ min: 8 })
     .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
     .withMessage('Password must be at least 8 characters and contain uppercase, lowercase, number, and special character'),
-  body('firstName')
-    .isLength({ min: 2, max: 50 })
+  body('name')
+    .isLength({ min: 2, max: 100 })
     .trim()
     .escape()
-    .withMessage('First name must be between 2 and 50 characters'),
-  body('lastName')
-    .isLength({ min: 2, max: 50 })
-    .trim()
-    .escape()
-    .withMessage('Last name must be between 2 and 50 characters'),
-  body('phone')
-    .optional()
-    .matches(/^\+?[1-9]\d{1,14}$/)
-    .withMessage('Please provide a valid phone number'),
+    .withMessage('Name must be between 2 and 100 characters'),
+  body('identifier')
+    .isLength({ min: 1 })
+    .withMessage('Identifier is required'),
+  body('identifierType')
+    .isIn(['phone', 'account', 'username'])
+    .withMessage('Identifier type must be phone, account, or username'),
   validateRequest
 ], authController.register);
 

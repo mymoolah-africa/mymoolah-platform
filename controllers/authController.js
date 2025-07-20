@@ -11,20 +11,65 @@ class AuthController {
   // Register a new user
   async register(req, res) {
     try {
-      const { email, password, firstName, lastName, phoneNumber } = req.body;
-      if (!email || !password || !firstName || !lastName) {
-        return res.status(400).json({ success: false, message: 'Email, password, firstName, and lastName are required.' });
+      const { email, password, name, identifier, identifierType } = req.body;
+      if (!email || !password || !name || !identifier || !identifierType) {
+        return res.status(400).json({ success: false, message: 'Email, password, name, identifier, and identifierType are required.' });
       }
+      
       // Create a User instance to use instance methods
       const userModel = new User();
       const existingUser = await userModel.getUserByEmail(email);
       if (existingUser) {
         return res.status(409).json({ success: false, message: 'User already exists.' });
       }
-      // Create user and wallet
-      const user = await userModel.createUser({ email, password, firstName, lastName, phoneNumber });
-      // Wallet is created as part of createUser, but you can double-check or handle errors here if needed
-      return res.status(201).json({ success: true, message: 'User registered successfully.' });
+      
+      // Check if identifier already exists based on type
+      let existingIdentifier = null;
+      switch (identifierType) {
+        case 'phone':
+          existingIdentifier = await userModel.getUserByPhone(identifier);
+          break;
+        case 'username':
+          existingIdentifier = await userModel.getUserByUsername(identifier);
+          break;
+        case 'account':
+          existingIdentifier = await userModel.getUserByAccount(identifier);
+          break;
+      }
+      
+      if (existingIdentifier) {
+        return res.status(409).json({ success: false, message: `${identifierType} already exists.` });
+      }
+      
+      // Create user and wallet with new format
+      const user = await userModel.createUser({ 
+        email, 
+        password, 
+        name,
+        identifier,
+        identifierType
+      });
+      
+      // Generate JWT token
+      const token = jwt.sign(
+        { id: user.id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      
+      return res.status(201).json({ 
+        success: true, 
+        message: 'User registered successfully.',
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone || '',
+          kycStatus: user.kycStatus || 'pending',
+          walletId: user.walletId
+        }
+      });
     } catch (error) {
       return res.status(500).json({ success: false, message: error.message });
     }

@@ -114,7 +114,7 @@ export function LoginPage() {
   const handleDemoFill = () => {
     setCredentials({
       identifier: '27821234567',
-      password: 'MyWallet2024!'
+      password: 'Demo123!'
     });
   };
 
