@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 
 // Import logo from src/assets/
-import logo2 from '../assets/logo2.svg';
+import logo2 from '../src/assets/logo2.svg';
 
 // Multi-input detection utilities (same as authentication)
 const detectInputType = (input: string): 'phone' | 'account' | 'username' | 'unknown' => {
@@ -163,7 +163,7 @@ export function RegisterPage() {
         <div style={{ padding: 'var(--mobile-padding)', paddingTop: '2rem', paddingBottom: '2rem' }}>
           {/* Header with Logo - IDENTICAL SIZING TO LOGIN PAGE */}
           <div className="text-center mb-8">
-            {/* Logo2.svg - EXACTLY THE SAME SIZE AS LOGIN PAGE */}
+            {/* Logo.svg - EXACTLY THE SAME SIZE AS LOGIN PAGE */}
             <div className="flex justify-center mb-4">
               <img 
                 src={logo2} 

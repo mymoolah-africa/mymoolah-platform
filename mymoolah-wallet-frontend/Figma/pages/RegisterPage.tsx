@@ -161,18 +161,18 @@ export function RegisterPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#86BE41] to-[#2D8CCA]">
       <div className="mobile-container">
         <div style={{ padding: 'var(--mobile-padding)', paddingTop: '2rem', paddingBottom: '2rem' }}>
-          {/* Header with Logo - IDENTICAL SIZING TO LOGIN PAGE */}
+          {/* Header with Logo - 10% Larger + Reduced Spacing */}
           <div className="text-center mb-8">
-            {/* Logo2.svg - EXACTLY THE SAME SIZE AS LOGIN PAGE */}
-            <div className="flex justify-center mb-4">
+            {/* Logo2.svg - 10% LARGER with REDUCED spacing */}
+            <div className="flex justify-center mb-2">
               <img 
                 src={logo2} 
                 alt="MyMoolah Logo" 
                 className="h-16 w-auto"
                 style={{ 
-                  height: '4rem',
+                  height: '4.4rem',        // 10% larger (was 4rem)
                   width: 'auto',
-                  maxWidth: '200px',
+                  maxWidth: '220px',       // 10% larger (was 200px)
                   objectFit: 'contain'
                 }}
               />
@@ -211,7 +211,7 @@ export function RegisterPage() {
             </Alert>
           )}
 
-          {/* Main Register Card - 5% Smaller with Updated Title */}
+          {/* Main Register Card - 5% Smaller */}
           <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl" style={{ transform: 'scale(0.95)' }}>
             <CardHeader style={{ paddingBottom: '1rem' }}>
               <CardTitle className="text-center" style={{ 

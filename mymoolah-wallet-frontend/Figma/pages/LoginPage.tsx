@@ -122,18 +122,18 @@ export function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-[#86BE41] to-[#2D8CCA]">
       <div className="mobile-container">
         <div style={{ padding: 'var(--mobile-padding)', paddingTop: '2rem', paddingBottom: '2rem' }}>
-          {/* Header with Logo */}
+          {/* Header with Logo - 10% Larger + Reduced Spacing */}
           <div className="text-center mb-8">
-            {/* Logo2.svg - Consistent sizing with proper import */}
-            <div className="flex justify-center mb-4">
+            {/* Logo2.svg - 10% LARGER with REDUCED spacing */}
+            <div className="flex justify-center mb-2">
               <img 
                 src={logo2} 
                 alt="MyMoolah Logo" 
                 className="h-16 w-auto"
                 style={{ 
-                  height: '4rem',
+                  height: '4.4rem',        // 10% larger (was 4rem)
                   width: 'auto',
-                  maxWidth: '200px',
+                  maxWidth: '220px',       // 10% larger (was 200px)
                   objectFit: 'contain'
                 }}
               />
@@ -337,7 +337,7 @@ export function LoginPage() {
                 </Button>
               </form>
 
-              {/* Register Link - Updated to "Create Wallet" */}
+              {/* Register Link */}
               <div className="mt-6 text-center">
                 <p style={{ 
                   fontFamily: 'Montserrat, sans-serif', 
