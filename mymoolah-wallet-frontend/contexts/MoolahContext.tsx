@@ -9,25 +9,30 @@ interface WalletBalance {
 
 interface Transaction {
   id: string;
-  type: 'credit' | 'debit' | 'sent' | 'received';
+  type: 'received' | 'sent' | 'payment';
   amount: number;
   currency: string;
   description: string;
+  date: string;
   timestamp: string;
-  date?: string;
   status: 'completed' | 'pending' | 'failed';
   counterparty?: string;
 }
 
+interface TodayActivity {
+  received: number;
+  sent: number;
+}
+
 interface MoolahContextType {
   walletBalance: WalletBalance | null;
-  voucherBalance: number;
-  recentTransactions: Transaction[];
-  isLoading: boolean;
   balance: number;
   hideBalance: boolean;
   toggleBalanceVisibility: () => void;
-  todayActivity: Transaction[];
+  voucherBalance: number;
+  recentTransactions: Transaction[];
+  todayActivity: TodayActivity;
+  isLoading: boolean;
   refreshData: () => Promise<void>;
   sendMoney: (recipient: string, amount: number) => Promise<void>;
 }
@@ -37,10 +42,12 @@ const MoolahContext = createContext<MoolahContextType | undefined>(undefined);
 export function MoolahProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [walletBalance, setWalletBalance] = useState<WalletBalance | null>(null);
+  const [balance, setBalance] = useState(0);
+  const [hideBalance, setHideBalance] = useState(false);
   const [voucherBalance, setVoucherBalance] = useState(0);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [todayActivity, setTodayActivity] = useState<TodayActivity>({ received: 0, sent: 0 });
   const [isLoading, setIsLoading] = useState(false);
-  const [hideBalance, setHideBalance] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -48,31 +55,130 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  const toggleBalanceVisibility = () => {
+    setHideBalance(!hideBalance);
+  };
+
   const refreshData = async () => {
     if (!user) return;
     
     setIsLoading(true);
     try {
       const token = localStorage.getItem('mymoolah_token');
-      const headers = { Authorization: `Bearer ${token}` };
+      
+      if (token && token.startsWith('demo-token-')) {
+        // Demo mode - use mock data
+        const mockWalletBalance: WalletBalance = {
+          available: 12450.75,
+          pending: 150.00,
+          currency: 'ZAR'
+        };
+        
+        const mockTransactions: Transaction[] = [
+          {
+            id: 'txn-001',
+            type: 'received',
+            amount: 500.00,
+            currency: 'ZAR',
+            description: 'Payment from John Smith',
+            date: 'Today, 10:30 AM',
+            timestamp: new Date().toISOString(),
+            status: 'completed',
+            counterparty: '+27 82 123 4567'
+          },
+          {
+            id: 'txn-002',
+            type: 'sent',
+            amount: 250.00,
+            currency: 'ZAR',
+            description: 'Groceries - Pick n Pay',
+            date: 'Today, 09:15 AM',
+            timestamp: new Date(Date.now() - 1000 * 60 * 75).toISOString(),
+            status: 'completed',
+            counterparty: 'Pick n Pay Sandton'
+          },
+          {
+            id: 'txn-003',
+            type: 'payment',
+            amount: 89.50,
+            currency: 'ZAR',
+            description: 'Uber Trip',
+            date: 'Yesterday, 6:45 PM',
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 17).toISOString(),
+            status: 'completed',
+            counterparty: 'Uber'
+          },
+          {
+            id: 'txn-004',
+            type: 'received',
+            amount: 1200.00,
+            currency: 'ZAR',
+            description: 'Salary Payment',
+            date: 'Yesterday, 12:00 PM',
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+            status: 'completed',
+            counterparty: 'ABC Company'
+          },
+          {
+            id: 'txn-005',
+            type: 'sent',
+            amount: 75.00,
+            currency: 'ZAR',
+            description: 'Airtime Top-up',
+            date: '2 days ago',
+            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+            status: 'completed',
+            counterparty: 'MTN'
+          }
+        ];
 
-      // Fetch wallet balance
-      const balanceResponse = await fetch(`/api/wallet/${user.walletId}/balance`, { headers });
-      const balanceData = await balanceResponse.json();
-      setWalletBalance(balanceData);
+        const mockTodayActivity: TodayActivity = {
+          received: 500.00,
+          sent: 250.00
+        };
 
-      // Fetch voucher balance
-      const voucherResponse = await fetch(`/api/vouchers/${user.id}/balance`, { headers });
-      const voucherData = await voucherResponse.json();
-      setVoucherBalance(voucherData.total);
+        setWalletBalance(mockWalletBalance);
+        setBalance(mockWalletBalance.available);
+        setVoucherBalance(45.50);
+        setRecentTransactions(mockTransactions);
+        setTodayActivity(mockTodayActivity);
+      } else {
+        // Real API calls for production (when backend is ready)
+        const headers = { Authorization: `Bearer ${token}` };
 
-      // Fetch recent transactions
-      const transactionsResponse = await fetch(`/api/transactions/${user.walletId}?limit=5`, { headers });
-      const transactionsData = await transactionsResponse.json();
-      setRecentTransactions(transactionsData.transactions);
+        // Fetch wallet balance
+        const balanceResponse = await fetch(`/api/wallet/${user.walletId}/balance`, { headers });
+        if (!balanceResponse.ok) throw new Error('Failed to fetch balance');
+        const balanceData = await balanceResponse.json();
+        setWalletBalance(balanceData);
+        setBalance(balanceData.available);
 
+        // Fetch voucher balance
+        const voucherResponse = await fetch(`/api/vouchers/${user.id}/balance`, { headers });
+        if (!voucherResponse.ok) throw new Error('Failed to fetch voucher balance');
+        const voucherData = await voucherResponse.json();
+        setVoucherBalance(voucherData.total);
+
+        // Fetch recent transactions
+        const transactionsResponse = await fetch(`/api/transactions/${user.walletId}?limit=5`, { headers });
+        if (!transactionsResponse.ok) throw new Error('Failed to fetch transactions');
+        const transactionsData = await transactionsResponse.json();
+        setRecentTransactions(transactionsData.transactions);
+
+        // Fetch today's activity
+        const activityResponse = await fetch(`/api/activity/${user.walletId}/today`, { headers });
+        if (!activityResponse.ok) throw new Error('Failed to fetch activity');
+        const activityData = await activityResponse.json();
+        setTodayActivity(activityData);
+      }
     } catch (error) {
       console.error('Failed to fetch wallet data:', error);
+      // Fallback to empty/safe values on error
+      setWalletBalance({ available: 0, pending: 0, currency: 'ZAR' });
+      setBalance(0);
+      setVoucherBalance(0);
+      setRecentTransactions([]);
+      setTodayActivity({ received: 0, sent: 0 });
     } finally {
       setIsLoading(false);
     }
@@ -82,6 +188,34 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
     if (!user || !walletBalance) throw new Error('User not authenticated');
 
     const token = localStorage.getItem('mymoolah_token');
+    
+    if (token && token.startsWith('demo-token-')) {
+      // Demo mode - simulate transfer
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Update demo balance
+      const newBalance = balance - amount;
+      setBalance(newBalance);
+      setWalletBalance(prev => prev ? { ...prev, available: newBalance } : null);
+      
+      // Add transaction to history
+      const newTransaction: Transaction = {
+        id: `txn-${Date.now()}`,
+        type: 'sent',
+        amount,
+        currency: 'ZAR',
+        description: `Transfer to ${recipient}`,
+        date: 'Just now',
+        timestamp: new Date().toISOString(),
+        status: 'completed',
+        counterparty: recipient
+      };
+      
+      setRecentTransactions(prev => [newTransaction, ...prev.slice(0, 4)]);
+      return;
+    }
+
+    // Real API transfer (when backend is ready)
     const response = await fetch('/api/transfers', {
       method: 'POST',
       headers: {
@@ -104,26 +238,16 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
     await refreshData();
   };
 
-  const toggleBalanceVisibility = () => {
-    setHideBalance(!hideBalance);
-  };
-
-  const balance = walletBalance?.available || 0;
-  const todayActivity = recentTransactions.filter(t => {
-    const today = new Date().toDateString();
-    return new Date(t.timestamp).toDateString() === today;
-  });
-
   return (
     <MoolahContext.Provider value={{
       walletBalance,
-      voucherBalance,
-      recentTransactions,
-      isLoading,
       balance,
       hideBalance,
       toggleBalanceVisibility,
+      voucherBalance,
+      recentTransactions,
       todayActivity,
+      isLoading,
       refreshData,
       sendMoney
     }}>

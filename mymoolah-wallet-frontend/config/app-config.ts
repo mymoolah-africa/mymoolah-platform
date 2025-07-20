@@ -199,19 +199,54 @@ export const getLaunchStats = () => APP_CONFIG.LAUNCH_STATS;
  * Demo Credentials Quick Reference (for development)
  * ================================================
  * 
- * Phone Numbers:
- * - 27821234567 (Demo123!)
- * - 27721234567 (Test456#)
+ * Phone Numbers (South African format):
+ * - 27821234567 / Demo123!
+ * - 27721234567 / Test456#
  * 
  * Account Numbers:
- * - 123456789 (Account789$)
- * - 987654321012 (Secure456&)
+ * - 123456789 / Account789$
+ * - 987654321012 / Secure456&
  * 
  * Usernames:
- * - demo_user (User123@)
- * - john.doe (MyPass789!)
+ * - demo_user / User123@
+ * - john.doe / MyPass789!
  * 
- * All passwords meet the complex requirements:
- * - 8+ characters
- * - Uppercase + Lowercase + Number + Special Character
- */ 
+ * All passwords meet complex requirements:
+ * ✓ 8+ characters
+ * ✓ Uppercase letter
+ * ✓ Lowercase letter  
+ * ✓ Number
+ * ✓ Special character
+ */
+
+/**
+ * Production Launch Checklist - UPDATED FOR COMPLEX PASSWORD SYSTEM
+ * TODO: Before production launch:
+ * 1. Set DEMO_MODE to false
+ * 2. Set ENVIRONMENT to 'production'
+ * 3. Update API baseUrl to production endpoint
+ * 4. Update Mojaloop configuration
+ * 5. Enable analytics
+ * 6. Update launch statistics
+ * 7. Test multi-input authentication without demo credentials
+ * 8. Verify complex password validation in production
+ * 9. Test all three identifier types (phone/account/username)
+ * 10. Verify South African phone number validation
+ */
+export const PRODUCTION_CHECKLIST = [
+  'Set DEMO_MODE to false',
+  'Set ENVIRONMENT to production',
+  'Update API endpoints',
+  'Configure Mojaloop production settings',
+  'Enable analytics and monitoring',
+  'Update launch statistics',
+  'Remove demo credentials access',
+  'Test complete multi-input authentication flow',
+  'Verify complex password validation in production',
+  'Test phone number validation (SA format)',
+  'Test account number validation (8-12 digits)',
+  'Test username validation (4-32 chars)',
+  'Verify security settings and password requirements',
+  'Performance testing on low-cost devices',
+  'Test real-time validation feedback'
+];

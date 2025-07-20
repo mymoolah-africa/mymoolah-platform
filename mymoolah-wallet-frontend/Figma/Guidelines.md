@@ -80,6 +80,196 @@ export default function App() {
 
 ---
 
+## **NEW: SendMoneyPage - Unified Payment Hub Architecture**
+
+### **Complete SendMoneyPage Implementation**
+The SendMoneyPage now implements a comprehensive **Unified Payment Hub** that supports three distinct payment methods with smart service discovery and Mojaloop-compliant architecture.
+
+### **Three Payment Method Architecture**
+```typescript
+// Comprehensive payment method support:
+interface PaymentMethod {
+  id: 'mymoolah_internal' | 'sa_bank_transfer' | 'atm_cash_pickup';
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  estimatedTime: string;
+  fee: string;
+  feeAmount: number;
+  available: boolean;
+  preferred: boolean;
+  badge?: string;
+}
+
+// 1. MyMoolah Internal Transfers (FREE • INSTANT)
+// 2. SA Bank Transfers via dtMercury (R2.50 • 2-5 MIN)  
+// 3. ATM Cash Pickup (R5.00 • 15 MIN - Placeholder)
+```
+
+### **Service Discovery & Smart Routing**
+```typescript
+// Parallel service discovery for optimal performance:
+const resolveRecipient = async (identifier: string): Promise<RecipientResolution> => {
+  const [mymoolahResult, bankResult, atmResult] = await Promise.allSettled([
+    checkMyMoolahWallet(identifier),     // Internal wallet check
+    checkSABankAccount(identifier),      // dtMercury bank resolution
+    checkATMCashAvailability(identifier) // Future SP integration
+  ]);
+
+  return {
+    identifier,
+    type: detectInputType(identifier), // phone | account | username
+    availableMethods: filterAvailableServices([...]),
+    recipientName: resolvedName,
+    recipientInfo: resolvedBankInfo
+  };
+};
+```
+
+### **5-Step User Flow Implementation**
+```typescript
+// Complete user journey with progress tracking:
+type SendMoneyStep = 'recipient' | 'method' | 'amount' | 'review' | 'processing' | 'success';
+
+// Step 1: Recipient Resolution (Multi-input with dynamic validation)
+// Step 2: Payment Method Selection (Smart routing - skip if only one option)
+// Step 3: Amount Input (Quick buttons R50-R1000, purpose field)
+// Step 4: Review & Confirm (Complete transaction summary)
+// Step 5: Processing → Success (Real-time status with receipt)
+```
+
+### **Multi-Input Recipient System Integration**
+```typescript
+// Reuses authentication multi-input system:
+const recipientType = detectInputType(recipient);
+const recipientValidation = validateRecipient(recipient, recipientType);
+
+// Supports same three identifier types:
+// - Phone: +27XXXXXXXXX, 27XXXXXXXXX, 0XXXXXXXXX  
+// - Account: 8-12 digit bank account numbers
+// - Username: 4-32 character MyMoolah usernames
+```
+
+### **KYC Integration for Transaction Blocking**
+```typescript
+// Automatic KYC requirement checking:
+useEffect(() => {
+  if (requiresKYC('send')) {
+    navigate('/kyc/documents?returnTo=/send-money');
+  }
+}, [requiresKYC, navigate]);
+
+// Transaction flow integration:
+const handleTransactionAttempt = () => {
+  if (requiresKYC('send')) {
+    navigate('/kyc/documents?returnTo=/send-money');
+    return;
+  }
+  // Proceed with transaction
+};
+```
+
+### **Quote System & Fee Comparison**
+```typescript
+// Mojaloop-compliant quote generation:
+interface TransferQuote {
+  paymentMethodId: string;
+  amount: number;
+  fee: number;
+  exchangeRate?: number;
+  totalAmount: number;
+  estimatedTime: string;
+  reference: string; // TX{timestamp} format
+}
+
+// Real-time fee calculation and comparison:
+const generateQuote = async (method: PaymentMethod, amount: number) => {
+  return {
+    amount,
+    fee: method.feeAmount,
+    totalAmount: amount + method.feeAmount,
+    estimatedTime: method.estimatedTime,
+    reference: `TX${Date.now().toString().slice(-8).toUpperCase()}`
+  };
+};
+```
+
+### **Payment Method UI Components**
+```typescript
+// Smart payment method cards with preferred routing:
+{recipientResolution.availableMethods.map((method) => (
+  <Card 
+    key={method.id}
+    className={`cursor-pointer transition-all border-2 ${
+      method.preferred ? 'border-[#86BE41] bg-[#86BE41]/5' : 
+      'border-gray-200 hover:border-[#86BE41]/50'
+    }`}
+    onClick={() => handleMethodSelect(method)}
+  >
+    <CardContent>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-xl bg-brand-color/20">
+            {method.icon}
+          </div>
+          <div>
+            <p>{method.name}</p>
+            <p>{method.description}</p>
+            <div className="flex items-center gap-2">
+              <Clock className="w-3 h-3" />
+              <span>{method.estimatedTime}</span>
+              <span>•</span>
+              <span className={method.feeAmount === 0 ? 'text-green-600' : 'text-gray-600'}>
+                {method.fee}
+              </span>
+            </div>
+          </div>
+        </div>
+        {method.badge && (
+          <span className="text-xs px-2 py-1 rounded bg-badge-color">
+            {method.badge}
+          </span>
+        )}
+      </div>
+    </CardContent>
+  </Card>
+))}
+```
+
+### **Service Integration Ready Architecture**
+```typescript
+// dtMercury Integration Points:
+interface SABankTransfer {
+  type: 'external_bank';
+  recipientBank: string;
+  recipientAccount: string;
+  amount: number;
+  currency: 'ZAR';
+  purpose: string;
+  
+  // dtMercury/Mojaloop fields:
+  participantFSP: string;
+  quote: Quote;
+  transferState: TransferState;
+}
+
+// ATM Cash Pickup (Future SP):
+interface ATMCashPickup {
+  type: 'atm_cash';
+  recipientPhone: string;
+  pickupLocation?: string;
+  amount: number;
+  currency: 'ZAR';
+  
+  // Future SP fields:
+  pickupCode: string;
+  expiryTime: string;
+  atmNetwork: string;
+}
+```
+
+---
+
 ## Brand System & Design Guidelines
 
 ### Color System
@@ -955,6 +1145,269 @@ const DocumentUploadSection: React.FC<DocumentUploadProps> = ({
 };
 ```
 
+### **NEW: SendMoneyPage Component Patterns**
+
+### Service Discovery Loading Pattern
+```tsx
+// Service discovery with progress indication:
+const [isResolvingRecipient, setIsResolvingRecipient] = useState(false);
+
+{isResolvingRecipient && (
+  <div className="text-center py-6">
+    <div className="w-12 h-12 mx-auto bg-gradient-to-r from-[#86BE41]/20 to-[#2D8CCA]/20 rounded-full flex items-center justify-center mb-3">
+      <Loader2 className="w-6 h-6 animate-spin text-[#86BE41]" />
+    </div>
+    <p style={{ 
+      fontFamily: 'Montserrat, sans-serif', 
+      fontSize: 'var(--mobile-font-base)',
+      color: '#6b7280'
+    }}>
+      Finding payment methods...
+    </p>
+  </div>
+)}
+```
+
+### Payment Method Selection Cards
+```tsx
+// Interactive payment method cards with smart defaults:
+{recipientResolution.availableMethods.map((method) => (
+  <Card 
+    key={method.id}
+    className={`cursor-pointer transition-all duration-200 border-2 ${
+      method.preferred ? 'border-[#86BE41] bg-[#86BE41]/5' : 
+      'border-gray-200 hover:border-[#86BE41]/50 hover:bg-gray-50'
+    }`}
+    style={{ borderRadius: 'var(--mobile-border-radius)' }}
+    onClick={() => handleMethodSelect(method)}
+  >
+    <CardContent style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+            method.id === 'mymoolah_internal' ? 'bg-[#86BE41]/20' : 
+            method.id === 'sa_bank_transfer' ? 'bg-[#2D8CCA]/20' : 'bg-orange-100'
+          }`}>
+            {React.cloneElement(method.icon as React.ReactElement, {
+              className: `w-6 h-6 ${
+                method.id === 'mymoolah_internal' ? 'text-[#86BE41]' : 
+                method.id === 'sa_bank_transfer' ? 'text-[#2D8CCA]' : 'text-orange-600'
+              }`
+            })}
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <p style={{ 
+                fontFamily: 'Montserrat, sans-serif', 
+                fontSize: 'var(--mobile-font-base)', 
+                fontWeight: 'var(--font-weight-medium)',
+                color: '#1f2937'
+              }}>
+                {method.name}
+              </p>
+              {method.preferred && (
+                <span className="bg-[#86BE41] text-white text-xs px-2 py-1 rounded-full" style={{ 
+                  fontFamily: 'Montserrat, sans-serif', 
+                  fontSize: '10px',
+                  fontWeight: 'var(--font-weight-medium)'
+                }}>
+                  RECOMMENDED
+                </span>
+              )}
+            </div>
+            <p style={{ 
+              fontFamily: 'Montserrat, sans-serif', 
+              fontSize: 'var(--mobile-font-small)',
+              color: '#6b7280'
+            }}>
+              {method.description}
+            </p>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-gray-500" />
+                <span style={{ 
+                  fontFamily: 'Montserrat, sans-serif', 
+                  fontSize: 'var(--mobile-font-small)',
+                  color: '#6b7280'
+                }}>
+                  {method.estimatedTime}
+                </span>
+              </div>
+              <span style={{ color: '#d1d5db' }}>•</span>
+              <span style={{ 
+                fontFamily: 'Montserrat, sans-serif', 
+                fontSize: 'var(--mobile-font-small)',
+                fontWeight: 'var(--font-weight-medium)',
+                color: method.feeAmount === 0 ? '#16a34a' : '#6b7280'
+              }}>
+                {method.fee}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="text-right">
+          {method.badge && (
+            <span className={`text-xs px-2 py-1 rounded ${
+              method.feeAmount === 0 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+            }`} style={{ 
+              fontFamily: 'Montserrat, sans-serif', 
+              fontSize: '10px',
+              fontWeight: 'var(--font-weight-medium)'
+            }}>
+              {method.badge}
+            </span>
+          )}
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+))}
+```
+
+### Quick Amount Selection Pattern
+```tsx
+// Mobile-optimized quick amount buttons:
+const quickAmounts = [50, 100, 200, 500, 1000];
+
+<div className="space-y-2">
+  <Label style={{ 
+    fontFamily: 'Montserrat, sans-serif', 
+    fontSize: 'var(--mobile-font-small)', 
+    fontWeight: 'var(--font-weight-medium)', 
+    color: '#6b7280'
+  }}>
+    Quick Amounts
+  </Label>
+  <div className="grid grid-cols-5 gap-2">
+    {quickAmounts.map((quickAmount) => (
+      <Button
+        key={quickAmount}
+        variant="outline"
+        size="sm"
+        onClick={() => setAmount(quickAmount.toString())}
+        className={`border-gray-200 text-gray-700 hover:border-[#86BE41] hover:text-[#86BE41] ${
+          amount === quickAmount.toString() ? 'border-[#86BE41] text-[#86BE41] bg-[#86BE41]/5' : ''
+        }`}
+        style={{ 
+          fontFamily: 'Montserrat, sans-serif',
+          fontSize: 'var(--mobile-font-small)',
+          fontWeight: 'var(--font-weight-medium)',
+          borderRadius: 'var(--mobile-border-radius)',
+          height: '2.5rem'
+        }}
+      >
+        R{quickAmount}
+      </Button>
+    ))}
+  </div>
+</div>
+```
+
+### Transfer Review Summary Pattern
+```tsx
+// Comprehensive transfer review with all details:
+<div className="space-y-3">
+  <div className="flex items-center justify-between">
+    <span style={{ 
+      fontFamily: 'Montserrat, sans-serif', 
+      fontSize: 'var(--mobile-font-base)',
+      fontWeight: 'var(--font-weight-medium)',
+      color: '#6b7280'
+    }}>
+      Send to
+    </span>
+    <span style={{ 
+      fontFamily: 'Montserrat, sans-serif', 
+      fontSize: 'var(--mobile-font-base)',
+      fontWeight: 'var(--font-weight-medium)',
+      color: '#1f2937'
+    }}>
+      {recipientResolution.recipientName || recipientResolution.identifier}
+    </span>
+  </div>
+  
+  <div className="flex items-center justify-between">
+    <span style={{ 
+      fontFamily: 'Montserrat, sans-serif', 
+      fontSize: 'var(--mobile-font-base)',
+      fontWeight: 'var(--font-weight-medium)',
+      color: '#6b7280'
+    }}>
+      Payment method
+    </span>
+    <span style={{ 
+      fontFamily: 'Montserrat, sans-serif', 
+      fontSize: 'var(--mobile-font-base)',
+      fontWeight: 'var(--font-weight-medium)',
+      color: '#1f2937'
+    }}>
+      {selectedMethod.name}
+    </span>
+  </div>
+
+  <div className="flex items-center justify-between">
+    <span style={{ 
+      fontFamily: 'Montserrat, sans-serif', 
+      fontSize: 'var(--mobile-font-base)',
+      fontWeight: 'var(--font-weight-medium)',
+      color: '#6b7280'
+    }}>
+      Amount
+    </span>
+    <span style={{ 
+      fontFamily: 'Montserrat, sans-serif', 
+      fontSize: 'var(--mobile-font-base)',
+      fontWeight: 'var(--font-weight-bold)',
+      color: '#1f2937'
+    }}>
+      {formatCurrency(quote.amount)}
+    </span>
+  </div>
+
+  {quote.fee > 0 && (
+    <div className="flex items-center justify-between">
+      <span style={{ 
+        fontFamily: 'Montserrat, sans-serif', 
+        fontSize: 'var(--mobile-font-base)',
+        fontWeight: 'var(--font-weight-medium)',
+        color: '#6b7280'
+      }}>
+        Transfer fee
+      </span>
+      <span style={{ 
+        fontFamily: 'Montserrat, sans-serif', 
+        fontSize: 'var(--mobile-font-base)',
+        fontWeight: 'var(--font-weight-medium)',
+        color: '#1f2937'
+      }}>
+        {formatCurrency(quote.fee)}
+      </span>
+    </div>
+  )}
+  
+  <Separator />
+  
+  <div className="flex items-center justify-between">
+    <span style={{ 
+      fontFamily: 'Montserrat, sans-serif', 
+      fontSize: 'var(--mobile-font-base)',
+      fontWeight: 'var(--font-weight-bold)',
+      color: '#1f2937'
+    }}>
+      Total
+    </span>
+    <span style={{ 
+      fontFamily: 'Montserrat, sans-serif', 
+      fontSize: 'clamp(1.125rem, 2.5vw, 1.25rem)',
+      fontWeight: 'var(--font-weight-bold)',
+      color: '#1f2937'
+    }}>
+      {formatCurrency(quote.totalAmount)}
+    </span>
+  </div>
+</div>
+```
+
 ### Password Input Component Pattern
 ```typescript
 // Required structure for password fields with compact hints:
@@ -1093,7 +1546,21 @@ type="file"     // For document uploads (with accept attribute)
 * **Accessibility compliance** - proper ARIA labels for document types
 * **Error handling** - clear guidance for failed uploads or rejected documents
 
-### Main Application Pages (Dashboard, Send Money, etc.)
+### **NEW: SendMoneyPage (Main Application)**
+* **Clean white background required** - main app page styling (not gradient)
+* **MobileLayout wrapper required** - provides consistent structure with bottom navigation
+* **5-step progressive flow** - recipient → method → amount → review → success
+* **KYC integration points** - automatic blocking for unverified users
+* **Multi-input recipient system** - reuses authentication validation logic
+* **Service discovery architecture** - parallel API calls for optimal performance
+* **Smart payment routing** - skip method selection if only one option
+* **Real-time validation** - all inputs validated as user types
+* **Progress tracking** - visual progress bar with step indicators
+* **Mobile-optimized amounts** - quick selection buttons and proper formatting
+* **Comprehensive review** - all transaction details with fees and timings
+* **Success confirmation** - receipt with reference number and action options
+
+### Main Application Pages (Dashboard, Transact, Vouchers, Profile)
 * **Clean white background required** - optimal for low-cost Android performance
 * **MobileLayout wrapper required** - provides consistent structure
 * **KYC integration points** - status banners, requirement checks
@@ -1112,6 +1579,10 @@ type="file"     // For document uploads (with accept attribute)
 * **Password complexity** - enforce all 5 requirements with visual feedback
 * **Document validation** - file type, size, and quality checks
 * **Accessibility compliance** - proper ARIA labels, focus management, keyboard navigation
+* **Service discovery** - parallel API calls with loading states
+* **Payment method selection** - clear comparison of fees and delivery times
+* **Amount input optimization** - large input field with quick selection buttons
+* **Currency formatting** - consistent ZAR formatting throughout
 
 ---
 
@@ -1146,6 +1617,16 @@ will-change: auto;                     /* Optimize animations */
 * **Document preview** - efficient image rendering and memory management
 * **Status polling** - intelligent refresh intervals to avoid excessive API calls
 
+### **NEW: SendMoneyPage Performance Optimizations**
+* **Service discovery optimization** - parallel API calls to minimize wait times
+* **Payment method caching** - cache resolved payment methods for recipients
+* **Amount validation debouncing** - avoid excessive validation calls while typing
+* **Quote generation throttling** - rate limit quote requests during amount changes
+* **Recipient resolution caching** - cache successful recipient lookups
+* **Background service checks** - non-blocking availability checks
+* **Progress state management** - efficient state updates without re-renders
+* **Memory cleanup** - proper cleanup of unused service discovery results
+
 ---
 
 ## Accessibility Guidelines
@@ -1158,6 +1639,9 @@ will-change: auto;                     /* Optimize animations */
 * **Multi-input accessibility** - clear ARIA labels for different input types
 * **Password accessibility** - proper ARIA labels, screen reader support for validation states
 * **Document upload accessibility** - clear labeling of upload areas and requirements
+* **Payment method selection** - keyboard navigation support for method cards
+* **Amount input accessibility** - proper labeling and screen reader announcements
+* **Progress tracking** - accessible progress indicators with proper ARIA labels
 
 ### Screen Readers & Assistive Technology
 * **Semantic HTML** - proper heading hierarchy, landmark elements
@@ -1167,6 +1651,9 @@ will-change: auto;                     /* Optimize animations */
 * **Dynamic content announcements** - ensure screen readers announce input type changes
 * **Validation feedback** - ensure screen readers can access real-time validation feedback
 * **KYC process guidance** - clear announcements for document upload progress and status
+* **Payment flow announcements** - screen reader support for step progression
+* **Service discovery feedback** - accessible loading states and result announcements
+* **Transaction confirmation** - proper announcement of successful transfers
 
 ---
 
@@ -1178,6 +1665,10 @@ will-change: auto;                     /* Optimize animations */
 * **Input validation** - both client and server-side validation required
 * **Error messages** - never expose system internals in user-facing errors
 * **Document security** - secure handling of uploaded identity documents
+* **Transaction data encryption** - all payment information encrypted in transit
+* **Quote security** - secure handling of financial quotes and fee calculations
+* **Recipient data protection** - careful handling of recipient information
+* **Service discovery security** - secure API calls to payment service providers
 
 ### Authentication Flow
 * **Protected routes** - use ProtectedRoute wrapper consistently
@@ -1187,6 +1678,8 @@ will-change: auto;                     /* Optimize animations */
 * **KYC data protection** - encryption of uploaded documents, secure transmission
 * **Biometric support** - when available, integrate fingerprint/face ID as secondary factor
 * **Password masking** - default masked state with optional visibility toggle
+* **Transaction authentication** - additional verification for high-value transfers
+* **Service provider security** - secure integration with dtMercury and future ATM partners
 
 ### **NEW: KYC Security Requirements**
 * **Document encryption** - all uploaded files encrypted in transit and at rest
@@ -1194,6 +1687,16 @@ will-change: auto;                     /* Optimize animations */
 * **Compliance reporting** - audit trails for verification attempts and outcomes
 * **PII protection** - careful handling of personally identifiable information
 * **Secure deletion** - proper cleanup of temporary files and preview data
+
+### **NEW: SendMoneyPage Security**
+* **Payment method validation** - verify service availability before allowing selection
+* **Amount validation** - server-side verification of all transaction amounts
+* **Quote integrity** - cryptographic verification of quote authenticity
+* **Recipient verification** - secure resolution of recipient information
+* **Service discovery security** - authenticated API calls to payment providers
+* **Transaction limits** - enforce daily/monthly transfer limits
+* **Fraud detection** - suspicious transaction pattern detection
+* **Reference number security** - cryptographically secure transaction references
 
 ---
 
@@ -1230,12 +1733,31 @@ will-change: auto;                     /* Optimize animations */
 * **Cross-browser compatibility** - test camera API across different mobile browsers
 * **Accessibility** - test document upload with screen readers and keyboard navigation
 
+### **NEW: SendMoneyPage Testing**
+* **Complete user flow** - test all 5 steps (recipient → method → amount → review → success)
+* **Multi-input recipient** - test phone/account/username detection and validation
+* **Service discovery** - test parallel API resolution for all payment methods
+* **Payment method selection** - test method cards, preferred routing, accessibility
+* **Amount input validation** - test currency formatting, balance checks, quick buttons
+* **KYC requirement checking** - test transaction blocking for unverified users
+* **Quote generation** - test fee calculation and delivery time estimation
+* **Transfer review** - test comprehensive transaction summary display
+* **Processing states** - test loading indicators and progress feedback
+* **Success confirmation** - test receipt display and action buttons
+* **Error handling** - test network failures, insufficient funds, invalid recipients
+* **Cross-browser compatibility** - test on various mobile browsers and devices
+* **Performance testing** - test on low-cost Android devices with slow networks
+* **Accessibility testing** - test complete flow with screen readers and keyboard navigation
+
 ### Fintech-Specific Testing
 * **Transaction flows** - test complete user journeys including KYC requirements
 * **Error scenarios** - test failure modes and recovery
 * **Data validation** - test edge cases for financial inputs
 * **Security scenarios** - test authentication and authorization flows
 * **KYC integration** - test transaction blocking and KYC requirement triggers
+* **Payment integration** - test service provider API integration points
+* **Currency handling** - test ZAR formatting and calculation accuracy
+* **Service availability** - test graceful degradation when services are unavailable
 
 ---
 
@@ -1249,6 +1771,7 @@ will-change: auto;                     /* Optimize animations */
 * **Authentication utilities** - reusable validation functions for all input types
 * **Password utilities** - reusable validation functions for password complexity
 * **KYC utilities** - document validation, upload helpers, status management
+* **SendMoney utilities** - service discovery, payment method resolution, quote generation
 
 ### Mojaloop Integration
 * **Mock data structures** - match expected Mojaloop API responses
@@ -1258,6 +1781,9 @@ will-change: auto;                     /* Optimize animations */
 * **Authentication tokens** - secure handling of JWT/OAuth tokens
 * **Multi-identifier support** - backend must handle phone/account/username mapping
 * **KYC compliance** - integration with Mojaloop KYC requirements and standards
+* **Service discovery** - Mojaloop-compliant participant and service lookup
+* **Quote management** - proper quote request/response handling
+* **Transfer execution** - Mojaloop transfer state management
 
 ### **NEW: Backend API Integration Requirements**
 ```typescript
@@ -1286,6 +1812,72 @@ Response: {
   kycStatus: KYCStatus,
   kycVerified: boolean,
   // ... other user data
+}
+
+// SendMoney Service Discovery API:
+POST /api/send-money/resolve-recipient
+{
+  identifier: string,
+  type: 'phone' | 'account' | 'username'
+}
+Response: {
+  availableMethods: PaymentMethod[],
+  recipientInfo: RecipientInfo,
+  preferredMethod: string
+}
+
+// SendMoney Quote API:
+POST /api/send-money/get-quote
+{
+  paymentMethodId: string,
+  amount: number,
+  recipientId: string
+}
+Response: {
+  quote: TransferQuote,
+  estimatedTime: string,
+  fees: FeeBreakdown
+}
+
+// SendMoney Transfer Execution API:
+POST /api/send-money/execute-transfer
+{
+  quoteId: string,
+  purpose?: string
+}
+Response: {
+  transactionId: string,
+  status: TransferStatus,
+  reference: string
+}
+```
+
+### **dtMercury Integration Points**
+```typescript
+// Bank account resolution:
+POST /api/dtmercury/resolve-account
+{
+  accountNumber: string,
+  bankCode?: string
+}
+Response: {
+  accountHolder: string,
+  bankName: string,
+  available: boolean
+}
+
+// Bank transfer execution:
+POST /api/dtmercury/transfer
+{
+  fromAccount: string,
+  toAccount: string,
+  amount: number,
+  reference: string
+}
+Response: {
+  transactionId: string,
+  status: 'pending' | 'completed' | 'failed',
+  estimatedTime: string
 }
 ```
 
@@ -1327,6 +1919,7 @@ Response: {
 * ✅ **Simplified UI messaging** (static "Phone Number" label, clear help text)
 * ✅ **Bottom card consistency** (T&C's, Security, FAQ icons on auth pages)
 * ✅ **KYC system integration** (document upload, status tracking, transaction blocking)
+* ✅ **SendMoney unified hub** (service discovery, smart routing, comprehensive flow)
 * ✅ **Error handling implemented**
 * ✅ **Loading states included**
 * ✅ **TypeScript strict compliance**
@@ -1352,6 +1945,11 @@ Response: {
 - [ ] KYC status tracking displays properly (if applicable)
 - [ ] Document validation (file type, size) implemented (if applicable)
 - [ ] Camera integration works on mobile devices (if applicable)
+- [ ] SendMoney flow supports all 5 steps (if applicable)
+- [ ] Service discovery works with parallel API calls (if applicable)
+- [ ] Payment method selection with smart routing (if applicable)
+- [ ] Amount input with quick buttons and validation (if applicable)
+- [ ] Transfer review with comprehensive summary (if applicable)
 - [ ] Proper error handling and loading states
 - [ ] Accessibility features implemented (ARIA labels, keyboard navigation)
 - [ ] TypeScript types properly defined
@@ -1376,6 +1974,9 @@ Response: {
 11. **KYC System**: Complete document upload and status tracking system
 12. **Route Structure**: New KYC routes added to App.tsx
 13. **AuthContext**: Enhanced with KYC status management functions
+14. **SendMoneyPage**: Complete unified payment hub with 5-step flow
+15. **Service Discovery**: Parallel API calls for payment method resolution
+16. **Payment Integration**: dtMercury integration points and ATM cash pickup placeholders
 
 ### 🔥 Cursor AI Integration Requirements:
 * **Multi-Input Field**: Must support phone/account/username with dynamic detection
@@ -1391,9 +1992,23 @@ Response: {
 * **KYC Integration**: Transaction blocking and requirement checks throughout app
 * **Document Validation**: File type, size, and quality validation
 * **Camera Integration**: Mobile-first document capture with fallback
+* **SendMoney Unified Hub**: Complete 5-step flow with service discovery
+* **Payment Method Selection**: Smart routing with preferred method highlighting
+* **Service Discovery**: Parallel API calls to multiple payment providers
+* **Quote Management**: Real-time fee calculation and delivery time estimation
+* **Transfer Processing**: Complete transaction flow with progress tracking
 * **Accessibility**: Full screen reader and keyboard navigation support
 * **Typography**: Explicit Montserrat styling to override component defaults
 * **Error Messages**: User-friendly, actionable feedback for all validation failures
+
+### **NEW: SendMoneyPage Components Required:**
+* **SendMoneyPage.tsx** - Main unified payment hub interface
+* **RecipientResolver** - Multi-input recipient validation and resolution
+* **PaymentMethodSelector** - Interactive method selection with smart routing
+* **AmountInput** - Amount validation with quick selection buttons
+* **TransferReview** - Comprehensive transaction summary
+* **TransferProgress** - Real-time processing status
+* **TransferSuccess** - Success confirmation with receipt
 
 ### **NEW: KYC System Components Required:**
 * **KYCDocumentsPage.tsx** - Main document upload interface
@@ -1406,4 +2021,4 @@ Response: {
 
 ---
 
-*These guidelines ensure MyMoolah maintains award-winning quality, optimal performance for low-cost Android devices, meets enterprise security requirements, and provides comprehensive KYC compliance while delivering a simplified, user-friendly interface that preserves consistency across all development phases including document verification workflows.*
+*These guidelines ensure MyMoolah maintains award-winning quality, optimal performance for low-cost Android devices, meets enterprise security requirements, provides comprehensive KYC compliance, and delivers a unified payment hub that rivals global fintech leaders while maintaining a simplified, user-friendly interface across all development phases including complete transaction workflows.*

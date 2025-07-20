@@ -1,467 +1,1256 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Progress } from '../components/ui/progress';
 import { Separator } from '../components/ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../components/ui/select';
 import { 
   ArrowLeft, 
-  Send, 
-  User, 
-  Phone, 
-  Mail, 
-  CreditCard,
+  Wallet, 
+  Building, 
+  CreditCard, 
+  Check, 
+  X, 
+  AlertTriangle, 
+  Info,
+  Clock,
   Shield,
-  CheckCircle,
-  AlertCircle,
-  Loader2
+  Loader2,
+  Search,
+  Banknote,
+  Phone,
+  User,
+  Hash
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useMoolah } from '../contexts/MoolahContext';
 
-interface SendMoneyForm {
-  recipientType: 'phone' | 'email' | 'account';
-  recipient: string;
-  amount: string;
-  reference: string;
-  memo: string;
+// Multi-input detection utilities (same as authentication)
+const detectInputType = (input: string): 'phone' | 'account' | 'username' | 'unknown' => {
+  const cleanInput = input.trim();
+  
+  // Phone number patterns (SA format)
+  const phonePattern = /^(\+27|27|0)?[6-8][0-9]{8}$/;
+  if (phonePattern.test(cleanInput.replace(/\s/g, ''))) {
+    return 'phone';
+  }
+  
+  // Account number pattern (8-12 digits only)
+  const accountPattern = /^[0-9]{8,12}$/;
+  if (accountPattern.test(cleanInput)) {
+    return 'account';
+  }
+  
+  // Username pattern (4-32 chars, letters/numbers/periods/underscores)
+  const usernamePattern = /^[a-zA-Z0-9._]{4,32}$/;
+  if (usernamePattern.test(cleanInput)) {
+    return 'username';
+  }
+  
+  return 'unknown';
+};
+
+// Recipient validation functions
+const validateRecipient = (recipient: string, type: string): { isValid: boolean; message?: string } => {
+  if (!recipient.trim()) {
+    return { isValid: false, message: 'Recipient is required' };
+  }
+
+  switch (type) {
+    case 'phone':
+      const phonePattern = /^(\+27|27|0)[6-8][0-9]{8}$/;
+      if (!phonePattern.test(recipient.replace(/\s/g, ''))) {
+        return { isValid: false, message: 'Invalid South African mobile number' };
+      }
+      return { isValid: true };
+    
+    case 'account':
+      if (!/^[0-9]{8,12}$/.test(recipient)) {
+        return { isValid: false, message: 'Account number must be 8-12 digits' };
+      }
+      return { isValid: true };
+    
+    case 'username':
+      if (!/^[a-zA-Z0-9._]{4,32}$/.test(recipient)) {
+        return { isValid: false, message: 'Invalid username format' };
+      }
+      return { isValid: true };
+    
+    default:
+      return { isValid: false, message: 'Please enter a valid recipient' };
+  }
+};
+
+// Payment method types
+interface PaymentMethod {
+  id: 'mymoolah_internal' | 'sa_bank_transfer' | 'atm_cash_pickup';
+  name: string;
+  description: string;
+  icon: React.ReactNode;
+  estimatedTime: string;
+  fee: string;
+  feeAmount: number;
+  available: boolean;
+  preferred: boolean;
+  badge?: string;
 }
 
-export function SendMoneyPage() {
-  const navigate = useNavigate();
-  const { balance, sendMoney } = useMoolah();
-  const [form, setForm] = useState<SendMoneyForm>({
-    recipientType: 'phone',
-    recipient: '',
-    amount: '',
-    reference: '',
-    memo: ''
-  });
-  const [step, setStep] = useState<'form' | 'confirm' | 'success'>('form');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [recipientInfo, setRecipientInfo] = useState<any>(null);
+interface RecipientResolution {
+  identifier: string;
+  type: 'phone' | 'account' | 'username';
+  availableMethods: PaymentMethod[];
+  recipientName?: string;
+  recipientInfo?: string;
+}
 
-  const handleRecipientLookup = async (recipient: string) => {
-    if (!recipient) return;
+interface TransferQuote {
+  paymentMethodId: string;
+  amount: number;
+  fee: number;
+  exchangeRate?: number;
+  totalAmount: number;
+  estimatedTime: string;
+  reference: string;
+}
+
+type SendMoneyStep = 'recipient' | 'method' | 'amount' | 'review' | 'processing' | 'success';
+
+export function SendMoneyPage() {
+  const { user, requiresKYC } = useAuth();
+  const navigate = useNavigate();
+
+  // Form state
+  const [step, setStep] = useState<SendMoneyStep>('recipient');
+  const [recipient, setRecipient] = useState('');
+  const [amount, setAmount] = useState('');
+  const [purpose, setPurpose] = useState('');
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+  const [recipientResolution, setRecipientResolution] = useState<RecipientResolution | null>(null);
+  const [quote, setQuote] = useState<TransferQuote | null>(null);
+
+  // UI state
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [isResolvingRecipient, setIsResolvingRecipient] = useState(false);
+
+  // Real-time validation
+  const recipientType = detectInputType(recipient);
+  const recipientValidation = validateRecipient(recipient, recipientType);
+
+  // Demo wallet balance
+  const walletBalance = 2500.00;
+
+  // Quick amount buttons
+  const quickAmounts = [50, 100, 200, 500, 1000];
+
+  // KYC check on component mount
+  useEffect(() => {
+    if (requiresKYC('send')) {
+      navigate('/kyc/documents?returnTo=/send-money');
+    }
+  }, [requiresKYC, navigate]);
+
+  // Service discovery simulation
+  const resolveRecipient = async (identifier: string): Promise<RecipientResolution> => {
+    setIsResolvingRecipient(true);
     
-    setLoading(true);
+    // Simulate API calls to different services
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const type = detectInputType(identifier);
+    const methods: PaymentMethod[] = [];
+
+    // 1. Check MyMoolah internal wallet
+    const hasMyMoolahWallet = Math.random() > 0.6; // 40% chance
+    if (hasMyMoolahWallet || type === 'username') {
+      methods.push({
+        id: 'mymoolah_internal',
+        name: 'MyMoolah Wallet',
+        description: 'Instant transfer to MyMoolah user',
+        icon: <Wallet className="w-6 h-6" />,
+        estimatedTime: 'Instant',
+        fee: 'Free',
+        feeAmount: 0,
+        available: true,
+        preferred: true,
+        badge: 'FREE • INSTANT'
+      });
+    }
+
+    // 2. Check SA bank account (dtMercury)
+    const hasBankAccount = type === 'account' || (type === 'phone' && Math.random() > 0.3); // 70% chance for phone
+    if (hasBankAccount) {
+      methods.push({
+        id: 'sa_bank_transfer',
+        name: 'Bank Transfer',
+        description: 'Send to any South African bank account',
+        icon: <Building className="w-6 h-6" />,
+        estimatedTime: '2-5 minutes',
+        fee: 'R2.50',
+        feeAmount: 2.50,
+        available: true,
+        preferred: false,
+        badge: 'R2.50 • 2-5 MIN'
+      });
+    }
+
+    // 3. ATM cash pickup (always available for phone numbers)
+    if (type === 'phone') {
+      methods.push({
+        id: 'atm_cash_pickup',
+        name: 'ATM Cash Pickup',
+        description: 'Recipient collects cash at partner ATMs',
+        icon: <CreditCard className="w-6 h-6" />,
+        estimatedTime: '15 minutes',
+        fee: 'R5.00',
+        feeAmount: 5.00,
+        available: true, // Placeholder - would check actual SP availability
+        preferred: false,
+        badge: 'R5.00 • 15 MIN'
+      });
+    }
+
+    setIsResolvingRecipient(false);
+
+    return {
+      identifier,
+      type,
+      availableMethods: methods,
+      recipientName: hasMyMoolahWallet ? 'John Doe' : undefined,
+      recipientInfo: hasBankAccount ? 'Standard Bank' : undefined
+    };
+  };
+
+  const handleRecipientSubmit = async () => {
+    if (!recipientValidation.isValid) {
+      setError(recipientValidation.message || 'Please enter a valid recipient');
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+
     try {
-      // Simulate Mojaloop party lookup
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock recipient lookup - replace with real Mojaloop API
-      const mockRecipient = {
-        name: 'John Doe',
-        verified: true,
-        bank: 'Standard Bank',
-        displayName: recipient.includes('@') ? recipient : `+27 ${recipient.slice(1)}`
-      };
-      
-      setRecipientInfo(mockRecipient);
+      const resolution = await resolveRecipient(recipient);
+      setRecipientResolution(resolution);
+
+      if (resolution.availableMethods.length === 0) {
+        setError('No payment methods available for this recipient');
+        return;
+      }
+
+      // Smart routing - skip method selection if only one option
+      if (resolution.availableMethods.length === 1) {
+        setSelectedMethod(resolution.availableMethods[0]);
+        setStep('amount');
+      } else {
+        setStep('method');
+      }
     } catch (err) {
-      setError('Could not find recipient. Please check the details.');
+      setError('Failed to resolve recipient. Please try again.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const handleMethodSelect = (method: PaymentMethod) => {
+    setSelectedMethod(method);
+    setStep('amount');
+  };
 
-    const amount = parseFloat(form.amount);
-    if (amount <= 0) {
+  const handleAmountSubmit = async () => {
+    const amountValue = parseFloat(amount);
+    
+    if (!amountValue || amountValue <= 0) {
       setError('Please enter a valid amount');
       return;
     }
 
-    if (amount > balance) {
+    if (amountValue > walletBalance) {
       setError('Insufficient balance');
       return;
     }
 
-    if (!recipientInfo) {
-      await handleRecipientLookup(form.recipient);
+    if (!selectedMethod) {
+      setError('Payment method not selected');
       return;
     }
 
-    setStep('confirm');
-  };
+    setError('');
+    setIsLoading(true);
 
-  const handleConfirmSend = async () => {
-    setLoading(true);
     try {
-      // Simulate Mojaloop transfer
-      await sendMoney({
-        recipient: form.recipient,
-        amount: parseFloat(form.amount),
-        reference: form.reference,
-        memo: form.memo
-      });
-      setStep('success');
+      // Generate quote
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const transferQuote: TransferQuote = {
+        paymentMethodId: selectedMethod.id,
+        amount: amountValue,
+        fee: selectedMethod.feeAmount,
+        totalAmount: amountValue + selectedMethod.feeAmount,
+        estimatedTime: selectedMethod.estimatedTime,
+        reference: `TX${Date.now().toString().slice(-8).toUpperCase()}`
+      };
+
+      setQuote(transferQuote);
+      setStep('review');
     } catch (err) {
-      setError('Transfer failed. Please try again.');
+      setError('Failed to get quote. Please try again.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  if (step === 'success') {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
-        <div className="text-center mb-8">
-          <div className="bg-green-100 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-            <CheckCircle className="w-10 h-10 text-green-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Transfer Successful!</h1>
-          <p className="text-gray-600">Your money has been sent securely</p>
-        </div>
+  const handleTransferSubmit = async () => {
+    if (!quote || !selectedMethod || !recipientResolution) {
+      setError('Transfer information missing');
+      return;
+    }
 
-        <Card className="w-full max-w-sm mb-8">
-          <CardContent className="p-6 text-center">
-            <p className="text-3xl font-bold text-gray-900 mb-2">
-              R {parseFloat(form.amount).toLocaleString()}
-            </p>
-            <p className="text-gray-600 mb-4">Sent to {recipientInfo?.name}</p>
-            <div className="flex items-center justify-center space-x-2 text-green-600">
-              <Shield className="w-4 h-4" />
-              <span className="text-sm">Secured by Mojaloop</span>
-            </div>
-          </CardContent>
-        </Card>
+    setError('');
+    setIsLoading(true);
+    setStep('processing');
 
-        <div className="space-y-3 w-full max-w-sm">
-          <Button 
-            onClick={() => navigate('/dashboard')} 
-            className="w-full bg-[#86BE41] hover:bg-[#7AB139]"
-          >
-            Back to Dashboard
-          </Button>
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              setStep('form');
-              setForm({ recipientType: 'phone', recipient: '', amount: '', reference: '', memo: '' });
-              setRecipientInfo(null);
-            }}
-            className="w-full"
-          >
-            Send Another Transfer
-          </Button>
-        </div>
-      </div>
-    );
-  }
+    try {
+      // Simulate transfer processing
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Different processing based on payment method
+      switch (selectedMethod.id) {
+        case 'mymoolah_internal':
+          // Internal transfer - instant
+          break;
+        case 'sa_bank_transfer':
+          // dtMercury API integration
+          break;
+        case 'atm_cash_pickup':
+          // Future SP integration
+          break;
+      }
 
-  if (step === 'confirm') {
-    return (
-      <div className="min-h-screen bg-gray-50">
+      setStep('success');
+    } catch (err) {
+      setError('Transfer failed. Please try again.');
+      setStep('review');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getStepProgress = (): number => {
+    switch (step) {
+      case 'recipient': return 20;
+      case 'method': return 40;
+      case 'amount': return 60;
+      case 'review': return 80;
+      case 'processing': 
+      case 'success': return 100;
+      default: return 0;
+    }
+  };
+
+  const getPlaceholderText = () => {
+    switch (recipientType) {
+      case 'phone': return '27 XX XXX XXXX';
+      case 'account': return '12345678';
+      case 'username': return 'username';
+      default: return 'Phone, Account, or Username';
+    }
+  };
+
+  const formatCurrency = (amount: number): string => {
+    return `R${amount.toFixed(2)}`;
+  };
+
+  return (
+    <div className="min-h-screen bg-white">
+      <div className="max-w-sm mx-auto">
         {/* Header */}
-        <div className="bg-white border-b px-6 py-4">
-          <div className="flex items-center space-x-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setStep('form')}
-              className="p-2"
+        <div style={{ padding: 'var(--mobile-padding)', paddingTop: '2rem', paddingBottom: '1rem' }}>
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="inline-flex items-center text-gray-600 hover:text-gray-900 transition-colors touch-target"
+              style={{ 
+                fontFamily: 'Montserrat, sans-serif', 
+                fontSize: 'var(--mobile-font-base)',
+                fontWeight: 'var(--font-weight-medium)',
+                minHeight: 'var(--mobile-touch-target)'
+              }}
             >
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h1 className="text-lg font-bold text-gray-900">Confirm Transfer</h1>
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              <span>Back</span>
+            </button>
+
+            <div className="flex items-center gap-2">
+              <Wallet className="w-5 h-5 text-[#86BE41]" />
+              <span style={{ 
+                fontFamily: 'Montserrat, sans-serif', 
+                fontSize: 'var(--mobile-font-small)',
+                fontWeight: 'var(--font-weight-medium)',
+                color: '#6b7280'
+              }}>
+                Balance: {formatCurrency(walletBalance)}
+              </span>
+            </div>
+          </div>
+
+          <div className="text-center mb-6">
+            <h1 style={{ 
+              fontFamily: 'Montserrat, sans-serif', 
+              fontSize: 'clamp(1.25rem, 3vw, 1.5rem)', 
+              fontWeight: 'var(--font-weight-bold)', 
+              color: '#1f2937',
+              marginBottom: '0.5rem'
+            }}>
+              Send Money
+            </h1>
+            <p style={{ 
+              fontFamily: 'Montserrat, sans-serif', 
+              fontSize: 'var(--mobile-font-base)', 
+              fontWeight: 'var(--font-weight-normal)',
+              color: '#6b7280'
+            }}>
+              {step === 'recipient' && 'Who would you like to send money to?'}
+              {step === 'method' && 'Choose how to send'}
+              {step === 'amount' && 'Enter the amount to send'}
+              {step === 'review' && 'Review your transfer'}
+              {step === 'processing' && 'Processing your transfer...'}
+              {step === 'success' && 'Transfer successful!'}
+            </p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span style={{ 
+                fontFamily: 'Montserrat, sans-serif', 
+                fontSize: 'var(--mobile-font-small)',
+                fontWeight: 'var(--font-weight-medium)',
+                color: '#6b7280'
+              }}>
+                Step {step === 'recipient' ? 1 : step === 'method' ? 2 : step === 'amount' ? 3 : step === 'review' ? 4 : 5} of 5
+              </span>
+              <span style={{ 
+                fontFamily: 'Montserrat, sans-serif', 
+                fontSize: 'var(--mobile-font-small)',
+                color: '#6b7280'
+              }}>
+                {getStepProgress()}%
+              </span>
+            </div>
+            <Progress value={getStepProgress()} className="h-2" />
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          {/* Transfer Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Transfer Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="text-center py-6">
-                <p className="text-3xl font-bold text-gray-900 mb-2">
-                  R {parseFloat(form.amount).toLocaleString()}
-                </p>
-                <p className="text-gray-600">Transfer Amount</p>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">To:</span>
-                  <div className="text-right">
-                    <p className="font-medium">{recipientInfo?.name}</p>
-                    <p className="text-sm text-gray-500">{recipientInfo?.displayName}</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Reference:</span>
-                  <span className="font-medium">{form.reference || 'N/A'}</span>
-                </div>
-
-                {form.memo && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Memo:</span>
-                    <span className="font-medium">{form.memo}</span>
-                  </div>
-                )}
-
-                <Separator />
-
-                <div className="flex justify-between font-medium">
-                  <span>Total Amount:</span>
-                  <span>R {parseFloat(form.amount).toLocaleString()}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Security Notice */}
-          <Alert>
-            <Shield className="w-4 h-4" />
-            <AlertDescription>
-              This transfer is secured by Mojaloop and will be processed instantly.
-            </AlertDescription>
-          </Alert>
-
+        {/* Main Content */}
+        <div className="flex-1" style={{ padding: 'var(--mobile-padding)', paddingBottom: '2rem' }}>
           {error && (
-            <Alert className="border-red-200 bg-red-50">
-              <AlertCircle className="w-4 h-4 text-red-600" />
-              <AlertDescription className="text-red-700">{error}</AlertDescription>
+            <Alert className="border-red-200 bg-red-50 mb-4">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription style={{ 
+                fontFamily: 'Montserrat, sans-serif', 
+                fontSize: 'var(--mobile-font-base)',
+                fontWeight: 'var(--font-weight-normal)',
+                color: '#dc2626'
+              }}>
+                {error}
+              </AlertDescription>
             </Alert>
           )}
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <Button 
-              onClick={handleConfirmSend}
-              disabled={loading}
-              className="w-full h-12 bg-[#86BE41] hover:bg-[#7AB139]"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4 mr-2" />
-                  Confirm & Send
-                </>
-              )}
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => setStep('form')}
-              className="w-full"
-              disabled={loading}
-            >
-              Edit Details
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+          {/* Step 1: Recipient Input */}
+          {step === 'recipient' && (
+            <Card className="bg-white border border-gray-200 shadow-sm" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-3" style={{ 
+                  fontFamily: 'Montserrat, sans-serif', 
+                  fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', 
+                  fontWeight: 'var(--font-weight-bold)', 
+                  color: '#1f2937'
+                }}>
+                  <div className="bg-gradient-to-r from-[#86BE41]/20 to-[#2D8CCA]/20 rounded-xl w-10 h-10 flex items-center justify-center">
+                    <User className="w-5 h-5 text-[#86BE41]" />
+                  </div>
+                  Recipient Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="recipient" style={{ 
+                      fontFamily: 'Montserrat, sans-serif', 
+                      fontSize: 'var(--mobile-font-base)', 
+                      fontWeight: 'var(--font-weight-medium)', 
+                      color: '#374151'
+                    }}>
+                      Send To
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="recipient"
+                        type="text"
+                        placeholder={getPlaceholderText()}
+                        value={recipient}
+                        onChange={(e) => setRecipient(e.target.value)}
+                        className={`bg-white border-gray-200 focus:border-[#86BE41] focus:ring-[#86BE41] pl-12 ${
+                          !recipientValidation.isValid && recipient.trim() ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 
+                          recipientValidation.isValid && recipient.trim() ? 'border-green-300 focus:border-green-500 focus:ring-green-500' : ''
+                        }`}
+                        style={{ 
+                          height: 'var(--mobile-touch-target)',
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-normal)',
+                          borderRadius: 'var(--mobile-border-radius)'
+                        }}
+                        required
+                        aria-describedby="recipient-help recipient-error"
+                      />
+                      <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                        {recipientType === 'phone' && <Phone className="w-4 h-4 text-gray-400" />}
+                        {recipientType === 'account' && <Hash className="w-4 h-4 text-gray-400" />}
+                        {recipientType === 'username' && <User className="w-4 h-4 text-gray-400" />}
+                        {recipientType === 'unknown' && <Search className="w-4 h-4 text-gray-400" />}
+                      </div>
+                      {isResolvingRecipient && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="w-4 h-4 animate-spin text-[#86BE41]" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div id="recipient-help" className="text-xs mt-1" style={{ 
+                      fontFamily: 'Montserrat, sans-serif', 
+                      fontSize: 'var(--mobile-font-small)'
+                    }}>
+                      {recipient.trim() ? (
+                        <span className={`inline-flex items-center gap-1 ${recipientValidation.isValid ? 'text-green-600' : 'text-red-600'}`}>
+                          {recipientValidation.isValid ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                          {recipientType === 'phone' && 'South African mobile number'}
+                          {recipientType === 'account' && 'Bank account number'}
+                          {recipientType === 'username' && 'MyMoolah username'}
+                          {recipientType === 'unknown' && 'Invalid format'}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#6b7280' }}>
+                          Enter phone number, account number, or username
+                        </span>
+                      )}
+                    </div>
+                    
+                    {!recipientValidation.isValid && recipient.trim() && recipientValidation.message && (
+                      <div id="recipient-error" className="text-xs text-red-600 mt-1 flex items-center gap-1" style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-small)'
+                      }}>
+                        <AlertTriangle className="w-3 h-3" />
+                        {recipientValidation.message}
+                      </div>
+                    )}
+                  </div>
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b px-6 py-4">
-        <div className="flex items-center space-x-4">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={() => navigate('/dashboard')}
-            className="p-2"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <h1 className="text-lg font-bold text-gray-900">Send Money</h1>
-        </div>
-      </div>
-
-      {/* Balance Display */}
-      <div className="bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] px-6 py-4">
-        <div className="text-center">
-          <p className="text-white/90 text-sm">Available Balance</p>
-          <p className="text-white text-2xl font-bold">R {balance.toLocaleString()}</p>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
-        {/* Recipient Type Selection */}
-        <div className="space-y-2">
-          <Label>Send To</Label>
-          <Select 
-            value={form.recipientType} 
-            onValueChange={(value: 'phone' | 'email' | 'account') => {
-              setForm({ ...form, recipientType: value, recipient: '' });
-              setRecipientInfo(null);
-            }}
-          >
-            <SelectTrigger className="h-12">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="phone">
-                <div className="flex items-center space-x-2">
-                  <Phone className="w-4 h-4" />
-                  <span>Phone Number</span>
+                  <Button
+                    onClick={handleRecipientSubmit}
+                    disabled={!recipientValidation.isValid || isLoading}
+                    className="w-full bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] hover:from-[#7AB139] hover:to-[#2680B8] text-white disabled:opacity-60"
+                    style={{ 
+                      height: 'var(--mobile-touch-target)',
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: 'var(--mobile-font-base)',
+                      fontWeight: 'var(--font-weight-medium)',
+                      borderRadius: 'var(--mobile-border-radius)'
+                    }}
+                  >
+                    {isLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        <span>Finding Payment Methods...</span>
+                      </>
+                    ) : (
+                      <span>Continue</span>
+                    )}
+                  </Button>
                 </div>
-              </SelectItem>
-              <SelectItem value="email">
-                <div className="flex items-center space-x-2">
-                  <Mail className="w-4 h-4" />
-                  <span>Email Address</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="account">
-                <div className="flex items-center space-x-2">
-                  <CreditCard className="w-4 h-4" />
-                  <span>Account Number</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+              </CardContent>
+            </Card>
+          )}
 
-        {/* Recipient Input */}
-        <div className="space-y-2">
-          <Label htmlFor="recipient">
-            {form.recipientType === 'phone' ? 'Phone Number' : 
-             form.recipientType === 'email' ? 'Email Address' : 'Account Number'}
-          </Label>
-          <div className="relative">
-            <Input
-              id="recipient"
-              type={form.recipientType === 'email' ? 'email' : 'text'}
-              placeholder={
-                form.recipientType === 'phone' ? '+27 XX XXX XXXX' :
-                form.recipientType === 'email' ? 'recipient@email.com' : 
-                'Account number'
-              }
-              value={form.recipient}
-              onChange={(e) => {
-                setForm({ ...form, recipient: e.target.value });
-                setRecipientInfo(null);
-              }}
-              onBlur={() => handleRecipientLookup(form.recipient)}
-              className="h-12 pl-10"
-              required
-            />
-            <div className="absolute left-3 top-1/2 -translate-y-1/2">
-              {form.recipientType === 'phone' ? (
-                <Phone className="w-4 h-4 text-gray-400" />
-              ) : form.recipientType === 'email' ? (
-                <Mail className="w-4 h-4 text-gray-400" />
-              ) : (
-                <CreditCard className="w-4 h-4 text-gray-400" />
-              )}
-            </div>
-            {loading && (
-              <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+          {/* Step 2: Payment Method Selection */}
+          {step === 'method' && recipientResolution && (
+            <div className="space-y-4">
+              <Card className="bg-blue-50 border border-blue-200" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+                <CardContent style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      recipientType === 'phone' ? 'bg-[#86BE41]/20' : 
+                      recipientType === 'account' ? 'bg-[#2D8CCA]/20' : 'bg-purple-100'
+                    }`}>
+                      {recipientType === 'phone' && <Phone className="w-4 h-4 text-[#86BE41]" />}
+                      {recipientType === 'account' && <Hash className="w-4 h-4 text-[#2D8CCA]" />}
+                      {recipientType === 'username' && <User className="w-4 h-4 text-purple-600" />}
+                    </div>
+                    <div>
+                      <p style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-base)', 
+                        fontWeight: 'var(--font-weight-medium)',
+                        color: '#1f2937'
+                      }}>
+                        {recipientResolution.recipientName || 'Recipient'}
+                      </p>
+                      <p style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-small)',
+                        color: '#6b7280'
+                      }}>
+                        {recipientResolution.identifier} {recipientResolution.recipientInfo && `• ${recipientResolution.recipientInfo}`}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-3">
+                <h3 style={{ 
+                  fontFamily: 'Montserrat, sans-serif', 
+                  fontSize: 'var(--mobile-font-base)', 
+                  fontWeight: 'var(--font-weight-bold)',
+                  color: '#1f2937',
+                  marginBottom: '0.5rem'
+                }}>
+                  Choose Payment Method ({recipientResolution.availableMethods.length} available)
+                </h3>
+
+                {recipientResolution.availableMethods.map((method) => (
+                  <Card 
+                    key={method.id}
+                    className={`cursor-pointer transition-all duration-200 border-2 ${
+                      method.preferred ? 'border-[#86BE41] bg-[#86BE41]/5' : 
+                      'border-gray-200 hover:border-[#86BE41]/50 hover:bg-gray-50'
+                    }`}
+                    style={{ borderRadius: 'var(--mobile-border-radius)' }}
+                    onClick={() => handleMethodSelect(method)}
+                  >
+                    <CardContent style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                            method.id === 'mymoolah_internal' ? 'bg-[#86BE41]/20' : 
+                            method.id === 'sa_bank_transfer' ? 'bg-[#2D8CCA]/20' : 'bg-orange-100'
+                          }`}>
+                            {React.cloneElement(method.icon as React.ReactElement, {
+                              className: `w-6 h-6 ${
+                                method.id === 'mymoolah_internal' ? 'text-[#86BE41]' : 
+                                method.id === 'sa_bank_transfer' ? 'text-[#2D8CCA]' : 'text-orange-600'
+                              }`
+                            })}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p style={{ 
+                                fontFamily: 'Montserrat, sans-serif', 
+                                fontSize: 'var(--mobile-font-base)', 
+                                fontWeight: 'var(--font-weight-medium)',
+                                color: '#1f2937'
+                              }}>
+                                {method.name}
+                              </p>
+                              {method.preferred && (
+                                <span className="bg-[#86BE41] text-white text-xs px-2 py-1 rounded-full" style={{ 
+                                  fontFamily: 'Montserrat, sans-serif', 
+                                  fontSize: '10px',
+                                  fontWeight: 'var(--font-weight-medium)'
+                                }}>
+                                  RECOMMENDED
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ 
+                              fontFamily: 'Montserrat, sans-serif', 
+                              fontSize: 'var(--mobile-font-small)',
+                              color: '#6b7280'
+                            }}>
+                              {method.description}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-gray-500" />
+                                <span style={{ 
+                                  fontFamily: 'Montserrat, sans-serif', 
+                                  fontSize: 'var(--mobile-font-small)',
+                                  color: '#6b7280'
+                                }}>
+                                  {method.estimatedTime}
+                                </span>
+                              </div>
+                              <span style={{ color: '#d1d5db' }}>•</span>
+                              <span style={{ 
+                                fontFamily: 'Montserrat, sans-serif', 
+                                fontSize: 'var(--mobile-font-small)',
+                                fontWeight: 'var(--font-weight-medium)',
+                                color: method.feeAmount === 0 ? '#16a34a' : '#6b7280'
+                              }}>
+                                {method.fee}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          {method.badge && (
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              method.feeAmount === 0 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
+                            }`} style={{ 
+                              fontFamily: 'Montserrat, sans-serif', 
+                              fontSize: '10px',
+                              fontWeight: 'var(--font-weight-medium)'
+                            }}>
+                              {method.badge}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            )}
-          </div>
-          
-          {/* Recipient Info */}
-          {recipientInfo && (
-            <div className="flex items-center space-x-2 p-3 bg-green-50 rounded-lg border border-green-200">
-              <CheckCircle className="w-4 h-4 text-green-600" />
+            </div>
+          )}
+
+          {/* Step 3: Amount Input */}
+          {step === 'amount' && selectedMethod && (
+            <div className="space-y-4">
+              {/* Selected method summary */}
+              <Card className="bg-gray-50 border border-gray-200" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+                <CardContent style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                      selectedMethod.id === 'mymoolah_internal' ? 'bg-[#86BE41]/20' : 
+                      selectedMethod.id === 'sa_bank_transfer' ? 'bg-[#2D8CCA]/20' : 'bg-orange-100'
+                    }`}>
+                      {React.cloneElement(selectedMethod.icon as React.ReactElement, {
+                        className: `w-4 h-4 ${
+                          selectedMethod.id === 'mymoolah_internal' ? 'text-[#86BE41]' : 
+                          selectedMethod.id === 'sa_bank_transfer' ? 'text-[#2D8CCA]' : 'text-orange-600'
+                        }`
+                      })}
+                    </div>
+                    <div>
+                      <p style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-base)', 
+                        fontWeight: 'var(--font-weight-medium)',
+                        color: '#1f2937'
+                      }}>
+                        {selectedMethod.name}
+                      </p>
+                      <p style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-small)',
+                        color: '#6b7280'
+                      }}>
+                        {selectedMethod.estimatedTime} • {selectedMethod.fee}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border border-gray-200 shadow-sm" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3" style={{ 
+                    fontFamily: 'Montserrat, sans-serif', 
+                    fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', 
+                    fontWeight: 'var(--font-weight-bold)', 
+                    color: '#1f2937'
+                  }}>
+                    <div className="bg-gradient-to-r from-[#86BE41]/20 to-[#2D8CCA]/20 rounded-xl w-10 h-10 flex items-center justify-center">
+                      <Banknote className="w-5 h-5 text-[#86BE41]" />
+                    </div>
+                    Enter Amount
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="amount" style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-base)', 
+                        fontWeight: 'var(--font-weight-medium)', 
+                        color: '#374151'
+                      }}>
+                        Amount (ZAR)
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="amount"
+                          type="number"
+                          placeholder="0.00"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          className="bg-white border-gray-200 focus:border-[#86BE41] focus:ring-[#86BE41] pl-8 text-right text-2xl"
+                          style={{ 
+                            height: '3.5rem',
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '1.5rem',
+                            fontWeight: 'var(--font-weight-bold)',
+                            borderRadius: 'var(--mobile-border-radius)'
+                          }}
+                          required
+                        />
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                          <span style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: '1.25rem',
+                            fontWeight: 'var(--font-weight-bold)',
+                            color: '#6b7280'
+                          }}>
+                            R
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="text-xs text-gray-500 text-right" style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-small)'
+                      }}>
+                        Available: {formatCurrency(walletBalance)}
+                      </div>
+                    </div>
+
+                    {/* Quick amount buttons */}
+                    <div className="space-y-2">
+                      <Label style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-small)', 
+                        fontWeight: 'var(--font-weight-medium)', 
+                        color: '#6b7280'
+                      }}>
+                        Quick Amounts
+                      </Label>
+                      <div className="grid grid-cols-5 gap-2">
+                        {quickAmounts.map((quickAmount) => (
+                          <Button
+                            key={quickAmount}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setAmount(quickAmount.toString())}
+                            className={`border-gray-200 text-gray-700 hover:border-[#86BE41] hover:text-[#86BE41] ${
+                              amount === quickAmount.toString() ? 'border-[#86BE41] text-[#86BE41] bg-[#86BE41]/5' : ''
+                            }`}
+                            style={{ 
+                              fontFamily: 'Montserrat, sans-serif',
+                              fontSize: 'var(--mobile-font-small)',
+                              fontWeight: 'var(--font-weight-medium)',
+                              borderRadius: 'var(--mobile-border-radius)',
+                              height: '2.5rem'
+                            }}
+                          >
+                            R{quickAmount}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Purpose/Reference */}
+                    <div className="space-y-2">
+                      <Label htmlFor="purpose" style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-base)', 
+                        fontWeight: 'var(--font-weight-medium)', 
+                        color: '#374151'
+                      }}>
+                        Purpose (Optional)
+                      </Label>
+                      <Input
+                        id="purpose"
+                        type="text"
+                        placeholder="What's this for?"
+                        value={purpose}
+                        onChange={(e) => setPurpose(e.target.value)}
+                        className="bg-white border-gray-200 focus:border-[#86BE41] focus:ring-[#86BE41]"
+                        style={{ 
+                          height: 'var(--mobile-touch-target)',
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-normal)',
+                          borderRadius: 'var(--mobile-border-radius)'
+                        }}
+                        maxLength={50}
+                      />
+                    </div>
+
+                    <Button
+                      onClick={handleAmountSubmit}
+                      disabled={!amount || parseFloat(amount) <= 0 || isLoading}
+                      className="w-full bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] hover:from-[#7AB139] hover:to-[#2680B8] text-white disabled:opacity-60"
+                      style={{ 
+                        height: 'var(--mobile-touch-target)',
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        borderRadius: 'var(--mobile-border-radius)'
+                      }}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          <span>Getting Quote...</span>
+                        </>
+                      ) : (
+                        <span>Continue</span>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Step 4: Review & Confirm */}
+          {step === 'review' && quote && selectedMethod && recipientResolution && (
+            <div className="space-y-4">
+              <Card className="bg-white border border-gray-200 shadow-sm" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3" style={{ 
+                    fontFamily: 'Montserrat, sans-serif', 
+                    fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', 
+                    fontWeight: 'var(--font-weight-bold)', 
+                    color: '#1f2937'
+                  }}>
+                    <div className="bg-gradient-to-r from-[#86BE41]/20 to-[#2D8CCA]/20 rounded-xl w-10 h-10 flex items-center justify-center">
+                      <Check className="w-5 h-5 text-[#86BE41]" />
+                    </div>
+                    Review Transfer
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Transfer summary */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: '#6b7280'
+                        }}>
+                          Send to
+                        </span>
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: '#1f2937'
+                        }}>
+                          {recipientResolution.recipientName || recipientResolution.identifier}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: '#6b7280'
+                        }}>
+                          Payment method
+                        </span>
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: '#1f2937'
+                        }}>
+                          {selectedMethod.name}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: '#6b7280'
+                        }}>
+                          Amount
+                        </span>
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-bold)',
+                          color: '#1f2937'
+                        }}>
+                          {formatCurrency(quote.amount)}
+                        </span>
+                      </div>
+
+                      {quote.fee > 0 && (
+                        <div className="flex items-center justify-between">
+                          <span style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-base)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            color: '#6b7280'
+                          }}>
+                            Transfer fee
+                          </span>
+                          <span style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-base)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            color: '#1f2937'
+                          }}>
+                            {formatCurrency(quote.fee)}
+                          </span>
+                        </div>
+                      )}
+
+                      {purpose && (
+                        <div className="flex items-center justify-between">
+                          <span style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-base)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            color: '#6b7280'
+                          }}>
+                            Purpose
+                          </span>
+                          <span style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-base)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            color: '#1f2937'
+                          }}>
+                            {purpose}
+                          </span>
+                        </div>
+                      )}
+                      
+                      <Separator />
+                      
+                      <div className="flex items-center justify-between">
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-bold)',
+                          color: '#1f2937'
+                        }}>
+                          Total
+                        </span>
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'clamp(1.125rem, 2.5vw, 1.25rem)',
+                          fontWeight: 'var(--font-weight-bold)',
+                          color: '#1f2937'
+                        }}>
+                          {formatCurrency(quote.totalAmount)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Estimated time */}
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-blue-600" />
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-small)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: '#2563eb'
+                        }}>
+                          Estimated delivery: {quote.estimatedTime}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Reference number */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-small)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: '#6b7280'
+                        }}>
+                          Reference
+                        </span>
+                        <span style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-small)',
+                          fontWeight: 'var(--font-weight-bold)',
+                          color: '#1f2937'
+                        }}>
+                          {quote.reference}
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleTransferSubmit}
+                      disabled={isLoading}
+                      className="w-full bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] hover:from-[#7AB139] hover:to-[#2680B8] text-white"
+                      style={{ 
+                        height: 'var(--mobile-touch-target)',
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        borderRadius: 'var(--mobile-border-radius)'
+                      }}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <span>Send {formatCurrency(quote.totalAmount)}</span>
+                      )}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Step 5: Processing */}
+          {step === 'processing' && (
+            <div className="text-center space-y-6">
+              <div className="w-20 h-20 mx-auto bg-gradient-to-r from-[#86BE41]/20 to-[#2D8CCA]/20 rounded-full flex items-center justify-center">
+                <Loader2 className="w-10 h-10 animate-spin text-[#86BE41]" />
+              </div>
+              
               <div>
-                <p className="text-green-800 font-medium text-sm">{recipientInfo.name}</p>
-                <p className="text-green-700 text-xs">Verified • {recipientInfo.bank}</p>
+                <h3 style={{ 
+                  fontFamily: 'Montserrat, sans-serif', 
+                  fontSize: 'clamp(1.125rem, 2.5vw, 1.25rem)', 
+                  fontWeight: 'var(--font-weight-bold)', 
+                  color: '#1f2937',
+                  marginBottom: '0.5rem'
+                }}>
+                  Processing Transfer
+                </h3>
+                <p style={{ 
+                  fontFamily: 'Montserrat, sans-serif', 
+                  fontSize: 'var(--mobile-font-base)',
+                  color: '#6b7280'
+                }}>
+                  Please wait while we process your transfer...
+                </p>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-center gap-2">
+                  <Shield className="w-5 h-5 text-blue-600" />
+                  <span style={{ 
+                    fontFamily: 'Montserrat, sans-serif', 
+                    fontSize: 'var(--mobile-font-small)',
+                    fontWeight: 'var(--font-weight-medium)',
+                    color: '#2563eb'
+                  }}>
+                    Your transfer is secured with bank-grade encryption
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 6: Success */}
+          {step === 'success' && quote && selectedMethod && recipientResolution && (
+            <div className="text-center space-y-6">
+              <div className="w-20 h-20 mx-auto bg-green-100 rounded-full flex items-center justify-center">
+                <Check className="w-10 h-10 text-green-600" />
+              </div>
+              
+              <div>
+                <h3 style={{ 
+                  fontFamily: 'Montserrat, sans-serif', 
+                  fontSize: 'clamp(1.125rem, 2.5vw, 1.25rem)', 
+                  fontWeight: 'var(--font-weight-bold)', 
+                  color: '#16a34a',
+                  marginBottom: '0.5rem'
+                }}>
+                  Transfer Successful!
+                </h3>
+                <p style={{ 
+                  fontFamily: 'Montserrat, sans-serif', 
+                  fontSize: 'var(--mobile-font-base)',
+                  color: '#6b7280'
+                }}>
+                  {formatCurrency(quote.amount)} sent successfully to {recipientResolution.recipientName || recipientResolution.identifier}
+                </p>
+              </div>
+
+              <Card className="bg-green-50 border border-green-200" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+                <CardContent style={{ paddingTop: '1rem', paddingBottom: '1rem' }}>
+                  <div className="space-y-2 text-center">
+                    <p style={{ 
+                      fontFamily: 'Montserrat, sans-serif', 
+                      fontSize: 'var(--mobile-font-small)',
+                      fontWeight: 'var(--font-weight-medium)',
+                      color: '#16a34a'
+                    }}>
+                      Transaction Reference
+                    </p>
+                    <p style={{ 
+                      fontFamily: 'Montserrat, sans-serif', 
+                      fontSize: 'var(--mobile-font-base)',
+                      fontWeight: 'var(--font-weight-bold)',
+                      color: '#1f2937'
+                    }}>
+                      {quote.reference}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-3">
+                <Button
+                  onClick={() => navigate('/dashboard')}
+                  className="w-full bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] hover:from-[#7AB139] hover:to-[#2680B8] text-white"
+                  style={{ 
+                    height: 'var(--mobile-touch-target)',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: 'var(--mobile-font-base)',
+                    fontWeight: 'var(--font-weight-medium)',
+                    borderRadius: 'var(--mobile-border-radius)'
+                  }}
+                >
+                  Back to Dashboard
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    // Reset form for new transfer
+                    setStep('recipient');
+                    setRecipient('');
+                    setAmount('');
+                    setPurpose('');
+                    setSelectedMethod(null);
+                    setRecipientResolution(null);
+                    setQuote(null);
+                    setError('');
+                  }}
+                  className="w-full border-[#86BE41] text-[#86BE41] hover:bg-[#86BE41] hover:text-white"
+                  style={{ 
+                    height: 'var(--mobile-touch-target)',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: 'var(--mobile-font-base)',
+                    fontWeight: 'var(--font-weight-medium)',
+                    borderRadius: 'var(--mobile-border-radius)'
+                  }}
+                >
+                  Send Another Transfer
+                </Button>
               </div>
             </div>
           )}
         </div>
-
-        {/* Amount */}
-        <div className="space-y-2">
-          <Label htmlFor="amount">Amount</Label>
-          <div className="relative">
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={form.amount}
-              onChange={(e) => setForm({ ...form, amount: e.target.value })}
-              className="h-12 pl-8 text-lg"
-              required
-            />
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
-              R
-            </div>
-          </div>
-          {form.amount && parseFloat(form.amount) > balance && (
-            <p className="text-red-600 text-sm">Insufficient balance</p>
-          )}
-        </div>
-
-        {/* Reference */}
-        <div className="space-y-2">
-          <Label htmlFor="reference">Reference (Optional)</Label>
-          <Input
-            id="reference"
-            placeholder="Payment reference"
-            value={form.reference}
-            onChange={(e) => setForm({ ...form, reference: e.target.value })}
-            className="h-12"
-          />
-        </div>
-
-        {/* Memo */}
-        <div className="space-y-2">
-          <Label htmlFor="memo">Memo (Optional)</Label>
-          <Input
-            id="memo"
-            placeholder="Add a note"
-            value={form.memo}
-            onChange={(e) => setForm({ ...form, memo: e.target.value })}
-            className="h-12"
-          />
-        </div>
-
-        {error && (
-          <Alert className="border-red-200 bg-red-50">
-            <AlertCircle className="w-4 h-4 text-red-600" />
-            <AlertDescription className="text-red-700">{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Submit Button */}
-        <Button 
-          type="submit" 
-          className="w-full h-12 bg-[#86BE41] hover:bg-[#7AB139]"
-          disabled={loading || !form.recipient || !form.amount}
-        >
-          {loading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              Looking up recipient...
-            </>
-          ) : (
-            <>
-              <Send className="w-4 h-4 mr-2" />
-              Continue
-            </>
-          )}
-        </Button>
-      </form>
+      </div>
     </div>
   );
 }

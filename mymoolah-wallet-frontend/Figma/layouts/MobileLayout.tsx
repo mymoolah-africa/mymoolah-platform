@@ -1,23 +1,37 @@
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { TopBanner } from '../components/TopBanner';
 import { BottomNavigation } from '../components/BottomNavigation';
 
 export function MobileLayout() {
+  const location = useLocation();
+  
   return (
-    <div className="mobile-container bg-mymoolah-primary">
-      {/* Sticky Top Banner */}
-      <div className="sticky top-0 z-50">
+    <div className="min-h-screen bg-white">
+      <div className="mobile-container">
+        {/* Sticky Top Banner */}
         <TopBanner />
-      </div>
-      
-      {/* Main Content with Clean White Background */}
-      <main className="pb-24 mobile-scroll mobile-safe-area bg-mymoolah-primary min-h-screen">
-        <Outlet />
-      </main>
-      
-      {/* Sticky Bottom Navigation - Optimized for Mobile */}
-      <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-sm z-50 mobile-safe-area">
-        <BottomNavigation />
+        
+        {/* Main Content with Clean White Background */}
+        <main 
+          className="mobile-scroll mobile-safe-area bg-white"
+          style={{ 
+            paddingBottom: '5rem', // Space for bottom navigation
+            minHeight: 'calc(100vh - 2rem)' // Account for top banner height
+          }}
+        >
+          <Outlet />
+        </main>
+        
+        {/* Sticky Bottom Navigation - Properly Positioned */}
+        <div 
+          className="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50"
+          style={{ 
+            width: '100%',
+            maxWidth: 'var(--mobile-max-width)'
+          }}
+        >
+          <BottomNavigation />
+        </div>
       </div>
     </div>
   );
