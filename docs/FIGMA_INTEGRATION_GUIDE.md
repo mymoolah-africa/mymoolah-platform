@@ -410,6 +410,14 @@ cd mymoolah-wallet-frontend && npm install && cd ..
 
 ---
 
+## 🤖 Figma AI Agent API Wiring
+
+- Always refer to `FIGMA_API_WIRING.md` for the latest page-to-endpoint mapping and wiring instructions.
+- Use only the documented endpoints for each page.
+- If an endpoint is missing, request it from the backend team.
+
+---
+
 **Last Updated:** July 20, 2025  
 **Status:** ✅ **ACTIVE**  
 **Next Review:** July 27, 2025 

@@ -1,5 +1,9 @@
-import { Icons } from "./Icons";
+import { User, Bell } from '../components/Icons';
 import myMoolahLogo from '../assets/logo2.svg';
+import { FunctionComponent } from 'react';
+
+const UserIcon = User as FunctionComponent<any>;
+const BellIcon = Bell as FunctionComponent<any>;
 
 export function TopBanner() {
   return (
@@ -23,7 +27,7 @@ export function TopBanner() {
             aria-label="Profile and Settings"
           >
             <div style={{ width: '1.25rem', height: '1.25rem' }}>
-              <Icons.User />
+              <UserIcon />
             </div>
           </button>
 
@@ -50,7 +54,7 @@ export function TopBanner() {
             aria-label="Notifications"
           >
             <div style={{ width: '1.25rem', height: '1.25rem' }}>
-              <Icons.Bell />
+              <BellIcon />
             </div>
             {/* Notification badge - Smaller */}
             <span 

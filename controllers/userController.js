@@ -136,6 +136,26 @@ class UserController {
       });
     }
   }
+
+  // Get authenticated user's profile
+  async getMe(req, res) {
+    try {
+      const userId = req.user.id;
+      const user = await this.userModel.getUserById(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      // Only return safe fields
+      const { id, email, firstName, lastName, phoneNumber, balance, status, createdAt, updatedAt } = user;
+      res.json({
+        success: true,
+        data: { id, email, firstName, lastName, phoneNumber, balance, status, createdAt, updatedAt }
+      });
+    } catch (error) {
+      console.error('❌ Error in getMe:', error);
+      res.status(500).json({ success: false, error: 'Internal server error', details: error.message });
+    }
+  }
 }
 
 // Create instance and export methods
@@ -146,5 +166,6 @@ module.exports = {
   getUserById: userController.getUserById.bind(userController),
   updateUser: userController.updateUser.bind(userController),
   getUserStats: userController.getUserStats.bind(userController),
-  updateUserStatus: userController.updateUserStatus.bind(userController)
+  updateUserStatus: userController.updateUserStatus.bind(userController),
+  getMe: userController.getMe.bind(userController)
 };

@@ -645,6 +645,14 @@ curl -X GET http://localhost:5050/api/v1/wallets/transactions \
 
 ---
 
+## 🤖 Figma AI Agent Integration Notes
+
+- For a complete mapping of frontend pages to backend endpoints, see `FIGMA_API_WIRING.md`.
+- All new and legacy endpoints are documented here for reference.
+- If a new endpoint is needed, request it from the backend team.
+
+---
+
 **API Status:** ✅ **ALL ENDPOINTS OPERATIONAL**  
 **Last Updated:** July 20, 2025  
 **Version:** 2.1.0 

@@ -316,3 +316,16 @@ mymoolah/
 
 **Last Updated:** July 20, 2025  
 **Handover Complete:** ✅ **READY FOR NEXT AGENT**
+
+---
+
+## 🚦 Figma AI Agent Wiring Instructions (See: docs/FIGMA_API_WIRING.md)
+
+A new dedicated file, `FIGMA_API_WIRING.md`, contains:
+- A mapping of every page to its backend endpoints
+- Example API requests and responses
+- Best practices for wiring
+- Error handling and authentication notes
+- What to do if an endpoint is missing
+
+**Always refer to `FIGMA_API_WIRING.md` for the latest integration details.**

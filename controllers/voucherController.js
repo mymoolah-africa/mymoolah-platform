@@ -52,6 +52,17 @@ exports.listActiveVouchers = async (req, res) => {
   }
 };
 
+exports.listActiveVouchersForMe = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const vouchers = await voucherModel.listActiveVouchers(userId);
+    res.json({ success: true, data: vouchers });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to list vouchers' });
+  }
+};
+
 exports.getVoucherByCode = async (req, res) => {
   try {
     const { voucher_code } = req.params;

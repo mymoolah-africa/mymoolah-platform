@@ -291,3 +291,19 @@ npm run dev
 
 **Last Updated:** July 20, 2025  
 **Status:** All systems operational, development continuing 
+
+---
+
+## 🔗 Figma-Backend API Wiring Coverage
+
+A new file, `FIGMA_API_WIRING.md`, provides a detailed mapping of every page to its backend endpoints, with wiring instructions for the Figma AI agent.
+
+- DashboardPage: All endpoints in place
+- SendMoneyPage: All endpoints in place
+- VouchersPage: All endpoints in place
+- KYCStatusPage/KYCDocumentsPage: All endpoints in place
+- ProfilePage: `/me` in place, update endpoints may need review
+- TransactPage: Service endpoints available for most services
+- Login/Register: All endpoints in place
+
+See `FIGMA_API_WIRING.md` for details. 

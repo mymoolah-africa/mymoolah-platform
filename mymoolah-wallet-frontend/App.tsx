@@ -1,8 +1,10 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { MoolahProvider } from './contexts/MoolahContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { BottomNavigation } from './components/BottomNavigation';
 
 // Pages
 import { LoginPage } from './pages/LoginPage';
@@ -20,37 +22,91 @@ import { KYCStatusPage } from './pages/KYCStatusPage';
 // Layout Components
 import { MobileLayout } from './layouts/MobileLayout';
 
+function AppContent() {
+  const location = useLocation();
+  
+  // Pages that should NOT show bottom navigation
+  const pagesWithoutNavigation = ['/login', '/register', '/kyc', '/kyc/documents', '/kyc/status'];
+  const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
+
+  return (
+    <div 
+      style={{
+        fontFamily: 'Montserrat, sans-serif',
+        backgroundColor: '#ffffff',
+        height: '100vh',
+        overflow: 'hidden'
+      }}
+    >
+      {/* Single Mobile Container - 375px max width, centered */}
+      <div 
+        style={{
+          maxWidth: '375px',
+          margin: '0 auto',
+          height: '100vh',
+          backgroundColor: '#ffffff',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        {/* Main Content Area - Flex 1 to take remaining space */}
+        <div 
+          style={{
+            flex: 1,
+            overflow: 'auto',
+            backgroundColor: '#ffffff'
+          }}
+        >
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            
+            {/* KYC Routes */}
+            <Route path="/kyc" element={<ProtectedRoute><KYCDocumentsPage /></ProtectedRoute>} />
+            <Route path="/kyc/documents" element={<ProtectedRoute><KYCDocumentsPage /></ProtectedRoute>} />
+            <Route path="/kyc/status" element={<ProtectedRoute><KYCStatusPage /></ProtectedRoute>} />
+            
+            {/* FIXED: Direct protected routes - bypassing nested routing for now */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+            <Route path="/send-money" element={<ProtectedRoute><SendMoneyPage /></ProtectedRoute>} />
+            <Route path="/transact" element={<ProtectedRoute><TransactPage /></ProtectedRoute>} />
+            <Route path="/vouchers" element={<ProtectedRoute><VouchersPage /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+            
+            {/* Catch-all redirect */}
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </div>
+
+        {/* Bottom Navigation - Fixed at bottom, only show on main app pages */}
+        {showBottomNavigation && (
+          <div 
+            style={{
+              height: '80px',
+              backgroundColor: '#ffffff',
+              borderTop: '1px solid #e5e7eb',
+              boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.1)',
+              flexShrink: 0
+            }}
+          >
+            <BottomNavigation />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
         <MoolahProvider>
           <Router>
-            <div className="min-h-screen bg-white">
-              <Routes>
-                {/* Public Routes - Both keep gradient backgrounds */}
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                
-                {/* KYC Routes - Gradient background like auth pages */}
-                <Route path="/kyc" element={<ProtectedRoute><KYCDocumentsPage /></ProtectedRoute>} />
-                <Route path="/kyc/documents" element={<ProtectedRoute><KYCDocumentsPage /></ProtectedRoute>} />
-                <Route path="/kyc/status" element={<ProtectedRoute><KYCStatusPage /></ProtectedRoute>} />
-                
-                {/* Protected Routes with Clean White Mobile Layout */}
-                <Route path="/" element={<ProtectedRoute><MobileLayout /></ProtectedRoute>}>
-                  <Route index element={<Navigate to="/dashboard" replace />} />
-                  <Route path="dashboard" element={<DashboardPage />} />
-                  <Route path="send-money" element={<SendMoneyPage />} />
-                  <Route path="transact" element={<TransactPage />} />
-                  <Route path="vouchers" element={<VouchersPage />} />
-                  <Route path="profile" element={<ProfilePage />} />
-                </Route>
-                
-                {/* Catch-all redirect */}
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
-            </div>
+            <AppContent />
           </Router>
         </MoolahProvider>
       </AuthProvider>

@@ -172,6 +172,15 @@
 
 ---
 
+## [1.0.1] - 2025-07-22
+
+### 🆕 Documentation & Figma AI Agent Integration
+- Created `FIGMA_API_WIRING.md`: Dedicated wiring instructions for Figma AI agent
+- Documented all new/updated backend endpoints
+- Mapped every page to its backend endpoints
+- Provided best practices for frontend-backend integration
+- Updated all .md files to reference the new wiring file
+
 ## [0.9.0] - 2025-07-19
 
 ### 🚀 **Major Features Added**
