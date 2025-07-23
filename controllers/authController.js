@@ -20,7 +20,7 @@ class AuthController {
       const userModel = new User();
       const existingUser = await userModel.getUserByEmail(email);
       if (existingUser) {
-        return res.status(409).json({ success: false, message: 'User already exists.' });
+        return res.status(409).json({ success: false, message: 'User with this email already exists' });
       }
       
       // Check if identifier already exists based on type
@@ -38,7 +38,7 @@ class AuthController {
       }
       
       if (existingIdentifier) {
-        return res.status(409).json({ success: false, message: `${identifierType} already exists.` });
+        return res.status(409).json({ success: false, message: `User with this identifier already exists` });
       }
       
       // Create user and wallet with new format

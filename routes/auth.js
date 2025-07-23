@@ -21,6 +21,10 @@ const validateRequest = (req, res, next) => {
   next();
 };
 
+const phoneRegex = /^(\+27|27|0)?[6-8][0-9]{8}$/;
+const accountRegex = /^[0-9]{8,12}$/;
+const usernameRegex = /^[a-zA-Z0-9._]{4,32}$/;
+
 // GET /api/v1/auth/profile
 router.get('/profile', authMiddleware, authController.getProfile);
 
@@ -31,17 +35,33 @@ router.post('/register', [
     .normalizeEmail()
     .withMessage('Please provide a valid email address'),
   body('password')
-    .isLength({ min: 8 })
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-    .withMessage('Password must be at least 8 characters and contain uppercase, lowercase, number, and special character'),
+    .custom(value => {
+      const regex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!regex.test(value)) {
+        throw new Error('Password must be at least 8 characters and contain a letter, a number, and a special character');
+      }
+      return true;
+    }),
   body('name')
     .isLength({ min: 2, max: 100 })
     .trim()
     .escape()
     .withMessage('Name must be between 2 and 100 characters'),
   body('identifier')
-    .isLength({ min: 1 })
-    .withMessage('Identifier is required'),
+    .custom((value, { req }) => {
+      const type = req.body.identifierType;
+      if (!value) throw new Error('Identifier is required');
+      if (type === 'phone' && !phoneRegex.test(value.replace(/\s/g, ''))) {
+        throw new Error('Invalid South African mobile number');
+      }
+      if (type === 'account' && !accountRegex.test(value)) {
+        throw new Error('Account number must be 8-12 digits');
+      }
+      if (type === 'username' && !usernameRegex.test(value)) {
+        throw new Error('Username must be 4-32 characters (letters, numbers, periods, underscores)');
+      }
+      return true;
+    }),
   body('identifierType')
     .isIn(['phone', 'account', 'username'])
     .withMessage('Identifier type must be phone, account, or username'),

@@ -17,7 +17,13 @@ router.post(
     body('firstName').notEmpty().withMessage('First name is required'),
     body('lastName').notEmpty().withMessage('Last name is required'),
     body('email').isEmail().withMessage('Valid email is required'),
-    body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters')
+    body('password').custom(value => {
+      const regex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!regex.test(value)) {
+        throw new Error('Password must be at least 8 characters and contain a letter, a number, and a special character');
+      }
+      return true;
+    }),
   ],
   (req, res) => {
     const errors = validationResult(req);

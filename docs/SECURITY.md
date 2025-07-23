@@ -19,7 +19,7 @@ We will acknowledge your report within 2 business days and work to resolve the i
 - **Environment Variables:** All sensitive credentials are stored in `.env` files and never committed to source control.
 - **Password Hashing:** User passwords are hashed using bcrypt before storage.
 - **Multi-Input Authentication:** Support for phone numbers, account numbers, and usernames with complex validation.
-- **Complex Password System:** 8+ characters, uppercase, lowercase, number, and special character requirements.
+- **Complex Password System:** 8+ characters, must contain a letter, a number, and a special character.
 - **JWT Authentication:** Secure token-based authentication with refresh capabilities.
 - **Input Validation:** All API endpoints validate and sanitize input to prevent injection attacks.
 - **CORS:** Configured to restrict API access to trusted origins.

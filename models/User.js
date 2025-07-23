@@ -54,7 +54,7 @@ class User {
       } = userData;
 
       // Hash password
-      const saltRounds = 10;
+      const saltRounds = 12;
       const passwordHash = bcrypt.hashSync(password, saltRounds);
 
       // Generate wallet ID before database operation
