@@ -1,6 +1,6 @@
 const express = require('express');
 const app = express();
-const port = 5050; // or 3000, but 5050 matches your previous output
+const port = 3001; // Changed from 5050 to 3001 for frontend integration
 
 // Middleware to parse JSON bodies
 app.use(express.json());

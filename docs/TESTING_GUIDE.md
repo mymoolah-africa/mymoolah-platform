@@ -1102,3 +1102,13 @@ npm run test:coverage:lcov
 ---
 
 *This testing guide provides comprehensive testing strategies and examples for the MyMoolah platform with enhanced authentication, KYC verification, and Figma AI integration.* 
+
+## 🚀 REGISTRATION & LOGIN POLICY UPDATE (July 23, 2025)
+
+- Registration requires: valid South African mobile number (used as both phoneNumber and accountNumber), valid email, and password.
+- Login requires: mobile number (account number) and password only.
+- Email is not used for login.
+- All username/account/legacy logic is removed from backend and tests.
+- All backend and test scripts are aligned and pass.
+- Ready for frontend integration.
+- All automated API tests pass as of July 23, 2025. 

@@ -329,3 +329,10 @@ A new dedicated file, `FIGMA_API_WIRING.md`, contains:
 - What to do if an endpoint is missing
 
 **Always refer to `FIGMA_API_WIRING.md` for the latest integration details.**
+
+- ✅ Permanent fix for user name handling in registration and login.
+- ✅ All user API responses now include real name fields.
+- ✅ Temporary frontend greeting workaround removed.
+
+## Next Steps for Next Agent (Updated July 23, 2025)
+- Ensure all new user-facing features use the `name` field from backend.

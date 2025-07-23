@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-// Import icons directly from lucide-react
+// Import icons directly from lucide-react for testing
 import { 
   User, 
   Bell,
@@ -28,7 +28,7 @@ function Logo3Component() {
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '16px',
-          fontWeight: 'var(--font-weight-bold)',
+          fontWeight: '700',
           color: '#1f2937',
           fontFamily: 'Montserrat, sans-serif',
           textAlign: 'center'
@@ -128,21 +128,6 @@ interface Transaction {
   category: string;
 }
 
-// Helper function to extract and format user's first name for greeting
-function getGreetingName(fullName: string | undefined): string {
-  if (!fullName || !fullName.trim()) {
-    return '';
-  }
-  
-  // Split by space and take the first part (first name)
-  const firstName = fullName.trim().split(' ')[0];
-  
-  // Capitalize first letter if needed
-  const formattedName = firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
-  
-  return formattedName;
-}
-
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -154,7 +139,7 @@ export function DashboardPage() {
   const openVouchersCount = 5;
   const openVouchersValue = 2450.00; // This would come from your MoolahContext or API
 
-  // Mock recent transactions - 6 most recent (with proper icons)
+  // Mock recent transactions - 6 most recent (with proper icons restored)
   const recentTransactions: Transaction[] = [
     {
       id: 'tx_001',
@@ -323,9 +308,6 @@ export function DashboardPage() {
     }
   };
 
-  // Generate the greeting with user's first name
-  const greetingName = getGreetingName(user?.name);
-
   return (
     <div style={{ fontFamily: 'Montserrat, sans-serif' }}>
       {/* Top Card: User | Logo3 | Bell */}
@@ -422,30 +404,26 @@ export function DashboardPage() {
 
       {/* Content */}
       <div style={{ padding: '16px' }}>
-        {/* CLEAN GREETING MESSAGE */}
         <h1 
           style={{
             fontFamily: 'Montserrat, sans-serif',
-            fontSize: 'clamp(1.5rem, 4vw, 2rem)',
-            fontWeight: 'var(--font-weight-bold)',
+            fontSize: '24px',
+            fontWeight: '700',
             color: '#1f2937',
             marginBottom: '8px',
-            textAlign: 'center',
-            lineHeight: '1.3'
+            textAlign: 'center'
           }}
         >
-          Welcome back{greetingName ? `, ${greetingName}` : ''}!
+          Welcome back{user?.name ? `, ${user.name.split(' ')[0]}` : ''}!
         </h1>
         
         <p 
           style={{
             fontFamily: 'Montserrat, sans-serif',
-            fontSize: 'var(--mobile-font-base)',
-            fontWeight: 'var(--font-weight-normal)',
+            fontSize: '14px',
             color: '#6b7280',
             textAlign: 'center',
-            marginBottom: '24px',
-            lineHeight: '1.6'
+            marginBottom: '24px'
           }}
         >
           Your digital wallet dashboard
@@ -458,10 +436,10 @@ export function DashboardPage() {
             width: '100%',
             backgroundColor: '#ffffff',
             border: '1px solid #e5e7eb',
-            borderRadius: 'var(--mobile-border-radius)',
+            borderRadius: '12px',
             padding: '20px',
             marginBottom: '16px',
-            boxShadow: 'var(--mobile-shadow)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -476,7 +454,7 @@ export function DashboardPage() {
           }}
           onMouseOut={(e) => {
             e.currentTarget.style.backgroundColor = '#ffffff';
-            e.currentTarget.style.boxShadow = 'var(--mobile-shadow)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
           aria-label="View wallet transaction history"
@@ -486,8 +464,8 @@ export function DashboardPage() {
             <h3 
               style={{
                 fontFamily: 'Montserrat, sans-serif',
-                fontSize: 'clamp(1.125rem, 2.5vw, 1.25rem)',
-                fontWeight: 'var(--font-weight-bold)',
+                fontSize: '18px',
+                fontWeight: '700',
                 color: '#1f2937',
                 marginBottom: '4px',
                 margin: '0 0 4px 0'
@@ -498,8 +476,7 @@ export function DashboardPage() {
             <p 
               style={{
                 fontFamily: 'Montserrat, sans-serif',
-                fontSize: 'var(--mobile-font-base)',
-                fontWeight: 'var(--font-weight-normal)',
+                fontSize: '14px',
                 color: '#6b7280',
                 margin: '0'
               }}
@@ -517,8 +494,8 @@ export function DashboardPage() {
             <span 
               style={{
                 fontFamily: 'Montserrat, sans-serif',
-                fontSize: 'clamp(1.25rem, 3vw, 1.5rem)',
-                fontWeight: 'var(--font-weight-bold)',
+                fontSize: '24px',
+                fontWeight: '700',
                 color: walletBalance >= 0 ? '#16a34a' : '#dc2626', // Green for positive, red for negative
                 lineHeight: '1.2'
               }}
@@ -535,10 +512,10 @@ export function DashboardPage() {
             width: '100%',
             backgroundColor: '#ffffff',
             border: '1px solid #e5e7eb',
-            borderRadius: 'var(--mobile-border-radius)',
+            borderRadius: '12px',
             padding: '20px',
             marginBottom: '16px',
-            boxShadow: 'var(--mobile-shadow)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -553,7 +530,7 @@ export function DashboardPage() {
           }}
           onMouseOut={(e) => {
             e.currentTarget.style.backgroundColor = '#ffffff';
-            e.currentTarget.style.boxShadow = 'var(--mobile-shadow)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
           aria-label="View vouchers page"
@@ -563,8 +540,8 @@ export function DashboardPage() {
             <h3 
               style={{
                 fontFamily: 'Montserrat, sans-serif',
-                fontSize: 'clamp(1.125rem, 2.5vw, 1.25rem)',
-                fontWeight: 'var(--font-weight-bold)',
+                fontSize: '18px',
+                fontWeight: '700',
                 color: '#1f2937',
                 marginBottom: '4px',
                 margin: '0'
@@ -600,7 +577,7 @@ export function DashboardPage() {
                 style={{
                   fontFamily: 'Montserrat, sans-serif',
                   fontSize: '16px', // Slightly smaller to fit in box
-                  fontWeight: 'var(--font-weight-bold)',
+                  fontWeight: '600',
                   color: '#374151',
                   lineHeight: '1'
                 }}
@@ -622,8 +599,8 @@ export function DashboardPage() {
             <span 
               style={{
                 fontFamily: 'Montserrat, sans-serif',
-                fontSize: 'clamp(1.125rem, 2.5vw, 1.25rem)',
-                fontWeight: 'var(--font-weight-bold)',
+                fontSize: '22px',
+                fontWeight: '700',
                 color: '#2D8CCA', // MyMoolah blue for voucher asset class
                 lineHeight: '1.2'
               }}
@@ -633,17 +610,17 @@ export function DashboardPage() {
           </div>
         </button>
 
-        {/* Recent Transactions Card - AWARD-WINNING DESIGN WITH ICONS */}
+        {/* Recent Transactions Card - AWARD-WINNING DESIGN WITH RESTORED ICONS */}
         <button
           onClick={handleRecentTransactionsClick}
           style={{
             width: '100%',
             backgroundColor: '#ffffff',
             border: '1px solid #e5e7eb',
-            borderRadius: 'var(--mobile-border-radius)',
+            borderRadius: '12px',
             padding: '0',
             marginBottom: '24px',
-            boxShadow: 'var(--mobile-shadow)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
             textAlign: 'left',
@@ -656,7 +633,7 @@ export function DashboardPage() {
           }}
           onMouseOut={(e) => {
             e.currentTarget.style.backgroundColor = '#ffffff';
-            e.currentTarget.style.boxShadow = 'var(--mobile-shadow)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
             e.currentTarget.style.transform = 'translateY(0)';
           }}
           aria-label="View full transaction history"
@@ -674,8 +651,8 @@ export function DashboardPage() {
             <h3 
               style={{
                 fontFamily: 'Montserrat, sans-serif',
-                fontSize: 'clamp(1.125rem, 2.5vw, 1.25rem)',
-                fontWeight: 'var(--font-weight-bold)',
+                fontSize: '18px',
+                fontWeight: '700',
                 color: '#1f2937',
                 margin: '0'
               }}
@@ -713,7 +690,7 @@ export function DashboardPage() {
                     flex: 1
                   }}
                 >
-                  {/* Transaction Icon */}
+                  {/* Transaction Icon - RESTORED WITH PROPER ICONS */}
                   <div
                     style={{
                       width: '40px',
@@ -737,8 +714,8 @@ export function DashboardPage() {
                     <p 
                       style={{
                         fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-small)',
-                        fontWeight: 'var(--font-weight-medium)',
+                        fontSize: '12px',
+                        fontWeight: '500',
                         color: '#1f2937',
                         margin: '0 0 2px 0',
                         whiteSpace: 'nowrap',
@@ -751,8 +728,8 @@ export function DashboardPage() {
                     <p 
                       style={{
                         fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-small)',
-                        fontWeight: 'var(--font-weight-normal)',
+                        fontSize: '12px',
+                        fontWeight: '400',
                         color: '#6b7280',
                         margin: '0'
                       }}
@@ -772,8 +749,8 @@ export function DashboardPage() {
                   <span 
                     style={{
                       fontFamily: 'Montserrat, sans-serif',
-                      fontSize: 'var(--mobile-font-base)',
-                      fontWeight: 'var(--font-weight-bold)',
+                      fontSize: '16px',
+                      fontWeight: '700',
                       color: getTransactionColor(transaction),
                       lineHeight: '1.2'
                     }}

@@ -16,8 +16,8 @@ This file is the single source of truth for wiring all frontend pages to backend
 | ProfilePage         | `/api/v1/users/me`, `/api/v1/users/update`, `/api/v1/users/change-password`        | `/me` in place, update endpoints may need review |
 | KYCStatusPage       | `/api/v1/kyc/status`                                                              | In place       |
 | KYCDocumentsPage    | `/api/v1/kyc/upload-document`, `/api/v1/kyc/submit`, `/api/v1/kyc/requirements`   | All in place   |
-| LoginPage           | `/api/v1/auth/login`                                                              | In place       |
-| RegisterPage        | `/api/v1/auth/register`                                                           | In place       |
+| LoginPage           | `/api/v1/auth/login`                                                              | In place, fully tested |
+| RegisterPage        | `/api/v1/auth/register`                                                           | In place, fully tested |
 
 ---
 
@@ -100,6 +100,7 @@ This file is the single source of truth for wiring all frontend pages to backend
 - **2025-07-22:** Legacy wallet endpoints added for test compatibility.
 - **2025-07-22:** KYC endpoints confirmed and documented.
 - **2025-07-22:** All .md files updated to reference this file.
+- **2025-07-23:** Registration and login now require only mobile number (as phoneNumber/accountNumber) and password. Email is required for registration but not for login. All username/account/legacy logic is removed from backend and tests. All backend and test scripts are aligned and pass. Ready for frontend integration.
 
 ---
 

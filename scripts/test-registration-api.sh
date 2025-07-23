@@ -27,55 +27,34 @@ run_fail_test() {
 
 RANDOM_ID=$RANDOM
 EMAIL1="testuser${RANDOM_ID}@example.com"
-EMAIL2="testuser2${RANDOM_ID}@example.com"
 # Generate a valid South African mobile number (e.g., 0821234567)
 VALID_PHONE_PREFIXES=("082" "083" "084" "072" "073" "074" "076" "078" "079")
 PREFIX_INDEX=$((RANDOM % ${#VALID_PHONE_PREFIXES[@]}))
 PHONE_PREFIX=${VALID_PHONE_PREFIXES[$PREFIX_INDEX]}
 PHONE_SUFFIX=$(printf "%07d" $((RANDOM % 10000000)))
 PHONE="${PHONE_PREFIX}${PHONE_SUFFIX}"
-ACCOUNT="12345${RANDOM_ID}"
-USERNAME="user${RANDOM_ID}"
-
-# Use a single valid password for all positive tests
 VALID_PASSWORD="Testpass1!"
 INVALID_PASSWORD="pass123"  # For negative test
 
-# 1. Valid Registration: Phone
-run_test "Valid Registration (Phone)" \
-  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"name\":\"Test User\",\"email\":\"$EMAIL1\",\"password\":\"$VALID_PASSWORD\",\"identifier\":\"$PHONE\",\"identifierType\":\"phone\"}'"
+# 1. Valid Registration
+run_test "Valid Registration" \
+  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"email\":\"$EMAIL1\",\"password\":\"$VALID_PASSWORD\",\"phoneNumber\":\"$PHONE\"}'"
 
-# 2. Valid Registration: Account
-run_test "Valid Registration (Account)" \
-  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"name\":\"Account User\",\"email\":\"$EMAIL2\",\"password\":\"$VALID_PASSWORD\",\"identifier\":\"$ACCOUNT\",\"identifierType\":\"account\"}'"
-
-# 3. Valid Registration: Username
-run_test "Valid Registration (Username)" \
-  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"name\":\"Username User\",\"email\":\"user${RANDOM_ID}@example.com\",\"password\":\"$VALID_PASSWORD\",\"identifier\":\"$USERNAME\",\"identifierType\":\"username\"}'"
-
-# 4. Duplicate Email
+# 2. Duplicate Email
 run_fail_test "Duplicate Email" \
-  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"name\":\"Test User\",\"email\":\"$EMAIL1\",\"password\":\"$VALID_PASSWORD\",\"identifier\":\"$PHONE\",\"identifierType\":\"phone\"}'"
+  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"email\":\"$EMAIL1\",\"password\":\"$VALID_PASSWORD\",\"phoneNumber\":\"$PHONE\"}'"
 
-# 5. Duplicate Identifier (Phone)
-run_fail_test "Duplicate Identifier (Phone)" \
-  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"name\":\"Test User\",\"email\":\"dupe${RANDOM_ID}@example.com\",\"password\":\"$VALID_PASSWORD\",\"identifier\":\"$PHONE\",\"identifierType\":\"phone\"}'"
+# 3. Duplicate Phone
+run_fail_test "Duplicate Phone" \
+  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"email\":\"dupe${RANDOM_ID}@example.com\",\"password\":\"$VALID_PASSWORD\",\"phoneNumber\":\"$PHONE\"}'"
 
-# 6. Invalid Phone
+# 4. Invalid Phone
 run_fail_test "Invalid Phone" \
-  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"name\":\"Test User\",\"email\":\"badphone${RANDOM_ID}@example.com\",\"password\":\"$VALID_PASSWORD\",\"identifier\":\"1234567\",\"identifierType\":\"phone\"}'"
+  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"email\":\"badphone${RANDOM_ID}@example.com\",\"password\":\"$VALID_PASSWORD\",\"phoneNumber\":\"1234567\"}'"
 
-# 7. Invalid Account
-run_fail_test "Invalid Account" \
-  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"name\":\"Test User\",\"email\":\"badacct${RANDOM_ID}@example.com\",\"password\":\"$VALID_PASSWORD\",\"identifier\":\"1234abc\",\"identifierType\":\"account\"}'"
-
-# 8. Invalid Username
-run_fail_test "Invalid Username" \
-  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"name\":\"Test User\",\"email\":\"baduser${RANDOM_ID}@example.com\",\"password\":\"$VALID_PASSWORD\",\"identifier\":\"ab\",\"identifierType\":\"username\"}'"
-
-# 9. Invalid Password
+# 5. Invalid Password
 run_fail_test "Invalid Password" \
-  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"name\":\"Test User\",\"email\":\"badpass${RANDOM_ID}@example.com\",\"password\":\"$INVALID_PASSWORD\",\"identifier\":\"$PHONE\",\"identifierType\":\"phone\"}'"
+  "curl -s -X POST $REGISTER_ENDPOINT -H 'Content-Type: application/json' -d '{\"email\":\"badpass${RANDOM_ID}@example.com\",\"password\":\"$INVALID_PASSWORD\",\"phoneNumber\":\"$PHONE\"}'"
 
 if [ "$failures" -eq 0 ]; then
   echo -e "\n🎉 All registration API tests passed!"

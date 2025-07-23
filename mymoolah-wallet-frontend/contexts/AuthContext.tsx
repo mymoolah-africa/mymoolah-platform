@@ -7,11 +7,11 @@ type KYCStatus = 'not_started' | 'documents_uploaded' | 'under_review' | 'verifi
 interface User {
   id: string;
   name: string;
-  identifier: string; // Updated to support phone/account/username
+  identifier: string; // SA mobile number for login
   identifierType: 'phone' | 'account' | 'username';
-  phoneNumber?: string; // Keep for backward compatibility
+  phoneNumber: string; // Always set for login users (SA mobile number)
   walletId: string;
-  kycStatus: KYCStatus; // Updated to use complete KYC flow
+  kycStatus: KYCStatus;
   kycVerified: boolean; // Computed property for easy access
 }
 
@@ -28,8 +28,8 @@ interface AuthContextType {
 }
 
 interface LoginCredentials {
-  identifier: string; // Updated to support phone/account/username 
-  password: string; // Updated from 'pin' to 'password'
+  identifier: string; // SA mobile number only for login
+  password: string;
 }
 
 interface RegistrationData {
@@ -42,7 +42,14 @@ interface RegistrationData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Input type detection utility (same as LoginPage)
+// SA Mobile Number validation for login
+const validateSAMobileNumber = (phoneNumber: string): boolean => {
+  const saPhonePattern = /^(\+27|27|0)[6-8][0-9]{8}$/;
+  const cleanNumber = phoneNumber.replace(/\s/g, '');
+  return saPhonePattern.test(cleanNumber);
+};
+
+// Input type detection utility for registration (multi-input support)
 const detectInputType = (input: string): 'phone' | 'account' | 'username' | 'unknown' => {
   const cleanInput = input.trim();
   
@@ -67,6 +74,41 @@ const detectInputType = (input: string): 'phone' | 'account' | 'username' | 'unk
   return 'unknown';
 };
 
+// Normalize SA mobile number to consistent format
+const normalizeSAMobileNumber = (phoneNumber: string): string => {
+  const cleanNumber = phoneNumber.replace(/\s/g, '');
+  
+  // Convert to 27XXXXXXXXX format
+  if (cleanNumber.startsWith('+27')) {
+    return cleanNumber.slice(1); // Remove +
+  } else if (cleanNumber.startsWith('0')) {
+    return '27' + cleanNumber.slice(1); // Replace 0 with 27
+  } else if (cleanNumber.startsWith('27')) {
+    return cleanNumber; // Already correct format
+  }
+  
+  return cleanNumber;
+};
+
+// Helper function to safely parse JSON responses
+const safeJsonParse = async (response: Response): Promise<any> => {
+  const contentType = response.headers.get('content-type');
+  
+  if (contentType && contentType.includes('application/json')) {
+    try {
+      return await response.json();
+    } catch (error) {
+      console.error('Failed to parse JSON response:', error);
+      return null;
+    }
+  } else {
+    // Response is not JSON (likely HTML error page)
+    const text = await response.text();
+    console.error('Received non-JSON response:', text);
+    return null;
+  }
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -85,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const token = localStorage.getItem('mymoolah_token');
       if (token && token.startsWith('demo-token-')) {
-        // Demo mode - restore user session with updated user structure
+        // Demo mode - restore user session
         const demoCredentials = getDemoCredentials();
         
         // Check for stored KYC status in demo mode
@@ -95,26 +137,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const mockUser: User = {
           id: 'demo-user-001',
           name: 'Demo User',
-          identifier: demoCredentials.phoneNumber,
+          identifier: normalizeSAMobileNumber(demoCredentials.phoneNumber),
           identifierType: 'phone',
-          phoneNumber: demoCredentials.phoneNumber,
+          phoneNumber: normalizeSAMobileNumber(demoCredentials.phoneNumber),
           walletId: 'wallet-demo-001',
           kycStatus,
           kycVerified: kycStatus === 'verified'
         };
         setUser(mockUser);
       } else if (token) {
-        // Real authentication - validate token with backend (when backend is ready)
-        const response = await fetch('/api/auth/verify', {
+        // Real authentication - validate token with backend
+        const response = await fetch('/api/v1/auth/verify', {
           headers: { Authorization: `Bearer ${token}` }
         });
         
         if (response.ok) {
-          const userData = await response.json();
-          setUser({
-            ...userData,
-            kycVerified: userData.kycStatus === 'verified'
-          });
+          const responseData = await safeJsonParse(response);
+          if (responseData && responseData.user) {
+            setUser({
+              ...responseData.user,
+              kycVerified: responseData.user.kycStatus === 'verified'
+            });
+          } else {
+            localStorage.removeItem('mymoolah_token');
+          }
         } else {
           localStorage.removeItem('mymoolah_token');
         }
@@ -130,29 +176,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
     try {
+      // Validate SA mobile number format
+      if (!validateSAMobileNumber(credentials.identifier)) {
+        throw new Error('Please enter a valid South African mobile number');
+      }
+
       // Simulate API call delay for realistic UX
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       if (isDemoMode()) {
-        // Demo authentication using new complex password system
-        const isValidCredentials = validateDemoCredentials(credentials.identifier, credentials.password);
+        // Demo authentication - check against demo credentials
+        const normalizedPhoneNumber = normalizeSAMobileNumber(credentials.identifier);
+        const isValidCredentials = validateDemoCredentials(normalizedPhoneNumber, credentials.password);
         
         if (isValidCredentials) {
-          // Determine input type for user profile
-          const inputType = detectInputType(credentials.identifier);
-          
           // Check for stored KYC status in demo mode
           const storedKYCStatus = localStorage.getItem('mymoolah_kyc_status') as KYCStatus;
           const kycStatus = storedKYCStatus || 'not_started';
           
-          // Create mock user with proper identifier type
+          // Create mock user for demo
           const mockUser: User = {
             id: 'demo-user-001',
             name: 'Demo User',
-            identifier: credentials.identifier,
-            identifierType: inputType as 'phone' | 'account' | 'username',
-            // Set phoneNumber if identifier is a phone number
-            phoneNumber: inputType === 'phone' ? credentials.identifier : undefined,
+            identifier: normalizedPhoneNumber,
+            identifierType: 'phone',
+            phoneNumber: normalizedPhoneNumber,
             walletId: 'wallet-demo-001',
             kycStatus,
             kycVerified: kycStatus === 'verified'
@@ -162,32 +210,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.setItem('mymoolah_token', mockToken);
           setUser(mockUser);
         } else {
-          throw new Error('Invalid credentials. Please check your phone number/account/username and password.');
+          throw new Error('Invalid mobile number or password. Please check your credentials.');
         }
       } else {
-        // Production authentication with Mojaloop (when backend is ready)
-        const response = await fetch('/api/auth/login', {
+        // Production authentication with backend
+        const normalizedPhoneNumber = normalizeSAMobileNumber(credentials.identifier);
+        
+        const response = await fetch('/api/v1/auth/login', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            identifier: credentials.identifier,
+            identifier: normalizedPhoneNumber,
             password: credentials.password,
-            identifierType: detectInputType(credentials.identifier)
           }),
         });
 
         if (response.ok) {
-          const { user: userData, token } = await response.json();
-          localStorage.setItem('mymoolah_token', token);
-          setUser({
-            ...userData,
-            kycVerified: userData.kycStatus === 'verified'
-          });
+          const responseData = await safeJsonParse(response);
+          if (responseData && responseData.user && responseData.token) {
+            localStorage.setItem('mymoolah_token', responseData.token);
+            setUser({
+              ...responseData.user,
+              kycVerified: responseData.user.kycStatus === 'verified'
+            });
+          } else {
+            throw new Error('Invalid response from server. Please try again.');
+          }
         } else {
-          const error = await response.json();
-          throw new Error(error.message || 'Login failed. Please try again.');
+          const errorData = await safeJsonParse(response);
+          throw new Error(errorData?.message || `Login failed (${response.status}). Please try again.`);
         }
       }
     } catch (error) {
@@ -215,15 +268,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      // Real authentication - refresh token with backend (when backend is ready)
-      const response = await fetch('/api/auth/refresh', {
+      // Real authentication - refresh token with backend
+      const response = await fetch('/api/v1/auth/refresh', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
 
       if (response.ok) {
-        const { token: newToken } = await response.json();
-        localStorage.setItem('mymoolah_token', newToken);
+        const responseData = await safeJsonParse(response);
+        if (responseData && responseData.token) {
+          localStorage.setItem('mymoolah_token', responseData.token);
+        } else {
+          logout();
+        }
       } else {
         logout();
       }
@@ -233,7 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // New KYC Management Functions
+  // KYC Management Functions
   const updateKYCStatus = async (status: KYCStatus) => {
     try {
       if (isDemoMode()) {
@@ -252,7 +309,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         // Production mode - API call to backend
         const token = localStorage.getItem('mymoolah_token');
-        const response = await fetch('/api/kyc/update-status', {
+        const response = await fetch('/api/v1/kyc/update-status', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -262,11 +319,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         if (response.ok) {
-          const userData = await response.json();
-          setUser({
-            ...userData,
-            kycVerified: userData.kycStatus === 'verified'
-          });
+          const responseData = await safeJsonParse(response);
+          if (responseData) {
+            setUser({
+              ...responseData,
+              kycVerified: responseData.kycStatus === 'verified'
+            });
+          }
         } else {
           throw new Error('Failed to update KYC status');
         }
@@ -318,16 +377,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         // Production mode - fetch latest status from backend
         const token = localStorage.getItem('mymoolah_token');
-        const response = await fetch('/api/user/status', {
+        const response = await fetch('/api/v1/users/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
 
         if (response.ok) {
-          const userData = await response.json();
-          setUser({
-            ...userData,
-            kycVerified: userData.kycStatus === 'verified'
-          });
+          const responseData = await safeJsonParse(response);
+          if (responseData) {
+            setUser({
+              ...responseData,
+              kycVerified: responseData.kycStatus === 'verified'
+            });
+          }
         }
       }
     } catch (error) {
@@ -355,7 +416,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return kycStatus !== 'verified';
   };
 
-  // Mock register function for demo mode
+  // FIXED: Registration function with proper backend field mapping
   const register = async (registrationData: RegistrationData) => {
     setIsLoading(true);
     try {
@@ -367,9 +428,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const mockUser: User = {
           id: 'demo-user-' + Date.now(),
           name: registrationData.name,
-          identifier: registrationData.identifier,
+          identifier: registrationData.identifierType === 'phone' ? 
+            normalizeSAMobileNumber(registrationData.identifier) : 
+            registrationData.identifier, // Normalize phone numbers for consistency
           identifierType: registrationData.identifierType,
-          phoneNumber: registrationData.identifierType === 'phone' ? registrationData.identifier : undefined,
+          phoneNumber: registrationData.identifierType === 'phone' ? 
+            normalizeSAMobileNumber(registrationData.identifier) : 
+            '', // Empty for non-phone registrations, will be set during profile update
           walletId: 'wallet-demo-' + Date.now(),
           kycStatus: 'not_started',
           kycVerified: false
@@ -379,23 +444,114 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('mymoolah_token', mockToken);
         setUser(mockUser);
       } else {
-        // Production registration
-        const response = await fetch('/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(registrationData)
+        // FIXED: Production registration with correct backend field mapping
+        let backendPayload: any;
+        
+        if (registrationData.identifierType === 'phone') {
+          // For phone numbers, send as phoneNumber field (what backend expects)
+          const cleanPhoneNumber = registrationData.identifier.replace(/\s/g, '');
+          backendPayload = {
+            name: registrationData.name,
+            email: registrationData.email,
+            phoneNumber: cleanPhoneNumber, // FIXED: Use phoneNumber field for backend
+            password: registrationData.password
+          };
+        } else {
+          // For account numbers and usernames, send as identifier
+          // (Note: Backend may need to be updated to handle these cases)
+          backendPayload = {
+            name: registrationData.name,
+            email: registrationData.email,
+            identifier: registrationData.identifier,
+            identifierType: registrationData.identifierType,
+            password: registrationData.password
+          };
+        }
+
+        console.log('🚀 Sending registration to backend:', {
+          ...backendPayload,
+          password: '[REDACTED]' // Don't log password
         });
 
-        if (response.ok) {
-          const { user: userData, token } = await response.json();
-          localStorage.setItem('mymoolah_token', token);
-          setUser({ ...userData, kycVerified: userData.kycStatus === 'verified' });
-        } else {
-          const error = await response.json();
-          throw new Error(error.message || 'Registration failed. Please try again.');
+        try {
+          const response = await fetch('/api/v1/auth/register', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify(backendPayload)
+          });
+
+          console.log('📡 Backend response status:', response.status);
+          console.log('📡 Backend response headers:', response.headers.get('content-type'));
+
+          if (response.ok) {
+            const responseData = await safeJsonParse(response);
+            if (responseData && responseData.user && responseData.token) {
+              console.log('✅ Registration successful:', {
+                userId: responseData.user?.id,
+                identifier: responseData.user?.identifier || responseData.user?.phoneNumber
+              });
+
+              localStorage.setItem('mymoolah_token', responseData.token);
+              setUser({ 
+                ...responseData.user, 
+                kycVerified: responseData.user.kycStatus === 'verified' 
+              });
+            } else {
+              throw new Error('Invalid response from server. Please try again.');
+            }
+          } else {
+            // Handle different error response types
+            const errorData = await safeJsonParse(response);
+            
+            let errorMessage = 'Registration failed. Please try again.';
+            
+            if (response.status === 404) {
+              errorMessage = 'Registration service is currently unavailable. Please check that your backend is running on http://localhost:3001';
+            } else if (response.status === 409) {
+              errorMessage = 'An account with this information already exists.';
+            } else if (response.status === 400) {
+              // Handle validation errors
+              if (errorData && errorData.message) {
+                if (errorData.message.toLowerCase().includes('phone')) {
+                  errorMessage = 'Invalid phone number format. Please use SA mobile number (0XX XXX XXXX).';
+                } else if (errorData.message.toLowerCase().includes('email')) {
+                  errorMessage = 'Invalid email address format.';
+                } else if (errorData.message.toLowerCase().includes('password')) {
+                  errorMessage = 'Password does not meet security requirements.';
+                } else {
+                  errorMessage = errorData.message;
+                }
+              } else {
+                errorMessage = 'Invalid registration data. Please check all fields.';
+              }
+            } else if (response.status >= 500) {
+              errorMessage = 'Server error. Please try again later.';
+            } else if (errorData && errorData.message) {
+              errorMessage = errorData.message;
+            }
+            
+            console.error('❌ Registration failed:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData
+            });
+            
+            throw new Error(errorMessage);
+          }
+        } catch (networkError) {
+          if (networkError instanceof TypeError && networkError.message.includes('fetch')) {
+            // Network connectivity issue
+            throw new Error('Cannot connect to server. Please check that your backend is running on http://localhost:3001');
+          } else {
+            throw networkError;
+          }
         }
       }
     } catch (error) {
+      console.error('🔥 Registration error:', error);
       throw error;
     } finally {
       setIsLoading(false);

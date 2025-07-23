@@ -19,7 +19,8 @@ We will acknowledge your report within 2 business days and work to resolve the i
 - **Environment Variables:** All sensitive credentials are stored in `.env` files and never committed to source control.
 - **Password Hashing:** User passwords are hashed using bcrypt before storage.
 - **Multi-Input Authentication:** Support for phone numbers, account numbers, and usernames with complex validation.
-- **Complex Password System:** 8+ characters, must contain a letter, a number, and a special character.
+- **Complex Password System:** 8+ characters, must contain a letter, a number, and a special character. (Fully aligned frontend/backend, tested July 23, 2025)
+- **Automated and manual registration testing completed July 23, 2025. Documentation updated.**
 - **JWT Authentication:** Secure token-based authentication with refresh capabilities.
 - **Input Validation:** All API endpoints validate and sanitize input to prevent injection attacks.
 - **CORS:** Configured to restrict API access to trusted origins.
@@ -30,6 +31,11 @@ We will acknowledge your report within 2 business days and work to resolve the i
 - **Security Headers:** Helmet.js implementation for complete HTTP security protection.
 - **Audit Logging:** Key actions and errors are logged for monitoring and compliance.
 - **Dependency Management:** Dependencies are regularly updated and checked with `npm audit`.
+- **Registration:** Requires valid South African mobile number (used as both phoneNumber and accountNumber), valid email, and password.
+- **Login:** Requires mobile number (account number) and password only. Email is not used for login.
+- All username/account/legacy logic is removed from backend and tests.
+- All backend and test scripts are aligned and pass.
+- Ready for frontend integration.
 
 ## Data Protection
 

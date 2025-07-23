@@ -181,6 +181,14 @@
 - Provided best practices for frontend-backend integration
 - Updated all .md files to reference the new wiring file
 
+## [1.0.2] - 2025-07-23
+
+### 🆕 User Name Handling Improvements
+- Registration now requires a `name` field, split into `firstName` and `lastName`.
+- Login and all user API responses now include `firstName`, `lastName`, and `name`.
+- Temporary frontend greeting workaround removed.
+- Documentation and API references updated.
+
 ## [0.9.0] - 2025-07-19
 
 ### 🚀 **Major Features Added**

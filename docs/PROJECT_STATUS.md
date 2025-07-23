@@ -307,3 +307,11 @@ A new file, `FIGMA_API_WIRING.md`, provides a detailed mapping of every page to 
 - Login/Register: All endpoints in place
 
 See `FIGMA_API_WIRING.md` for details. 
+
+### **User Name Handling (July 23, 2025)**
+- Registration and login now require and return the user's name.
+- Database schema and API updated to store and return `firstName`, `lastName`, and `name`.
+- All user-facing greetings now use the real name from backend.
+
+## 🟢 Documentation Status (Updated July 23, 2025)
+- All .md files updated to reflect the new user name handling and API changes. 

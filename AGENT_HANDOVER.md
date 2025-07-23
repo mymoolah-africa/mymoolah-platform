@@ -121,6 +121,8 @@ I am a collective of the world's best full-stack IT developers, system engineers
 - **All pages** integrated and functional - ✅ WORKING
 - **Cross-browser compatibility** verified - ✅ WORKING
 
+### **✅ Registration Integration:** End-to-end registration flow (frontend ↔ backend) fully tested and working. Password and phone validation are now fully aligned. Automated and manual tests pass. Documentation, backup, and push workflow followed.
+
 ---
 
 ## 🧹 **CLEANUP & MAINTENANCE SESSION (July 20, 2025)**
@@ -360,6 +362,8 @@ interface User {
 - **Financial endpoints** tested and working - ✅ WORKING
 - **Error handling** tested and working - ✅ WORKING
 
+### **Registration API:** Automated and manual registration tests pass. End-to-end registration flow confirmed working in the browser.
+
 ---
 
 ## 📱 **MOBILE OPTIMIZATION**
@@ -416,6 +420,7 @@ MOJALOOP_API_URL=your-mojaloop-url
 - **TESTING_GUIDE.md** - Comprehensive testing documentation - ✅ UPDATED
 - **DEPLOYMENT_GUIDE.md** - Production deployment guide - ✅ UPDATED
 - **CONTRIBUTING.md** - Development contribution guidelines - ✅ UPDATED
+- **All .md files** - Updated to reflect registration integration, testing, and process changes (July 23, 2025)
 
 ---
 
@@ -470,3 +475,12 @@ All documentation has been updated and maintained by the developer/agent. The ag
 **Last Updated**: July 20, 2025  
 **Status**: ✅ **PRODUCTION READY** - Logo System Fixed & Frontend Server Stable  
 **Cleanup Status**: ✅ **COMPLETE** - System cleaned and optimized for production 
+
+## 🚀 REGISTRATION & LOGIN POLICY UPDATE (July 23, 2025)
+
+- Registration requires: valid South African mobile number (used as both phoneNumber and accountNumber), valid email, and password.
+- Login requires: mobile number (account number) and password only.
+- Email is not used for login.
+- All username/account/legacy logic is removed from backend and tests.
+- All backend and test scripts are aligned and pass.
+- Ready for frontend integration. 

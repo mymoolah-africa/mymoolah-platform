@@ -21,7 +21,7 @@ const app = express();
 
 // Get configuration from security config
 const config = securityConfig.getConfig();
-const port = config.port;
+const port = config.port || 3001; // Changed fallback port to 3001
 
 // Import core routes
 const authRoutes = require('./routes/auth.js');
