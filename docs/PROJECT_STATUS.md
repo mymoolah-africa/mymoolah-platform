@@ -315,3 +315,9 @@ See `FIGMA_API_WIRING.md` for details.
 
 ## 🟢 Documentation Status (Updated July 23, 2025)
 - All .md files updated to reflect the new user name handling and API changes. 
+
+### [2025-07-23] RegisterPage.tsx Restored
+- RegisterPage.tsx reverted to last working Figma-generated version.
+- Full styling, validation, and mobile optimization restored.
+- All recent refactor attempts (custom hooks, validation extraction) rolled back for stability.
+- Registration and login flows confirmed working and visually correct on mobile and desktop. 

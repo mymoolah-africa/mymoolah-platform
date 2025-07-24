@@ -336,3 +336,7 @@ A new dedicated file, `FIGMA_API_WIRING.md`, contains:
 
 ## Next Steps for Next Agent (Updated July 23, 2025)
 - Ensure all new user-facing features use the `name` field from backend.
+- RegisterPage.tsx reverted to last working Figma-generated version (2025-07-23).
+- All refactor attempts (custom hooks, validation extraction) rolled back for stability.
+- Registration and login flows confirmed working and visually correct.
+- Future agents: If refactoring, proceed in small, tested steps and keep a backup of the working file.

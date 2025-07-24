@@ -189,6 +189,11 @@
 - Temporary frontend greeting workaround removed.
 - Documentation and API references updated.
 
+## [1.0.3] - 2025-07-23
+- Reverted RegisterPage.tsx to last working Figma-generated version for full styling and UX.
+- Rolled back custom hook and validation extraction attempts for stability.
+- Registration and login confirmed working and visually correct.
+
 ## [0.9.0] - 2025-07-19
 
 ### 🚀 **Major Features Added**
