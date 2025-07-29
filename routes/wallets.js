@@ -21,6 +21,20 @@ const validateRequest = (req, res, next) => {
   next();
 };
 
+// GET /api/v1/wallets - Get all wallets
+router.get('/', async (req, res) => {
+  try {
+    const walletController = require('../controllers/walletController');
+    await walletController.getAllWallets(req, res);
+  } catch (error) {
+    console.error('Error getting all wallets:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Failed to get wallets' 
+    });
+  }
+});
+
 // GET /api/v1/wallets/balance
 router.get('/balance', authMiddleware, async (req, res) => {
   try {

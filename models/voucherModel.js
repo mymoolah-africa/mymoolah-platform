@@ -334,7 +334,7 @@ class VoucherModel {
   // List all active vouchers with positive balance for a user/wallet
   async listActiveVouchers(userId) {
     return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM vouchers WHERE issued_to = ? AND balance > 0 AND status = "active"';
+      const sql = 'SELECT * FROM vouchers WHERE userId = ? AND status = "active" AND expiryDate > datetime("now")';
       
       this.db.all(sql, [userId], (err, rows) => {
         if (err) {

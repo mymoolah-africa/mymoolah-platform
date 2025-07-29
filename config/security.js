@@ -110,7 +110,17 @@ class SecurityConfig {
         process.env.ALLOWED_ORIGINS.split(',') : 
         ['https://mymoolah.com', 'https://www.mymoolah.com'];
     }
-    return ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'];
+    return [
+      'http://localhost:3000', 
+      'http://localhost:3001', 
+      'http://localhost:3002',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:3002',
+      'http://192.168.3.160:3000',
+      'http://192.168.3.160:3001',
+      'http://192.168.3.160:3002'
+    ];
   }
 
   // Generate secure random string

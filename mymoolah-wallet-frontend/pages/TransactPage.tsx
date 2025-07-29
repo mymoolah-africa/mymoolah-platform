@@ -263,28 +263,28 @@ export function TransactPage() {
         navigate('/vouchers');
         break;
       case 'airtime':
-        // LIVE SERVICE: MobileMart & Flash integration
-        alert('🚀 Airtime & Data service is now LIVE! Purchase airtime and data bundles with demo functionality.');
+        // TODO: Implement real MobileMart & Flash integration
+        alert('Airtime & Data service is coming soon!');
         break;
       case 'electricity':
-        // LIVE SERVICE: MobileMart & Flash integration
-        alert('⚡ Electricity service is now LIVE! Purchase prepaid electricity tokens with demo functionality.');
+        // TODO: Implement real MobileMart & Flash integration
+        alert('Electricity service is coming soon!');
         break;
       case 'bill-payments':
-        // LIVE SERVICE: MobileMart & EasyPay integration
-        alert('💳 Bill Payments service is now LIVE! Pay hundreds of merchants with demo functionality.');
+        // TODO: Implement real MobileMart & EasyPay integration
+        alert('Bill Payments service is coming soon!');
         break;
       case 'transport':
         // COMING SOON: Not yet integrated
-        alert('🚌 Transport payments coming soon!');
+        alert('Transport payments coming soon!');
         break;
       case 'request-money':
         // COMING SOON: Not yet integrated
-        alert('📋 Request Money feature coming soon!');
+        alert('Request Money feature coming soon!');
         break;
       case 'instant-cash':
         // COMING SOON: Needs new SP integration
-        alert('🏧 Instant Cash pickup coming soon!');
+        alert('Instant Cash pickup coming soon!');
         break;
       default:
         alert(`${service.name} is coming soon!`);

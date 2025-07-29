@@ -7,6 +7,21 @@ class WalletModel {
     this.db = new sqlite3.Database(this.dbPath);
     this.initTable();
   }
+  
+  // Get all wallets
+    async getAllWallets() {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT id, userId, walletId, balance, status, account_number, created_at, updated_at FROM wallets ORDER BY created_at DESC';
+      this.db.all(sql, (err, rows) => {
+        if (err) {
+          console.error('❌ Error getting all wallets:', err.message);
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
 
   // Initialize wallets table
   initTable() {
@@ -177,15 +192,72 @@ class WalletModel {
     });
   }
 
-  // List wallet transactions (placeholder for now)
+  // List wallet transactions
   async listWalletTransactions(walletId, { page = 1, limit = 20, type, startDate, endDate } = {}) {
-    // For now, return empty array - we'll implement transactions later
-    return {
-      page,
-      limit,
-      total: 0,
-      transactions: []
-    };
+    return new Promise((resolve, reject) => {
+      const offset = (page - 1) * limit;
+      
+      let sql = `SELECT * FROM transactions WHERE walletId = ?`;
+      const params = [walletId];
+      
+      if (type) {
+        sql += ` AND type = ?`;
+        params.push(type);
+      }
+      
+      if (startDate) {
+        sql += ` AND createdAt >= ?`;
+        params.push(startDate);
+      }
+      
+      if (endDate) {
+        sql += ` AND createdAt <= ?`;
+        params.push(endDate);
+      }
+      
+      sql += ` ORDER BY createdAt DESC LIMIT ? OFFSET ?`;
+      params.push(limit, offset);
+      
+      this.db.all(sql, params, (err, rows) => {
+        if (err) {
+          console.error('❌ Error listing wallet transactions:', err.message);
+          reject(err);
+        } else {
+          // Get total count for pagination
+          let countSql = `SELECT COUNT(*) as total FROM transactions WHERE walletId = ?`;
+          const countParams = [walletId];
+          
+          if (type) {
+            countSql += ` AND type = ?`;
+            countParams.push(type);
+          }
+          
+          if (startDate) {
+            countSql += ` AND createdAt >= ?`;
+            countParams.push(startDate);
+          }
+          
+          if (endDate) {
+            countSql += ` AND createdAt <= ?`;
+            countParams.push(endDate);
+          }
+          
+          this.db.get(countSql, countParams, (countErr, countRow) => {
+            if (countErr) {
+              console.error('❌ Error getting transaction count:', countErr.message);
+              reject(countErr);
+            } else {
+              resolve({
+                page: parseInt(page),
+                limit: parseInt(limit),
+                total: countRow.total,
+                transactions: rows || []
+              });
+            }
+          });
+        }
+      });
+    });
   }
 }
 

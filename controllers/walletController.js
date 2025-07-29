@@ -7,6 +7,26 @@
      // No need to instantiate models as they're already singletons
    }
  
+     // Get all wallets (for admin/testing purposes)
+  async getAllWallets(req, res) {
+    try {
+      const wallets = await walletModel.getAllWallets();
+      
+      res.json({
+        success: true,
+        message: 'Wallets retrieved successfully',
+        data: { wallets }
+      });
+    } catch (error) {
+      console.error('❌ Error in getAllWallets:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Internal server error',
+        details: error.message
+      });
+    }
+  }
+
    // Get user's wallet balance
    async getBalance(req, res) {
      try {

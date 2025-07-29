@@ -70,14 +70,26 @@ export function KYCStatusPage() {
   const handleRefreshStatus = async () => {
     setIsRefreshing(true);
     try {
-      // TODO: Replace with actual API call to check verification status
-      // const response = await fetch('/api/kyc/status', {
-      //   headers: { Authorization: `Bearer ${getAuthToken()}` }
-      // });
+      // Real API call to check verification status
+      const token = localStorage.getItem('mymoolah_token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch('/api/v1/kyc/status', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch KYC status');
+      }
+
+      const data = await response.json();
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      // Update user status if available
       if (refreshUserStatus) {
         await refreshUserStatus();
       }

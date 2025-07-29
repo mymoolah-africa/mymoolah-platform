@@ -151,7 +151,74 @@ class User {
     return this.getUserById(id);
   }
 
-  // ... rest of your model unchanged ...
+  // Get all users
+  async getAllUsers() {
+    return new Promise((resolve, reject) => {
+      const sql = 'SELECT id, email, firstName, lastName, phoneNumber, balance, status, createdAt, updatedAt FROM users ORDER BY createdAt DESC';
+      this.db.all(sql, (err, rows) => {
+        if (err) {
+          console.error('❌ Error getting all users:', err.message);
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+
+  // Update user
+  async updateUser(id, updateData) {
+    return new Promise((resolve, reject) => {
+      const { firstName, lastName, phoneNumber } = updateData;
+      const sql = 'UPDATE users SET firstName = ?, lastName = ?, phoneNumber = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?';
+      this.db.run(sql, [firstName, lastName, phoneNumber, id], function(err) {
+        if (err) {
+          console.error('❌ Error updating user:', err.message);
+          reject(err);
+        } else {
+          resolve({ changes: this.changes });
+        }
+      });
+    });
+  }
+
+  // Get user statistics
+  async getUserStats() {
+    return new Promise((resolve, reject) => {
+      const sql = `
+        SELECT 
+          COUNT(*) as totalUsers,
+          COUNT(CASE WHEN status = 'active' THEN 1 END) as activeUsers,
+          COUNT(CASE WHEN status = 'inactive' THEN 1 END) as inactiveUsers,
+          AVG(balance) as averageBalance,
+          SUM(balance) as totalBalance
+        FROM users
+      `;
+      this.db.get(sql, (err, row) => {
+        if (err) {
+          console.error('❌ Error getting user stats:', err.message);
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      });
+    });
+  }
+
+  // Update user status
+  async updateUserStatus(id, status) {
+    return new Promise((resolve, reject) => {
+      const sql = 'UPDATE users SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?';
+      this.db.run(sql, [status, id], function(err) {
+        if (err) {
+          console.error('❌ Error updating user status:', err.message);
+          reject(err);
+        } else {
+          resolve({ changes: this.changes });
+        }
+      });
+    });
+  }
 }
 
 module.exports = User;

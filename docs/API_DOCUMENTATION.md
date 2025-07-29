@@ -1,658 +1,658 @@
 # MyMoolah Platform - API Documentation
 
-## 🎯 **API Overview**
+## 🎉 **CURRENT STATUS: DASHBOARD INTEGRATION COMPLETE - ALL ENDPOINTS WORKING**
 
-**Base URL:** `http://localhost:5050`  
-**Version:** 2.1.0  
-**Status:** ✅ **ALL ENDPOINTS OPERATIONAL**  
-**Last Updated:** July 20, 2025
+**Last Updated:** July 29, 2025  
+**Base URL:** `http://localhost:3001/api/v1`  
+**Health Check:** `http://localhost:3001/health`
 
 ---
 
-## 🔐 **Authentication Endpoints**
+## **OVERVIEW**
 
-### **POST /api/v1/auth/login**
-Authenticate user with phone number, account number, or username.
+The MyMoolah API provides comprehensive financial services including user management, wallet operations, KYC verification, voucher management, and payment processing. All endpoints are fully functional and tested with real data from SQLite database.
 
-**Request Body:**
+### **Dashboard Integration Status**
+- ✅ **Wallet Balance:** Real-time balance from database
+- ✅ **Recent Transactions:** Last 5 transactions with contextual icons
+- ✅ **Active Vouchers:** Voucher count and value display
+- ✅ **Clean Console:** Production-ready output with no errors
+
+### **Authentication**
+- **Method:** JWT (JSON Web Tokens)
+- **Header:** `Authorization: Bearer <token>`
+- **Protected Routes:** Marked with 🔒
+
+### **Response Format**
+All API responses follow a consistent JSON format:
 ```json
 {
-  "identifier": "27821234567",
-  "password": "SecurePass123!"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 15,
-    "name": "Test User",
-    "kycStatus": "pending",
-    "email": "demo@mymoolah.com"
-  }
-}
-```
-
-### **POST /api/v1/auth/register**
-Register a new user account.
-
-**Request Body:**
-```json
-{
-  "name": "John Doe",
-  "identifier": "27821234568",
-  "identifierType": "phone",
-  "email": "john@mymoolah.com",
-  "password": "SecurePass123!",
-  "firstName": "John",
-  "lastName": "Doe"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "message": "User registered successfully",
-  "user": {
-    "id": 16,
-    "name": "John Doe",
-    "kycStatus": "pending"
-  }
+  "success": true/false,
+  "message": "Human-readable message",
+  "data": { /* response data */ },
+  "error": "Error details (if applicable)"
 }
 ```
 
 ---
 
-## 💰 **Send Money Endpoints**
+## **DASHBOARD ENDPOINTS (NEW - JULY 29, 2025)**
 
-### **POST /api/v1/send-money/resolve-recipient**
-Detect recipient type and available payment methods.
-
-**Request Body:**
-```json
-{
-  "identifier": "27821234567"
-}
+### **Get Wallet Balance** 🔒
+```http
+GET /wallets/balance
+Authorization: Bearer <token>
 ```
-
-**Response:**
+**Status:** ✅ **WORKING - REAL DATA**  
+**Response:** Current wallet balance with available, pending, and total amounts
 ```json
 {
   "success": true,
+  "message": "Wallet balance retrieved successfully",
   "data": {
-    "identifier": "27821234567",
-    "type": "phone",
-    "availableMethods": [
-      {
-        "id": "sa_bank_transfer",
-        "name": "Bank Transfer",
-        "description": "Send to any South African bank account",
-        "estimatedTime": "2-5 minutes",
-        "fee": "R2.50",
-        "feeAmount": 2.5,
-        "available": true,
-        "preferred": false,
-        "badge": "R2.50 • 2-5 MIN"
-      },
-      {
-        "id": "atm_cash_pickup",
-        "name": "ATM Cash Pickup",
-        "description": "Recipient collects cash at partner ATMs",
-        "estimatedTime": "15 minutes",
-        "fee": "R5.00",
-        "feeAmount": 5,
-        "available": true,
-        "preferred": false,
-        "badge": "R5.00 • 15 MIN"
-      }
-    ],
-    "recipientInfo": "Standard Bank"
-  }
-}
-```
-
-### **POST /api/v1/send-money/quote**
-Generate transfer quote with fees and estimated time.
-
-**Request Body:**
-```json
-{
-  "identifier": "27821234567",
-  "amount": 1000,
-  "method": "sa_bank_transfer"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "quoteId": "q_123456789",
-    "amount": 1000,
-    "fee": 2.5,
-    "totalAmount": 1002.5,
-    "estimatedTime": "2-5 minutes",
-    "method": "sa_bank_transfer",
-    "recipientInfo": "Standard Bank"
-  }
-}
-```
-
-### **POST /api/v1/send-money/transfer**
-Initiate a money transfer (requires authentication).
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "identifier": "27821234567",
-  "amount": 1000,
-  "method": "sa_bank_transfer",
-  "quoteId": "q_123456789"
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "transactionId": "tx_987654321",
-    "status": "processing",
-    "amount": 1000,
-    "fee": 2.5,
-    "totalAmount": 1002.5,
-    "estimatedTime": "2-5 minutes"
-  }
-}
-```
-
-### **GET /api/v1/send-money/status/:transactionId**
-Check transfer status.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "transactionId": "tx_987654321",
-    "status": "completed",
-    "amount": 1000,
-    "fee": 2.5,
-    "completedAt": "2025-07-20T15:30:00Z"
-  }
-}
-```
-
----
-
-## 📋 **KYC (Know Your Customer) Endpoints**
-
-### **GET /api/v1/kyc/status**
-Get KYC status and progress (requires authentication).
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "status": "pending",
-    "progress": 25,
-    "requiredDocuments": [
-      "identity_document",
-      "address_proof"
-    ],
-    "uploadedDocuments": [
-      {
-        "type": "identity_document",
-        "filename": "id_document.pdf",
-        "uploadedAt": "2025-07-20T10:00:00Z"
-      }
-    ]
-  }
-}
-```
-
-### **POST /api/v1/kyc/upload-document**
-Upload KYC document (requires authentication).
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-Content-Type: multipart/form-data
-```
-
-**Form Data:**
-- `documentType`: "identity_document" | "address_proof"
-- `file`: Document file (JPG, PNG, PDF, max 10MB)
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "documentId": "doc_123456",
-    "filename": "id_document.pdf",
-    "type": "identity_document",
-    "uploadedAt": "2025-07-20T10:00:00Z"
-  }
-}
-```
-
-### **POST /api/v1/kyc/submit**
-Submit KYC for verification (requires authentication).
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "status": "processing",
-    "estimatedTime": "24-48 hours",
-    "submittedAt": "2025-07-20T10:00:00Z"
-  }
-}
-```
-
-### **GET /api/v1/kyc/requirements**
-Get KYC document requirements.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "requiredDocuments": [
-      {
-        "type": "identity_document",
-        "name": "Identity Document",
-        "description": "SA ID, Passport, or Driver's License",
-        "acceptedFormats": ["JPG", "PNG", "PDF"],
-        "maxSize": "10MB"
-      },
-      {
-        "type": "address_proof",
-        "name": "Address Proof",
-        "description": "Utility bill, Bank statement, or Lease agreement",
-        "acceptedFormats": ["JPG", "PNG", "PDF"],
-        "maxSize": "10MB"
-      }
-    ]
-  }
-}
-```
-
----
-
-## 💳 **Wallet Management Endpoints**
-
-### **GET /api/v1/wallets/balance**
-Get wallet balance (requires authentication).
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "balance": 5000.00,
+    "available": 5204.50,
+    "pending": 0,
+    "total": 5204.50,
     "currency": "ZAR",
-    "lastUpdated": "2025-07-20T15:30:00Z"
+    "lastUpdated": "2025-07-29T18:39:58.000Z"
   }
 }
 ```
 
-### **GET /api/v1/wallets/transactions**
-Get transaction history (requires authentication).
-
-**Headers:**
+### **Get Recent Transactions** 🔒
+```http
+GET /wallets/transactions?limit=5
+Authorization: Bearer <token>
 ```
-Authorization: Bearer <jwt_token>
-```
-
-**Query Parameters:**
-- `page`: Page number (default: 1)
-- `limit`: Items per page (default: 10)
-- `type`: Transaction type (optional)
-
-**Response:**
+**Status:** ✅ **WORKING - REAL DATA**  
+**Response:** Last 5 transactions with contextual categorization
 ```json
 {
   "success": true,
+  "message": "Transactions retrieved successfully",
   "data": {
     "transactions": [
       {
-        "id": "tx_123456",
-        "type": "transfer",
-        "amount": 1000.00,
-        "fee": 2.50,
-        "status": "completed",
-        "recipient": "27821234567",
-        "createdAt": "2025-07-20T15:30:00Z"
+        "id": 1,
+        "type": "credit",
+        "amount": 5000,
+        "description": "Initial deposit",
+        "createdAt": "2025-07-29T18:39:58.000Z"
+      },
+      {
+        "id": 2,
+        "type": "debit",
+        "amount": 245.50,
+        "description": "Woolworths Sandton",
+        "createdAt": "2025-07-29T17:40:08.000Z"
       }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 10,
-      "total": 25,
-      "pages": 3
-    }
+    ]
   }
 }
 ```
 
-### **POST /api/v1/wallets/deposit**
-Deposit funds to wallet (requires authentication).
-
-**Headers:**
+### **Get Active Vouchers** 🔒
+```http
+GET /vouchers/active
+Authorization: Bearer <token>
 ```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
+**Status:** ✅ **WORKING - REAL DATA**  
+**Response:** Active vouchers with count and total value
 ```json
+{
+  "success": true,
+  "message": "Active vouchers retrieved successfully",
+  "data": [
+    {
+      "id": 1,
+      "voucherId": "VOUCHER001",
+      "type": "grocery",
+      "amount": 100,
+      "description": "Woolworths Voucher",
+      "status": "active",
+      "expiryDate": "2025-12-31T23:59:59.000Z"
+    }
+  ]
+}
+```
+
+---
+
+## **HEALTH & TESTING ENDPOINTS**
+
+### **Health Check**
+```http
+GET /health
+```
+**Status:** ✅ **WORKING**  
+**Response:** Server health status
+
+### **Test Endpoint**
+```http
+GET /test
+```
+**Status:** ✅ **WORKING**  
+**Response:** List of all available endpoints
+
+---
+
+## **AUTHENTICATION ENDPOINTS**
+
+### **User Registration**
+```http
+POST /auth/register
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@example.com",
+  "phoneNumber": "27821234567",
+  "password": "SecurePassword123!"
+}
+```
+**Status:** ✅ **WORKING**  
+**Response:** User account created with JWT token
+
+### **User Login**
+```http
+POST /auth/login
+Content-Type: application/json
+
+{
+  "phoneNumber": "27821234567",
+  "password": "SecurePassword123!"
+}
+```
+**Status:** ✅ **WORKING**  
+**Response:** JWT token for authenticated requests
+
+---
+
+## **USER MANAGEMENT ENDPOINTS**
+
+### **Get All Users**
+```http
+GET /users
+```
+**Status:** ✅ **WORKING**  
+**Response:** Returns 5 demo users with complete data
+```json
+{
+  "success": true,
+  "message": "Users retrieved successfully",
+  "data": {
+    "users": [
+      {
+        "id": 1,
+        "email": "john.doe@mymoolah.com",
+        "firstName": "John",
+        "lastName": "Doe",
+        "phoneNumber": "27821234567",
+        "balance": 5000,
+        "status": "active",
+        "createdAt": "2025-07-29 16:29:01.087 +00:00",
+        "updatedAt": "2025-07-29 16:29:01.087 +00:00"
+      }
+    ]
+  }
+}
+```
+
+### **Get User by ID**
+```http
+GET /users/:id
+```
+**Status:** ✅ **WORKING**  
+**Response:** Specific user details
+
+### **Update User Profile**
+```http
+PUT /users/:id
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "phoneNumber": "27821234567"
+}
+```
+**Status:** ✅ **WORKING**  
+**Response:** Updated user profile
+
+### **Get User Statistics**
+```http
+GET /users/stats
+```
+**Status:** ✅ **WORKING**  
+**Response:** User analytics and statistics
+
+---
+
+## **WALLET MANAGEMENT ENDPOINTS**
+
+### **Get All Wallets**
+```http
+GET /wallets
+```
+**Status:** ✅ **WORKING**  
+**Response:** Returns 5 demo wallets with realistic balances
+```json
+{
+  "success": true,
+  "message": "Wallets retrieved successfully",
+  "data": {
+    "wallets": [
+      {
+        "id": 1,
+        "userId": 1,
+        "walletId": "WAL20250729123456JOHN",
+        "balance": 5000,
+        "status": "active",
+        "account_number": "27821234567",
+        "created_at": "2025-07-29 16:29:01.093 +00:00",
+        "updated_at": "2025-07-29 16:29:01.093 +00:00"
+      }
+    ]
+  }
+}
+```
+
+### **Get Wallet Balance** 🔒
+```http
+GET /wallets/balance
+Authorization: Bearer <token>
+```
+**Status:** ✅ **WORKING**  
+**Response:** Current wallet balance and details
+
+### **Credit Wallet** 🔒
+```http
+POST /wallets/credit
+Authorization: Bearer <token>
+Content-Type: application/json
+
 {
   "amount": 1000,
-  "method": "bank_transfer"
+  "description": "Bank deposit"
 }
 ```
+**Status:** ✅ **WORKING**  
+**Response:** Updated balance and transaction details
 
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "transactionId": "tx_123456",
-    "amount": 1000,
-    "status": "pending",
-    "reference": "DEP123456789"
-  }
-}
-```
+### **Debit Wallet** 🔒
+```http
+POST /wallets/debit
+Authorization: Bearer <token>
+Content-Type: application/json
 
-### **POST /api/v1/wallets/withdraw**
-Withdraw funds from wallet (requires authentication).
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
 {
   "amount": 500,
-  "method": "bank_transfer",
-  "accountNumber": "1234567890"
+  "description": "Payment for services"
 }
 ```
+**Status:** ✅ **WORKING**  
+**Response:** Updated balance and transaction details
 
-**Response:**
-```json
+### **Send Money** 🔒
+```http
+POST /wallets/transfer
+Authorization: Bearer <token>
+Content-Type: application/json
+
 {
-  "success": true,
-  "data": {
-    "transactionId": "tx_789012",
+  "receiverEmail": "jane.smith@example.com",
+  "amount": 200,
+  "description": "Money transfer"
+}
+```
+**Status:** ✅ **WORKING**  
+**Response:** Transfer confirmation and transaction details
+
+---
+
+## **TRANSACTION MANAGEMENT ENDPOINTS**
+
+### **Get All Transactions**
+```http
+GET /transactions
+```
+**Status:** ✅ **WORKING**  
+**Response:** Returns 7 demo transactions with different types
+```json
+[
+  {
+    "id": 1,
+    "walletId": "WAL20250729123456JOHN",
+    "type": "transfer",
     "amount": 500,
-    "fee": 5.00,
-    "status": "processing"
+    "description": "Transfer to Jane Smith",
+    "status": "completed",
+    "createdAt": "2025-07-25 10:30:00.000 +00:00",
+    "updatedAt": "2025-07-25 10:30:00.000 +00:00"
   }
-}
+]
 ```
 
-### **GET /api/v1/wallets/limits**
-Get wallet limits and restrictions (requires authentication).
-
-**Headers:**
+### **Get Transaction History** 🔒
+```http
+GET /transactions/history
+Authorization: Bearer <token>
 ```
-Authorization: Bearer <jwt_token>
-```
+**Status:** ✅ **WORKING**  
+**Response:** User's transaction history with pagination
 
-**Response:**
+### **Get Transaction Summary** 🔒
+```http
+GET /transactions/summary
+Authorization: Bearer <token>
+```
+**Status:** ✅ **WORKING**  
+**Response:** Transaction analytics and summaries
+
+---
+
+## **KYC MANAGEMENT ENDPOINTS**
+
+### **Get All KYC Records**
+```http
+GET /kyc
+```
+**Status:** ✅ **WORKING**  
+**Response:** Returns 5 demo KYC records with verification statuses
 ```json
 {
   "success": true,
+  "message": "KYC records retrieved successfully",
   "data": {
-    "dailyLimit": 10000.00,
-    "monthlyLimit": 50000.00,
-    "singleTransactionLimit": 5000.00,
-    "kycRequired": true,
-    "kycStatus": "pending"
+    "kyc": [
+      {
+        "id": 1,
+        "userId": 1,
+        "documentType": "identity_document",
+        "documentNumber": "ID123456789",
+        "status": "verified",
+        "submittedAt": "2025-07-15 10:00:00.000 +00:00",
+        "reviewedAt": "2025-07-16 14:30:00.000 +00:00",
+        "reviewerNotes": "Documents verified successfully",
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john.doe@mymoolah.com"
+      }
+    ]
   }
 }
 ```
 
+### **Submit KYC** 🔒
+```http
+POST /kyc/submit
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "firstName": "John",
+  "lastName": "Doe",
+  "dateOfBirth": "1990-01-01",
+  "nationality": "South African",
+  "address": "123 Main Street, Johannesburg",
+  "city": "Johannesburg",
+  "postalCode": "2000"
+}
+```
+**Status:** ✅ **WORKING**  
+**Response:** KYC submission confirmation
+
+### **Upload KYC Document** 🔒
+```http
+POST /kyc/upload-document
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+
+{
+  "documentType": "identity",
+  "document": <file>
+}
+```
+**Status:** ✅ **WORKING**  
+**Response:** Document upload confirmation
+
+### **Get KYC Status** 🔒
+```http
+GET /kyc/status
+Authorization: Bearer <token>
+```
+**Status:** ✅ **WORKING**  
+**Response:** Current KYC verification status
+
 ---
 
-## 🔍 **System Endpoints**
+## **VOUCHER MANAGEMENT ENDPOINTS**
 
-### **GET /test**
-Test endpoint to verify server status.
-
-**Response:**
+### **Get All Vouchers**
+```http
+GET /vouchers
+```
+**Status:** ✅ **WORKING**  
+**Response:** Returns 6 demo vouchers with different types
 ```json
 {
-  "message": "MyMoolah Wallet API is running!",
-  "endpoints": {
-    "auth": "/api/v1/auth",
-    "wallets": "/api/v1/wallets",
-    "transactions": "/api/v1/transactions",
-    "users": "/api/v1/users",
-    "kyc": "/api/v1/kyc",
-    "sendMoney": "/api/v1/send-money",
-    "support": "/api/v1/support",
-    "notifications": "/api/v1/notifications",
-    "vouchers": "/api/v1/vouchers",
-    "voucherTypes": "/api/v1/voucher-types",
-    "vas": "/api/v1/vas",
-    "merchants": "/api/v1/merchants",
-    "serviceProviders": "/api/v1/service-providers",
-    "flash": "/api/v1/flash",
-    "mobilemart": "/api/v1/mobilemart",
-    "health": "/health",
-    "test": "/test"
+  "success": true,
+  "message": "Vouchers retrieved successfully",
+  "data": {
+    "vouchers": [
+      {
+        "id": 1,
+        "voucherId": "VOUCH20250729123456",
+        "userId": 1,
+        "type": "airtime",
+        "amount": 100,
+        "description": "MTN Airtime Voucher",
+        "status": "active",
+        "expiryDate": "2025-12-31 23:59:59.000 +00:00",
+        "createdAt": "2025-07-25 10:00:00.000 +00:00",
+        "updatedAt": "2025-07-25 10:00:00.000 +00:00",
+        "firstName": "John",
+        "lastName": "Doe",
+        "email": "john.doe@mymoolah.com"
+      }
+    ]
   }
 }
 ```
 
-### **GET /health**
-Health check endpoint.
+### **Issue Voucher** 🔒
+```http
+POST /vouchers/issue
+Authorization: Bearer <token>
+Content-Type: application/json
 
-**Response:**
+{
+  "type": "airtime",
+  "amount": 100,
+  "description": "MTN Airtime Voucher"
+}
+```
+**Status:** ✅ **WORKING**  
+**Response:** Voucher creation confirmation
+
+### **Redeem Voucher**
+```http
+POST /vouchers/redeem
+Content-Type: application/json
+
+{
+  "voucherCode": "VOUCH20250729123456"
+}
+```
+**Status:** ✅ **WORKING**  
+**Response:** Voucher redemption confirmation
+
+### **Get Active Vouchers** 🔒
+```http
+GET /vouchers/active
+Authorization: Bearer <token>
+```
+**Status:** ✅ **WORKING**  
+**Response:** User's active vouchers
+
+---
+
+## **PAYMENT INTEGRATION ENDPOINTS**
+
+### **Flash Payment Processing**
+```http
+POST /flash/process
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "amount": 1000,
+  "recipientNumber": "27821234567",
+  "description": "Payment via Flash"
+}
+```
+**Status:** ✅ **WORKING**  
+**Response:** Flash payment confirmation
+
+### **MobileMart Services**
+```http
+POST /mobilemart/purchase
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "serviceType": "airtime",
+  "provider": "MTN",
+  "amount": 50,
+  "recipientNumber": "27821234567"
+}
+```
+**Status:** ✅ **WORKING**  
+**Response:** MobileMart purchase confirmation
+
+---
+
+## **ERROR HANDLING**
+
+### **Standard Error Response**
 ```json
 {
-  "status": "OK",
-  "timestamp": "2025-07-20T15:30:00Z",
-  "service": "MyMoolah Wallet API",
-  "version": "1.0.0"
+  "success": false,
+  "message": "Error description",
+  "error": "Detailed error information",
+  "details": "Additional error context"
 }
 ```
 
----
+### **Common HTTP Status Codes**
+- **200:** Success
+- **201:** Created
+- **400:** Bad Request (validation errors)
+- **401:** Unauthorized (authentication required)
+- **403:** Forbidden (insufficient permissions)
+- **404:** Not Found
+- **409:** Conflict (duplicate data)
+- **500:** Internal Server Error
 
-## 🔐 **Authentication & Security**
-
-### **JWT Token Format**
-```
-Authorization: Bearer <jwt_token>
-```
-
-### **Token Expiration**
-- **Access Token:** 24 hours
-- **Refresh Token:** 7 days
-
-### **Security Headers**
-- **CORS:** Configured for cross-origin requests
-- **Rate Limiting:** Applied to all endpoints
-- **Input Validation:** All requests validated
-- **HTTPS:** Required in production
-
----
-
-## 📊 **Error Responses**
-
-### **Validation Error**
+### **Validation Error Response**
 ```json
 {
   "success": false,
   "message": "Validation failed",
   "errors": [
     {
-      "field": "identifier",
-      "message": "Identifier is required"
+      "field": "email",
+      "message": "Email is required",
+      "value": ""
     }
   ]
 }
 ```
 
-### **Authentication Error**
+---
+
+## **RATE LIMITING**
+
+### **Limits**
+- **Authentication Endpoints:** 5 requests per minute
+- **Wallet Operations:** 10 requests per minute
+- **KYC Operations:** 3 requests per minute
+- **General Endpoints:** 20 requests per minute
+
+### **Rate Limit Response**
 ```json
 {
   "success": false,
-  "message": "Invalid credentials"
+  "message": "Rate limit exceeded",
+  "retryAfter": 60
 }
 ```
 
-### **Server Error**
+---
+
+## **TESTING**
+
+### **Dummy Data Available**
+- **5 Demo Users:** John Doe, Jane Smith, Mike Wilson, Sarah Jones, Demo User
+- **5 Demo Wallets:** Balances ranging from R750 to R10,000
+- **7 Demo Transactions:** Different types and statuses
+- **5 Demo KYC Records:** Different verification statuses
+- **6 Demo Vouchers:** Different types (airtime, data, gift cards)
+
+### **Test Credentials**
 ```json
 {
-  "success": false,
-  "message": "Internal server error",
-  "error": "Database connection failed"
+  "phoneNumber": "27821234567",
+  "password": "Demo123!"
 }
 ```
 
----
-
-## 🧪 **Testing Examples**
-
-### **Test Authentication**
+### **Testing Commands**
 ```bash
-# Login
-curl -X POST http://localhost:5050/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"identifier": "27821234567", "password": "Demo123!"}'
+# Test health endpoint
+curl http://localhost:3001/health
 
-# Register
-curl -X POST http://localhost:5050/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Test User", "identifier": "27821234568", "identifierType": "phone", "email": "test@mymoolah.com", "password": "Test123!", "firstName": "Test", "lastName": "User"}'
-```
+# Test users endpoint
+curl http://localhost:3001/api/v1/users
 
-### **Test Send Money**
-```bash
-# Resolve recipient
-curl -X POST http://localhost:5050/api/v1/send-money/resolve-recipient \
-  -H "Content-Type: application/json" \
-  -d '{"identifier": "27821234567"}'
+# Test wallets endpoint
+curl http://localhost:3001/api/v1/wallets
 
-# Get quote
-curl -X POST http://localhost:5050/api/v1/send-money/quote \
-  -H "Content-Type: application/json" \
-  -d '{"identifier": "27821234567", "amount": 1000, "method": "sa_bank_transfer"}'
-```
+# Test transactions endpoint
+curl http://localhost:3001/api/v1/transactions
 
-### **Test KYC**
-```bash
-# Get KYC status (with auth token)
-curl -X GET http://localhost:5050/api/v1/kyc/status \
-  -H "Authorization: Bearer <your_jwt_token>"
+# Test KYC endpoint
+curl http://localhost:3001/api/v1/kyc
 
-# Get KYC requirements
-curl -X GET http://localhost:5050/api/v1/kyc/requirements
-```
-
-### **Test Wallet**
-```bash
-# Get balance (with auth token)
-curl -X GET http://localhost:5050/api/v1/wallets/balance \
-  -H "Authorization: Bearer <your_jwt_token>"
-
-# Get transactions (with auth token)
-curl -X GET http://localhost:5050/api/v1/wallets/transactions \
-  -H "Authorization: Bearer <your_jwt_token>"
+# Test vouchers endpoint
+curl http://localhost:3001/api/v1/vouchers
 ```
 
 ---
 
-## 📈 **Rate Limits**
+## **SECURITY**
 
-### **Authentication Endpoints**
-- **Login:** 5 requests per minute
-- **Register:** 3 requests per minute
+### **Authentication**
+- JWT tokens with configurable expiration
+- Secure password hashing with bcrypt
+- Token refresh mechanism
+- Automatic token invalidation on logout
 
-### **API Endpoints**
-- **General:** 100 requests per minute
-- **File Upload:** 10 requests per minute
-- **Money Transfer:** 20 requests per minute
+### **Input Validation**
+- Express-validator for all inputs
+- SQL injection prevention
+- XSS protection
+- CSRF protection
 
----
-
-## 🔄 **Webhooks (Future)**
-
-### **Transaction Webhooks**
-```json
-{
-  "event": "transaction.completed",
-  "data": {
-    "transactionId": "tx_123456",
-    "status": "completed",
-    "amount": 1000.00,
-    "timestamp": "2025-07-20T15:30:00Z"
-  }
-}
-```
-
-### **KYC Webhooks**
-```json
-{
-  "event": "kyc.verified",
-  "data": {
-    "userId": 15,
-    "status": "verified",
-    "timestamp": "2025-07-20T15:30:00Z"
-  }
-}
-```
+### **Data Protection**
+- Encrypted sensitive data
+- Secure transmission (HTTPS in production)
+- Audit logging for all operations
+- Data retention policies
 
 ---
 
-## 🤖 Figma AI Agent Integration Notes
-
-- For a complete mapping of frontend pages to backend endpoints, see `FIGMA_API_WIRING.md`.
-- All new and legacy endpoints are documented here for reference.
-- If a new endpoint is needed, request it from the backend team.
-
----
-
-**API Status:** ✅ **ALL ENDPOINTS OPERATIONAL**  
-**Last Updated:** July 20, 2025  
-**Version:** 2.1.0 
+**Last Updated:** July 29, 2025  
+**Status:** All Endpoints Tested and Working  
+**Next Update:** Frontend Integration Documentation 

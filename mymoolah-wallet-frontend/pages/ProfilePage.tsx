@@ -184,8 +184,28 @@ export function ProfilePage() {
   // Handle profile update
   const handleProfileUpdate = async () => {
     try {
-      // In demo mode, just update local state
-      alert('Profile updated successfully! (Demo mode)');
+      const token = localStorage.getItem('mymoolah_token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch('/api/v1/users/update', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          name: profileForm.name,
+          phoneNumber: profileForm.phone
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update profile');
+      }
+
+      alert('Profile updated successfully!');
       setIsEditingProfile(false);
     } catch (error) {
       alert('Failed to update profile. Please try again.');
@@ -206,8 +226,28 @@ export function ProfilePage() {
     }
 
     try {
-      // In demo mode, just show success
-      alert('Password changed successfully! (Demo mode)');
+      const token = localStorage.getItem('mymoolah_token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch('/api/v1/users/change-password', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to change password');
+      }
+
+      alert('Password changed successfully!');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setIsChangingPassword(false);
     } catch (error) {

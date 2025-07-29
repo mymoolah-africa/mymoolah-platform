@@ -100,7 +100,7 @@ interface PaymentMethod {
 
 interface RecipientResolution {
   identifier: string;
-  type: 'phone' | 'account' | 'username';
+  type: 'phone' | 'account' | 'username' | 'unknown';
   availableMethods: PaymentMethod[];
   recipientName?: string;
   recipientInfo?: string;
@@ -140,8 +140,37 @@ export function SendMoneyPage() {
   const recipientType = detectInputType(recipient);
   const recipientValidation = validateRecipient(recipient, recipientType);
 
-  // Demo wallet balance
-  const walletBalance = 2500.00;
+  // Real wallet balance from API
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+
+  // Fetch wallet balance on component mount
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      try {
+        const token = localStorage.getItem('mymoolah_token');
+        if (!token) return;
+
+        const response = await fetch('/api/v1/wallets/balance', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setWalletBalance(data.data.available || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching wallet balance:', error);
+      } finally {
+        setIsLoadingBalance(false);
+      }
+    };
+
+    fetchWalletBalance();
+  }, []);
 
   // Quick amount buttons
   const quickAmounts = [50, 100, 200, 500, 1000];
@@ -153,75 +182,69 @@ export function SendMoneyPage() {
     }
   }, [requiresKYC, navigate]);
 
-  // Service discovery simulation
+  // Real API call to resolve recipient
   const resolveRecipient = async (identifier: string): Promise<RecipientResolution> => {
     setIsResolvingRecipient(true);
     
-    // Simulate API calls to different services
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const type = detectInputType(identifier);
-    const methods: PaymentMethod[] = [];
+    try {
+      const token = localStorage.getItem('mymoolah_token');
+      if (!token) throw new Error('No authentication token');
 
-    // 1. Check MyMoolah internal wallet
-    const hasMyMoolahWallet = Math.random() > 0.6; // 40% chance
-    if (hasMyMoolahWallet || type === 'username') {
-      methods.push({
-        id: 'mymoolah_internal',
-        name: 'MyMoolah Wallet',
-        description: 'Instant transfer to MyMoolah user',
-        icon: <Wallet className="w-6 h-6" />,
-        estimatedTime: 'Instant',
-        fee: 'Free',
-        feeAmount: 0,
-        available: true,
-        preferred: true,
-        badge: 'FREE • INSTANT'
+      const response = await fetch('/api/v1/send-money/resolve-recipient', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ identifier })
       });
+
+      if (!response.ok) {
+        throw new Error('Failed to resolve recipient');
+      }
+
+      const data = await response.json();
+      setIsResolvingRecipient(false);
+
+      return {
+        identifier,
+        type: data.data.type || detectInputType(identifier),
+        availableMethods: data.data.availableMethods || [],
+        recipientName: data.data.recipientName,
+        recipientInfo: data.data.recipientInfo
+      };
+    } catch (error) {
+      console.error('Error resolving recipient:', error);
+      setIsResolvingRecipient(false);
+      
+      // Fallback to basic resolution
+      const type = detectInputType(identifier);
+      const methods: PaymentMethod[] = [];
+
+      // Basic fallback methods
+      if (type === 'phone' || type === 'username') {
+        methods.push({
+          id: 'mymoolah_internal',
+          name: 'MyMoolah Wallet',
+          description: 'Instant transfer to MyMoolah user',
+          icon: <Wallet className="w-6 h-6" />,
+          estimatedTime: 'Instant',
+          fee: 'Free',
+          feeAmount: 0,
+          available: true,
+          preferred: true,
+          badge: 'FREE • INSTANT'
+        });
+      }
+
+      return {
+        identifier,
+        type,
+        availableMethods: methods,
+        recipientName: undefined,
+        recipientInfo: undefined
+      };
     }
-
-    // 2. Check SA bank account (dtMercury)
-    const hasBankAccount = type === 'account' || (type === 'phone' && Math.random() > 0.3); // 70% chance for phone
-    if (hasBankAccount) {
-      methods.push({
-        id: 'sa_bank_transfer',
-        name: 'Bank Transfer',
-        description: 'Send to any South African bank account',
-        icon: <Building className="w-6 h-6" />,
-        estimatedTime: '2-5 minutes',
-        fee: 'R2.50',
-        feeAmount: 2.50,
-        available: true,
-        preferred: false,
-        badge: 'R2.50 • 2-5 MIN'
-      });
-    }
-
-    // 3. ATM cash pickup (always available for phone numbers)
-    if (type === 'phone') {
-      methods.push({
-        id: 'atm_cash_pickup',
-        name: 'ATM Cash Pickup',
-        description: 'Recipient collects cash at partner ATMs',
-        icon: <CreditCard className="w-6 h-6" />,
-        estimatedTime: '15 minutes',
-        fee: 'R5.00',
-        feeAmount: 5.00,
-        available: true, // Placeholder - would check actual SP availability
-        preferred: false,
-        badge: 'R5.00 • 15 MIN'
-      });
-    }
-
-    setIsResolvingRecipient(false);
-
-    return {
-      identifier,
-      type,
-      availableMethods: methods,
-      recipientName: hasMyMoolahWallet ? 'John Doe' : undefined,
-      recipientInfo: hasBankAccount ? 'Standard Bank' : undefined
-    };
   };
 
   const handleRecipientSubmit = async () => {

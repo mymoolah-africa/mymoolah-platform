@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { APP_CONFIG } from '../config/app-config';
 
 // Import icons directly from lucide-react
 import { 
@@ -12,7 +13,18 @@ import {
   Phone,
   ArrowUpRight,
   Coffee,
-  Car
+  Car,
+  CreditCard,
+  Wallet,
+  Gift,
+  Home,
+  Utensils,
+  ShoppingCart,
+  Bus,
+  Train,
+  Plane,
+  Wifi,
+  Zap
 } from 'lucide-react';
 
 // Enhanced logo component with better styling and sizing
@@ -86,33 +98,76 @@ function getTransactionIcon(transaction: Transaction) {
       return <ArrowUpRight style={iconStyle} />;
     case 'purchase':
       // Smart icon selection based on description
-      if (transaction.description.toLowerCase().includes('woolworths') || 
-          transaction.description.toLowerCase().includes('grocery') ||
-          transaction.description.toLowerCase().includes('food')) {
-        return <ShoppingBag style={iconStyle} />;
+      const desc = transaction.description.toLowerCase();
+      if (desc.includes('woolworths') || desc.includes('grocery') || desc.includes('food') || desc.includes('supermarket')) {
+        return <ShoppingCart style={iconStyle} />;
       }
-      if (transaction.description.toLowerCase().includes('caf') || 
-          transaction.description.toLowerCase().includes('coffee')) {
-        return <Coffee style={iconStyle} />;
+      if (desc.includes('caf') || desc.includes('coffee') || desc.includes('restaurant') || desc.includes('food')) {
+        return <Utensils style={iconStyle} />;
+      }
+      if (desc.includes('uber') || desc.includes('taxi') || desc.includes('transport') || desc.includes('ride')) {
+        return <Car style={iconStyle} />;
+      }
+      if (desc.includes('airtime') || desc.includes('vodacom') || desc.includes('mtn') || desc.includes('cell')) {
+        return <Phone style={iconStyle} />;
+      }
+      if (desc.includes('electricity') || desc.includes('power') || desc.includes('eskom')) {
+        return <Zap style={iconStyle} />;
+      }
+      if (desc.includes('internet') || desc.includes('wifi') || desc.includes('data')) {
+        return <Wifi style={iconStyle} />;
+      }
+      if (desc.includes('flight') || desc.includes('airline') || desc.includes('travel')) {
+        return <Plane style={iconStyle} />;
+      }
+      if (desc.includes('bus') || desc.includes('public transport')) {
+        return <Bus style={iconStyle} />;
+      }
+      if (desc.includes('train') || desc.includes('rail')) {
+        return <Train style={iconStyle} />;
+      }
+      if (desc.includes('home') || desc.includes('rent') || desc.includes('property')) {
+        return <Home style={iconStyle} />;
+      }
+      if (desc.includes('gift') || desc.includes('present')) {
+        return <Gift style={iconStyle} />;
       }
       // Default to shopping bag for purchases
       return <ShoppingBag style={iconStyle} />;
     case 'payment':
       // Smart icon selection based on description
-      if (transaction.description.toLowerCase().includes('airtime') || 
-          transaction.description.toLowerCase().includes('vodacom') ||
-          transaction.description.toLowerCase().includes('mtn')) {
+      const paymentDesc = transaction.description.toLowerCase();
+      if (paymentDesc.includes('airtime') || paymentDesc.includes('vodacom') || paymentDesc.includes('mtn') || paymentDesc.includes('cell')) {
         return <Phone style={iconStyle} />;
       }
-      if (transaction.description.toLowerCase().includes('uber') || 
-          transaction.description.toLowerCase().includes('taxi') ||
-          transaction.description.toLowerCase().includes('transport')) {
+      if (paymentDesc.includes('uber') || paymentDesc.includes('taxi') || paymentDesc.includes('transport') || paymentDesc.includes('ride')) {
         return <Car style={iconStyle} />;
       }
-      // Default to phone for payments
-      return <Phone style={iconStyle} />;
+      if (paymentDesc.includes('electricity') || paymentDesc.includes('power') || paymentDesc.includes('eskom')) {
+        return <Zap style={iconStyle} />;
+      }
+      if (paymentDesc.includes('internet') || paymentDesc.includes('wifi') || paymentDesc.includes('data')) {
+        return <Wifi style={iconStyle} />;
+      }
+      if (paymentDesc.includes('flight') || paymentDesc.includes('airline') || paymentDesc.includes('travel')) {
+        return <Plane style={iconStyle} />;
+      }
+      if (paymentDesc.includes('bus') || paymentDesc.includes('public transport')) {
+        return <Bus style={iconStyle} />;
+      }
+      if (paymentDesc.includes('train') || paymentDesc.includes('rail')) {
+        return <Train style={iconStyle} />;
+      }
+      if (paymentDesc.includes('home') || paymentDesc.includes('rent') || paymentDesc.includes('property')) {
+        return <Home style={iconStyle} />;
+      }
+      if (paymentDesc.includes('gift') || paymentDesc.includes('present')) {
+        return <Gift style={iconStyle} />;
+      }
+      // Default to credit card for payments
+      return <CreditCard style={iconStyle} />;
     default:
-      return <ShoppingBag style={iconStyle} />;
+      return <Wallet style={iconStyle} />;
   }
 }
 
@@ -143,124 +198,133 @@ function getGreetingName(fullName: string | undefined): string {
   return formattedName;
 }
 
+// Wallet Balance interface
+interface WalletBalance {
+  available: number;
+  pending: number;
+  total: number;
+  currency: string;
+  lastUpdated: string;
+}
+
+// Voucher interface
+interface Voucher {
+  id: number;
+  voucherId: string;
+  type: string;
+  amount: number;
+  description: string;
+  status: string;
+  expiryDate: string;
+}
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // Mock wallet balance - you can connect this to your context later
-  const walletBalance = 12345.67; // This would come from your MoolahContext or API
+  // State for real data from backend
+  const [walletBalance, setWalletBalance] = useState<WalletBalance>({
+    available: 0,
+    pending: 0,
+    total: 0,
+    currency: 'ZAR',
+    lastUpdated: new Date().toISOString()
+  });
   
-  // Mock vouchers data - you can connect this to your context later
-  const openVouchersCount = 5;
-  const openVouchersValue = 2450.00; // This would come from your MoolahContext or API
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [openVouchers, setOpenVouchers] = useState<Voucher[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock recent transactions - 6 most recent (with proper icons)
-  const recentTransactions: Transaction[] = [
-    {
-      id: 'tx_001',
-      type: 'purchase',
-      description: 'Woolworths Sandton',
-      amount: -245.50,
-      date: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-      category: 'Groceries',
-      icon: getTransactionIcon({
-        id: 'tx_001',
-        type: 'purchase',
-        description: 'Woolworths Sandton',
-        amount: -245.50,
-        date: new Date(),
-        category: 'Groceries',
-        icon: null
-      } as Transaction)
-    },
-    {
-      id: 'tx_002',
-      type: 'received',
-      description: 'From Sarah M.',
-      amount: 500.00,
-      date: new Date(Date.now() - 1000 * 60 * 60 * 3), // 3 hours ago
-      recipient: 'Sarah M.',
-      category: 'Transfer',
-      icon: getTransactionIcon({
-        id: 'tx_002',
-        type: 'received',
-        description: 'From Sarah M.',
-        amount: 500.00,
-        date: new Date(),
-        category: 'Transfer',
-        icon: null
-      } as Transaction)
-    },
-    {
-      id: 'tx_003',
-      type: 'payment',
-      description: 'Vodacom Airtime',
-      amount: -55.00,
-      date: new Date(Date.now() - 1000 * 60 * 60 * 24), // Yesterday
-      category: 'Airtime',
-      icon: getTransactionIcon({
-        id: 'tx_003',
-        type: 'payment',
-        description: 'Vodacom Airtime',
-        amount: -55.00,
-        date: new Date(),
-        category: 'Airtime',
-        icon: null
-      } as Transaction)
-    },
-    {
-      id: 'tx_004',
-      type: 'sent',
-      description: 'To John K.',
-      amount: -120.00,
-      date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-      recipient: 'John K.',
-      category: 'Transfer',
-      icon: getTransactionIcon({
-        id: 'tx_004',
-        type: 'sent',
-        description: 'To John K.',
-        amount: -120.00,
-        date: new Date(),
-        category: 'Transfer',
-        icon: null
-      } as Transaction)
-    },
-    {
-      id: 'tx_005',
-      type: 'purchase',
-      description: 'Vida e Caffè',
-      amount: -42.90,
-      date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 days ago
-      category: 'Food & Drink',
-      icon: getTransactionIcon({
-        id: 'tx_005',
-        type: 'purchase',
-        description: 'Vida e Caffè',
-        amount: -42.90,
-        date: new Date(),
-        category: 'Food & Drink',
-        icon: null
-      } as Transaction)
-    },
-    {
-      id: 'tx_006',
-      type: 'payment',
-      description: 'Uber Trip',
-      amount: -67.50,
-      date: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4), // 4 days ago
-      category: 'Transport',
-      icon: getTransactionIcon({
-        id: 'tx_006',
-        type: 'payment',
-        description: 'Uber Trip',
-        amount: -67.50,
-        date: new Date(),
-        category: 'Transport',
-        icon: null
-      } as Transaction)
-    }
-  ];
+  // Fetch real data from backend
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const token = localStorage.getItem('mymoolah_token');
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+
+        // Fetch wallet balance
+        const balanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance`, { headers });
+        if (!balanceResponse.ok) throw new Error('Failed to fetch wallet balance');
+        const balanceData = await balanceResponse.json();
+        
+        // Fetch recent transactions
+        const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=5`, { headers });
+        if (!transactionsResponse.ok) throw new Error('Failed to fetch transactions');
+        const transactionsData = await transactionsResponse.json();
+        
+        // Fetch active vouchers
+        const vouchersResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/active`, { headers });
+        if (!vouchersResponse.ok) throw new Error('Failed to fetch vouchers');
+        const vouchersData = await vouchersResponse.json();
+
+        // Update state with real data
+        setWalletBalance(balanceData.data);
+        
+        // Transform transactions to match frontend format
+        const transformedTransactions: Transaction[] = (transactionsData.data?.transactions || []).map((tx: any) => {
+          // Determine the transaction type for display and icon selection
+          let type: 'sent' | 'received' | 'purchase' | 'payment';
+          let amount: number;
+          
+          if (tx.type === 'credit') {
+            type = 'received';
+            amount = tx.amount;
+          } else if (tx.type === 'debit') {
+            // For debit transactions, determine if it's a purchase or payment based on description
+            const desc = tx.description.toLowerCase();
+            if (desc.includes('woolworths') || desc.includes('grocery') || desc.includes('food') || 
+                desc.includes('supermarket') || desc.includes('restaurant') || desc.includes('cafe') ||
+                desc.includes('coffee') || desc.includes('shopping')) {
+              type = 'purchase';
+            } else if (desc.includes('airtime') || desc.includes('vodacom') || desc.includes('mtn') ||
+                       desc.includes('electricity') || desc.includes('power') || desc.includes('eskom') ||
+                       desc.includes('internet') || desc.includes('wifi') || desc.includes('data') ||
+                       desc.includes('uber') || desc.includes('taxi') || desc.includes('transport')) {
+              type = 'payment';
+            } else {
+              type = 'sent';
+            }
+            amount = -tx.amount;
+          } else {
+            type = 'payment';
+            amount = -tx.amount;
+          }
+          
+          const date = new Date(tx.createdAt || tx.date);
+          const category = tx.category || 'Transfer';
+          const description = tx.description || 'Transaction';
+
+          return {
+            id: tx.id || `tx_${tx.transactionId}`,
+            type,
+            description,
+            amount,
+            date,
+            category,
+            icon: getTransactionIcon({ id: tx.id, type, description, amount, date, category, icon: null } as Transaction)
+          };
+        });
+
+        setRecentTransactions(transformedTransactions);
+        setOpenVouchers(vouchersData.data || []);
+        
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [user]);
 
   // Handle wallet balance card click - navigate to transaction history
   const handleWalletClick = () => {
@@ -323,8 +387,44 @@ export function DashboardPage() {
     }
   };
 
+  // Calculate voucher totals
+  const openVouchersCount = openVouchers.length;
+  const openVouchersValue = openVouchers.reduce((total, voucher) => total + voucher.amount, 0);
+
   // Generate the greeting with user's first name
   const greetingName = getGreetingName(user?.name);
+
+  if (isLoading) {
+    return (
+      <div style={{ 
+        fontFamily: 'Montserrat, sans-serif',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '18px',
+        color: '#6b7280'
+      }}>
+        Loading dashboard...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ 
+        fontFamily: 'Montserrat, sans-serif',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        fontSize: '18px',
+        color: '#dc2626'
+      }}>
+        Error: {error}
+      </div>
+    );
+  }
 
   return (
     <div style={{ fontFamily: 'Montserrat, sans-serif' }}>
@@ -519,11 +619,11 @@ export function DashboardPage() {
                 fontFamily: 'Montserrat, sans-serif',
                 fontSize: 'clamp(1.25rem, 3vw, 1.5rem)',
                 fontWeight: 'var(--font-weight-bold)',
-                color: walletBalance >= 0 ? '#16a34a' : '#dc2626', // Green for positive, red for negative
+                color: walletBalance.available >= 0 ? '#16a34a' : '#dc2626', // Green for positive, red for negative
                 lineHeight: '1.2'
               }}
             >
-              {formatCurrency(walletBalance)}
+              {formatCurrency(walletBalance.available)}
             </span>
           </div>
         </button>
@@ -693,96 +793,129 @@ export function DashboardPage() {
 
           {/* Transaction List */}
           <div style={{ padding: '0 20px 20px 20px' }}>
-            {recentTransactions.map((transaction, index) => (
-              <div
-                key={transaction.id}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingBottom: index === recentTransactions.length - 1 ? '0' : '16px',
-                  marginBottom: index === recentTransactions.length - 1 ? '0' : '16px',
-                  borderBottom: index === recentTransactions.length - 1 ? 'none' : '1px solid #f8fafc'
-                }}
-              >
-                {/* Left: Icon and Description */}
-                <div 
+            {recentTransactions.length > 0 ? (
+              recentTransactions.map((transaction, index) => (
+                <div
+                  key={transaction.id}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    flex: 1
+                    justifyContent: 'space-between',
+                    paddingBottom: index === recentTransactions.length - 1 ? '0' : '16px',
+                    marginBottom: index === recentTransactions.length - 1 ? '0' : '16px',
+                    borderBottom: index === recentTransactions.length - 1 ? 'none' : '1px solid #f8fafc'
                   }}
                 >
-                  {/* Transaction Icon */}
-                  <div
+                  {/* Left: Icon and Description */}
+                  <div 
                     style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '10px',
-                      backgroundColor: getIconBackgroundColor(transaction),
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      marginRight: '12px',
-                      flexShrink: 0
+                      flex: 1
                     }}
                   >
-                    <div style={{ color: getIconColor(transaction) }}>
-                      {transaction.icon}
+                    {/* Transaction Icon */}
+                    <div
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        backgroundColor: getIconBackgroundColor(transaction),
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: '12px',
+                        flexShrink: 0
+                      }}
+                    >
+                      <div style={{ color: getIconColor(transaction) }}>
+                        {transaction.icon}
+                      </div>
+                    </div>
+
+                    {/* Transaction Details */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p 
+                        style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: 'var(--mobile-font-small)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          color: '#1f2937',
+                          margin: '0 0 2px 0',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        {transaction.description}
+                      </p>
+                      <p 
+                        style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: 'var(--mobile-font-small)',
+                          fontWeight: 'var(--font-weight-normal)',
+                          color: '#6b7280',
+                          margin: '0'
+                        }}
+                      >
+                        {formatTransactionDate(transaction.date)}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Transaction Details */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p 
-                      style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-small)',
-                        fontWeight: 'var(--font-weight-medium)',
-                        color: '#1f2937',
-                        margin: '0 0 2px 0',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis'
-                      }}
-                    >
-                      {transaction.description}
-                    </p>
-                    <p 
-                      style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-small)',
-                        fontWeight: 'var(--font-weight-normal)',
-                        color: '#6b7280',
-                        margin: '0'
-                      }}
-                    >
-                      {formatTransactionDate(transaction.date)}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right: Amount */}
-                <div 
-                  style={{
-                    textAlign: 'right',
-                    paddingLeft: '12px'
-                  }}
-                >
-                  <span 
+                  {/* Right: Amount */}
+                  <div 
                     style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: 'var(--mobile-font-base)',
-                      fontWeight: 'var(--font-weight-bold)',
-                      color: getTransactionColor(transaction),
-                      lineHeight: '1.2'
+                      textAlign: 'right',
+                      paddingLeft: '12px'
                     }}
                   >
-                    {transaction.amount < 0 ? '-' : ''}{formatCurrency(Math.abs(transaction.amount))}
-                  </span>
+                    <span 
+                      style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        fontWeight: 'var(--font-weight-bold)',
+                        color: getTransactionColor(transaction),
+                        lineHeight: '1.2'
+                      }}
+                    >
+                      {transaction.amount < 0 ? '-' : ''}{formatCurrency(Math.abs(transaction.amount))}
+                    </span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px 20px',
+                color: '#6b7280',
+                fontSize: 'var(--mobile-font-base)',
+                textAlign: 'center'
+              }}>
+                <div>
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    backgroundColor: '#f8fafc',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 12px auto'
+                  }}>
+                    <ShoppingBag style={{ width: '24px', height: '24px', color: '#9ca3af' }} />
+                  </div>
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 'var(--font-weight-medium)' }}>
+                    No recent transactions
+                  </p>
+                  <p style={{ margin: '0', fontSize: 'var(--mobile-font-small)' }}>
+                    Your transaction history will appear here
+                  </p>
                 </div>
               </div>
-            ))}
+            )}
           </div>
         </button>
       </div>

@@ -182,17 +182,25 @@ export function KYCDocumentsPage() {
       formData.append('addressDocument', documents.address.file);
       formData.append('userId', user?.id || '');
 
-      // TODO: Replace with actual API call to your backend
-      // const response = await fetch('/api/kyc/upload-documents', {
-      //   method: 'POST',
-      //   body: formData,
-      //   headers: {
-      //     'Authorization': `Bearer ${getAuthToken()}`
-      //   }
-      // });
+      // Real API call to upload documents
+      const token = localStorage.getItem('mymoolah_token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
 
-      // Simulate API success
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch('/api/v1/kyc/upload-document', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload documents');
+      }
+
+      const data = await response.json();
 
       // Update user KYC status in context
       if (updateKYCStatus) {

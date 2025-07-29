@@ -22,8 +22,52 @@ router.get('/code/:voucher_code', voucherController.getVoucherByCode);
 router.get('/:voucher_id/redemptions', voucherController.getVoucherRedemptions);
 
 // List all vouchers (for admin/testing)
-router.get('/', (req, res) => {
-  res.json({ message: 'Voucher API is working. Use specific endpoints for operations.' });
+router.get('/', async (req, res) => {
+  try {
+    const VoucherModel = require('../models/voucherModel');
+    const voucherModel = new VoucherModel();
+    
+    voucherModel.db.all(`
+      SELECT 
+        v.id,
+        v.voucherId,
+        v.userId,
+        v.type,
+        v.amount,
+        v.description,
+        v.status,
+        v.expiryDate,
+        v.createdAt,
+        v.updatedAt,
+        u.firstName,
+        u.lastName,
+        u.email
+      FROM vouchers v
+      LEFT JOIN users u ON v.userId = u.id
+      ORDER BY v.createdAt DESC
+    `, [], (err, rows) => {
+      if (err) {
+        console.error('❌ Error getting vouchers:', err);
+        return res.status(500).json({ 
+          success: false,
+          error: 'Database error', 
+          details: err.message 
+        });
+      }
+      res.json({ 
+        success: true,
+        message: 'Vouchers retrieved successfully',
+        data: { vouchers: rows || [] }
+      });
+    });
+  } catch (error) {
+    console.error('❌ Error in getAllVouchers:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error', 
+      details: error.message 
+    });
+  }
 });
 
 module.exports = router;

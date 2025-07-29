@@ -136,6 +136,37 @@ class AuthController {
       return res.status(500).json({ success: false, message: error.message });
     }
   }
+
+  // Verify JWT token
+  async verify(req, res) {
+    try {
+      // The authMiddleware has already verified the token and set req.user
+      const userId = req.user.id;
+      const userModel = new User();
+      const user = await userModel.getUserById(userId);
+      
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found.' });
+      }
+      
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Token is valid',
+        user: {
+          id: user.id,
+          email: user.email,
+          phone: user.phoneNumber,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          name: `${user.firstName} ${user.lastName}`.trim(),
+          walletId: user.walletId,
+          kycStatus: user.kycStatus || 'pending'
+        }
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
 }
 
 module.exports = new AuthController();

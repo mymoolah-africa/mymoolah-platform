@@ -102,11 +102,12 @@ export function VouchersPage() {
   
   // State management
   const [activeTab, setActiveTab] = useState<'vouchers' | 'sell' | 'redeem' | 'history'>('vouchers');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedVoucher, setSelectedVoucher] = useState<MMVoucher | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Filter state
   const [filters, setFilters] = useState<FilterOptions>({
@@ -140,113 +141,80 @@ export function VouchersPage() {
     return `9${paddedDigits}`;
   };
 
-  // Mock data for demo - in production, this would come from Mojaloop-compliant APIs
-  const [mmVouchers, setMMVouchers] = useState<MMVoucher[]>([
-    {
-      id: 'MMV001',
-      type: 'mm_voucher',
-      status: 'active',
-      amount: 200,
-      currency: 'ZAR',
-      voucherCode: '1234 5678 9012 3456',
-      createdDate: '2024-11-20',
-      expiryDate: '2025-02-20',
-      description: 'MyMoolah voucher',
-      transactionId: 'TX20241120001',
-      redemptionLocations: ['MyMoolah Network', 'Partner Retailers'],
-      remainingValue: 150,
-      isPartialRedemption: true
-    },
-    {
-      id: 'EPV001',
-      type: 'easypay_voucher',
-      status: 'pending_payment',
-      amount: 100,
-      currency: 'ZAR',
-      voucherCode: '9876 5432 1098 7654',
-      easyPayNumber: '91234567890123',
-      createdDate: '2024-11-21',
-      expiryDate: '2024-11-23',
-      description: 'EasyPay voucher',
-      transactionId: 'TX20241121001',
-      redemptionLocations: ['8000+ EasyPay Retail Stores'],
-      remainingValue: 100,
-      isPartialRedemption: false
-    },
-    {
-      id: 'TPV001',
-      type: 'third_party_voucher',
-      status: 'active',
-      amount: 50,
-      currency: 'ZAR',
-      voucherCode: '1VCH-DEF456',
-      merchantName: '1Voucher',
-      merchantId: 'MER_1VOUCHER',
-      createdDate: '2024-11-18',
-      expiryDate: '2025-01-18',
-      description: '1Voucher gift card',
-      transactionId: 'TX20241118001',
-      redemptionLocations: ['1Voucher Online Platform'],
-      remainingValue: 50,
-      isPartialRedemption: false
-    },
-    {
-      id: 'MMV002',
-      type: 'mm_voucher',
-      status: 'redeemed',
-      amount: 75,
-      currency: 'ZAR',
-      voucherCode: '9876 5432 1098 7654',
-      createdDate: '2024-11-15',
-      expiryDate: '2025-01-15',
-      redeemedDate: '2024-11-19',
-      description: 'MyMoolah voucher',
-      transactionId: 'TX20241115001',
-      redemptionLocations: ['MyMoolah Wallet'],
-      remainingValue: 0,
-      isPartialRedemption: false
-    }
-  ]);
+  // Real voucher data from API
+  const [mmVouchers, setMMVouchers] = useState<MMVoucher[]>([]);
+  const [voucherTransactions, setVoucherTransactions] = useState<VoucherTransaction[]>([]);
 
-  const [voucherTransactions, setVoucherTransactions] = useState<VoucherTransaction[]>([
-    {
-      id: 'VT001',
-      voucherId: 'MMV001',
-      type: 'generate',
-      amount: 200,
-      currency: 'ZAR',
-      timestamp: '2024-11-20T10:30:00Z',
-      description: 'Generated MyMoolah voucher',
-      reference: 'REF-MMV001-GEN',
-      status: 'completed',
-      voucherType: 'mm_voucher'
-    },
-    {
-      id: 'VT002',
-      voucherId: 'MMV001',
-      type: 'partial_redeem',
-      amount: 50,
-      currency: 'ZAR',
-      timestamp: '2024-11-21T14:15:00Z',
-      description: 'Partial redemption for wallet top-up',
-      reference: 'REF-MMV001-RED1',
-      status: 'completed',
-      voucherType: 'mm_voucher'
-    },
-    {
-      id: 'VT003',
-      voucherId: 'EPV001',
-      type: 'generate',
-      amount: 100,
-      currency: 'ZAR',
-      timestamp: '2024-11-21T09:00:00Z',
-      description: 'Generated EasyPay voucher',
-      reference: 'REF-EPV001-GEN',
-      status: 'completed',
-      easyPayNumber: '91234567890123',
-      voucherType: 'easypay_voucher'
-    }
-  ]);
+  // Fetch vouchers from backend
+  useEffect(() => {
+    const fetchVouchers = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const token = localStorage.getItem('mymoolah_token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        };
+
+        // Fetch active vouchers
+        const vouchersResponse = await fetch('/api/v1/vouchers/active', { headers });
+        if (!vouchersResponse.ok) throw new Error('Failed to fetch vouchers');
+        const vouchersData = await vouchersResponse.json();
+
+        // Transform backend data to frontend format
+        const transformedVouchers: MMVoucher[] = (vouchersData.data?.vouchers || []).map((voucher: any) => ({
+          id: voucher.id.toString(),
+          type: voucher.type === 'airtime' ? 'mm_voucher' : 
+                voucher.type === 'data' ? 'easypay_voucher' : 'third_party_voucher',
+          status: voucher.status === 'active' ? 'active' : 
+                  voucher.status === 'pending' ? 'pending_payment' : 
+                  voucher.status === 'redeemed' ? 'redeemed' : 'expired',
+          amount: voucher.amount,
+          currency: 'ZAR',
+          voucherCode: voucher.voucherId || `VOUCHER-${voucher.id}`,
+          createdDate: voucher.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+          expiryDate: voucher.expiryDate?.split('T')[0] || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          description: voucher.description || `${voucher.type} voucher`,
+          transactionId: `TX${voucher.id}`,
+          redemptionLocations: ['MyMoolah Network', 'Partner Retailers'],
+          remainingValue: voucher.amount,
+          isPartialRedemption: false
+        }));
+
+        setMMVouchers(transformedVouchers);
+
+        // Generate mock transactions for now (backend doesn't have transaction history yet)
+        const mockTransactions: VoucherTransaction[] = transformedVouchers.map(voucher => ({
+          id: `VT${voucher.id}`,
+          voucherId: voucher.id,
+          type: 'generate',
+          amount: voucher.amount,
+          currency: 'ZAR',
+          timestamp: voucher.createdDate + 'T10:30:00Z',
+          description: `Generated ${voucher.description}`,
+          reference: `REF-${voucher.id}-GEN`,
+          status: 'completed',
+          voucherType: voucher.type
+        }));
+
+        setVoucherTransactions(mockTransactions);
+
+      } catch (err) {
+        console.error('Error fetching vouchers:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load vouchers');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVouchers();
+  }, []);
 
   // Filter vouchers based on search and filters
   const filteredVouchers = mmVouchers.filter(voucher => {
@@ -422,11 +390,11 @@ export function VouchersPage() {
       }
 
       // Update voucher
-      const updatedVoucher = {
+      const updatedVoucher: MMVoucher = {
         ...voucher,
         remainingValue: voucher.remainingValue - redeemAmountNum,
         isPartialRedemption: (voucher.remainingValue - redeemAmountNum) > 0,
-        status: (voucher.remainingValue - redeemAmountNum) > 0 ? 'active' : 'redeemed' as const,
+        status: (voucher.remainingValue - redeemAmountNum) > 0 ? 'active' : 'redeemed',
         redeemedDate: (voucher.remainingValue - redeemAmountNum) <= 0 ? new Date().toISOString().split('T')[0] : voucher.redeemedDate
       };
 

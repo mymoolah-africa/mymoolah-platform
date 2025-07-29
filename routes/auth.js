@@ -26,6 +26,9 @@ const phoneRegex = /^(\+27|27|0)?[6-8][0-9]{8}$/;
 // GET /api/v1/auth/profile
 router.get('/profile', authMiddleware, authController.getProfile);
 
+// GET /api/v1/auth/verify
+router.get('/verify', authMiddleware, authController.verify);
+
 // POST /api/v1/auth/register
 router.post('/register', [
   body('email')

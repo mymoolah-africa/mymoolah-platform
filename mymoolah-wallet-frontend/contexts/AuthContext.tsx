@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { isDemoMode, validateDemoCredentials, getDemoCredentials } from '../config/app-config';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { validateDemoCredentials, isDemoMode, getDemoCredentials } from '../config/app-config';
+import { APP_CONFIG } from '../config/app-config';
 
 // Updated KYC status type with complete flow
 type KYCStatus = 'not_started' | 'documents_uploaded' | 'under_review' | 'verified' | 'rejected';
@@ -147,7 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(mockUser);
       } else if (token) {
         // Real authentication - validate token with backend
-        const response = await fetch('/api/v1/auth/verify', {
+        const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/auth/verify`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         
@@ -216,7 +217,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Production authentication with backend
         const normalizedPhoneNumber = normalizeSAMobileNumber(credentials.identifier);
         
-        const response = await fetch('/api/v1/auth/login', {
+        const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/auth/login`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -1,0 +1,17 @@
+{
+  "development": {
+    "dialect": "sqlite",
+    "storage": "./data/mymoolah.db"
+  },
+  "test": {
+    "dialect": "sqlite",
+    "storage": ":memory:"
+  },
+  "production": {
+    "username": "mymoolah_user",
+    "password": "B0t3s@Google",
+    "database": "mymoolah_db",
+    "host": "localhost",
+    "dialect": "mysql"
+  }
+}

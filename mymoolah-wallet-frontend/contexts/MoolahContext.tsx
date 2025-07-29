@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
+import { APP_CONFIG } from '../config/app-config';
 
 interface WalletBalance {
   available: number;
@@ -147,29 +148,34 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
         const headers = { Authorization: `Bearer ${token}` };
 
         // Fetch wallet balance
-        const balanceResponse = await fetch(`/api/wallet/${user.walletId}/balance`, { headers });
+        const balanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance`, { headers });
         if (!balanceResponse.ok) throw new Error('Failed to fetch balance');
         const balanceData = await balanceResponse.json();
-        setWalletBalance(balanceData);
-        setBalance(balanceData.available);
+        setWalletBalance(balanceData.data);
+        setBalance(balanceData.data.available);
 
         // Fetch voucher balance
-        const voucherResponse = await fetch(`/api/vouchers/${user.id}/balance`, { headers });
+        const voucherResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/active`, { headers });
         if (!voucherResponse.ok) throw new Error('Failed to fetch voucher balance');
         const voucherData = await voucherResponse.json();
-        setVoucherBalance(voucherData.total);
+        setVoucherBalance(voucherData.data?.length || 0);
 
         // Fetch recent transactions
-        const transactionsResponse = await fetch(`/api/transactions/${user.walletId}?limit=5`, { headers });
+        const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=5`, { headers });
         if (!transactionsResponse.ok) throw new Error('Failed to fetch transactions');
         const transactionsData = await transactionsResponse.json();
-        setRecentTransactions(transactionsData.transactions);
+        setRecentTransactions(transactionsData.data?.transactions || []);
 
         // Fetch today's activity
-        const activityResponse = await fetch(`/api/activity/${user.walletId}/today`, { headers });
+        const activityResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=10`, { headers });
         if (!activityResponse.ok) throw new Error('Failed to fetch activity');
         const activityData = await activityResponse.json();
-        setTodayActivity(activityData);
+        const todayTransactions = activityData.data?.transactions || [];
+        const todayActivity = {
+          received: todayTransactions.filter((t: any) => t.type === 'credit').reduce((sum: number, t: any) => sum + t.amount, 0),
+          sent: todayTransactions.filter((t: any) => t.type === 'debit').reduce((sum: number, t: any) => sum + t.amount, 0)
+        };
+        setTodayActivity(todayActivity);
       }
     } catch (error) {
       console.error('Failed to fetch wallet data:', error);
@@ -216,15 +222,14 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
     }
 
     // Real API transfer (when backend is ready)
-    const response = await fetch('/api/transfers', {
+    const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/send-money`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`
       },
       body: JSON.stringify({
-        fromWalletId: user.walletId,
-        toPhoneNumber: recipient,
+        recipientPhoneNumber: recipient,
         amount,
         currency: walletBalance.currency
       })

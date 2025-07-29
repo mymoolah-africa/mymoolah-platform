@@ -105,7 +105,7 @@ export default function App() {
     <ErrorBoundary>
       <AuthProvider>
         <MoolahProvider>
-          <Router>
+          <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AppContent />
           </Router>
         </MoolahProvider>

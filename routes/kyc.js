@@ -48,6 +48,53 @@ const validateRequest = (req, res, next) => {
   next();
 };
 
+// GET /api/v1/kyc - Get all KYC records
+router.get('/', async (req, res) => {
+  try {
+    const Kyc = require('../models/Kyc');
+    const kycModel = new Kyc();
+    
+    kycModel.db.all(`
+      SELECT 
+        k.id,
+        k.userId,
+        k.documentType,
+        k.documentNumber,
+        k.status,
+        k.submittedAt,
+        k.reviewedAt,
+        k.reviewerNotes,
+        u.firstName,
+        u.lastName,
+        u.email
+      FROM kyc k
+      LEFT JOIN users u ON k.userId = u.id
+      ORDER BY k.submittedAt DESC
+    `, [], (err, rows) => {
+      if (err) {
+        console.error('❌ Error getting KYC records:', err);
+        return res.status(500).json({ 
+          success: false,
+          error: 'Database error', 
+          details: err.message 
+        });
+      }
+      res.json({ 
+        success: true,
+        message: 'KYC records retrieved successfully',
+        data: { kyc: rows || [] }
+      });
+    });
+  } catch (error) {
+    console.error('❌ Error in getAllKyc:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error', 
+      details: error.message 
+    });
+  }
+});
+
 // GET /api/v1/kyc/status
 router.get('/status', authMiddleware, async (req, res) => {
   try {
