@@ -1,5 +1,4 @@
-const Bill = require('../models/Bill');
-const Payment = require('../models/Payment');
+const { Bill, Payment } = require('../models');
 const { validateEasyPayNumber, extractReceiverId } = require('../utils/easyPayUtils');
 
 /**
@@ -9,8 +8,7 @@ const { validateEasyPayNumber, extractReceiverId } = require('../utils/easyPayUt
 
 class EasyPayController {
   constructor() {
-    this.billModel = new Bill();
-    this.paymentModel = new Payment();
+    // No need to instantiate - Sequelize models are static
   }
   
   /**
@@ -53,7 +51,7 @@ class EasyPayController {
       const receiverId = extractReceiverId(EasyPayNumber);
       
       // Find bill information in database
-      const bill = await this.billModel.findByEasyPayNumber(EasyPayNumber);
+      const bill = await Bill.findOne({ where: { easyPayNumber: EasyPayNumber } });
       
       if (!bill) {
         return res.status(200).json({
@@ -99,7 +97,6 @@ class EasyPayController {
         },
         echoData: EchoData
       });
-
     } catch (error) {
       console.error('❌ EasyPay info request error:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -107,17 +104,23 @@ class EasyPayController {
   }
 
   /**
-   * Authorization request
+   * Payment authorization request
    * POST /billpayment/v1/authorisationRequest
    */
   async authorisationRequest(req, res) {
     try {
-      console.log('🔐 EasyPay authorization request received:', req.body);
+      console.log('💳 EasyPay authorization request received:', req.body);
       
-      const { EasyPayNumber, AccountNumber, Amount, EchoData } = req.body;
+      const { 
+        EasyPayNumber, 
+        AccountNumber, 
+        Amount, 
+        Reference, 
+        EchoData 
+      } = req.body;
       
       // Validate required fields
-      if (!EasyPayNumber || !AccountNumber || !EchoData) {
+      if (!EasyPayNumber || !AccountNumber || !Amount || !Reference) {
         return res.status(400).json({ error: 'Missing required fields' });
       }
 
@@ -126,15 +129,12 @@ class EasyPayController {
         return res.status(400).json({ error: 'Invalid EasyPay number format' });
       }
 
-      // Find bill information
-      const bill = await this.billModel.findByEasyPayNumber(EasyPayNumber);
+      // Find bill in database
+      const bill = await Bill.findOne({ where: { easyPayNumber: EasyPayNumber } });
       
       if (!bill) {
         return res.status(200).json({
           ResponseCode: '1', // InvalidAccount
-          ResponseMessage: 'Invalid account number',
-          Amount: 0,
-          expiryDate: null,
           echoData: EchoData
         });
       }
@@ -142,49 +142,46 @@ class EasyPayController {
       // Check if bill is already paid
       if (bill.status === 'paid') {
         return res.status(200).json({
-          ResponseCode: '3', // Expired payment
-          ResponseMessage: 'Bill already paid',
-          Amount: bill.amount,
-          expiryDate: bill.dueDate,
+          ResponseCode: '5', // AlreadyPaid
           echoData: EchoData
         });
       }
 
-      // Check if payment amount is valid
-      if (Amount < bill.minAmount || Amount > bill.maxAmount) {
+      // Validate amount
+      const amount = Number(Amount);
+      const minAmount = bill.minAmount || bill.amount;
+      const maxAmount = bill.maxAmount || bill.amount;
+      
+      if (amount < minAmount || amount > maxAmount) {
         return res.status(200).json({
-          ResponseCode: '2', // Invalid amount
-          ResponseMessage: `Incorrect amount. Due amount is R${(bill.amount / 100).toFixed(2)}`,
-          Amount: bill.amount,
-          expiryDate: bill.dueDate,
+          ResponseCode: '2', // InvalidAmount
           echoData: EchoData
         });
       }
 
-      // Check if bill is expired
-      const today = new Date();
-      const dueDate = new Date(bill.dueDate);
-      if (today > dueDate) {
-        return res.status(200).json({
-          ResponseCode: '3', // Expired payment
-          ResponseMessage: 'Bill payment expired',
-          Amount: bill.amount,
-          expiryDate: bill.dueDate,
-          echoData: EchoData
-        });
-      }
-
-      // Authorization successful
-      res.status(200).json({
-        ResponseCode: '0', // Allow payment
-        ResponseMessage: 'Allow payment',
-        Amount: bill.amount,
-        expiryDate: bill.dueDate,
+      // Create payment record
+      const payment = await Payment.create({
+        reference: Reference,
+        easyPayNumber: EasyPayNumber,
+        accountNumber: AccountNumber,
+        amount: amount,
+        paymentType: 'bill_payment',
+        paymentMethod: 'easypay',
+        status: 'pending',
         echoData: EchoData
       });
 
+      // Update bill status
+      await bill.update({ status: 'processing' });
+
+      console.log('✅ Payment authorized:', payment.id);
+
+      res.status(200).json({
+        ResponseCode: '0', // Authorized
+        echoData: EchoData
+      });
     } catch (error) {
-      console.error('❌ EasyPay authorization request error:', error);
+      console.error('❌ EasyPay authorization error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
@@ -195,61 +192,47 @@ class EasyPayController {
    */
   async paymentNotification(req, res) {
     try {
-      console.log('💰 EasyPay payment notification received:', req.body);
+      console.log('📢 EasyPay payment notification received:', req.body);
       
       const { 
-        MerchantId, 
-        TerminalId, 
-        PaymentDate, 
-        Reference, 
         EasyPayNumber, 
         AccountNumber, 
         Amount, 
-        EchoData 
+        Reference, 
+        EchoData,
+        TransactionId 
       } = req.body;
       
-      // Validate required fields
-      if (!MerchantId || !TerminalId || !PaymentDate || !Reference || !EasyPayNumber || !AccountNumber || !Amount) {
-        return res.status(400).json({ error: 'Missing required fields' });
-      }
-
-      // Find bill information
-      const bill = await this.billModel.findByEasyPayNumber(EasyPayNumber);
+      // Find payment record
+      const payment = await Payment.findOne({ 
+        where: { reference: Reference } 
+      });
       
-      if (!bill) {
-        return res.status(200).json({
-          ResponseCode: '1', // InvalidAccount
-          ResponseMessage: 'Invalid account number',
-          echoData: EchoData
-        });
+      if (!payment) {
+        return res.status(400).json({ error: 'Payment not found' });
       }
 
-      // Create payment record
-      const payment = await this.paymentModel.create({
-        merchantId: MerchantId,
-        terminalId: TerminalId,
-        paymentDate: PaymentDate,
-        reference: Reference,
-        easyPayNumber: EasyPayNumber,
-        accountNumber: AccountNumber,
-        amount: Amount,
-        echoData: EchoData,
-        billId: bill.id,
-        status: 'completed'
+      // Update payment status
+      await payment.update({
+        status: 'completed',
+        paymentDate: new Date()
       });
 
-      // Update bill status to paid
-      await this.billModel.updateStatus(bill.id, 'paid');
+      // Find and update bill
+      const bill = await Bill.findOne({ 
+        where: { easyPayNumber: EasyPayNumber } 
+      });
+      
+      if (bill) {
+        await bill.update({ status: 'paid' });
+      }
 
-      console.log('✅ Payment processed successfully:', payment.id);
+      console.log('✅ Payment completed:', payment.id);
 
-      // Return success response
       res.status(200).json({
         ResponseCode: '0', // Success
-        ResponseMessage: 'Payment processed successfully',
         echoData: EchoData
       });
-
     } catch (error) {
       console.error('❌ EasyPay payment notification error:', error);
       res.status(500).json({ error: 'Internal server error' });
@@ -257,60 +240,100 @@ class EasyPayController {
   }
 
   /**
-   * Get all bills (for testing/admin)
-   * GET /billpayment/v1/bills
+   * Get all bills (admin endpoint)
+   * GET /api/easypay/bills
    */
   async getAllBills(req, res) {
     try {
-      const bills = await this.billModel.findAll();
+      const bills = await Bill.findAll({
+        order: [['createdAt', 'DESC']]
+      });
       
       res.json({
         success: true,
-        message: 'Bills retrieved successfully',
-        data: { bills }
+        data: bills
       });
     } catch (error) {
-      console.error('❌ Error getting bills:', error);
+      console.error('❌ Get all bills error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
 
   /**
-   * Get all payments (for testing/admin)
-   * GET /billpayment/v1/payments
+   * Get all payments (admin endpoint)
+   * GET /api/easypay/payments
    */
   async getAllPayments(req, res) {
     try {
-      const payments = await this.paymentModel.findAll();
+      const payments = await Payment.findAll({
+        where: { paymentType: 'bill_payment' },
+        order: [['createdAt', 'DESC']]
+      });
       
       res.json({
         success: true,
-        message: 'Payments retrieved successfully',
-        data: { payments }
+        data: payments
       });
     } catch (error) {
-      console.error('❌ Error getting payments:', error);
+      console.error('❌ Get all payments error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
 
   /**
-   * Create test bills (for development)
-   * POST /billpayment/v1/create-test-bills
+   * Create test bills (admin endpoint)
+   * POST /api/easypay/test-bills
    */
   async createTestBills(req, res) {
     try {
-      await this.billModel.createTestBills();
+      const testBills = [
+        {
+          easyPayNumber: '90001234123412',
+          accountNumber: 'TEST001',
+          receiverId: '2021',
+          customerName: 'Test Customer 1',
+          billType: 'electricity',
+          description: 'Test electricity bill',
+          amount: 500,
+          dueDate: '2025-12-31',
+          status: 'pending'
+        },
+        {
+          easyPayNumber: '90001234123413',
+          accountNumber: 'TEST002',
+          receiverId: '2022',
+          customerName: 'Test Customer 2',
+          billType: 'water',
+          description: 'Test water bill',
+          amount: 300,
+          dueDate: '2025-12-31',
+          status: 'pending'
+        }
+      ];
+
+      const createdBills = await Bill.bulkCreate(testBills);
       
       res.json({
         success: true,
-        message: 'Test bills created successfully'
+        message: 'Test bills created successfully',
+        data: createdBills
       });
     } catch (error) {
-      console.error('❌ Error creating test bills:', error);
+      console.error('❌ Create test bills error:', error);
       res.status(500).json({ error: 'Internal server error' });
     }
   }
 }
 
-module.exports = new EasyPayController();
+// Create instance and export methods
+const easyPayController = new EasyPayController();
+
+module.exports = {
+  ping: easyPayController.ping.bind(easyPayController),
+  infoRequest: easyPayController.infoRequest.bind(easyPayController),
+  authorisationRequest: easyPayController.authorisationRequest.bind(easyPayController),
+  paymentNotification: easyPayController.paymentNotification.bind(easyPayController),
+  getAllBills: easyPayController.getAllBills.bind(easyPayController),
+  getAllPayments: easyPayController.getAllPayments.bind(easyPayController),
+  createTestBills: easyPayController.createTestBills.bind(easyPayController)
+};

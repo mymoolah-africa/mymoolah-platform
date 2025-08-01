@@ -1,63 +1,144 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+// mymoolah/models/supportMessageModel.js
 
-class SupportMessageModel {
-  constructor() {
-    this.dbPath = path.join(__dirname, '../data/mymoolah.db');
-    this.db = new sqlite3.Database(this.dbPath);
-    this.initTable();
-  }
-
-  initTable() {
-    this.db.run(`
-      CREATE TABLE IF NOT EXISTS support_messages (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        ticket_id INTEGER NOT NULL,
-        sender_id INTEGER NOT NULL,
-        message TEXT NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-  }
-
-  createMessage(ticketId, senderId, message) {
-    return new Promise((resolve, reject) => {
-      this.db.run(
-        'INSERT INTO support_messages (ticket_id, sender_id, message) VALUES (?, ?, ?)',
-        [ticketId, senderId, message],
-        function(err) {
-          if (err) reject(err);
-          else resolve({ id: this.lastID });
+module.exports = (sequelize, DataTypes) => {
+  const SupportMessage = sequelize.define('SupportMessage', {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    ticketId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'support_tickets',
+        key: 'id',
+      },
+      validate: {
+        notNull: true,
+      },
+    },
+    senderId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+      validate: {
+        notNull: true,
+      },
+    },
+    message: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        len: [1, 5000],
+      },
+    },
+    messageType: {
+      type: DataTypes.ENUM('user_message', 'admin_response', 'system_notification'),
+      allowNull: false,
+      defaultValue: 'user_message',
+    },
+    isInternal: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Whether this message is internal (not visible to user)',
+    },
+    attachments: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Array of attachment URLs or file references',
+    },
+    metadata: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Additional message metadata',
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  }, {
+    tableName: 'support_messages',
+    timestamps: true,
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    indexes: [
+      {
+        fields: ['ticketId'],
+      },
+      {
+        fields: ['senderId'],
+      },
+      {
+        fields: ['messageType'],
+      },
+      {
+        fields: ['createdAt'],
+      },
+    ],
+    hooks: {
+      beforeCreate: (message) => {
+        // Set message type based on sender if not specified
+        if (!message.messageType) {
+          // This would need to be determined based on your user roles
+          message.messageType = 'user_message';
         }
-      );
-    });
-  }
+      },
+    },
+  });
 
-  getMessagesByTicket(ticketId) {
-    return new Promise((resolve, reject) => {
-      this.db.all(
-        'SELECT * FROM support_messages WHERE ticket_id = ? ORDER BY created_at ASC',
-        [ticketId],
-        (err, rows) => {
-          if (err) reject(err);
-          else resolve(rows);
-        }
-      );
+  // Define associations
+  SupportMessage.associate = (models) => {
+    // SupportMessage belongs to one SupportTicket
+    SupportMessage.belongsTo(models.SupportTicket, {
+      foreignKey: 'ticketId',
+      as: 'ticket',
     });
-  }
 
-  deleteMessage(messageId) {
-    return new Promise((resolve, reject) => {
-      this.db.run(
-        'DELETE FROM support_messages WHERE id = ?',
-        [messageId],
-        function(err) {
-          if (err) reject(err);
-          else resolve({ changes: this.changes });
-        }
-      );
+    // SupportMessage belongs to one User (sender)
+    SupportMessage.belongsTo(models.User, {
+      foreignKey: 'senderId',
+      as: 'sender',
     });
-  }
-}
+  };
 
-module.exports = SupportMessageModel; 
+  // Instance methods
+  SupportMessage.prototype.isFromUser = function() {
+    return this.messageType === 'user_message';
+  };
+
+  SupportMessage.prototype.isFromAdmin = function() {
+    return this.messageType === 'admin_response';
+  };
+
+  SupportMessage.prototype.isSystemNotification = function() {
+    return this.messageType === 'system_notification';
+  };
+
+  SupportMessage.prototype.isInternalMessage = function() {
+    return this.isInternal === true;
+  };
+
+  SupportMessage.prototype.getFormattedCreatedAt = function() {
+    return this.createdAt.toLocaleString('en-ZA', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  return SupportMessage;
+}; 

@@ -1,425 +1,237 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+// mymoolah/models/voucherTypeModel.js
 
-class VoucherTypeModel {
-  constructor() {
-    this.dbPath = path.join(__dirname, '../data/mymoolah.db');
-    this.db = new sqlite3.Database(this.dbPath);
-    this.initTable();
-  }
+module.exports = (sequelize, DataTypes) => {
+  const VoucherType = sequelize.define('VoucherType', {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    typeName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+        len: [3, 50],
+      },
+    },
+    displayName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        len: [3, 100],
+      },
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    pricingModel: {
+      type: DataTypes.ENUM('fixed_rate', 'percentage_rate', 'bundle_rate', 'tiered_rate'),
+      allowNull: false,
+      defaultValue: 'fixed_rate',
+    },
+    baseRate: {
+      type: DataTypes.DECIMAL(10, 4),
+      allowNull: false,
+      defaultValue: 1.0,
+      validate: {
+        min: 0,
+      },
+    },
+    minAmount: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
+      defaultValue: 5.00,
+      validate: {
+        min: 0,
+      },
+    },
+    maxAmount: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
+      defaultValue: 4000.00,
+      validate: {
+        min: 0,
+      },
+    },
+    validationRules: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Validation rules for this voucher type',
+    },
+    redemptionRules: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Redemption rules for this voucher type',
+    },
+    expirationRules: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Expiration rules for this voucher type',
+    },
+    merchantRules: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Merchant restrictions for this voucher type',
+    },
+    routeRules: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Route restrictions for this voucher type',
+    },
+    isActive: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true,
+    },
+    metadata: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Additional metadata for this voucher type',
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  }, {
+    tableName: 'voucher_types',
+    timestamps: true,
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    indexes: [
+      {
+        unique: true,
+        fields: ['typeName'],
+      },
+      {
+        fields: ['isActive'],
+      },
+      {
+        fields: ['pricingModel'],
+      },
+    ],
+    hooks: {
+      beforeCreate: (voucherType) => {
+        // Set default validation rules if not provided
+        if (!voucherType.validationRules) {
+          voucherType.validationRules = {
+            allowPartialRedemption: true,
+            requireMerchantValidation: false,
+            allowMultipleRedemptions: true,
+          };
+        }
+        
+        // Set default redemption rules if not provided
+        if (!voucherType.redemptionRules) {
+          voucherType.redemptionRules = {
+            minRedemptionAmount: 1.0,
+            maxRedemptionAmount: null,
+            allowPartial: true,
+          };
+        }
+        
+        // Set default expiration rules if not provided
+        if (!voucherType.expirationRules) {
+          voucherType.expirationRules = {
+            expiresInDays: 365,
+            allowExtension: false,
+          };
+        }
+        
+        // Set default merchant rules if not provided
+        if (!voucherType.merchantRules) {
+          voucherType.merchantRules = {
+            allowedMerchants: [],
+            restrictedMerchants: [],
+            requireMerchantApproval: false,
+          };
+        }
+        
+        // Set default route rules if not provided
+        if (!voucherType.routeRules) {
+          voucherType.routeRules = {
+            allowedRoutes: ['general_purchase'],
+            restrictedRoutes: [],
+          };
+        }
+      },
+    },
+  });
 
-  // Initialize voucher_types table
-  initTable() {
-    const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS voucher_types (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        type_name TEXT UNIQUE NOT NULL,
-        display_name TEXT NOT NULL,
-        description TEXT,
-        pricing_model TEXT DEFAULT 'fixed_rate',
-        base_rate REAL DEFAULT 1.0,
-        min_amount REAL DEFAULT 5.0,
-        max_amount REAL DEFAULT 4000.0,
-        validation_rules TEXT,
-        redemption_rules TEXT,
-        expiration_rules TEXT,
-        merchant_rules TEXT,
-        route_rules TEXT,
-        is_active BOOLEAN DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
+  // Define associations
+  VoucherType.associate = (models) => {
+    // VoucherType has many Vouchers
+    VoucherType.hasMany(models.Voucher, {
+      foreignKey: 'voucherType',
+      sourceKey: 'typeName',
+      as: 'vouchers',
+    });
+  };
 
-    this.db.run(createTableSQL, (err) => {
-      if (err) {
-        console.error('❌ Error creating voucher_types table:', err.message);
-      } else {
-        console.log('✅ Voucher types table created successfully');
-        this.initializeDefaultTypes();
+  // Instance methods
+  VoucherType.prototype.isActiveType = function() {
+    return this.isActive === true;
+  };
+
+  VoucherType.prototype.validateAmount = function(amount) {
+    const numAmount = parseFloat(amount);
+    if (numAmount < this.minAmount) {
+      return { valid: false, reason: `Amount must be at least ${this.minAmount}` };
+    }
+    if (numAmount > this.maxAmount) {
+      return { valid: false, reason: `Amount cannot exceed ${this.maxAmount}` };
+    }
+    return { valid: true };
+  };
+
+  VoucherType.prototype.validateRedemption = function(amount, merchantId, routeUsed) {
+    const redemptionRules = this.redemptionRules || {};
+    const merchantRules = this.merchantRules || {};
+    const routeRules = this.routeRules || {};
+    
+    // Check minimum redemption amount
+    if (redemptionRules.minRedemptionAmount && amount < redemptionRules.minRedemptionAmount) {
+      return { valid: false, reason: `Minimum redemption amount is ${redemptionRules.minRedemptionAmount}` };
+    }
+    
+    // Check maximum redemption amount
+    if (redemptionRules.maxRedemptionAmount && amount > redemptionRules.maxRedemptionAmount) {
+      return { valid: false, reason: `Maximum redemption amount is ${redemptionRules.maxRedemptionAmount}` };
+    }
+    
+    // Check merchant restrictions
+    if (merchantRules.allowedMerchants && merchantRules.allowedMerchants.length > 0) {
+      if (!merchantRules.allowedMerchants.includes(merchantId)) {
+        return { valid: false, reason: `Voucher can only be redeemed at: ${merchantRules.allowedMerchants.join(', ')}` };
       }
-    });
-  }
-
-  // Initialize default voucher types
-  async initializeDefaultTypes() {
-    const defaultTypes = [
-      {
-        type_name: 'standard',
-        display_name: 'Standard Voucher',
-        description: 'General purpose voucher with fixed value',
-        pricing_model: 'fixed_rate',
-        base_rate: 1.0,
-        min_amount: 5.0,
-        max_amount: 4000.0,
-        validation_rules: JSON.stringify({
-          allow_partial_redemption: true,
-          require_merchant_validation: false,
-          allow_multiple_redemptions: true
-        }),
-        redemption_rules: JSON.stringify({
-          min_redemption_amount: 1.0,
-          max_redemption_amount: null,
-          allow_partial: true
-        }),
-        expiration_rules: JSON.stringify({
-          expires_in_days: 365,
-          allow_extension: false
-        }),
-        merchant_rules: JSON.stringify({
-          allowed_merchants: [],
-          restricted_merchants: [],
-          require_merchant_approval: false
-        }),
-        route_rules: JSON.stringify({
-          allowed_routes: ['general_purchase'],
-          restricted_routes: []
-        })
-      },
-      {
-        type_name: 'airtime',
-        display_name: 'Airtime Voucher',
-        description: 'Voucher for airtime purchases',
-        pricing_model: 'fixed_rate',
-        base_rate: 1.0,
-        min_amount: 10.0,
-        max_amount: 500.0,
-        validation_rules: JSON.stringify({
-          allow_partial_redemption: false,
-          require_merchant_validation: true,
-          allow_multiple_redemptions: false
-        }),
-        redemption_rules: JSON.stringify({
-          min_redemption_amount: 10.0,
-          max_redemption_amount: 500.0,
-          allow_partial: false
-        }),
-        expiration_rules: JSON.stringify({
-          expires_in_days: 30,
-          allow_extension: false
-        }),
-        merchant_rules: JSON.stringify({
-          allowed_merchants: ['vodacom', 'mtn', 'cell_c', 'telkom'],
-          restricted_merchants: [],
-          require_merchant_approval: true
-        }),
-        route_rules: JSON.stringify({
-          allowed_routes: ['airtime_purchase'],
-          restricted_routes: []
-        })
-      },
-      {
-        type_name: 'data',
-        display_name: 'Data Bundle Voucher',
-        description: 'Voucher for data bundle purchases',
-        pricing_model: 'bundle_rate',
-        base_rate: 1.0,
-        min_amount: 20.0,
-        max_amount: 1000.0,
-        validation_rules: JSON.stringify({
-          allow_partial_redemption: false,
-          require_merchant_validation: true,
-          allow_multiple_redemptions: false
-        }),
-        redemption_rules: JSON.stringify({
-          min_redemption_amount: 20.0,
-          max_redemption_amount: 1000.0,
-          allow_partial: false
-        }),
-        expiration_rules: JSON.stringify({
-          expires_in_days: 60,
-          allow_extension: true
-        }),
-        merchant_rules: JSON.stringify({
-          allowed_merchants: ['vodacom', 'mtn', 'cell_c', 'telkom'],
-          restricted_merchants: [],
-          require_merchant_approval: true
-        }),
-        route_rules: JSON.stringify({
-          allowed_routes: ['data_purchase'],
-          restricted_routes: []
-        })
-      },
-      {
-        type_name: 'grocery',
-        display_name: 'Grocery Voucher',
-        description: 'Voucher for grocery store purchases',
-        pricing_model: 'fixed_rate',
-        base_rate: 1.0,
-        min_amount: 25.0,
-        max_amount: 2000.0,
-        validation_rules: JSON.stringify({
-          allow_partial_redemption: true,
-          require_merchant_validation: false,
-          allow_multiple_redemptions: true
-        }),
-        redemption_rules: JSON.stringify({
-          min_redemption_amount: 5.0,
-          max_redemption_amount: null,
-          allow_partial: true
-        }),
-        expiration_rules: JSON.stringify({
-          expires_in_days: 90,
-          allow_extension: false
-        }),
-        merchant_rules: JSON.stringify({
-          allowed_merchants: ['checkers', 'pick_n_pay', 'woolworths', 'spar'],
-          restricted_merchants: [],
-          require_merchant_approval: false
-        }),
-        route_rules: JSON.stringify({
-          allowed_routes: ['grocery_purchase'],
-          restricted_routes: []
-        })
-      },
-      {
-        type_name: 'fuel',
-        display_name: 'Fuel Voucher',
-        description: 'Voucher for fuel purchases',
-        pricing_model: 'fixed_rate',
-        base_rate: 1.0,
-        min_amount: 50.0,
-        max_amount: 1000.0,
-        validation_rules: JSON.stringify({
-          allow_partial_redemption: true,
-          require_merchant_validation: false,
-          allow_multiple_redemptions: true
-        }),
-        redemption_rules: JSON.stringify({
-          min_redemption_amount: 10.0,
-          max_redemption_amount: null,
-          allow_partial: true
-        }),
-        expiration_rules: JSON.stringify({
-          expires_in_days: 180,
-          allow_extension: false
-        }),
-        merchant_rules: JSON.stringify({
-          allowed_merchants: ['shell', 'bp', 'caltex', 'engen'],
-          restricted_merchants: [],
-          require_merchant_approval: false
-        }),
-        route_rules: JSON.stringify({
-          allowed_routes: ['fuel_purchase'],
-          restricted_routes: []
-        })
-      },
-      {
-        type_name: 'easypay_mm',
-        display_name: 'EasyPay/MMVoucher',
-        description: 'EasyPay settlement voucher for MyMoolah wallet top-up',
-        pricing_model: 'fixed_rate',
-        base_rate: 1.0,
-        min_amount: 10.0,
-        max_amount: 4000.0,
-        validation_rules: JSON.stringify({
-          allow_partial_redemption: true,
-          require_merchant_validation: false,
-          allow_multiple_redemptions: true
-        }),
-        redemption_rules: JSON.stringify({
-          min_redemption_amount: 1.0,
-          max_redemption_amount: null,
-          allow_partial: true
-        }),
-        expiration_rules: JSON.stringify({
-          expires_in_days: 365,
-          allow_extension: false
-        }),
-        merchant_rules: JSON.stringify({
-          allowed_merchants: [],
-          restricted_merchants: [],
-          require_merchant_approval: false
-        }),
-        route_rules: JSON.stringify({
-          allowed_routes: ['wallet_topup', 'general_purchase'],
-          restricted_routes: []
-        })
+    }
+    
+    // Check route restrictions
+    if (routeRules.allowedRoutes && routeRules.allowedRoutes.length > 0) {
+      if (!routeRules.allowedRoutes.includes(routeUsed)) {
+        return { valid: false, reason: `Voucher can only be used for: ${routeRules.allowedRoutes.join(', ')}` };
       }
-    ];
-
-    for (const type of defaultTypes) {
-      await this.createVoucherType(type);
     }
-  }
+    
+    return { valid: true };
+  };
 
-  // Create a new voucher type
-  async createVoucherType(typeData) {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        INSERT OR IGNORE INTO voucher_types (
-          type_name, display_name, description, pricing_model, base_rate,
-          min_amount, max_amount, validation_rules, redemption_rules,
-          expiration_rules, merchant_rules, route_rules, is_active
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      this.db.run(sql, [
-        typeData.type_name,
-        typeData.display_name,
-        typeData.description,
-        typeData.pricing_model,
-        typeData.base_rate,
-        typeData.min_amount,
-        typeData.max_amount,
-        typeData.validation_rules,
-        typeData.redemption_rules,
-        typeData.expiration_rules,
-        typeData.merchant_rules,
-        typeData.route_rules,
-        typeData.is_active !== undefined ? typeData.is_active : 1
-      ], function(err) {
-        if (err) {
-          console.error('❌ Error creating voucher type:', err.message);
-          reject(err);
-        } else {
-          resolve({
-            id: this.lastID,
-            type_name: typeData.type_name,
-            display_name: typeData.display_name
-          });
-        }
-      });
-    });
-  }
-
-  // Get voucher type by name
-  async getVoucherType(typeName) {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM voucher_types WHERE type_name = ? AND is_active = 1';
-      
-      this.db.get(sql, [typeName], (err, row) => {
-        if (err) {
-          console.error('❌ Error getting voucher type:', err.message);
-          reject(err);
-        } else {
-          if (row) {
-            // Parse JSON fields
-            row.validation_rules = JSON.parse(row.validation_rules || '{}');
-            row.redemption_rules = JSON.parse(row.redemption_rules || '{}');
-            row.expiration_rules = JSON.parse(row.expiration_rules || '{}');
-            row.merchant_rules = JSON.parse(row.merchant_rules || '{}');
-            row.route_rules = JSON.parse(row.route_rules || '{}');
-          }
-          resolve(row);
-        }
-      });
-    });
-  }
-
-  // Get all active voucher types
-  async getAllVoucherTypes() {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM voucher_types WHERE is_active = 1 ORDER BY display_name';
-      
-      this.db.all(sql, [], (err, rows) => {
-        if (err) {
-          console.error('❌ Error getting voucher types:', err.message);
-          reject(err);
-        } else {
-          // Parse JSON fields for each row
-          rows.forEach(row => {
-            row.validation_rules = JSON.parse(row.validation_rules || '{}');
-            row.redemption_rules = JSON.parse(row.redemption_rules || '{}');
-            row.expiration_rules = JSON.parse(row.expiration_rules || '{}');
-            row.merchant_rules = JSON.parse(row.merchant_rules || '{}');
-            row.route_rules = JSON.parse(row.route_rules || '{}');
-          });
-          resolve(rows);
-        }
-      });
-    });
-  }
-
-  // Update voucher type
-  async updateVoucherType(typeName, updateData) {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        UPDATE voucher_types SET 
-          display_name = ?, description = ?, pricing_model = ?, base_rate = ?,
-          min_amount = ?, max_amount = ?, validation_rules = ?, redemption_rules = ?,
-          expiration_rules = ?, merchant_rules = ?, route_rules = ?, 
-          is_active = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE type_name = ?
-      `;
-
-      this.db.run(sql, [
-        updateData.display_name,
-        updateData.description,
-        updateData.pricing_model,
-        updateData.base_rate,
-        updateData.min_amount,
-        updateData.max_amount,
-        JSON.stringify(updateData.validation_rules || {}),
-        JSON.stringify(updateData.redemption_rules || {}),
-        JSON.stringify(updateData.expiration_rules || {}),
-        JSON.stringify(updateData.merchant_rules || {}),
-        JSON.stringify(updateData.route_rules || {}),
-        updateData.is_active !== undefined ? updateData.is_active : 1,
-        typeName
-      ], function(err) {
-        if (err) {
-          console.error('❌ Error updating voucher type:', err.message);
-          reject(err);
-        } else {
-          resolve({ success: true, changes: this.changes });
-        }
-      });
-    });
-  }
-
-  // Delete voucher type (soft delete)
-  async deleteVoucherType(typeName) {
-    return new Promise((resolve, reject) => {
-      const sql = 'UPDATE voucher_types SET is_active = 0, updated_at = CURRENT_TIMESTAMP WHERE type_name = ?';
-      
-      this.db.run(sql, [typeName], function(err) {
-        if (err) {
-          console.error('❌ Error deleting voucher type:', err.message);
-          reject(err);
-        } else {
-          resolve({ success: true, changes: this.changes });
-        }
-      });
-    });
-  }
-
-  // Validate voucher against type rules
-  async validateVoucherAgainstType(voucherData, typeName) {
-    const voucherType = await this.getVoucherType(typeName);
-    if (!voucherType) {
-      throw new Error(`Voucher type '${typeName}' not found`);
+  VoucherType.prototype.getExpirationDate = function() {
+    const expirationRules = this.expirationRules || {};
+    if (expirationRules.expiresInDays) {
+      return new Date(Date.now() + expirationRules.expiresInDays * 24 * 60 * 60 * 1000);
     }
+    return null;
+  };
 
-    const amount = Number(voucherData.original_amount);
-    const errors = [];
-
-    // Validate amount range
-    if (amount < voucherType.min_amount) {
-      errors.push(`Amount must be at least ${voucherType.min_amount}`);
-    }
-    if (amount > voucherType.max_amount) {
-      errors.push(`Amount cannot exceed ${voucherType.max_amount}`);
-    }
-
-    // Validate pricing model
-    if (voucherType.pricing_model === 'bundle_rate' && !voucherData.bundle_size) {
-      errors.push('Bundle size is required for bundle rate vouchers');
-    }
-
-    return {
-      isValid: errors.length === 0,
-      errors,
-      voucherType
-    };
-  }
-
-  // Close database connection
-  close() {
-    if (this.db) {
-      this.db.close();
-    }
-  }
-}
-
-module.exports = VoucherTypeModel; 
+  return VoucherType;
+}; 

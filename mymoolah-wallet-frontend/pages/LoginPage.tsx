@@ -33,8 +33,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 
-// Import logo from src/assets/
-import logo2 from "../src/assets/logo2.svg";
+// Import logo from assets/
+import logo2 from "../assets/logo2.svg";
 
 // SA Mobile Number validation with all supported formats
 const validateSAMobileNumber = (phoneNumber: string): { isValid: boolean; message?: string } => {

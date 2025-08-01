@@ -1,26 +1,35 @@
 // controllers/authController.js
 
+const { User, Wallet } = require('../models'); // Use Sequelize models
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const bcrypt = require('bcrypt');
-const User = require('../models/User'); // Exports a class
-const walletModel = require('../models/Wallet'); // Exports an instance
 
-// Helper to normalize SA mobile numbers to 278XXXXXXXX format
+// Normalize South African mobile numbers
 function normalizeSAMobileNumber(phoneNumber) {
   // Remove all non-digit characters
-  let cleanNumber = phoneNumber.replace(/\D/g, '');
-  if (cleanNumber.startsWith('27') && cleanNumber.length === 11) {
-    return cleanNumber;
-  } else if (cleanNumber.startsWith('0') && cleanNumber.length === 10) {
-    return '27' + cleanNumber.slice(1);
-  } else if (cleanNumber.startsWith('27') && cleanNumber.length > 11) {
-    // In case someone enters something like 27 82 557 1055
-    return cleanNumber.slice(0, 11);
-  } else if (cleanNumber.startsWith('8') && cleanNumber.length === 9) {
-    // In case someone enters 825571055
-    return '27' + cleanNumber;
+  let cleaned = phoneNumber.replace(/\D/g, '');
+  
+  // If it already starts with 2727, fix it to just 27
+  if (cleaned.startsWith('2727')) {
+    cleaned = '27' + cleaned.substring(4);
   }
-  return cleanNumber;
+  
+  // If it starts with 0, replace with +27
+  if (cleaned.startsWith('0')) {
+    cleaned = '+27' + cleaned.substring(1);
+  }
+  
+  // If it starts with 27 and has 11 digits, convert to +27 format
+  if (cleaned.startsWith('27') && cleaned.length === 11) {
+    cleaned = '+27' + cleaned.substring(2);
+  }
+  
+  // If it still doesn't start with +, add +27
+  if (!cleaned.startsWith('+')) {
+    cleaned = '+27' + cleaned;
+  }
+  
+  return cleaned;
 }
 
 class AuthController {
@@ -29,9 +38,13 @@ class AuthController {
   // Register a new user
   async register(req, res) {
     try {
-      let { email, password, phoneNumber, name } = req.body;
-      if (!email || !password || !phoneNumber || !name) {
-        return res.status(400).json({ success: false, message: 'Email, password, phoneNumber, and name are required.' });
+      let { name, email, phoneNumber, password } = req.body;
+      
+      if (!name || !email || !phoneNumber || !password) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Name, email, mobile number and password are required.' 
+        });
       }
       phoneNumber = normalizeSAMobileNumber(phoneNumber);
 
@@ -39,28 +52,57 @@ class AuthController {
       const [firstName, ...rest] = name.trim().split(' ');
       const lastName = rest.join(' ');
 
-      const userModel = new User();
-      const existingUser = await userModel.getUserByEmail(email);
+      // Check for existing user by email
+      const existingUser = await User.findOne({ where: { email } });
       if (existingUser) {
         return res.status(409).json({ success: false, message: 'User with this email already exists' });
       }
-      const existingPhone = await userModel.getUserByPhone(phoneNumber);
+      
+      // Check for existing user by phone number
+      const existingPhone = await User.findOne({ where: { phoneNumber } });
       if (existingPhone) {
         return res.status(409).json({ success: false, message: 'User with this mobile number already exists' });
       }
-      // Create user with phoneNumber as both phoneNumber and accountNumber
-      const user = await userModel.createUser({ 
+      
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 12);
+      
+      // Generate account number
+      const accountNumber = 'ACC' + Date.now().toString().slice(-9);
+      
+      // Create user
+      const user = await User.create({ 
         email, 
-        password, 
+        password_hash: passwordHash, 
         phoneNumber,
         firstName,
-        lastName
+        lastName,
+        accountNumber,
+        balance: 0.00,
+        status: 'active',
+        kycStatus: 'not_started'
       });
+      
+      // Create wallet for user
+      const wallet = await Wallet.create({
+        userId: user.id,
+        walletId: `WAL-${accountNumber}`,
+        balance: 0.00,
+        currency: 'ZAR',
+        status: 'active',
+        kycVerified: false,
+        dailyLimit: 100000.00,
+        monthlyLimit: 1000000.00,
+        dailySpent: 0.00,
+        monthlySpent: 0.00
+      });
+      
       const token = jwt.sign(
         { id: user.id, email: user.email },
         process.env.JWT_SECRET,
         { expiresIn: '24h' }
       );
+      
       return res.status(201).json({ 
         success: true, 
         message: 'User registered successfully.',
@@ -72,11 +114,12 @@ class AuthController {
           firstName: user.firstName,
           lastName: user.lastName,
           name: `${user.firstName} ${user.lastName}`.trim(),
-          kycStatus: user.kycStatus || 'pending',
-          walletId: user.walletId
+          kycStatus: user.kycStatus,
+          walletId: wallet.walletId
         }
       });
     } catch (error) {
+      console.error('❌ Registration error:', error);
       return res.status(500).json({ success: false, message: error.message });
     }
   }
@@ -85,26 +128,59 @@ class AuthController {
   async login(req, res) {
     try {
       let { identifier, password } = req.body;
+      
       if (!identifier || !password) {
-        return res.status(400).json({ success: false, message: 'Mobile number and password are required.' });
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Mobile number and password are required.' 
+        });
       }
+      
       identifier = normalizeSAMobileNumber(identifier);
-      const userModel = new User();
-      const user = await userModel.getUserByPhone(identifier);
+      
+      // Find user by phone number
+      const user = await User.findOne({ 
+        where: { phoneNumber: identifier },
+        include: [{
+          model: Wallet,
+          as: 'wallet',
+          attributes: ['walletId', 'balance', 'currency', 'status']
+        }]
+      });
+      
       if (!user) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Invalid mobile number or password.' 
+        });
       }
-      const passwordMatch = await bcrypt.compare(password, user.password_hash);
-      if (!passwordMatch) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials.' });
+      
+      // Check password
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+      if (!isValidPassword) {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Invalid mobile number or password.' 
+        });
       }
+      
+      // Check if user is active
+      if (user.status !== 'active') {
+        return res.status(401).json({ 
+          success: false, 
+          message: 'Account is not active. Please contact support.' 
+        });
+      }
+      
       const token = jwt.sign(
         { id: user.id, email: user.email },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+        { expiresIn: '24h' }
       );
-      return res.status(200).json({ 
+      
+      return res.json({ 
         success: true, 
+        message: 'Login successful.',
         token,
         user: {
           id: user.id,
@@ -113,45 +189,35 @@ class AuthController {
           firstName: user.firstName,
           lastName: user.lastName,
           name: `${user.firstName} ${user.lastName}`.trim(),
-          walletId: user.walletId,
-          kycStatus: user.kycStatus || 'pending'
+          kycStatus: user.kycStatus,
+          walletId: user.wallet?.walletId,
+          balance: user.wallet?.balance || 0
         }
       });
     } catch (error) {
+      console.error('❌ Login error:', error);
       return res.status(500).json({ success: false, message: error.message });
     }
   }
 
-  // Get user profile (requires authentication middleware)
+  // Get user profile
   async getProfile(req, res) {
     try {
       const userId = req.user.id;
-      const userModel = new User();
-      const user = await userModel.getUserById(userId);
-      if (!user) {
-        return res.status(404).json({ success: false, message: 'User not found.' });
-      }
-      return res.status(200).json({ success: true, user });
-    } catch (error) {
-      return res.status(500).json({ success: false, message: error.message });
-    }
-  }
-
-  // Verify JWT token
-  async verify(req, res) {
-    try {
-      // The authMiddleware has already verified the token and set req.user
-      const userId = req.user.id;
-      const userModel = new User();
-      const user = await userModel.getUserById(userId);
+      const user = await User.findByPk(userId, {
+        include: [{
+          model: Wallet,
+          as: 'wallet',
+          attributes: ['walletId', 'balance', 'currency', 'status']
+        }]
+      });
       
       if (!user) {
-        return res.status(404).json({ success: false, message: 'User not found.' });
+        return res.status(404).json({ success: false, message: 'User not found' });
       }
       
-      return res.status(200).json({ 
-        success: true, 
-        message: 'Token is valid',
+      return res.json({
+        success: true,
         user: {
           id: user.id,
           email: user.email,
@@ -159,14 +225,47 @@ class AuthController {
           firstName: user.firstName,
           lastName: user.lastName,
           name: `${user.firstName} ${user.lastName}`.trim(),
-          walletId: user.walletId,
-          kycStatus: user.kycStatus || 'pending'
+          kycStatus: user.kycStatus,
+          walletId: user.wallet?.walletId,
+          balance: user.wallet?.balance || 0
         }
       });
     } catch (error) {
+      console.error('❌ Get profile error:', error);
       return res.status(500).json({ success: false, message: error.message });
+    }
+  }
+
+  // Verify token
+  async verify(req, res) {
+    try {
+      const token = req.headers.authorization?.split(' ')[1];
+      
+      if (!token) {
+        return res.status(401).json({ success: false, message: 'No token provided' });
+      }
+      
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findByPk(decoded.id);
+      
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'Invalid token' });
+      }
+      
+      return res.json({ success: true, message: 'Token is valid' });
+    } catch (error) {
+      console.error('❌ Token verification error:', error);
+      return res.status(401).json({ success: false, message: 'Invalid token' });
     }
   }
 }
 
-module.exports = new AuthController();
+// Create instance and export methods
+const authController = new AuthController();
+
+module.exports = {
+  register: authController.register.bind(authController),
+  login: authController.login.bind(authController),
+  getProfile: authController.getProfile.bind(authController),
+  verify: authController.verify.bind(authController)
+};

@@ -5,10 +5,8 @@ import { BottomNavigation } from '../components/BottomNavigation';
 export function MobileLayout() {
   return (
     <div className="max-w-sm mx-auto bg-white min-h-screen relative">
-      {/* Sticky Top Banner */}
-      <div className="sticky top-0 z-50">
-        <TopBanner />
-      </div>
+      {/* Top Banner - handles its own sticky positioning */}
+      <TopBanner />
       
       {/* Main Content */}
       <main className="pb-24">

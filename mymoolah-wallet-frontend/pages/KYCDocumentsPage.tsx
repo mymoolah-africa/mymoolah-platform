@@ -22,6 +22,7 @@ import {
   Home,
   Loader2
 } from 'lucide-react';
+import { APP_CONFIG } from '../config/app-config';
 
 type DocumentType = 'identity' | 'address';
 type DocumentStatus = 'pending' | 'uploaded' | 'processing' | 'verified' | 'rejected';
@@ -188,7 +189,7 @@ export function KYCDocumentsPage() {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch('/api/v1/kyc/upload-document', {
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/kyc/upload-documents`, {
         method: 'POST',
         body: formData,
         headers: {

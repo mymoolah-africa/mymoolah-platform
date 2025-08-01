@@ -1,224 +1,207 @@
-const sqlite3 = require('sqlite3').verbose();
-const bcrypt = require('bcryptjs');
-const path = require('path');
+// mymoolah/models/User.js
 
-class User {
-  constructor() {
-    this.dbPath = path.join(__dirname, '../data/mymoolah.db');
-    this.db = new sqlite3.Database(this.dbPath);
-    this.initTable();
-  }
+module.exports = (sequelize, DataTypes) => {
+  const User = sequelize.define('User', {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        isEmail: true,
+        notEmpty: true,
+      },
+    },
+    password_hash: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        len: [60, 60], // bcrypt hash length
+      },
+    },
+    firstName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        len: [1, 50],
+      },
+    },
+    lastName: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        len: [1, 50],
+      },
+    },
+    phoneNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        is: /^(\+27|0)[6-8][0-9]{8}$/, // South African mobile format
+      },
+    },
+    accountNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      unique: true,
+    },
+    balance: {
+      type: DataTypes.DECIMAL(15, 2), // Banking-grade precision
+      allowNull: false,
+      defaultValue: 0.00,
+      validate: {
+        min: 0,
+      },
+    },
+    status: {
+      type: DataTypes.ENUM('active', 'suspended', 'inactive', 'pending'),
+      allowNull: false,
+      defaultValue: 'active',
+    },
+    kycStatus: {
+      type: DataTypes.ENUM('not_started', 'pending', 'verified', 'rejected'),
+      allowNull: false,
+      defaultValue: 'not_started',
+    },
+    kycVerifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    kycVerifiedBy: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    lastLoginAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    loginAttempts: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      validate: {
+        min: 0,
+        max: 10,
+      },
+    },
+    lockedUntil: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  }, {
+    tableName: 'users',
+    timestamps: true,
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    indexes: [
+      {
+        unique: true,
+        fields: ['email'],
+      },
+      {
+        unique: true,
+        fields: ['accountNumber'],
+      },
+      {
+        fields: ['phoneNumber'],
+      },
+      {
+        fields: ['status'],
+      },
+      {
+        fields: ['kycStatus'],
+      },
+    ],
+    hooks: {
+      beforeCreate: (user) => {
+        // Generate account number if not provided
+        if (!user.accountNumber && user.phoneNumber) {
+          user.accountNumber = user.phoneNumber;
+        }
+      },
+      beforeUpdate: (user) => {
+        // Update kycVerifiedAt when KYC status changes to verified
+        if (user.changed('kycStatus') && user.kycStatus === 'verified') {
+          user.kycVerifiedAt = new Date();
+        }
+      },
+    },
+  });
 
-  // Initialize users table
-  initTable() {
-    const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        password_hash TEXT NOT NULL,
-        firstName TEXT NOT NULL,
-        lastName TEXT NOT NULL,
-        phoneNumber TEXT,
-        accountNumber TEXT,
-        balance REAL DEFAULT 0.00,
-        status TEXT DEFAULT 'active',
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `;
-
-    this.db.run(createTableSQL, (err) => {
-      if (err) {
-        console.error('❌ Error creating users table:', err.message);
-      } else {
-        console.log('✅ Users table created successfully');
-      }
+  // Define associations
+  User.associate = (models) => {
+    // User has one Wallet
+    User.hasOne(models.Wallet, {
+      foreignKey: 'userId',
+      as: 'wallet',
     });
-  }
 
-  // Generate unique wallet ID
-  generateWalletId() {
+    // User has many Transactions
+    User.hasMany(models.Transaction, {
+      foreignKey: 'userId',
+      as: 'transactions',
+    });
+
+    // User has many Payments
+    User.hasMany(models.Payment, {
+      foreignKey: 'userId',
+      as: 'payments',
+    });
+
+    // User has one KYC record
+    User.hasOne(models.Kyc, {
+      foreignKey: 'userId',
+      as: 'kyc',
+    });
+
+    // User has many Support Tickets
+    User.hasMany(models.SupportTicket, {
+      foreignKey: 'userId',
+      as: 'supportTickets',
+    });
+  };
+
+  // Instance methods
+  User.prototype.generateWalletId = function() {
     const timestamp = Date.now();
     const random = Math.random().toString(36).substring(2, 8);
     return `WAL${timestamp}${random}`;
-  }
+  };
 
-  // Create a new user
-  async createUser(userData) {
-    return new Promise((resolve, reject) => {
-      const {
-        email,
-        password,
-        phoneNumber,
-        firstName = '',
-        lastName = ''
-      } = userData;
-      const saltRounds = 12;
-      const passwordHash = bcrypt.hashSync(password, saltRounds);
-      const walletId = this.generateWalletId();
-      const sql = `
-        INSERT INTO users (
-          email, password_hash, firstName, lastName, 
-          phoneNumber, accountNumber, balance, status, createdAt, updatedAt
-        ) VALUES (?, ?, ?, ?, ?, ?, 0.00, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      `;
-      this.db.run(sql, [
-        email, passwordHash, firstName, lastName, phoneNumber, phoneNumber
-      ], function(err) {
-        if (err) {
-          console.error('\u274c Error creating user:', err.message);
-          reject(err);
-        } else {
-          const userId = this.lastID;
-          const walletModel = require('./Wallet');
-          walletModel.createWallet(userId, walletId)
-            .then(() => {
-              resolve({
-                id: userId,
-                email,
-                phoneNumber,
-                accountNumber: phoneNumber,
-                firstName,
-                lastName,
-                walletId,
-                balance: 0.00,
-                status: 'active',
-                kycStatus: 'pending',
-                createdAt: new Date().toISOString()
-              });
-            })
-            .catch(walletErr => {
-              console.error('\u274c Error creating wallet:', walletErr.message);
-              reject(walletErr);
-            });
-        }
-      });
-    });
-  }
+  User.prototype.isLocked = function() {
+    return this.lockedUntil && new Date() < this.lockedUntil;
+  };
 
-  // Get user by ID
-  async getUserById(id) {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM users WHERE id = ?';
-      this.db.get(sql, [id], (err, row) => {
-        if (err) {
-          console.error('❌ Error getting user by ID:', err.message);
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-    });
-  }
+  User.prototype.incrementLoginAttempts = async function() {
+    this.loginAttempts += 1;
+    if (this.loginAttempts >= 5) {
+      this.lockedUntil = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+    }
+    await this.save();
+  };
 
-  // Get user by email
-  async getUserByEmail(email) {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM users WHERE email = ?';
-      this.db.get(sql, [email], (err, row) => {
-        if (err) {
-          console.error('❌ Error getting user by email:', err.message);
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-    });
-  }
+  User.prototype.resetLoginAttempts = async function() {
+    this.loginAttempts = 0;
+    this.lockedUntil = null;
+    await this.save();
+  };
 
-  // Get user by phone
-  async getUserByPhone(phone) {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT * FROM users WHERE phoneNumber = ?';
-      this.db.get(sql, [phone], (err, row) => {
-        if (err) {
-          console.error('❌ Error getting user by phone:', err.message);
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-    });
-  }
-
-  // Alias for getUserByEmail (for compatibility)
-  async findUserByEmail(email) {
-    return this.getUserByEmail(email);
-  }
-
-  // Alias for getUserById (for compatibility)
-  async findUserById(id) {
-    return this.getUserById(id);
-  }
-
-  // Get all users
-  async getAllUsers() {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT id, email, firstName, lastName, phoneNumber, balance, status, createdAt, updatedAt FROM users ORDER BY createdAt DESC';
-      this.db.all(sql, (err, rows) => {
-        if (err) {
-          console.error('❌ Error getting all users:', err.message);
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
-  }
-
-  // Update user
-  async updateUser(id, updateData) {
-    return new Promise((resolve, reject) => {
-      const { firstName, lastName, phoneNumber } = updateData;
-      const sql = 'UPDATE users SET firstName = ?, lastName = ?, phoneNumber = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?';
-      this.db.run(sql, [firstName, lastName, phoneNumber, id], function(err) {
-        if (err) {
-          console.error('❌ Error updating user:', err.message);
-          reject(err);
-        } else {
-          resolve({ changes: this.changes });
-        }
-      });
-    });
-  }
-
-  // Get user statistics
-  async getUserStats() {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT 
-          COUNT(*) as totalUsers,
-          COUNT(CASE WHEN status = 'active' THEN 1 END) as activeUsers,
-          COUNT(CASE WHEN status = 'inactive' THEN 1 END) as inactiveUsers,
-          AVG(balance) as averageBalance,
-          SUM(balance) as totalBalance
-        FROM users
-      `;
-      this.db.get(sql, (err, row) => {
-        if (err) {
-          console.error('❌ Error getting user stats:', err.message);
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-    });
-  }
-
-  // Update user status
-  async updateUserStatus(id, status) {
-    return new Promise((resolve, reject) => {
-      const sql = 'UPDATE users SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?';
-      this.db.run(sql, [status, id], function(err) {
-        if (err) {
-          console.error('❌ Error updating user status:', err.message);
-          reject(err);
-        } else {
-          resolve({ changes: this.changes });
-        }
-      });
-    });
-  }
-}
-
-module.exports = User;
+  return User;
+};

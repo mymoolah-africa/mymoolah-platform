@@ -37,8 +37,8 @@ import {
   CheckCircle,
 } from "lucide-react";
 
-// Import logo from src/assets/
-import logo2 from "../src/assets/logo2.svg";
+// Import logo from assets/
+import logo2 from "../assets/logo2.svg";
 
 // Multi-input detection utilities (same as authentication)
 const detectInputType = (

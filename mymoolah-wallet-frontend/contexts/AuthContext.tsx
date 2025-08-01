@@ -295,7 +295,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updateKYCStatus = async (status: KYCStatus) => {
     try {
       if (isDemoMode()) {
-        // Demo mode - update local storage
+        // Demo mode - store in localStorage
         localStorage.setItem('mymoolah_kyc_status', status);
         
         // Update user state
@@ -310,7 +310,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         // Production mode - API call to backend
         const token = localStorage.getItem('mymoolah_token');
-        const response = await fetch('/api/v1/kyc/update-status', {
+        const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/kyc/update-status`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -378,7 +378,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         // Production mode - fetch latest status from backend
         const token = localStorage.getItem('mymoolah_token');
-        const response = await fetch('/api/v1/users/me', {
+        const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/users/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
 

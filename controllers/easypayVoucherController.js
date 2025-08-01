@@ -1,9 +1,4 @@
-const EasyPayVoucherModel = require('../models/easypayVoucherModel');
-const VoucherModel = require('../models/voucherModel');
-
-// Create instances
-const easypayVoucherModel = new EasyPayVoucherModel();
-const voucherModel = new VoucherModel();
+const { EasyPayVoucher, Voucher } = require('../models');
 
 // Mock SMS service (replace with actual SMS service)
 const mockSMSService = {
@@ -30,26 +25,46 @@ exports.issueEasyPayVoucher = async (req, res) => {
       return res.status(400).json({ error: 'Amount must be between 10 and 4000' });
     }
 
+    // Generate EasyPay code and MM voucher code
+    const easypayCode = 'EP' + Date.now().toString().slice(-10);
+    const mmVoucherCode = 'MM' + Date.now().toString().slice(-10);
+    
+    // Set expiration (48 hours from now)
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000);
+    
     // Create EasyPay voucher
-    const easypayVoucher = await easypayVoucherModel.createEasyPayVoucher(voucherData);
+    const easypayVoucher = await EasyPayVoucher.create({
+      easypayCode,
+      mmVoucherCode,
+      originalAmount: amount,
+      status: 'pending',
+      issuedTo: voucherData.issued_to,
+      issuedBy: 'system',
+      expiresAt,
+      callbackReceived: false,
+      smsSent: false
+    });
     
     // Send SMS with EasyPay code (mock)
-    const smsMessage = `Your EasyPay code: ${easypayVoucher.easypay_code}\nAmount: R${amount}\nValid for 48 hours. Pay at any EasyPay merchant.`;
+    const smsMessage = `Your EasyPay code: ${easypayVoucher.easypayCode}\nAmount: R${amount}\nValid for 48 hours. Pay at any EasyPay merchant.`;
     await mockSMSService.sendSMS(voucherData.phone_number || 'mock_number', smsMessage);
     
     // Mark SMS as sent
-    await easypayVoucherModel.markSMSSent(easypayVoucher.easypay_code);
+    await easypayVoucher.update({
+      smsSent: true,
+      smsTimestamp: new Date()
+    });
 
     res.status(201).json({
       success: true,
       message: 'EasyPay voucher created successfully',
-      easypay_code: easypayVoucher.easypay_code,
-      amount: easypayVoucher.original_amount,
-      expires_at: easypayVoucher.expires_at,
+      easypay_code: easypayVoucher.easypayCode,
+      amount: easypayVoucher.originalAmount,
+      expires_at: easypayVoucher.expiresAt,
       sms_sent: true
     });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Issue EasyPay voucher error:', err);
     res.status(500).json({ error: err.message || 'Failed to create EasyPay voucher' });
   }
 };
@@ -63,39 +78,55 @@ exports.processSettlementCallback = async (req, res) => {
       return res.status(400).json({ error: 'EasyPay code, amount, and merchant are required' });
     }
 
-    // Process settlement
-    const settlementResult = await easypayVoucherModel.processSettlementCallback(easypay_code, {
-      amount: Number(amount),
-      merchant,
-      transaction_id
+    // Find EasyPay voucher
+    const easypayVoucher = await EasyPayVoucher.findOne({
+      where: { easypayCode: easypay_code }
+    });
+    
+    if (!easypayVoucher) {
+      return res.status(404).json({ error: 'EasyPay voucher not found' });
+    }
+    
+    if (easypayVoucher.status !== 'pending') {
+      return res.status(400).json({ error: 'EasyPay voucher is not pending' });
+    }
+
+    // Update EasyPay voucher with settlement info
+    await easypayVoucher.update({
+      status: 'settled',
+      settlementAmount: Number(amount),
+      settlementMerchant: merchant,
+      settlementTimestamp: new Date(),
+      callbackReceived: true
     });
 
     // Create MM voucher for the settled amount
-    const mmVoucherData = {
-      original_amount: settlementResult.settlement_amount,
-      voucher_type: 'easypay_mm',
-      issued_to: settlementResult.issued_to,
-      issued_by: 'easypay_settlement',
+    const mmVoucher = await Voucher.create({
+      voucherCode: easypayVoucher.mmVoucherCode,
+      originalAmount: Number(amount),
+      balance: Number(amount),
+      status: 'active',
+      voucherType: 'easypay_mm',
+      issuedTo: easypayVoucher.issuedTo,
+      issuedBy: 'easypay_settlement',
       config: {
         easypay_code: easypay_code,
-        settlement_merchant: settlementResult.settlement_merchant,
+        settlement_merchant: merchant,
         settlement_timestamp: new Date().toISOString()
       }
-    };
-
-    const mmVoucher = await voucherModel.issueVoucher(mmVoucherData);
+    });
 
     res.json({
       success: true,
       message: 'Settlement processed successfully',
       easypay_code: easypay_code,
-      mm_voucher_code: mmVoucher.voucher_code,
-      settlement_amount: settlementResult.settlement_amount,
-      settlement_merchant: settlementResult.settlement_merchant,
+      mm_voucher_code: mmVoucher.voucherCode,
+      settlement_amount: mmVoucher.originalAmount,
+      settlement_merchant: merchant,
       mm_voucher_created: true
     });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Process settlement error:', err);
     res.status(400).json({ error: err.message || 'Failed to process settlement' });
   }
 };
@@ -104,24 +135,26 @@ exports.processSettlementCallback = async (req, res) => {
 exports.getEasyPayVoucherStatus = async (req, res) => {
   try {
     const { easypay_code } = req.params;
-    const voucher = await easypayVoucherModel.getEasyPayVoucher(easypay_code);
+    const voucher = await EasyPayVoucher.findOne({
+      where: { easypayCode: easypay_code }
+    });
     
     if (!voucher) {
       return res.status(404).json({ error: 'EasyPay voucher not found' });
     }
 
     res.json({
-      easypay_code: voucher.easypay_code,
+      easypay_code: voucher.easypayCode,
       status: voucher.status,
-      amount: voucher.original_amount,
-      expires_at: voucher.expires_at,
-      settlement_amount: voucher.settlement_amount,
-      settlement_merchant: voucher.settlement_merchant,
-      settlement_timestamp: voucher.settlement_timestamp,
-      mm_voucher_code: voucher.mm_voucher_code
+      amount: voucher.originalAmount,
+      expires_at: voucher.expiresAt,
+      settlement_amount: voucher.settlementAmount,
+      settlement_merchant: voucher.settlementMerchant,
+      settlement_timestamp: voucher.settlementTimestamp,
+      mm_voucher_code: voucher.mmVoucherCode
     });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Get EasyPay voucher status error:', err);
     res.status(500).json({ error: 'Failed to get EasyPay voucher status' });
   }
 };
@@ -130,10 +163,20 @@ exports.getEasyPayVoucherStatus = async (req, res) => {
 exports.getPendingEasyPayVouchers = async (req, res) => {
   try {
     const { userId } = req.params;
-    const vouchers = await easypayVoucherModel.getPendingEasyPayVouchers(userId);
-    res.json(vouchers);
+    const vouchers = await EasyPayVoucher.findAll({
+      where: {
+        userId: userId,
+        status: 'pending'
+      },
+      order: [['createdAt', 'DESC']]
+    });
+    
+    res.json({
+      success: true,
+      data: vouchers
+    });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Get pending EasyPay vouchers error:', err);
     res.status(500).json({ error: 'Failed to get pending EasyPay vouchers' });
   }
 };
@@ -142,10 +185,21 @@ exports.getPendingEasyPayVouchers = async (req, res) => {
 exports.getSettledMMVouchers = async (req, res) => {
   try {
     const { userId } = req.params;
-    const vouchers = await easypayVoucherModel.getSettledMMVouchers(userId);
-    res.json(vouchers);
+    const vouchers = await Voucher.findAll({
+      where: {
+        userId: userId,
+        voucherType: 'easypay_mm',
+        status: 'active'
+      },
+      order: [['createdAt', 'DESC']]
+    });
+    
+    res.json({
+      success: true,
+      data: vouchers
+    });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Get settled MM vouchers error:', err);
     res.status(500).json({ error: 'Failed to get settled MM vouchers' });
   }
 };
@@ -154,7 +208,9 @@ exports.getSettledMMVouchers = async (req, res) => {
 exports.resendSMS = async (req, res) => {
   try {
     const { easypay_code } = req.params;
-    const voucher = await easypayVoucherModel.getEasyPayVoucher(easypay_code);
+    const voucher = await EasyPayVoucher.findOne({
+      where: { easypayCode: easypay_code }
+    });
     
     if (!voucher) {
       return res.status(404).json({ error: 'EasyPay voucher not found' });
@@ -165,19 +221,22 @@ exports.resendSMS = async (req, res) => {
     }
 
     // Resend SMS
-    const smsMessage = `Your EasyPay code: ${voucher.easypay_code}\nAmount: R${voucher.original_amount}\nValid for 48 hours. Pay at any EasyPay merchant.`;
+    const smsMessage = `Your EasyPay code: ${voucher.easypayCode}\nAmount: R${voucher.originalAmount}\nValid for 48 hours. Pay at any EasyPay merchant.`;
     await mockSMSService.sendSMS('mock_number', smsMessage);
     
     // Update SMS timestamp
-    await easypayVoucherModel.markSMSSent(easypay_code);
+    await voucher.update({
+      smsSent: true,
+      smsTimestamp: new Date()
+    });
 
     res.json({
       success: true,
       message: 'SMS resent successfully',
-      easypay_code: voucher.easypay_code
+      easypay_code: voucher.easypayCode
     });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Resend SMS error:', err);
     res.status(500).json({ error: 'Failed to resend SMS' });
   }
 };
@@ -185,14 +244,28 @@ exports.resendSMS = async (req, res) => {
 // Cleanup expired vouchers (admin function)
 exports.cleanupExpiredVouchers = async (req, res) => {
   try {
-    const result = await easypayVoucherModel.cleanupExpiredVouchers();
+    const expiredVouchers = await EasyPayVoucher.findAll({
+      where: {
+        status: 'pending',
+        expiresAt: {
+          [require('sequelize').Op.lt]: new Date()
+        }
+      }
+    });
+    
+    let expiredCount = 0;
+    for (const voucher of expiredVouchers) {
+      await voucher.update({ status: 'expired' });
+      expiredCount++;
+    }
+    
     res.json({
       success: true,
       message: 'Expired vouchers cleaned up',
-      expired_count: result.expired_count
+      expired_count: expiredCount
     });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Cleanup expired vouchers error:', err);
     res.status(500).json({ error: 'Failed to cleanup expired vouchers' });
   }
 }; 

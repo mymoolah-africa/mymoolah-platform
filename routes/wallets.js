@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
-const WalletModel = require('../models/Wallet');
 
 // Validation middleware
 const validateRequest = (req, res, next) => {
@@ -38,19 +37,8 @@ router.get('/', async (req, res) => {
 // GET /api/v1/wallets/balance
 router.get('/balance', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const wallet = await WalletModel.getWalletByUserId(userId);
-    if (!wallet) {
-      return res.status(404).json({ success: false, message: 'Wallet not found' });
-    }
-    const balanceData = {
-      available: wallet.balance,
-      pending: 0.00, // Update if you have pending logic
-      total: wallet.balance,
-      currency: wallet.currency || 'ZAR',
-      lastUpdated: wallet.updatedAt || new Date().toISOString()
-    };
-    return res.json({ success: true, data: balanceData });
+    const walletController = require('../controllers/walletController');
+    await walletController.getBalance(req, res);
   } catch (error) {
     console.error('Error getting wallet balance:', error);
     return res.status(500).json({ success: false, message: 'Failed to get wallet balance' });
@@ -60,14 +48,8 @@ router.get('/balance', authMiddleware, async (req, res) => {
 // GET /api/v1/wallets/transactions
 router.get('/transactions', authMiddleware, async (req, res) => {
   try {
-    const userId = req.user.id;
-    const wallet = await WalletModel.getWalletByUserId(userId);
-    if (!wallet) {
-      return res.status(404).json({ success: false, message: 'Wallet not found' });
-    }
-    const { page = 1, limit = 10 } = req.query;
-    const txResult = await WalletModel.listWalletTransactions(wallet.walletId, { page, limit });
-    return res.json({ success: true, data: txResult });
+    const walletController = require('../controllers/walletController');
+    await walletController.getTransactionHistory(req, res);
   } catch (error) {
     console.error('Error getting wallet transactions:', error);
     return res.status(500).json({ success: false, message: 'Failed to get wallet transactions' });
@@ -86,31 +68,11 @@ router.post('/deposit', [
   validateRequest
 ], async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { amount, source } = req.body;
-    
-    // Simulate deposit processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const transactionId = `TXN${Date.now()}${Math.random().toString(36).substring(2, 8)}`;
-    
-    return res.json({
-      success: true,
-      message: 'Deposit initiated successfully',
-      data: {
-        transactionId,
-        amount: parseFloat(amount),
-        source,
-        status: 'processing',
-        estimatedCompletion: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
-      }
-    });
+    const walletController = require('../controllers/walletController');
+    await walletController.creditWallet(req, res);
   } catch (error) {
     console.error('Error processing deposit:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to process deposit'
-    });
+    return res.status(500).json({ success: false, message: 'Failed to process deposit' });
   }
 });
 
@@ -121,158 +83,127 @@ router.post('/withdraw', [
     .isFloat({ min: 1 })
     .withMessage('Amount must be at least R1'),
   body('destination')
-    .isIn(['bank_account', 'atm'])
-    .withMessage('Destination must be bank_account or atm'),
+    .isIn(['bank_account', 'card', 'cash'])
+    .withMessage('Destination must be bank_account, card, or cash'),
   validateRequest
 ], async (req, res) => {
   try {
-    const userId = req.user.id;
-    const { amount, destination } = req.body;
-    
-    // Simulate withdrawal processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const transactionId = `TXN${Date.now()}${Math.random().toString(36).substring(2, 8)}`;
-    
-    return res.json({
-      success: true,
-      message: 'Withdrawal initiated successfully',
-      data: {
-        transactionId,
-        amount: parseFloat(amount),
-        destination,
-        status: 'processing',
-        estimatedCompletion: new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 minutes
-      }
-    });
+    const walletController = require('../controllers/walletController');
+    await walletController.debitWallet(req, res);
   } catch (error) {
     console.error('Error processing withdrawal:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to process withdrawal'
-    });
+    return res.status(500).json({ success: false, message: 'Failed to process withdrawal' });
   }
 });
 
-// GET /api/v1/wallets/limits
-router.get('/limits', authMiddleware, async (req, res) => {
+// POST /api/v1/wallets/send
+router.post('/send', [
+  authMiddleware,
+  body('receiverPhoneNumber')
+    .notEmpty()
+    .withMessage('Receiver phone number is required'),
+  body('amount')
+    .isFloat({ min: 1 })
+    .withMessage('Amount must be at least R1'),
+  validateRequest
+], async (req, res) => {
   try {
-    const limits = {
-      daily: {
-        deposit: 50000.00,
-        withdrawal: 10000.00,
-        transfer: 25000.00
-      },
-      monthly: {
-        deposit: 500000.00,
-        withdrawal: 100000.00,
-        transfer: 250000.00
-      },
-      transaction: {
-        min: 1.00,
-        max: 50000.00
-      }
-    };
-    
-    return res.json({
-      success: true,
-      data: limits
-    });
+    const walletController = require('../controllers/walletController');
+    await walletController.sendMoney(req, res);
   } catch (error) {
-    console.error('Error getting wallet limits:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get wallet limits'
-    });
+    console.error('Error sending money:', error);
+    return res.status(500).json({ success: false, message: 'Failed to send money' });
   }
 });
 
-// Legacy: POST /api/v1/wallets
-router.post('/', async (req, res) => {
-  const { user_id, account_number } = req.body;
-  if (user_id === undefined) {
-    return res.status(400).json({ error: 'user_id is required' });
+// GET /api/v1/wallets/summary
+router.get('/summary', authMiddleware, async (req, res) => {
+  try {
+    const walletController = require('../controllers/walletController');
+    await walletController.getTransactionSummary(req, res);
+  } catch (error) {
+    console.error('Error getting wallet summary:', error);
+    return res.status(500).json({ success: false, message: 'Failed to get wallet summary' });
   }
-  if (typeof user_id !== 'number' || user_id <= 0) {
-    return res.status(400).json({ error: 'Invalid user_id' });
-  }
-  if (account_number === 'DUPLICATE') {
-    return res.status(409).json({ error: 'Duplicate account_number' });
-  }
-  // Simulate wallet creation
-  return res.status(201).json({ wallet_id: 123, account_number: account_number || 'ACC123' });
 });
-// Legacy: GET /api/v1/wallets/:id
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  if (isNaN(id)) {
-    return res.status(400).json({ error: 'Invalid wallet id' });
+
+// GET /api/v1/wallets/details
+router.get('/details', authMiddleware, async (req, res) => {
+  try {
+    const walletController = require('../controllers/walletController');
+    await walletController.getWalletDetails(req, res);
+  } catch (error) {
+    console.error('Error getting wallet details:', error);
+    return res.status(500).json({ success: false, message: 'Failed to get wallet details' });
   }
-  if (id === '999999') {
-    return res.status(404).json({ error: 'Wallet not found' });
-  }
-  return res.status(200).json({ message: 'Wallet info placeholder' });
 });
-// Legacy: GET /api/v1/wallets/:id/balance
-router.get('/:id/balance', async (req, res) => {
-  const { id } = req.params;
-  if (isNaN(id)) {
-    return res.status(400).json({ error: 'Invalid wallet id' });
+
+// Admin routes (require admin authentication)
+// GET /api/v1/wallets/:walletId
+router.get('/:walletId', authMiddleware, async (req, res) => {
+  try {
+    const walletController = require('../controllers/walletController');
+    await walletController.getWalletById(req, res);
+  } catch (error) {
+    console.error('Error getting wallet by ID:', error);
+    return res.status(500).json({ success: false, message: 'Failed to get wallet' });
   }
-  if (id === '999999') {
-    return res.status(404).json({ error: 'Wallet not found' });
-  }
-  return res.status(200).json({ message: 'Wallet balance placeholder' });
 });
-// Legacy: POST /api/v1/wallets/:id/credit
-router.post('/:id/credit', async (req, res) => {
-  const { id } = req.params;
-  const { amount } = req.body;
-  if (isNaN(id)) {
-    return res.status(404).json({ error: 'Wallet not found' });
+
+// GET /api/v1/wallets/:walletId/balance
+router.get('/:walletId/balance', authMiddleware, async (req, res) => {
+  try {
+    const walletController = require('../controllers/walletController');
+    await walletController.getWalletBalance(req, res);
+  } catch (error) {
+    console.error('Error getting wallet balance by ID:', error);
+    return res.status(500).json({ success: false, message: 'Failed to get wallet balance' });
   }
-  if (id === '999999') {
-    return res.status(404).json({ error: 'Wallet not found' });
-  }
-  if (amount === undefined) {
-    return res.status(400).json({ error: 'Amount is required' });
-  }
-  if (typeof amount !== 'number' || amount <= 0) {
-    return res.status(400).json({ error: 'Invalid amount' });
-  }
-  return res.status(200).json({ message: 'Wallet credited' });
 });
-// Legacy: POST /api/v1/wallets/:id/debit
-router.post('/:id/debit', async (req, res) => {
-  const { id } = req.params;
-  const { amount } = req.body;
-  if (isNaN(id)) {
-    return res.status(404).json({ error: 'Wallet not found' });
+
+// POST /api/v1/wallets/:walletId/credit
+router.post('/:walletId/credit', [
+  authMiddleware,
+  body('amount')
+    .isFloat({ min: 0.01 })
+    .withMessage('Amount must be at least R0.01'),
+  validateRequest
+], async (req, res) => {
+  try {
+    const walletController = require('../controllers/walletController');
+    await walletController.creditWalletById(req, res);
+  } catch (error) {
+    console.error('Error crediting wallet:', error);
+    return res.status(500).json({ success: false, message: 'Failed to credit wallet' });
   }
-  if (id === '999999') {
-    return res.status(404).json({ error: 'Wallet not found' });
-  }
-  if (amount === undefined) {
-    return res.status(400).json({ error: 'Amount is required' });
-  }
-  if (typeof amount !== 'number' || amount <= 0) {
-    return res.status(400).json({ error: 'Invalid amount' });
-  }
-  if (amount > 1000) {
-    return res.status(400).json({ error: 'Insufficient funds' });
-  }
-  return res.status(200).json({ message: 'Wallet debited' });
 });
-// Legacy: GET /api/v1/wallets/:id/transactions
-router.get('/:id/transactions', async (req, res) => {
-  const { id } = req.params;
-  if (isNaN(id)) {
-    return res.status(400).json({ error: 'Invalid wallet id' });
+
+// POST /api/v1/wallets/:walletId/debit
+router.post('/:walletId/debit', [
+  authMiddleware,
+  body('amount')
+    .isFloat({ min: 0.01 })
+    .withMessage('Amount must be at least R0.01'),
+  validateRequest
+], async (req, res) => {
+  try {
+    const walletController = require('../controllers/walletController');
+    await walletController.debitWalletById(req, res);
+  } catch (error) {
+    console.error('Error debiting wallet:', error);
+    return res.status(500).json({ success: false, message: 'Failed to debit wallet' });
   }
-  if (id === '999999') {
-    return res.status(404).json({ error: 'Wallet not found' });
+});
+
+// GET /api/v1/wallets/:walletId/transactions
+router.get('/:walletId/transactions', authMiddleware, async (req, res) => {
+  try {
+    const walletController = require('../controllers/walletController');
+    await walletController.getWalletTransactions(req, res);
+  } catch (error) {
+    console.error('Error getting wallet transactions:', error);
+    return res.status(500).json({ success: false, message: 'Failed to get wallet transactions' });
   }
-  return res.status(200).json({ message: 'Wallet transactions placeholder' });
 });
 
 module.exports = router;

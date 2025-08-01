@@ -5,6 +5,7 @@ import { MoolahProvider } from './contexts/MoolahContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { BottomNavigation } from './components/BottomNavigation';
+import { TopBanner } from './components/TopBanner';
 
 // Pages
 import { LoginPage } from './pages/LoginPage';
@@ -28,6 +29,10 @@ function AppContent() {
   // Pages that should NOT show bottom navigation
   const pagesWithoutNavigation = ['/login', '/register', '/kyc', '/kyc/documents', '/kyc/status'];
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
+  
+  // Pages that should show the top banner (main app pages)
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/vouchers', '/profile'];
+  const showTopBanner = pagesWithTopBanner.includes(location.pathname);
 
   return (
     <div 
@@ -50,6 +55,9 @@ function AppContent() {
           flexDirection: 'column'
         }}
       >
+        {/* Top Banner - only show on main app pages */}
+        {showTopBanner && <TopBanner />}
+        
         {/* Main Content Area - Flex 1 to take remaining space */}
         <div 
           style={{

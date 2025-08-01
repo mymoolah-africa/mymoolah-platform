@@ -1,14 +1,21 @@
-const User = require('../models/User');
+const { User, Wallet } = require('../models');
 
 class UserController {
   constructor() {
-    this.userModel = new User();
+    // No need to instantiate - Sequelize models are static
   }
 
   // Get all users
   async getAllUsers(req, res) {
     try {
-      const users = await this.userModel.getAllUsers();
+      const users = await User.findAll({
+        attributes: ['id', 'email', 'firstName', 'lastName', 'phoneNumber', 'accountNumber', 'balance', 'status', 'kycStatus', 'createdAt'],
+        include: [{
+          model: Wallet,
+          as: 'wallet',
+          attributes: ['walletId', 'balance', 'currency', 'status']
+        }]
+      });
       
       res.json({ 
         success: true,
@@ -29,7 +36,13 @@ class UserController {
   async getUserById(req, res) {
     try {
       const { id } = req.params;
-      const user = await this.userModel.getUserById(id);
+      const user = await User.findByPk(id, {
+        include: [{
+          model: Wallet,
+          as: 'wallet',
+          attributes: ['walletId', 'balance', 'currency', 'status']
+        }]
+      });
       
       if (!user) {
         return res.status(404).json({ 
@@ -59,18 +72,20 @@ class UserController {
       const { id } = req.params;
       const { firstName, lastName, phoneNumber } = req.body;
       
-      const result = await this.userModel.updateUser(id, {
-        firstName,
-        lastName,
-        phoneNumber
-      });
+      const user = await User.findByPk(id);
       
-      if (result.changes === 0) {
+      if (!user) {
         return res.status(404).json({ 
           success: false,
           message: 'User not found' 
         });
       }
+      
+      await user.update({
+        firstName,
+        lastName,
+        phoneNumber
+      });
       
       res.json({ 
         success: true,
@@ -90,7 +105,16 @@ class UserController {
   // Get user statistics
   async getUserStats(req, res) {
     try {
-      const stats = await this.userModel.getUserStats();
+      const totalUsers = await User.count();
+      const activeUsers = await User.count({ where: { status: 'active' } });
+      const verifiedUsers = await User.count({ where: { kycStatus: 'verified' } });
+      
+      const stats = {
+        totalUsers,
+        activeUsers,
+        verifiedUsers,
+        pendingKYC: totalUsers - verifiedUsers
+      };
       
       res.json({ 
         success: true,
@@ -113,14 +137,16 @@ class UserController {
       const { id } = req.params;
       const { status } = req.body;
       
-      const result = await this.userModel.updateUserStatus(id, status);
+      const user = await User.findByPk(id);
       
-      if (result.changes === 0) {
+      if (!user) {
         return res.status(404).json({ 
           success: false,
           message: 'User not found' 
         });
       }
+      
+      await user.update({ status });
       
       res.json({ 
         success: true,
@@ -141,15 +167,23 @@ class UserController {
   async getMe(req, res) {
     try {
       const userId = req.user.id;
-      const user = await this.userModel.getUserById(userId);
+      const user = await User.findByPk(userId, {
+        include: [{
+          model: Wallet,
+          as: 'wallet',
+          attributes: ['walletId', 'balance', 'currency', 'status']
+        }]
+      });
+      
       if (!user) {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
+      
       // Only return safe fields
-      const { id, email, firstName, lastName, phoneNumber, balance, status, createdAt, updatedAt } = user;
+      const { id, email, firstName, lastName, phoneNumber, accountNumber, balance, status, kycStatus, createdAt, updatedAt, wallet } = user;
       res.json({
         success: true,
-        data: { id, email, firstName, lastName, phoneNumber, balance, status, createdAt, updatedAt }
+        data: { id, email, firstName, lastName, phoneNumber, accountNumber, balance, status, kycStatus, createdAt, updatedAt, wallet }
       });
     } catch (error) {
       console.error('❌ Error in getMe:', error);

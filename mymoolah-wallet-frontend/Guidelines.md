@@ -8,7 +8,7 @@
 - **LoginPage**: Use `logo3.svg` with proper error handling
 - **RegisterPage**: Use `logo2.svg` at 60% larger size (w-26 h-26)
 - **Fallback**: Display "M" logo when SVG fails to load
-- **Asset Path**: Always use `/src/assets/` for logo references
+- **Asset Path**: Always use `/assets/` for logo references
 
 ### **Color Scheme**
 - **Primary Green**: #86BE41

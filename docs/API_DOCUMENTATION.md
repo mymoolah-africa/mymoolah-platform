@@ -1,658 +1,723 @@
-# MyMoolah Platform - API Documentation
+# MyMoolah API Documentation
 
-## 🎉 **CURRENT STATUS: DASHBOARD INTEGRATION COMPLETE - ALL ENDPOINTS WORKING**
-
-**Last Updated:** July 29, 2025  
-**Base URL:** `http://localhost:3001/api/v1`  
-**Health Check:** `http://localhost:3001/health`
+**Version:** 1.0.0  
+**Last Updated:** July 30, 2025  
+**Base URL:** `http://localhost:3001/api/v1`
 
 ---
 
-## **OVERVIEW**
+## 📋 **Table of Contents**
 
-The MyMoolah API provides comprehensive financial services including user management, wallet operations, KYC verification, voucher management, and payment processing. All endpoints are fully functional and tested with real data from SQLite database.
+1. [Authentication](#authentication)
+2. [Wallet Management](#wallet-management)
+3. [Voucher Management](#voucher-management)
+4. [Transaction Management](#transaction-management)
+5. [KYC Services](#kyc-services)
+6. [Payment Processing](#payment-processing)
+7. [Error Handling](#error-handling)
+8. [Rate Limiting](#rate-limiting)
 
-### **Dashboard Integration Status**
-- ✅ **Wallet Balance:** Real-time balance from database
-- ✅ **Recent Transactions:** Last 5 transactions with contextual icons
-- ✅ **Active Vouchers:** Voucher count and value display
-- ✅ **Clean Console:** Production-ready output with no errors
+---
 
-### **Authentication**
-- **Method:** JWT (JSON Web Tokens)
-- **Header:** `Authorization: Bearer <token>`
-- **Protected Routes:** Marked with 🔒
+## 🔐 **Authentication**
 
-### **Response Format**
-All API responses follow a consistent JSON format:
+### **POST /auth/register**
+Register a new user account.
+
+**Request Body:**
 ```json
 {
-  "success": true/false,
-  "message": "Human-readable message",
-  "data": { /* response data */ },
-  "error": "Error details (if applicable)"
+  "mobileNumber": "+27123456789",
+  "password": "securePassword123",
+  "firstName": "John",
+  "lastName": "Doe",
+  "email": "john.doe@example.com"
 }
 ```
 
----
-
-## **DASHBOARD ENDPOINTS (NEW - JULY 29, 2025)**
-
-### **Get Wallet Balance** 🔒
-```http
-GET /wallets/balance
-Authorization: Bearer <token>
-```
-**Status:** ✅ **WORKING - REAL DATA**  
-**Response:** Current wallet balance with available, pending, and total amounts
+**Response (201):**
 ```json
 {
   "success": true,
-  "message": "Wallet balance retrieved successfully",
+  "message": "User registered successfully",
   "data": {
-    "available": 5204.50,
-    "pending": 0,
-    "total": 5204.50,
-    "currency": "ZAR",
-    "lastUpdated": "2025-07-29T18:39:58.000Z"
+    "userId": 1,
+    "mobileNumber": "+27123456789",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "createdAt": "2025-07-30T10:00:00.000Z"
   }
 }
 ```
 
-### **Get Recent Transactions** 🔒
-```http
-GET /wallets/transactions?limit=5
-Authorization: Bearer <token>
-```
-**Status:** ✅ **WORKING - REAL DATA**  
-**Response:** Last 5 transactions with contextual categorization
+### **POST /auth/login**
+Authenticate user and receive JWT token.
+
+**Request Body:**
 ```json
 {
-  "success": true,
-  "message": "Transactions retrieved successfully",
-  "data": {
-    "transactions": [
-      {
-        "id": 1,
-        "type": "credit",
-        "amount": 5000,
-        "description": "Initial deposit",
-        "createdAt": "2025-07-29T18:39:58.000Z"
-      },
-      {
-        "id": 2,
-        "type": "debit",
-        "amount": 245.50,
-        "description": "Woolworths Sandton",
-        "createdAt": "2025-07-29T17:40:08.000Z"
-      }
-    ]
-  }
+  "mobileNumber": "+27123456789",
+  "password": "securePassword123"
 }
 ```
 
-### **Get Active Vouchers** 🔒
-```http
-GET /vouchers/active
-Authorization: Bearer <token>
-```
-**Status:** ✅ **WORKING - REAL DATA**  
-**Response:** Active vouchers with count and total value
+**Response (200):**
 ```json
 {
   "success": true,
-  "message": "Active vouchers retrieved successfully",
-  "data": [
-    {
-      "id": 1,
-      "voucherId": "VOUCHER001",
-      "type": "grocery",
-      "amount": 100,
-      "description": "Woolworths Voucher",
-      "status": "active",
-      "expiryDate": "2025-12-31T23:59:59.000Z"
+  "message": "Login successful",
+  "data": {
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "user": {
+      "userId": 1,
+      "mobileNumber": "+27123456789",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john.doe@example.com"
     }
-  ]
+  }
 }
 ```
 
----
+### **POST /auth/verify**
+Verify JWT token validity.
 
-## **HEALTH & TESTING ENDPOINTS**
-
-### **Health Check**
-```http
-GET /health
+**Headers:**
 ```
-**Status:** ✅ **WORKING**  
-**Response:** Server health status
-
-### **Test Endpoint**
-```http
-GET /test
+Authorization: Bearer <jwt_token>
 ```
-**Status:** ✅ **WORKING**  
-**Response:** List of all available endpoints
 
----
-
-## **AUTHENTICATION ENDPOINTS**
-
-### **User Registration**
-```http
-POST /auth/register
-Content-Type: application/json
-
-{
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john.doe@example.com",
-  "phoneNumber": "27821234567",
-  "password": "SecurePassword123!"
-}
-```
-**Status:** ✅ **WORKING**  
-**Response:** User account created with JWT token
-
-### **User Login**
-```http
-POST /auth/login
-Content-Type: application/json
-
-{
-  "phoneNumber": "27821234567",
-  "password": "SecurePassword123!"
-}
-```
-**Status:** ✅ **WORKING**  
-**Response:** JWT token for authenticated requests
-
----
-
-## **USER MANAGEMENT ENDPOINTS**
-
-### **Get All Users**
-```http
-GET /users
-```
-**Status:** ✅ **WORKING**  
-**Response:** Returns 5 demo users with complete data
+**Response (200):**
 ```json
 {
   "success": true,
-  "message": "Users retrieved successfully",
+  "message": "Token is valid",
   "data": {
-    "users": [
-      {
-        "id": 1,
-        "email": "john.doe@mymoolah.com",
-        "firstName": "John",
-        "lastName": "Doe",
-        "phoneNumber": "27821234567",
-        "balance": 5000,
-        "status": "active",
-        "createdAt": "2025-07-29 16:29:01.087 +00:00",
-        "updatedAt": "2025-07-29 16:29:01.087 +00:00"
-      }
-    ]
+    "userId": 1,
+    "mobileNumber": "+27123456789"
   }
 }
 ```
 
-### **Get User by ID**
-```http
-GET /users/:id
-```
-**Status:** ✅ **WORKING**  
-**Response:** Specific user details
-
-### **Update User Profile**
-```http
-PUT /users/:id
-Content-Type: application/json
-
-{
-  "firstName": "John",
-  "lastName": "Doe",
-  "phoneNumber": "27821234567"
-}
-```
-**Status:** ✅ **WORKING**  
-**Response:** Updated user profile
-
-### **Get User Statistics**
-```http
-GET /users/stats
-```
-**Status:** ✅ **WORKING**  
-**Response:** User analytics and statistics
-
 ---
 
-## **WALLET MANAGEMENT ENDPOINTS**
+## 💳 **Wallet Management**
 
-### **Get All Wallets**
-```http
-GET /wallets
+### **GET /wallets/balance**
+Get current wallet balance.
+
+**Headers:**
 ```
-**Status:** ✅ **WORKING**  
-**Response:** Returns 5 demo wallets with realistic balances
+Authorization: Bearer <jwt_token>
+```
+
+**Response (200):**
 ```json
 {
   "success": true,
-  "message": "Wallets retrieved successfully",
   "data": {
-    "wallets": [
-      {
-        "id": 1,
-        "userId": 1,
-        "walletId": "WAL20250729123456JOHN",
-        "balance": 5000,
-        "status": "active",
-        "account_number": "27821234567",
-        "created_at": "2025-07-29 16:29:01.093 +00:00",
-        "updated_at": "2025-07-29 16:29:01.093 +00:00"
-      }
-    ]
+    "balance": 1250.75,
+    "currency": "ZAR",
+    "lastUpdated": "2025-07-30T10:00:00.000Z"
   }
 }
 ```
 
-### **Get Wallet Balance** 🔒
-```http
-GET /wallets/balance
-Authorization: Bearer <token>
+### **POST /wallets/deposit**
+Deposit funds into wallet.
+
+**Headers:**
 ```
-**Status:** ✅ **WORKING**  
-**Response:** Current wallet balance and details
-
-### **Credit Wallet** 🔒
-```http
-POST /wallets/credit
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "amount": 1000,
-  "description": "Bank deposit"
-}
+Authorization: Bearer <jwt_token>
 ```
-**Status:** ✅ **WORKING**  
-**Response:** Updated balance and transaction details
 
-### **Debit Wallet** 🔒
-```http
-POST /wallets/debit
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "amount": 500,
-  "description": "Payment for services"
-}
-```
-**Status:** ✅ **WORKING**  
-**Response:** Updated balance and transaction details
-
-### **Send Money** 🔒
-```http
-POST /wallets/transfer
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "receiverEmail": "jane.smith@example.com",
-  "amount": 200,
-  "description": "Money transfer"
-}
-```
-**Status:** ✅ **WORKING**  
-**Response:** Transfer confirmation and transaction details
-
----
-
-## **TRANSACTION MANAGEMENT ENDPOINTS**
-
-### **Get All Transactions**
-```http
-GET /transactions
-```
-**Status:** ✅ **WORKING**  
-**Response:** Returns 7 demo transactions with different types
+**Request Body:**
 ```json
-[
-  {
-    "id": 1,
-    "walletId": "WAL20250729123456JOHN",
-    "type": "transfer",
-    "amount": 500,
-    "description": "Transfer to Jane Smith",
-    "status": "completed",
-    "createdAt": "2025-07-25 10:30:00.000 +00:00",
-    "updatedAt": "2025-07-25 10:30:00.000 +00:00"
-  }
-]
+{
+  "amount": 500.00,
+  "currency": "ZAR",
+  "description": "Bank transfer deposit"
+}
 ```
 
-### **Get Transaction History** 🔒
-```http
-GET /transactions/history
-Authorization: Bearer <token>
-```
-**Status:** ✅ **WORKING**  
-**Response:** User's transaction history with pagination
-
-### **Get Transaction Summary** 🔒
-```http
-GET /transactions/summary
-Authorization: Bearer <token>
-```
-**Status:** ✅ **WORKING**  
-**Response:** Transaction analytics and summaries
-
----
-
-## **KYC MANAGEMENT ENDPOINTS**
-
-### **Get All KYC Records**
-```http
-GET /kyc
-```
-**Status:** ✅ **WORKING**  
-**Response:** Returns 5 demo KYC records with verification statuses
+**Response (200):**
 ```json
 {
   "success": true,
-  "message": "KYC records retrieved successfully",
+  "message": "Deposit successful",
   "data": {
-    "kyc": [
-      {
-        "id": 1,
-        "userId": 1,
-        "documentType": "identity_document",
-        "documentNumber": "ID123456789",
-        "status": "verified",
-        "submittedAt": "2025-07-15 10:00:00.000 +00:00",
-        "reviewedAt": "2025-07-16 14:30:00.000 +00:00",
-        "reviewerNotes": "Documents verified successfully",
-        "firstName": "John",
-        "lastName": "Doe",
-        "email": "john.doe@mymoolah.com"
-      }
-    ]
+    "transactionId": "TXN_123456789",
+    "amount": 500.00,
+    "newBalance": 1750.75,
+    "timestamp": "2025-07-30T10:00:00.000Z"
   }
 }
 ```
 
-### **Submit KYC** 🔒
-```http
-POST /kyc/submit
-Authorization: Bearer <token>
-Content-Type: application/json
+### **POST /wallets/withdraw**
+Withdraw funds from wallet.
 
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
 {
-  "firstName": "John",
-  "lastName": "Doe",
-  "dateOfBirth": "1990-01-01",
-  "nationality": "South African",
-  "address": "123 Main Street, Johannesburg",
-  "city": "Johannesburg",
-  "postalCode": "2000"
+  "amount": 200.00,
+  "currency": "ZAR",
+  "description": "ATM withdrawal"
 }
 ```
-**Status:** ✅ **WORKING**  
-**Response:** KYC submission confirmation
 
-### **Upload KYC Document** 🔒
-```http
-POST /kyc/upload-document
-Authorization: Bearer <token>
-Content-Type: multipart/form-data
-
-{
-  "documentType": "identity",
-  "document": <file>
-}
-```
-**Status:** ✅ **WORKING**  
-**Response:** Document upload confirmation
-
-### **Get KYC Status** 🔒
-```http
-GET /kyc/status
-Authorization: Bearer <token>
-```
-**Status:** ✅ **WORKING**  
-**Response:** Current KYC verification status
-
----
-
-## **VOUCHER MANAGEMENT ENDPOINTS**
-
-### **Get All Vouchers**
-```http
-GET /vouchers
-```
-**Status:** ✅ **WORKING**  
-**Response:** Returns 6 demo vouchers with different types
+**Response (200):**
 ```json
 {
   "success": true,
-  "message": "Vouchers retrieved successfully",
+  "message": "Withdrawal successful",
+  "data": {
+    "transactionId": "TXN_987654321",
+    "amount": 200.00,
+    "newBalance": 1550.75,
+    "timestamp": "2025-07-30T10:00:00.000Z"
+  }
+}
+```
+
+---
+
+## 🎫 **Voucher Management**
+
+### **GET /vouchers/active**
+Get all active vouchers for the user.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
   "data": {
     "vouchers": [
       {
-        "id": 1,
-        "voucherId": "VOUCH20250729123456",
-        "userId": 1,
-        "type": "airtime",
-        "amount": 100,
-        "description": "MTN Airtime Voucher",
+        "voucherId": "VCH_001",
+        "brand": "EasyPay",
+        "amount": 100.00,
+        "currency": "ZAR",
+        "expiryDate": "2025-08-30T00:00:00.000Z",
         "status": "active",
-        "expiryDate": "2025-12-31 23:59:59.000 +00:00",
-        "createdAt": "2025-07-25 10:00:00.000 +00:00",
-        "updatedAt": "2025-07-25 10:00:00.000 +00:00",
-        "firstName": "John",
-        "lastName": "Doe",
-        "email": "john.doe@mymoolah.com"
+        "createdAt": "2025-07-30T10:00:00.000Z"
+      },
+      {
+        "voucherId": "VCH_002",
+        "brand": "Standard",
+        "amount": 250.00,
+        "currency": "ZAR",
+        "expiryDate": "2025-09-15T00:00:00.000Z",
+        "status": "active",
+        "createdAt": "2025-07-30T10:00:00.000Z"
       }
-    ]
+    ],
+    "totalVouchers": 2
   }
 }
 ```
 
-### **Issue Voucher** 🔒
-```http
-POST /vouchers/issue
-Authorization: Bearer <token>
-Content-Type: application/json
+### **GET /vouchers/balance**
+Get voucher balance summary.
 
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response (200):**
+```json
 {
-  "type": "airtime",
-  "amount": 100,
-  "description": "MTN Airtime Voucher"
+  "success": true,
+  "data": {
+    "totalBalance": 9025.00,
+    "currency": "ZAR",
+    "totalVouchers": 13,
+    "activeVouchers": 13,
+    "expiredVouchers": 0,
+    "brandBreakdown": {
+      "EasyPay": {
+        "count": 5,
+        "totalAmount": 3500.00
+      },
+      "Standard": {
+        "count": 4,
+        "totalAmount": 2800.00
+      },
+      "Premium": {
+        "count": 3,
+        "totalAmount": 2025.00
+      },
+      "Business": {
+        "count": 1,
+        "totalAmount": 700.00
+      }
+    }
+  }
 }
 ```
-**Status:** ✅ **WORKING**  
-**Response:** Voucher creation confirmation
 
-### **Redeem Voucher**
-```http
-POST /vouchers/redeem
-Content-Type: application/json
+### **POST /vouchers/issue**
+Issue a new voucher.
 
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
 {
-  "voucherCode": "VOUCH20250729123456"
+  "brand": "EasyPay",
+  "amount": 100.00,
+  "currency": "ZAR",
+  "expiryDate": "2025-08-30T00:00:00.000Z",
+  "description": "Promotional voucher"
 }
 ```
-**Status:** ✅ **WORKING**  
-**Response:** Voucher redemption confirmation
 
-### **Get Active Vouchers** 🔒
-```http
-GET /vouchers/active
-Authorization: Bearer <token>
+**Response (201):**
+```json
+{
+  "success": true,
+  "message": "Voucher issued successfully",
+  "data": {
+    "voucherId": "VCH_003",
+    "brand": "EasyPay",
+    "amount": 100.00,
+    "currency": "ZAR",
+    "expiryDate": "2025-08-30T00:00:00.000Z",
+    "status": "active",
+    "createdAt": "2025-07-30T10:00:00.000Z"
+  }
+}
 ```
-**Status:** ✅ **WORKING**  
-**Response:** User's active vouchers
+
+### **POST /vouchers/redeem**
+Redeem a voucher.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "voucherId": "VCH_001",
+  "amount": 100.00
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Voucher redeemed successfully",
+  "data": {
+    "voucherId": "VCH_001",
+    "redeemedAmount": 100.00,
+    "remainingAmount": 0.00,
+    "status": "redeemed",
+    "redeemedAt": "2025-07-30T10:00:00.000Z"
+  }
+}
+```
 
 ---
 
-## **PAYMENT INTEGRATION ENDPOINTS**
+## 💸 **Transaction Management**
 
-### **Flash Payment Processing**
-```http
-POST /flash/process
-Authorization: Bearer <token>
-Content-Type: application/json
+### **GET /wallets/transactions**
+Get transaction history.
 
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 10)
+- `type` (optional): Transaction type (deposit, withdrawal, transfer)
+- `startDate` (optional): Start date filter
+- `endDate` (optional): End date filter
+
+**Response (200):**
+```json
 {
-  "amount": 1000,
-  "recipientNumber": "27821234567",
-  "description": "Payment via Flash"
+  "success": true,
+  "data": {
+    "transactions": [
+      {
+        "transactionId": "TXN_123456789",
+        "type": "deposit",
+        "amount": 500.00,
+        "currency": "ZAR",
+        "description": "Bank transfer deposit",
+        "status": "completed",
+        "timestamp": "2025-07-30T10:00:00.000Z",
+        "balanceAfter": 1750.75
+      },
+      {
+        "transactionId": "TXN_987654321",
+        "type": "withdrawal",
+        "amount": 200.00,
+        "currency": "ZAR",
+        "description": "ATM withdrawal",
+        "status": "completed",
+        "timestamp": "2025-07-30T09:30:00.000Z",
+        "balanceAfter": 1550.75
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 50,
+      "itemsPerPage": 10
+    }
+  }
 }
 ```
-**Status:** ✅ **WORKING**  
-**Response:** Flash payment confirmation
 
-### **MobileMart Services**
-```http
-POST /mobilemart/purchase
-Authorization: Bearer <token>
-Content-Type: application/json
+---
 
+## 📋 **KYC Services**
+
+### **POST /kyc/upload**
+Upload KYC documents.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: multipart/form-data
+```
+
+**Request Body:**
+```
+FormData:
+- documentType: "id_card" | "passport" | "proof_of_address"
+- documentFile: <file>
+- description: "South African ID card"
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Document uploaded successfully",
+  "data": {
+    "documentId": "DOC_123456789",
+    "documentType": "id_card",
+    "status": "pending",
+    "uploadedAt": "2025-07-30T10:00:00.000Z"
+  }
+}
+```
+
+### **GET /kyc/status**
+Get KYC verification status.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "kycStatus": "verified",
+    "documents": [
+      {
+        "documentId": "DOC_123456789",
+        "documentType": "id_card",
+        "status": "verified",
+        "verifiedAt": "2025-07-30T10:00:00.000Z"
+      },
+      {
+        "documentId": "DOC_987654321",
+        "documentType": "proof_of_address",
+        "status": "verified",
+        "verifiedAt": "2025-07-30T10:00:00.000Z"
+      }
+    ],
+    "lastUpdated": "2025-07-30T10:00:00.000Z"
+  }
+}
+```
+
+### **POST /kyc/verify**
+Verify uploaded documents using OpenAI OCR.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "documentId": "DOC_123456789"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Document verification completed",
+  "data": {
+    "documentId": "DOC_123456789",
+    "verificationResult": {
+      "isValid": true,
+      "confidence": 0.95,
+      "extractedData": {
+        "documentNumber": "8001015009087",
+        "fullName": "John Doe",
+        "dateOfBirth": "1980-01-01",
+        "nationality": "South African"
+      }
+    },
+    "verifiedAt": "2025-07-30T10:00:00.000Z"
+  }
+}
+```
+
+---
+
+## 💳 **Payment Processing**
+
+### **POST /flash/pay**
+Process Flash payment.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
+{
+  "amount": 150.00,
+  "currency": "ZAR",
+  "recipientMobile": "+27123456789",
+  "description": "Payment to John Doe"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Payment processed successfully",
+  "data": {
+    "transactionId": "FLASH_123456789",
+    "amount": 150.00,
+    "currency": "ZAR",
+    "recipientMobile": "+27123456789",
+    "status": "completed",
+    "timestamp": "2025-07-30T10:00:00.000Z"
+  }
+}
+```
+
+### **POST /mobilemart/purchase**
+Purchase airtime or data.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Request Body:**
+```json
 {
   "serviceType": "airtime",
-  "provider": "MTN",
-  "amount": 50,
-  "recipientNumber": "27821234567"
+  "provider": "Vodacom",
+  "amount": 50.00,
+  "recipientMobile": "+27123456789",
+  "description": "Airtime purchase"
 }
 ```
-**Status:** ✅ **WORKING**  
-**Response:** MobileMart purchase confirmation
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Purchase completed successfully",
+  "data": {
+    "transactionId": "MM_123456789",
+    "serviceType": "airtime",
+    "provider": "Vodacom",
+    "amount": 50.00,
+    "recipientMobile": "+27123456789",
+    "status": "completed",
+    "timestamp": "2025-07-30T10:00:00.000Z"
+  }
+}
+```
 
 ---
 
-## **ERROR HANDLING**
+## ⚠️ **Error Handling**
 
-### **Standard Error Response**
+### **Error Response Format**
+All error responses follow this format:
+
 ```json
 {
   "success": false,
-  "message": "Error description",
-  "error": "Detailed error information",
-  "details": "Additional error context"
-}
-```
-
-### **Common HTTP Status Codes**
-- **200:** Success
-- **201:** Created
-- **400:** Bad Request (validation errors)
-- **401:** Unauthorized (authentication required)
-- **403:** Forbidden (insufficient permissions)
-- **404:** Not Found
-- **409:** Conflict (duplicate data)
-- **500:** Internal Server Error
-
-### **Validation Error Response**
-```json
-{
-  "success": false,
-  "message": "Validation failed",
-  "errors": [
-    {
-      "field": "email",
-      "message": "Email is required",
-      "value": ""
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": {
+      "field": "Additional error details"
     }
-  ]
+  }
+}
+```
+
+### **Common Error Codes**
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `AUTH_001` | 401 | Invalid credentials |
+| `AUTH_002` | 401 | Token expired |
+| `AUTH_003` | 403 | Insufficient permissions |
+| `VAL_001` | 400 | Validation error |
+| `DB_001` | 500 | Database error |
+| `INT_001` | 500 | Internal server error |
+| `NOT_FOUND` | 404 | Resource not found |
+| `INSUFFICIENT_FUNDS` | 400 | Insufficient wallet balance |
+| `VOUCHER_EXPIRED` | 400 | Voucher has expired |
+| `VOUCHER_ALREADY_REDEEMED` | 400 | Voucher already redeemed |
+
+### **Example Error Response**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "INSUFFICIENT_FUNDS",
+    "message": "Insufficient funds in wallet",
+    "details": {
+      "currentBalance": 100.00,
+      "requestedAmount": 200.00,
+      "shortfall": 100.00
+    }
+  }
 }
 ```
 
 ---
 
-## **RATE LIMITING**
+## 🚦 **Rate Limiting**
 
-### **Limits**
-- **Authentication Endpoints:** 5 requests per minute
-- **Wallet Operations:** 10 requests per minute
-- **KYC Operations:** 3 requests per minute
-- **General Endpoints:** 20 requests per minute
+### **Rate Limits**
+- **Authentication endpoints:** 5 requests per minute
+- **Wallet operations:** 10 requests per minute
+- **Voucher operations:** 20 requests per minute
+- **Transaction queries:** 30 requests per minute
+- **KYC operations:** 3 requests per minute
+- **Payment processing:** 5 requests per minute
 
 ### **Rate Limit Response**
+When rate limit is exceeded:
+
 ```json
 {
   "success": false,
-  "message": "Rate limit exceeded",
-  "retryAfter": 60
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Too many requests. Please try again later.",
+    "details": {
+      "retryAfter": 60,
+      "limit": 10,
+      "window": "1 minute"
+    }
+  }
 }
+```
+
+**Headers:**
+```
+X-RateLimit-Limit: 10
+X-RateLimit-Remaining: 0
+X-RateLimit-Reset: 1640995200
+Retry-After: 60
 ```
 
 ---
 
-## **TESTING**
+## 🔧 **Development & Testing**
 
-### **Dummy Data Available**
-- **5 Demo Users:** John Doe, Jane Smith, Mike Wilson, Sarah Jones, Demo User
-- **5 Demo Wallets:** Balances ranging from R750 to R10,000
-- **7 Demo Transactions:** Different types and statuses
-- **5 Demo KYC Records:** Different verification statuses
-- **6 Demo Vouchers:** Different types (airtime, data, gift cards)
+### **Environment Variables**
+```env
+# Server Configuration
+PORT=3001
+NODE_ENV=development
 
-### **Test Credentials**
-```json
-{
-  "phoneNumber": "27821234567",
-  "password": "Demo123!"
-}
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=mymoolah
+DB_USER=root
+DB_PASSWORD=your_password
+
+# JWT Configuration
+JWT_SECRET=your_jwt_secret_key
+JWT_EXPIRES_IN=24h
+
+# OpenAI Configuration (for KYC)
+OPENAI_API_KEY=your_openai_api_key
+
+# Flash Integration
+FLASH_API_KEY=your_flash_api_key
+FLASH_API_URL=https://api.flash.com
+
+# MobileMart Integration
+MOBILEMART_API_KEY=your_mobilemart_api_key
+MOBILEMART_API_URL=https://api.mobilemart.com
 ```
 
-### **Testing Commands**
+### **Testing Endpoints**
 ```bash
-# Test health endpoint
-curl http://localhost:3001/health
+# Test authentication
+curl -X POST http://localhost:3001/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"mobileNumber": "+27123456789", "password": "password123"}'
 
-# Test users endpoint
-curl http://localhost:3001/api/v1/users
+# Test wallet balance
+curl -X GET http://localhost:3001/api/v1/wallets/balance \
+  -H "Authorization: Bearer <jwt_token>"
 
-# Test wallets endpoint
-curl http://localhost:3001/api/v1/wallets
-
-# Test transactions endpoint
-curl http://localhost:3001/api/v1/transactions
-
-# Test KYC endpoint
-curl http://localhost:3001/api/v1/kyc
-
-# Test vouchers endpoint
-curl http://localhost:3001/api/v1/vouchers
+# Test voucher balance
+curl -X GET http://localhost:3001/api/v1/vouchers/balance \
+  -H "Authorization: Bearer <jwt_token>"
 ```
 
 ---
 
-## **SECURITY**
+## 📚 **Additional Resources**
 
-### **Authentication**
-- JWT tokens with configurable expiration
-- Secure password hashing with bcrypt
-- Token refresh mechanism
-- Automatic token invalidation on logout
-
-### **Input Validation**
-- Express-validator for all inputs
-- SQL injection prevention
-- XSS protection
-- CSRF protection
-
-### **Data Protection**
-- Encrypted sensitive data
-- Secure transmission (HTTPS in production)
-- Audit logging for all operations
-- Data retention policies
+- [Security Guide](./SECURITY.md)
+- [Development Guide](./DEVELOPMENT_GUIDE.md)
+- [Testing Guide](./TESTING_GUIDE.md)
+- [Mojaloop Integration](./mojaloop-integration.md)
 
 ---
 
-**Last Updated:** July 29, 2025  
-**Status:** All Endpoints Tested and Working  
-**Next Update:** Frontend Integration Documentation 
+**MyMoolah API Documentation** - Version 1.0.0  
+**Last Updated:** July 30, 2025 

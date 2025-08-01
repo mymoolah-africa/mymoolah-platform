@@ -1,85 +1,175 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+// mymoolah/models/Kyc.js
 
-class Kyc {
-  constructor() {
-    this.dbPath = path.join(__dirname, '../data/mymoolah.db');
-    this.db = new sqlite3.Database(this.dbPath);
-    this.initTable();
-  }
-
-  // Create the KYC table if it doesn't exist
-  initTable() {
-    const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS kyc (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        userId INTEGER NOT NULL,
-        documentType TEXT NOT NULL,
-        documentNumber TEXT NOT NULL,
-        status TEXT DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
-        submittedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        reviewedAt DATETIME,
-        reviewerNotes TEXT,
-        FOREIGN KEY(userId) REFERENCES users(id)
-      )
-    `;
-    this.db.run(createTableSQL, (err) => {
-      if (err) {
-        console.error('❌ Error creating KYC table:', err.message);
-      } else {
-        console.log('✅ KYC table created successfully');
-      }
-    });
-  }
-
-  // Submit KYC document
-  async submitKyc({ userId, documentType, documentNumber }) {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        INSERT INTO kyc (userId, documentType, documentNumber, status, submittedAt)
-        VALUES (?, ?, ?, 'pending', CURRENT_TIMESTAMP)
-      `;
-      this.db.run(sql, [userId, documentType, documentNumber], function (err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ id: this.lastID, userId, documentType, documentNumber, status: 'pending' });
+module.exports = (sequelize, DataTypes) => {
+  const Kyc = sequelize.define('Kyc', {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+      validate: {
+        notNull: true,
+      },
+    },
+    documentType: {
+      type: DataTypes.ENUM('id_card', 'passport', 'drivers_license', 'utility_bill', 'bank_statement'),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+      },
+    },
+    documentNumber: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        len: [5, 50],
+      },
+    },
+    documentImageUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        isUrl: true,
+      },
+    },
+    ocrData: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'OCR extracted data from document',
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'approved', 'rejected', 'under_review'),
+      allowNull: false,
+      defaultValue: 'pending',
+    },
+    submittedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    reviewedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    reviewedBy: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    reviewerNotes: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    rejectionReason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    verificationScore: {
+      type: DataTypes.DECIMAL(3, 2), // 0.00 to 1.00
+      allowNull: true,
+      validate: {
+        min: 0,
+        max: 1,
+      },
+    },
+    isAutomated: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  }, {
+    tableName: 'kyc',
+    timestamps: true,
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    indexes: [
+      {
+        fields: ['userId'],
+      },
+      {
+        fields: ['status'],
+      },
+      {
+        fields: ['documentType'],
+      },
+      {
+        fields: ['submittedAt'],
+      },
+    ],
+    hooks: {
+      beforeUpdate: (kyc) => {
+        // Update reviewedAt when status changes from pending
+        if (kyc.changed('status') && kyc.status !== 'pending' && !kyc.reviewedAt) {
+          kyc.reviewedAt = new Date();
         }
-      });
-    });
-  }
+      },
+    },
+  });
 
-  // Get KYC status for a user
-  async getKycStatus(userId) {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        SELECT * FROM kyc WHERE userId = ? ORDER BY submittedAt DESC LIMIT 1
-      `;
-      this.db.get(sql, [userId], (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
+  // Define associations
+  Kyc.associate = (models) => {
+    // KYC belongs to one User
+    Kyc.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'user',
     });
-  }
+  };
 
-  // Update KYC status (admin function)
-  async updateKycStatus(kycId, status, reviewerNotes = '') {
-    return new Promise((resolve, reject) => {
-      const sql = `
-        UPDATE kyc SET status = ?, reviewerNotes = ?, reviewedAt = CURRENT_TIMESTAMP WHERE id = ?
-      `;
-      this.db.run(sql, [status, reviewerNotes, kycId], function (err) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve({ changes: this.changes });
-        }
-      });
-    });
-  }
-}
+  // Instance methods
+  Kyc.prototype.isApproved = function() {
+    return this.status === 'approved';
+  };
 
-module.exports = Kyc;
+  Kyc.prototype.isRejected = function() {
+    return this.status === 'rejected';
+  };
+
+  Kyc.prototype.isPending = function() {
+    return this.status === 'pending';
+  };
+
+  Kyc.prototype.approve = async function(reviewedBy = 'system', notes = '') {
+    this.status = 'approved';
+    this.reviewedBy = reviewedBy;
+    this.reviewerNotes = notes;
+    this.reviewedAt = new Date();
+    
+    await this.save();
+    return this;
+  };
+
+  Kyc.prototype.reject = async function(reviewedBy = 'system', reason = '') {
+    this.status = 'rejected';
+    this.reviewedBy = reviewedBy;
+    this.rejectionReason = reason;
+    this.reviewedAt = new Date();
+    
+    await this.save();
+    return this;
+  };
+
+  Kyc.prototype.setVerificationScore = async function(score) {
+    this.verificationScore = score;
+    await this.save();
+    return this;
+  };
+
+  return Kyc;
+};

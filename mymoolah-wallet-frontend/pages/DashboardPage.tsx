@@ -5,70 +5,20 @@ import { APP_CONFIG } from '../config/app-config';
 
 // Import icons directly from lucide-react
 import { 
-  User, 
-  Bell,
   ChevronRight,
   ShoppingBag,
   ArrowDownLeft,
   Phone,
   ArrowUpRight,
   Coffee,
-  Car,
-  CreditCard,
-  Wallet,
-  Gift,
-  Home,
-  Utensils,
-  ShoppingCart,
-  Bus,
-  Train,
-  Plane,
-  Wifi,
-  Zap
+  Car
 } from 'lucide-react';
 
-// Enhanced logo component with better styling and sizing
-function Logo3Component() {
-  const [logoError, setLogoError] = useState(false);
-
-  if (logoError) {
-    return (
-      <div 
-        style={{ 
-          height: '40px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '16px',
-          fontWeight: 'var(--font-weight-bold)',
-          color: '#1f2937',
-          fontFamily: 'Montserrat, sans-serif',
-          textAlign: 'center'
-        }}
-      >
-        MyMoolah
-      </div>
-    );
-  }
-
-  return (
-    <img 
-      src="/src/assets/logo3.svg"
-      alt="MyMoolah Logo" 
-      style={{ 
-        height: '40px', // Increased from 32px for better prominence
-        width: 'auto',
-        maxWidth: '180px', // Increased max width
-        objectFit: 'contain',
-        display: 'block'
-      }}
-      onError={() => setLogoError(true)}
-    />
-  );
-}
-
 // Format currency function
-function formatCurrency(amount: number): string {
+function formatCurrency(amount: number | undefined): string {
+  if (!amount && amount !== 0) {
+    return 'R 0.00';
+  }
   return `R ${amount.toLocaleString('en-ZA', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
@@ -98,76 +48,33 @@ function getTransactionIcon(transaction: Transaction) {
       return <ArrowUpRight style={iconStyle} />;
     case 'purchase':
       // Smart icon selection based on description
-      const desc = transaction.description.toLowerCase();
-      if (desc.includes('woolworths') || desc.includes('grocery') || desc.includes('food') || desc.includes('supermarket')) {
-        return <ShoppingCart style={iconStyle} />;
+      if (transaction.description.toLowerCase().includes('woolworths') || 
+          transaction.description.toLowerCase().includes('grocery') ||
+          transaction.description.toLowerCase().includes('food')) {
+        return <ShoppingBag style={iconStyle} />;
       }
-      if (desc.includes('caf') || desc.includes('coffee') || desc.includes('restaurant') || desc.includes('food')) {
-        return <Utensils style={iconStyle} />;
-      }
-      if (desc.includes('uber') || desc.includes('taxi') || desc.includes('transport') || desc.includes('ride')) {
-        return <Car style={iconStyle} />;
-      }
-      if (desc.includes('airtime') || desc.includes('vodacom') || desc.includes('mtn') || desc.includes('cell')) {
-        return <Phone style={iconStyle} />;
-      }
-      if (desc.includes('electricity') || desc.includes('power') || desc.includes('eskom')) {
-        return <Zap style={iconStyle} />;
-      }
-      if (desc.includes('internet') || desc.includes('wifi') || desc.includes('data')) {
-        return <Wifi style={iconStyle} />;
-      }
-      if (desc.includes('flight') || desc.includes('airline') || desc.includes('travel')) {
-        return <Plane style={iconStyle} />;
-      }
-      if (desc.includes('bus') || desc.includes('public transport')) {
-        return <Bus style={iconStyle} />;
-      }
-      if (desc.includes('train') || desc.includes('rail')) {
-        return <Train style={iconStyle} />;
-      }
-      if (desc.includes('home') || desc.includes('rent') || desc.includes('property')) {
-        return <Home style={iconStyle} />;
-      }
-      if (desc.includes('gift') || desc.includes('present')) {
-        return <Gift style={iconStyle} />;
+      if (transaction.description.toLowerCase().includes('caf') || 
+          transaction.description.toLowerCase().includes('coffee')) {
+        return <Coffee style={iconStyle} />;
       }
       // Default to shopping bag for purchases
       return <ShoppingBag style={iconStyle} />;
     case 'payment':
       // Smart icon selection based on description
-      const paymentDesc = transaction.description.toLowerCase();
-      if (paymentDesc.includes('airtime') || paymentDesc.includes('vodacom') || paymentDesc.includes('mtn') || paymentDesc.includes('cell')) {
+      if (transaction.description.toLowerCase().includes('airtime') || 
+          transaction.description.toLowerCase().includes('vodacom') ||
+          transaction.description.toLowerCase().includes('mtn')) {
         return <Phone style={iconStyle} />;
       }
-      if (paymentDesc.includes('uber') || paymentDesc.includes('taxi') || paymentDesc.includes('transport') || paymentDesc.includes('ride')) {
+      if (transaction.description.toLowerCase().includes('uber') || 
+          transaction.description.toLowerCase().includes('taxi') ||
+          transaction.description.toLowerCase().includes('transport')) {
         return <Car style={iconStyle} />;
       }
-      if (paymentDesc.includes('electricity') || paymentDesc.includes('power') || paymentDesc.includes('eskom')) {
-        return <Zap style={iconStyle} />;
-      }
-      if (paymentDesc.includes('internet') || paymentDesc.includes('wifi') || paymentDesc.includes('data')) {
-        return <Wifi style={iconStyle} />;
-      }
-      if (paymentDesc.includes('flight') || paymentDesc.includes('airline') || paymentDesc.includes('travel')) {
-        return <Plane style={iconStyle} />;
-      }
-      if (paymentDesc.includes('bus') || paymentDesc.includes('public transport')) {
-        return <Bus style={iconStyle} />;
-      }
-      if (paymentDesc.includes('train') || paymentDesc.includes('rail')) {
-        return <Train style={iconStyle} />;
-      }
-      if (paymentDesc.includes('home') || paymentDesc.includes('rent') || paymentDesc.includes('property')) {
-        return <Home style={iconStyle} />;
-      }
-      if (paymentDesc.includes('gift') || paymentDesc.includes('present')) {
-        return <Gift style={iconStyle} />;
-      }
-      // Default to credit card for payments
-      return <CreditCard style={iconStyle} />;
+      // Default to phone for payments
+      return <Phone style={iconStyle} />;
     default:
-      return <Wallet style={iconStyle} />;
+      return <ShoppingBag style={iconStyle} />;
   }
 }
 
@@ -198,41 +105,15 @@ function getGreetingName(fullName: string | undefined): string {
   return formattedName;
 }
 
-// Wallet Balance interface
-interface WalletBalance {
-  available: number;
-  pending: number;
-  total: number;
-  currency: string;
-  lastUpdated: string;
-}
-
-// Voucher interface
-interface Voucher {
-  id: number;
-  voucherId: string;
-  type: string;
-  amount: number;
-  description: string;
-  status: string;
-  expiryDate: string;
-}
-
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
   // State for real data from backend
-  const [walletBalance, setWalletBalance] = useState<WalletBalance>({
-    available: 0,
-    pending: 0,
-    total: 0,
-    currency: 'ZAR',
-    lastUpdated: new Date().toISOString()
-  });
-  
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
-  const [openVouchers, setOpenVouchers] = useState<Voucher[]>([]);
+  const [openVouchersCount, setOpenVouchersCount] = useState<number>(0);
+  const [openVouchersValue, setOpenVouchersValue] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -258,14 +139,20 @@ export function DashboardPage() {
         const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=5`, { headers });
         if (!transactionsResponse.ok) throw new Error('Failed to fetch transactions');
         const transactionsData = await transactionsResponse.json();
-        
-        // Fetch active vouchers
-        const vouchersResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/active`, { headers });
-        if (!vouchersResponse.ok) throw new Error('Failed to fetch vouchers');
-        const vouchersData = await vouchersResponse.json();
+
+        // Fetch voucher balance summary
+        const voucherBalanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/balance`, { headers });
+        if (!voucherBalanceResponse.ok) throw new Error('Failed to fetch voucher balance');
+        const voucherBalanceData = await voucherBalanceResponse.json();
 
         // Update state with real data
-        setWalletBalance(balanceData.data);
+        const balanceDataFromAPI = balanceData.data;
+        setWalletBalance(balanceDataFromAPI.balance || 0);
+        
+        // Update voucher data from the new API
+        const voucherBalanceFromAPI = voucherBalanceData.data;
+        setOpenVouchersCount(voucherBalanceFromAPI.voucherCount || 0);
+        setOpenVouchersValue(parseFloat(voucherBalanceFromAPI.totalBalance) || 0);
         
         // Transform transactions to match frontend format
         const transformedTransactions: Transaction[] = (transactionsData.data?.transactions || []).map((tx: any) => {
@@ -313,7 +200,6 @@ export function DashboardPage() {
         });
 
         setRecentTransactions(transformedTransactions);
-        setOpenVouchers(vouchersData.data || []);
         
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -387,139 +273,11 @@ export function DashboardPage() {
     }
   };
 
-  // Calculate voucher totals
-  const openVouchersCount = openVouchers.length;
-  const openVouchersValue = openVouchers.reduce((total, voucher) => total + voucher.amount, 0);
-
   // Generate the greeting with user's first name
   const greetingName = getGreetingName(user?.name);
 
-  if (isLoading) {
-    return (
-      <div style={{ 
-        fontFamily: 'Montserrat, sans-serif',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        fontSize: '18px',
-        color: '#6b7280'
-      }}>
-        Loading dashboard...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ 
-        fontFamily: 'Montserrat, sans-serif',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        fontSize: '18px',
-        color: '#dc2626'
-      }}>
-        Error: {error}
-      </div>
-    );
-  }
-
   return (
     <div style={{ fontFamily: 'Montserrat, sans-serif' }}>
-      {/* Top Card: User | Logo3 | Bell */}
-      <div 
-        style={{
-          position: 'sticky',
-          top: 0,
-          backgroundColor: '#ffffff',
-          borderBottom: '1px solid #e5e7eb',
-          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-          zIndex: 10
-        }}
-      >
-        <div 
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            height: '68px', // Slightly increased height for better logo spacing
-            padding: '0 16px'
-          }}
-        >
-          {/* Left: User Icon */}
-          <button 
-            onClick={() => navigate('/profile')}
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              backgroundColor: 'transparent',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s ease'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            aria-label="Go to Profile"
-          >
-            <User style={{ width: '24px', height: '24px', color: '#6b7280' }} />
-          </button>
-
-          {/* Center: Logo3 - Enhanced with better container */}
-          <div 
-            style={{ 
-              flex: 1, 
-              display: 'flex', 
-              justifyContent: 'center',
-              alignItems: 'center',
-              padding: '0 16px' // Add padding to prevent logo from touching icons
-            }}
-          >
-            <Logo3Component />
-          </div>
-
-          {/* Right: Bell Icon with notification badge */}
-          <button 
-            onClick={() => alert('Notifications coming soon!')}
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              backgroundColor: 'transparent',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              position: 'relative',
-              transition: 'background-color 0.2s ease'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            aria-label="Messages and Notifications"
-          >
-            <Bell style={{ width: '24px', height: '24px', color: '#6b7280' }} />
-            {/* Red notification badge */}
-            <span 
-              style={{
-                position: 'absolute',
-                top: '4px',
-                right: '4px',
-                width: '8px',
-                height: '8px',
-                backgroundColor: '#dc2626',
-                borderRadius: '50%'
-              }}
-            />
-          </button>
-        </div>
-      </div>
-
       {/* Content */}
       <div style={{ padding: '16px' }}>
         {/* CLEAN GREETING MESSAGE */}
@@ -619,11 +377,11 @@ export function DashboardPage() {
                 fontFamily: 'Montserrat, sans-serif',
                 fontSize: 'clamp(1.25rem, 3vw, 1.5rem)',
                 fontWeight: 'var(--font-weight-bold)',
-                color: walletBalance.available >= 0 ? '#16a34a' : '#dc2626', // Green for positive, red for negative
+                color: walletBalance >= 0 ? '#16a34a' : '#dc2626', // Green for positive, red for negative
                 lineHeight: '1.2'
               }}
             >
-              {formatCurrency(walletBalance.available)}
+              {formatCurrency(walletBalance)}
             </span>
           </div>
         </button>
@@ -803,7 +561,8 @@ export function DashboardPage() {
                     justifyContent: 'space-between',
                     paddingBottom: index === recentTransactions.length - 1 ? '0' : '16px',
                     marginBottom: index === recentTransactions.length - 1 ? '0' : '16px',
-                    borderBottom: index === recentTransactions.length - 1 ? 'none' : '1px solid #f8fafc'
+                    borderBottom: index === recentTransactions.length - 1 ? 'none' : '1px solid #f8fafc',
+                    width: '100%'
                   }}
                 >
                   {/* Left: Icon and Description */}
@@ -811,7 +570,8 @@ export function DashboardPage() {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      flex: 1
+                      flex: 1,
+                      minWidth: 0
                     }}
                   >
                     {/* Transaction Icon */}
@@ -825,7 +585,8 @@ export function DashboardPage() {
                         alignItems: 'center',
                         justifyContent: 'center',
                         marginRight: '12px',
-                        flexShrink: 0
+                        flexShrink: 0,
+                        minWidth: '40px'
                       }}
                     >
                       <div style={{ color: getIconColor(transaction) }}>
@@ -834,7 +595,11 @@ export function DashboardPage() {
                     </div>
 
                     {/* Transaction Details */}
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ 
+                      flex: 1, 
+                      minWidth: 0,
+                      maxWidth: '60%'
+                    }}>
                       <p 
                         style={{
                           fontFamily: 'Montserrat, sans-serif',
@@ -844,7 +609,9 @@ export function DashboardPage() {
                           margin: '0 0 2px 0',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis'
+                          textOverflow: 'ellipsis',
+                          maxWidth: '100%',
+                          display: 'block'
                         }}
                       >
                         {transaction.description}
@@ -855,7 +622,11 @@ export function DashboardPage() {
                           fontSize: 'var(--mobile-font-small)',
                           fontWeight: 'var(--font-weight-normal)',
                           color: '#6b7280',
-                          margin: '0'
+                          margin: '0',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          maxWidth: '100%'
                         }}
                       >
                         {formatTransactionDate(transaction.date)}
@@ -867,7 +638,9 @@ export function DashboardPage() {
                   <div 
                     style={{
                       textAlign: 'right',
-                      paddingLeft: '12px'
+                      paddingLeft: '12px',
+                      flexShrink: 0,
+                      minWidth: '80px'
                     }}
                   >
                     <span 

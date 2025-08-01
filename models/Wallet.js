@@ -1,264 +1,257 @@
- const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+// mymoolah/models/Wallet.js
 
-class WalletModel {
-  constructor() {
-    this.dbPath = path.join(__dirname, '../data/mymoolah.db');
-    this.db = new sqlite3.Database(this.dbPath);
-    this.initTable();
-  }
-  
-  // Get all wallets
-    async getAllWallets() {
-    return new Promise((resolve, reject) => {
-      const sql = 'SELECT id, userId, walletId, balance, status, account_number, created_at, updated_at FROM wallets ORDER BY created_at DESC';
-      this.db.all(sql, (err, rows) => {
-        if (err) {
-          console.error('❌ Error getting all wallets:', err.message);
-          reject(err);
-        } else {
-          resolve(rows);
+module.exports = (sequelize, DataTypes) => {
+  const Wallet = sequelize.define('Wallet', {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+      validate: {
+        notNull: true,
+      },
+    },
+    walletId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+        len: [10, 50],
+      },
+    },
+    balance: {
+      type: DataTypes.DECIMAL(15, 2), // Banking-grade precision
+      allowNull: false,
+      defaultValue: 0.00,
+      validate: {
+        min: 0,
+      },
+    },
+    currency: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'ZAR',
+      validate: {
+        isIn: [['ZAR', 'USD', 'EUR']], // Supported currencies
+      },
+    },
+    status: {
+      type: DataTypes.ENUM('active', 'suspended', 'inactive', 'pending', 'locked'),
+      allowNull: false,
+      defaultValue: 'active',
+    },
+    kycVerified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    kycVerifiedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    kycVerifiedBy: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    dailyLimit: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
+      defaultValue: 100000.00, // R100,000 daily limit
+      validate: {
+        min: 0,
+      },
+    },
+    monthlyLimit: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
+      defaultValue: 1000000.00, // R1,000,000 monthly limit
+      validate: {
+        min: 0,
+      },
+    },
+    dailySpent: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+      validate: {
+        min: 0,
+      },
+    },
+    monthlySpent: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+      validate: {
+        min: 0,
+      },
+    },
+    lastTransactionAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  }, {
+    tableName: 'wallets',
+    timestamps: true,
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    indexes: [
+      {
+        unique: true,
+        fields: ['walletId'],
+      },
+      {
+        fields: ['userId'],
+      },
+      {
+        fields: ['status'],
+      },
+      {
+        fields: ['kycVerified'],
+      },
+    ],
+    hooks: {
+      beforeCreate: (wallet) => {
+        // Generate wallet ID if not provided
+        if (!wallet.walletId) {
+          wallet.walletId = `WAL-${Date.now()}-${wallet.userId}`;
         }
-      });
-    });
-  }
-
-  // Initialize wallets table
-  initTable() {
-    const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS wallets (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        userId INTEGER NOT NULL,
-        walletId TEXT UNIQUE NOT NULL,
-        balance REAL DEFAULT 0.00,
-        currency TEXT DEFAULT 'ZAR',
-        status TEXT DEFAULT 'active',
-        createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY(userId) REFERENCES users(id)
-      )
-    `;
-    this.db.run(createTableSQL, (err) => {
-      if (err) {
-        console.error('❌ Error creating wallets table:', err.message);
-      } else {
-        console.log('✅ Wallets table created successfully');
-      }
-    });
-  }
-
-  // Create a wallet for a user
-  async createWallet(userId, accountNumber = null) {
-    return new Promise((resolve, reject) => {
-      const walletId = accountNumber || `WAL-${Date.now()}-${userId}`;
-      const sql = `INSERT INTO wallets (userId, walletId, balance, currency, status) VALUES (?, ?, 0.00, 'ZAR', 'active')`;
-      this.db.run(sql, [userId, walletId], function(err) {
-        if (err) {
-          console.error('❌ Error creating wallet:', err.message);
-          reject(err);
-        } else {
-          resolve({ 
-            id: this.lastID,
-            walletId: walletId, 
-            accountNumber: walletId,
-            userId: userId,
-            balance: 0.00,
-            status: 'active'
-          });
+      },
+      beforeUpdate: (wallet) => {
+        // Update kycVerifiedAt when KYC status changes
+        if (wallet.changed('kycVerified') && wallet.kycVerified) {
+          wallet.kycVerifiedAt = new Date();
         }
-      });
-    });
-  }
-
-  // Get wallet by wallet ID
-  async getWalletById(walletId) {
-    return new Promise((resolve, reject) => {
-      const sql = `SELECT * FROM wallets WHERE walletId = ?`;
-      this.db.get(sql, [walletId], (err, row) => {
-        if (err) {
-          console.error('❌ Error getting wallet by ID:', err.message);
-          reject(err);
-        } else {
-          resolve(row);
+        
+        // Reset daily/monthly spent at appropriate intervals
+        const now = new Date();
+        const lastTransaction = wallet.lastTransactionAt;
+        
+        if (!lastTransaction || !isSameDay(now, lastTransaction)) {
+          wallet.dailySpent = 0.00;
         }
-      });
-    });
-  }
-
-  // Get wallet by numeric ID
-  async getWalletByNumericId(id) {
-    return new Promise((resolve, reject) => {
-      const sql = `SELECT * FROM wallets WHERE id = ?`;
-      this.db.get(sql, [id], (err, row) => {
-        if (err) {
-          console.error('❌ Error getting wallet by numeric ID:', err.message);
-          reject(err);
-        } else {
-          resolve(row);
+        
+        if (!lastTransaction || !isSameMonth(now, lastTransaction)) {
+          wallet.monthlySpent = 0.00;
         }
-      });
-    });
+      },
+    },
+  });
+
+  // Helper functions for date comparison
+  function isSameDay(date1, date2) {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth() &&
+           date1.getDate() === date2.getDate();
   }
 
-  // Get wallet balance
-  async getWalletBalance(walletId) {
-    return new Promise((resolve, reject) => {
-      const sql = `SELECT balance FROM wallets WHERE walletId = ?`;
-      this.db.get(sql, [walletId], (err, row) => {
-        if (err) {
-          console.error('❌ Error getting wallet balance:', err.message);
-          reject(err);
-        } else {
-          resolve(row ? row.balance : null);
-        }
-      });
-    });
+  function isSameMonth(date1, date2) {
+    return date1.getFullYear() === date2.getFullYear() &&
+           date1.getMonth() === date2.getMonth();
   }
 
-  // Credit wallet (deposit, voucher, etc.)
-  async creditWallet(walletId, amount) {
-    return new Promise((resolve, reject) => {
-      if (amount <= 0) {
-        reject(new Error('Invalid amount'));
-        return;
-      }
-
-      const sql = `UPDATE wallets SET balance = balance + ?, updatedAt = CURRENT_TIMESTAMP WHERE walletId = ?`;
-      this.db.run(sql, [amount, walletId], (err) => {
-        if (err) {
-          console.error('❌ Error crediting wallet:', err.message);
-          reject(err);
-        } else {
-          // Get the new balance using the same database instance
-          this.db.get('SELECT balance FROM wallets WHERE walletId = ?', [walletId], (err, row) => {
-            if (err) {
-              console.error('❌ Error getting new balance:', err.message);
-              reject(err);
-            } else if (!row) {
-              reject(new Error('Wallet not found'));
-            } else {
-              resolve({ newBalance: row.balance });
-            }
-          });
-        }
-      });
+  // Define associations
+  Wallet.associate = (models) => {
+    // Wallet belongs to one User
+    Wallet.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'user',
     });
-  }
 
-  // Debit wallet (spend, transfer, etc.)
-  async debitWallet(walletId, amount) {
-    return new Promise((resolve, reject) => {
-      if (amount <= 0) {
-        reject(new Error('Invalid amount'));
-        return;
-      }
-
-      // First check current balance
-      this.db.get('SELECT balance FROM wallets WHERE walletId = ?', [walletId], (err, row) => {
-        if (err) {
-          reject(err);
-        } else if (!row) {
-          reject(new Error('Wallet not found'));
-        } else if (row.balance < amount) {
-          reject(new Error('Insufficient funds'));
-        } else {
-          // Proceed with debit
-          const sql = `UPDATE wallets SET balance = balance - ?, updatedAt = CURRENT_TIMESTAMP WHERE walletId = ?`;
-          this.db.run(sql, [amount, walletId], function(err) {
-            if (err) {
-              console.error('❌ Error debiting wallet:', err.message);
-              reject(err);
-            } else {
-              resolve({ newBalance: row.balance - amount });
-            }
-          });
-        }
-      });
+    // Wallet has many Transactions
+    Wallet.hasMany(models.Transaction, {
+      foreignKey: 'walletId',
+      as: 'transactions',
     });
-  }
 
-  // Get wallet by userId
-  async getWalletByUserId(userId) {
-    return new Promise((resolve, reject) => {
-      const sql = `SELECT * FROM wallets WHERE userId = ?`;
-      this.db.get(sql, [userId], (err, row) => {
-        if (err) {
-          console.error('❌ Error getting wallet by userId:', err.message);
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
+    // Wallet has many Payments
+    Wallet.hasMany(models.Payment, {
+      foreignKey: 'walletId',
+      as: 'payments',
     });
-  }
+  };
 
-  // List wallet transactions
-  async listWalletTransactions(walletId, { page = 1, limit = 20, type, startDate, endDate } = {}) {
-    return new Promise((resolve, reject) => {
-      const offset = (page - 1) * limit;
-      
-      let sql = `SELECT * FROM transactions WHERE walletId = ?`;
-      const params = [walletId];
-      
-      if (type) {
-        sql += ` AND type = ?`;
-        params.push(type);
-      }
-      
-      if (startDate) {
-        sql += ` AND createdAt >= ?`;
-        params.push(startDate);
-      }
-      
-      if (endDate) {
-        sql += ` AND createdAt <= ?`;
-        params.push(endDate);
-      }
-      
-      sql += ` ORDER BY createdAt DESC LIMIT ? OFFSET ?`;
-      params.push(limit, offset);
-      
-      this.db.all(sql, params, (err, rows) => {
-        if (err) {
-          console.error('❌ Error listing wallet transactions:', err.message);
-          reject(err);
-        } else {
-          // Get total count for pagination
-          let countSql = `SELECT COUNT(*) as total FROM transactions WHERE walletId = ?`;
-          const countParams = [walletId];
-          
-          if (type) {
-            countSql += ` AND type = ?`;
-            countParams.push(type);
-          }
-          
-          if (startDate) {
-            countSql += ` AND createdAt >= ?`;
-            countParams.push(startDate);
-          }
-          
-          if (endDate) {
-            countSql += ` AND createdAt <= ?`;
-            countParams.push(endDate);
-          }
-          
-          this.db.get(countSql, countParams, (countErr, countRow) => {
-            if (countErr) {
-              console.error('❌ Error getting transaction count:', countErr.message);
-              reject(countErr);
-            } else {
-              resolve({
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total: countRow.total,
-                transactions: rows || []
-              });
-            }
-          });
-        }
-      });
-    });
-  }
-}
+  // Instance methods
+  Wallet.prototype.canDebit = function(amount) {
+    if (this.status !== 'active') {
+      return { allowed: false, reason: 'Wallet is not active' };
+    }
+    
+    if (this.balance < amount) {
+      return { allowed: false, reason: 'Insufficient balance' };
+    }
+    
+    if (this.dailySpent + amount > this.dailyLimit) {
+      return { allowed: false, reason: 'Daily limit exceeded' };
+    }
+    
+    if (this.monthlySpent + amount > this.monthlyLimit) {
+      return { allowed: false, reason: 'Monthly limit exceeded' };
+    }
+    
+    return { allowed: true };
+  };
 
-module.exports = new WalletModel();
+  Wallet.prototype.debit = async function(amount, transactionType = 'debit') {
+    const canDebit = this.canDebit(amount);
+    if (!canDebit.allowed) {
+      throw new Error(canDebit.reason);
+    }
+    
+    this.balance -= amount;
+    this.dailySpent += amount;
+    this.monthlySpent += amount;
+    this.lastTransactionAt = new Date();
+    
+    await this.save();
+    return this;
+  };
+
+  Wallet.prototype.credit = async function(amount, transactionType = 'credit') {
+    if (this.status !== 'active') {
+      throw new Error('Wallet is not active');
+    }
+    
+    this.balance += amount;
+    this.lastTransactionAt = new Date();
+    
+    await this.save();
+    return this;
+  };
+
+  Wallet.prototype.verifyKYC = async function(verifiedBy = 'system') {
+    this.kycVerified = true;
+    this.kycVerifiedAt = new Date();
+    this.kycVerifiedBy = verifiedBy;
+    
+    await this.save();
+    return this;
+  };
+
+  Wallet.prototype.getBalance = function() {
+    return parseFloat(this.balance);
+  };
+
+  Wallet.prototype.getFormattedBalance = function() {
+    return `R${(this.balance / 100).toFixed(2)}`;
+  };
+
+  return Wallet;
+};

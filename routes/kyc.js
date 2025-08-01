@@ -1,316 +1,137 @@
 const express = require('express');
-const router = express.Router();
-const authMiddleware = require('../middleware/auth');
-const { body, validationResult } = require('express-validator');
 const multer = require('multer');
-const path = require('path');
+const router = express.Router();
+const kycController = require('../controllers/kycController');
+const authenticateToken = require('../middleware/auth');
 
 // Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/kyc/');
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 5 * 1024 * 1024, // 5MB limit
   },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
-    if (allowedTypes.includes(file.mimetype)) {
+    // Accept images and PDFs
+    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only JPG, PNG, and PDF files are allowed.'), false);
+      cb(new Error('Invalid file type. Only images and PDFs are allowed.'), false);
     }
   }
 });
 
-// Validation middleware
-const validateRequest = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      message: 'Validation failed',
-      errors: errors.array().map(error => ({
-        field: error.path,
-        message: error.msg,
-        value: error.value
-      }))
-    });
-  }
-  next();
-};
-
-// GET /api/v1/kyc - Get all KYC records
-router.get('/', async (req, res) => {
+// Upload KYC document (single document)
+router.post('/upload', authenticateToken, upload.single('document'), async (req, res) => {
   try {
-    const Kyc = require('../models/Kyc');
-    const kycModel = new Kyc();
-    
-    kycModel.db.all(`
-      SELECT 
-        k.id,
-        k.userId,
-        k.documentType,
-        k.documentNumber,
-        k.status,
-        k.submittedAt,
-        k.reviewedAt,
-        k.reviewerNotes,
-        u.firstName,
-        u.lastName,
-        u.email
-      FROM kyc k
-      LEFT JOIN users u ON k.userId = u.id
-      ORDER BY k.submittedAt DESC
-    `, [], (err, rows) => {
-      if (err) {
-        console.error('❌ Error getting KYC records:', err);
-        return res.status(500).json({ 
-          success: false,
-          error: 'Database error', 
-          details: err.message 
-        });
-      }
-      res.json({ 
-        success: true,
-        message: 'KYC records retrieved successfully',
-        data: { kyc: rows || [] }
-      });
-    });
+    await kycController.uploadDocument(req, res);
   } catch (error) {
-    console.error('❌ Error in getAllKyc:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'Internal server error', 
-      details: error.message 
+    console.error('❌ Error in KYC upload route:', error);
+    res.status(500).json({
+      error: 'UPLOAD_ROUTE_ERROR',
+      message: 'Error processing upload'
     });
   }
 });
 
-// GET /api/v1/kyc/status
-router.get('/status', authMiddleware, async (req, res) => {
+// Upload both KYC documents (identity and address)
+router.post('/upload-documents', authenticateToken, upload.fields([
+  { name: 'identityDocument', maxCount: 1 },
+  { name: 'addressDocument', maxCount: 1 }
+]), async (req, res) => {
   try {
-    const userId = req.user.id;
-    
-    // Simulate KYC status check
-    const statuses = ['pending', 'documents_uploaded', 'processing', 'verified', 'rejected'];
-    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-    
-    const kycData = {
-      status: randomStatus,
-      progress: randomStatus === 'pending' ? 0 : 
-                randomStatus === 'documents_uploaded' ? 25 :
-                randomStatus === 'processing' ? 75 :
-                randomStatus === 'verified' ? 100 : 0,
-      documents: {
-        identity: randomStatus !== 'pending' ? 'uploaded' : 'pending',
-        address: randomStatus === 'verified' ? 'uploaded' : 'pending',
-        selfie: randomStatus === 'verified' ? 'uploaded' : 'pending'
-      },
-      submittedAt: randomStatus !== 'pending' ? new Date().toISOString() : null,
-      verifiedAt: randomStatus === 'verified' ? new Date().toISOString() : null,
-      rejectionReason: randomStatus === 'rejected' ? 'Document quality too low' : null
-    };
-    
-    return res.json({
-      success: true,
-      data: kycData
-    });
+    await kycController.uploadDocuments(req, res);
   } catch (error) {
-    console.error('Error checking KYC status:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to check KYC status'
+    console.error('❌ Error in KYC upload-documents route:', error);
+    res.status(500).json({
+      error: 'UPLOAD_ROUTE_ERROR',
+      message: 'Error processing upload'
     });
   }
 });
 
-// POST /api/v1/kyc/upload-document
-router.post('/upload-document', [
-  authMiddleware,
-  upload.single('document'),
-  body('documentType')
-    .isIn(['identity', 'address', 'selfie'])
-    .withMessage('Document type must be identity, address, or selfie'),
-  validateRequest
-], async (req, res) => {
+// Alias for frontend compatibility
+router.post('/upload-document', authenticateToken, upload.single('document'), async (req, res) => {
   try {
+    await kycController.uploadDocument(req, res);
+  } catch (error) {
+    console.error('❌ Error in KYC upload-document route:', error);
+    res.status(500).json({
+      error: 'UPLOAD_ROUTE_ERROR',
+      message: 'Error processing upload'
+    });
+  }
+});
+
+// Get KYC status
+router.get('/status/:userId', authenticateToken, async (req, res) => {
+  try {
+    await kycController.getKYCStatus(req, res);
+  } catch (error) {
+    console.error('❌ Error in KYC status route:', error);
+    res.status(500).json({
+      error: 'STATUS_ROUTE_ERROR',
+      message: 'Error getting KYC status'
+    });
+  }
+});
+
+// Manual KYC verification (admin/support only)
+router.post('/manual-verify', authenticateToken, async (req, res) => {
+  try {
+    await kycController.manualVerifyKYC(req, res);
+  } catch (error) {
+    console.error('❌ Error in manual KYC verification route:', error);
+    res.status(500).json({
+      error: 'MANUAL_VERIFICATION_ROUTE_ERROR',
+      message: 'Error during manual verification'
+    });
+  }
+});
+
+// Get accepted document types
+router.get('/accepted-documents/:documentType', async (req, res) => {
+  try {
+    await kycController.getAcceptedDocuments(req, res);
+  } catch (error) {
+    console.error('❌ Error in accepted documents route:', error);
+    res.status(500).json({
+      error: 'DOCUMENTS_ROUTE_ERROR',
+      message: 'Error getting accepted documents'
+    });
+  }
+});
+
+// Update KYC status
+router.post('/update-status', authenticateToken, async (req, res) => {
+  try {
+    const { status } = req.body;
     const userId = req.user.id;
-    const { documentType } = req.body;
-    
-    if (!req.file) {
+
+    if (!status) {
       return res.status(400).json({
-        success: false,
-        message: 'No file uploaded'
+        error: 'STATUS_REQUIRED',
+        message: 'KYC status is required'
       });
     }
-    
-    // Simulate document processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return res.json({
-      success: true,
-      message: 'Document uploaded successfully',
-      data: {
-        documentType,
-        filename: req.file.filename,
-        uploadedAt: new Date().toISOString(),
-        status: 'uploaded'
-      }
-    });
-  } catch (error) {
-    console.error('Error uploading document:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to upload document'
-    });
-  }
-});
 
-// POST /api/v1/kyc/submit
-router.post('/submit', [
-  authMiddleware,
-  body('firstName')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('First name must be between 2 and 50 characters'),
-  body('lastName')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Last name must be between 2 and 50 characters'),
-  body('dateOfBirth')
-    .isISO8601()
-    .withMessage('Date of birth must be a valid date'),
-  body('nationality')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Nationality must be between 2 and 50 characters'),
-  body('address')
-    .isLength({ min: 10, max: 200 })
-    .withMessage('Address must be between 10 and 200 characters'),
-  body('city')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('City must be between 2 and 50 characters'),
-  body('postalCode')
-    .isLength({ min: 4, max: 10 })
-    .withMessage('Postal code must be between 4 and 10 characters'),
-  validateRequest
-], async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { firstName, lastName, dateOfBirth, nationality, address, city, postalCode } = req.body;
-    
-    // Simulate KYC submission processing
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    return res.json({
-      success: true,
-      message: 'KYC submitted successfully',
-      data: {
-        status: 'processing',
-        submittedAt: new Date().toISOString(),
-        estimatedCompletion: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
-      }
-    });
-  } catch (error) {
-    console.error('Error submitting KYC:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to submit KYC'
-    });
-  }
-});
+    // Update user's KYC status in the database
+    const UserModel = require('../models/User');
+    const userModel = new UserModel();
+    await userModel.updateKYCStatus(userId, status);
 
-// GET /api/v1/kyc/requirements
-router.get('/requirements', authMiddleware, async (req, res) => {
-  try {
-    const requirements = {
-      documents: [
-        {
-          type: 'identity',
-          name: 'Identity Document',
-          description: 'Valid South African ID book, passport, or driver\'s license',
-          required: true,
-          acceptedFormats: ['JPG', 'PNG', 'PDF'],
-          maxSize: '10MB'
-        },
-        {
-          type: 'address',
-          name: 'Proof of Address',
-          description: 'Recent utility bill, bank statement, or municipal account',
-          required: true,
-          acceptedFormats: ['JPG', 'PNG', 'PDF'],
-          maxSize: '10MB'
-        },
-        {
-          type: 'selfie',
-          name: 'Selfie with ID',
-          description: 'Photo of yourself holding your identity document',
-          required: true,
-          acceptedFormats: ['JPG', 'PNG'],
-          maxSize: '10MB'
-        }
-      ],
-      personalInfo: [
-        {
-          field: 'firstName',
-          name: 'First Name',
-          required: true,
-          type: 'text'
-        },
-        {
-          field: 'lastName',
-          name: 'Last Name',
-          required: true,
-          type: 'text'
-        },
-        {
-          field: 'dateOfBirth',
-          name: 'Date of Birth',
-          required: true,
-          type: 'date'
-        },
-        {
-          field: 'nationality',
-          name: 'Nationality',
-          required: true,
-          type: 'text'
-        },
-        {
-          field: 'address',
-          name: 'Residential Address',
-          required: true,
-          type: 'textarea'
-        },
-        {
-          field: 'city',
-          name: 'City',
-          required: true,
-          type: 'text'
-        },
-        {
-          field: 'postalCode',
-          name: 'Postal Code',
-          required: true,
-          type: 'text'
-        }
-      ]
-    };
+    // Get updated user data
+    const updatedUser = await userModel.getUserById(userId);
     
-    return res.json({
+    res.json({
       success: true,
-      data: requirements
+      message: 'KYC status updated successfully',
+      user: updatedUser
     });
   } catch (error) {
-    console.error('Error getting KYC requirements:', error);
-    return res.status(500).json({
-      success: false,
-      message: 'Failed to get KYC requirements'
+    console.error('❌ Error updating KYC status:', error);
+    res.status(500).json({
+      error: 'STATUS_UPDATE_ERROR',
+      message: 'Error updating KYC status'
     });
   }
 });

@@ -15,6 +15,9 @@ router.get('/user/:userId', voucherController.listActiveVouchers);
 // GET /api/v1/vouchers/active - List active vouchers for authenticated user
 router.get('/active', authMiddleware, voucherController.listActiveVouchersForMe);
 
+// GET /api/v1/vouchers/balance - Get total voucher balance for authenticated user
+router.get('/balance', authMiddleware, voucherController.getVoucherBalance);
+
 // Get voucher by code
 router.get('/code/:voucher_code', voucherController.getVoucherByCode);
 

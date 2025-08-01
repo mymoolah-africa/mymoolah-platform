@@ -1,316 +1,255 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+// mymoolah/models/Payment.js
 
-class Payment {
-  constructor() {
-    this.dbPath = path.join(__dirname, '../data/mymoolah.db');
-    this.init();
-  }
-
-  init() {
-    const db = new sqlite3.Database(this.dbPath);
-
-    db.serialize(() => {
-      db.run(`
-        CREATE TABLE IF NOT EXISTS payments (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          merchantId TEXT,
-          terminalId TEXT,
-          paymentDate TEXT NOT NULL,
-          reference TEXT NOT NULL,
-          easyPayNumber TEXT NOT NULL,
-          accountNumber TEXT NOT NULL,
-          amount INTEGER NOT NULL,
-          echoData TEXT,
-          billId INTEGER,
-          status TEXT DEFAULT 'pending',
-          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (billId) REFERENCES bills (id)
-        )
-      `, (err) => {
-        if (err) {
-          console.error('❌ Error creating payments table:', err);
-        } else {
-          console.log('✅ Payments table created successfully');
+module.exports = (sequelize, DataTypes) => {
+  const Payment = sequelize.define('Payment', {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true,
+    },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'users',
+        key: 'id',
+      },
+    },
+    walletId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      references: {
+        model: 'wallets',
+        key: 'walletId',
+      },
+    },
+    merchantId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: [1, 50],
+      },
+    },
+    terminalId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: [1, 50],
+      },
+    },
+    paymentDate: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    reference: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+        len: [10, 100],
+      },
+    },
+    easyPayNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: [10, 50],
+      },
+    },
+    accountNumber: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      validate: {
+        len: [5, 50],
+      },
+    },
+    amount: {
+      type: DataTypes.DECIMAL(15, 2), // Banking-grade precision
+      allowNull: false,
+      validate: {
+        min: 0,
+      },
+    },
+    currency: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'ZAR',
+      validate: {
+        isIn: [['ZAR', 'USD', 'EUR']],
+      },
+    },
+    paymentType: {
+      type: DataTypes.ENUM('bill_payment', 'transfer', 'deposit', 'withdrawal', 'voucher', 'flash_payment'),
+      allowNull: false,
+      defaultValue: 'bill_payment',
+    },
+    paymentMethod: {
+      type: DataTypes.ENUM('wallet', 'card', 'bank_transfer', 'cash', 'voucher'),
+      allowNull: false,
+      defaultValue: 'wallet',
+    },
+    echoData: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      comment: 'Additional payment data from external systems',
+    },
+    billId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'bills',
+        key: 'id',
+      },
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded'),
+      allowNull: false,
+      defaultValue: 'pending',
+    },
+    failureReason: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    processingTime: {
+      type: DataTypes.INTEGER, // milliseconds
+      allowNull: true,
+    },
+    transactionFee: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0.00,
+      validate: {
+        min: 0,
+      },
+    },
+    exchangeRate: {
+      type: DataTypes.DECIMAL(10, 6),
+      allowNull: true,
+      validate: {
+        min: 0,
+      },
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      allowNull: false,
+      defaultValue: DataTypes.NOW,
+    },
+  }, {
+    tableName: 'payments',
+    timestamps: true,
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    indexes: [
+      {
+        unique: true,
+        fields: ['reference'],
+      },
+      {
+        fields: ['userId'],
+      },
+      {
+        fields: ['walletId'],
+      },
+      {
+        fields: ['status'],
+      },
+      {
+        fields: ['paymentType'],
+      },
+      {
+        fields: ['paymentDate'],
+      },
+      {
+        fields: ['easyPayNumber'],
+      },
+      {
+        fields: ['billId'],
+      },
+    ],
+    hooks: {
+      beforeCreate: (payment) => {
+        // Generate reference if not provided
+        if (!payment.reference) {
+          payment.reference = `PAY-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
         }
-      });
+      },
+      beforeUpdate: (payment) => {
+        // Calculate processing time if status changes to completed
+        if (payment.changed('status') && payment.status === 'completed' && !payment.processingTime) {
+          payment.processingTime = Date.now() - payment.createdAt.getTime();
+        }
+      },
+    },
+  });
+
+  // Define associations
+  Payment.associate = (models) => {
+    // Payment belongs to one User
+    Payment.belongsTo(models.User, {
+      foreignKey: 'userId',
+      as: 'user',
     });
 
-    db.close();
-  }
-
-  /**
-   * Create a new payment record
-   */
-  async create(paymentData) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-
-      const {
-        merchantId,
-        terminalId,
-        paymentDate,
-        reference,
-        easyPayNumber,
-        accountNumber,
-        amount,
-        echoData,
-        billId,
-        status
-      } = paymentData;
-
-      const sql = `
-        INSERT INTO payments (
-          merchantId, terminalId, paymentDate, reference, 
-          easyPayNumber, accountNumber, amount, echoData, billId, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-
-      const params = [
-        merchantId,
-        terminalId,
-        paymentDate,
-        reference,
-        easyPayNumber,
-        accountNumber,
-        amount,
-        echoData,
-        billId,
-        status || 'completed'
-      ];
-
-      db.run(sql, params, function(err) {
-        if (err) {
-          console.error('❌ Error creating payment:', err);
-          reject(err);
-        } else {
-          console.log('✅ Payment created successfully:', this.lastID);
-          resolve({ id: this.lastID, ...paymentData });
-        }
-      });
-
-      db.close();
+    // Payment belongs to one Wallet
+    Payment.belongsTo(models.Wallet, {
+      foreignKey: 'walletId',
+      as: 'wallet',
     });
-  }
 
-  /**
-   * Find payment by ID
-   */
-  async findById(id) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-
-      const sql = 'SELECT * FROM payments WHERE id = ?';
-
-      db.get(sql, [id], (err, row) => {
-        if (err) {
-          console.error('❌ Error finding payment by ID:', err);
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-
-      db.close();
+    // Payment belongs to one Bill
+    Payment.belongsTo(models.Bill, {
+      foreignKey: 'billId',
+      as: 'bill',
     });
-  }
 
-  /**
-   * Find payment by reference
-   */
-  async findByReference(reference) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-
-      const sql = 'SELECT * FROM payments WHERE reference = ?';
-
-      db.get(sql, [reference], (err, row) => {
-        if (err) {
-          console.error('❌ Error finding payment by reference:', err);
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-
-      db.close();
+    // Payment has one Transaction
+    Payment.hasOne(models.Transaction, {
+      foreignKey: 'paymentId',
+      as: 'transaction',
     });
-  }
+  };
 
-  /**
-   * Find payments by EasyPay number
-   */
-  async findByEasyPayNumber(easyPayNumber) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
+  // Instance methods
+  Payment.prototype.isCompleted = function() {
+    return this.status === 'completed';
+  };
 
-      const sql = 'SELECT * FROM payments WHERE easyPayNumber = ? ORDER BY createdAt DESC';
+  Payment.prototype.isFailed = function() {
+    return this.status === 'failed';
+  };
 
-      db.all(sql, [easyPayNumber], (err, rows) => {
-        if (err) {
-          console.error('❌ Error finding payments by EasyPay number:', err);
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
+  Payment.prototype.isPending = function() {
+    return this.status === 'pending';
+  };
 
-      db.close();
-    });
-  }
+  Payment.prototype.complete = async function() {
+    this.status = 'completed';
+    this.processingTime = Date.now() - this.createdAt.getTime();
+    await this.save();
+    return this;
+  };
 
-  /**
-   * Update payment status
-   */
-  async updateStatus(id, status) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
+  Payment.prototype.fail = async function(reason = '') {
+    this.status = 'failed';
+    this.failureReason = reason;
+    await this.save();
+    return this;
+  };
 
-      const sql = 'UPDATE payments SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?';
+  Payment.prototype.getFormattedAmount = function() {
+    return `R${(this.amount / 100).toFixed(2)}`;
+  };
 
-      db.run(sql, [status, id], function(err) {
-        if (err) {
-          console.error('❌ Error updating payment status:', err);
-          reject(err);
-        } else {
-          console.log('✅ Payment status updated successfully');
-          resolve({ id, status });
-        }
-      });
+  Payment.prototype.getTotalAmount = function() {
+    return parseFloat(this.amount) + parseFloat(this.transactionFee || 0);
+  };
 
-      db.close();
-    });
-  }
-
-  /**
-   * Get all payments
-   */
-  async findAll() {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-
-      const sql = 'SELECT * FROM payments ORDER BY createdAt DESC';
-
-      db.all(sql, [], (err, rows) => {
-        if (err) {
-          console.error('❌ Error finding all payments:', err);
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-
-      db.close();
-    });
-  }
-
-  /**
-   * Get payments by status
-   */
-  async findByStatus(status) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-
-      const sql = 'SELECT * FROM payments WHERE status = ? ORDER BY createdAt DESC';
-
-      db.all(sql, [status], (err, rows) => {
-        if (err) {
-          console.error('❌ Error finding payments by status:', err);
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-
-      db.close();
-    });
-  }
-
-  /**
-   * Get payment statistics
-   */
-  async getStatistics() {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-
-      const sql = `
-        SELECT 
-          COUNT(*) as totalPayments,
-          SUM(amount) as totalAmount,
-          COUNT(CASE WHEN status = 'completed' THEN 1 END) as completedPayments,
-          SUM(CASE WHEN status = 'completed' THEN amount ELSE 0 END) as completedAmount,
-          COUNT(CASE WHEN status = 'pending' THEN 1 END) as pendingPayments,
-          SUM(CASE WHEN status = 'pending' THEN amount ELSE 0 END) as pendingAmount
-        FROM payments
-      `;
-
-      db.get(sql, [], (err, row) => {
-        if (err) {
-          console.error('❌ Error getting payment statistics:', err);
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      });
-
-      db.close();
-    });
-  }
-
-  /**
-   * Get payments with bill information
-   */
-  async findWithBillInfo() {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-
-      const sql = `
-        SELECT 
-          p.*,
-          b.customerName,
-          b.billType,
-          b.description as billDescription
-        FROM payments p
-        LEFT JOIN bills b ON p.billId = b.id
-        ORDER BY p.createdAt DESC
-      `;
-
-      db.all(sql, [], (err, rows) => {
-        if (err) {
-          console.error('❌ Error finding payments with bill info:', err);
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-
-      db.close();
-    });
-  }
-
-  /**
-   * Delete payment
-   */
-  async delete(id) {
-    return new Promise((resolve, reject) => {
-      const db = new sqlite3.Database(this.dbPath);
-
-      const sql = 'DELETE FROM payments WHERE id = ?';
-
-      db.run(sql, [id], function(err) {
-        if (err) {
-          console.error('❌ Error deleting payment:', err);
-          reject(err);
-        } else {
-          console.log('✅ Payment deleted successfully');
-          resolve({ id });
-        }
-      });
-
-      db.close();
-    });
-  }
-}
-
-module.exports = Payment;
+  return Payment;
+};

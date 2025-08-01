@@ -8,7 +8,7 @@
 - **LoginPage**: Successfully integrated `logo3.svg` with proper error handling
 - **RegisterPage**: Enhanced `logo2.svg` to 60% larger size (w-26 h-26)
 - **Fallback System**: Implemented robust error handling with "M" logo fallback
-- **Asset Management**: All logos properly organized in `/src/assets/` directory
+- **Asset Management**: All logos properly organized in `/assets/` directory
 
 ### **Development Server Status** ✅ **OPERATIONAL**
 - **Frontend Server**: Running on `http://localhost:3000/` with Vite v4.5.14
@@ -58,7 +58,7 @@ cd frontend && npm run dev
 - **LoginPage**: Uses `logo3.svg` with error handling
 - **RegisterPage**: Uses `logo2.svg` at 60% larger size
 - **Fallback**: "M" logo when SVG fails to load
-- **Paths**: `/src/assets/logo2.svg` and `/src/assets/logo3.svg`
+- **Paths**: `/assets/logo2.svg` and `/assets/logo3.svg`
 
 ### **Integration Best Practices**
 - Always test logo loading after changes
