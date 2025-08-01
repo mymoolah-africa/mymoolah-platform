@@ -1,6 +1,81 @@
 # MyMoolah Platform - Changelog
 
-## [Latest] - July 29, 2025
+## [Latest] - January 30, 2025
+
+### 🎉 **TRANSACTION SORTING & DATE RANGE FILTER FIXES**
+
+#### ✅ **Transaction Sorting Issues Resolved**
+- **Backend Sorting:** Confirmed Sequelize ORM `order: [['createdAt', 'DESC']]` working correctly
+- **Frontend Sorting:** Fixed timestamp comparison logic with proper normalization
+- **Dashboard Page:** Transactions now display in correct chronological order (newest first)
+- **Transaction History Page:** Proper sorting maintained with all filtering features
+- **Date Formatting:** Fixed day calculation for "Today", "Yesterday", and date display
+
+#### ✅ **Date Range Filter Functionality**
+- **Date Comparison Logic:** Implemented proper date normalization to remove time component
+- **Visual Indicators:** Added blue highlighting for active date range filters
+- **Filter State Detection:** Enhanced to include both from/to dates
+- **Transaction Count Display:** Shows filtered vs total transaction counts
+- **Clear Filters:** Proper reset functionality for all filter types
+
+#### ✅ **UI/UX Improvements**
+- **Button Nesting Warning:** Fixed PopoverTrigger component to use `div` instead of `Button`
+- **Debug Cleanup:** Removed console logs and cleaned up code
+- **Visual Feedback:** Enhanced user experience with better filter state indicators
+- **Performance:** Optimized sorting and filtering with proper useMemo implementation
+
+#### ✅ **Technical Improvements**
+- **Date Normalization:** Proper handling of ISO timestamps from database
+- **API Consistency:** Both Dashboard and Transaction History pages use same API endpoints
+- **Error Handling:** Maintained robust error handling throughout
+- **Code Quality:** Clean, maintainable code with proper TypeScript types
+
+---
+
+## [Previous] - July 29, 2025
+
+### 🎉 **TRANSACTION HISTORY PAGE FULLY INTEGRATED**
+
+#### ✅ **TransactionHistoryPage Integration**
+- **Figma-Generated Code:** Integrated new TransactionHistoryPage.tsx from Figma AI agent
+- **Real Backend Data:** Connected to `/api/v1/wallets/transactions` endpoint
+- **Data Mapping:** Transformed backend transaction data to frontend interface
+- **Loading States:** Added proper loading and error states with UI feedback
+- **Pagination:** Integrated pagination with currentPage, totalPages, totalItems
+- **Search & Filtering:** Implemented search, type filter, and date range filtering
+- **CSV Export:** Added export functionality for transaction data
+- **Inline Styling:** Converted all Tailwind CSS classes to inline styles for consistency
+
+#### ✅ **Navigation Integration**
+- **Route Configuration:** Added `/transactions` route to App.tsx
+- **Top Banner:** Added `/transactions` to pagesWithTopBanner array
+- **Bottom Navigation Fix:** Updated BottomNavigation.tsx to include `/transactions` in showBottomNav
+- **Tab Highlighting:** Configured getActiveTabId to highlight Home tab for transactions page
+- **Layout Consistency:** Ensured TransactionHistoryPage matches DashboardPage styling approach
+
+#### ✅ **Critical Bug Fixes**
+- **Bottom Navigation Icons:** Fixed missing 5 icons on bottom sticky banner
+- **Route Matching:** Corrected `/transaction-history` to `/transactions` in BottomNavigation
+- **Layout Interference:** Changed minHeight from '100vh' to 'auto' to prevent navigation interference
+- **Duplicate Routes:** Removed duplicate import and route declarations in App.tsx
+- **500 Internal Server Error:** Fixed login page error caused by duplicate declarations
+
+#### ✅ **Frontend-Backend Integration**
+- **API Endpoint:** `/api/v1/wallets/transactions` returns paginated transaction data
+- **Data Transformation:** Maps backend fields (id, transactionId, type, amount, currency, status, etc.)
+- **Error Handling:** Proper error states and retry functionality
+- **Authentication:** JWT token-based API calls with proper headers
+
+#### ✅ **UI/UX Improvements**
+- **Transaction Cards:** Clean card design with icons, amounts, and status badges
+- **Status Colors:** Dynamic color coding for different transaction statuses
+- **Responsive Design:** Mobile-optimized layout with proper spacing
+- **Accessibility:** Proper ARIA labels and keyboard navigation
+- **Performance:** Optimized rendering with useMemo for filtered transactions
+
+---
+
+## [Previous] - July 29, 2025
 
 ### 🎉 **MAJOR MILESTONE: BACKEND FULLY FUNCTIONAL & READY FOR FRONTEND INTEGRATION**
 

@@ -1,391 +1,262 @@
-# MyMoolah API Documentation
+# MyMoolah Platform - API Documentation
 
-**Version:** 1.0.0  
-**Last Updated:** July 30, 2025  
-**Base URL:** `http://localhost:3001/api/v1`
+## 🎯 **CURRENT STATUS: TRANSACTION SORTING & DATE RANGE FILTER FIXES COMPLETED**
 
----
-
-## 📋 **Table of Contents**
-
-1. [Authentication](#authentication)
-2. [Wallet Management](#wallet-management)
-3. [Voucher Management](#voucher-management)
-4. [Transaction Management](#transaction-management)
-5. [KYC Services](#kyc-services)
-6. [Payment Processing](#payment-processing)
-7. [Error Handling](#error-handling)
-8. [Rate Limiting](#rate-limiting)
+**Last Updated:** January 30, 2025  
+**API Base URL:** `http://localhost:3001/api/v1`
 
 ---
 
-## 🔐 **Authentication**
+## **AUTHENTICATION**
 
-### **POST /auth/register**
-Register a new user account.
+### **JWT Token Authentication**
+All protected endpoints require a valid JWT token in the Authorization header:
+```
+Authorization: Bearer <jwt_token>
+```
+
+### **Token Storage**
+- Frontend stores tokens in `localStorage.getItem('token')`
+- Tokens are automatically included in API requests
+- Token expiration is handled gracefully
+
+---
+
+## **CORE API ENDPOINTS**
+
+### **🔐 Authentication Endpoints**
+
+#### **POST `/api/v1/auth/register`**
+**Description:** Register a new user account
 
 **Request Body:**
 ```json
 {
-  "mobileNumber": "+27123456789",
-  "password": "securePassword123",
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "john.doe@example.com"
+  "phoneNumber": "0825571055",
+  "password": "SecurePassword123!",
+  "firstName": "Andre",
+  "lastName": "Botes",
+  "email": "andre@example.com"
 }
 ```
 
-**Response (201):**
+**Response:**
 ```json
 {
   "success": true,
   "message": "User registered successfully",
   "data": {
-    "userId": 1,
-    "mobileNumber": "+27123456789",
-    "firstName": "John",
-    "lastName": "Doe",
-    "email": "john.doe@example.com",
-    "createdAt": "2025-07-30T10:00:00.000Z"
+    "user": {
+      "id": 1,
+      "phoneNumber": "0825571055",
+      "firstName": "Andre",
+      "lastName": "Botes",
+      "email": "andre@example.com",
+      "accountNumber": "ACC001234567",
+      "status": "active",
+      "createdAt": "2025-07-29T10:00:00.000Z"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
   }
 }
 ```
 
-### **POST /auth/login**
-Authenticate user and receive JWT token.
+#### **POST `/api/v1/auth/login`**
+**Description:** Authenticate user and receive JWT token
 
 **Request Body:**
 ```json
 {
-  "mobileNumber": "+27123456789",
-  "password": "securePassword123"
+  "phoneNumber": "0825571055",
+  "password": "SecurePassword123!"
 }
 ```
 
-**Response (200):**
+**Response:**
 ```json
 {
   "success": true,
   "message": "Login successful",
   "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "user": {
+      "id": 1,
+      "phoneNumber": "0825571055",
+      "firstName": "Andre",
+      "lastName": "Botes",
+      "email": "andre@example.com",
+      "accountNumber": "ACC001234567",
+      "status": "active"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+---
+
+### **👥 User Management Endpoints**
+
+#### **GET `/api/v1/users`**
+**Description:** Get all users (demo data)
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "phoneNumber": "0825571055",
+      "firstName": "Andre",
+      "lastName": "Botes",
+      "email": "andre@example.com",
+      "accountNumber": "ACC001234567",
+      "balance": 10000.00,
+      "status": "active",
+      "kycStatus": "verified",
+      "createdAt": "2025-07-29T10:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "phoneNumber": "0831234567",
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "email": "jane@example.com",
+      "accountNumber": "ACC001234568",
+      "balance": 5000.00,
+      "status": "active",
+      "kycStatus": "verified",
+      "createdAt": "2025-07-29T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### **GET `/api/v1/users/stats`**
+**Description:** Get user statistics and analytics
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "totalUsers": 5,
+    "activeUsers": 5,
+    "verifiedUsers": 4,
+    "pendingKYC": 1,
+    "totalBalance": 25000.00,
+    "averageBalance": 5000.00
+  }
+}
+```
+
+---
+
+### **💰 Wallet Management Endpoints**
+
+#### **GET `/api/v1/wallets`**
+**Description:** Get all wallets (demo data)
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
       "userId": 1,
-      "mobileNumber": "+27123456789",
-      "firstName": "John",
-      "lastName": "Doe",
-      "email": "john.doe@example.com"
+      "accountNumber": "ACC001234567",
+      "balance": 10000.00,
+      "currency": "ZAR",
+      "status": "active",
+      "createdAt": "2025-07-29T10:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "userId": 2,
+      "accountNumber": "ACC001234568",
+      "balance": 5000.00,
+      "currency": "ZAR",
+      "status": "active",
+      "createdAt": "2025-07-29T10:00:00.000Z"
     }
-  }
+  ]
 }
 ```
 
-### **POST /auth/verify**
-Verify JWT token validity.
+#### **GET `/api/v1/wallets/balance`**
+**Description:** Get current user's wallet balance
 
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
+**Headers:** `Authorization: Bearer <token>`
 
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Token is valid",
-  "data": {
-    "userId": 1,
-    "mobileNumber": "+27123456789"
-  }
-}
-```
-
----
-
-## 💳 **Wallet Management**
-
-### **GET /wallets/balance**
-Get current wallet balance.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response (200):**
+**Response:**
 ```json
 {
   "success": true,
   "data": {
-    "balance": 1250.75,
+    "balance": 10000.00,
     "currency": "ZAR",
-    "lastUpdated": "2025-07-30T10:00:00.000Z"
+    "accountNumber": "ACC001234567",
+    "status": "active"
   }
 }
 ```
 
-### **POST /wallets/deposit**
-Deposit funds into wallet.
+#### **GET `/api/v1/wallets/transactions`**
+**Description:** Get user's transaction history with pagination
 
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "amount": 500.00,
-  "currency": "ZAR",
-  "description": "Bank transfer deposit"
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Deposit successful",
-  "data": {
-    "transactionId": "TXN_123456789",
-    "amount": 500.00,
-    "newBalance": 1750.75,
-    "timestamp": "2025-07-30T10:00:00.000Z"
-  }
-}
-```
-
-### **POST /wallets/withdraw**
-Withdraw funds from wallet.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "amount": 200.00,
-  "currency": "ZAR",
-  "description": "ATM withdrawal"
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Withdrawal successful",
-  "data": {
-    "transactionId": "TXN_987654321",
-    "amount": 200.00,
-    "newBalance": 1550.75,
-    "timestamp": "2025-07-30T10:00:00.000Z"
-  }
-}
-```
-
----
-
-## 🎫 **Voucher Management**
-
-### **GET /vouchers/active**
-Get all active vouchers for the user.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "vouchers": [
-      {
-        "voucherId": "VCH_001",
-        "brand": "EasyPay",
-        "amount": 100.00,
-        "currency": "ZAR",
-        "expiryDate": "2025-08-30T00:00:00.000Z",
-        "status": "active",
-        "createdAt": "2025-07-30T10:00:00.000Z"
-      },
-      {
-        "voucherId": "VCH_002",
-        "brand": "Standard",
-        "amount": 250.00,
-        "currency": "ZAR",
-        "expiryDate": "2025-09-15T00:00:00.000Z",
-        "status": "active",
-        "createdAt": "2025-07-30T10:00:00.000Z"
-      }
-    ],
-    "totalVouchers": 2
-  }
-}
-```
-
-### **GET /vouchers/balance**
-Get voucher balance summary.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "totalBalance": 9025.00,
-    "currency": "ZAR",
-    "totalVouchers": 13,
-    "activeVouchers": 13,
-    "expiredVouchers": 0,
-    "brandBreakdown": {
-      "EasyPay": {
-        "count": 5,
-        "totalAmount": 3500.00
-      },
-      "Standard": {
-        "count": 4,
-        "totalAmount": 2800.00
-      },
-      "Premium": {
-        "count": 3,
-        "totalAmount": 2025.00
-      },
-      "Business": {
-        "count": 1,
-        "totalAmount": 700.00
-      }
-    }
-  }
-}
-```
-
-### **POST /vouchers/issue**
-Issue a new voucher.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "brand": "EasyPay",
-  "amount": 100.00,
-  "currency": "ZAR",
-  "expiryDate": "2025-08-30T00:00:00.000Z",
-  "description": "Promotional voucher"
-}
-```
-
-**Response (201):**
-```json
-{
-  "success": true,
-  "message": "Voucher issued successfully",
-  "data": {
-    "voucherId": "VCH_003",
-    "brand": "EasyPay",
-    "amount": 100.00,
-    "currency": "ZAR",
-    "expiryDate": "2025-08-30T00:00:00.000Z",
-    "status": "active",
-    "createdAt": "2025-07-30T10:00:00.000Z"
-  }
-}
-```
-
-### **POST /vouchers/redeem**
-Redeem a voucher.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "voucherId": "VCH_001",
-  "amount": 100.00
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Voucher redeemed successfully",
-  "data": {
-    "voucherId": "VCH_001",
-    "redeemedAmount": 100.00,
-    "remainingAmount": 0.00,
-    "status": "redeemed",
-    "redeemedAt": "2025-07-30T10:00:00.000Z"
-  }
-}
-```
-
----
-
-## 💸 **Transaction Management**
-
-### **GET /wallets/transactions**
-Get transaction history.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
+**Headers:** `Authorization: Bearer <token>`
 
 **Query Parameters:**
 - `page` (optional): Page number (default: 1)
-- `limit` (optional): Items per page (default: 10)
-- `type` (optional): Transaction type (deposit, withdrawal, transfer)
-- `startDate` (optional): Start date filter
-- `endDate` (optional): End date filter
+- `limit` (optional): Items per page (default: 50)
 
-**Response (200):**
+**Response:**
 ```json
 {
   "success": true,
   "data": {
     "transactions": [
       {
-        "transactionId": "TXN_123456789",
-        "type": "deposit",
+        "id": 1,
+        "transactionId": "TXN001",
+        "type": "transfer",
         "amount": 500.00,
         "currency": "ZAR",
-        "description": "Bank transfer deposit",
+        "senderWalletId": "ACC001234567",
+        "receiverWalletId": "ACC001234568",
+        "description": "Transfer to Jane Smith",
         "status": "completed",
-        "timestamp": "2025-07-30T10:00:00.000Z",
-        "balanceAfter": 1750.75
+        "fee": 5.00,
+        "createdAt": "2025-07-29T10:00:00.000Z",
+        "updatedAt": "2025-07-29T10:00:00.000Z"
       },
       {
-        "transactionId": "TXN_987654321",
-        "type": "withdrawal",
-        "amount": 200.00,
+        "id": 2,
+        "transactionId": "TXN002",
+        "type": "deposit",
+        "amount": 1000.00,
         "currency": "ZAR",
-        "description": "ATM withdrawal",
+        "senderWalletId": null,
+        "receiverWalletId": "ACC001234567",
+        "description": "Bank deposit",
         "status": "completed",
-        "timestamp": "2025-07-30T09:30:00.000Z",
-        "balanceAfter": 1550.75
+        "fee": 0.00,
+        "createdAt": "2025-07-29T09:00:00.000Z",
+        "updatedAt": "2025-07-29T09:00:00.000Z"
       }
     ],
     "pagination": {
       "currentPage": 1,
-      "totalPages": 5,
-      "totalItems": 50,
-      "itemsPerPage": 10
+      "totalPages": 1,
+      "totalItems": 2,
+      "itemsPerPage": 50
     }
   }
 }
@@ -393,229 +264,64 @@ Authorization: Bearer <jwt_token>
 
 ---
 
-## 📋 **KYC Services**
+### **📊 Transaction Management Endpoints**
 
-### **POST /kyc/upload**
-Upload KYC documents.
+#### **GET `/api/v1/transactions`**
+**Description:** Get all transactions (demo data)
 
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-Content-Type: multipart/form-data
-```
+**Headers:** `Authorization: Bearer <token>`
 
-**Request Body:**
-```
-FormData:
-- documentType: "id_card" | "passport" | "proof_of_address"
-- documentFile: <file>
-- description: "South African ID card"
-```
-
-**Response (200):**
+**Response:**
 ```json
 {
   "success": true,
-  "message": "Document uploaded successfully",
-  "data": {
-    "documentId": "DOC_123456789",
-    "documentType": "id_card",
-    "status": "pending",
-    "uploadedAt": "2025-07-30T10:00:00.000Z"
-  }
-}
-```
-
-### **GET /kyc/status**
-Get KYC verification status.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "data": {
-    "kycStatus": "verified",
-    "documents": [
-      {
-        "documentId": "DOC_123456789",
-        "documentType": "id_card",
-        "status": "verified",
-        "verifiedAt": "2025-07-30T10:00:00.000Z"
-      },
-      {
-        "documentId": "DOC_987654321",
-        "documentType": "proof_of_address",
-        "status": "verified",
-        "verifiedAt": "2025-07-30T10:00:00.000Z"
-      }
-    ],
-    "lastUpdated": "2025-07-30T10:00:00.000Z"
-  }
-}
-```
-
-### **POST /kyc/verify**
-Verify uploaded documents using OpenAI OCR.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "documentId": "DOC_123456789"
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Document verification completed",
-  "data": {
-    "documentId": "DOC_123456789",
-    "verificationResult": {
-      "isValid": true,
-      "confidence": 0.95,
-      "extractedData": {
-        "documentNumber": "8001015009087",
-        "fullName": "John Doe",
-        "dateOfBirth": "1980-01-01",
-        "nationality": "South African"
-      }
+  "data": [
+    {
+      "id": 1,
+      "transactionId": "TXN001",
+      "type": "transfer",
+      "amount": 500.00,
+      "currency": "ZAR",
+      "senderWalletId": "ACC001234567",
+      "receiverWalletId": "ACC001234568",
+      "description": "Transfer to Jane Smith",
+      "status": "completed",
+      "fee": 5.00,
+      "createdAt": "2025-07-29T10:00:00.000Z"
     },
-    "verifiedAt": "2025-07-30T10:00:00.000Z"
-  }
-}
-```
-
----
-
-## 💳 **Payment Processing**
-
-### **POST /flash/pay**
-Process Flash payment.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "amount": 150.00,
-  "currency": "ZAR",
-  "recipientMobile": "+27123456789",
-  "description": "Payment to John Doe"
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Payment processed successfully",
-  "data": {
-    "transactionId": "FLASH_123456789",
-    "amount": 150.00,
-    "currency": "ZAR",
-    "recipientMobile": "+27123456789",
-    "status": "completed",
-    "timestamp": "2025-07-30T10:00:00.000Z"
-  }
-}
-```
-
-### **POST /mobilemart/purchase**
-Purchase airtime or data.
-
-**Headers:**
-```
-Authorization: Bearer <jwt_token>
-```
-
-**Request Body:**
-```json
-{
-  "serviceType": "airtime",
-  "provider": "Vodacom",
-  "amount": 50.00,
-  "recipientMobile": "+27123456789",
-  "description": "Airtime purchase"
-}
-```
-
-**Response (200):**
-```json
-{
-  "success": true,
-  "message": "Purchase completed successfully",
-  "data": {
-    "transactionId": "MM_123456789",
-    "serviceType": "airtime",
-    "provider": "Vodacom",
-    "amount": 50.00,
-    "recipientMobile": "+27123456789",
-    "status": "completed",
-    "timestamp": "2025-07-30T10:00:00.000Z"
-  }
-}
-```
-
----
-
-## ⚠️ **Error Handling**
-
-### **Error Response Format**
-All error responses follow this format:
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "ERROR_CODE",
-    "message": "Human-readable error message",
-    "details": {
-      "field": "Additional error details"
+    {
+      "id": 2,
+      "transactionId": "TXN002",
+      "type": "deposit",
+      "amount": 1000.00,
+      "currency": "ZAR",
+      "senderWalletId": null,
+      "receiverWalletId": "ACC001234567",
+      "description": "Bank deposit",
+      "status": "completed",
+      "fee": 0.00,
+      "createdAt": "2025-07-29T09:00:00.000Z"
     }
-  }
+  ]
 }
 ```
 
-### **Common Error Codes**
+#### **GET `/api/v1/transactions/history`**
+**Description:** Get complete transaction history
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `AUTH_001` | 401 | Invalid credentials |
-| `AUTH_002` | 401 | Token expired |
-| `AUTH_003` | 403 | Insufficient permissions |
-| `VAL_001` | 400 | Validation error |
-| `DB_001` | 500 | Database error |
-| `INT_001` | 500 | Internal server error |
-| `NOT_FOUND` | 404 | Resource not found |
-| `INSUFFICIENT_FUNDS` | 400 | Insufficient wallet balance |
-| `VOUCHER_EXPIRED` | 400 | Voucher has expired |
-| `VOUCHER_ALREADY_REDEEMED` | 400 | Voucher already redeemed |
+**Headers:** `Authorization: Bearer <token>`
 
-### **Example Error Response**
+**Response:**
 ```json
 {
-  "success": false,
-  "error": {
-    "code": "INSUFFICIENT_FUNDS",
-    "message": "Insufficient funds in wallet",
-    "details": {
-      "currentBalance": 100.00,
-      "requestedAmount": 200.00,
-      "shortfall": 100.00
+  "success": true,
+  "data": {
+    "transactions": [...],
+    "summary": {
+      "totalTransactions": 7,
+      "totalAmount": 3500.00,
+      "completedTransactions": 6,
+      "pendingTransactions": 1
     }
   }
 }
@@ -623,101 +329,283 @@ All error responses follow this format:
 
 ---
 
-## 🚦 **Rate Limiting**
+### **🆔 KYC Management Endpoints**
 
-### **Rate Limits**
+#### **GET `/api/v1/kyc`**
+**Description:** Get KYC records (demo data)
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "userId": 1,
+      "documentType": "id_card",
+      "documentNumber": "8001015009087",
+      "status": "verified",
+      "verifiedAt": "2025-07-29T10:00:00.000Z",
+      "verifiedBy": "system",
+      "createdAt": "2025-07-29T10:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "userId": 2,
+      "documentType": "passport",
+      "documentNumber": "A12345678",
+      "status": "verified",
+      "verifiedAt": "2025-07-29T10:00:00.000Z",
+      "verifiedBy": "system",
+      "createdAt": "2025-07-29T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### **POST `/api/v1/kyc/submit`**
+**Description:** Submit KYC documents
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request Body:**
+```json
+{
+  "documentType": "id_card",
+  "documentNumber": "8001015009087",
+  "documentFile": "base64_encoded_file"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "KYC documents submitted successfully",
+  "data": {
+    "kycId": 1,
+    "status": "pending",
+    "submittedAt": "2025-07-29T10:00:00.000Z"
+  }
+}
+```
+
+---
+
+### **🎫 Voucher Management Endpoints**
+
+#### **GET `/api/v1/vouchers`**
+**Description:** Get all vouchers (demo data)
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "userId": 1,
+      "typeId": 1,
+      "typeName": "airtime",
+      "amount": 50.00,
+      "currency": "ZAR",
+      "status": "active",
+      "redeemedAmount": 0.00,
+      "expiryDate": "2025-12-31T23:59:59.000Z",
+      "createdAt": "2025-07-29T10:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "userId": 1,
+      "typeId": 2,
+      "typeName": "data",
+      "amount": 100.00,
+      "currency": "ZAR",
+      "status": "active",
+      "redeemedAmount": 0.00,
+      "expiryDate": "2025-12-31T23:59:59.000Z",
+      "createdAt": "2025-07-29T10:00:00.000Z"
+    }
+  ]
+}
+```
+
+#### **GET `/api/v1/vouchers/active`**
+**Description:** Get active vouchers for current user
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "vouchers": [...],
+    "summary": {
+      "totalVouchers": 6,
+      "totalValue": 450.00,
+      "activeVouchers": 5,
+      "expiredVouchers": 1
+    }
+  }
+}
+```
+
+---
+
+### **🏥 Health & Monitoring Endpoints**
+
+#### **GET `/health`**
+**Description:** Health check endpoint
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-07-29T10:00:00.000Z",
+  "uptime": 3600,
+  "version": "2.0.2"
+}
+```
+
+#### **GET `/test`**
+**Description:** Test endpoint for debugging
+
+**Response:**
+```json
+{
+  "message": "MyMoolah API is running!",
+  "timestamp": "2025-07-29T10:00:00.000Z",
+  "environment": "development"
+}
+```
+
+---
+
+## **FRONTEND INTEGRATION PATTERNS**
+
+### **TransactionHistoryPage Integration**
+
+#### **Data Fetching:**
+```typescript
+const fetchTransactions = async (page = 1) => {
+  try {
+    setLoading(true);
+    setError(null);
+    const token = localStorage.getItem('token');
+    const response = await fetch(`/api/v1/wallets/transactions?page=${page}&limit=50`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    
+    if (data.success) {
+      const transformedTransactions = data.data.transactions.map((tx: any) => ({
+        id: tx.id.toString(),
+        transactionId: tx.transactionId,
+        type: tx.type,
+        amount: parseFloat(tx.amount),
+        currency: tx.currency || 'ZAR',
+        recipient: tx.receiverWalletId || tx.recipient,
+        sender: tx.senderWalletId || tx.sender,
+        description: tx.description || 'Transaction',
+        status: tx.status,
+        timestamp: tx.createdAt,
+        reference: tx.transactionId,
+        fee: parseFloat(tx.fee || 0),
+        method: tx.type === 'transfer' ? 'MyMoolah Internal' : 'Bank Transfer',
+        createdAt: tx.createdAt,
+        updatedAt: tx.updatedAt
+      }));
+      setTransactions(transformedTransactions);
+      setPagination(data.data.pagination);
+    }
+  } catch (err) {
+    setError('Failed to load transaction history');
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+#### **Error Handling:**
+```typescript
+if (error) {
+  return (
+    <div style={{ padding: '16px' }}>
+      <div style={{ 
+        backgroundColor: '#fef2f2', 
+        border: '1px solid #fecaca', 
+        borderRadius: '8px', 
+        padding: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px'
+      }}>
+        <AlertTriangle style={{ width: '16px', height: '16px', color: '#dc2626' }} />
+        <span style={{ color: '#dc2626' }}>{error}</span>
+      </div>
+      <button onClick={() => fetchTransactions()} style={{...}}>
+        Try Again
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+## **ERROR RESPONSES**
+
+### **Standard Error Format:**
+```json
+{
+  "success": false,
+  "message": "Error description",
+  "error": "ERROR_CODE",
+  "timestamp": "2025-07-29T10:00:00.000Z"
+}
+```
+
+### **Common Error Codes:**
+- `UNAUTHORIZED`: Authentication required
+- `FORBIDDEN`: Insufficient permissions
+- `NOT_FOUND`: Resource not found
+- `VALIDATION_ERROR`: Invalid input data
+- `INTERNAL_ERROR`: Server error
+- `RATE_LIMIT_EXCEEDED`: Too many requests
+
+---
+
+## **RATE LIMITING**
+
 - **Authentication endpoints:** 5 requests per minute
-- **Wallet operations:** 10 requests per minute
-- **Voucher operations:** 20 requests per minute
-- **Transaction queries:** 30 requests per minute
-- **KYC operations:** 3 requests per minute
-- **Payment processing:** 5 requests per minute
-
-### **Rate Limit Response**
-When rate limit is exceeded:
-
-```json
-{
-  "success": false,
-  "error": {
-    "code": "RATE_LIMIT_EXCEEDED",
-    "message": "Too many requests. Please try again later.",
-    "details": {
-      "retryAfter": 60,
-      "limit": 10,
-      "window": "1 minute"
-    }
-  }
-}
-```
-
-**Headers:**
-```
-X-RateLimit-Limit: 10
-X-RateLimit-Remaining: 0
-X-RateLimit-Reset: 1640995200
-Retry-After: 60
-```
+- **Data endpoints:** 100 requests per minute
+- **Health endpoints:** No limit
 
 ---
 
-## 🔧 **Development & Testing**
+## **SECURITY**
 
-### **Environment Variables**
-```env
-# Server Configuration
-PORT=3001
-NODE_ENV=development
+### **Authentication:**
+- JWT tokens with 24-hour expiration
+- Secure token storage in localStorage
+- Automatic token refresh mechanism
 
-# Database Configuration
-DB_HOST=localhost
-DB_PORT=3306
-DB_NAME=mymoolah
-DB_USER=root
-DB_PASSWORD=your_password
+### **Input Validation:**
+- All inputs validated on server-side
+- SQL injection prevention
+- XSS protection
 
-# JWT Configuration
-JWT_SECRET=your_jwt_secret_key
-JWT_EXPIRES_IN=24h
-
-# OpenAI Configuration (for KYC)
-OPENAI_API_KEY=your_openai_api_key
-
-# Flash Integration
-FLASH_API_KEY=your_flash_api_key
-FLASH_API_URL=https://api.flash.com
-
-# MobileMart Integration
-MOBILEMART_API_KEY=your_mobilemart_api_key
-MOBILEMART_API_URL=https://api.mobilemart.com
-```
-
-### **Testing Endpoints**
-```bash
-# Test authentication
-curl -X POST http://localhost:3001/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"mobileNumber": "+27123456789", "password": "password123"}'
-
-# Test wallet balance
-curl -X GET http://localhost:3001/api/v1/wallets/balance \
-  -H "Authorization: Bearer <jwt_token>"
-
-# Test voucher balance
-curl -X GET http://localhost:3001/api/v1/vouchers/balance \
-  -H "Authorization: Bearer <jwt_token>"
-```
+### **Data Protection:**
+- Sensitive data encrypted at rest
+- HTTPS required for all communications
+- Regular security audits
 
 ---
 
-## 📚 **Additional Resources**
-
-- [Security Guide](./SECURITY.md)
-- [Development Guide](./DEVELOPMENT_GUIDE.md)
-- [Testing Guide](./TESTING_GUIDE.md)
-- [Mojaloop Integration](./mojaloop-integration.md)
-
----
-
-**MyMoolah API Documentation** - Version 1.0.0  
-**Last Updated:** July 30, 2025 
+**Last Updated:** July 29, 2025  
+**Status:** TransactionHistoryPage fully integrated with real backend data 

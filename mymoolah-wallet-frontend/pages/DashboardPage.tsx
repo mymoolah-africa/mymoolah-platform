@@ -136,7 +136,7 @@ export function DashboardPage() {
         const balanceData = await balanceResponse.json();
         
         // Fetch recent transactions
-        const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=5`, { headers });
+        const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?page=1&limit=6`, { headers });
         if (!transactionsResponse.ok) throw new Error('Failed to fetch transactions');
         const transactionsData = await transactionsResponse.json();
 
@@ -214,10 +214,10 @@ export function DashboardPage() {
 
   // Handle wallet balance card click - navigate to transaction history
   const handleWalletClick = () => {
-    // TODO: Create WalletTransactionHistoryPage or TransactionHistoryPage
+    // Navigate to transaction history page
     // For now, we'll show an alert that this feature is coming soon
-    alert('Wallet transaction history page coming soon!');
-    // When page is created, use: navigate('/wallet/transactions');
+    navigate('/transactions');
+    // Navigate to transaction history page
   };
 
   // Handle vouchers card click - navigate to vouchers page

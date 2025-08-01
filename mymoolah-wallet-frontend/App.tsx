@@ -15,6 +15,7 @@ import { SendMoneyPage } from './pages/SendMoneyPage';
 import { TransactPage } from './pages/TransactPage';
 import { VouchersPage } from './pages/VouchersPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { TransactionHistoryPage } from './pages/TransactionHistoryPage';
 
 // KYC Pages
 import { KYCDocumentsPage } from './pages/KYCDocumentsPage';
@@ -31,7 +32,7 @@ function AppContent() {
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
-  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/vouchers', '/profile'];
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/vouchers', '/profile', '/transactions'];
   const showTopBanner = pagesWithTopBanner.includes(location.pathname);
 
   return (
@@ -83,7 +84,7 @@ function AppContent() {
             <Route path="/transact" element={<ProtectedRoute><TransactPage /></ProtectedRoute>} />
             <Route path="/vouchers" element={<ProtectedRoute><VouchersPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-            
+            <Route path="/transactions" element={<ProtectedRoute><TransactionHistoryPage /></ProtectedRoute>} />
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

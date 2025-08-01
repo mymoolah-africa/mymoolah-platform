@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { 
   Home, 
   Send, 
@@ -53,24 +54,64 @@ export function BottomNavigation() {
 
   const getActiveTabId = () => {
     const currentPath = location.pathname;
+    
+    // Special case: transaction-history should highlight the Home tab
+    if (currentPath === '/transactions') {
+      return 'home';
+    }
+    
     const activeItem = navItems.find(item => item.path === currentPath);
     return activeItem?.id || 'home';
   };
 
   const activeTab = getActiveTabId();
 
-  return (
+  // Check if we should show the bottom navigation
+  const showBottomNav = ['/dashboard', '/send-money', '/transact', '/vouchers', '/profile', '/transactions'].includes(location.pathname);
+  
+  if (!showBottomNav) return null;
+
+  // ULTIMATE FIX: Margin-based centering with zero containing block interference
+  const navigationElement = (
     <div 
       style={{
-        height: '100%',
-        width: '100%',
+        // PURE VIEWPORT FIXED POSITIONING - NO CONTAINING BLOCKS
+        position: 'fixed',
+        bottom: '0px',
+        left: '50%',
+        marginLeft: '-187.5px', // Exact half of 375px for perfect centering
+        width: '375px',
+        height: '80px',
         backgroundColor: '#ffffff',
-        fontFamily: 'Montserrat, sans-serif',
+        borderTop: '1px solid #e5e7eb',
+        boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.1)',
+        zIndex: 2147483647, // Maximum z-index
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-around',
-        padding: '0 16px'
+        padding: '0 16px',
+        fontFamily: 'Montserrat, sans-serif',
+        
+        // CRITICAL: Eliminate ALL containing block creators
+        transform: 'none !important',
+        filter: 'none !important',
+        perspective: 'none !important',
+        contain: 'none !important',
+        isolation: 'auto !important',
+        willChange: 'auto !important',
+        backfaceVisibility: 'visible !important',
+        transformStyle: 'flat !important',
+        
+        // Ensure no interference from any CSS properties
+        clip: 'auto',
+        clipPath: 'none',
+        mask: 'none',
+        maskImage: 'none',
+        
+        // Force proper stacking without creating contexts
+        overflow: 'visible'
       }}
+      data-fixed-navigation="true"
     >
       {navItems.map((item) => {
         const isActive = activeTab === item.id;
@@ -93,7 +134,15 @@ export function BottomNavigation() {
               border: 'none',
               cursor: 'pointer',
               fontFamily: 'Montserrat, sans-serif',
-              transition: 'all 0.2s ease'
+              fontSize: 'var(--mobile-font-small)',
+              fontWeight: 'var(--font-weight-normal)',
+              transition: 'all 0.2s ease',
+              position: 'relative',
+              
+              // Ensure buttons don't create containing blocks
+              transform: 'none',
+              filter: 'none',
+              willChange: 'auto'
             }}
             aria-label={item.label}
           >
@@ -130,4 +179,6 @@ export function BottomNavigation() {
       })}
     </div>
   );
+
+  return createPortal(navigationElement, document.body);
 }
