@@ -37,7 +37,7 @@ const vasRoutes = require('./routes/vas.js');
 const merchantRoutes = require('./routes/merchants.js');
 const serviceProviderRoutes = require('./routes/serviceproviders.js');
 const easyPayRoutes = require('./routes/easypay.js'); // <-- ADD THIS
-const easyPayVoucherRoutes = require('./routes/easypayVouchers');
+
 const sendMoneyRoutes = require('./routes/sendMoney.js');
 
 // Validate external service credentials
@@ -65,10 +65,7 @@ if (validCredentials.mobilemart) {
   console.warn('⚠️  MobileMart credentials not set. MobileMart API endpoints will be unavailable.');
 }
 
-// Import problematic routes (commented out as requested)
-// const easyPayRoutes = require('./routes/easypay.js');
-// const mercuryRoutes = require('./routes/mercury.js');
-// const easyPayVoucherRoutes = require('./routes/easypayVouchers.js');
+
 
 // Security Middleware
 app.use(helmet({
@@ -215,7 +212,6 @@ app.use('/api/v1/voucher-types', voucherTypeRoutes);
 app.use('/api/v1/vas', vasRoutes);
 app.use('/api/v1/merchants', merchantRoutes);
 app.use('/api/v1/service-providers', serviceProviderRoutes);
-app.use('/api/v1/easypay-vouchers', easyPayVoucherRoutes);
 app.use('/billpayment/v1', easyPayRoutes);
 if (flashRoutesLoaded) {
   app.use('/api/v1/flash', flashRoutes);
@@ -224,10 +220,7 @@ if (mobilemartRoutesLoaded) {
   app.use('/api/v1/mobilemart', mobilemartRoutes);
 }
 
-// Commented out problematic routes as requested
-// app.use('/billpayment/v1', easyPayRoutes);
-// app.use('/api/v1/mercury', mercuryRoutes);
-// app.use('/api/v1/easypay-vouchers', easyPayVoucherRoutes);
+
 
 // Health check endpoint
 app.get('/health', (req, res) => {

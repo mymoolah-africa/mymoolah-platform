@@ -35,6 +35,9 @@ import {
   Image
 } from 'lucide-react';
 
+// Import logo from assets/
+import logo3 from "../assets/logo3.svg";
+
 // Import UI components
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -134,6 +137,67 @@ export function VouchersPage() {
     return `${paddedDigits.substring(0, 4)} ${paddedDigits.substring(4, 8)} ${paddedDigits.substring(8, 12)} ${paddedDigits.substring(12, 16)}`;
   };
 
+  // Get proper display name for voucher type
+  const getVoucherTypeDisplayName = (voucherType: string): string => {
+    switch (voucherType) {
+      case 'premium':
+        return 'MMVoucher';
+      case 'business':
+        return 'EasyPay';
+      case 'standard':
+        return 'Standard Voucher';
+      case 'student':
+        return 'Student Voucher';
+      case 'senior':
+        return 'Senior Voucher';
+      case 'corporate':
+        return 'Corporate Voucher';
+      default:
+        return 'Voucher';
+    }
+  };
+
+  // Format voucher code for display based on type
+  const formatVoucherCodeForDisplay = (voucher: MMVoucher): { mainCode: string; subCode?: string } => {
+    if (voucher.type === 'mm_voucher') {
+      // For MMVouchers, format as 16 digits in groups of 4
+      const numericCode = voucher.voucherCode.replace(/\D/g, ''); // Remove non-digits
+      const paddedCode = numericCode.padEnd(16, '0').substring(0, 16);
+      return {
+        mainCode: `${paddedCode.substring(0, 4)} ${paddedCode.substring(4, 8)} ${paddedCode.substring(8, 12)} ${paddedCode.substring(12, 16)}`
+      };
+    } else if (voucher.type === 'easypay_voucher') {
+      // Check if this is a paid EasyPay voucher (has MMVoucher PIN and is active)
+      if (voucher.status === 'active' && voucher.easyPayNumber && voucher.voucherCode && voucher.voucherCode.startsWith('MM')) {
+        // Paid EasyPay voucher - show MMVoucher code with EP number below
+        const numericCode = voucher.voucherCode.replace(/\D/g, '');
+        const paddedCode = numericCode.padEnd(16, '0').substring(0, 16);
+        const mmCode = `${paddedCode.substring(0, 4)} ${paddedCode.substring(4, 8)} ${paddedCode.substring(8, 12)} ${paddedCode.substring(12, 16)}`;
+        
+        // Format EP number below
+        const epNumber = voucher.easyPayNumber;
+        const epCode = `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`;
+        
+        return {
+          mainCode: mmCode,
+          subCode: epCode
+        };
+      } else {
+        // Unpaid EasyPay voucher - show only EP number
+        if (voucher.easyPayNumber) {
+          const epNumber = voucher.easyPayNumber;
+          return {
+            mainCode: `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`
+          };
+        }
+        return { mainCode: voucher.voucherCode };
+      }
+    } else {
+      // For other vouchers, show the original code
+      return { mainCode: voucher.voucherCode };
+    }
+  };
+
   const generateEasyPayNumber = (): string => {
     // Generate 14 numerical digits starting with "9" (no grouping)
     const randomDigits = Math.random().toString().substring(2, 15);
@@ -162,48 +226,103 @@ export function VouchersPage() {
           'Content-Type': 'application/json'
         };
 
-        // Fetch active vouchers
-        const vouchersResponse = await fetch('/api/v1/vouchers/active', { headers });
-        if (!vouchersResponse.ok) throw new Error('Failed to fetch vouchers');
-        const vouchersData = await vouchersResponse.json();
+        // Fetch all vouchers (including pending, active, redeemed)
+        let vouchersResponse = await fetch('/api/v1/vouchers/', { headers });
+        let vouchersData;
+        
+        if (!vouchersResponse.ok) {
+          const errorData = await vouchersResponse.json().catch(() => ({}));
+          throw new Error(errorData.message || `Failed to fetch vouchers: ${vouchersResponse.status}`);
+        }
+        
+        vouchersData = await vouchersResponse.json();
+
+
+
+        // Validate response structure
+        if (!vouchersData.success) {
+          throw new Error(vouchersData.message || 'Invalid response from vouchers API');
+        }
 
         // Transform backend data to frontend format
-        const transformedVouchers: MMVoucher[] = (vouchersData.data?.vouchers || []).map((voucher: any) => ({
-          id: voucher.id.toString(),
-          type: voucher.type === 'airtime' ? 'mm_voucher' : 
-                voucher.type === 'data' ? 'easypay_voucher' : 'third_party_voucher',
-          status: voucher.status === 'active' ? 'active' : 
-                  voucher.status === 'pending' ? 'pending_payment' : 
-                  voucher.status === 'redeemed' ? 'redeemed' : 'expired',
-          amount: voucher.amount,
-          currency: 'ZAR',
-          voucherCode: voucher.voucherId || `VOUCHER-${voucher.id}`,
-          createdDate: voucher.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
-          expiryDate: voucher.expiryDate?.split('T')[0] || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-          description: voucher.description || `${voucher.type} voucher`,
-          transactionId: `TX${voucher.id}`,
-          redemptionLocations: ['MyMoolah Network', 'Partner Retailers'],
-          remainingValue: voucher.amount,
-          isPartialRedemption: false
-        }));
+        const vouchersArray = vouchersData.data?.vouchers || vouchersData.data || [];
+        
+        // Transform regular vouchers (including EasyPay vouchers from main table)
+        const transformedVouchers: MMVoucher[] = vouchersArray.map((voucher: any) => {
+          // Determine voucher type based on new structure
+          let voucherType: 'mm_voucher' | 'easypay_voucher' | 'third_party_voucher';
+          
+          if (voucher.voucherType === 'easypay_pending' || voucher.voucherType === 'easypay_active') {
+            voucherType = 'easypay_voucher';
+          } else {
+            voucherType = 'mm_voucher';
+          }
 
-        setMMVouchers(transformedVouchers);
+          // Determine status
+          let status: 'active' | 'pending_payment' | 'redeemed' | 'expired';
+          if (voucher.status === 'pending') {
+            status = 'pending_payment';
+          } else if (voucher.status === 'expired') {
+            status = 'expired';
+          } else if (voucher.status === 'redeemed') {
+            // Check if it's fully redeemed (balance = 0) or partially redeemed
+            const balance = parseFloat(voucher.balance || 0);
+            if (balance === 0) {
+              status = 'redeemed'; // Fully redeemed
+            } else {
+              status = 'active'; // Partially redeemed - still active
+            }
+          } else {
+            status = 'active';
+          }
 
-        // Generate mock transactions for now (backend doesn't have transaction history yet)
-        const mockTransactions: VoucherTransaction[] = transformedVouchers.map(voucher => ({
+          return {
+            id: voucher.id.toString(),
+            type: voucherType,
+            status: status,
+            amount: parseFloat(voucher.originalAmount || 0),
+            currency: 'ZAR',
+            voucherCode: voucher.voucherCode || `VOUCHER-${voucher.id}`,
+            easyPayNumber: voucher.easyPayCode, // Direct field in new structure
+            createdDate: voucher.createdAt || new Date().toISOString(),
+            expiryDate: voucher.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            description: voucherType === 'easypay_voucher' ? 'EasyPay voucher' : 'MMVoucher',
+            transactionId: `VOUCHER-${voucher.id}`,
+            redemptionLocations: voucherType === 'easypay_voucher' ? ['EasyPay Network', 'MyMoolah Network'] : ['MyMoolah Network'],
+            remainingValue: parseFloat(voucher.balance || 0),
+            isPartialRedemption: voucher.status === 'redeemed' && parseFloat(voucher.balance || 0) > 0
+          };
+        });
+
+
+
+        // All vouchers come from the main table (no need to combine separate arrays)
+        const allVouchers = transformedVouchers;
+        
+        // Sort vouchers by creation date (newest first)
+        const sortedVouchers = allVouchers.sort((a, b) => {
+          const dateA = new Date(a.createdDate).getTime();
+          const dateB = new Date(b.createdDate).getTime();
+          return dateB - dateA; // Newest first
+        });
+
+        setMMVouchers(sortedVouchers);
+
+        // Create real transactions from voucher data (no more mock data)
+        const realTransactions: VoucherTransaction[] = sortedVouchers.map(voucher => ({
           id: `VT${voucher.id}`,
           voucherId: voucher.id,
           type: 'generate',
           amount: voucher.amount,
           currency: 'ZAR',
           timestamp: voucher.createdDate + 'T10:30:00Z',
-          description: `Generated ${voucher.description}`,
+          description: `Generated voucher`,
           reference: `REF-${voucher.id}-GEN`,
           status: 'completed',
           voucherType: voucher.type
         }));
 
-        setVoucherTransactions(mockTransactions);
+        setVoucherTransactions(realTransactions);
 
       } catch (err) {
         console.error('Error fetching vouchers:', err);
@@ -221,9 +340,10 @@ export function VouchersPage() {
     // Search filter
     if (searchQuery) {
       const searchLower = searchQuery.toLowerCase();
+      const formattedCode = formatVoucherCodeForDisplay(voucher);
       const matchesSearch = 
-        voucher.voucherCode.toLowerCase().includes(searchLower) ||
-        voucher.description.toLowerCase().includes(searchLower) ||
+        formattedCode.mainCode.toLowerCase().includes(searchLower) ||
+        (formattedCode.subCode && formattedCode.subCode.toLowerCase().includes(searchLower)) ||
         voucher.easyPayNumber?.includes(searchLower) ||
         voucher.merchantName?.toLowerCase().includes(searchLower);
       if (!matchesSearch) return false;
@@ -269,10 +389,24 @@ export function VouchersPage() {
       return;
     }
 
+    const amount = parseFloat(sellAmount);
+    
+    // Validate amount based on voucher type
+    if (sellVoucherType === 'easypay_voucher') {
+      if (amount < 50 || amount > 4000) {
+        alert('EasyPay vouchers must be between R50 and R4,000');
+        return;
+      }
+    } else {
+      if (amount < 5 || amount > 4000) {
+        alert('Vouchers must be between R5 and R4,000');
+        return;
+      }
+    }
+
     setIsLoading(true);
 
     try {
-      const amount = parseFloat(sellAmount);
       
       // Generate voucher code based on type
       let voucherCode: string;
@@ -297,7 +431,7 @@ export function VouchersPage() {
         voucherCode: voucherCode,
         easyPayNumber: easyPayNumber,
         createdDate: new Date().toISOString().split('T')[0],
-        expiryDate: new Date(Date.now() + (sellVoucherType === 'easypay_voucher' ? 2 : 90) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        expiryDate: new Date(Date.now() + (sellVoucherType === 'easypay_voucher' ? 4 : 90) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         description: sellDescription || `${sellVoucherType === 'mm_voucher' ? 'MyMoolah' : sellVoucherType === 'easypay_voucher' ? 'EasyPay' : 'Third Party'} voucher`,
         transactionId: `TX${Date.now().toString().slice(-8)}`,
         merchantName: sellMerchant || undefined,
@@ -332,7 +466,7 @@ export function VouchersPage() {
 
       // Show success message with voucher details
       const successMessage = sellVoucherType === 'easypay_voucher' 
-        ? `🎟️ EasyPay Voucher Generated!\n\nEasyPay Number: ${newVoucher.easyPayNumber}\nAmount: R${amount}\n\nTake this number to any of 8000+ EasyPay retail stores to pay. Once paid, your MyMoolah voucher will be activated automatically.`
+        ? `🎟️ EasyPay Voucher Generated!\n\nEasyPay Number: ${newVoucher.easyPayNumber}\nAmount: R${amount}\nValid for 4 days\n\nTake this number to any of 8000+ EasyPay retail stores to pay. Once paid, your MyMoolah voucher will be activated automatically.`
         : `🎟️ ${sellVoucherType === 'mm_voucher' ? 'MyMoolah' : 'Third Party'} Voucher Generated!\n\nVoucher Code: ${newVoucher.voucherCode}\nAmount: R${amount}\n\nVoucher is ready for use and redemption.`;
 
       alert(successMessage);
@@ -430,14 +564,64 @@ export function VouchersPage() {
     }
   };
 
+  // Simulate EasyPay payment
+  
+
   // Copy voucher code to clipboard
-  const handleCopyCode = async (code: string) => {
+  const handleCopyCode = async (voucher: MMVoucher) => {
     try {
-      await navigator.clipboard.writeText(code);
-      setCopiedCode(code);
+      const formattedCode = formatVoucherCodeForDisplay(voucher);
+      const codeToCopy = formattedCode.mainCode;
+      
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(codeToCopy);
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = codeToCopy;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      
+      // Set success state
+      setCopiedCode(voucher.voucherCode);
       setTimeout(() => setCopiedCode(null), 2000);
+      
+      // Show user feedback
+      console.log('✅ Voucher code copied to clipboard:', codeToCopy);
+      
+      // Show toast notification
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #16a34a;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      toast.textContent = 'Voucher code copied!';
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 2000);
     } catch (error) {
-      console.error('Failed to copy code:', error);
+      console.error('❌ Failed to copy code:', error);
+      // Show error feedback to user
+      alert('Failed to copy voucher code. Please try again.');
     }
   };
 
@@ -445,13 +629,13 @@ export function VouchersPage() {
   const getVoucherTypeBadge = (type: MMVoucher['type']) => {
     switch (type) {
       case 'mm_voucher':
-        return { text: 'MyMoolah', color: 'bg-[#86BE41] text-white' };
+        return { text: 'MMVoucher', color: 'bg-[#86BE41] text-white' };
       case 'easypay_voucher':
         return { text: 'EasyPay', color: 'bg-[#2D8CCA] text-white' };
       case 'third_party_voucher':
         return { text: '3rd Party', color: 'bg-orange-500 text-white' };
       default:
-        return { text: 'Unknown', color: 'bg-gray-500 text-white' };
+        return { text: 'MMVoucher', color: 'bg-[#86BE41] text-white' };
     }
   };
 
@@ -462,14 +646,16 @@ export function VouchersPage() {
         return { text: 'Active', color: 'bg-green-100 text-green-700' };
       case 'pending_payment':
         return { text: 'Pending', color: 'bg-orange-100 text-orange-700' };
+      case 'pending':
+        return { text: 'Pending', color: 'bg-orange-100 text-orange-700' };
       case 'redeemed':
-        return { text: 'Redeemed', color: 'bg-gray-100 text-gray-700' };
+        return { text: 'Redeemed', color: 'bg-blue-100 text-blue-700' };
       case 'expired':
         return { text: 'Expired', color: 'bg-red-100 text-red-700' };
       case 'cancelled':
         return { text: 'Cancelled', color: 'bg-red-100 text-red-700' };
       default:
-        return { text: 'Unknown', color: 'bg-gray-100 text-gray-700' };
+        return { text: 'Active', color: 'bg-green-100 text-green-700' };
     }
   };
 
@@ -478,12 +664,18 @@ export function VouchersPage() {
     return `R${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
-  // Format date
+  // Format date with time
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-ZA', {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    return date.toLocaleDateString('en-ZA', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -880,7 +1072,7 @@ export function VouchersPage() {
                         {/* Header with Logo and Badges */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            {/* Logo Placeholder */}
+                            {/* Logo */}
                             <div 
                               style={{
                                 width: '40px',
@@ -891,24 +1083,45 @@ export function VouchersPage() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 border: '1px solid #e5e7eb',
-                                position: 'relative'
+                                overflow: 'hidden'
                               }}
                             >
-                              <Image style={{ width: '18px', height: '18px', color: '#9ca3af' }} />
-                              <span 
-                                style={{
-                                  position: 'absolute',
-                                  fontSize: '6px',
-                                  fontFamily: 'Montserrat, sans-serif',
-                                  color: '#6b7280',
-                                  bottom: '-10px',
-                                  whiteSpace: 'nowrap'
+                                                             <img 
+                                 src={voucher.type === 'mm_voucher' ? logo3 : 
+                                      voucher.type === 'easypay_voucher' ? logo3 : 
+                                      logo3}
+                                 alt={voucher.type === 'mm_voucher' ? 'MMVoucher Logo' : 
+                                      voucher.type === 'easypay_voucher' ? 'EasyPay Logo' : 
+                                      'Voucher Logo'}
+                                style={{ 
+                                  width: '24px', 
+                                  height: '24px',
+                                  objectFit: 'contain'
                                 }}
-                              >
-                                {voucher.type === 'mm_voucher' ? 'logo3.svg' : 
-                                 voucher.type === 'easypay_voucher' ? 'EPlogo.svg' : 
-                                 'logo.svg'}
-                              </span>
+                                onError={(e) => {
+                                  // Fallback to a simple icon if image fails to load
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling.style.display = 'flex';
+                                }}
+                              />
+                              <div 
+                                style={{
+                                  display: 'none',
+                                  width: '24px',
+                                  height: '24px',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                                                   backgroundColor: voucher.type === 'mm_voucher' ? '#86BE41' : 
+                                                voucher.type === 'easypay_voucher' ? '#86BE41' : '#9ca3af',
+                                 borderRadius: '6px',
+                                 color: 'white',
+                                 fontSize: '12px',
+                                 fontWeight: 'bold'
+                               }}
+                             >
+                               {voucher.type === 'mm_voucher' ? 'MM' : 
+                                voucher.type === 'easypay_voucher' ? 'MM' : 'V'}
+                              </div>
                             </div>
                             
                             {/* Type and Status Badges */}
@@ -970,38 +1183,45 @@ export function VouchersPage() {
                           </div>
                         </div>
 
-                        {/* Voucher Code - Single Line */}
+                        {/* Voucher Code - Dual Display for EasyPay */}
                         <div style={{ marginBottom: '12px' }}>
-                          <p 
-                            style={{
-                              fontFamily: 'monospace',
-                              fontSize: '16px',
-                              fontWeight: '600',
-                              color: '#1f2937',
-                              margin: 0,
-                              letterSpacing: '0.5px',
-                              lineHeight: 1.2
-                            }}
-                          >
-                            {voucher.voucherCode}
-                          </p>
-                          
-                          {/* EasyPay Number - Smaller */}
-                          {voucher.easyPayNumber && (
-                            <p 
-                              style={{
-                                fontFamily: 'monospace',
-                                fontSize: '13px',
-                                fontWeight: '500',
-                                color: '#2D8CCA',
-                                margin: '4px 0 0 0',
-                                letterSpacing: '0.3px',
-                                lineHeight: 1
-                              }}
-                            >
-                              EP: {voucher.easyPayNumber}
-                            </p>
-                          )}
+                          {(() => {
+                            const formattedCode = formatVoucherCodeForDisplay(voucher);
+                            return (
+                              <>
+                                <p 
+                                  style={{
+                                    fontFamily: 'monospace',
+                                    fontSize: '16px', // Always use 16px for main code (MM PIN)
+                                    fontWeight: '600',
+                                    color: '#1f2937',
+                                    margin: 0,
+                                    letterSpacing: '0.5px',
+                                    lineHeight: 1.2
+                                  }}
+                                >
+                                  {formattedCode.mainCode}
+                                </p>
+                                
+                                {/* Sub-code for paid EasyPay vouchers */}
+                                {formattedCode.subCode && (
+                                  <p 
+                                    style={{
+                                      fontFamily: 'monospace',
+                                      fontSize: '12px',
+                                      fontWeight: '500',
+                                      color: '#2D8CCA',
+                                      margin: '2px 0 0 0',
+                                      letterSpacing: '0.3px',
+                                      lineHeight: 1
+                                    }}
+                                  >
+                                    {formattedCode.subCode}
+                                  </p>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
 
                         {/* Description - Shorter and smaller */}
@@ -1014,7 +1234,7 @@ export function VouchersPage() {
                             lineHeight: 1.3
                           }}
                         >
-                          {voucher.description}
+                          
                         </p>
 
                         {/* Bottom Info */}
@@ -1029,31 +1249,16 @@ export function VouchersPage() {
                                 fontWeight: '500'
                               }}
                             >
-                              {formatDate(voucher.expiryDate)}
+                              {formatDate(voucher.createdDate)}
                             </span>
                           </div>
                           
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {voucher.easyPayNumber && (
-                              <span 
-                                style={{
-                                  fontFamily: 'Montserrat, sans-serif',
-                                  fontSize: '10px',
-                                  fontWeight: '600',
-                                  color: '#2D8CCA',
-                                  backgroundColor: '#dbeafe',
-                                  padding: '2px 6px',
-                                  borderRadius: '4px'
-                                }}
-                              >
-                                {voucher.easyPayNumber.substring(0, 4)}...
-                              </span>
-                            )}
-                            
+
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleCopyCode(voucher.voucherCode);
+                                handleCopyCode(voucher);
                               }}
                               style={{
                                 background: 'none',
@@ -1760,10 +1965,10 @@ export function VouchersPage() {
                         flex: 1
                       }}
                     >
-                      {selectedVoucher.voucherCode}
+                                                  {formatVoucherCodeForDisplay(selectedVoucher)}
                     </span>
                     <button
-                      onClick={() => handleCopyCode(selectedVoucher.voucherCode)}
+                                                  onClick={() => handleCopyCode(selectedVoucher)}
                       style={{
                         background: 'none',
                         border: 'none',
@@ -1815,7 +2020,7 @@ export function VouchersPage() {
                         {selectedVoucher.easyPayNumber}
                       </span>
                       <button
-                        onClick={() => handleCopyCode(selectedVoucher.easyPayNumber!)}
+                                                    onClick={() => handleCopyCode(selectedVoucher)}
                         style={{
                           background: 'none',
                           border: 'none',
@@ -1958,7 +2163,7 @@ export function VouchersPage() {
                       margin: 0
                     }}
                   >
-                    {selectedVoucher.description}
+                    
                   </p>
                 </div>
 

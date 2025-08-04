@@ -6,6 +6,12 @@ const authMiddleware = require('../middleware/auth');
 // Issue a new voucher
 router.post('/issue', voucherController.issueVoucher);
 
+// Issue EasyPay voucher
+router.post('/easypay/issue', voucherController.issueEasyPayVoucher);
+
+// Process EasyPay settlement callback
+router.post('/easypay/settlement', voucherController.processEasyPaySettlement);
+
 // Redeem a voucher
 router.post('/redeem', voucherController.redeemVoucher);
 
@@ -18,50 +24,44 @@ router.get('/active', authMiddleware, voucherController.listActiveVouchersForMe)
 // GET /api/v1/vouchers/balance - Get total voucher balance for authenticated user
 router.get('/balance', authMiddleware, voucherController.getVoucherBalance);
 
+
+
 // Get voucher by code
 router.get('/code/:voucher_code', voucherController.getVoucherByCode);
 
 // Get voucher redemption history
 router.get('/:voucher_id/redemptions', voucherController.getVoucherRedemptions);
 
+// GET /api/v1/vouchers/redeemed - List redeemed vouchers for authenticated user
+router.get('/redeemed', authMiddleware, voucherController.listRedeemedVouchersForMe);
+
 // List all vouchers (for admin/testing)
 router.get('/', async (req, res) => {
   try {
-    const VoucherModel = require('../models/voucherModel');
-    const voucherModel = new VoucherModel();
+    const { Voucher } = require('../models');
     
-    voucherModel.db.all(`
-      SELECT 
-        v.id,
-        v.voucherId,
-        v.userId,
-        v.type,
-        v.amount,
-        v.description,
-        v.status,
-        v.expiryDate,
-        v.createdAt,
-        v.updatedAt,
-        u.firstName,
-        u.lastName,
-        u.email
-      FROM vouchers v
-      LEFT JOIN users u ON v.userId = u.id
-      ORDER BY v.createdAt DESC
-    `, [], (err, rows) => {
-      if (err) {
-        console.error('❌ Error getting vouchers:', err);
-        return res.status(500).json({ 
-          success: false,
-          error: 'Database error', 
-          details: err.message 
-        });
-      }
-      res.json({ 
-        success: true,
-        message: 'Vouchers retrieved successfully',
-        data: { vouchers: rows || [] }
-      });
+    const vouchers = await Voucher.findAll({
+      order: [['createdAt', 'DESC']]
+    });
+    
+    const vouchersData = vouchers.map(voucher => ({
+      id: voucher.id,
+      voucherCode: voucher.voucherCode,
+      easyPayCode: voucher.easyPayCode,
+      userId: voucher.userId,
+      voucherType: voucher.voucherType,
+      originalAmount: voucher.originalAmount,
+      balance: voucher.balance,
+      status: voucher.status,
+      expiresAt: voucher.expiresAt,
+      createdAt: voucher.createdAt,
+      updatedAt: voucher.updatedAt
+    }));
+    
+    res.json({ 
+      success: true,
+      message: 'Vouchers retrieved successfully',
+      data: { vouchers: vouchersData }
     });
   } catch (error) {
     console.error('❌ Error in getAllVouchers:', error);

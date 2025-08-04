@@ -1,287 +1,351 @@
-# MyMoolah Development Guide
+# MyMoolah Platform - Development Guide
 
-## 🚀 **CURRENT STATUS: FULLY OPERATIONAL - PRODUCTION READY**
-
-**Version:** 2.0.3 - Transaction Sorting & Date Range Filter Fixes  
-**Last Updated:** January 30, 2025  
-**Status:** ✅ **PRODUCTION READY**
-
----
-
-## 🎯 **CRITICAL WORKFLOW REQUIREMENT**
-
-### **Figma AI Integration Process:**
-- **ALL frontend pages (.tsx) MUST be designed and developed using Figma AI agent**
-- **NO direct manual editing of .tsx files by Cursor AI agents**
-- **Cursor AI agents must adapt backend APIs to work with Figma-generated .tsx pages**
-- **This ensures consistency and maintains the established design system**
-
-**For detailed workflow information, see:** `docs/FIGMA_INTEGRATION_WORKFLOW.md`
-
----
-
-## 📋 **PROJECT SETUP**
+## **🚀 Getting Started**
 
 ### **Prerequisites**
-- Node.js 18+ 
-- npm or yarn
-- Git
+- Node.js v22.16.0 or higher
+- npm or yarn package manager
+- Git for version control
 - SQLite (development) / MySQL (production)
 
-### **Installation**
+### **Project Structure**
+```
+mymoolah/
+├── server.js                 # Main server entry point
+├── models/                   # Database models
+│   └── voucherModel.js      # Unified voucher model
+├── controllers/              # Business logic
+│   └── voucherController.js # Voucher operations
+├── routes/                   # API endpoints
+│   └── vouchers.js          # Voucher routes
+├── config/                   # Configuration files
+│   └── security.js          # Security settings
+├── mymoolah-wallet-frontend/ # Frontend application
+│   └── pages/               # React components
+└── docs/                    # Documentation
+```
+
+---
+
+## **🔧 Development Workflow**
+
+### **1. Environment Setup**
 ```bash
-# Clone the repository
+# Clone repository
 git clone <repository-url>
 cd mymoolah
 
-# Install backend dependencies
+# Install dependencies
 npm install
 
-# Install frontend dependencies
-cd mymoolah-wallet-frontend
-npm install
-```
-
-### **Database Setup**
-```bash
-# Initialize the database
+# Initialize database
 npm run init-db
-```
 
----
-
-## 🔧 **DEVELOPMENT WORKFLOW**
-
-### **Backend Development**
-```bash
-# Start backend server (Port 3001)
+# Start development server
 npm start
-
-# Development with auto-restart
-npm run dev
 ```
 
-### **Frontend Development**
-```bash
-# Navigate to frontend directory
-cd mymoolah-wallet-frontend
+### **2. Working Directory Rules**
+- **✅ Always work in `/mymoolah/` directory**
+- **❌ Never work in root directory**
+- **✅ All code changes in subdirectories**
+- **✅ Documentation updates in `/docs/`**
 
-# Start frontend server (Port 3002)
-npm run dev
+### **3. Frontend Development**
+- **Source of Truth**: Figma AI-generated components
+- **Location**: `/mymoolah-wallet-frontend/pages/`
+- **No Manual Edits**: Don't edit `.tsx` files directly (will be overwritten by Figma updates)
+- **Integration**: Adapt backend APIs to match Figma components
+
+### **4. Backend Development**
+- **API Design**: RESTful endpoints with consistent response format
+- **Database**: Single table design for vouchers (MM + EasyPay)
+- **Security**: JWT authentication + banking-grade encryption
+- **Validation**: Comprehensive input validation and error handling
+
+---
+
+## **📋 Current System Architecture**
+
+### **Voucher System (Unified Design)**
+```javascript
+// Single table for all voucher types
+const Voucher = sequelize.define('Voucher', {
+  id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+  userId: { type: DataTypes.INTEGER, allowNull: true },
+  voucherCode: { type: DataTypes.STRING(255), allowNull: false, unique: true },
+  easyPayCode: { type: DataTypes.STRING(255), allowNull: true, unique: true },
+  originalAmount: { type: DataTypes.DECIMAL(15, 2), allowNull: false },
+  balance: { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: 0 },
+  status: { 
+    type: DataTypes.ENUM('pending', 'active', 'redeemed', 'expired', 'cancelled'),
+    allowNull: false,
+    defaultValue: 'pending'
+  },
+  voucherType: {
+    type: DataTypes.ENUM('standard', 'premium', 'business', 'corporate', 'student', 'senior', 'easypay_pending', 'easypay_active'),
+    allowNull: false,
+    defaultValue: 'standard'
+  },
+  expiresAt: { type: DataTypes.DATE, allowNull: true },
+  redemptionCount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+  maxRedemptions: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
+  metadata: { type: DataTypes.JSON, allowNull: true },
+  createdAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW },
+  updatedAt: { type: DataTypes.DATE, allowNull: false, defaultValue: DataTypes.NOW }
+});
 ```
 
-### **Full Stack Development**
-```bash
-# Terminal 1: Backend
-npm start
+### **Status Logic (Frontend Mapping)**
+```javascript
+// Consistent status mapping across all components
+const mapVoucherStatus = (voucher) => {
+  if (voucher.status === 'pending') {
+    return 'pending_payment';
+  } else if (voucher.status === 'expired') {
+    return 'expired';
+  } else if (voucher.status === 'redeemed') {
+    const balance = parseFloat(voucher.balance || 0);
+    if (balance === 0) {
+      return 'redeemed'; // Fully redeemed
+    } else {
+      return 'active'; // Partially redeemed - still active
+    }
+  } else {
+    return 'active';
+  }
+};
+```
 
-# Terminal 2: Frontend
-cd mymoolah-wallet-frontend
-npm run dev
+### **API Response Format**
+```javascript
+// Standard API response structure
+{
+  success: true,
+  data: {
+    vouchers: [
+      {
+        id: 1,
+        voucherCode: "MMVOUCHER_1754321424055_abc123",
+        easyPayCode: "91234388661929",
+        originalAmount: "500.00",
+        balance: "250.00",
+        status: "active",
+        voucherType: "easypay_active",
+        expiresAt: "2026-08-04T14:15:13.040Z"
+      }
+    ]
+  }
+}
 ```
 
 ---
 
-## 🏗️ **ARCHITECTURE OVERVIEW**
+## **🎯 Development Best Practices**
 
-### **Backend Architecture**
-```
-/controllers/          # Business logic
-/models/              # Database schemas (Sequelize)
-/routes/              # API endpoints
-/services/            # External integrations
-/middleware/          # Authentication & validation
-```
+### **1. Code Organization**
+- **Models**: Database schema and relationships
+- **Controllers**: Business logic and data processing
+- **Routes**: API endpoint definitions
+- **Frontend**: React components with TypeScript
 
-### **Frontend Architecture**
-```
-/mymoolah-wallet-frontend/
-├── pages/            # Figma AI generated .tsx files
-├── components/       # UI components
-├── contexts/         # State management
-├── config/           # App configuration
-└── assets/           # Static resources
-```
-
-### **API Integration**
-- Base URL: `http://localhost:3001`
-- Frontend proxy: `http://localhost:3002/api/v1/*`
-- Authentication: JWT tokens
-- Validation: Express-validator
-- Database: Sequelize ORM
-
----
-
-## 🧪 **TESTING**
-
-### **Backend Testing**
-```bash
-# Run backend tests
-npm test
-
-# Test specific endpoints
-curl http://localhost:3001/api/v1/health
-curl http://localhost:3001/api/v1/auth/login
+### **2. Error Handling**
+```javascript
+// Standard error handling pattern
+try {
+  const result = await someOperation();
+  res.json({ success: true, data: result });
+} catch (err) {
+  console.error('❌ Operation error:', err);
+  res.status(500).json({ 
+    success: false, 
+    error: err.message || 'Operation failed' 
+  });
+}
 ```
 
-### **Frontend Testing**
-```bash
-# Navigate to frontend
-cd mymoolah-wallet-frontend
-
-# Run frontend tests
-npm test
+### **3. Database Operations**
+```javascript
+// Use Sequelize for all database operations
+const voucher = await Voucher.create({
+  voucherCode: generateMMVoucherCode(),
+  originalAmount: amount,
+  balance: amount,
+  status: 'active',
+  voucherType: 'standard',
+  expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+});
 ```
 
-### **Integration Testing**
-- Backend (Port 3001): ✅ Active and operational
-- Frontend (Port 3002): ✅ Active and operational
-- API Proxy: ✅ Working between frontend and backend
-- Authentication: ✅ Login/register working
-- All core services: ✅ Working (wallets, vouchers, merchants)
+### **4. API Design**
+- **RESTful**: Use standard HTTP methods (GET, POST, PUT, DELETE)
+- **Consistent**: Same response format across all endpoints
+- **Validated**: Input validation on all endpoints
+- **Documented**: Clear API documentation with examples
 
 ---
 
-## 🔐 **SECURITY IMPLEMENTATION**
+## **🔒 Security Guidelines**
 
-### **Authentication**
-- JWT tokens with bcrypt password hashing
-- Token expiration: 30 minutes
-- Multi-input authentication (phone, account, username)
-- Complex password validation (8+ chars, uppercase, lowercase, number, special char)
+### **1. Authentication**
+- **JWT Tokens**: Secure token-based authentication
+- **Token Storage**: Secure localStorage management
+- **Token Refresh**: Automatic token refresh mechanism
 
-### **Security Features**
-- Helmet for security headers
-- CORS protection configured
-- Rate limiting implemented
-- Input validation with Express-validator
-- SQL injection protection
-- XSS protection enabled
+### **2. Input Validation**
+```javascript
+// Validate all inputs
+const validateVoucherAmount = (amount) => {
+  const numAmount = Number(amount);
+  if (isNaN(numAmount) || numAmount < 5 || numAmount > 4000) {
+    throw new Error('Voucher value must be between 5.00 and 4000.00');
+  }
+  return numAmount;
+};
+```
 
-### **Security Score: 100/100**
-- JWT authentication: ✅ Implemented
-- Password hashing: ✅ bcrypt
-- Input validation: ✅ Express-validator
-- CORS protection: ✅ Configured
-- Rate limiting: ✅ Implemented
-
----
-
-## 📊 **CURRENT FEATURE STATUS**
-
-### ✅ **Authentication & Security - COMPLETE**
-- Multi-input authentication (phone, account, username)
-- Complex password validation (8+ chars, uppercase, lowercase, number, special char)
-- JWT token authentication working
-- South African mobile number validation
-- Real backend authentication operational
-
-### ✅ **Wallet Management - COMPLETE**
-- Wallet balance retrieval working
-- Transaction history functional
-- Real-time balance updates
-- Backend API integration verified
-
-### ✅ **Voucher System - COMPLETE**
-- Voucher types management operational
-- Active vouchers listing working
-- Voucher redemption functional
-- Backend integration tested
-
-### ✅ **KYC Integration - COMPLETE**
-- Document upload system working
-- KYC status tracking functional
-- Camera support for document capture
-- Backend API integration verified
-
-### ✅ **Payment Integrations - COMPLETE**
-- Flash payment service operational
-- MobileMart payment service working
-- Merchant services functional
-- VAS (Value Added Services) working
-- All payment APIs tested
-
-### ✅ **Frontend Dashboard - COMPLETE**
-- React 18 + TypeScript operational
-- Figma AI generated components working
-- Responsive mobile-first design
-- Real-time data integration
-- Port 3002 operational
-
-### ✅ **Backend API - COMPLETE**
-- Node.js + Express.js working
-- Sequelize ORM with SQLite/MySQL operational
-- RESTful API endpoints all functional
-- Authentication middleware working
-- Port 3001 operational
+### **3. Data Protection**
+- **Encryption**: Sensitive data encrypted at rest
+- **HTTPS**: Required for all communications
+- **CORS**: Proper cross-origin resource sharing
+- **Rate Limiting**: Prevent abuse of API endpoints
 
 ---
 
-## 🚨 **CRITICAL WORKFLOW RULES**
+## **📊 Testing Strategy**
 
-### **For All AI Agents:**
-1. **NEVER create .md files in `/mymoolah/` root directory**
-2. **ALWAYS create and update .md files in `/mymoolah/docs/`**
-3. **NEVER work in the user's root directory (`/Users/andremacbookpro/`)**
-4. **ALWAYS work ONLY in the `/mymoolah/` project directory**
-5. **NEVER modify .tsx files directly - only Figma AI agent can do this**
-6. **ALWAYS adapt backend APIs to work with Figma-generated .tsx pages**
+### **1. Unit Testing**
+```javascript
+// Test voucher status logic
+describe('Voucher Status Logic', () => {
+  test('should map partially redeemed to active', () => {
+    const voucher = { status: 'redeemed', balance: 250 };
+    const result = mapVoucherStatus(voucher);
+    expect(result).toBe('active');
+  });
+});
+```
 
-### **File Organization Rules:**
-- **Project documentation:** `/mymoolah/docs/`
-- **Code files:** `/mymoolah/` (root)
-- **Frontend files:** `/mymoolah/mymoolah-wallet-frontend/`
-- **Backend files:** `/mymoolah/` (controllers, models, routes, etc.)
+### **2. Integration Testing**
+- **API Endpoints**: Test all voucher operations
+- **Database Operations**: Verify data integrity
+- **Frontend Integration**: Test component interactions
 
----
-
-## 📈 **PERFORMANCE METRICS**
-
-### **Server Performance:**
-- Backend startup: ✅ < 5 seconds
-- Frontend startup: ✅ < 3 seconds
-- API response time: ✅ < 100ms average
-- Database queries: ✅ Optimized with Sequelize
-
-### **Throughput:**
-- Concurrent users: 1000+
-- Requests per second: 100+
-- Database queries: Optimized with Sequelize
+### **3. Performance Testing**
+- **API Response Time**: < 200ms for all operations
+- **Database Queries**: Optimized single table queries
+- **Frontend Rendering**: Smooth, responsive interface
 
 ---
 
-## ⚠️ **KNOWN ISSUES**
+## **🚀 Deployment Guidelines**
 
-### **Minor Issues (Non-Critical):**
-- Some KYC endpoints need routing review
-- Flash/MobileMart payment endpoints need routing review
-- Support service has minor model function issue
+### **1. Environment Configuration**
+```javascript
+// config/database.js
+module.exports = {
+  development: {
+    dialect: 'sqlite',
+    storage: './data/mymoolah.db'
+  },
+  production: {
+    dialect: 'mysql',
+    host: process.env.DB_HOST,
+    username: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME
+  }
+};
+```
 
-### **Resolved Issues:**
-- ✅ Port conflicts resolved
-- ✅ API proxy working
-- ✅ Authentication flow working
-- ✅ Database connectivity working
-- ✅ Logo path conflicts resolved
-- ✅ Documentation structure organized
+### **2. Production Checklist**
+- [ ] Database migrations applied
+- [ ] Environment variables configured
+- [ ] SSL certificates installed
+- [ ] Monitoring tools configured
+- [ ] Backup procedures in place
+
+### **3. Monitoring**
+- **Health Checks**: Regular system health monitoring
+- **Error Tracking**: Comprehensive error logging
+- **Performance Metrics**: API response time tracking
+- **User Analytics**: Voucher usage analytics
 
 ---
 
-## 🎯 **NEXT MILESTONES**
+## **📝 Documentation Standards**
 
-### **Current Focus:**
-- Test specific user flows (registration → login → dashboard)
-- Check frontend UI in browser
-- Test specific features like voucher redemption
-- Run performance tests on the integration
+### **1. Code Documentation**
+```javascript
+/**
+ * Issue a new voucher with the specified amount
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} Created voucher data
+ */
+exports.issueVoucher = async (req, res) => {
+  // Implementation
+};
+```
 
-### **Future Enhancements:**
-- Enhanced error handling
-- Performance optimization
-- Additional payment integrations
-- Advanced KYC features
+### **2. API Documentation**
+- **OpenAPI/Swagger**: Complete API specification
+- **Request/Response Examples**: Clear examples for all endpoints
+- **Error Codes**: Comprehensive error documentation
+- **Authentication**: Clear authentication requirements
+
+### **3. User Documentation**
+- **Setup Guide**: Step-by-step installation instructions
+- **User Guide**: End-user documentation
+- **Troubleshooting**: Common issues and solutions
+- **FAQ**: Frequently asked questions
 
 ---
 
-**Last Updated:** July 31, 2025  
-**Status:** ✅ **FULLY OPERATIONAL - PRODUCTION READY** 
+## **🔗 Key Resources**
+
+### **Development Tools**
+- **IDE**: Visual Studio Code with TypeScript support
+- **Database**: SQLite Browser for development
+- **API Testing**: Postman or Insomnia
+- **Version Control**: Git with GitHub
+
+### **Documentation**
+- [API Documentation](./API_DOCUMENTATION.md)
+- [Project Status](./PROJECT_STATUS.md)
+- [Testing Guide](./TESTING_GUIDE.md)
+- [Security Compliance](./SECURITY_COMPLIANCE_CERTIFICATE.md)
+
+### **External Resources**
+- [Mojaloop Documentation](https://docs.mojaloop.io/)
+- [Sequelize Documentation](https://sequelize.org/)
+- [React Documentation](https://reactjs.org/docs/)
+- [Node.js Documentation](https://nodejs.org/docs/)
+
+---
+
+## **🎯 Success Metrics**
+
+### **Code Quality**
+- **Test Coverage**: > 80% for critical components
+- **Code Review**: All changes reviewed before merge
+- **Documentation**: Complete and up-to-date
+- **Performance**: < 200ms API response times
+
+### **User Experience**
+- **Voucher Management**: Intuitive creation and redemption
+- **Status Clarity**: Clear distinction between voucher states
+- **Error Handling**: Helpful error messages
+- **Mobile Experience**: Optimized for mobile use
+
+### **System Reliability**
+- **Uptime**: 99.9% system availability
+- **Error Rate**: < 1% for all operations
+- **Data Integrity**: No data corruption or loss
+- **Security**: No security vulnerabilities
+
+---
+
+**Last Updated**: August 4, 2025  
+**Version**: 1.2.1  
+**Status**: Production Ready 

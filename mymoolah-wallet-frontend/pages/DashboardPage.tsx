@@ -140,19 +140,25 @@ export function DashboardPage() {
         if (!transactionsResponse.ok) throw new Error('Failed to fetch transactions');
         const transactionsData = await transactionsResponse.json();
 
-        // Fetch voucher balance summary
-        const voucherBalanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/balance`, { headers });
-        if (!voucherBalanceResponse.ok) throw new Error('Failed to fetch voucher balance');
-        const voucherBalanceData = await voucherBalanceResponse.json();
+        // Fetch all vouchers to calculate consistent totals
+        const vouchersResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/`, { headers });
+        if (!vouchersResponse.ok) throw new Error('Failed to fetch vouchers');
+        const vouchersData = await vouchersResponse.json();
 
         // Update state with real data
         const balanceDataFromAPI = balanceData.data;
         setWalletBalance(balanceDataFromAPI.balance || 0);
         
-        // Update voucher data from the new API
-        const voucherBalanceFromAPI = voucherBalanceData.data;
-        setOpenVouchersCount(voucherBalanceFromAPI.voucherCount || 0);
-        setOpenVouchersValue(parseFloat(voucherBalanceFromAPI.totalBalance) || 0);
+        // Calculate active vouchers (same logic as VouchersPage)
+        const allVouchers = vouchersData.data?.vouchers || [];
+        const activeVouchers = allVouchers.filter((v: any) => {
+          if (v.status === 'active') return true;
+          if (v.status === 'redeemed' && parseFloat(v.balance || 0) > 0) return true; // Partially redeemed = active
+          return false;
+        });
+        
+        setOpenVouchersCount(activeVouchers.length);
+        setOpenVouchersValue(activeVouchers.reduce((sum: number, v: any) => sum + parseFloat(v.balance || 0), 0));
         
         // Transform transactions to match frontend format
         const transformedTransactions: Transaction[] = (transactionsData.data?.transactions || []).map((tx: any) => {
@@ -386,7 +392,7 @@ export function DashboardPage() {
           </div>
         </button>
 
-        {/* Open Vouchers Card - CLICKABLE with Square Box Count */}
+        {/* Active Vouchers Card - CLICKABLE with Square Box Count */}
         <button
           onClick={handleVouchersClick}
           style={{
@@ -428,7 +434,7 @@ export function DashboardPage() {
                 margin: '0'
               }}
             >
-              Open Vouchers
+              Active Vouchers
             </h3>
           </div>
 

@@ -1,285 +1,140 @@
 # MyMoolah Platform - Changelog
 
-## [Latest] - January 30, 2025
+## **[Unreleased] - August 4, 2025**
 
-### 🎉 **TRANSACTION SORTING & DATE RANGE FILTER FIXES**
+### **🔄 Major System Improvements**
 
-#### ✅ **Transaction Sorting Issues Resolved**
-- **Backend Sorting:** Confirmed Sequelize ORM `order: [['createdAt', 'DESC']]` working correctly
-- **Frontend Sorting:** Fixed timestamp comparison logic with proper normalization
-- **Dashboard Page:** Transactions now display in correct chronological order (newest first)
-- **Transaction History Page:** Proper sorting maintained with all filtering features
-- **Date Formatting:** Fixed day calculation for "Today", "Yesterday", and date display
+#### **Voucher Status Logic Optimization**
+- **Fixed Status Logic**: Partially redeemed vouchers now show as "Active" (can still be used), fully redeemed vouchers show as "Redeemed" (balance = 0)
+- **Database Updates**: Updated 4 vouchers (IDs 32, 33, 34, 35) from partially redeemed to fully redeemed
+- **Frontend Consistency**: All voucher displays now use consistent status mapping
+- **Status Filter Fix**: Fixed status filtering logic to work correctly without duplicates
 
-#### ✅ **Date Range Filter Functionality**
-- **Date Comparison Logic:** Implemented proper date normalization to remove time component
-- **Visual Indicators:** Added blue highlighting for active date range filters
-- **Filter State Detection:** Enhanced to include both from/to dates
-- **Transaction Count Display:** Shows filtered vs total transaction counts
-- **Clear Filters:** Proper reset functionality for all filter types
+#### **API Route Optimization**
+- **Removed Duplicate Routes**: Eliminated conflicting `/redeemed` vs `/:voucher_id/redemptions` routes
+- **Single Data Source**: All vouchers now fetched from `/api/v1/vouchers/` endpoint
+- **Removed Redundant Endpoints**: Deleted separate EasyPay voucher endpoints (functionality integrated into main voucher system)
+- **Clean Route Structure**: No more duplicate or conflicting API calls
 
-#### ✅ **UI/UX Improvements**
-- **Button Nesting Warning:** Fixed PopoverTrigger component to use `div` instead of `Button`
-- **Debug Cleanup:** Removed console logs and cleaned up code
-- **Visual Feedback:** Enhanced user experience with better filter state indicators
-- **Performance:** Optimized sorting and filtering with proper useMemo implementation
+#### **Frontend Display Fixes**
+- **Consistent Partial Redemption Display**: All partial redemptions show "R[balance] of R[original]" format
+- **Font Size Consistency**: 16-digit MM PIN on EasyPay vouchers now matches normal MyMoolah voucher size (16px)
+- **Dashboard Terminology**: Changed "Open Vouchers" to "Active Vouchers" for consistency
+- **Status Badge Consistency**: Proper status badges across all voucher types
 
-#### ✅ **Technical Improvements**
-- **Date Normalization:** Proper handling of ISO timestamps from database
-- **API Consistency:** Both Dashboard and Transaction History pages use same API endpoints
-- **Error Handling:** Maintained robust error handling throughout
-- **Code Quality:** Clean, maintainable code with proper TypeScript types
+#### **Database Cleanup**
+- **Removed Malformed Records**: Deleted voucher with incorrect "EP-1754125987523-PENDING" format
+- **Verified Data Integrity**: Confirmed no duplicate or malformed voucher records remain
+- **Balance Corrections**: Updated voucher balances to reflect proper partial vs full redemptions
 
----
+#### **System Architecture Improvements**
+- **Single Table Design**: All vouchers (MM and EasyPay) now use unified `vouchers` table
+- **Optimized Performance**: Reduced API calls and eliminated data duplication
+- **Consistent Logic**: Dashboard and VouchersPage now use identical calculation methods
 
-## [Previous] - July 29, 2025
+### **🐛 Bug Fixes**
+- Fixed voucher status filtering inconsistency between Dashboard and VouchersPage
+- Resolved API route conflicts causing duplicate data
+- Corrected partial redemption display logic
+- Fixed font size inconsistency for EasyPay voucher codes
+- Removed malformed voucher records from database
 
-### 🎉 **TRANSACTION HISTORY PAGE FULLY INTEGRATED**
-
-#### ✅ **TransactionHistoryPage Integration**
-- **Figma-Generated Code:** Integrated new TransactionHistoryPage.tsx from Figma AI agent
-- **Real Backend Data:** Connected to `/api/v1/wallets/transactions` endpoint
-- **Data Mapping:** Transformed backend transaction data to frontend interface
-- **Loading States:** Added proper loading and error states with UI feedback
-- **Pagination:** Integrated pagination with currentPage, totalPages, totalItems
-- **Search & Filtering:** Implemented search, type filter, and date range filtering
-- **CSV Export:** Added export functionality for transaction data
-- **Inline Styling:** Converted all Tailwind CSS classes to inline styles for consistency
-
-#### ✅ **Navigation Integration**
-- **Route Configuration:** Added `/transactions` route to App.tsx
-- **Top Banner:** Added `/transactions` to pagesWithTopBanner array
-- **Bottom Navigation Fix:** Updated BottomNavigation.tsx to include `/transactions` in showBottomNav
-- **Tab Highlighting:** Configured getActiveTabId to highlight Home tab for transactions page
-- **Layout Consistency:** Ensured TransactionHistoryPage matches DashboardPage styling approach
-
-#### ✅ **Critical Bug Fixes**
-- **Bottom Navigation Icons:** Fixed missing 5 icons on bottom sticky banner
-- **Route Matching:** Corrected `/transaction-history` to `/transactions` in BottomNavigation
-- **Layout Interference:** Changed minHeight from '100vh' to 'auto' to prevent navigation interference
-- **Duplicate Routes:** Removed duplicate import and route declarations in App.tsx
-- **500 Internal Server Error:** Fixed login page error caused by duplicate declarations
-
-#### ✅ **Frontend-Backend Integration**
-- **API Endpoint:** `/api/v1/wallets/transactions` returns paginated transaction data
-- **Data Transformation:** Maps backend fields (id, transactionId, type, amount, currency, status, etc.)
-- **Error Handling:** Proper error states and retry functionality
-- **Authentication:** JWT token-based API calls with proper headers
-
-#### ✅ **UI/UX Improvements**
-- **Transaction Cards:** Clean card design with icons, amounts, and status badges
-- **Status Colors:** Dynamic color coding for different transaction statuses
-- **Responsive Design:** Mobile-optimized layout with proper spacing
-- **Accessibility:** Proper ARIA labels and keyboard navigation
-- **Performance:** Optimized rendering with useMemo for filtered transactions
+### **📈 Performance Improvements**
+- Reduced API calls by eliminating duplicate endpoints
+- Optimized database queries with single table design
+- Improved frontend rendering with consistent data structure
+- Enhanced status filtering performance
 
 ---
 
-## [Previous] - July 29, 2025
+## **[1.2.0] - August 3, 2025**
 
-### 🎉 **MAJOR MILESTONE: BACKEND FULLY FUNCTIONAL & READY FOR FRONTEND INTEGRATION**
+### **🆕 New Features**
+- **EasyPay Voucher Integration**: Complete EasyPay voucher system with 14-digit Luhn algorithm numbers
+- **Dual Display System**: EasyPay vouchers show both MM PIN and EasyPay number
+- **Settlement Callback Processing**: Automatic MM voucher creation upon EasyPay settlement
+- **Partial Redemption Support**: Vouchers can be partially redeemed with remaining balance tracking
 
-#### ✅ **Database Migration & ORM Implementation**
-- **Sequelize ORM Integration:** Successfully migrated from raw SQLite to Sequelize ORM
-- **Migration System:** Implemented proper database migrations for production deployment
-- **Database Seeding:** Created comprehensive seeding system with realistic dummy data
-- **Production Ready:** Configured for SQLite (dev) and MySQL (prod) environments
+### **🔄 Major Changes**
+- **Unified Voucher System**: Single table design for all voucher types (MM and EasyPay)
+- **Enhanced Status Management**: Pending → Active → Redeemed lifecycle
+- **Improved Frontend Logic**: Better voucher type and status handling
+- **Database Schema Optimization**: Streamlined voucher table structure
 
-#### ✅ **API Endpoints - All Working Perfectly**
-- **Users Endpoint:** `/api/v1/users` - Returns 5 demo users with complete data
-- **Wallets Endpoint:** `/api/v1/wallets` - Returns 5 demo wallets with realistic balances (R750 to R10,000)
-- **Transactions Endpoint:** `/api/v1/transactions` - Returns 7 demo transactions with different types
-- **KYC Endpoint:** `/api/v1/kyc` - Returns 5 demo KYC records with verification statuses
-- **Vouchers Endpoint:** `/api/v1/vouchers` - Returns 6 demo vouchers with different types (airtime, data, gift cards)
-
-#### ✅ **Backend Testing Complete**
-- **Health Endpoint:** ✅ Working perfectly
-- **All Core Endpoints:** ✅ Tested and returning proper structured data
-- **Error Handling:** ✅ Proper error responses implemented
-- **Authentication:** ✅ JWT tokens working correctly
-- **Database Integration:** ✅ All endpoints connected to real database
-
-#### ✅ **Dummy Data Seeding**
-- **5 Demo Users:** John Doe, Jane Smith, Mike Wilson, Sarah Jones, Demo User
-- **5 Demo Wallets:** Realistic balances ranging from R750 to R10,000
-- **7 Demo Transactions:** Different types (transfer, deposit, withdrawal) with various statuses
-- **5 Demo KYC Records:** Different verification statuses (verified, processing, pending)
-- **6 Demo Vouchers:** Different types (airtime, data, gift cards) with various statuses
-
-#### ✅ **Model & Controller Updates**
-- **User Model:** Added `getAllUsers()`, `updateUser()`, `getUserStats()`, `updateUserStatus()` methods
-- **Wallet Model:** Added `getAllWallets()` method with proper SQL queries
-- **Controller Methods:** Fixed missing controller methods for all endpoints
-- **Route Configuration:** Added missing routes for main endpoints
-
-#### ✅ **Database Schema Improvements**
-- **Sequelize Migrations:** Created proper migration files for all tables
-- **Table Structure:** Aligned SQL queries with actual database schema
-- **Foreign Keys:** Proper relationships between users, wallets, transactions, KYC, vouchers
-- **Timestamps:** Consistent created_at/updated_at fields across all tables
+### **🐛 Bug Fixes**
+- Fixed voucher status mapping inconsistencies
+- Resolved EasyPay number generation issues
+- Corrected voucher balance calculations
+- Fixed frontend display formatting
 
 ---
 
-## [Previous] - July 28, 2025
+## **[1.1.0] - August 2, 2025**
 
-### 🔧 **Backend Infrastructure Improvements**
+### **🆕 New Features**
+- **Enhanced Voucher Management**: Improved voucher creation and redemption system
+- **Status Tracking**: Better voucher status management (pending, active, redeemed, expired)
+- **Frontend Improvements**: Enhanced voucher display and filtering
+- **Database Optimization**: Improved voucher table structure
 
-#### ✅ **Server Configuration**
-- **Port Configuration:** Server running on port 3001
-- **Health Endpoints:** `/health` and `/test` endpoints implemented
-- **Error Handling:** Comprehensive error handling across all endpoints
-- **Logging:** Proper logging for debugging and monitoring
+### **🔄 Major Changes**
+- **Voucher Status Logic**: Improved status mapping and display
+- **Frontend Consistency**: Better voucher type and status handling
+- **API Endpoint Optimization**: Streamlined voucher-related endpoints
+- **Database Schema Updates**: Enhanced voucher table with better indexing
 
-#### ✅ **Authentication System**
-- **JWT Implementation:** Secure token-based authentication
-- **Middleware Protection:** Auth middleware for protected routes
-- **Password Security:** bcrypt hashing for password protection
-- **Session Management:** Proper session handling
-
-#### ✅ **Payment Integrations**
-- **Flash Integration:** Authentication and payment processing
-- **MobileMart Integration:** Service provider integration
-- **EasyPay Integration:** Voucher system integration
-- **Payment Processing:** Credit/debit wallet operations
+### **🐛 Bug Fixes**
+- Fixed voucher status display issues
+- Resolved voucher balance calculation problems
+- Corrected frontend filtering logic
+- Fixed voucher creation validation
 
 ---
 
-## [Previous] - July 27, 2025
+## **[1.0.0] - August 1, 2025**
 
-### 🎯 **Core Features Implementation**
+### **🎉 Initial Release**
+- **Core Voucher System**: Basic MM voucher functionality
+- **User Authentication**: JWT-based authentication system
+- **Dashboard**: Basic dashboard with wallet and voucher overview
+- **Frontend Interface**: React-based voucher management interface
+- **Backend API**: RESTful API for voucher operations
+- **Database Integration**: SQLite database with Sequelize ORM
 
-#### ✅ **User Management**
-- **Registration:** Complete user registration with validation
-- **Login:** Secure login with JWT tokens
-- **Profile Management:** User profile updates and management
-- **Password Reset:** Secure password reset functionality
+### **🆕 Features**
+- **Voucher Generation**: Create MM vouchers with unique codes
+- **Voucher Redemption**: Redeem vouchers with balance tracking
+- **User Management**: User registration and authentication
+- **Wallet Integration**: Basic wallet functionality
+- **Frontend Dashboard**: User-friendly voucher management interface
 
-#### ✅ **Wallet System**
-- **Balance Management:** Real-time balance tracking
-- **Transaction History:** Complete transaction logging
-- **Credit/Debit Operations:** Secure wallet operations
-- **Transfer System:** User-to-user money transfers
-
-#### ✅ **KYC System**
-- **Document Upload:** Secure document upload system
-- **Verification Process:** Multi-step verification workflow
-- **Status Tracking:** Real-time verification status updates
-- **Compliance:** Regulatory compliance features
-
-#### ✅ **Voucher System**
-- **Voucher Creation:** Dynamic voucher generation
-- **Redemption Process:** Secure voucher redemption
-- **Expiry Management:** Automatic expiry handling
-- **Type Management:** Multiple voucher types support
+### **🔧 Technical Implementation**
+- **Backend**: Node.js + Express.js + Sequelize
+- **Frontend**: React + TypeScript
+- **Database**: SQLite (development)
+- **Authentication**: JWT tokens
+- **Security**: bcrypt password hashing
 
 ---
 
-## [Previous] - July 26, 2025
+## **📋 Version History Summary**
 
-### 🏗️ **Project Foundation**
-
-#### ✅ **Project Structure**
-- **Directory Organization:** Proper separation of concerns
-- **File Naming:** Consistent naming conventions
-- **Module Structure:** Modular architecture implementation
-- **Configuration Management:** Environment-based configuration
-
-#### ✅ **Development Environment**
-- **Node.js Setup:** Proper Node.js environment configuration
-- **Package Management:** npm dependencies properly configured
-- **Development Tools:** ESLint, Prettier, TypeScript setup
-- **Testing Framework:** Jest testing framework implementation
-
-#### ✅ **Database Setup**
-- **SQLite Configuration:** Development database setup
-- **Table Creation:** All core tables implemented
-- **Indexing:** Proper database indexing for performance
-- **Backup System:** Automated backup procedures
+| Version | Date | Key Changes |
+|---------|------|-------------|
+| 1.2.0 | Aug 3, 2025 | EasyPay integration, unified voucher system |
+| 1.1.0 | Aug 2, 2025 | Enhanced voucher management, status tracking |
+| 1.0.0 | Aug 1, 2025 | Initial release with core voucher functionality |
 
 ---
 
-## [Previous] - July 25, 2025
-
-### 🚀 **Initial Project Setup**
-
-#### ✅ **Repository Setup**
-- **Git Repository:** Initialized Git repository
-- **Branch Strategy:** Proper branching strategy implemented
-- **Commit Standards:** Conventional commit standards
-- **Documentation:** Initial documentation structure
-
-#### ✅ **Basic Infrastructure**
-- **Express Server:** Basic Express.js server setup
-- **Route Structure:** RESTful API route structure
-- **Middleware Setup:** Essential middleware configuration
-- **Error Handling:** Basic error handling implementation
-
-#### ✅ **Security Foundation**
-- **Input Validation:** Basic input validation
-- **CORS Configuration:** Cross-origin resource sharing setup
-- **Rate Limiting:** Basic rate limiting implementation
-- **Security Headers:** Essential security headers
+## **🔗 Related Documentation**
+- [API Documentation](./API_DOCUMENTATION.md)
+- [Project Status](./PROJECT_STATUS.md)
+- [Development Guide](./DEVELOPMENT_GUIDE.md)
+- [Testing Guide](./TESTING_GUIDE.md)
 
 ---
 
-## **Version History Summary**
-
-| Version | Date | Major Changes |
-|---------|------|---------------|
-| Latest | July 29, 2025 | Backend fully functional, all endpoints working, ready for frontend integration |
-| v1.2.0 | July 28, 2025 | Backend infrastructure improvements, authentication system |
-| v1.1.0 | July 27, 2025 | Core features implementation (users, wallets, KYC, vouchers) |
-| v1.0.1 | July 26, 2025 | Project foundation and development environment setup |
-| v1.0.0 | July 25, 2025 | Initial project setup and basic infrastructure |
-
----
-
-## **Breaking Changes**
-
-### **Database Migration (July 29, 2025)**
-- **Migration from raw SQLite to Sequelize ORM**
-- **New migration system requires proper setup**
-- **Database schema changes require migration execution**
-- **Seeding system replaces manual data insertion**
-
-### **API Endpoint Updates (July 29, 2025)**
-- **All endpoints now return structured JSON responses**
-- **Error responses standardized across all endpoints**
-- **Authentication required for protected endpoints**
-- **Input validation enhanced on all endpoints**
-
----
-
-## **Deprecated Features**
-
-### **Legacy Database Operations (July 29, 2025)**
-- **Raw SQLite operations deprecated in favor of Sequelize**
-- **Manual table creation deprecated in favor of migrations**
-- **Hardcoded data deprecated in favor of seeding system**
-
-### **Legacy API Responses (July 29, 2025)**
-- **Simple string responses deprecated in favor of structured JSON**
-- **Basic error messages deprecated in favor of detailed error responses**
-- **Unprotected endpoints deprecated in favor of authenticated endpoints**
-
----
-
-## **Upcoming Features**
-
-### **Frontend Integration (Next Phase)**
-- **Dashboard Integration:** Wire dashboard components to real API data
-- **Authentication Flow:** Connect login/register forms to auth endpoints
-- **KYC Flow Integration:** Connect KYC forms to KYC endpoints
-- **Wallet Operations:** Connect wallet operations to wallet endpoints
-
-### **Production Deployment (Future)**
-- **MySQL Migration:** Migrate from SQLite to MySQL for production
-- **Environment Configuration:** Production environment setup
-- **Security Audit:** Final security review and hardening
-- **Performance Optimization:** API response time optimization
-
----
-
-**Last Updated:** July 29, 2025  
-**Current Status:** Backend Complete, Ready for Frontend Integration  
-**Next Milestone:** Frontend Integration and User Flow Testing 
+**Last Updated**: August 4, 2025  
+**Current Version**: 1.2.1 (Unreleased)  
+**Next Release**: Production testing and monitoring 

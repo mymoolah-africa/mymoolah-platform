@@ -4,6 +4,42 @@ const router = express.Router();
 const kycController = require('../controllers/kycController');
 const authenticateToken = require('../middleware/auth');
 
+// Get all KYC records (for testing/admin)
+router.get('/', async (req, res) => {
+  try {
+    const { Kyc } = require('../models');
+    const kycRecords = await Kyc.findAll({
+      order: [['createdAt', 'DESC']]
+    });
+    
+    const kycData = kycRecords.map(record => ({
+      id: record.id,
+      userId: record.userId,
+      documentType: record.documentType,
+      documentNumber: record.documentNumber,
+      status: record.status,
+      submittedAt: record.submittedAt,
+      reviewedAt: record.reviewedAt,
+      reviewedBy: record.reviewedBy,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt
+    }));
+    
+    res.json({
+      success: true,
+      message: 'KYC records retrieved successfully',
+      data: kycData
+    });
+  } catch (error) {
+    console.error('❌ Error in KYC getAll route:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error',
+      details: error.message
+    });
+  }
+});
+
 // Configure multer for file uploads
 const upload = multer({
   storage: multer.memoryStorage(),

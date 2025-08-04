@@ -40,4 +40,16 @@ This file is a running log of key decisions, design choices, and important conte
 
 ---
 
+## [2025-08-02] EasyPay Voucher Integration Decision
+- **Database Structure:** Added `easyPayNumber` field to vouchers table to support EasyPay voucher system
+- **Voucher Types:** Added `easypay_pending` voucher type to voucher_types table for proper categorization
+- **EasyPay Number Generation:** Implemented proper 14-digit Luhn algorithm generation following EasyPay standards
+- **Frontend Integration:** Updated VouchersPage.tsx to handle EasyPay voucher display with proper formatting
+- **CORS Configuration:** Added `192.168.3.176:3000` to allowed origins to fix frontend-backend communication
+- **Test Data:** Created 3 EasyPay vouchers with different statuses (Pending, Active, Redeemed) for testing
+- **Documentation:** Updated all `.md` files in `/docs/` directory to reflect EasyPay voucher integration
+- **Decision:** Use existing vouchers table with `easyPayNumber` field rather than separate EasyPayVoucher model for simplicity and consistency
+
+---
+
 *Add new entries below for each session or major decision/change.*
