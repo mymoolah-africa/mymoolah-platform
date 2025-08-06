@@ -24,7 +24,11 @@ router.get('/active', authMiddleware, voucherController.listActiveVouchersForMe)
 // GET /api/v1/vouchers/balance - Get total voucher balance for authenticated user
 router.get('/balance', authMiddleware, voucherController.getVoucherBalance);
 
+// GET /api/v1/vouchers/balance-summary - Get detailed voucher balance summary for authenticated user
+router.get('/balance-summary', authMiddleware, voucherController.getVoucherBalanceSummary);
 
+// GET /api/v1/vouchers/ - List all vouchers for authenticated user (for dashboard)
+router.get('/', authMiddleware, voucherController.listAllVouchersForMe);
 
 // Get voucher by code
 router.get('/code/:voucher_code', voucherController.getVoucherByCode);
@@ -34,43 +38,5 @@ router.get('/:voucher_id/redemptions', voucherController.getVoucherRedemptions);
 
 // GET /api/v1/vouchers/redeemed - List redeemed vouchers for authenticated user
 router.get('/redeemed', authMiddleware, voucherController.listRedeemedVouchersForMe);
-
-// List all vouchers (for admin/testing)
-router.get('/', async (req, res) => {
-  try {
-    const { Voucher } = require('../models');
-    
-    const vouchers = await Voucher.findAll({
-      order: [['createdAt', 'DESC']]
-    });
-    
-    const vouchersData = vouchers.map(voucher => ({
-      id: voucher.id,
-      voucherCode: voucher.voucherCode,
-      easyPayCode: voucher.easyPayCode,
-      userId: voucher.userId,
-      voucherType: voucher.voucherType,
-      originalAmount: voucher.originalAmount,
-      balance: voucher.balance,
-      status: voucher.status,
-      expiresAt: voucher.expiresAt,
-      createdAt: voucher.createdAt,
-      updatedAt: voucher.updatedAt
-    }));
-    
-    res.json({ 
-      success: true,
-      message: 'Vouchers retrieved successfully',
-      data: { vouchers: vouchersData }
-    });
-  } catch (error) {
-    console.error('❌ Error in getAllVouchers:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'Internal server error', 
-      details: error.message 
-    });
-  }
-});
 
 module.exports = router;

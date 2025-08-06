@@ -1,16 +1,24 @@
-const { body, validationResult } = require('express-validator');
 const express = require('express');
 const router = express.Router();
 const userController = require('../controllers/userController');
 const authMiddleware = require('../middleware/auth');
 
-// GET /api/v1/users - List all users
-router.get('/', userController.getAllUsers);
+// Get all users (admin only)
+router.get('/', authMiddleware, userController.getAllUsers);
 
-// Test endpoint
-router.get('/test', (req, res) => res.json({ ok: true }));
+// Get user by ID
+router.get('/:id', authMiddleware, userController.getUserById);
 
-// GET /api/v1/users/me - Get authenticated user's profile
+// Update user
+router.put('/:id', authMiddleware, userController.updateUser);
+
+// Update user status
+router.patch('/:id/status', authMiddleware, userController.updateUserStatus);
+
+// Get user statistics
+router.get('/stats', authMiddleware, userController.getUserStats);
+
+// Get authenticated user's profile
 router.get('/me', authMiddleware, userController.getMe);
 
 module.exports = router;

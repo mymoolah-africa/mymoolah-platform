@@ -21,7 +21,8 @@ import {
   FileText,
   Clock,
   CheckCircle,
-  AlertTriangle
+  AlertTriangle,
+  ChevronRight
 } from 'lucide-react';
 
 // Transaction types for filtering
@@ -57,9 +58,10 @@ export function TransactionHistoryPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage] = useState(100); // Increased to show more transactions
   const [isExporting, setIsExporting] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
 
   // Filtered and sorted transactions based on search and filters
   const filteredTransactions = useMemo(() => {
@@ -102,33 +104,48 @@ export function TransactionHistoryPage() {
     });
   }, [transactions, searchQuery, filterType, dateRange]);
 
+  // Load transactions with pagination
+  const loadTransactions = async (page: number = 1, append: boolean = false) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const newTransactions = await fetchTransactions(page, itemsPerPage);
+      
+      if (append) {
+        setTransactions(prev => [...prev, ...newTransactions]);
+      } else {
+        setTransactions(newTransactions);
+      }
+      
+      // Update pagination state
+      setCurrentPage(page);
+      // If we got fewer transactions than requested, we've reached the end
+      setHasMore(newTransactions.length === itemsPerPage);
+      
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+      setError(error instanceof Error ? error.message : 'Failed to load transactions');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch transactions on component mount
   useEffect(() => {
-    const loadTransactions = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const data = await fetchTransactions();
-        setTransactions(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load transactions');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadTransactions();
   }, []);
 
   // Real API integration for transaction data
-  const fetchTransactions = async (): Promise<Transaction[]> => {
+  const fetchTransactions = async (page: number = 1, limit: number = 100): Promise<Transaction[]> => {
   try {
     const token = localStorage.getItem('mymoolah_token');
     if (!token) {
       throw new Error("Authentication required");
     }
 
-    const response = await fetch("/api/v1/wallets/transactions?page=1&limit=6", {
+    // Fetch transactions with pagination
+    const response = await fetch(`/api/v1/wallets/transactions?page=${page}&limit=${limit}`, {
       headers: {
         "Authorization": `Bearer ${token}`,
         "Content-Type": "application/json"
@@ -165,12 +182,35 @@ export function TransactionHistoryPage() {
     throw error;
   }
 };
-  // Format currency
+  // Format voucher numbers in groups of 4 digits
+  const formatVoucherNumber = (description: string): string => {
+    // Check if description contains a voucher number (12-16 digits)
+    const voucherMatch = description.match(/(\d{12,16})/);
+    if (voucherMatch) {
+      const voucherNumber = voucherMatch[1];
+      // Format in groups of 4 digits
+      const formattedVoucher = voucherNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
+      return description.replace(voucherNumber, formattedVoucher);
+    }
+    return description;
+  };
+
+  // Format currency with proper negative sign placement
   const formatCurrency = (amount: number): string => {
-    return `R ${amount.toLocaleString('en-ZA', { 
+    const formattedAmount = amount.toLocaleString('en-ZA', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
-    })}`;
+    });
+    
+    // For negative amounts, show R -amount (negative sign after R)
+    if (amount < 0) {
+      return `R -${Math.abs(amount).toLocaleString('en-ZA', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      })}`;
+    }
+    
+    return `R ${formattedAmount}`;
   };
 
   // Format date
@@ -202,6 +242,11 @@ export function TransactionHistoryPage() {
     setSearchQuery('');
     setFilterType('all');
     setDateRange({});
+    // Reset pagination when filters are cleared
+    setCurrentPage(1);
+    setHasMore(true);
+    // Reload transactions from the beginning
+    loadTransactions(1, false);
   };
 
   // Export transactions
@@ -471,7 +516,24 @@ export function TransactionHistoryPage() {
 
         {/* Transaction List */}
         <div className="space-y-3">
-          {filteredTransactions.length === 0 ? (
+          {loading && transactions.length === 0 ? (
+            <Card style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+              <CardContent style={{ padding: 'var(--mobile-padding)' }}>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mx-auto mb-3"></div>
+                  <p 
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: 'var(--mobile-font-base)',
+                      color: '#6b7280'
+                    }}
+                  >
+                    Loading transactions...
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : filteredTransactions.length === 0 ? (
             <Card style={{ borderRadius: 'var(--mobile-border-radius)' }}>
               <CardContent style={{ padding: 'var(--mobile-padding)' }}>
                 <div className="text-center py-8">
@@ -506,8 +568,12 @@ export function TransactionHistoryPage() {
               return (
                 <Card 
                   key={transaction.id} 
-                  className="hover:shadow-md transition-shadow"
+                  className="hover:shadow-md transition-shadow cursor-pointer"
                   style={{ borderRadius: 'var(--mobile-border-radius)' }}
+                  onClick={() => {
+                    // Future: Add transaction details modal/page
+                    console.log('Transaction details:', transaction);
+                  }}
                 >
                   <CardContent style={{ padding: 'var(--mobile-padding)' }}>
                     <div className="flex items-center justify-between">
@@ -537,7 +603,7 @@ export function TransactionHistoryPage() {
                                   marginBottom: '0.25rem'
                                 }}
                               >
-                                {transaction.description}
+                                {formatVoucherNumber(transaction.description)}
                               </p>
                               <div className="flex items-center gap-2 mb-1">
                                 <span 
@@ -563,31 +629,7 @@ export function TransactionHistoryPage() {
                                   </span>
                                 </Badge>
                               </div>
-                              <div className="flex items-center gap-2">
-                                <span 
-                                  style={{
-                                    fontFamily: 'Montserrat, sans-serif',
-                                    fontSize: 'var(--mobile-font-small)',
-                                    color: '#9ca3af'
-                                  }}
-                                >
-                                  {transaction.reference}
-                                </span>
-                                {transaction.method && (
-                                  <>
-                                    <span style={{ color: '#d1d5db' }}>•</span>
-                                    <span 
-                                      style={{
-                                        fontFamily: 'Montserrat, sans-serif',
-                                        fontSize: 'var(--mobile-font-small)',
-                                        color: '#9ca3af'
-                                      }}
-                                    >
-                                      {transaction.method}
-                                    </span>
-                                  </>
-                                )}
-                              </div>
+
                             </div>
                             
                             {/* Amount */}
@@ -601,7 +643,7 @@ export function TransactionHistoryPage() {
                                   marginBottom: '0.25rem'
                                 }}
                               >
-                                {transaction.type === 'money_in' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                                {formatCurrency(transaction.amount)}
                               </p>
                               {transaction.fee && transaction.fee > 0 && (
                                 <p 
@@ -625,6 +667,29 @@ export function TransactionHistoryPage() {
             })
           )}
         </div>
+
+        {/* Load More Button */}
+        {hasMore && filteredTransactions.length > 0 && (
+          <div className="mt-6 text-center">
+            <Button
+              onClick={() => loadTransactions(currentPage + 1, true)}
+              disabled={loading}
+              style={{
+                backgroundColor: '#16a34a',
+                color: 'white',
+                border: 'none',
+                borderRadius: 'var(--mobile-border-radius)',
+                padding: '12px 24px',
+                fontSize: 'var(--mobile-font-base)',
+                fontWeight: 'var(--font-weight-medium)',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1
+              }}
+            >
+              {loading ? 'Loading...' : 'Load More Transactions'}
+            </Button>
+          </div>
+        )}
 
         {/* Summary Footer */}
         {filteredTransactions.length > 0 && (

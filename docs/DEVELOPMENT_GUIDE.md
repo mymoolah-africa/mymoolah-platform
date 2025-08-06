@@ -78,14 +78,14 @@ const Voucher = sequelize.define('Voucher', {
   originalAmount: { type: DataTypes.DECIMAL(15, 2), allowNull: false },
   balance: { type: DataTypes.DECIMAL(15, 2), allowNull: false, defaultValue: 0 },
   status: { 
-    type: DataTypes.ENUM('pending', 'active', 'redeemed', 'expired', 'cancelled'),
+    type: DataTypes.ENUM('pending_payment', 'active', 'redeemed', 'expired', 'cancelled'),
     allowNull: false,
-    defaultValue: 'pending'
+    defaultValue: 'pending_payment'
   },
   voucherType: {
-    type: DataTypes.ENUM('standard', 'premium', 'business', 'corporate', 'student', 'senior', 'easypay_pending', 'easypay_active'),
+    type: DataTypes.ENUM('mm_voucher', 'easypay_voucher', 'third_party_voucher'),
     allowNull: false,
-    defaultValue: 'standard'
+    defaultValue: 'mm_voucher'
   },
   expiresAt: { type: DataTypes.DATE, allowNull: true },
   redemptionCount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
@@ -96,11 +96,76 @@ const Voucher = sequelize.define('Voucher', {
 });
 ```
 
+### **Voucher Display Logic (Updated August 5, 2025)**
+```javascript
+// Correct business logic: All vouchers are MMVouchers
+const formatVoucherCodeForDisplay = (voucher) => {
+  if (voucher.type === 'mm_voucher') {
+    // Regular MMVoucher: 16 digits in groups of 4
+    return { mainCode: '1234 5678 9012 3456' };
+  } else if (voucher.type === 'easypay_voucher') {
+    if (voucher.status === 'pending_payment') {
+      // Pending: Show only EasyPay number
+      return { mainCode: '9 1234 1385 1948 7' };
+    } else if (voucher.status === 'active') {
+      // Active: Show MMVoucher as main, EasyPay as sub
+      return { 
+        mainCode: '1093 2371 6105 6632',
+        subCode: '9 1234 1385 1948 7'
+      };
+    }
+  }
+};
+```
+
+### **Currency Formatting Standards (Updated August 5, 2025)**
+```javascript
+// Banking standards: Negative sign after currency
+const formatCurrency = (amount) => {
+  if (amount < 0) {
+    return `R -${Math.abs(amount).toLocaleString('en-ZA', { 
+      minimumFractionDigits: 2 
+    })}`;
+  }
+  return `R ${amount.toLocaleString('en-ZA', { 
+    minimumFractionDigits: 2 
+  })}`;
+};
+
+// Examples:
+// Credits: R 900.00 (green, no + sign)
+// Debits: R -500.00 (red, negative after currency)
+```
+
+### **Transaction Display Standards**
+```javascript
+// Voucher transaction mapping
+const getTransactionDisplay = (transaction) => {
+  if (transaction.description.includes('voucher')) {
+    return {
+      icon: <Gift />,
+      color: transaction.type === 'received' ? 'green' : 'red',
+      amount: formatCurrency(transaction.amount)
+    };
+  }
+};
+
+// Transaction type mapping
+const mapTransactionType = (backendType, description) => {
+  if (backendType === 'deposit') return 'received';
+  if (backendType === 'payment') {
+    if (description.includes('voucher purchase')) return 'purchase';
+    if (description.includes('voucher redemption')) return 'received';
+  }
+  return 'sent';
+};
+```
+
 ### **Status Logic (Frontend Mapping)**
 ```javascript
 // Consistent status mapping across all components
 const mapVoucherStatus = (voucher) => {
-  if (voucher.status === 'pending') {
+  if (voucher.status === 'pending_payment') {
     return 'pending_payment';
   } else if (voucher.status === 'expired') {
     return 'expired';
@@ -349,3 +414,13 @@ exports.issueVoucher = async (req, res) => {
 **Last Updated**: August 4, 2025  
 **Version**: 1.2.1  
 **Status**: Production Ready 
+
+## 🛑 Critical Process Policy: Incremental Cleanup & Testing
+
+- All code cleanup (especially deletions) must be performed in small, incremental steps.
+- After each small change, comprehensive tests must be run to ensure nothing is broken.
+- No bulk deletions or mass cleanups without explicit, step-by-step review and confirmation.
+- All testing/debugging scripts must be backed up or archived before removal.
+- A clear, restorable backup must be created before any destructive operation.
+- Every cleanup step must be documented in the changelog and session notes.
+- If in doubt, always err on the side of caution and ask for explicit user confirmation. 

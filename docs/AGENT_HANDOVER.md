@@ -1,42 +1,48 @@
 # MyMoolah Platform - Agent Handover Documentation
 
-## **🔄 Latest Session Updates (August 4, 2025)**
+## **🔄 Latest Session Updates (August 5, 2025)**
 
 ### **Major System Improvements Completed:**
 
-#### **Voucher Status Logic Optimization**
-- **Fixed Status Logic**: Partially redeemed vouchers now show as "Active" (can still be used), fully redeemed vouchers show as "Redeemed" (balance = 0)
-- **Database Updates**: Updated 4 vouchers (IDs 32, 33, 34, 35) from partially redeemed to fully redeemed
-- **Frontend Consistency**: All voucher displays now use consistent status mapping
+#### **Voucher Display Logic Fix**
+- **Corrected Business Logic**: All vouchers are MMVouchers (16 digits), EasyPay is a purchase type
+- **Status-Based Display**: Pending shows EasyPay number, Active shows MMVoucher + EasyPay
+- **Number Formatting**: All voucher numbers display in groups of 4 digits
+- **Process Clarity**: Create EasyPay → Settle → Activate MMVoucher
+- **MMVoucher Priority**: Active vouchers show MMVoucher code as main display
 
-#### **API Route Optimization**
-- **Removed Duplicate Routes**: Eliminated conflicting `/redeemed` vs `/:voucher_id/redemptions` routes
-- **Single Data Source**: All vouchers now fetched from `/api/v1/vouchers/` endpoint
-- **Removed Redundant Endpoints**: Deleted separate EasyPay voucher endpoints (functionality integrated into main voucher system)
-- **Clean Route Structure**: No more duplicate or conflicting API calls
+#### **Currency Formatting Standardization**
+- **Banking Standards**: Consistent `R -500.00` format (negative after currency)
+- **Credit Display**: `R 900.00` (no + sign, green color)
+- **Debit Display**: `R -500.00` (negative after currency, red color)
+- **Cross-Page Consistency**: TransactionHistoryPage, DashboardPage, Money Out summary
+- **Professional Standards**: Award-winning wallet format
 
-#### **Frontend Display Fixes**
-- **Consistent Partial Redemption Display**: All partial redemptions show "R[balance] of R[original]" format
-- **Font Size Consistency**: 16-digit MM PIN on EasyPay vouchers now matches normal MyMoolah voucher size (16px)
-- **Status Filter Fix**: Fixed status filtering logic to work correctly without duplicates
-- **Dashboard Terminology**: Changed "Open Vouchers" to "Active Vouchers" for consistency
+#### **Transaction History Improvements**
+- **Cleaner Cards**: Removed transaction ID and payment method clutter
+- **Enhanced Pagination**: 100 transactions default, "Load More" button
+- **Mobile Optimization**: More transactions visible, professional appearance
+- **Future-Ready**: Cursor pointer for transaction details modal
 
-#### **Database Cleanup**
-- **Removed Malformed Records**: Deleted voucher with incorrect "EP-1754125987523-PENDING" format
-- **Verified Data Integrity**: Confirmed no duplicate or malformed voucher records remain
-- **Balance Corrections**: Updated voucher balances to reflect proper partial vs full redemptions
+#### **Frontend UX Enhancements**
+- **Voucher Transaction Icons**: Gift icon for all voucher transactions
+- **Correct Colors**: Green for voucher redemptions, red for purchases
+- **Transaction Type Mapping**: Proper backend-to-frontend type conversion
+- **Professional Standards**: Consistent with Apple Pay, Google Pay, major banks
 
-#### **System Architecture Improvements**
-- **Single Table Design**: All vouchers (MM and EasyPay) now use unified `vouchers` table
-- **Optimized Performance**: Reduced API calls and eliminated data duplication
-- **Consistent Logic**: Dashboard and VouchersPage now use identical calculation methods
+#### **Technical Fixes**
+- **Luhn Algorithm**: Corrected EasyPay number generation per API specification
+- **Database Corrections**: Regenerated invalid EasyPay numbers
+- **Voucher Redemption**: Fixed status update logic and balance calculations
+- **Data Integrity**: Resolved voucher status mismatches
 
 ### **Current System Status:**
 - **Active Vouchers**: 55 vouchers, R17,773.00 total value
 - **Redeemed Vouchers**: 5 fully redeemed vouchers (balance = 0)
 - **Pending Vouchers**: 13 pending EasyPay vouchers
 - **API Endpoints**: Clean, conflict-free routing
-- **Frontend**: Consistent display across all pages
+- **Frontend**: Professional banking app appearance
+- **Currency Standards**: Consistent across all pages
 
 ---
 
@@ -232,3 +238,10 @@ CREATE TABLE vouchers (
 **Last Updated**: August 4, 2025  
 **Session Status**: Complete - All major issues resolved  
 **Next Session**: Ready for production testing and monitoring 
+
+## 🛑 Critical Incident & Process Improvement (August 5, 2025)
+
+- During a cleanup operation, crucial testing/debugging scripts were removed in bulk, resulting in loss of valuable work and hours of restoration effort.
+- New policy: All code cleanup must be incremental, with comprehensive testing after each change, and backups/archives created before any removal.
+- No bulk deletions or mass cleanups without explicit, step-by-step review and confirmation.
+- This policy is now in effect for all future sessions and agents. 

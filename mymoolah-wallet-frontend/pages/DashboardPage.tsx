@@ -11,7 +11,8 @@ import {
   Phone,
   ArrowUpRight,
   Coffee,
-  Car
+  Car,
+  Gift
 } from 'lucide-react';
 
 // Format currency function
@@ -19,10 +20,21 @@ function formatCurrency(amount: number | undefined): string {
   if (!amount && amount !== 0) {
     return 'R 0.00';
   }
-  return `R ${amount.toLocaleString('en-ZA', {
+  
+  const formattedAmount = amount.toLocaleString('en-ZA', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2
-  })}`;
+  });
+  
+  // For negative amounts, show R -amount (negative sign after R)
+  if (amount < 0) {
+    return `R -${Math.abs(amount).toLocaleString('en-ZA', { 
+      minimumFractionDigits: 2, 
+      maximumFractionDigits: 2 
+    })}`;
+  }
+  
+  return `R ${formattedAmount}`;
 }
 
 // Format date function for transactions
@@ -40,6 +52,12 @@ function formatTransactionDate(date: Date): string {
 // Get transaction icon based on transaction type and description
 function getTransactionIcon(transaction: Transaction) {
   const iconStyle = { width: '20px', height: '20px' };
+  
+  // Check for voucher transactions first
+  if (transaction.description.toLowerCase().includes('voucher')) {
+    // Use a proper voucher/gift icon
+    return <Gift style={iconStyle} />;
+  }
   
   switch (transaction.type) {
     case 'received':
@@ -105,6 +123,19 @@ function getGreetingName(fullName: string | undefined): string {
   return formattedName;
 }
 
+// Format voucher numbers in groups of 4 digits
+function formatVoucherNumber(description: string): string {
+  // Check if description contains a voucher number (12-16 digits)
+  const voucherMatch = description.match(/(\d{12,16})/);
+  if (voucherMatch) {
+    const voucherNumber = voucherMatch[1];
+    // Format in groups of 4 digits
+    const formattedVoucher = voucherNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
+    return description.replace(voucherNumber, formattedVoucher);
+  }
+  return description;
+}
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -145,20 +176,32 @@ export function DashboardPage() {
         if (!vouchersResponse.ok) throw new Error('Failed to fetch vouchers');
         const vouchersData = await vouchersResponse.json();
 
+        // Fetch voucher balance summary for proper reconciliation
+        const voucherBalanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/balance-summary`, { headers });
+        if (!voucherBalanceResponse.ok) throw new Error('Failed to fetch voucher balance summary');
+        const voucherBalanceData = await voucherBalanceResponse.json();
+
         // Update state with real data
         const balanceDataFromAPI = balanceData.data;
         setWalletBalance(balanceDataFromAPI.balance || 0);
         
-        // Calculate active vouchers (same logic as VouchersPage)
-        const allVouchers = vouchersData.data?.vouchers || [];
-        const activeVouchers = allVouchers.filter((v: any) => {
-          if (v.status === 'active') return true;
-          if (v.status === 'redeemed' && parseFloat(v.balance || 0) > 0) return true; // Partially redeemed = active
-          return false;
-        });
-        
-        setOpenVouchersCount(activeVouchers.length);
-        setOpenVouchersValue(activeVouchers.reduce((sum: number, v: any) => sum + parseFloat(v.balance || 0), 0));
+        // Use the dedicated voucher balance summary API for proper reconciliation
+        if (voucherBalanceData.success && voucherBalanceData.data) {
+          const summary = voucherBalanceData.data;
+          setOpenVouchersCount(summary.active.count);
+          setOpenVouchersValue(parseFloat(summary.active.value));
+        } else {
+          // Fallback to manual calculation if API fails
+          const allVouchers = vouchersData.data?.vouchers || [];
+          const activeVouchers = allVouchers.filter((v: any) => {
+            if (v.status === 'active') return true;
+            if (v.status === 'redeemed' && parseFloat(v.balance || 0) > 0) return true; // Partially redeemed = active
+            return false;
+          });
+          
+          setOpenVouchersCount(activeVouchers.length);
+          setOpenVouchersValue(activeVouchers.reduce((sum: number, v: any) => sum + parseFloat(v.balance || 0), 0));
+        }
         
         // Transform transactions to match frontend format
         const transformedTransactions: Transaction[] = (transactionsData.data?.transactions || []).map((tx: any) => {
@@ -166,13 +209,21 @@ export function DashboardPage() {
           let type: 'sent' | 'received' | 'purchase' | 'payment';
           let amount: number;
           
-          if (tx.type === 'credit') {
+          // Handle backend transaction types correctly
+          if (tx.type === 'deposit') {
+            // Deposit transactions are credits (increase wallet balance)
             type = 'received';
             amount = tx.amount;
-          } else if (tx.type === 'debit') {
-            // For debit transactions, determine if it's a purchase or payment based on description
+          } else if (tx.type === 'payment') {
+            // Payment transactions are debits (decrease wallet balance)
             const desc = tx.description.toLowerCase();
-            if (desc.includes('woolworths') || desc.includes('grocery') || desc.includes('food') || 
+            if (desc.includes('voucher purchase')) {
+              type = 'purchase';
+            } else if (desc.includes('voucher redemption')) {
+              // Voucher redemptions should be credits, not debits
+              type = 'received';
+              amount = tx.amount;
+            } else if (desc.includes('woolworths') || desc.includes('grocery') || desc.includes('food') || 
                 desc.includes('supermarket') || desc.includes('restaurant') || desc.includes('cafe') ||
                 desc.includes('coffee') || desc.includes('shopping')) {
               type = 'purchase';
@@ -186,6 +237,7 @@ export function DashboardPage() {
             }
             amount = -tx.amount;
           } else {
+            // Default to payment for other types
             type = 'payment';
             amount = -tx.amount;
           }
@@ -197,7 +249,7 @@ export function DashboardPage() {
           return {
             id: tx.id || `tx_${tx.transactionId}`,
             type,
-            description,
+            description: formatVoucherNumber(description),
             amount,
             date,
             category,
@@ -249,6 +301,15 @@ export function DashboardPage() {
 
   // Get transaction icon background color
   const getIconBackgroundColor = (transaction: Transaction) => {
+    // Check for voucher transactions first
+    if (transaction.description.toLowerCase().includes('voucher')) {
+      if (transaction.type === 'received') {
+        return '#f0fdf4'; // Light green background for voucher redemptions
+      } else {
+        return '#fef3f2'; // Light red background for voucher purchases
+      }
+    }
+    
     switch (transaction.type) {
       case 'received':
         return '#f0fdf4'; // Light green background
@@ -265,6 +326,15 @@ export function DashboardPage() {
 
   // Get transaction icon color
   const getIconColor = (transaction: Transaction) => {
+    // Check for voucher transactions first
+    if (transaction.description.toLowerCase().includes('voucher')) {
+      if (transaction.type === 'received') {
+        return '#16a34a'; // Green for voucher redemptions
+      } else {
+        return '#dc2626'; // Red for voucher purchases
+      }
+    }
+    
     switch (transaction.type) {
       case 'received':
         return '#16a34a'; // Green
@@ -620,7 +690,7 @@ export function DashboardPage() {
                           display: 'block'
                         }}
                       >
-                        {transaction.description}
+                        {formatVoucherNumber(transaction.description)}
                       </p>
                       <p 
                         style={{
@@ -658,7 +728,7 @@ export function DashboardPage() {
                         lineHeight: '1.2'
                       }}
                     >
-                      {transaction.amount < 0 ? '-' : ''}{formatCurrency(Math.abs(transaction.amount))}
+                      {formatCurrency(transaction.amount)}
                     </span>
                   </div>
                 </div>

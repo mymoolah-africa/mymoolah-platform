@@ -1,14 +1,15 @@
 import { Icons } from "./Icons";
+import { useNavigate } from 'react-router-dom';
 
 export function BalanceCards() {
+  const navigate = useNavigate();
+
   const handleWalletClick = () => {
-    // Navigate to wallet transaction history page
-    console.log("Navigate to wallet transaction history");
+    navigate('/transaction-history');
   };
 
   const handleVouchersClick = () => {
-    // Navigate to voucher history page
-    console.log("Navigate to voucher history page");
+    navigate('/vouchers');
   };
 
   return (

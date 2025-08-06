@@ -25,6 +25,38 @@ Content-Type: application/json
 
 ## **🎫 Voucher Management API**
 
+### **Voucher Display Logic (Updated August 5, 2025)**
+
+**Business Rules:**
+- **All vouchers are MMVouchers** (16 digits)
+- **EasyPay is a "type" of MMVoucher** (different purchase method)
+- **Process**: Create EasyPay → Settle → Activate MMVoucher
+- **MMVouchers only exist after settlement** (cannot be "Pending")
+
+**Display Logic:**
+```javascript
+// Pending EasyPay Voucher
+{
+  "status": "pending_payment",
+  "easyPayCode": "9 1234 1385 1948 7",  // Only EasyPay shown
+  "voucherCode": null
+}
+
+// Active EasyPay Voucher  
+{
+  "status": "active",
+  "voucherCode": "1093 2371 6105 6632",  // MMVoucher as main
+  "easyPayCode": "9 1234 1385 1948 7"    // EasyPay as sub
+}
+
+// Regular MMVoucher
+{
+  "status": "active", 
+  "voucherCode": "1234 5678 9012 3456",  // 16-digit MMVoucher
+  "easyPayCode": null
+}
+```
+
 ### **Get All Vouchers**
 ```http
 GET /api/v1/vouchers/

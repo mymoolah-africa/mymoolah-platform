@@ -1,7 +1,14 @@
 {
   "development": {
     "dialect": "sqlite",
-    "storage": "./data/mymoolah.db"
+    "storage": "./data/mymoolah.db",
+    "pool": {
+      "max": 5,
+      "min": 0,
+      "acquire": 30000,
+      "idle": 10000
+    },
+    "logging": false
   },
   "test": {
     "dialect": "sqlite",

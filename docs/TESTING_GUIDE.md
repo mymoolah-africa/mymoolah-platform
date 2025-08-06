@@ -2,8 +2,8 @@
 
 ## **🧪 Testing Strategy Overview**
 
-**Last Updated**: August 4, 2025  
-**Testing Phase**: Production Ready - Comprehensive Testing Complete  
+**Last Updated**: August 5, 2025  
+**Testing Phase**: Production Ready - Voucher Display & Currency Standards Complete  
 **Next Phase**: Production Monitoring & User Acceptance Testing
 
 ---
@@ -15,18 +15,22 @@
 - **✅ API Endpoint Validation**: All voucher operations tested
 - **✅ Database Operations**: Sequelize model operations verified
 - **✅ Input Validation**: Amount ranges, voucher codes, status mapping
+- **✅ Voucher Display Logic**: Correct MMVoucher vs EasyPay display
+- **✅ Currency Formatting**: Banking standards implementation
 
 ### **Integration Testing**
 - **✅ Frontend-Backend Integration**: VouchersPage ↔ API endpoints
 - **✅ Database Integration**: Single table design working correctly
 - **✅ Authentication Flow**: JWT token validation and refresh
 - **✅ Payment Integration**: Flash and MobileMart services
+- **✅ Transaction Display**: Proper voucher transaction mapping
 
 ### **System Testing**
 - **✅ Voucher Lifecycle**: Create → Activate → Redeem → Expire
 - **✅ EasyPay Integration**: 14-digit number generation and settlement
 - **✅ Status Filtering**: Active, Pending, Redeemed filters working
 - **✅ Search Functionality**: Voucher code and number search
+- **✅ Transaction History**: Clean display and pagination
 
 ---
 
@@ -72,6 +76,146 @@ SELECT COUNT(*) FROM vouchers WHERE balance > 0;
 ---
 
 ## **📋 Test Cases**
+
+### **1. Voucher Display Logic Testing (Updated August 5, 2025)**
+
+#### **Test Case: Pending EasyPay Voucher**
+```javascript
+// Test data
+const voucher = {
+  type: 'easypay_voucher',
+  status: 'pending_payment',
+  easyPayCode: '91234388661929',
+  voucherCode: null
+};
+
+// Expected result: Show only EasyPay number
+const result = formatVoucherCodeForDisplay(voucher);
+expect(result.mainCode).toBe('9 1234 3886 6129 2');
+expect(result.subCode).toBeUndefined();
+```
+
+#### **Test Case: Active EasyPay Voucher**
+```javascript
+// Test data
+const voucher = {
+  type: 'easypay_voucher',
+  status: 'active',
+  easyPayCode: '91234388661929',
+  voucherCode: '1093237161056632'
+};
+
+// Expected result: Show MMVoucher as main, EasyPay as sub
+const result = formatVoucherCodeForDisplay(voucher);
+expect(result.mainCode).toBe('1093 2371 6105 6632');
+expect(result.subCode).toBe('9 1234 3886 6129 2');
+```
+
+#### **Test Case: Regular MMVoucher**
+```javascript
+// Test data
+const voucher = {
+  type: 'mm_voucher',
+  status: 'active',
+  voucherCode: '1234567890123456',
+  easyPayCode: null
+};
+
+// Expected result: Show only MMVoucher code
+const result = formatVoucherCodeForDisplay(voucher);
+expect(result.mainCode).toBe('1234 5678 9012 3456');
+expect(result.subCode).toBeUndefined();
+```
+
+### **2. Currency Formatting Testing (Updated August 5, 2025)**
+
+#### **Test Case: Credit Amounts**
+```javascript
+// Test data
+const amount = 900.00;
+
+// Expected result: R 900.00 (no + sign)
+const result = formatCurrency(amount);
+expect(result).toBe('R 900.00');
+```
+
+#### **Test Case: Debit Amounts**
+```javascript
+// Test data
+const amount = -500.00;
+
+// Expected result: R -500.00 (negative after currency)
+const result = formatCurrency(amount);
+expect(result).toBe('R -500.00');
+```
+
+#### **Test Case: Zero Amount**
+```javascript
+// Test data
+const amount = 0;
+
+// Expected result: R 0.00
+const result = formatCurrency(amount);
+expect(result).toBe('R 0.00');
+```
+
+### **3. Transaction Display Testing**
+
+#### **Test Case: Voucher Redemption Transaction**
+```javascript
+// Test data
+const transaction = {
+  type: 'payment',
+  description: 'Voucher redemption: 1093237161056632',
+  amount: 250.00
+};
+
+// Expected result: Green credit with Gift icon
+const result = getTransactionDisplay(transaction);
+expect(result.type).toBe('received');
+expect(result.icon).toBe('Gift');
+expect(result.color).toBe('green');
+```
+
+#### **Test Case: Voucher Purchase Transaction**
+```javascript
+// Test data
+const transaction = {
+  type: 'payment',
+  description: 'Voucher purchase: 1234567890123456',
+  amount: -500.00
+};
+
+// Expected result: Red debit with Gift icon
+const result = getTransactionDisplay(transaction);
+expect(result.type).toBe('purchase');
+expect(result.icon).toBe('Gift');
+expect(result.color).toBe('red');
+```
+
+### **4. Transaction History Testing**
+
+#### **Test Case: Clean Transaction Cards**
+```javascript
+// Verify transaction cards don't show:
+// - Transaction ID (TXN-1754426529429-3rw6jy970)
+// - Payment method (Bank Transfer)
+// But do show:
+// - Amount (R 900.00)
+// - Description (Voucher redemption)
+// - Date (Today, 22:42)
+// - Status (completed)
+// - Icon (Gift)
+```
+
+#### **Test Case: Pagination**
+```javascript
+// Verify:
+// - Default limit is 100 transactions
+// - "Load More" button appears when hasMore = true
+// - Pagination resets on filter clear
+// - Loading indicator shows during fetch
+```
 
 ### **1. Voucher Status Logic Testing**
 
@@ -365,3 +509,13 @@ curl -H "Authorization: Bearer <token>" \
 **Testing Status**: ✅ Production Ready  
 **Next Review**: August 11, 2025  
 **Test Environment**: Development (Port 3001/3002) 
+
+## 🛑 Critical Testing Policy: Incremental Cleanup & Testing
+
+- All code cleanup (especially deletions) must be performed in small, incremental steps.
+- After each small change, comprehensive tests must be run to ensure nothing is broken.
+- No bulk deletions or mass cleanups without explicit, step-by-step review and confirmation.
+- All testing/debugging scripts must be backed up or archived before removal.
+- A clear, restorable backup must be created before any destructive operation.
+- Every cleanup step must be documented in the changelog and session notes.
+- If in doubt, always err on the side of caution and ask for explicit user confirmation. 

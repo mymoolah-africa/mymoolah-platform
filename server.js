@@ -15,7 +15,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { body, validationResult } = require('express-validator');
+const { body } = require('express-validator');
 const { secureLogging, secureErrorLogging } = require('./middleware/secureLogging');
 const app = express();
 
@@ -225,132 +225,39 @@ if (mobilemartRoutesLoaded) {
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
-    status: 'OK',
+    status: 'healthy',
     timestamp: new Date().toISOString(),
-    service: 'MyMoolah Wallet API',
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
     version: '1.0.0'
   });
 });
 
-// Test endpoint
-app.get('/test', (req, res) => {
-  res.json({
-    message: 'MyMoolah Wallet API is running!',
-    endpoints: {
-      auth: '/api/v1/auth',
-      wallets: '/api/v1/wallets',
-      transactions: '/api/v1/transactions',
-      users: '/api/v1/users',
-      kyc: '/api/v1/kyc',
-      sendMoney: '/api/v1/send-money',
-      support: '/api/v1/support',
-      notifications: '/api/v1/notifications',
-      vouchers: '/api/v1/vouchers',
-      voucherTypes: '/api/v1/voucher-types',
-      vas: '/api/v1/vas',
-      merchants: '/api/v1/merchants',
-      serviceProviders: '/api/v1/service-providers',
-      ...(flashRoutesLoaded ? { flash: '/api/v1/flash' } : {}),
-      ...(mobilemartRoutesLoaded ? { mobilemart: '/api/v1/mobilemart' } : {}),
-      health: '/health',
-      test: '/test'
-    }
-  });
-});
-
-// Root endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'MyMoolah Wallet API',
-    version: '1.0.0',
-    endpoints: {
-      auth: '/api/v1/auth',
-      wallets: '/api/v1/wallets',
-      transactions: '/api/v1/transactions',
-      users: '/api/v1/users',
-      kyc: '/api/v1/kyc',
-      sendMoney: '/api/v1/send-money',
-      support: '/api/v1/support',
-      notifications: '/api/v1/notifications',
-      vouchers: '/api/v1/vouchers',
-      voucherTypes: '/api/v1/voucher-types',
-      vas: '/api/v1/vas',
-      merchants: '/api/v1/merchants',
-      serviceProviders: '/api/v1/service-providers',
-      ...(flashRoutesLoaded ? { flash: '/api/v1/flash' } : {}),
-      ...(mobilemartRoutesLoaded ? { mobilemart: '/api/v1/mobilemart' } : {}),
-      health: '/health',
-      test: '/test'
-    }
-  });
-});
-
-// Debug endpoint
-app.post('/debug', (req, res) => {
-  console.log("Debug endpoint hit", req.body);
-  res.json({ 
-    message: "Debug route works!",
-    receivedData: req.body
-  });
-});
-
-// Error handling middleware
-app.use(secureErrorLogging);
-
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    success: false,
-    message: 'Endpoint not found',
-    availableEndpoints: {
-      auth: '/api/v1/auth',
-      wallets: '/api/v1/wallets',
-      transactions: '/api/v1/transactions',
-      users: '/api/v1/users',
-      kyc: '/api/v1/kyc',
-      support: '/api/v1/support',
-      notifications: '/api/v1/notifications',
-      vouchers: '/api/v1/vouchers',
-      voucherTypes: '/api/v1/voucher-types',
-      vas: '/api/v1/vas',
-      merchants: '/api/v1/merchants',
-      serviceProviders: '/api/v1/service-providers',
-      ...(flashRoutesLoaded ? { flash: '/api/v1/flash' } : {}),
-      ...(mobilemartRoutesLoaded ? { mobilemart: '/api/v1/mobilemart' } : {}),
-      health: '/health',
-      test: '/test'
-    }
-  });
-});
-
 // Start server
-if (require.main === module) {
+app.listen(port, () => {
   console.log("Starting server...");
-  app.listen(port, () => {
-    console.log(`🚀 MyMoolah Wallet API server running on port ${port}`);
-    console.log(`📡 API Base URL: http://localhost:${port}/api/v1`);
-    console.log(`🔗 Health Check: http://localhost:${port}/health`);
-    console.log(`🧪 Test Endpoint: http://localhost:${port}/test`);
-    console.log(`📋 Available endpoints:`);
-    console.log(`   - Auth: /api/v1/auth`);
-    console.log(`   - Wallets: /api/v1/wallets`);
-    console.log(`   - Transactions: /api/v1/transactions`);
-    console.log(`   - Users: /api/v1/users`);
-    console.log(`   - KYC: /api/v1/kyc`);
-    console.log(`   - Support: /api/v1/support`);
-    console.log(`   - Notifications: /api/v1/notifications`);
-    console.log(`   - Vouchers: /api/v1/vouchers`);
-    console.log(`   - Voucher Types: /api/v1/voucher-types`);
-    console.log(`   - VAS: /api/v1/vas`);
-    console.log(`   - Merchants: /api/v1/merchants`);
-    console.log(`   - Service Providers: /api/v1/service-providers`);
-    if (flashRoutesLoaded) {
-      console.log(`   - Flash: /api/v1/flash`);
-    }
-    if (mobilemartRoutesLoaded) {
-      console.log(`   - MobileMart: /api/v1/mobilemart`);
-    }
-  });
-}
+  console.log(`🚀 MyMoolah Wallet API server running on port ${port}`);
+  console.log(`📡 API Base URL: http://localhost:${port}/api/v1`);
+  console.log(`🔗 Health Check: http://localhost:${port}/health`);
+  console.log(`📋 Available endpoints:`);
+  console.log(`   - Auth: /api/v1/auth`);
+  console.log(`   - Wallets: /api/v1/wallets`);
+  console.log(`   - Transactions: /api/v1/transactions`);
+  console.log(`   - Users: /api/v1/users`);
+  console.log(`   - KYC: /api/v1/kyc`);
+  console.log(`   - Support: /api/v1/support`);
+  console.log(`   - Notifications: /api/v1/notifications`);
+  console.log(`   - Vouchers: /api/v1/vouchers`);
+  console.log(`   - Voucher Types: /api/v1/voucher-types`);
+  console.log(`   - VAS: /api/v1/vas`);
+  console.log(`   - Merchants: /api/v1/merchants`);
+  console.log(`   - Service Providers: /api/v1/service-providers`);
+  if (flashRoutesLoaded) {
+    console.log(`   - Flash: /api/v1/flash`);
+  }
+  if (mobilemartRoutesLoaded) {
+    console.log(`   - MobileMart: /api/v1/mobilemart`);
+  }
+});
 
 module.exports = app; // Export the app for testing

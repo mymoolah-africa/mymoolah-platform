@@ -469,13 +469,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
         }
 
-        console.log('🚀 Sending registration to backend:', {
-          ...backendPayload,
-          password: '[REDACTED]' // Don't log password
-        });
-
         try {
-          const response = await fetch('/api/v1/auth/register', {
+          const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/auth/register`, {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
@@ -484,17 +479,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             body: JSON.stringify(backendPayload)
           });
 
-          console.log('📡 Backend response status:', response.status);
-          console.log('📡 Backend response headers:', response.headers.get('content-type'));
-
           if (response.ok) {
             const responseData = await safeJsonParse(response);
             if (responseData && responseData.user && responseData.token) {
-              console.log('✅ Registration successful:', {
-                userId: responseData.user?.id,
-                identifier: responseData.user?.identifier || responseData.user?.phoneNumber
-              });
-
               localStorage.setItem('mymoolah_token', responseData.token);
               setUser({ 
                 ...responseData.user, 

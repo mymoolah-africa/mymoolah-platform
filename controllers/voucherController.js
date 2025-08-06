@@ -1,17 +1,18 @@
-const { Voucher, VoucherType, User } = require('../models');
+const { Voucher, VoucherType, User, sequelize } = require('../models');
+const { Op } = require('sequelize');
 
 // Generate EasyPay number using Luhn algorithm
 const generateEasyPayNumber = () => {
   const EASYPAY_PREFIX = '9';
   const RECEIVER_ID = '1234'; // MyMoolah's EasyPay receiver ID
   
-  // Generate random account number (8 digits)
+  // Generate random account number (8 digits) - fixed length for Receiver 1234
   const accountNumber = Math.floor(Math.random() * 100000000).toString().padStart(8, '0');
   
-  // Combine receiver ID and account number
+  // Combine receiver ID and account number (excluding the leading 9)
   const baseDigits = RECEIVER_ID + accountNumber;
   
-  // Calculate check digit using Luhn algorithm
+  // Calculate check digit using Luhn algorithm on baseDigits
   const checkDigit = generateLuhnCheckDigit(baseDigits);
   
   // Return complete EasyPay number (14 digits)
@@ -20,31 +21,40 @@ const generateEasyPayNumber = () => {
 
 const generateLuhnCheckDigit = (digits) => {
   let sum = 0;
-  let isEven = false;
   
-  // Process from right to left
+  // Process from right to left (last digit to first)
   for (let i = digits.length - 1; i >= 0; i--) {
     let digit = parseInt(digits[i]);
     
-    if (isEven) {
+    // Check if position is odd (from right to left, 1-based indexing)
+    const positionFromRight = digits.length - i;
+    if (positionFromRight % 2 === 1) {
+      // Odd position: double the digit
       digit *= 2;
       if (digit > 9) {
-        digit -= 9;
+        digit -= 9; // Same as adding the digits: 16 -> 1+6 = 7, so 16-9=7
       }
     }
+    // Even position: use digit as is
     
     sum += digit;
-    isEven = !isEven;
   }
   
+  // Check digit is the number needed to make sum a multiple of 10
   return (10 - (sum % 10)) % 10;
 };
 
 // Generate MM voucher code
 const generateMMVoucherCode = () => {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8);
-  return `MMVOUCHER_${timestamp}_${random}`;
+  // Generate a 16-digit numeric code
+  const timestamp = Date.now().toString().slice(-8); // Last 8 digits of timestamp
+  const random = Math.floor(Math.random() * 100000000).toString().padStart(8, '0'); // 8 random digits
+  return timestamp + random; // 16-digit numeric code
+};
+
+// Clean voucher code by removing spaces and non-digits
+const cleanVoucherCode = (code) => {
+  return code.replace(/\s/g, '').replace(/\D/g, '');
 };
 
 // Issue a new voucher
@@ -52,35 +62,90 @@ exports.issueVoucher = async (req, res) => {
   try {
     const voucherData = req.body;
     const amount = Number(voucherData.original_amount);
+    const userId = req.user?.id || voucherData.user_id;
+    
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
     
     // Validate minimum and maximum value
     if (isNaN(amount) || amount < 5.00 || amount > 4000.00) {
       return res.status(400).json({ error: 'Voucher value must be between 5.00 and 4000.00' });
     }
     
-    // Generate voucher code
-    const voucherCode = generateMMVoucherCode();
+    // Get user's wallet
+    const { Wallet, Transaction } = require('../models');
+    const wallet = await Wallet.findOne({ where: { userId: userId } });
     
-    // Create voucher
-    const voucher = await Voucher.create({
-      voucherCode,
-      originalAmount: amount,
-      balance: amount,
-      status: 'active',
-      voucherType: 'standard',
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
-    });
+    if (!wallet) {
+      return res.status(404).json({ error: 'User wallet not found' });
+    }
     
-    res.status(201).json({
-      success: true,
-      message: 'Voucher issued successfully',
-      data: {
-        voucher_code: voucher.voucherCode,
-        original_amount: voucher.originalAmount,
-        balance: voucher.balance,
-        status: voucher.status
-      }
-    });
+    if (wallet.status !== 'active') {
+      return res.status(400).json({ error: 'Wallet is not active' });
+    }
+    
+    // Check if user has sufficient balance
+    if (wallet.balance < amount) {
+      return res.status(400).json({ error: 'Insufficient wallet balance' });
+    }
+    
+    try {
+      // Generate voucher code
+      const voucherCode = generateMMVoucherCode();
+      
+      // Create voucher
+      const voucher = await Voucher.create({
+        voucherCode,
+        userId: userId,
+        originalAmount: amount,
+        balance: amount,
+        status: 'active',
+        voucherType: 'standard',
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+      });
+      
+      // Debit user's wallet
+      await wallet.debit(amount, 'voucher_purchase');
+      
+      // Create transaction record
+      const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      await Transaction.create({
+        transactionId: transactionId,
+        userId: userId,
+        walletId: wallet.walletId,
+        amount: amount,
+        type: 'payment',
+        status: 'completed',
+        description: `Voucher purchase: ${voucherCode}`,
+        currency: 'ZAR',
+        fee: 0.00,
+        metadata: {
+          voucherId: voucher.id,
+          voucherCode: voucherCode,
+          voucherType: 'standard',
+          purchaseType: 'voucher_issue'
+        }
+      });
+      
+      res.status(201).json({
+        success: true,
+        message: 'Voucher issued successfully',
+        data: {
+          voucher_code: voucher.voucherCode,
+          original_amount: voucher.originalAmount,
+          balance: voucher.balance,
+          status: voucher.status,
+          wallet_balance: wallet.balance,
+          transaction_id: transactionId
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Error in voucher issuance:', error);
+      res.status(500).json({ error: 'Database error during issuance. Please try again.' });
+    }
+    
   } catch (err) {
     console.error('❌ Issue voucher error:', err);
     res.status(500).json({ error: err.message || 'Failed to issue voucher' });
@@ -111,6 +176,7 @@ exports.issueEasyPayVoucher = async (req, res) => {
     
     // Create EasyPay voucher
     const voucher = await Voucher.create({
+      voucherCode: easyPayCode, // Use EasyPay code as voucher code initially
       easyPayCode,
       originalAmount: amount,
       balance: 0, // No balance until settled
@@ -202,50 +268,137 @@ exports.processEasyPaySettlement = async (req, res) => {
 exports.redeemVoucher = async (req, res) => {
   try {
     const { voucher_code, amount, redeemer_id, merchant_id, service_provider_id } = req.body;
-    const amt = Number(amount);
     
-    if (!voucher_code || isNaN(amt) || amt <= 0) {
-      return res.status(400).json({ error: 'Valid voucher_code and amount are required' });
+    if (!voucher_code) {
+      return res.status(400).json({ error: 'Voucher code is required' });
     }
     
-    // Find voucher by code
-    const voucher = await Voucher.findOne({ where: { voucherCode: voucher_code } });
+    // Clean the voucher code to handle spaces and formatting
+    const cleanedVoucherCode = cleanVoucherCode(voucher_code);
+    
+    // Find voucher by code (check both voucherCode and easyPayCode)
+    let voucher = await Voucher.findOne({ where: { voucherCode: cleanedVoucherCode } });
+    
+    if (!voucher) {
+      voucher = await Voucher.findOne({ where: { easyPayCode: cleanedVoucherCode } });
+    }
+    
+    // If still not found, try to match against formatted display codes
+    if (!voucher) {
+      // Get all vouchers and check if the cleaned code matches any formatted display code
+      const allVouchers = await Voucher.findAll();
+      for (const v of allVouchers) {
+        // Format the database code the same way the frontend does
+        const numericCode = v.voucherCode.replace(/\D/g, ''); // Remove non-digits
+        const paddedCode = numericCode.padEnd(16, '0').substring(0, 16);
+        const formattedCode = `${paddedCode.substring(0, 4)} ${paddedCode.substring(4, 8)} ${paddedCode.substring(8, 12)} ${paddedCode.substring(12, 16)}`;
+        const formattedCleaned = cleanVoucherCode(formattedCode);
+        
+        if (formattedCleaned === cleanedVoucherCode) {
+          voucher = v;
+          break;
+        }
+      }
+    }
+    
     if (!voucher) {
       return res.status(404).json({ error: 'Voucher not found' });
     }
     
-    if (!voucher.canRedeem()) {
-      return res.status(400).json({ error: 'Voucher cannot be redeemed' });
+    if (voucher.status !== 'active') {
+      return res.status(400).json({ error: 'Voucher is not active and cannot be redeemed' });
     }
     
-    if (voucher.balance < amt) {
-      return res.status(400).json({ error: 'Insufficient voucher balance' });
-    }
-    
-    // Update voucher balance
-    await voucher.update({
-      balance: voucher.balance - amt,
-      redemptionCount: voucher.redemptionCount + 1
-    });
-    
-    // If balance is 0, mark as redeemed
-    if (voucher.balance === 0) {
-      await voucher.update({ status: 'redeemed' });
-    }
-    
-    res.json({
-      success: true,
-      message: 'Voucher redeemed successfully',
-      data: {
-        voucher_code: voucher.voucherCode,
-        redeemed_amount: amt,
-        remaining_balance: voucher.balance,
-        status: voucher.status
+    // Determine redemption amount
+    let redemptionAmount;
+    if (amount && amount > 0) {
+      // Partial redemption
+      redemptionAmount = Number(amount);
+      if (isNaN(redemptionAmount) || redemptionAmount <= 0) {
+        return res.status(400).json({ error: 'Invalid redemption amount' });
       }
-    });
+      if (redemptionAmount > voucher.balance) {
+        return res.status(400).json({ error: 'Redemption amount exceeds voucher balance' });
+      }
+    } else {
+      // Full redemption
+      redemptionAmount = voucher.balance;
+    }
+    
+    // Get user's wallet
+    const { Wallet, Transaction } = require('../models');
+    const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
+    
+    if (!wallet) {
+      return res.status(404).json({ error: 'User wallet not found' });
+    }
+    
+    if (wallet.status !== 'active') {
+      return res.status(400).json({ error: 'Wallet is not active' });
+    }
+    
+    try {
+      // Calculate new balance
+      const newBalance = voucher.balance - redemptionAmount;
+      
+      // Update voucher balance
+      await voucher.update({
+        balance: newBalance,
+        redemptionCount: (voucher.redemptionCount || 0) + 1
+      });
+      
+      // If balance is 0, mark as redeemed
+      if (newBalance === 0) {
+        await voucher.update({ status: 'redeemed' });
+      }
+      
+      // Credit user's wallet
+      await wallet.credit(redemptionAmount, 'voucher_redemption');
+      
+      // Create transaction record
+      const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      await Transaction.create({
+        transactionId: transactionId,
+        userId: voucher.userId,
+        walletId: wallet.walletId,
+        amount: redemptionAmount,
+        type: 'deposit',
+        status: 'completed',
+        description: `Voucher redemption: ${voucher.voucherCode || voucher.easyPayCode}`,
+        currency: 'ZAR',
+        fee: 0.00,
+        metadata: {
+          voucherId: voucher.id,
+          voucherCode: voucher.voucherCode,
+          easyPayCode: voucher.easyPayCode,
+          voucherType: voucher.voucherType,
+          redemptionType: voucher.balance === 0 ? 'full' : 'partial',
+          merchantId: merchant_id,
+          serviceProviderId: service_provider_id
+        }
+      });
+      
+      res.json({
+        success: true,
+        message: 'Voucher redeemed successfully',
+        data: {
+          voucher_code: voucher.voucherCode || voucher.easyPayCode,
+          redeemed_amount: redemptionAmount,
+          remaining_balance: voucher.balance,
+          status: voucher.status,
+          wallet_balance: wallet.balance,
+          transaction_id: transactionId
+        }
+      });
+      
+    } catch (error) {
+      console.error('❌ Error in voucher redemption:', error);
+      res.status(500).json({ error: 'Database error during redemption. Please try again.' });
+    }
+    
   } catch (err) {
     console.error('❌ Redeem voucher error:', err);
-    res.status(400).json({ error: err.message || 'Failed to redeem voucher' });
+    res.status(500).json({ error: err.message || 'Failed to redeem voucher' });
   }
 };
 
@@ -403,5 +556,107 @@ exports.getVoucherBalance = async (req, res) => {
   } catch (err) {
     console.error('❌ Get voucher balance error:', err);
     res.status(500).json({ error: 'Failed to get voucher balance' });
+  }
+};
+
+// Get voucher balance summary for authenticated user
+exports.getVoucherBalanceSummary = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get all vouchers for the user (active, pending, redeemed)
+    const vouchers = await Voucher.findAll({
+      where: {
+        userId: userId
+      },
+      attributes: ['balance', 'originalAmount', 'status', 'voucherType']
+    });
+    
+    // Calculate active vouchers (including partially redeemed)
+    const activeVouchers = vouchers.filter(voucher => {
+      if (voucher.status === 'active') return true;
+      if (voucher.status === 'redeemed' && parseFloat(voucher.balance || 0) > 0) return true; // Partially redeemed = active
+      return false;
+    });
+    
+    // Calculate totals
+    const activeVouchersCount = activeVouchers.length;
+    const activeVouchersValue = activeVouchers.reduce((sum, voucher) => sum + parseFloat(voucher.balance || 0), 0);
+    
+    // Calculate pending vouchers (EasyPay pending)
+    const pendingVouchers = vouchers.filter(voucher => voucher.status === 'pending');
+    const pendingVouchersCount = pendingVouchers.length;
+    const pendingVouchersValue = pendingVouchers.reduce((sum, voucher) => sum + parseFloat(voucher.originalAmount || 0), 0);
+    
+    // Calculate redeemed vouchers (fully redeemed only)
+    const redeemedVouchers = vouchers.filter(voucher => voucher.status === 'redeemed' && parseFloat(voucher.balance || 0) === 0);
+    const redeemedVouchersCount = redeemedVouchers.length;
+    const redeemedVouchersValue = redeemedVouchers.reduce((sum, voucher) => sum + parseFloat(voucher.originalAmount || 0), 0);
+    
+    res.json({
+      success: true,
+      data: {
+        active: {
+          count: activeVouchersCount,
+          value: activeVouchersValue.toFixed(2)
+        },
+        pending: {
+          count: pendingVouchersCount,
+          value: pendingVouchersValue.toFixed(2)
+        },
+        redeemed: {
+          count: redeemedVouchersCount,
+          value: redeemedVouchersValue.toFixed(2)
+        },
+        total: {
+          count: vouchers.length,
+          value: vouchers.reduce((sum, voucher) => sum + parseFloat(voucher.originalAmount || 0), 0).toFixed(2)
+        }
+      }
+    });
+  } catch (err) {
+    console.error('❌ Get voucher balance summary error:', err);
+    res.status(500).json({ error: 'Failed to get voucher balance summary' });
+  }
+};
+
+// List all vouchers for authenticated user (for dashboard)
+exports.listAllVouchersForMe = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const vouchers = await Voucher.findAll({
+      where: {
+        userId: userId
+      },
+      order: [['createdAt', 'DESC']]
+    });
+    
+    const vouchersData = vouchers.map(voucher => ({
+      id: voucher.id,
+      voucherCode: voucher.voucherCode,
+      easyPayCode: voucher.easyPayCode,
+      userId: voucher.userId,
+      voucherType: voucher.voucherType,
+      originalAmount: voucher.originalAmount,
+      balance: voucher.balance,
+      status: voucher.status,
+      expiresAt: voucher.expiresAt,
+      createdAt: voucher.createdAt,
+      updatedAt: voucher.updatedAt
+    }));
+    
+    res.json({ 
+      success: true,
+      message: 'Vouchers retrieved successfully',
+      data: { vouchers: vouchersData }
+    });
+  } catch (error) {
+    console.error('❌ Error in listAllVouchersForMe:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Internal server error', 
+      details: error.message 
+    });
   }
 };

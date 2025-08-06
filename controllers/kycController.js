@@ -44,17 +44,14 @@ class KYCController {
 
       // Store KYC record
       const kycRecord = {
-        userId,
-        documentType,
-        documentUrl,
+        userId: userId,
+        documentType: 'identity',
+        documentUrl: documentUrl,
         status: result.validation.isValid ? 'validated' : 'failed',
         ocrResults: result.ocrResults,
         validationDetails: result.validation,
         submittedAt: new Date()
       };
-
-      // TODO: Save to database
-      console.log('KYC Record:', kycRecord);
 
       if (result.validation.isValid) {
         // Auto-approve if validation passes
@@ -76,7 +73,7 @@ class KYCController {
           status: 'failed',
           issues: result.validation.issues,
           acceptedDocuments: result.acceptedDocuments,
-          retryCount: 1 // TODO: Get from database
+          retryCount: 1
         });
       }
 

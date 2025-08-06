@@ -281,46 +281,37 @@ class EasyPayController {
   }
 
   /**
-   * Create test bills (admin endpoint)
-   * POST /api/easypay/test-bills
+   * Get bill payment status
+   * GET /api/easypay/bill-status/:billId
    */
-  async createTestBills(req, res) {
+  async getBillStatus(req, res) {
     try {
-      const testBills = [
-        {
-          easyPayNumber: '90001234123412',
-          accountNumber: 'TEST001',
-          receiverId: '2021',
-          customerName: 'Test Customer 1',
-          billType: 'electricity',
-          description: 'Test electricity bill',
-          amount: 500,
-          dueDate: '2025-12-31',
-          status: 'pending'
-        },
-        {
-          easyPayNumber: '90001234123413',
-          accountNumber: 'TEST002',
-          receiverId: '2022',
-          customerName: 'Test Customer 2',
-          billType: 'water',
-          description: 'Test water bill',
-          amount: 300,
-          dueDate: '2025-12-31',
-          status: 'pending'
-        }
-      ];
-
-      const createdBills = await Bill.bulkCreate(testBills);
+      const { billId } = req.params;
       
+      const bill = await Bill.findByPk(billId);
+      if (!bill) {
+        return res.status(404).json({
+          success: false,
+          message: 'Bill not found'
+        });
+      }
+
       res.json({
         success: true,
-        message: 'Test bills created successfully',
-        data: createdBills
+        data: {
+          billId: bill.id,
+          status: bill.status,
+          paidAmount: bill.paidAmount,
+          paidAt: bill.paidAt,
+          transactionId: bill.transactionId
+        }
       });
     } catch (error) {
-      console.error('❌ Create test bills error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error('❌ Get bill status error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get bill status'
+      });
     }
   }
 }
@@ -335,5 +326,5 @@ module.exports = {
   paymentNotification: easyPayController.paymentNotification.bind(easyPayController),
   getAllBills: easyPayController.getAllBills.bind(easyPayController),
   getAllPayments: easyPayController.getAllPayments.bind(easyPayController),
-  createTestBills: easyPayController.createTestBills.bind(easyPayController)
+  getBillStatus: easyPayController.getBillStatus.bind(easyPayController)
 };
