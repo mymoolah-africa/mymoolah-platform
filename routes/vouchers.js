@@ -4,10 +4,10 @@ const voucherController = require('../controllers/voucherController');
 const authMiddleware = require('../middleware/auth');
 
 // Issue a new voucher
-router.post('/issue', voucherController.issueVoucher);
+router.post('/issue', authMiddleware, voucherController.issueVoucher);
 
 // Issue EasyPay voucher
-router.post('/easypay/issue', voucherController.issueEasyPayVoucher);
+router.post('/easypay/issue', authMiddleware, voucherController.issueEasyPayVoucher);
 
 // Process EasyPay settlement callback
 router.post('/easypay/settlement', voucherController.processEasyPaySettlement);
@@ -38,5 +38,11 @@ router.get('/:voucher_id/redemptions', voucherController.getVoucherRedemptions);
 
 // GET /api/v1/vouchers/redeemed - List redeemed vouchers for authenticated user
 router.get('/redeemed', authMiddleware, voucherController.listRedeemedVouchersForMe);
+
+// POST /api/v1/vouchers/trigger-expiration - Manual trigger for EasyPay expiration handler (admin only)
+router.post('/trigger-expiration', authMiddleware, voucherController.triggerExpirationHandler);
+
+// POST /api/v1/vouchers/:voucherId/cancel - Cancel EasyPay voucher with full refund
+router.post('/:voucherId/cancel', authMiddleware, voucherController.cancelEasyPayVoucher);
 
 module.exports = router;

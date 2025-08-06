@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -22,7 +23,8 @@ import {
   Clock,
   CheckCircle,
   AlertTriangle,
-  ChevronRight
+  ChevronRight,
+  ArrowLeft
 } from 'lucide-react';
 
 // Transaction types for filtering
@@ -47,6 +49,7 @@ interface Transaction {
 
 export function TransactionHistoryPage() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   // State management
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -162,8 +165,8 @@ export function TransactionHistoryPage() {
       // Transform backend data to match frontend interface
       return data.data.transactions.map((tx: any) => ({
         id: tx.id.toString(),
-        type: ["credit", "receive", "deposit"].includes(tx.type) ? "money_in" : "money_out",
-        amount: ["credit", "receive", "deposit"].includes(tx.type) ? parseFloat(tx.amount) : -parseFloat(tx.amount),
+        type: ["credit", "receive", "deposit", "refund"].includes(tx.type) ? "money_in" : "money_out",
+        amount: ["credit", "receive", "deposit", "refund"].includes(tx.type) ? parseFloat(tx.amount) : -parseFloat(tx.amount),
         currency: tx.currency || "ZAR",
         recipient: tx.receiverWalletId || tx.recipient,
         sender: tx.senderWalletId || tx.sender,
@@ -182,14 +185,35 @@ export function TransactionHistoryPage() {
     throw error;
   }
 };
-  // Format voucher numbers in groups of 4 digits
+  // Format voucher numbers based on length
   const formatVoucherNumber = (description: string): string => {
     // Check if description contains a voucher number (12-16 digits)
     const voucherMatch = description.match(/(\d{12,16})/);
     if (voucherMatch) {
       const voucherNumber = voucherMatch[1];
-      // Format in groups of 4 digits
-      const formattedVoucher = voucherNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
+      
+      // Format based on length
+      let formattedVoucher: string;
+      if (voucherNumber.length === 14) {
+        // EasyPay PIN (14 digits): 9 1234 0371 6648 2
+        formattedVoucher = voucherNumber.slice(0, 1) + ' ' + 
+                          voucherNumber.slice(1, 5) + ' ' + 
+                          voucherNumber.slice(5, 9) + ' ' + 
+                          voucherNumber.slice(9, 13) + ' ' + 
+                          voucherNumber.slice(13);
+      } else if (voucherNumber.length === 16) {
+        // MMVoucher PIN (16 digits): 9562 4205 7827 9406
+        formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
+                          voucherNumber.slice(4, 8) + ' ' + 
+                          voucherNumber.slice(8, 12) + ' ' + 
+                          voucherNumber.slice(12);
+      } else {
+        // Fallback for other lengths: groups of 4
+        formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
+                          voucherNumber.slice(4, 8) + ' ' + 
+                          voucherNumber.slice(8);
+      }
+      
       return description.replace(voucherNumber, formattedVoucher);
     }
     return description;
@@ -197,6 +221,10 @@ export function TransactionHistoryPage() {
 
   // Format currency with proper negative sign placement
   const formatCurrency = (amount: number): string => {
+    if (!amount && amount !== 0) {
+      return 'R 0.00';
+    }
+    
     const formattedAmount = amount.toLocaleString('en-ZA', { 
       minimumFractionDigits: 2, 
       maximumFractionDigits: 2 
@@ -317,26 +345,80 @@ export function TransactionHistoryPage() {
         fontFamily: 'Montserrat, sans-serif'
       }}
     >
-      <div style={{ padding: 'var(--mobile-padding)' }}>
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 
+      {/* Top Navigation Bar */}
+      <div 
+        style={{
+          position: 'sticky',
+          top: 0,
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid #e5e7eb',
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+          zIndex: 10
+        }}
+      >
+        <div 
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            height: '64px',
+            padding: '0 16px'
+          }}
+        >
+          {/* Left: Back Button */}
+          <button 
+            onClick={() => navigate('/dashboard')}
             style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: 'clamp(1.25rem, 3vw, 1.5rem)',
-              fontWeight: 'var(--font-weight-bold)',
-              color: '#1f2937',
-              marginBottom: '0.5rem'
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              backgroundColor: 'transparent',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s ease',
+              fontFamily: 'Montserrat, sans-serif'
             }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            aria-label="Back to Dashboard"
           >
-            Transaction History
-          </h1>
+            <ArrowLeft style={{ width: '24px', height: '24px', color: '#6b7280' }} />
+          </button>
+
+          {/* Center: Page Title */}
+          <div style={{ flex: 1, textAlign: 'center' }}>
+            <h1 
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '20px',
+                fontWeight: '700',
+                color: '#1f2937',
+                margin: 0
+              }}
+            >
+              Transaction History
+            </h1>
+          </div>
+
+          {/* Right: Placeholder for balance */}
+          <div style={{ width: '44px' }}></div>
+        </div>
+      </div>
+
+      <div style={{ padding: 'var(--mobile-padding)' }}>
+        {/* Page Description */}
+        <div className="mb-6">
           <p 
             style={{
               fontFamily: 'Montserrat, sans-serif',
               fontSize: 'var(--mobile-font-base)',
               fontWeight: 'var(--font-weight-normal)',
-              color: '#6b7280'
+              color: '#6b7280',
+              marginTop: '0.5rem',
+              marginBottom: '1.5rem'
             }}
           >
             View and manage your transaction history

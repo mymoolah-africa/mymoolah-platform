@@ -5,7 +5,7 @@ import { APP_CONFIG } from '../config/app-config';
 
 // Import icons directly from lucide-react
 import { 
-  Gift,
+  Ticket,
   Plus,
   Minus,
   ArrowLeft,
@@ -33,7 +33,8 @@ import {
   Building2,
   Users,
   Zap,
-  Image
+  Image,
+  X
 } from 'lucide-react';
 
 // Import logo from assets/
@@ -59,6 +60,7 @@ interface MMVoucher {
   type: 'mm_voucher' | 'easypay_voucher' | 'third_party_voucher';
   status: 'active' | 'pending_payment' | 'redeemed' | 'expired' | 'cancelled';
   amount: number;
+  originalAmount: number; // Add this field
   currency: 'ZAR';
   voucherCode: string;
   easyPayNumber?: string; // For EasyPay vouchers
@@ -74,6 +76,10 @@ interface MMVoucher {
   redemptionLocations: string[];
   remainingValue: number;
   isPartialRedemption: boolean;
+  metadata?: {
+    description?: string;
+    merchant?: string;
+  };
 }
 
 interface VoucherTransaction {
@@ -93,7 +99,7 @@ interface VoucherTransaction {
 
 interface FilterOptions {
   type: 'all' | 'mm_voucher' | 'easypay_voucher' | 'third_party_voucher';
-  status: 'all' | 'active' | 'pending_payment' | 'redeemed' | 'expired';
+  status: 'all' | 'active' | 'pending_payment' | 'redeemed' | 'expired' | 'cancelled';
   dateRange: 'all' | 'today' | 'week' | 'month' | 'custom';
   startDate?: string;
   endDate?: string;
@@ -178,8 +184,8 @@ export function VouchersPage() {
           };
         }
         return { mainCode: voucher.voucherCode };
-      } else if (voucher.status === 'active') {
-        // Active EasyPay voucher - show MMVoucher code as main, EasyPay as sub
+      } else if (voucher.status === 'active' || voucher.status === 'redeemed') {
+        // Active or Redeemed EasyPay voucher - show MMVoucher code as main, EasyPay as sub
         if (voucher.voucherCode && voucher.voucherCode.length >= 16) {
           // Has MMVoucher code - show it as main
           const numericCode = voucher.voucherCode.replace(/\D/g, '');
@@ -198,6 +204,15 @@ export function VouchersPage() {
           
           return { mainCode: mmCode };
         }
+      } else if (voucher.status === 'cancelled') {
+        // Cancelled EasyPay voucher - show only EasyPay number (formatted)
+        if (voucher.easyPayNumber) {
+          const epNumber = voucher.easyPayNumber;
+          return {
+            mainCode: `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`
+          };
+        }
+        return { mainCode: voucher.voucherCode };
       }
       
       // Fallback - show original code
@@ -266,11 +281,13 @@ export function VouchersPage() {
         }
 
         // Determine status
-        let status: 'active' | 'pending_payment' | 'redeemed' | 'expired';
-        if (voucher.status === 'pending') {
+        let status: 'active' | 'pending_payment' | 'redeemed' | 'expired' | 'cancelled';
+        if (voucher.status === 'pending' || voucher.status === 'pending_payment') {
           status = 'pending_payment';
         } else if (voucher.status === 'expired') {
           status = 'expired';
+        } else if (voucher.status === 'cancelled') {
+          status = 'cancelled';
         } else if (voucher.status === 'redeemed') {
           // Check if it's fully redeemed (balance = 0) or partially redeemed
           const balance = parseFloat(voucher.balance || 0);
@@ -288,15 +305,18 @@ export function VouchersPage() {
           type: voucherType,
           status: status,
           amount: parseFloat(voucher.originalAmount || 0),
+          originalAmount: parseFloat(voucher.originalAmount || 0), // Add this field
           currency: 'ZAR',
           voucherCode: voucher.voucherCode || `VOUCHER-${voucher.id}`,
           easyPayNumber: voucher.easyPayCode, // Direct field in new structure
           createdDate: voucher.createdAt || new Date().toISOString(),
           expiryDate: voucher.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          description: voucherType === 'easypay_voucher' ? 'EasyPay voucher' : 'MMVoucher',
+          description: voucher.metadata?.description || (voucherType === 'easypay_voucher' ? 'EasyPay voucher' : 'MMVoucher'),
           transactionId: `VOUCHER-${voucher.id}`,
           redemptionLocations: voucherType === 'easypay_voucher' ? ['EasyPay Network', 'MyMoolah Network'] : ['MyMoolah Network'],
-          remainingValue: parseFloat(voucher.balance || 0),
+          remainingValue: voucherType === 'easypay_voucher' && status === 'pending_payment' 
+            ? parseFloat(voucher.originalAmount || 0) 
+            : parseFloat(voucher.balance || 0),
           isPartialRedemption: parseFloat(voucher.balance || 0) > 0 && parseFloat(voucher.balance || 0) < parseFloat(voucher.originalAmount || 0)
         };
       });
@@ -374,6 +394,12 @@ export function VouchersPage() {
     return true;
   });
 
+  // Dashboard vouchers: 10 newest Active and Pending vouchers
+  const dashboardVouchers = mmVouchers
+    .filter(voucher => voucher.status === 'active' || voucher.status === 'pending_payment')
+    .sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime())
+    .slice(0, 10);
+
   // Generate new voucher
   const handleGenerateVoucher = async () => {
     if (!sellAmount || parseFloat(sellAmount) <= 0) {
@@ -386,12 +412,12 @@ export function VouchersPage() {
     // Validate amount based on voucher type
     if (sellVoucherType === 'easypay_voucher') {
       if (amount < 50 || amount > 4000) {
-        alert('EasyPay vouchers must be between R50 and R4000');
+        alert('EasyPay vouchers must be between R 50 and R 4000');
         return;
       }
     } else {
       if (amount < 5 || amount > 4000) {
-        alert('Voucher amount must be between R5 and R4000');
+        alert('Voucher amount must be between R 5 and R 4000');
         return;
       }
     }
@@ -399,8 +425,13 @@ export function VouchersPage() {
     setIsLoading(true);
 
     try {
+      // Determine API endpoint based on voucher type
+      const apiEndpoint = sellVoucherType === 'easypay_voucher' 
+        ? `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/issue`
+        : `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/issue`;
+
       // Call backend API to issue voucher
-      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/issue`, {
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -411,7 +442,7 @@ export function VouchersPage() {
           voucher_type: sellVoucherType,
           description: sellDescription,
           merchant: sellMerchant,
-          user_id: localStorage.getItem('userId')
+          issued_to: sellVoucherType === 'easypay_voucher' ? 'customer' : undefined
         })
       });
 
@@ -423,8 +454,8 @@ export function VouchersPage() {
 
       // Show success message
       const successMessage = sellVoucherType === 'easypay_voucher' 
-        ? `🎟️ EasyPay Voucher Generated!\n\nEasyPay Number: ${result.data.easypay_code}\nAmount: R${amount}\nValid for 4 days\n\nTake this number to any of 8000+ EasyPay retail stores to pay. Once paid, your MyMoolah voucher will be activated automatically.`
-        : `🎟️ ${sellVoucherType === 'mm_voucher' ? 'MyMoolah' : 'Third Party'} Voucher Generated!\n\nVoucher Code: ${result.data.voucher_code}\nAmount: R${amount}\nWallet Balance: R${result.data.wallet_balance}\n\nVoucher is ready for use and redemption.`;
+        ? `🎟️ EasyPay Voucher Generated!\n\nEasyPay Number: ${result.data.easypay_code}\nAmount: R ${amount}\nValid for 4 days\n\nTake this number to any of 8000+ EasyPay retail stores to pay. Once paid, your MyMoolah voucher will be activated automatically.`
+        : `🎟️ ${sellVoucherType === 'mm_voucher' ? 'MyMoolah' : 'Third Party'} Voucher Generated!\n\nVoucher Code: ${result.data.voucher_code}\nAmount: R ${amount}\nWallet Balance: R ${result.data.wallet_balance}\n\nVoucher is ready for use and redemption.`;
 
       alert(successMessage);
 
@@ -470,7 +501,7 @@ export function VouchersPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${localStorage.getItem('mymoolah_token')}`
         },
         body: JSON.stringify({
           voucher_code: cleanVoucherCode(redeemCode.trim()),
@@ -488,7 +519,7 @@ export function VouchersPage() {
       }
 
       // Show success message
-      alert(`✅ Voucher Redeemed Successfully!\n\nAmount: R${result.data.redeemed_amount}\nRemaining Balance: R${result.data.remaining_balance}\nWallet Balance: R${result.data.wallet_balance}\n\nFunds have been added to your MyMoolah wallet.`);
+      alert(`✅ Voucher Redeemed Successfully!\n\nAmount: R ${result.data.redeemed_amount}\nRemaining Balance: R ${result.data.remaining_balance}\nWallet Balance: R ${result.data.wallet_balance}\n\nFunds have been added to your MyMoolah wallet.`);
 
       // Clear form
       setRedeemCode('');
@@ -569,6 +600,65 @@ export function VouchersPage() {
     }
   };
 
+  // Handle copying EasyPay numbers specifically
+  const handleCopyEasyPayNumber = async (easyPayNumber: string) => {
+    try {
+      const formattedNumber = easyPayNumber.slice(0, 1) + ' ' + 
+                             easyPayNumber.slice(1, 5) + ' ' + 
+                             easyPayNumber.slice(5, 9) + ' ' + 
+                             easyPayNumber.slice(9, 13) + ' ' + 
+                             easyPayNumber.slice(13);
+      
+      // Try modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(formattedNumber);
+      } else {
+        // Fallback for older browsers or non-secure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = formattedNumber;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+      }
+      
+      // Set success state
+      setCopiedCode(formattedNumber);
+      setTimeout(() => setCopiedCode(''), 2000);
+      
+      // Show toast notification
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #16a34a;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      toast.textContent = 'EasyPay number copied!';
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Failed to copy EasyPay number:', error);
+      // Show error feedback to user
+      alert('Failed to copy EasyPay number. Please try again.');
+    }
+  };
+
   // Get voucher type badge
   const getVoucherTypeBadge = (type: MMVoucher['type']) => {
     switch (type) {
@@ -603,7 +693,46 @@ export function VouchersPage() {
 
   // Format currency
   const formatCurrency = (amount: number) => {
-    return `R${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (!amount && amount !== 0) {
+      return 'R 0.00';
+    }
+    
+    const formattedAmount = amount.toLocaleString('en-ZA', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    // For negative amounts, show R -amount (negative sign after R)
+    if (amount < 0) {
+      return `R -${Math.abs(amount).toLocaleString('en-ZA', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      })}`;
+    }
+    
+    return `R ${formattedAmount}`;
+  };
+
+  // Special formatting for Total Value card (no space between R and amount)
+  const formatCurrencyCompact = (amount: number) => {
+    if (!amount && amount !== 0) {
+      return 'R0.00';
+    }
+    
+    const formattedAmount = amount.toLocaleString('en-ZA', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    
+    // For negative amounts, show R-amount (negative sign after R)
+    if (amount < 0) {
+      return `R-${Math.abs(amount).toLocaleString('en-ZA', { 
+        minimumFractionDigits: 2, 
+        maximumFractionDigits: 2 
+      })}`;
+    }
+    
+    return `R${formattedAmount}`;
   };
 
   // Format date with time
@@ -619,6 +748,116 @@ export function VouchersPage() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Handle cancelling EasyPay voucher
+  const handleCancelEasyPayVoucher = async (voucher: MMVoucher) => {
+    try {
+      // Show confirmation dialog
+      const confirmed = window.confirm(
+        `Cancel this EasyPay voucher?\n\n` +
+        `EasyPay Number: ${voucher.easyPayNumber}\n` +
+        `Amount: R ${voucher.originalAmount}\n\n` +
+        `This will:\n` +
+        `• Cancel the voucher immediately\n` +
+        `• Refund R ${voucher.originalAmount} to your wallet\n` +
+        `• This action cannot be undone\n\n` +
+        `Are you sure you want to cancel?`
+      );
+
+      if (!confirmed) {
+        return;
+      }
+
+      // Show loading state
+      const loadingToast = document.createElement('div');
+      loadingToast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #f59e0b;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      loadingToast.textContent = 'Cancelling voucher...';
+      document.body.appendChild(loadingToast);
+
+      // Make API call
+      const token = localStorage.getItem('mymoolah_token');
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/${voucher.id}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      // Remove loading toast
+      document.body.removeChild(loadingToast);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to cancel voucher');
+      }
+
+      const result = await response.json();
+
+      // Show success toast
+      const successToast = document.createElement('div');
+      successToast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #16a34a;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      successToast.textContent = `Voucher cancelled! R ${result.data.refundAmount} refunded to wallet`;
+      document.body.appendChild(successToast);
+      setTimeout(() => {
+        document.body.removeChild(successToast);
+      }, 3000);
+
+      // Refresh vouchers list
+      await fetchVouchers();
+
+    } catch (error) {
+      console.error('Error cancelling voucher:', error);
+      
+      // Show error toast
+      const errorToast = document.createElement('div');
+      errorToast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #dc2626;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      errorToast.textContent = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      document.body.appendChild(errorToast);
+      setTimeout(() => {
+        document.body.removeChild(errorToast);
+      }, 3000);
+    }
   };
 
   return (
@@ -681,64 +920,13 @@ export function VouchersPage() {
             </h1>
           </div>
 
-          {/* Right: Search */}
-          <button 
-            onClick={() => document.getElementById('search-input')?.focus()}
-            style={{
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              backgroundColor: 'transparent',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              transition: 'background-color 0.2s ease',
-              fontFamily: 'Montserrat, sans-serif'
-            }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            aria-label="Search Vouchers"
-          >
-            <Search style={{ width: '24px', height: '24px', color: '#6b7280' }} />
-          </button>
+          {/* Right: Empty space for balance */}
+          <div style={{ width: '44px' }}></div>
         </div>
       </div>
 
       {/* Content */}
       <div style={{ padding: '16px' }}>
-        {/* Search Bar */}
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ position: 'relative' }}>
-            <Search style={{ 
-              position: 'absolute', 
-              left: '12px', 
-              top: '50%', 
-              transform: 'translateY(-50%)', 
-              width: '20px', 
-              height: '20px', 
-              color: '#6b7280' 
-            }} />
-            <Input
-              id="search-input"
-              type="text"
-              placeholder="Search vouchers, codes, or EasyPay numbers..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                height: '44px',
-                paddingLeft: '44px',
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '14px',
-                borderRadius: '12px',
-                backgroundColor: '#f8fafc',
-                border: '1px solid #e2e8f0'
-              }}
-            />
-          </div>
-        </div>
-
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'vouchers' | 'sell' | 'redeem' | 'history')}>
           <TabsList 
@@ -821,113 +1009,6 @@ export function VouchersPage() {
 
           {/* Vouchers Tab - Open MMVouchers List */}
           <TabsContent value="vouchers">
-            {/* Search and Filter Bar */}
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ position: 'relative', flex: 1 }}>
-                  <Search style={{ 
-                    position: 'absolute', 
-                    left: '12px', 
-                    top: '50%', 
-                    transform: 'translateY(-50%)', 
-                    width: '20px', 
-                    height: '20px', 
-                    color: '#6b7280' 
-                  }} />
-                  <Input
-                    type="text"
-                    placeholder="Search vouchers, codes, or EasyPay numbers..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{
-                      height: '44px',
-                      paddingLeft: '44px',
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      borderRadius: '12px',
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0'
-                    }}
-                  />
-                </div>
-                <Button
-                  onClick={() => setShowFilters(!showFilters)}
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    backgroundColor: showFilters ? '#86BE41' : '#f8fafc',
-                    color: showFilters ? '#ffffff' : '#6b7280',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: 'Montserrat, sans-serif'
-                  }}
-                >
-                  <Filter style={{ width: '20px', height: '20px' }} />
-                </Button>
-              </div>
-
-              {/* Filter Options */}
-              {showFilters && (
-                <Card style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                    <div>
-                      <Label style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', fontWeight: '600', color: '#374151' }}>
-                        Type
-                      </Label>
-                      <Select value={filters.type} onValueChange={(value) => setFilters(prev => ({ ...prev, type: value as FilterOptions['type'] }))}>
-                        <SelectTrigger style={{ height: '36px', fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Types</SelectItem>
-                          <SelectItem value="mm_voucher">MyMoolah</SelectItem>
-                          <SelectItem value="easypay_voucher">EasyPay</SelectItem>
-                          <SelectItem value="third_party_voucher">3rd Party</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', fontWeight: '600', color: '#374151' }}>
-                        Status
-                      </Label>
-                      <Select value={filters.status} onValueChange={(value) => setFilters(prev => ({ ...prev, status: value as FilterOptions['status'] }))}>
-                        <SelectTrigger style={{ height: '36px', fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Status</SelectItem>
-                          <SelectItem value="active">Active</SelectItem>
-                          <SelectItem value="pending_payment">Pending Payment</SelectItem>
-                          <SelectItem value="redeemed">Redeemed</SelectItem>
-                          <SelectItem value="expired">Expired</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div>
-                    <Label style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', fontWeight: '600', color: '#374151' }}>
-                      Date Range
-                    </Label>
-                    <Select value={filters.dateRange} onValueChange={(value) => setFilters(prev => ({ ...prev, dateRange: value as FilterOptions['dateRange'] }))}>
-                      <SelectTrigger style={{ height: '36px', fontSize: '14px', fontFamily: 'Montserrat, sans-serif' }}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Time</SelectItem>
-                        <SelectItem value="today">Today</SelectItem>
-                        <SelectItem value="week">Past Week</SelectItem>
-                        <SelectItem value="month">Past Month</SelectItem>
-                        <SelectItem value="custom">Custom Range</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </Card>
-              )}
-            </div>
-
             {/* Vouchers Summary */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px' }}>
               <Card style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', textAlign: 'center' }}>
@@ -960,49 +1041,74 @@ export function VouchersPage() {
                   Total Value
                 </p>
                 <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
-                  {formatCurrency(mmVouchers.filter(v => v.status === 'active').reduce((sum, v) => sum + v.remainingValue, 0))}
+                  {formatCurrencyCompact(
+                    mmVouchers.filter(v => v.status === 'active').reduce((sum, v) => sum + v.remainingValue, 0) +
+                    mmVouchers.filter(v => v.status === 'pending_payment').reduce((sum, v) => sum + v.amount, 0)
+                  )}
                 </p>
               </Card>
             </div>
 
             {/* Sleek Vouchers List */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-              {filteredVouchers.length === 0 ? (
-                <Card style={{ border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-                  <CardContent style={{ padding: '48px 24px', textAlign: 'center' }}>
-                    <Gift style={{ width: '48px', height: '48px', color: '#d1d5db', margin: '0 auto 16px' }} />
-                    <h4 
-                      style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '18px',
-                        fontWeight: '600',
-                        color: '#6b7280',
-                        marginBottom: '8px'
-                      }}
-                    >
-                      No vouchers found
-                    </h4>
-                    <p 
-                      style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        color: '#9ca3af',
-                        margin: 0
-                      }}
-                    >
-                      Try adjusting your search or filters
-                    </p>
+              {(activeTab === 'vouchers' ? dashboardVouchers : filteredVouchers).length === 0 ? (
+                <Card style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+                  <CardContent style={{ padding: 'var(--mobile-padding)' }}>
+                    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 12px auto'
+                      }}>
+                        <Ticket style={{ width: '24px', height: '24px', color: '#9ca3af' }} />
+                      </div>
+                      <h4 
+                        style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '18px',
+                          fontWeight: '600',
+                          color: '#6b7280',
+                          marginBottom: '8px'
+                        }}
+                      >
+                        {activeTab === 'vouchers' ? 'No active vouchers' : 'No vouchers found'}
+                      </h4>
+                      <p 
+                        style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '14px',
+                          color: '#9ca3af',
+                          margin: 0
+                        }}
+                      >
+                        {activeTab === 'vouchers' 
+                          ? 'Create your first voucher to get started' 
+                          : 'Try adjusting your search or filters'
+                        }
+                      </p>
+                    </div>
                   </CardContent>
                 </Card>
               ) : (
-                filteredVouchers.map((voucher) => {
+                (activeTab === 'vouchers' ? dashboardVouchers : filteredVouchers).map((voucher) => {
                   const typeBadge = getVoucherTypeBadge(voucher.type);
                   const statusBadge = getVoucherStatusBadge(voucher.status);
                   
                   return (
-                    <Card
+                    <div
                       key={voucher.id}
                       style={{
+                        width: '100%',
+                        minWidth: '100%',
+                        maxWidth: 'none',
+                        margin: '0',
+                        padding: '0',
+                        boxSizing: 'border-box',
                         border: '1px solid #e2e8f0',
                         borderRadius: '16px',
                         cursor: 'pointer',
@@ -1022,7 +1128,7 @@ export function VouchersPage() {
                       }}
                       onClick={() => setSelectedVoucher(voucher)}
                     >
-                      <CardContent style={{ padding: '20px' }}>
+                      <div style={{ padding: '20px', width: '100%', boxSizing: 'border-box' }}>
                         {/* Header with Logo and Badges */}
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1233,8 +1339,81 @@ export function VouchersPage() {
                             </button>
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+
+                        {/* EasyPay Pending Expiry Information with Cancel Button */}
+                        {voucher.type === 'easypay_voucher' && voucher.status === 'pending_payment' && (
+                          <div style={{ 
+                            marginTop: '8px',
+                            display: 'flex',
+                            gap: '8px',
+                            alignItems: 'flex-start'
+                          }}>
+                            {/* Expiry Notice - Narrower */}
+                            <div style={{ 
+                              flex: 1,
+                              padding: '8px 12px', 
+                              backgroundColor: '#fef3c7', 
+                              border: '1px solid #f59e0b', 
+                              borderRadius: '6px',
+                              borderLeft: '3px solid #f59e0b'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+                                <Clock style={{ width: '10px', height: '10px', color: '#f59e0b' }} />
+                                <span 
+                                  style={{
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    fontSize: '11px',
+                                    color: '#f59e0b',
+                                    fontWeight: '600'
+                                  }}
+                                >
+                                  Expires: {formatDate(voucher.expiryDate)}
+                                </span>
+                              </div>
+                              <span 
+                                style={{
+                                  fontFamily: 'Montserrat, sans-serif',
+                                  fontSize: '10px',
+                                  color: '#d97706',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                Make payment at any EasyPay terminal
+                              </span>
+                            </div>
+                            
+                            {/* Cancel Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancelEasyPayVoucher(voucher);
+                              }}
+                              style={{
+                                backgroundColor: '#dc2626',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '8px',
+                                width: '32px',
+                                height: '32px',
+                                cursor: 'pointer',
+                                fontFamily: 'Montserrat, sans-serif',
+                                transition: 'background-color 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                              title="Cancel voucher and get refund"
+                            >
+                              <X style={{ width: '14px', height: '14px' }} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   );
                 })
               )}
@@ -1632,10 +1811,241 @@ export function VouchersPage() {
 
           {/* History Tab - Transaction History */}
           <TabsContent value="history">
-            <Card style={{ border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-              <CardHeader>
+            {/* Search and Filter Bar */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <Search style={{ 
+                    position: 'absolute', 
+                    left: '12px', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)', 
+                    width: '20px', 
+                    height: '20px', 
+                    color: '#6b7280' 
+                  }} />
+                  <Input
+                    type="text"
+                    placeholder="Search vouchers, codes, or EasyPay numbers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      height: '44px',
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      borderRadius: '12px',
+                      paddingLeft: '44px',
+                      border: '1px solid #e2e8f0',
+                      backgroundColor: '#ffffff'
+                    }}
+                  />
+                </div>
+                <Button
+                  onClick={() => setShowFilters(!showFilters)}
+                  variant="outline"
+                  style={{
+                    height: '44px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: showFilters ? '#f0f9ff' : '#ffffff',
+                    color: showFilters ? '#1d4ed8' : '#374151'
+                  }}
+                >
+                  <Filter style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                  Filters
+                </Button>
+              </div>
+
+              {/* Filter Options */}
+              {showFilters && (
+                <Card style={{ borderRadius: '12px', marginBottom: '16px' }}>
+                  <CardContent style={{ padding: '20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                      {/* Type Filter */}
+                      <div>
+                        <Label style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#374151',
+                          marginBottom: '8px',
+                          display: 'block'
+                        }}>
+                          Voucher Type
+                        </Label>
+                        <Select value={filters.type} onValueChange={(value) => setFilters({ ...filters, type: value as any })}>
+                          <SelectTrigger style={{
+                            height: '36px',
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '14px',
+                            borderRadius: '8px'
+                          }}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Types</SelectItem>
+                            <SelectItem value="mm_voucher">MMVoucher</SelectItem>
+                            <SelectItem value="easypay_voucher">EasyPay</SelectItem>
+                            <SelectItem value="third_party_voucher">Third Party</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Status Filter */}
+                      <div>
+                        <Label style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#374151',
+                          marginBottom: '8px',
+                          display: 'block'
+                        }}>
+                          Status
+                        </Label>
+                        <Select value={filters.status} onValueChange={(value) => setFilters({ ...filters, status: value as any })}>
+                          <SelectTrigger style={{
+                            height: '36px',
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '14px',
+                            borderRadius: '8px'
+                          }}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Status</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="pending_payment">Pending</SelectItem>
+                            <SelectItem value="redeemed">Redeemed</SelectItem>
+                            <SelectItem value="expired">Expired</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Date Range Filter */}
+                      <div>
+                        <Label style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#374151',
+                          marginBottom: '8px',
+                          display: 'block'
+                        }}>
+                          Date Range
+                        </Label>
+                        <Select value={filters.dateRange} onValueChange={(value) => setFilters({ ...filters, dateRange: value as any })}>
+                          <SelectTrigger style={{
+                            height: '36px',
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '14px',
+                            borderRadius: '8px'
+                          }}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Time</SelectItem>
+                            <SelectItem value="today">Today</SelectItem>
+                            <SelectItem value="week">This Week</SelectItem>
+                            <SelectItem value="month">This Month</SelectItem>
+                            <SelectItem value="custom">Custom Range</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Clear Filters */}
+                      <div style={{ display: 'flex', alignItems: 'end' }}>
+                        <Button
+                          onClick={() => {
+                            setFilters({
+                              type: 'all',
+                              status: 'all',
+                              dateRange: 'all',
+                              startDate: undefined,
+                              endDate: undefined
+                            });
+                            setSearchQuery('');
+                          }}
+                          variant="outline"
+                          style={{
+                            height: '36px',
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0',
+                            backgroundColor: '#ffffff',
+                            color: '#6b7280'
+                          }}
+                        >
+                          Clear All
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Custom Date Range */}
+                    {filters.dateRange === 'custom' && (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '16px' }}>
+                        <div>
+                          <Label style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#374151',
+                            marginBottom: '8px',
+                            display: 'block'
+                          }}>
+                            Start Date
+                          </Label>
+                          <Input
+                            type="date"
+                            value={filters.startDate || ''}
+                            onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+                            style={{
+                              height: '36px',
+                              fontFamily: 'Montserrat, sans-serif',
+                              fontSize: '14px',
+                              borderRadius: '8px'
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <Label style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            color: '#374151',
+                            marginBottom: '8px',
+                            display: 'block'
+                          }}>
+                            End Date
+                          </Label>
+                          <Input
+                            type="date"
+                            value={filters.endDate || ''}
+                            onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+                            style={{
+                              height: '36px',
+                              fontFamily: 'Montserrat, sans-serif',
+                              fontSize: '14px',
+                              borderRadius: '8px'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Vouchers List */}
+            <div style={{ borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)', marginBottom: '24px' }}>
+              <div style={{ padding: '24px', borderBottom: '1px solid #e2e8f0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <CardTitle 
+                  <div 
                     style={{
                       fontFamily: 'Montserrat, sans-serif',
                       fontSize: '20px',
@@ -1647,10 +2057,24 @@ export function VouchersPage() {
                     }}
                   >
                     <History style={{ width: '24px', height: '24px', color: '#6b7280' }} />
-                    Transaction History
-                  </CardTitle>
+                    Voucher History
+                  </div>
                   <Button
-                    onClick={() => alert('Export functionality coming soon!')}
+                    onClick={() => {
+                      // Export functionality - create CSV of filtered vouchers
+                      const csvContent = "data:text/csv;charset=utf-8," 
+                        + "Voucher Code,Type,Status,Amount,Currency,Created Date,Expiry Date,Description\n"
+                        + filteredVouchers.map(v => 
+                          `"${v.voucherCode}","${v.type}","${v.status}","${v.amount}","${v.currency}","${v.createdDate}","${v.expiryDate}","${v.description}"`
+                        ).join("\n");
+                      const encodedUri = encodeURI(csvContent);
+                      const link = document.createElement("a");
+                      link.setAttribute("href", encodedUri);
+                      link.setAttribute("download", `voucher_history_${new Date().toISOString().split('T')[0]}.csv`);
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                    }}
                     style={{
                       backgroundColor: '#f8fafc',
                       color: '#6b7280',
@@ -1671,164 +2095,381 @@ export function VouchersPage() {
                     fontFamily: 'Montserrat, sans-serif',
                     fontSize: '14px',
                     color: '#6b7280',
-                    margin: 0
+                    margin: '8px 0 0 0'
                   }}
                 >
-                  Complete voucher transaction statements
+                  Complete voucher transaction history ({filteredVouchers.length} vouchers)
                 </p>
-              </CardHeader>
-              <CardContent style={{ padding: '24px' }}>
-                {voucherTransactions.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '48px 0' }}>
-                    <Receipt style={{ width: '48px', height: '48px', color: '#d1d5db', margin: '0 auto 16px' }} />
-                    <h4 
-                      style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '18px',
-                        fontWeight: '600',
-                        color: '#6b7280',
-                        marginBottom: '8px'
-                      }}
-                    >
-                      No transactions yet
-                    </h4>
-                    <p 
-                      style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        color: '#9ca3af',
-                        margin: 0
-                      }}
-                    >
-                      Your voucher transactions will appear here
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    {voucherTransactions.map((transaction) => (
-                      <div
-                        key={transaction.id}
+              </div>
+            </div>
+
+            {/* Vouchers Grid - Loose Standing Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+              {filteredVouchers.length === 0 ? (
+                <Card style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+                  <CardContent style={{ padding: 'var(--mobile-padding)' }}>
+                    <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                      <div style={{
+                        width: '48px',
+                        height: '48px',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 12px auto'
+                      }}>
+                        <Ticket style={{ width: '24px', height: '24px', color: '#9ca3af' }} />
+                      </div>
+                      <h4 
                         style={{
-                          padding: '16px',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '12px',
-                          backgroundColor: '#ffffff'
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '18px',
+                          fontWeight: '600',
+                          color: '#6b7280',
+                          marginBottom: '8px'
                         }}
                       >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            {/* Logo Placeholder for Transaction */}
+                        No vouchers found
+                      </h4>
+                      <p 
+                        style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '14px',
+                          color: '#9ca3af',
+                          margin: 0
+                        }}
+                      >
+                        Try adjusting your search or filters
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredVouchers.map((voucher) => {
+                  const typeBadge = getVoucherTypeBadge(voucher.type);
+                  const statusBadge = getVoucherStatusBadge(voucher.status);
+                  const formattedCode = formatVoucherCodeForDisplay(voucher);
+                  
+                  return (
+                    <div key={voucher.id} style={{ 
+                      backgroundColor: '#ffffff', 
+                      borderRadius: '12px', 
+                      border: '1px solid #e2e8f0', 
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)', 
+                      overflow: 'hidden',
+                      width: '100%', 
+                      minWidth: '100%', 
+                      maxWidth: 'none', 
+                      flex: '1 1 100%', 
+                      margin: '0', 
+                      padding: '0', 
+                      boxSizing: 'border-box',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.borderColor = '#86BE41';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 20px rgba(134, 190, 65, 0.15)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
+                    }}
+                    onClick={() => setSelectedVoucher(voucher)}
+                    >
+                      <div style={{ padding: '20px', width: '100%', boxSizing: 'border-box' }}>
+                        {/* Header with Logo and Badges */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {/* Logo */}
                             <div 
                               style={{
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '8px',
-                                backgroundColor: '#f3f4f6',
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '12px',
+                                backgroundColor: '#f8fafc',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 border: '1px solid #e5e7eb',
-                                position: 'relative'
+                                overflow: 'hidden'
                               }}
                             >
-                              <Image style={{ width: '16px', height: '16px', color: '#9ca3af' }} />
-                              <span 
-                                style={{
-                                  position: 'absolute',
-                                  fontSize: '6px',
-                                  fontFamily: 'Montserrat, sans-serif',
-                                  color: '#6b7280',
-                                  bottom: '-8px',
-                                  whiteSpace: 'nowrap'
+                              <img 
+                                src={voucher.type === 'mm_voucher' ? logo3 : 
+                                     voucher.type === 'easypay_voucher' ? logo3 : 
+                                     logo3}
+                                alt={voucher.type === 'mm_voucher' ? 'MMVoucher Logo' : 
+                                     voucher.type === 'easypay_voucher' ? 'EasyPay Logo' : 
+                                     'Voucher Logo'}
+                                style={{ 
+                                  width: '24px', 
+                                  height: '24px',
+                                  objectFit: 'contain'
                                 }}
-                              >
-                                {transaction.voucherType === 'mm_voucher' ? 'logo3.svg' : 
-                                 transaction.voucherType === 'easypay_voucher' ? 'EPlogo.svg' : 
-                                 'logo.svg'}
-                              </span>
-                            </div>
-                            <div>
-                              <p 
-                                style={{
-                                  fontFamily: 'Montserrat, sans-serif',
-                                  fontSize: '14px',
-                                  fontWeight: '600',
-                                  color: '#1f2937',
-                                  margin: '0 0 4px 0'
+                                onError={(e) => {
+                                  // Fallback to a simple icon if image fails to load
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling.style.display = 'flex';
                                 }}
-                              >
-                                {transaction.description}
-                              </p>
-                              <p 
+                              />
+                              <div 
                                 style={{
-                                  fontFamily: 'Montserrat, sans-serif',
+                                  display: 'none',
+                                  width: '24px',
+                                  height: '24px',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  backgroundColor: voucher.type === 'mm_voucher' ? '#86BE41' : 
+                                                 voucher.type === 'easypay_voucher' ? '#86BE41' : '#9ca3af',
+                                  borderRadius: '6px',
+                                  color: 'white',
                                   fontSize: '12px',
-                                  color: '#6b7280',
-                                  margin: 0
+                                  fontWeight: 'bold'
                                 }}
                               >
-                                {transaction.reference}
-                              </p>
+                                {voucher.type === 'mm_voucher' ? 'MM' : 
+                                 voucher.type === 'easypay_voucher' ? 'MM' : 'V'}
+                              </div>
+                            </div>
+                            
+                            {/* Type and Status Badges */}
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <Badge 
+                                className={typeBadge.color}
+                                style={{
+                                  fontSize: '10px',
+                                  fontWeight: '600',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  fontFamily: 'Montserrat, sans-serif'
+                                }}
+                              >
+                                {typeBadge.text}
+                              </Badge>
+                              <Badge 
+                                className={statusBadge.color}
+                                style={{
+                                  fontSize: '10px',
+                                  fontWeight: '500',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  fontFamily: 'Montserrat, sans-serif'
+                                }}
+                              >
+                                {statusBadge.text}
+                              </Badge>
                             </div>
                           </div>
+                          
+                          {/* Amount */}
                           <div style={{ textAlign: 'right' }}>
                             <p 
                               style={{
                                 fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '16px',
+                                fontSize: '18px',
                                 fontWeight: '700',
-                                color: transaction.type === 'generate' ? '#86BE41' : '#16a34a',
-                                margin: '0 0 4px 0'
+                                color: voucher.remainingValue > 0 ? '#16a34a' : '#9ca3af',
+                                margin: 0,
+                                lineHeight: 1
                               }}
                             >
-                              {transaction.type === 'generate' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                              {formatCurrency(voucher.remainingValue)}
                             </p>
-                            <p 
-                              style={{
-                                fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '12px',
-                                color: '#6b7280',
-                                margin: 0
-                              }}
-                            >
-                              {new Date(transaction.timestamp).toLocaleDateString('en-ZA', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit'
-                              })}
-                            </p>
+                            {voucher.isPartialRedemption && (
+                              <p 
+                                style={{
+                                  fontFamily: 'Montserrat, sans-serif',
+                                  fontSize: '11px',
+                                  color: '#9ca3af',
+                                  margin: '2px 0 0 0',
+                                  lineHeight: 1
+                                }}
+                              >
+                                of {formatCurrency(voucher.amount)}
+                              </p>
+                            )}
                           </div>
                         </div>
-                        {transaction.easyPayNumber && (
-                          <div 
-                            style={{
-                              backgroundColor: '#dbeafe',
-                              border: '1px solid #93c5fd',
-                              borderRadius: '8px',
-                              padding: '8px',
-                              marginTop: '8px'
-                            }}
-                          >
-                            <p 
+
+                        {/* Voucher Code - Dual Display for EasyPay */}
+                        <div style={{ marginBottom: '12px' }}>
+                          {(() => {
+                            const formattedCode = formatVoucherCodeForDisplay(voucher);
+                            return (
+                              <>
+                                <p 
+                                  style={{
+                                    fontFamily: 'monospace',
+                                    fontSize: '16px', // Always use 16px for main code (MM PIN)
+                                    fontWeight: '600',
+                                    color: '#1f2937',
+                                    margin: 0,
+                                    letterSpacing: '0.5px',
+                                    lineHeight: 1.2
+                                  }}
+                                >
+                                  {formattedCode.mainCode}
+                                </p>
+                                
+                                {/* Sub-code for paid EasyPay vouchers */}
+                                {formattedCode.subCode && (
+                                  <p 
+                                    style={{
+                                      fontFamily: 'monospace',
+                                      fontSize: '12px',
+                                      fontWeight: '500',
+                                      color: '#2D8CCA',
+                                      margin: '2px 0 0 0',
+                                      letterSpacing: '0.3px',
+                                      lineHeight: 1
+                                    }}
+                                  >
+                                    {formattedCode.subCode}
+                                  </p>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Description - Shorter and smaller */}
+                        <p 
+                          style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '12px',
+                            color: '#6b7280',
+                            margin: '0 0 12px 0',
+                            lineHeight: 1.3
+                          }}
+                        >
+                          
+                        </p>
+
+                        {/* Bottom Info */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Calendar style={{ width: '12px', height: '12px', color: '#9ca3af' }} />
+                            <span 
                               style={{
                                 fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '12px',
-                                color: '#1e40af',
-                                margin: 0
+                                fontSize: '11px',
+                                color: new Date(voucher.expiryDate) < new Date() ? '#dc2626' : '#9ca3af',
+                                fontWeight: '500'
                               }}
                             >
-                              <strong>EasyPay Number:</strong> {transaction.easyPayNumber}
-                            </p>
+                              {formatDate(voucher.createdDate)}
+                            </span>
+                          </div>
+                          
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCopyCode(voucher);
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: copiedCode === voucher.voucherCode ? '#16a34a' : '#9ca3af',
+                                padding: '4px',
+                                borderRadius: '4px',
+                                transition: 'color 0.2s ease',
+                                fontFamily: 'Montserrat, sans-serif'
+                              }}
+                              aria-label="Copy voucher code"
+                            >
+                              {copiedCode === voucher.voucherCode ? 
+                                <Check style={{ width: '14px', height: '14px' }} /> : 
+                                <Copy style={{ width: '14px', height: '14px' }} />
+                              }
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* EasyPay Pending Expiry Information with Cancel Button */}
+                        {voucher.type === 'easypay_voucher' && voucher.status === 'pending_payment' && (
+                          <div style={{ 
+                            marginTop: '8px',
+                            display: 'flex',
+                            gap: '8px',
+                            alignItems: 'flex-start'
+                          }}>
+                            {/* Expiry Notice - Narrower */}
+                            <div style={{ 
+                              flex: 1,
+                              padding: '8px 12px', 
+                              backgroundColor: '#fef3c7', 
+                              border: '1px solid #f59e0b', 
+                              borderRadius: '6px',
+                              borderLeft: '3px solid #f59e0b'
+                            }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+                                <Clock style={{ width: '10px', height: '10px', color: '#f59e0b' }} />
+                                <span 
+                                  style={{
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    fontSize: '11px',
+                                    color: '#f59e0b',
+                                    fontWeight: '600'
+                                  }}
+                                >
+                                  Expires: {formatDate(voucher.expiryDate)}
+                                </span>
+                              </div>
+                              <span 
+                                style={{
+                                  fontFamily: 'Montserrat, sans-serif',
+                                  fontSize: '10px',
+                                  color: '#d97706',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                Make payment at any EasyPay terminal
+                              </span>
+                            </div>
+                            
+                            {/* Cancel Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCancelEasyPayVoucher(voucher);
+                              }}
+                              style={{
+                                backgroundColor: '#dc2626',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                padding: '8px',
+                                width: '32px',
+                                height: '32px',
+                                cursor: 'pointer',
+                                fontFamily: 'Montserrat, sans-serif',
+                                transition: 'background-color 0.2s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0
+                              }}
+                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                              title="Cancel voucher and get refund"
+                            >
+                              <X style={{ width: '14px', height: '14px' }} />
+                            </button>
                           </div>
                         )}
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </div>
@@ -1885,71 +2526,73 @@ export function VouchersPage() {
                   </Badge>
                 </div>
 
-                {/* Voucher Code */}
-                <div style={{ marginBottom: '16px' }}>
-                  <Label 
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#374151',
-                      marginBottom: '8px',
-                      display: 'block'
-                    }}
-                  >
-                    Voucher Code
-                  </Label>
-                  <div 
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '8px',
-                      padding: '12px'
-                    }}
-                  >
-                    <span 
+                {/* Voucher Code - Only show for non-EasyPay vouchers */}
+                {selectedVoucher.type !== 'easypay_voucher' && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <Label 
                       style={{
-                        fontFamily: 'monospace',
+                        fontFamily: 'Montserrat, sans-serif',
                         fontSize: '14px',
                         fontWeight: '600',
-                        color: '#1f2937',
-                        flex: 1
+                        color: '#374151',
+                        marginBottom: '8px',
+                        display: 'block'
                       }}
                     >
-                      {(() => {
-                        const formatted = formatVoucherCodeForDisplay(selectedVoucher);
-                        return (
-                          <div>
-                            <div>{formatted.mainCode}</div>
-                            {formatted.subCode && (
-                              <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
-                                {formatted.subCode}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </span>
-                    <button
-                      onClick={() => handleCopyCode(selectedVoucher)}
+                      Voucher Code
+                    </Label>
+                    <div 
                       style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: copiedCode === selectedVoucher.voucherCode ? '#16a34a' : '#6b7280',
-                        fontFamily: 'Montserrat, sans-serif'
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        backgroundColor: '#f8fafc',
+                        border: '1px solid #e2e8f0',
+                        borderRadius: '8px',
+                        padding: '12px'
                       }}
                     >
-                      {copiedCode === selectedVoucher.voucherCode ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
-                    </button>
+                      <span 
+                        style={{
+                          fontFamily: 'monospace',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          color: '#1f2937',
+                          flex: 1
+                        }}
+                      >
+                        {(() => {
+                          const formatted = formatVoucherCodeForDisplay(selectedVoucher);
+                          return (
+                            <div>
+                              <div>{formatted.mainCode}</div>
+                              {formatted.subCode && (
+                                <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '4px' }}>
+                                  {formatted.subCode}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </span>
+                      <button
+                        onClick={() => handleCopyCode(selectedVoucher)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: copiedCode === selectedVoucher.voucherCode ? '#16a34a' : '#6b7280',
+                          fontFamily: 'Montserrat, sans-serif'
+                        }}
+                      >
+                        {copiedCode === selectedVoucher.voucherCode ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* EasyPay Number (if applicable) */}
-                {selectedVoucher.easyPayNumber && (
+                {/* EasyPay Number - Only show for EasyPay vouchers */}
+                {selectedVoucher.type === 'easypay_voucher' && selectedVoucher.easyPayNumber && (
                   <div style={{ marginBottom: '16px' }}>
                     <Label 
                       style={{
@@ -1983,19 +2626,30 @@ export function VouchersPage() {
                           flex: 1
                         }}
                       >
-                        {selectedVoucher.easyPayNumber}
+                        {selectedVoucher.easyPayNumber && (
+                          selectedVoucher.easyPayNumber.slice(0, 1) + ' ' + 
+                          selectedVoucher.easyPayNumber.slice(1, 5) + ' ' + 
+                          selectedVoucher.easyPayNumber.slice(5, 9) + ' ' + 
+                          selectedVoucher.easyPayNumber.slice(9, 13) + ' ' + 
+                          selectedVoucher.easyPayNumber.slice(13)
+                        )}
                       </span>
-                      <button
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          cursor: 'pointer',
-                          color: copiedCode === selectedVoucher.easyPayNumber ? '#16a34a' : '#1e40af',
-                          fontFamily: 'Montserrat, sans-serif'
-                        }}
-                      >
-                        {copiedCode === selectedVoucher.easyPayNumber ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
-                      </button>
+                                              <button
+                          onClick={() => {
+                            if (selectedVoucher.easyPayNumber) {
+                              handleCopyEasyPayNumber(selectedVoucher.easyPayNumber);
+                            }
+                          }}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: copiedCode === selectedVoucher.easyPayNumber ? '#16a34a' : '#1e40af',
+                            fontFamily: 'Montserrat, sans-serif'
+                          }}
+                        >
+                          {copiedCode === selectedVoucher.easyPayNumber ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
+                        </button>
                     </div>
                   </div>
                 )}
@@ -2128,7 +2782,9 @@ export function VouchersPage() {
                       margin: 0
                     }}
                   >
-                    
+                    {selectedVoucher.description && selectedVoucher.description !== 'MMVoucher' && selectedVoucher.description !== 'EasyPay voucher' 
+                      ? selectedVoucher.description 
+                      : 'No description provided'}
                   </p>
                 </div>
 

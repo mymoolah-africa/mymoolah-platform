@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { 
   Send,
   Receipt,
-  Gift,
+  Ticket,
   CreditCard,
   Smartphone,
   Car,
@@ -151,7 +151,7 @@ export function TransactPage() {
       id: 'vouchers',
       name: 'Vouchers',
       description: 'Buy and manage digital vouchers',
-      icon: <Gift className="w-6 h-6" />,
+      icon: <Ticket className="w-6 h-6" />,
       category: 'vouchers',
       available: true,
       requiresKYC: false,
@@ -181,7 +181,7 @@ export function TransactPage() {
       id: 'vouchers',
       name: 'Vouchers & Digital Services',
       description: 'Digital vouchers and services',
-      icon: <Gift className="w-5 h-5" />,
+      icon: <Ticket className="w-5 h-5" />,
       services: services.filter(s => s.category === 'vouchers')
     }
   ];

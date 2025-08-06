@@ -12,7 +12,7 @@ import {
   ArrowUpRight,
   Coffee,
   Car,
-  Gift
+  Ticket
 } from 'lucide-react';
 
 // Format currency function
@@ -39,14 +39,14 @@ function formatCurrency(amount: number | undefined): string {
 
 // Format date function for transactions
 function formatTransactionDate(date: Date): string {
-  // Format as dd:mmm:yyyy hh:mm
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = date.toLocaleString('en-ZA', { month: 'short' });
-  const year = date.getFullYear();
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  
-  return `${day}:${month}:${year} ${hours}:${minutes}`;
+  // Use consistent format like VouchersPage
+  return date.toLocaleDateString('en-ZA', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 
 // Get transaction icon based on transaction type and description
@@ -55,8 +55,8 @@ function getTransactionIcon(transaction: Transaction) {
   
   // Check for voucher transactions first
   if (transaction.description.toLowerCase().includes('voucher')) {
-    // Use a proper voucher/gift icon
-    return <Gift style={iconStyle} />;
+    // Use a proper voucher/ticket icon
+    return <Ticket style={iconStyle} />;
   }
   
   switch (transaction.type) {
@@ -129,8 +129,29 @@ function formatVoucherNumber(description: string): string {
   const voucherMatch = description.match(/(\d{12,16})/);
   if (voucherMatch) {
     const voucherNumber = voucherMatch[1];
-    // Format in groups of 4 digits
-    const formattedVoucher = voucherNumber.replace(/(\d{4})(?=\d)/g, '$1 ');
+    
+    // Format based on length
+    let formattedVoucher: string;
+    if (voucherNumber.length === 14) {
+      // EasyPay PIN (14 digits): 9 1234 0371 6648 2
+      formattedVoucher = voucherNumber.slice(0, 1) + ' ' + 
+                        voucherNumber.slice(1, 5) + ' ' + 
+                        voucherNumber.slice(5, 9) + ' ' + 
+                        voucherNumber.slice(9, 13) + ' ' + 
+                        voucherNumber.slice(13);
+    } else if (voucherNumber.length === 16) {
+      // MMVoucher PIN (16 digits): 9562 4205 7827 9406
+      formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
+                        voucherNumber.slice(4, 8) + ' ' + 
+                        voucherNumber.slice(8, 12) + ' ' + 
+                        voucherNumber.slice(12);
+    } else {
+      // Fallback for other lengths: groups of 4
+      formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
+                        voucherNumber.slice(4, 8) + ' ' + 
+                        voucherNumber.slice(8);
+    }
+    
     return description.replace(voucherNumber, formattedVoucher);
   }
   return description;
@@ -167,7 +188,7 @@ export function DashboardPage() {
         const balanceData = await balanceResponse.json();
         
         // Fetch recent transactions
-        const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?page=1&limit=6`, { headers });
+        const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?page=1&limit=10`, { headers });
         if (!transactionsResponse.ok) throw new Error('Failed to fetch transactions');
         const transactionsData = await transactionsResponse.json();
 
@@ -188,8 +209,12 @@ export function DashboardPage() {
         // Use the dedicated voucher balance summary API for proper reconciliation
         if (voucherBalanceData.success && voucherBalanceData.data) {
           const summary = voucherBalanceData.data;
-          setOpenVouchersCount(summary.active.count);
-          setOpenVouchersValue(parseFloat(summary.active.value));
+          // Use total count (active + pending) instead of just active
+          const totalVoucherCount = summary.active.count + summary.pending.count;
+          setOpenVouchersCount(totalVoucherCount);
+          // Use total value (active + pending) instead of just active
+          const totalVoucherValue = parseFloat(summary.active.value) + parseFloat(summary.pending.value);
+          setOpenVouchersValue(totalVoucherValue);
         } else {
           // Fallback to manual calculation if API fails
           const allVouchers = vouchersData.data?.vouchers || [];
@@ -199,8 +224,14 @@ export function DashboardPage() {
             return false;
           });
           
-          setOpenVouchersCount(activeVouchers.length);
-          setOpenVouchersValue(activeVouchers.reduce((sum: number, v: any) => sum + parseFloat(v.balance || 0), 0));
+          const pendingVouchers = allVouchers.filter((v: any) => v.status === 'pending_payment');
+          
+          // Use total count (active + pending) instead of just active
+          const totalVoucherCount = activeVouchers.length + pendingVouchers.length;
+          setOpenVouchersCount(totalVoucherCount);
+          const activeValue = activeVouchers.reduce((sum: number, v: any) => sum + parseFloat(v.balance || 0), 0);
+          const pendingValue = pendingVouchers.reduce((sum: number, v: any) => sum + parseFloat(v.originalAmount || 0), 0);
+          setOpenVouchersValue(activeValue + pendingValue);
         }
         
         // Transform transactions to match frontend format
@@ -212,6 +243,10 @@ export function DashboardPage() {
           // Handle backend transaction types correctly
           if (tx.type === 'deposit') {
             // Deposit transactions are credits (increase wallet balance)
+            type = 'received';
+            amount = tx.amount;
+          } else if (tx.type === 'refund') {
+            // Refund transactions are credits (increase wallet balance)
             type = 'received';
             amount = tx.amount;
           } else if (tx.type === 'payment') {
@@ -285,9 +320,7 @@ export function DashboardPage() {
 
   // Handle recent transactions card click - navigate to full transaction history
   const handleRecentTransactionsClick = () => {
-    // TODO: Create full transaction history page
-    alert('Full transaction history page coming soon!');
-    // When page is created, use: navigate('/transactions');
+    navigate('/transactions');
   };
 
   // Get transaction color based on type and amount

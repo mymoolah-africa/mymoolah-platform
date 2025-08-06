@@ -4,7 +4,7 @@ import {
   Home, 
   Send, 
   Receipt, 
-  Gift, 
+  Ticket, 
   User
 } from "lucide-react";
 
@@ -38,7 +38,7 @@ const navItems: NavItem[] = [
     id: 'vouchers',
     path: '/vouchers',
     label: 'Vouchers',
-    icon: () => <Gift style={{ width: '20px', height: '20px' }} />
+    icon: () => <Ticket style={{ width: '20px', height: '20px' }} />
   },
   {
     id: 'profile',

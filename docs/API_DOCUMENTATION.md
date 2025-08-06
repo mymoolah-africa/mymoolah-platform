@@ -273,6 +273,41 @@ GET /api/v1/vouchers/{voucher_id}/redemptions
 }
 ```
 
+### Cancel EasyPay Voucher
+```http
+POST /api/v1/vouchers/:voucherId/cancel
+Authorization: Bearer <token>
+```
+
+**Description**: Cancel a pending EasyPay voucher and refund the full amount to the user's wallet.
+
+**Parameters**:
+- `voucherId` (path): The ID of the voucher to cancel
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "EasyPay voucher cancelled successfully",
+  "data": {
+    "voucherId": "123",
+    "easyPayCode": "91234604263339",
+    "originalAmount": 130.00,
+    "refundAmount": 130.00,
+    "newWalletBalance": 11530.00,
+    "cancelledAt": "2025-08-05T22:57:00.000Z",
+    "transactionId": "TXN-1234567890-abc123"
+  }
+}
+```
+
+**Business Rules**:
+- Only pending EasyPay vouchers can be cancelled
+- Expired vouchers cannot be cancelled (auto-refunded)
+- Settled vouchers cannot be cancelled
+- Full refund is processed immediately
+- Complete audit trail is maintained
+
 ---
 
 ## **💰 Wallet Management API**

@@ -424,3 +424,146 @@ exports.issueVoucher = async (req, res) => {
 - A clear, restorable backup must be created before any destructive operation.
 - Every cleanup step must be documented in the changelog and session notes.
 - If in doubt, always err on the side of caution and ask for explicit user confirmation. 
+
+## Voucher Copy Functionality (2025-08-05)
+
+### EasyPay Copy Function
+```typescript
+const handleCopyEasyPayNumber = async (easyPayNumber: string) => {
+  const formattedNumber = easyPayNumber.slice(0, 1) + ' ' + 
+                         easyPayNumber.slice(1, 5) + ' ' + 
+                         easyPayNumber.slice(5, 9) + ' ' + 
+                         easyPayNumber.slice(9, 13) + ' ' + 
+                         easyPayNumber.slice(13);
+  
+  await navigator.clipboard.writeText(formattedNumber);
+  setCopiedCode(formattedNumber);
+  // Shows success toast and green check icon
+};
+```
+
+### All Copy Functions Working
+- **Dashboard Cards**: `handleCopyCode(voucher)`
+- **History Cards**: `handleCopyCode(voucher)`  
+- **Details Popup MMVoucher**: `handleCopyCode(selectedVoucher)`
+- **Details Popup EasyPay**: `handleCopyEasyPayNumber(selectedVoucher.easyPayNumber)`
+
+### EasyPay Pending Expiry Information
+```typescript
+{voucher.type === 'easypay_voucher' && voucher.status === 'pending_payment' && (
+  <div style={{ 
+    marginTop: '8px', 
+    padding: '8px 12px', 
+    backgroundColor: '#fef3c7', 
+    border: '1px solid #f59e0b', 
+    borderRadius: '6px',
+    borderLeft: '3px solid #f59e0b'
+  }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '2px' }}>
+      <Clock style={{ width: '10px', height: '10px', color: '#f59e0b' }} />
+      <span style={{ color: '#f59e0b', fontWeight: '600' }}>
+        Expires: {formatDate(voucher.expiryDate)}
+      </span>
+    </div>
+    <span style={{ color: '#d97706', fontWeight: '500' }}>
+      Make payment at any EasyPay terminal
+    </span>
+  </div>
+)}
+```
+
+## EasyPay Automatic Expiration Handling (2025-08-05)
+
+### Configuration
+```javascript
+const EASYPAY_EXPIRATION_CONFIG = {
+  ENABLE_EXPIRY_FEE: false, // Future implementation - currently no fee
+  EXPIRY_FEE_PERCENTAGE: 0.05, // 5% fee when enabled
+  MIN_EXPIRY_FEE: 5.00, // Minimum R5.00 fee
+  MAX_EXPIRY_FEE: 50.00, // Maximum R50.00 fee
+  REFUND_DESCRIPTION: 'EasyPay voucher expired - full refund',
+  FEE_DESCRIPTION: 'EasyPay voucher expired - processing fee',
+  REFUND_DESCRIPTION_WITH_FEE: 'EasyPay voucher expired - refund minus processing fee'
+};
+```
+
+### Automatic Processing
+- **Frequency**: Runs every hour automatically
+- **Scope**: Only processes EasyPay vouchers with `pending_payment` status
+- **Action**: Updates status to `expired` and refunds user's wallet
+- **Audit**: Creates detailed transaction records with metadata
+
+### Manual Trigger Endpoint
+```bash
+POST /api/v1/vouchers/trigger-expiration
+Authorization: Bearer <admin_token>
+```
+
+### Future Fee Implementation
+When `ENABLE_EXPIRY_FEE: true`:
+- **Fee Calculation**: 5% of original amount (min R5, max R50)
+- **Refund Amount**: Original amount minus fee
+- **Transaction Records**: Separate refund and fee transactions
+- **Audit Trail**: Complete metadata for compliance
+
+## EasyPay Cancel Functionality (2025-08-05)
+
+### API Endpoint
+```bash
+POST /api/v1/vouchers/:voucherId/cancel
+Authorization: Bearer <user_token>
+```
+
+### Business Logic
+```javascript
+// Validation checks
+- Voucher must be pending_payment status
+- Voucher must not be expired
+- Voucher must not be settled (callback received)
+- User must own the voucher
+
+// Actions performed
+- Update status: pending_payment → cancelled
+- Refund full amount to user's wallet
+- Create refund transaction record
+- Add comprehensive audit trail
+```
+
+### Frontend Implementation
+```typescript
+const handleCancelEasyPayVoucher = async (voucher: MMVoucher) => {
+  // Show confirmation dialog
+  // Make API call to cancel endpoint
+  // Show loading state
+  // Display success/error toast
+  // Refresh voucher list
+};
+```
+
+### User Experience
+- **Cancel Button**: Small red button with X icon
+- **Confirmation Dialog**: Clear warning about permanent cancellation
+- **Loading State**: Orange toast during processing
+- **Success Feedback**: Green toast with refund amount
+- **Error Handling**: Red toast with error message
+- **Auto Refresh**: Voucher list updates automatically 
+
+## EasyPay Voucher Formatting (2025-08-05)
+
+### Cancelled Voucher Display
+```typescript
+// Format cancelled EasyPay vouchers
+} else if (voucher.status === 'cancelled') {
+  if (voucher.easyPayNumber) {
+    const epNumber = voucher.easyPayNumber;
+    return {
+      mainCode: `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`
+    };
+  }
+}
+```
+
+### Format Requirements
+- **14-digit EasyPay numbers**: `9 1234 6042 6333 9`
+- **Consistent spacing**: Groups of 4 digits with spaces
+- **Status handling**: All EasyPay statuses (pending, active, cancelled, redeemed) 

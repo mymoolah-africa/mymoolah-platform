@@ -25,7 +25,7 @@ const createFallbackIcon = (name: string) => {
 
 // Try to import lucide-react icons, fallback to simple icons if not available
 let Eye, EyeOff, Phone, User, Hash, Check, X, AlertTriangle, FileText, Shield, HelpCircle, Info, CheckCircle;
-let Send, Receipt, Gift, Plus, ArrowUpRight, ArrowDownLeft, Bell, Settings, TrendingUp;
+let Send, Receipt, Ticket, Plus, ArrowUpRight, ArrowDownLeft, Bell, Settings, TrendingUp;
 let Loader2, Clock, CreditCard, Home, Upload, Camera, ArrowLeft;
 let ShoppingBag, Wifi, Coffee, Car, ChevronRight;
 
@@ -48,7 +48,7 @@ try {
   CheckCircle = lucideIcons.CheckCircle;
   Send = lucideIcons.Send;
   Receipt = lucideIcons.Receipt;
-  Gift = lucideIcons.Gift;
+  Ticket = lucideIcons.Ticket;
   Plus = lucideIcons.Plus;
   ArrowUpRight = lucideIcons.ArrowUpRight;
   ArrowDownLeft = lucideIcons.ArrowDownLeft;
@@ -86,7 +86,7 @@ try {
   CheckCircle = createFallbackIcon('CheckCircle');
   Send = createFallbackIcon('Send');
   Receipt = createFallbackIcon('Receipt');
-  Gift = createFallbackIcon('Gift');
+  Ticket = createFallbackIcon('Ticket');
   Plus = createFallbackIcon('Plus');
   ArrowUpRight = createFallbackIcon('ArrowUp');
   ArrowDownLeft = createFallbackIcon('ArrowDown');
@@ -123,7 +123,7 @@ const Icons = {
   CheckCircle,
   Send,
   Receipt,
-  Gift,
+  Ticket,
   Plus,
   ArrowUpRight,
   ArrowDownLeft,
@@ -161,7 +161,7 @@ export {
   CheckCircle,
   Send,
   Receipt,
-  Gift,
+  Ticket,
   Plus,
   ArrowUpRight,
   ArrowDownLeft,

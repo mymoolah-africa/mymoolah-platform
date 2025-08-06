@@ -519,3 +519,64 @@ curl -H "Authorization: Bearer <token>" \
 - A clear, restorable backup must be created before any destructive operation.
 - Every cleanup step must be documented in the changelog and session notes.
 - If in doubt, always err on the side of caution and ask for explicit user confirmation. 
+
+## Voucher Copy Functionality Tests (2025-08-05)
+
+### EasyPay Copy Button Tests
+- **Test**: EasyPay voucher details popup copy button
+- **Expected**: Copies formatted number `9 1234 0671 6648 2`
+- **Success**: Shows green check icon and success toast
+- **Error**: Graceful fallback if clipboard fails
+
+### All Copy Function Tests
+- **Dashboard Cards**: Copy button works for all voucher types
+- **History Cards**: Copy button works for all voucher types
+- **Details Popup MMVoucher**: Copy button works for regular vouchers
+- **Details Popup EasyPay**: Copy button works for EasyPay vouchers
+
+### EasyPay Pending Expiry Information Tests
+- **Display**: Only shows for `easypay_voucher` + `pending_payment`
+- **Styling**: Orange background with clock icon
+- **Content**: Shows expiry date and payment instructions
+- **Conditional**: Hidden for all other voucher types 
+
+## EasyPay Cancel Functionality Tests
+
+### Test Cases
+1. **Cancel Pending EasyPay Voucher**
+   - Create EasyPay voucher with pending status
+   - Click cancel button
+   - Verify confirmation dialog appears
+   - Confirm cancellation
+   - Verify voucher status changes to cancelled
+   - Verify refund transaction is created
+   - Verify wallet balance increases
+
+2. **Cancel Button UI**
+   - Verify cancel button appears only on pending EasyPay vouchers
+   - Verify button styling (red background, X icon)
+   - Verify hover effects
+   - Verify tooltip text
+
+3. **Transaction Display**
+   - Verify refund transaction appears as green credit
+   - Verify amount is positive (no minus sign)
+   - Verify proper transaction description
+
+4. **Voucher History Filter**
+   - Verify "Cancelled" option appears in status filter
+   - Verify cancelled vouchers display in history
+   - Verify cancelled vouchers show red "Cancelled" badges
+
+## EasyPay Voucher Formatting Tests
+
+### Test Cases
+1. **Cancelled Voucher Formatting**
+   - Verify cancelled EasyPay vouchers display as `9 1234 6042 6333 9`
+   - Verify no continuous string display
+   - Verify consistent spacing
+
+2. **Status Filter Integration**
+   - Verify cancelled vouchers appear in history
+   - Verify proper status mapping from backend
+   - Verify filter functionality works correctly 

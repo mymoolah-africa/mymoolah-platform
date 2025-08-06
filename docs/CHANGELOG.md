@@ -17,7 +17,90 @@
 
 ---
 
-## [2025-08-05] - Voucher Display Logic & Currency Formatting
+## [2025-08-05] - Voucher System Enhancements & Copy Functionality Fixes
+
+### ✅ **EasyPay Automatic Expiration Handling**
+- **Added**: Automatic processing of expired EasyPay vouchers with full refunds
+- **Feature**: Runs every hour to check for expired vouchers
+- **Refund Logic**: Full refund to user's wallet when EasyPay vouchers expire
+- **Future Fee Capability**: Configurable expiry fee system (currently disabled)
+- **Audit Trail**: Comprehensive transaction records with detailed metadata
+- **Manual Trigger**: Admin endpoint for manual expiration processing
+- **Bug Fix**: Resolved Sequelize association error in expiration handler
+
+### ✅ **EasyPay Cancel Functionality**
+- **Added**: User-initiated cancellation of pending EasyPay vouchers
+- **Feature**: Small red "Cancel" button on pending EasyPay voucher cards
+- **Refund Logic**: Immediate full refund to user's wallet upon cancellation
+- **Confirmation Dialog**: Clear warning about cancellation being permanent
+- **Audit Trail**: Complete transaction records with cancellation metadata
+- **API Endpoint**: `POST /api/v1/vouchers/:voucherId/cancel`
+- **User Experience**: Loading states, success/error toasts, automatic list refresh
+
+### ✅ **EasyPay Voucher Formatting Fixes**
+- **Fixed**: Cancelled EasyPay vouchers now display properly formatted 14-digit numbers
+- **Format**: `9 1234 6042 6333 9` (as per EasyPay API requirements)
+- **Status Handling**: Added `'cancelled'` status to voucher code formatting logic
+- **Consistency**: Same formatting as pending EasyPay vouchers
+
+### ✅ **Cancelled Vouchers in History**
+- **Added**: "Cancelled" status option to voucher history filter dropdown
+- **Fixed**: Frontend status mapping to include cancelled vouchers in API response
+- **Display**: Cancelled vouchers show with red "Cancelled" badges
+- **Filtering**: Users can now filter and view cancelled vouchers in history
+
+### ✅ **Transaction Display Fixes**
+- **Fixed**: Refund transactions now display as green credits instead of red debits
+- **Updated**: Transaction type mapping to include `'refund'` as credit transaction
+- **Consistency**: Proper color coding for all transaction types
+- **User Experience**: Clear visual distinction between credits and debits
+
+### ✅ **EasyPay Pending Expiry Information**
+- **Added**: Expiry timestamp and payment instructions for EasyPay pending vouchers
+- **Feature**: Shows "Expires: 10 Aug 2025, 18:03" and "Make payment at any EasyPay terminal"
+- **Styling**: Orange background with clock icon and left border accent
+- **Conditional**: Only displays for `voucher.type === 'easypay_voucher' && voucher.status === 'pending_payment'`
+- **Easy Removal**: Well-commented for future changes
+
+### ✅ **EasyPay Copy to Clipboard Function - FIXED**
+- **Issue**: Copy button in voucher details popup wasn't working for EasyPay vouchers
+- **Root Cause**: Using inline logic instead of centralized copy function
+- **Solution**: Created dedicated `handleCopyEasyPayNumber()` function
+- **Improvements**:
+  - Proper formatting: `9 1234 0671 6648 2`
+  - Success toast: "EasyPay number copied!"
+  - Visual feedback: Green check icon when copied
+  - Error handling: Graceful fallback if copy fails
+  - TypeScript safety: Null checks for `easyPayNumber`
+
+### ✅ **All Copy Functions Now Working**
+- **Dashboard Voucher Cards**: Uses `handleCopyCode(voucher)` ✅
+- **History Voucher Cards**: Uses `handleCopyCode(voucher)` ✅  
+- **Details Popup MMVoucher**: Uses `handleCopyCode(selectedVoucher)` ✅
+- **Details Popup EasyPay**: Uses `handleCopyEasyPayNumber(selectedVoucher.easyPayNumber)` ✅
+
+### 🔧 **Technical Improvements**
+- **Code Organization**: Separated EasyPay copy logic from regular voucher copy logic
+- **Error Handling**: Added comprehensive error handling for clipboard operations
+- **User Experience**: Consistent copy behavior across all voucher types
+- **Type Safety**: Added proper TypeScript null checks
+
+### 📋 **Files Modified**
+- `mymoolah/mymoolah-wallet-frontend/pages/VouchersPage.tsx`
+  - Added `handleCopyEasyPayNumber()` function
+  - Fixed EasyPay copy button in details popup
+  - Added EasyPay pending expiry information display
+  - Improved conditional rendering logic
+
+### 🎯 **User Experience Improvements**
+- **EasyPay Pending Vouchers**: Clear expiry information and payment instructions
+- **Copy Functionality**: All voucher types now have working copy buttons
+- **Visual Feedback**: Consistent success indicators across all copy operations
+- **Error Recovery**: Graceful handling of clipboard failures
+
+---
+
+## [2025-08-04] - Voucher Display Logic & Currency Formatting
 
 ### 🎫 **Voucher Display Logic Fix**
 - **Corrected Voucher Status Logic:**

@@ -258,6 +258,14 @@ app.listen(port, () => {
   if (mobilemartRoutesLoaded) {
     console.log(`   - MobileMart: /api/v1/mobilemart`);
   }
+  
+  // Start EasyPay expiration handler
+  try {
+    const { startExpirationHandler } = require('./controllers/voucherController');
+    startExpirationHandler();
+  } catch (error) {
+    console.error('❌ Failed to start EasyPay expiration handler:', error);
+  }
 });
 
 module.exports = app; // Export the app for testing

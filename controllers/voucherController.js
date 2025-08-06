@@ -1,6 +1,213 @@
 const { Voucher, VoucherType, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
+// Configuration for EasyPay expiration handling
+const EASYPAY_EXPIRATION_CONFIG = {
+  ENABLE_EXPIRY_FEE: false, // Future implementation - currently no fee
+  EXPIRY_FEE_PERCENTAGE: 0.05, // 5% fee when enabled
+  MIN_EXPIRY_FEE: 5.00, // Minimum R5.00 fee
+  MAX_EXPIRY_FEE: 50.00, // Maximum R50.00 fee
+  REFUND_DESCRIPTION: 'EasyPay voucher expired - full refund',
+  FEE_DESCRIPTION: 'EasyPay voucher expired - processing fee',
+  REFUND_DESCRIPTION_WITH_FEE: 'EasyPay voucher expired - refund minus processing fee'
+};
+
+// Handle expired EasyPay vouchers with automatic refund
+const handleExpiredVouchers = async () => {
+  try {
+    console.log('🕐 Checking for expired EasyPay vouchers...');
+    
+    const expiredVouchers = await Voucher.findAll({
+      where: {
+        status: 'pending_payment',
+        easyPayCode: { [Op.ne]: null }, // Only EasyPay vouchers
+        expiresAt: { [Op.lt]: new Date() }
+      }
+    });
+
+    console.log(`📊 Found ${expiredVouchers.length} expired EasyPay vouchers`);
+
+    for (const voucher of expiredVouchers) {
+      try {
+        // Get user's wallet
+        const { Wallet, Transaction } = require('../models');
+        const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
+        
+        if (!wallet) {
+          console.error(`❌ Wallet not found for user ${voucher.userId}`);
+          continue;
+        }
+
+        // Calculate refund amount (with future fee capability)
+        let refundAmount = parseFloat(voucher.originalAmount);
+        let feeAmount = 0;
+        let transactionDescription = EASYPAY_EXPIRATION_CONFIG.REFUND_DESCRIPTION;
+
+        // Future implementation: Apply expiry fee if enabled
+        if (EASYPAY_EXPIRATION_CONFIG.ENABLE_EXPIRY_FEE) {
+          feeAmount = Math.max(
+            EASYPAY_EXPIRATION_CONFIG.MIN_EXPIRY_FEE,
+            Math.min(
+              EASYPAY_EXPIRATION_CONFIG.MAX_EXPIRY_FEE,
+              refundAmount * EASYPAY_EXPIRATION_CONFIG.EXPIRY_FEE_PERCENTAGE
+            )
+          );
+          refundAmount -= feeAmount;
+          transactionDescription = EASYPAY_EXPIRATION_CONFIG.REFUND_DESCRIPTION_WITH_FEE;
+        }
+
+        // Update voucher status to expired
+        await voucher.update({ 
+          status: 'expired',
+          metadata: {
+            ...voucher.metadata,
+            expiredAt: new Date().toISOString(),
+            refundAmount: refundAmount,
+            feeAmount: feeAmount,
+            processedBy: 'auto_expiration_handler'
+          }
+        });
+
+        // Credit user's wallet with refund
+        await wallet.credit(refundAmount, 'easypay_expired_refund');
+        
+        // Create refund transaction record
+        const refundTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await Transaction.create({
+          transactionId: refundTransactionId,
+          userId: voucher.userId,
+          walletId: wallet.walletId,
+          amount: refundAmount,
+          type: 'refund',
+          status: 'completed',
+          description: transactionDescription,
+          currency: 'ZAR',
+          fee: 0.00,
+          metadata: {
+            voucherId: voucher.id,
+            voucherCode: voucher.easyPayCode,
+            voucherType: 'easypay_expired',
+            originalAmount: voucher.originalAmount,
+            refundAmount: refundAmount,
+            feeAmount: feeAmount,
+            expiryDate: voucher.expiresAt,
+            refundReason: 'easypay_voucher_expired',
+            auditTrail: {
+              processedAt: new Date().toISOString(),
+              handler: 'auto_expiration_handler',
+              config: {
+                enableExpiryFee: EASYPAY_EXPIRATION_CONFIG.ENABLE_EXPIRY_FEE,
+                expiryFeePercentage: EASYPAY_EXPIRATION_CONFIG.EXPIRY_FEE_PERCENTAGE
+              }
+            }
+          }
+        });
+
+        // Create fee transaction record if fee was applied
+        if (feeAmount > 0) {
+          const feeTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          await Transaction.create({
+            transactionId: feeTransactionId,
+            userId: voucher.userId,
+            walletId: wallet.walletId,
+            amount: -feeAmount, // Negative amount for fee
+            type: 'fee',
+            status: 'completed',
+            description: EASYPAY_EXPIRATION_CONFIG.FEE_DESCRIPTION,
+            currency: 'ZAR',
+            fee: feeAmount,
+            metadata: {
+              voucherId: voucher.id,
+              voucherCode: voucher.easyPayCode,
+              voucherType: 'easypay_expired_fee',
+              originalAmount: voucher.originalAmount,
+              feeAmount: feeAmount,
+              expiryDate: voucher.expiresAt,
+              feeReason: 'easypay_voucher_expiry_fee',
+              auditTrail: {
+                processedAt: new Date().toISOString(),
+                handler: 'auto_expiration_handler',
+                config: {
+                  enableExpiryFee: EASYPAY_EXPIRATION_CONFIG.ENABLE_EXPIRY_FEE,
+                  expiryFeePercentage: EASYPAY_EXPIRATION_CONFIG.EXPIRY_FEE_PERCENTAGE
+                }
+              }
+            }
+          });
+        }
+
+        console.log(`✅ Processed expired voucher ${voucher.easyPayCode}:`);
+        console.log(`   - Original Amount: R${voucher.originalAmount}`);
+        console.log(`   - Refund Amount: R${refundAmount}`);
+        console.log(`   - Fee Amount: R${feeAmount}`);
+        console.log(`   - User ID: ${voucher.userId}`);
+
+      } catch (error) {
+        console.error(`❌ Error processing expired voucher ${voucher.easyPayCode}:`, error);
+      }
+    }
+
+    console.log(`✅ Completed expired voucher processing. Processed ${expiredVouchers.length} vouchers.`);
+
+  } catch (error) {
+    console.error('❌ Error in handleExpiredVouchers:', error);
+  }
+};
+
+// Start automatic expiration handling (run every hour)
+const startExpirationHandler = () => {
+  console.log('🔄 Starting EasyPay expiration handler...');
+  
+  // Run immediately on startup
+  handleExpiredVouchers();
+  
+  // Then run every hour
+  setInterval(handleExpiredVouchers, 60 * 60 * 1000);
+  
+  console.log('✅ EasyPay expiration handler started successfully');
+};
+
+// Export for manual execution if needed
+exports.handleExpiredVouchers = handleExpiredVouchers;
+exports.startExpirationHandler = startExpirationHandler;
+exports.EASYPAY_EXPIRATION_CONFIG = EASYPAY_EXPIRATION_CONFIG;
+
+// Manual trigger endpoint for testing (admin only)
+exports.triggerExpirationHandler = async (req, res) => {
+  try {
+    // Check if user is admin (you can modify this logic)
+    if (!req.user || req.user.role !== 'admin') {
+      return res.status(403).json({ 
+        error: 'Access denied. Admin privileges required.' 
+      });
+    }
+
+    console.log('🔧 Manual trigger of EasyPay expiration handler...');
+    
+    // Run the expiration handler
+    await handleExpiredVouchers();
+    
+    res.json({
+      success: true,
+      message: 'EasyPay expiration handler executed successfully',
+      timestamp: new Date().toISOString(),
+      config: {
+        enableExpiryFee: EASYPAY_EXPIRATION_CONFIG.ENABLE_EXPIRY_FEE,
+        expiryFeePercentage: EASYPAY_EXPIRATION_CONFIG.EXPIRY_FEE_PERCENTAGE,
+        minExpiryFee: EASYPAY_EXPIRATION_CONFIG.MIN_EXPIRY_FEE,
+        maxExpiryFee: EASYPAY_EXPIRATION_CONFIG.MAX_EXPIRY_FEE
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in manual expiration trigger:', error);
+    res.status(500).json({ 
+      error: 'Failed to execute expiration handler',
+      details: error.message 
+    });
+  }
+};
+
 // Generate EasyPay number using Luhn algorithm
 const generateEasyPayNumber = () => {
   const EASYPAY_PREFIX = '9';
@@ -102,7 +309,11 @@ exports.issueVoucher = async (req, res) => {
         balance: amount,
         status: 'active',
         voucherType: 'standard',
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        metadata: {
+          description: voucherData.description || null,
+          merchant: voucherData.merchant || null
+        }
       });
       
       // Debit user's wallet
@@ -168,41 +379,89 @@ exports.issueEasyPayVoucher = async (req, res) => {
       return res.status(400).json({ error: 'Amount must be between 50 and 4000' });
     }
 
+    // Get user's wallet
+    const { Wallet, Transaction } = require('../models');
+    const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+    
+    if (!wallet) {
+      return res.status(404).json({ error: 'User wallet not found' });
+    }
+    
+    if (wallet.status !== 'active') {
+      return res.status(400).json({ error: 'Wallet is not active' });
+    }
+    
+    // Check if user has sufficient balance
+    if (wallet.balance < amount) {
+      return res.status(400).json({ error: 'Insufficient wallet balance' });
+    }
+
     // Generate EasyPay number
     const easyPayCode = generateEasyPayNumber();
     
     // Set expiration (96 hours from now - 4 days)
     const expiresAt = new Date(Date.now() + 96 * 60 * 60 * 1000);
     
-    // Create EasyPay voucher
-    const voucher = await Voucher.create({
-      voucherCode: easyPayCode, // Use EasyPay code as voucher code initially
-      easyPayCode,
-      originalAmount: amount,
-      balance: 0, // No balance until settled
-      status: 'pending',
-      voucherType: 'easypay_pending',
-      expiresAt,
-      metadata: {
-        issuedTo: voucherData.issued_to,
-        issuedBy: 'system',
-        callbackReceived: false,
-        smsSent: false
-      }
-    });
-    
+    try {
+      // Create EasyPay voucher
+      const voucher = await Voucher.create({
+        userId: req.user.id, // Add user ID
+        voucherCode: easyPayCode, // Use EasyPay code as voucher code initially
+        easyPayCode,
+        originalAmount: amount,
+        balance: 0, // No balance until settled
+        status: 'pending_payment',
+        voucherType: 'easypay_pending',
+        expiresAt,
+        metadata: {
+          issuedTo: voucherData.issued_to,
+          issuedBy: 'system',
+          callbackReceived: false,
+          smsSent: false,
+          description: voucherData.description || null,
+          merchant: voucherData.merchant || null
+        }
+      });
 
+      // Debit user's wallet
+      await wallet.debit(amount, 'voucher_purchase');
+      
+      // Create transaction record
+      const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      await Transaction.create({
+        transactionId: transactionId,
+        userId: req.user.id,
+        walletId: wallet.walletId,
+        amount: amount,
+        type: 'payment',
+        status: 'completed',
+        description: `Voucher purchase: ${easyPayCode}`,
+        currency: 'ZAR',
+        fee: 0.00,
+        metadata: {
+          voucherId: voucher.id,
+          voucherCode: easyPayCode,
+          voucherType: 'easypay_pending',
+          purchaseType: 'easypay_voucher_issue'
+        }
+      });
 
-    res.status(201).json({
-      success: true,
-      message: 'EasyPay voucher created successfully',
-      data: {
-        easypay_code: voucher.easyPayCode,
-        amount: voucher.originalAmount,
-        expires_at: voucher.expiresAt,
-        sms_sent: false
-      }
-    });
+      res.status(201).json({
+        success: true,
+        message: 'EasyPay voucher created successfully',
+        data: {
+          easypay_code: voucher.easyPayCode,
+          amount: voucher.originalAmount,
+          expires_at: voucher.expiresAt,
+          sms_sent: false,
+          wallet_balance: wallet.balance,
+          transaction_id: transactionId
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error in EasyPay voucher issuance:', error);
+      res.status(500).json({ error: 'Database error during EasyPay voucher issuance. Please try again.' });
+    }
   } catch (err) {
     console.error('❌ Issue EasyPay voucher error:', err);
     res.status(500).json({ error: err.message || 'Failed to issue EasyPay voucher' });
@@ -219,7 +478,7 @@ exports.processEasyPaySettlement = async (req, res) => {
       where: {
         easyPayCode: easypay_code,
         voucherType: 'easypay_pending',
-        status: 'pending'
+        status: 'pending_payment'
       }
     });
     
@@ -584,7 +843,7 @@ exports.getVoucherBalanceSummary = async (req, res) => {
     const activeVouchersValue = activeVouchers.reduce((sum, voucher) => sum + parseFloat(voucher.balance || 0), 0);
     
     // Calculate pending vouchers (EasyPay pending)
-    const pendingVouchers = vouchers.filter(voucher => voucher.status === 'pending');
+    const pendingVouchers = vouchers.filter(voucher => voucher.status === 'pending_payment');
     const pendingVouchersCount = pendingVouchers.length;
     const pendingVouchersValue = pendingVouchers.reduce((sum, voucher) => sum + parseFloat(voucher.originalAmount || 0), 0);
     
@@ -643,7 +902,8 @@ exports.listAllVouchersForMe = async (req, res) => {
       status: voucher.status,
       expiresAt: voucher.expiresAt,
       createdAt: voucher.createdAt,
-      updatedAt: voucher.updatedAt
+      updatedAt: voucher.updatedAt,
+      metadata: voucher.metadata
     }));
     
     res.json({ 
@@ -657,6 +917,143 @@ exports.listAllVouchersForMe = async (req, res) => {
       success: false,
       error: 'Internal server error', 
       details: error.message 
+    });
+  }
+};
+
+// Cancel EasyPay voucher with full refund
+exports.cancelEasyPayVoucher = async (req, res) => {
+  try {
+    const { voucherId } = req.params;
+    
+    if (!voucherId) {
+      return res.status(400).json({ error: 'Voucher ID is required' });
+    }
+
+    // Find the voucher
+    const voucher = await Voucher.findOne({
+      where: {
+        id: voucherId,
+        userId: req.user.id,
+        status: 'pending_payment',
+        easyPayCode: { [Op.ne]: null } // Only EasyPay vouchers
+      }
+    });
+
+    if (!voucher) {
+      return res.status(404).json({ 
+        error: 'EasyPay voucher not found or cannot be cancelled' 
+      });
+    }
+
+    // Check if voucher has already expired
+    if (voucher.expiresAt && new Date() > voucher.expiresAt) {
+      return res.status(400).json({ 
+        error: 'Cannot cancel expired voucher. It will be automatically refunded.' 
+      });
+    }
+
+    // Check if voucher has already been settled (callback received)
+    if (voucher.metadata?.callbackReceived) {
+      return res.status(400).json({ 
+        error: 'Cannot cancel voucher that has already been settled' 
+      });
+    }
+
+    // Get user's wallet
+    const { Wallet, Transaction } = require('../models');
+    const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+    
+    if (!wallet) {
+      return res.status(404).json({ error: 'User wallet not found' });
+    }
+
+    const refundAmount = parseFloat(voucher.originalAmount);
+
+    try {
+      // Update voucher status to cancelled
+      await voucher.update({ 
+        status: 'cancelled',
+        metadata: {
+          ...voucher.metadata,
+          cancelledAt: new Date().toISOString(),
+          cancellationReason: 'user_requested',
+          cancelledBy: req.user.id,
+          refundAmount: refundAmount,
+          auditTrail: {
+            action: 'easypay_voucher_cancellation',
+            userInitiated: true,
+            processedAt: new Date().toISOString(),
+            originalStatus: 'pending_payment',
+            newStatus: 'cancelled'
+          }
+        }
+      });
+
+      // Credit user's wallet with full refund
+      await wallet.credit(refundAmount, 'easypay_cancellation_refund');
+      
+      // Create refund transaction record
+      const refundTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      await Transaction.create({
+        transactionId: refundTransactionId,
+        userId: req.user.id,
+        walletId: wallet.walletId,
+        amount: refundAmount,
+        type: 'refund',
+        status: 'completed',
+        description: 'EasyPay voucher cancelled - full refund',
+        currency: 'ZAR',
+        fee: 0.00,
+        metadata: {
+          voucherId: voucher.id,
+          voucherCode: voucher.easyPayCode,
+          voucherType: 'easypay_cancelled',
+          originalAmount: voucher.originalAmount,
+          refundAmount: refundAmount,
+          cancellationReason: 'user_requested',
+          cancelledAt: new Date().toISOString(),
+          auditTrail: {
+            processedAt: new Date().toISOString(),
+            handler: 'user_cancellation',
+            action: 'easypay_voucher_cancellation',
+            userInitiated: true,
+            originalStatus: 'pending_payment',
+            newStatus: 'cancelled'
+          }
+        }
+      });
+
+      console.log(`✅ User ${req.user.id} cancelled EasyPay voucher ${voucher.easyPayCode}:`);
+      console.log(`   - Original Amount: R${voucher.originalAmount}`);
+      console.log(`   - Refund Amount: R${refundAmount}`);
+      console.log(`   - New Wallet Balance: R${wallet.balance}`);
+
+      res.json({
+        success: true,
+        message: 'EasyPay voucher cancelled successfully',
+        data: {
+          voucherId: voucher.id,
+          easyPayCode: voucher.easyPayCode,
+          originalAmount: voucher.originalAmount,
+          refundAmount: refundAmount,
+          newWalletBalance: wallet.balance,
+          cancelledAt: new Date().toISOString(),
+          transactionId: refundTransactionId
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Error cancelling EasyPay voucher:', error);
+      res.status(500).json({ 
+        error: 'Failed to cancel voucher. Please try again.' 
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Error in cancelEasyPayVoucher:', error);
+    res.status(500).json({ 
+      error: 'Server error during voucher cancellation' 
     });
   }
 };

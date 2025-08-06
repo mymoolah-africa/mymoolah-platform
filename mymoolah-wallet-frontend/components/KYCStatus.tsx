@@ -102,7 +102,11 @@ const KYCStatus: React.FC<KYCStatusProps> = ({ userId }) => {
       {kycStatus.kycVerified && kycStatus.kycVerifiedAt && (
         <div className="mt-3 pt-3 border-t border-gray-200">
           <p className="text-xs text-gray-500">
-            Verified on: {new Date(kycStatus.kycVerifiedAt).toLocaleDateString()}
+            Verified on: {new Date(kycStatus.kycVerifiedAt).toLocaleDateString('en-ZA', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            })}
           </p>
           {kycStatus.kycVerifiedBy && (
             <p className="text-xs text-gray-500">
