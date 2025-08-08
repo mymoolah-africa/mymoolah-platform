@@ -517,3 +517,33 @@ POST /billpayment/v1/easypay/process
 **Last Updated**: August 4, 2025  
 **API Version**: v1.2.1  
 **Status**: Production Ready 
+
+## Ledger API
+Base Path: `/api/v1/ledger`
+
+### POST `/accounts`
+Create a ledger account.
+Request body:
+```json
+{ "code": "1000", "name": "Cash", "type": "asset", "normalSide": "debit" }
+```
+Response: `{ success, message, data }`
+
+### POST `/journal-entries`
+Post a balanced journal entry.
+Request body:
+```json
+{
+  "reference": "TEST-001",
+  "description": "Sale for cash",
+  "lines": [
+    { "accountCode": "1000", "dc": "debit", "amount": 100.00 },
+    { "accountCode": "4000", "dc": "credit", "amount": 100.00 }
+  ]
+}
+```
+Response: `{ success, message, data }`
+
+### GET `/trial-balance`
+Returns trial balance totals and account-level balances.
+Response: `{ success, message, data: { balances: [...], totals: { debits, credits } } }` 

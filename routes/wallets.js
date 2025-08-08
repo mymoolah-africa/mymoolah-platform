@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
+const { requireKYCVerification } = require('../middleware/kycMiddleware');
 const { body, validationResult } = require('express-validator');
 
 // Validation middleware
@@ -79,6 +80,7 @@ router.post('/deposit', [
 // POST /api/v1/wallets/withdraw
 router.post('/withdraw', [
   authMiddleware,
+  requireKYCVerification,
   body('amount')
     .isFloat({ min: 1 })
     .withMessage('Amount must be at least R1'),
@@ -99,6 +101,7 @@ router.post('/withdraw', [
 // POST /api/v1/wallets/send
 router.post('/send', [
   authMiddleware,
+  requireKYCVerification,
   body('receiverPhoneNumber')
     .notEmpty()
     .withMessage('Receiver phone number is required'),

@@ -3,6 +3,8 @@ const multer = require('multer');
 const router = express.Router();
 const kycController = require('../controllers/kycController');
 const authenticateToken = require('../middleware/auth');
+const { sequelize } = require('../models');
+const User = require('../models/User')(sequelize, require('sequelize').DataTypes);
 
 // Get all KYC records (for testing/admin)
 router.get('/', async (req, res) => {
@@ -44,14 +46,18 @@ router.get('/', async (req, res) => {
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
+    fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    // Accept images and PDFs
-    if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
+    console.log('🔍 Multer fileFilter called for:', file.fieldname, file.originalname, file.mimetype);
+    
+    // Only accept image files for OCR processing
+    if (file.mimetype.startsWith('image/')) {
+      console.log('✅ File accepted:', file.originalname);
       cb(null, true);
     } else {
-      cb(new Error('Invalid file type. Only images and PDFs are allowed.'), false);
+      console.log('❌ File rejected:', file.originalname, 'MIME type:', file.mimetype);
+      cb(new Error('Only image files (JPEG, PNG) are supported for OCR processing. PDF files are not supported.'), false);
     }
   }
 });
@@ -71,16 +77,45 @@ router.post('/upload', authenticateToken, upload.single('document'), async (req,
 
 // Upload both KYC documents (identity and address)
 router.post('/upload-documents', authenticateToken, upload.fields([
-  { name: 'identityDocument', maxCount: 1 },
-  { name: 'addressDocument', maxCount: 1 }
+  { name: 'identityDocument', maxCount: 1 }
+  // { name: 'addressDocument', maxCount: 1 } // POA requirement masked
 ]), async (req, res) => {
+  console.log('🎯 KYC UPLOAD ROUTE HIT - REAL VALIDATION');
+  console.log('🎯 KYC UPLOAD ROUTE HIT - REAL VALIDATION');
+  console.log('🎯 KYC UPLOAD ROUTE HIT - REAL VALIDATION');
+  
   try {
-    await kycController.uploadDocuments(req, res);
+    console.log('🚀 KYC upload-documents ROUTE HIT');
+    console.log('🔍 KYC upload-documents route called');
+    console.log('📁 Files received:', req.files);
+    console.log('📝 Body received:', req.body);
+    console.log('👤 User:', req.user);
+    
+    // Test KYC service import
+    console.log('🔍 Testing KYC service import...');
+    const KYCService = require('../services/kycService');
+    console.log('✅ KYCService imported successfully');
+    console.log('🔍 KYCService type:', typeof KYCService);
+    console.log('🔍 KYCService.processKYCSubmission:', typeof KYCService.processKYCSubmission);
+    
+    // Test kycController import
+    console.log('🔍 Testing kycController import...');
+    console.log('🔍 kycController type:', typeof kycController);
+    console.log('🔍 kycController.uploadDocuments:', typeof kycController.uploadDocuments);
+    
+    // Call the real KYC controller to test actual validation
+    console.log('🔍 Calling kycController.uploadDocuments...');
+    const result = await kycController.uploadDocuments(req, res);
+    console.log('✅ kycController.uploadDocuments completed');
+    console.log('🔍 Result:', result);
+    
   } catch (error) {
     console.error('❌ Error in KYC upload-documents route:', error);
+    console.error('❌ Error stack:', error.stack);
     res.status(500).json({
       error: 'UPLOAD_ROUTE_ERROR',
-      message: 'Error processing upload'
+      message: 'Error processing upload',
+      details: error.message
     });
   }
 });
@@ -151,12 +186,18 @@ router.post('/update-status', authenticateToken, async (req, res) => {
     }
 
     // Update user's KYC status in the database
-    const UserModel = require('../models/User');
-    const userModel = new UserModel();
-    await userModel.updateKYCStatus(userId, status);
+    const user = await User.findOne({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({
+        error: 'USER_NOT_FOUND',
+        message: 'User not found'
+      });
+    }
+
+    await user.update({ kycStatus: status });
 
     // Get updated user data
-    const updatedUser = await userModel.getUserById(userId);
+    const updatedUser = await User.findOne({ where: { id: userId } });
     
     res.json({
       success: true,

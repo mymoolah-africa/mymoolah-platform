@@ -35,7 +35,14 @@ import {
   HelpCircle,
   Info,
   CheckCircle,
+  CreditCard,
 } from "lucide-react";
+import { 
+  validateIdNumber, 
+  getPlaceholderText as getIdPlaceholderText,
+  getHelperText as getIdHelperText,
+  type IdValidationResult 
+} from "../utils/idValidation";
 
 // Import logo from assets/
 import logo2 from "../assets/logo2.svg";
@@ -151,6 +158,7 @@ export function RegisterPage() {
   const [formData, setFormData] = useState({
     name: "",
     identifier: "",
+    idNumber: "",
     email: "",
     password: "",
     confirmPassword: "",
@@ -169,6 +177,7 @@ export function RegisterPage() {
     formData.identifier,
     inputType,
   );
+  const idValidation = validateIdNumber(formData.idNumber);
   const passwordValidation = validatePassword(
     formData.password,
   );
@@ -193,6 +202,7 @@ export function RegisterPage() {
 
     if (
       !identifierValidation.isValid ||
+      !idValidation.isValid ||
       !passwordValidation.isValid ||
       !passwordsMatch ||
       !formData.name ||
@@ -208,6 +218,8 @@ export function RegisterPage() {
       await register({
         name: formData.name,
         identifier: formData.identifier,
+        idNumber: formData.idNumber,
+        idType: idValidation.type,
         email: formData.email,
         password: formData.password,
         identifierType: inputType as
@@ -439,6 +451,80 @@ export function RegisterPage() {
                       <span style={{ color: "#6b7280" }}>
                         Enter your phone number (27XXXXXXXXX) -
                         also your account no.
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* ID Number / Passport */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="idNumber"
+                    style={{
+                      fontFamily: "Montserrat, sans-serif",
+                      fontSize: "var(--mobile-font-base)",
+                      fontWeight: "var(--font-weight-medium)",
+                      color: "#374151",
+                    }}
+                  >
+                    ID Number / Passport
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="idNumber"
+                      type="text"
+                      placeholder={getIdPlaceholderText(idValidation.type)}
+                      value={formData.idNumber}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          idNumber: e.target.value,
+                        }))
+                      }
+                      className={`bg-white border-gray-200 focus:border-[#86BE41] focus:ring-[#86BE41] pl-12 ${
+                        !idValidation.isValid &&
+                        formData.idNumber.trim()
+                          ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                          : idValidation.isValid &&
+                              formData.idNumber.trim()
+                            ? "border-green-300 focus:border-green-500 focus:ring-green-500"
+                            : ""
+                      }`}
+                      style={{
+                        height: "var(--mobile-touch-target)",
+                        fontFamily: "Montserrat, sans-serif",
+                        fontSize: "var(--mobile-font-base)",
+                        fontWeight: "var(--font-weight-normal)",
+                        borderRadius:
+                          "var(--mobile-border-radius)",
+                      }}
+                      required
+                    />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                      <CreditCard className="w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      fontFamily: "Montserrat, sans-serif",
+                      fontSize: "var(--mobile-font-small)",
+                    }}
+                  >
+                    {formData.idNumber.trim() ? (
+                      <span
+                        className={`inline-flex items-center gap-1 ${idValidation.isValid ? "text-green-600" : "text-red-600"}`}
+                      >
+                        {idValidation.isValid ? (
+                          <Check className="w-3 h-3" />
+                        ) : (
+                          <X className="w-3 h-3" />
+                        )}
+                        {getIdHelperText(idValidation)}
+                      </span>
+                    ) : (
+                      <span style={{ color: "#6b7280" }}>
+                        Enter your ID number or passport for verification
                       </span>
                     )}
                   </div>

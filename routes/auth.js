@@ -29,6 +29,9 @@ router.get('/profile', authMiddleware, authController.getProfile);
 // GET /api/v1/auth/verify
 router.get('/verify', authMiddleware, authController.verify);
 
+// POST /api/v1/auth/refresh
+router.post('/refresh', authMiddleware, authController.refreshToken);
+
 // POST /api/v1/auth/register
 router.post('/register', [
   body('email')

@@ -38,12 +38,12 @@ class AuthController {
   // Register a new user
   async register(req, res) {
     try {
-      let { name, email, phoneNumber, password } = req.body;
+      let { name, email, phoneNumber, password, idNumber, idType } = req.body;
       
-      if (!name || !email || !phoneNumber || !password) {
+      if (!name || !email || !phoneNumber || !password || !idNumber || !idType) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Name, email, mobile number and password are required.' 
+          message: 'Name, email, mobile number, password, ID number and ID type are required.' 
         });
       }
       phoneNumber = normalizeSAMobileNumber(phoneNumber);
@@ -64,6 +64,12 @@ class AuthController {
         return res.status(409).json({ success: false, message: 'User with this mobile number already exists' });
       }
       
+      // Check for existing user by ID number
+      const existingId = await User.findOne({ where: { idNumber } });
+      if (existingId) {
+        return res.status(409).json({ success: false, message: 'User with this ID number already exists' });
+      }
+      
       // Hash password
       const passwordHash = await bcrypt.hash(password, 12);
       
@@ -77,6 +83,9 @@ class AuthController {
         phoneNumber,
         firstName,
         lastName,
+        idNumber,
+        idType,
+        idVerified: false,
         accountNumber,
         balance: 0.00,
         status: 'active',
@@ -114,6 +123,9 @@ class AuthController {
           firstName: user.firstName,
           lastName: user.lastName,
           name: `${user.firstName} ${user.lastName}`.trim(),
+          idNumber: user.idNumber,
+          idType: user.idType,
+          idVerified: user.idVerified,
           kycStatus: user.kycStatus,
           walletId: wallet.walletId
         }
@@ -258,6 +270,51 @@ class AuthController {
       return res.status(401).json({ success: false, message: 'Invalid token' });
     }
   }
+
+  // Refresh token
+  async refreshToken(req, res) {
+    try {
+      const userId = req.user.id;
+      const user = await User.findByPk(userId, {
+        include: [{
+          model: Wallet,
+          as: 'wallet',
+          attributes: ['walletId', 'balance', 'currency', 'status']
+        }]
+      });
+      
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'User not found' });
+      }
+      
+      // Generate new token
+      const token = jwt.sign(
+        { id: user.id, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+      
+      return res.json({
+        success: true,
+        message: 'Token refreshed successfully',
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          phone: user.phoneNumber,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          name: `${user.firstName} ${user.lastName}`.trim(),
+          kycStatus: user.kycStatus,
+          walletId: user.wallet?.walletId,
+          balance: user.wallet?.balance || 0
+        }
+      });
+    } catch (error) {
+      console.error('❌ Token refresh error:', error);
+      return res.status(500).json({ success: false, message: error.message });
+    }
+  }
 }
 
 // Create instance and export methods
@@ -267,5 +324,6 @@ module.exports = {
   register: authController.register.bind(authController),
   login: authController.login.bind(authController),
   getProfile: authController.getProfile.bind(authController),
-  verify: authController.verify.bind(authController)
+  verify: authController.verify.bind(authController),
+  refreshToken: authController.refreshToken.bind(authController)
 };

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { APP_CONFIG } from '../config/app-config';
 
-type DocumentType = 'identity' | 'address';
+type DocumentType = 'identity';
 type DocumentStatus = 'pending' | 'uploaded' | 'processing' | 'verified' | 'rejected';
 
 interface DocumentUpload {
@@ -41,23 +41,22 @@ export function KYCDocumentsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [kycRetryCount, setKycRetryCount] = useState(0);
+  const [kycFeedback, setKycFeedback] = useState<{
+    title: string;
+    issues: string[];
+    tips: string[];
+    canRetry: boolean;
+  } | null>(null);
   
   // File input refs for manual file selection
   const identityFileRef = useRef<HTMLInputElement>(null);
-  const addressFileRef = useRef<HTMLInputElement>(null);
 
   const [documents, setDocuments] = useState<{
     identity: DocumentUpload;
-    address: DocumentUpload;
   }>({
     identity: {
       type: 'identity',
-      file: null,
-      preview: null,
-      status: 'pending'
-    },
-    address: {
-      type: 'address',
       file: null,
       preview: null,
       status: 'pending'
@@ -74,36 +73,22 @@ export function KYCDocumentsPage() {
   }
 
   const handleFileSelect = (type: DocumentType, file: File) => {
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
+    // Validate file type - only accept images for OCR processing
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
-      setError('Please upload a JPG, PNG, or PDF file');
+      setError('Please upload an image file (JPEG or PNG). PDF files are not supported for OCR processing.');
       return;
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('File size must be less than 10MB');
-      return;
-    }
-
-    // Create preview for images
-    let preview = null;
-    if (file.type.startsWith('image/')) {
-      preview = URL.createObjectURL(file);
     }
 
     setDocuments(prev => ({
       ...prev,
       [type]: {
-        ...prev[type],
+        type,
         file,
-        preview,
-        status: 'uploaded',
-        error: undefined
+        preview: URL.createObjectURL(file),
+        status: 'uploaded'
       }
     }));
-
     setError('');
   };
 
@@ -134,7 +119,7 @@ export function KYCDocumentsPage() {
   };
 
   const handleFileUpload = (type: DocumentType) => {
-    const fileRef = type === 'identity' ? identityFileRef : addressFileRef;
+    const fileRef = identityFileRef;
     fileRef.current?.click();
   };
 
@@ -162,14 +147,10 @@ export function KYCDocumentsPage() {
     setUploadProgress(0);
 
     try {
-      // Validate both documents are uploaded
-      if (!documents.identity.file) {
-        throw new Error('Please upload your identity document (SAID or Passport)');
-      }
-      
-      if (!documents.address.file) {
-        throw new Error('Please upload your proof of address document');
-      }
+      // Validate identity document is uploaded
+              if (!documents.identity.file) {
+          throw new Error('Please upload your identity document (SAID, Passport, Driving License, or Temporary ID Certificate)');
+        }
 
       // Simulate upload progress
       for (let i = 0; i <= 100; i += 10) {
@@ -180,8 +161,7 @@ export function KYCDocumentsPage() {
       // Create FormData for file upload (backend integration)
       const formData = new FormData();
       formData.append('identityDocument', documents.identity.file);
-      formData.append('addressDocument', documents.address.file);
-      formData.append('userId', user?.id || '');
+      formData.append('retryCount', String(kycRetryCount));
 
       // Real API call to upload documents
       const token = localStorage.getItem('mymoolah_token');
@@ -189,7 +169,12 @@ export function KYCDocumentsPage() {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/kyc/upload-documents`, {
+      console.log('🔍 Frontend: Sending KYC upload request');
+      console.log('📁 File:', documents.identity.file?.name, documents.identity.file?.size);
+      console.log('🔑 Token present:', !!token);
+      console.log('🌐 URL:', `${APP_CONFIG.API.baseUrl}/api/v1/kyc/upload-documents`);
+      
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/kyc/upload-documents?_t=${Date.now()}`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -197,15 +182,52 @@ export function KYCDocumentsPage() {
         }
       });
 
+      console.log('📡 Frontend: Response status:', response.status);
+      console.log('📡 Frontend: Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        throw new Error('Failed to upload documents');
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || errorData.error || 'Failed to upload documents';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log('📄 Backend response data:', data);
 
-      // Update user KYC status in context
+      // Respect backend flags: on retry/failed, show message and stop
+      if (!data.success && (data.status === 'retry' || data.status === 'failed')) {
+        const issues: string[] = data?.validation?.issues || [];
+        const tips: string[] = [
+          'Upload a clear photo of your SA ID card/book or a passport',
+          'Ensure the whole document is visible with good lighting (no glare)',
+          `The name must match your profile: ${(user?.firstName || '')} ${(user?.lastName || '')}`.trim(),
+          'Only images are supported (JPG/PNG), max 10MB'
+        ];
+        setKycFeedback({
+          title: data.message || "We couldn't verify your identity yet",
+          issues,
+          tips,
+          canRetry: data?.canRetry === true
+        });
+        setError('');
+        if (data.status === 'retry') {
+          setKycRetryCount(prev => prev + 1);
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Update user KYC status in context based on backend response
       if (updateKYCStatus) {
-        updateKYCStatus('documents_uploaded');
+        if (data.success && data.status === 'approved') {
+          // KYC was successful, update to verified
+          console.log('✅ KYC successful, updating status to verified');
+          updateKYCStatus('verified');
+        } else {
+          // Documents uploaded but not yet verified
+          console.log('📋 Documents uploaded, updating status to documents_uploaded');
+          updateKYCStatus('documents_uploaded');
+        }
       }
 
       // Redirect to status page
@@ -219,17 +241,14 @@ export function KYCDocumentsPage() {
   };
 
   const getDocumentTypeText = (type: DocumentType) => {
-    return type === 'identity' ? 'Identity Document' : 'Proof of Address';
+    return 'Identity Document';
   };
 
   const getDocumentDescription = (type: DocumentType) => {
-    if (type === 'identity') {
-      return 'Upload your South African ID document or Passport';
-    }
-    return 'Upload a utility bill, bank statement, or municipal rates notice';
+    return 'Upload your South African ID document, Passport, Driving License, or Temporary ID Certificate';
   };
 
-  const isSubmitDisabled = !documents.identity.file || !documents.address.file || isLoading;
+  const isSubmitDisabled = !documents.identity.file || isLoading;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#86BE41] to-[#2D8CCA]">
@@ -289,11 +308,11 @@ export function KYCDocumentsPage() {
                 fontFamily: 'Montserrat, sans-serif', 
                 fontSize: 'var(--mobile-font-small)' 
               }}>
-                {Object.values(documents).filter(doc => doc.file).length}/2
+                {documents.identity.file ? 1 : 0}/1
               </span>
             </div>
             <Progress 
-              value={(Object.values(documents).filter(doc => doc.file).length / 2) * 100}
+              value={documents.identity.file ? 100 : 0}
               className="h-2 bg-white/20"
             />
           </div>
@@ -301,7 +320,58 @@ export function KYCDocumentsPage() {
 
         {/* Documents Section */}
         <div className="flex-1" style={{ padding: 'var(--mobile-padding)', paddingBottom: '2rem' }}>
-          {error && (
+          {kycFeedback && (
+            <Card className="border-0 shadow-xl mb-4" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+              <CardContent className="pt-4 pb-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-600 mt-1" />
+                  <div className="flex-1">
+                    <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontWeight: 'var(--font-weight-bold)', color: '#991b1b' }}>{kycFeedback.title}</h3>
+                    {kycFeedback.issues?.length > 0 && (
+                      <ul className="list-disc pl-5 mt-2 text-red-700" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)' }}>
+                        {kycFeedback.issues.map((i, idx) => (
+                          <li key={idx}>{i}</li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="mt-3 text-gray-700">
+                      <p className="font-medium" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)' }}>How to fix:</p>
+                      <ul className="list-disc pl-5 mt-1" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)' }}>
+                        {kycFeedback.tips.map((t, idx) => (
+                          <li key={idx}>{t}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        onClick={() => {
+                          // allow user to replace the document quickly
+                          setKycFeedback(null);
+                          setKycRetryCount(kycRetryCount); // keep retry count as-is
+                          identityFileRef.current?.click();
+                        }}
+                        className="bg-[#86BE41] hover:bg-[#7AB139]"
+                      >
+                        Try Again
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setKycFeedback(null);
+                          handleRemoveDocument('identity');
+                        }}
+                        className="border-[#2D8CCA] text-[#2D8CCA] hover:bg-[#2D8CCA] hover:text-white"
+                      >
+                        Remove & Start Over
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {error && !kycFeedback && (
             <Alert className="border-red-200 bg-red-50 mb-4">
               <AlertTriangle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-700" style={{ 
@@ -437,7 +507,7 @@ export function KYCDocumentsPage() {
                       fontFamily: 'Montserrat, sans-serif', 
                       fontSize: 'var(--mobile-font-small)' 
                     }}>
-                      Accepted: JPG, PNG, PDF (Max 10MB)
+                      Accepted: JPG, PNG (Max 10MB)
                     </p>
                   </div>
                 )}
@@ -446,153 +516,11 @@ export function KYCDocumentsPage() {
                 <input
                   ref={identityFileRef}
                   type="file"
-                  accept="image/*,.pdf"
+                  accept="image/*"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) handleFileSelect('identity', file);
-                  }}
-                />
-              </CardContent>
-            </Card>
-
-            {/* Proof of Address Upload */}
-            <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-3" style={{ 
-                  fontFamily: 'Montserrat, sans-serif', 
-                  fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', 
-                  fontWeight: 'var(--font-weight-bold)', 
-                  color: '#1f2937' 
-                }}>
-                  <div className="bg-gradient-to-r from-[#86BE41]/20 to-[#2D8CCA]/20 rounded-xl w-10 h-10 flex items-center justify-center">
-                    <Home className="w-5 h-5 text-[#2D8CCA]" />
-                  </div>
-                  Proof of Address
-                  {documents.address.file && (
-                    <Check className="w-5 h-5 text-green-500 ml-auto" />
-                  )}
-                </CardTitle>
-                <p className="text-gray-600" style={{ 
-                  fontFamily: 'Montserrat, sans-serif', 
-                  fontSize: 'var(--mobile-font-small)', 
-                  fontWeight: 'var(--font-weight-normal)' 
-                }}>
-                  Upload utility bill, bank statement, or municipal rates notice (last 3 months)
-                </p>
-              </CardHeader>
-              <CardContent>
-                {documents.address.file ? (
-                  <div className="space-y-3">
-                    {/* Document Preview */}
-                    <div className="relative bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-8 h-8 text-[#2D8CCA] flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate" style={{ 
-                            fontFamily: 'Montserrat, sans-serif', 
-                            fontSize: 'var(--mobile-font-small)', 
-                            fontWeight: 'var(--font-weight-medium)' 
-                          }}>
-                            {documents.address.file.name}
-                          </p>
-                          <p className="text-gray-500" style={{ 
-                            fontFamily: 'Montserrat, sans-serif', 
-                            fontSize: 'var(--mobile-font-small)' 
-                          }}>
-                            {(documents.address.file.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveDocument('address')}
-                          className="p-1 hover:bg-gray-200 rounded touch-target"
-                          style={{ minHeight: 'var(--mobile-touch-target)', minWidth: 'var(--mobile-touch-target)' }}
-                        >
-                          <X className="w-4 h-4 text-gray-500" />
-                        </button>
-                      </div>
-                      
-                      {/* Image Preview */}
-                      {documents.address.preview && (
-                        <div className="mt-3">
-                          <img 
-                            src={documents.address.preview} 
-                            alt="Address document preview"
-                            className="w-full h-32 object-cover rounded border"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    
-                    <Button
-                      onClick={() => handleFileUpload('address')}
-                      variant="outline"
-                      className="w-full border-[#2D8CCA] text-[#2D8CCA] hover:bg-[#2D8CCA] hover:text-white"
-                      style={{ 
-                        height: '2.5rem',
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-small)',
-                        fontWeight: 'var(--font-weight-medium)',
-                        borderRadius: 'var(--mobile-border-radius)'
-                      }}
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Replace Document
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Upload Options */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        onClick={() => handleCameraCapture('address')}
-                        variant="outline"
-                        className="h-20 flex-col border-[#2D8CCA] text-[#2D8CCA] hover:bg-[#2D8CCA] hover:text-white"
-                        style={{ 
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: 'var(--mobile-font-small)',
-                          fontWeight: 'var(--font-weight-medium)',
-                          borderRadius: 'var(--mobile-border-radius)'
-                        }}
-                      >
-                        <Camera className="w-6 h-6 mb-1" />
-                        Take Photo
-                      </Button>
-                      
-                      <Button
-                        onClick={() => handleFileUpload('address')}
-                        variant="outline"
-                        className="h-20 flex-col border-[#2D8CCA] text-[#2D8CCA] hover:bg-[#2D8CCA] hover:text-white"
-                        style={{ 
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: 'var(--mobile-font-small)',
-                          fontWeight: 'var(--font-weight-medium)',
-                          borderRadius: 'var(--mobile-border-radius)'
-                        }}
-                      >
-                        <Upload className="w-6 h-6 mb-1" />
-                        Browse Files
-                      </Button>
-                    </div>
-                    
-                    <p className="text-xs text-gray-500 text-center" style={{ 
-                      fontFamily: 'Montserrat, sans-serif', 
-                      fontSize: 'var(--mobile-font-small)' 
-                    }}>
-                      Accepted: JPG, PNG, PDF (Max 10MB)
-                    </p>
-                  </div>
-                )}
-                
-                {/* Hidden File Input */}
-                <input
-                  ref={addressFileRef}
-                  type="file"
-                  accept="image/*,.pdf"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelect('address', file);
                   }}
                 />
               </CardContent>

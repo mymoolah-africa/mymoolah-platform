@@ -175,12 +175,7 @@ export function SendMoneyPage() {
   // Quick amount buttons
   const quickAmounts = [50, 100, 200, 500, 1000];
 
-  // KYC check on component mount
-  useEffect(() => {
-    if (requiresKYC('send')) {
-      navigate('/kyc/documents?returnTo=/send-money');
-    }
-  }, [requiresKYC, navigate]);
+  // KYC gating moved to point-of-need (bank transfer selection). No redirect on mount.
 
   // Real API call to resolve recipient
   const resolveRecipient = async (identifier: string): Promise<RecipientResolution> => {
@@ -280,6 +275,11 @@ export function SendMoneyPage() {
   };
 
   const handleMethodSelect = (method: PaymentMethod) => {
+    // Enforce KYC only for bank transfers at selection time
+    if (method.id === 'sa_bank_transfer' && requiresKYC('send')) {
+      navigate('/kyc/documents?intent=instant_payment');
+      return;
+    }
     setSelectedMethod(method);
     setStep('amount');
   };

@@ -227,3 +227,9 @@
 **Session Decisions Updated**: July 10, 2025  
 **Status**: ✅ **ALL DECISIONS IMPLEMENTED**  
 **Next Review**: Frontend development session 
+
+## [2025-08-08] Scope & Database Decisions
+- Decision: Treat MyMoolah as a Treasury Platform beyond wallet—include general ledger, integrations, and reporting.
+- Decision: Continue development on SQLite; plan a controlled migration to PostgreSQL post-frontend integration stabilization with dual-run validation and full rollback.
+- Impact: Broader API surface, ledger invariants (debits == credits), migration scripts, and test coverage expansion.
+- Actions: Created `docs/AGENT_ROLE_TEMPLATE.md`; updated `AGENT_HANDOVER.md` and `CHANGELOG.md`. 

@@ -20,7 +20,9 @@ import {
   CheckCircle,
   Lock,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  Gift,
+  Star
 } from 'lucide-react';
 
 // Service interface
@@ -29,11 +31,10 @@ interface Service {
   name: string;
   description: string;
   icon: React.ReactNode;
-  category: 'payments' | 'vouchers' | 'bills' | 'savings' | 'business';
+  category: 'payments' | 'loyalty' | 'bills' | 'savings' | 'business';
   available: boolean;
   requiresKYC: boolean;
-  isBottomNavOption: boolean; // Can be added to bottom navigation
-  isActive: boolean; // Currently in bottom navigation
+
   comingSoon?: boolean;
 }
 
@@ -50,8 +51,7 @@ export function TransactPage() {
   const navigate = useNavigate();
   const { user, requiresKYC } = useAuth();
   
-  // State for bottom navigation selection
-  const [selectedBottomNavServices, setSelectedBottomNavServices] = useState<string[]>(['send-money', 'vouchers']);
+
   
   // Available services with UPDATED integration status - LIVE SERVICES
   const [services, setServices] = useState<Service[]>([
@@ -64,8 +64,7 @@ export function TransactPage() {
       category: 'payments',
       available: true,
       requiresKYC: true,
-      isBottomNavOption: true,
-      isActive: true
+
       // LIVE: dtMercury & Flash integration
     },
     {
@@ -76,8 +75,6 @@ export function TransactPage() {
       category: 'payments',
       available: true,
       requiresKYC: false,
-      isBottomNavOption: true,
-      isActive: false,
       comingSoon: true
       // COMING SOON: Not yet integrated
     },
@@ -89,8 +86,6 @@ export function TransactPage() {
       category: 'payments',
       available: true,
       requiresKYC: true,
-      isBottomNavOption: true,
-      isActive: false,
       comingSoon: true
       // COMING SOON: Needs new SP integration
     },
@@ -103,9 +98,7 @@ export function TransactPage() {
       icon: <Smartphone className="w-6 h-6" />,
       category: 'bills',
       available: true,
-      requiresKYC: false,
-      isBottomNavOption: true,
-      isActive: false
+      requiresKYC: false
       // LIVE: MobileMart & Flash integration
     },
     {
@@ -115,9 +108,7 @@ export function TransactPage() {
       icon: <Zap className="w-6 h-6" />,
       category: 'bills',
       available: true,
-      requiresKYC: false,
-      isBottomNavOption: true,
-      isActive: false
+      requiresKYC: false
       // LIVE: MobileMart & Flash integration
     },
     {
@@ -127,9 +118,7 @@ export function TransactPage() {
       icon: <Users className="w-6 h-6" />,
       category: 'bills',
       available: true,
-      requiresKYC: true,
-      isBottomNavOption: true,
-      isActive: false
+      requiresKYC: true
       // LIVE: MobileMart & EasyPay integration
     },
     {
@@ -140,24 +129,32 @@ export function TransactPage() {
       category: 'bills',
       available: true,
       requiresKYC: false,
-      isBottomNavOption: true,
-      isActive: false,
       comingSoon: true
       // COMING SOON: Not yet integrated
     },
     
-    // Voucher Services (position 5)
+    // Loyalty & Promotions Services (position 5)
     {
-      id: 'vouchers',
-      name: 'Vouchers',
-      description: 'Buy and manage digital vouchers',
-      icon: <Ticket className="w-6 h-6" />,
-      category: 'vouchers',
+      id: 'loyalty',
+      name: 'Loyalty',
+      description: 'Earn and redeem loyalty points',
+      icon: <Star className="w-6 h-6" />,
+      category: 'loyalty',
       available: true,
       requiresKYC: false,
-      isBottomNavOption: true,
-      isActive: true
-      // LIVE: Internal system
+      comingSoon: true
+      // COMING SOON: Not yet integrated
+    },
+    {
+      id: 'promotions',
+      name: 'Promotions',
+      description: 'Special offers and discounts',
+      icon: <Gift className="w-6 h-6" />,
+      category: 'loyalty',
+      available: true,
+      requiresKYC: false,
+      comingSoon: true
+      // COMING SOON: Not yet integrated
     }
   ]);
 
@@ -178,67 +175,17 @@ export function TransactPage() {
       services: services.filter(s => s.category === 'bills')
     },
     {
-      id: 'vouchers',
-      name: 'Vouchers & Digital Services',
-      description: 'Digital vouchers and services',
-      icon: <Ticket className="w-5 h-5" />,
-      services: services.filter(s => s.category === 'vouchers')
+      id: 'loyalty',
+      name: 'Loyalty & Promotions',
+      description: 'Earn points and get special offers',
+      icon: <Star className="w-5 h-5" />,
+      services: services.filter(s => s.category === 'loyalty')
     }
   ];
 
-  // Handle service activation/deactivation for bottom navigation
-  const handleBottomNavToggle = (serviceId: string) => {
-    const service = services.find(s => s.id === serviceId);
-    if (!service) return;
 
-    // Check if service requires KYC
-    if (service.requiresKYC && requiresKYC('transact')) {
-      navigate('/kyc/documents?returnTo=/transact');
-      return;
-    }
 
-    // Check if coming soon - UPDATED for live services
-    if (service.comingSoon) {
-      // Only show coming soon for non-integrated services
-      const comingSoonServices = ['request-money', 'instant-cash', 'transport'];
-      if (comingSoonServices.includes(serviceId)) {
-        alert(`${service.name} is coming soon! We'll notify you when it's available.`);
-        return;
-      }
-    }
 
-    const currentSelected = [...selectedBottomNavServices];
-    const isCurrentlySelected = currentSelected.includes(serviceId);
-
-    if (isCurrentlySelected) {
-      // Remove from bottom nav (minimum 1 service required)
-      if (currentSelected.length > 1) {
-        const newSelected = currentSelected.filter(id => id !== serviceId);
-        setSelectedBottomNavServices(newSelected);
-        updateServiceActiveStatus(serviceId, false);
-      } else {
-        alert('You must have at least one service in your bottom navigation.');
-      }
-    } else {
-      // Add to bottom nav (maximum 2 services allowed for optimal mobile UX)
-      if (currentSelected.length < 2) {
-        const newSelected = [...currentSelected, serviceId];
-        setSelectedBottomNavServices(newSelected);
-        updateServiceActiveStatus(serviceId, true);
-      } else {
-        alert('You can only have 2 services in your bottom navigation. Remove one first.');
-      }
-    }
-  };
-
-  // Update service active status
-  const updateServiceActiveStatus = (serviceId: string, isActive: boolean) => {
-    setServices(prev => prev.map(service => 
-      service.id === serviceId 
-        ? { ...service, isActive }
-        : service
-    ));
-  };
 
   // Handle service navigation
   const handleServiceClick = (service: Service) => {
@@ -259,8 +206,13 @@ export function TransactPage() {
       case 'send-money':
         navigate('/send-money');
         break;
-      case 'vouchers':
-        navigate('/vouchers');
+      case 'loyalty':
+        // COMING SOON: Not yet integrated
+        alert('Loyalty program coming soon!');
+        break;
+      case 'promotions':
+        // COMING SOON: Not yet integrated
+        alert('Promotions and offers coming soon!');
         break;
       case 'airtime':
         // TODO: Implement real MobileMart & Flash integration
@@ -314,7 +266,7 @@ export function TransactPage() {
   const getStatusBadgeText = (status: string) => {
     switch (status) {
       case 'available': return 'Available';
-      case 'requires-kyc': return 'Verify ID';
+      case 'requires-kyc': return 'KYC Required';
       case 'coming-soon': return 'Coming Soon';
       case 'unavailable': return 'Unavailable';
       default: return 'Unknown';
@@ -430,214 +382,10 @@ export function TransactPage() {
             Customize your dashboard and explore all available services
           </p>
 
-          {/* KYC Status Banner */}
-          {user && requiresKYC('transact') && (
-            <div 
-              style={{
-                backgroundColor: '#fef3c7',
-                border: '1px solid #fcd34d',
-                borderRadius: '12px',
-                padding: '16px',
-                marginBottom: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div 
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    backgroundColor: '#f59e0b',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <Lock style={{ width: '20px', height: '20px', color: '#ffffff' }} />
-                </div>
-                <div>
-                  <p 
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#92400e',
-                      margin: '0 0 4px 0'
-                    }}
-                  >
-                    Complete verification to unlock all services
-                  </p>
-                  <p 
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '12px',
-                      color: '#a16207',
-                      margin: '0'
-                    }}
-                  >
-                    Upload your ID and proof of address
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => navigate('/kyc/documents')}
-                style={{
-                  backgroundColor: '#f59e0b',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '8px 16px',
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
-              >
-                Verify Now
-              </button>
-            </div>
-          )}
+
         </div>
 
-        {/* Bottom Navigation Customization */}
-        <div 
-          style={{
-            backgroundColor: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            padding: '20px',
-            marginBottom: '24px'
-          }}
-        >
-          <h3 
-            style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#1f2937',
-              marginBottom: '8px'
-            }}
-          >
-            Quick Access Services
-          </h3>
-          <p 
-            style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: '14px',
-              color: '#6b7280',
-              marginBottom: '16px'
-            }}
-          >
-            Choose 2 services to appear in your bottom navigation for quick access
-          </p>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            {/* Reorder services for specific grid layout: 
-                Row 1: Send Money, Request Money
-                Row 2: Airtime & Data, Electricity  
-                Row 3: Vouchers, Bill Payments
-                Row 4: Instant Cash, Transport */}
-            {services.filter(service => service.isBottomNavOption)
-              .sort((a, b) => {
-                const order = [
-                  'send-money',      // Position 1 (top-left)
-                  'request-money',   // Position 2 (top-right)
-                  'airtime',         // Position 3 (row 2, left)
-                  'electricity',     // Position 4 (row 2, right)
-                  'vouchers',        // Position 5 (row 3, left)
-                  'bill-payments',   // Position 6 (row 3, right)
-                  'instant-cash',    // Position 7 (row 4, left)
-                  'transport'        // Position 8 (row 4, right)
-                ];
-                return order.indexOf(a.id) - order.indexOf(b.id);
-              })
-              .map(service => {
-              const status = getServiceStatus(service);
-              const isSelected = selectedBottomNavServices.includes(service.id);
-              
-              return (
-                <button
-                  key={service.id}
-                  onClick={() => handleBottomNavToggle(service.id)}
-                  disabled={status === 'unavailable'}
-                  style={{
-                    backgroundColor: isSelected ? '#86BE41' : '#ffffff',
-                    border: `2px solid ${isSelected ? '#86BE41' : '#e2e8f0'}`,
-                    borderRadius: '12px',
-                    padding: '16px',
-                    textAlign: 'left',
-                    cursor: status === 'unavailable' ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s ease',
-                    opacity: status === 'unavailable' ? 0.5 : 1
-                  }}
-                  onMouseOver={(e) => {
-                    if (status !== 'unavailable') {
-                      e.currentTarget.style.backgroundColor = isSelected ? '#7AB139' : '#f8fafc';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (status !== 'unavailable') {
-                      e.currentTarget.style.backgroundColor = isSelected ? '#86BE41' : '#ffffff';
-                    }
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <div style={{ color: isSelected ? '#ffffff' : '#6b7280' }}>
-                      {React.cloneElement(service.icon as React.ReactElement, {
-                        style: { width: '20px', height: '20px' }
-                      })}
-                    </div>
-                    {isSelected && (
-                      <CheckCircle style={{ width: '16px', height: '16px', color: '#ffffff' }} />
-                    )}
-                  </div>
-                  <p 
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: isSelected ? '#ffffff' : '#1f2937',
-                      margin: '0 0 4px 0'
-                    }}
-                  >
-                    {service.name}
-                  </p>
-                  <p 
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '12px',
-                      color: isSelected ? '#ffffff' : '#6b7280',
-                      margin: '0'
-                    }}
-                  >
-                    {service.description}
-                  </p>
-                  
-                  {status !== 'available' && (
-                    <div style={{ marginTop: '8px' }}>
-                      <span 
-                        style={{
-                          backgroundColor: isSelected ? '#ffffff' : getStatusBadgeColor(status).split(' ')[0],
-                          color: isSelected ? '#86BE41' : getStatusBadgeColor(status).split(' ')[1],
-                          fontSize: '10px',
-                          fontWeight: '600',
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          fontFamily: 'Montserrat, sans-serif'
-                        }}
-                      >
-                        {getStatusBadgeText(status)}
-                      </span>
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* Service Categories */}
         {categories.map(category => (

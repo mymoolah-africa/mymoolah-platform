@@ -3,7 +3,7 @@ const router = express.Router();
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const { body, validationResult } = require('express-validator');
-const { checkKYCForDebit } = require('../middleware/kycMiddleware');
+const { requireKYCVerification } = require('../middleware/kycMiddleware');
 
 // Validation middleware
 const validateRequest = (req, res, next) => {
@@ -73,7 +73,7 @@ router.post("/", [
     .isIn(['ZAR', 'USD', 'EUR', 'GBP'])
     .withMessage('Currency must be ZAR, USD, EUR, or GBP'),
   validateRequest,
-  checkKYCForDebit // Add KYC check for debit transactions
+  requireKYCVerification // Add KYC check for debit transactions
 ], (req, res) => {
   const { 
     senderWalletId,

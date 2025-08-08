@@ -15,7 +15,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { body } = require('express-validator');
+const { body, validationResult } = require('express-validator');
 const { secureLogging, secureErrorLogging } = require('./middleware/secureLogging');
 const app = express();
 
@@ -37,6 +37,8 @@ const vasRoutes = require('./routes/vas.js');
 const merchantRoutes = require('./routes/merchants.js');
 const serviceProviderRoutes = require('./routes/serviceproviders.js');
 const easyPayRoutes = require('./routes/easypay.js'); // <-- ADD THIS
+const ledgerRoutes = require('./routes/ledger.js');
+const settingsRoutes = require('./routes/settings.js');
 
 const sendMoneyRoutes = require('./routes/sendMoney.js');
 
@@ -100,6 +102,18 @@ Object.entries(config.securityHeaders).forEach(([header, value]) => {
     res.setHeader(header, value);
     next();
   });
+});
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`🌐 ${req.method} ${req.url} - ${new Date().toISOString()}`);
+  next();
+});
+
+// Add a simple test route
+app.get('/test', (req, res) => {
+  console.log('🧪 Test route hit!');
+  res.json({ message: 'Test route working', timestamp: new Date().toISOString() });
 });
 
 // Rate Limiting Middleware
@@ -204,6 +218,7 @@ app.use('/api/v1/wallets', walletRoutes);
 app.use('/api/v1/transactions', transactionRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/kyc', kycRoutes);
+app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/send-money', sendMoneyRoutes);
 app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
@@ -213,6 +228,7 @@ app.use('/api/v1/vas', vasRoutes);
 app.use('/api/v1/merchants', merchantRoutes);
 app.use('/api/v1/service-providers', serviceProviderRoutes);
 app.use('/billpayment/v1', easyPayRoutes);
+app.use('/api/v1/ledger', ledgerRoutes);
 if (flashRoutesLoaded) {
   app.use('/api/v1/flash', flashRoutes);
 }
@@ -245,6 +261,7 @@ app.listen(port, () => {
   console.log(`   - Transactions: /api/v1/transactions`);
   console.log(`   - Users: /api/v1/users`);
   console.log(`   - KYC: /api/v1/kyc`);
+  console.log(`   - Settings: /api/v1/settings`);
   console.log(`   - Support: /api/v1/support`);
   console.log(`   - Notifications: /api/v1/notifications`);
   console.log(`   - Vouchers: /api/v1/vouchers`);
@@ -252,6 +269,7 @@ app.listen(port, () => {
   console.log(`   - VAS: /api/v1/vas`);
   console.log(`   - Merchants: /api/v1/merchants`);
   console.log(`   - Service Providers: /api/v1/service-providers`);
+  console.log(`   - Ledger: /api/v1/ledger`);
   if (flashRoutesLoaded) {
     console.log(`   - Flash: /api/v1/flash`);
   }

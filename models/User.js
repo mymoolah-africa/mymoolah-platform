@@ -52,6 +52,28 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       unique: true,
     },
+    idNumber: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+        len: [5, 20], // Reasonable length for ID numbers
+      },
+    },
+    idType: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        isIn: [['south_african_id', 'south_african_passport', 'south_african_driving_license', 'south_african_temporary_id', 'nigerian_passport', 'kenyan_passport', 'ghanaian_passport', 'egyptian_passport', 'moroccan_passport', 'ethiopian_passport', 'tanzanian_passport', 'ugandan_passport', 'rwandan_passport', 'zambian_passport', 'zimbabwean_passport', 'malawian_passport', 'mozambican_passport', 'angolan_passport', 'namibian_passport', 'botswanan_passport', 'lesothan_passport', 'eswatini_passport', 'international_passport', 'generic_passport', 'generic_id']],
+      },
+    },
+    idVerified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
     balance: {
       type: DataTypes.DECIMAL(15, 2), // Banking-grade precision
       allowNull: false,
@@ -118,6 +140,10 @@ module.exports = (sequelize, DataTypes) => {
       {
         unique: true,
         fields: ['accountNumber'],
+      },
+      {
+        unique: true,
+        fields: ['idNumber'],
       },
       {
         fields: ['phoneNumber'],

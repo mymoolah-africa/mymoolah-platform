@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middleware/auth');
 const { body, validationResult } = require('express-validator');
+const requireKycVerified = require('../middleware/requireKycVerified');
 
 // Validation middleware
 const validateRequest = (req, res, next) => {
@@ -18,6 +19,19 @@ const validateRequest = (req, res, next) => {
     });
   }
   next();
+};
+
+// Conditional KYC enforcement for bank transfers only
+const requireKycIfBankTransfer = async (req, res, next) => {
+  try {
+    const method = (req.body && req.body.paymentMethodId) || '';
+    if (String(method) === 'sa_bank_transfer') {
+      return requireKycVerified()(req, res, next);
+    }
+    return next();
+  } catch (e) {
+    return res.status(500).json({ success: false, message: 'Error enforcing KYC requirement' });
+  }
 };
 
 // POST /api/v1/send-money/resolve-recipient
@@ -197,7 +211,8 @@ router.post('/transfer', [
   body('reference')
     .isLength({ min: 1 })
     .withMessage('Reference is required'),
-  validateRequest
+  validateRequest,
+  requireKycIfBankTransfer
 ], async (req, res) => {
   try {
     const { paymentMethodId, amount, recipient, reference } = req.body;

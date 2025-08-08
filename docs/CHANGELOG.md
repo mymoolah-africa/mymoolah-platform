@@ -1,5 +1,10 @@
 # MyMoolah Wallet - Changelog
 
+## [2025-08-08] - Treasury Platform Scope & DB Migration Documentation
+- Added `docs/AGENT_ROLE_TEMPLATE.md` defining the Treasury Platform operating charter (wallet, general ledger, integrations, APIs).
+- Documented SQLite (dev) → PostgreSQL (prod) migration directive with phased steps and rollback strategy.
+- Linked the role template from `AGENT_HANDOVER.md`.
+
 ## [2025-08-05] - Critical Incident & Process Improvement
 
 ### 🛑 Incident: Overzealous Cleanup of Testing/Debugging Code

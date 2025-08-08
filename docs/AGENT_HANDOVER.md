@@ -34,3 +34,10 @@
 - Begin implementation of Transact features
 - Focus on 3rd party API integrations
 - dtMercury, MobileMart, Flash, Zapper integrations 
+
+---
+
+## Treasury Platform Scope & DB Migration Note (2025-08-08)
+- Scope broadened from wallet-only to full Treasury Platform: wallet services, general ledger (double-entry), integrations (EasyPay, Flash, MobileMart, dtMercury, Zapper), and reporting/audit.
+- Database plan: develop on SQLite; migrate to PostgreSQL once Figma frontend integrations are stable. Migrations must be forward/backward compatible with clear rollback.
+- See operating charter: `./AGENT_ROLE_TEMPLATE.md` for personas, constraints, and PostgreSQL migration directive. 

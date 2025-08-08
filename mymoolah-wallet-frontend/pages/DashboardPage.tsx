@@ -166,16 +166,11 @@ export function DashboardPage() {
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [openVouchersCount, setOpenVouchersCount] = useState<number>(0);
   const [openVouchersValue, setOpenVouchersValue] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   // Fetch real data from backend
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        setIsLoading(true);
-        setError(null);
-
         const token = localStorage.getItem('mymoolah_token');
         const headers = {
           'Authorization': `Bearer ${token}`,
@@ -296,9 +291,6 @@ export function DashboardPage() {
         
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
-      } finally {
-        setIsLoading(false);
       }
     };
 
@@ -417,6 +409,8 @@ export function DashboardPage() {
         >
           Your digital wallet dashboard
         </p>
+
+        {/* KYC banner removed: KYC is now enforced contextually only on restricted flows */}
 
         {/* Wallet Balance Card - CLICKABLE */}
         <button

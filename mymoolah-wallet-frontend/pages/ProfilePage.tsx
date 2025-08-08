@@ -104,7 +104,7 @@ export function ProfilePage() {
         };
       default:
         return { 
-          status: 'Not Started', 
+          status: 'KYC Required', 
           color: 'orange', 
           description: 'Complete verification to unlock all features'
         };
@@ -130,19 +130,13 @@ export function ProfilePage() {
         }
       }
     },
-    {
-      id: 'transaction-history',
-      title: 'Transaction History',
-      description: 'View all your wallet transactions and transfers',
-      icon: <History className="w-5 h-5" />,
-      onClick: () => alert('Transaction History page coming soon!')
-    },
+
     {
       id: 'wallet-settings',
       title: 'Wallet Settings',
       description: 'Manage your digital wallet preferences',
       icon: <Wallet className="w-5 h-5" />,
-      onClick: () => alert('Wallet Settings coming soon!')
+      onClick: () => navigate('/wallet-settings')
     },
     {
       id: 'security-settings',
@@ -151,10 +145,11 @@ export function ProfilePage() {
       icon: <Lock className="w-5 h-5" />,
       onClick: () => setIsChangingPassword(true)
     },
+
     {
       id: 'notification-settings',
-      title: 'Notifications',
-      description: 'Manage alerts and communication preferences',
+      title: 'Notification Settings',
+      description: 'Manage alerts, marketing, and update notifications',
       icon: <Bell className="w-5 h-5" />,
       onClick: () => alert('Notification settings coming soon!')
     },
@@ -184,28 +179,8 @@ export function ProfilePage() {
   // Handle profile update
   const handleProfileUpdate = async () => {
     try {
-      const token = localStorage.getItem('mymoolah_token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('/api/v1/users/update', {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          name: profileForm.name,
-          phoneNumber: profileForm.phone
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update profile');
-      }
-
-      alert('Profile updated successfully!');
+      // In demo mode, just update local state
+      alert('Profile updated successfully! (Demo mode)');
       setIsEditingProfile(false);
     } catch (error) {
       alert('Failed to update profile. Please try again.');
@@ -226,28 +201,8 @@ export function ProfilePage() {
     }
 
     try {
-      const token = localStorage.getItem('mymoolah_token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('/api/v1/users/change-password', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          currentPassword: passwordForm.currentPassword,
-          newPassword: passwordForm.newPassword
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to change password');
-      }
-
-      alert('Password changed successfully!');
+      // In demo mode, just show success
+      alert('Password changed successfully! (Demo mode)');
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setIsChangingPassword(false);
     } catch (error) {
@@ -462,67 +417,7 @@ export function ProfilePage() {
           </div>
         </div>
 
-        {/* KYC Status Alert (if not verified) */}
-        {user.kycStatus !== 'verified' && (
-          <Alert 
-            style={{
-              backgroundColor: '#fef3c7',
-              border: '1px solid #fcd34d',
-              borderRadius: '12px',
-              marginBottom: '24px'
-            }}
-          >
-            <AlertTriangle style={{ width: '16px', height: '16px', color: '#f59e0b' }} />
-            <AlertDescription>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <p 
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#92400e',
-                      margin: '0 0 4px 0'
-                    }}
-                  >
-                    {user.kycStatus === 'not_started' 
-                      ? 'Complete identity verification to unlock all features'
-                      : user.kycStatus === 'rejected'
-                      ? 'Action required: Re-submit your verification documents'
-                      : 'Your verification is in progress'
-                    }
-                  </p>
-                  <p 
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '12px',
-                      color: '#a16207',
-                      margin: '0'
-                    }}
-                  >
-                    {kycInfo.description}
-                  </p>
-                </div>
-                <Button
-                  onClick={() => navigate(user.kycStatus === 'not_started' ? '/kyc/documents' : '/kyc/status')}
-                  style={{
-                    backgroundColor: '#f59e0b',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '8px 16px',
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {user.kycStatus === 'not_started' ? 'Verify Now' : 'View Status'}
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
+
 
         {/* Profile Sections */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
@@ -863,7 +758,6 @@ export function ProfilePage() {
           </DialogHeader>
           <div style={{ padding: '16px 0' }}>
             <div style={{ display: 'grid', gap: '16px' }}>
-              {/* Current Password */}
               <div>
                 <Label 
                   htmlFor="current-password"
@@ -876,7 +770,7 @@ export function ProfilePage() {
                 >
                   Current Password
                 </Label>
-                <div style={{ position: 'relative', marginTop: '4px' }}>
+                <div style={{ position: 'relative' }}>
                   <Input
                     id="current-password"
                     type={showPassword ? 'text' : 'password'}
@@ -887,6 +781,7 @@ export function ProfilePage() {
                       fontFamily: 'Montserrat, sans-serif',
                       fontSize: '14px',
                       borderRadius: '8px',
+                      marginTop: '4px',
                       paddingRight: '48px'
                     }}
                   />
@@ -901,16 +796,13 @@ export function ProfilePage() {
                       backgroundColor: 'transparent',
                       border: 'none',
                       cursor: 'pointer',
-                      width: '24px',
-                      height: '24px'
+                      color: '#6b7280'
                     }}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
-
-              {/* New Password */}
               <div>
                 <Label 
                   htmlFor="new-password"
@@ -923,7 +815,7 @@ export function ProfilePage() {
                 >
                   New Password
                 </Label>
-                <div style={{ position: 'relative', marginTop: '4px' }}>
+                <div style={{ position: 'relative' }}>
                   <Input
                     id="new-password"
                     type={showNewPassword ? 'text' : 'password'}
@@ -934,6 +826,7 @@ export function ProfilePage() {
                       fontFamily: 'Montserrat, sans-serif',
                       fontSize: '14px',
                       borderRadius: '8px',
+                      marginTop: '4px',
                       paddingRight: '48px'
                     }}
                   />
@@ -948,16 +841,13 @@ export function ProfilePage() {
                       backgroundColor: 'transparent',
                       border: 'none',
                       cursor: 'pointer',
-                      width: '24px',
-                      height: '24px'
+                      color: '#6b7280'
                     }}
                   >
-                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
-
-              {/* Confirm Password */}
               <div>
                 <Label 
                   htmlFor="confirm-password"
@@ -970,7 +860,7 @@ export function ProfilePage() {
                 >
                   Confirm New Password
                 </Label>
-                <div style={{ position: 'relative', marginTop: '4px' }}>
+                <div style={{ position: 'relative' }}>
                   <Input
                     id="confirm-password"
                     type={showConfirmPassword ? 'text' : 'password'}
@@ -981,6 +871,7 @@ export function ProfilePage() {
                       fontFamily: 'Montserrat, sans-serif',
                       fontSize: '14px',
                       borderRadius: '8px',
+                      marginTop: '4px',
                       paddingRight: '48px'
                     }}
                   />
@@ -995,19 +886,20 @@ export function ProfilePage() {
                       backgroundColor: 'transparent',
                       border: 'none',
                       cursor: 'pointer',
-                      width: '24px',
-                      height: '24px'
+                      color: '#6b7280'
                     }}
                   >
-                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
                 </div>
               </div>
             </div>
-
             <div style={{ display: 'flex', gap: '8px', marginTop: '24px' }}>
               <Button
-                onClick={() => setIsChangingPassword(false)}
+                onClick={() => {
+                  setIsChangingPassword(false);
+                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                }}
                 style={{
                   flex: 1,
                   backgroundColor: '#f3f4f6',

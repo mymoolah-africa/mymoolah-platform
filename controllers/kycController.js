@@ -1,7 +1,11 @@
 const KYCService = require('../services/kycService');
-const Wallet = require('../models/Wallet');
+const { sequelize } = require('../models');
+const Wallet = require('../models/Wallet')(sequelize, require('sequelize').DataTypes);
 const path = require('path');
 const fs = require('fs').promises;
+
+console.log('🔍 KYCService imported:', typeof KYCService);
+console.log('🔍 KYCService.processKYCSubmission:', typeof KYCService.processKYCSubmission);
 
 class KYCController {
   // Upload KYC document
@@ -36,35 +40,38 @@ class KYCController {
       const result = await KYCService.processKYCSubmission(userId, documentType, documentUrl);
 
       if (!result.success) {
-        return res.status(500).json({
-          error: 'KYC_PROCESSING_ERROR',
-          message: result.error
-        });
+        return res.status(200).json(result);
       }
 
-      // Store KYC record
-      const kycRecord = {
+      // Store KYC record - FIXED: Actually save to database
+      const { Kyc } = require('../models');
+      const kycRecord = await Kyc.create({
         userId: userId,
-        documentType: 'identity',
-        documentUrl: documentUrl,
-        status: result.validation.isValid ? 'validated' : 'failed',
-        ocrResults: result.ocrResults,
-        validationDetails: result.validation,
-        submittedAt: new Date()
-      };
+        documentType: documentType === 'id_document' ? 'id_card' : 'passport', // FIXED: Use correct ENUM values
+        documentNumber: result.ocrResults?.idNumber || 'N/A',
+        documentImageUrl: documentUrl,
+        ocrData: result.ocrResults,
+        status: result.validation.isValid ? 'approved' : 'rejected', // FIXED: Use correct ENUM values
+        submittedAt: new Date(),
+        isAutomated: true,
+        verificationScore: result.validation.confidence / 100 // Convert percentage to decimal
+      });
+
+      console.log('✅ KYC record saved to database:', kycRecord.id);
 
       if (result.validation.isValid) {
         // Auto-approve if validation passes
-        const wallet = await Wallet.getWalletByUserId(userId);
+        const wallet = await Wallet.findOne({ where: { userId: userId } });
         if (wallet) {
-          await Wallet.verifyKYC(wallet.walletId, 'ai_system');
+          await wallet.verifyKYC('ai_system');
         }
 
         return res.json({
           success: true,
           message: 'KYC verification successful',
           status: 'approved',
-          walletVerified: true
+          walletVerified: true,
+          kycRecordId: kycRecord.id
         });
       } else {
         return res.json({
@@ -73,7 +80,8 @@ class KYCController {
           status: 'failed',
           issues: result.validation.issues,
           acceptedDocuments: result.acceptedDocuments,
-          retryCount: 1
+          retryCount: 1,
+          kycRecordId: kycRecord.id
         });
       }
 
@@ -89,26 +97,35 @@ class KYCController {
   // Upload both KYC documents (identity and address)
   async uploadDocuments(req, res) {
     try {
+      console.log('🚀 KYC uploadDocuments STARTED');
       console.log('🔍 KYC uploadDocuments called');
       console.log('📝 Request body:', req.body);
       console.log('📁 Request files:', req.files);
+      console.log('👤 Authenticated user:', req.user);
+      console.log('🔑 Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
       
-      const { userId } = req.body;
+      // Use authenticated user ID instead of request body for security
+      const userId = req.user.id;
+      const { retryCount = 0 } = req.body;
       const files = req.files;
 
       if (!userId) {
-        console.error('❌ No userId provided');
-        return res.status(400).json({
-          error: 'USER_ID_REQUIRED',
-          message: 'User ID is required'
+        console.error('❌ No authenticated user ID found');
+        return res.status(401).json({
+          error: 'UNAUTHORIZED',
+          message: 'Authentication required'
         });
       }
 
-      if (!files || !files.identityDocument || !files.addressDocument) {
-        console.error('❌ Missing files:', { files: !!files, identity: !!files?.identityDocument, address: !!files?.addressDocument });
+      console.log('✅ Using authenticated user ID:', userId);
+      console.log('📋 Files received:', files ? Object.keys(files) : 'No files');
+      console.log('📋 Identity document:', files?.identityDocument ? 'Present' : 'Missing');
+
+      if (!files || !files.identityDocument) {
+        console.error('❌ Missing identity document:', { files: !!files, identity: !!files?.identityDocument });
         return res.status(400).json({
           error: 'DOCUMENTS_REQUIRED',
-          message: 'Please upload both identity and address documents'
+          message: 'Please upload your ID document (SA ID or Passport)'
         });
       }
 
@@ -128,7 +145,8 @@ class KYCController {
       }
 
       const identityFile = files.identityDocument[0];
-      const addressFile = files.addressDocument[0];
+      // Address document requirement is masked for now
+      // const addressFile = files.addressDocument[0];
 
       // Process identity document
       const identityUrl = `/uploads/kyc/${userId}_id_document_${Date.now()}.${identityFile.originalname.split('.').pop()}`;
@@ -146,48 +164,47 @@ class KYCController {
         });
       }
 
-      // Process address document
-      const addressUrl = `/uploads/kyc/${userId}_proof_of_address_${Date.now()}.${addressFile.originalname.split('.').pop()}`;
-      
-      try {
-        await fs.writeFile(path.join(uploadDir, path.basename(addressUrl)), addressFile.buffer);
-        console.log('✅ Address file saved');
-      } catch (fileError) {
-        console.error('❌ Address file save failed:', fileError);
-        return res.status(500).json({
-          error: 'FILE_SAVE_ERROR',
-          message: 'Error saving address document'
-        });
-      }
+      // Process address document (masked for now)
+      // const addressUrl = `/uploads/kyc/${userId}_proof_of_address_${Date.now()}.${addressFile.originalname.split('.').pop()}`;
+      // 
+      // try {
+      //   await fs.writeFile(path.join(uploadDir, path.basename(addressUrl)), addressFile.buffer);
+      //   console.log('✅ Address file saved');
+      // } catch (fileError) {
+      //   console.error('❌ Address file save failed:', fileError);
+      //   return res.status(500).json({
+      //     error: 'FILE_SAVE_ERROR',
+      //     message: 'Error saving address document'
+      //   });
+      // }
 
       console.log('✅ Files saved, processing OCR...');
 
-      // Process both documents
+      // Process identity document only (POA masked for now)
       try {
-        const identityResult = await KYCService.processKYCSubmission(userId, 'id_document', identityUrl);
-        const addressResult = await KYCService.processKYCSubmission(userId, 'proof_of_address', addressUrl);
+        console.log('🔍 Calling KYCService.processKYCSubmission...');
+        const identityResult = await KYCService.processKYCSubmission(userId, 'id_document', identityUrl, parseInt(retryCount));
+        console.log('🔍 KYCService returned:', identityResult);
+        // const addressResult = await KYCService.processKYCSubmission(userId, 'proof_of_address', addressUrl);
 
-        console.log('✅ OCR results:', { identity: identityResult.success, address: addressResult.success });
+        console.log('✅ OCR results:', { identity: identityResult.success, retryCount });
 
-        if (!identityResult.success || !addressResult.success) {
-          console.error('❌ OCR processing failed');
-          return res.status(500).json({
-            error: 'KYC_PROCESSING_ERROR',
-            message: 'Error processing documents'
-          });
+        if (!identityResult.success) {
+          // Return structured validation outcome to the frontend (no server error)
+          return res.status(200).json(identityResult);
         }
 
-        // Check if both documents are valid
-        const identityValid = identityResult.validation.isValid;
-        const addressValid = addressResult.validation.isValid;
+        // Check if identity document is valid - use the success field from KYC service
+        const identityValid = identityResult.success && identityResult.validation.isValid;
+        // const addressValid = addressResult.validation.isValid;
 
-        console.log('✅ Validation results:', { identityValid, addressValid });
+        console.log('✅ Validation results:', { identityValid, retryCount });
 
-        if (identityValid && addressValid) {
-          // Auto-approve if both documents are valid
-          const wallet = await Wallet.getWalletByUserId(userId);
+        if (identityValid) {
+          // Auto-approve if identity document is valid (POA requirement masked)
+          const wallet = await Wallet.findOne({ where: { userId: userId } });
           if (wallet) {
-            await Wallet.verifyKYC(wallet.walletId, 'ai_system');
+            await wallet.verifyKYC('ai_system');
           }
 
           return res.json({
@@ -196,30 +213,49 @@ class KYCController {
             status: 'approved',
             walletVerified: true,
             identityValid: true,
-            addressValid: true
+            addressValid: true // Always true since POA is masked
           });
         } else {
-          // Return issues for failed documents
-          const issues = [];
-          if (!identityValid) {
-            issues.push(...identityResult.validation.issues);
+          // Handle retry logic
+          const currentRetryCount = parseInt(retryCount) || 0;
+          const canRetry = currentRetryCount < 1;
+          
+          if (canRetry) {
+            // First failure - allow retry
+            return res.json({
+              success: false,
+              message: identityResult.message || 'Identity document validation failed. Please try again with a clearer image.',
+              status: 'retry',
+              issues: identityResult.validation.issues,
+              identityValid,
+              addressValid: true, // Always true since POA is masked
+              retryCount: currentRetryCount + 1,
+              canRetry: true,
+              acceptedDocuments: {
+                identity: KYCService.getAcceptedDocuments('id_document'),
+                address: ['Proof of address requirement is temporarily disabled']
+              }
+            });
+          } else {
+            // Second failure - escalate to support
+            console.log('🚨 KYC failed after retry, escalating to support for user:', userId);
+            
+            return res.json({
+              success: false,
+              message: identityResult.message || 'Document validation failed after retry. Please contact support for manual verification.',
+              status: 'failed',
+              issues: identityResult.validation.issues,
+              identityValid,
+              addressValid: true, // Always true since POA is masked
+              retryCount: currentRetryCount + 1,
+              canRetry: false,
+              escalateToSupport: true,
+              acceptedDocuments: {
+                identity: KYCService.getAcceptedDocuments('id_document'),
+                address: ['Proof of address requirement is temporarily disabled']
+              }
+            });
           }
-          if (!addressValid) {
-            issues.push(...addressResult.validation.issues);
-          }
-
-          return res.json({
-            success: false,
-            message: 'Document validation failed',
-            status: 'failed',
-            issues,
-            identityValid,
-            addressValid,
-            acceptedDocuments: {
-              identity: KYCService.getAcceptedDocuments('id_document'),
-              address: KYCService.getAcceptedDocuments('proof_of_address')
-            }
-          });
         }
       } catch (kycError) {
         console.error('❌ KYC processing error:', kycError);
@@ -239,13 +275,15 @@ class KYCController {
         details: error.message
       });
     }
+    
+    console.log('🏁 KYC uploadDocuments COMPLETED');
   }
 
   // Get KYC status
   async getKYCStatus(req, res) {
     try {
       const { userId } = req.params;
-      const wallet = await Wallet.getWalletByUserId(userId);
+      const wallet = await Wallet.findOne({ where: { userId: userId } });
       
       if (!wallet) {
         return res.status(404).json({
