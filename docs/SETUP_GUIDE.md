@@ -1,3 +1,25 @@
+### Setup Quick Start (Local vs Codespaces)
+
+Refer to `PORT_MATRIX.md` for ports and environment variables. Summary:
+
+- Local: Backend 3001, Frontend 3000
+- Codespaces: Backend 5050, Frontend 3000 (forwarded)
+
+Commands
+```
+# Local
+cd /Users/andremacbookpro/mymoolah && npm start
+cd /Users/andremacbookpro/mymoolah/mymoolah-wallet-frontend && npm run dev
+
+# Codespaces
+cd /workspaces/mymoolah-platform && npm start
+cd /workspaces/mymoolah-platform/mymoolah-wallet-frontend && npm run dev
+```
+
+Env files
+- Backend: `.env` with PORT, JWT_SECRET (32+), DATABASE_PATH, ALLOWED_ORIGINS
+- Frontend: `.env.local` with `VITE_API_BASE_URL`
+
 # MyMoolah Platform - Setup Guide
 
 ## 🎯 **Quick Start Guide**

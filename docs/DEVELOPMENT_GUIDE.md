@@ -306,6 +306,7 @@ describe('Voucher Status Logic', () => {
 ## **🚀 Deployment Guidelines**
 
 ### **1. Environment Configuration**
+See `PORT_MATRIX.md` for a concise matrix. In short: Local uses backend 3001/frontend 3000; Codespaces uses backend 5050/frontend 3000 (forwarded URLs).
 ```javascript
 // config/database.js
 module.exports = {
