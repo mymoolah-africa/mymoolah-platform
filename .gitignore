@@ -49,3 +49,10 @@ backups/**
 # Ignore backups (large files)
 backups/**
 !backups/.gitkeep
+
+# Local SDK and ad-hoc helpers
+/google-cloud-sdk/
+*.old
+/test-*.js
+mymoolah-wallet-frontend/.env.local
+/data/*.db
