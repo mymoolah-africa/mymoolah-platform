@@ -105,11 +105,18 @@ class SecurityConfig {
 
   // Get CORS origins based on environment
   getCorsOrigins() {
+    // Always allow explicit ALLOWED_ORIGINS if provided (comma-separated)
+    const envOrigins = process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+
     if (process.env.NODE_ENV === 'production') {
-      return process.env.ALLOWED_ORIGINS ? 
-        process.env.ALLOWED_ORIGINS.split(',') : 
-        ['https://mymoolah.com', 'https://www.mymoolah.com'];
+      return envOrigins.length
+        ? envOrigins
+        : ['https://mymoolah.com', 'https://www.mymoolah.com'];
     }
+
+    // Development defaults + any explicitly provided origins (e.g., Codespaces URLs)
     return [
       'http://localhost:3000', 
       'http://localhost:3001', 
@@ -125,7 +132,8 @@ class SecurityConfig {
       'http://192.168.3.176:3002',
       'http://192.168.3.179:3000',
       'http://192.168.3.179:3001',
-      'http://192.168.3.179:3002'
+      'http://192.168.3.179:3002',
+      ...envOrigins
     ];
   }
 

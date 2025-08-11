@@ -3,6 +3,11 @@
  * Central configuration for demo/production modes
  */
 
+// Allow overriding API base via Vite env (Codespaces, local, etc.)
+const API_BASE_URL = (typeof import.meta !== 'undefined' && (import.meta as any).env?.VITE_API_BASE_URL)
+  ? (import.meta as any).env.VITE_API_BASE_URL
+  : 'http://localhost:5050';
+
 export const APP_CONFIG = {
   // Demo vs Production Mode - FIXED FOR REAL BACKEND TESTING
   DEMO_MODE: false, // Set to false for production backend testing
@@ -72,9 +77,9 @@ export const APP_CONFIG = {
     enableAnalytics: false // Set to true for production
   },
   
-  // API Configuration - UPDATED FOR LOCAL BACKEND TESTING
+  // API Configuration - reads from VITE_API_BASE_URL when provided
   API: {
-    baseUrl: 'http://localhost:3001', // Updated for local backend
+    baseUrl: API_BASE_URL,
     timeout: 10000,
     retryAttempts: 3
   },
