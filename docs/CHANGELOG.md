@@ -1,6 +1,7 @@
 # MyMoolah Wallet - Changelog
 
 ## [2025-08-11] - Git Sync Hardening, Ignore Rules, and Docs Alignment
+- Voucher redemption rule: enforce 16‑digit MMVoucher only; block 14‑digit EasyPay codes from redemption with a clear error. Updated backend and API docs.
 - Added `scripts/git-sync-local.sh` and npm scripts:
   - `npm run sync:local` creates a timestamped snapshot branch from local work and prints a PR link
   - `npm run sync:pull` pulls the latest `main` safely

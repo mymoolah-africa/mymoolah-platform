@@ -210,7 +210,7 @@ POST /api/v1/vouchers/redeem
 **Request Body**:
 ```json
 {
-  "voucher_code": "MMVOUCHER_1754321424055_abc123",
+  "voucher_code": "1093237161056632",
   "amount": 250,
   "redeemer_id": "user123",
   "merchant_id": "MERCHANT123",
@@ -231,6 +231,11 @@ POST /api/v1/vouchers/redeem
   }
 }
 ```
+
+Important rules (2025‑08‑11):
+- Only 16‑digit MMVoucher codes can be redeemed.
+- 14‑digit EasyPay codes are display/settlement only and are rejected by the API with
+  `400` and message: "EasyPay codes (14 digits) cannot be redeemed. Use the 16‑digit MMVoucher code."
 
 ### **Get Voucher by Code**
 ```http

@@ -143,6 +143,13 @@ const formatCurrency = (amount) => {
 // Debits: R -500.00 (red, negative after currency)
 ```
 
+### **Redemption Rules (Updated Aug 11, 2025)**
+```text
+- Only 16‑digit MMVoucher codes can be redeemed
+- 14‑digit EasyPay codes are display/settlement only and cannot be redeemed
+- Settlement converts EasyPay → MMVoucher (active) and sets balance=originalAmount
+```
+
 ### **Transaction Display Standards**
 ```javascript
 // Voucher transaction mapping

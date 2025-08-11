@@ -76,6 +76,11 @@ MyMoolah is a Mojaloop-inspired, modular banking and wallet platform for Africa,
   # open the printed PR link and merge to main
   ```
 - See `docs/git-sync-workflow.md` for the full playbook.
+
+### Voucher lifecycle quick facts (Aug 11, 2025)
+- EasyPay (14 digits): display/settlement only; cannot be redeemed
+- Settlement callback converts to MMVoucher (16 digits), status=active, balance=originalAmount, 12‑month expiry
+- Redemption requires 16‑digit MMVoucher code
 - Use backup branches before major changes.
 - Keep documentation up to date after each session or major change.
 
