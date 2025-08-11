@@ -51,6 +51,12 @@ npm start
 - **✅ All code changes in subdirectories**
 - **✅ Documentation updates in `/docs/`**
 
+### **2.1 Git Sync (Local-first)**
+- Use the helper scripts:
+  - From your Mac: `cd /Users/andremacbookpro/mymoolah && npm run sync:local` to snapshot and push a PR branch
+  - Pull latest main: `cd /Users/andremacbookpro/mymoolah && npm run sync:pull`
+- Never force-push to `main`. Always merge via PRs. See `docs/git-sync-workflow.md` for the full playbook.
+
 ### **3. Frontend Development**
 - **Source of Truth**: Figma AI-generated components
 - **Location**: `/mymoolah-wallet-frontend/pages/`
@@ -306,7 +312,7 @@ describe('Voucher Status Logic', () => {
 ## **🚀 Deployment Guidelines**
 
 ### **1. Environment Configuration**
-See `PORT_MATRIX.md` for a concise matrix. In short: Local uses backend 3001/frontend 3000; Codespaces uses backend 5050/frontend 3000 (forwarded URLs).
+See `PORT_MATRIX.md` for a concise matrix. In short: Local uses backend 3001/frontend 3000; Codespaces uses backend 5050/frontend 3000 (forwarded URLs). Ensure `VITE_API_BASE_URL` is the host only (no trailing slash and no `/api/v1`).
 ```javascript
 // config/database.js
 module.exports = {

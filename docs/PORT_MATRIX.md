@@ -9,19 +9,20 @@ This single source of truth defines which ports and environment variables to use
   - Frontend dev server: 3000
   - API base: http://localhost:3001/api/v1
   - Backend CORS: ALLOWED_ORIGINS=http://localhost:3000[,http://<your-LAN-IP>:3000]
-  - Frontend env: VITE_API_BASE_URL=http://localhost:3001/api/v1
+  - Frontend env: VITE_API_BASE_URL=http://localhost:3001
 
 - Codespaces (or any cloud dev with forwarded URLs)
   - Backend: PORT=5050
   - Frontend dev server: 3000 (Codespaces UI)
   - API base: https://<your-5050-forwarded-host>/api/v1
   - Backend CORS: ALLOWED_ORIGINS=https://<your-3000-forwarded-host>
-  - Frontend env: VITE_API_BASE_URL=https://<your-5050-forwarded-host>/api/v1
+  - Frontend env: VITE_API_BASE_URL=https://<your-5050-forwarded-host>
 
 Notes
 - Never include a trailing slash on ALLOWED_ORIGINS values
 - Multiple origins are comma-separated in a single line
 - The backend CORS in `config/security.js` accepts ALLOWED_ORIGINS in both production and development
+- `VITE_API_BASE_URL` should be the host only. The frontend code adds `/api/v1` internally.
 
 ### Exact steps
 

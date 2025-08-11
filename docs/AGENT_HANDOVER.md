@@ -41,3 +41,13 @@
 - Scope broadened from wallet-only to full Treasury Platform: wallet services, general ledger (double-entry), integrations (EasyPay, Flash, MobileMart, dtMercury, Zapper), and reporting/audit.
 - Database plan: develop on SQLite; migrate to PostgreSQL once Figma frontend integrations are stable. Migrations must be forward/backward compatible with clear rollback.
 - See operating charter: `./AGENT_ROLE_TEMPLATE.md` for personas, constraints, and PostgreSQL migration directive. 
+
+---
+
+## Git Sync Hardening & Docs (2025-08-11)
+- Implemented safe local sync workflow:
+  - `scripts/git-sync-local.sh`; npm scripts `sync:local` and `sync:pull`
+  - Snapshot branches `sync/local-YYYYMMDD-HHMM` merged via PRs
+- Tightened `.gitignore` to prevent accidental commits of `data/*.db`, `.env.local`, `google-cloud-sdk/`, and `test-*.js`.
+- Cleaned repo state in Codespaces and Mac; aligned both to `main`.
+- Updated docs: `CHANGELOG.md`, `DEVELOPMENT_GUIDE.md`, `PROJECT_ONBOARDING.md`, `PORT_MATRIX.md`.

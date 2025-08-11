@@ -233,3 +233,9 @@
 - Decision: Continue development on SQLite; plan a controlled migration to PostgreSQL post-frontend integration stabilization with dual-run validation and full rollback.
 - Impact: Broader API surface, ledger invariants (debits == credits), migration scripts, and test coverage expansion.
 - Actions: Created `docs/AGENT_ROLE_TEMPLATE.md`; updated `AGENT_HANDOVER.md` and `CHANGELOG.md`. 
+
+## [2025-08-11] Git Hygiene & Environment Config Decisions
+- Decision: Adopt snapshot-branch PR workflow for local work. Implement helper script `scripts/git-sync-local.sh` and npm scripts `sync:local` and `sync:pull` for André’s Mac workflow.
+- Decision: Strengthen `.gitignore` to exclude `data/*.db`, `mymoolah-wallet-frontend/.env.local`, `google-cloud-sdk/`, and `test-*.js`. Remove tracked dev DB and keep `data/.gitkeep`.
+- Decision: Clarify frontend env rules—`VITE_API_BASE_URL` must be host-only (no trailing slash, no `/api/v1`). Update `PORT_MATRIX.md` and guides.
+- Outcome: Local and Codespaces repos aligned to `main`; noise removed; merge safety improved.
