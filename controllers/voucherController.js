@@ -534,13 +534,14 @@ exports.redeemVoucher = async (req, res) => {
     
     // Clean the voucher code to handle spaces and formatting
     const cleanedVoucherCode = cleanVoucherCode(voucher_code);
-    
-    // Find voucher by code (check both voucherCode and easyPayCode)
-    let voucher = await Voucher.findOne({ where: { voucherCode: cleanedVoucherCode } });
-    
-    if (!voucher) {
-      voucher = await Voucher.findOne({ where: { easyPayCode: cleanedVoucherCode } });
+
+    // Business rule: EasyPay (14 digits) can never be redeemed directly
+    if (cleanedVoucherCode.length === 14) {
+      return res.status(400).json({ error: 'EasyPay codes (14 digits) cannot be redeemed. Use the 16‑digit MMVoucher code.' });
     }
+
+    // Only redeem using the 16‑digit MMVoucher code
+    let voucher = await Voucher.findOne({ where: { voucherCode: cleanedVoucherCode } });
     
     // If still not found, try to match against formatted display codes
     if (!voucher) {
@@ -548,7 +549,7 @@ exports.redeemVoucher = async (req, res) => {
       const allVouchers = await Voucher.findAll();
       for (const v of allVouchers) {
         // Format the database code the same way the frontend does
-        const numericCode = v.voucherCode.replace(/\D/g, ''); // Remove non-digits
+        const numericCode = (v.voucherCode || '').replace(/\D/g, ''); // Remove non-digits
         const paddedCode = numericCode.padEnd(16, '0').substring(0, 16);
         const formattedCode = `${paddedCode.substring(0, 4)} ${paddedCode.substring(4, 8)} ${paddedCode.substring(8, 12)} ${paddedCode.substring(12, 16)}`;
         const formattedCleaned = cleanVoucherCode(formattedCode);
