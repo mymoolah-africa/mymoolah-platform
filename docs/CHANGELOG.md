@@ -1,5 +1,17 @@
 # MyMoolah Wallet - Changelog
 
+## [2025-08-11] - Git Sync Hardening, Ignore Rules, and Docs Alignment
+- Added `scripts/git-sync-local.sh` and npm scripts:
+  - `npm run sync:local` creates a timestamped snapshot branch from local work and prints a PR link
+  - `npm run sync:pull` pulls the latest `main` safely
+- Standardized Git workflow: always snapshot to `sync/local-YYYYMMDD-HHMM` (or cloud branch) and merge via PRs. See `docs/git-sync-workflow.md`.
+- Tightened `.gitignore` to prevent accidental commits:
+  - `google-cloud-sdk/`, `*.old`, `test-*.js`, `mymoolah-wallet-frontend/.env.local`, and `data/*.db`
+  - Stopped tracking `data/mymoolah.db` and added `data/.gitkeep`
+- Updated `docs/PORT_MATRIX.md` to clarify that `VITE_API_BASE_URL` should be the HOST ONLY (no trailing slash and no `/api/v1`).
+- Clarified restart guidance and trust‑proxy/CORS notes in server docs; consolidated CORS in `server.js` and relaxed Helmet `connectSrc` to include `https:` when on Codespaces.
+
+
 ## [2025-08-08] - Treasury Platform Scope & DB Migration Documentation
 - Added `docs/AGENT_ROLE_TEMPLATE.md` defining the Treasury Platform operating charter (wallet, general ledger, integrations, APIs).
 - Documented SQLite (dev) → PostgreSQL (prod) migration directive with phased steps and rollback strategy.

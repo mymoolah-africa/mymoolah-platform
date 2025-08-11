@@ -9,7 +9,9 @@
     "test": "jest",
     "test:auth": "node test-auth.js",
     "test:server": "node test-server.js",
-    "test:sqlite": "node test-sqlite.js"
+    "test:sqlite": "node test-sqlite.js",
+    "sync:local": "bash scripts/git-sync-local.sh",
+    "sync:pull": "git fetch --all --prune && git checkout main && git pull --rebase && git status -sb | cat"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",

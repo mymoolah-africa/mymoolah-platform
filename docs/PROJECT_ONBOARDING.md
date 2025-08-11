@@ -65,17 +65,17 @@ MyMoolah is a Mojaloop-inspired, modular banking and wallet platform for Africa,
 
 ## Git & Workflow
 
-- Always work in Codespaces unless you have a specific reason to work locally.
-- Before starting work:  
+- Local-first workflow is supported. André primarily works on his Mac in `/Users/andremacbookpro/mymoolah`.
+- Before starting work (Mac):
   ```bash
-  git pull origin main
+  cd /Users/andremacbookpro/mymoolah && npm run sync:pull
   ```
-- After making changes and testing:  
+- After making changes and testing (Mac):
   ```bash
-  git add .
-  git commit -m "Describe your change"
-  git push origin <your-branch>
+  cd /Users/andremacbookpro/mymoolah && npm run sync:local
+  # open the printed PR link and merge to main
   ```
+- See `docs/git-sync-workflow.md` for the full playbook.
 - Use backup branches before major changes.
 - Keep documentation up to date after each session or major change.
 
