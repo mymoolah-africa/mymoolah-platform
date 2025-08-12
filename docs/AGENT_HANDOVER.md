@@ -51,3 +51,6 @@
 - Tightened `.gitignore` to prevent accidental commits of `data/*.db`, `.env.local`, `google-cloud-sdk/`, and `test-*.js`.
 - Cleaned repo state in Codespaces and Mac; aligned both to `main`.
 - Updated docs: `CHANGELOG.md`, `DEVELOPMENT_GUIDE.md`, `PROJECT_ONBOARDING.md`, `PORT_MATRIX.md`.
+
+## Agent Operational Preference (2025-08-11)
+- Standing instruction: Proactively notify André when short‑term context is getting tight and recommend starting a fresh agent/chat if beneficial. Keep summaries and key rules ready for quick reload.

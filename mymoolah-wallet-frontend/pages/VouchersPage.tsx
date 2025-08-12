@@ -300,6 +300,11 @@ export function VouchersPage() {
           status = 'active';
         }
 
+        const createdTs = new Date(voucher.createdAt || new Date().toISOString()).getTime();
+        const computedExpiry = (status === 'pending_payment' && voucherType === 'easypay_voucher')
+          ? new Date(createdTs + 96 * 60 * 60 * 1000).toISOString()
+          : new Date(createdTs + 365 * 24 * 60 * 60 * 1000).toISOString();
+
         return {
           id: voucher.id.toString(),
           type: voucherType,
@@ -310,7 +315,9 @@ export function VouchersPage() {
           voucherCode: voucher.voucherCode || `VOUCHER-${voucher.id}`,
           easyPayNumber: voucher.easyPayCode, // Direct field in new structure
           createdDate: voucher.createdAt || new Date().toISOString(),
-          expiryDate: voucher.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          expiryDate: voucher.expiresAt || computedExpiry,
+          // expose expiresAt for export logic
+          expiresAt: voucher.expiresAt || undefined,
           description: voucher.metadata?.description || (voucherType === 'easypay_voucher' ? 'EasyPay voucher' : 'MMVoucher'),
           transactionId: `VOUCHER-${voucher.id}`,
           redemptionLocations: voucherType === 'easypay_voucher' ? ['EasyPay Network', 'MyMoolah Network'] : ['MyMoolah Network'],
@@ -2062,11 +2069,17 @@ export function VouchersPage() {
                   <Button
                     onClick={() => {
                       // Export functionality - create CSV of filtered vouchers
+                      // Ensure expiry follows business rules: 96h for EasyPay pending; 12 months for MMVoucher
                       const csvContent = "data:text/csv;charset=utf-8," 
                         + "Voucher Code,Type,Status,Amount,Currency,Created Date,Expiry Date,Description\n"
-                        + filteredVouchers.map(v => 
-                          `"${v.voucherCode}","${v.type}","${v.status}","${v.amount}","${v.currency}","${v.createdDate}","${v.expiryDate}","${v.description}"`
-                        ).join("\n");
+                        + filteredVouchers.map(v => {
+                          const createdMs = new Date(v.createdDate).getTime();
+                          const computedExpiry = (v.status === 'pending_payment' && v.type === 'easypay_voucher')
+                            ? new Date(createdMs + 96 * 60 * 60 * 1000).toISOString()
+                            : new Date(createdMs + 365 * 24 * 60 * 60 * 1000).toISOString();
+                          const expiry = (v as any).expiresAt || v.expiryDate || computedExpiry;
+                          return `"${v.voucherCode}","${v.type}","${v.status}","${v.amount}","${v.currency}","${v.createdDate}","${expiry}","${v.description}"`;
+                        }).join("\n");
                       const encodedUri = encodeURI(csvContent);
                       const link = document.createElement("a");
                       link.setAttribute("href", encodedUri);
