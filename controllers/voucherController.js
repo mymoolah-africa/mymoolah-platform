@@ -309,7 +309,8 @@ exports.issueVoucher = async (req, res) => {
         balance: amount,
         status: 'active',
         voucherType: 'standard',
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+        // MMVoucher expiry: 12 months from issuance
+        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
         metadata: {
           description: voucherData.description || null,
           merchant: voucherData.merchant || null
@@ -399,7 +400,7 @@ exports.issueEasyPayVoucher = async (req, res) => {
     // Generate EasyPay number
     const easyPayCode = generateEasyPayNumber();
     
-    // Set expiration (96 hours from now - 4 days)
+    // Set expiration (96 hours from now - 4 days) for EasyPay pending
     const expiresAt = new Date(Date.now() + 96 * 60 * 60 * 1000);
     
     try {
@@ -489,7 +490,7 @@ exports.processEasyPaySettlement = async (req, res) => {
     // Generate MM voucher code
     const mmVoucherCode = generateMMVoucherCode();
     
-    // Update voucher to settled state
+    // Update voucher to settled state (MMVoucher active, 12 months)
     await voucher.update({
       voucherCode: mmVoucherCode,
       status: 'active',
