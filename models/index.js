@@ -11,7 +11,23 @@ const db = {};
 
 let sequelize;
 if (config.use_env_variable) {
-  sequelize = new Sequelize(process.env[config.use_env_variable], config);
+  const url = process.env[config.use_env_variable];
+  // Clone config so we can safely tweak connection options per environment
+  const options = { ...config };
+  try {
+    const parsed = new URL(url);
+    const host = (parsed.hostname || '').toLowerCase();
+    const isLocalProxy = host === '127.0.0.1' || host === 'localhost';
+    if (isLocalProxy) {
+      // When using Cloud SQL Auth Proxy locally, disable client-side SSL to the proxy
+      if (options.dialectOptions && options.dialectOptions.ssl) {
+        delete options.dialectOptions.ssl;
+      }
+    }
+  } catch (_) {
+    // Ignore URL parse errors; fall back to defaults
+  }
+  sequelize = new Sequelize(url, options);
 } else {
   sequelize = new Sequelize(config.database, config.username, config.password, config);
 }

@@ -7,13 +7,13 @@
 ## 📋 Development Environment Setup
 
 ### **Local Development Environment**
-- **Database**: SQLite for simplicity and speed
+- **Database**: PostgreSQL (Cloud SQL) for realism and performance
 - **Server**: Node.js with Express.js on port 5050
 - **Testing**: Comprehensive manual and automated testing
 - **Documentation**: Real-time updates after every change
 
 ### **Cloud Development (Codespaces)**
-- **Database**: MySQL for production-like environment
+- **Database**: PostgreSQL for production-like environment
 - **Server**: Same Node.js/Express.js setup
 - **Testing**: Full integration testing
 - **Deployment**: Automated deployment pipeline ready
@@ -88,8 +88,8 @@ curl -X GET http://localhost:5050/api/v1/kyc
 
 ### **Database Testing**
 ```bash
-# Test database connectivity
-node test-sqlite.js
+# Test API connectivity instead of direct DB scripts
+node scripts/api-smoke-test.js
 
 # Test database operations
 node test-database.js
@@ -166,42 +166,15 @@ node test-database.js
 - **Examples**: Include curl commands and code examples
 - **Status**: Always indicate current status (working/not working)
 
-## 🗄️ Database Best Practices
+## 🗄️ Database Best Practices (PostgreSQL)
 
-### **SQLite (Local Development)**
-- ✅ **Automatic Creation**: Tables created automatically on startup
-- ✅ **Data Integrity**: Foreign key relationships working
-- ✅ **Backup Strategy**: Regular database backups
-- ✅ **Migration Strategy**: Ready for MySQL migration
-
-### **Database Operations**
+### **Operations**
 ```bash
-# Initialize new tables
-node scripts/init-kyc-table.js
+# Start Cloud SQL proxy
+./bin/cloud-sql-proxy --address 127.0.0.1 --port 5433 mymoolah-db:africa-south1:mmtp-pg
 
-# Backup database
-cp data/mymoolah.db data/mymoolah.db.backup
-
-# Restore database
-cp data/mymoolah.db.backup data/mymoolah.db
-```
-
-### **Data Verification**
-```bash
-# Check database tables
-sqlite3 data/mymoolah.db ".tables"
-
-# Check table schemas
-sqlite3 data/mymoolah.db ".schema users"
-sqlite3 data/mymoolah.db ".schema wallets"
-sqlite3 data/mymoolah.db ".schema transactions"
-sqlite3 data/mymoolah.db ".schema kyc"
-
-# Check data counts
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM users;"
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM wallets;"
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM transactions;"
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM kyc;"
+# Simple health check
+node -e "require('dotenv').config();const{Client}=require('pg');(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL,ssl:false});await c.connect();const r=await c.query('select 1');console.log('pg ok',r.rowCount);await c.end();})()"
 ```
 
 ## 🚀 Deployment Best Practices
@@ -240,7 +213,7 @@ NODE_ENV=development
 
 ### **Current Performance**
 - ✅ **Response Time**: < 200ms for most endpoints
-- ✅ **Database Performance**: Optimized SQLite queries
+- ✅ **Database Performance**: Use Query Insights and `EXPLAIN ANALYZE` for tuning
 - ✅ **Memory Usage**: Efficient memory management
 - ✅ **Error Handling**: Graceful error handling and recovery
 
@@ -250,7 +223,7 @@ NODE_ENV=development
 top -p $(pgrep node)
 
 # Monitor database performance
-sqlite3 data/mymoolah.db "PRAGMA stats;"
+# Use Cloud SQL Query Insights or `EXPLAIN ANALYZE` on critical queries
 
 # Monitor API response times
 time curl http://localhost:5050/api/v1/users

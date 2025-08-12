@@ -1,3 +1,7 @@
+# Cloud SQL proxy and keys (do not commit)
+bin/cloud-sql-proxy
+infra/gcp/keys/
+
 # macOS system files
 .DS_Store
 

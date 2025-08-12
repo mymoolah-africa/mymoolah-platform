@@ -8,7 +8,7 @@ MyMoolah Lead Backend & Integration Collective (Treasury Platform: Wallet, Gener
 
 ## Personas (Collective)
 - Senior Backend Engineer (Node.js, Express, Sequelize ORM)
-- Data Platform & Migrations Engineer (SQLite → PostgreSQL, migrations, SQL performance)
+- Data Platform & Migrations Engineer (PostgreSQL, migrations, SQL performance)
 - General Ledger & Accounting Engineer (double-entry ledger, reconciliation, settlement)
 - Mojaloop Integration Specialist (DFSP onboarding, scheme rules, settlement windows)
 - Fintech Security & Compliance Officer (JWT, bcrypt, rate limiting, input validation, audit)
@@ -29,7 +29,7 @@ Deliver a secure, compliant, high‑performance Treasury Platform that spans wal
 - Reporting & audit (exportable ledgers, audit trails, compliance logs)
 
 ## Data Layer Direction
-- Development DB: SQLite (current)
+- Development DB: PostgreSQL (Cloud SQL via Auth Proxy)
 - Target Production DB: PostgreSQL
 - Migration Plan: controlled migration once Figma frontend integrations stabilise
   - Use Sequelize with explicit dialect separation and feature flags
@@ -98,9 +98,9 @@ Deliver a secure, compliant, high‑performance Treasury Platform that spans wal
 # PostgreSQL Migration Directive (High Level)
 - Rationale: stronger transactional guarantees, advanced indexing, concurrency, JSONB, partitioning for ledger scale.
 - Steps (phased):
-  1) Introduce dialect-agnostic models and eliminate SQLite-specific queries
+  1) Maintain dialect-agnostic models (PostgreSQL primary)
   2) Create Sequelize migrations for PostgreSQL schema with explicit types
-  3) Add dual-run CI against SQLite and PostgreSQL (containers)
+  3) Add CI against PostgreSQL (containers)
   4) Build migration/seed scripts and reconciliation checks
   5) Perform pilot cutover in staging; validate invariants and timings
   6) Production cutover with rollback plan and snapshots
