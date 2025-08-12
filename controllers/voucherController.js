@@ -893,22 +893,37 @@ exports.listAllVouchersForMe = async (req, res) => {
       order: [['createdAt', 'DESC']]
     });
     
-    const vouchersData = vouchers.map(voucher => ({
-      id: voucher.id,
-      voucherCode: voucher.voucherCode,
-      easyPayCode: voucher.easyPayCode,
-      userId: voucher.userId,
-      voucherType: voucher.voucherType,
-      originalAmount: voucher.originalAmount,
-      balance: voucher.balance,
-      status: voucher.status,
-      // Provide both expiresAt and expiryDate for frontend compatibility
-      expiresAt: voucher.expiresAt,
-      expiryDate: voucher.expiresAt,
-      createdAt: voucher.createdAt,
-      updatedAt: voucher.updatedAt,
-      metadata: voucher.metadata
-    }));
+    const vouchersData = vouchers.map(voucher => {
+      // Backfill expiry if missing to ensure consistent UI
+      let effectiveExpiresAt = voucher.expiresAt;
+      if (!effectiveExpiresAt) {
+        const createdTs = new Date(voucher.createdAt).getTime();
+        if (voucher.status === 'pending_payment' && voucher.easyPayCode) {
+          // EasyPay pending: 96 hours from creation
+          effectiveExpiresAt = new Date(createdTs + 96 * 60 * 60 * 1000);
+        } else if (voucher.status === 'active') {
+          // Active MMVoucher: 12 months from creation
+          effectiveExpiresAt = new Date(createdTs + 365 * 24 * 60 * 60 * 1000);
+        }
+      }
+
+      return {
+        id: voucher.id,
+        voucherCode: voucher.voucherCode,
+        easyPayCode: voucher.easyPayCode,
+        userId: voucher.userId,
+        voucherType: voucher.voucherType,
+        originalAmount: voucher.originalAmount,
+        balance: voucher.balance,
+        status: voucher.status,
+        // Provide both expiresAt and expiryDate for frontend compatibility
+        expiresAt: effectiveExpiresAt,
+        expiryDate: effectiveExpiresAt,
+        createdAt: voucher.createdAt,
+        updatedAt: voucher.updatedAt,
+        metadata: voucher.metadata
+      };
+    });
     
     res.json({ 
       success: true,
