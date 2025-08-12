@@ -902,7 +902,9 @@ exports.listAllVouchersForMe = async (req, res) => {
       originalAmount: voucher.originalAmount,
       balance: voucher.balance,
       status: voucher.status,
+      // Provide both expiresAt and expiryDate for frontend compatibility
       expiresAt: voucher.expiresAt,
+      expiryDate: voucher.expiresAt,
       createdAt: voucher.createdAt,
       updatedAt: voucher.updatedAt,
       metadata: voucher.metadata
