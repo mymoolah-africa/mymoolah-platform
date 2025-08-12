@@ -50,7 +50,7 @@ class WalletController {
         message: 'Balance retrieved successfully',
         data: {
           walletId: wallet.walletId,
-          balance: wallet.balance,
+          balance: parseFloat(wallet.balance),
           currency: wallet.currency,
           status: wallet.status
         }
@@ -143,7 +143,7 @@ class WalletController {
         userId: userId,
         walletId: wallet.walletId,
         amount: amount,
-        type: 'credit',
+        type: 'deposit',
         status: 'completed',
         description: description || 'Wallet credit',
         currency: wallet.currency
@@ -370,11 +370,33 @@ class WalletController {
         offset: offset
       });
 
+      const normalizedRows = (transactions.rows || []).map((t) => ({
+        id: t.id,
+        transactionId: t.transactionId,
+        userId: t.userId,
+        walletId: t.walletId,
+        senderWalletId: t.senderWalletId,
+        receiverWalletId: t.receiverWalletId,
+        paymentId: t.paymentId,
+        amount: parseFloat(t.amount),
+        type: t.type === 'credit' ? 'deposit' : t.type === 'debit' ? 'payment' : t.type,
+        status: t.status,
+        description: t.description,
+        fee: t.fee != null ? parseFloat(t.fee) : 0,
+        currency: t.currency || 'ZAR',
+        exchangeRate: t.exchangeRate != null ? Number(t.exchangeRate) : null,
+        failureReason: t.failureReason || null,
+        processingTime: t.processingTime != null ? Number(t.processingTime) : null,
+        metadata: t.metadata || null,
+        createdAt: t.createdAt,
+        updatedAt: t.updatedAt,
+      }));
+
       res.json({
         success: true,
         message: 'Transaction history retrieved successfully',
         data: {
-          transactions: transactions.rows,
+          transactions: normalizedRows,
           pagination: {
             currentPage: parseInt(page),
             totalPages: Math.ceil(transactions.count / limit),
@@ -594,7 +616,7 @@ class WalletController {
         userId: wallet.userId,
         walletId: wallet.walletId,
         amount: amount,
-        type: 'credit',
+        type: 'deposit',
         status: 'completed',
         description: description || 'Admin wallet credit',
         currency: wallet.currency

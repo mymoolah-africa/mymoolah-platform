@@ -3,10 +3,11 @@
 ## **🚀 Getting Started**
 
 ### **Prerequisites**
-- Node.js v22.16.0 or higher
-- npm or yarn package manager
-- Git for version control
-- SQLite (development) / MySQL (production)
+- Node.js 18+
+- npm
+- Git
+- PostgreSQL (Google Cloud SQL)
+- Cloud SQL Auth Proxy (local dev)
 
 ### **Project Structure**
 ```
@@ -38,10 +39,7 @@ cd mymoolah
 # Install dependencies
 npm install
 
-# Initialize database
-npm run init-db
-
-# Start development server
+# Start backend
 npm start
 ```
 
@@ -65,7 +63,7 @@ npm start
 
 ### **4. Backend Development**
 - **API Design**: RESTful endpoints with consistent response format
-- **Database**: Single table design for vouchers (MM + EasyPay)
+- **Database**: PostgreSQL (Cloud SQL). Single-table voucher design (MM + EasyPay)
 - **Security**: JWT authentication + banking-grade encryption
 - **Validation**: Comprehensive input validation and error handling
 
@@ -124,7 +122,7 @@ const formatVoucherCodeForDisplay = (voucher) => {
 };
 ```
 
-### **Currency Formatting Standards (Updated August 5, 2025)**
+### **Currency Formatting Standards (Updated Aug 12, 2025)**
 ```javascript
 // Banking standards: Negative sign after currency
 const formatCurrency = (amount) => {
@@ -165,8 +163,8 @@ const getTransactionDisplay = (transaction) => {
 
 // Transaction type mapping
 const mapTransactionType = (backendType, description) => {
-  if (backendType === 'deposit') return 'received';
-  if (backendType === 'payment') {
+  if (backendType === 'deposit' || backendType === 'refund' || backendType === 'receive') return 'received';
+  if (backendType === 'payment' || backendType === 'debit' || backendType === 'send') {
     if (description.includes('voucher purchase')) return 'purchase';
     if (description.includes('voucher redemption')) return 'received';
   }
@@ -319,23 +317,20 @@ describe('Voucher Status Logic', () => {
 ## **🚀 Deployment Guidelines**
 
 ### **1. Environment Configuration**
-See `PORT_MATRIX.md` for a concise matrix. In short: Local uses backend 3001/frontend 3000; Codespaces uses backend 5050/frontend 3000 (forwarded URLs). Ensure `VITE_API_BASE_URL` is the host only (no trailing slash and no `/api/v1`).
-```javascript
-// config/database.js
-module.exports = {
-  development: {
-    dialect: 'sqlite',
-    storage: './data/mymoolah.db'
-  },
-  production: {
-    dialect: 'mysql',
-    host: process.env.DB_HOST,
-    username: process.env.DB_USER,
-    password: process.env.DB_PASS,
-    database: process.env.DB_NAME
-  }
-};
+- Backend `.env` (local proxy):
+```env
+DATABASE_URL=postgres://mymoolah_app:<PASSWORD>@127.0.0.1:5433/mymoolah
+DB_DIALECT=postgres
 ```
+- Start the proxy in a separate terminal:
+```bash
+./bin/cloud-sql-proxy --address 127.0.0.1 --port 5433 mymoolah-db:africa-south1:mmtp-pg
+```
+- Frontend `.env.local`:
+```env
+VITE_API_BASE_URL=http://localhost:3001
+```
+- Note: If you connect via public IP instead of the proxy, set `DATABASE_URL` to the instance host with `sslmode=require` and make sure your Mac IP is authorized in Cloud SQL.
 
 ### **2. Production Checklist**
 - [ ] Database migrations applied
@@ -385,7 +380,7 @@ exports.issueVoucher = async (req, res) => {
 
 ### **Development Tools**
 - **IDE**: Visual Studio Code with TypeScript support
-- **Database**: SQLite Browser for development
+- **Database**: PostgreSQL (Cloud SQL). For local inspection use `psql` or TablePlus.
 - **API Testing**: Postman or Insomnia
 - **Version Control**: Git with GitHub
 
@@ -425,9 +420,9 @@ exports.issueVoucher = async (req, res) => {
 
 ---
 
-**Last Updated**: August 4, 2025  
-**Version**: 1.2.1  
-**Status**: Production Ready 
+**Last Updated**: August 12, 2025  
+**Version**: 1.3.0  
+**Status**: Production Ready (PostgreSQL)
 
 ## 🛑 Critical Process Policy: Incremental Cleanup & Testing
 

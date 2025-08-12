@@ -17,7 +17,7 @@ cd /workspaces/mymoolah-platform/mymoolah-wallet-frontend && npm run dev
 ```
 
 Env files
-- Backend: `.env` with PORT, JWT_SECRET (32+), DATABASE_PATH, ALLOWED_ORIGINS
+- Backend: `.env` with PORT, JWT_SECRET (32+), DATABASE_URL, DB_DIALECT=postgres, ALLOWED_ORIGINS
 - Frontend: `.env.local` with `VITE_API_BASE_URL`
 
 # MyMoolah Platform - Setup Guide
@@ -61,7 +61,7 @@ cd mymoolah
 # Install dependencies
 npm install
 
-# Create data directory for SQLite
+# Start Cloud SQL Auth Proxy (local dev)
 mkdir -p data
 ```
 
@@ -92,7 +92,7 @@ The backend uses default configuration for development:
 // Default settings in server.js
 const PORT = process.env.PORT || 5050;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-const DATABASE_PATH = './data/mymoolah.db';
+const DATABASE_URL = process.env.DATABASE_URL; // postgres connection string
 ```
 
 ### **Frontend Configuration**
@@ -174,7 +174,8 @@ curl -X GET http://localhost:5050/api/v1/vouchers/active \
 ### **Database Verification**
 ```bash
 # Check Andre Botes transactions
-sqlite3 data/mymoolah.db "SELECT t.type, t.description, t.amount, t.createdAt FROM transactions t JOIN wallets w ON t.walletId = w.walletId WHERE w.userId = (SELECT id FROM users WHERE firstName = 'Andre' AND lastName = 'Botes') ORDER BY t.createdAt DESC LIMIT 5;"
+# Example: check transactions via API instead of sqlite3
+curl -s -H "Authorization: Bearer <TOKEN>" "http://localhost:3001/api/v1/wallets/transactions?page=1&limit=5" | jq
 ```
 
 ---
@@ -196,7 +197,7 @@ PORT=5051 npm start
 npm run init-db
 
 # Check database status
-sqlite3 data/mymoolah.db ".tables"
+# Not applicable (PostgreSQL managed by Cloud SQL)
 ```
 
 #### **Frontend Issues**
@@ -241,7 +242,7 @@ npm run dev
 - **Voucher Management:** `/api/v1/vouchers/*` ✅
 
 ### **✅ Database Status**
-- **SQLite Database:** `data/mymoolah.db` ✅
+- **PostgreSQL Database:** Cloud SQL instance `mmtp-pg` ✅
 - **Demo Data:** 5 users with realistic transactions ✅
 - **Andre Botes:** 4 transactions in database ✅
 
@@ -257,7 +258,7 @@ npm run dev
 5. **Monitor Console:** Ensure clean output with no errors
 
 ### **Production Preparation**
-- **Database Migration:** SQLite to MySQL
+- **Database Migration:** Completed migration to PostgreSQL
 - **Environment Variables:** Configure production settings
 - **Security Hardening:** Implement additional security measures
 - **Performance Optimization:** Monitor and optimize response times 

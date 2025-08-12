@@ -1,3 +1,21 @@
+## [2025-08-12] - PostgreSQL (Cloud SQL) migration, Cloud SQL Auth Proxy, schema alignment, voucher fixes
+
+- Backend now uses PostgreSQL on Google Cloud SQL for all environments.
+- Added least‑privileged DB role `mymoolah_app` and updated `.env` to use `DATABASE_URL=postgres://mymoolah_app@127.0.0.1:5433/mymoolah` for local dev via the Cloud SQL Auth Proxy.
+- New helper scripts:
+  - `scripts/setup-cloud-sql-proxy.sh` to download the proxy to `bin/cloud-sql-proxy`
+  - `scripts/create-db-role.sql` to provision `mymoolah_app` with minimal grants
+- Sequelize migration `20250812_align_schema_postgres.js` codifies required columns for `users`, `wallets`, `vouchers` (idempotent).
+- Runtime schema alignment performed for `transactions` table (added: `userId`, `transactionId`, `fee`, `currency`, `senderWalletId`, `receiverWalletId`, `paymentId`, `exchangeRate`, `failureReason`, `processingTime`, `metadata`).
+- Timestamp columns normalized to camelCase (`createdAt`, `updatedAt`) for `wallets`.
+- Backend changes:
+  - `models/index.js`: when host is `127.0.0.1` or `localhost` (proxy), client SSL is disabled; for public IP, SSL remains required.
+  - `controllers/walletController.js`: balance returns numeric; transaction list normalizes amounts and maps legacy types; credits emitted as `deposit` for UI.
+- Voucher engine fixes:
+  - Cancellation and expiration refund paths credit wallet and log refund transactions.
+  - Dashboard totals use balance endpoints; export logic uses consistent 12‑month MMVoucher and 96‑hour EasyPay rules.
+- Frontend: currency formatting standardized to `R 30,000.00` with `en-ZA` thousands separators.
+
 # MyMoolah Wallet - Changelog
 
 ## [2025-08-11] - Git Sync Hardening, Ignore Rules, and Docs Alignment

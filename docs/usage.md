@@ -7,13 +7,13 @@ MyMoolah is a South African fintech wallet platform built on Mojaloop open-sourc
 
 ### Authentication System (Fully Functional)
 - **Status**: ✅ Complete and tested
-- **Database**: SQLite (`data/mymoolah.db`)
+- **Database**: PostgreSQL (Cloud SQL)
 - **Features**: User registration, login, JWT authentication
 - **Endpoints**: `/api/v1/auth/register`, `/api/v1/auth/login`
 
 ### Environment Setup
-- **Local Development**: Node.js backend with SQLite
-- **Cloud Development**: GitHub Codespaces with MySQL
+- **Local Development**: Node.js backend with PostgreSQL via Cloud SQL proxy
+- **Cloud Development**: GitHub Codespaces with PostgreSQL
 - **Testing Environment**: Docker sandbox with Mojaloop Testing Toolkit
 
 ## API Endpoints
@@ -99,7 +99,7 @@ node test-server.js
 node test-auth.js
 
 # Test database connectivity
-node test-sqlite.js
+node scripts/api-smoke-test.js
 ```
 
 ### Cloud Development (Codespaces)
@@ -110,22 +110,10 @@ node test-sqlite.js
 
 ## Database Management
 
-### SQLite Database
-- **Location**: `data/mymoolah.db`
-- **Schema**: Users table with authentication fields
-- **Initialization**: Automatic on first run
-
-### Database Operations
-```bash
-# View database (if sqlite3 is installed)
-sqlite3 data/mymoolah.db
-
-# List tables
-.tables
-
-# View users
-SELECT * FROM users;
-```
+### PostgreSQL Database
+- **Location**: Google Cloud SQL instance `mmtp-pg`
+- **Connectivity (local)**: Cloud SQL Auth Proxy on `127.0.0.1:5433`
+- **Runtime**: App connects via `DATABASE_URL`
 
 ## Security Features
 
@@ -170,9 +158,11 @@ kill -9 <PID>
 
 #### Database Issues
 ```bash
-# Remove and recreate database
-rm data/mymoolah.db
-npm start
+# Check proxy is running on 127.0.0.1:5433
+lsof -i :5433 | cat
+
+# Verify connection string
+node -e "require('dotenv').config();const{Client}=require('pg');(async()=>{const c=new Client({connectionString:process.env.DATABASE_URL,ssl:false});await c.connect();console.log('ok');await c.end();})()"
 ```
 
 #### Authentication Errors

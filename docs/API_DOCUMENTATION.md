@@ -2,8 +2,10 @@
 
 ## **📋 API Overview**
 
-**Base URL**: `http://localhost:3001` (development)  
-**Authentication**: JWT Bearer Token  
+**Base URL**: `http://localhost:3001` (development)
+
+**Authentication**: JWT Bearer Token
+
 **Content-Type**: `application/json`
 
 ---
@@ -20,6 +22,35 @@ Content-Type: application/json
 - **Login**: `POST /api/v1/auth/login`
 - **Register**: `POST /api/v1/auth/register`
 - **Refresh**: `POST /api/v1/auth/refresh`
+
+Login uses mobile number as the identifier plus password.
+
+Request:
+```http
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "identifier": "+27825571055",
+  "password": "Password123!"
+}
+```
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Login successful.",
+  "token": "<JWT>",
+  "user": {
+    "id": 1,
+    "phone": "+27825571055",
+    "firstName": "Andre",
+    "lastName": "Test",
+    "kycStatus": "not_started"
+  }
+}
+```
 
 ---
 
@@ -101,7 +132,7 @@ GET /api/v1/vouchers/redeemed
 
 ### **Get Voucher Balance Summary**
 ```http
-GET /api/v1/vouchers/balance
+GET /api/v1/vouchers/balance-summary
 ```
 
 **Response**:
@@ -109,11 +140,10 @@ GET /api/v1/vouchers/balance
 {
   "success": true,
   "data": {
-    "totalBalance": "17773.00",
-    "totalOriginalValue": "25000.00",
-    "totalRedeemed": "7227.00",
-    "voucherCount": 55,
-    "redemptionRate": "28.9"
+    "active": { "count": 3, "value": "2600.00" },
+    "pending": { "count": 2, "value": "1000.00" },
+    "redeemed": { "count": 4, "value": "1500.00" },
+    "total": { "count": 9, "value": "5100.00" }
   }
 }
 ```
@@ -237,6 +267,11 @@ Important rules (2025‑08‑11):
 - 14‑digit EasyPay codes are display/settlement only and are rejected by the API with
   `400` and message: "EasyPay codes (14 digits) cannot be redeemed. Use the 16‑digit MMVoucher code."
 
+Cancellation and Expiration rules (2025‑08‑12):
+- Cancelling a pending EasyPay voucher refunds the full `originalAmount` to the wallet and creates a refund transaction.
+- Pending EasyPay vouchers that expire are auto‑refunded.
+- Expired active MMVouchers refund the remaining balance to the wallet.
+
 ### **Get Voucher by Code**
 ```http
 GET /api/v1/vouchers/code/{voucher_code}
@@ -326,10 +361,12 @@ GET /api/v1/wallets/balance
 ```json
 {
   "success": true,
+  "message": "Balance retrieved successfully",
   "data": {
-    "balance": "15000.00",
+    "walletId": "WAL-1755007499196",
+    "balance": 15000.00,
     "currency": "ZAR",
-    "last_updated": "2025-08-04T14:15:13.040Z"
+    "status": "active"
   }
 }
 ```
@@ -347,18 +384,43 @@ GET /api/v1/wallets/transactions?page=1&limit=10
     "transactions": [
       {
         "id": 1,
-        "type": "credit",
-        "amount": "1000.00",
-        "description": "Voucher redemption",
-        "createdAt": "2025-08-04T14:15:13.040Z"
+        "transactionId": "TXN-1755008423028",
+        "type": "deposit",
+        "amount": 1000.00,
+        "description": "Initial Deposit",
+        "currency": "ZAR",
+        "createdAt": "2025-08-12T14:20:23.028Z"
       }
     ],
     "pagination": {
-      "page": 1,
-      "limit": 10,
-      "total": 25,
-      "pages": 3
+      "currentPage": 1,
+      "itemsPerPage": 10,
+      "totalItems": 25,
+      "totalPages": 3
     }
+  }
+}
+```
+
+### **User Settings**
+```http
+GET /api/v1/settings
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "User settings retrieved successfully",
+  "data": {
+    "settings": {
+      "userId": 1,
+      "quickAccessServices": ["send_money", "vouchers"],
+      "showBalance": true,
+      "language": "en",
+      "displayCurrency": "ZAR"
+    },
+    "enabledServices": ["send_money", "vouchers"]
   }
 }
 ```
@@ -368,34 +430,7 @@ GET /api/v1/wallets/transactions?page=1&limit=10
 ## **👤 User Management API**
 
 ### **User Login**
-```http
-POST /api/v1/auth/login
-```
-
-**Request Body**:
-```json
-{
-  "mobile_number": "0821234567",
-  "password": "securepassword123"
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "message": "Login successful",
-  "data": {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "user": {
-      "id": 1,
-      "mobile_number": "0821234567",
-      "full_name": "André User",
-      "email": "andre@example.com"
-    }
-  }
-}
-```
+See the Authentication section above for the updated request/response using `identifier` and `password`.
 
 ### **User Registration**
 ```http
@@ -405,10 +440,12 @@ POST /api/v1/auth/register
 **Request Body**:
 ```json
 {
-  "mobile_number": "0821234567",
-  "password": "securepassword123",
-  "full_name": "André User",
-  "email": "andre@example.com"
+  "name": "Andre Test",
+  "email": "andre@example.com",
+  "phoneNumber": "+27825571055",
+  "password": "Password123!",
+  "idNumber": "8001015009087",
+  "idType": "south_african_id"
 }
 ```
 
@@ -416,14 +453,14 @@ POST /api/v1/auth/register
 ```json
 {
   "success": true,
-  "message": "User registered successfully",
-  "data": {
-    "user": {
-      "id": 1,
-      "mobile_number": "0821234567",
-      "full_name": "André User",
-      "email": "andre@example.com"
-    }
+  "message": "User registered successfully.",
+  "token": "<JWT>",
+  "user": {
+    "id": 1,
+    "phone": "+27825571055",
+    "firstName": "Andre",
+    "lastName": "Test",
+    "kycStatus": "not_started"
   }
 }
 ```
@@ -519,8 +556,8 @@ POST /billpayment/v1/easypay/process
 
 ---
 
-**Last Updated**: August 4, 2025  
-**API Version**: v1.2.1  
+**Last Updated**: August 12, 2025  
+**API Version**: v1.3.0  
 **Status**: Production Ready 
 
 ## Ledger API

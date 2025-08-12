@@ -43,7 +43,7 @@
 
 ### **✅ Production Ready Components**
 - **Backend API**: Node.js + Express.js + Sequelize ORM
-- **Database**: SQLite (development) / MySQL (production)
+- **Database**: PostgreSQL (Google Cloud SQL)
 - **Frontend**: React + TypeScript + Figma components
 - **Authentication**: JWT + bcrypt security
 - **Payment Integration**: Flash + MobileMart + EasyPay
@@ -70,7 +70,7 @@
 - Node.js v22.16.0 or higher
 - npm or yarn package manager
 - Git for version control
-- SQLite (development) / MySQL (production)
+- PostgreSQL (Cloud SQL)
 
 ### **Installation**
 ```bash
@@ -101,7 +101,7 @@ npm start
 ```
 Node.js + Express.js + Sequelize ORM
 ├── Authentication: JWT + bcrypt
-├── Database: SQLite (dev) / MySQL (prod)
+├── Database: PostgreSQL (Cloud SQL)
 ├── Security: CORS + rate limiting + validation
 └── Integration: Flash + MobileMart + EasyPay
 ```

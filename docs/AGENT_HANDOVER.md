@@ -39,7 +39,7 @@
 
 ## Treasury Platform Scope & DB Migration Note (2025-08-08)
 - Scope broadened from wallet-only to full Treasury Platform: wallet services, general ledger (double-entry), integrations (EasyPay, Flash, MobileMart, dtMercury, Zapper), and reporting/audit.
-- Database plan: develop on SQLite; migrate to PostgreSQL once Figma frontend integrations are stable. Migrations must be forward/backward compatible with clear rollback.
+- Database: PostgreSQL (Google Cloud SQL). Local dev via Cloud SQL Auth Proxy. Migrations maintained with Sequelize; schema alignment migration added `20250812_align_schema_postgres.js`.
 - See operating charter: `./AGENT_ROLE_TEMPLATE.md` for personas, constraints, and PostgreSQL migration directive. 
 
 ---

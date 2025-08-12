@@ -29,7 +29,7 @@
 ### **Backend Infrastructure**
 - **✅ RESTful API**: Complete voucher management endpoints
 - **✅ Authentication**: JWT-based secure authentication
-- **✅ Database Integration**: SQLite (dev) / MySQL (prod) with Sequelize ORM
+- **✅ Database Integration**: PostgreSQL (Cloud SQL) with Sequelize ORM
 - **✅ Security**: Banking-grade encryption and Mojaloop compliance
 - **✅ Error Handling**: Comprehensive error handling and validation
 
@@ -147,7 +147,7 @@
 ### **Backend Stack**
 - **Runtime**: Node.js v22.16.0
 - **Framework**: Express.js
-- **Database**: SQLite (development) / MySQL (production)
+- **Database**: PostgreSQL (Cloud SQL) across environments
 - **ORM**: Sequelize
 - **Authentication**: JWT + bcrypt
 - **Security**: CORS, rate limiting, input validation

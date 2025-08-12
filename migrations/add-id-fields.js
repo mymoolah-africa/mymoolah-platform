@@ -1,84 +1,69 @@
-// Migration script to add ID fields to users table
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+'use strict';
 
-const dbPath = path.join(__dirname, '../data/mymoolah.db');
+/**
+ * Sequelize migration: add ID fields to users table
+ * - idNumber (string, nullable)
+ * - idType (string, nullable)
+ * - idVerified (boolean, default false)
+ * - index on idNumber
+ *
+ * Works on PostgreSQL and SQLite.
+ */
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
+    const tableName = 'users';
+    const columns = await queryInterface.describeTable(tableName);
 
-async function addIdFields() {
-  const db = new sqlite3.Database(dbPath);
-  
-  return new Promise((resolve, reject) => {
-    console.log('🔄 Adding ID fields to users table...');
-    
-    // Add idNumber column
-    db.run(`
-      ALTER TABLE users 
-      ADD COLUMN idNumber TEXT
-    `, (err) => {
-      if (err && !err.message.includes('duplicate column name')) {
-        console.error('❌ Error adding idNumber column:', err.message);
-        reject(err);
-        return;
-      }
-      console.log('✅ Added idNumber column');
-      
-      // Add idType column
-      db.run(`
-        ALTER TABLE users 
-        ADD COLUMN idType TEXT
-      `, (err) => {
-        if (err && !err.message.includes('duplicate column name')) {
-          console.error('❌ Error adding idType column:', err.message);
-          reject(err);
-          return;
-        }
-        console.log('✅ Added idType column');
-        
-        // Add idVerified column
-        db.run(`
-          ALTER TABLE users 
-          ADD COLUMN idVerified BOOLEAN DEFAULT 0
-        `, (err) => {
-          if (err && !err.message.includes('duplicate column name')) {
-            console.error('❌ Error adding idVerified column:', err.message);
-            reject(err);
-            return;
-          }
-          console.log('✅ Added idVerified column');
-          
-          // Create index on idNumber
-          db.run(`
-            CREATE INDEX IF NOT EXISTS idx_users_idNumber 
-            ON users(idNumber)
-          `, (err) => {
-            if (err) {
-              console.error('❌ Error creating idNumber index:', err.message);
-              reject(err);
-              return;
-            }
-            console.log('✅ Created idNumber index');
-            
-            db.close();
-            console.log('🎉 Migration completed successfully!');
-            resolve();
-          });
-        });
+    if (!columns.idNumber) {
+      await queryInterface.addColumn(tableName, 'idNumber', {
+        type: Sequelize.STRING,
+        allowNull: true,
       });
-    });
-  });
-}
+    }
 
-// Run migration if called directly
-if (require.main === module) {
-  addIdFields()
-    .then(() => {
-      console.log('✅ Migration completed successfully!');
-      process.exit(0);
-    })
-    .catch((error) => {
-      console.error('❌ Migration failed:', error);
-      process.exit(1);
-    });
-}
+    if (!columns.idType) {
+      await queryInterface.addColumn(tableName, 'idType', {
+        type: Sequelize.STRING,
+        allowNull: true,
+      });
+    }
 
-module.exports = { addIdFields };
+    if (!columns.idVerified) {
+      await queryInterface.addColumn(tableName, 'idVerified', {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      });
+    }
+
+    // Add index on idNumber (ignore if it already exists)
+    try {
+      await queryInterface.addIndex(tableName, ['idNumber'], {
+        name: 'idx_users_idNumber',
+      });
+    } catch (_) {
+      // index exists; no-op
+    }
+  },
+
+  down: async (queryInterface /*, Sequelize */) => {
+    const tableName = 'users';
+    try {
+      await queryInterface.removeIndex(tableName, 'idx_users_idNumber');
+    } catch (_) {
+      // ignore if not present
+    }
+
+    const columns = await queryInterface.describeTable(tableName);
+
+    if (columns.idVerified) {
+      await queryInterface.removeColumn(tableName, 'idVerified');
+    }
+    if (columns.idType) {
+      await queryInterface.removeColumn(tableName, 'idType');
+    }
+    if (columns.idNumber) {
+      await queryInterface.removeColumn(tableName, 'idNumber');
+    }
+  },
+};

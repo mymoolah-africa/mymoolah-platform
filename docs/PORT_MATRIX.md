@@ -31,14 +31,15 @@ Notes
 ```
 PORT=3001
 NODE_ENV=development
-DATABASE_PATH=./data/mymoolah.db
+DATABASE_URL=postgres://mymoolah_app:<PASSWORD>@127.0.0.1:5433/mymoolah
+DB_DIALECT=postgres
 JWT_SECRET=<32+ char secret>
 ALLOWED_ORIGINS=http://localhost:3000
 ```
 
 2) Frontend `.env.local` (at `mymoolah/mymoolah-wallet-frontend/.env.local`)
 ```
-VITE_API_BASE_URL=http://localhost:3001/api/v1
+VITE_API_BASE_URL=http://localhost:3001
 ```
 
 3) Start
@@ -52,14 +53,15 @@ cd /Users/andremacbookpro/mymoolah/mymoolah-wallet-frontend && npm run dev
 ```
 PORT=5050
 NODE_ENV=development
-DATABASE_PATH=./data/mymoolah.db
+DATABASE_URL=<postgres-connection-string>
+DB_DIALECT=postgres
 JWT_SECRET=<32+ char secret>
 ALLOWED_ORIGINS=https://<your-3000-forwarded-host>
 ```
 
 2) Frontend `.env.local` (at `/workspaces/mymoolah-platform/mymoolah-wallet-frontend/.env.local`)
 ```
-VITE_API_BASE_URL=https://<your-5050-forwarded-host>/api/v1
+VITE_API_BASE_URL=https://<your-5050-forwarded-host>
 ```
 
 3) Start

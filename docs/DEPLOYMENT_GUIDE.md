@@ -19,9 +19,9 @@
 - ✅ **Documentation**: All files updated and current
 
 ### **Deployment Environments**
-- **Local Development**: SQLite database, port 5050 (backend), port 3000 (frontend)
-- **Cloud Development**: MySQL database, port 5050 (backend), port 3000 (frontend)
-- **Production**: Ready for deployment with proper configuration
+- **Local Development**: Backend 3001, Frontend 3000. DB is PostgreSQL via Cloud SQL proxy.
+- **Cloud Development**: PostgreSQL (Cloud SQL) recommended. Backend 3001, Frontend 3000.
+- **Production**: PostgreSQL (Cloud SQL/AlloyDB), HA recommended.
 
 ## 🔧 Local Deployment
 
@@ -65,18 +65,40 @@ curl http://192.168.3.160:3000
 # Expected: HTML content
 ```
 
-### **Database Setup**
+### **Database Setup (Cloud SQL for PostgreSQL)**
 ```bash
-# Database is automatically created on first run
-# SQLite database location: data/mymoolah.db
+# Instance example: mmtp-pg (PostgreSQL 16, africa-south1-c)
+# Connection name: mymoolah-db:africa-south1:mmtp-pg
+# Public IP enabled; authorise your IPv4 or use Cloud SQL Auth Proxy
 
-# Check database tables
-sqlite3 data/mymoolah.db ".tables"
-# Expected: users, wallets, transactions, kyc
+# Install psql (macOS)
+brew install libpq
+export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 
-# Check data counts
-sqlite3 data/mymoolah.db "SELECT COUNT(*) FROM users;"
-# Expected: 36 users
+# Create DB and grants (replace YOUR_DB_PASSWORD, PUBLIC_IP)
+PGPASSWORD='YOUR_DB_PASSWORD' psql "host=PUBLIC_IP port=5432 user=mymoolah_user dbname=postgres sslmode=require" -v ON_ERROR_STOP=1 \
+  -c "CREATE DATABASE mymoolah;" \
+  -c "GRANT ALL PRIVILEGES ON DATABASE mymoolah TO mymoolah_user;"
+
+PGPASSWORD='YOUR_DB_PASSWORD' psql "host=PUBLIC_IP port=5432 user=mymoolah_user dbname=mymoolah sslmode=require" -v ON_ERROR_STOP=1 \
+  -c "GRANT ALL ON SCHEMA public TO mymoolah_user;" \
+  -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO mymoolah_user;"
+
+# Recommended local connectivity via Cloud SQL Auth Proxy
+```
+bash scripts/setup-cloud-sql-proxy.sh
+./bin/cloud-sql-proxy --address 127.0.0.1 --port 5433 mymoolah-db:africa-south1:mmtp-pg
+```
+
+# Backend .env (proxy on 127.0.0.1:5433, least-priv user)
+# DATABASE_URL=postgres://mymoolah_app:YOUR_APP_PASSWORD@127.0.0.1:5433/mymoolah
+# DB_DIALECT=postgres
+
+Note: The proxy is only required for the backend when `DATABASE_URL` points to `127.0.0.1:5433`. If you use the instance public IP with `sslmode=require` and your IP is authorized, you can stop the proxy.
+
+# Install PG driver and run migrations
+npm i pg pg-hstore
+DATABASE_URL="$DATABASE_URL" npx sequelize-cli db:migrate
 ```
 
 ### **Logo System Verification**
@@ -134,10 +156,9 @@ npm run dev
 ```
 
 ### **Database Configuration**
-- **Database**: MySQL (provided by Codespaces)
-- **Connection**: Automatic configuration
-- **Tables**: Same schema as local development
-- **Data**: Migrated from local development
+- **Database**: PostgreSQL (Cloud SQL)
+- **Connection**: via `DATABASE_URL`
+- **Migrations**: `npx sequelize-cli db:migrate`
 
 ### **Verification**
 ```bash
@@ -170,21 +191,21 @@ services:
       - mysql
     restart: unless-stopped
 
-  mysql:
-    image: mysql:8.0
+  # Example Postgres service (optional for local containerized dev)
+  postgres:
+    image: postgres:16
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: mymoolah
-      MYSQL_USER: mymoolah_user
-      MYSQL_PASSWORD: mymoolah_password
+      POSTGRES_DB: mymoolah
+      POSTGRES_USER: mymoolah_user
+      POSTGRES_PASSWORD: strongpassword
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - pg_data:/var/lib/postgresql/data
     restart: unless-stopped
 
 volumes:
-  mysql_data:
+  pg_data:
 ```
 
 ### **Dockerfile**
@@ -233,14 +254,7 @@ DB_NAME=your-database-name
 ```
 
 ### **Database Setup**
-```bash
-# Production database (MySQL)
-mysql -u root -p
-CREATE DATABASE mymoolah;
-CREATE USER 'mymoolah_user'@'%' IDENTIFIED BY 'your-password';
-GRANT ALL PRIVILEGES ON mymoolah.* TO 'mymoolah_user'@'%';
-FLUSH PRIVILEGES;
-```
+Use Cloud SQL for PostgreSQL; create roles and grants via psql or Cloud Console. See `scripts/create-db-role.sql`.
 
 ### **Application Deployment**
 ```bash
@@ -336,31 +350,13 @@ pm2 monit
 ```
 
 ### **Database Performance**
-```bash
-# SQLite optimization
-sqlite3 data/mymoolah.db "PRAGMA journal_mode=WAL;"
-sqlite3 data/mymoolah.db "PRAGMA synchronous=NORMAL;"
-sqlite3 data/mymoolah.db "PRAGMA cache_size=10000;"
-
-# MySQL optimization (production)
-# Configure MySQL for performance
-```
+- Use Cloud SQL Query Insights to monitor slow queries.
+- Ensure adequate CPU/RAM; enable auto storage increase.
 
 ## 🔄 Backup and Recovery
 
 ### **Database Backup**
-```bash
-# SQLite backup
-cp data/mymoolah.db data/mymoolah.db.backup.$(date +%Y%m%d)
-
-# MySQL backup (production)
-mysqldump -u mymoolah_user -p mymoolah > backup_$(date +%Y%m%d).sql
-
-# Automated backup script
-#!/bin/bash
-cp data/mymoolah.db data/mymoolah.db.backup.$(date +%Y%m%d_%H%M%S)
-find data/ -name "*.backup.*" -mtime +7 -delete
-```
+Cloud SQL automated backups and PITR are enabled; for manual logical backups use `pg_dump`.
 
 ### **Application Backup**
 ```bash
@@ -455,7 +451,7 @@ NODE_ENV=development npm start
 - ✅ **Security**: All security features working
 
 ### **Scalability Ready**
-- ✅ **Database**: Ready for MySQL migration
+- ✅ **Database**: Migrated to PostgreSQL
 - ✅ **Load Balancing**: Architecture supports horizontal scaling
 - ✅ **Caching**: Ready for Redis integration
 - ✅ **Monitoring**: Ready for comprehensive monitoring
@@ -468,7 +464,7 @@ NODE_ENV=development npm start
 pm2 monit
 
 # Database monitoring
-sqlite3 data/mymoolah.db "PRAGMA stats;"
+psql "$DATABASE_URL" -c "SELECT 1" | cat
 
 # Network monitoring
 netstat -tulpn | grep :5050
@@ -482,8 +478,7 @@ npm install
 npm start
 
 # Database maintenance
-sqlite3 data/mymoolah.db "VACUUM;"
-sqlite3 data/mymoolah.db "ANALYZE;"
+VACUUM and ANALYZE are managed by Postgres auto‑vacuum; no manual action needed for Cloud SQL.
 ```
 
 ---
