@@ -164,7 +164,7 @@ export function KYCDocumentsPage() {
       formData.append('retryCount', String(kycRetryCount));
 
       // Real API call to upload documents
-      const token = localStorage.getItem('mymoolah_token');
+      const token = (await import('../utils/authToken')).getToken();
       if (!token) {
         throw new Error('No authentication token found');
       }

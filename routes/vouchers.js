@@ -12,8 +12,8 @@ router.post('/easypay/issue', authMiddleware, voucherController.issueEasyPayVouc
 // Process EasyPay settlement callback
 router.post('/easypay/settlement', voucherController.processEasyPaySettlement);
 
-// Redeem a voucher
-router.post('/redeem', voucherController.redeemVoucher);
+// Redeem a voucher (must be authenticated so we credit the redeemer's wallet)
+router.post('/redeem', authMiddleware, voucherController.redeemVoucher);
 
 // List all active vouchers for a user
 router.get('/user/:userId', voucherController.listActiveVouchers);

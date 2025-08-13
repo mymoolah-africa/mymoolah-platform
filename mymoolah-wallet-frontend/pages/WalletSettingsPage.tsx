@@ -113,7 +113,7 @@ export function WalletSettingsPage() {
       setLoading(true);
       setError('');
 
-      const token = localStorage.getItem('mymoolah_token');
+      const token = (await import('../utils/authToken')).getToken();
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -174,7 +174,7 @@ export function WalletSettingsPage() {
       setSaving(true);
       setError('');
 
-      const token = localStorage.getItem('mymoolah_token');
+      const token = (await import('../utils/authToken')).getToken();
       if (!token) {
         throw new Error('No authentication token found');
       }

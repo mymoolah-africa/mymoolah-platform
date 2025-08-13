@@ -22,6 +22,10 @@ class FlashAuthService {
         this.accessToken = null;
         this.tokenExpiry = null;
         this.tokenRefreshBuffer = 300; // 5 minutes buffer before expiry
+
+        // Idempotency cache (reference replay for 30 minutes)
+        this.referenceCache = new Map();
+        this.referenceTtlMs = 30 * 60 * 1000;
         
         // API credentials
         this.consumerKey = process.env.FLASH_CONSUMER_KEY;
@@ -138,6 +142,16 @@ class FlashAuthService {
      */
     async makeAuthenticatedRequest(method, endpoint, data = null) {
         try {
+            // Idempotency: if POST with a reference, serve from cache when available
+            let cacheKey = null;
+            if (method && method.toLowerCase() === 'post' && data && data.reference) {
+                cacheKey = `${endpoint}|${data.reference}`;
+                const cached = this.referenceCache.get(cacheKey);
+                if (cached && Date.now() < cached.expiry) {
+                    console.log(`♻️  Flash: returning cached response for reference ${data.reference} on ${endpoint}`);
+                    return cached.payload;
+                }
+            }
             const headers = await this.generateRequestHeaders();
             const url = `${this.apiUrl}${endpoint}`;
             
@@ -158,9 +172,18 @@ class FlashAuthService {
             
             // Check for Flash API error response
             if (response.data && response.data.responseCode !== undefined && response.data.responseCode !== 0) {
-                throw new Error(`Flash API Error: ${response.data.responseMessage || 'Unknown error'} (Code: ${response.data.responseCode})`);
+                const err = new Error(`Flash API Error: ${response.data.responseMessage || 'Unknown error'} (Code: ${response.data.responseCode})`);
+                err.flashError = {
+                    code: response.data.responseCode,
+                    message: response.data.responseMessage || 'Unknown error',
+                    raw: response.data
+                };
+                throw err;
             }
-
+            // Success – populate idempotency cache if applicable
+            if (cacheKey) {
+                this.referenceCache.set(cacheKey, { payload: response.data, expiry: Date.now() + this.referenceTtlMs });
+            }
             return response.data;
 
         } catch (error) {
@@ -190,9 +213,19 @@ class FlashAuthService {
                     const retryResponse = await axios(config);
                     
                     if (retryResponse.data && retryResponse.data.responseCode !== undefined && retryResponse.data.responseCode !== 0) {
-                        throw new Error(`Flash API Error: ${retryResponse.data.responseMessage || 'Unknown error'} (Code: ${retryResponse.data.responseCode})`);
+                        const err = new Error(`Flash API Error: ${retryResponse.data.responseMessage || 'Unknown error'} (Code: ${retryResponse.data.responseCode})`);
+                        err.flashError = {
+                            code: retryResponse.data.responseCode,
+                            message: retryResponse.data.responseMessage || 'Unknown error',
+                            raw: retryResponse.data
+                        };
+                        throw err;
                     }
 
+                    // Cache after successful retry as well
+                    if (cacheKey) {
+                        this.referenceCache.set(cacheKey, { payload: retryResponse.data, expiry: Date.now() + this.referenceTtlMs });
+                    }
                     return retryResponse.data;
 
                 } catch (retryError) {

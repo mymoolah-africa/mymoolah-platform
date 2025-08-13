@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getToken as getSessionToken } from '../utils/authToken';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { APP_CONFIG } from '../config/app-config';
@@ -80,6 +81,14 @@ interface MMVoucher {
     description?: string;
     merchant?: string;
   };
+  redeemedAt?: {
+    type?: string;
+    userId?: string | number;
+    walletId?: string | number;
+    name?: string;
+    phoneNumber?: string;
+    timestamp?: string;
+  } | null;
 }
 
 interface VoucherTransaction {
@@ -240,7 +249,7 @@ export function VouchersPage() {
       setIsLoading(true);
       setError(null);
 
-      const token = localStorage.getItem('mymoolah_token');
+      const token = getSessionToken();
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -442,7 +451,7 @@ export function VouchersPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('mymoolah_token')}`
+          'Authorization': `Bearer ${getSessionToken()}`
         },
         body: JSON.stringify({
           original_amount: amount,
@@ -508,7 +517,7 @@ export function VouchersPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('mymoolah_token')}`
+          'Authorization': `Bearer ${getSessionToken()}`
         },
         body: JSON.stringify({
           voucher_code: cleanVoucherCode(redeemCode.trim()),
@@ -796,7 +805,7 @@ export function VouchersPage() {
       document.body.appendChild(loadingToast);
 
       // Make API call
-      const token = localStorage.getItem('mymoolah_token');
+      const token = getSessionToken();
       const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/${voucher.id}/cancel`, {
         method: 'POST',
         headers: {
@@ -1168,7 +1177,8 @@ export function VouchersPage() {
                                 onError={(e) => {
                                   // Fallback to a simple icon if image fails to load
                                   e.currentTarget.style.display = 'none';
-                                  e.currentTarget.nextElementSibling.style.display = 'flex';
+                                  const sibling = e.currentTarget.nextElementSibling as HTMLElement | null;
+                                  if (sibling) sibling.style.display = 'flex';
                                 }}
                               />
                               <div 
@@ -1539,15 +1549,31 @@ export function VouchersPage() {
                     </Label>
                     <Input
                       type="number"
-                      placeholder="0.00"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={sellAmount}
-                      onChange={(e) => setSellAmount(e.target.value)}
+                      onWheel={(e) => e.currentTarget.blur()}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowUp" || e.key === "ArrowDown") e.preventDefault();
+                        // block non‑digits often allowed by number inputs
+                        if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
+                      }}
+                      onChange={(e) => {
+                        // normalize to digits only; keep as string
+                        const v = e.target.value.replace(/[^0-9]/g, "");
+                        setSellAmount(v);
+                      }}
+                      onBlur={() => {
+                        if (!sellAmount) return;
+                        const v = Math.min(4000, Math.max(5, Number(sellAmount)));
+                        setSellAmount(String(v));
+                      }}
                       style={{
-                        height: '44px',
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '16px',
-                        fontWeight: '600',
-                        borderRadius: '12px'
+                        height: "44px",
+                        fontFamily: "Montserrat, sans-serif",
+                        fontSize: "16px",
+                        fontWeight: 600,
+                        borderRadius: "12px",
                       }}
                     />
                   </div>
@@ -2226,7 +2252,8 @@ export function VouchersPage() {
                                 onError={(e) => {
                                   // Fallback to a simple icon if image fails to load
                                   e.currentTarget.style.display = 'none';
-                                  e.currentTarget.nextElementSibling.style.display = 'flex';
+                                  const sibling2 = e.currentTarget.nextElementSibling as HTMLElement | null;
+                                  if (sibling2) sibling2.style.display = 'flex';
                                 }}
                               />
                               <div 
@@ -2772,6 +2799,37 @@ export function VouchersPage() {
                     </p>
                   </div>
                 </div>
+
+                {/* Redeemed At (if applicable) */}
+                {selectedVoucher.redeemedAt && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <Label 
+                      style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#374151',
+                        marginBottom: '4px',
+                        display: 'block'
+                      }}
+                    >
+                      Redeemed In
+                    </Label>
+                    <p 
+                      style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '14px',
+                        color: '#6b7280',
+                        margin: 0
+                      }}
+                    >
+                      {selectedVoucher.redeemedAt.type === 'wallet' ? 'Wallet' : selectedVoucher.redeemedAt.type}
+                      {selectedVoucher.redeemedAt.name ? ` (${selectedVoucher.redeemedAt.name})` : ''}
+                      {selectedVoucher.redeemedAt.phoneNumber ? `, ${selectedVoucher.redeemedAt.phoneNumber}` : ''}
+                      {selectedVoucher.redeemedAt.timestamp ? ` on ${formatDate(selectedVoucher.redeemedAt.timestamp)}` : ''}
+                    </p>
+                  </div>
+                )}
 
                 {/* Description */}
                 <div style={{ marginBottom: '16px' }}>

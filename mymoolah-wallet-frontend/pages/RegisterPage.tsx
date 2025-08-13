@@ -37,12 +37,82 @@ import {
   CheckCircle,
   CreditCard,
 } from "lucide-react";
-import { 
-  validateIdNumber, 
-  getPlaceholderText as getIdPlaceholderText,
-  getHelperText as getIdHelperText,
-  type IdValidationResult 
-} from "../utils/idValidation";
+// Local validators for ID and phone/email
+
+type IdType = 'south_african_id' | 'south_african_temporary_id' | 'south_african_driving_license' | 'passport' | 'generic';
+
+interface IdValidationResult { isValid: boolean; type: IdType; reason?: string }
+
+const luhn13 = (digits: string): boolean => {
+  if (!/^\d{13}$/.test(digits)) return false;
+  let sum = 0; let alt = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let d = parseInt(digits[i], 10);
+    if (alt) { d *= 2; if (d > 9) d -= 9; }
+    sum += d; alt = !alt;
+  }
+  return sum % 10 === 0;
+};
+
+const validateIdNumber = (value: string): IdValidationResult => {
+  const v = (value || '').replace(/\s/g, '');
+  if (!v) return { isValid: false, type: 'generic', reason: 'Required' };
+  // SA ID / Temporary ID
+  if (/^\d{13}$/.test(v)) {
+    return luhn13(v)
+      ? { isValid: true, type: 'south_african_id' }
+      : { isValid: false, type: 'south_african_id', reason: 'Checksum failed' };
+  }
+  // SA Driving Licence – 12 alphanumeric (accept common layouts like 60460002CSK4)
+  if (/^[A-Z0-9]{12}$/i.test(v)) {
+    return { isValid: true, type: 'south_african_driving_license' };
+  }
+  // Passport: 6–9 alphanumeric
+  if (/^[A-Z0-9]{6,9}$/i.test(v)) {
+    return { isValid: true, type: 'passport' };
+  }
+  return { isValid: false, type: 'generic', reason: 'Invalid format' };
+};
+
+const getIdPlaceholderText = (t: IdType) => {
+  switch (t) {
+    case 'south_african_id':
+      return '13 digits (SA ID)';
+    case 'south_african_driving_license':
+      return '12 chars (e.g., 60460002CSK4)';
+    case 'passport':
+      return '6–9 alphanumeric';
+    default:
+      return 'ID / Passport / Licence';
+  }
+};
+
+const getIdHelperText = (res: IdValidationResult) => {
+  if (!res) return '';
+  if (!res.isValid && res.reason === 'Required') return 'Required';
+  if (res.type === 'south_african_id') return res.isValid ? 'SOUTH AFRICAN ID - Valid' : 'SA ID must be 13 digits and pass checksum';
+  if (res.type === 'south_african_driving_license') return res.isValid ? 'SA Driving Licence - Valid' : 'Driving licence must be 12 alphanumeric characters';
+  if (res.type === 'passport') return res.isValid ? 'Passport - Valid' : 'Passport must be 6–9 alphanumeric characters';
+  return res.isValid ? 'Generic ID - Valid' : 'Invalid ID format';
+};
+
+const normalizePhone = (raw: string): string => {
+  const s = (raw || '').replace(/\s+/g, '').replace(/[()-]/g, '');
+  if (s.startsWith('+27')) return s.slice(1);
+  if (s.startsWith('27')) return s;
+  if (s.startsWith('0') && s.length === 10) return '27' + s.slice(1);
+  return s; // fallback
+};
+
+const isValidSAMobile = (raw: string): boolean => {
+  const n = normalizePhone(raw);
+  return /^27[6-8][0-9]{8}$/.test(n);
+};
+
+const isValidEmail = (email: string): boolean => {
+  const e = (email || '').trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e);
+};
 
 // Import logo from assets/
 import logo2 from "../assets/logo2.svg";
@@ -159,6 +229,7 @@ export function RegisterPage() {
     name: "",
     identifier: "",
     idNumber: "",
+    idType: 'generic' as IdType,
     email: "",
     password: "",
     confirmPassword: "",
@@ -173,16 +244,14 @@ export function RegisterPage() {
 
   // Real-time validation
   const inputType = detectInputType(formData.identifier);
-  const identifierValidation = validateIdentifier(
-    formData.identifier,
-    inputType,
-  );
+  const identifierValidation = { isValid: isValidSAMobile(formData.identifier), message: isValidSAMobile(formData.identifier) ? undefined : 'Invalid South African mobile number' };
   const idValidation = validateIdNumber(formData.idNumber);
   const passwordValidation = validatePassword(
     formData.password,
   );
   const passwordsMatch =
     formData.password === formData.confirmPassword;
+  const emailValid = isValidEmail(formData.email);
 
   const getPlaceholderText = () => {
     switch (inputType) {
@@ -205,6 +274,7 @@ export function RegisterPage() {
       !idValidation.isValid ||
       !passwordValidation.isValid ||
       !passwordsMatch ||
+      !emailValid ||
       !formData.name ||
       !formData.email
     ) {
@@ -438,8 +508,7 @@ export function RegisterPage() {
                         ) : (
                           <X className="w-3 h-3" />
                         )}
-                        {inputType === "phone" &&
-                          "South African mobile number"}
+                        {identifierValidation.isValid ? 'South African mobile number' : 'Enter SA mobile e.g. 078 456 0585 or +27 78 456 0585'}
                         {inputType === "account" &&
                           "Account number (8-12 digits)"}
                         {inputType === "username" &&
@@ -554,7 +623,10 @@ export function RegisterPage() {
                         email: e.target.value,
                       }))
                     }
-                    className="bg-white border-gray-200 focus:border-[#86BE41] focus:ring-[#86BE41]"
+                    className={`bg-white border-gray-200 focus:border-[#86BE41] focus:ring-[#86BE41] ${
+                      formData.email && !emailValid ? 'border-red-300 focus:border-red-500 focus:ring-red-500' :
+                      formData.email && emailValid ? 'border-green-300 focus:border-green-500 focus:ring-green-500' : ''
+                    }`}
                     style={{
                       height: "var(--mobile-touch-target)",
                       fontFamily: "Montserrat, sans-serif",
@@ -565,6 +637,18 @@ export function RegisterPage() {
                     }}
                     required
                   />
+                  <div
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: 'var(--mobile-font-small)'
+                    }}
+                  >
+                    {formData.email && (
+                      <span className={`inline-flex items-center gap-1 ${emailValid ? 'text-green-600' : 'text-red-600'}`}>
+                        {emailValid ? 'Valid email' : 'Invalid email format (e.g., user@example.com)'}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Password Field - WITH BLUE FORMAT HINTS */}
@@ -915,6 +999,7 @@ export function RegisterPage() {
                     !identifierValidation.isValid ||
                     !passwordValidation.isValid ||
                     !passwordsMatch ||
+                    !emailValid ||
                     !formData.name ||
                     !formData.email ||
                     isLoading

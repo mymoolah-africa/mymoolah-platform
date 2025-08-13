@@ -65,7 +65,8 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
     
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('mymoolah_token');
+      const { getToken } = await import('../utils/authToken');
+      const token = getToken();
       
       if (token && token.startsWith('demo-token-')) {
         // Demo mode - use mock data
@@ -193,7 +194,8 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
   const sendMoney = async (recipient: string, amount: number) => {
     if (!user || !walletBalance) throw new Error('User not authenticated');
 
-    const token = localStorage.getItem('mymoolah_token');
+    const { getToken } = await import('../utils/authToken');
+    const token = getToken();
     
     if (token && token.startsWith('demo-token-')) {
       // Demo mode - simulate transfer

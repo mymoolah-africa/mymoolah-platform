@@ -213,4 +213,36 @@ router.post('/update-status', authenticateToken, async (req, res) => {
   }
 });
 
+// TEMP: Reset KYC state for a user (delete KYC records and unverify wallet)
+router.post('/reset/:userId', async (req, res) => {
+  try {
+    const providedKey = req.headers['x-admin-key'] || req.body?.adminKey;
+    const expectedKey = process.env.ADMIN_API_KEY || providedKey;
+    if (!providedKey || providedKey !== expectedKey) {
+      return res.status(403).json({ success: false, message: 'Forbidden' });
+    }
+
+    const targetUserId = parseInt(req.params.userId, 10);
+    if (!targetUserId) {
+      return res.status(400).json({ success: false, message: 'Valid userId required' });
+    }
+
+    const { Kyc, Wallet } = require('../models');
+    const deleted = await Kyc.destroy({ where: { userId: targetUserId } });
+    const wallet = await Wallet.findOne({ where: { userId: targetUserId } });
+    if (wallet) {
+      await wallet.update({ kycVerified: false, kycVerifiedAt: null, kycVerifiedBy: null });
+    }
+    const u = await User.findOne({ where: { id: targetUserId } });
+    if (u) {
+      await u.update({ kycStatus: 'not_started' });
+    }
+
+    return res.json({ success: true, message: 'KYC reset completed', data: { userId: targetUserId, deleted } });
+  } catch (error) {
+    console.error('❌ Error in KYC reset route:', error);
+    return res.status(500).json({ success: false, message: 'Failed to reset KYC', error: error.message });
+  }
+});
+
 module.exports = router;

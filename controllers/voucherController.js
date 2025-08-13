@@ -298,61 +298,64 @@ exports.issueVoucher = async (req, res) => {
     }
     
     try {
-      // Generate voucher code
-      const voucherCode = generateMMVoucherCode();
-      
-      // Create voucher
-      const voucher = await Voucher.create({
-        voucherCode,
-        userId: userId,
-        originalAmount: amount,
-        balance: amount,
-        status: 'active',
-        voucherType: 'standard',
-        // MMVoucher expiry: 12 months from issuance
-        expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-        metadata: {
-          description: voucherData.description || null,
-          merchant: voucherData.merchant || null
-        }
-      });
-      
-      // Debit user's wallet
-      await wallet.debit(amount, 'voucher_purchase');
-      
-      // Create transaction record
-      const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await Transaction.create({
-        transactionId: transactionId,
-        userId: userId,
-        walletId: wallet.walletId,
-        amount: amount,
-        type: 'payment',
-        status: 'completed',
-        description: `Voucher purchase: ${voucherCode}`,
-        currency: 'ZAR',
-        fee: 0.00,
-        metadata: {
-          voucherId: voucher.id,
-          voucherCode: voucherCode,
+      const result = await sequelize.transaction(async (t) => {
+        // Generate voucher code
+        const voucherCode = generateMMVoucherCode();
+
+        // Create voucher
+        const voucher = await Voucher.create({
+          voucherCode,
+          userId: userId,
+          originalAmount: amount,
+          balance: amount,
+          status: 'active',
           voucherType: 'standard',
-          purchaseType: 'voucher_issue'
-        }
+          expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          metadata: {
+            description: voucherData.description || null,
+            merchant: voucherData.merchant || null
+          }
+        }, { transaction: t });
+
+        // Debit wallet within the same transaction
+        await wallet.debit(amount, 'voucher_purchase', { transaction: t });
+
+        // Create transaction record
+        const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await Transaction.create({
+          transactionId: transactionId,
+          userId: userId,
+          walletId: wallet.walletId,
+          amount: amount,
+          type: 'payment',
+          status: 'completed',
+          description: `Voucher purchase: ${voucherCode}`,
+          currency: 'ZAR',
+          fee: 0.00,
+          metadata: {
+            voucherId: voucher.id,
+            voucherCode: voucherCode,
+            voucherType: 'standard',
+            purchaseType: 'voucher_issue'
+          }
+        }, { transaction: t });
+
+        return { voucher, transactionId };
       });
-      
+
       res.status(201).json({
         success: true,
         message: 'Voucher issued successfully',
         data: {
-          voucher_code: voucher.voucherCode,
-          original_amount: voucher.originalAmount,
-          balance: voucher.balance,
-          status: voucher.status,
+          voucher_code: result.voucher.voucherCode,
+          original_amount: result.voucher.originalAmount,
+          balance: result.voucher.balance,
+          status: result.voucher.status,
           wallet_balance: wallet.balance,
-          transaction_id: transactionId
+          transaction_id: result.transactionId
         }
       });
-      
+
     } catch (error) {
       console.error('❌ Error in voucher issuance:', error);
       res.status(500).json({ error: 'Database error during issuance. Please try again.' });
@@ -587,8 +590,9 @@ exports.redeemVoucher = async (req, res) => {
     }
     
     // Get user's wallet
-    const { Wallet, Transaction } = require('../models');
-    const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
+    const { Wallet, Transaction, User } = require('../models');
+    // Credit the REDEEMER's wallet (transfer on redemption)
+    const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
     
     if (!wallet) {
       return res.status(404).json({ error: 'User wallet not found' });
@@ -599,45 +603,117 @@ exports.redeemVoucher = async (req, res) => {
     }
     
     try {
-      // Calculate new balance
-      const newBalance = voucher.balance - redemptionAmount;
-      
-      // Update voucher balance
-      await voucher.update({
-        balance: newBalance,
-        redemptionCount: (voucher.redemptionCount || 0) + 1
-      });
-      
-      // If balance is 0, mark as redeemed
-      if (newBalance === 0) {
-        await voucher.update({ status: 'redeemed' });
-      }
-      
-      // Credit user's wallet
-      await wallet.credit(redemptionAmount, 'voucher_redemption');
-      
-      // Create transaction record
-      const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await Transaction.create({
-        transactionId: transactionId,
-        userId: voucher.userId,
-        walletId: wallet.walletId,
-        amount: redemptionAmount,
-        type: 'deposit',
-        status: 'completed',
-        description: `Voucher redemption: ${voucher.voucherCode || voucher.easyPayCode}`,
-        currency: 'ZAR',
-        fee: 0.00,
-        metadata: {
-          voucherId: voucher.id,
-          voucherCode: voucher.voucherCode,
-          easyPayCode: voucher.easyPayCode,
-          voucherType: voucher.voucherType,
-          redemptionType: voucher.balance === 0 ? 'full' : 'partial',
-          merchantId: merchant_id,
-          serviceProviderId: service_provider_id
+      let redemptionTransactionId = null;
+      // Perform redemption and reconciliation atomically
+      await sequelize.transaction(async (t) => {
+        // Calculate new balance
+        const newBalance = voucher.balance - redemptionAmount;
+        
+        // Update voucher balance
+        await voucher.update({
+          balance: newBalance,
+          redemptionCount: (voucher.redemptionCount || 0) + 1
+        }, { transaction: t });
+        
+        // If balance is 0, mark as redeemed
+        if (newBalance === 0) {
+          await voucher.update({ status: 'redeemed' }, { transaction: t });
         }
+        
+        // Credit redeemer's wallet
+        await wallet.credit(redemptionAmount, 'voucher_redemption', { transaction: t });
+        
+        // Record redeemer transaction
+        const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        redemptionTransactionId = transactionId;
+        await Transaction.create({
+          transactionId: transactionId,
+          userId: req.user.id,
+          walletId: wallet.walletId,
+          amount: redemptionAmount,
+          type: 'deposit',
+          status: 'completed',
+          description: `Voucher redemption: ${voucher.voucherCode || voucher.easyPayCode}`,
+          currency: 'ZAR',
+          fee: 0.00,
+          metadata: {
+            voucherId: voucher.id,
+            voucherCode: voucher.voucherCode,
+            easyPayCode: voucher.easyPayCode,
+            voucherType: voucher.voucherType,
+            redemptionType: newBalance === 0 ? 'full' : 'partial',
+            merchantId: merchant_id,
+            serviceProviderId: service_provider_id,
+            redeemedBy: req.user.id
+          }
+        }, { transaction: t });
+
+        // Reconciliation for legacy vouchers (issuer was not debited on issue)
+        try {
+          const { Op } = require('sequelize');
+          const issuerWallet = await Wallet.findOne({ where: { userId: voucher.userId } });
+          if (issuerWallet) {
+            // Look for a prior purchase transaction for this voucher
+            const priorPurchaseTx = await Transaction.findOne({
+              where: {
+                userId: voucher.userId,
+                type: 'payment',
+                description: { [Op.like]: `%${voucher.voucherCode}%` }
+              }
+            });
+            if (!priorPurchaseTx) {
+              // No prior debit found; debit issuer now for the redeemed amount (with cap for partial redemptions)
+              const meta = voucher.metadata || {};
+              const debitedSoFar = Number(meta.issuerDebitedAmount || 0);
+              const original = Number(voucher.originalAmount || 0);
+              const remainingCap = Math.max(0, original - debitedSoFar);
+              const amountToDebit = Math.min(Number(redemptionAmount), remainingCap);
+              if (amountToDebit > 0) {
+                await issuerWallet.debit(amountToDebit, 'voucher_redemption_issuer', { transaction: t });
+              }
+              await Transaction.create({
+                transactionId: `TXN-${Date.now()}-ISSUER-${Math.random().toString(36).substr(2, 6)}`,
+                userId: voucher.userId,
+                walletId: issuerWallet.walletId,
+                amount: amountToDebit,
+                type: 'payment',
+                status: 'completed',
+                description: `Voucher redemption debit: ${voucher.voucherCode}`,
+                currency: 'ZAR',
+                fee: 0.00,
+                metadata: {
+                  voucherId: voucher.id,
+                  voucherCode: voucher.voucherCode,
+                  reconciliation: true,
+                  redeemedBy: req.user.id
+                }
+              }, { transaction: t });
+
+              // Track cumulative issuer debit on voucher metadata to support partial redemptions
+              const newDebitedTotal = debitedSoFar + amountToDebit;
+              await voucher.update({
+                metadata: { ...(voucher.metadata || {}), issuerDebitedAmount: newDebitedTotal }
+              }, { transaction: t });
+            }
+          }
+        } catch (_) { /* best effort reconciliation */ }
       });
+
+      // Persist redemption location metadata on voucher
+      try {
+        const redeemer = await User.findByPk(req.user.id);
+        const redeemedAt = {
+          type: 'wallet',
+          userId: req.user.id,
+          walletId: wallet.walletId,
+          name: redeemer ? `${redeemer.firstName || ''} ${redeemer.lastName || ''}`.trim() : undefined,
+          phoneNumber: redeemer ? redeemer.phoneNumber : undefined,
+          timestamp: new Date().toISOString()
+        };
+        await voucher.update({
+          metadata: { ...(voucher.metadata || {}), redeemedAt }
+        });
+      } catch (_) { /* best effort */ }
       
       res.json({
         success: true,
@@ -648,7 +724,8 @@ exports.redeemVoucher = async (req, res) => {
           remaining_balance: voucher.balance,
           status: voucher.status,
           wallet_balance: wallet.balance,
-          transaction_id: transactionId
+          transaction_id: redemptionTransactionId,
+          redeemed_at: (voucher.metadata && voucher.metadata.redeemedAt) || null
         }
       });
       
@@ -921,7 +998,8 @@ exports.listAllVouchersForMe = async (req, res) => {
         expiryDate: effectiveExpiresAt,
         createdAt: voucher.createdAt,
         updatedAt: voucher.updatedAt,
-        metadata: voucher.metadata
+        metadata: voucher.metadata,
+        redeemedAt: voucher.metadata && voucher.metadata.redeemedAt ? voucher.metadata.redeemedAt : null
       };
     });
     

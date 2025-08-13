@@ -71,7 +71,7 @@ export function KYCStatusPage() {
     setIsRefreshing(true);
     try {
       // Real API call to check verification status
-      const token = localStorage.getItem('mymoolah_token');
+      const token = (await import('../utils/authToken')).getToken();
       if (!token) {
         throw new Error('No authentication token found');
       }

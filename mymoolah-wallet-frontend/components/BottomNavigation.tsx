@@ -103,7 +103,8 @@ export function BottomNavigation() {
     const fetchUserSettings = async () => {
       try {
         // Check if user is authenticated
-        const token = localStorage.getItem('token') || localStorage.getItem('mymoolah_token');
+        const { getToken } = await import('../utils/authToken');
+        const token = localStorage.getItem('token') || getToken();
         if (!token) {
           console.log('No authentication token found, using default services');
           setQuickAccessServices(['send_money', 'airtime_data']);

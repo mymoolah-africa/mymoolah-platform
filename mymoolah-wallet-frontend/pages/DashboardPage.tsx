@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getToken as getSessionToken } from '../utils/authToken';
 import { APP_CONFIG } from '../config/app-config';
 
 // Import icons directly from lucide-react
@@ -171,7 +172,7 @@ export function DashboardPage() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const token = localStorage.getItem('mymoolah_token');
+        const token = getSessionToken();
         const headers = {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
