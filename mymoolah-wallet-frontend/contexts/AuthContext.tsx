@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { validateDemoCredentials, isDemoMode, getDemoCredentials } from '../config/app-config';
 import { APP_CONFIG } from '../config/app-config';
+import { getToken as getSessionToken, setToken as setSessionToken, removeToken as removeSessionToken } from '../utils/authToken';
 
 // Updated KYC status type with complete flow
 type KYCStatus = 'not_started' | 'documents_uploaded' | 'under_review' | 'verified' | 'rejected';
@@ -36,6 +37,8 @@ interface LoginCredentials {
 interface RegistrationData {
   name: string;
   identifier: string;
+  idNumber: string;
+  idType: 'south_african_id' | 'south_african_temporary_id' | 'south_african_driving_license' | 'passport';
   email: string;
   password: string;
   identifierType: 'phone' | 'account' | 'username';
@@ -126,7 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const checkAuthStatus = async () => {
     try {
-      const token = localStorage.getItem('mymoolah_token');
+      const token = getSessionToken();
       if (token && token.startsWith('demo-token-')) {
         // Demo mode - restore user session
         const demoCredentials = getDemoCredentials();
@@ -159,16 +162,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ...responseData.user,
               kycVerified: responseData.user.kycStatus === 'verified'
             });
-          } else {
-            localStorage.removeItem('mymoolah_token');
+           } else {
+            removeSessionToken();
           }
         } else {
-          localStorage.removeItem('mymoolah_token');
+          removeSessionToken();
         }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('mymoolah_token');
+      removeSessionToken();
     } finally {
       setIsLoading(false);
     }
@@ -208,7 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
           
           const mockToken = 'demo-token-' + Date.now();
-          localStorage.setItem('mymoolah_token', mockToken);
+          setSessionToken(mockToken);
           setUser(mockUser);
         } else {
           throw new Error('Invalid mobile number or password. Please check your credentials.');
@@ -231,7 +234,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.ok) {
           const responseData = await safeJsonParse(response);
           if (responseData && responseData.user && responseData.token) {
-            localStorage.setItem('mymoolah_token', responseData.token);
+            setSessionToken(responseData.token);
             setUser({
               ...responseData.user,
               kycVerified: responseData.user.kycStatus === 'verified'
@@ -252,20 +255,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('mymoolah_token');
+    removeSessionToken();
     localStorage.removeItem('mymoolah_kyc_status');
     setUser(null);
   };
 
   const refreshToken = async () => {
     try {
-      const token = localStorage.getItem('mymoolah_token');
+      const token = getSessionToken();
       if (!token) return;
 
       if (token.startsWith('demo-token-')) {
         // Demo mode - just refresh the timestamp
         const newToken = 'demo-token-' + Date.now();
-        localStorage.setItem('mymoolah_token', newToken);
+        setSessionToken(newToken);
         return;
       }
 
@@ -278,7 +281,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.ok) {
         const responseData = await safeJsonParse(response);
         if (responseData && responseData.token) {
-          localStorage.setItem('mymoolah_token', responseData.token);
+          setSessionToken(responseData.token);
         } else {
           logout();
         }
@@ -309,7 +312,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         // Production mode - API call to backend
-        const token = localStorage.getItem('mymoolah_token');
+         const token = getSessionToken();
         const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/kyc/update-status`, {
           method: 'POST',
           headers: {
@@ -377,7 +380,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } else {
         // Production mode - fetch latest status from backend
-        const token = localStorage.getItem('mymoolah_token');
+        const token = getSessionToken();
         const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/users/me`, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -450,12 +453,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (registrationData.identifierType === 'phone') {
           // For phone numbers, send as phoneNumber field (what backend expects)
-          const cleanPhoneNumber = registrationData.identifier.replace(/\s/g, '');
+          const cleanPhoneNumber = normalizeSAMobileNumber(registrationData.identifier);
           backendPayload = {
             name: registrationData.name,
             email: registrationData.email,
             phoneNumber: cleanPhoneNumber, // FIXED: Use phoneNumber field for backend
-            password: registrationData.password
+            password: registrationData.password,
+            idType: registrationData.idType,
+            idNumber: registrationData.idNumber
           };
         } else {
           // For account numbers and usernames, send as identifier
@@ -465,7 +470,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             email: registrationData.email,
             identifier: registrationData.identifier,
             identifierType: registrationData.identifierType,
-            password: registrationData.password
+            password: registrationData.password,
+            idType: registrationData.idType,
+            idNumber: registrationData.idNumber
           };
         }
 
@@ -502,15 +509,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               errorMessage = 'An account with this information already exists.';
             } else if (response.status === 400) {
               // Handle validation errors
-              if (errorData && errorData.message) {
-                if (errorData.message.toLowerCase().includes('phone')) {
-                  errorMessage = 'Invalid phone number format. Please use SA mobile number (0XX XXX XXXX).';
-                } else if (errorData.message.toLowerCase().includes('email')) {
-                  errorMessage = 'Invalid email address format.';
-                } else if (errorData.message.toLowerCase().includes('password')) {
-                  errorMessage = 'Password does not meet security requirements.';
-                } else {
-                  errorMessage = errorData.message;
+              if (errorData) {
+                // Prefer field-specific errors when present
+                if (Array.isArray(errorData.errors) && errorData.errors.length > 0) {
+                  errorMessage = errorData.errors
+                    .map((e: any) => `${e.field}: ${e.message}`)
+                    .join(' • ');
+                } else if (errorData.message) {
+                  const msg = String(errorData.message).toLowerCase();
+                  if (msg.includes('phone')) {
+                    errorMessage = 'Invalid phone number format. Please use SA mobile number (0XX XXX XXXX).';
+                  } else if (msg.includes('email')) {
+                    errorMessage = 'Invalid email address format.';
+                  } else if (msg.includes('password')) {
+                    errorMessage = 'Password does not meet security requirements.';
+                  } else if (msg.includes('id')) {
+                    errorMessage = errorData.message;
+                  } else {
+                    errorMessage = errorData.message;
+                  }
                 }
               } else {
                 errorMessage = 'Invalid registration data. Please check all fields.';

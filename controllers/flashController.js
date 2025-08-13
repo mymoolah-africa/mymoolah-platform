@@ -37,7 +37,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Flash service health check failed',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -83,7 +84,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to list Flash products',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -129,7 +131,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to lookup Flash product',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -204,7 +207,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase 1Voucher',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -279,7 +283,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to disburse 1Voucher',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -370,7 +375,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to redeem 1Voucher',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -453,7 +459,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to refund 1Voucher',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -560,7 +567,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase gift voucher',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -643,7 +651,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase cash out PIN',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -726,7 +735,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to cancel cash out PIN',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -817,7 +827,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase cellular recharge',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -900,7 +911,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase Eezi voucher',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -991,7 +1003,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to lookup meter',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }
@@ -1074,7 +1087,8 @@ class FlashController {
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase prepaid utility',
-                message: error.message
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
             });
         }
     }

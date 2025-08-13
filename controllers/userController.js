@@ -102,6 +102,44 @@ class UserController {
     }
   }
 
+  // Update authenticated user's profile
+  async updateMe(req, res) {
+    try {
+      const userId = req.user && req.user.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { firstName, lastName, phoneNumber } = req.body || {};
+
+      // Disallow phone number changes via this endpoint for security
+      if (typeof phoneNumber !== 'undefined') {
+        return res.status(400).json({ success: false, message: 'Phone number cannot be changed' });
+      }
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      const updates = {};
+      if (typeof firstName === 'string') updates.firstName = firstName.trim();
+      if (typeof lastName === 'string') updates.lastName = lastName.trim();
+
+      await user.update(updates);
+
+      const { id, email, phoneNumber: pn, accountNumber, status, kycStatus, createdAt, updatedAt } = user;
+      return res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: { id, email, firstName: user.firstName, lastName: user.lastName, phoneNumber: pn, accountNumber, status, kycStatus, createdAt, updatedAt }
+      });
+    } catch (error) {
+      console.error('❌ Error in updateMe:', error);
+      return res.status(500).json({ success: false, error: 'Internal server error', details: error.message });
+    }
+  }
+
   // Get user statistics
   async getUserStats(req, res) {
     try {
@@ -199,6 +237,7 @@ module.exports = {
   getAllUsers: userController.getAllUsers.bind(userController),
   getUserById: userController.getUserById.bind(userController),
   updateUser: userController.updateUser.bind(userController),
+  updateMe: userController.updateMe.bind(userController),
   getUserStats: userController.getUserStats.bind(userController),
   updateUserStatus: userController.updateUserStatus.bind(userController),
   getMe: userController.getMe.bind(userController)

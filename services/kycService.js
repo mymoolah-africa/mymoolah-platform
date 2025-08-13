@@ -329,6 +329,45 @@ function isValidSouthAfricanId(idNumber) {
   return sum % 10 === 0;
 }
 
+// Normalize commonly misread OCR characters to digits for SA IDs
+function normalizeIdDigits(raw) {
+  const s = (raw || '').toString().toUpperCase().replace(/\s|[^0-9A-Z]/g, '');
+  return s
+    .replace(/O/g, '0')
+    .replace(/[I|l]/g, '1')
+    .replace(/B/g, '8')
+    .replace(/S/g, '5')
+    .replace(/Z/g, '2')
+    .replace(/G/g, '6')
+    .replace(/Q/g, '0')
+    .replace(/D/g, '0')
+    .replace(/[^0-9]/g, '');
+}
+
+// Normalize surname text from OCR for robust matching
+function normalizeSurnameOCR(raw) {
+  const s = (raw || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s'-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Join stray internal spaces like "BH OES" => "BHOES"
+  const compact = s.replace(/\b([A-Z])\s+([A-Z]{2,})\b/g, '$1$2').replace(/\s+/g, '');
+
+  // Map common OCR digit/letter confusions back to letters
+  return compact
+    .replace(/0/g, 'O')
+    .replace(/1/g, 'I')
+    .replace(/5/g, 'S')
+    .replace(/2/g, 'Z')
+    .replace(/8/g, 'B')
+    .replace(/6/g, 'G')
+    .replace(/4/g, 'A');
+}
+
 function isValidSouthAfricanDrivingLicense(licenseNumber) {
   const clean = (licenseNumber || '').replace(/\s/g, '').toUpperCase();
   return /^[A-Z]{2}\d{6}[A-Z]{2}$/.test(clean);
@@ -421,21 +460,103 @@ class KYCService {
   }
 
   parseSouthAfricanIdText(plainText) {
-    const text = (plainText || '').replace(/\s+/g, ' ').trim();
+    const text = (plainText || '').replace(/\r/g, '').trim();
     const results = {};
-    // Try to extract labelled fields from SA ID card
-    const surnameMatch = plainText.match(/Surname[:\s]+([A-Z' -]+)/i) || plainText.match(/SURNAM[E]?[\s:]*([A-Z' -]+)/i);
-    const namesMatch = plainText.match(/Names?[:\s]+([A-Z' -]+)/i);
-    const idMatch = plainText.match(/Identity\s*Number[:\s]*([0-9 ]{6,})/i) || plainText.match(/ID\s*Number[:\s]*([0-9 ]{6,})/i);
-    const dobMatch = plainText.match(/Date\s*of\s*Birth[:\s]*([0-9]{1,2}\s*[A-Z]{3}\s*[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i);
 
-    if (surnameMatch) results.fullName = results.fullName ? `${results.fullName} ${surnameMatch[1].trim()}` : surnameMatch[1].trim();
+    // Normalized helpers
+    const oneLine = text.replace(/\s+/g, ' ');
+    const upper = text.toUpperCase();
+
+    // 1) Try labelled fields (English & common Afrikaans variants)
+    const surnameMatch = upper.match(/\bSURNAME\b[:\s]*([A-Z' -]+)/) || upper.match(/\bVAN\b[:\s]*([A-Z' -]+)/);
+    const namesMatch = upper.match(/\bNAMES?\b[:\s]*([A-Z' -]+)/) || upper.match(/\bNAME\b[:\s]*([A-Z' -]+)/);
+    const idMatch = oneLine.match(/(?:Identity|Identiteit|ID|ID\.?|ID\s*No\.?|ID\s*Nr\.?|ID\s*Number|Identity\s*No\.?)[^0-9]*([0-9 ]{6,})/i);
+    const dobMatch = oneLine.match(/(?:Date\s*of\s*Birth|Geboortedatum)[:\s]*([0-9]{1,2}\s*[A-Z]{3}\s*[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i);
+
+    if (surnameMatch) {
+      const s = surnameMatch[1].trim();
+      results.surname = s;
+      results.fullName = results.fullName ? `${results.fullName} ${s}` : s;
+    }
     if (namesMatch) {
       const names = namesMatch[1].trim();
+      results.firstNames = names;
       results.fullName = results.fullName ? `${names} ${results.fullName}` : names;
     }
     if (idMatch) results.idNumber = idMatch[1].replace(/\D/g, '').slice(0, 13);
     if (dobMatch) results.dateOfBirth = dobMatch[1].trim();
+
+    // 2) Fallbacks
+    // ID number: any 13 consecutive digits
+    if (!results.idNumber) {
+      const any13 = oneLine.match(/\b(\d{13})\b/);
+      if (any13) results.idNumber = any13[1];
+    }
+    // ID number: if still missing, collapse all non-digits and take first 13
+    if (!results.idNumber) {
+      const digitsOnly = text.replace(/\D/g, '');
+      if (digitsOnly.length >= 13) {
+        results.idNumber = digitsOnly.slice(0, 13);
+      }
+    }
+
+    // Full name extraction improvements for SA ID book layout
+    const lines = upper.split(/\n+/).map(l => l.trim()).filter(Boolean);
+    const onlyLetters = (txt) => txt.replace(/[^A-Z'\-\s]/g, '').trim();
+
+    if (!results.fullName) {
+      let surIdx = lines.findIndex(l => /(\bSURNAME\b|VAN\s*\/\s*SURNAME|VAN\s+SURNAME)/.test(l));
+      let namesIdx = lines.findIndex(l => /(FORENAMES|VOORNAME)/.test(l));
+      let surnameVal = null;
+      let namesVal = null;
+      if (surIdx >= 0) {
+        // Scan up to 3 lines below to skip empty/noisy lines
+        for (let k = 1; k <= 3 && surIdx + k < lines.length; k++) {
+          const raw = lines[surIdx + k];
+          // Ignore the S.A. BURGER/CITIZEN line completely
+          if (/S\.?A\.?\s*\.?BURGER|CITIZEN/.test(raw)) continue;
+          const cand = onlyLetters(raw).replace(/\s+/g, ' ').trim();
+          if (cand && /^[A-Z'\-]{3,}$/.test(cand)) { surnameVal = cand; break; }
+        }
+      }
+      if (namesIdx >= 0 && namesIdx + 1 < lines.length) {
+        const cand = onlyLetters(lines[namesIdx + 1]);
+        if (cand && /[A-Z]/.test(cand)) namesVal = cand.replace(/\s+/g, ' ').trim();
+      }
+      if (surnameVal || namesVal) {
+        const first = namesVal ? namesVal.split(/\s+/)[0] : '';
+        const last = surnameVal || '';
+        const full = `${first} ${last}`.trim();
+        if (last.length > 0) results.surname = last;
+        if (first.length > 0) results.firstNames = first;
+        if (full.length > 0) results.fullName = full;
+      }
+    }
+
+    // As a fallback, choose the most probable uppercase line with 2-4 words
+    if (!results.fullName) {
+      let best = '';
+      for (const l of lines) {
+        if (/(SURNAME|NAMES?|FORENAMES|VOORNAME|IDENTITY|I\.?D\.?|DATE|BIRTH|COUNTRY|NATIONALITY|NUMBER|NO\.?|NR\.?|CITIZEN)/.test(l)) continue;
+        const words = l.split(/\s+/).filter(w => /^[A-Z'\-]{2,}$/.test(w));
+        if (words.length >= 2 && words.length <= 4) {
+          best = words.join(' ');
+          break;
+        }
+      }
+      if (best) results.fullName = best;
+    }
+
+    // Date of birth: derive from SA ID if present and DOB missing (YYMMDDxxxxxC)
+    if (!results.dateOfBirth && results.idNumber && /^\d{13}$/.test(results.idNumber)) {
+      const yy = parseInt(results.idNumber.slice(0, 2), 10);
+      const mm = results.idNumber.slice(2, 4);
+      const dd = results.idNumber.slice(4, 6);
+      const nowYY = new Date().getFullYear() % 100;
+      const century = yy <= nowYY ? 2000 : 1900;
+      const yyyy = century + yy;
+      results.dateOfBirth = `${yyyy}-${mm}-${dd}`;
+    }
 
     return results;
   }
@@ -656,15 +777,41 @@ class KYCService {
         return validation;
       }
 
-      // Enhanced name matching with surname priority and light first name matching
+      // Enhanced name matching with surname priority only (first name ignored)
+      const docSurname = ocrResults.surname || '';
       const { first: docFirst, last: docLast } = splitFullName(fullName);
+      const surnameForCompare = docSurname || docLast;
       const userFirst = normalizeName(user.firstName || '');
       const userLast = normalizeName(user.lastName || '');
 
-      // Priority 1: Surname must match (strict)
-      if (docLast && userLast && docLast !== userLast) {
-        validation.issues.push(`Surname mismatch (${fullName} vs ${user.firstName} ${user.lastName})`);
-        return validation; // Fail immediately if surname doesn't match
+      // Priority 1: Surname must match (robust normalization)
+      // Pre-compute ID match (used to decide tolerance or skip when surname cannot be confidently extracted)
+      const documentType = this.determineDocumentType(ocrResults);
+      const registeredId = normalizeIdDigits(user.idNumber || '');
+      const docIdForMatch = normalizeIdDigits(ocrResults.idNumber || ocrResults.licenseNumber || '');
+      const idMatches = documentType === 'sa_id' && registeredId && docIdForMatch && registeredId === docIdForMatch;
+
+      // If SA ID matches registration exactly, accept immediately to avoid false negatives from surname OCR.
+      if (idMatches) {
+        validation.confidence = 100;
+        validation.isValid = true;
+        return validation;
+      }
+
+      if (surnameForCompare && userLast) {
+        const docLastNorm = normalizeSurnameOCR(surnameForCompare);
+        const userLastNorm = normalizeSurnameOCR(userLast);
+        if (docLastNorm !== userLastNorm) {
+          const similarity = jaroWinkler(docLastNorm, userLastNorm);
+          const threshold = 0.999;
+          if (similarity < threshold) {
+            validation.issues.push(`Surname mismatch (${surnameForCompare} vs ${user.firstName} ${user.lastName})`);
+            return validation;
+          }
+        }
+      } else if (!surnameForCompare) {
+        validation.issues.push('Surname not found on document');
+        return validation;
       }
 
       // Priority 2: Light first name matching (flexible)
@@ -677,10 +824,17 @@ class KYCService {
         }
       }
 
+      // Enforce ID number match with what was captured at registration (only for SA IDs)
+      const registeredId2 = normalizeIdDigits(user.idNumber || '');
+      const docId2 = normalizeIdDigits(idNumber || licenseNumber || '');
+      if (documentType === 'sa_id' && registeredId2 && docId2 && registeredId2 !== docId2) {
+        // If both are 13 digits and docId has OCR ambiguities, still mismatch triggers failure
+        validation.issues.push('ID number does not match the number captured at registration');
+      }
+
       // Check document format based on type
-      const documentType = this.determineDocumentType(ocrResults);
-      const rawId = idNumber.replace(/\s/g, '');
-      const rawLicense = licenseNumber.replace(/\s/g, '');
+      const rawId = normalizeIdDigits(idNumber);
+      const rawLicense = normalizeIdDigits(licenseNumber);
       
       if (documentType === 'sa_id') {
         if (!/^\d{13}$/.test(rawId) || !isValidSouthAfricanId(rawId)) {
@@ -727,11 +881,8 @@ class KYCService {
       const criticalChecks = checks.filter(Boolean).length;
       const criticalConfidence = (criticalChecks / checks.length) * 100;
       
-      // First name matching is optional (doesn't affect validation success)
-      const firstNameMatch = docFirst && userFirst && lightFirstNameMatch(docFirst, userFirst).matches;
-      const firstNameBonus = firstNameMatch ? 10 : 0; // Bonus for first name match
-      
-      validation.confidence = Math.min(100, criticalConfidence + firstNameBonus);
+      // Confidence: surname + id + dob only
+      validation.confidence = Math.min(100, criticalConfidence);
       validation.isValid = validation.issues.length === 0;
 
       console.log('🔍 Final validation result:', validation);

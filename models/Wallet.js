@@ -193,46 +193,61 @@ module.exports = (sequelize, DataTypes) => {
     if (this.status !== 'active') {
       return { allowed: false, reason: 'Wallet is not active' };
     }
-    
-    if (this.balance < amount) {
+
+    const numericAmount = parseFloat(amount);
+    const currentBalance = parseFloat(this.balance);
+    const currentDailySpent = parseFloat(this.dailySpent || 0);
+    const currentMonthlySpent = parseFloat(this.monthlySpent || 0);
+    const allowedDailyLimit = parseFloat(this.dailyLimit || 0);
+    const allowedMonthlyLimit = parseFloat(this.monthlyLimit || 0);
+
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return { allowed: false, reason: 'Invalid debit amount' };
+    }
+
+    if (currentBalance < numericAmount) {
       return { allowed: false, reason: 'Insufficient balance' };
     }
-    
-    if (this.dailySpent + amount > this.dailyLimit) {
+
+    if (currentDailySpent + numericAmount > allowedDailyLimit) {
       return { allowed: false, reason: 'Daily limit exceeded' };
     }
-    
-    if (this.monthlySpent + amount > this.monthlyLimit) {
+
+    if (currentMonthlySpent + numericAmount > allowedMonthlyLimit) {
       return { allowed: false, reason: 'Monthly limit exceeded' };
     }
-    
+
     return { allowed: true };
   };
 
-  Wallet.prototype.debit = async function(amount, transactionType = 'debit') {
-    const canDebit = this.canDebit(amount);
+  Wallet.prototype.debit = async function(amount, transactionType = 'debit', options = {}) {
+    const numericAmount = parseFloat(amount);
+    const canDebit = this.canDebit(numericAmount);
     if (!canDebit.allowed) {
       throw new Error(canDebit.reason);
     }
     
-    this.balance -= amount;
-    this.dailySpent += amount;
-    this.monthlySpent += amount;
+    const currentBalance = parseFloat(this.balance);
+    this.balance = currentBalance - numericAmount;
+    this.dailySpent = parseFloat(this.dailySpent) + numericAmount;
+    this.monthlySpent = parseFloat(this.monthlySpent) + numericAmount;
     this.lastTransactionAt = new Date();
     
-    await this.save();
+    await this.save(options);
     return this;
   };
 
-  Wallet.prototype.credit = async function(amount, transactionType = 'credit') {
+  Wallet.prototype.credit = async function(amount, transactionType = 'credit', options = {}) {
     if (this.status !== 'active') {
       throw new Error('Wallet is not active');
     }
     
-    this.balance += amount;
+    const numericAmount = parseFloat(amount);
+    const currentBalance = parseFloat(this.balance);
+    this.balance = currentBalance + numericAmount;
     this.lastTransactionAt = new Date();
     
-    await this.save();
+    await this.save(options);
     return this;
   };
 

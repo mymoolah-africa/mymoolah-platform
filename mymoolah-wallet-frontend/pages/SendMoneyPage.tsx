@@ -148,7 +148,7 @@ export function SendMoneyPage() {
   useEffect(() => {
     const fetchWalletBalance = async () => {
       try {
-        const token = localStorage.getItem('mymoolah_token');
+        const token = (await import('../utils/authToken')).getToken();
         if (!token) return;
 
         const response = await fetch('/api/v1/wallets/balance', {
@@ -182,7 +182,7 @@ export function SendMoneyPage() {
     setIsResolvingRecipient(true);
     
     try {
-      const token = localStorage.getItem('mymoolah_token');
+      const token = (await import('../utils/authToken')).getToken();
       if (!token) throw new Error('No authentication token');
 
       const response = await fetch('/api/v1/send-money/resolve-recipient', {

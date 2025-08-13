@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { getToken as getSessionToken } from '../utils/authToken';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
@@ -142,7 +143,7 @@ export function TransactionHistoryPage() {
   // Real API integration for transaction data
   const fetchTransactions = async (page: number = 1, limit: number = 100): Promise<Transaction[]> => {
   try {
-    const token = localStorage.getItem('mymoolah_token');
+    const token = getSessionToken();
     if (!token) {
       throw new Error("Authentication required");
     }

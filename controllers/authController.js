@@ -40,6 +40,7 @@ class AuthController {
     try {
       let { name, email, phoneNumber, password, idNumber, idType } = req.body;
       
+      // Require ID details at registration for OCR comparison later
       if (!name || !email || !phoneNumber || !password || !idNumber || !idType) {
         return res.status(400).json({ 
           success: false, 
@@ -136,6 +137,53 @@ class AuthController {
     }
   }
 
+  // Change password for authenticated user
+  async changePassword(req, res) {
+    try {
+      const userId = req.user && req.user.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      const { currentPassword, newPassword, confirmNewPassword } = req.body || {};
+      if (!currentPassword || !newPassword || !confirmNewPassword) {
+        return res.status(400).json({ success: false, message: 'All password fields are required' });
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        return res.status(400).json({ success: false, message: 'New password and confirmation do not match' });
+      }
+
+      // Same strength rule used on registration
+      const strength = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!strength.test(newPassword)) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 8 characters and contain a letter, a number, and a special character' });
+      }
+
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      const valid = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!valid) {
+        return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+      }
+
+      const sameAsOld = await bcrypt.compare(newPassword, user.password_hash);
+      if (sameAsOld) {
+        return res.status(400).json({ success: false, message: 'New password must be different from current password' });
+      }
+
+      const newHash = await bcrypt.hash(newPassword, 12);
+      await user.update({ password_hash: newHash });
+
+      return res.json({ success: true, message: 'Password changed successfully' });
+    } catch (error) {
+      console.error('❌ Change password error:', error);
+      return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+  }
   // Login user with phone number only
   async login(req, res) {
     try {
@@ -325,5 +373,6 @@ module.exports = {
   login: authController.login.bind(authController),
   getProfile: authController.getProfile.bind(authController),
   verify: authController.verify.bind(authController),
-  refreshToken: authController.refreshToken.bind(authController)
+  refreshToken: authController.refreshToken.bind(authController),
+  changePassword: authController.changePassword.bind(authController)
 };

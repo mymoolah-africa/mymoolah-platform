@@ -1,0 +1,344 @@
+openapi: 3.0.3
+info:
+  title: EasyPay BillPayment Receiver API
+  description: >-
+    This API serves to define the EasyPay BillPayment Receiver Service to
+    communicate with implementing receivers. The yaml file can be imported into [Swagger Hub](https://app.swaggerhub.com/)
+    or [Swagger Editor](https://editor-next.swagger.io/) and from there server and client stubs can be generated for most programming languages. The receiver must implement the server side of the API. Easypay will connect with a client side implementation to the receiver's server implementation of the API.
+  contact:
+    name: EasyPay (Pty), Ltd
+    url: https://www.easypay.co.za/LegalDocuments/Index?i=2
+    email: operations@easypay.co.za
+  version: '5'
+basePath: /billpayment/v1
+schemes:
+  - https
+tags:
+  - name: EasyPay - BillPayment Receiver API
+paths:
+  /ping:
+    get:
+      summary: ping request
+      description: >-
+        The ping request is used by EasyPay to check periodically if the service is up. Each service must implement this method. EasyPay does not require the service to perform any task on receipt of this other than to return a body as specified in PingResponse with "OK". The Epsilon Server uses this method to ascertain if the service is operational
+      operationId: ping
+      responses:
+        '200':
+          description: Successfull request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PingResponse'
+        '500':
+          description: Internal Server Error.
+          content: {}
+        '502':
+          description: Bad Gateway
+          content: {}
+        '503':
+          description: Service Unavailable
+          content: {}
+        '504':
+          description:  Timeout
+          content: {}
+  /infoRequest:
+    post:
+      tags:
+        - session
+      summary: Info request
+      description: >-
+        The info request is used by EasyPay to ask for information related to the specific account number. It is used especially to determine if the easyPayNumber/account number is valid for payment, to obtain the due payment amount, the minimum and maximum amounts that will be accepted for payment, and any other relevant information.
+      security:
+        - Authorization: []
+      operationId: Info
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InfoRequest'
+        required: true
+      responses:
+        '200':
+          description: Successfull request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfoResponse'
+        '400':
+          description: Invalid input provided. High Order Data Validation Failed
+          content: {}
+        '401':
+          description: Invalid / Expired token provided. High Order Cannot Authenticate Request.
+          content: {}
+        '403':
+          description: Forbidden / Unauthorized role. High Order Cannot Authenticate Request.
+          content: {}
+        '500':
+          description: Internal Server Error. High Order Institution Not Available.
+          content: {}
+        '502':
+          description: Bad Gateway. High Order Institution Not Available.
+          content: {}
+        '503':
+          description: Service Unavailable. High Order Institution Not Available.
+          content: {}
+        '504':
+          description: Gateway Timeout. A connection time-out occurred. Please try again later.
+          content: {}          
+  /authorisationRequest:
+    post:
+      tags:
+        - session
+      summary: Authorisation request
+      description: >-
+        The authorisation request is used by EasyPay to ask for authorisation to accept the specified payment at the specific amount. The receiver must validate if payment will succeed for the specific account number and amount. It in no way implies that the payment has been accepted or that it will be accepted.
+      security:
+        - Authorization: []
+      operationId: Authorisation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentNotification'
+        required: true
+      responses:
+        '200':
+          description: Successfull request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorisationResponse'
+        '400':
+          description: Invalid input provided. High Order Data Validation Failed
+          content: {}
+        '401':
+          description: Invalid / Expired token provided. High Order Cannot Authenticate Request.
+          content: {}
+        '403':
+          description: Forbidden / Unauthorized role. High Order Cannot Authenticate Request.
+          content: {}
+        '500':
+          description: Internal Server Error. High Order Institution Not Available.
+          content: {}
+        '502':
+          description: Bad Gateway. High Order Institution Not Available.
+          content: {}
+        '503':
+          description: Service Unavailable. High Order Institution Not Available.
+          content: {}
+        '504':
+          description: Gateway Timeout. A connection time-out occurred. Please try again later.
+          content: {}          
+  /paymentNotification:
+    post:
+      tags:
+        - session
+      summary: Payment notification
+      description: >-
+        The payment notification is used by EasyPay to notify the receiver of
+        payments taken. The receiver can log that payment has been completed and match it to the SOF file that will be received from the settlement system the following day.
+      security:
+        - Authorization: []
+      operationId: payment
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentNotification'
+        required: true
+      responses:
+        '200':
+          description: Successfull request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Invalid input provided. High Order Data Validation Failed
+          content: {}
+        '401':
+          description: Invalid / Expired token provided. High Order Cannot Authenticate Request.
+          content: {}
+        '403':
+          description: Forbidden / Unauthorized role. High Order Cannot Authenticate Request.
+          content: {}
+        '500':
+          description: Internal Server Error. High Order Institution Not Available.
+          content: {}
+        '502':
+          description: Bad Gateway. High Order Institution Not Available.
+          content: {}
+        '503':
+          description: Service Unavailable. High Order Institution Not Available.
+          content: {}
+        '504':
+          description: Gateway Timeout. A connection time-out occurred. Please try again later.
+          content: {}          
+components:
+  schemas:
+    AuthorisationResponse:
+      required:
+        - ResponseCode
+        - Amount
+        - expiryDate
+        - echoData
+      type: object
+      properties:
+        ResponseCode:
+          type: string
+          description: Response Code. Allow payment=0,Invalid account=1,Invalid amount=2,Expired payment=3,Unknown APIkey=4
+          example: 0
+        ResponseMessage:
+          type: string
+          description: Response message. If invalid amount then the amount field must contain the correct amount and the ResponseMessage- Incorrect amount. Due amount is R????.??. Note some collectors implement their own message based on the ResponseCode.
+          example: Allow payment
+        Amount:
+          type: integer
+          description: The required amount in cents to be paid
+          example: 10000
+        expiryDate:
+          type: string
+          description: The bill due date
+          example: '2023-10-19'
+        echoData:
+          type: string
+          description: Exactly the same data as was in the echo data field of the AuthorisationRequest message.
+          example: 000000000000002|00000001|20210430|185248|6|9202117470005030000
+    InfoResponse:
+      required:
+        - ResponseCode
+        - correctAmount
+        - minAmount
+        - maxAmount
+        - expiryDate
+        - echoData
+      type: object
+      properties:
+        ResponseCode:
+          type: string
+          description: Response Code values. AllowPayment=0,InvalidAccount=1,UnknownAPIkey=4, AlreadyPaid=5
+          example: 0
+        correctAmount:
+          type: integer
+          description: The required amount in cents to be paid
+          example: 10000
+        minAmount:
+          type: integer
+          description: The minimum amount in cents to be paid. It can have the same value as the correctAmount.
+          example: 8000
+        maxAmount:
+          type: integer
+          description: The maximum amount in cents to be paid. It can have the same value as the correctAmount.
+          example: 10000
+        expiryDate:
+          type: string
+          description: The bill due date
+          example: '2023-10-19'
+        fields:
+          type: object
+          description: An optional map of fields that provides more information about the bill to be paid. Note not all collectors display these additional fields on the POS.
+          additionalProperties:
+            type: string
+          example:
+            name: John
+            surname: Doe            
+        echoData:
+          type: string
+          description: Exactly the same data as was in the echo data field of the AuthorisationRequest message.
+          example: 000000000000002|00000001|20210430|185248|6|9202117470005030000
+    PingResponse:
+      required:
+        - Ping
+      type: object
+      properties:
+        Ping:
+          type: string
+          example: OK
+    PaymentNotification:
+      required:
+        - EasyPayNumber
+        - AccountNumber
+        - EchoData
+      type: object
+      properties:
+        MerchantId:
+          description: Merchant identifier where payment occured
+          type: string
+          example: 006008800085122
+        TerminalId:
+          description: The terminal ID where the payment occurred
+          type: string
+          example: 01180024
+        PaymentDate:
+          description: >-
+            The date-time stamp when the payment was taken in format yyyy-MM-dd HH:mm:ss
+          type: string
+          example: 2024-01-03 12:58:04
+        Reference:
+          description: The POS assigned payment reference.
+          type: string
+          example: 1d21e120ab82
+        EasyPayNumber:
+          description: The full EasyPay Number as it was presented at the POS including the ‘9’ the receiver Id the account number and the check digit
+          type: string
+          example: 9202117470005030074
+        AccountNumber:
+          description: For convenience this field will contain just the account number portion of the EasyPay number.
+          type: string
+          example: 1747000503007
+        Amount:
+          description: The amount that was paid in cents. 
+          type: number
+          example: 15000
+        EchoData:
+          description: Receiver service is obliged to return this data as is
+          type: string
+          example: 000000000000002|00000001|20210430|185248|6|9202117470005030000
+    PaymentResponse:
+      required:
+        - EchoData
+      type: object
+      properties:
+        EchoData:
+          description: >-
+            Exactly the same data as was in the echo data field of the
+            request message. Receiver cannot decline a valid PaymentNotification. The receiver is obliged to respond to each PaymentNotification with a PaymentResponse.
+          type: string
+          example: 000000000000002|00000001|20210430|185248|6|9202117470005030000
+    InfoRequest:
+      required:
+        - EasyPayNumber
+        - AccountNumber
+        - EchoData
+      type: object
+      properties:
+        MerchantId:
+          description: Merchant identifier where payment occured
+          type: string
+          example: 006008800085122
+        TerminalId:
+          description: The terminal ID where the payment occurred
+          type: string
+          example: 01180024
+        Reference:
+          description: The POS payment reference.
+          type: string
+          example: 1d21e120ab82
+        EasyPayNumber:
+          description: The full EasyPay Number as it was presented at the POS including the ‘9’ the receiver Id the account number and the check digit.
+          type: string
+          example: 9202117470005030074
+        AccountNumber:
+          description: For convenience this field will contain just the account number portion of the EasyPay number.
+          type: string
+          example: 1747000503007
+        EchoData:
+          description: Receiver service is obliged to return this data as is
+          type: string
+          example: 000000000000002|00000001|20210430|185248|6|9202117470005030000
+  securitySchemes:
+    Authorization:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: 'Assigned by the receiver, the content of this field is designed to identify EasyPay to the receiver. Provide the token with the SessionToken: "SessionToken abcde12345"'

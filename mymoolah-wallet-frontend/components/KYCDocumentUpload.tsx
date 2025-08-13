@@ -80,7 +80,7 @@ const KYCDocumentUpload: React.FC<KYCDocumentUploadProps> = ({
       const response = await fetch('/api/v1/kyc/upload-documents', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('mymoolah_token')}`
+          'Authorization': `Bearer ${(await import('../utils/authToken')).getToken()}`
         },
         body: formData
       });
