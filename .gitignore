@@ -60,3 +60,4 @@ backups/**
 /test-*.js
 mymoolah-wallet-frontend/.env.local
 /data/*.db
+.env.backup*
