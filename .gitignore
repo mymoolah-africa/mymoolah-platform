@@ -1,0 +1,62 @@
+# Cloud SQL proxy and keys (do not commit)
+bin/cloud-sql-proxy
+infra/gcp/keys/
+
+# macOS system files
+.DS_Store
+
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+dist/
+build/
+
+# VS Code settings
+.vscode/
+
+# Husky hooks (if you want to ignore local hooks)
+.husky/
+
+# Coverage reports
+coverage/
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Icon?
+Desktop.ini
+
+# IDE files
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Backup files
+*.bak
+*.tmp
+*.swp
+*~ml-core-test-harness/
+
+# Ignore backups (large files)
+backups/**
+!backups/.gitkeep
+
+# Ignore backups (large files)
+backups/**
+!backups/.gitkeep
+
+# Local SDK and ad-hoc helpers
+/google-cloud-sdk/
+*.old
+/test-*.js
+mymoolah-wallet-frontend/.env.local
+/data/*.db

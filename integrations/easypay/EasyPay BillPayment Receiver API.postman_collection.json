@@ -1,0 +1,1417 @@
+{
+	"info": {
+		"_postman_id": "54a2aa54-19d8-4e71-9321-9459d2946acb",
+		"name": "EasyPay BillPayment Receiver API Copy 2",
+		"description": "This API serves to define the EasyPay BillPayment Receiver Service to communicate with implementing receivers. The yaml file can be imported into [Swagger Hub](https://app.swaggerhub.com/) or [Swagger Editor](https://editor-next.swagger.io/) and from there server and client stubs can be generated for most programming languages. The receiver must implement the server side of the API. Easypay will connect with a client side implementation to the receiver's server implementation of the API.\n\nContact Support:\n Name: EasyPay (Pty), Ltd\n Email: operations@easypay.co.za",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "8220142"
+	},
+	"item": [
+		{
+			"name": "ping",
+			"item": [
+				{
+					"name": "ping request",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/ping",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ping"
+							]
+						},
+						"description": "The ping request is used by EasyPay to check periodically if the service is up. Each service must implement this method. EasyPay does not require the service to perform any task on receipt of this other than to return \"OK\". The Epsilon Server uses this method to ascertain if the service is operational"
+					},
+					"response": [
+						{
+							"name": "Successfull request",
+							"originalRequest": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Accept",
+										"value": "application/json"
+									}
+								],
+								"url": {
+									"raw": "{{baseUrl}}/ping",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ping"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"Ping\": \"<string>\"\n}"
+						},
+						{
+							"name": "Internal Server Error.",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/ping",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ping"
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Bad Gateway",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/ping",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ping"
+									]
+								}
+							},
+							"status": "Bad Gateway",
+							"code": 502,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Service Unavailable",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/ping",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ping"
+									]
+								}
+							},
+							"status": "Service Unavailable",
+							"code": 503,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Timeout",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{baseUrl}}/ping",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"ping"
+									]
+								}
+							},
+							"status": "Gateway Timeout",
+							"code": 504,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "paymentNotification",
+			"item": [
+				{
+					"name": "Payment notification",
+					"request": {
+						"auth": {
+							"type": "apikey",
+							"apikey": [
+								{
+									"key": "key",
+									"value": "Authorization",
+									"type": "string"
+								},
+								{
+									"key": "value",
+									"value": "{{apiKey}}",
+									"type": "string"
+								},
+								{
+									"key": "in",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/paymentNotification",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"paymentNotification"
+							]
+						},
+						"description": "The payment notification is used by EasyPay to notify the receiver of payments taken. The receiver can log that payment has been completed and match it to the SOF file that will be received from the settlement system the following day."
+					},
+					"response": [
+						{
+							"name": "Successfull request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/paymentNotification",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"paymentNotification"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"EchoData\": \"<string>\"\n}"
+						},
+						{
+							"name": "Invalid input provided.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/paymentNotification",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"paymentNotification"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"code\": \"<string>\",\n  \"message\": \"<string>\"\n}"
+						},
+						{
+							"name": "Invalid / Expired token provided.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/paymentNotification",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"paymentNotification"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Forbidden / Unauthorized role.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/paymentNotification",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"paymentNotification"
+									]
+								}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Internal Server Error.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/paymentNotification",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"paymentNotification"
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Bad Gateway",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/paymentNotification",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"paymentNotification"
+									]
+								}
+							},
+							"status": "Bad Gateway",
+							"code": 502,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Service Unavailable",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/paymentNotification",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"paymentNotification"
+									]
+								}
+							},
+							"status": "Service Unavailable",
+							"code": 503,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Gateway Timeout",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/paymentNotification",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"paymentNotification"
+									]
+								}
+							},
+							"status": "Gateway Timeout",
+							"code": 504,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "authorisationRequest",
+			"item": [
+				{
+					"name": "Authorisation request",
+					"request": {
+						"auth": {
+							"type": "apikey",
+							"apikey": [
+								{
+									"key": "key",
+									"value": "Authorization",
+									"type": "string"
+								},
+								{
+									"key": "value",
+									"value": "{{apiKey}}",
+									"type": "string"
+								},
+								{
+									"key": "in",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/authorisationRequest",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"authorisationRequest"
+							]
+						},
+						"description": "The authorisation request is used by EasyPay to ask for authorisation to accept the specified payment at the specific amount. The receiver must validate if payment will succeed for the specific account number and amount. It in no way implies that the payment has been accepted or that it will be accepted."
+					},
+					"response": [
+						{
+							"name": "Successfull request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/authorisationRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"authorisationRequest"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"ResponseCode\": \"<string>\",\n  \"Amount\": \"<integer>\",\n  \"expiryDate\": \"<string>\",\n  \"echoData\": \"<string>\",\n  \"ResponseMessage\": \"<string>\"\n}"
+						},
+						{
+							"name": "Invalid input provided.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/authorisationRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"authorisationRequest"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"code\": \"<string>\",\n  \"message\": \"<string>\"\n}"
+						},
+						{
+							"name": "Invalid / Expired token provided.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/authorisationRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"authorisationRequest"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Forbidden / Unauthorized role.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/authorisationRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"authorisationRequest"
+									]
+								}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Internal Server Error.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/authorisationRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"authorisationRequest"
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Bad Gateway",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/authorisationRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"authorisationRequest"
+									]
+								}
+							},
+							"status": "Bad Gateway",
+							"code": 502,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Service Unavailable",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/authorisationRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"authorisationRequest"
+									]
+								}
+							},
+							"status": "Service Unavailable",
+							"code": 503,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Gateway Timeout",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"PaymentDate\": \"<string>\",\n  \"Reference\": \"<string>\",\n  \"Amount\": \"<number>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/authorisationRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"authorisationRequest"
+									]
+								}
+							},
+							"status": "Gateway Timeout",
+							"code": 504,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "infoRequest",
+			"item": [
+				{
+					"name": "Info request",
+					"request": {
+						"auth": {
+							"type": "apikey",
+							"apikey": [
+								{
+									"key": "key",
+									"value": "Authorization",
+									"type": "string"
+								},
+								{
+									"key": "value",
+									"value": "{{apiKey}}",
+									"type": "string"
+								},
+								{
+									"key": "in",
+									"value": "header",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"Reference\": \"<string>\"\n}",
+							"options": {
+								"raw": {
+									"headerFamily": "json",
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/infoRequest",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"infoRequest"
+							]
+						},
+						"description": "The info request is used by EasyPay to ask for information related to the specific account number. It is used especially to determine if the easyPayNumber/account number is valid for payment, to obtain the due payment amount, the minimum and maximum amounts that will be accepted for payment, and any other relevant information."
+					},
+					"response": [
+						{
+							"name": "Successfull request",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"Reference\": \"<string>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/infoRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"infoRequest"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"ResponseCode\": \"<string>\",\n  \"correctAmount\": \"<integer>\",\n  \"minAmount\": \"<integer>\",\n  \"maxAmount\": \"<integer>\",\n  \"expiryDate\": \"<string>\",\n  \"echoData\": \"<string>\",\n  \"fields\": {\n    \"in_e\": \"<string>\",\n    \"sed_97f\": \"<string>\"\n  }\n}"
+						},
+						{
+							"name": "Invalid input provided.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Accept",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"Reference\": \"<string>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/infoRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"infoRequest"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"cookie": [],
+							"body": "{\n  \"code\": \"<string>\",\n  \"message\": \"<string>\"\n}"
+						},
+						{
+							"name": "Invalid / Expired token provided.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"Reference\": \"<string>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/infoRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"infoRequest"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Forbidden / Unauthorized role.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"Reference\": \"<string>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/infoRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"infoRequest"
+									]
+								}
+							},
+							"status": "Forbidden",
+							"code": 403,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Internal Server Error.",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"Reference\": \"<string>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/infoRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"infoRequest"
+									]
+								}
+							},
+							"status": "Internal Server Error",
+							"code": 500,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Bad Gateway",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"Reference\": \"<string>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/infoRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"infoRequest"
+									]
+								}
+							},
+							"status": "Bad Gateway",
+							"code": 502,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Service Unavailable",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"Reference\": \"<string>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/infoRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"infoRequest"
+									]
+								}
+							},
+							"status": "Service Unavailable",
+							"code": 503,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						},
+						{
+							"name": "Gateway Timeout",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									},
+									{
+										"key": "Authorization",
+										"value": "<API Key>",
+										"description": "Added as a part of security scheme: apikey"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"EasyPayNumber\": \"<string>\",\n  \"AccountNumber\": \"<string>\",\n  \"EchoData\": \"<string>\",\n  \"MerchantId\": \"<string>\",\n  \"TerminalId\": \"<integer>\",\n  \"Reference\": \"<string>\"\n}",
+									"options": {
+										"raw": {
+											"headerFamily": "json",
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "{{baseUrl}}/infoRequest",
+									"host": [
+										"{{baseUrl}}"
+									],
+									"path": [
+										"infoRequest"
+									]
+								}
+							},
+							"status": "Gateway Timeout",
+							"code": 504,
+							"_postman_previewlanguage": "text",
+							"header": [],
+							"cookie": [],
+							"body": ""
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "/"
+		}
+	]
+}

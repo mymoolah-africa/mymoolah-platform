@@ -1,0 +1,1 @@
+- [View the OpenAPI YAML](openapi.yaml)

@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql/mysql-server:8.0
+    platform: linux/amd64
+    environment:
+      - MYSQL_ROOT_PASSWORD=mysql
+      - MYSQL_DATABASE=mymoolah_sandbox
+      - MYSQL_USER=mymoolah_user
+      - MYSQL_PASSWORD=mymoolah_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Redis Cache
+  redis:
+    image: redis:6.2-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 20s
+      retries: 10
+
+  # Kafka Message Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    platform: linux/amd64
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      timeout: 20s
+      retries: 10
+
+  # Zookeeper (required for Kafka)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    platform: linux/amd64
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181"]
+      timeout: 20s
+      retries: 10
+
+  # Mojaloop Testing Toolkit API
+  ml-testing-toolkit:
+    image: mojaloop/ml-testing-toolkit:v14.0.0
+    ports:
+      - "5050:5050"
+      - "5001:4040"
+      - "5002:5050"
+    environment:
+      - NODE_ENV=development
+      - PORT=4040
+    depends_on:
+      - mysql
+      - redis
+      - kafka
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4040/"]
+      timeout: 20s
+      retries: 10
+
+  # Mojaloop Testing Toolkit UI
+  ml-testing-toolkit-ui:
+    image: mymoolah-ml-testing-toolkit-ui:custom
+    pull_policy: never
+    ports:
+      - "9661:6060"
+
+    depends_on:
+      - ml-testing-toolkit
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6060"]
+      timeout: 20s
+      retries: 10
+
+volumes:
+  mysql_data:
+  redis_data:

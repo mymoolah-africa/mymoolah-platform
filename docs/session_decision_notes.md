@@ -1,0 +1,55 @@
+# Session Decision Notes
+
+## [2024-07-12] Wallet-First, Closed-Loop, and Mojaloop-First Strategy
+- MyMoolah's urgent business requirement: launch its own wallet for individuals, and provide REST API integration for closed-loop clients (with millions of wallets/accounts) and service providers (VAS, payments) using pre-funded ledger accounts.
+- All new features and integrations must use Mojaloop APIs and best practices, even for closed-loop (internal/partner) flows, to ensure future-proofing, compliance, and interoperability.
+- The platform is architected as a dual-rail (closed-loop + Mojaloop) solution, with a "Mojaloop-first" policy for all transaction flows.
+- Documentation updated across all key files to reflect this strategy and session decisions.
+
+This file is a running log of key decisions, design choices, and important context made during development sessions. Update this file after each major session or decision.
+
+---
+
+## [2024-07-10] Initial Platform & Voucher Engine Decisions
+
+- **Architecture:**
+  - Node.js/Express backend, MySQL (Google Cloud SQL), modular structure (controllers, models, routes, services, utils)
+- **Wallets:**
+  - Each user has a wallet linked to a unique account number (composed of mobile, ID/passport, and a unique code)
+  - Suspense account logic for unallocated deposits (e.g., wrong mobile number)
+- **Vouchers:**
+  - Voucher engine supports partial redemption, brand-locking (merchant/service provider), and configuration
+  - Voucher value must be between 5 and 4000 (validated in controller)
+  - Voucher table schema aligned with API (see `DESCRIBE vouchers;` for current columns)
+- **Best Practices:**
+  - All major decisions and requirements are documented in project files
+  - API endpoints are tested with curl/Postman and validated for business rules
+- **Next Steps:**
+  - Continue to document all major decisions here for future agents/developers
+  - Expand features (VAS, QR, referrals, etc.) as needed
+
+---
+
+## [2024-07-13] Mojaloop Integration Decision
+- Decided to prioritize full Mojaloop integration for MyMoolah wallet to achieve interoperability and industry best practice.
+- Action plan: Document roadmap, update requirements, and begin research and sandbox deployment.
+- All major steps and findings will be documented in requirements.md and new Mojaloop integration docs as needed.
+
+## [2024-07-13] Client Float Account Clarification
+- For B2B clients (e.g., betting operators), MyMoolah only tracks and manages the main prefunded float account for each client. The client is responsible for tracking and managing their own sub-wallets/customers; MyMoolah does not track or manage these sub-wallets.
+
+---
+
+## [2025-08-02] EasyPay Voucher Integration Decision
+- **Database Structure:** Added `easyPayNumber` field to vouchers table to support EasyPay voucher system
+- **Voucher Types:** Added `easypay_pending` voucher type to voucher_types table for proper categorization
+- **EasyPay Number Generation:** Implemented proper 14-digit Luhn algorithm generation following EasyPay standards
+- **Frontend Integration:** Updated VouchersPage.tsx to handle EasyPay voucher display with proper formatting
+- **CORS Configuration:** Added `192.168.3.176:3000` to allowed origins to fix frontend-backend communication
+- **Test Data:** Created 3 EasyPay vouchers with different statuses (Pending, Active, Redeemed) for testing
+- **Documentation:** Updated all `.md` files in `/docs/` directory to reflect EasyPay voucher integration
+- **Decision:** Use existing vouchers table with `easyPayNumber` field rather than separate EasyPayVoucher model for simplicity and consistency
+
+---
+
+*Add new entries below for each session or major decision/change.*
