@@ -34,7 +34,7 @@ const notificationRoutes = require('./routes/notifications.js');
 const voucherRoutes = require('./routes/vouchers.js');
 const voucherTypeRoutes = require('./routes/voucherTypes.js');
 // Temporarily commented out to fix startup issue
-// const peachRoutes = require('./routes/peach.js');
+const peachRoutes = require('./routes/peach.js');
 const vasRoutes = require('./routes/vas.js');
 const merchantRoutes = require('./routes/merchants.js');
 const serviceProviderRoutes = require('./routes/serviceproviders.js');
@@ -44,6 +44,8 @@ const ledgerRoutes = require('./routes/ledger.js');
 const settingsRoutes = require('./routes/settings.js');
 const supplierComparisonRoutes = require('./routes/supplierComparison.js');
 const qrPaymentRoutes = require('./routes/qrpayments.js');
+const requestRoutes = require('./routes/requests.js');
+const requestScheduler = require('./services/requestScheduler');
 
 const sendMoneyRoutes = require('./routes/sendMoney.js');
 const beneficiariesRoutes = require('./routes/beneficiaries.js');
@@ -129,6 +131,8 @@ const limiter = rateLimit({
   message: config.rateLimits.general.message,
   standardHeaders: true,
   legacyHeaders: false,
+  // In development, and for CORS preflight, skip limiting to avoid false CORS failures during polling
+  skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -148,6 +152,7 @@ const authLimiter = rateLimit({
   message: config.rateLimits.auth.message,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -232,7 +237,7 @@ app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/vouchers', voucherRoutes);
 app.use('/api/v1/voucher-types', voucherTypeRoutes);
 // Temporarily commented out to fix startup issue
-// app.use('/api/v1/peach', peachRoutes);
+app.use('/api/v1/peach', peachRoutes);
 app.use('/api/v1/vas', vasRoutes);
 app.use('/api/v1/merchants', merchantRoutes);
 app.use('/api/v1/service-providers', serviceProviderRoutes);
@@ -251,6 +256,7 @@ app.use('/api/v1/suppliers', supplierComparisonRoutes);
 
 // QR Payment Routes
 app.use('/api/v1/qr', qrPaymentRoutes);
+app.use('/api/v1/requests', requestRoutes);
 
 
 
@@ -296,6 +302,7 @@ if (mobilemartRoutesLoaded) {
 }
 console.log(`   - Supplier Comparison: /api/v1/suppliers`);
 console.log(`   - QR Payments: /api/v1/qr`);
+console.log(`   - Requests: /api/v1/requests`);
   
   // Start EasyPay expiration handler (env-gated)
   const expiryToggle = String(process.env.EASYPAY_EXPIRY_HANDLER_ENABLED || '').trim().toLowerCase();
@@ -308,6 +315,19 @@ console.log(`   - QR Payments: /api/v1/qr`);
     }
   } else {
     console.log('⏸️  EasyPay expiration handler disabled by EASYPAY_EXPIRY_HANDLER_ENABLED');
+  }
+
+  // Start recurring request scheduler (env-gated)
+  const recurringToggle = String(process.env.RECURRING_REQUESTS_ENABLED || 'true').trim().toLowerCase();
+  if (recurringToggle === 'true' || recurringToggle === '1' || recurringToggle === 'yes') {
+    try {
+      requestScheduler.start();
+      console.log('✅ Recurring Request Scheduler: Started');
+    } catch (e) {
+      console.error('❌ Failed to start Recurring Request Scheduler:', e);
+    }
+  } else {
+    console.log('⏸️  Recurring Request Scheduler disabled by RECURRING_REQUESTS_ENABLED');
   }
 });
 

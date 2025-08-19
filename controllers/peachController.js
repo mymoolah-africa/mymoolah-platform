@@ -234,13 +234,15 @@ exports.initiatePayShapRtp = async (req, res) => {
       },
     });
 
-    // For RTP, we'll use the same checkout flow but with different parameters
-    const response = await peachClient.createCheckoutPayShap({ 
+    // For RTP, use the dedicated PayShap RTP API
+    const response = await peachClient.createPayShapRtp({ 
       amount, 
       currency, 
       description: description || 'PayShap RTP Request',
-      debtorPhone: creditorPhone,
-      debtorAccountNumber: creditorAccountNumber
+      creditorPhone,
+      creditorAccountNumber,
+      bankCode,
+      bankName
     });
 
     const peachRef = response.checkoutId || response.id || null;

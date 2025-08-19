@@ -79,6 +79,10 @@ db.Transaction = require('./Transaction')(sequelize, Sequelize.DataTypes);
 db.Notification = require('./Notification')(sequelize, Sequelize.DataTypes);
 db.UserNotificationSettings = require('./UserNotificationSettings')(sequelize, Sequelize.DataTypes);
 
+// Payment Requests
+db.PaymentRequest = require('./PaymentRequest')(sequelize, Sequelize.DataTypes);
+db.RecurringPaymentRequest = require('./RecurringPaymentRequest')(sequelize, Sequelize.DataTypes);
+
 // Add Reseller, Tax, and Compliance models to exports
 db.ResellerFloat = require('./ResellerFloat')(sequelize, Sequelize.DataTypes);
 db.TaxConfiguration = require('./TaxConfiguration')(sequelize, Sequelize.DataTypes);

@@ -60,3 +60,5 @@ module.exports = (sequelize, DataTypes) => {
 
   return Beneficiary;
 };
+
+

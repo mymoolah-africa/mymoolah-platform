@@ -2,11 +2,18 @@ import { User, Bell } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useMoolah } from '../contexts/MoolahContext';
+import logoSvg from '../assets/logo.svg';
 
 export function TopBanner() {
   const navigate = useNavigate();
-  const { unreadCount, notifications, markRead } = useMoolah();
+  const { unreadCount, notifications, markRead, blockingNotification, respondToPaymentRequest } = useMoolah();
   const [open, setOpen] = useState(false);
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  // Allow runtime toggle without code changes:
+  // localStorage.setItem('brand_wordmark', '1') -> use text wordmark
+  // localStorage.removeItem('brand_wordmark')   -> use SVG logo
+  const preferWordmark = typeof window !== 'undefined' && localStorage.getItem('brand_wordmark') === '1';
 
   return (
     <header 
@@ -60,7 +67,7 @@ export function TopBanner() {
           <User style={{ width: '20px', height: '20px', color: '#6b7280' }} />
         </button>
 
-        {/* Center: MyMoolah Text Logo */}
+        {/* Center: MyMoolah brand (SVG with graceful fallback to gradient wordmark) */}
         <div 
           style={{ 
             flex: 1, 
@@ -70,23 +77,35 @@ export function TopBanner() {
             padding: '0 16px'
           }}
         >
-          <div 
-            style={{
-              fontSize: '18px',
-              fontWeight: '700',
-              color: '#1f2937',
-              fontFamily: 'Montserrat, sans-serif',
-              background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            MyMoolah
-          </div>
+          {(!preferWordmark && !logoFailed) ? (
+            <img
+              src={logoSvg}
+              alt="MyMoolah"
+              onError={() => setLogoFailed(true)}
+              style={{
+                height: 48, // Double the previous size (24px -> 48px)
+                display: 'block'
+              }}
+            />
+          ) : (
+            <div 
+              style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                color: '#1f2937',
+                fontFamily: 'Montserrat, sans-serif',
+                background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              MyMoolah
+            </div>
+          )}
         </div>
 
         {/* Right: Notifications Icon */}
@@ -151,6 +170,31 @@ export function TopBanner() {
                 ))}
               </ul>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Blocking overlay for payment requests (freezeUntilViewed) */}
+      {blockingNotification && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ maxWidth: 360, margin: '0 16px', background: '#fff', borderRadius: 12, padding: 16, fontFamily: 'Montserrat, sans-serif' }}>
+            <h3 style={{ fontWeight: 700, marginBottom: 6 }}>{blockingNotification.title || 'Payment Request'}</h3>
+            {blockingNotification.message && <p style={{ color: '#374151', marginTop: 0 }}>{blockingNotification.message}</p>}
+            {blockingNotification.payload && (
+              <div style={{ background: '#f8fafc', border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, margin: '12px 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Amount</span>
+                  <strong>R{Number(blockingNotification.payload.amount || 0).toFixed(2)}</strong>
+                </div>
+                {blockingNotification.payload.description && (
+                  <div style={{ marginTop: 6, color: '#6b7280' }}>{blockingNotification.payload.description}</div>
+                )}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button onClick={() => respondToPaymentRequest(Number(blockingNotification.payload?.requestId), 'decline', blockingNotification.id)} style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1px solid #e5e7eb', background: '#fff', cursor: 'pointer' }}>Decline</button>
+              <button onClick={() => respondToPaymentRequest(Number(blockingNotification.payload?.requestId), 'approve', blockingNotification.id)} style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)', color: '#fff', cursor: 'pointer' }}>Approve</button>
+            </div>
           </div>
         </div>
       )}

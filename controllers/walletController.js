@@ -50,10 +50,11 @@ class WalletController {
         success: true,
         message: 'Balance retrieved successfully',
         data: {
-          walletId: wallet.walletId,
+          // Backward compatibility: expose both available and balance fields
+          available: parseFloat(wallet.balance),
           balance: parseFloat(wallet.balance),
-          currency: wallet.currency,
-          status: wallet.status
+          pending: 0, // TODO: Implement pending balance logic
+          currency: wallet.currency
         }
       });
 
@@ -425,7 +426,7 @@ class WalletController {
         receiverWalletId: t.receiverWalletId,
         paymentId: t.paymentId,
         amount: parseFloat(t.amount),
-        type: t.type === 'credit' ? 'deposit' : t.type === 'debit' ? 'payment' : t.type,
+        type: t.type === 'credit' ? 'deposit' : t.type === 'debit' ? 'payment' : t.type === 'send' ? 'sent' : t.type === 'receive' ? 'received' : t.type,
         status: t.status,
         description: t.description,
         fee: t.fee != null ? parseFloat(t.fee) : 0,

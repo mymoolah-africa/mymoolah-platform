@@ -88,9 +88,57 @@ async function createPayShapDebit({ amount, currency = 'ZAR', debtorPhone, debto
   return data;
 }
 
+/**
+ * Create a PayShap RTP (Request to Pay) request
+ * This initiates an inbound payment request to a creditor
+ * Using Checkout V2 API which has better RTP support
+ */
+async function createPayShapRtp({ amount, currency = 'ZAR', description, creditorPhone, creditorAccountNumber, bankCode, bankName }) {
+  const cfg = getConfig();
+  const token = await getAccessToken();
+  
+  // Use Checkout V2 API for RTP
+  const url = `${cfg.checkoutBase}/v2/checkout`;
+  
+  const body = {
+    entityId: cfg.entityIdPayShap,
+    amount: Number(amount).toFixed(2),
+    currency,
+    description: description || 'PayShap RTP Request',
+    // Focus PayShap; force method in UI
+    defaultPaymentMethod: 'PAYSHAP',
+    forceDefaultMethod: true,
+    // Set payment type to RTP
+    paymentType: 'RTP',
+    shopperResultUrl: 'http://localhost:3001/health',
+    // Sandbox simulator toggle
+    ...(cfg.enableTestMode ? { customParameters: { enableTestMode: 'true' } } : {})
+  };
+
+  // Handle both PayShap proxy (mobile number) and direct bank account
+  if (creditorPhone) {
+    // PayShap proxy/alias (mobile number)
+    body.customer = { mobile: creditorPhone };
+  } else if (creditorAccountNumber) {
+    // Direct bank account number
+    body.customer = { accountNumber: creditorAccountNumber };
+    if (bankCode) {
+      body.customer.bankCode = bankCode;
+    }
+    if (bankName) {
+      body.customer.bankName = bankName;
+    }
+  }
+
+  const headers = { Authorization: `Bearer ${token}` };
+  const { data } = await axios.post(url, body, { headers, timeout: 20000 });
+  return data;
+}
+
 module.exports = {
   getAccessToken,
   createPayShapDebit,
+  createPayShapRtp,
   /**
    * Create a Checkout V2 session for PayShap and return the API payload.
    * This uses Bearer JWT minted by the auth service and returns a redirectUrl.

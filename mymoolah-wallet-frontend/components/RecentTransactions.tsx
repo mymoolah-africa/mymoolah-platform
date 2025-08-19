@@ -1,4 +1,5 @@
-import { Icons } from "./Icons";
+// import React from 'react';
+import { Filter } from "./Icons";
 
 interface Transaction {
   id: string;
@@ -73,7 +74,7 @@ export function RecentTransactions() {
           className="p-2 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300"
           aria-label="Filter transactions"
         >
-          <Icons.Filter />
+          <Filter />
         </button>
       </div>
 

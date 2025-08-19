@@ -346,13 +346,13 @@ class ApiService {
   // Admin: get wallet by ID (used to resolve recipient phone for previous recipients)
   async getWalletById(walletId: string): Promise<any> {
     const response = await this.request(`/api/v1/wallets/${walletId}`);
-    return response.data?.wallet;
+    return (response.data as any)?.wallet;
   }
 
   // Beneficiaries API (for future backend integration)
   async getBeneficiaries(): Promise<any[]> {
     const response = await this.request('/api/v1/beneficiaries');
-    return response.data?.beneficiaries || [];
+    return (response.data as any)?.beneficiaries || [];
   }
 
   async addBeneficiary(beneficiary: {

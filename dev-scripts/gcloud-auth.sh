@@ -39,3 +39,5 @@ echo "Done. You can now start the Cloud SQL proxy via:"
 echo "/Users/andremacbookpro/mymoolah/dev-scripts/start-proxy.sh"
 
 
+
+

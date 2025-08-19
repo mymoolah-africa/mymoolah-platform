@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { getToken as getSessionToken } from '../utils/authToken';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -144,6 +144,17 @@ export function VouchersPage() {
   // Redeem voucher state
   const [redeemCode, setRedeemCode] = useState('');
   const [redeemAmount, setRedeemAmount] = useState('');
+
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successModalData, setSuccessModalData] = useState<{
+    title: string;
+    message: string;
+    voucherCode?: string;
+    amount?: string;
+    walletBalance?: string;
+    type: 'easypay' | 'mm_voucher' | 'third_party';
+  } | null>(null);
 
   // Voucher formatting functions
   const generateMMVoucherCode = (): string => {
@@ -468,12 +479,26 @@ export function VouchersPage() {
         throw new Error(result.error || 'Failed to generate voucher');
       }
 
-      // Show success message
-      const successMessage = sellVoucherType === 'easypay_voucher' 
-        ? `🎟️ EasyPay Voucher Generated!\n\nEasyPay Number: ${result.data.easypay_code}\nAmount: R ${amount}\nValid for 4 days\n\nTake this number to any of 8000+ EasyPay retail stores to pay. Once paid, your MyMoolah voucher will be activated automatically.`
-        : `🎟️ ${sellVoucherType === 'mm_voucher' ? 'MyMoolah' : 'Third Party'} Voucher Generated!\n\nVoucher Code: ${result.data.voucher_code}\nAmount: R ${amount}\nWallet Balance: R ${result.data.wallet_balance}\n\nVoucher is ready for use and redemption.`;
-
-      alert(successMessage);
+      // Show success modal
+      if (sellVoucherType === 'easypay_voucher') {
+        setSuccessModalData({
+          title: 'EasyPay Voucher Generated!',
+          message: 'Take this number to any of 8000+ EasyPay retail stores to pay. Once paid, your MyMoolah voucher will be activated automatically.',
+          voucherCode: result.data.easypay_code,
+          amount: `R ${amount}`,
+          type: 'easypay'
+        });
+      } else {
+        setSuccessModalData({
+          title: `${sellVoucherType === 'mm_voucher' ? 'MyMoolah' : 'Third Party'} Voucher Generated!`,
+          message: 'Voucher is ready for use and redemption.',
+          voucherCode: result.data.voucher_code,
+          amount: `R ${amount}`,
+          walletBalance: `R ${result.data.wallet_balance}`,
+          type: sellVoucherType === 'mm_voucher' ? 'mm_voucher' : 'third_party'
+        });
+      }
+      setShowSuccessModal(true);
 
       // Clear form
       setSellAmount('');
@@ -488,7 +513,7 @@ export function VouchersPage() {
 
     } catch (error) {
       console.error('Voucher generation error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to generate voucher. Please try again.');
+      setError(error instanceof Error ? error.message : 'Failed to generate voucher. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -497,7 +522,7 @@ export function VouchersPage() {
   // Redeem voucher
   const handleRedeemVoucher = async () => {
     if (!redeemCode.trim()) {
-      alert('Please enter a voucher code');
+      setError('Please enter a voucher code');
       return;
     }
 
@@ -507,7 +532,7 @@ export function VouchersPage() {
       const redeemAmountNum = redeemAmount ? parseFloat(redeemAmount) : 0;
 
       if (redeemAmountNum < 0) {
-        alert('Invalid redemption amount');
+        setError('Invalid redemption amount');
         setIsLoading(false);
         return;
       }
@@ -534,8 +559,15 @@ export function VouchersPage() {
         throw new Error(result.error || 'Failed to redeem voucher');
       }
 
-      // Show success message
-      alert(`✅ Voucher Redeemed Successfully!\n\nAmount: R ${result.data.redeemed_amount}\nRemaining Balance: R ${result.data.remaining_balance}\nWallet Balance: R ${result.data.wallet_balance}\n\nFunds have been added to your MyMoolah wallet.`);
+      // Show success modal
+      setSuccessModalData({
+        title: 'Voucher Redeemed Successfully!',
+        message: 'Funds have been added to your MyMoolah wallet.',
+        amount: `R ${result.data.redeemed_amount}`,
+        walletBalance: `R ${result.data.wallet_balance}`,
+        type: 'mm_voucher'
+      });
+      setShowSuccessModal(true);
 
       // Clear form
       setRedeemCode('');
@@ -546,7 +578,7 @@ export function VouchersPage() {
 
     } catch (error) {
       console.error('Voucher redemption error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to redeem voucher. Please try again.');
+      setError(error instanceof Error ? error.message : 'Failed to redeem voucher. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -943,6 +975,45 @@ export function VouchersPage() {
 
       {/* Content */}
       <div style={{ padding: '16px' }}>
+        {/* Error Alert */}
+        {error && (
+          <Alert 
+            style={{
+              marginBottom: '16px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              padding: '12px 16px'
+            }}
+          >
+            <AlertCircle style={{ width: '16px', height: '16px', color: '#dc2626', marginRight: '8px' }} />
+            <AlertDescription 
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                color: '#dc2626',
+                margin: 0
+              }}
+            >
+              {error}
+            </AlertDescription>
+            <button
+              onClick={() => setError(null)}
+              style={{
+                position: 'absolute',
+                top: '8px',
+                right: '8px',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px'
+              }}
+            >
+              <X style={{ width: '16px', height: '16px', color: '#dc2626' }} />
+            </button>
+          </Alert>
+        )}
+
         {/* Main Tabs */}
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'vouchers' | 'sell' | 'redeem' | 'history')}>
           <TabsList 
@@ -2879,6 +2950,182 @@ export function VouchersPage() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent 
+          style={{
+            maxWidth: '400px',
+            width: '90vw',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            padding: '24px',
+            border: 'none',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}
+        >
+          <div style={{ textAlign: 'center' }}>
+            {/* Success Icon */}
+            <div 
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                backgroundColor: '#f0fdf4',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px auto'
+              }}
+            >
+              <CheckCircle style={{ width: '32px', height: '32px', color: '#16a34a' }} />
+            </div>
+
+            {/* Title */}
+            <h2 
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '20px',
+                fontWeight: '700',
+                color: '#1f2937',
+                margin: '0 0 8px 0'
+              }}
+            >
+              {successModalData?.title}
+            </h2>
+
+            {/* Voucher Code (if applicable) */}
+            {successModalData?.voucherCode && (
+              <div 
+                style={{
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '12px',
+                  padding: '16px',
+                  margin: '16px 0',
+                  border: '1px solid #e2e8f0'
+                }}
+              >
+                <p 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    color: '#6b7280',
+                    margin: '0 0 4px 0',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}
+                >
+                  {successModalData.type === 'easypay' ? 'EasyPay Number' : 'Voucher Code'}
+                </p>
+                <p 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    color: '#1f2937',
+                    margin: 0,
+                    letterSpacing: '1px'
+                  }}
+                >
+                  {successModalData.voucherCode}
+                </p>
+              </div>
+            )}
+
+            {/* Amount */}
+            {successModalData?.amount && (
+              <div style={{ marginBottom: '16px' }}>
+                <p 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#6b7280',
+                    margin: '0 0 4px 0'
+                  }}
+                >
+                  Amount
+                </p>
+                <p 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: '#16a34a',
+                    margin: 0
+                  }}
+                >
+                  {successModalData.amount}
+                </p>
+              </div>
+            )}
+
+            {/* Wallet Balance (if applicable) */}
+            {successModalData?.walletBalance && (
+              <div style={{ marginBottom: '16px' }}>
+                <p 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#6b7280',
+                    margin: '0 0 4px 0'
+                  }}
+                >
+                  Wallet Balance
+                </p>
+                <p 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    color: '#1f2937',
+                    margin: 0
+                  }}
+                >
+                  {successModalData.walletBalance}
+                </p>
+              </div>
+            )}
+
+            {/* Message */}
+            <p 
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                color: '#6b7280',
+                margin: '0 0 24px 0',
+                lineHeight: '1.5'
+              }}
+            >
+              {successModalData?.message}
+            </p>
+
+            {/* Action Button */}
+            <Button
+              onClick={() => setShowSuccessModal(false)}
+              style={{
+                width: '100%',
+                height: '44px',
+                backgroundColor: '#86BE41',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#7caf3a'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#86BE41'}
+            >
+              OK
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

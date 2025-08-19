@@ -128,7 +128,8 @@ class AuthController {
           idType: user.idType,
           idVerified: user.idVerified,
           kycStatus: user.kycStatus,
-          walletId: wallet.walletId
+          walletId: wallet.walletId,
+          createdAt: user.createdAt
         }
       });
     } catch (error) {
@@ -251,7 +252,8 @@ class AuthController {
           name: `${user.firstName} ${user.lastName}`.trim(),
           kycStatus: user.kycStatus,
           walletId: user.wallet?.walletId,
-          balance: user.wallet?.balance || 0
+          balance: user.wallet?.balance || 0,
+          createdAt: user.createdAt
         }
       });
     } catch (error) {
@@ -287,7 +289,8 @@ class AuthController {
           name: `${user.firstName} ${user.lastName}`.trim(),
           kycStatus: user.kycStatus,
           walletId: user.wallet?.walletId,
-          balance: user.wallet?.balance || 0
+          balance: user.wallet?.balance || 0,
+          createdAt: user.createdAt
         }
       });
     } catch (error) {
@@ -355,7 +358,8 @@ class AuthController {
           name: `${user.firstName} ${user.lastName}`.trim(),
           kycStatus: user.kycStatus,
           walletId: user.wallet?.walletId,
-          balance: user.wallet?.balance || 0
+          balance: user.wallet?.balance || 0,
+          createdAt: user.createdAt
         }
       });
     } catch (error) {

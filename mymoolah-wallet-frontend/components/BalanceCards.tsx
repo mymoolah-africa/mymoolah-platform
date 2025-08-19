@@ -1,4 +1,5 @@
-import { Icons } from "./Icons";
+// import React from 'react';
+import { TrendingUp, ArrowUpRight, ArrowDownLeft } from "./Icons";
 import { useNavigate } from 'react-router-dom';
 
 export function BalanceCards() {
@@ -23,7 +24,7 @@ export function BalanceCards() {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Icons.Wallet />
+            <TrendingUp />
             <div className="text-left">
               <p className="text-white/90 text-sm" style={{ fontFamily: 'Montserrat, sans-serif' }}>
                 Wallet Balance
@@ -53,7 +54,7 @@ export function BalanceCards() {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <Icons.Ticket />
+            <ArrowUpRight />
             <div className="text-left">
               <p className="text-white/90 text-sm" style={{ fontFamily: 'Montserrat, sans-serif' }}>
                 Open Vouchers

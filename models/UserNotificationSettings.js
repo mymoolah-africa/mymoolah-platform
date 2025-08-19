@@ -19,3 +19,5 @@ module.exports = (sequelize, DataTypes) => {
   };
   return UserNotificationSettings;
 };
+
+

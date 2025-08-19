@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { MoolahProvider } from './contexts/MoolahContext';
@@ -18,13 +18,14 @@ import { QRPaymentPage } from './pages/QRPaymentPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { TransactionHistoryPage } from './pages/TransactionHistoryPage';
 import { WalletSettingsPage } from './pages/WalletSettingsPage';
+import { RequestMoneyPage } from './pages/RequestMoneyPage';
 
 // KYC Pages
 import { KYCDocumentsPage } from './pages/KYCDocumentsPage';
 import { KYCStatusPage } from './pages/KYCStatusPage';
 
 // Layout Components
-import { MobileLayout } from './layouts/MobileLayout';
+// import { MobileLayout } from './layouts/MobileLayout';
 
 function AppContent() {
   const location = useLocation();
@@ -89,7 +90,7 @@ function AppContent() {
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/wallet-settings" element={<ProtectedRoute><WalletSettingsPage /></ProtectedRoute>} />
             <Route path="/transactions" element={<ProtectedRoute><TransactionHistoryPage /></ProtectedRoute>} />
-            <Route path="/request-money" element={<ProtectedRoute><div>Request Money Page - Coming Soon</div></ProtectedRoute>} />
+            <Route path="/request-money" element={<ProtectedRoute><RequestMoneyPage /></ProtectedRoute>} />
             <Route path="/airtime-data" element={<ProtectedRoute><div>Airtime & Data Page - Coming Soon</div></ProtectedRoute>} />
             <Route path="/electricity" element={<ProtectedRoute><div>Electricity Page - Coming Soon</div></ProtectedRoute>} />
             <Route path="/bill-payments" element={<ProtectedRoute><div>Bill Payments Page - Coming Soon</div></ProtectedRoute>} />

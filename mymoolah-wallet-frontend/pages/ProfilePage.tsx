@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+// import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
 // Import icons directly from lucide-react
@@ -48,6 +49,23 @@ interface ProfileSection {
   badge?: string;
   badgeColor?: 'green' | 'orange' | 'blue' | 'red';
   disabled?: boolean;
+}
+
+// Helper function to format registration date
+function formatRegistrationDate(createdAt?: string): string {
+  if (!createdAt) {
+    return 'Member since Nov 2024'; // Fallback for users without createdAt
+  }
+  
+  try {
+    const date = new Date(createdAt);
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const year = date.getFullYear();
+    return `Member since ${month} ${year}`;
+  } catch (error) {
+    console.error('Error formatting registration date:', error);
+    return 'Member since Nov 2024'; // Fallback
+  }
 }
 
 export function ProfilePage() {
@@ -419,7 +437,7 @@ export function ProfilePage() {
                     color: '#6b7280'
                   }}
                 >
-                  Member since Nov 2024
+                  {formatRegistrationDate(user?.createdAt)}
                 </span>
               </div>
             </div>
@@ -473,9 +491,7 @@ export function ProfilePage() {
                       justifyContent: 'center'
                     }}
                   >
-                    {React.cloneElement(section.icon as React.ReactElement, {
-                      style: { color: '#ffffff' }
-                    })}
+                    {section.icon}
                   </div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>

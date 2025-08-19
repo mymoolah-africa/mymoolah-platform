@@ -2,6 +2,40 @@
 
 All notable changes to the MyMoolah Treasury Platform will be documented in this file.
 
+## [3.3.0] - 2025-08-19
+
+### Added
+- **Dashboard Voucher Counter Enhancement**: Active vouchers counter now includes both "Active" status vouchers and "Pending Payment" status EasyPay vouchers
+- **Dynamic Registration Date**: Profile page now displays actual user registration date instead of hardcoded text
+- **Beautiful Success Modal**: Replaced browser `alert()` popups with custom-designed modal dialogs for voucher operations
+- **SVG Logo Integration**: TopBanner now uses `logo.svg` with fallback to gradient text
+- **Logo Size Enhancements**: Doubled size of logos on TopBanner and LoginPage for better visibility
+- **LoginPage UI Improvements**: Reduced gap between logo and "Sign In" text, moved card up with negative margin
+
+### Fixed
+- **React Ref Warning**: Fixed Button component to properly handle refs using React.forwardRef
+- **Transaction Icon System**: Standardized transaction icons across Dashboard, Transaction History, and Send Money pages
+- **Transaction Color Logic**: Corrected transaction display colors (green for credits, red for debits)
+- **Missing Transactions**: Fixed transaction display issues on Dashboard, Transaction History, and Send Money pages
+- **Transaction Type Mapping**: Updated frontend to match backend's transformed transaction types
+- **Voucher Expiration Logic**: Enhanced voucher expiration to handle both EasyPay and MM vouchers with proper refund logic
+- **Timezone Handling**: Fixed voucher expiry timezone to display correctly as local time (SAST)
+- **User CreatedAt Field**: Added `createdAt` field to user data for dynamic registration date display
+
+### Changed
+- **Transaction Icon Rules**: Implemented new icon system with wallet, ticket, arrows, airtime, data, electricity icons
+- **Voucher Expiration System**: Updated to handle both EasyPay (refund original amount) and MM vouchers (refund remaining balance)
+- **UI Consistency**: Standardized transaction display across all pages with consistent icons and colors
+- **Logo Display**: TopBanner now uses SVG logo with localStorage toggle for easy switching
+- **LoginPage Layout**: Improved spacing and positioning for better visual hierarchy
+
+### Technical Improvements
+- **TypeScript Fixes**: Resolved various TypeScript errors with proper type assertions
+- **Component Architecture**: Improved Button component with proper ref forwarding
+- **API Integration**: Enhanced transaction data handling with proper wallet ID mapping
+- **Error Handling**: Replaced browser alerts with custom error components
+- **Code Quality**: Improved maintainability and consistency across components
+
 ## [3.2.0] - 2025-08-17
 
 ### Added
@@ -95,6 +129,7 @@ All notable changes to the MyMoolah Treasury Platform will be documented in this
 
 ## Version History
 
+- **3.3.0** (2025-08-19): UI/UX enhancements, voucher system improvements, and various fixes
 - **3.2.0** (2025-08-17): Database integrity restoration and transaction display fixes
 - **3.1.0** (2025-08-16): Transaction description display improvements
 - **3.0.0** (2025-08-14): Complete frontend integration with backend APIs

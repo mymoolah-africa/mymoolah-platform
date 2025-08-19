@@ -12,20 +12,20 @@ const EASYPAY_EXPIRATION_CONFIG = {
   REFUND_DESCRIPTION_WITH_FEE: 'EasyPay voucher expired - refund minus processing fee'
 };
 
-// Handle expired EasyPay vouchers with automatic refund
+// Handle expired vouchers with automatic refund
 const handleExpiredVouchers = async () => {
   try {
-    console.log('🕐 Checking for expired EasyPay vouchers...');
+    console.log('🕐 Checking for expired vouchers...');
     
+    // Find all expired vouchers (both EasyPay and MM vouchers)
     const expiredVouchers = await Voucher.findAll({
       where: {
-        status: 'pending_payment',
-        easyPayCode: { [Op.ne]: null }, // Only EasyPay vouchers
+        status: { [Op.in]: ['pending_payment', 'active'] }, // Handle both pending and active vouchers
         expiresAt: { [Op.lt]: new Date() }
       }
     });
 
-    console.log(`📊 Found ${expiredVouchers.length} expired EasyPay vouchers`);
+    console.log(`📊 Found ${expiredVouchers.length} expired vouchers`);
 
     for (const voucher of expiredVouchers) {
       try {
@@ -38,13 +38,20 @@ const handleExpiredVouchers = async () => {
           continue;
         }
 
-        // Calculate refund amount (with future fee capability)
-        let refundAmount = parseFloat(voucher.originalAmount);
+        // Determine voucher type and calculate refund amount
+        const isEasyPayVoucher = voucher.easyPayCode !== null;
+        const isMMVoucher = voucher.voucherCode && !voucher.easyPayCode;
+        
+        // For MM vouchers, refund the remaining balance
+        // For EasyPay vouchers, refund the original amount (as they haven't been paid yet)
+        let refundAmount = isMMVoucher ? parseFloat(voucher.balance) : parseFloat(voucher.originalAmount);
         let feeAmount = 0;
-        let transactionDescription = EASYPAY_EXPIRATION_CONFIG.REFUND_DESCRIPTION;
+        let transactionDescription = isEasyPayVoucher ? 
+          EASYPAY_EXPIRATION_CONFIG.REFUND_DESCRIPTION : 
+          'MM Voucher expired - balance refund';
 
-        // Future implementation: Apply expiry fee if enabled
-        if (EASYPAY_EXPIRATION_CONFIG.ENABLE_EXPIRY_FEE) {
+        // Future implementation: Apply expiry fee if enabled (only for EasyPay)
+        if (isEasyPayVoucher && EASYPAY_EXPIRATION_CONFIG.ENABLE_EXPIRY_FEE) {
           feeAmount = Math.max(
             EASYPAY_EXPIRATION_CONFIG.MIN_EXPIRY_FEE,
             Math.min(
@@ -69,7 +76,8 @@ const handleExpiredVouchers = async () => {
         });
 
         // Credit user's wallet with refund
-        await wallet.credit(refundAmount, 'easypay_expired_refund');
+        const creditReason = isEasyPayVoucher ? 'easypay_expired_refund' : 'mm_voucher_expired_refund';
+        await wallet.credit(refundAmount, creditReason);
         
         // Create refund transaction record
         const refundTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -85,13 +93,13 @@ const handleExpiredVouchers = async () => {
           fee: 0.00,
           metadata: {
             voucherId: voucher.id,
-            voucherCode: voucher.easyPayCode,
-            voucherType: 'easypay_expired',
+            voucherCode: isEasyPayVoucher ? voucher.easyPayCode : voucher.voucherCode,
+            voucherType: isEasyPayVoucher ? 'easypay_expired' : 'mm_voucher_expired',
             originalAmount: voucher.originalAmount,
             refundAmount: refundAmount,
             feeAmount: feeAmount,
             expiryDate: voucher.expiresAt,
-            refundReason: 'easypay_voucher_expired',
+            refundReason: isEasyPayVoucher ? 'easypay_voucher_expired' : 'mm_voucher_expired',
             auditTrail: {
               processedAt: new Date().toISOString(),
               handler: 'auto_expiration_handler',
@@ -136,14 +144,16 @@ const handleExpiredVouchers = async () => {
           });
         }
 
-        console.log(`✅ Processed expired voucher ${voucher.easyPayCode}:`);
+        const voucherCode = isEasyPayVoucher ? voucher.easyPayCode : voucher.voucherCode;
+        console.log(`✅ Processed expired ${isEasyPayVoucher ? 'EasyPay' : 'MM'} voucher ${voucherCode}:`);
         console.log(`   - Original Amount: R${voucher.originalAmount}`);
-        console.log(`   - Refund Amount: R${refundAmount}`);
+        console.log(`   - ${isMMVoucher ? 'Remaining Balance' : 'Refund Amount'}: R${refundAmount}`);
         console.log(`   - Fee Amount: R${feeAmount}`);
         console.log(`   - User ID: ${voucher.userId}`);
 
       } catch (error) {
-        console.error(`❌ Error processing expired voucher ${voucher.easyPayCode}:`, error);
+        const voucherCode = isEasyPayVoucher ? voucher.easyPayCode : voucher.voucherCode;
+        console.error(`❌ Error processing expired ${isEasyPayVoucher ? 'EasyPay' : 'MM'} voucher ${voucherCode}:`, error);
       }
     }
 
@@ -156,7 +166,7 @@ const handleExpiredVouchers = async () => {
 
 // Start automatic expiration handling (run every hour)
 const startExpirationHandler = () => {
-  console.log('🔄 Starting EasyPay expiration handler...');
+  console.log('🔄 Starting voucher expiration handler...');
   
   // Run immediately on startup
   handleExpiredVouchers();
@@ -164,7 +174,7 @@ const startExpirationHandler = () => {
   // Then run every hour
   setInterval(handleExpiredVouchers, 60 * 60 * 1000);
   
-  console.log('✅ EasyPay expiration handler started successfully');
+  console.log('✅ Voucher expiration handler started successfully');
 };
 
 // Export for manual execution if needed
@@ -182,14 +192,14 @@ exports.triggerExpirationHandler = async (req, res) => {
       });
     }
 
-    console.log('🔧 Manual trigger of EasyPay expiration handler...');
+    console.log('🔧 Manual trigger of voucher expiration handler...');
     
     // Run the expiration handler
     await handleExpiredVouchers();
     
     res.json({
       success: true,
-      message: 'EasyPay expiration handler executed successfully',
+      message: 'Voucher expiration handler executed successfully',
       timestamp: new Date().toISOString(),
       config: {
         enableExpiryFee: EASYPAY_EXPIRATION_CONFIG.ENABLE_EXPIRY_FEE,
@@ -1018,7 +1028,7 @@ exports.listAllVouchersForMe = async (req, res) => {
   }
 };
 
-// Cancel EasyPay voucher with full refund
+// Cancel voucher with refund
 exports.cancelEasyPayVoucher = async (req, res) => {
   try {
     const { voucherId } = req.params;
@@ -1027,19 +1037,18 @@ exports.cancelEasyPayVoucher = async (req, res) => {
       return res.status(400).json({ error: 'Voucher ID is required' });
     }
 
-    // Find the voucher
+    // Find the voucher (both EasyPay and MM vouchers)
     const voucher = await Voucher.findOne({
       where: {
         id: voucherId,
         userId: req.user.id,
-        status: 'pending_payment',
-        easyPayCode: { [Op.ne]: null } // Only EasyPay vouchers
+        status: { [Op.in]: ['pending_payment', 'active'] } // Allow cancellation of pending and active vouchers
       }
     });
 
     if (!voucher) {
       return res.status(404).json({ 
-        error: 'EasyPay voucher not found or cannot be cancelled' 
+        error: 'Voucher not found or cannot be cancelled' 
       });
     }
 

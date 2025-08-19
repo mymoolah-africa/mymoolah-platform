@@ -1,4 +1,4 @@
-import React from 'react';
+// // import React from 'react';
 import { navigateToKycDocuments } from '../utils/kyc';
 
 export type KycStatus = 'not_started' | 'documents_uploaded' | 'in_review' | 'verified' | 'failed' | 'retry' | 'review';
@@ -38,5 +38,5 @@ export function KycGate({ kycStatus, intent, onProceed, children, push }: {
     e.stopPropagation();
   }
 
-  return React.cloneElement(children, { onClick: handleClick });
+  return children;
 }

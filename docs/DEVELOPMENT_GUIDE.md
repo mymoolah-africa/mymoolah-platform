@@ -1,265 +1,239 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: August 17, 2025  
-**Current Version**: 3.2.0  
+**Version**: 3.3.0  
+**Last Updated**: August 19, 2025  
 **Status**: ✅ **PRODUCTION READY - ALL SYSTEMS OPERATIONAL**
 
-This guide provides comprehensive instructions for setting up and developing the MyMoolah Treasury Platform.
+---
+
+## 🎯 **Overview**
+
+This guide provides comprehensive instructions for setting up and developing the MyMoolah Treasury Platform. The platform is a full-stack financial application built with Node.js, Express.js, React, TypeScript, and PostgreSQL.
+
+### **Current System Status**
+- **Backend**: ✅ Complete with 28+ API endpoints
+- **Frontend**: ✅ Complete React/TypeScript application
+- **Database**: ✅ PostgreSQL with full audit trail
+- **Authentication**: ✅ JWT-based security
+- **UI/UX**: ✅ Enhanced with modern design elements
+- **Documentation**: ✅ Comprehensive and up-to-date
 
 ---
 
-## 🎯 **Project Overview**
-
-**MyMoolah Treasury Platform (MMTP)** is a comprehensive financial platform that combines:
-- **Digital Wallet System**: Multi-currency wallet with secure transaction processing
-- **Supplier Integrations**: Real-time data from EasyPay, Flash, and MobileMart
-- **AI-Powered Comparison**: Smart supplier comparison and best deals detection
-- **Complete Audit Trail**: Banking-grade compliance with full money flow tracing
-- **Modern Frontend**: React/TypeScript frontend with real-time API integration
-
----
-
-## 🚀 **Quick Setup (5 Minutes)**
+## 🚀 **Quick Setup**
 
 ### **Prerequisites**
 - Node.js 18+ and npm
-- PostgreSQL database access
-- Git for version control
+- PostgreSQL database (Cloud SQL recommended)
+- Git
+- Code editor (VS Code recommended)
 
-### **One-Command Setup**
+### **1. Clone Repository**
 ```bash
-# Clone and setup
 git clone <repository-url>
 cd mymoolah
-npm run setup:dev
 ```
 
-### **Manual Setup**
+### **2. Backend Setup**
 ```bash
-# Backend setup
+# Install dependencies
 npm install
-cp .env.example .env
-# Edit .env with your database credentials
 
-# Frontend setup
+# Copy environment template
+cp env.template .env
+
+# Edit .env with your configuration
+# Required variables:
+# DATABASE_URL=postgresql://...
+# JWT_SECRET=your-secret-key
+# CORS_ORIGINS=http://localhost:3000
+
+# Start development server
+npm run dev
+# Backend runs on http://localhost:3001
+```
+
+### **3. Frontend Setup**
+```bash
+# Navigate to frontend directory
 cd mymoolah-wallet-frontend
-npm install
-cp .env.example .env.local
-# Edit .env.local with your API URL
 
-# Start development
-npm start                    # Backend (port 3001)
-npm run dev                 # Frontend (port 3000)
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+# Frontend runs on http://localhost:3000
+```
+
+### **4. Database Setup**
+```bash
+# Run migrations
+npx sequelize-cli db:migrate
+
+# Seed initial data
+npx sequelize-cli db:seed:all
 ```
 
 ---
 
 ## 🏗️ **Project Architecture**
 
-### **Directory Structure**
+### **Backend Structure**
 ```
 mymoolah/
-├── controllers/           # API controllers and business logic
-├── models/               # Database models and schemas
-├── routes/               # API route definitions
-├── middleware/           # Authentication and validation middleware
-├── config/               # Configuration files and database setup
-├── scripts/              # Utility and setup scripts
-├── docs/                 # Project documentation
-├── mymoolah-wallet-frontend/  # React frontend application
-└── package.json          # Backend dependencies and scripts
+├── controllers/          # API controllers
+│   ├── authController.js      # Authentication logic
+│   ├── walletController.js    # Wallet operations
+│   ├── voucherController.js   # Voucher management
+│   ├── userController.js      # User management
+│   └── ...
+├── models/              # Database models
+│   ├── User.js               # User model
+│   ├── Wallet.js             # Wallet model
+│   ├── Transaction.js        # Transaction model
+│   ├── Voucher.js            # Voucher model
+│   └── ...
+├── routes/              # API routes
+│   ├── auth.js               # Authentication routes
+│   ├── wallets.js            # Wallet routes
+│   ├── vouchers.js           # Voucher routes
+│   └── ...
+├── middleware/          # Custom middleware
+│   ├── auth.js               # JWT authentication
+│   ├── rateLimiter.js        # Rate limiting
+│   └── ...
+├── services/            # Business logic
+│   ├── WalletService.js      # Wallet business logic
+│   ├── kycService.js         # KYC processing
+│   └── ...
+├── migrations/          # Database migrations
+├── seeders/             # Database seeders
+└── docs/                # Documentation
 ```
 
-### **Technology Stack**
+### **Frontend Structure**
 ```
-Backend
-├── Runtime: Node.js 18+ with Express.js
-├── Database: PostgreSQL with Sequelize ORM
-├── Authentication: JWT with bcrypt
-├── Validation: Joi and custom middleware
-└── Testing: Jest with supertest
-
-Frontend
-├── Framework: React 18 with TypeScript
-├── State Management: React Context API
-├── Styling: Tailwind CSS with custom components
-├── Build Tool: Vite for fast development
-└── Testing: React Testing Library
-```
-
----
-
-## 🔧 **Development Environment Setup**
-
-### **1. Backend Environment**
-```bash
-# Create .env file
-cp .env.example .env
-
-# Required environment variables
-DATABASE_URL=postgresql://username:password@localhost:5432/mymoolah_db
-JWT_SECRET=your_32_character_jwt_secret_key
-ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-PORT=3001
-NODE_ENV=development
-```
-
-### **2. Frontend Environment**
-```bash
-# Create .env.local file
-cd mymoolah-wallet-frontend
-cp .env.example .env.local
-
-# Required environment variables
-VITE_API_BASE_URL=http://localhost:3001/api/v1
-VITE_APP_NAME=MyMoolah Treasury Platform
-```
-
-### **3. Database Setup**
-```bash
-# Start Cloud SQL Auth Proxy (for local development)
-cloud-sql-proxy --instances=mmtp_pg:us-central1:mmtp-pg
-
-# Test database connection
-psql "postgresql://username:password@localhost:5432/mymoolah_db"
-
-# Run database migrations
-npx sequelize-cli db:migrate
-
-# Seed initial data (optional)
-npm run seed
+mymoolah-wallet-frontend/
+├── components/          # Reusable components
+│   ├── TopBanner.tsx          # Header with logo
+│   ├── ui/                    # UI component library
+│   └── ...
+├── pages/               # Page components
+│   ├── DashboardPage.tsx      # Main dashboard
+│   ├── LoginPage.tsx          # Authentication
+│   ├── SendMoneyPage.tsx      # Money transfer
+│   ├── TransactionHistoryPage.tsx # Transaction list
+│   ├── VouchersPage.tsx       # Voucher management
+│   └── ...
+├── contexts/            # React contexts
+│   ├── AuthContext.tsx        # Authentication state
+│   └── MoolahContext.tsx      # Global app state
+├── services/            # API services
+│   └── apiService.ts          # API communication
+├── utils/               # Utility functions
+│   ├── transactionIcons.tsx   # Transaction icons
+│   └── ...
+└── assets/              # Static assets
+    ├── logo.svg              # Application logo
+    └── ...
 ```
 
 ---
 
-## 🚀 **Development Workflow**
+## 🔧 **Development Workflow**
 
-### **Starting Development Servers**
-```bash
-# Terminal 1 - Backend
-cd /Users/andremacbookpro/mymoolah
-npm start
+### **Working Directory Rules**
+- **✅ Always work in `/mymoolah/` directory**
+- **❌ Never work in root directory**
+- **✅ All code changes in subdirectories**
+- **✅ Documentation updates in `/docs/`**
 
-# Terminal 2 - Frontend
-cd /Users/andremacbookpro/mymoolah/mymoolah-wallet-frontend
-npm run dev
+### **Code Standards**
+
+#### **Backend (Node.js/Express)**
+```javascript
+// Use ES6+ features
+const express = require('express');
+const { User, Wallet } = require('../models');
+
+// Consistent error handling
+try {
+  const result = await someOperation();
+  res.json({ success: true, data: result });
+} catch (error) {
+  console.error('Error:', error);
+  res.status(500).json({ success: false, error: error.message });
+}
+
+// JSDoc comments for functions
+/**
+ * Create a new wallet for a user
+ * @param {number} userId - The user ID
+ * @param {string} currency - The wallet currency
+ * @returns {Promise<Object>} The created wallet
+ */
+async function createWallet(userId, currency) {
+  // Implementation
+}
 ```
 
-### **Development Commands**
-```bash
-# Backend commands
-npm start              # Start development server
-npm run dev            # Start with nodemon (auto-restart)
-npm test               # Run tests
-npm run test:watch     # Run tests in watch mode
-npm run lint           # Lint code
-npm run lint:fix       # Fix linting issues
-
-# Frontend commands
-cd mymoolah-wallet-frontend
-npm run dev            # Start development server
-npm run build          # Build for production
-npm test               # Run tests
-npm run lint           # Lint code
-```
-
-### **Hot Reload & Development**
-- **Backend**: Auto-restart on file changes (nodemon)
-- **Frontend**: Hot module replacement (Vite)
-- **Database**: Sequelize migrations for schema changes
-- **API**: Live reload with automatic route registration
-
----
-
-## 📊 **Current Development Status**
-
-### **✅ Completed Systems (100% Operational)**
-1. **Project Foundation** - Complete development environment
-2. **Database Infrastructure** - PostgreSQL with full audit trail
-3. **Core Wallet System** - Multi-currency wallet functionality
-4. **Authentication & Security** - JWT-based secure authentication
-5. **Supplier Integrations** - EasyPay, Flash, MobileMart
-6. **Frontend Integration** - Complete React/TypeScript integration
-7. **Transaction Display System** - Clean, readable descriptions
-8. **Database Integrity & Audit Trail** - Full regulatory compliance
-
-### **🎯 Next Development Phase**
-- **Additional Frontend Pages**: Profile management, settings, notifications
-- **Enhanced UI/UX**: Better mobile responsiveness, animations, themes
-- **Advanced Features**: Recurring payments, scheduled transfers
-- **Analytics Dashboard**: Spending patterns, financial insights
-
----
-
-## 🔍 **Development Best Practices**
-
-### **Code Organization**
+#### **Frontend (React/TypeScript)**
 ```typescript
-// Controllers: Business logic and request handling
-export const sendMoney = async (req: Request, res: Response) => {
+// Use TypeScript interfaces
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  createdAt?: string;
+}
+
+// Functional components with hooks
+const UserProfile: React.FC<{ user: User }> = ({ user }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Implementation
+  return (
+    <div>
+      {/* JSX */}
+    </div>
+  );
+};
+
+// Proper error handling
+const handleSubmit = async (data: FormData) => {
   try {
-    // Input validation
-    // Business logic
-    // Database operations
-    // Response formatting
+    setIsLoading(true);
+    const result = await apiService.submitData(data);
+    // Handle success
   } catch (error) {
-    // Error handling
+    console.error('Error:', error);
+    // Handle error
+  } finally {
+    setIsLoading(false);
   }
 };
-
-// Models: Database schema and relationships
-export class Transaction extends Model {
-  static associate(models: any) {
-    // Define relationships
-  }
-}
-
-// Routes: API endpoint definitions
-router.post('/send-money', authenticateToken, sendMoney);
 ```
 
-### **Error Handling**
-```typescript
-// Consistent error response format
-const errorResponse = (res: Response, message: string, status: number = 400) => {
-  return res.status(status).json({
-    success: false,
-    message,
-    timestamp: new Date().toISOString()
-  });
-};
+### **Git Workflow**
+```bash
+# Create feature branch
+git checkout -b feature/new-feature
 
-// Try-catch with proper error logging
-try {
-  // Operation
-} catch (error) {
-  console.error('Operation failed:', error);
-  return errorResponse(res, 'Operation failed', 500);
-}
-```
+# Make changes and commit
+git add .
+git commit -m "feat: add new feature description"
 
-### **Database Operations**
-```typescript
-// Use transactions for complex operations
-const transaction = await sequelize.transaction();
-try {
-  // Multiple database operations
-  await transaction.commit();
-} catch (error) {
-  await transaction.rollback();
-  throw error;
-}
+# Push to remote
+git push origin feature/new-feature
 
-// Proper error handling for database queries
-const user = await User.findByPk(userId);
-if (!user) {
-  throw new Error('User not found');
-}
+# Create pull request
+# Code review and merge
 ```
 
 ---
 
-## 🧪 **Testing Strategy**
+## 🧪 **Testing**
 
 ### **Backend Testing**
 ```bash
@@ -267,19 +241,17 @@ if (!user) {
 npm test
 
 # Run specific test file
-npm test -- --testNamePattern="User Authentication"
+npm test -- tests/auth.test.js
 
-# Run tests in watch mode
-npm run test:watch
-
-# Generate coverage report
+# Run tests with coverage
 npm run test:coverage
 ```
 
 ### **Frontend Testing**
 ```bash
-# Run all tests
 cd mymoolah-wallet-frontend
+
+# Run tests
 npm test
 
 # Run tests in watch mode
@@ -291,155 +263,321 @@ npm run test:coverage
 
 ### **API Testing**
 ```bash
-# Test health endpoint
-curl http://localhost:3001/api/v1/health
+# Test authentication
+curl -X POST http://localhost:3001/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"identifier": "+27123456789", "password": "password123"}'
 
-# Test authenticated endpoint
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-     http://localhost:3001/api/v1/wallets/balance
-
-# Test with data
-curl -X POST \
-     -H "Content-Type: application/json" \
-     -H "Authorization: Bearer YOUR_TOKEN" \
-     -d '{"amount": 100, "recipientPhone": "+27123456789"}' \
-     http://localhost:3001/api/v1/wallets/send-money
+# Test wallet operations
+curl -X GET http://localhost:3001/api/v1/wallets/1/balance \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 ---
 
-## 🔧 **Common Development Tasks**
+## 🔒 **Security Guidelines**
 
-### **Adding New API Endpoints**
-1. **Create Controller**: Add business logic in `controllers/`
-2. **Define Route**: Add route in appropriate `routes/` file
-3. **Add Validation**: Create validation schema if needed
-4. **Write Tests**: Add unit and integration tests
-5. **Update Documentation**: Update API documentation
+### **Authentication**
+- Always use JWT tokens for API authentication
+- Implement proper token refresh mechanisms
+- Use bcrypt for password hashing
+- Validate all input data
 
-### **Database Schema Changes**
-1. **Create Migration**: `npx sequelize-cli migration:generate --name=add_new_field`
-2. **Update Model**: Modify model file to reflect changes
-3. **Run Migration**: `npx sequelize-cli db:migrate`
-4. **Update Tests**: Modify tests to work with new schema
-5. **Verify Changes**: Test the new schema thoroughly
+### **API Security**
+```javascript
+// Rate limiting
+const rateLimit = require('express-rate-limit');
+app.use('/api/', rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+}));
 
-### **Frontend Component Development**
-1. **Create Component**: Add new component in appropriate directory
-2. **Add Types**: Define TypeScript interfaces
-3. **Implement Logic**: Add business logic and state management
-4. **Style Component**: Use Tailwind CSS for styling
-5. **Add Tests**: Write component tests
-6. **Update Routes**: Add navigation if needed
+// CORS configuration
+app.use(cors({
+  origin: process.env.CORS_ORIGINS.split(','),
+  credentials: true
+}));
+
+// Input validation
+const { body, validationResult } = require('express-validator');
+app.post('/api/v1/auth/register', [
+  body('email').isEmail(),
+  body('password').isLength({ min: 8 }),
+  // Handle validation errors
+]);
+```
+
+### **Database Security**
+- Use parameterized queries (Sequelize ORM)
+- Implement proper access controls
+- Regular security audits
+- Encrypt sensitive data
 
 ---
 
-## 🚨 **Troubleshooting Common Issues**
+## 📊 **Performance Optimization**
 
-### **Database Connection Issues**
+### **Backend Optimization**
+```javascript
+// Database query optimization
+const users = await User.findAll({
+  include: [{
+    model: Wallet,
+    attributes: ['balance']
+  }],
+  where: { status: 'active' },
+  limit: 50
+});
+
+// Caching strategies
+const cache = require('redis');
+const client = cache.createClient();
+
+// Cache frequently accessed data
+const getCachedData = async (key) => {
+  let data = await client.get(key);
+  if (!data) {
+    data = await fetchFromDatabase();
+    await client.setex(key, 3600, JSON.stringify(data));
+  }
+  return JSON.parse(data);
+};
+```
+
+### **Frontend Optimization**
+```typescript
+// React optimization
+import React, { useMemo, useCallback } from 'react';
+
+// Memoize expensive calculations
+const expensiveValue = useMemo(() => {
+  return computeExpensiveValue(data);
+}, [data]);
+
+// Memoize callbacks
+const handleClick = useCallback(() => {
+  // Handle click
+}, [dependencies]);
+
+// Lazy loading
+const LazyComponent = React.lazy(() => import('./LazyComponent'));
+```
+
+---
+
+## 🐛 **Debugging**
+
+### **Backend Debugging**
+```javascript
+// Enable debug logging
+DEBUG=app:* npm run dev
+
+// Add debug statements
+console.log('Debug:', { variable1, variable2 });
+
+// Use debugger
+debugger; // Will pause execution in debugger
+
+// Error tracking
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+```
+
+### **Frontend Debugging**
+```typescript
+// React DevTools
+// Install React Developer Tools browser extension
+
+// Console debugging
+console.log('Component state:', state);
+console.log('Props:', props);
+
+// React error boundaries
+class ErrorBoundary extends React.Component {
+  componentDidCatch(error, errorInfo) {
+    console.error('Error caught:', error, errorInfo);
+  }
+}
+```
+
+---
+
+## 📚 **Documentation Standards**
+
+### **Code Documentation**
+```javascript
+/**
+ * User authentication controller
+ * Handles user registration, login, and token management
+ * 
+ * @module controllers/authController
+ * @requires express
+ * @requires bcryptjs
+ * @requires jsonwebtoken
+ */
+
+/**
+ * Register a new user
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @returns {Object} JSON response with user data and token
+ */
+exports.register = async (req, res) => {
+  // Implementation
+};
+```
+
+### **API Documentation**
+```javascript
+/**
+ * @api {post} /api/v1/auth/register Register User
+ * @apiName RegisterUser
+ * @apiGroup Authentication
+ * @apiVersion 1.0.0
+ *
+ * @apiParam {String} name User's full name
+ * @apiParam {String} identifier Phone number or email
+ * @apiParam {String} password User's password
+ *
+ * @apiSuccess {Boolean} success Success status
+ * @apiSuccess {Object} data User data and token
+ * @apiSuccess {String} data.token JWT token
+ * @apiSuccess {Object} data.user User information
+ */
+```
+
+---
+
+## 🚀 **Deployment**
+
+### **Environment Configuration**
 ```bash
-# Check Cloud SQL Auth Proxy
-ps aux | grep cloud-sql-proxy
-
-# Test database connection
-psql "postgresql://username:password@localhost:5432/mymoolah_db"
-
-# Check environment variables
-echo $DATABASE_URL
+# Production environment variables
+NODE_ENV=production
+DATABASE_URL=postgresql://...
+JWT_SECRET=your-production-secret
+CORS_ORIGINS=https://yourdomain.com
+PORT=3001
 ```
 
-### **Frontend Build Issues**
+### **Database Migration**
+```bash
+# Run migrations in production
+NODE_ENV=production npx sequelize-cli db:migrate
+
+# Verify migration status
+npx sequelize-cli db:migrate:status
+```
+
+### **Build and Deploy**
+```bash
+# Build frontend
+cd mymoolah-wallet-frontend
+npm run build
+
+# Start production server
+cd ..
+npm start
+```
+
+---
+
+## 📋 **Development Checklist**
+
+### **Before Starting Development**
+- [ ] Environment variables configured
+- [ ] Database migrations up to date
+- [ ] Dependencies installed
+- [ ] Development servers running
+- [ ] Git repository cloned and up to date
+
+### **During Development**
+- [ ] Follow coding standards
+- [ ] Write tests for new features
+- [ ] Update documentation
+- [ ] Test on multiple browsers/devices
+- [ ] Check for security vulnerabilities
+
+### **Before Committing**
+- [ ] All tests passing
+- [ ] Code linting clean
+- [ ] Documentation updated
+- [ ] Security review completed
+- [ ] Performance impact assessed
+
+### **Before Deploying**
+- [ ] Production environment configured
+- [ ] Database migrations applied
+- [ ] Security audit completed
+- [ ] Performance testing done
+- [ ] Backup procedures verified
+
+---
+
+## 🆘 **Troubleshooting**
+
+### **Common Issues**
+
+#### **Database Connection Issues**
+```bash
+# Check database connection
+npx sequelize-cli db:migrate:status
+
+# Reset database (development only)
+npx sequelize-cli db:drop
+npx sequelize-cli db:create
+npx sequelize-cli db:migrate
+npx sequelize-cli db:seed:all
+```
+
+#### **Frontend Build Issues**
 ```bash
 # Clear node_modules and reinstall
 rm -rf node_modules package-lock.json
 npm install
 
-# Clear Vite cache
-rm -rf node_modules/.vite
-
-# Check for TypeScript errors
-npm run type-check
+# Clear build cache
+npm run build -- --force
 ```
 
-### **API Integration Issues**
+#### **API Endpoint Issues**
 ```bash
-# Check backend server status
-curl http://localhost:3001/api/v1/health
+# Check server logs
+npm run dev
 
-# Verify CORS configuration
-curl -H "Origin: http://localhost:3000" \
-     -H "Access-Control-Request-Method: POST" \
-     -H "Access-Control-Request-Headers: X-Requested-With" \
-     -X OPTIONS \
-     http://localhost:3001/api/v1/wallets/balance
+# Test endpoints with curl
+curl -X GET http://localhost:3001/api/v1/health
 ```
 
 ---
 
-## 📚 **Development Resources**
+## 📞 **Support & Resources**
 
-### **Essential Documentation**
-- [**API Documentation**](API_DOCUMENTATION.md) - Complete API reference
-- [**Project Status**](PROJECT_STATUS.md) - Current system status
-- [**Quick Fixes**](QUICK_FIXES.md) - Common issues and solutions
-- [**Agent Handover**](AGENT_HANDOVER.md) - Development session handovers
+### **Documentation**
+- **[API Documentation](API_DOCUMENTATION.md)**: Complete API reference
+- **[Project Status](PROJECT_STATUS.md)**: Current system status
+- **[Quick Fixes](QUICK_FIXES.md)**: Common issues and solutions
+- **[Testing Guide](TESTING_GUIDE.md)**: Testing procedures
 
-### **External Resources**
-- [**Node.js Documentation**](https://nodejs.org/docs/)
-- [**Express.js Guide**](https://expressjs.com/en/guide/routing.html)
-- [**Sequelize Documentation**](https://sequelize.org/docs/v6/)
-- [**React Documentation**](https://react.dev/)
-- [**TypeScript Handbook**](https://www.typescriptlang.org/docs/)
+### **Tools & Resources**
+- **Postman**: API testing and documentation
+- **React DevTools**: Frontend debugging
+- **Sequelize CLI**: Database management
+- **Jest**: Testing framework
+- **ESLint**: Code linting
 
-### **Development Tools**
-- **VS Code Extensions**: ESLint, Prettier, TypeScript, Tailwind CSS IntelliSense
-- **API Testing**: Postman, Insomnia, or curl
-- **Database Management**: pgAdmin, DBeaver, or psql
-- **Git Tools**: SourceTree, GitKraken, or command line
-
----
-
-## 🚀 **Deployment Preparation**
-
-### **Production Checklist**
-- [ ] **Environment Variables**: All production values configured
-- [ ] **Database**: Production database configured and tested
-- [ ] **Security**: JWT secrets and API keys updated
-- [ ] **Testing**: All tests passing
-- [ ] **Documentation**: Updated and accurate
-- [ ] **Monitoring**: Logging and error tracking configured
-
-### **Deployment Commands**
-```bash
-# Production build
-npm run build
-cd mymoolah-wallet-frontend && npm run build
-
-# Start production servers
-NODE_ENV=production npm start
-```
+### **Community**
+- **GitHub Issues**: Bug reports and feature requests
+- **Documentation**: Comprehensive guides and tutorials
+- **Code Reviews**: Peer review process
 
 ---
 
-## 📞 **Getting Help**
-
-### **Immediate Issues**
-1. **Check Quick Fixes**: [QUICK_FIXES.md](QUICK_FIXES.md)
-2. **Review Recent Changes**: [CHANGELOG.md](CHANGELOG.md)
-3. **Check System Status**: [PROJECT_STATUS.md](PROJECT_STATUS.md)
-
-### **Development Questions**
-1. **Review This Guide**: Check relevant sections
-2. **Examine Code**: Look at existing implementations
-3. **Check Documentation**: Review API and integration guides
-
-### **Emergency Procedures**
-1. **Database Issues**: Use backup scripts in `/scripts/`
-2. **System Failures**: Check logs and restart services
-3. **Critical Issues**: Review recent changes and rollback if needed
+**Development Guide Version**: 3.3.0  
+**Last Updated**: August 19, 2025  
+**Status**: ✅ **COMPLETE AND UP-TO-DATE**
 
 ---
 
-**Development Guide**: ✅ **UP TO DATE**  
-**All Systems**: ✅ **OPERATIONAL**  
-**Ready for Development**: 🚀 **YES** 
+*This development guide provides comprehensive instructions for working with the MyMoolah Treasury Platform. Follow these guidelines to ensure consistent, high-quality development practices.* 

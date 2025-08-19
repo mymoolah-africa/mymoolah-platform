@@ -1,31 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, type RecipientInfo, type RecipientMethod, type PaymentQuote, type TransferResult } from '../services/apiService';
+import { getToken } from '../utils/authToken';
+import { APP_CONFIG } from '../config/app-config';
+
+// Import centralized transaction icon utility
+import { getTransactionIcon } from '../utils/transactionIcons.tsx';
+
 import { 
   Search, 
   Plus, 
   ArrowLeft,
-  
-  
-  
-  
-  Phone,
   Building2,
-  
   Send,
   Star,
-  
   Loader2,
-  
   Wallet,
-  
-  Ticket,
-  ArrowDownLeft,
-  ArrowUpRight,
-  ShoppingBag,
-  Coffee,
-  Car,
   ChevronRight
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
@@ -65,6 +56,9 @@ interface Transaction {
   description?: string;
   kind?: 'send' | 'other';
   receiverWalletId?: string;
+  type: 'send' | 'receive' | 'deposit' | 'withdraw' | 'transfer' | 'payment' | 'refund' | 'fee';
+  senderWalletId?: string;
+  metadata?: any;
 }
 
 // South African Banks Supporting PayShap
@@ -83,18 +77,113 @@ const SA_BANKS = [
 
 // No mock data; pull from backend
 
+// Function to clean up transaction descriptions - remove "Ref:" prefix
+function getCleanTransactionText(description: string): string {
+  let cleanDescription = description || '';
+  
+  // Remove "Ref:" prefix and extract the actual description
+  // Convert "Leonie Botes | Ref:test balance refresh" to "Leonie Botes | test balance refresh"
+  if (cleanDescription.includes('| Ref:')) {
+    // Extract the name part (before the pipe)
+    const namePart = cleanDescription.split('|')[0].trim();
+    
+    // Extract the description part (after "Ref:")
+    const refPart = cleanDescription.split('| Ref:')[1] || '';
+    const actualDescription = refPart.trim();
+    
+    // Limit description to 20 characters
+    const truncatedDescription = actualDescription.length > 20 
+      ? actualDescription.substring(0, 20) + '...' 
+      : actualDescription;
+    
+    return `${namePart} | ${truncatedDescription}`;
+  }
+  
+  // Also handle variations like "Ref:" without the pipe
+  if (cleanDescription.includes('Ref:')) {
+    // Extract the name part (before "Ref:")
+    const namePart = cleanDescription.split('Ref:')[0].trim();
+    
+    // Extract the description part (after "Ref:")
+    const refPart = cleanDescription.split('Ref:')[1] || '';
+    const actualDescription = refPart.trim();
+    
+    // Limit description to 20 characters
+    const truncatedDescription = actualDescription.length > 20 
+      ? actualDescription.substring(0, 20) + '...' 
+      : actualDescription;
+    
+    return `${namePart}${truncatedDescription}`;
+  }
+  
+  return cleanDescription;
+}
+
 export function SendMoneyPage() {
   const navigate = useNavigate();
   const { requiresKYC } = useAuth();
+  // Local state management for scalable architecture
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]);
+
+  // Fetch transactions from API
+  const fetchTransactions = async () => {
+    try {
+      const token = getToken();
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=50`, { headers });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          const sourceList = Array.isArray(data.data)
+            ? data.data
+            : (data.data.transactions || []);
+
+          const transformedTransactions = sourceList.map((tx: any) => {
+            // Backend transforms: credit->deposit, debit->payment, send->sent, receive->received
+            const isCredit = ['deposit', 'received'].includes(tx.type);
+            const displayType = isCredit ? 'received' : 'sent';
+
+            return {
+              id: tx.id || `tx_${tx.transactionId}`,
+              type: displayType,
+              amount: isCredit ? Math.abs(tx.amount) : -Math.abs(tx.amount),
+              currency: tx.currency || 'ZAR',
+              description: tx.description || 'Transaction',
+              date: new Date(tx.createdAt || tx.date).toLocaleDateString('en-ZA', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              }),
+              timestamp: new Date(tx.createdAt || tx.date).toISOString(),
+              status: tx.status || 'completed',
+              counterparty: tx.metadata?.counterpartyIdentifier || 'Unknown'
+            };
+          });
+          setAllTransactions(transformedTransactions);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    }
+  };
+
+  // Load transactions on component mount
+  useEffect(() => {
+    fetchTransactions();
+  }, []);
   
   // State Management
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'alphabetical' | 'lastPaid' | 'favorite'>('lastPaid');
   const [filterType, setFilterType] = useState<'all' | 'mymoolah' | 'bank'>('all');
   const [isOneTimeMode, setIsOneTimeMode] = useState(false);
-  const [showAllTransactions] = useState(false);
   
   // API Integration State
   const [recipientInfo, setRecipientInfo] = useState<RecipientInfo | null>(null);
@@ -133,6 +222,111 @@ export function SendMoneyPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [saveAsBeneficiary, setSaveAsBeneficiary] = useState(false);
 
+  // Transform MoolahContext transactions to SendMoneyPage format
+  const transformedTransactions = useMemo(() => {
+    return allTransactions.map((tx) => {
+      // Map MoolahContext types to SendMoneyPage types
+      const mapType = (moolahType: string): 'send' | 'receive' | 'deposit' | 'withdraw' | 'transfer' | 'payment' | 'refund' | 'fee' => {
+        switch (moolahType) {
+          case 'sent': return 'send';
+          case 'received': return 'receive';
+          case 'payment': return 'payment';
+          case 'deposit': return 'deposit';
+          default: return 'send';
+        }
+      };
+
+      const desc = String(tx.description || '');
+      const isCreditTx = (tx as any).type === 'received';
+      const isDebitTx = (tx as any).type === 'sent' || (tx as any).type === 'payment';
+
+      // Create a user-friendly primary text
+      let displayName = desc || 'Transaction';
+      
+      // Handle voucher transactions
+      if (tx.description && tx.description.toLowerCase().includes('voucher')) {
+        // Extract voucher number if present
+        const voucherMatch = tx.description.match(/(\d{12,16})/);
+        if (voucherMatch) {
+          const voucherNumber = voucherMatch[1];
+          let formattedVoucher: string;
+          if (voucherNumber.length === 14) {
+            formattedVoucher = voucherNumber.slice(0, 1) + ' ' + 
+                              voucherNumber.slice(1, 5) + ' ' + 
+                              voucherNumber.slice(5, 9) + ' ' + 
+                              voucherNumber.slice(9, 13) + ' ' + 
+                              voucherNumber.slice(13);
+          } else if (voucherNumber.length === 16) {
+            formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
+                              voucherNumber.slice(4, 8) + ' ' + 
+                              voucherNumber.slice(8, 12) + ' ' + 
+                              voucherNumber.slice(12);
+          } else {
+            formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
+                              voucherNumber.slice(4, 8) + ' ' + 
+                              voucherNumber.slice(8);
+          }
+          
+          if (tx.description.toLowerCase().includes('purchase')) {
+            displayName = `Voucher purchase: ${formattedVoucher}`;
+          } else if (tx.description.toLowerCase().includes('redemption')) {
+            displayName = `Voucher redemption: ${formattedVoucher}`;
+          } else {
+            displayName = `Voucher transaction: ${formattedVoucher}`;
+          }
+        } else {
+          if (tx.description.toLowerCase().includes('purchase')) {
+            displayName = 'Voucher purchase';
+          } else if (tx.description.toLowerCase().includes('redemption')) {
+            displayName = 'Voucher redemption';
+          } else {
+            displayName = 'Voucher transaction';
+          }
+        }
+      } else if (isDebitTx) {
+        // Parse name and optional reference from description
+        const nameMatch = desc.match(/sent to\s+([^|]+)/i) || desc.match(/payment to\s+([^|]+)/i);
+        const name = (nameMatch && nameMatch[1]) ? nameMatch[1].trim() : desc.trim();
+        const refMatch = desc.match(/ref\s*:\s*([^|]+)/i);
+        const ref = refMatch ? refMatch[1].trim().slice(0, 20) : '';
+        displayName = name;
+      } else if (isCreditTx) {
+        // Credit: prefer sender name + optional reference
+        const fromMatch = desc.match(/received from\s+([^|]+)/i);
+        if (fromMatch && fromMatch[1]) {
+          const sender = fromMatch[1].trim();
+          const refMatch = desc.match(/ref\s*:\s*([^|]+)/i);
+          const ref = refMatch ? refMatch[1].trim().slice(0, 20) : '';
+          displayName = sender;
+        }
+      }
+      
+      // Preserve original description for icon logic
+      const originalDescription = desc || 'Transaction';
+
+      // Infer account type for this transaction row
+      const txAccountType: 'mymoolah' | 'bank' = isDebitTx
+        ? ((tx as any).counterparty ? 'mymoolah' : 'bank')
+        : 'bank';
+
+      return {
+        id: String(tx.id || Date.now()),
+        beneficiaryName: displayName,
+        amount: isCreditTx ? Number(tx.amount || 0) : -Math.abs(Number(tx.amount || 0)),
+        date: new Date((tx as any).timestamp || Date.now()),
+        status: (tx.status || 'completed') as 'completed' | 'pending' | 'failed',
+        reference: tx.id || '',
+        accountType: txAccountType,
+        description: originalDescription, // Keep original for icon logic
+        kind: isDebitTx ? ('send' as const) : ('other' as const),
+        receiverWalletId: (tx as any).counterparty,
+        senderWalletId: (tx as any).counterparty,
+        type: mapType(tx.type), // Map to SendMoneyPage type
+        metadata: {} // Add metadata field
+      };
+    });
+  }, [allTransactions]);
+
   // Check KYC requirements
   useEffect(() => {
     if (requiresKYC('send')) {
@@ -144,124 +338,6 @@ export function SendMoneyPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        // Load recent transactions from backend
-        const recent = await apiService.getRecentTransactions(20);
-        const mapped: Transaction[] = (recent || []).map((t: any) => {
-          // Normalized backend type
-          const rawType = String(t.type || '').toLowerCase();
-          const desc = String(t.description || '');
-          const creditTypes = ['receive', 'deposit', 'refund', 'credit'];
-          const debitTypes = ['send', 'payment', 'withdraw', 'fee', 'transfer', 'debit'];
-
-          const isCreditTx = creditTypes.includes(rawType);
-          const isDebitTx = debitTypes.includes(rawType) || (!isCreditTx && (/^sent to\s+/i.test(desc) || /^payment to\s+/i.test(desc)));
-
-          // Create a user-friendly primary text
-          let displayName = desc || t.reference || 'Transaction';
-          
-          // Handle voucher transactions
-          if (t.description && t.description.toLowerCase().includes('voucher')) {
-            // Extract voucher number if present
-            const voucherMatch = t.description.match(/(\d{12,16})/);
-            if (voucherMatch) {
-              const voucherNumber = voucherMatch[1];
-              let formattedVoucher: string;
-              if (voucherNumber.length === 14) {
-                formattedVoucher = voucherNumber.slice(0, 1) + ' ' + 
-                                  voucherNumber.slice(1, 5) + ' ' + 
-                                  voucherNumber.slice(5, 9) + ' ' + 
-                                  voucherNumber.slice(9, 13) + ' ' + 
-                                  voucherNumber.slice(13);
-              } else if (voucherNumber.length === 16) {
-                formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
-                                  voucherNumber.slice(4, 8) + ' ' + 
-                                  voucherNumber.slice(8, 12) + ' ' + 
-                                  voucherNumber.slice(12);
-              } else {
-                formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
-                                  voucherNumber.slice(4, 8) + ' ' + 
-                                  voucherNumber.slice(8);
-              }
-              
-              if (t.description.toLowerCase().includes('purchase')) {
-                displayName = `Voucher purchase: ${formattedVoucher}`;
-              } else if (t.description.toLowerCase().includes('redemption')) {
-                displayName = `Voucher redemption: ${formattedVoucher}`;
-              } else {
-                displayName = `Voucher transaction: ${formattedVoucher}`;
-              }
-            } else {
-              if (t.description.toLowerCase().includes('purchase')) {
-                displayName = 'Voucher purchase';
-              } else if (t.description.toLowerCase().includes('redemption')) {
-                displayName = 'Voucher redemption';
-              } else {
-                displayName = 'Voucher transaction';
-              }
-            }
-          } else if (isDebitTx) {
-            // Parse name and optional reference from description
-            const nameMatch = desc.match(/sent to\s+([^|]+)/i) || desc.match(/payment to\s+([^|]+)/i);
-            const name = (nameMatch && nameMatch[1]) ? nameMatch[1].trim() : desc.trim();
-            const refMatch = desc.match(/ref\s*:\s*([^|]+)/i);
-            const ref = refMatch ? refMatch[1].trim().slice(0, 20) : '';
-            displayName = name;
-          } else if (isCreditTx) {
-            // Credit: prefer sender name + optional reference
-            const fromMatch = desc.match(/received from\s+([^|]+)/i);
-            if (fromMatch && fromMatch[1]) {
-              const sender = fromMatch[1].trim();
-              const refMatch = desc.match(/ref\s*:\s*([^|]+)/i);
-              const ref = refMatch ? refMatch[1].trim().slice(0, 20) : '';
-              displayName = sender;
-            }
-          }
-          
-          // Preserve original description for icon logic
-          const originalDescription = desc || t.reference || 'Transaction';
- 
-          // Infer account type for this transaction row
-          const txAccountType: 'mymoolah' | 'bank' = isDebitTx
-            ? (t.receiverWalletId ? 'mymoolah' : 'bank')
-            : 'bank';
-
-          return {
-            id: String(t.id || t.transactionId || Date.now()),
-            beneficiaryName: displayName,
-            amount: isCreditTx ? Number(t.amount || 0) : -Math.abs(Number(t.amount || 0)),
-            date: new Date(t.createdAt || Date.now()),
-            status: (t.status || 'completed') as any,
-            reference: t.transactionId || t.reference,
-            accountType: txAccountType,
-            description: originalDescription, // Keep original for icon logic
-            kind: isDebitTx ? 'send' : 'other',
-            receiverWalletId: t.receiverWalletId,
-            senderWalletId: t.senderWalletId as any,
-          };
-        });
-        setTransactions(mapped);
-
-        // Resolve sender names for ALL credit rows that have a senderWalletId
-        // This ensures legacy descriptions like "Sent to ..." are corrected to show the sender's name
-        try {
-          const updated = await Promise.all(mapped.map(async (tx: any) => {
-            if (!(tx.amount > 0 && tx.senderWalletId)) {
-              return tx;
-            }
-            try {
-              const wallet = await apiService.getWalletById(tx.senderWalletId);
-              const user = wallet?.user || {};
-              const senderName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Sender';
-              const refMatch = String(tx.description || '').match(/ref\s*:\s*([^|]+)/i);
-              const ref = refMatch ? refMatch[1].trim().slice(0, 20) : '';
-              return { ...tx, beneficiaryName: senderName };
-            } catch (_) {
-              return tx;
-            }
-          }));
-          setTransactions(updated as any);
-        } catch (_) {}
-
         // Load beneficiaries from localStorage (temporary until backend API is ready)
         try {
           const savedContacts = JSON.parse(localStorage.getItem('mymoolah_contacts') || '[]');
@@ -313,10 +389,10 @@ export function SendMoneyPage() {
 
   // Compute last 10 most recent transactions (show both send and receive for context)
   const lastTenSendTx = useMemo(() => {
-    return transactions
+    return transformedTransactions
       .sort((a, b) => b.date.getTime() - a.date.getTime())
       .slice(0, 10);
-  }, [transactions]);
+  }, [transformedTransactions]);
 
   // Helper: When clicking a recent row, prefill payment (saved or one-time)
   const prefillPaymentFromTransaction = async (t: Transaction) => {
@@ -630,8 +706,11 @@ export function SendMoneyPage() {
         accountType: 'mymoolah',
         description: `${newBeneficiary.name} | Ref:${paymentReference || 'Payment'}`, // Show recipient name and user reference
         kind: 'send',
+        type: 'send', // Add type field
+        metadata: {} // Add metadata field
       };
-      setTransactions(prev => [txn, ...prev]);
+      // Refresh transactions from API
+      await fetchTransactions();
 
       setShowPayNow(false);
       setLastPaidContact({
@@ -719,10 +798,12 @@ export function SendMoneyPage() {
         status: 'completed',
         reference: data?.transactionId || `TX${Date.now().toString().slice(-8)}`,
         accountType: selectedBeneficiary.accountType,
-        description: `Sent to ${selectedBeneficiary.name}` // Keep original for icon logic
+        description: `Sent to ${selectedBeneficiary.name}`, // Keep original for icon logic
+        type: 'send' // Add type field
       };
 
-      setTransactions(prev => [transaction, ...prev]);
+      // Refresh transactions from API
+      await fetchTransactions();
       
       // Update beneficiary stats
       setBeneficiaries(prev => prev.map(b => 
@@ -820,89 +901,7 @@ export function SendMoneyPage() {
     });
   };
 
-  // Get transaction icon based on transaction type and description - Award-winning design
-  const getTransactionIcon = (transaction: Transaction) => {
-    const iconStyle = { width: '20px', height: '20px' };
-    
-    // Check for voucher transactions first
-    if (transaction.description && transaction.description.toLowerCase().includes('voucher')) {
-      // Use a proper voucher/ticket icon
-      return <Ticket style={iconStyle} />;
-    }
-    
-    // Determine transaction type based on amount and description
-    let type: 'sent' | 'received' | 'purchase' | 'payment';
-    
-    if (transaction.amount < 0) {
-      // Negative amount = debit (sent money)
-      if (transaction.description && transaction.description.toLowerCase().includes('sent to')) {
-        type = 'sent';
-      } else if (transaction.description && (
-        transaction.description.toLowerCase().includes('woolworths') || 
-        transaction.description.toLowerCase().includes('grocery') ||
-        transaction.description.toLowerCase().includes('food') ||
-        transaction.description.toLowerCase().includes('shopping')
-      )) {
-        type = 'purchase';
-      } else if (transaction.description && (
-        transaction.description.toLowerCase().includes('airtime') || 
-        transaction.description.toLowerCase().includes('vodacom') ||
-        transaction.description.toLowerCase().includes('mtn') ||
-        transaction.description.toLowerCase().includes('electricity') ||
-        transaction.description.toLowerCase().includes('power')
-      )) {
-        type = 'payment';
-      } else {
-        type = 'sent';
-      }
-    } else {
-      // Positive amount = credit (received money)
-      type = 'received';
-    }
-    
-    // Return appropriate icon based on type - Award-winning icon selection
-    switch (type) {
-      case 'received':
-        // Money received (credit) - Arrow pointing down and left (money coming in)
-        return <ArrowDownLeft style={iconStyle} />;
-      case 'sent':
-        // Money sent (debit) - Arrow pointing up and right (money going out)
-        return <ArrowUpRight style={iconStyle} />;
-      case 'purchase':
-        if (transaction.description && (
-          transaction.description.toLowerCase().includes('woolworths') || 
-          transaction.description.toLowerCase().includes('grocery') ||
-          transaction.description.toLowerCase().includes('food')
-        )) {
-          return <ShoppingBag style={iconStyle} />;
-        }
-        if (transaction.description && (
-          transaction.description.toLowerCase().includes('caf') || 
-          transaction.description.toLowerCase().includes('coffee')
-        )) {
-          return <Coffee style={iconStyle} />;
-        }
-        return <ShoppingBag style={iconStyle} />;
-      case 'payment':
-        if (transaction.description && (
-          transaction.description.toLowerCase().includes('airtime') || 
-          transaction.description.toLowerCase().includes('vodacom') ||
-          transaction.description.toLowerCase().includes('mtn')
-        )) {
-          return <Phone style={iconStyle} />;
-        }
-        if (transaction.description && (
-          transaction.description.toLowerCase().includes('uber') || 
-          transaction.description.toLowerCase().includes('taxi') ||
-          transaction.description.toLowerCase().includes('transport')
-        )) {
-          return <Car style={iconStyle} />;
-        }
-        return <Phone style={iconStyle} />;
-      default:
-        return <ShoppingBag style={iconStyle} />;
-    }
-  };
+
 
   // Get account type badge
   const getAccountTypeBadge = (accountType: 'mymoolah' | 'bank') => {
@@ -925,46 +924,110 @@ export function SendMoneyPage() {
       minHeight: '100vh',
       fontFamily: 'Montserrat, sans-serif'
     }}>
-      {/* Header */}
-      <div className="bg-[#2D8CCA] text-white p-4">
-        <div className="flex items-center gap-3 mb-4">
-          <button 
-            onClick={() => navigate('/transact')}
-            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            style={{ minHeight: 'var(--mobile-touch-target)', minWidth: 'var(--mobile-touch-target)' }}
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <h1 style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: 'clamp(1.125rem, 3vw, 1.25rem)',
-            fontWeight: 'var(--font-weight-bold)',
-            color: 'white'
-          }}>
-            Pay Beneficiary
-          </h1>
-        </div>
+      {/* Page Title Section */}
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderBottom: '1px solid #e5e7eb',
+        padding: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        position: 'relative'
+      }}>
+        <button 
+          onClick={() => navigate('/transact')}
+          style={{
+            width: '44px',
+            height: '44px',
+            borderRadius: '50%',
+            backgroundColor: 'transparent',
+            border: 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'background-color 0.2s ease',
+            padding: '0',
+            minHeight: '44px',
+            minWidth: '44px',
+            position: 'absolute',
+            left: '16px',
+            zIndex: 1
+          }}
+          onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f3f4f6'}
+          onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          <ArrowLeft style={{ width: '20px', height: '20px', color: '#6b7280' }} />
+        </button>
+        <h1 style={{
+          fontFamily: 'Montserrat, sans-serif',
+          fontSize: '18px',
+          fontWeight: '700',
+          color: '#1f2937',
+          margin: '0',
+          textAlign: 'center',
+          width: '100%'
+        }}>
+          Send Money
+        </h1>
+      </div>
 
-        {/* Search and Add */}
-        <div className="flex gap-3">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+      {/* Search and Add Section */}
+      <div style={{
+        padding: '16px',
+        backgroundColor: '#ffffff'
+      }}>
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          marginBottom: '16px'
+        }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <Search style={{
+              position: 'absolute',
+              left: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '16px',
+              height: '16px',
+              color: '#9ca3af'
+            }} />
             <Input
               placeholder="Search beneficiaries"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-white/90 border-0 text-gray-900"
               style={{
                 fontFamily: 'Montserrat, sans-serif',
                 fontSize: 'var(--mobile-font-base)',
-                height: 'var(--mobile-touch-target)'
+                height: '44px',
+                paddingLeft: '40px',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                backgroundColor: '#ffffff'
               }}
             />
           </div>
           <Dialog open={showAddBeneficiary} onOpenChange={setShowAddBeneficiary}>
             <DialogTrigger asChild>
-              <Button className="bg-[#86BE41] hover:bg-[#7AB139] text-white border-0 px-4">
-                <Plus className="w-4 h-4 mr-2" />
+              <Button style={{
+                backgroundColor: '#86BE41',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '0 16px',
+                height: '44px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: 'var(--mobile-font-base)',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#7AB139'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#86BE41'}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
                 Add
               </Button>
             </DialogTrigger>
@@ -1109,10 +1172,26 @@ export function SendMoneyPage() {
       </div>
 
       {/* Filters */}
-      <div className="px-4 py-3 bg-gray-50 border-b">
-        <div className="flex gap-3 items-center justify-center">
+      <div style={{
+        padding: '16px',
+        backgroundColor: '#f9fafb',
+        borderBottom: '1px solid #e5e7eb'
+      }}>
+        <div style={{
+          display: 'flex',
+          gap: '12px',
+          alignItems: 'center'
+        }}>
           <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-            <SelectTrigger className="flex-1">
+            <SelectTrigger style={{
+              flex: 1,
+              height: '44px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              backgroundColor: '#ffffff',
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: 'var(--mobile-font-base)'
+            }}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1123,7 +1202,15 @@ export function SendMoneyPage() {
           </Select>
 
           <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
-            <SelectTrigger className="flex-1">
+            <SelectTrigger style={{
+              flex: 1,
+              height: '44px',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              backgroundColor: '#ffffff',
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: 'var(--mobile-font-base)'
+            }}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -1136,28 +1223,68 @@ export function SendMoneyPage() {
       </div>
 
       {/* Content */}
-      <div style={{ padding: 'var(--mobile-padding)' }}>
+      <div style={{ padding: '16px' }}>
         {/* Quick Filter Tabs */}
-        <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+        <div style={{
+          display: 'flex',
+          backgroundColor: '#f3f4f6',
+          borderRadius: '8px',
+          padding: '4px',
+          marginBottom: '24px'
+        }}>
           <button
             onClick={() => { setFilterType('all'); setIsOneTimeMode(false); }}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              filterType === 'all'
-                ? 'bg-[#2D8CCA] text-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            style={{ fontFamily: 'Montserrat, sans-serif' }}
+            style={{
+              flex: 1,
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontSize: 'var(--mobile-font-small)',
+              fontWeight: '500',
+              fontFamily: 'Montserrat, sans-serif',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              backgroundColor: filterType === 'all' ? '#2D8CCA' : 'transparent',
+              color: filterType === 'all' ? '#ffffff' : '#6b7280'
+            }}
+            onMouseOver={(e) => {
+              if (filterType !== 'all') {
+                e.currentTarget.style.color = '#1f2937';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (filterType !== 'all') {
+                e.currentTarget.style.color = '#6b7280';
+              }
+            }}
           >
             Frequent
           </button>
           <button
             onClick={() => { setFilterType('mymoolah'); setIsOneTimeMode(true); setShowPayNow(true); }}
-            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-              isOneTimeMode
-                ? 'bg-[#2D8CCA] text-white'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-            style={{ fontFamily: 'Montserrat, sans-serif' }}
+            style={{
+              flex: 1,
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontSize: 'var(--mobile-font-small)',
+              fontWeight: '500',
+              fontFamily: 'Montserrat, sans-serif',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              backgroundColor: isOneTimeMode ? '#2D8CCA' : 'transparent',
+              color: isOneTimeMode ? '#ffffff' : '#6b7280'
+            }}
+            onMouseOver={(e) => {
+              if (!isOneTimeMode) {
+                e.currentTarget.style.color = '#1f2937';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (!isOneTimeMode) {
+                e.currentTarget.style.color = '#6b7280';
+              }
+            }}
           >
             Pay Now
           </button>
@@ -1334,7 +1461,7 @@ export function SendMoneyPage() {
                         display: 'block'
                       }}
                     >
-                      {transaction.beneficiaryName}
+                      {getCleanTransactionText(transaction.beneficiaryName)}
                     </p>
                     <p 
                       style={{

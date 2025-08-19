@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
@@ -200,7 +200,7 @@ export function KYCDocumentsPage() {
         const tips: string[] = [
           'Upload a clear photo of your SA ID card/book or a passport',
           'Ensure the whole document is visible with good lighting (no glare)',
-          `The name must match your profile: ${(user?.firstName || '')} ${(user?.lastName || '')}`.trim(),
+          `The name must match your profile: ${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim(),
           'Only images are supported (JPG/PNG), max 10MB'
         ];
         setKycFeedback({

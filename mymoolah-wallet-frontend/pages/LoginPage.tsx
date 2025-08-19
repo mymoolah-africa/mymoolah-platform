@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui/button";
@@ -225,15 +225,15 @@ export function LoginPage() {
           {/* Header with Logo */}
           <div className="text-center mb-8">
             {/* Logo2.svg - Consistent sizing with proper import */}
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-2">
               <img
                 src={logo2}
                 alt="MyMoolah Logo"
                 className="h-16 w-auto"
                 style={{
-                  height: "4rem",
+                  height: "8rem", // Doubled from 4rem to 8rem
                   width: "auto",
-                  maxWidth: "200px",
+                  maxWidth: "400px", // Doubled max width to accommodate larger logo
                   objectFit: "contain",
                 }}
               />
@@ -279,7 +279,7 @@ export function LoginPage() {
           )}
 
           {/* Main Login Card */}
-          <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl">
+          <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl" style={{ marginTop: "-2rem" }}>
             <CardHeader style={{ paddingBottom: "1rem" }}>
               <CardTitle
                 className="text-center"

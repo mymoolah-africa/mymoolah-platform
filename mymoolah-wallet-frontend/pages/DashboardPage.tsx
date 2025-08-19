@@ -1,19 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getToken as getSessionToken } from '../utils/authToken';
 import { APP_CONFIG } from '../config/app-config';
 
-// Import icons directly from lucide-react
+// Import centralized transaction icon utility
+import { getTransactionIcon } from '../utils/transactionIcons.tsx';
+
+// Import icons directly from lucide-react (for other UI elements)
 import { 
-  ChevronRight,
-  ShoppingBag,
-  ArrowDownLeft,
-  Phone,
-  ArrowUpRight,
-  Coffee,
-  Car,
-  Ticket
+  ChevronRight
 } from 'lucide-react';
 
 // Format currency function
@@ -39,8 +35,13 @@ function formatCurrency(amount: number | undefined): string {
 }
 
 // Format date function for transactions
-function formatTransactionDate(date: Date): string {
-  // Use consistent format like VouchersPage
+function formatTransactionDate(date: Date | string): string {
+  // If it's already a formatted string (from MoolahContext), return it
+  if (typeof date === 'string') {
+    return date;
+  }
+  
+  // If it's a Date object, format it
   return date.toLocaleDateString('en-ZA', {
     year: 'numeric',
     month: 'short',
@@ -50,71 +51,63 @@ function formatTransactionDate(date: Date): string {
   });
 }
 
-// Derive primary text for display (beneficiary name + optional reference for sent money)
+// Derive primary text for display - clean up description format
 function getPrimaryDisplayText(transaction: Transaction): string {
-  // The backend now provides the correct format: "Name | Description"
-  // So we can use the description directly without any parsing
-  return transaction.description;
-}
-
-// Get transaction icon based on transaction type and description
-function getTransactionIcon(transaction: Transaction) {
-  const iconStyle = { width: '20px', height: '20px' };
+  let description = transaction.description || '';
   
-  // Check for voucher transactions first
-  if (transaction.description.toLowerCase().includes('voucher')) {
-    // Use a proper voucher/ticket icon
-    return <Ticket style={iconStyle} />;
+  // Remove "Ref:" prefix and extract the actual description
+  // Convert "Leonie Botes | Ref:test balance refresh" to "Leonie Botes | test balance refresh"
+  if (description.includes('| Ref:')) {
+    // Extract the name part (before the pipe)
+    const namePart = description.split('|')[0].trim();
+    
+    // Extract the description part (after "Ref:")
+    const refPart = description.split('| Ref:')[1] || '';
+    const cleanDescription = refPart.trim();
+    
+    // Limit description to 20 characters
+    const truncatedDescription = cleanDescription.length > 20 
+      ? cleanDescription.substring(0, 20) + '...' 
+      : cleanDescription;
+    
+    return `${namePart} | ${truncatedDescription}`;
   }
   
-  switch (transaction.type) {
-    case 'received':
-      return <ArrowDownLeft style={iconStyle} />;
-    case 'sent':
-      // Money sent (debit) - Arrow pointing up and right (money going out)
-      return <ArrowUpRight style={iconStyle} />;
-    case 'purchase':
-      // Smart icon selection based on description
-      if (transaction.description.toLowerCase().includes('woolworths') || 
-          transaction.description.toLowerCase().includes('grocery') ||
-          transaction.description.toLowerCase().includes('food')) {
-        return <ShoppingBag style={iconStyle} />;
-      }
-      if (transaction.description.toLowerCase().includes('caf') || 
-          transaction.description.toLowerCase().includes('coffee')) {
-        return <Coffee style={iconStyle} />;
-      }
-      // Default to shopping bag for purchases
-      return <ShoppingBag style={iconStyle} />;
-    case 'payment':
-      // Smart icon selection based on description
-      if (transaction.description.toLowerCase().includes('airtime') || 
-          transaction.description.toLowerCase().includes('vodacom') ||
-          transaction.description.toLowerCase().includes('mtn')) {
-        return <Phone style={iconStyle} />;
-      }
-      if (transaction.description.toLowerCase().includes('uber') || 
-          transaction.description.toLowerCase().includes('taxi') ||
-          transaction.description.toLowerCase().includes('transport')) {
-        return <Car style={iconStyle} />;
-      }
-      // Default to phone for payments
-      return <Phone style={iconStyle} />;
-    default:
-      return <ShoppingBag style={iconStyle} />;
+  // Also handle variations like "Ref:" without the pipe
+  if (description.includes('Ref:')) {
+    // Extract the name part (before "Ref:")
+    const namePart = description.split('Ref:')[0].trim();
+    
+    // Extract the description part (after "Ref:")
+    const refPart = description.split('Ref:')[1] || '';
+    const cleanDescription = refPart.trim();
+    
+    // Limit description to 20 characters
+    const truncatedDescription = cleanDescription.length > 20 
+      ? cleanDescription.substring(0, 20) + '...' 
+      : cleanDescription;
+    
+    return `${namePart}${truncatedDescription}`;
   }
+  
+  return description;
 }
 
-// Transaction interface
+// Transaction interface - compatible with MoolahContext
 interface Transaction {
   id: string;
-  type: 'sent' | 'received' | 'purchase' | 'payment';
-  description: string;
+  type: 'received' | 'sent' | 'payment';
   amount: number;
-  date: Date;
-  recipient?: string;
-  icon: React.ReactNode;
-  category: string;
+  currency: string;
+  description: string;
+  date: string;
+  timestamp: string;
+  status: 'completed' | 'pending' | 'failed';
+  counterparty?: string;
+  // Add wallet IDs for proper icon classification
+  senderWalletId?: string;
+  receiverWalletId?: string;
+  metadata?: any;
 }
 
 // Helper function to extract and format user's first name for greeting
@@ -133,52 +126,56 @@ function getGreetingName(fullName: string | undefined): string {
 }
 
 // Format voucher numbers in groups of 4 digits
-function formatVoucherNumber(description: string): string {
-  // Check if description contains a voucher number (12-16 digits)
-  const voucherMatch = description.match(/(\d{12,16})/);
-  if (voucherMatch) {
-    const voucherNumber = voucherMatch[1];
-    
-    // Format based on length
-    let formattedVoucher: string;
-    if (voucherNumber.length === 14) {
-      // EasyPay PIN (14 digits): 9 1234 0371 6648 2
-      formattedVoucher = voucherNumber.slice(0, 1) + ' ' + 
-                        voucherNumber.slice(1, 5) + ' ' + 
-                        voucherNumber.slice(5, 9) + ' ' + 
-                        voucherNumber.slice(9, 13) + ' ' + 
-                        voucherNumber.slice(13);
-    } else if (voucherNumber.length === 16) {
-      // MMVoucher PIN (16 digits): 9562 4205 7827 9406
-      formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
-                        voucherNumber.slice(4, 8) + ' ' + 
-                        voucherNumber.slice(8, 12) + ' ' + 
-                        voucherNumber.slice(12);
-    } else {
-      // Fallback for other lengths: groups of 4
-      formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
-                        voucherNumber.slice(4, 8) + ' ' + 
-                        voucherNumber.slice(8);
-    }
-    
-    return description.replace(voucherNumber, formattedVoucher);
-  }
-  return description;
-}
+// function formatVoucherNumber(description: string): string {
+//   // Check if description contains a voucher number (12-16 digits)
+//   const voucherMatch = description.match(/(\d{12,16})/);
+//   if (voucherMatch) {
+//     const voucherNumber = voucherMatch[1];
+//     
+//     // Format based on length
+//     let formattedVoucher: string;
+//     if (voucherNumber.length === 14) {
+//       // EasyPay PIN (14 digits): 9 1234 0371 6648 2
+//       formattedVoucher = voucherNumber.slice(0, 1) + ' ' + 
+//                         voucherNumber.slice(1, 5) + ' ' + 
+//                         voucherNumber.slice(5, 9) + ' ' + 
+//                         voucherNumber.slice(9, 13) + ' ' + 
+//                         voucherNumber.slice(13);
+//     } else if (voucherNumber.length === 16) {
+//       // MMVoucher PIN (16 digits): 9562 4205 7827 9406
+//       formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
+//                         voucherNumber.slice(4, 8) + ' ' + 
+//                         voucherNumber.slice(8, 12) + ' ' + 
+//                         voucherNumber.slice(12);
+//     } else {
+//       // Fallback for other lengths: groups of 4
+//       formattedVoucher = voucherNumber.slice(0, 4) + ' ' + 
+//                         voucherNumber.slice(4, 8) + ' ' + 
+//                         voucherNumber.slice(8);
+//     }
+//     
+//     return description.replace(voucherNumber, formattedVoucher);
+//   }
+//   return description;
+// }
 
 export function DashboardPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // State for real data from backend
+  // Local state management for scalable architecture
   const [walletBalance, setWalletBalance] = useState<number>(0);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
   const [openVouchersCount, setOpenVouchersCount] = useState<number>(0);
   const [openVouchersValue, setOpenVouchersValue] = useState<number>(0);
+  // const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Fetch real data from backend
+    // Fetch wallet balance and recent transactions
   useEffect(() => {
     const fetchDashboardData = async () => {
+      if (!user) return;
+      
+      // setIsLoading(true);
       try {
         const token = getSessionToken();
         const headers = {
@@ -187,131 +184,77 @@ export function DashboardPage() {
         };
 
         // Fetch wallet balance
-        const balanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance?_t=${Date.now()}`, { headers });
-        if (!balanceResponse.ok) throw new Error('Failed to fetch wallet balance');
-        const balanceData = await balanceResponse.json();
-        
-        // Fetch recent transactions
-        const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?page=1&limit=10&_t=${Date.now()}`, { headers });
-        if (!transactionsResponse.ok) throw new Error('Failed to fetch transactions');
-        const transactionsData = await transactionsResponse.json();
-
-        // Fetch all vouchers to calculate consistent totals
-        const vouchersResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/`, { headers });
-        if (!vouchersResponse.ok) throw new Error('Failed to fetch vouchers');
-        const vouchersData = await vouchersResponse.json();
-
-        // Fetch voucher balance summary for proper reconciliation
-        const voucherBalanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/balance-summary`, { headers });
-        if (!voucherBalanceResponse.ok) throw new Error('Failed to fetch voucher balance summary');
-        const voucherBalanceData = await voucherBalanceResponse.json();
-
-        // Update state with real data
-        const balanceDataFromAPI = balanceData.data;
-        setWalletBalance(balanceDataFromAPI.balance || 0);
-        
-        // Use the dedicated voucher balance summary API for proper reconciliation
-        if (voucherBalanceData.success && voucherBalanceData.data) {
-          const summary = voucherBalanceData.data;
-          // Use total count (active + pending) instead of just active
-          const totalVoucherCount = summary.active.count + summary.pending.count;
-          setOpenVouchersCount(totalVoucherCount);
-          // Use total value (active + pending) instead of just active
-          const totalVoucherValue = parseFloat(summary.active.value) + parseFloat(summary.pending.value);
-          setOpenVouchersValue(totalVoucherValue);
-        } else {
-          // Fallback to manual calculation if API fails
-          const allVouchers = vouchersData.data?.vouchers || [];
-          const activeVouchers = allVouchers.filter((v: any) => {
-            if (v.status === 'active') return true;
-            if (v.status === 'redeemed' && parseFloat(v.balance || 0) > 0) return true; // Partially redeemed = active
-            return false;
-          });
-          
-          const pendingVouchers = allVouchers.filter((v: any) => v.status === 'pending_payment');
-          
-          // Use total count (active + pending) instead of just active
-          const totalVoucherCount = activeVouchers.length + pendingVouchers.length;
-          setOpenVouchersCount(totalVoucherCount);
-          const activeValue = activeVouchers.reduce((sum: number, v: any) => sum + parseFloat(v.balance || 0), 0);
-          const pendingValue = pendingVouchers.reduce((sum: number, v: any) => sum + parseFloat(v.originalAmount || 0), 0);
-          setOpenVouchersValue(activeValue + pendingValue);
-        }
-        
-        // Transform transactions to match frontend format
-        const transformedTransactions: Transaction[] = (transactionsData.data?.transactions || []).map((tx: any) => {
-          // Debug: Log the raw transaction data
-          console.log('🔍 Raw transaction from API:', {
-            id: tx.id,
-            type: tx.type,
-            description: tx.description,
-            amount: tx.amount
-          });
-          
-          // Determine the transaction type for display and icon selection
-          let type: 'sent' | 'received' | 'purchase' | 'payment';
-          let amount: number;
-          
-          // Handle backend transaction types correctly
-          if (tx.type === 'deposit' || tx.type === 'receive' || tx.type === 'credit') {
-            // Deposit transactions are credits (increase wallet balance)
-            type = 'received';
-            amount = tx.amount;
-          } else if (tx.type === 'refund') {
-            // Refund transactions are credits (increase wallet balance)
-            type = 'received';
-            amount = tx.amount;
-          } else if (tx.type === 'payment') {
-            // Payment transactions are debits (decrease wallet balance)
-            const desc = tx.description.toLowerCase();
-            if (desc.includes('voucher purchase')) {
-              type = 'purchase';
-            } else if (desc.includes('voucher redemption')) {
-              // Voucher redemptions should be credits, not debits
-              type = 'received';
-              amount = tx.amount;
-            } else if (desc.includes('woolworths') || desc.includes('grocery') || desc.includes('food') || 
-                desc.includes('supermarket') || desc.includes('restaurant') || desc.includes('cafe') ||
-                desc.includes('coffee') || desc.includes('shopping')) {
-              type = 'purchase';
-            } else if (desc.includes('airtime') || desc.includes('vodacom') || desc.includes('mtn') ||
-                       desc.includes('electricity') || desc.includes('power') || desc.includes('eskom') ||
-                       desc.includes('internet') || desc.includes('wifi') || desc.includes('data') ||
-                       desc.includes('uber') || desc.includes('taxi') || desc.includes('transport')) {
-              type = 'payment';
-            } else if (desc.includes('sent to')) {
-              type = 'sent';
-            } else {
-              type = 'sent';
-            }
-            amount = -tx.amount;
-          } else {
-            // Treat unknown backend types as standard wallet-to-wallet sends (debit)
-            type = 'sent';
-            amount = -tx.amount;
+        const balanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance`, { headers });
+        if (balanceResponse.ok) {
+          const balanceData = await balanceResponse.json();
+          if (balanceData.success && balanceData.data) {
+            setWalletBalance(balanceData.data.available || 0);
           }
-          
-          const date = new Date(tx.createdAt || tx.date);
-          const category = tx.category || 'Transfer';
-          
-          // Use the actual description from the backend - it already contains the proper format
-          const description = tx.description || 'Transaction';
+        }
 
-          return {
-            id: tx.id || `tx_${tx.transactionId}`,
-            type,
-            description: formatVoucherNumber(description),
-            amount,
-            date,
-            category,
-            icon: getTransactionIcon({ id: tx.id, type, description, amount, date, category, icon: null } as Transaction)
-          };
-        });
+        // Fetch recent transactions
+        const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=10`, { headers });
+        if (transactionsResponse.ok) {
+          const transactionsData = await transactionsResponse.json();
+          if (transactionsData.success && transactionsData.data) {
+            const sourceList = Array.isArray(transactionsData.data)
+              ? transactionsData.data
+              : (transactionsData.data.transactions || []);
 
-        setRecentTransactions(transformedTransactions);
-        
+            const transformedTransactions = sourceList.map((tx: any) => {
+              // Determine if this is a credit (money received) or debit (money sent)
+              // Backend transforms: credit->deposit, debit->payment, send->sent, receive->received
+              const isCredit = ['deposit', 'received'].includes(tx.type);
+              const isDebit = ['sent', 'payment', 'withdrawal'].includes(tx.type);
+              
+              // For credits: positive amount, green color
+              // For debits: negative amount, red color
+              const displayType = isCredit ? 'received' : 'sent';
+              const displayAmount = isCredit ? Math.abs(tx.amount) : -Math.abs(tx.amount);
+              
+              return {
+                id: tx.id || `tx_${tx.transactionId}`,
+                type: displayType,
+                amount: displayAmount,
+                currency: tx.currency || 'ZAR',
+                description: tx.description || 'Transaction',
+                date: new Date(tx.createdAt || tx.date).toLocaleDateString('en-ZA', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }),
+                timestamp: new Date(tx.createdAt || tx.date).toISOString(),
+                status: tx.status || 'completed',
+                counterparty: tx.metadata?.counterpartyIdentifier || 'Unknown',
+                // Add wallet IDs for proper icon classification
+                senderWalletId: tx.senderWalletId || tx.metadata?.senderWalletId,
+                receiverWalletId: tx.receiverWalletId || tx.metadata?.receiverWalletId,
+                metadata: tx.metadata || {}
+              };
+            });
+            setRecentTransactions(transformedTransactions);
+          }
+        }
+
+        // Fetch voucher balance
+        const voucherResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/balance-summary`, { headers });
+        if (voucherResponse.ok) {
+          const voucherData = await voucherResponse.json();
+          if (voucherData.success && voucherData.data) {
+            const summary = voucherData.data;
+            // Dashboard counter should include both active vouchers AND pending payment EasyPay vouchers
+            const dashboardVoucherCount = (summary.active.count || 0) + (summary.pending.count || 0);
+            setOpenVouchersCount(dashboardVoucherCount);
+            const totalVoucherValue = parseFloat(summary.active.value) + parseFloat(summary.pending.value);
+            setOpenVouchersValue(totalVoucherValue);
+          }
+        }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
+      } finally {
+        // setIsLoading(false);
       }
     };
 
@@ -341,7 +284,7 @@ export function DashboardPage() {
     if (transaction.type === 'received') {
       return '#16a34a'; // Green for received money
     } else {
-      return '#dc2626'; // Red for debit transactions (sent, purchase, payment)
+      return '#dc2626'; // Red for debit transactions (sent, payment)
     }
   };
 
@@ -361,10 +304,8 @@ export function DashboardPage() {
         return '#f0fdf4'; // Light green background
       case 'sent':
         return '#fef3f2'; // Light red background  
-      case 'purchase':
-        return '#f8fafc'; // Light gray background
       case 'payment':
-        return '#f0f9ff'; // Light blue background
+        return '#f8fafc'; // Light gray background
       default:
         return '#f8fafc';
     }
@@ -386,10 +327,8 @@ export function DashboardPage() {
         return '#16a34a'; // Green
       case 'sent':
         return '#dc2626'; // Red
-      case 'purchase':
-        return '#6b7280'; // Gray
       case 'payment':
-        return '#2D8CCA'; // MyMoolah blue
+        return '#6b7280'; // Gray
       default:
         return '#6b7280';
     }
@@ -704,7 +643,7 @@ export function DashboardPage() {
                         width: '40px',
                         height: '40px',
                         borderRadius: '10px',
-                        backgroundColor: getIconBackgroundColor(transaction),
+                        backgroundColor: transaction.amount >= 0 ? '#f0fdf4' : '#fef3f2',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -713,9 +652,15 @@ export function DashboardPage() {
                         minWidth: '40px'
                       }}
                     >
-                      <div style={{ color: getIconColor(transaction) }}>
-                        {transaction.icon}
-                      </div>
+                      {getTransactionIcon({
+                        id: transaction.id,
+                        type: transaction.type === 'received' ? 'receive' : 'send',
+                        amount: transaction.amount,
+                        description: transaction.description,
+                        senderWalletId: transaction.senderWalletId,
+                        receiverWalletId: transaction.receiverWalletId,
+                        metadata: transaction.metadata || {}
+                      }, 20)}
                     </div>
 
                     {/* Transaction Details */}
@@ -802,7 +747,7 @@ export function DashboardPage() {
                     justifyContent: 'center',
                     margin: '0 auto 12px auto'
                   }}>
-                    <ShoppingBag style={{ width: '24px', height: '24px', color: '#9ca3af' }} />
+                    {/* ShoppingBag style={{ width: '24px', height: '24px', color: '#9ca3af' }} /> */}
                   </div>
                   <p style={{ margin: '0 0 4px 0', fontWeight: 'var(--font-weight-medium)' }}>
                     No recent transactions

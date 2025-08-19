@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { validateDemoCredentials, isDemoMode, getDemoCredentials } from '../config/app-config';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken as getSessionToken, setToken as setSessionToken, removeToken as removeSessionToken } from '../utils/authToken';
@@ -15,6 +15,7 @@ interface User {
   walletId: string;
   kycStatus: KYCStatus;
   kycVerified: boolean; // Computed property for easy access
+  createdAt?: string; // User registration date
 }
 
 interface AuthContextType {
@@ -474,7 +475,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             '', // Empty for non-phone registrations, will be set during profile update
           walletId: 'wallet-demo-' + Date.now(),
           kycStatus: 'not_started',
-          kycVerified: false
+          kycVerified: false,
+          createdAt: new Date().toISOString()
         };
         
         const mockToken = 'demo-token-' + Date.now();

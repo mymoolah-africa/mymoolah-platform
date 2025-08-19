@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
@@ -33,6 +33,8 @@ interface NotificationItem {
   type: 'txn_wallet_credit' | 'txn_bank_credit' | 'maintenance' | 'promo';
   createdAt: string;
   readAt?: string | null;
+  freezeUntilViewed?: boolean;
+  payload?: any;
 }
 
 interface MoolahContextType {
@@ -42,14 +44,21 @@ interface MoolahContextType {
   toggleBalanceVisibility: () => void;
   voucherBalance: number;
   recentTransactions: Transaction[];
+  allTransactions: Transaction[]; // NEW: All transactions for transaction history
   todayActivity: TodayActivity;
   isLoading: boolean;
   refreshData: () => Promise<void>;
+  refreshTransactions: () => Promise<void>; // NEW: Dedicated transaction refresh
   sendMoney: (recipient: string, amount: number) => Promise<void>;
   notifications: NotificationItem[];
   unreadCount: number;
   refreshNotifications: () => Promise<void>;
   markRead: (id: number) => Promise<void>;
+  blockingNotification: NotificationItem | null;
+  respondToPaymentRequest: (requestId: number, action: 'approve' | 'decline', notificationId?: number) => Promise<void>;
+  // Event-driven balance refresh
+  refreshBalanceAfterAction: (action: 'payment_request_created' | 'payment_request_approved' | 'payment_request_declined' | 'money_sent' | 'money_received') => Promise<void>;
+  refreshBalanceAfterTransaction: () => Promise<void>;
 }
 
 const MoolahContext = createContext<MoolahContextType | undefined>(undefined);
@@ -61,25 +70,88 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
   const [hideBalance, setHideBalance] = useState(false);
   const [voucherBalance, setVoucherBalance] = useState(0);
   const [recentTransactions, setRecentTransactions] = useState<Transaction[]>([]);
+  const [allTransactions, setAllTransactions] = useState<Transaction[]>([]); // NEW: All transactions
   const [todayActivity, setTodayActivity] = useState<TodayActivity>({ received: 0, sent: 0 });
   const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [blockingNotification, setBlockingNotification] = useState<NotificationItem | null>(null);
 
   useEffect(() => {
     if (user) {
+      // Initial data load when user logs in
       refreshData();
     }
   }, [user]);
 
   useEffect(() => {
+    if (!user) return;
     refreshNotifications();
-    const i = setInterval(refreshNotifications, 30000);
-    return () => clearInterval(i);
-  }, []);
+    // SMART POLLING STRATEGY:
+    // - Reduced polling frequency since we now have event-driven updates
+    // - Only poll for notifications every 30 seconds instead of 10
+    // - Event-driven updates handle real-time balance/transaction changes
+    // - Polling is now just a fallback for missed notifications
+    const i = setInterval(() => refreshNotifications(), 30000);
+    return () => { 
+      clearInterval(i); 
+    };
+  }, [user]);
 
   const toggleBalanceVisibility = () => {
     setHideBalance(!hideBalance);
+  };
+
+  // NEW: Transform transactions from backend format to frontend format
+  const transformTransactions = (transactions: any[]): Transaction[] => {
+    return transactions.map((tx: any) => {
+      // Determine the transaction type for display and icon selection
+      let type: 'received' | 'sent' | 'payment';
+      let amount: number;
+      
+      // Handle backend transaction types correctly
+      if (tx.type === 'deposit' || tx.type === 'receive' || tx.type === 'credit' || tx.type === 'received') {
+        // Receive transactions are credits (increase wallet balance) - GREEN
+        type = 'received';
+        amount = tx.amount;
+      } else if (tx.type === 'refund') {
+        // Refund transactions are credits (increase wallet balance) - GREEN
+        type = 'received';
+        amount = tx.amount;
+      } else if (tx.type === 'send' || tx.type === 'sent') {
+        // Send transactions are debits (decrease wallet balance) - RED
+        type = 'sent';
+        amount = -tx.amount;
+      } else if (tx.type === 'payment') {
+        // Payment transactions are debits (decrease wallet balance) - RED
+        type = 'payment';
+        amount = -tx.amount;
+      } else {
+        // Treat unknown backend types as standard wallet-to-wallet sends (debit) - RED
+        type = 'sent';
+        amount = -tx.amount;
+      }
+      
+      const date = new Date(tx.createdAt || tx.date);
+      
+      return {
+        id: tx.id || `tx_${tx.transactionId}`,
+        type,
+        amount,
+        currency: tx.currency || 'ZAR',
+        description: tx.description || 'Transaction',
+        date: date.toLocaleDateString('en-ZA', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }),
+        timestamp: date.toISOString(),
+        status: tx.status || 'completed',
+        counterparty: tx.metadata?.counterpartyIdentifier || 'Unknown'
+      };
+    });
   };
 
   const refreshData = async () => {
@@ -170,32 +242,49 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
         const headers = { Authorization: `Bearer ${token}` };
 
         // Fetch wallet balance
-        const balanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance`, { headers });
+        const balanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance?_t=${Date.now()}` , { headers });
         if (!balanceResponse.ok) throw new Error('Failed to fetch balance');
         const balanceData = await balanceResponse.json();
+        console.log('💰 Balance API response:', JSON.stringify(balanceData, null, 2));
+        console.log('💰 Current balance:', balanceData.data?.available, 'Previous balance:', balance);
+        
+        // Check if balance actually changed
+        const newBalance = balanceData.data?.available;
+        const balanceChanged = newBalance !== balance;
+        
+        if (balanceChanged) {
+          console.log('✅ Balance changed from', balance, 'to', newBalance);
+        } else {
+          console.log('⚠️ Balance unchanged:', newBalance);
+        }
+        
         setWalletBalance(balanceData.data);
-        setBalance(balanceData.data.available);
+        setBalance(newBalance);
 
         // Fetch voucher balance
-        const voucherResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/active`, { headers });
+        const voucherResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/active?_t=${Date.now()}` , { headers });
         if (!voucherResponse.ok) throw new Error('Failed to fetch voucher balance');
         const voucherData = await voucherResponse.json();
         setVoucherBalance(voucherData.data?.length || 0);
 
-        // Fetch recent transactions
-        const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=5&_t=${Date.now()}`, { headers });
+        // NEW: Fetch all transactions (single API call for both recent and all)
+        const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=50&_t=${Date.now()}`, { headers });
         if (!transactionsResponse.ok) throw new Error('Failed to fetch transactions');
         const transactionsData = await transactionsResponse.json();
-        setRecentTransactions(transactionsData.data?.transactions || []);
-
-        // Fetch today's activity
-        const activityResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=10&_t=${Date.now()}`, { headers });
-        if (!activityResponse.ok) throw new Error('Failed to fetch activity');
-        const activityData = await activityResponse.json();
-        const todayTransactions = activityData.data?.transactions || [];
+        
+        // Transform transactions using the new function
+        const allTransactions = transformTransactions(transactionsData.data?.transactions || []);
+        setAllTransactions(allTransactions);
+        setRecentTransactions(allTransactions.slice(0, 10)); // Recent 10 for dashboard
+        
+        // Calculate today's activity from transformed transactions
+        const today = new Date().toDateString();
+        const todayTransactions = allTransactions.filter(tx => 
+          new Date(tx.timestamp).toDateString() === today
+        );
         const todayActivity = {
-          received: todayTransactions.filter((t: any) => t.type === 'credit').reduce((sum: number, t: any) => sum + t.amount, 0),
-          sent: todayTransactions.filter((t: any) => t.type === 'debit').reduce((sum: number, t: any) => sum + t.amount, 0)
+          received: todayTransactions.filter(tx => tx.type === 'received').reduce((sum, tx) => sum + Math.abs(tx.amount), 0),
+          sent: todayTransactions.filter(tx => tx.type === 'sent' || tx.type === 'payment').reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
         };
         setTodayActivity(todayActivity);
       }
@@ -206,9 +295,36 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       setBalance(0);
       setVoucherBalance(0);
       setRecentTransactions([]);
+      setAllTransactions([]); // NEW: Reset all transactions
       setTodayActivity({ received: 0, sent: 0 });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // NEW: Dedicated transaction refresh function
+  const refreshTransactions = async () => {
+    if (!user) return;
+    
+    try {
+      const token = getToken();
+      if (!token) return;
+      
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // Fetch all transactions
+      const transactionsResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?limit=50&_t=${Date.now()}`, { headers });
+      if (!transactionsResponse.ok) throw new Error('Failed to fetch transactions');
+      const transactionsData = await transactionsResponse.json();
+      
+      // Transform and update transactions
+      const allTransactions = transformTransactions(transactionsData.data?.transactions || []);
+      setAllTransactions(allTransactions);
+      setRecentTransactions(allTransactions.slice(0, 10)); // Recent 10 for dashboard
+      
+      console.log('🔄 Transactions refreshed:', allTransactions.length, 'transactions');
+    } catch (error) {
+      console.error('Failed to refresh transactions:', error);
     }
   };
 
@@ -261,8 +377,8 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       throw new Error('Transfer failed');
     }
 
-    // Refresh data after successful transfer
-    await refreshData();
+    // TODO: Implement proper balance refresh after transfer
+    // await refreshData();
   };
 
   const refreshNotifications = async () => {
@@ -272,6 +388,7 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
         // No token yet (e.g., before login) – avoid hitting API with "Bearer null"
         setNotifications([]);
         setUnreadCount(0);
+        setBlockingNotification(null);
         return;
       }
 
@@ -288,6 +405,51 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       const list: NotificationItem[] = json?.data || [];
       setNotifications(list);
       setUnreadCount(list.length);
+      const blocker = list.find(n => n.freezeUntilViewed);
+      setBlockingNotification(blocker || null);
+      
+      // Debug: Log notifications for balance refresh debugging
+      if (list.length > 0) {
+        console.log('📱 Notifications received:', list.map(n => ({
+          id: n.id,
+          type: n.type,
+          title: n.title,
+          payload: n.payload
+        })));
+      }
+      // Event-driven balance refresh after transaction notifications
+      const hasTransactionNotification = list.some(n => {
+        // Check for transaction notification types
+        const isTransactionType = n.type === 'txn_wallet_credit' || n.type === 'txn_bank_credit';
+        
+        // Check for balance refresh reason in payload
+        const hasBalanceRefreshReason = n.payload?.reason === 'balance_refresh';
+        
+        // Check for transaction-related titles
+        const isTransactionTitle = n.title?.includes('Payment') || 
+                                 n.title?.includes('Received') || 
+                                 n.title?.includes('Sent') ||
+                                 n.title?.includes('Transaction');
+        
+        return isTransactionType || hasBalanceRefreshReason || isTransactionTitle;
+      });
+      
+      // Only refresh if we have transaction notifications AND haven't refreshed recently
+      if (hasTransactionNotification) {
+        const now = Date.now();
+        const lastRefreshTime = (window as any).lastBalanceRefreshTime || 0;
+        const timeSinceLastRefresh = now - lastRefreshTime;
+        
+        // Debounce: only refresh if it's been more than 2 seconds since last refresh
+        if (timeSinceLastRefresh > 2000) {
+          console.log('🔔 Transaction notification detected - refreshing balance and transactions');
+          (window as any).lastBalanceRefreshTime = now;
+          await refreshBalanceAfterAction('money_received');
+          await refreshTransactions(); // NEW: Also refresh transactions
+        } else {
+          console.log('⏳ Balance refresh debounced (last refresh was', Math.round(timeSinceLastRefresh/1000), 'seconds ago)');
+        }
+      }
     } catch (_) {}
   };
 
@@ -303,6 +465,83 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
     } catch (_) {}
   };
 
+  const respondToPaymentRequest = async (requestId: number, action: 'approve' | 'decline', notificationId?: number) => {
+    try {
+      const token = getToken();
+      if (!token) return;
+      await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/requests/${requestId}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ action })
+      });
+      if (notificationId) {
+        await markRead(notificationId);
+      } else {
+        await refreshNotifications();
+      }
+      // Event-driven balance refresh after payment request response
+      await refreshBalanceAfterAction(action === 'approve' ? 'payment_request_approved' : 'payment_request_declined');
+    } catch (_) {}
+  };
+
+  // Event-driven balance refresh system
+  const refreshBalanceAfterAction = async (action: 'payment_request_created' | 'payment_request_approved' | 'payment_request_declined' | 'money_sent' | 'money_received') => {
+    console.log(`🔄 Event-driven balance refresh triggered by: ${action}`);
+    
+    try {
+      // Debounce multiple rapid calls
+      if (isLoading) {
+        console.log('⏳ Balance refresh already in progress, skipping...');
+        return;
+      }
+
+      // Refresh balance based on action type
+      switch (action) {
+        case 'payment_request_created':
+          // For created requests, only refresh if it's a bank request (affects pending balance)
+          console.log('📝 Payment request created - refreshing balance');
+          await refreshData();
+          break;
+          
+        case 'payment_request_approved':
+          // Approved requests affect actual balance
+          console.log('✅ Payment request approved - refreshing balance');
+          await refreshData();
+          break;
+          
+        case 'payment_request_declined':
+          // Declined requests don't affect balance, but refresh for consistency
+          console.log('❌ Payment request declined - refreshing balance');
+          await refreshData();
+          break;
+          
+        case 'money_sent':
+          // Money sent affects sender's balance
+          console.log('💸 Money sent - refreshing balance');
+          await refreshData();
+          break;
+          
+        case 'money_received':
+          // Money received affects recipient's balance
+          console.log('💰 Money received - refreshing balance');
+          await refreshData();
+          break;
+          
+        default:
+          console.log('❓ Unknown action, skipping balance refresh');
+      }
+    } catch (error) {
+      console.error('❌ Event-driven balance refresh failed:', error);
+      // Don't throw error to prevent breaking the main flow
+    }
+  };
+
+  // Convenience function for transaction-related balance refresh
+  const refreshBalanceAfterTransaction = async () => {
+    console.log('🔄 Transaction completed - refreshing balance');
+    await refreshBalanceAfterAction('money_sent');
+  };
+
   return (
     <MoolahContext.Provider value={{
       walletBalance,
@@ -311,14 +550,21 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       toggleBalanceVisibility,
       voucherBalance,
       recentTransactions,
+      allTransactions, // NEW: All transactions
       todayActivity,
       isLoading,
       refreshData,
+      refreshTransactions, // NEW: Dedicated transaction refresh
       sendMoney,
       notifications,
       unreadCount,
       refreshNotifications,
-      markRead
+      markRead,
+      blockingNotification,
+      respondToPaymentRequest,
+      // Event-driven balance refresh
+      refreshBalanceAfterAction,
+      refreshBalanceAfterTransaction
     }}>
       {children}
     </MoolahContext.Provider>

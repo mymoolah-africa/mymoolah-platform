@@ -33,8 +33,8 @@ router.post('/payshap/rpp', auth, peachController.initiatePayShapRpp);
 // PayShap RTP (Request to Pay - inbound)
 router.post('/payshap/rtp', auth, peachController.initiatePayShapRtp);
 
-// Client integration payments (for employee payments)
-router.post('/client/payments', auth, peachController.initiateClientPayment);
+// Client integration payments (for employee payments) - TODO: Implement
+// router.post('/client/payments', auth, peachController.initiateClientPayment);
 
 // Payment status and management
 router.get('/payments/:merchantTransactionId', auth, peachController.getPaymentStatus);

@@ -1,30 +1,24 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { getToken as getSessionToken } from '../utils/authToken';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getToken } from '../utils/authToken';
+import { APP_CONFIG } from '../config/app-config';
+
+// Import centralized transaction icon utility
+import { getTransactionIcon } from '../utils/transactionIcons.tsx';
+
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Card, CardContent } from '../components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Calendar } from '../components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover';
-import { Separator } from '../components/ui/separator';
-import { Badge } from '../components/ui/badge';
-import { Alert, AlertDescription } from '../components/ui/alert';
 import { 
   Search, 
   Download, 
   Calendar as CalendarIcon, 
-  Filter,
-  ArrowUpRight,
-  ArrowDownLeft,
   X,
-  FileText,
-  Clock,
-  CheckCircle,
-  AlertTriangle,
-  ChevronRight,
   ArrowLeft
 } from 'lucide-react';
 
@@ -45,35 +39,109 @@ interface Transaction {
   reference: string;
   fee?: number;
   method?: string;
+  // Add wallet IDs for proper icon classification
+  senderWalletId?: string;
+  receiverWalletId?: string;
+  metadata?: any;
 }
 
 
 export function TransactionHistoryPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
+  const { user } = useAuth();
   
-  // State management
+  // Local state management for scalable architecture
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<TransactionType>('all');
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [isExporting, setIsExporting] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [itemsPerPage] = useState(100); // Increased to show more transactions
-  const [isExporting, setIsExporting] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [itemsPerPage] = useState(50);
   const [hasMore, setHasMore] = useState(true);
+
+  // Fetch transactions from API
+  const fetchTransactions = async (page: number = 1, append: boolean = false) => {
+    if (!user) return;
+    
+    setLoading(true);
+    try {
+      const token = getToken();
+      const headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      };
+
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?page=${page}&limit=${itemsPerPage}`, { headers });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          const sourceList = Array.isArray(data.data)
+            ? data.data
+            : (data.data.transactions || []);
+
+          const transformedTransactions = sourceList.map((tx: any) => {
+            // Determine if this is a credit (money received) or debit (money sent)
+            // Backend transforms: credit->deposit, debit->payment, send->sent, receive->received
+            const isCredit = ['deposit', 'received'].includes(tx.type);
+            const isDebit = ['sent', 'payment', 'withdrawal'].includes(tx.type);
+            
+                         return {
+               id: tx.id,
+               type: (isCredit ? 'money_in' : 'money_out') as 'money_in' | 'money_out',
+               amount: isCredit ? Math.abs(tx.amount) : -Math.abs(tx.amount),
+               currency: 'ZAR' as const,
+               recipient: tx.metadata?.counterpartyIdentifier,
+               sender: tx.metadata?.counterpartyIdentifier,
+               description: tx.description,
+               status: tx.status,
+               timestamp: new Date(tx.createdAt || tx.date).toISOString(),
+               reference: tx.id,
+               fee: 0,
+               method: 'MyMoolah Internal',
+               senderWalletId: tx.senderWalletId || tx.metadata?.senderWalletId,
+               receiverWalletId: tx.receiverWalletId || tx.metadata?.receiverWalletId,
+               metadata: tx.metadata || {}
+             };
+           });
+
+          if (append) {
+            setTransactions(prev => [...prev, ...transformedTransactions]);
+          } else {
+            setTransactions(transformedTransactions);
+          }
+          
+          // Handle pagination data from backend
+          const pagination = data.data?.pagination || {};
+          setTotalItems(pagination.totalItems || transformedTransactions.length);
+          setTotalPages(pagination.totalPages || Math.ceil(transformedTransactions.length / itemsPerPage));
+          setHasMore(transformedTransactions.length === itemsPerPage);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching transactions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load transactions on component mount
+  useEffect(() => {
+    fetchTransactions(1, false);
+  }, [user]);
 
   // Filtered and sorted transactions based on search and filters
   const filteredTransactions = useMemo(() => {
+
     const filtered = transactions.filter(transaction => {
       // Search filter
       const matchesSearch = searchQuery.trim() === '' || 
         transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        transaction.reference.toLowerCase().includes(searchQuery.toLowerCase());
+        (transaction.reference && String(transaction.reference).toLowerCase().includes(searchQuery.toLowerCase()));
 
       // Type filter
       const matchesType = filterType === 'all' || transaction.type === filterType;
@@ -104,93 +172,49 @@ export function TransactionHistoryPage() {
     return filtered.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   }, [transactions, searchQuery, filterType, dateRange]);
 
-  // Helper to display primary line as Name — Ref: for money_out
+  // Helper to display primary line - clean up description format
   const getPrimaryText = (t: Transaction) => {
-    if (t.type === 'money_out') {
-      const base = (t.description || '').replace(/^sent to\s+/i, '').replace(/^payment to\s+/i, '').trim();
-      return base;
+    let description = t.description || '';
+    
+    // Remove "Ref:" prefix and extract the actual description
+    // Convert "Leonie Botes | Ref:test balance refresh" to "Leonie Botes | test balance refresh"
+    if (description.includes('| Ref:')) {
+      // Extract the name part (before the pipe)
+      const namePart = description.split('|')[0].trim();
+      
+      // Extract the description part (after "Ref:")
+      const refPart = description.split('| Ref:')[1] || '';
+      const cleanDescription = refPart.trim();
+      
+      // Limit description to 20 characters
+      const truncatedDescription = cleanDescription.length > 20 
+        ? cleanDescription.substring(0, 20) + '...' 
+        : cleanDescription;
+      
+      return `${namePart} | ${truncatedDescription}`;
     }
-    return t.description;
+    
+    // For other transaction types, clean up common prefixes
+    if (t.type === 'money_out') {
+      description = description.replace(/^sent to\s+/i, '').replace(/^payment to\s+/i, '').trim();
+    }
+    
+    return description;
   };
 
-  // Load transactions with pagination
-  const loadTransactions = async (page: number = 1, append: boolean = false) => {
+  // Load transactions function (kept for potential future use)
+  const loadTransactions = async () => {
     try {
       setLoading(true);
-      setError(null);
-      
-      const newTransactions = await fetchTransactions(page, itemsPerPage);
-      
-      if (append) {
-        setTransactions(prev => [...prev, ...newTransactions]);
-      } else {
-        setTransactions(newTransactions);
-      }
-      
-      // Update pagination state
-      setCurrentPage(page);
-      // If we got fewer transactions than requested, we've reached the end
-      setHasMore(newTransactions.length === itemsPerPage);
-      
+      await fetchTransactions(1, false);
     } catch (error) {
       console.error('Error loading transactions:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load transactions');
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch transactions on component mount
-  useEffect(() => {
-    loadTransactions();
-  }, []);
-
-  // Real API integration for transaction data
-  const fetchTransactions = async (page: number = 1, limit: number = 100): Promise<Transaction[]> => {
-  try {
-    const token = getSessionToken();
-    if (!token) {
-      throw new Error("Authentication required");
-    }
-
-    // Fetch transactions with pagination
-    const response = await fetch(`/api/v1/wallets/transactions?page=${page}&limit=${limit}`, {
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const data = await response.json();
-    
-    if (data.success) {
-      // Transform backend data to match frontend interface
-      return data.data.transactions.map((tx: any) => ({
-        id: tx.id.toString(),
-        type: ["credit", "receive", "deposit", "refund"].includes(tx.type) ? "money_in" : "money_out",
-        amount: ["credit", "receive", "deposit", "refund"].includes(tx.type) ? parseFloat(tx.amount) : -parseFloat(tx.amount),
-        currency: tx.currency || "ZAR",
-        recipient: tx.receiverWalletId || tx.recipient,
-        sender: tx.senderWalletId || tx.sender,
-        description: tx.description || "Transaction",
-        status: tx.status,
-        timestamp: tx.createdAt,
-        reference: tx.transactionId,
-        fee: parseFloat(tx.fee || 0),
-        method: tx.type === "transfer" ? "MyMoolah Internal" : "Bank Transfer"
-      }));
-    } else {
-      throw new Error(data.message || "Failed to fetch transactions");
-    }
-  } catch (error) {
-    console.error("Error fetching transactions:", error);
-    throw error;
-  }
-};
+  // REMOVED: fetchTransactions function - now using MoolahContext
   // Format voucher numbers based on length
   const formatVoucherNumber = (description: string): string => {
     // Check if description contains a voucher number (12-16 digits)
@@ -276,11 +300,8 @@ export function TransactionHistoryPage() {
     setSearchQuery('');
     setFilterType('all');
     setDateRange({});
-    // Reset pagination when filters are cleared
-    setCurrentPage(1);
-    setHasMore(true);
     // Reload transactions from the beginning
-    loadTransactions(1, false);
+    loadTransactions();
   };
 
   // Export transactions
@@ -323,20 +344,6 @@ export function TransactionHistoryPage() {
       console.error('Export failed:', error);
     } finally {
       setIsExporting(false);
-    }
-  };
-
-  // Get status styling
-  const getStatusStyling = (status: TransactionStatus) => {
-    switch (status) {
-      case 'completed':
-        return { className: 'bg-green-100 text-green-700', icon: <CheckCircle className="w-3 h-3" /> };
-      case 'pending':
-        return { className: 'bg-yellow-100 text-yellow-700', icon: <Clock className="w-3 h-3" /> };
-      case 'failed':
-        return { className: 'bg-red-100 text-red-700', icon: <AlertTriangle className="w-3 h-3" /> };
-      default:
-        return { className: 'bg-gray-100 text-gray-700', icon: <Clock className="w-3 h-3" /> };
     }
   };
 
@@ -625,7 +632,9 @@ export function TransactionHistoryPage() {
             <Card style={{ borderRadius: 'var(--mobile-border-radius)' }}>
               <CardContent style={{ padding: 'var(--mobile-padding)' }}>
                 <div className="text-center py-8">
-                  <FileText className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+                                      <div className="w-12 h-12 mx-auto text-gray-300 mb-3 flex items-center justify-center">
+                      📄
+                    </div>
                   <h3 
                     style={{
                       fontFamily: 'Montserrat, sans-serif',
@@ -651,8 +660,6 @@ export function TransactionHistoryPage() {
             </Card>
           ) : (
             filteredTransactions.map((transaction) => {
-              const statusStyle = getStatusStyling(transaction.status);
-              
               return (
                 <Card 
                   key={transaction.id} 
@@ -672,11 +679,15 @@ export function TransactionHistoryPage() {
                             ? 'bg-green-100' 
                             : 'bg-red-100'
                         }`}>
-                          {transaction.type === 'money_in' ? (
-                            <ArrowDownLeft className="w-5 h-5 text-green-600" />
-                          ) : (
-                            <ArrowUpRight className="w-5 h-5 text-red-600" />
-                          )}
+                          {getTransactionIcon({
+                            id: transaction.id,
+                            type: transaction.type === 'money_in' ? 'receive' : 'send',
+                            amount: transaction.amount,
+                            description: transaction.description,
+                            senderWalletId: transaction.senderWalletId,
+                            receiverWalletId: transaction.receiverWalletId,
+                            metadata: transaction.metadata || {}
+                          }, 20)}
                         </div>
                         
                         <div className="flex-1 min-w-0">
@@ -685,7 +696,7 @@ export function TransactionHistoryPage() {
                               <p 
                                 style={{
                                   fontFamily: 'Montserrat, sans-serif',
-                                  fontSize: 'var(--mobile-font-base)',
+                                  fontSize: 'var(--mobile-font-small)',
                                   fontWeight: 'var(--font-weight-medium)',
                                   color: '#1f2937',
                                   marginBottom: '0.25rem'
@@ -703,19 +714,6 @@ export function TransactionHistoryPage() {
                                 >
                                   {formatDate(transaction.timestamp)}
                                 </span>
-                                <Badge 
-                                  className={`text-xs ${statusStyle.className}`}
-                                  style={{
-                                    fontFamily: 'Montserrat, sans-serif',
-                                    fontSize: '10px',
-                                    fontWeight: 'var(--font-weight-medium)'
-                                  }}
-                                >
-                                  <span className="flex items-center gap-1">
-                                    {statusStyle.icon}
-                                    {transaction.status}
-                                  </span>
-                                </Badge>
                               </div>
 
                             </div>
@@ -756,28 +754,7 @@ export function TransactionHistoryPage() {
           )}
         </div>
 
-        {/* Load More Button */}
-        {hasMore && filteredTransactions.length > 0 && (
-          <div className="mt-6 text-center">
-            <Button
-              onClick={() => loadTransactions(currentPage + 1, true)}
-              disabled={loading}
-              style={{
-                backgroundColor: '#16a34a',
-                color: 'white',
-                border: 'none',
-                borderRadius: 'var(--mobile-border-radius)',
-                padding: '12px 24px',
-                fontSize: 'var(--mobile-font-base)',
-                fontWeight: 'var(--font-weight-medium)',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.6 : 1
-              }}
-            >
-              {loading ? 'Loading...' : 'Load More Transactions'}
-            </Button>
-          </div>
-        )}
+        {/* Load More Button - Removed since we're using MoolahContext which loads all transactions */}
 
         {/* Summary Footer */}
         {filteredTransactions.length > 0 && (

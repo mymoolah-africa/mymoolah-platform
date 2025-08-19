@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, type QRMerchant, type QRValidationResult, type QRPaymentResult } from '../services/apiService';
@@ -156,7 +156,7 @@ export function QRPaymentPage() {
     input.capture = 'environment'; // Prefer camera on mobile
     
     input.onchange = async (event) => {
-      const file = event.target.files[0];
+      const file = (event.target as HTMLInputElement).files?.[0];
       if (file) {
         try {
           // Read the file and process it
@@ -172,7 +172,7 @@ export function QRPaymentPage() {
   };
 
   // Process uploaded QR code image
-  const processUploadedQR = async (file) => {
+  const processUploadedQR = async (file: File) => {
     try {
       setIsProcessing(true);
       setError(null);
@@ -194,21 +194,23 @@ export function QRPaymentPage() {
       canvas.height = img.height;
       
       // Draw image on canvas
-      ctx.drawImage(img, 0, 0);
+      ctx?.drawImage(img, 0, 0);
       
       // Get image data for QR code detection
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
       
       // Try to decode QR code
-      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      if (imageData) {
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
       
-      if (code) {
-        // QR code found, process it
-        console.log('QR Code detected:', code.data);
-        await processQRCode(code.data);
-      } else {
-        // No QR code found in image
-        setError('No QR code detected in the uploaded image. Please try a different image.');
+        if (code) {
+          // QR code found, process it
+          console.log('QR Code detected:', code.data);
+          await processQRCode(code.data);
+        } else {
+          // No QR code found in image
+          setError('No QR code detected in the uploaded image. Please try a different image.');
+        }
       }
       
       // Clean up
@@ -629,8 +631,8 @@ export function QRPaymentPage() {
                           margin: 0
                         }}
                       >
-                        {navigator.mediaDevices?.getUserMedia 
-                          ? 'Point your camera at a QR code'
+                        {typeof navigator.mediaDevices?.getUserMedia === 'function' ? 
+                          'Point your camera at a QR code'
                           : 'Camera not supported - use upload instead'
                         }
                       </p>

@@ -70,8 +70,24 @@ class SecurityConfig {
     };
 
     // CORS configuration
+    // In development, allow any LAN frontend at http://192.168.*.*:3000 in addition to configured origins
+    const allowedOrigins = this.getCorsOrigins();
+    const isDev = process.env.NODE_ENV !== 'production';
+    const devLanFrontendRegex = /^http:\/\/192\.168\.[0-9]{1,3}\.[0-9]{1,3}:3000$/;
+
     this.corsConfig = {
-      origin: this.getCorsOrigins(),
+      origin: (origin, callback) => {
+        // Allow non-browser requests (no origin)
+        if (!origin) return callback(null, true);
+
+        if (allowedOrigins.includes(origin)) return callback(null, true);
+
+        if (isDev && devLanFrontendRegex.test(origin)) {
+          return callback(null, true);
+        }
+
+        return callback(new Error('Not allowed by CORS'), false);
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
