@@ -29,7 +29,7 @@ class MobileMartAuthService {
         // Validation
         this.validateCredentials();
         
-        console.log('✅ MobileMart Auth Service: Initialized');
+
     }
 
     /**
@@ -48,7 +48,7 @@ class MobileMartAuthService {
      */
     async requestAccessToken() {
         try {
-            console.log('🔄 MobileMart Auth Service: Requesting new access token...');
+
             
             const response = await axios.post(this.tokenUrl, 
                 {
@@ -80,7 +80,7 @@ class MobileMartAuthService {
             this.accessToken = tokenData.access_token;
             this.tokenExpiry = expiryTime;
 
-            console.log('✅ MobileMart Auth Service: New access token obtained');
+
             return tokenData;
 
         } catch (error) {
@@ -145,7 +145,7 @@ class MobileMartAuthService {
                 config.data = data;
             }
 
-            console.log(`🔄 MobileMart Auth Service: Making ${method.toUpperCase()} request to ${endpoint}`);
+    
             
             const response = await axios(config);
             
@@ -161,7 +161,7 @@ class MobileMartAuthService {
             
             // If it's an authentication error, try to refresh token and retry once
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
-                console.log('🔄 MobileMart Auth Service: Authentication error, refreshing token and retrying...');
+    
                 this.accessToken = null; // Force token refresh
                 this.tokenExpiry = null;
                 

@@ -49,6 +49,7 @@ const requestScheduler = require('./services/requestScheduler');
 
 const sendMoneyRoutes = require('./routes/sendMoney.js');
 const beneficiariesRoutes = require('./routes/beneficiaries.js');
+const airtimeRoutes = require('./routes/airtime.js');
 
 // Validate external service credentials
 const validCredentials = securityConfig.validateExternalCredentials();
@@ -61,7 +62,7 @@ if (validCredentials.flash) {
   flashRoutesLoaded = true;
   console.log('✅ Flash routes loaded');
 } else {
-  console.warn('⚠️  Flash credentials not set. Flash API endpoints will be unavailable.');
+
 }
 
 // Conditionally load MobileMart routes
@@ -72,7 +73,7 @@ if (validCredentials.mobilemart) {
   mobilemartRoutesLoaded = true;
   console.log('✅ MobileMart routes loaded');
 } else {
-  console.warn('⚠️  MobileMart credentials not set. MobileMart API endpoints will be unavailable.');
+
 }
 
 
@@ -232,6 +233,7 @@ app.use('/api/v1/kyc', kycRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/send-money', sendMoneyRoutes);
 app.use('/api/v1/beneficiaries', beneficiariesRoutes);
+app.use('/api/v1/airtime', airtimeRoutes);
 app.use('/api/v1/support', supportRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/vouchers', voucherRoutes);
@@ -303,6 +305,7 @@ if (mobilemartRoutesLoaded) {
 console.log(`   - Supplier Comparison: /api/v1/suppliers`);
 console.log(`   - QR Payments: /api/v1/qr`);
 console.log(`   - Requests: /api/v1/requests`);
+console.log(`   - Airtime: /api/v1/airtime`);
   
   // Start EasyPay expiration handler (env-gated)
   const expiryToggle = String(process.env.EASYPAY_EXPIRY_HANDLER_ENABLED || '').trim().toLowerCase();

@@ -277,7 +277,7 @@ export function RequestMoneyPage() {
         expiresAt: expiresAt.toISOString()
       };
 
-      console.log('Creating money request:', moneyRequest);
+      
 
       if (formData.accountType === 'mymoolah') {
         // MyMoolah internal request – call backend API
@@ -306,7 +306,7 @@ export function RequestMoneyPage() {
         moneyRequest.id = String(payload.data.requestId);
       } else {
         // Peach Payments bank request (PayShap RTP)
-        console.log('Submitting Peach Payments RTP request for account:', formData.payerAccountNumber);
+
         
         // Call Peach Payments API for bank payment request
         const token = getToken();
@@ -330,8 +330,7 @@ export function RequestMoneyPage() {
         });
 
         const payload = await resp.json();
-        console.log('Peach Payments API response:', payload);
-        console.log('Peach Payments API response details:', JSON.stringify(payload?.details, null, 2));
+
         
         if (!resp.ok || !payload?.success) {
           const errorMessage = payload?.message || (typeof payload?.details === 'string' ? payload?.details : JSON.stringify(payload?.details)) || payload?.error || 'Failed to submit Peach Payments RTP request';
@@ -351,7 +350,7 @@ export function RequestMoneyPage() {
       setCreatedRequest(moneyRequest);
       setCurrentStep('success');
 
-      console.log('Money request created successfully:', requestId);
+      
 
       // Event-driven balance refresh after payment request creation
       try {

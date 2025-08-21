@@ -15,7 +15,7 @@ const EASYPAY_EXPIRATION_CONFIG = {
 // Handle expired vouchers with automatic refund
 const handleExpiredVouchers = async () => {
   try {
-    console.log('🕐 Checking for expired vouchers...');
+
     
     // Find all expired vouchers (both EasyPay and MM vouchers)
     const expiredVouchers = await Voucher.findAll({
@@ -25,7 +25,7 @@ const handleExpiredVouchers = async () => {
       }
     });
 
-    console.log(`📊 Found ${expiredVouchers.length} expired vouchers`);
+    
 
     for (const voucher of expiredVouchers) {
       try {
@@ -145,11 +145,7 @@ const handleExpiredVouchers = async () => {
         }
 
         const voucherCode = isEasyPayVoucher ? voucher.easyPayCode : voucher.voucherCode;
-        console.log(`✅ Processed expired ${isEasyPayVoucher ? 'EasyPay' : 'MM'} voucher ${voucherCode}:`);
-        console.log(`   - Original Amount: R${voucher.originalAmount}`);
-        console.log(`   - ${isMMVoucher ? 'Remaining Balance' : 'Refund Amount'}: R${refundAmount}`);
-        console.log(`   - Fee Amount: R${feeAmount}`);
-        console.log(`   - User ID: ${voucher.userId}`);
+
 
       } catch (error) {
         const voucherCode = isEasyPayVoucher ? voucher.easyPayCode : voucher.voucherCode;
@@ -157,7 +153,7 @@ const handleExpiredVouchers = async () => {
       }
     }
 
-    console.log(`✅ Completed expired voucher processing. Processed ${expiredVouchers.length} vouchers.`);
+    
 
   } catch (error) {
     console.error('❌ Error in handleExpiredVouchers:', error);
@@ -166,7 +162,7 @@ const handleExpiredVouchers = async () => {
 
 // Start automatic expiration handling (run every hour)
 const startExpirationHandler = () => {
-  console.log('🔄 Starting voucher expiration handler...');
+  
   
   // Run immediately on startup
   handleExpiredVouchers();
@@ -174,7 +170,7 @@ const startExpirationHandler = () => {
   // Then run every hour
   setInterval(handleExpiredVouchers, 60 * 60 * 1000);
   
-  console.log('✅ Voucher expiration handler started successfully');
+  
 };
 
 // Export for manual execution if needed
@@ -192,7 +188,7 @@ exports.triggerExpirationHandler = async (req, res) => {
       });
     }
 
-    console.log('🔧 Manual trigger of voucher expiration handler...');
+
     
     // Run the expiration handler
     await handleExpiredVouchers();
@@ -725,6 +721,8 @@ exports.redeemVoucher = async (req, res) => {
         });
       } catch (_) { /* best effort */ }
       
+
+      
       res.json({
         success: true,
         message: 'Voucher redeemed successfully',
@@ -907,58 +905,90 @@ exports.getVoucherBalance = async (req, res) => {
   }
 };
 
-// Get voucher balance summary for authenticated user
+/**
+ * 🚨 CRITICAL: VOUCHER BUSINESS LOGIC - NEVER CHANGE
+ * 
+ * ⚠️ IMMUTABLE BUSINESS RULES - DO NOT MODIFY
+ * 
+ * This function implements the core voucher balance calculation logic that has been
+ * tested and verified to work correctly. Changing this logic will result in
+ * incorrect balances and business logic failures.
+ * 
+ * BUSINESS RULES:
+ * 1. Active Vouchers = Active Status + Pending Payment Status
+ * 2. Active MMVouchers: use balance field (remaining value)
+ * 3. Pending EPVouchers: use originalAmount field (full value)
+ * 4. Cross-user redemption: Creator's voucher balance debited, Redeemer's wallet credited
+ * 5. NEVER use single SQL aggregation - ALWAYS use this working JavaScript logic
+ * 
+ * VIOLATION OF THESE RULES WILL RESULT IN INCORRECT BALANCES.
+ * ONLY MODIFY IF THERE ARE CRUCIAL PERFORMANCE OR SECURITY RISKS.
+ */
+
+// Get voucher balance summary for authenticated user - REVERTED to previous working logic
 exports.getVoucherBalanceSummary = async (req, res) => {
   try {
     const userId = req.user.id;
     
-    // Get all vouchers for the user (active, pending, redeemed)
-    const vouchers = await Voucher.findAll({
+    // Get all vouchers for the user (excluding cancelled/expired)
+    const allVouchers = await Voucher.findAll({
       where: {
-        userId: userId
+        userId: userId,
+        status: {
+          [require('sequelize').Op.notIn]: ['cancelled', 'expired']
+        }
       },
-      attributes: ['balance', 'originalAmount', 'status', 'voucherType']
+      attributes: ['id', 'status', 'balance', 'originalAmount', 'voucherType']
     });
     
-    // Calculate active vouchers (including partially redeemed)
-    const activeVouchers = vouchers.filter(voucher => {
-      if (voucher.status === 'active') return true;
-      if (voucher.status === 'redeemed' && parseFloat(voucher.balance || 0) > 0) return true; // Partially redeemed = active
-      return false;
+    let activeValue = 0;
+    let pendingValue = 0;
+    let redeemedValue = 0;
+    let totalValue = 0;
+    
+    // Apply business logic: Active Vouchers = Active status + Pending Payment status
+    allVouchers.forEach(voucher => {
+      const amount = parseFloat(voucher.originalAmount || 0);
+      const balance = parseFloat(voucher.balance || 0);
+      
+      if (voucher.status === 'active') {
+        // Active MMVouchers: use balance (remaining value)
+        activeValue += balance;
+      } else if (voucher.status === 'pending_payment') {
+        // Pending EPVouchers: use originalAmount (full value) - EVEN THOUGH status is pending
+        activeValue += amount;
+      } else if (voucher.status === 'redeemed') {
+        // Redeemed vouchers: use originalAmount
+        redeemedValue += amount;
+      }
+      
+      // Total includes all non-cancelled/expired vouchers
+      totalValue += amount;
     });
     
-    // Calculate totals
-    const activeVouchersCount = activeVouchers.length;
-    const activeVouchersValue = activeVouchers.reduce((sum, voucher) => sum + parseFloat(voucher.balance || 0), 0);
-    
-    // Calculate pending vouchers (EasyPay pending)
-    const pendingVouchers = vouchers.filter(voucher => voucher.status === 'pending_payment');
-    const pendingVouchersCount = pendingVouchers.length;
-    const pendingVouchersValue = pendingVouchers.reduce((sum, voucher) => sum + parseFloat(voucher.originalAmount || 0), 0);
-    
-    // Calculate redeemed vouchers (fully redeemed only)
-    const redeemedVouchers = vouchers.filter(voucher => voucher.status === 'redeemed' && parseFloat(voucher.balance || 0) === 0);
-    const redeemedVouchersCount = redeemedVouchers.length;
-    const redeemedVouchersValue = redeemedVouchers.reduce((sum, voucher) => sum + parseFloat(voucher.originalAmount || 0), 0);
+    // Count vouchers by status
+    const activeCount = allVouchers.filter(v => v.status === 'active').length;
+    const pendingCount = allVouchers.filter(v => v.status === 'pending_payment').length;
+    const redeemedCount = allVouchers.filter(v => v.status === 'redeemed').length;
     
     res.json({
       success: true,
       data: {
         active: {
-          count: activeVouchersCount,
-          value: activeVouchersValue.toFixed(2)
+          count: activeCount + pendingCount, // BOTH active AND pending count as "active vouchers"
+          value: activeValue.toFixed(2)
         },
         pending: {
-          count: pendingVouchersCount,
-          value: pendingVouchersValue.toFixed(2)
+          count: pendingCount,
+          value: pendingValue.toFixed(2)
         },
         redeemed: {
-          count: redeemedVouchersCount,
-          value: redeemedVouchersValue.toFixed(2)
+          count: redeemedCount,
+          value: redeemedValue.toFixed(2)
         },
         total: {
-          count: vouchers.length,
-          value: vouchers.reduce((sum, voucher) => sum + parseFloat(voucher.originalAmount || 0), 0).toFixed(2)
+          count: allVouchers.length,
+          value: totalValue.toFixed(2)
         }
       }
     });
@@ -1130,10 +1160,7 @@ exports.cancelEasyPayVoucher = async (req, res) => {
         }
       });
 
-      console.log(`✅ User ${req.user.id} cancelled EasyPay voucher ${voucher.easyPayCode}:`);
-      console.log(`   - Original Amount: R${voucher.originalAmount}`);
-      console.log(`   - Refund Amount: R${refundAmount}`);
-      console.log(`   - New Wallet Balance: R${wallet.balance}`);
+      
 
       res.json({
         success: true,

@@ -402,42 +402,65 @@ class WalletController {
     }
   }
 
-  // Get transaction history
+  // Get transaction history - OPTIMIZED with keyset pagination and trimmed payloads
   async getTransactionHistory(req, res) {
     try {
       const userId = req.user.id;
-      const { page = 1, limit = 10 } = req.query;
+      const { cursor, limit = 10 } = req.query;
+      const { Op } = require('sequelize');
 
-      const offset = (page - 1) * limit;
+      // Build where clause for keyset pagination
+      const whereClause = { userId: userId };
+      if (cursor) {
+        // Parse cursor (ISO timestamp string)
+        const cursorDate = new Date(cursor);
+        if (!isNaN(cursorDate.getTime())) {
+          whereClause.createdAt = { [Op.lt]: cursorDate };
+        }
+      }
 
-      const transactions = await Transaction.findAndCountAll({
-        where: { userId: userId },
+      // Fetch transactions with keyset pagination
+      const transactions = await Transaction.findAll({
+        where: whereClause,
         order: [['createdAt', 'DESC']],
-        limit: parseInt(limit),
-        offset: offset
+        limit: Math.min(parseInt(limit), 100), // Cap at 100 for performance
+        attributes: [
+          'id',
+          'transactionId',
+          'amount',
+          'type',
+          'status',
+          'description',
+          'currency',
+          'createdAt',
+          'senderWalletId',
+          'receiverWalletId',
+          'metadata'
+        ]
       });
 
-      const normalizedRows = (transactions.rows || []).map((t) => ({
+      // Transform to trimmed payload with banking-grade type mapping
+      const normalizedRows = transactions.map((t) => ({
         id: t.id,
         transactionId: t.transactionId,
-        userId: t.userId,
-        walletId: t.walletId,
-        senderWalletId: t.senderWalletId,
-        receiverWalletId: t.receiverWalletId,
-        paymentId: t.paymentId,
         amount: parseFloat(t.amount),
-        type: t.type === 'credit' ? 'deposit' : t.type === 'debit' ? 'payment' : t.type === 'send' ? 'sent' : t.type === 'receive' ? 'received' : t.type,
+        type: t.type === 'credit' ? 'deposit' : 
+              t.type === 'debit' ? 'payment' : 
+              t.type === 'send' ? 'sent' : 
+              t.type === 'receive' ? 'received' : t.type,
         status: t.status,
         description: t.description,
-        fee: t.fee != null ? parseFloat(t.fee) : 0,
         currency: t.currency || 'ZAR',
-        exchangeRate: t.exchangeRate != null ? Number(t.exchangeRate) : null,
-        failureReason: t.failureReason || null,
-        processingTime: t.processingTime != null ? Number(t.processingTime) : null,
-        metadata: t.metadata || null,
         createdAt: t.createdAt,
-        updatedAt: t.updatedAt,
+        // Essential fields for frontend icon classification
+        senderWalletId: t.senderWalletId,
+        receiverWalletId: t.receiverWalletId,
+        metadata: t.metadata || {}
       }));
+
+      // Generate next cursor for pagination
+      const nextCursor = transactions.length > 0 ? 
+        transactions[transactions.length - 1].createdAt.toISOString() : null;
 
       res.json({
         success: true,
@@ -445,10 +468,9 @@ class WalletController {
         data: {
           transactions: normalizedRows,
           pagination: {
-            currentPage: parseInt(page),
-            totalPages: Math.ceil(transactions.count / limit),
-            totalItems: transactions.count,
-            itemsPerPage: parseInt(limit)
+            hasMore: transactions.length === parseInt(limit),
+            nextCursor: nextCursor,
+            count: transactions.length
           }
         }
       });

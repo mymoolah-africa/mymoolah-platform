@@ -92,14 +92,14 @@ class DynamicApiEngine {
             syncInterval: 90000
         });
 
-        console.log('✅ Dynamic API Engine: SP connections initialized');
+
     }
 
     /**
      * Start automatic synchronization
      */
     startAutoSync() {
-        console.log('🔄 Dynamic API Engine: Starting automatic sync...');
+
         
         // Sync all SPs immediately
         this.syncAllSPs();
@@ -116,7 +116,7 @@ class DynamicApiEngine {
      * Sync all Service Providers
      */
     async syncAllSPs() {
-        console.log('🔄 Dynamic API Engine: Syncing all SPs...');
+
         
         const syncPromises = Array.from(this.spConnections.keys()).map(spId => 
             this.syncSP(spId)
@@ -124,7 +124,7 @@ class DynamicApiEngine {
         
         try {
             await Promise.allSettled(syncPromises);
-            console.log('✅ Dynamic API Engine: All SPs synced');
+    
         } catch (error) {
             console.error('❌ Dynamic API Engine: Error syncing SPs:', error.message);
         }
@@ -141,7 +141,7 @@ class DynamicApiEngine {
         }
 
         try {
-            console.log(`🔄 Dynamic API Engine: Syncing ${spConfig.name}...`);
+    
             
             // Fetch products from SP
             const products = await this.fetchSPProducts(spId);
@@ -158,14 +158,14 @@ class DynamicApiEngine {
             // Update last sync timestamp
             this.lastSync.set(spId, new Date().toISOString());
             
-            console.log(`✅ Dynamic API Engine: ${spConfig.name} synced successfully`);
+    
             
         } catch (error) {
             console.error(`❌ Dynamic API Engine: Error syncing ${spConfig.name}:`, error.message);
             
             // Retry logic
             if (retryCount < this.maxRetries) {
-                console.log(`🔄 Dynamic API Engine: Retrying ${spConfig.name} (${retryCount + 1}/${this.maxRetries})...`);
+        
                 setTimeout(() => {
                     this.syncSP(spId, retryCount + 1);
                 }, this.retryDelay);
@@ -368,7 +368,7 @@ class DynamicApiEngine {
             lastUpdated: new Date().toISOString()
         });
 
-        console.log(`✅ Dynamic API Engine: Menu updated for ${spConfig.name}`);
+
     }
 
     /**
@@ -474,7 +474,7 @@ class DynamicApiEngine {
      * Force sync specific SP
      */
     async forceSyncSP(spId) {
-        console.log(`🔄 Dynamic API Engine: Force syncing ${spId}...`);
+
         await this.syncSP(spId);
     }
 
@@ -482,7 +482,7 @@ class DynamicApiEngine {
      * Force sync all SPs
      */
     async forceSyncAll() {
-        console.log('🔄 Dynamic API Engine: Force syncing all SPs...');
+
         await this.syncAllSPs();
     }
 

@@ -19,7 +19,7 @@ class DynamicApiController {
         // Initialize menu generation
         this.initializeMenuGeneration();
         
-        console.log('✅ Dynamic API Controller: Initialized');
+    
     }
 
     /**
@@ -33,7 +33,7 @@ class DynamicApiController {
             // Generate initial menu
             await this.menuGenerator.generateMenu(allProducts);
             
-            console.log('✅ Dynamic API Controller: Menu generation initialized');
+        
         } catch (error) {
             console.error('❌ Dynamic API Controller: Error initializing menu:', error.message);
         }

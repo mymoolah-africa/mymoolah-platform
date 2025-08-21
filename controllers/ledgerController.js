@@ -37,5 +37,30 @@ module.exports = {
     } catch (err) {
       return fail(res, err);
     }
+  },
+
+  // Demo endpoints (env-gated)
+  async demoDraftVasPosting(req, res) {
+    if (String(process.env.LEDGER_DEMO_ENABLED || '').toLowerCase() !== 'true') {
+      return res.status(403).json({ success: false, message: 'Demo endpoints disabled' });
+    }
+    try {
+      const result = await ledgerService.draftPostVasPurchase(req.body);
+      return ok(res, 'Draft VAS posting complete', result);
+    } catch (err) {
+      return fail(res, err);
+    }
+  },
+
+  async demoDraftRtpPosting(req, res) {
+    if (String(process.env.LEDGER_DEMO_ENABLED || '').toLowerCase() !== 'true') {
+      return res.status(403).json({ success: false, message: 'Demo endpoints disabled' });
+    }
+    try {
+      const result = await ledgerService.draftPostPayShapRtp(req.body);
+      return ok(res, 'Draft RTP posting complete', result);
+    } catch (err) {
+      return fail(res, err);
+    }
   }
 };

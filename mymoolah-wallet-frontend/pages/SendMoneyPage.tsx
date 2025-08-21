@@ -144,7 +144,8 @@ export function SendMoneyPage() {
 
           const transformedTransactions = sourceList.map((tx: any) => {
             // Backend transforms: credit->deposit, debit->payment, send->sent, receive->received
-            const isCredit = ['deposit', 'received'].includes(tx.type);
+            // Also treat 'refund' as credit for display
+            const isCredit = ['deposit', 'received', 'refund'].includes(tx.type);
             const displayType = isCredit ? 'received' : 'sent';
 
             return {
@@ -162,7 +163,11 @@ export function SendMoneyPage() {
               }),
               timestamp: new Date(tx.createdAt || tx.date).toISOString(),
               status: tx.status || 'completed',
-              counterparty: tx.metadata?.counterpartyIdentifier || 'Unknown'
+              counterparty: tx.metadata?.counterpartyIdentifier || 'Unknown',
+              // Preserve identifiers and metadata for classification
+              senderWalletId: tx.senderWalletId || tx.metadata?.senderWalletId,
+              receiverWalletId: tx.receiverWalletId || tx.metadata?.receiverWalletId,
+              metadata: tx.metadata || {}
             };
           });
           setAllTransactions(transformedTransactions);
@@ -176,6 +181,7 @@ export function SendMoneyPage() {
   // Load transactions on component mount
   useEffect(() => {
     fetchTransactions();
+    fetchWalletBalance();
   }, []);
   
   // State Management
@@ -221,6 +227,36 @@ export function SendMoneyPage() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [saveAsBeneficiary, setSaveAsBeneficiary] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<string>('R0.00');
+
+  // Fetch wallet balance
+  const fetchWalletBalance = async () => {
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data?.balance) {
+          const balance = parseFloat(data.data.balance);
+          const formattedBalance = balance.toLocaleString('en-ZA', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+          setWalletBalance(`R${formattedBalance}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch wallet balance:', error);
+    }
+  };
 
   // Transform MoolahContext transactions to SendMoneyPage format
   const transformedTransactions = useMemo(() => {
@@ -305,9 +341,10 @@ export function SendMoneyPage() {
       const originalDescription = desc || 'Transaction';
 
       // Infer account type for this transaction row
-      const txAccountType: 'mymoolah' | 'bank' = isDebitTx
-        ? ((tx as any).counterparty ? 'mymoolah' : 'bank')
-        : 'bank';
+      // Determine account type using icon classification helpers
+      const looksBank = /external bank|bank transfer|absa|nedbank|standard bank|fnb|capitec|investec|discovery bank|african bank|bidvest bank|postbank|paygate|payfast|paypal/i.test(desc);
+      const looksWallet = /sent to|payment to|transfer to|received from|\|/i.test(desc) || !!(tx as any).senderWalletId || !!(tx as any).receiverWalletId;
+      const txAccountType: 'mymoolah' | 'bank' = looksBank && !looksWallet ? 'bank' : 'mymoolah';
 
       return {
         id: String(tx.id || Date.now()),
@@ -319,8 +356,8 @@ export function SendMoneyPage() {
         accountType: txAccountType,
         description: originalDescription, // Keep original for icon logic
         kind: isDebitTx ? ('send' as const) : ('other' as const),
-        receiverWalletId: (tx as any).counterparty,
-        senderWalletId: (tx as any).counterparty,
+        receiverWalletId: (tx as any).receiverWalletId,
+        senderWalletId: (tx as any).senderWalletId,
         type: mapType(tx.type), // Map to SendMoneyPage type
         metadata: {} // Add metadata field
       };
@@ -387,12 +424,19 @@ export function SendMoneyPage() {
     load();
   }, []);
 
-  // Compute last 10 most recent transactions (show both send and receive for context)
+  // Compute last 10 most recent transactions (wallet + bank only; exclude vouchers)
   const lastTenSendTx = useMemo(() => {
-    return transformedTransactions
+    const nonVoucher = transformedTransactions.filter((t) => {
+      const d = String(t.description || '').toLowerCase();
+      if (d.includes('voucher')) return false;
+      if (filterType === 'bank') return t.accountType === 'bank';
+      if (filterType === 'mymoolah') return t.accountType === 'mymoolah';
+      return true;
+    });
+    return nonVoucher
       .sort((a, b) => b.date.getTime() - a.date.getTime())
       .slice(0, 10);
-  }, [transformedTransactions]);
+  }, [transformedTransactions, filterType]);
 
   // Helper: When clicking a recent row, prefill payment (saved or one-time)
   const prefillPaymentFromTransaction = async (t: Transaction) => {
@@ -550,7 +594,7 @@ export function SendMoneyPage() {
       // Show success message or redirect
       if (result.status === 'processing') {
         // Could show a success modal or redirect to status page
-        console.log('Transfer initiated successfully:', result);
+
       }
       
     } catch (err) {
@@ -969,6 +1013,33 @@ export function SendMoneyPage() {
         }}>
           Send Money
         </h1>
+        {/* Wallet Balance Badge */}
+        <div 
+          style={{
+            position: 'absolute',
+            right: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            height: '44px'
+          }}
+        >
+          <Badge 
+            style={{
+              backgroundColor: '#86BE41',
+              color: '#ffffff',
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '9.18px',
+              fontWeight: '600',
+              padding: '3.06px 6.12px',
+              borderRadius: '9.18px',
+              border: 'none',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {walletBalance}
+          </Badge>
+        </div>
       </div>
 
       {/* Search and Add Section */}

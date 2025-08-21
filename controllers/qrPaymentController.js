@@ -700,16 +700,6 @@ class QRPaymentController {
         reference = reference.split('[')[0];
       }
       
-      // Debug logging
-      console.log('Zapper URL parsing:', {
-        url,
-        transactionId,
-        amount,
-        merchant,
-        reference,
-        cleanReference: reference
-      });
-      
       return {
         type: 'zapper',
         merchant: merchant || 'Zapper Merchant',
@@ -907,7 +897,7 @@ class QRPaymentController {
       const response = await axios.post('http://localhost:3001/api/v1/transactions', transactionData);
       
       if (response.data && response.data.success) {
-        console.log('✅ Wallet transaction created via API:', transactionId);
+
         return response.data.data;
       } else {
         throw new Error('Failed to create transaction via API');
@@ -916,7 +906,7 @@ class QRPaymentController {
     } catch (error) {
       console.error('❌ Failed to create wallet transaction:', error);
       // Don't throw error - just log it so the payment can still complete
-      console.log('⚠️  Payment completed but transaction record creation failed');
+      
     }
   }
 

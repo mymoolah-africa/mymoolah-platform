@@ -31,9 +31,13 @@ import {
   ArrowRight,
   AlertTriangle,
   Loader2,
-  ArrowLeft
+  ArrowLeft,
+  QrCode,
+  Banknote,
+  Home
 } from 'lucide-react';
 import { APP_CONFIG } from '../config/app-config';
+import { getToken } from '../utils/authToken';
 
 // Service interface for Quick Access Services
 interface QuickAccessService {
@@ -87,21 +91,34 @@ export function WalletSettingsPage() {
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [limitModalData, setLimitModalData] = useState<{ serviceName: string; enabledServices: string[] } | null>(null);
 
-  // Service icons mapping
+  // Service icons mapping - SINGLE SOURCE OF TRUTH from TransactPage
   const getServiceIcon = (serviceId: string) => {
     switch (serviceId) {
-      case 'send_money':
+      // Payments & Transfers
+      case 'send-money':
         return <Send className="w-6 h-6" />;
-      case 'request_money':
+      case 'request-money':
         return <Download className="w-6 h-6" />;
-      case 'airtime_data':
+      case 'qr-scan':
+        return <QrCode className="w-6 h-6" />;
+      case 'wallet-withdraw':
+        return <Banknote className="w-6 h-6" />;
+      // Bills & Utilities
+      case 'airtime-data':
         return <Smartphone className="w-6 h-6" />;
       case 'electricity':
         return <Zap className="w-6 h-6" />;
-      case 'bill_payments':
+      case 'bill-payments':
         return <Receipt className="w-6 h-6" />;
+      case 'insurance':
+        return <Home className="w-6 h-6" />;
+      // Vouchers & Digital Services
       case 'vouchers':
         return <Gift className="w-6 h-6" />;
+      case 'gaming':
+        return <CreditCard className="w-6 h-6" />;
+      case 'streaming':
+        return <Wallet className="w-6 h-6" />;
       default:
         return <Settings className="w-6 h-6" />;
     }
@@ -113,7 +130,7 @@ export function WalletSettingsPage() {
       setLoading(true);
       setError('');
 
-      const token = (await import('../utils/authToken')).getToken();
+      const token = getToken();
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -174,7 +191,7 @@ export function WalletSettingsPage() {
       setSaving(true);
       setError('');
 
-      const token = (await import('../utils/authToken')).getToken();
+      const token = getToken();
       if (!token) {
         throw new Error('No authentication token found');
       }
@@ -208,7 +225,7 @@ export function WalletSettingsPage() {
         if (data.data.settings) {
           setUserSettings(data.data.settings);
         }
-        console.log('Settings saved successfully');
+
         // Dispatch event to update bottom navigation
         window.dispatchEvent(new CustomEvent('settingsUpdated'));
       } else {
@@ -227,7 +244,13 @@ export function WalletSettingsPage() {
     const enabledCount = services.filter(s => s.enabled).length;
     const service = services.find(s => s.id === serviceId);
     
-    if (!service?.available) return;
+    // Prevent selection of unavailable or coming soon services
+    if (!service?.available || service?.comingSoon) return;
+    
+    // Prevent unselecting when only 1 service is selected (minimum requirement is 2)
+    if (service.enabled && enabledCount <= 1) {
+      return; // Don't allow unselecting if we're at the absolute minimum
+    }
     
     // Limit to 2 enabled services maximum
     if (!service.enabled && enabledCount >= 2) {

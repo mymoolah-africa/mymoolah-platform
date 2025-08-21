@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, type QRMerchant, type QRValidationResult, type QRPaymentResult } from '../services/apiService';
+import { getToken } from '../utils/authToken';
+import { APP_CONFIG } from '../config/app-config';
 import jsQR from 'jsqr';
 import {
   ArrowLeft,
@@ -20,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 import { Alert, AlertDescription } from '../components/ui/alert';
 
 export function QRPaymentPage() {
@@ -40,11 +43,42 @@ export function QRPaymentPage() {
   const [isLoadingMerchants, setIsLoadingMerchants] = useState(false);
   const [qrValidationResult, setQrValidationResult] = useState<QRValidationResult | null>(null);
   const [currentPayment, setCurrentPayment] = useState<QRPaymentResult | null>(null);
+  const [walletBalance, setWalletBalance] = useState<string>('R0.00');
 
   // Load featured merchants on component mount
   useEffect(() => {
     loadFeaturedMerchants();
+    fetchWalletBalance();
   }, []);
+
+  // Fetch wallet balance
+  const fetchWalletBalance = async () => {
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data?.balance) {
+          const balance = parseFloat(data.data.balance);
+          const formattedBalance = balance.toLocaleString('en-ZA', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+          setWalletBalance(`R${formattedBalance}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch wallet balance:', error);
+    }
+  };
 
   // Load featured merchants from API
   const loadFeaturedMerchants = async () => {
@@ -205,7 +239,7 @@ export function QRPaymentPage() {
       
         if (code) {
           // QR code found, process it
-          console.log('QR Code detected:', code.data);
+  
           await processQRCode(code.data);
         } else {
           // No QR code found in image
@@ -235,9 +269,9 @@ export function QRPaymentPage() {
     <div 
       style={{
         backgroundColor: '#ffffff',
-        minHeight: '100vh',
         fontFamily: 'Montserrat, sans-serif',
-        position: 'relative'
+        position: 'relative',
+        width: '100%'
       }}
     >
       {/* Header */}
@@ -245,7 +279,7 @@ export function QRPaymentPage() {
         style={{
           position: 'sticky',
           top: 0,
-          zIndex: 50,
+          zIndex: 40,
           backgroundColor: '#ffffff',
           borderBottom: '1px solid #e5e7eb',
           boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
@@ -304,12 +338,36 @@ export function QRPaymentPage() {
                 margin: 0
               }}
             >
-              QR Code Payment
+              QR Payment
             </h1>
           </div>
 
-          {/* Spacer for alignment */}
-          <div style={{ width: '44px', height: '44px' }} />
+          {/* Wallet Balance Badge */}
+          <div 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '44px',
+              height: '44px'
+            }}
+          >
+            <Badge 
+              style={{
+                backgroundColor: '#86BE41',
+                color: '#ffffff',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '9.18px',
+                fontWeight: '600',
+                padding: '3.06px 6.12px',
+                borderRadius: '9.18px',
+                border: 'none',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {walletBalance}
+            </Badge>
+          </div>
         </div>
       </header>
 
@@ -319,7 +377,7 @@ export function QRPaymentPage() {
           maxWidth: '375px',
           margin: '0 auto',
           padding: '1rem',
-          paddingBottom: '100px' // Space for bottom navigation
+          paddingBottom: '120px' // Increased space for bottom navigation
         }}
       >
         {/* Camera Scanner View */}
@@ -334,7 +392,7 @@ export function QRPaymentPage() {
               maxWidth: '375px',
               height: '100vh',
               backgroundColor: '#000000',
-              zIndex: 60,
+              zIndex: 45,
               display: 'flex',
               flexDirection: 'column'
             }}

@@ -4,6 +4,8 @@
 
 MyMoolah is a South African fintech wallet platform built on Node.js/Express.js with PostgreSQL database, focusing on compliance, security, and best practices. The platform provides comprehensive wallet management, user authentication, and transaction processing capabilities.
 
+For settlements, floats, and double-entry journal patterns, see **[SETTLEMENTS.md](SETTLEMENTS.md)** (closed-loop, Mojaloop-aligned model).
+
 ## 🏗️ Architecture Components
 
 ### **Backend Layer**

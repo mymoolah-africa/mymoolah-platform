@@ -212,7 +212,7 @@ class SecurityConfig {
     Object.entries(credentials).forEach(([service, creds]) => {
       if (creds.consumerKey && creds.consumerSecret || creds.clientId && creds.clientSecret) {
         validCredentials[service] = true;
-        console.log(`✅ ${service} credentials validated`);
+    
       } else {
         console.warn(`⚠️  ${service} credentials not configured`);
       }

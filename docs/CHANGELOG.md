@@ -1,147 +1,191 @@
-# MyMoolah Treasury Platform - Changelog
+# Changelog
 
 All notable changes to the MyMoolah Treasury Platform will be documented in this file.
 
-## [3.3.0] - 2025-08-19
+## [2.0.1] - 2025-08-20
 
-### Added
-- **Dashboard Voucher Counter Enhancement**: Active vouchers counter now includes both "Active" status vouchers and "Pending Payment" status EasyPay vouchers
-- **Dynamic Registration Date**: Profile page now displays actual user registration date instead of hardcoded text
-- **Beautiful Success Modal**: Replaced browser `alert()` popups with custom-designed modal dialogs for voucher operations
-- **SVG Logo Integration**: TopBanner now uses `logo.svg` with fallback to gradient text
-- **Logo Size Enhancements**: Doubled size of logos on TopBanner and LoginPage for better visibility
-- **LoginPage UI Improvements**: Reduced gap between logo and "Sign In" text, moved card up with negative margin
+### 🎨 UI/UX Improvements
+- **TransactPage Redesign**: Complete redesign with 4 distinct service containers
+  - Replaced individual service cards with container-based layout
+  - Added proper spacing and shadows for better visual separation
+  - Grouped headings and banners together as cohesive units
+  - Improved responsive design for mobile devices
+- **Bottom Navigation Update**: Replaced Profile icon with Support icon
+  - Updated navigation to include Support route
+  - Maintained existing quick access service functionality
+  - Improved visual consistency across navigation
 
-### Fixed
-- **React Ref Warning**: Fixed Button component to properly handle refs using React.forwardRef
-- **Transaction Icon System**: Standardized transaction icons across Dashboard, Transaction History, and Send Money pages
-- **Transaction Color Logic**: Corrected transaction display colors (green for credits, red for debits)
-- **Missing Transactions**: Fixed transaction display issues on Dashboard, Transaction History, and Send Money pages
-- **Transaction Type Mapping**: Updated frontend to match backend's transformed transaction types
-- **Voucher Expiration Logic**: Enhanced voucher expiration to handle both EasyPay and MM vouchers with proper refund logic
-- **Timezone Handling**: Fixed voucher expiry timezone to display correctly as local time (SAST)
-- **User CreatedAt Field**: Added `createdAt` field to user data for dynamic registration date display
+### 🔧 Technical Improvements
+- **Container Architecture**: Implemented container-based layout system
+  - Each service category now has its own distinct container
+  - Better visual hierarchy and content organization
+  - Improved spacing and shadow effects for professional appearance
+- **Code Quality**: Enhanced component structure and styling
+  - Cleaner separation of concerns in TransactPage
+  - Improved CSS organization and consistency
+  - Better responsive breakpoints and mobile optimization
 
-### Changed
-- **Transaction Icon Rules**: Implemented new icon system with wallet, ticket, arrows, airtime, data, electricity icons
-- **Voucher Expiration System**: Updated to handle both EasyPay (refund original amount) and MM vouchers (refund remaining balance)
-- **UI Consistency**: Standardized transaction display across all pages with consistent icons and colors
-- **Logo Display**: TopBanner now uses SVG logo with localStorage toggle for easy switching
-- **LoginPage Layout**: Improved spacing and positioning for better visual hierarchy
+### 📱 User Experience
+- **Visual Clarity**: Clear separation between different service categories
+- **Navigation Flow**: Improved user journey through service categories
+- **Mobile Optimization**: Better touch targets and spacing for mobile devices
+- **Consistent Design**: Unified design language across all components
 
-### Technical Improvements
-- **TypeScript Fixes**: Resolved various TypeScript errors with proper type assertions
-- **Component Architecture**: Improved Button component with proper ref forwarding
-- **API Integration**: Enhanced transaction data handling with proper wallet ID mapping
-- **Error Handling**: Replaced browser alerts with custom error components
-- **Code Quality**: Improved maintainability and consistency across components
+---
 
-## [3.2.0] - 2025-08-17
+## [2.0.0] - 2025-08-20
 
-### Added
-- **Database Integrity Restoration**: Complete audit trail compliance achieved
-- **Wallet Reference Mapping**: All transactions now have complete sender/receiver wallet references
-- **Regulatory Compliance**: Banking-grade audit requirements met
+### 🧹 Debug Log Cleanup & Code Quality
+- **Frontend Cleanup**: Removed 15+ debug logs from MoolahContext.tsx
+- **Backend Cleanup**: Removed 100+ debug logs from controllers and services
+- **Syntax Error Fixes**: Resolved multiple syntax errors from cleanup process
+- **Code Quality**: Improved overall code cleanliness and maintainability
 
-### Fixed
-- **Transaction Display Issues**: Resolved duplicate names and incorrect descriptions in frontend
-- **Frontend Description Logic**: Simplified to use backend descriptions directly without parsing
-- **Backend Transaction Creation**: Corrected transaction description formatting
-- **Missing Wallet References**: Restored senderWalletId and receiverWalletId for all 24 transactions
-- **Audit Trail Completeness**: Every transaction now has full wallet references for money flow tracing
+### 🗄️ Database Cleanup
+- **Mock Data Removal**: Eliminated all hardcoded airtime transactions
+- **Product Catalog Verification**: Confirmed only legitimate product definitions remain
+- **Data Integrity**: Ensured database contains only real transaction data
+- **Cleanup Scripts**: Removed test data seeding scripts
 
-### Changed
-- **Transaction Format**: Standardized to `<Counterparty> | <User Description>` format
-- **Frontend Logic**: Removed unnecessary description parsing and formatting
-- **Database Structure**: Unified wallet reference structure across all transaction types
+### 🎨 Frontend Improvements
+- **RecentTransactions Component**: Updated to use real data from MoolahContext
+- **Demo Mode Removal**: Eliminated all demo mode logic and mock data
+- **Component Refactoring**: Improved data flow and state management
+- **Error Handling**: Enhanced error boundaries and fallback states
 
-### Technical Improvements
-- **SendMoneyPage.tsx**: Cleaned up transaction mapping logic and description construction
-- **DashboardPage.tsx**: Simplified getPrimaryDisplayText function
-- **TransactionHistoryPage.tsx**: Removed reference concatenation from getPrimaryText function
-- **Database Queries**: Optimized wallet reference restoration queries
+### ⚡ Performance Optimizations
+- **API Response Optimization**: Reduced payload sizes for better performance
+- **Database Query Optimization**: Improved query efficiency and indexing
+- **Memory Management**: Better resource utilization and cleanup
+- **Loading States**: Enhanced loading indicators and user feedback
 
-## [3.1.0] - 2025-08-16
+---
 
-### Fixed
-- **Duplicate Transaction References**: Removed duplicate " — Ref:" concatenation from frontend display
-- **Transaction Description Format**: Cleaned up transaction mapping logic in SendMoneyPage.tsx
-- **Frontend Display Logic**: Removed unnecessary reference concatenation from TransactionHistoryPage.tsx
-- **Transaction Display Consistency**: Both sent and received transactions now show clean, readable descriptions
+## [1.9.0] - 2025-08-19
 
-### Changed
-- **SendMoneyPage.tsx**: Cleaned up transaction mapping and removed hardcoded references
-- **TransactionHistoryPage.tsx**: Simplified getPrimaryText function to remove reference concatenation
-- **Transaction Display Format**: Now follows rule `<Sender> | <Description of transaction entered by sender>`
+### 🎯 Services Page Consolidation
+- **Unified ServicesPage**: Merged Airtime, Data, and Electricity into single page
+- **Dynamic Product Rendering**: AI-powered product optimization and ranking
+- **Supplier Integration**: Flash and MobileMart product catalogs
+- **User Experience**: Streamlined service selection and purchase flow
 
-### Technical Improvements
-- **Frontend Logic**: Streamlined transaction description handling
-- **Code Quality**: Removed duplicate reference logic and improved maintainability
-- **User Experience**: Cleaner, more readable transaction descriptions
+### 🔄 Balance Refresh System
+- **Event-Driven Architecture**: Real-time balance updates on user actions
+- **Smart Polling Fallback**: Exponential backoff for network resilience
+- **Performance Optimization**: Reduced unnecessary API calls
+- **User Feedback**: Improved loading states and error handling
 
-## [3.0.0] - 2025-08-14
+### 📊 Transaction History Enhancement
+- **Keyset Pagination**: Efficient handling of large transaction lists
+- **Trimmed Payloads**: Optimized API responses for better performance
+- **Real-time Updates**: Live transaction status updates
+- **Search and Filter**: Enhanced transaction discovery capabilities
 
-### Added
-- **Complete Frontend Integration**: All major pages connected to real backend APIs
-- **API Service Layer**: Comprehensive backend integration with error handling
-- **Real-time Data**: Replaced hardcoded dummy data with live API responses
-- **Type Safety**: Full TypeScript integration with proper interfaces
+---
 
-### Changed
-- **TransactPage**: Connected to real supplier data APIs
-- **SendMoneyPage**: Full payment flow with recipient resolution
-- **DashboardPage**: Real-time wallet balance and transaction history
-- **TransactionHistoryPage**: Complete transaction listing with search/filter
+## [1.8.0] - 2025-08-18
 
-### Technical Improvements
-- **Error Handling**: Comprehensive error states and user feedback
-- **Loading States**: Professional loading indicators for all API calls
-- **API Integration**: 28 endpoints fully integrated with frontend
+### 💳 Request Money Feature
+- **Money Request Creation**: Users can request payments from other users
+- **Recurring Requests**: Support for scheduled payment requests
+- **Peach Payments RTP**: Bank-to-bank real-time payment integration
+- **Notification System**: Real-time alerts for payment requests
 
-## [2.0.0] - 2025-08-12
+### 🔐 KYC System Enhancement
+- **Multi-tier Verification**: Progressive KYC levels with feature gating
+- **Document Upload**: Secure file upload with OCR processing
+- **AI-powered Validation**: Automated document verification
+- **Manual Review**: Escalation system for complex cases
 
-### Added
-- **Supplier Integration System**: Complete integration with EasyPay, Flash, and MobileMart
-- **AI-Powered Comparison**: Smart supplier comparison with best deals detection
-- **Real-time Data**: Live supplier data and dynamic pricing
-- **Comprehensive API Coverage**: 17+ supplier API endpoints
+### 🎫 Voucher System Improvements
+- **EasyPay Integration**: PIN-based voucher system
+- **Expiration Handling**: Automatic voucher expiration and refunds
+- **Cancellation Support**: User-initiated voucher cancellation
+- **Audit Trail**: Complete transaction history and audit logs
 
-### Changed
-- **Database Schema**: Extended with supplier-specific tables and models
-- **API Architecture**: Modular supplier integration system
-- **Performance**: Optimized database queries and caching
+---
 
-## [1.0.0] - 2025-08-10
+## [1.7.0] - 2025-08-17
 
-### Added
-- **Core Wallet System**: Basic wallet functionality with PostgreSQL
-- **Authentication**: JWT-based user authentication system
-- **Database Infrastructure**: PostgreSQL setup with Sequelize ORM
-- **Project Foundation**: Organized project structure and development tools
+### 🔌 Service Provider Integrations
+- **Flash Integration**: Complete airtime and data service integration
+- **MobileMart Integration**: Gaming credits and digital products
+- **Peach Payments**: Real-time bank transfer capabilities
+- **EasyPay**: Digital voucher system with PIN security
 
-### Technical Foundation
-- **PostgreSQL Database**: Cloud SQL instance with local development proxy
-- **Node.js Backend**: Express.js server with comprehensive middleware
-- **React Frontend**: TypeScript-based frontend with modern UI components
-- **Development Tools**: Hot reload, linting, and debugging setup
+### 📱 Mobile-First Design
+- **Responsive Layout**: Optimized for mobile devices and low-cost hardware
+- **Progressive Web App**: Offline capabilities and app-like experience
+- **Touch Optimization**: Improved touch targets and gesture support
+- **Performance**: Optimized for slow networks and limited data usage
+
+### 🔒 Security Enhancements
+- **JWT Authentication**: Secure token-based authentication system
+- **Rate Limiting**: API abuse prevention and protection
+- **Input Validation**: Comprehensive data sanitization
+- **Audit Logging**: Complete transaction and user action audit trails
+
+---
+
+## [1.6.0] - 2025-08-16
+
+### 🏗️ Architecture Foundation
+- **Mojaloop Compliance**: Banking-grade architecture patterns
+- **Microservices Ready**: Modular service architecture
+- **Database Design**: Normalized schema with proper relationships
+- **API Design**: RESTful endpoints with comprehensive error handling
+
+### 🎨 User Interface
+- **React + TypeScript**: Modern frontend with type safety
+- **Tailwind CSS**: Utility-first styling approach
+- **Component Library**: Reusable UI components
+- **State Management**: Context-based state management
+
+### 🗄️ Database Implementation
+- **PostgreSQL**: Robust relational database
+- **Sequelize ORM**: Database abstraction and migration system
+- **Migration System**: Version-controlled schema changes
+- **Seed Data**: Initial data setup and testing
+
+---
+
+## [1.5.0] - 2025-08-15
+
+### 🚀 Project Initialization
+- **Repository Setup**: Initial project structure and configuration
+- **Development Environment**: Local development setup and tooling
+- **Documentation**: Comprehensive documentation structure
+- **Testing Framework**: Unit and integration testing setup
+
+### 📋 Requirements Analysis
+- **Business Requirements**: Core functionality and feature specifications
+- **Technical Requirements**: Architecture and technology stack decisions
+- **Security Requirements**: Authentication and data protection needs
+- **Performance Requirements**: Scalability and performance targets
+
+---
+
+## [1.0.0] - 2025-08-14
+
+### 🎉 Initial Release
+- **Core Wallet**: Basic wallet functionality and balance management
+- **User Authentication**: Registration and login system
+- **Basic Transactions**: Simple money transfer capabilities
+- **Foundation**: Project foundation and basic architecture
 
 ---
 
 ## Version History
 
-- **3.3.0** (2025-08-19): UI/UX enhancements, voucher system improvements, and various fixes
-- **3.2.0** (2025-08-17): Database integrity restoration and transaction display fixes
-- **3.1.0** (2025-08-16): Transaction description display improvements
-- **3.0.0** (2025-08-14): Complete frontend integration with backend APIs
-- **2.0.0** (2025-08-12): Supplier integration system and AI comparison
-- **1.0.0** (2025-08-10): Core wallet system and project foundation
+- **2.0.1** - TransactPage redesign and UI improvements
+- **2.0.0** - Debug log cleanup and code quality improvements
+- **1.9.0** - Services consolidation and balance refresh system
+- **1.8.0** - Request money feature and KYC enhancements
+- **1.7.0** - Service provider integrations and mobile optimization
+- **1.6.0** - Architecture foundation and database implementation
+- **1.5.0** - Project initialization and requirements analysis
+- **1.0.0** - Initial release with core wallet functionality
 
 ---
 
-## Contributing
-
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+**Note**: This changelog follows the [Keep a Changelog](https://keepachangelog.com/) format and adheres to [Semantic Versioning](https://semver.org/). 

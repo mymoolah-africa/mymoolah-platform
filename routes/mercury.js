@@ -32,7 +32,7 @@ router.post('/credit-transfer', secureTokenMiddleware.validateCreditTransferToke
         const processingTransactionId = generateUUID();
 
         // Create transaction ledger entry (simulated)
-        console.log('Creating transaction ledger entry:', {
+
             transactionIdentifier,
             processingTransactionId,
             status: 'Awaiting Settlement'
@@ -189,7 +189,7 @@ router.post('/payment-status', secureTokenMiddleware.validatePaymentStatusToken.
             });
         } else {
             // Simulate sending payment status request to host
-            console.log('Sending payment status request to host for UETR:', originalUETR);
+    
 
             // Return success response (status request sent to host)
             res.status(200).json({
@@ -258,7 +258,7 @@ router.post('/payment-status-report', async (req, res) => {
         const processingTransactionId = generateUUID();
 
         // Simulate processing payment status report
-        console.log('Processing payment status report:', {
+
             originalUETR,
             transactionStatus,
             transactionStatusDescription

@@ -86,16 +86,15 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
+    // Initial notification load when user logs in
     refreshNotifications();
-    // SMART POLLING STRATEGY:
-    // - Reduced polling frequency since we now have event-driven updates
-    // - Only poll for notifications every 30 seconds instead of 10
-    // - Event-driven updates handle real-time balance/transaction changes
-    // - Polling is now just a fallback for missed notifications
-    const i = setInterval(() => refreshNotifications(), 30000);
-    return () => { 
-      clearInterval(i); 
-    };
+    
+    // REMOVED: Harmful polling interval
+    // Only refresh notifications on-demand or when events occur
+    // This follows Mojaloop and banking best practices for scalability
+    // 
+    // FUTURE: Will implement WebSocket/SSE for real-time updates
+    // FUTURE: Will add smart polling fallback with exponential backoff
   }, [user]);
 
   const toggleBalanceVisibility = () => {
@@ -161,102 +160,17 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
     try {
       const token = getToken();
       
-      if (token && token.startsWith('demo-token-')) {
-        // Demo mode - use mock data
-        const mockWalletBalance: WalletBalance = {
-          available: 12450.75,
-          pending: 150.00,
-          currency: 'ZAR'
-        };
-        
-        const mockTransactions: Transaction[] = [
-          {
-            id: 'txn-001',
-            type: 'received',
-            amount: 500.00,
-            currency: 'ZAR',
-            description: 'Payment from John Smith',
-            date: 'Today, 10:30 AM',
-            timestamp: new Date().toISOString(),
-            status: 'completed',
-            counterparty: '+27 82 123 4567'
-          },
-          {
-            id: 'txn-002',
-            type: 'sent',
-            amount: 250.00,
-            currency: 'ZAR',
-            description: 'Groceries - Pick n Pay',
-            date: 'Today, 09:15 AM',
-            timestamp: new Date(Date.now() - 1000 * 60 * 75).toISOString(),
-            status: 'completed',
-            counterparty: 'Pick n Pay Sandton'
-          },
-          {
-            id: 'txn-003',
-            type: 'payment',
-            amount: 89.50,
-            currency: 'ZAR',
-            description: 'Uber Trip',
-            date: 'Yesterday, 6:45 PM',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 17).toISOString(),
-            status: 'completed',
-            counterparty: 'Uber'
-          },
-          {
-            id: 'txn-004',
-            type: 'received',
-            amount: 1200.00,
-            currency: 'ZAR',
-            description: 'Salary Payment',
-            date: 'Yesterday, 12:00 PM',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-            status: 'completed',
-            counterparty: 'ABC Company'
-          },
-          {
-            id: 'txn-005',
-            type: 'sent',
-            amount: 75.00,
-            currency: 'ZAR',
-            description: 'Airtime Top-up',
-            date: '2 days ago',
-            timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-            status: 'completed',
-            counterparty: 'MTN'
-          }
-        ];
-
-        const mockTodayActivity: TodayActivity = {
-          received: 500.00,
-          sent: 250.00
-        };
-
-        setWalletBalance(mockWalletBalance);
-        setBalance(mockWalletBalance.available);
-        setVoucherBalance(45.50);
-        setRecentTransactions(mockTransactions);
-        setTodayActivity(mockTodayActivity);
-      } else {
-        // Real API calls for production (when backend is ready)
-        const headers = { Authorization: `Bearer ${token}` };
+      // Real API calls for production (when backend is ready)
+      const headers = { Authorization: `Bearer ${token}` };
 
         // Fetch wallet balance
         const balanceResponse = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance?_t=${Date.now()}` , { headers });
         if (!balanceResponse.ok) throw new Error('Failed to fetch balance');
         const balanceData = await balanceResponse.json();
-        console.log('💰 Balance API response:', JSON.stringify(balanceData, null, 2));
-        console.log('💰 Current balance:', balanceData.data?.available, 'Previous balance:', balance);
         
         // Check if balance actually changed
         const newBalance = balanceData.data?.available;
         const balanceChanged = newBalance !== balance;
-        
-        if (balanceChanged) {
-          console.log('✅ Balance changed from', balance, 'to', newBalance);
-        } else {
-          console.log('⚠️ Balance unchanged:', newBalance);
-        }
         
         setWalletBalance(balanceData.data);
         setBalance(newBalance);
@@ -287,7 +201,6 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
           sent: todayTransactions.filter(tx => tx.type === 'sent' || tx.type === 'payment').reduce((sum, tx) => sum + Math.abs(tx.amount), 0)
         };
         setTodayActivity(todayActivity);
-      }
     } catch (error) {
       console.error('Failed to fetch wallet data:', error);
       // Fallback to empty/safe values on error
@@ -322,7 +235,7 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       setAllTransactions(allTransactions);
       setRecentTransactions(allTransactions.slice(0, 10)); // Recent 10 for dashboard
       
-      console.log('🔄 Transactions refreshed:', allTransactions.length, 'transactions');
+
     } catch (error) {
       console.error('Failed to refresh transactions:', error);
     }
@@ -333,33 +246,7 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
 
     const token = getToken();
     
-    if (token && token.startsWith('demo-token-')) {
-      // Demo mode - simulate transfer
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Update demo balance
-      const newBalance = balance - amount;
-      setBalance(newBalance);
-      setWalletBalance(prev => prev ? { ...prev, available: newBalance } : null);
-      
-      // Add transaction to history
-      const newTransaction: Transaction = {
-        id: `txn-${Date.now()}`,
-        type: 'sent',
-        amount,
-        currency: 'ZAR',
-        description: `Transfer to ${recipient}`,
-        date: 'Just now',
-        timestamp: new Date().toISOString(),
-        status: 'completed',
-        counterparty: recipient
-      };
-      
-      setRecentTransactions(prev => [newTransaction, ...prev.slice(0, 4)]);
-      return;
-    }
-
-    // Real API transfer (when backend is ready)
+    // Real API transfer
     const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/send-money`, {
       method: 'POST',
       headers: {
@@ -408,15 +295,7 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       const blocker = list.find(n => n.freezeUntilViewed);
       setBlockingNotification(blocker || null);
       
-      // Debug: Log notifications for balance refresh debugging
-      if (list.length > 0) {
-        console.log('📱 Notifications received:', list.map(n => ({
-          id: n.id,
-          type: n.type,
-          title: n.title,
-          payload: n.payload
-        })));
-      }
+
       // Event-driven balance refresh after transaction notifications
       const hasTransactionNotification = list.some(n => {
         // Check for transaction notification types
@@ -442,12 +321,9 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
         
         // Debounce: only refresh if it's been more than 2 seconds since last refresh
         if (timeSinceLastRefresh > 2000) {
-          console.log('🔔 Transaction notification detected - refreshing balance and transactions');
           (window as any).lastBalanceRefreshTime = now;
           await refreshBalanceAfterAction('money_received');
           await refreshTransactions(); // NEW: Also refresh transactions
-        } else {
-          console.log('⏳ Balance refresh debounced (last refresh was', Math.round(timeSinceLastRefresh/1000), 'seconds ago)');
         }
       }
     } catch (_) {}
@@ -486,12 +362,10 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
 
   // Event-driven balance refresh system
   const refreshBalanceAfterAction = async (action: 'payment_request_created' | 'payment_request_approved' | 'payment_request_declined' | 'money_sent' | 'money_received') => {
-    console.log(`🔄 Event-driven balance refresh triggered by: ${action}`);
     
     try {
       // Debounce multiple rapid calls
       if (isLoading) {
-        console.log('⏳ Balance refresh already in progress, skipping...');
         return;
       }
 
@@ -499,36 +373,31 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       switch (action) {
         case 'payment_request_created':
           // For created requests, only refresh if it's a bank request (affects pending balance)
-          console.log('📝 Payment request created - refreshing balance');
           await refreshData();
           break;
           
         case 'payment_request_approved':
           // Approved requests affect actual balance
-          console.log('✅ Payment request approved - refreshing balance');
           await refreshData();
           break;
           
         case 'payment_request_declined':
           // Declined requests don't affect balance, but refresh for consistency
-          console.log('❌ Payment request declined - refreshing balance');
           await refreshData();
           break;
           
         case 'money_sent':
           // Money sent affects sender's balance
-          console.log('💸 Money sent - refreshing balance');
           await refreshData();
           break;
           
         case 'money_received':
           // Money received affects recipient's balance
-          console.log('💰 Money received - refreshing balance');
           await refreshData();
           break;
           
         default:
-          console.log('❓ Unknown action, skipping balance refresh');
+          // Unknown action, skip balance refresh
       }
     } catch (error) {
       console.error('❌ Event-driven balance refresh failed:', error);
@@ -538,7 +407,6 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
 
   // Convenience function for transaction-related balance refresh
   const refreshBalanceAfterTransaction = async () => {
-    console.log('🔄 Transaction completed - refreshing balance');
     await refreshBalanceAfterAction('money_sent');
   };
 

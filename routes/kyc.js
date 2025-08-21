@@ -49,14 +49,14 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024 // 10MB limit
   },
   fileFilter: (req, file, cb) => {
-    console.log('🔍 Multer fileFilter called for:', file.fieldname, file.originalname, file.mimetype);
+    
     
     // Only accept image files for OCR processing
     if (file.mimetype.startsWith('image/')) {
-      console.log('✅ File accepted:', file.originalname);
+      
       cb(null, true);
     } else {
-      console.log('❌ File rejected:', file.originalname, 'MIME type:', file.mimetype);
+      
       cb(new Error('Only image files (JPEG, PNG) are supported for OCR processing. PDF files are not supported.'), false);
     }
   }
@@ -80,34 +80,19 @@ router.post('/upload-documents', authenticateToken, upload.fields([
   { name: 'identityDocument', maxCount: 1 }
   // { name: 'addressDocument', maxCount: 1 } // POA requirement masked
 ]), async (req, res) => {
-  console.log('🎯 KYC UPLOAD ROUTE HIT - REAL VALIDATION');
-  console.log('🎯 KYC UPLOAD ROUTE HIT - REAL VALIDATION');
-  console.log('🎯 KYC UPLOAD ROUTE HIT - REAL VALIDATION');
-  
+
   try {
-    console.log('🚀 KYC upload-documents ROUTE HIT');
-    console.log('🔍 KYC upload-documents route called');
-    console.log('📁 Files received:', req.files);
-    console.log('📝 Body received:', req.body);
-    console.log('👤 User:', req.user);
     
     // Test KYC service import
-    console.log('🔍 Testing KYC service import...');
     const KYCService = require('../services/kycService');
-    console.log('✅ KYCService imported successfully');
-    console.log('🔍 KYCService type:', typeof KYCService);
-    console.log('🔍 KYCService.processKYCSubmission:', typeof KYCService.processKYCSubmission);
     
     // Test kycController import
-    console.log('🔍 Testing kycController import...');
-    console.log('🔍 kycController type:', typeof kycController);
-    console.log('🔍 kycController.uploadDocuments:', typeof kycController.uploadDocuments);
+    
     
     // Call the real KYC controller to test actual validation
-    console.log('🔍 Calling kycController.uploadDocuments...');
+    
     const result = await kycController.uploadDocuments(req, res);
-    console.log('✅ kycController.uploadDocuments completed');
-    console.log('🔍 Result:', result);
+    
     
   } catch (error) {
     console.error('❌ Error in KYC upload-documents route:', error);

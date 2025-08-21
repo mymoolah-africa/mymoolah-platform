@@ -4,8 +4,7 @@ const Wallet = require('../models/Wallet')(sequelize, require('sequelize').DataT
 const path = require('path');
 const fs = require('fs').promises;
 
-console.log('🔍 KYCService imported:', typeof KYCService);
-console.log('🔍 KYCService.processKYCSubmission:', typeof KYCService.processKYCSubmission);
+
 
 class KYCController {
   // Upload KYC document
@@ -57,7 +56,7 @@ class KYCController {
         verificationScore: result.validation.confidence / 100 // Convert percentage to decimal
       });
 
-      console.log('✅ KYC record saved to database:', kycRecord.id);
+      
 
       if (result.validation.isValid) {
         // Auto-approve if validation passes
@@ -97,12 +96,7 @@ class KYCController {
   // Upload both KYC documents (identity and address)
   async uploadDocuments(req, res) {
     try {
-      console.log('🚀 KYC uploadDocuments STARTED');
-      console.log('🔍 KYC uploadDocuments called');
-      console.log('📝 Request body:', req.body);
-      console.log('📁 Request files:', req.files);
-      console.log('👤 Authenticated user:', req.user);
-      console.log('🔑 Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
+
       
       // Use authenticated user ID instead of request body for security
       const userId = req.user.id;
@@ -117,9 +111,7 @@ class KYCController {
         });
       }
 
-      console.log('✅ Using authenticated user ID:', userId);
-      console.log('📋 Files received:', files ? Object.keys(files) : 'No files');
-      console.log('📋 Identity document:', files?.identityDocument ? 'Present' : 'Missing');
+      
 
       if (!files || !files.identityDocument) {
         console.error('❌ Missing identity document:', { files: !!files, identity: !!files?.identityDocument });
@@ -129,13 +121,13 @@ class KYCController {
         });
       }
 
-      console.log('✅ Files received, processing...');
+      
 
       // Test basic file operations first
       try {
         const testDir = path.join(__dirname, '../uploads/test');
         await fs.mkdir(testDir, { recursive: true });
-        console.log('✅ Directory creation test passed');
+
       } catch (dirError) {
         console.error('❌ Directory creation failed:', dirError);
         return res.status(500).json({
@@ -155,7 +147,7 @@ class KYCController {
       try {
         await fs.mkdir(uploadDir, { recursive: true });
         await fs.writeFile(path.join(uploadDir, path.basename(identityUrl)), identityFile.buffer);
-        console.log('✅ Identity file saved');
+
       } catch (fileError) {
         console.error('❌ Identity file save failed:', fileError);
         return res.status(500).json({
@@ -178,16 +170,16 @@ class KYCController {
       //   });
       // }
 
-      console.log('✅ Files saved, processing OCR...');
+      
 
       // Process identity document only (POA masked for now)
       try {
-        console.log('🔍 Calling KYCService.processKYCSubmission...');
+
         const identityResult = await KYCService.processKYCSubmission(userId, 'id_document', identityUrl, parseInt(retryCount));
-        console.log('🔍 KYCService returned:', identityResult);
+
         // const addressResult = await KYCService.processKYCSubmission(userId, 'proof_of_address', addressUrl);
 
-        console.log('✅ OCR results:', { identity: identityResult.success, retryCount });
+
 
         if (!identityResult.success) {
           // Return structured validation outcome to the frontend (no server error)
@@ -198,7 +190,7 @@ class KYCController {
         const identityValid = identityResult.success && identityResult.validation.isValid;
         // const addressValid = addressResult.validation.isValid;
 
-        console.log('✅ Validation results:', { identityValid, retryCount });
+
 
         if (identityValid) {
           // Auto-approve if identity document is valid (POA requirement masked)
@@ -238,7 +230,7 @@ class KYCController {
             });
           } else {
             // Second failure - escalate to support
-            console.log('🚨 KYC failed after retry, escalating to support for user:', userId);
+    
             
             return res.json({
               success: false,
@@ -276,7 +268,7 @@ class KYCController {
       });
     }
     
-    console.log('🏁 KYC uploadDocuments COMPLETED');
+    
   }
 
   // Get KYC status

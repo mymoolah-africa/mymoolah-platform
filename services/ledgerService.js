@@ -113,5 +113,105 @@ async function getTrialBalance() {
 module.exports = {
   createAccount,
   postJournalEntry,
-  getTrialBalance
+  getTrialBalance,
+  // Draft-only: Not wired. Use after configuring account codes.
+  draftPostVasPurchase,
+  draftPostPayShapRtp
 };
+
+/**
+ * DRAFT: Post journals for a VAS purchase (closed-loop)
+ * @param {Object} p
+ * @param {string} p.reference - idempotency/business reference
+ * @param {number} p.grossAmount - total amount charged to client (incl. fees if payer-pays)
+ * @param {number} p.commissionAmount - MM revenue portion
+ * @param {string} p.clientFloatCode - account code for Client Float (liability)
+ * @param {string} p.clientClearingCode - account code for Client Settlement Clearing
+ * @param {string} p.supplierClearingCode - account code for Supplier Settlement Clearing
+ * @param {string} p.interchangeCode - account code for Interchange/Clearing Control
+ * @param {string} p.revenueCode - account code for MM Commission/Fees Revenue
+ */
+async function draftPostVasPurchase({
+  reference,
+  grossAmount,
+  commissionAmount,
+  clientFloatCode,
+  clientClearingCode,
+  supplierClearingCode,
+  interchangeCode,
+  revenueCode
+}) {
+  assert(grossAmount > 0 && commissionAmount >= 0 && commissionAmount <= grossAmount, "Invalid amounts");
+  const netToSupplier = Number((grossAmount - commissionAmount).toFixed(2));
+
+  return postJournalEntry({
+    reference,
+    description: `VAS purchase (${reference})`,
+    lines: [
+      // Move from Client Float to Client Clearing (lock funds)
+      { accountCode: clientClearingCode, dc: "debit", amount: grossAmount, memo: "Client clearing" },
+      { accountCode: clientFloatCode, dc: "credit", amount: grossAmount, memo: "Client float" },
+
+      // Recognise revenue (commission)
+      { accountCode: clientClearingCode, dc: "debit", amount: commissionAmount, memo: "Commission from client" },
+      { accountCode: revenueCode, dc: "credit", amount: commissionAmount, memo: "MM commission revenue" },
+
+      // Deliver net to supplier via clearing/interchange
+      { accountCode: interchangeCode, dc: "debit", amount: netToSupplier, memo: "Interchange debit" },
+      { accountCode: supplierClearingCode, dc: "credit", amount: netToSupplier, memo: "Supplier clearing" },
+
+      // Clear supplier to interchange (internal settle)
+      { accountCode: supplierClearingCode, dc: "debit", amount: netToSupplier, memo: "Supplier clearing" },
+      { accountCode: interchangeCode, dc: "credit", amount: netToSupplier, memo: "Interchange credit" }
+    ]
+  });
+}
+
+/**
+ * DRAFT: Post journals for a PayShap RTP payment
+ * Mirrors VAS pattern; treat payee as supplier-like float in closed-loop, or clearing for external.
+ * @param {Object} p
+ * @param {string} p.reference
+ * @param {number} p.amount
+ * @param {number} p.feeAmount - MM fee (can be 0)
+ * @param {string} p.payerFloatCode - Client/User float
+ * @param {string} p.payerClearingCode - Client/User clearing
+ * @param {string} p.payeeClearingCode - Payee clearing (or house settlement clearing)
+ * @param {string} p.interchangeCode
+ * @param {string} p.revenueCode
+ */
+async function draftPostPayShapRtp({
+  reference,
+  amount,
+  feeAmount,
+  payerFloatCode,
+  payerClearingCode,
+  payeeClearingCode,
+  interchangeCode,
+  revenueCode
+}) {
+  assert(amount > 0 && feeAmount >= 0 && feeAmount <= amount, "Invalid amounts");
+  const netToPayee = Number((amount - feeAmount).toFixed(2));
+
+  return postJournalEntry({
+    reference,
+    description: `RTP PayShap (${reference})`,
+    lines: [
+      // Lock from payer float
+      { accountCode: payerClearingCode, dc: "debit", amount, memo: "Payer clearing" },
+      { accountCode: payerFloatCode, dc: "credit", amount, memo: "Payer float" },
+
+      // Recognise MM fee
+      { accountCode: payerClearingCode, dc: "debit", amount: feeAmount, memo: "MM fee" },
+      { accountCode: revenueCode, dc: "credit", amount: feeAmount, memo: "MM fee revenue" },
+
+      // Net to payee via clearing/interchange
+      { accountCode: interchangeCode, dc: "debit", amount: netToPayee, memo: "Interchange debit" },
+      { accountCode: payeeClearingCode, dc: "credit", amount: netToPayee, memo: "Payee clearing" },
+
+      // Clear payee to interchange
+      { accountCode: payeeClearingCode, dc: "debit", amount: netToPayee, memo: "Payee clearing" },
+      { accountCode: interchangeCode, dc: "credit", amount: netToPayee, memo: "Interchange credit" }
+    ]
+  });
+}

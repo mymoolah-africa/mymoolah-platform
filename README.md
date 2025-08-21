@@ -1,4 +1,16 @@
-# MyMoolah Treasury Platform (MMTP)
+# MyMoolah Treasury Platform
+
+## 🚨 **CRITICAL: VOUCHER BUSINESS LOGIC**
+
+**⚠️ IMMUTABLE BUSINESS RULES - DO NOT MODIFY**
+
+The voucher system implements critical business logic that has been tested and verified. **NEVER change the voucher balance calculation logic unless there are crucial performance or security risks.**
+
+**See**: `docs/VOUCHER_BUSINESS_LOGIC.md` for complete immutable rules.
+
+**Current Status**: ✅ Working correctly for both User ID 1 and 2.
+
+--- (MMTP)
 
 **A comprehensive financial platform combining digital wallet functionality with supplier integrations, AI-powered comparisons, and complete audit trail compliance.**
 

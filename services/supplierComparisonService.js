@@ -25,7 +25,7 @@ class SupplierComparisonService {
             }
         };
         
-        console.log('✅ Supplier Comparison Service: Initialized');
+    
     }
 
     /**
@@ -37,7 +37,7 @@ class SupplierComparisonService {
      */
     async compareProducts(vasType, amount = null, provider = null) {
         try {
-            console.log(`🔍 Comparing ${vasType} products across suppliers...`);
+    
 
             const comparison = {
                 vasType,

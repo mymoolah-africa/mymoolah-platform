@@ -19,6 +19,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { TransactionHistoryPage } from './pages/TransactionHistoryPage';
 import { WalletSettingsPage } from './pages/WalletSettingsPage';
 import { RequestMoneyPage } from './pages/RequestMoneyPage';
+import { ServicesPage } from './pages/ServicesPage';
 
 // KYC Pages
 import { KYCDocumentsPage } from './pages/KYCDocumentsPage';
@@ -35,7 +36,7 @@ function AppContent() {
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
-  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/airtime-data', '/electricity', '/bill-payments'];
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments'];
   const showTopBanner = pagesWithTopBanner.includes(location.pathname);
 
   return (
@@ -91,7 +92,7 @@ function AppContent() {
             <Route path="/wallet-settings" element={<ProtectedRoute><WalletSettingsPage /></ProtectedRoute>} />
             <Route path="/transactions" element={<ProtectedRoute><TransactionHistoryPage /></ProtectedRoute>} />
             <Route path="/request-money" element={<ProtectedRoute><RequestMoneyPage /></ProtectedRoute>} />
-            <Route path="/airtime-data" element={<ProtectedRoute><div>Airtime & Data Page - Coming Soon</div></ProtectedRoute>} />
+            <Route path="/services" element={<ProtectedRoute><ServicesPage /></ProtectedRoute>} />
             <Route path="/electricity" element={<ProtectedRoute><div>Electricity Page - Coming Soon</div></ProtectedRoute>} />
             <Route path="/bill-payments" element={<ProtectedRoute><div>Bill Payments Page - Coming Soon</div></ProtectedRoute>} />
             {/* Catch-all redirect */}
@@ -107,7 +108,9 @@ function AppContent() {
               backgroundColor: '#ffffff',
               borderTop: '1px solid #e5e7eb',
               boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.1)',
-              flexShrink: 0
+              flexShrink: 0,
+              position: 'relative',
+              zIndex: 50
             }}
           >
             <BottomNavigation />

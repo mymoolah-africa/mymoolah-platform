@@ -170,9 +170,8 @@ export function DashboardPage() {
   const [openVouchersValue, setOpenVouchersValue] = useState<number>(0);
   // const [isLoading, setIsLoading] = useState<boolean>(false);
 
-    // Fetch wallet balance and recent transactions
-  useEffect(() => {
-    const fetchDashboardData = async () => {
+    // Fetch dashboard data function
+  const fetchDashboardData = async () => {
       if (!user) return;
       
       // setIsLoading(true);
@@ -204,8 +203,9 @@ export function DashboardPage() {
             const transformedTransactions = sourceList.map((tx: any) => {
               // Determine if this is a credit (money received) or debit (money sent)
               // Backend transforms: credit->deposit, debit->payment, send->sent, receive->received
-              const isCredit = ['deposit', 'received'].includes(tx.type);
-              const isDebit = ['sent', 'payment', 'withdrawal'].includes(tx.type);
+              // Treat 'refund' as a credit, and 'fee' as a debit
+              const isCredit = ['deposit', 'received', 'refund'].includes(tx.type);
+              const isDebit = ['sent', 'payment', 'withdrawal', 'fee'].includes(tx.type);
               
               // For credits: positive amount, green color
               // For debits: negative amount, red color
@@ -248,8 +248,11 @@ export function DashboardPage() {
             const dashboardVoucherCount = (summary.active.count || 0) + (summary.pending.count || 0);
             setOpenVouchersCount(dashboardVoucherCount);
             const totalVoucherValue = parseFloat(summary.active.value) + parseFloat(summary.pending.value);
+            
             setOpenVouchersValue(totalVoucherValue);
           }
+        } else {
+          console.error('❌ Voucher balance fetch failed:', voucherResponse.status);
         }
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -258,8 +261,28 @@ export function DashboardPage() {
       }
     };
 
-    fetchDashboardData();
+  // Fetch wallet balance and recent transactions
+  useEffect(() => {
+    if (user) {
+      // Initial data load when user logs in
+      fetchDashboardData();
+    }
   }, [user]);
+
+  // Refresh data when component comes into focus (fixes caching issues)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user) {
+
+        fetchDashboardData();
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user]);
+
+
 
   // Handle wallet balance card click - navigate to transaction history
   const handleWalletClick = () => {
@@ -369,6 +392,8 @@ export function DashboardPage() {
         >
           Your digital wallet dashboard
         </p>
+        
+
 
         {/* KYC banner removed: KYC is now enforced contextually only on restricted flows */}
 

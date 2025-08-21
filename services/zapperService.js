@@ -67,7 +67,7 @@ class ZapperService {
       // Set expiry to 14 minutes (slightly less than 15 minutes for safety)
       this.tokenExpiry = Date.now() + (14 * 60 * 1000);
 
-      console.log('✅ Zapper authentication successful');
+      
       return this.identityToken;
 
     } catch (error) {

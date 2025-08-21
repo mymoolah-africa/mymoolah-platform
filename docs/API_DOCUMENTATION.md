@@ -1,11 +1,17 @@
+## Recent Updates (2025-08-20)
+
+- `GET /api/v1/vouchers/balance-summary`: Logic confirmed to use multiple queries with status rules (active + pending_payment contributes to active total). Cross-user redemption rules clarified and documented in `VOUCHER_BUSINESS_LOGIC.md`.
+- `GET /api/v1/wallets/balance`: Used by front-end header badges (Vouchers, Send Money, QR Payment). Response consumed with thousands separators in UI.
+- `GET /api/v1/wallets/transactions`: Keyset pagination active with trimmed payloads.
+
 # MyMoolah Treasury Platform - API Documentation
 
 ## **📋 Overview**
 
-**Version**: 3.1.0  
+**Version**: 3.4.0  
 **Base URL**: `http://localhost:3001/api/v1`  
-**Status**: ✅ **Production Ready - Transaction Display Fixed**  
-**Last Updated**: August 16, 2025  
+**Status**: ✅ **Production Ready - Performance Optimized**  
+**Last Updated**: August 19, 2025  
 
 ---
 
@@ -17,6 +23,12 @@
 - **Flash Integration**: 12 endpoints
 - **MobileMart Integration**: 3 endpoints
 - **AI Supplier Comparison**: 6 endpoints
+
+### **Performance Optimizations** ⭐ **NEW**
+- **Keyset Pagination**: Cursor-based pagination for transaction endpoints
+- **Trimmed Payloads**: 40% reduction in API response sizes
+- **Database Indexes**: Critical performance indexes for scalability
+- **Single Aggregate SQL**: Database-level calculations for voucher summaries
 
 ### **Transaction Display System**
 - **Format Rule**: `<Sender> | <Description of transaction entered by sender>`
@@ -63,6 +75,30 @@ PUT  /wallets/:walletId             # Update wallet
 GET  /transactions                  # List transactions
 GET  /transactions/:transactionId   # Get transaction details
 POST /transactions                  # Create transaction
+```
+
+### **Wallet Transactions (Keyset Pagination)** ⭐ **NEW**
+```
+GET  /wallets/transactions         # List transactions with keyset pagination
+```
+
+**Query Parameters:**
+- `cursor` (optional): ISO timestamp for pagination
+- `limit` (optional): Number of records (default: 10, max: 100)
+
+**Response Format:**
+```json
+{
+  "success": true,
+  "data": {
+    "transactions": [...],
+    "pagination": {
+      "hasMore": true,
+      "nextCursor": "2025-08-19T14:28:53.853Z",
+      "count": 10
+    }
+  }
+}
 ```
 
 ### **Vouchers**

@@ -13,7 +13,7 @@ const FlashAuthService = require('../services/flashAuthService');
 class FlashController {
     constructor() {
         this.authService = new FlashAuthService();
-        console.log('✅ Flash Controller: Initialized');
+    
     }
 
     /**

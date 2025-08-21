@@ -100,29 +100,102 @@ export interface QRValidationResult {
   paymentDetails: {
     amount: number;
     currency: string;
-    reference?: string;
-    description?: string;
+    reference: string;
   };
-  timestamp: string;
-}
-
-export interface QRPayment {
-  id: string;
-  qrCode: string;
-  amount: number;
-  walletId: string;
-  reference: string;
-  merchant: QRMerchant;
-  status: 'pending' | 'completed' | 'failed';
-  createdAt: string;
-  expiresAt: string;
+  isValid: boolean;
+  error?: string;
 }
 
 export interface QRPaymentResult {
   paymentId: string;
-  payment: QRPayment;
-  nextStep: string;
-  timestamp: string;
+  status: 'pending' | 'completed' | 'failed';
+  amount: number;
+  reference: string;
+  qrCode: string;
+  merchant?: QRMerchant;
+}
+
+// Airtime Types
+export interface AirtimeNetwork {
+  id: string;
+  name: string;
+  logo: string;
+  available: boolean;
+  voucherAvailable: boolean;
+  topUpAvailable: boolean;
+  preferred: boolean;
+}
+
+export interface AirtimeValue {
+  value: number;
+  available: boolean;
+  promotional: boolean;
+}
+
+export interface AirtimePromotion {
+  id: string;
+  title: string;
+  description: string;
+  discountPercentage?: number;
+  validUntil: string;
+}
+
+export interface AirtimeVoucherData {
+  networkId: string;
+  networkName: string;
+  voucherValues: AirtimeValue[];
+  promotions: AirtimePromotion[];
+  type: 'voucher';
+  lastUpdated: string;
+}
+
+export interface AirtimeTopUpData {
+  networkId: string;
+  networkName: string;
+  topUpValues: AirtimeValue[];
+  promotions: AirtimePromotion[];
+  type: 'topup';
+  customAmount: {
+    min: number;
+    max: number;
+    available: boolean;
+  };
+  lastUpdated: string;
+}
+
+export interface EeziAirtimeData {
+  type: 'eeziAirtime';
+  supplier: string;
+  eeziValues: AirtimeValue[];
+  promotions: AirtimePromotion[];
+  customAmount: {
+    min: number;
+    max: number;
+    available: boolean;
+  };
+  lastUpdated: string;
+}
+
+export interface GlobalService {
+  id: string;
+  name: string;
+  description: string;
+  type: string;
+  supplier: string;
+  available: boolean;
+  icon: string;
+}
+
+export interface AirtimePurchaseResult {
+  transactionId: string;
+  status: 'completed' | 'failed';
+  amount: number;
+  networkId?: string;
+  type: string;
+  recipientPhone?: string;
+  pin?: string;
+  reference: string;
+  completedAt: string;
 }
 
 // API Service Class
@@ -366,6 +439,56 @@ class ApiService {
       body: JSON.stringify(beneficiary),
     });
     return response.data;
+  }
+
+  // Airtime API Methods
+  async getAirtimeNetworks(): Promise<AirtimeNetwork[]> {
+    const response = await this.request<{ networks: AirtimeNetwork[] }>('/api/v1/airtime/networks');
+    return response.data!.networks;
+  }
+
+  async getAirtimeVoucherValues(networkId: string): Promise<AirtimeVoucherData> {
+    const response = await this.request<AirtimeVoucherData>(`/api/v1/airtime/networks/${networkId}/voucher-values`);
+    return response.data!;
+  }
+
+  async getAirtimeTopUpValues(networkId: string): Promise<AirtimeTopUpData> {
+    const response = await this.request<AirtimeTopUpData>(`/api/v1/airtime/networks/${networkId}/topup-values`);
+    return response.data!;
+  }
+
+  async getEeziAirtimeValues(): Promise<EeziAirtimeData> {
+    const response = await this.request<EeziAirtimeData>('/api/v1/airtime/eezi-values');
+    return response.data!;
+  }
+
+  async getGlobalServices(): Promise<GlobalService[]> {
+    const response = await this.request<{ services: GlobalService[] }>('/api/v1/airtime/global-services');
+    return response.data!.services;
+  }
+
+  async purchaseAirtimeVoucher(networkId: string, amount: number, recipientPhone?: string): Promise<AirtimePurchaseResult> {
+    const response = await this.request<AirtimePurchaseResult>('/api/v1/airtime/purchase/voucher', {
+      method: 'POST',
+      body: JSON.stringify({ networkId, amount, recipientPhone }),
+    });
+    return response.data!;
+  }
+
+  async purchaseAirtimeTopUp(networkId: string, amount: number, recipientPhone: string): Promise<AirtimePurchaseResult> {
+    const response = await this.request<AirtimePurchaseResult>('/api/v1/airtime/purchase/topup', {
+      method: 'POST',
+      body: JSON.stringify({ networkId, amount, recipientPhone }),
+    });
+    return response.data!;
+  }
+
+  async purchaseEeziAirtime(amount: number, recipientPhone: string): Promise<AirtimePurchaseResult> {
+    const response = await this.request<AirtimePurchaseResult>('/api/v1/airtime/purchase/eezi', {
+      method: 'POST',
+      body: JSON.stringify({ amount, recipientPhone }),
+    });
+    return response.data!;
   }
 }
 

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Upload, FileText, AlertCircle, CheckCircle, X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { getToken } from '../utils/authToken';
 
 interface KYCDocumentUploadProps {
   onUploadSuccess?: () => void;
@@ -80,7 +81,7 @@ const KYCDocumentUpload: React.FC<KYCDocumentUploadProps> = ({
       const response = await fetch('/api/v1/kyc/upload-documents', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${(await import('../utils/authToken')).getToken()}`
+          'Authorization': `Bearer ${getToken()}`
         },
         body: formData
       });

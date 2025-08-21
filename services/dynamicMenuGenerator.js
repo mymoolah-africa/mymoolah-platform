@@ -32,7 +32,7 @@ class DynamicMenuGenerator {
             updateInterval: 30000 // 30 seconds
         };
         
-        console.log('✅ Dynamic Menu Generator: Initialized');
+    
     }
 
     /**
@@ -40,7 +40,7 @@ class DynamicMenuGenerator {
      */
     async generateMenu(allProducts = []) {
         try {
-            console.log('🔄 Dynamic Menu Generator: Generating menu...');
+    
             
             // Process all products
             const processedProducts = this.processProducts(allProducts);
@@ -61,7 +61,7 @@ class DynamicMenuGenerator {
             this.menuVersion++;
             this.lastGenerated = new Date().toISOString();
             
-            console.log('✅ Dynamic Menu Generator: Menu generated successfully');
+    
             
             return menuStructure;
             
@@ -430,7 +430,7 @@ class DynamicMenuGenerator {
      * Force menu regeneration
      */
     async forceRegenerate(allProducts) {
-        console.log('🔄 Dynamic Menu Generator: Force regenerating menu...');
+
         return await this.generateMenu(allProducts);
     }
 

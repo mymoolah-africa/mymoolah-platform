@@ -50,7 +50,7 @@ export function TransactionHistoryPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // Local state management for scalable architecture
+  // Local state management for scalable architecture with keyset pagination
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,14 +58,12 @@ export function TransactionHistoryPage() {
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [isExporting, setIsExporting] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalItems, setTotalItems] = useState(0);
-  const [itemsPerPage] = useState(50);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
+  const [itemsPerPage] = useState(50);
 
-  // Fetch transactions from API
-  const fetchTransactions = async (page: number = 1, append: boolean = false) => {
+  // Fetch transactions from API with keyset pagination
+  const fetchTransactions = async (cursor?: string | null, append: boolean = false) => {
     if (!user) return;
     
     setLoading(true);
@@ -76,7 +74,14 @@ export function TransactionHistoryPage() {
         'Content-Type': 'application/json'
       };
 
-      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?page=${page}&limit=${itemsPerPage}`, { headers });
+      const params = new URLSearchParams({
+        limit: itemsPerPage.toString()
+      });
+      if (cursor) {
+        params.append('cursor', cursor);
+      }
+
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/transactions?${params}`, { headers });
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data) {
@@ -87,8 +92,9 @@ export function TransactionHistoryPage() {
           const transformedTransactions = sourceList.map((tx: any) => {
             // Determine if this is a credit (money received) or debit (money sent)
             // Backend transforms: credit->deposit, debit->payment, send->sent, receive->received
-            const isCredit = ['deposit', 'received'].includes(tx.type);
-            const isDebit = ['sent', 'payment', 'withdrawal'].includes(tx.type);
+            // Treat 'refund' as credit and 'fee' as debit for display purposes
+            const isCredit = ['deposit', 'received', 'refund'].includes(tx.type);
+            const isDebit = ['sent', 'payment', 'withdrawal', 'fee'].includes(tx.type);
             
                          return {
                id: tx.id,
@@ -115,11 +121,10 @@ export function TransactionHistoryPage() {
             setTransactions(transformedTransactions);
           }
           
-          // Handle pagination data from backend
+          // Handle keyset pagination data from backend
           const pagination = data.data?.pagination || {};
-          setTotalItems(pagination.totalItems || transformedTransactions.length);
-          setTotalPages(pagination.totalPages || Math.ceil(transformedTransactions.length / itemsPerPage));
-          setHasMore(transformedTransactions.length === itemsPerPage);
+          setHasMore(pagination.hasMore || false);
+          setNextCursor(pagination.nextCursor || null);
         }
       }
     } catch (error) {
@@ -131,7 +136,7 @@ export function TransactionHistoryPage() {
 
   // Load transactions on component mount
   useEffect(() => {
-    fetchTransactions(1, false);
+    fetchTransactions(null, false);
   }, [user]);
 
   // Filtered and sorted transactions based on search and filters
@@ -206,7 +211,7 @@ export function TransactionHistoryPage() {
   const loadTransactions = async () => {
     try {
       setLoading(true);
-      await fetchTransactions(1, false);
+      await fetchTransactions(null, false);
     } catch (error) {
       console.error('Error loading transactions:', error);
     } finally {
@@ -667,7 +672,7 @@ export function TransactionHistoryPage() {
                   style={{ borderRadius: 'var(--mobile-border-radius)' }}
                   onClick={() => {
                     // Future: Add transaction details modal/page
-                    console.log('Transaction details:', transaction);
+            
                   }}
                 >
                   <CardContent style={{ padding: 'var(--mobile-padding)' }}>
@@ -754,7 +759,27 @@ export function TransactionHistoryPage() {
           )}
         </div>
 
-        {/* Load More Button - Removed since we're using MoolahContext which loads all transactions */}
+        {/* Load More Button - Keyset Pagination */}
+        {hasMore && (
+          <div className="mt-6 text-center">
+            <Button
+              onClick={() => fetchTransactions(nextCursor, true)}
+              disabled={loading}
+              className="w-full"
+              style={{
+                backgroundColor: 'var(--primary-color)',
+                color: 'white',
+                borderRadius: 'var(--mobile-border-radius)',
+                padding: 'var(--mobile-padding)',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: 'var(--mobile-font-base)',
+                fontWeight: 'var(--font-weight-bold)'
+              }}
+            >
+              {loading ? 'Loading...' : 'Load More Transactions'}
+            </Button>
+          </div>
+        )}
 
         {/* Summary Footer */}
         {filteredTransactions.length > 0 && (

@@ -9,7 +9,7 @@ try {
     });
   }
 } catch (error) {
-  console.log("OpenAI not initialized - API key missing or invalid");
+  
 }
 
 const getAIResponse = async (subject, message, language = "en") => {

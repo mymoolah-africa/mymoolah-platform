@@ -422,15 +422,15 @@ class KYCService {
         this.openai = new OpenAI({
           apiKey: process.env.OPENAI_API_KEY
         });
-        console.log('✅ OpenAI client initialized');
+
         this.openaiInitialized = true;
       } else {
-        console.log('⚠️ OpenAI API key not found, using mock responses');
+
         this.openai = null;
         this.openaiInitialized = true;
       }
     } catch (error) {
-      console.log('⚠️ OpenAI initialization failed, using mock responses:', error.message);
+      
       this.openai = null;
       this.openaiInitialized = true;
     }
@@ -578,7 +578,7 @@ class KYCService {
       let localFilePath = null;
       
       if (documentUrl.startsWith('/uploads/')) {
-        console.log('🔍 Converting local file to base64 for OpenAI Vision API...');
+
         localFilePath = require('path').join(__dirname, '..', documentUrl);
         const fs = require('fs');
         const path = require('path');
@@ -598,7 +598,7 @@ class KYCService {
           throw new Error('Unsupported file type. Please upload an image file (JPEG or PNG).');
         }
         
-        console.log(`📄 File type detected: ${mimeType}`);
+
       } else {
         // For remote URLs, we'd need to fetch and convert
         throw new Error('Only local file processing is currently supported');
@@ -609,7 +609,7 @@ class KYCService {
         ? "Extract the following information from this identity document (South African ID book/card, South African passport, or international passport): Full name, ID/Passport number, Date of birth, Nationality, Document type (ID/Passport), Country of issue. Return as JSON format with exact values as they appear on the document."
         : "Extract the following information from this South African proof of address document: Street address, City, Postal code, Province. Return as JSON format.";
 
-      console.log('🔍 Processing document with OpenAI Vision API...');
+      
       
       const response = await this.openai.chat.completions.create({
         model: "gpt-4o",
@@ -630,17 +630,17 @@ class KYCService {
 
       const content = response.choices[0].message.content || '';
       if (/i\s*can'?t\s*help/i.test(content) || /unable to extract/i.test(content)) {
-        console.log('⚠️ OpenAI refused OCR, invoking Tesseract fallback');
+
         const tText = await this.runTesseractOCR(localFilePath);
         const parsed = this.parseSouthAfricanIdText(tText);
         return parsed;
       }
 
-      console.log('✅ OpenAI Vision API response:', content);
+      
       
       const parsedFromOpenAI = this.parseOCRResults(content, documentType);
       if (documentType === 'id_document' && (!parsedFromOpenAI.fullName || !parsedFromOpenAI.idNumber)) {
-        console.log('⚠️ OpenAI OCR incomplete, invoking Tesseract fallback');
+
         const tText = await this.runTesseractOCR(localFilePath);
         const parsed = this.parseSouthAfricanIdText(tText);
         return parsed.fullName || parsed.idNumber ? parsed : parsedFromOpenAI;
@@ -748,17 +748,17 @@ class KYCService {
     };
 
     try {
-      console.log('🔍 Starting validation for user ID:', userId);
+      
       
       // Get user information from database
       const { sequelize } = require('../models');
       const User = require('../models/User')(sequelize, require('sequelize').DataTypes);
       
-      console.log('🔍 Querying user from database...');
+      
       const user = await User.findOne({ where: { id: userId } });
       
       if (!user) {
-        console.log('❌ User not found in database');
+
         validation.issues.push('User not found');
         return validation;
       }
@@ -819,7 +819,7 @@ class KYCService {
         const firstMatchResult = lightFirstNameMatch(docFirst, userFirst);
         if (!firstMatchResult.matches) {
           // Log the mismatch but don't fail validation
-          console.log(`⚠️ Light first name mismatch: "${docFirst}" vs "${userFirst}" (similarity: ${firstMatchResult.similarity})`);
+  
           validation.tolerantNameMatch = true; // Allow manual review
         }
       }
@@ -885,7 +885,7 @@ class KYCService {
       validation.confidence = Math.min(100, criticalConfidence);
       validation.isValid = validation.issues.length === 0;
 
-      console.log('🔍 Final validation result:', validation);
+      
       return validation;
     } catch (error) {
       console.error('❌ Error validating document against user:', error);
@@ -971,16 +971,16 @@ class KYCService {
   // Process KYC submission with retry tracking
   async processKYCSubmission(userId, documentType, documentUrl, retryCount = 0) {
     try {
-      console.log('🔍 Starting KYC submission process for user:', userId);
+      
       
       // Process OCR
       const ocrResults = await this.processDocumentOCR(documentUrl, documentType);
-      console.log('🔍 OCR Results:', ocrResults);
+      
       
       // Validate document against user information
-      console.log('🔍 Starting document validation...');
+      
       const validation = await this.validateDocumentAgainstUser(ocrResults, userId);
-      console.log('🔍 Validation result:', validation);
+      
 
       // Add retry information to response
       const response = {
@@ -992,7 +992,7 @@ class KYCService {
         canRetry: retryCount < 1 // Allow one retry
       };
 
-      console.log('🔍 Building response with success:', response.success);
+      
 
       // Manual review path for first name mismatches (surname matches but first name doesn't)
       if (validation.tolerantNameMatch && validation.issues.length === 0) {
@@ -1000,7 +1000,7 @@ class KYCService {
         response.message = 'Surname matches but first name differs. Requires manual review.';
         response.canRetry = false;
         response.escalateToSupport = true;
-        console.log('🟡 First name mismatch - sending to manual review');
+
         return response;
       }
 
@@ -1009,22 +1009,22 @@ class KYCService {
         response.status = 'retry';
         response.message = validation.issues.join('. ');
         response.success = false; // Ensure success is false for validation failures
-        console.log('❌ Validation failed, setting retry status');
+
       } else if (!validation.isValid && retryCount >= 1) {
         // Second failure - escalate to support
         response.status = 'failed';
         response.message = validation.issues.join('. ');
         response.escalateToSupport = true;
         response.success = false; // Ensure success is false for validation failures
-        console.log('❌ Validation failed after retry, escalating to support');
+
       } else if (validation.isValid) {
         // Validation passed
         response.status = 'approved';
         response.message = 'KYC verification successful';
-        console.log('✅ Validation passed, setting approved status');
+
       }
 
-      console.log('🔍 Final response:', response);
+      
       return response;
     } catch (error) {
       console.error('❌ Error processing KYC submission:', error);

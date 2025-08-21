@@ -16,6 +16,7 @@ import {
   Eye,
   Loader2
 } from 'lucide-react';
+import { getToken } from '../utils/authToken';
 
 type KYCStatus = 'not_started' | 'documents_uploaded' | 'under_review' | 'verified' | 'rejected';
 
@@ -71,7 +72,7 @@ export function KYCStatusPage() {
     setIsRefreshing(true);
     try {
       // Real API call to check verification status
-      const token = (await import('../utils/authToken')).getToken();
+      const token = getToken();
       if (!token) {
         throw new Error('No authentication token found');
       }

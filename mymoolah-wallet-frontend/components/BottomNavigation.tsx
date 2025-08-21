@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { createPortal } from "react-dom";
 import { useState, useEffect } from "react";
 import { APP_CONFIG } from "../config/app-config";
+import { getToken } from "../utils/authToken";
 import { 
   Home, 
   Send, 
@@ -11,7 +12,13 @@ import {
   Wifi,
   Zap,
   CreditCard,
-  Download
+  Download,
+  QrCode,
+  Banknote,
+  Smartphone,
+  Gift,
+  Wallet,
+  HelpCircle
 } from "lucide-react";
 
 interface NavItem {
@@ -30,43 +37,73 @@ interface QuickAccessService {
   comingSoon?: boolean;
 }
 
-// Service mapping for quick access services
+// Service mapping for quick access services - SINGLE SOURCE OF TRUTH from TransactPage
 const serviceMapping = {
-  send_money: {
-    id: 'send_money',
+  'send-money': {
+    id: 'send-money',
     path: '/send-money',
-    label: 'Send Money',
+    label: 'Pay Beneficiary',
     icon: () => <Send style={{ width: '20px', height: '20px' }} />
   },
-  request_money: {
-    id: 'request_money',
+  'request-money': {
+    id: 'request-money',
     path: '/request-money',
     label: 'Request Money',
     icon: () => <Download style={{ width: '20px', height: '20px' }} />
   },
-  airtime_data: {
-    id: 'airtime_data',
-    path: '/airtime-data',
-    label: 'Airtime & Data',
-    icon: () => <Wifi style={{ width: '20px', height: '20px' }} />
+  'qr-scan': {
+    id: 'qr-scan',
+    path: '/qr-payment',
+    label: 'Scan QR to Pay',
+    icon: () => <QrCode style={{ width: '20px', height: '20px' }} />
   },
-  electricity: {
+  'wallet-withdraw': {
+    id: 'wallet-withdraw',
+    path: '/service-cash_withdrawal',
+    label: 'Cash Withdrawal',
+    icon: () => <Banknote style={{ width: '20px', height: '20px' }} />
+  },
+  'airtime-data': {
+    id: 'airtime-data',
+    path: '/services',
+    label: 'Airtime & Data',
+    icon: () => <Smartphone style={{ width: '20px', height: '20px' }} />
+  },
+  'electricity': {
     id: 'electricity',
-    path: '/electricity',
-    label: 'Electricity',
+    path: '/services',
+    label: 'Electricity & Water',
     icon: () => <Zap style={{ width: '20px', height: '20px' }} />
   },
-  bill_payments: {
-    id: 'bill_payments',
-    path: '/bill-payments',
+  'bill-payments': {
+    id: 'bill-payments',
+    path: '/services',
     label: 'Bill Payments',
-    icon: () => <CreditCard style={{ width: '20px', height: '20px' }} />
+    icon: () => <Receipt style={{ width: '20px', height: '20px' }} />
   },
-  vouchers: {
+  'insurance': {
+    id: 'insurance',
+    path: '/services',
+    label: 'Insurance',
+    icon: () => <Home style={{ width: '20px', height: '20px' }} />
+  },
+  'vouchers': {
     id: 'vouchers',
     path: '/vouchers',
     label: 'Vouchers',
-    icon: () => <Ticket style={{ width: '20px', height: '20px' }} />
+    icon: () => <Gift style={{ width: '20px', height: '20px' }} />
+  },
+  'gaming': {
+    id: 'gaming',
+    path: '/service-gaming',
+    label: 'Gaming Credits',
+    icon: () => <CreditCard style={{ width: '20px', height: '20px' }} />
+  },
+  'streaming': {
+    id: 'streaming',
+    path: '/service-streaming',
+    label: 'Streaming Services',
+    icon: () => <Wallet style={{ width: '20px', height: '20px' }} />
   }
 };
 
@@ -85,10 +122,10 @@ const defaultNavItems: NavItem[] = [
     icon: () => <Receipt style={{ width: '28px', height: '28px' }} />
   },
   {
-    id: 'profile',
-    path: '/profile',
-    label: 'Profile',
-    icon: () => <User style={{ width: '20px', height: '20px' }} />
+    id: 'support',
+    path: '/support',
+    label: 'Support',
+    icon: () => <HelpCircle style={{ width: '20px', height: '20px' }} />
   }
 ];
 
@@ -103,22 +140,20 @@ export function BottomNavigation() {
     const fetchUserSettings = async () => {
       try {
         // Check if user is authenticated
-        const { getToken } = await import('../utils/authToken');
-        const token = localStorage.getItem('token') || getToken();
+        const token = getToken();
         if (!token) {
-          console.log('No authentication token found, using default services');
-          setQuickAccessServices(['send_money', 'airtime_data']);
+          
+        setQuickAccessServices(['airtime-data', 'vouchers']);
           setLoading(false);
           return;
         }
 
         // Only fetch settings if we're on a page that shows bottom navigation
         const currentPath = location.pathname;
-        const shouldShowNav = ['/dashboard', '/send-money', '/transact', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/airtime-data', '/electricity', '/bill-payments'].includes(currentPath);
+        const shouldShowNav = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments', '/support'].includes(currentPath);
         
         if (!shouldShowNav) {
-          console.log('Not on a page that shows bottom navigation, using default services');
-          setQuickAccessServices(['send_money', 'airtime_data']);
+          setQuickAccessServices(['airtime-data', 'vouchers']);
           setLoading(false);
           return;
         }
@@ -135,23 +170,19 @@ export function BottomNavigation() {
           if (data.success && data.data?.settings?.quickAccessServices) {
             setQuickAccessServices(data.data.settings.quickAccessServices);
           } else {
-            console.log('No quick access services found, using defaults');
-            setQuickAccessServices(['send_money', 'airtime_data']);
+            setQuickAccessServices(['airtime-data', 'vouchers']);
           }
         } else if (response.status === 403) {
-          console.log('Access forbidden (user not logged in), using default services');
-          setQuickAccessServices(['send_money', 'airtime_data']);
+          setQuickAccessServices(['airtime-data', 'vouchers']);
         } else if (response.status === 401) {
-          console.log('Unauthorized (invalid token), using default services');
-          setQuickAccessServices(['send_money', 'airtime_data']);
+          setQuickAccessServices(['airtime-data', 'vouchers']);
         } else {
-          console.log(`API error ${response.status}, using default services`);
-          setQuickAccessServices(['send_money', 'airtime_data']);
+          setQuickAccessServices(['airtime-data', 'vouchers']);
         }
       } catch (error) {
         console.error('Failed to fetch user settings:', error);
         // Fallback to default services
-        setQuickAccessServices(['send_money', 'airtime_data']);
+        setQuickAccessServices(['airtime-data', 'vouchers']);
       } finally {
         setLoading(false);
       }
@@ -177,10 +208,10 @@ export function BottomNavigation() {
       // Return default navigation while loading
       return [
         defaultNavItems[0], // Home
-        serviceMapping.send_money, // Default Send Money
+        serviceMapping['airtime-data'], // Default Airtime & Data
         defaultNavItems[1], // Transact
-        serviceMapping.airtime_data, // Default Airtime & Data
-        defaultNavItems[2] // Profile
+        serviceMapping.vouchers, // Default Vouchers
+        defaultNavItems[2] // Support
       ];
     }
 
@@ -190,18 +221,18 @@ export function BottomNavigation() {
     // Ensure we have exactly 2 services, fallback to defaults if needed
     const service1 = selectedServices[0] && serviceMapping[selectedServices[0] as keyof typeof serviceMapping] 
       ? serviceMapping[selectedServices[0] as keyof typeof serviceMapping] 
-      : serviceMapping.send_money;
+      : serviceMapping['airtime-data'];
     
     const service2 = selectedServices[1] && serviceMapping[selectedServices[1] as keyof typeof serviceMapping] 
       ? serviceMapping[selectedServices[1] as keyof typeof serviceMapping] 
-      : serviceMapping.airtime_data;
+      : serviceMapping.vouchers;
 
     return [
       defaultNavItems[0], // Home (position 1)
       service1, // First selected service (position 2)
       defaultNavItems[1], // Transact (position 3)
       service2, // Second selected service (position 4)
-      defaultNavItems[2] // Profile (position 5)
+      defaultNavItems[2] // Support (position 5)
     ];
   };
 
@@ -222,7 +253,7 @@ export function BottomNavigation() {
   const activeTab = getActiveTabId();
 
   // Check if we should show the bottom navigation
-  const showBottomNav = ['/dashboard', '/send-money', '/transact', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/airtime-data', '/electricity', '/bill-payments'].includes(location.pathname);
+  const showBottomNav = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments', '/support'].includes(location.pathname);
   
   if (!showBottomNav) return null;
 
@@ -268,9 +299,9 @@ export function BottomNavigation() {
       }}
       data-fixed-navigation="true"
     >
-      {navItems.map((item) => {
+      {navItems.map((item, index) => {
         const isActive = activeTab === item.id;
-        const IconComponent = item.icon;
+        const isTransact = item.id === 'transact';
         
         return (
           <button
@@ -281,50 +312,80 @@ export function BottomNavigation() {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: '44px',
-              minWidth: '60px',
-              padding: '8px',
-              backgroundColor: isActive ? '#f3f4f6' : 'transparent',
-              borderRadius: '8px',
+              gap: '4px',
+              padding: '8px 4px',
               border: 'none',
+              background: 'transparent',
               cursor: 'pointer',
+              minWidth: '0',
+              flex: isTransact ? '1.2' : '1',
               fontFamily: 'Montserrat, sans-serif',
-              fontSize: 'var(--mobile-font-small)',
-              fontWeight: 'var(--font-weight-normal)',
+              fontSize: '10px',
+              fontWeight: isActive ? '600' : '400',
+              color: isActive ? '#86BE41' : '#6B7280',
               transition: 'all 0.2s ease',
-              position: 'relative',
-              
-              // Ensure buttons don't create containing blocks
-              transform: 'none',
-              filter: 'none',
-              willChange: 'auto'
+              borderRadius: '8px',
+              position: 'relative'
             }}
-            aria-label={item.label}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#F3F4F6';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
-            <div 
-              style={{ 
-                marginBottom: '4px',
-                color: isActive 
-                  ? item.id === 'home' || item.id === 'transact'
-                    ? '#86BE41' 
-                    : '#2D8CCA'
-                  : '#6b7280'
+            {/* Icon Container */}
+            <div
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: isTransact ? '32px' : '24px',
+                height: isTransact ? '32px' : '24px',
+                borderRadius: '6px',
+                backgroundColor: isActive ? '#86BE41' : 'transparent',
+                transition: 'all 0.2s ease'
               }}
             >
-              <IconComponent />
+              {/* Icon with conditional styling */}
+              <div style={{
+                color: isActive ? '#FFFFFF' : '#6B7280',
+                transition: 'color 0.2s ease'
+              }}>
+                {item.icon()}
+              </div>
+              
+              {/* Active indicator dot */}
+              {isActive && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '-2px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    width: '4px',
+                    height: '4px',
+                    borderRadius: '50%',
+                    backgroundColor: '#86BE41',
+                    border: '2px solid #FFFFFF'
+                  }}
+                />
+              )}
             </div>
-            <span 
-              style={{ 
-                fontSize: '12px',
-                fontWeight: isActive ? '500' : '400',
-                color: isActive 
-                  ? item.id === 'home' || item.id === 'transact'
-                    ? '#86BE41' 
-                    : '#2D8CCA'
-                  : '#6b7280',
-                fontFamily: 'Montserrat, sans-serif',
+            
+            {/* Label */}
+            <span
+              style={{
+                fontSize: '10px',
+                fontWeight: isActive ? '600' : '400',
+                color: isActive ? '#86BE41' : '#6B7280',
+                textAlign: 'center',
                 lineHeight: '1.2',
-                textAlign: 'center'
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
               }}
             >
               {item.label}
@@ -335,5 +396,6 @@ export function BottomNavigation() {
     </div>
   );
 
+  // Use createPortal to render outside of any containing blocks
   return createPortal(navigationElement, document.body);
 }

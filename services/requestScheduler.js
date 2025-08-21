@@ -43,7 +43,7 @@ async function tick() {
   });
 
   for (const row of due) {
-    console.log(`⏰ Recurring Request due: id=${row.id} nextRunAt=${row.nextRunAt.toISOString()} freq=${row.frequency}`);
+    
     const t = await sequelize.transaction();
     try {
       const requester = await User.findByPk(row.requesterUserId);
@@ -95,7 +95,7 @@ async function tick() {
 let intervalHandle;
 function start() {
   if (intervalHandle) return;
-  console.log('🕒 Starting Recurring Request Scheduler (1 min cadence)');
+  
   intervalHandle = setInterval(tick, 60 * 1000);
   // Run once on start to pick up immediate items
   tick().catch(()=>{});

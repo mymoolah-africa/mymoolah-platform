@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { getToken as getSessionToken } from '../utils/authToken';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -253,6 +253,39 @@ export function VouchersPage() {
   // Real voucher data from API
   const [mmVouchers, setMMVouchers] = useState<MMVoucher[]>([]);
   const [voucherTransactions, setVoucherTransactions] = useState<VoucherTransaction[]>([]);
+  const [walletBalance, setWalletBalance] = useState<string>('R0.00');
+  
+  // Auto-refresh timer for pending EasyPay vouchers
+  const autoRefreshRef = useRef<number | null>(null);
+
+  // Fetch wallet balance
+  const fetchWalletBalance = async () => {
+    try {
+      const token = getSessionToken();
+      if (!token) return;
+
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data?.balance) {
+          const balance = parseFloat(data.data.balance);
+          const formattedBalance = balance.toLocaleString('en-ZA', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          });
+          setWalletBalance(`R${formattedBalance}`);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch wallet balance:', error);
+    }
+  };
 
   // Fetch vouchers from backend
   const fetchVouchers = async () => {
@@ -325,6 +358,19 @@ export function VouchersPage() {
           ? new Date(createdTs + 96 * 60 * 60 * 1000).toISOString()
           : new Date(createdTs + 365 * 24 * 60 * 60 * 1000).toISOString();
 
+        // Compute remaining value per business rules:
+        // - EasyPay pending: remaining = originalAmount
+        // - EasyPay active: remaining = originalAmount if DB balance is 0/undefined (no wallet-side balance tracked)
+        // - Otherwise use balance (for standard MM vouchers)
+        const dbBalance = parseFloat(voucher.balance || 0);
+        const computedRemainingValue = (voucherType === 'easypay_voucher')
+          ? (status === 'pending_payment'
+              ? parseFloat(voucher.originalAmount || 0)
+              : (status === 'active'
+                  ? (dbBalance === 0 ? parseFloat(voucher.originalAmount || 0) : dbBalance)
+                  : dbBalance))
+          : dbBalance;
+
         return {
           id: voucher.id.toString(),
           type: voucherType,
@@ -341,9 +387,7 @@ export function VouchersPage() {
           description: voucher.metadata?.description || (voucherType === 'easypay_voucher' ? 'EasyPay voucher' : 'MMVoucher'),
           transactionId: `VOUCHER-${voucher.id}`,
           redemptionLocations: voucherType === 'easypay_voucher' ? ['EasyPay Network', 'MyMoolah Network'] : ['MyMoolah Network'],
-          remainingValue: voucherType === 'easypay_voucher' && status === 'pending_payment' 
-            ? parseFloat(voucher.originalAmount || 0) 
-            : parseFloat(voucher.balance || 0),
+          remainingValue: computedRemainingValue,
           isPartialRedemption: parseFloat(voucher.balance || 0) > 0 && parseFloat(voucher.balance || 0) < parseFloat(voucher.originalAmount || 0)
         };
       });
@@ -372,7 +416,35 @@ export function VouchersPage() {
 
   useEffect(() => {
     fetchVouchers();
+    fetchWalletBalance();
   }, []);
+
+  // If there are any pending EasyPay vouchers, auto-refresh every 5 seconds
+  const hasPendingEasyPay = useMemo(
+    () => mmVouchers.some(v => v.type === 'easypay_voucher' && v.status === 'pending_payment'),
+    [mmVouchers]
+  );
+
+  useEffect(() => {
+    // Clear any existing timer first
+    if (autoRefreshRef.current) {
+      clearInterval(autoRefreshRef.current);
+      autoRefreshRef.current = null;
+    }
+
+    if (hasPendingEasyPay) {
+      autoRefreshRef.current = window.setInterval(() => {
+        fetchVouchers();
+      }, 5000); // refresh within 5 seconds
+    }
+
+    return () => {
+      if (autoRefreshRef.current) {
+        clearInterval(autoRefreshRef.current);
+        autoRefreshRef.current = null;
+      }
+    };
+  }, [hasPendingEasyPay]);
 
   // Filter vouchers based on search and filters
   const filteredVouchers = mmVouchers.filter(voucher => {
@@ -968,8 +1040,32 @@ export function VouchersPage() {
             </h1>
           </div>
 
-          {/* Right: Empty space for balance */}
-          <div style={{ width: '44px' }}></div>
+          {/* Right: Wallet Balance Badge */}
+          <div 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              minWidth: '44px',
+              height: '44px'
+            }}
+          >
+            <Badge 
+              style={{
+                backgroundColor: '#86BE41',
+                color: '#ffffff',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '9.18px',
+                fontWeight: '600',
+                padding: '3.06px 6.12px',
+                borderRadius: '9.18px',
+                border: 'none',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {walletBalance}
+            </Badge>
+          </div>
         </div>
       </div>
 

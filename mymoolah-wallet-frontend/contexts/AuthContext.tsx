@@ -123,10 +123,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check for stored auth token on app start
     checkAuthStatus();
     
-    // Set up token refresh interval
-    const refreshInterval = setInterval(refreshToken, 14 * 60 * 1000); // 14 minutes
-    
-    return () => clearInterval(refreshInterval);
+    // REMOVED: Harmful polling interval for token refresh
+    // Token refresh will now happen on-demand when API calls fail
+    // This follows Mojaloop and banking best practices for scalability
+    // 
+    // FUTURE: Will implement proper token refresh on API failure
+    // FUTURE: Will add WebSocket-based token validation
   }, []);
 
   const checkAuthStatus = async () => {

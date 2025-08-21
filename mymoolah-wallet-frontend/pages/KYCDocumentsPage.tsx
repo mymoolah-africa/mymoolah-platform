@@ -23,6 +23,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { APP_CONFIG } from '../config/app-config';
+import { getToken } from '../utils/authToken';
 
 type DocumentType = 'identity';
 type DocumentStatus = 'pending' | 'uploaded' | 'processing' | 'verified' | 'rejected';
@@ -164,15 +165,12 @@ export function KYCDocumentsPage() {
       formData.append('retryCount', String(kycRetryCount));
 
       // Real API call to upload documents
-      const token = (await import('../utils/authToken')).getToken();
+      const token = getToken();
       if (!token) {
         throw new Error('No authentication token found');
       }
 
-      console.log('🔍 Frontend: Sending KYC upload request');
-      console.log('📁 File:', documents.identity.file?.name, documents.identity.file?.size);
-      console.log('🔑 Token present:', !!token);
-      console.log('🌐 URL:', `${APP_CONFIG.API.baseUrl}/api/v1/kyc/upload-documents`);
+
       
       const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/kyc/upload-documents?_t=${Date.now()}`, {
         method: 'POST',
@@ -182,8 +180,7 @@ export function KYCDocumentsPage() {
         }
       });
 
-      console.log('📡 Frontend: Response status:', response.status);
-      console.log('📡 Frontend: Response headers:', Object.fromEntries(response.headers.entries()));
+      
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -192,7 +189,7 @@ export function KYCDocumentsPage() {
       }
 
       const data = await response.json();
-      console.log('📄 Backend response data:', data);
+      
 
       // Respect backend flags: on retry/failed, show message and stop
       if (!data.success && (data.status === 'retry' || data.status === 'failed')) {
@@ -221,11 +218,11 @@ export function KYCDocumentsPage() {
       if (updateKYCStatus) {
         if (data.success && data.status === 'approved') {
           // KYC was successful, update to verified
-          console.log('✅ KYC successful, updating status to verified');
+  
           updateKYCStatus('verified');
         } else {
           // Documents uploaded but not yet verified
-          console.log('📋 Documents uploaded, updating status to documents_uploaded');
+  
           updateKYCStatus('documents_uploaded');
         }
       }

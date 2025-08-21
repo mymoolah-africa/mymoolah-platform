@@ -17,7 +17,7 @@ class EasyPayController {
    */
   async ping(req, res) {
     try {
-      console.log('🏥 EasyPay ping request received');
+    
       res.status(200).json({
         Ping: 'OK'
       });
@@ -33,7 +33,7 @@ class EasyPayController {
    */
   async infoRequest(req, res) {
     try {
-      console.log('📋 EasyPay info request received:', req.body);
+    
       
       const { EasyPayNumber, AccountNumber, EchoData } = req.body;
       
@@ -109,7 +109,7 @@ class EasyPayController {
    */
   async authorisationRequest(req, res) {
     try {
-      console.log('💳 EasyPay authorization request received:', req.body);
+    
       
       const { 
         EasyPayNumber, 
@@ -174,7 +174,7 @@ class EasyPayController {
       // Update bill status
       await bill.update({ status: 'processing' });
 
-      console.log('✅ Payment authorized:', payment.id);
+      
 
       res.status(200).json({
         ResponseCode: '0', // Authorized
@@ -192,7 +192,7 @@ class EasyPayController {
    */
   async paymentNotification(req, res) {
     try {
-      console.log('📢 EasyPay payment notification received:', req.body);
+    
       
       const { 
         EasyPayNumber, 
@@ -227,7 +227,7 @@ class EasyPayController {
         await bill.update({ status: 'paid' });
       }
 
-      console.log('✅ Payment completed:', payment.id);
+      
 
       res.status(200).json({
         ResponseCode: '0', // Success

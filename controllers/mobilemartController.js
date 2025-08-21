@@ -13,7 +13,7 @@ const MobileMartAuthService = require('../services/mobilemartAuthService');
 class MobileMartController {
     constructor() {
         this.authService = new MobileMartAuthService();
-        console.log('✅ MobileMart Controller: Initialized');
+    
     }
 
     /**

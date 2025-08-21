@@ -15,7 +15,7 @@ class SettingsController {
         where: { userId },
         defaults: {
           userId,
-          quickAccessServices: ['send_money', 'vouchers'],
+          quickAccessServices: ['airtime', 'vouchers'],
           showBalance: true,
           biometricEnabled: false,
           notificationsEnabled: true,
@@ -28,62 +28,110 @@ class SettingsController {
         }
       });
 
-      // Get available services list
+      // Get available services list - SINGLE SOURCE OF TRUTH from TransactPage
+      // Organized by type groups: Active services first, then Coming Soon services
       const availableServices = [
+        // ===== ACTIVE SERVICES =====
+        // Payments & Transfers (Active)
         {
-          id: 'send_money',
-          name: 'Send Money',
-          description: 'Transfer money to banks, wallets, and ATMs',
+          id: 'send-money',
+          name: 'Pay Beneficiary',
+          description: 'Transfer money to MyMoolah users or bank accounts',
           category: 'payment',
           available: true,
           comingSoon: false
         },
         {
-          id: 'request_money',
+          id: 'request-money',
           name: 'Request Money',
-          description: 'Request payments from friends and family',
+          description: 'Request payment from MyMoolah users or bank accounts',
           category: 'payment',
-          available: false,
-          comingSoon: true
+          available: true,
+          comingSoon: false
         },
         {
-          id: 'airtime_data',
+          id: 'qr-scan',
+          name: 'Scan QR to Pay',
+          description: 'Pay merchants by scanning QR codes',
+          category: 'payment',
+          available: true,
+          comingSoon: false
+        },
+        // Bills & Utilities (Active)
+        {
+          id: 'airtime-data',
           name: 'Airtime & Data',
-          description: 'Top up airtime and buy data bundles',
+          description: 'Purchase Airtime & Data with AI-powered best deals',
           category: 'utility',
           available: true,
           comingSoon: false
         },
         {
           id: 'electricity',
-          name: 'Electricity',
-          description: 'Purchase prepaid electricity tokens',
+          name: 'Electricity & Water',
+          description: 'Pay your utility bills quickly',
           category: 'utility',
           available: true,
           comingSoon: false
         },
         {
-          id: 'bill_payments',
+          id: 'bill-payments',
           name: 'Bill Payments',
-          description: 'Pay monthly bills and subscriptions',
-          category: 'financial',
+          description: 'Pay municipal and service bills',
+          category: 'utility',
           available: true,
           comingSoon: false
         },
         {
-          id: 'vouchers',
-          name: 'Vouchers',
-          description: 'Buy and redeem digital vouchers',
-          category: 'financial',
+          id: 'insurance',
+          name: 'Insurance',
+          description: 'Pay insurance premiums',
+          category: 'utility',
           available: true,
           comingSoon: false
+        },
+        // Vouchers & Digital Services (Active)
+        {
+          id: 'vouchers',
+          name: 'Vouchers',
+          description: 'Buy and send digital vouchers',
+          category: 'digital',
+          available: true,
+          comingSoon: false
+        },
+        // ===== COMING SOON SERVICES =====
+        // Payments & Transfers (Coming Soon)
+        {
+          id: 'wallet-withdraw',
+          name: 'Cash Withdrawal',
+          description: 'Get cash at Flash traders or Formal retail brands',
+          category: 'payment',
+          available: true,
+          comingSoon: true
+        },
+        // Digital Services (Coming Soon)
+        {
+          id: 'gaming',
+          name: 'Gaming Credits',
+          description: 'Top up gaming accounts',
+          category: 'digital',
+          available: true,
+          comingSoon: true
+        },
+        {
+          id: 'streaming',
+          name: 'Streaming Services',
+          description: 'Pay for Netflix, Spotify, etc.',
+          category: 'digital',
+          available: true,
+          comingSoon: true
         }
       ];
 
-      // Map services with enabled status
+      // Map services with enabled status and filter out coming soon services from enabled list
       const servicesWithStatus = availableServices.map(service => ({
         ...service,
-        enabled: userSettings.quickAccessServices.includes(service.id)
+        enabled: userSettings.quickAccessServices.includes(service.id) && !service.comingSoon
       }));
 
       res.json({
