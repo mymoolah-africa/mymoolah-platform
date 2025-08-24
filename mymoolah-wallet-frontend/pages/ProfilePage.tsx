@@ -10,7 +10,6 @@ import {
   Settings,
   CreditCard,
   Bell,
-  HelpCircle,
   LogOut,
   ChevronRight,
   Eye,
@@ -184,19 +183,13 @@ export function ProfilePage() {
       icon: <Smartphone className="w-5 h-5" />,
       onClick: () => alert('Device management coming soon!')
     },
-    {
-      id: 'help-support',
-      title: 'Help & Support',
-      description: 'Get help, contact support, or view FAQs',
-      icon: <HelpCircle className="w-5 h-5" />,
-      onClick: () => alert('Help & Support center coming soon!')
-    },
+
     {
       id: 'feedback',
       title: 'Send Feedback',
       description: 'Help us improve MyMoolah with your suggestions',
       icon: <MessageCircle className="w-5 h-5" />,
-      onClick: () => alert('Feedback system coming soon!')
+      onClick: () => navigate('/feedback')
     }
   ];
 

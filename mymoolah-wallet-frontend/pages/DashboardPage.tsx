@@ -56,7 +56,7 @@ function getPrimaryDisplayText(transaction: Transaction): string {
   let description = transaction.description || '';
   
   // Remove "Ref:" prefix and extract the actual description
-  // Convert "Leonie Botes | Ref:test balance refresh" to "Leonie Botes | test balance refresh"
+          // Convert transaction description format
   if (description.includes('| Ref:')) {
     // Extract the name part (before the pipe)
     const namePart = description.split('|')[0].trim();
@@ -244,10 +244,13 @@ export function DashboardPage() {
           const voucherData = await voucherResponse.json();
           if (voucherData.success && voucherData.data) {
             const summary = voucherData.data;
-            // Dashboard counter should include both active vouchers AND pending payment EasyPay vouchers
-            const dashboardVoucherCount = (summary.active.count || 0) + (summary.pending.count || 0);
+            // Dashboard counter should use active.count which already includes both active AND pending vouchers
+            const dashboardVoucherCount = summary.active.count || 0;
+            
+                  // Voucher count calculation for dashboard display
+            
             setOpenVouchersCount(dashboardVoucherCount);
-            const totalVoucherValue = parseFloat(summary.active.value) + parseFloat(summary.pending.value);
+            const totalVoucherValue = parseFloat(summary.active.value);
             
             setOpenVouchersValue(totalVoucherValue);
           }

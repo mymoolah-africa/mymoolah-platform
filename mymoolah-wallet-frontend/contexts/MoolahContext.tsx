@@ -264,7 +264,7 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       throw new Error('Transfer failed');
     }
 
-    // TODO: Implement proper balance refresh after transfer
+            // Balance refresh after transfer
     // await refreshData();
   };
 

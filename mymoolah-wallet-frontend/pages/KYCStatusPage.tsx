@@ -128,7 +128,7 @@ export function KYCStatusPage() {
       case 'under_review':
         return 'Our verification team is currently reviewing your documents.';
       case 'verified':
-        return 'Congratulations! Your identity has been successfully verified.';
+        return 'Congratulations! Your identity has been verified. You are now at Tier 1 with transaction limits up to R4,999.99 per transaction.';
       case 'rejected':
         return 'Some documents need to be re-submitted for verification.';
       default:
@@ -328,6 +328,144 @@ export function KYCStatusPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* KYC Tier Information - Only show for verified users */}
+            {currentStatus === 'verified' && (
+              <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+                <CardHeader>
+                  <CardTitle style={{ 
+                    fontFamily: 'Montserrat, sans-serif', 
+                    fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', 
+                    fontWeight: 'var(--font-weight-bold)', 
+                    color: '#1f2937' 
+                  }}>
+                    Your KYC Tier & Limits
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Current Tier Display */}
+                    <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                          <Shield className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <h4 style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-base)', 
+                            fontWeight: 'var(--font-weight-bold)', 
+                            color: '#1f2937'
+                          }}>
+                            Tier 1 - Basic Verification
+                          </h4>
+                          <p style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-small)', 
+                            fontWeight: 'var(--font-weight-normal)', 
+                            color: '#6b7280'
+                          }}>
+                            ID document verified
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-green-600 font-semibold" style={{ 
+                          fontFamily: 'Montserrat, sans-serif', 
+                          fontSize: 'var(--mobile-font-base)'
+                        }}>
+                          ACTIVE
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transaction Limits */}
+                    <div className="space-y-3">
+                      <h5 style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-small)', 
+                        fontWeight: 'var(--font-weight-bold)', 
+                        color: '#374151'
+                      }}>
+                        Transaction Limits
+                      </h5>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          <div className="text-blue-600 font-semibold" style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-small)'
+                          }}>
+                            Per Transaction
+                          </div>
+                          <div className="text-blue-800 font-bold" style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-base)'
+                          }}>
+                            R4,999.99
+                          </div>
+                        </div>
+                        
+                        <div className="p-3 bg-green-50 rounded-lg border border-green-200">
+                          <div className="text-green-600 font-semibold" style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-small)'
+                          }}>
+                            Monthly Limit
+                          </div>
+                          <div className="text-green-800 font-bold" style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-base)'
+                          }}>
+                            R29,999.99
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Upgrade to Tier 2 Info */}
+                    <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-amber-600 text-sm">💡</span>
+                        </div>
+                        <div>
+                          <h6 style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-small)', 
+                            fontWeight: 'var(--font-weight-bold)', 
+                            color: '#92400e'
+                          }}>
+                            Upgrade to Tier 2
+                          </h6>
+                          <p style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-small)', 
+                            fontWeight: 'var(--font-weight-normal)', 
+                            color: '#92400e'
+                          }}>
+                            Upload proof of address to unlock higher limits: R100,000 per transaction, R500,000 monthly.
+                          </p>
+                          <Button
+                            onClick={() => navigate('/kyc/documents')}
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 border-amber-300 text-amber-700 hover:bg-amber-100"
+                            style={{ 
+                              fontFamily: 'Montserrat, sans-serif',
+                              fontSize: 'var(--mobile-font-small)',
+                              fontWeight: 'var(--font-weight-medium)'
+                            }}
+                          >
+                            Upload POA Document
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Action Buttons */}
             <div className="space-y-3">

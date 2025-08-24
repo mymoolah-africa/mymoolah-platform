@@ -20,6 +20,8 @@ import { TransactionHistoryPage } from './pages/TransactionHistoryPage';
 import { WalletSettingsPage } from './pages/WalletSettingsPage';
 import { RequestMoneyPage } from './pages/RequestMoneyPage';
 import { ServicesPage } from './pages/ServicesPage';
+import { SupportPage } from './pages/SupportPage';
+import FeedbackPage from './pages/FeedbackPage';
 
 // KYC Pages
 import { KYCDocumentsPage } from './pages/KYCDocumentsPage';
@@ -36,7 +38,7 @@ function AppContent() {
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
-  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments'];
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments'];
   const showTopBanner = pagesWithTopBanner.includes(location.pathname);
 
   return (
@@ -93,6 +95,8 @@ function AppContent() {
             <Route path="/transactions" element={<ProtectedRoute><TransactionHistoryPage /></ProtectedRoute>} />
             <Route path="/request-money" element={<ProtectedRoute><RequestMoneyPage /></ProtectedRoute>} />
             <Route path="/services" element={<ProtectedRoute><ServicesPage /></ProtectedRoute>} />
+            <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
+            <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
             <Route path="/electricity" element={<ProtectedRoute><div>Electricity Page - Coming Soon</div></ProtectedRoute>} />
             <Route path="/bill-payments" element={<ProtectedRoute><div>Bill Payments Page - Coming Soon</div></ProtectedRoute>} />
             {/* Catch-all redirect */}
@@ -116,6 +120,8 @@ function AppContent() {
             <BottomNavigation />
           </div>
         )}
+        
+
       </div>
     </div>
   );

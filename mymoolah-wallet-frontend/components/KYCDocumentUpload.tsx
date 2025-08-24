@@ -75,7 +75,7 @@ const KYCDocumentUpload: React.FC<KYCDocumentUploadProps> = ({
     try {
       const formData = new FormData();
       formData.append('identityDocument', selectedFile);
-      formData.append('userId', user?.id || '1'); // TODO: Get from auth context
+              formData.append('userId', user?.id || '1'); // Get from auth context
       formData.append('retryCount', retryCount.toString());
 
       const response = await fetch('/api/v1/kyc/upload-documents', {

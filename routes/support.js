@@ -1,23 +1,29 @@
 const express = require('express');
 const router = express.Router();
 const supportController = require('../controllers/supportController');
+const authenticateToken = require('../middleware/auth');
 
-// Create a new support ticket
-router.post('/', supportController.createTicket);
+/**
+ * Support Routes
+ * AI-powered support chat functionality
+ */
 
-// List all tickets for a user
-router.get('/', supportController.listTicketsByUser);
+// Health check - no auth required
+router.get('/health', supportController.healthCheck);
 
-// Get a ticket and its messages
-router.get('/:id', supportController.getTicketWithMessages);
+// Get FAQ - no auth required
+router.get('/faq', supportController.getFAQ);
 
-// Post a message to a ticket
-router.post('/:id/message', supportController.postMessage);
+// Process chat message - no auth required (for initial support)
+router.post('/chat', supportController.processChatMessage);
 
-// Update ticket status
-router.patch('/:id/status', supportController.updateStatus);
+// Get user context - requires auth
+router.get('/context', authenticateToken, supportController.getUserContext);
 
-// Escalate ticket to external platform
-router.post('/:id/escalate', supportController.escalate);
+// Submit feedback - requires auth
+router.post('/feedback', authenticateToken, supportController.submitFeedback);
+
+// Get support statistics - requires admin auth
+router.get('/stats', authenticateToken, supportController.getSupportStats);
 
 module.exports = router;

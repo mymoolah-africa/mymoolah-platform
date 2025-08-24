@@ -182,7 +182,7 @@ export function TransactionHistoryPage() {
     let description = t.description || '';
     
     // Remove "Ref:" prefix and extract the actual description
-    // Convert "Leonie Botes | Ref:test balance refresh" to "Leonie Botes | test balance refresh"
+    // Convert transaction description format
     if (description.includes('| Ref:')) {
       // Extract the name part (before the pipe)
       const namePart = description.split('|')[0].trim();

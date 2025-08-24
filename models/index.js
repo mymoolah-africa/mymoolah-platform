@@ -89,6 +89,25 @@ db.TaxConfiguration = require('./TaxConfiguration')(sequelize, Sequelize.DataTyp
 db.TaxTransaction = require('./TaxTransaction')(sequelize, Sequelize.DataTypes);
 db.ComplianceRecord = require('./ComplianceRecord')(sequelize, Sequelize.DataTypes);
 
+// Add Support System models to exports
+db.SupportInteraction = require('./SupportInteraction')(sequelize, Sequelize.DataTypes);
+db.SupportFeedback = require('./SupportFeedback')(sequelize, Sequelize.DataTypes);
+db.AiKnowledgeBase = require('./AiKnowledgeBase')(sequelize, Sequelize.DataTypes);
+
+// Add Feedback System models to exports
+db.FeedbackCategory = require('./FeedbackCategory')(sequelize, Sequelize.DataTypes);
+db.FeedbackSubmission = require('./FeedbackSubmission')(sequelize, Sequelize.DataTypes);
+db.FeedbackAiInsight = require('./FeedbackAiInsight')(sequelize, Sequelize.DataTypes);
+db.FeedbackContentGeneration = require('./FeedbackContentGeneration')(sequelize, Sequelize.DataTypes);
+db.FeedbackAnalytics = require('./FeedbackAnalytics')(sequelize, Sequelize.DataTypes);
+db.FeedbackAttachment = require('./FeedbackAttachment')(sequelize, Sequelize.DataTypes);
+
+// Add Google Reviews Integration models to exports
+db.FeedbackGoogleReview = require('./FeedbackGoogleReview')(sequelize, Sequelize.DataTypes);
+db.GoogleReviewResponse = require('./GoogleReviewResponse')(sequelize, Sequelize.DataTypes);
+db.GoogleReviewAnalytics = require('./GoogleReviewAnalytics')(sequelize, Sequelize.DataTypes);
+db.GoogleApiConfig = require('./GoogleApiConfig')(sequelize, Sequelize.DataTypes);
+
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 

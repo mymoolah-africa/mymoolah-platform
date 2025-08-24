@@ -18,7 +18,8 @@ import {
   Smartphone,
   Gift,
   Wallet,
-  HelpCircle
+  HelpCircle,
+  MessageSquare
 } from "lucide-react";
 
 interface NavItem {
@@ -107,7 +108,7 @@ const serviceMapping = {
   }
 };
 
-// Default navigation items (positions 1, 3, 5)
+// Default navigation items (positions 1, 3, 5, 7)
 const defaultNavItems: NavItem[] = [
   {
     id: 'home',
@@ -126,6 +127,12 @@ const defaultNavItems: NavItem[] = [
     path: '/support',
     label: 'Support',
     icon: () => <HelpCircle style={{ width: '20px', height: '20px' }} />
+  },
+  {
+    id: 'feedback',
+    path: '/feedback',
+    label: 'Feedback',
+    icon: () => <MessageSquare style={{ width: '20px', height: '20px' }} />
   }
 ];
 

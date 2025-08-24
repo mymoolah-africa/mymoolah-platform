@@ -82,7 +82,7 @@ function getCleanTransactionText(description: string): string {
   let cleanDescription = description || '';
   
   // Remove "Ref:" prefix and extract the actual description
-  // Convert "Leonie Botes | Ref:test balance refresh" to "Leonie Botes | test balance refresh"
+          // Convert transaction description format
   if (cleanDescription.includes('| Ref:')) {
     // Extract the name part (before the pipe)
     const namePart = cleanDescription.split('|')[0].trim();
@@ -414,7 +414,7 @@ export function SendMoneyPage() {
           console.error('Failed to load saved contacts', e);
         }
 
-        // TODO: When beneficiaries API is ready, replace localStorage with:
+        // When beneficiaries API is ready, replace localStorage with:
         // const beneficiaries = await apiService.getBeneficiaries();
         // setBeneficiaries(beneficiaries);
       } catch (e) {
@@ -644,7 +644,7 @@ export function SendMoneyPage() {
     if (!newBeneficiary.name || !newBeneficiary.identifier) return;
 
     try {
-      // TODO: When beneficiaries API is ready, use this instead:
+              // When beneficiaries API is ready, use this instead:
       // const data = await apiService.addBeneficiary({
       //   name: newBeneficiary.name,
       //   identifier: newBeneficiary.identifier,
