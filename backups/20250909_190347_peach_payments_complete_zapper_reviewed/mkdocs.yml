@@ -1,0 +1,21 @@
+site_name: MyMoolah Documentation
+
+nav:
+  - Home: index.md
+  - Requirements: requirements.md
+  - Session Summary: session-summary.md
+  - Session Decision Notes: session_decision_notes.md
+  - Project Onboarding: PROJECT_ONBOARDING.md
+  - API Reference (Markdown): openapi.md
+  - API Reference (Swagger UI): openapi.yaml
+  - Changelog: CHANGELOG.md
+  - Contributing: CONTRIBUTING.md
+  - Security: SECURITY.md
+
+theme:
+  name: material
+
+plugins:
+  - search
+  - swagger-ui:
+      spec: openapi.yaml

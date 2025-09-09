@@ -1,0 +1,44 @@
+{
+  "User Registration": {
+    "Common User Questions": [
+      "How do I register for an account?",
+      "What do I do if I don't receive a confirmation email after registration?"
+    ],
+    "Support Scenarios": [
+      "A user is unable to complete the registration process",
+      "A user hasn't received the confirmation email after registration"
+    ],
+    "Feature Explanations Users Might Need": [
+      "Explaining the registration process",
+      "Explaining why a confirmation email is necessary and what to do if it's not received"
+    ]
+  },
+  "Account Management": {
+    "Common User Questions": [
+      "How do I change my password?",
+      "How can I update my email address?"
+    ],
+    "Support Scenarios": [
+      "A user has forgotten their password and needs to reset it",
+      "A user wants to update their email address but doesn't know how"
+    ],
+    "Feature Explanations Users Might Need": [
+      "Explaining how to change the password",
+      "Explaining how to update the email address"
+    ]
+  },
+  "Transaction Processing": {
+    "Common User Questions": [
+      "How do I make a transaction?",
+      "Why is my transaction not going through?"
+    ],
+    "Support Scenarios": [
+      "A user is unable to make a transaction",
+      "A user's transaction is not being processed"
+    ],
+    "Feature Explanations Users Might Need": [
+      "Explaining how to make a transaction",
+      "Explaining possible reasons why a transaction might not go through"
+    ]
+  }
+}

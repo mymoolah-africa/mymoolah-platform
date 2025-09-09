@@ -1,0 +1,984 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { apiService, type RecipientInfo, type RecipientMethod, type PaymentQuote, type TransferResult } from '../services/apiService';
+import { 
+  Search, 
+  Plus, 
+  ArrowLeft,
+  Filter,
+  ChevronDown,
+  User,
+  CreditCard,
+  Phone,
+  Building2,
+  Clock,
+  Send,
+  Star,
+  MoreHorizontal,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  Loader2,
+  AlertTriangle,
+  Wallet,
+  Smartphone,
+  Calendar,
+  Repeat,
+  DollarSign,
+  FileText,
+  X
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Label } from '../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Separator } from '../components/ui/separator';
+import { Switch } from '../components/ui/switch';
+import { Textarea } from '../components/ui/textarea';
+import { Alert, AlertDescription } from '../components/ui/alert';
+
+// Beneficiary Types
+interface Beneficiary {
+  id: string;
+  name: string;
+  identifier: string; // Phone number for MyMoolah, account number for bank
+  accountType: 'mymoolah' | 'bank';
+  bankName?: string; // Only for bank accounts
+  lastPaid?: Date;
+  isFavorite: boolean;
+  totalPaid: number;
+  paymentCount: number;
+  avatar?: string;
+}
+
+// Transaction Types
+interface Transaction {
+  id: string;
+  beneficiaryId: string;
+  beneficiaryName: string;
+  amount: number;
+  date: Date;
+  status: 'completed' | 'pending' | 'failed';
+  reference: string;
+  accountType: 'mymoolah' | 'bank';
+  description?: string;
+}
+
+// South African Banks Supporting PayShap
+const SA_BANKS = [
+  { code: 'ABSA', name: 'ABSA Bank' },
+  { code: 'FNB', name: 'First National Bank' },
+  { code: 'NEDBANK', name: 'Nedbank' },
+  { code: 'STANDARD', name: 'Standard Bank' },
+  { code: 'CAPITEC', name: 'Capitec Bank' },
+  { code: 'DISCOVERY', name: 'Discovery Bank' },
+  { code: 'INVESTEC', name: 'Investec Bank' },
+  { code: 'AFRICAN', name: 'African Bank' },
+  { code: 'BIDVEST', name: 'Bidvest Bank' },
+  { code: 'POSTBANK', name: 'Postbank' }
+];
+
+// Mock Data
+const MOCK_BENEFICIARIES: Beneficiary[] = [
+  {
+    id: '1',
+    name: 'Andre Botes Disc',
+    identifier: '27821234567',
+    accountType: 'mymoolah',
+    lastPaid: new Date('2025-05-20T10:30:00'),
+    isFavorite: true,
+    totalPaid: 2500.00,
+    paymentCount: 8
+  },
+  {
+    id: '2',
+    name: 'Andre Botes Sr SB',
+    identifier: '1234567890',
+    accountType: 'bank',
+    bankName: 'Standard Bank',
+    lastPaid: new Date('2021-10-26T19:55:00'),
+    isFavorite: false,
+    totalPaid: 1200.00,
+    paymentCount: 3
+  },
+  {
+    id: '3',
+    name: 'Andre Jr Botes',
+    identifier: '27831234567',
+    accountType: 'mymoolah',
+    lastPaid: new Date('2021-10-20T18:57:00'),
+    isFavorite: false,
+    totalPaid: 800.00,
+    paymentCount: 5
+  },
+  {
+    id: '4',
+    name: 'Church of Christ Quaggasr...',
+    identifier: '9876543210',
+    accountType: 'bank',
+    bankName: 'FNB',
+    lastPaid: undefined,
+    isFavorite: false,
+    totalPaid: 0,
+    paymentCount: 0
+  },
+  {
+    id: '5',
+    name: 'HD Botes',
+    identifier: '27841234567',
+    accountType: 'mymoolah',
+    lastPaid: new Date('2025-01-30T13:58:00'),
+    isFavorite: true,
+    totalPaid: 3200.00,
+    paymentCount: 12
+  }
+];
+
+const MOCK_TRANSACTIONS: Transaction[] = [
+  {
+    id: 'tx1',
+    beneficiaryId: '1',
+    beneficiaryName: 'Andre Botes Disc',
+    amount: 500.00,
+    date: new Date('2025-05-20T10:30:00'),
+    status: 'completed',
+    reference: 'TX20250520',
+    accountType: 'mymoolah',
+    description: 'Weekly allowance'
+  },
+  {
+    id: 'tx2',
+    beneficiaryId: '5',
+    beneficiaryName: 'HD Botes',
+    amount: 200.00,
+    date: new Date('2025-01-30T13:58:00'),
+    status: 'completed',
+    reference: 'TX20250130',
+    accountType: 'mymoolah',
+    description: 'Lunch money'
+  },
+  // Add more mock transactions...
+];
+
+export function SendMoneyPage() {
+  const navigate = useNavigate();
+  const { user, requiresKYC } = useAuth();
+  
+  // State Management
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>(MOCK_BENEFICIARIES);
+  const [transactions, setTransactions] = useState<Transaction[]>(MOCK_TRANSACTIONS);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'alphabetical' | 'lastPaid' | 'favorite'>('lastPaid');
+  const [filterType, setFilterType] = useState<'all' | 'mymoolah' | 'bank'>('all');
+  const [showAllTransactions, setShowAllTransactions] = useState(false);
+  
+  // API Integration State
+  const [recipientInfo, setRecipientInfo] = useState<RecipientInfo | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<RecipientMethod | null>(null);
+  const [paymentQuote, setPaymentQuote] = useState<PaymentQuote | null>(null);
+  const [isResolvingRecipient, setIsResolvingRecipient] = useState(false);
+  const [isGettingQuote, setIsGettingQuote] = useState(false);
+  const [isProcessingTransfer, setIsProcessingTransfer] = useState(false);
+  const [transferResult, setTransferResult] = useState<TransferResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Add Beneficiary Modal State
+  const [showAddBeneficiary, setShowAddBeneficiary] = useState(false);
+  const [selectedAccountType, setSelectedAccountType] = useState<'mymoolah' | 'bank'>('mymoolah');
+  const [newBeneficiary, setNewBeneficiary] = useState({
+    name: '',
+    identifier: '',
+    bankName: '',
+    accountNumber: ''
+  });
+  
+  // Payment Modal State
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentDescription, setPaymentDescription] = useState('');
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Check KYC requirements
+  useEffect(() => {
+    if (requiresKYC('send')) {
+      navigate('/kyc/documents?returnTo=/send-money');
+    }
+  }, [requiresKYC, navigate]);
+
+  // API Functions
+  const resolveRecipient = async (identifier: string) => {
+    try {
+      setIsResolvingRecipient(true);
+      setError(null);
+      setRecipientInfo(null);
+      setSelectedPaymentMethod(null);
+      setPaymentQuote(null);
+
+      const info = await apiService.resolveRecipient(identifier);
+      setRecipientInfo(info);
+      
+      // Auto-select preferred method if available
+      const preferredMethod = info.availableMethods.find(method => method.preferred);
+      if (preferredMethod) {
+        setSelectedPaymentMethod(preferredMethod);
+      }
+      
+    } catch (err) {
+      console.error('Error resolving recipient:', err);
+      setError(err instanceof Error ? err.message : 'Failed to resolve recipient');
+    } finally {
+      setIsResolvingRecipient(false);
+    }
+  };
+
+  const getPaymentQuote = async (paymentMethodId: string, amount: number, recipient: string) => {
+    try {
+      setIsGettingQuote(true);
+      setError(null);
+
+      const quote = await apiService.getPaymentQuote(paymentMethodId, amount, recipient);
+      setPaymentQuote(quote);
+      
+    } catch (err) {
+      console.error('Error getting payment quote:', err);
+      setError(err instanceof Error ? err.message : 'Failed to get payment quote');
+    } finally {
+      setIsGettingQuote(false);
+    }
+  };
+
+  const processTransfer = async (paymentMethodId: string, amount: number, recipient: string, reference: string) => {
+    try {
+      setIsProcessingTransfer(true);
+      setError(null);
+
+      const result = await apiService.initiateTransfer(paymentMethodId, amount, recipient, reference);
+      setTransferResult(result);
+      
+      // Close payment modal on success
+      setShowPaymentModal(false);
+      
+      // Show success message or redirect
+      if (result.status === 'processing') {
+        // Could show a success modal or redirect to status page
+        console.log('Transfer initiated successfully:', result);
+      }
+      
+    } catch (err) {
+      console.error('Error processing transfer:', err);
+      setError(err instanceof Error ? err.message : 'Failed to process transfer');
+    } finally {
+      setIsProcessingTransfer(false);
+    }
+  };
+
+  // Filtered and Sorted Beneficiaries
+  const filteredBeneficiaries = useMemo(() => {
+    let filtered = beneficiaries.filter(beneficiary => {
+      const matchesSearch = beneficiary.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           beneficiary.identifier.includes(searchQuery);
+      
+      const matchesFilter = filterType === 'all' || beneficiary.accountType === filterType;
+      
+      return matchesSearch && matchesFilter;
+    });
+
+    // Sort beneficiaries
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'alphabetical':
+          return a.name.localeCompare(b.name);
+        case 'lastPaid':
+          if (!a.lastPaid && !b.lastPaid) return 0;
+          if (!a.lastPaid) return 1;
+          if (!b.lastPaid) return -1;
+          return b.lastPaid.getTime() - a.lastPaid.getTime();
+        case 'favorite':
+          if (a.isFavorite === b.isFavorite) {
+            return a.name.localeCompare(b.name);
+          }
+          return a.isFavorite ? -1 : 1;
+        default:
+          return 0;
+      }
+    });
+
+    return filtered;
+  }, [beneficiaries, searchQuery, sortBy, filterType]);
+
+  // Handle Add Beneficiary
+  const handleAddBeneficiary = async () => {
+    if (!newBeneficiary.name || !newBeneficiary.identifier) return;
+
+    const beneficiary: Beneficiary = {
+      id: Date.now().toString(),
+      name: newBeneficiary.name,
+      identifier: newBeneficiary.identifier,
+      accountType: selectedAccountType,
+      bankName: selectedAccountType === 'bank' ? newBeneficiary.bankName : undefined,
+      lastPaid: undefined,
+      isFavorite: false,
+      totalPaid: 0,
+      paymentCount: 0
+    };
+
+    setBeneficiaries(prev => [...prev, beneficiary]);
+    setNewBeneficiary({ name: '', identifier: '', bankName: '', accountNumber: '' });
+    setShowAddBeneficiary(false);
+
+    // Ask if user wants to make payment now
+    const makePaymentNow = window.confirm(`Beneficiary "${beneficiary.name}" added successfully! Would you like to make a payment now?`);
+    if (makePaymentNow) {
+      setSelectedBeneficiary(beneficiary);
+      setShowPaymentModal(true);
+    }
+  };
+
+  // Handle Payment
+  const handlePayment = async () => {
+    if (!selectedBeneficiary || !paymentAmount) return;
+
+    setIsProcessing(true);
+    
+    try {
+      // Simulate payment processing
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      // Create transaction record
+      const transaction: Transaction = {
+        id: Date.now().toString(),
+        beneficiaryId: selectedBeneficiary.id,
+        beneficiaryName: selectedBeneficiary.name,
+        amount: parseFloat(paymentAmount),
+        date: new Date(),
+        status: 'completed',
+        reference: `TX${Date.now().toString().slice(-8)}`,
+        accountType: selectedBeneficiary.accountType,
+        description: paymentDescription
+      };
+
+      setTransactions(prev => [transaction, ...prev]);
+      
+      // Update beneficiary stats
+      setBeneficiaries(prev => prev.map(b => 
+        b.id === selectedBeneficiary.id 
+          ? {
+              ...b,
+              lastPaid: new Date(),
+              totalPaid: b.totalPaid + parseFloat(paymentAmount),
+              paymentCount: b.paymentCount + 1
+            }
+          : b
+      ));
+
+      setPaymentAmount('');
+      setPaymentDescription('');
+      setIsRecurring(false);
+      setShowPaymentModal(false);
+      setSelectedBeneficiary(null);
+      
+      alert(`Payment of R${paymentAmount} sent successfully to ${selectedBeneficiary.name}!`);
+      
+    } catch (error) {
+      alert('Payment failed. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Format currency
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency: 'ZAR',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+
+  // Format date
+  const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  };
+
+  // Get account type badge
+  const getAccountTypeBadge = (accountType: 'mymoolah' | 'bank') => {
+    return accountType === 'mymoolah' ? (
+      <Badge className="bg-[#86BE41]/10 text-[#86BE41] border-[#86BE41]/20" style={{ fontSize: '10px' }}>
+        <Wallet className="w-3 h-3 mr-1" />
+        MyMoolah
+      </Badge>
+    ) : (
+      <Badge className="bg-[#2D8CCA]/10 text-[#2D8CCA] border-[#2D8CCA]/20" style={{ fontSize: '10px' }}>
+        <Building2 className="w-3 h-3 mr-1" />
+        Bank
+      </Badge>
+    );
+  };
+
+  return (
+    <div style={{ 
+      backgroundColor: '#ffffff',
+      minHeight: '100vh',
+      fontFamily: 'Montserrat, sans-serif'
+    }}>
+      {/* Header */}
+      <div className="bg-[#2D8CCA] text-white p-4">
+        <div className="flex items-center gap-3 mb-4">
+          <button 
+            onClick={() => navigate('/transact')}
+            className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            style={{ minHeight: 'var(--mobile-touch-target)', minWidth: 'var(--mobile-touch-target)' }}
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <h1 style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: 'clamp(1.125rem, 3vw, 1.25rem)',
+            fontWeight: 'var(--font-weight-bold)',
+            color: 'white'
+          }}>
+            Pay Beneficiary
+          </h1>
+        </div>
+
+        {/* Search and Add */}
+        <div className="flex gap-3">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Input
+              placeholder="Search beneficiaries"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-white/90 border-0 text-gray-900"
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: 'var(--mobile-font-base)',
+                height: 'var(--mobile-touch-target)'
+              }}
+            />
+          </div>
+          <Dialog open={showAddBeneficiary} onOpenChange={setShowAddBeneficiary}>
+            <DialogTrigger asChild>
+              <Button className="bg-[#86BE41] hover:bg-[#7AB139] text-white border-0 px-4">
+                <Plus className="w-4 h-4 mr-2" />
+                Add
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-sm mx-auto">
+              <DialogHeader>
+                <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                  Add New Beneficiary
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {/* Account Type Selection */}
+                <div className="space-y-3">
+                  <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Account Type</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant={selectedAccountType === 'mymoolah' ? 'default' : 'outline'}
+                      onClick={() => setSelectedAccountType('mymoolah')}
+                      className={`h-16 flex-col ${selectedAccountType === 'mymoolah' 
+                        ? 'bg-[#86BE41] text-white border-[#86BE41]' 
+                        : 'border-gray-200'}`}
+                    >
+                      <Wallet className="w-5 h-5 mb-1" />
+                      <span style={{ fontSize: 'var(--mobile-font-small)' }}>MyMoolah</span>
+                    </Button>
+                    <Button
+                      variant={selectedAccountType === 'bank' ? 'default' : 'outline'}
+                      onClick={() => setSelectedAccountType('bank')}
+                      className={`h-16 flex-col ${selectedAccountType === 'bank' 
+                        ? 'bg-[#2D8CCA] text-white border-[#2D8CCA]' 
+                        : 'border-gray-200'}`}
+                    >
+                      <Building2 className="w-5 h-5 mb-1" />
+                      <span style={{ fontSize: 'var(--mobile-font-small)' }}>Bank</span>
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Form Fields */}
+                <div className="space-y-3">
+                  <div>
+                    <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                      Beneficiary Name
+                    </Label>
+                    <Input
+                      placeholder="Enter full name"
+                      value={newBeneficiary.name}
+                      onChange={(e) => setNewBeneficiary(prev => ({ ...prev, name: e.target.value }))}
+                      style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        height: 'var(--mobile-touch-target)'
+                      }}
+                    />
+                  </div>
+
+                  {selectedAccountType === 'mymoolah' ? (
+                    <div>
+                      <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                        SA Mobile Number
+                      </Label>
+                      <Input
+                        placeholder="27XXXXXXXXX"
+                        value={newBeneficiary.identifier}
+                        onChange={(e) => setNewBeneficiary(prev => ({ ...prev, identifier: e.target.value }))}
+                        style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: 'var(--mobile-font-base)',
+                          height: 'var(--mobile-touch-target)'
+                        }}
+                      />
+                      <p style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-small)',
+                        color: '#6b7280',
+                        marginTop: '0.5rem'
+                      }}>
+                        This is also their MyMoolah account number
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                          Bank
+                        </Label>
+                        <Select value={newBeneficiary.bankName} onValueChange={(value) => 
+                          setNewBeneficiary(prev => ({ ...prev, bankName: value }))
+                        }>
+                          <SelectTrigger style={{ height: 'var(--mobile-touch-target)' }}>
+                            <SelectValue placeholder="Select bank" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SA_BANKS.map((bank) => (
+                              <SelectItem key={bank.code} value={bank.name}>
+                                {bank.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                          Account Number
+                        </Label>
+                        <Input
+                          placeholder="Enter account number"
+                          value={newBeneficiary.identifier}
+                          onChange={(e) => setNewBeneficiary(prev => ({ ...prev, identifier: e.target.value }))}
+                          style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: 'var(--mobile-font-base)',
+                            height: 'var(--mobile-touch-target)'
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowAddBeneficiary(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleAddBeneficiary}
+                    disabled={!newBeneficiary.name || !newBeneficiary.identifier}
+                    className="flex-1 bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] text-white"
+                  >
+                    Add Beneficiary
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="px-4 py-3 bg-gray-50 border-b">
+        <div className="flex gap-3 items-center justify-center">
+          <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+            <SelectTrigger className="flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="lastPaid">Last Paid</SelectItem>
+              <SelectItem value="alphabetical">Alphabetical</SelectItem>
+              <SelectItem value="favorite">Favorites First</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={filterType} onValueChange={(value: any) => setFilterType(value)}>
+            <SelectTrigger className="flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Show All</SelectItem>
+              <SelectItem value="mymoolah">MyMoolah Only</SelectItem>
+              <SelectItem value="bank">Bank Only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: 'var(--mobile-padding)' }}>
+        {/* Quick Filter Tabs */}
+        <div className="flex bg-gray-100 rounded-lg p-1 mb-6">
+          <button
+            onClick={() => setFilterType('all')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              filterType === 'all'
+                ? 'bg-[#2D8CCA] text-white'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+            style={{ fontFamily: 'Montserrat, sans-serif' }}
+          >
+            Frequent
+          </button>
+          <button
+            onClick={() => setFilterType('mymoolah')}
+            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+              filterType === 'mymoolah'
+                ? 'bg-[#2D8CCA] text-white'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+            style={{ fontFamily: 'Montserrat, sans-serif' }}
+          >
+            One time
+          </button>
+        </div>
+
+        {/* Beneficiaries List */}
+        <div className="space-y-3 mb-8">
+          {filteredBeneficiaries.map((beneficiary) => (
+            <Card 
+              key={beneficiary.id}
+              className="hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => {
+                setSelectedBeneficiary(beneficiary);
+                setShowPaymentModal(true);
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  {/* Avatar */}
+                  <div className="w-12 h-12 bg-[#2D8CCA] rounded-full flex items-center justify-center text-white font-bold">
+                    {beneficiary.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                  </div>
+
+                  {/* Beneficiary Info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        color: '#1f2937'
+                      }}>
+                        {beneficiary.name}
+                      </h3>
+                      {beneficiary.isFavorite && (
+                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mb-1">
+                      {getAccountTypeBadge(beneficiary.accountType)}
+                    </div>
+
+                    {beneficiary.lastPaid ? (
+                      <p style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-small)',
+                        color: '#6b7280'
+                      }}>
+                        Last paid: {formatDate(beneficiary.lastPaid)}
+                      </p>
+                    ) : (
+                      <p style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-small)',
+                        color: '#6b7280'
+                      }}>
+                        Never paid
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="flex flex-col items-end gap-1">
+                    <Button
+                      size="sm"
+                      className="bg-[#86BE41] hover:bg-[#7AB139] text-white px-3 py-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedBeneficiary(beneficiary);
+                        setShowPaymentModal(true);
+                      }}
+                    >
+                      <Send className="w-3 h-3 mr-1" />
+                      Pay
+                    </Button>
+                    {beneficiary.paymentCount > 0 && (
+                      <span style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '10px',
+                        color: '#6b7280'
+                      }}>
+                        {beneficiary.paymentCount} payments
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Recent Transactions */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: 'clamp(1rem, 2vw, 1.125rem)',
+                fontWeight: 'var(--font-weight-bold)'
+              }}>
+                Recent Transactions
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAllTransactions(!showAllTransactions)}
+                className="text-[#2D8CCA] hover:text-[#2680B8] hover:bg-[#2D8CCA]/10"
+                style={{ 
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: 'var(--mobile-font-small)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  minHeight: 'var(--mobile-touch-target)'
+                }}
+              >
+                {showAllTransactions ? 'Show Less' : 'Show All'}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {(showAllTransactions ? transactions : transactions.slice(0, 10)).map((transaction) => (
+              <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    transaction.status === 'completed' ? 'bg-green-100' :
+                    transaction.status === 'pending' ? 'bg-yellow-100' : 'bg-red-100'
+                  }`}>
+                    {transaction.status === 'completed' ? (
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                    ) : transaction.status === 'pending' ? (
+                      <Clock className="w-5 h-5 text-yellow-600" />
+                    ) : (
+                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                    )}
+                  </div>
+                  <div>
+                    <p style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: 'var(--mobile-font-base)',
+                      fontWeight: 'var(--font-weight-medium)',
+                      color: '#1f2937'
+                    }}>
+                      {transaction.beneficiaryName}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      {getAccountTypeBadge(transaction.accountType)}
+                      <span style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-small)',
+                        color: '#6b7280'
+                      }}>
+                        {formatDate(transaction.date)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: 'var(--mobile-font-base)',
+                    fontWeight: 'var(--font-weight-medium)',
+                    color: '#1f2937'
+                  }}>
+                    {formatCurrency(transaction.amount)}
+                  </p>
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: 'var(--mobile-font-small)',
+                    color: '#6b7280'
+                  }}>
+                    {transaction.reference}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Payment Modal */}
+      <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+        <DialogContent className="max-w-sm mx-auto">
+          <DialogHeader>
+            <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
+              Pay {selectedBeneficiary?.name}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedBeneficiary && (
+            <div className="space-y-4">
+              {/* Beneficiary Summary */}
+              <div className="p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-[#2D8CCA] rounded-full flex items-center justify-center text-white font-bold">
+                    {selectedBeneficiary.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                  </div>
+                  <div>
+                    <p style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: 'var(--mobile-font-base)',
+                      fontWeight: 'var(--font-weight-medium)'
+                    }}>
+                      {selectedBeneficiary.name}
+                    </p>
+                    {getAccountTypeBadge(selectedBeneficiary.accountType)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount Input */}
+              <div>
+                <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Amount (ZAR)</Label>
+                <Input
+                  placeholder="0.00"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  type="number"
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: 'var(--mobile-font-base)',
+                    height: 'var(--mobile-touch-target)'
+                  }}
+                />
+              </div>
+
+              {/* Quick Amounts */}
+              <div className="grid grid-cols-4 gap-2">
+                {[50, 100, 200, 500].map(amount => (
+                  <Button
+                    key={amount}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPaymentAmount(amount.toString())}
+                    className="text-[#2D8CCA] border-[#2D8CCA] hover:bg-[#2D8CCA] hover:text-white"
+                  >
+                    R{amount}
+                  </Button>
+                ))}
+              </div>
+
+              {/* Description */}
+              <div>
+                <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                  Description (Optional)
+                </Label>
+                <Textarea
+                  placeholder="What's this payment for?"
+                  value={paymentDescription}
+                  onChange={(e) => setPaymentDescription(e.target.value)}
+                  rows={3}
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: 'var(--mobile-font-base)'
+                  }}
+                />
+              </div>
+
+              {/* Recurring Payment */}
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                <div>
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: 'var(--mobile-font-base)',
+                    fontWeight: 'var(--font-weight-medium)'
+                  }}>
+                    Set up recurring payment
+                  </p>
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: 'var(--mobile-font-small)',
+                    color: '#6b7280'
+                  }}>
+                    Pay this amount monthly
+                  </p>
+                </div>
+                <Switch
+                  checked={isRecurring}
+                  onCheckedChange={setIsRecurring}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowPaymentModal(false)}
+                  className="flex-1"
+                  disabled={isProcessing}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handlePayment}
+                  disabled={!paymentAmount || parseFloat(paymentAmount) <= 0 || isProcessing}
+                  className="flex-1 bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] text-white"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Pay R{paymentAmount || '0.00'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

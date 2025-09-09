@@ -1,0 +1,69 @@
+{
+  "UserFacingFeatures": {
+    "CommonUserQuestions": [
+      "How do I create an account?",
+      "How do I log in?",
+      "I forgot my password, how can I reset it?",
+      "How do I update my profile information?",
+      "How do I add a new bank account?",
+      "How do I transfer money to another account?",
+      "How do I check my balance?",
+      "How do I view my transaction history?",
+      "How do I set up recurring payments?",
+      "How do I close my account?"
+    ],
+    "SupportScenarios": [
+      "User is unable to log in",
+      "User is unable to create an account",
+      "User is unable to add a bank account",
+      "User is unable to transfer money",
+      "User is unable to view transaction history",
+      "User is unable to set up recurring payments",
+      "User is unable to close account"
+    ],
+    "FeatureExplanations": [
+      "Explanation on how to create an account",
+      "Explanation on how to log in",
+      "Explanation on how to reset password",
+      "Explanation on how to update profile information",
+      "Explanation on how to add a new bank account",
+      "Explanation on how to transfer money",
+      "Explanation on how to check balance",
+      "Explanation on how to view transaction history",
+      "Explanation on how to set up recurring payments",
+      "Explanation on how to close account"
+    ]
+  },
+  "CommonProblems": {
+    "Questions": [
+      "Why can't I log in to my account?",
+      "Why can't I create a new account?",
+      "Why can't I add a new bank account?",
+      "Why can't I transfer money?",
+      "Why can't I view my transaction history?",
+      "Why can't I set up recurring payments?",
+      "Why can't I close my account?"
+    ],
+    "Scenarios": [
+      "User is unable to log in due to incorrect password",
+      "User is unable to create an account due to invalid information",
+      "User is unable to add a bank account due to incorrect bank details",
+      "User is unable to transfer money due to insufficient funds",
+      "User is unable to view transaction history due to server error",
+      "User is unable to set up recurring payments due to invalid payment details",
+      "User is unable to close account due to pending transactions"
+    ]
+  },
+  "IntegrationQuestions": {
+    "Questions": [
+      "How do I integrate MyMoolah with my bank account?",
+      "How do I integrate MyMoolah with my accounting software?",
+      "How do I integrate MyMoolah with my e-commerce platform?"
+    ],
+    "Scenarios": [
+      "User is unable to integrate MyMoolah with bank account",
+      "User is unable to integrate MyMoolah with accounting software",
+      "User is unable to integrate MyMoolah with e-commerce platform"
+    ]
+  }
+}

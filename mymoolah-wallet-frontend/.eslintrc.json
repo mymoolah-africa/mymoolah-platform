@@ -1,0 +1,22 @@
+{
+  "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
+  "rules": {
+    "no-restricted-imports": [
+      2,
+      {
+        "paths": [
+          {
+            "name": "@radix-ui/react-dialog",
+            "message": "Import from components/ui/dialog instead."
+          },
+          {
+            "name": "@radix-ui/react-alert-dialog",
+            "message": "Import from components/ui/alert-dialog instead."
+          }
+        ]
+      }
+    ]
+  }
+}

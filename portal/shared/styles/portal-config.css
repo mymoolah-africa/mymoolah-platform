@@ -1,0 +1,210 @@
+/* MyMoolah Portal - CSS Configuration */
+/* Portal-specific overrides and configurations */
+
+/* Import the main globals.css */
+@import './globals.css';
+
+/* Portal-specific customizations */
+.portal-container {
+  min-height: 100vh;
+  background-color: var(--background-primary);
+}
+
+/* Portal-specific header styles */
+.portal-header {
+  background-color: var(--background-primary);
+  border-bottom: 1px solid var(--gray-medium);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Portal-specific navigation */
+.portal-nav {
+  background-color: var(--background-secondary);
+  border-right: 1px solid var(--gray-medium);
+}
+
+.portal-nav-item {
+  padding: var(--space-md);
+  color: var(--gray-text);
+  text-decoration: none;
+  border-radius: var(--mobile-border-radius);
+  transition: all 0.2s ease;
+}
+
+.portal-nav-item:hover {
+  background-color: var(--background-tertiary);
+  color: var(--mymoolah-blue);
+}
+
+.portal-nav-item.active {
+  background-color: var(--mymoolah-blue);
+  color: white;
+}
+
+/* Portal-specific form styles */
+.portal-form {
+  background-color: var(--background-primary);
+  border: 1px solid var(--gray-medium);
+  border-radius: var(--mobile-border-radius);
+  padding: var(--space-xl);
+  box-shadow: var(--mobile-shadow);
+}
+
+.portal-form-group {
+  margin-bottom: var(--space-lg);
+}
+
+.portal-form-label {
+  display: block;
+  margin-bottom: var(--space-sm);
+  font-weight: var(--font-weight-medium);
+  color: #374151;
+}
+
+.portal-form-input {
+  width: 100%;
+  padding: var(--space-md);
+  border: 1px solid var(--gray-medium);
+  border-radius: var(--mobile-border-radius);
+  font-size: var(--mobile-font-base);
+  transition: border-color 0.2s ease;
+}
+
+.portal-form-input:focus {
+  outline: none;
+  border-color: var(--mymoolah-blue);
+  box-shadow: 0 0 0 3px rgba(45, 140, 202, 0.1);
+}
+
+/* Portal-specific table styles */
+.portal-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--background-primary);
+}
+
+.portal-table th {
+  background-color: var(--background-secondary);
+  padding: var(--space-md);
+  text-align: left;
+  font-weight: var(--font-weight-medium);
+  border-bottom: 1px solid var(--gray-medium);
+}
+
+.portal-table td {
+  padding: var(--space-md);
+  border-bottom: 1px solid var(--gray-light);
+}
+
+.portal-table tr:hover {
+  background-color: var(--background-secondary);
+}
+
+/* Portal-specific modal styles */
+.portal-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.portal-modal {
+  background-color: var(--background-primary);
+  border-radius: var(--mobile-border-radius);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+/* Portal-specific status indicators */
+.portal-status-active {
+  background-color: var(--success-color);
+  color: white;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: 9999px;
+  font-size: var(--mobile-font-small);
+  font-weight: var(--font-weight-medium);
+}
+
+.portal-status-pending {
+  background-color: var(--warning-color);
+  color: white;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: 9999px;
+  font-size: var(--mobile-font-small);
+  font-weight: var(--font-weight-medium);
+}
+
+.portal-status-inactive {
+  background-color: var(--error-color);
+  color: white;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: 9999px;
+  font-size: var(--mobile-font-small);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Portal-specific loading states */
+.portal-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--gray-medium);
+  border-top: 2px solid var(--mymoolah-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Portal-specific responsive utilities */
+@media (max-width: 768px) {
+  .portal-form {
+    padding: var(--space-lg);
+    margin: var(--space-md);
+  }
+  
+  .portal-modal {
+    margin: var(--space-md);
+    max-width: calc(100vw - 2rem);
+  }
+  
+  .portal-table {
+    font-size: var(--mobile-font-small);
+  }
+  
+  .portal-table th,
+  .portal-table td {
+    padding: var(--space-sm);
+  }
+}
+
+/* Portal-specific print styles */
+@media print {
+  .portal-nav,
+  .portal-header {
+    display: none;
+  }
+  
+  .portal-container {
+    background-color: white;
+  }
+  
+  .portal-table {
+    border: 1px solid #000;
+  }
+  
+  .portal-table th,
+  .portal-table td {
+    border: 1px solid #000;
+  }
+}
