@@ -10,6 +10,10 @@
 
 The MyMoolah Treasury Platform implements **banking-grade security** with **TLS 1.3** compliance, designed to meet **Mojaloop FSPIOP standards** and **ISO 27001 requirements**. The platform is built to handle **millions of financial transactions** with enterprise-grade security, privacy, and compliance.
 
+Notes for Codespaces development:
+- TLS is disabled for the dev HTTP server; DB connections use runtime TLS overrides only for development convenience
+- Recommended for teams: Cloud SQL Auth Proxy for verified TLS. See `docs/CODESPACES_DB_CONNECTION.md`
+
 ### **🏆 Security Achievements**
 - ✅ **TLS 1.3 Implementation**: Complete TLS 1.3 with banking-grade cipher suites
 - ✅ **Mojaloop Compliance**: FSPIOP standards implementation

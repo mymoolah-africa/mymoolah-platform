@@ -10,6 +10,11 @@
 
 The MyMoolah Treasury Platform has successfully completed the **Peach Payments sandbox integration** with **100% working PayShap functionality** and conducted a **comprehensive review of the Zapper integration** with detailed action plan. The platform now has **complete payment processing capabilities** and is ready for **Phase 2.4.2** with Zapper integration completion as the next priority.
 
+### Codespaces Development Status (current)
+- Backend auto-starts on container open; manual fallback `npm run start:cs-ip`
+- Frontend on port 3000 with CORS set to the forwarded URL
+- Redis optional; when absent, logs are suppressed and in‑memory cache is used
+
 ### **🏆 MISSION ACCOMPLISHED - KEY ACHIEVEMENTS**
 
 #### **💳 Peach Payments Integration** ✅ **100% COMPLETE**

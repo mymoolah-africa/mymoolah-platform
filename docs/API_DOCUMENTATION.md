@@ -24,6 +24,15 @@ The MyMoolah Treasury Platform provides a comprehensive REST API built on **bank
 - **Versioning**: API versioning for backward compatibility
 - **Documentation**: OpenAPI 3.0 specification available
 
+### Codespaces Base URL (dev)
+In Codespaces, the frontend runs on the 3000 forwarded URL and the backend on a forwarded host (3001 or 5050). Set:
+
+```
+VITE_API_BASE_URL=https://<your-backend-forwarded-host>
+```
+
+Ensure `CORS_ORIGINS` (backend) includes `https://<your-3000-forwarded-host>`.
+
 ---
 
 ## 🔐 **AUTHENTICATION & SECURITY**
