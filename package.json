@@ -37,7 +37,8 @@
     "setup:complete-system": "npm run setup:all-floats && npm run setup:reseller-compliance-tax",
     "migrate:support": "npx sequelize-cli db:migrate --name 20250821_create_support_system",
     "seed:support": "node scripts/seed-support-knowledge-base.js",
-    "setup:support": "npm run migrate:support && npm run seed:support"
+    "setup:support": "npm run migrate:support && npm run seed:support",
+    "start:cs-ip": "node scripts/start-cs-ip.js"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
