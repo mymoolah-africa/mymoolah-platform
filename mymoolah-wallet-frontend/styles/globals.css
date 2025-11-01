@@ -430,6 +430,55 @@ small {
   .text-gray {
     color: var(--gray-text);
   }
+  
+  /* Transaction Icon System - Centralized Styling */
+  .transaction-icon {
+    flex-shrink: 0;
+    display: inline-block;
+  }
+  
+  /* Zapper QR Payment Icons - Always show QR icon */
+  .transaction-icon-zapper {
+    /* Force QR icon display - override any other icon styles */
+  }
+  
+  /* Transaction Icon Colors */
+  .transaction-icon-credit {
+    color: var(--success-color) !important; /* Green for credits */
+  }
+  
+  .transaction-icon-debit {
+    color: var(--error-color) !important; /* Red for debits */
+  }
+  
+  /* Transaction Icon Type Classes */
+  .transaction-icon-voucher {
+    /* Voucher-specific styling if needed */
+  }
+  
+  .transaction-icon-airtime {
+    /* Airtime-specific styling if needed */
+  }
+  
+  .transaction-icon-data {
+    /* Data-specific styling if needed */
+  }
+  
+  .transaction-icon-electricity {
+    /* Electricity-specific styling if needed */
+  }
+  
+  .transaction-icon-banking {
+    /* Banking-specific styling if needed */
+  }
+  
+  .transaction-icon-wallet {
+    /* Wallet transfer-specific styling if needed */
+  }
+  
+  .transaction-icon-default {
+    /* Default arrow icon styling */
+  }
 }
 
 html {

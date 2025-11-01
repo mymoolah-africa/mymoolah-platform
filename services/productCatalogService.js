@@ -7,7 +7,19 @@ const crypto = require('crypto');
 
 class ProductCatalogService {
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    // Quiet, optional Redis in dev/Codespaces
+    const url = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+    this.redis = new Redis(url, {
+      lazyConnect: true,
+      enableOfflineQueue: false,
+      maxRetriesPerRequest: 0,
+      retryStrategy: () => null,
+      connectTimeout: 2000,
+      commandTimeout: 2000
+    });
+    this.redis.on('error', () => {});
+    // Fire-and-forget connect; if it fails, calls using redis will no-op via try/catch
+    this.redis.connect().catch(() => {});
     this.cacheTTL = 300; // 5 minutes
     this.searchCacheTTL = 60; // 1 minute for search results
   }

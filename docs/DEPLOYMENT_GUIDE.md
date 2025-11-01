@@ -1,8 +1,10 @@
 # MyMoolah Deployment Guide
 
-## 🚀 Current Deployment Procedures (August 16, 2025 - All Integrations Complete + Transaction Display Fixed)
+## 🚀 Current Deployment Procedures (October 31, 2025 - Security Features Complete)
 
 **Status**: ✅ **VALIDATED** - All deployment procedures tested and working
+
+**New**: Banking-grade security features (CAPTCHA, 2FA, Security Monitoring, IP Whitelisting) implemented and ready for production.
 
 ## 📋 Deployment Overview
 
@@ -307,15 +309,26 @@ df -h
 ## 🔐 Security Configuration
 
 ### **Environment Security**
+
+#### **Required Environment Variables**
 ```bash
 # Secure environment variables
 export NODE_ENV=production
 export JWT_SECRET=your-very-secure-secret-key
 export DATABASE_URL=postgresql://username:password@localhost:5433/mymoolah
 
+# Security Features (Optional)
+RECAPTCHA_SITE_KEY=your_recaptcha_site_key
+RECAPTCHA_SECRET_KEY=your_recaptcha_secret_key
+ADMIN_IP_WHITELIST=192.168.1.100,10.0.0.50,192.168.1.0/24
+SECURITY_ALERT_EMAIL=security@mymoolah.com
+SECURITY_WEBHOOK_URL=https://your-webhook-url.com/alerts
+
 # File permissions
 chmod 600 .env
 ```
+
+**Note**: See `docs/SECURITY_FEATURES_SETUP.md` for complete security features setup instructions.
 
 ### **Network Security**
 ```bash
@@ -328,10 +341,29 @@ sudo ufw enable
 ```
 
 ### **Application Security**
+
+#### **Security Features Enabled**
+- ✅ **TLS 1.3**: End-to-end encryption
 - ✅ **JWT Authentication**: Secure token generation and validation
 - ✅ **Rate Limiting**: Per-endpoint rate limiting
 - ✅ **Input Validation**: Sanitization and validation
 - ✅ **Error Handling**: Secure error responses
+- ✅ **CAPTCHA Protection**: Optional reCAPTCHA v3 bot protection
+- ✅ **Two-Factor Authentication**: Optional TOTP-based 2FA (ready for production)
+- ✅ **Security Monitoring**: Real-time security event monitoring and alerting
+- ✅ **IP Whitelisting**: Optional IP whitelist for admin routes
+- ✅ **Account Locking**: Automatic account locking after failed attempts
+- ✅ **Audit Logging**: Complete security event logging
+
+#### **Security Best Practices**
+- Use strong JWT secrets (minimum 32 characters)
+- Enable TLS 1.3 in production
+- Configure rate limiting appropriately
+- Enable CAPTCHA for high-risk endpoints
+- Enable 2FA for admin accounts
+- Configure IP whitelist for admin routes
+- Monitor security events regularly
+- Review audit logs weekly
 
 ## 📈 Performance Optimization
 
@@ -421,11 +453,26 @@ NODE_ENV=development npm start
 ## 📋 Deployment Checklist
 
 ### **Pre-Deployment**
-- [ ] All tests passing
-- [ ] Documentation updated
+
+#### **Security Checklist**
+- [ ] JWT secret configured and secure
+- [ ] TLS certificates ready (production)
+- [ ] Database credentials secured
 - [ ] Environment variables configured
-- [ ] Database backup completed
-- [ ] Security measures in place
+- [ ] Rate limiting configured
+- [ ] CAPTCHA keys configured (optional)
+- [ ] IP whitelist configured (optional)
+- [ ] Security alert email/webhook configured
+- [ ] 2FA database migration ready (if deploying 2FA)
+- [ ] Security monitoring enabled
+- [ ] Audit logging enabled
+
+#### **Database Checklist**
+- [ ] Database migration script ready
+- [ ] Backup strategy in place
+- [ ] Rollback procedure documented
+- [ ] 2FA migration ready (if deploying 2FA)
+- [ ] Database user permissions verified
 
 ### **Deployment**
 - [ ] Code deployed to target environment
@@ -438,6 +485,10 @@ NODE_ENV=development npm start
 - [ ] All endpoints responding correctly
 - [ ] Database connectivity verified
 - [ ] Security features working
+- [ ] CAPTCHA protection tested (if enabled)
+- [ ] 2FA flow tested (if enabled)
+- [ ] Security monitoring verified
+- [ ] IP whitelist tested (if enabled)
 - [ ] Performance metrics acceptable
 - [ ] Monitoring configured
 

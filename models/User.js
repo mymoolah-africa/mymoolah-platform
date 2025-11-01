@@ -117,6 +117,45 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    // Two-Factor Authentication (2FA)
+    twoFactorEnabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Whether 2FA is enabled for this user'
+    },
+    twoFactorSecret: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: '2FA secret key (base32 encoded, encrypted in production)'
+    },
+    twoFactorBackupCodes: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      comment: 'Backup codes for 2FA recovery (encrypted in production)'
+    },
+    twoFactorEnabledAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Timestamp when 2FA was enabled'
+    },
+    // Security tracking
+    lastLoginIP: {
+      type: DataTypes.STRING(45),
+      allowNull: true,
+      comment: 'Last successful login IP address'
+    },
+    lastLoginUserAgent: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Last successful login user agent'
+    },
+    knownDevices: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      defaultValue: [],
+      comment: 'List of known/trusted devices for this user'
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -233,6 +272,70 @@ module.exports = (sequelize, DataTypes) => {
     this.loginAttempts = 0;
     this.lockedUntil = null;
     await this.save();
+  };
+
+  // 2FA Methods
+  User.prototype.isAccountLocked = function() {
+    try {
+      return !!(this.lockedUntil && this.lockedUntil > new Date());
+    } catch (error) {
+      // If lockedUntil field doesn't exist, assume not locked
+      return false;
+    }
+  };
+  
+  User.prototype.has2FAEnabled = function() {
+    try {
+      return this.twoFactorEnabled === true && !!this.twoFactorSecret;
+    } catch (error) {
+      // If 2FA fields don't exist yet, assume 2FA is disabled
+      return false;
+    }
+  };
+  
+  User.prototype.verify2FAToken = function(token) {
+    if (!this.has2FAEnabled()) {
+      return false;
+    }
+    try {
+      const twoFactorAuthService = require('../services/twoFactorAuthService');
+      return twoFactorAuthService.verifyToken(token, this.twoFactorSecret);
+    } catch (error) {
+      console.error('⚠️ 2FA token verification error:', error.message);
+      return false;
+    }
+  };
+
+  User.prototype.verifyBackupCode = function(code) {
+    try {
+      if (!this.twoFactorBackupCodes || !Array.isArray(this.twoFactorBackupCodes)) {
+        return false;
+      }
+      const twoFactorAuthService = require('../services/twoFactorAuthService');
+      return twoFactorAuthService.verifyBackupCode(code, this.twoFactorBackupCodes);
+    } catch (error) {
+      console.error('⚠️ Backup code verification error:', error.message);
+      return false;
+    }
+  };
+  
+  User.prototype.removeBackupCode = async function(code) {
+    try {
+      if (!this.twoFactorBackupCodes || !Array.isArray(this.twoFactorBackupCodes)) {
+        return false;
+      }
+      const index = this.twoFactorBackupCodes.indexOf(code.toUpperCase());
+      if (index > -1) {
+        this.twoFactorBackupCodes.splice(index, 1);
+        await this.save();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('⚠️ Backup code removal error:', error.message);
+      // Don't throw - non-critical operation
+      return false;
+    }
   };
 
   return User;

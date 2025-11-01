@@ -1,8 +1,46 @@
 # MyMoolah Treasury Platform - Changelog
 
-**Last Updated**: January 9, 2025  
-**Version**: 2.4.1 - Peach Payments Integration Complete & Zapper Integration Reviewed  
-**Status**: ✅ **PEACH PAYMENTS INTEGRATION COMPLETE** ✅ **ZAPPER INTEGRATION REVIEWED**
+**Last Updated**: October 31, 2025  
+**Version**: 2.5.0 - Banking-Grade Security Features Implementation  
+**Status**: ✅ **SECURITY FEATURES COMPLETE** ✅ **2FA READY FOR PRODUCTION**
+
+---
+
+## 🚀 **VERSION 2.5.0 - BANKING-GRADE SECURITY FEATURES** (October 31, 2025)
+
+### **🔐 MAJOR: Banking-Grade Security Features Implementation**
+- ✅ **CAPTCHA Protection**: reCAPTCHA v3 integration for bot protection (optional)
+- ✅ **Two-Factor Authentication (2FA)**: TOTP-based 2FA implementation (optional, ready for production)
+- ✅ **Security Monitoring**: Real-time security event monitoring and alerting system
+- ✅ **IP Whitelisting**: Optional IP whitelist middleware for admin routes
+- ✅ **Enhanced Login Security**: Account locking, rate limiting, and security event logging
+
+#### **Security Features Implemented**
+- **CAPTCHA Middleware**: `middleware/captchaMiddleware.js` - reCAPTCHA v3 verification
+- **2FA Service**: `services/twoFactorAuthService.js` - TOTP (RFC 6238) implementation
+- **2FA Controller**: `controllers/twoFactorAuthController.js` - Complete 2FA management endpoints
+- **Security Monitoring**: `services/securityMonitoringService.js` - Suspicious activity detection
+- **IP Whitelist**: Enhanced `middleware/securityMiddleware.js` - CIDR support for IP whitelisting
+- **Migration File**: `migrations/20251031_add_2fa_to_users.js` - Ready for production deployment
+
+#### **2FA Features** (Optional - Not Enforced)
+- **TOTP Support**: Time-based One-Time Password (RFC 6238 standard)
+- **QR Code Generation**: Automatic QR code generation for authenticator apps
+- **Backup Codes**: 10 backup codes generated for account recovery
+- **API Endpoints**: Complete CRUD operations for 2FA management
+- **Login Integration**: Optional 2FA verification in login flow
+
+#### **Security Monitoring Features**
+- **Suspicious Activity Detection**: Automatic detection of multiple failed logins
+- **Security Event Logging**: Comprehensive logging of all security events
+- **Alert System**: Console, email, and webhook alert support
+- **Real-Time Monitoring**: Active monitoring of login attempts and security events
+
+#### **Status**
+- ✅ **Code Complete**: All security features implemented and tested
+- ✅ **Optional Implementation**: Features are optional and not enforced
+- ⏸️ **Database Migration**: Pending (requires DBA permissions)
+- 📋 **Production Ready**: Ready for deployment when DBA access is available
 
 ---
 

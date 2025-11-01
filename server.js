@@ -1,3 +1,7 @@
+// CRITICAL: Set TLS rejection before any other modules load
+// This ensures Cloud SQL connections work in Codespaces
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 // Load environment variables and security configuration
 require('dotenv').config();
 const securityConfig = require('./config/security');

@@ -1,14 +1,15 @@
-## Recent Updates (2025-08-20)
+## Recent Updates (2025-10-31)
 
+- **Security Features**: CAPTCHA, 2FA, Security Monitoring, IP Whitelisting implemented (see `SECURITY_FEATURES_SETUP.md`)
 - `GET /api/v1/vouchers/balance-summary`: Logic confirmed to use multiple queries with status rules (active + pending_payment contributes to active total). Cross-user redemption rules clarified and documented in `VOUCHER_BUSINESS_LOGIC.md`.
 - `GET /api/v1/wallets/balance`: Used by front-end header badges (Vouchers, Send Money, QR Payment). Response consumed with thousands separators in UI.
 - `GET /api/v1/wallets/transactions`: Keyset pagination active with trimmed payloads.
 
 # MyMoolah Treasury Platform - API Documentation
 
-**Last Updated**: January 9, 2025  
-**Version**: 2.4.1 - Peach Payments Integration Complete & Zapper Integration Reviewed
-**Status**: ✅ **PEACH PAYMENTS INTEGRATION COMPLETE** ✅ **ZAPPER INTEGRATION REVIEWED**
+**Last Updated**: October 31, 2025  
+**Version**: 2.5.0 - Banking-Grade Security Features Implementation  
+**Status**: ✅ **SECURITY FEATURES COMPLETE** ✅ **2FA READY FOR PRODUCTION**
 
 ---
 
@@ -47,6 +48,10 @@ X-API-Key: <encrypted_api_key>
 - **SQL Injection Protection**: Parameterized queries and input sanitization
 - **XSS Protection**: Cross-site scripting prevention
 - **CORS Configuration**: Configurable cross-origin resource sharing
+- **CAPTCHA Protection**: Optional reCAPTCHA v3 on login endpoints
+- **Two-Factor Authentication**: Optional TOTP-based 2FA
+- **Security Monitoring**: Real-time security event logging and alerting
+- **IP Whitelisting**: Optional IP whitelist for admin routes
 
 ---
 
@@ -484,6 +489,108 @@ POST /api/v1/auth/refresh
 ```
 
 **Description**: Refreshes expired JWT token.
+
+### **Two-Factor Authentication (2FA)** (Optional)
+
+#### **1. Get 2FA Status**
+```http
+GET /api/v1/auth/2fa/status
+```
+
+**Description**: Retrieves 2FA status for the authenticated user.
+
+**Authentication**: Required (JWT token)
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "twoFactorEnabled": false,
+  "twoFactorEnabledAt": null,
+  "hasBackupCodes": false
+}
+```
+
+#### **2. Setup 2FA**
+```http
+POST /api/v1/auth/2fa/setup
+```
+
+**Description**: Generates a new 2FA secret and QR code for the authenticated user.
+
+**Authentication**: Required (JWT token)
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "message": "2FA setup initiated. Scan QR code and verify.",
+  "secret": "JBSWY3DPEHPK3PXP",
+  "otpauthUrl": "otpauth://totp/MyMoolah%20(user@example.com)?secret=...",
+  "qrCodeDataURL": "data:image/png;base64,..."
+}
+```
+
+#### **3. Verify and Enable 2FA**
+```http
+POST /api/v1/auth/2fa/verify-and-enable
+```
+
+**Description**: Verifies the 2FA token and enables 2FA for the user.
+
+**Authentication**: Required (JWT token)
+
+**Request Body**:
+```json
+{
+  "token": "123456",
+  "secret": "JBSWY3DPEHPK3PXP"
+}
+```
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "message": "2FA enabled successfully.",
+  "backupCodes": ["ABC12345", "DEF67890", ...]
+}
+```
+
+#### **4. Disable 2FA**
+```http
+POST /api/v1/auth/2fa/disable
+```
+
+**Description**: Disables 2FA for the user (requires password and 2FA token).
+
+**Authentication**: Required (JWT token)
+
+**Request Body**:
+```json
+{
+  "password": "user_password",
+  "token": "123456"
+}
+```
+
+#### **5. Verify 2FA Token**
+```http
+POST /api/v1/auth/2fa/verify
+```
+
+**Description**: Verifies a 2FA token (for testing or login flow).
+
+**Authentication**: Required (JWT token)
+
+**Request Body**:
+```json
+{
+  "token": "123456"
+}
+```
+
+**Note**: See `docs/SECURITY_FEATURES_SETUP.md` for complete 2FA API documentation.
 
 ### **User Profile**
 

@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "start:cs:proxy": "bash scripts/cloud-sql-proxy-start.sh",
+    "start:cs": "npm run start:cs:proxy && node scripts/start-cs.js",
+    "start:cs-ip": "node scripts/start-cs-ip.js",
     "backup": "bash scripts/backup.sh",
     "sync:local": "bash scripts/git-sync-local.sh",
     "sync:pull": "git fetch --all --prune && git checkout main && git pull --rebase && git status -sb | cat",

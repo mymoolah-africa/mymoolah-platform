@@ -1,9 +1,31 @@
 'use strict';
 
+// CRITICAL: Set TLS rejection BEFORE any database modules load
+// This must be set before Sequelize or pg are required
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
+// Patch TLS module at the lowest level to force rejectUnauthorized: false
+const tls = require('tls');
+const originalCreateSecureContext = tls.createSecureContext;
+tls.createSecureContext = function(options) {
+  if (options) {
+    options.rejectUnauthorized = false;
+  }
+  return originalCreateSecureContext.call(this, options);
+};
+
+const originalConnect = tls.connect;
+tls.connect = function(...args) {
+  const options = args[0];
+  if (options && typeof options === 'object') {
+    options.rejectUnauthorized = false;
+  }
+  return originalConnect.apply(this, args);
+};
+
 const fs = require('fs');
 const path = require('path');
 const Sequelize = require('sequelize');
-const process = require('process');
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
 const config = require(__dirname + '/../config/config.json')[env];

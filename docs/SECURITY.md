@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: January 9, 2025  
-**Version**: 2.4.1 - Peach Payments Integration Complete & Zapper Integration Reviewed  
-**Status**: ✅ **PEACH PAYMENTS INTEGRATION COMPLETE** ✅ **ZAPPER INTEGRATION REVIEWED**
+**Last Updated**: October 31, 2025  
+**Version**: 2.5.0 - Banking-Grade Security Features Implementation  
+**Status**: ✅ **SECURITY FEATURES COMPLETE** ✅ **2FA READY FOR PRODUCTION**
 
 ---
 
@@ -18,6 +18,10 @@ The MyMoolah Treasury Platform implements **banking-grade security** with **TLS 
 - ✅ **Rate Limiting**: Advanced rate limiting for financial transactions
 - ✅ **Input Validation**: Comprehensive data validation and sanitization
 - ✅ **Audit Logging**: Complete transaction and security event logging
+- ✅ **CAPTCHA Protection**: reCAPTCHA v3 bot protection (optional)
+- ✅ **Two-Factor Authentication**: TOTP-based 2FA implementation (optional)
+- ✅ **Security Monitoring**: Real-time security event monitoring and alerting
+- ✅ **IP Whitelisting**: Optional IP whitelist for admin routes
 
 ---
 
@@ -468,12 +472,21 @@ const encryptionConfig = {
 
 ### **Real-Time Security Monitoring**
 
-The platform implements **comprehensive security monitoring** and alerting.
+The platform implements **comprehensive security monitoring** and alerting with automatic suspicious activity detection.
+
+#### **Security Monitoring Service**
+
+The platform includes a dedicated `SecurityMonitoringService` that provides:
+
+- **Suspicious Activity Detection**: Automatic detection of multiple failed logins, rapid login attempts, and unusual patterns
+- **Security Event Logging**: Comprehensive logging of all security events (failed logins, successful logins, suspicious activity)
+- **Alert System**: Multi-channel alerting (console, email, webhook) for high-severity events
+- **Real-Time Monitoring**: Active monitoring of login attempts and security events
 
 #### **Monitoring Configuration**
 ```javascript
 const monitoringConfig = {
-  enabled: process.env.NODE_ENV === 'production',
+  enabled: true, // Always enabled
   metrics: {
     responseTime: true,
     errorRate: true,
@@ -485,29 +498,167 @@ const monitoringConfig = {
     errorThreshold: 0.05, // 5% error rate
     responseTimeThreshold: 2000, // 2 seconds
     memoryThreshold: 0.9 // 90% memory usage
+  },
+  suspiciousPatterns: {
+    multipleFailedLogins: {
+      threshold: 5,
+      windowMinutes: 15,
+      severity: 'high'
+    },
+    rapidLoginAttempts: {
+      threshold: 10,
+      windowMinutes: 1,
+      severity: 'critical'
+    }
   }
 };
 ```
 
 ### **Security Monitoring Features**
 
-#### **1. Performance Monitoring**
-- **Response Time**: Monitor API response times
-- **Error Rates**: Track error rates and patterns
-- **Throughput**: Monitor transaction throughput
-- **Resource Usage**: Monitor CPU and memory usage
+#### **1. Suspicious Activity Detection**
+- **Multiple Failed Logins**: Detects 5+ failed login attempts from same IP within 15 minutes
+- **Rapid Login Attempts**: Detects 10+ login attempts within 1 minute
+- **Account Locking**: Automatic account locking after 5 failed attempts (2-hour lockout)
+- **IP Tracking**: Tracks login attempts by IP address
+- **User Agent Tracking**: Logs user agent strings for suspicious activity correlation
 
-#### **2. Security Alerts**
-- **Failed Logins**: Alert on multiple failed login attempts
-- **Rate Limit Violations**: Alert on rate limit breaches
-- **Suspicious Activity**: Alert on unusual patterns
-- **System Anomalies**: Alert on system performance issues
+#### **2. Security Event Logging**
+- **Failed Login Attempts**: Logs all failed login attempts with IP, user agent, and reason
+- **Successful Logins**: Logs successful logins with location tracking
+- **New Location Detection**: Alerts when login occurs from new location
+- **Account Locking Events**: Logs when accounts are locked
+- **2FA Events**: Logs 2FA enable/disable and verification attempts
 
-#### **3. Compliance Monitoring**
+#### **3. Alert System**
+- **Console Alerts**: Real-time console warnings for security events
+- **Email Alerts**: Configurable email alerts for high/critical severity events
+- **Webhook Alerts**: Configurable webhook notifications for integration with external systems
+- **Severity Levels**: Low, Medium, High, Critical severity classification
+
+#### **4. Compliance Monitoring**
 - **TLS Certificate**: Monitor certificate expiration
 - **Security Headers**: Verify security headers are present
 - **Rate Limiting**: Monitor rate limiting effectiveness
 - **Audit Logging**: Ensure audit logs are being generated
+
+---
+
+## 🛡️ **CAPTCHA PROTECTION**
+
+### **reCAPTCHA v3 Integration**
+
+The platform implements **Google reCAPTCHA v3** for bot protection on login endpoints. CAPTCHA is **optional** and only enforced when `RECAPTCHA_SECRET_KEY` is configured.
+
+#### **CAPTCHA Configuration**
+
+```javascript
+// CAPTCHA middleware configuration
+const captchaMiddleware = require('./middleware/captchaMiddleware');
+
+// Apply to login route
+router.post('/login', 
+  captchaMiddleware({
+    secretKey: process.env.RECAPTCHA_SECRET_KEY,
+    minScore: 0.5, // Banking-grade: Require at least 0.5 score
+    skipInDevelopment: true // Skip in development if key not set
+  }),
+  authController.login
+);
+```
+
+#### **CAPTCHA Features**
+- **Score-Based Verification**: Uses reCAPTCHA v3 score (0.0 - 1.0) instead of challenge
+- **Seamless User Experience**: No user interaction required (invisible CAPTCHA)
+- **Banking-Grade Threshold**: Minimum score of 0.5 required
+- **Development-Friendly**: Automatically skips in development if key not configured
+- **Error Handling**: Graceful fallback if CAPTCHA service unavailable
+
+#### **Setup Instructions**
+1. Get reCAPTCHA keys from: https://www.google.com/recaptcha/admin
+2. Add to `.env`:
+   ```bash
+   RECAPTCHA_SITE_KEY=your_site_key
+   RECAPTCHA_SECRET_KEY=your_secret_key
+   ```
+3. Frontend: Include reCAPTCHA script and generate token
+4. Backend: Token is automatically verified by middleware
+
+---
+
+## 🔐 **TWO-FACTOR AUTHENTICATION (2FA)**
+
+### **TOTP-Based 2FA Implementation**
+
+The platform implements **Time-based One-Time Password (TOTP)** 2FA using **RFC 6238 standard**. 2FA is **optional** and users can enable/disable it at their discretion.
+
+#### **2FA Implementation Status**
+- ✅ **Code Complete**: All 2FA code implemented and ready
+- ✅ **Optional**: Not enforced - users choose to enable
+- ⏸️ **Database Migration**: Pending (requires DBA permissions)
+- 📋 **Production Ready**: Ready for deployment
+
+#### **2FA Features**
+- **TOTP Standard**: RFC 6238 compliant Time-based One-Time Password
+- **6-Digit Codes**: Industry-standard 6-digit codes
+- **30-Second Windows**: 30-second time windows with 2-step tolerance (±60 seconds)
+- **QR Code Generation**: Automatic QR code generation for authenticator apps
+- **Backup Codes**: 10 backup codes for account recovery
+- **Manual Entry**: Support for manual secret key entry
+
+#### **2FA API Endpoints**
+
+See `docs/SECURITY_FEATURES_SETUP.md` for complete API documentation.
+
+#### **2FA Setup Flow**
+1. User calls `POST /api/v1/auth/2fa/setup` to generate secret
+2. User scans QR code with authenticator app (Google Authenticator, Authy, etc.)
+3. User verifies token with `POST /api/v1/auth/2fa/verify-and-enable`
+4. 2FA is enabled and required for future logins
+
+#### **Login Flow with 2FA**
+1. User logs in with phone number and password
+2. If 2FA enabled: System returns `requires2FA: true`
+3. User provides 2FA token: `POST /api/v1/auth/login` with `twoFactorToken`
+4. System verifies token and completes login
+
+---
+
+## 🔒 **IP WHITELISTING**
+
+### **Optional IP Whitelist for Admin Routes**
+
+The platform supports **IP whitelisting** for admin and sensitive routes. IP whitelisting is **optional** and only enforced when `ADMIN_IP_WHITELIST` is configured.
+
+#### **IP Whitelist Configuration**
+
+```javascript
+// IP whitelist middleware
+const { ipWhitelist } = require('./middleware/securityMiddleware');
+
+// Apply to admin routes
+router.use('/admin', ipWhitelist());
+
+// Or specify IPs directly
+router.use('/admin', ipWhitelist(['192.168.1.100', '10.0.0.50']));
+```
+
+#### **IP Whitelist Features**
+- **Environment Variable Support**: Configure via `ADMIN_IP_WHITELIST` env var
+- **CIDR Notation Support**: Supports CIDR notation (e.g., `192.168.1.0/24`)
+- **IPv4 and IPv6**: Supports both IPv4 and IPv6 addresses
+- **Development-Friendly**: Allows all IPs if not configured
+- **Security Logging**: Logs blocked IP attempts
+
+#### **Setup Instructions**
+```bash
+# Add to .env
+ADMIN_IP_WHITELIST=192.168.1.100,10.0.0.50,192.168.1.0/24
+```
+
+---
+
+## 🚨 **SECURITY MONITORING** (Legacy Section)
 
 ---
 
@@ -587,7 +738,11 @@ node scripts/test-tls.js
 - [x] JWT with HS512 algorithm
 - [x] Short token expiry
 - [x] Secure session management
-- [x] Multi-factor authentication ready
+- [x] Multi-factor authentication ready (2FA implemented, optional)
+- [x] Account locking after failed attempts
+- [x] Security event logging
+- [x] CAPTCHA protection (optional)
+- [x] IP whitelisting (optional)
 
 #### **Encryption** ✅
 - [x] AES-256-GCM encryption
@@ -606,6 +761,8 @@ node scripts/test-tls.js
 - [x] Performance monitoring
 - [x] Alert system configured
 - [x] Compliance monitoring
+- [x] Suspicious activity detection
+- [x] Real-time security event logging
 
 ---
 

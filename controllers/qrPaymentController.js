@@ -890,7 +890,14 @@ class QRPaymentController {
         description: `QR Payment to ${payment.merchant.name}`,
         fee: 0.00,
         currency: 'ZAR',
-        reference: payment.reference
+        reference: payment.reference,
+        metadata: {
+          qrType: 'zapper',
+          processingSource: transactionResult.processingSource || 'local',
+          zapperTransactionId: transactionResult.zapperTransactionId || null,
+          merchant: payment.merchant.name,
+          merchantId: payment.merchant.id
+        }
       };
 
       // Call the transaction API to create the transaction

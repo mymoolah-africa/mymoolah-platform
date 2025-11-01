@@ -17,4 +17,4 @@ export { ProductDetailModal } from './digital-vouchers/ProductDetailModal';
 export { BeneficiaryList } from './shared/BeneficiaryList';
 export { ConfirmSheet } from './shared/ConfirmSheet';
 export { SearchBar } from './shared/SearchBar';
-export { AmountInput } from './shared/AmountInput';
+export { AmountInput } from './shared/AmountInput';t

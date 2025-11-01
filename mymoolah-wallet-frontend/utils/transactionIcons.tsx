@@ -6,7 +6,8 @@ import {
   Wallet, 
   Phone, 
   Zap,
-  Wifi
+  Wifi,
+  QrCode
 } from 'lucide-react';
 
 // Transaction interface for type safety
@@ -20,57 +21,128 @@ export interface Transaction {
   metadata?: any;
 }
 
-// Centralized transaction icon function
+// Centralized transaction icon function with CSS class support
 export function getTransactionIcon(transaction: Transaction, size: number = 20): React.ReactNode {
   const iconStyle = { width: `${size}px`, height: `${size}px` };
   
   const description = (transaction.description || '').toLowerCase();
   const isCredit = transaction.amount > 0;
   const iconColor = isCredit ? '#16a34a' : '#dc2626'; // Green for credit, red for debit
+  const metadata = transaction.metadata || {};
   
-  // 1. VOUCHER TRANSACTIONS (Ticket icons)
+  // 1. ZAPPER QR PAYMENT TRANSACTIONS (QR Code icons)
+  // Enhanced detection for Zapper transactions
+  const isZapperTransaction = (
+    description.includes('qr payment') ||
+    description.includes('zapper') ||
+    description.includes('qr code') ||
+    description.includes('zapper float') ||
+    description.includes('zapper transaction') ||
+    description.includes('zapper payment') ||
+    metadata.processingSource === 'zapper' ||
+    metadata.zapperTransactionId ||
+    metadata.qrType === 'zapper' ||
+    metadata.processingSource === 'local' && description.includes('qr')
+  );
+  
+  if (isZapperTransaction) {
+    // Red QR icon for debits (money out), Green QR icon for credits (money in)
+    return (
+      <QrCode 
+        className={`transaction-icon transaction-icon-zapper ${isCredit ? 'transaction-icon-credit' : 'transaction-icon-debit'}`}
+        style={{ ...iconStyle, color: iconColor }} 
+      />
+    );
+  }
+  
+  // 2. VOUCHER TRANSACTIONS (Ticket icons)
   if (description.includes('voucher')) {
-    return <Ticket style={{ ...iconStyle, color: iconColor }} />;
+    return (
+      <Ticket 
+        className={`transaction-icon transaction-icon-voucher ${isCredit ? 'transaction-icon-credit' : 'transaction-icon-debit'}`}
+        style={{ ...iconStyle, color: iconColor }} 
+      />
+    );
   }
   
-  // 2. AIRTIME TRANSACTIONS
+  // 3. AIRTIME TRANSACTIONS
   if (description.includes('airtime') || description.includes('vodacom') || description.includes('mtn') || description.includes('cell c')) {
-    return <Phone style={{ ...iconStyle, color: iconColor }} />;
+    return (
+      <Phone 
+        className={`transaction-icon transaction-icon-airtime ${isCredit ? 'transaction-icon-credit' : 'transaction-icon-debit'}`}
+        style={{ ...iconStyle, color: iconColor }} 
+      />
+    );
   }
   
-  // 3. DATA TRANSACTIONS
+  // 4. DATA TRANSACTIONS
   if (description.includes('data') || description.includes('internet') || description.includes('wifi')) {
-    return <Wifi style={{ ...iconStyle, color: iconColor }} />;
+    return (
+      <Wifi 
+        className={`transaction-icon transaction-icon-data ${isCredit ? 'transaction-icon-credit' : 'transaction-icon-debit'}`}
+        style={{ ...iconStyle, color: iconColor }} 
+      />
+    );
   }
   
-  // 4. ELECTRICITY TRANSACTIONS
+  // 5. ELECTRICITY TRANSACTIONS
   if (description.includes('electricity') || description.includes('eskom') || description.includes('power')) {
-    return <Zap style={{ ...iconStyle, color: iconColor }} />;
+    return (
+      <Zap 
+        className={`transaction-icon transaction-icon-electricity ${isCredit ? 'transaction-icon-credit' : 'transaction-icon-debit'}`}
+        style={{ ...iconStyle, color: iconColor }} 
+      />
+    );
   }
   
-  // 5. BANKING TRANSACTIONS (External bank transfers via APIs)
+  // 6. BANKING TRANSACTIONS (External bank transfers via APIs)
   if (isBankingTransaction(transaction)) {
     if (isCredit) {
       // Credit (money received) - Green down arrow
-      return <ArrowDownLeft style={{ ...iconStyle, color: '#16a34a' }} />;
+      return (
+        <ArrowDownLeft 
+          className="transaction-icon transaction-icon-banking transaction-icon-credit"
+          style={{ ...iconStyle, color: '#16a34a' }} 
+        />
+      );
     } else {
       // Debit (money sent) - Red up arrow
-      return <ArrowUpRight style={{ ...iconStyle, color: '#dc2626' }} />;
+      return (
+        <ArrowUpRight 
+          className="transaction-icon transaction-icon-banking transaction-icon-debit"
+          style={{ ...iconStyle, color: '#dc2626' }} 
+        />
+      );
     }
   }
   
-  // 6. MYMOOLAH WALLET TRANSACTIONS (Internal transfers)
+  // 7. MYMOOLAH WALLET TRANSACTIONS (Internal transfers)
   if (isMyMoolahTransaction(transaction)) {
-    return <Wallet style={{ ...iconStyle, color: iconColor }} />;
+    return (
+      <Wallet 
+        className={`transaction-icon transaction-icon-wallet ${isCredit ? 'transaction-icon-credit' : 'transaction-icon-debit'}`}
+        style={{ ...iconStyle, color: iconColor }} 
+      />
+    );
   }
   
-  // 7. DEFAULT: Other transactions use arrows
+  // 8. DEFAULT: Other transactions use arrows
   if (isCredit) {
     // Credit (money received) - Green down arrow
-    return <ArrowDownLeft style={{ ...iconStyle, color: '#16a34a' }} />;
+    return (
+      <ArrowDownLeft 
+        className="transaction-icon transaction-icon-default transaction-icon-credit"
+        style={{ ...iconStyle, color: '#16a34a' }} 
+      />
+    );
   } else {
     // Debit (money sent) - Red up arrow
-    return <ArrowUpRight style={{ ...iconStyle, color: '#dc2626' }} />;
+    return (
+      <ArrowUpRight 
+        className="transaction-icon transaction-icon-default transaction-icon-debit"
+        style={{ ...iconStyle, color: '#dc2626' }} 
+      />
+    );
   }
 }
 

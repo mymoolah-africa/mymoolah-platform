@@ -213,12 +213,58 @@ const requestLogger = (req, res, next) => {
 
 /**
  * IP whitelist middleware
+ * Banking-Grade: Optional IP whitelisting for admin/sensitive routes
  */
 const ipWhitelist = (allowedIPs = []) => {
+  // Get allowed IPs from environment variable if not provided
+  const envIPs = process.env.ADMIN_IP_WHITELIST 
+    ? process.env.ADMIN_IP_WHITELIST.split(',').map(ip => ip.trim()).filter(Boolean)
+    : [];
+  
+  const finalAllowedIPs = allowedIPs.length > 0 ? allowedIPs : envIPs;
+  
   return (req, res, next) => {
-    const clientIP = req.ip || req.connection.remoteAddress;
+    // If no IPs configured, allow all (development-friendly)
+    if (finalAllowedIPs.length === 0) {
+      return next();
+    }
+
+    const clientIP = req.ip || 
+                     req.connection.remoteAddress || 
+                     req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
+                     req.socket.remoteAddress;
     
-    if (allowedIPs.length > 0 && !allowedIPs.includes(clientIP)) {
+    // Check if IP is whitelisted
+    const isWhitelisted = finalAllowedIPs.some(allowedIP => {
+      // Support CIDR notation (e.g., 192.168.1.0/24)
+      if (allowedIP.includes('/')) {
+        const [network, prefixLength] = allowedIP.split('/');
+        const mask = -1 << (32 - parseInt(prefixLength));
+        const ipNum = ipToNumber(clientIP);
+        const networkNum = ipToNumber(network);
+        return (ipNum & mask) === (networkNum & mask);
+      }
+      // Exact match
+      return clientIP === allowedIP || clientIP === `::ffff:${allowedIP}`;
+    });
+    
+    if (!isWhitelisted) {
+      console.warn(`🚫 IP whitelist blocked: ${clientIP} - Not in allowed list`);
+      
+      // Log security event
+      if (req.securityLogger) {
+        req.securityLogger.logSuspiciousActivity({
+          type: 'ip_whitelist_blocked',
+          severity: 'high',
+          ipAddress: clientIP,
+          userAgent: req.headers['user-agent'],
+          details: {
+            path: req.path,
+            method: req.method
+          }
+        });
+      }
+
       return res.status(403).json({
         status: 'error',
         message: 'Access denied: IP not whitelisted',
@@ -229,6 +275,17 @@ const ipWhitelist = (allowedIPs = []) => {
     next();
   };
 };
+
+/**
+ * Convert IP address to number for CIDR matching
+ */
+function ipToNumber(ip) {
+  if (ip.includes(':')) {
+    // IPv6 - simplified handling
+    return 0;
+  }
+  return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+}
 
 /**
  * Request size limiting middleware
@@ -307,32 +364,57 @@ const securityMonitor = (req, res, next) => {
 
 /**
  * CORS configuration
+ * Banking-Grade: Uses environment variables for origin management
+ * Supports Mojaloop standards and international banking security compliance
  */
 const corsConfig = {
   origin: (origin, callback) => {
+    // Get allowed origins from environment variable (banking-grade configuration)
+    const envOrigins = process.env.CORS_ORIGINS ? 
+      process.env.CORS_ORIGINS.split(',').map(o => o.trim()) : [];
+    
+    // Base allowed origins for banking-grade security
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:3002',
-      'http://192.168.3.198:3000',
-      'http://192.168.3.198:3002',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://127.0.0.1:3002',
       'https://mymoolah.com',
-      'https://www.mymoolah.com'
+      'https://www.mymoolah.com',
+      ...envOrigins
     ];
     
-    // Allow requests with no origin (mobile apps, etc.)
+    // Allow requests with no origin (mobile apps, Postman, etc.)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Banking-Grade: Strict origin validation with logging
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      // Log rejected CORS attempts for security monitoring
+      console.warn(`🚫 CORS Rejected: ${origin} - Not in allowed origins list`);
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  maxAge: 86400 // 24 hours
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With',
+    'X-API-Key',
+    'X-Client-Version',
+    'X-Device-ID',
+    'X-Request-ID'
+  ],
+  exposedHeaders: [
+    'X-Rate-Limit-Remaining',
+    'X-Rate-Limit-Reset',
+    'X-Request-ID'
+  ],
+  maxAge: 86400 // 24 hours - Banking standard
 };
 
 module.exports = {

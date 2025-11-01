@@ -9,9 +9,22 @@ const OpenAI = require('openai');
  */
 class CodebaseSweepService {
   constructor() {
+    // Banking-Grade: Validate API key before initializing OpenAI client
+    const apiKey = process.env.OPENAI_API_KEY?.trim() || '';
+    const isValidKey = apiKey !== '' &&
+                      apiKey.startsWith('sk-') &&
+                      !apiKey.startsWith('sk-proj-') &&
+                      !apiKey.startsWith('sk-test-') &&
+                      /^sk-[A-Za-z0-9]{32,}$/.test(apiKey);
+    
+    // Only initialize OpenAI if key is valid
+    if (isValidKey) {
     this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
+        apiKey: apiKey
     });
+    } else {
+      this.openai = null; // No OpenAI client if key is invalid
+    }
     
     this.projectRoot = process.cwd();
     this.discoveredCapabilities = new Map();
@@ -34,11 +47,27 @@ class CodebaseSweepService {
    * 🚀 Start the daily sweep scheduler
    */
   async startScheduler() {
+    // Banking-Grade: Validate API key before starting scheduler
+    const apiKey = process.env.OPENAI_API_KEY?.trim() || '';
+    const isValidKey = apiKey !== '' &&
+                      apiKey.startsWith('sk-') &&
+                      !apiKey.startsWith('sk-proj-') &&
+                      !apiKey.startsWith('sk-test-') &&
+                      /^sk-[A-Za-z0-9]{32,}$/.test(apiKey);
+    
+    if (!isValidKey) {
+      console.warn('⚠️  Codebase Sweep Service scheduler skipped - OPENAI_API_KEY invalid or not configured');
+      return; // Don't start scheduler if key is invalid
+    }
+    
     console.log('🚀 Starting MyMoolah Codebase Sweep Scheduler...');
     
     // Run initial sweep in background (non-blocking)
     this.performSweep().catch(error => {
+      // Silently handle errors - fallback already implemented in performSweep
+      if (error.status !== 401 && error.code !== 'invalid_api_key') {
       console.error('⚠️  Initial codebase sweep failed:', error.message);
+      }
     });
     
     // Schedule daily sweeps
@@ -233,9 +262,35 @@ class CodebaseSweepService {
 
   /**
    * 🤖 Use OpenAI to intelligently analyze discovered capabilities
+   * Banking-Grade: Graceful degradation if OpenAI is unavailable
    */
   async analyzeWithAI(consolidatedCapabilities) {
     try {
+      // Banking-Grade: Validate API key before attempting connection
+      const apiKey = process.env.OPENAI_API_KEY?.trim() || '';
+      
+      if (apiKey === '') {
+        console.warn('⚠️  OpenAI API key not configured - using basic analysis fallback');
+        return this.generateBasicSupportQuestions(consolidatedCapabilities);
+      }
+
+      // Validate API key format: must start with 'sk-' and be valid OpenAI format
+      // Valid format: sk- followed by 32+ alphanumeric characters
+      // Invalid: sk-proj- (project keys), sk-test- (test keys), etc.
+      if (!apiKey.startsWith('sk-') || 
+          apiKey.startsWith('sk-proj-') || 
+          apiKey.startsWith('sk-test-') ||
+          !/^sk-[A-Za-z0-9]{32,}$/.test(apiKey)) {
+        console.warn('⚠️  OpenAI API key appears invalid or expired - using basic analysis fallback');
+        return this.generateBasicSupportQuestions(consolidatedCapabilities);
+      }
+
+      // Banking-Grade: Check if OpenAI client is available
+      if (!this.openai) {
+        console.warn('⚠️  OpenAI client not available - using basic analysis fallback');
+        return this.generateBasicSupportQuestions(consolidatedCapabilities);
+      }
+      
       console.log('🤖 Sending capabilities to OpenAI for intelligent analysis...');
       
       // Prepare the data for OpenAI (keep it under token limits)
@@ -285,9 +340,20 @@ Generate a comprehensive list of support questions organized by category.`
       return structuredResponse;
       
     } catch (error) {
-      console.error('❌ OpenAI analysis failed:', error);
+      // Banking-Grade: Log authentication errors as warnings, not errors
+      if (error.status === 401 || error.code === 'invalid_api_key' || 
+          (error.message && error.message.includes('Incorrect API key'))) {
+        console.warn('⚠️  OpenAI API authentication failed - using basic analysis fallback');
+        console.warn('💡 To enable AI-powered codebase analysis, set a valid OPENAI_API_KEY in .env');
+        // Suppress error stack trace for invalid API keys
+      } else {
+        console.error('❌ OpenAI analysis failed:', error.message);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error details:', error);
+        }
+      }
       
-      // Fallback to basic analysis
+      // Fallback to basic analysis - system continues to work
       return this.generateBasicSupportQuestions(consolidatedCapabilities);
     }
   }

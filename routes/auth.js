@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const twoFactorAuthController = require('../controllers/twoFactorAuthController');
 const authMiddleware = require('../middleware/auth');
+const { captchaMiddleware } = require('../middleware/captchaMiddleware');
 const { body, validationResult } = require('express-validator');
 
 // Validation middleware
@@ -89,13 +91,24 @@ router.post('/register', [
 ], authController.register);
 
 // POST /api/v1/auth/login
+// Banking-Grade: Optional CAPTCHA (not enforced in development)
 router.post('/login', [
+  // Optional CAPTCHA - only enforced if RECAPTCHA_SECRET_KEY is set
+  captchaMiddleware({
+    secretKey: process.env.RECAPTCHA_SECRET_KEY,
+    minScore: 0.5,
+    skipInDevelopment: true // Skip in development if key not set
+  }),
   body('identifier')
     .matches(phoneRegex)
     .withMessage('Identifier must be a valid South African mobile number'),
   body('password')
     .isLength({ min: 1 })
     .withMessage('Password is required'),
+  body('twoFactorToken')
+    .optional()
+    .isLength({ min: 6, max: 6 })
+    .withMessage('2FA token must be 6 digits'),
   validateRequest
 ], authController.login);
 
@@ -114,4 +127,43 @@ router.post('/change-password', [
   validateRequest
 ], authController.changePassword);
 
-module.exports = router;
+// Two-Factor Authentication Routes (Optional - not enforced)
+// GET /api/v1/auth/2fa/status
+router.get('/2fa/status', authMiddleware, twoFactorAuthController.getStatus);
+
+// POST /api/v1/auth/2fa/setup - Generate secret and QR code
+router.post('/2fa/setup', authMiddleware, twoFactorAuthController.setup);
+
+// POST /api/v1/auth/2fa/verify-and-enable - Verify token and enable 2FA
+router.post('/2fa/verify-and-enable', [
+  authMiddleware,
+  body('token')
+    .isLength({ min: 6, max: 6 })
+    .withMessage('2FA token must be 6 digits'),
+  body('secret')
+    .isLength({ min: 1 })
+    .withMessage('Secret is required'),
+  validateRequest
+], twoFactorAuthController.verifyAndEnable);
+
+// POST /api/v1/auth/2fa/disable - Disable 2FA
+router.post('/2fa/disable', [
+  authMiddleware,
+  body('password')
+    .isLength({ min: 1 })
+    .withMessage('Password is required'),
+  body('token')
+    .optional()
+    .isLength({ min: 6, max: 8 })
+    .withMessage('2FA token or backup code is required'),
+  validateRequest
+], twoFactorAuthController.disable);
+
+// POST /api/v1/auth/2fa/verify - Verify 2FA token (for testing)
+router.post('/2fa/verify', [
+  authMiddleware,
+  body('token')
+    .isLength({ min: 6, max: 8 })
+    .withMessage('Token or backup code is required'),
+  validateRequest
+], twoFactorAuthController.verify);

@@ -166,12 +166,24 @@ class SecurityConfig {
         // Allow non-browser requests (no origin)
         if (!origin) return callback(null, true);
 
-        if (allowedOrigins.includes(origin)) return callback(null, true);
+        // Banking-Grade: Strict origin validation with logging
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
 
+        // Development: Allow local network IPs
         if (isDev && devLanFrontendRegex.test(origin)) {
           return callback(null, true);
         }
 
+        // Development: Allow GitHub Codespaces URLs (for development only)
+        if (isDev && origin && origin.includes('.app.github.dev')) {
+          console.log(`✅ CORS Allowed (Codespaces): ${origin}`);
+          return callback(null, true);
+        }
+
+        // Log rejected CORS attempts for security monitoring
+        console.warn(`🚫 CORS Rejected: ${origin} - Not in allowed origins list`);
         return callback(new Error('Not allowed by CORS'), false);
       },
       credentials: true,
@@ -277,9 +289,10 @@ class SecurityConfig {
   }
 
   // Get CORS origins based on environment
+  // Banking-Grade: Secure origin management with environment variable support
   getCorsOrigins() {
     const origins = process.env.CORS_ORIGINS ? 
-      process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()) : 
+      process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean) : 
       [];
 
     // Add default origins based on environment
@@ -288,7 +301,9 @@ class SecurityConfig {
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:3001',
-        'http://127.0.0.1:3001'
+        'http://127.0.0.1:3001',
+        'http://localhost:3002',
+        'http://127.0.0.1:3002'
       );
     }
 
@@ -300,7 +315,8 @@ class SecurityConfig {
       );
     }
 
-    return origins;
+    // Remove duplicates and return
+    return [...new Set(origins)];
   }
 
   // Validate external service credentials

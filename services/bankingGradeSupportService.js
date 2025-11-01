@@ -86,21 +86,26 @@ class BankingGradeSupportService {
         this.redis = new Redis({
           host: '127.0.0.1',
           port: 6379,
-          retryDelayOnFailover: 100,
-          maxRetriesPerRequest: 1,
-          lazyConnect: false, // Connect immediately
+          lazyConnect: true,            // Do not auto-connect on startup
+          enableOfflineQueue: false,    // Do not queue commands when offline
+          maxRetriesPerRequest: 0,      // Do not retry individual commands
+          retryStrategy: () => null,    // Disable reconnect spam
+          connectTimeout: 2000,
+          commandTimeout: 2000,
           keepAlive: 30000,
           family: 4,
-          db: 0,
-          connectTimeout: 5000,
-          commandTimeout: 5000,
-          retryDelayOnClusterDown: 300,
-          enableOfflineQueue: true // Enable offline queue
+          db: 0
         });
 
-        // Test Redis connection
-        await this.redis.ping();
-        console.log('✅ Redis connected successfully');
+        // Silence connection errors in dev/Codespaces when Redis isn't running
+        this.redis.on('error', () => {});
+        await this.redis.connect().catch(() => {});
+
+        if (this.redis.status === 'ready') {
+          console.log('✅ Redis connected successfully');
+        } else {
+          throw new Error('Redis not ready');
+        }
       } catch (redisError) {
         console.warn('⚠️ Redis not available, using in-memory cache');
         this.redis = null;

@@ -1,0 +1,13 @@
+{
+  "name": "MyMoolah Codespaces",
+  "postStartCommand": "npm install && npm run start:cs-ip",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash"
+      }
+    }
+  }
+}
+
+
