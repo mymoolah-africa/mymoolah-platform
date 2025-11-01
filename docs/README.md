@@ -10,6 +10,19 @@
 
 MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations) built on **Mojaloop standards** and **ISO 20022 banking standards**. The platform is designed to handle **millions of transactions** with banking-grade security, performance, and reliability.
 
+### Codespaces Development (current)
+- Frontend: runs on port 3000 (forwarded URL)
+- Backend: auto-starts on open via postStart; manual: `npm run start:cs-ip`
+- DB: connects to Cloud SQL with runtime TLS overrides for dev only (no code changes); recommended long‑term is Cloud SQL Auth Proxy
+- CORS: set `CORS_ORIGINS` to your 3000 forwarded URL
+- Redis: optional; when not running, logs are suppressed and in‑memory cache is used
+
+Quick start in Codespaces:
+```
+cd /workspaces/mymoolah-platform
+npm run start:cs-ip
+```
+
 ### **💳 NEW: Peach Payments Integration Complete**
 
 The platform now includes **complete Peach Payments integration** with **working PayShap sandbox functionality** and **production-ready code** for payment processing.

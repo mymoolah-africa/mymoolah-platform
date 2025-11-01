@@ -1,4 +1,9 @@
 # MyMoolah Treasury Platform - Changelog
+## 2025-11-01
+- Codespaces: backend auto-start postStart; added `start:cs-ip` runtime to simplify secure dev startup
+- DB: runtime TLS overrides for dev only; recommend Cloud SQL Auth Proxy for team setups
+- Redis: quiet mode in dev; falls back to in‑memory when unavailable
+
 
 **Last Updated**: January 9, 2025  
 **Version**: 2.4.1 - Peach Payments Integration Complete & Zapper Integration Reviewed  

@@ -18,6 +18,10 @@ This single source of truth defines which ports and environment variables to use
   - Backend CORS: ALLOWED_ORIGINS=https://<your-3000-forwarded-host>
   - Frontend env: VITE_API_BASE_URL=https://<your-5050-forwarded-host>
 
+Notes (Current):
+- We run backend on 3001 in some Codespaces; that is fine as long as the frontend points to the correct forwarded host and CORS includes the 3000 URL.
+- Backend auto-starts via postStart; manual fallback: `npm run start:cs-ip`.
+
 Notes
 - Never include a trailing slash on ALLOWED_ORIGINS values
 - Multiple origins are comma-separated in a single line

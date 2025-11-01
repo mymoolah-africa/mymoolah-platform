@@ -156,6 +156,12 @@ npm install
 npm run dev
 ```
 
+### **Codespaces Auto-Start & DB (Current)**
+- Backend auto-starts on container open (postStart). Manual fallback: `npm run start:cs-ip`
+- Frontend on port 3000 (forwarded URL). Set `CORS_ORIGINS` to your 3000 URL
+- Dev DB uses runtime TLS overrides only for Codespaces; for a fully secure setup use Cloud SQL Auth Proxy
+- See `docs/CODESPACES_DB_CONNECTION.md` and `docs/START_SERVICES_CODESPACES.md`
+
 ### **Database Configuration**
 - **Database**: PostgreSQL (Cloud SQL)
 - **Connection**: via `DATABASE_URL`
