@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
 **Last Updated**: January 9, 2025  
-**Version**: 2.4.1 - Peach Payments Integration Complete & Zapper Integration Reviewed
-**Status**: ✅ **PEACH PAYMENTS INTEGRATION COMPLETE** ✅ **ZAPPER INTEGRATION REVIEWED**
+**Version**: 2.4.2 - QR Code Scanning Enhancements & Cross-Browser Compatibility
+**Status**: ✅ **QR SCANNING ENHANCED** ✅ **CROSS-BROWSER COMPATIBLE**
 
 ---
 
@@ -75,6 +75,97 @@ The system automatically selects the **best supplier** for each transaction base
 2. **Availability**: Supplier must have stock/availability
 3. **Performance**: Historical success rate of supplier
 4. **Cost**: Lowest cost to user while maximizing commission
+
+---
+
+## 📷 **QR CODE SCANNING ARCHITECTURE**
+
+### **Cross-Browser Camera Support**
+
+The QR code scanning system provides **comprehensive cross-browser camera support** with graceful fallbacks for browsers that don't support camera access.
+
+#### **Browser Compatibility**
+- **iOS Safari**: Full support with HTTPS requirement detection
+- **Android Chrome**: Optimized for low-end devices with lower resolution
+- **Desktop Chrome**: Full feature support
+- **Opera Mini**: Graceful fallback with upload option guidance
+
+#### **Camera Scanning Implementation**
+
+**Key Components**:
+- `QRPaymentPage.tsx`: Main QR scanning page component
+- `browserSupport.ts`: Browser detection utility
+- `jsQR` library: QR code detection library
+
+**Camera Scanning Flow**:
+1. **User clicks "Scan with Camera"**
+2. **Camera initialization**:
+   - Check Opera Mini (early exit)
+   - Check `navigator.mediaDevices` availability
+   - Check `getUserMedia` support
+   - Render video element in DOM first (iOS Safari requirement)
+   - Request camera permissions
+   - Attach stream to video element
+   - Start continuous scanning loop
+
+3. **Continuous Scanning**:
+   - Scan every 100ms (10 times/second)
+   - Draw video frame to hidden canvas
+   - Use jsQR to detect QR codes
+   - Auto-process when QR code detected
+
+4. **QR Code Processing**:
+   - Validate QR code with backend API
+   - Display merchant and payment information
+   - Initiate payment flow
+
+#### **QR Code Upload Implementation**
+
+**Upload Detection Strategies**:
+1. **Original Image**: Direct detection from uploaded image
+2. **Inverted Colors**: For white-on-black QR codes
+3. **Grayscale with Enhanced Contrast**: Improved detection for unclear images
+4. **High Contrast (B&W)**: Pure black and white conversion
+5. **Scaled Down**: For large images (performance optimization)
+6. **Scaled Up**: For small images (sharp edges, no smoothing)
+
+**Image Processing**:
+- Uses HTML5 Canvas for image manipulation
+- Multiple detection attempts with different strategies
+- Handles QR codes with logo overlays
+- Automatic retry with different strategies
+
+#### **Error Handling**
+
+**Camera Access Errors**:
+- `OPERA_MINI_NO_CAMERA`: Opera Mini specific error
+- `CAMERA_API_NOT_AVAILABLE_HTTP`: iOS Safari on HTTP
+- `NotAllowedError`: Permission denied
+- `NotFoundError`: No camera found
+- `NotReadableError`: Camera in use
+- `OverconstrainedError`: Camera constraints not supported
+
+**QR Detection Errors**:
+- No QR code found: Provides troubleshooting steps
+- Invalid QR code: Shows validation error
+- Processing failure: Shows API error message
+
+#### **Mobile UX Considerations**
+
+**Touch Handling**:
+- Proper `onTouchStart` handlers for mobile
+- `touchAction: 'manipulation'` for better touch response
+- Disabled states with visual feedback
+
+**Video Element Requirements**:
+- iOS Safari: Video element must be in DOM before attaching stream
+- Android: Lower resolution for better performance
+- Desktop: Full resolution support
+
+**HTTPS Requirements**:
+- iOS Safari requires HTTPS for camera access (except localhost)
+- Informational banners (not blocking) for HTTP access
+- Graceful fallback to upload option
 
 ---
 

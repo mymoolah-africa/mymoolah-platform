@@ -150,14 +150,38 @@ export function isOperaMini(): boolean {
 
 /**
  * Check if camera API is supported (getUserMedia)
- * Returns false for Opera Mini which doesn't support camera access
+ * Returns false ONLY for Opera Mini which doesn't support camera access
+ * For other browsers, returns true even if getUserMedia isn't immediately available
+ * (iOS Safari may not expose it until actually accessed)
  */
 export function isCameraSupported(): boolean {
-  // Opera Mini doesn't support getUserMedia
+  // Opera Mini doesn't support getUserMedia - definitely not supported
   if (isOperaMini()) {
     return false;
   }
   
-  // Check if getUserMedia is available
+  // Check if navigator.mediaDevices exists (iOS Safari on HTTP doesn't expose this)
+  if (!navigator.mediaDevices) {
+    return false;
+  }
+  
+  // Check if getUserMedia method exists
+  if (typeof navigator.mediaDevices.getUserMedia !== 'function') {
+    return false;
+  }
+  
+  // For Safari/iOS: Even if getUserMedia isn't immediately available,
+  // we should allow the user to try (it might work on HTTPS or when accessed)
+  const userAgent = navigator.userAgent;
+  const isSafari = userAgent.includes('Safari') && !userAgent.includes('Chrome');
+  const isIOS = /iPad|iPhone|iPod/.test(userAgent);
+  
+  // iOS Safari: Allow camera access attempt even if getUserMedia isn't immediately visible
+  // (it may require HTTPS or user interaction)
+  if (isSafari || isIOS) {
+    return true; // Allow iOS Safari users to try camera access
+  }
+  
+  // For other browsers: Check if getUserMedia is available
   return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }

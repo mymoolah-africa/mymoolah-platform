@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
 **Last Updated**: January 9, 2025  
-**Version**: 2.4.1 - Peach Payments Integration Complete & Zapper Integration Reviewed  
-**Status**: ✅ **PEACH PAYMENTS INTEGRATION COMPLETE** ✅ **ZAPPER INTEGRATION REVIEWED**
+**Version**: 2.4.2 - QR Code Scanning Enhancements & Cross-Browser Compatibility
+**Status**: ✅ **QR SCANNING ENHANCED** ✅ **CROSS-BROWSER COMPATIBLE**
 
 ---
 

@@ -38,6 +38,8 @@ export function QRPaymentPage() {
   const [error, setError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const scanIntervalRef = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // API Data state
   const [featuredMerchants, setFeaturedMerchants] = useState<QRMerchant[]>([]);
@@ -106,14 +108,39 @@ export function QRPaymentPage() {
         throw new Error('OPERA_MINI_NO_CAMERA'); // Special error code for Opera Mini
       }
 
+      // Check if navigator.mediaDevices exists (required for getUserMedia)
+      if (!navigator.mediaDevices) {
+        const protocol = window.location.protocol;
+        const hostname = window.location.hostname;
+        
+        if (protocol !== 'https:' && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+          throw new Error('CAMERA_API_NOT_AVAILABLE_HTTP');
+        } else {
+          throw new Error('Camera API (navigator.mediaDevices) is not available in this browser. Please use a modern browser or try the "Upload QR Code" option.');
+        }
+      }
+
+      // Check if getUserMedia method exists
+      if (typeof navigator.mediaDevices.getUserMedia !== 'function') {
+        throw new Error('Camera API (getUserMedia) is not supported in this browser. Please use the "Upload QR Code" option instead.');
+      }
+
       // Check if camera API is supported (includes Opera Mini check)
       if (!isCameraSupported()) {
         throw new Error('Camera API not supported in this browser. Please use the "Upload QR Code" option instead.');
       }
 
-      // Chrome/Safari: Check HTTPS requirement (secure context)
-      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        throw new Error('Camera access requires HTTPS. Please access this page over HTTPS or localhost.');
+      // Note: We don't block camera access based on protocol here
+      // Let the browser handle HTTPS requirements - some browsers allow camera on local IPs
+      // If HTTPS is truly required, the browser will throw an error when getUserMedia is called
+      const isSecureContext = window.location.protocol === 'https:' || 
+                               window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1' ||
+                               window.location.hostname.match(/^192\.168\./); // Allow local network IPs
+      
+      if (!isSecureContext) {
+        console.warn('⚠️ Not accessing via HTTPS or localhost. Camera may not work on some browsers.');
+        // Don't throw error - let browser try and handle the error
       }
 
       // Chrome: Check camera permissions before requesting (optional, but better UX)
@@ -170,17 +197,40 @@ export function QRPaymentPage() {
       
       streamRef.current = stream;
       
-      // Wait for video element to be ready
+      // iOS Safari CRITICAL FIX: Video element MUST be visible in DOM before attaching stream
+      // Set showCamera first to render the video element, then attach stream
+      setShowCamera(true);
+      
+      // Wait for React to render the video element before attaching stream
+      // iOS Safari requires the video element to be in the DOM and visible
+      await new Promise<void>((resolve) => {
+        // Use requestAnimationFrame to ensure DOM is updated
+        requestAnimationFrame(() => {
+          // Small delay to ensure video element is fully rendered
+          setTimeout(() => {
+            resolve();
+          }, 100);
+        });
+      });
+      
+      // Now attach stream to video element
       if (videoRef.current) {
+        // iOS Safari: Clear any existing srcObject first
+        if (videoRef.current.srcObject) {
+          const oldStream = videoRef.current.srcObject as MediaStream;
+          oldStream.getTracks().forEach(track => track.stop());
+        }
+        
         videoRef.current.srcObject = stream;
         
         // iOS Safari and Chrome require explicit play() call after setting srcObject
-        // Chrome: May need to wait for video to be ready
         const playVideo = async () => {
           if (!videoRef.current) return;
           
           try {
+            // iOS Safari: Force play with multiple attempts
             await videoRef.current.play();
+            console.log('✅ Video play() successful');
           } catch (playError: any) {
             console.warn('Video play() failed:', playError);
             
@@ -189,26 +239,41 @@ export function QRPaymentPage() {
               throw new Error('Video autoplay blocked. Please tap the screen to start the camera.');
             }
             
-            // Retry play after a short delay (iOS/Chrome sometimes needs this)
-            setTimeout(async () => {
+            // iOS Safari: Retry with exponential backoff
+            let retryCount = 0;
+            const maxRetries = 3;
+            
+            const retryPlay = async (): Promise<void> => {
+              if (retryCount >= maxRetries) {
+                throw new Error('Unable to start camera preview after multiple attempts. Please try again.');
+              }
+              
+              retryCount++;
+              const delay = 100 * retryCount; // 100ms, 200ms, 300ms
+              
+              await new Promise(resolve => setTimeout(resolve, delay));
+              
               if (videoRef.current && streamRef.current) {
                 try {
                   await videoRef.current.play();
+                  console.log(`✅ Video play() successful on retry ${retryCount}`);
                 } catch (retryError) {
-                  console.error('Video play() retry failed:', retryError);
-                  throw new Error('Unable to start camera preview. Please try again.');
+                  console.warn(`Video play() retry ${retryCount} failed:`, retryError);
+                  return retryPlay();
                 }
               }
-            }, 100);
+            };
+            
+            await retryPlay();
           }
         };
 
-        // Chrome: Wait for video element to be ready before playing
+        // iOS Safari: Wait for video element to be ready before playing
         if (videoRef.current.readyState >= 2) {
           // Video already has enough data
           await playVideo();
         } else {
-          // Wait for video to load
+          // Wait for video to load - iOS Safari needs this
           await new Promise<void>((resolve, reject) => {
             const video = videoRef.current;
             if (!video) {
@@ -216,8 +281,14 @@ export function QRPaymentPage() {
               return;
             }
 
+            let resolved = false;
+
             const onLoadedData = async () => {
+              if (resolved) return;
+              resolved = true;
               video.removeEventListener('loadeddata', onLoadedData);
+              video.removeEventListener('loadedmetadata', onLoadedMetadata);
+              video.removeEventListener('canplay', onCanPlay);
               video.removeEventListener('error', onError);
               try {
                 await playVideo();
@@ -227,20 +298,68 @@ export function QRPaymentPage() {
               }
             };
 
+            const onLoadedMetadata = async () => {
+              if (resolved) return;
+              console.log('Video metadata loaded');
+              // Try to play immediately when metadata is loaded (iOS Safari)
+              try {
+                await playVideo();
+                if (!resolved) {
+                  resolved = true;
+                  video.removeEventListener('loadeddata', onLoadedData);
+                  video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                  video.removeEventListener('canplay', onCanPlay);
+                  video.removeEventListener('error', onError);
+                  resolve();
+                }
+              } catch (error) {
+                // Continue waiting for loadeddata
+              }
+            };
+
+            const onCanPlay = async () => {
+              if (resolved) return;
+              console.log('Video can play');
+              try {
+                await playVideo();
+                if (!resolved) {
+                  resolved = true;
+                  video.removeEventListener('loadeddata', onLoadedData);
+                  video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                  video.removeEventListener('canplay', onCanPlay);
+                  video.removeEventListener('error', onError);
+                  resolve();
+                }
+              } catch (error) {
+                // Continue waiting
+              }
+            };
+
             const onError = () => {
+              if (resolved) return;
+              resolved = true;
               video.removeEventListener('loadeddata', onLoadedData);
+              video.removeEventListener('loadedmetadata', onLoadedMetadata);
+              video.removeEventListener('canplay', onCanPlay);
               video.removeEventListener('error', onError);
               reject(new Error('Video element failed to load'));
             };
 
             video.addEventListener('loadeddata', onLoadedData);
+            video.addEventListener('loadedmetadata', onLoadedMetadata);
+            video.addEventListener('canplay', onCanPlay);
             video.addEventListener('error', onError);
             
             // Timeout after 5 seconds
             setTimeout(() => {
-              video.removeEventListener('loadeddata', onLoadedData);
-              video.removeEventListener('error', onError);
-              reject(new Error('Video loading timeout'));
+              if (!resolved) {
+                resolved = true;
+                video.removeEventListener('loadeddata', onLoadedData);
+                video.removeEventListener('loadedmetadata', onLoadedMetadata);
+                video.removeEventListener('canplay', onCanPlay);
+                video.removeEventListener('error', onError);
+                reject(new Error('Video loading timeout'));
+              }
             }, 5000);
           });
         }
@@ -252,6 +371,16 @@ export function QRPaymentPage() {
         
         videoRef.current.onloadeddata = () => {
           console.log('Camera video data loaded');
+        };
+        
+        // iOS Safari: Force play when video becomes ready
+        videoRef.current.oncanplay = () => {
+          console.log('Video can play');
+          if (videoRef.current && videoRef.current.paused) {
+            videoRef.current.play().catch(err => {
+              console.warn('Auto-play on canplay failed:', err);
+            });
+          }
         };
         
         // Chrome/Android: Ensure video continues playing if paused
@@ -268,9 +397,17 @@ export function QRPaymentPage() {
           console.error('Video element error:', error);
           setError('Camera video error. Please try again.');
         };
+        
+        // Start scanning for QR codes once video is ready
+        // Wait a bit for video to stabilize
+        setTimeout(() => {
+          if (videoRef.current && streamRef.current && showCamera) {
+            startScanning();
+          }
+        }, 500);
+      } else {
+        throw new Error('Video element not found in DOM');
       }
-      
-      setShowCamera(true);
     } catch (error: any) {
       console.error('Camera access failed:', error);
       
@@ -292,6 +429,15 @@ export function QRPaymentPage() {
         errorMessage = 'Camera API not supported in this browser. Please use the "Upload QR Code" option instead, or switch to Chrome, Safari, or Firefox.';
       } else if (error.message && error.message.includes('Camera API not supported')) {
         errorMessage = error.message;
+      } else if (error.message === 'CAMERA_API_NOT_AVAILABLE_HTTP') {
+        // navigator.mediaDevices is undefined (likely iOS Safari on HTTP)
+        errorMessage = 'Camera access requires HTTPS or localhost. iOS Safari requires a secure connection (HTTPS) for camera access. Please:\n\n1. Access via HTTPS (if available)\n2. Use the "Upload QR Code" option instead\n3. Access via localhost (127.0.0.1) if testing locally';
+      } else if (error.message && (error.message.includes('HTTPS') || error.message.includes('secure context'))) {
+        // HTTPS requirement error from browser
+        errorMessage = 'Camera access requires a secure connection (HTTPS). For local development, you can:\n\n1. Access via HTTPS (if available)\n2. Use the "Upload QR Code" option instead\n3. Access via localhost if testing locally';
+      } else if (error.message && error.message.includes('navigator.mediaDevices')) {
+        // Specific error about mediaDevices being undefined
+        errorMessage = 'Camera API is not available. This usually happens when accessing via HTTP on iOS Safari. Please:\n\n1. Access via HTTPS\n2. Use the "Upload QR Code" option instead\n3. Access via localhost if testing locally';
       } else if (error.message) {
         errorMessage = `Unable to access camera: ${error.message}. Please try the "Upload QR Code" option instead.`;
       } else {
@@ -303,25 +449,112 @@ export function QRPaymentPage() {
     }
   };
 
+  // Scan QR code from video feed
+  const scanQRFromVideo = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    
+    if (!video || !canvas || video.readyState !== video.HAVE_ENOUGH_DATA || !streamRef.current) {
+      return;
+    }
+    
+    try {
+      // Get canvas context
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      
+      // Set canvas dimensions to match video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      // Draw current video frame to canvas
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Get image data for QR code detection
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // Try to decode QR code
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      
+      if (code && code.data) {
+        // QR code found!
+        console.log('✅ QR code detected:', code.data);
+        
+        // Stop scanning
+        if (scanIntervalRef.current) {
+          clearInterval(scanIntervalRef.current);
+          scanIntervalRef.current = null;
+        }
+        
+        // Process the QR code
+        processQRCode(code.data).catch(err => {
+          console.error('Error processing QR code:', err);
+          // Restart scanning if processing fails
+          startScanning();
+        });
+      }
+    } catch (error) {
+      console.error('Error scanning QR code:', error);
+    }
+  };
+
+  // Start continuous scanning
+  const startScanning = () => {
+    // Clear any existing interval
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+    }
+    
+    // Create canvas for scanning if it doesn't exist
+    if (!canvasRef.current) {
+      canvasRef.current = document.createElement('canvas');
+      canvasRef.current.style.display = 'none';
+      document.body.appendChild(canvasRef.current);
+    }
+    
+    // Scan every 100ms (10 times per second)
+    scanIntervalRef.current = window.setInterval(() => {
+      scanQRFromVideo();
+    }, 100);
+  };
+
   // Stop camera
   const stopCamera = () => {
+    // Stop scanning interval
+    if (scanIntervalRef.current) {
+      clearInterval(scanIntervalRef.current);
+      scanIntervalRef.current = null;
+    }
+    
+    // Remove canvas if it exists
+    if (canvasRef.current && canvasRef.current.parentNode) {
+      canvasRef.current.parentNode.removeChild(canvasRef.current);
+      canvasRef.current = null;
+    }
+    
+    // Stop camera stream
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
     }
+    
     setShowCamera(false);
     setIsScanning(false);
   };
 
   // Handle QR code scan
   const handleQRScan = async () => {
+    console.log('🔍 QR Scan button clicked');
     setIsScanning(true);
     setError(null);
     setShowCamera(false); // Reset camera state before initializing
     
     try {
+      console.log('📷 Initializing camera...');
       await initializeCamera();
+      console.log('✅ Camera initialized successfully');
     } catch (error) {
+      console.error('❌ Camera initialization failed:', error);
       // Error is already handled in initializeCamera
       setIsScanning(false);
     }
@@ -332,6 +565,13 @@ export function QRPaymentPage() {
     try {
       setIsProcessing(true);
       setError(null);
+      
+      // Basic validation of QR code data
+      if (!code || code.trim().length === 0) {
+        throw new Error('QR code data is empty. Please try scanning again.');
+      }
+      
+      console.log('📋 Processing QR code:', code);
       
       // Validate QR code with backend
       const validationResult = await apiService.validateQRCode(code);
@@ -349,13 +589,41 @@ export function QRPaymentPage() {
         
         // Show success message
         alert(`✅ QR Code validated successfully!\n\nMerchant: ${validationResult.merchant.name}\nAmount: R${validationResult.paymentDetails.amount.toFixed(2)}\n\nPayment initiated! Check your transaction history.`);
+      } else {
+        throw new Error('QR code validation failed. The QR code may not be a valid payment code.');
       }
       
       stopCamera();
       
-    } catch (err) {
+    } catch (err: any) {
       console.error('QR processing error:', err);
-      setError('Failed to process QR code. Please try again.');
+      
+      // Provide specific error messages
+      let errorMsg = 'Failed to process QR code. ';
+      
+      if (err.response) {
+        // API error response
+        const status = err.response.status;
+        const data = err.response.data;
+        
+        if (status === 400) {
+          errorMsg += 'Invalid QR code format. Please scan a valid payment QR code.';
+        } else if (status === 404) {
+          errorMsg += 'QR code not recognized. Please ensure you\'re scanning a valid merchant QR code.';
+        } else if (status === 500) {
+          errorMsg += 'Server error. Please try again later.';
+        } else if (data && data.message) {
+          errorMsg += data.message;
+        } else {
+          errorMsg += 'Please try again.';
+        }
+      } else if (err.message) {
+        errorMsg += err.message;
+      } else {
+        errorMsg += 'Please try again.';
+      }
+      
+      setError(errorMsg);
     } finally {
       setIsProcessing(false);
     }
@@ -373,7 +641,8 @@ export function QRPaymentPage() {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    input.capture = 'environment'; // Prefer camera on mobile
+    // Removed 'capture' attribute to allow file selection from gallery/cloud
+    // Users can still take a photo if their file picker offers that option
     
     input.onchange = async (event) => {
       const file = (event.target as HTMLInputElement).files?.[0];
@@ -391,7 +660,7 @@ export function QRPaymentPage() {
     input.click();
   };
 
-  // Process uploaded QR code image
+  // Process uploaded QR code image with enhanced detection for logos and overlays
   const processUploadedQR = async (file: File) => {
     try {
       setIsProcessing(true);
@@ -399,46 +668,171 @@ export function QRPaymentPage() {
       
       // Create a canvas to process the image
       const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      
+      if (!ctx) {
+        throw new Error('Could not get canvas context');
+      }
+      
       const img = new Image();
       
       // Wait for image to load
       await new Promise((resolve, reject) => {
         img.onload = resolve;
-        img.onerror = reject;
+        img.onerror = (err) => {
+          console.error('Image load error:', err);
+          reject(new Error('Failed to load image. Please try a different image.'));
+        };
         img.src = URL.createObjectURL(file);
       });
       
-      // Set canvas dimensions
+      // Set canvas dimensions to match image
       canvas.width = img.width;
       canvas.height = img.height;
       
       // Draw image on canvas
-      ctx?.drawImage(img, 0, 0);
+      ctx.drawImage(img, 0, 0);
       
-      // Get image data for QR code detection
-              const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
+      // Get original image data
+      const originalImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       
-      // Try to decode QR code
-      if (imageData) {
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
+      // Try multiple detection strategies
+      let code = null;
+      const strategies = [
+        // Strategy 1: Original image
+        () => {
+          console.log('🔍 Strategy 1: Original image');
+          return jsQR(originalImageData.data, originalImageData.width, originalImageData.height);
+        },
+        
+        // Strategy 2: Inverted colors
+        () => {
+          console.log('🔍 Strategy 2: Inverted colors');
+          const invertedData = new Uint8ClampedArray(originalImageData.data.length);
+          for (let i = 0; i < originalImageData.data.length; i += 4) {
+            invertedData[i] = 255 - originalImageData.data[i];     // R
+            invertedData[i + 1] = 255 - originalImageData.data[i + 1]; // G
+            invertedData[i + 2] = 255 - originalImageData.data[i + 2]; // B
+            invertedData[i + 3] = originalImageData.data[i + 3];   // A
+          }
+          return jsQR(invertedData, originalImageData.width, originalImageData.height);
+        },
+        
+        // Strategy 3: Grayscale with enhanced contrast
+        () => {
+          console.log('🔍 Strategy 3: Grayscale with enhanced contrast');
+          const grayscaleData = new Uint8ClampedArray(originalImageData.data.length);
+          for (let i = 0; i < originalImageData.data.length; i += 4) {
+            // Convert to grayscale
+            const gray = Math.round(
+              originalImageData.data[i] * 0.299 +
+              originalImageData.data[i + 1] * 0.587 +
+              originalImageData.data[i + 2] * 0.114
+            );
+            // Enhance contrast
+            const enhanced = gray < 128 ? Math.max(0, gray - 50) : Math.min(255, gray + 50);
+            grayscaleData[i] = enhanced;     // R
+            grayscaleData[i + 1] = enhanced; // G
+            grayscaleData[i + 2] = enhanced; // B
+            grayscaleData[i + 3] = originalImageData.data[i + 3]; // A
+          }
+          return jsQR(grayscaleData, originalImageData.width, originalImageData.height);
+        },
+        
+        // Strategy 4: High contrast (black and white)
+        () => {
+          console.log('🔍 Strategy 4: High contrast (black and white)');
+          const bwData = new Uint8ClampedArray(originalImageData.data.length);
+          for (let i = 0; i < originalImageData.data.length; i += 4) {
+            const gray = Math.round(
+              originalImageData.data[i] * 0.299 +
+              originalImageData.data[i + 1] * 0.587 +
+              originalImageData.data[i + 2] * 0.114
+            );
+            const bw = gray > 128 ? 255 : 0;
+            bwData[i] = bw;     // R
+            bwData[i + 1] = bw; // G
+            bwData[i + 2] = bw; // B
+            bwData[i + 3] = originalImageData.data[i + 3]; // A
+          }
+          return jsQR(bwData, originalImageData.width, originalImageData.height);
+        },
+        
+        // Strategy 5: Scaled down (if image is large)
+        () => {
+          if (canvas.width <= 1000 && canvas.height <= 1000) {
+            return null; // Skip if already small
+          }
+          console.log('🔍 Strategy 5: Scaled down');
+          const scale = Math.min(1000 / canvas.width, 1000 / canvas.height);
+          const scaledWidth = Math.floor(canvas.width * scale);
+          const scaledHeight = Math.floor(canvas.height * scale);
+          
+          const scaledCanvas = document.createElement('canvas');
+          scaledCanvas.width = scaledWidth;
+          scaledCanvas.height = scaledHeight;
+          const scaledCtx = scaledCanvas.getContext('2d');
+          if (scaledCtx) {
+            scaledCtx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+            const scaledImageData = scaledCtx.getImageData(0, 0, scaledWidth, scaledHeight);
+            return jsQR(scaledImageData.data, scaledImageData.width, scaledImageData.height);
+          }
+          return null;
+        },
+        
+        // Strategy 6: Scaled up (if image is small)
+        () => {
+          if (canvas.width >= 500 && canvas.height >= 500) {
+            return null; // Skip if already large enough
+          }
+          console.log('🔍 Strategy 6: Scaled up');
+          const scale = Math.min(1000 / canvas.width, 1000 / canvas.height);
+          const scaledWidth = Math.floor(canvas.width * scale);
+          const scaledHeight = Math.floor(canvas.height * scale);
+          
+          const scaledCanvas = document.createElement('canvas');
+          scaledCanvas.width = scaledWidth;
+          scaledCanvas.height = scaledHeight;
+          const scaledCtx = scaledCanvas.getContext('2d');
+          if (scaledCtx) {
+            scaledCtx.imageSmoothingEnabled = false; // Disable smoothing for sharper edges
+            scaledCtx.drawImage(img, 0, 0, scaledWidth, scaledHeight);
+            const scaledImageData = scaledCtx.getImageData(0, 0, scaledWidth, scaledHeight);
+            return jsQR(scaledImageData.data, scaledImageData.width, scaledImageData.height);
+          }
+          return null;
+        },
+      ];
       
-        if (code) {
-          // QR code found, process it
-  
-          await processQRCode(code.data);
-        } else {
-          // No QR code found in image
-          setError('No QR code detected in the uploaded image. Please try a different image.');
+      // Try each strategy until we find a QR code
+      for (const strategy of strategies) {
+        try {
+          code = strategy();
+          if (code && code.data) {
+            console.log('✅ QR code detected with strategy:', strategies.indexOf(strategy) + 1);
+            break;
+          }
+        } catch (strategyError) {
+          console.warn('Strategy failed:', strategyError);
+          continue;
         }
+      }
+      
+      if (code && code.data) {
+        // QR code found, process it
+        console.log('✅ QR code detected:', code.data);
+        await processQRCode(code.data);
+      } else {
+        // No QR code found in image
+        setError('No QR code detected in the uploaded image. Possible reasons:\n\n1. QR code may be too blurry or unclear\n2. Logo overlay in center may be blocking critical data\n3. Image quality may be too low\n4. QR code may be damaged or incomplete\n\nPlease try:\n- Taking a clearer photo\n- Ensuring good lighting\n- Removing any obstructions\n- Using a different QR code image');
       }
       
       // Clean up
       URL.revokeObjectURL(img.src);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('QR upload processing error:', error);
-      setError('Failed to process uploaded QR code. Please try again.');
+      setError(error.message || 'Failed to process uploaded QR code. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -451,31 +845,48 @@ export function QRPaymentPage() {
     };
   }, []);
 
-  // Handle video element readiness for iOS and Android
+  // Handle video element readiness for iOS Safari (backup)
+  // This effect ensures video plays if it becomes ready after initial setup
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !showCamera) return;
+    if (!video || !showCamera || !streamRef.current) return;
 
-    // Ensure video plays when camera is shown (iOS/Android compatibility)
+    // iOS Safari: Sometimes video needs an extra play attempt after render
     const ensureVideoPlaying = async () => {
       if (video.srcObject && video.paused) {
         try {
           await video.play();
+          console.log('✅ Video play() successful in useEffect (backup)');
         } catch (error) {
           console.warn('Video play() in effect failed:', error);
         }
       }
     };
 
-    // Try to play when video becomes ready
-    video.addEventListener('loadedmetadata', ensureVideoPlaying);
-    video.addEventListener('loadeddata', ensureVideoPlaying);
-    video.addEventListener('canplay', ensureVideoPlaying);
+    // Small delay to ensure video element is fully rendered (iOS Safari)
+    const timer = setTimeout(() => {
+      ensureVideoPlaying();
+      
+      // Start scanning once video is playing
+      if (video.readyState >= video.HAVE_ENOUGH_DATA && !scanIntervalRef.current) {
+        startScanning();
+      }
+    }, 200);
+
+    // Also try on video ready events as backup
+    const onCanPlay = () => {
+      ensureVideoPlaying();
+      // Start scanning when video can play
+      if (!scanIntervalRef.current) {
+        startScanning();
+      }
+    };
+
+    video.addEventListener('canplay', onCanPlay);
 
     return () => {
-      video.removeEventListener('loadedmetadata', ensureVideoPlaying);
-      video.removeEventListener('loadeddata', ensureVideoPlaying);
-      video.removeEventListener('canplay', ensureVideoPlaying);
+      clearTimeout(timer);
+      video.removeEventListener('canplay', onCanPlay);
     };
   }, [showCamera]);
 
@@ -884,17 +1295,72 @@ export function QRPaymentPage() {
                 </Alert>
               )}
 
+              {/* HTTPS Info (not blocking) */}
+              {!isOperaMini() && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && (
+                <Alert 
+                  style={{
+                    borderRadius: 'var(--mobile-border-radius)',
+                    border: '1px solid #3b82f6',
+                    backgroundColor: '#eff6ff',
+                    marginBottom: '1rem'
+                  }}
+                >
+                  <AlertTriangle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription>
+                    <p 
+                      style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        color: '#1e40af',
+                        margin: 0
+                      }}
+                    >
+                      <strong>Info:</strong> Camera access may require HTTPS on some browsers. If camera doesn't work, use the <strong>"Upload QR Code"</strong> option instead.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <button
+                type="button"
+                disabled={isOperaMini() || !isCameraSupported() || isScanning}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('🔍 Scan button clicked, isOperaMini:', isOperaMini(), 'isCameraSupported:', isCameraSupported(), 'isScanning:', isScanning);
+                  if (!isOperaMini() && isCameraSupported() && !isScanning) {
+                    handleQRScan();
+                  }
+                }}
+                onTouchStart={(e) => {
+                  // Better touch handling for mobile
+                  if (!isOperaMini() && isCameraSupported() && !isScanning) {
+                    e.preventDefault();
+                    handleQRScan();
+                  }
+                }}
+                style={{ 
+                  width: '100%',
+                  border: 'none',
+                  padding: 0,
+                  margin: 0,
+                  background: 'transparent',
+                  cursor: isOperaMini() || !isCameraSupported() || isScanning ? 'not-allowed' : 'pointer',
+                  WebkitTapHighlightColor: 'transparent',
+                  touchAction: 'manipulation'
+                }}
+                title={isOperaMini() ? 'Camera not available in Opera Mini - use upload instead' : (!isCameraSupported() ? 'Camera not supported in this browser' : 'Scan QR code with camera')}
+              >
               <Card 
-                className={isOperaMini() || !isCameraSupported() ? '' : 'cursor-pointer hover:shadow-lg transition-all duration-200'}
+                className={isOperaMini() || !isCameraSupported() || isScanning ? '' : 'cursor-pointer hover:shadow-lg transition-all duration-200'}
                 style={{ 
                   borderRadius: 'var(--mobile-border-radius)',
-                  border: isOperaMini() || !isCameraSupported() ? '2px solid #9ca3af' : '2px solid #86BE41',
-                  background: isOperaMini() || !isCameraSupported() ? '#f3f4f6' : 'linear-gradient(135deg, #86BE41/5 0%, #2D8CCA/5 100%)',
-                  opacity: isOperaMini() || !isCameraSupported() ? 0.6 : 1,
-                  cursor: isOperaMini() || !isCameraSupported() ? 'not-allowed' : 'pointer'
+                  border: isOperaMini() || !isCameraSupported() || isScanning ? '2px solid #9ca3af' : '2px solid #86BE41',
+                  background: isOperaMini() || !isCameraSupported() || isScanning ? '#f3f4f6' : 'linear-gradient(135deg, #86BE41/5 0%, #2D8CCA/5 100%)',
+                  opacity: isOperaMini() || !isCameraSupported() || isScanning ? 0.6 : 1,
+                  pointerEvents: 'none' // Let button handle clicks
                 }}
-                onClick={isOperaMini() || !isCameraSupported() ? undefined : handleQRScan}
-                title={isOperaMini() ? 'Camera not available in Opera Mini - use upload instead' : (!isCameraSupported() ? 'Camera not supported in this browser' : 'Scan QR code with camera')}
               >
                 <CardContent style={{ padding: '1.5rem' }}>
                   <div className="flex items-center gap-4">
@@ -956,6 +1422,7 @@ export function QRPaymentPage() {
                   </div>
                 </CardContent>
               </Card>
+              </button>
 
               <Card 
                 className="cursor-pointer hover:shadow-lg transition-all duration-200"

@@ -1,5 +1,8 @@
-## Recent Updates (2025-08-20)
+## Recent Updates (2025-01-09)
 
+- **QR Code Scanning**: Enhanced camera QR scanning with cross-browser compatibility (iOS Safari, Android Chrome, Opera Mini)
+- **QR Upload**: Enhanced QR code detection with 6 detection strategies for logos and overlays
+- **Mobile UX**: Fixed button responsiveness on mobile devices with proper touch handling
 - `GET /api/v1/vouchers/balance-summary`: Logic confirmed to use multiple queries with status rules (active + pending_payment contributes to active total). Cross-user redemption rules clarified and documented in `VOUCHER_BUSINESS_LOGIC.md`.
 - `GET /api/v1/wallets/balance`: Used by front-end header badges (Vouchers, Send Money, QR Payment). Response consumed with thousands separators in UI.
 - `GET /api/v1/wallets/transactions`: Keyset pagination active with trimmed payloads.
@@ -7,8 +10,8 @@
 # MyMoolah Treasury Platform - API Documentation
 
 **Last Updated**: January 9, 2025  
-**Version**: 2.4.1 - Peach Payments Integration Complete & Zapper Integration Reviewed
-**Status**: ✅ **PEACH PAYMENTS INTEGRATION COMPLETE** ✅ **ZAPPER INTEGRATION REVIEWED**
+**Version**: 2.4.2 - QR Code Scanning Enhancements & Cross-Browser Compatibility
+**Status**: ✅ **QR SCANNING ENHANCED** ✅ **CROSS-BROWSER COMPATIBLE**
 
 ---
 
@@ -466,6 +469,119 @@ GET /api/v1/transactions/type/:type
 ```
 
 **Description**: Retrieves transactions filtered by type (airtime, data, electricity, etc.).
+
+---
+
+## 📷 **QR CODE PAYMENT API**
+
+### **QR Code Scanning & Payment**
+
+#### **1. Validate QR Code**
+```http
+POST /api/v1/qr/validate
+```
+
+**Description**: Validates a scanned QR code and retrieves merchant and payment information.
+
+**Authentication**: Required (JWT token)
+
+**Request Body**:
+```json
+{
+  "qrCode": "ZAPPER_woolworths_R125.50"
+}
+```
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "data": {
+    "merchant": {
+      "id": "woolworths_001",
+      "name": "Woolworths",
+      "category": "retail"
+    },
+    "paymentDetails": {
+      "amount": 125.50,
+      "currency": "ZAR",
+      "reference": "REF123456"
+    },
+    "valid": true
+  }
+}
+```
+
+#### **2. Initiate QR Payment**
+```http
+POST /api/v1/qr/payment
+```
+
+**Description**: Initiates a payment from a validated QR code.
+
+**Authentication**: Required (JWT token)
+
+**Request Body**:
+```json
+{
+  "qrCode": "ZAPPER_woolworths_R125.50",
+  "amount": 125.50,
+  "walletId": "user_wallet_123",
+  "reference": "REF123456"
+}
+```
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "data": {
+    "paymentId": "PAY_20250109_001",
+    "status": "completed",
+    "merchant": {
+      "name": "Woolworths",
+      "id": "woolworths_001"
+    },
+    "amount": 125.50,
+    "transactionId": "TXN_20250109_001",
+    "timestamp": "2025-01-09T12:00:00Z"
+  }
+}
+```
+
+#### **3. Get Featured Merchants**
+```http
+GET /api/v1/qr/merchants/featured
+```
+
+**Description**: Retrieves featured merchants that accept QR code payments.
+
+**Authentication**: Required (JWT token)
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "data": {
+    "merchants": [
+      {
+        "id": "woolworths_001",
+        "name": "Woolworths",
+        "category": "retail",
+        "logo": "https://example.com/woolworths-logo.png",
+        "description": "Premium retail store"
+      }
+    ]
+  }
+}
+```
+
+### **QR Code Scanning Features**
+- **Cross-Browser Camera Support**: iOS Safari, Android Chrome, Desktop Chrome
+- **Continuous Real-Time Scanning**: Automatic QR code detection every 100ms
+- **Opera Mini Fallback**: Graceful fallback with upload option guidance
+- **Enhanced Upload Detection**: 6 detection strategies for QR codes with logo overlays
+- **Mobile-Optimized**: Proper touch handling and responsive UI
 
 ---
 

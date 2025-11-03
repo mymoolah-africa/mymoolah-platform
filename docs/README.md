@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform
 
 **Last Updated**: January 9, 2025  
-**Version**: 2.4.1 - Peach Payments Integration Complete & Zapper Integration Reviewed  
-**Status**: ✅ **PEACH PAYMENTS INTEGRATION COMPLETE** ✅ **ZAPPER INTEGRATION REVIEWED**
+**Version**: 2.4.2 - QR Code Scanning Enhancements & Cross-Browser Compatibility  
+**Status**: ✅ **QR SCANNING ENHANCED** ✅ **CROSS-BROWSER COMPATIBLE**
 
 ---
 
@@ -30,6 +30,15 @@ The platform now includes **complete Peach Payments integration** with **working
 ### **🔍 NEW: Zapper Integration Reviewed**
 
 The platform has undergone a **comprehensive review of the Zapper integration** with detailed action plan for completion and QR payment functionality.
+
+### **📱 NEW: Enhanced QR Code Scanning**
+
+The platform now includes **enhanced QR code scanning** with:
+- **Cross-Browser Camera Support**: iOS Safari, Android Chrome, Desktop Chrome compatibility
+- **Continuous Real-Time Scanning**: Automatic QR code detection from camera feed
+- **Opera Mini Support**: Graceful fallback with helpful messaging
+- **Enhanced Upload Detection**: 6 detection strategies for QR codes with logo overlays
+- **Mobile-Optimized**: Proper touch handling and responsive buttons
 
 ### **🏢 MyMoolah Admin Portal (MMAP)**
 

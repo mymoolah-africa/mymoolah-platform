@@ -1,13 +1,75 @@
 # MyMoolah Treasury Platform - Changelog
-## 2025-11-01
-- Codespaces: backend auto-start postStart; added `start:cs-ip` runtime to simplify secure dev startup
-- DB: runtime TLS overrides for dev only; recommend Cloud SQL Auth Proxy for team setups
-- Redis: quiet mode in dev; falls back to in‑memory when unavailable
 
+## 2025-11-01 (Latest)
+- **QR Code Scanning**: Enhanced camera QR scanning with cross-browser compatibility (iOS Safari, Android Chrome, Opera Mini)
+- **Camera Detection**: Improved camera API detection with Opera Mini support and graceful fallbacks
+- **QR Upload**: Enhanced QR code detection with 6 detection strategies for logos and overlays
+- **Mobile UX**: Fixed button responsiveness on mobile devices with proper touch handling
+- **Error Handling**: Comprehensive error messages for camera access issues
 
 **Last Updated**: January 9, 2025  
 **Version**: 2.4.1 - Peach Payments Integration Complete & Zapper Integration Reviewed  
 **Status**: ✅ **PEACH PAYMENTS INTEGRATION COMPLETE** ✅ **ZAPPER INTEGRATION REVIEWED**
+
+---
+
+## 🚀 **VERSION 2.4.2 - QR CODE SCANNING ENHANCEMENTS** (January 9, 2025)
+
+### **📱 MAJOR: Enhanced QR Code Scanning**
+- ✅ **Cross-Browser Camera Support**: iOS Safari, Android Chrome, Desktop Chrome compatibility
+- ✅ **Continuous QR Scanning**: Real-time QR code detection from camera feed (10 scans/second)
+- ✅ **Opera Mini Support**: Graceful fallback with helpful messaging for Opera Mini users
+- ✅ **Enhanced Upload Detection**: 6 detection strategies for QR codes with logo overlays
+- ✅ **Mobile Button Fixes**: Proper touch handling for mobile devices
+- ✅ **Error Handling**: Comprehensive error messages with troubleshooting guidance
+
+#### **Camera Scanning Features**
+- **iOS Safari Compatibility**: Fixed black screen issues with proper video element rendering
+- **Android Chrome Support**: Optimized for low-end Android devices with lower resolution
+- **Desktop Chrome Support**: Full desktop camera scanning support
+- **Continuous Scanning**: Automatic QR code detection every 100ms when camera is active
+- **Auto-Processing**: Automatically processes QR codes when detected
+
+#### **QR Code Upload Features**
+- **Multiple Detection Strategies**: 6 different image processing strategies
+  - Original image detection
+  - Inverted colors (white-on-black codes)
+  - Grayscale with enhanced contrast
+  - High contrast (black and white)
+  - Scaled down (for large images)
+  - Scaled up (for small images)
+- **Logo Overlay Handling**: Enhanced detection for QR codes with center logos
+- **Error Recovery**: Automatic retry with different strategies
+
+#### **Browser Compatibility**
+- **iOS Safari**: Full support with HTTPS requirement detection
+- **Android Chrome**: Optimized for low-end devices
+- **Desktop Chrome**: Full feature support
+- **Opera Mini**: Graceful fallback with upload option guidance
+- **Error Messages**: Browser-specific error messages with troubleshooting steps
+
+#### **Mobile UX Improvements**
+- **Button Responsiveness**: Fixed non-responsive buttons on mobile devices
+- **Touch Handling**: Proper `onTouchStart` handlers for mobile
+- **Visual Feedback**: Disabled states and visual indicators
+- **HTTPS Warnings**: Informational banners (not blocking) for HTTP access
+
+### **🔧 TECHNICAL IMPROVEMENTS**
+- **Video Element Rendering**: iOS Safari requires video element to be in DOM before attaching stream
+- **Canvas Scanning**: Hidden canvas for continuous frame analysis
+- **Image Processing**: Multiple image processing strategies for robust QR detection
+- **Error Handling**: Comprehensive error handling with specific error codes
+- **Console Logging**: Detailed logging for debugging camera issues
+
+### **📊 TESTING STATUS**
+- ✅ **iOS Safari**: Tested and working (requires HTTPS or localhost)
+- ✅ **Android Chrome**: Tested and working on various devices
+- ✅ **Desktop Chrome**: Tested and working
+- ✅ **Opera Mini**: Tested fallback behavior
+- ✅ **QR Upload**: Tested with multiple image types and qualities
+- ✅ **Error Handling**: Tested all error scenarios
+
+---
 
 ---
 

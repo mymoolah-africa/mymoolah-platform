@@ -1,8 +1,9 @@
 # MyMoolah Deployment Guide
 
-## 🚀 Current Deployment Procedures (August 16, 2025 - All Integrations Complete + Transaction Display Fixed)
+## 🚀 Current Deployment Procedures (January 9, 2025 - QR Code Scanning Enhancements & Cross-Browser Compatibility)
 
 **Status**: ✅ **VALIDATED** - All deployment procedures tested and working
+**New**: Enhanced QR code scanning with cross-browser compatibility (iOS Safari, Android Chrome, Opera Mini) and improved detection algorithms.
 
 ## 📋 Deployment Overview
 
@@ -15,6 +16,8 @@
 - ✅ **KYC System**: Document upload with camera support
 - ✅ **Frontend**: React 18 with Figma AI integration
 - ✅ **Transaction Display**: Clean, no duplicate references, professional formatting
+- ✅ **QR Code Scanning**: Cross-browser camera support (iOS Safari, Android Chrome, Opera Mini)
+- ✅ **QR Upload**: Enhanced detection with 6 strategies for logos and overlays
 - ✅ **All Integrations**: EasyPay, Flash, MobileMart, dtMercury, Peach Payments
 - ✅ **AI Supplier Comparison**: Real-time deal analysis and recommendations
 - ✅ **Documentation**: All files updated and current
