@@ -175,9 +175,10 @@ export function TransactPage() {
           description: 'Send cash vouchers for ATM withdrawal',
           icon: <AtSign className="w-6 h-6" />,
           route: '/atm-cashsend-overlay',
-          available: true,
-          badge: 'New',
-          badgeType: 'warning'
+          available: false,
+          badge: 'Coming Soon',
+          badgeType: 'info',
+          comingSoon: true
         }
       ]
     },

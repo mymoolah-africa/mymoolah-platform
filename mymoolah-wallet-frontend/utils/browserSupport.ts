@@ -26,7 +26,18 @@ export function detectBrowserSupport(): BrowserSupport {
   let isSupported = false;
   
   // Detect browser and version
-  if (userAgent.includes('Chrome')) {
+  // IMPORTANT: Check Opera Mini FIRST (before Chrome) as Opera Mini user agent contains "Chrome"
+  if (userAgent.includes('Opera Mini') || userAgent.includes('Opera/9.80')) {
+    browser = 'Opera Mini';
+    const match = userAgent.match(/Opera Mini\/(\d+)/) || userAgent.match(/Version\/(\d+\.\d+)/);
+    version = match ? match[1] : 'Unknown';
+    isSupported = false; // Opera Mini doesn't support getUserMedia due to proxy architecture
+  } else if (userAgent.includes('Opera') || userAgent.includes('OPR/')) {
+    browser = 'Opera';
+    const match = userAgent.match(/OPR\/(\d+)/) || userAgent.match(/Version\/(\d+\.\d+)/);
+    version = match ? match[1] : 'Unknown';
+    isSupported = parseInt(version) >= 75;
+  } else if (userAgent.includes('Chrome')) {
     browser = 'Chrome';
     const match = userAgent.match(/Chrome\/(\d+)/);
     version = match ? match[1] : 'Unknown';
@@ -60,7 +71,11 @@ export function detectBrowserSupport(): BrowserSupport {
   const recommendations: string[] = [];
   
   if (!isSupported) {
-    if (browser === 'Chrome') {
+    if (browser === 'Opera Mini') {
+      recommendations.push('Opera Mini does not support camera access. Please use the "Upload QR Code" option instead, or switch to Chrome, Safari, or Opera browser.');
+    } else if (browser === 'Opera') {
+      recommendations.push('Update Opera to version 75 or higher, or use Chrome, Edge, or Safari for full functionality.');
+    } else if (browser === 'Chrome') {
       recommendations.push('Update Chrome to version 88 or higher');
     } else if (browser === 'Edge') {
       recommendations.push('Update Edge to version 88 or higher');
@@ -122,4 +137,27 @@ export function isVoiceInputSupported(): boolean {
          support.supportsSpeechRecognition && 
          support.supportsMediaDevices && 
          (support.isHTTPS || support.isLocalhost);
+}
+
+/**
+ * Detect if user is using Opera Mini browser
+ * Opera Mini uses a proxy server and doesn't support getUserMedia/camera API
+ */
+export function isOperaMini(): boolean {
+  const userAgent = navigator.userAgent;
+  return userAgent.includes('Opera Mini') || userAgent.includes('Opera/9.80');
+}
+
+/**
+ * Check if camera API is supported (getUserMedia)
+ * Returns false for Opera Mini which doesn't support camera access
+ */
+export function isCameraSupported(): boolean {
+  // Opera Mini doesn't support getUserMedia
+  if (isOperaMini()) {
+    return false;
+  }
+  
+  // Check if getUserMedia is available
+  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 }

@@ -6,7 +6,8 @@ import {
   Wallet, 
   Phone, 
   Zap,
-  Wifi
+  Wifi,
+  QrCode
 } from 'lucide-react';
 
 // Transaction interface for type safety
@@ -48,7 +49,22 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <Zap style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 5. BANKING TRANSACTIONS (External bank transfers via APIs)
+  // 5. QR/ZAPPER PAYMENT TRANSACTIONS (QR Code icons)
+  const metadata = transaction.metadata || {};
+  const isQRTransaction = (
+    description.includes('qr payment') ||
+    description.includes('zapper') ||
+    description.includes('qr code') ||
+    metadata.processingSource === 'zapper' ||
+    metadata.zapperTransactionId ||
+    metadata.qrType === 'zapper'
+  );
+  
+  if (isQRTransaction) {
+    return <QrCode style={{ ...iconStyle, color: iconColor }} />;
+  }
+  
+  // 6. BANKING TRANSACTIONS (External bank transfers via APIs)
   if (isBankingTransaction(transaction)) {
     if (isCredit) {
       // Credit (money received) - Green down arrow
@@ -59,12 +75,12 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     }
   }
   
-  // 6. MYMOOLAH WALLET TRANSACTIONS (Internal transfers)
+  // 7. MYMOOLAH WALLET TRANSACTIONS (Internal transfers)
   if (isMyMoolahTransaction(transaction)) {
     return <Wallet style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 7. DEFAULT: Other transactions use arrows
+  // 8. DEFAULT: Other transactions use arrows
   if (isCredit) {
     // Credit (money received) - Green down arrow
     return <ArrowDownLeft style={{ ...iconStyle, color: '#16a34a' }} />;

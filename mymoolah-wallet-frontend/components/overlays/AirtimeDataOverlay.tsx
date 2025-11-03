@@ -536,6 +536,7 @@ export function AirtimeDataOverlay() {
             onRemove={handleRemoveBeneficiary}
             searchPlaceholder="Search recipient name or number"
             isLoading={loadingState === 'loading'}
+            showFilters={false}
           />
         </div>
       )}

@@ -519,6 +519,7 @@ export function ElectricityOverlay() {
             onRemove={handleRemoveBeneficiary}
             searchPlaceholder="Search meter name or number"
             isLoading={loadingState === 'loading'}
+            showFilters={false}
           />
         </div>
       )}

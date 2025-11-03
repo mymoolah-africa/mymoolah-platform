@@ -68,14 +68,23 @@ export function TopBanner() {
         </button>
 
         {/* Center: MyMoolah brand (SVG with graceful fallback to gradient wordmark) */}
-        <div 
-          style={{ 
-            flex: 1, 
-            display: 'flex', 
+        <button
+          onClick={() => navigate('/dashboard')}
+          style={{
+            flex: 1,
+            display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            padding: '0 16px'
+            padding: '0 16px',
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'opacity 0.2s ease',
+            fontFamily: 'Montserrat, sans-serif'
           }}
+          onMouseOver={(e) => e.currentTarget.style.opacity = '0.8'}
+          onMouseOut={(e) => e.currentTarget.style.opacity = '1'}
+          aria-label="Home"
         >
           {(!preferWordmark && !logoFailed) ? (
             <img
@@ -106,7 +115,7 @@ export function TopBanner() {
               MyMoolah
             </div>
           )}
-        </div>
+        </button>
 
         {/* Right: Notifications Icon */}
         <button 

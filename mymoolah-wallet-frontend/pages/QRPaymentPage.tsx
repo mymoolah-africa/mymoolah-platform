@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Alert, AlertDescription } from '../components/ui/alert';
+import { isOperaMini, isCameraSupported } from '../utils/browserSupport';
 
 export function QRPaymentPage() {
   const navigate = useNavigate();
@@ -97,30 +98,208 @@ export function QRPaymentPage() {
     }
   };
 
-  // Initialize camera
+  // Initialize camera with iOS, Android, Chrome, and Opera Mini compatibility
   const initializeCamera = async () => {
     try {
-      // Check if getUserMedia is supported
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error('Camera API not supported in this browser');
+      // Opera Mini: Check early - Opera Mini doesn't support getUserMedia due to proxy architecture
+      if (isOperaMini()) {
+        throw new Error('OPERA_MINI_NO_CAMERA'); // Special error code for Opera Mini
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      // Check if camera API is supported (includes Opera Mini check)
+      if (!isCameraSupported()) {
+        throw new Error('Camera API not supported in this browser. Please use the "Upload QR Code" option instead.');
+      }
+
+      // Chrome/Safari: Check HTTPS requirement (secure context)
+      if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        throw new Error('Camera access requires HTTPS. Please access this page over HTTPS or localhost.');
+      }
+
+      // Chrome: Check camera permissions before requesting (optional, but better UX)
+      let permissionStatus = 'prompt';
+      try {
+        if ('permissions' in navigator && navigator.permissions.query) {
+          const permissionResult = await navigator.permissions.query({ name: 'camera' as PermissionName });
+          permissionStatus = permissionResult.state;
+          
+          if (permissionStatus === 'denied') {
+            throw new Error('Camera permission denied. Please allow camera access in your browser settings.');
+          }
+        }
+      } catch (permError) {
+        // Permission API not supported or failed - continue anyway
+        console.log('Permission API check failed, continuing:', permError);
+      }
+
+      // Request camera permissions with optimized constraints for mobile devices
+      // Lower resolution for better performance on low-end Android devices
+      // Chrome: Use more flexible constraints to avoid OverconstrainedError
+      const constraints: MediaStreamConstraints = {
         video: {
           facingMode: 'environment', // Prefer back camera
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          // Use lower resolution for better compatibility with low-end Android devices
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          // Additional constraints for Android/Chrome compatibility
+          aspectRatio: { ideal: 16 / 9 }
         }
-      });
+      };
+
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+      } catch (constraintError: any) {
+        // Chrome: If constraints fail, try with minimal constraints
+        if (constraintError.name === 'OverconstrainedError' || constraintError.name === 'ConstraintNotSatisfiedError') {
+          console.warn('Primary constraints failed, trying minimal constraints:', constraintError);
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: {
+                facingMode: 'environment'
+              }
+            });
+          } catch (fallbackError) {
+            console.error('Fallback constraints also failed:', fallbackError);
+            throw constraintError; // Throw original error
+          }
+        } else {
+          throw constraintError;
+        }
+      }
       
       streamRef.current = stream;
+      
+      // Wait for video element to be ready
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        
+        // iOS Safari and Chrome require explicit play() call after setting srcObject
+        // Chrome: May need to wait for video to be ready
+        const playVideo = async () => {
+          if (!videoRef.current) return;
+          
+          try {
+            await videoRef.current.play();
+          } catch (playError: any) {
+            console.warn('Video play() failed:', playError);
+            
+            // Chrome: Sometimes video needs to be triggered by user interaction
+            if (playError.name === 'NotAllowedError') {
+              throw new Error('Video autoplay blocked. Please tap the screen to start the camera.');
+            }
+            
+            // Retry play after a short delay (iOS/Chrome sometimes needs this)
+            setTimeout(async () => {
+              if (videoRef.current && streamRef.current) {
+                try {
+                  await videoRef.current.play();
+                } catch (retryError) {
+                  console.error('Video play() retry failed:', retryError);
+                  throw new Error('Unable to start camera preview. Please try again.');
+                }
+              }
+            }, 100);
+          }
+        };
+
+        // Chrome: Wait for video element to be ready before playing
+        if (videoRef.current.readyState >= 2) {
+          // Video already has enough data
+          await playVideo();
+        } else {
+          // Wait for video to load
+          await new Promise<void>((resolve, reject) => {
+            const video = videoRef.current;
+            if (!video) {
+              reject(new Error('Video element not found'));
+              return;
+            }
+
+            const onLoadedData = async () => {
+              video.removeEventListener('loadeddata', onLoadedData);
+              video.removeEventListener('error', onError);
+              try {
+                await playVideo();
+                resolve();
+              } catch (error) {
+                reject(error);
+              }
+            };
+
+            const onError = () => {
+              video.removeEventListener('loadeddata', onLoadedData);
+              video.removeEventListener('error', onError);
+              reject(new Error('Video element failed to load'));
+            };
+
+            video.addEventListener('loadeddata', onLoadedData);
+            video.addEventListener('error', onError);
+            
+            // Timeout after 5 seconds
+            setTimeout(() => {
+              video.removeEventListener('loadeddata', onLoadedData);
+              video.removeEventListener('error', onError);
+              reject(new Error('Video loading timeout'));
+            }, 5000);
+          });
+        }
+        
+        // Handle video loading events for better compatibility
+        videoRef.current.onloadedmetadata = () => {
+          console.log('Camera video metadata loaded');
+        };
+        
+        videoRef.current.onloadeddata = () => {
+          console.log('Camera video data loaded');
+        };
+        
+        // Chrome/Android: Ensure video continues playing if paused
+        videoRef.current.onpause = () => {
+          if (videoRef.current && streamRef.current) {
+            videoRef.current.play().catch(err => {
+              console.warn('Auto-resume play failed:', err);
+            });
+          }
+        };
+
+        // Chrome: Handle video errors
+        videoRef.current.onerror = (error) => {
+          console.error('Video element error:', error);
+          setError('Camera video error. Please try again.');
+        };
       }
+      
       setShowCamera(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Camera access failed:', error);
-      setError('Unable to access camera. Please check permissions or try uploading a QR code image instead.');
+      
+      // Provide specific error messages for better user experience
+      let errorMessage = '';
+      
+      // Opera Mini: Special handling with helpful message
+      if (error.message === 'OPERA_MINI_NO_CAMERA' || isOperaMini()) {
+        errorMessage = 'Camera scanning is not available in Opera Mini browser. Opera Mini uses a proxy server that prevents direct camera access. Please use the "Upload QR Code" button below to upload a photo of your QR code instead, or switch to Chrome, Safari, or Opera browser for camera scanning.';
+      } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = 'Camera permission denied. Please allow camera access in your browser settings and try again.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage = 'No camera found on this device. Please use the "Upload QR Code" option instead.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage = 'Camera is being used by another application. Please close other apps using the camera and try again, or use the "Upload QR Code" option.';
+      } else if (error.name === 'OverconstrainedError' || error.name === 'ConstraintNotSatisfiedError') {
+        errorMessage = 'Camera does not support the required settings. Please try uploading a QR code image instead.';
+      } else if (error.name === 'NotSupportedError') {
+        errorMessage = 'Camera API not supported in this browser. Please use the "Upload QR Code" option instead, or switch to Chrome, Safari, or Firefox.';
+      } else if (error.message && error.message.includes('Camera API not supported')) {
+        errorMessage = error.message;
+      } else if (error.message) {
+        errorMessage = `Unable to access camera: ${error.message}. Please try the "Upload QR Code" option instead.`;
+      } else {
+        errorMessage = 'Unable to access camera. Please check permissions or try uploading a QR code image instead.';
+      }
+      
+      setError(errorMessage);
+      setIsScanning(false);
     }
   };
 
@@ -138,7 +317,14 @@ export function QRPaymentPage() {
   const handleQRScan = async () => {
     setIsScanning(true);
     setError(null);
-    await initializeCamera();
+    setShowCamera(false); // Reset camera state before initializing
+    
+    try {
+      await initializeCamera();
+    } catch (error) {
+      // Error is already handled in initializeCamera
+      setIsScanning(false);
+    }
   };
 
   // Process QR code with API
@@ -264,6 +450,34 @@ export function QRPaymentPage() {
       stopCamera();
     };
   }, []);
+
+  // Handle video element readiness for iOS and Android
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !showCamera) return;
+
+    // Ensure video plays when camera is shown (iOS/Android compatibility)
+    const ensureVideoPlaying = async () => {
+      if (video.srcObject && video.paused) {
+        try {
+          await video.play();
+        } catch (error) {
+          console.warn('Video play() in effect failed:', error);
+        }
+      }
+    };
+
+    // Try to play when video becomes ready
+    video.addEventListener('loadedmetadata', ensureVideoPlaying);
+    video.addEventListener('loadeddata', ensureVideoPlaying);
+    video.addEventListener('canplay', ensureVideoPlaying);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', ensureVideoPlaying);
+      video.removeEventListener('loadeddata', ensureVideoPlaying);
+      video.removeEventListener('canplay', ensureVideoPlaying);
+    };
+  }, [showCamera]);
 
   return (
     <div 
@@ -447,6 +661,7 @@ export function QRPaymentPage() {
                 ref={videoRef}
                 autoPlay
                 playsInline
+                muted
                 style={{
                   width: '100%',
                   height: '100%',
@@ -642,15 +857,44 @@ export function QRPaymentPage() {
 
             {/* Scan Options */}
             <div className="space-y-4 mb-6">
+              {/* Opera Mini Notice */}
+              {isOperaMini() && (
+                <Alert 
+                  style={{
+                    borderRadius: 'var(--mobile-border-radius)',
+                    border: '1px solid #2D8CCA',
+                    backgroundColor: '#eff6ff',
+                    marginBottom: '1rem'
+                  }}
+                >
+                  <AlertTriangle className="h-4 w-4 text-blue-600" />
+                  <AlertDescription>
+                    <p 
+                      style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        color: '#1e40af',
+                        margin: 0
+                      }}
+                    >
+                      <strong>Opera Mini detected:</strong> Camera scanning is not available. Please use the <strong>"Upload QR Code"</strong> option below instead.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Card 
-                className="cursor-pointer hover:shadow-lg transition-all duration-200"
+                className={isOperaMini() || !isCameraSupported() ? '' : 'cursor-pointer hover:shadow-lg transition-all duration-200'}
                 style={{ 
                   borderRadius: 'var(--mobile-border-radius)',
-                  border: '2px solid #86BE41',
-                  background: 'linear-gradient(135deg, #86BE41/5 0%, #2D8CCA/5 100%)'
+                  border: isOperaMini() || !isCameraSupported() ? '2px solid #9ca3af' : '2px solid #86BE41',
+                  background: isOperaMini() || !isCameraSupported() ? '#f3f4f6' : 'linear-gradient(135deg, #86BE41/5 0%, #2D8CCA/5 100%)',
+                  opacity: isOperaMini() || !isCameraSupported() ? 0.6 : 1,
+                  cursor: isOperaMini() || !isCameraSupported() ? 'not-allowed' : 'pointer'
                 }}
-                onClick={handleQRScan}
-                title={!navigator.mediaDevices?.getUserMedia ? 'Camera not supported in this browser' : 'Scan QR code with camera'}
+                onClick={isOperaMini() || !isCameraSupported() ? undefined : handleQRScan}
+                title={isOperaMini() ? 'Camera not available in Opera Mini - use upload instead' : (!isCameraSupported() ? 'Camera not supported in this browser' : 'Scan QR code with camera')}
               >
                 <CardContent style={{ padding: '1.5rem' }}>
                   <div className="flex items-center gap-4">
@@ -659,7 +903,7 @@ export function QRPaymentPage() {
                         width: '60px',
                         height: '60px',
                         borderRadius: '50%',
-                        background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                        background: isOperaMini() || !isCameraSupported() ? '#9ca3af' : 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -674,11 +918,23 @@ export function QRPaymentPage() {
                           fontFamily: 'Montserrat, sans-serif',
                           fontSize: 'clamp(1.125rem, 2.5vw, 1.25rem)',
                           fontWeight: 'var(--font-weight-bold)',
-                          color: '#1f2937',
+                          color: isOperaMini() || !isCameraSupported() ? '#6b7280' : '#1f2937',
                           marginBottom: '0.25rem'
                         }}
                       >
                         Scan with Camera
+                        {isOperaMini() && (
+                          <Badge 
+                            style={{ 
+                              marginLeft: '0.5rem',
+                              backgroundColor: '#f59e0b',
+                              color: '#fff',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            Not Available
+                          </Badge>
+                        )}
                       </h3>
                       <p 
                         style={{
@@ -689,9 +945,11 @@ export function QRPaymentPage() {
                           margin: 0
                         }}
                       >
-                        {typeof navigator.mediaDevices?.getUserMedia === 'function' ? 
-                          'Point your camera at a QR code'
-                          : 'Camera not supported - use upload instead'
+                        {isOperaMini() ? 
+                          'Opera Mini doesn\'t support camera access - use upload instead'
+                          : !isCameraSupported() ?
+                          'Camera not supported - use upload instead'
+                          : 'Point your camera at a QR code'
                         }
                       </p>
                     </div>
@@ -701,7 +959,11 @@ export function QRPaymentPage() {
 
               <Card 
                 className="cursor-pointer hover:shadow-lg transition-all duration-200"
-                style={{ borderRadius: 'var(--mobile-border-radius)' }}
+                style={{ 
+                  borderRadius: 'var(--mobile-border-radius)',
+                  border: isOperaMini() ? '2px solid #2D8CCA' : '1px solid #e5e7eb',
+                  backgroundColor: isOperaMini() ? '#eff6ff' : '#ffffff'
+                }}
                 onClick={isProcessing ? undefined : handleQRUpload}
               >
                 <CardContent style={{ padding: '1rem' }}>
@@ -744,7 +1006,7 @@ export function QRPaymentPage() {
                           margin: 0
                         }}
                       >
-                        {isProcessing ? 'Decoding QR code...' : 'Select from gallery'}
+                        {isProcessing ? 'Decoding QR code...' : (isOperaMini() ? 'Take a photo or select from gallery' : 'Select from gallery')}
                       </p>
                     </div>
                   </div>
