@@ -458,7 +458,26 @@ class WalletController {
         metadata: t.metadata || {}
       }));
 
-      // Generate next cursor for pagination
+      // Filter out internal accounting transactions (float credits, revenue, VAT)
+      // Keep only customer-facing transactions (actual payments and fees)
+      const filteredRows = normalizedRows.filter((tx) => {
+        const desc = (tx.description || '').toLowerCase();
+        
+        // Hide internal accounting entries
+        if (desc.includes('vat payable') || 
+            desc.includes('vat payable to') ||
+            desc.includes('mymoolah revenue') ||
+            desc.includes('revenue from') ||
+            desc.includes('float credit') ||
+            desc.includes('float credit from')) {
+          return false;
+        }
+        
+        // Keep all other transactions (including "Zapper payment to" and "Zapper transaction fee")
+        return true;
+      });
+
+      // Generate next cursor for pagination (based on original transactions, not filtered)
       const nextCursor = transactions.length > 0 ? 
         transactions[transactions.length - 1].createdAt.toISOString() : null;
 
@@ -466,11 +485,11 @@ class WalletController {
         success: true,
         message: 'Transaction history retrieved successfully',
         data: {
-          transactions: normalizedRows,
+          transactions: filteredRows,
           pagination: {
             hasMore: transactions.length === parseInt(limit),
             nextCursor: nextCursor,
-            count: transactions.length
+            count: filteredRows.length
           }
         }
       });
