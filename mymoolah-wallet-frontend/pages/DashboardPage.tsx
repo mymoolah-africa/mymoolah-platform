@@ -214,6 +214,7 @@ export function DashboardPage() {
               
               return {
                 id: tx.id || `tx_${tx.transactionId}`,
+                transactionId: tx.transactionId, // Add transactionId for deduplication
                 type: displayType,
                 amount: displayAmount,
                 currency: tx.currency || 'ZAR',
@@ -234,6 +235,7 @@ export function DashboardPage() {
                 metadata: tx.metadata || {}
               };
             });
+            
             setRecentTransactions(transformedTransactions);
           }
         }

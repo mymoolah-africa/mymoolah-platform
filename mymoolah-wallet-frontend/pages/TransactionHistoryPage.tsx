@@ -98,6 +98,7 @@ export function TransactionHistoryPage() {
             
                          return {
                id: tx.id,
+               transactionId: tx.transactionId, // Add for deduplication
                type: (isCredit ? 'money_in' : 'money_out') as 'money_in' | 'money_out',
                amount: isCredit ? Math.abs(tx.amount) : -Math.abs(tx.amount),
                currency: 'ZAR' as const,

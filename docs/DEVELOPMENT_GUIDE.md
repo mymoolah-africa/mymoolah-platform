@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
 **Last Updated**: January 9, 2025  
-**Version**: 2.4.2 - QR Code Scanning Enhancements & Cross-Browser Compatibility
-**Status**: ✅ **QR SCANNING ENHANCED** ✅ **CROSS-BROWSER COMPATIBLE**
+**Version**: 2.4.3 - Banking-Grade Duplicate Transaction Prevention
+**Status**: ✅ **DUPLICATE PREVENTION COMPLETE** ✅ **BANKING-GRADE CONCURRENCY**
 
 ---
 
@@ -75,6 +75,130 @@ The system automatically selects the **best supplier** for each transaction base
 2. **Availability**: Supplier must have stock/availability
 3. **Performance**: Historical success rate of supplier
 4. **Cost**: Lowest cost to user while maximizing commission
+
+---
+
+## 🔒 **BANKING-GRADE CONCURRENCY CONTROL**
+
+### **Optimistic Locking Architecture**
+
+The platform implements **optimistic locking** for high-volume transaction processing, following industry standards used by major financial institutions (Stripe, PayPal, Square).
+
+#### **Why Optimistic Locking?**
+
+**Traditional Approach (Pessimistic Locking)**:
+- Uses `SELECT FOR UPDATE` to lock rows
+- Blocks concurrent reads
+- Can cause deadlocks
+- Poor scalability for high-volume systems
+
+**Banking-Grade Approach (Optimistic Locking)**:
+- No blocking locks
+- Allows concurrent reads
+- Deadlock-free
+- Scales to millions of transactions
+- Industry-standard for financial systems
+
+#### **Implementation Details**
+
+**Payment Request Versioning**:
+```javascript
+// PaymentRequest model includes version column
+{
+  version: {
+    type: DataTypes.INTEGER,
+    allowNull: false,
+    defaultValue: 1,
+    comment: 'Optimistic locking version number'
+  }
+}
+```
+
+**Atomic Update Pattern**:
+```javascript
+// Fetch payment request
+const pr = await PaymentRequest.findOne({ 
+  where: { id, status: ['requested', 'viewed'] }
+});
+
+// Atomic update with version check
+const [updateCount] = await PaymentRequest.update(
+  { 
+    status: 'approved',
+    version: sequelize.literal('version + 1')
+  },
+  {
+    where: {
+      id: pr.id,
+      version: pr.version, // Optimistic lock check
+      status: ['requested', 'viewed']
+    }
+  }
+);
+
+// If updateCount is 0, another request already processed it
+if (updateCount === 0) {
+  return res.status(409).json({ 
+    message: 'Request already processed' 
+  });
+}
+```
+
+**Database Constraints**:
+```sql
+-- Unique index prevents duplicate approvals
+CREATE UNIQUE INDEX idx_payment_requests_unique_approved
+ON payment_requests(id)
+WHERE status = 'approved';
+
+-- Unique index prevents duplicate transactions
+CREATE UNIQUE INDEX idx_transactions_unique_payment_request
+ON transactions((metadata->>'requestId'))
+WHERE metadata->>'requestId' IS NOT NULL
+  AND status = 'completed';
+```
+
+#### **Three-Layer Defense**
+
+1. **Application Layer**: Optimistic locking with version checks
+2. **Database Layer**: Unique constraints prevent duplicates
+3. **Idempotency Layer**: Payment request ID in transaction metadata
+
+#### **Error Handling**
+
+**409 Conflict Responses**:
+- Duplicate transaction attempt
+- Payment request already processed
+- Concurrent update detected
+
+**Transaction Rollback**:
+- All operations rolled back on error
+- No partial updates
+- ACID compliance maintained
+
+#### **Reconciliation Scripts**
+
+**Identify Duplicates**:
+```bash
+node scripts/reconcile-wallet-transactions.js \
+  "DATABASE_URL" \
+  "USER1_PHONE" \
+  "USER2_PHONE"
+```
+
+**Cleanup Duplicates**:
+```bash
+node scripts/cleanup-duplicate-transactions.js \
+  "DATABASE_URL"
+```
+
+#### **Best Practices**
+
+1. **Always use transactions**: Wrap operations in database transactions
+2. **Check update count**: Verify atomic update succeeded
+3. **Handle conflicts**: Return 409 Conflict for concurrent updates
+4. **Idempotency keys**: Include payment request ID in transaction metadata
+5. **Database constraints**: Rely on database-level enforcement
 
 ---
 

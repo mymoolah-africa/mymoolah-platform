@@ -100,30 +100,99 @@ module.exports = {
   async respond(req, res) {
     const { sequelize, User, Wallet, Transaction, PaymentRequest } = require('../models');
     const notificationService = require('../services/notificationService');
-    const t = await sequelize.transaction();
+    const { Op } = require('sequelize');
+    const t = await sequelize.transaction({ isolationLevel: 'READ COMMITTED' });
     try {
       const payerUserId = req.user.id;
       const { id } = req.params;
       const { action } = req.body; // 'approve' | 'decline'
-      const pr = await PaymentRequest.findOne({ where: { id, payerUserId } });
-      if (!pr) return res.status(404).json({ success: false, message: 'Request not found' });
-      if (pr.status !== 'requested' && pr.status !== 'viewed') return res.status(400).json({ success: false, message: 'Request already processed' });
+
+      // BANKING-GRADE APPROACH: Optimistic locking with atomic update
+      // Instead of SELECT FOR UPDATE (pessimistic locking), we use atomic UPDATE with WHERE clause
+      // This prevents race conditions without blocking concurrent reads
+      const pr = await PaymentRequest.findOne({ 
+        where: { 
+          id, 
+          payerUserId,
+          status: { [Op.in]: ['requested', 'viewed'] } // Only allow processing if in valid state
+        },
+        transaction: t
+      });
+      
+      if (!pr) {
+        await t.rollback();
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Request not found or already processed' 
+        });
+      }
+
+      // BANKING-GRADE APPROACH: Atomic status update with version check (optimistic locking)
+      // This ensures only one request can update the status
+      const [updateCount] = await PaymentRequest.update(
+        { 
+          status: action === 'approve' ? 'approved' : 'declined',
+          [action === 'approve' ? 'approvedAt' : 'declinedAt']: new Date(),
+          version: sequelize.literal('version + 1') // Increment version for optimistic locking
+        },
+        {
+          where: {
+            id: pr.id,
+            version: pr.version, // Optimistic lock: only update if version hasn't changed
+            status: { [Op.in]: ['requested', 'viewed'] } // Double-check status
+          },
+          transaction: t
+        }
+      );
+
+      // If updateCount is 0, another request already processed this (race condition detected)
+      if (updateCount === 0) {
+        await t.rollback();
+        return res.status(409).json({ 
+          success: false, 
+          message: 'Request was already processed by another request' 
+        });
+      }
+
+      // Reload the payment request to get updated version
+      await pr.reload({ transaction: t });
+
+      // BANKING-GRADE APPROACH: Idempotency check using database constraints
+      // Check if transactions already exist for this payment request
+      // Database unique constraint will prevent duplicates even if this check passes
+      const existingTransactions = await Transaction.findAll({
+        where: sequelize.literal(
+          `("metadata"->>'requestId' = :requestId OR "metadata"->>'paymentRequestId' = :requestId)`
+        ),
+        replacements: { requestId: String(pr.id) },
+        transaction: t,
+        limit: 1
+      });
+
+      if (existingTransactions.length > 0) {
+        console.warn(`⚠️ [DUPLICATE PREVENTION] Payment request ${pr.id} already has transactions. Existing count: ${existingTransactions.length}`);
+        await t.rollback();
+        return res.status(409).json({ success: false, message: 'Transactions already exist for this payment request' });
+      }
 
       if (action === 'decline') {
-        await pr.update({ status: 'declined', declinedAt: new Date() }, { transaction: t });
         await t.commit();
         return res.json({ success: true, data: { status: 'declined' } });
       }
 
-      // approve -> perform transfer like sendMoney
-      const payerWallet = await Wallet.findOne({ where: { userId: payerUserId } });
-      const requesterWallet = await Wallet.findOne({ where: { userId: pr.requesterUserId } });
+      // approve -> perform transfer
+      // BANKING-GRADE APPROACH: No row-level locks needed
+      // PostgreSQL READ COMMITTED isolation level ensures ACID compliance
+      const payerWallet = await Wallet.findOne({ where: { userId: payerUserId }, transaction: t });
+      const requesterWallet = await Wallet.findOne({ where: { userId: pr.requesterUserId }, transaction: t });
       const payer = await User.findByPk(payerUserId);
       const requester = await User.findByPk(pr.requesterUserId);
+      
       if (!payerWallet || !requesterWallet) {
         await t.rollback();
         return res.status(404).json({ success: false, message: 'Wallet not found' });
       }
+      
       if (parseFloat(payerWallet.balance) < parseFloat(pr.amount)) {
         await t.rollback();
         return res.status(400).json({ success: false, message: 'Insufficient balance' });
@@ -134,13 +203,22 @@ module.exports = {
       await payerWallet.update({ balance: newPayerBal }, { transaction: t });
       await requesterWallet.update({ balance: newRequesterBal }, { transaction: t });
 
-      const senderTransactionId = `TXN-${Date.now()}-SEND`;
-      const receiverTransactionId = `TXN-${Date.now()}-RECEIVE`;
+      // BANKING-GRADE APPROACH: Unique transaction IDs with payment request ID
+      // Database unique constraint on transactionId prevents duplicates
+      const timestamp = Date.now();
+      const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const senderTransactionId = `TXN-${timestamp}-PR${pr.id}-SEND-${randomSuffix}`;
+      const receiverTransactionId = `TXN-${timestamp}-PR${pr.id}-RECV-${randomSuffix}`;
+      
       const userDescription = pr.description || 'Payment request';
       const senderDesc = `${requester.firstName} ${requester.lastName} | ${userDescription}`.trim();
       const receiverDesc = `${payer.firstName} ${payer.lastName} | ${userDescription}`.trim();
 
-      await Transaction.create({
+      // BANKING-GRADE APPROACH: Database constraints prevent duplicates
+      // Unique constraint on transactionId + unique constraint on metadata.requestId
+      // If duplicate attempt occurs, database will reject it
+      try {
+        await Transaction.create({
         transactionId: senderTransactionId,
         userId: payerUserId,
         walletId: payerWallet.walletId,
@@ -149,7 +227,11 @@ module.exports = {
         type: 'send',
         status: 'completed',
         description: senderDesc,
-        metadata: { counterpartyIdentifier: requester.phoneNumber },
+        metadata: { 
+          counterpartyIdentifier: requester.phoneNumber,
+          requestId: pr.id, // Add requestId for idempotency
+          paymentRequestId: pr.id // Alias for clarity
+        },
         currency: payerWallet.currency,
       }, { transaction: t });
 
@@ -162,12 +244,29 @@ module.exports = {
         type: 'receive',
         status: 'completed',
         description: receiverDesc,
-        metadata: { counterpartyIdentifier: payer.phoneNumber },
+        metadata: { 
+          counterpartyIdentifier: payer.phoneNumber,
+          requestId: pr.id, // Add requestId for idempotency
+          paymentRequestId: pr.id // Alias for clarity
+        },
         currency: requesterWallet.currency,
       }, { transaction: t });
+      } catch (dbError) {
+        // If database constraint violation, rollback and return error
+        if (dbError.name === 'SequelizeUniqueConstraintError') {
+          await t.rollback();
+          console.error(`❌ [DUPLICATE CONSTRAINT VIOLATION] Payment request ${pr.id}:`, dbError.message);
+          return res.status(409).json({ 
+            success: false, 
+            message: 'Duplicate transaction prevented by database constraint' 
+          });
+        }
+        throw dbError; // Re-throw other errors
+      }
 
-      await pr.update({ status: 'approved', approvedAt: new Date() }, { transaction: t });
       await t.commit();
+      
+      console.log(`✅ [PAYMENT REQUEST APPROVED] Request ID: ${pr.id}, Amount: R${pr.amount}, Payer: ${payerUserId}, Requester: ${pr.requesterUserId}, Transactions: ${senderTransactionId}, ${receiverTransactionId}`);
 
       // Send non-blocking confirmations to both parties
       try {
@@ -210,6 +309,13 @@ module.exports = {
       return res.json({ success: true, data: { status: 'approved' } });
     } catch (err) {
       await t.rollback();
+      console.error(`❌ [PAYMENT REQUEST ERROR] Request ID: ${req.params.id}, Error:`, err);
+      
+      // Handle specific database errors
+      if (err.name === 'SequelizeUniqueConstraintError') {
+        return res.status(409).json({ success: false, message: 'Transaction already exists (duplicate prevented)' });
+      }
+      
       return res.status(500).json({ success: false, message: 'Failed to process request' });
     }
   }

@@ -458,9 +458,23 @@ class WalletController {
         metadata: t.metadata || {}
       }));
 
+      // CRITICAL FIX: Deduplicate by transaction ID to prevent duplicates
+      const uniqueTransactions = new Map();
+      normalizedRows.forEach(tx => {
+        // Use transactionId as primary key, or fallback to id
+        const key = tx.transactionId || `id_${tx.id}`;
+        if (!uniqueTransactions.has(key)) {
+          uniqueTransactions.set(key, tx);
+        } else {
+          // Log duplicate detection
+          console.warn(`⚠️ [DUPLICATE DETECTED] Transaction ID: ${key}, Database ID: ${tx.id}`);
+        }
+      });
+      const deduplicatedRows = Array.from(uniqueTransactions.values());
+
       // Filter out internal accounting transactions (float credits, revenue, VAT)
       // Keep only customer-facing transactions (actual payments and fees)
-      const filteredRows = normalizedRows.filter((tx) => {
+      const filteredRows = deduplicatedRows.filter((tx) => {
         const desc = (tx.description || '').toLowerCase();
         
         // Hide internal accounting entries

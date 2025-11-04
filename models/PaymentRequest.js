@@ -16,9 +16,16 @@ module.exports = (sequelize, DataTypes) => {
     notificationId: { type: DataTypes.INTEGER, allowNull: true },
     approvedAt: { type: DataTypes.DATE, allowNull: true },
     declinedAt: { type: DataTypes.DATE, allowNull: true },
+    version: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1,
+      comment: 'Optimistic locking version number - increments on each update'
+    },
   }, {
     tableName: 'payment_requests',
     timestamps: true,
+    version: true, // Enable optimistic locking in Sequelize
   });
   PaymentRequest.associate = (models) => {
     PaymentRequest.belongsTo(models.User, { foreignKey: 'requesterUserId', as: 'requester' });

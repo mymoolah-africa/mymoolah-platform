@@ -135,6 +135,7 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       
       return {
         id: tx.id || `tx_${tx.transactionId}`,
+        transactionId: tx.transactionId, // Add for deduplication
         type,
         amount,
         currency: tx.currency || 'ZAR',
@@ -148,7 +149,10 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
         }),
         timestamp: date.toISOString(),
         status: tx.status || 'completed',
-        counterparty: tx.metadata?.counterpartyIdentifier || 'Unknown'
+        counterparty: tx.metadata?.counterpartyIdentifier || 'Unknown',
+        senderWalletId: tx.senderWalletId || tx.metadata?.senderWalletId,
+        receiverWalletId: tx.receiverWalletId || tx.metadata?.receiverWalletId,
+        metadata: tx.metadata || {}
       };
     });
   };

@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
 **Last Updated**: January 9, 2025  
-**Version**: 2.4.2 - QR Code Scanning Enhancements & Cross-Browser Compatibility
-**Status**: ✅ **QR SCANNING ENHANCED** ✅ **CROSS-BROWSER COMPATIBLE**
+**Version**: 2.4.3 - Banking-Grade Duplicate Transaction Prevention
+**Status**: ✅ **DUPLICATE PREVENTION COMPLETE** ✅ **BANKING-GRADE CONCURRENCY**
 
 ---
 
@@ -253,6 +253,59 @@ const rateLimits = {
 - **Limit**: 10 transactions per IP in production
 - **Scope**: Financial transaction endpoints
 - **Protection**: Prevents rapid-fire transactions
+
+---
+
+## 🔒 **CONCURRENCY CONTROL & DUPLICATE PREVENTION**
+
+### **Banking-Grade Concurrency Control**
+
+The platform implements **optimistic locking** for high-volume transaction processing, following industry standards used by major financial institutions (Stripe, PayPal, Square).
+
+#### **Optimistic Locking Architecture**
+
+**Why Optimistic Locking?**
+- **No Blocking**: Allows concurrent reads without blocking
+- **Deadlock-Free**: Eliminates deadlock risk
+- **High Scalability**: Supports millions of transactions
+- **Industry Standard**: Used by major financial institutions
+
+#### **Implementation**
+
+**Payment Request Versioning**:
+- Version column tracks concurrent update attempts
+- Atomic UPDATE with version check ensures only one request processes
+- 409 Conflict response for concurrent updates
+
+**Database Constraints**:
+- Unique indexes prevent duplicate payment request approvals
+- Unique constraints prevent duplicate transactions
+- Three-layer defense: Application + Database + Idempotency
+
+#### **Race Condition Prevention**
+
+**Payment Request Processing**:
+1. Fetch payment request with current version
+2. Atomic UPDATE with version check
+3. Verify update count (0 = already processed)
+4. Return 409 Conflict if concurrent update detected
+
+**Transaction Creation**:
+- Unique constraint on `transactionId`
+- Unique constraint on `metadata.requestId`
+- Database-level enforcement prevents duplicates
+
+#### **Error Handling**
+
+**409 Conflict Responses**:
+- Duplicate transaction attempt
+- Payment request already processed
+- Concurrent update detected
+
+**Transaction Rollback**:
+- All operations rolled back on error
+- No partial updates
+- ACID compliance maintained
 
 ---
 

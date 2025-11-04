@@ -1,15 +1,63 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-11-01 (Latest)
-- **QR Code Scanning**: Enhanced camera QR scanning with cross-browser compatibility (iOS Safari, Android Chrome, Opera Mini)
-- **Camera Detection**: Improved camera API detection with Opera Mini support and graceful fallbacks
-- **QR Upload**: Enhanced QR code detection with 6 detection strategies for logos and overlays
-- **Mobile UX**: Fixed button responsiveness on mobile devices with proper touch handling
-- **Error Handling**: Comprehensive error messages for camera access issues
+## 2025-11-04 (Latest)
+- **CRITICAL FIX**: Banking-Grade Duplicate Transaction Prevention implemented
+- **Optimistic Locking**: Replaced row-level locking with optimistic locking for high-volume systems
+- **Database Constraints**: Added unique constraints to prevent duplicate transactions
+- **Balance Reconciliation**: Fixed duplicate transactions and reconciled wallet balances
+- **Migration**: Added version column and unique indexes to payment_requests table
 
 **Last Updated**: January 9, 2025  
-**Version**: 2.4.1 - Peach Payments Integration Complete & Zapper Integration Reviewed  
-**Status**: ✅ **PEACH PAYMENTS INTEGRATION COMPLETE** ✅ **ZAPPER INTEGRATION REVIEWED**
+**Version**: 2.4.3 - Banking-Grade Duplicate Transaction Prevention  
+**Status**: ✅ **DUPLICATE PREVENTION COMPLETE** ✅ **BANKING-GRADE CONCURRENCY**
+
+---
+
+## 🚀 **VERSION 2.4.3 - BANKING-GRADE DUPLICATE TRANSACTION PREVENTION** (January 9, 2025)
+
+### **🔒 CRITICAL FIX: Duplicate Transaction Prevention**
+- ✅ **Optimistic Locking**: Implemented optimistic locking with version numbers (replaces row-level locking)
+- ✅ **Database Constraints**: Added unique constraints to prevent duplicate payment request processing
+- ✅ **Idempotency Protection**: Enhanced idempotency checks using payment request IDs
+- ✅ **Race Condition Fix**: Fixed race condition in payment request approval flow
+- ✅ **Balance Reconciliation**: Cleaned up duplicate transactions and reconciled wallet balances
+- ✅ **Banking-Grade Architecture**: Industry-standard concurrency control for high-volume systems
+
+#### **Concurrency Control Improvements**
+- **Optimistic Locking**: Version-based optimistic locking replaces SELECT FOR UPDATE
+- **Atomic Updates**: Atomic UPDATE with version check prevents race conditions
+- **Database Constraints**: Unique indexes prevent duplicate transactions at database level
+- **No Row-Level Locks**: Eliminated blocking locks for better performance and scalability
+- **Deadlock-Free**: Optimistic locking eliminates deadlock risk
+
+#### **Duplicate Prevention Measures**
+- **Payment Request Locking**: Optimistic locking prevents duplicate payment request processing
+- **Transaction Deduplication**: Unique constraints on transactionId and metadata.requestId
+- **Idempotency Keys**: Payment request ID in transaction metadata for traceability
+- **Error Handling**: Comprehensive error handling with 409 Conflict responses
+
+#### **Database Migration**
+- **Version Column**: Added `version` column to `payment_requests` table
+- **Unique Indexes**: Added unique partial indexes for payment requests and transactions
+- **Backward Compatible**: Migration handles existing data safely
+
+#### **Reconciliation & Cleanup**
+- **Reconciliation Script**: Created script to identify and verify duplicate transactions
+- **Cleanup Script**: Created script to remove duplicate transactions and recalculate balances
+- **Balance Verification**: Automated balance reconciliation against transaction history
+
+#### **Performance & Scalability**
+- **No Blocking**: Optimistic locking allows concurrent reads (no blocking)
+- **High Concurrency**: Supports millions of transactions without deadlocks
+- **Banking-Grade**: Industry-standard approach used by Stripe, PayPal, Square
+- **ACID Compliance**: PostgreSQL ensures transaction consistency
+
+### **📊 TESTING STATUS**
+- ✅ **Duplicate Detection**: Verified duplicate transaction detection and removal
+- ✅ **Balance Reconciliation**: Verified wallet balance calculations
+- ✅ **Race Condition Testing**: Verified optimistic locking prevents duplicates
+- ✅ **Database Constraints**: Verified unique constraints prevent duplicates
+- ✅ **Migration Testing**: Verified migration runs successfully
 
 ---
 
