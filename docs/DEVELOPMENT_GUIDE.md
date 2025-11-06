@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: January 9, 2025  
-**Version**: 2.4.3 - Banking-Grade Duplicate Transaction Prevention
-**Status**: ✅ **DUPLICATE PREVENTION COMPLETE** ✅ **BANKING-GRADE CONCURRENCY**
+**Last Updated**: November 5, 2025  
+**Version**: 2.4.4 - MobileMart Fulcrum Integration Updates
+**Status**: ✅ **MOBILEMART INTEGRATION UPDATED** ⚠️ **AWAITING CREDENTIAL VERIFICATION**
 
 ---
 
@@ -75,6 +75,122 @@ The system automatically selects the **best supplier** for each transaction base
 2. **Availability**: Supplier must have stock/availability
 3. **Performance**: Historical success rate of supplier
 4. **Cost**: Lowest cost to user while maximizing commission
+
+## 🔌 **MOBILEMART FULCRUM INTEGRATION**
+
+### **MobileMart Fulcrum API Integration**
+
+The platform integrates with **MobileMart Fulcrum API** for VAS (Value Added Services) including airtime, data, vouchers, bill payments, and prepaid utilities.
+
+#### **API Configuration**
+
+**Base URLs:**
+- **UAT**: `https://uat.fulcrumswitch.com`
+- **PROD**: `https://fulcrumswitch.com`
+
+**OAuth Endpoint:**
+- **Token Endpoint**: `/connect/token` (IdentityServer4/OpenIddict pattern)
+- **Grant Type**: OAuth 2.0 Client Credentials
+- **Token Validity**: 2 hours (7200 seconds)
+
+**API Structure:**
+- **Version**: v1
+- **Products**: `/api/v1/{vasType}/products`
+- **Purchase**: `/api/v1/{vasType}/purchase` or `/api/v1/{vasType}/pay`
+
+#### **VAS Types Supported**
+
+1. **Airtime** (`airtime`)
+   - Pinned and Pinless airtime
+   - Endpoint: `/api/v1/airtime/products`
+
+2. **Data** (`data`)
+   - Pinned and Pinless data packages
+   - Endpoint: `/api/v1/data/products`
+
+3. **Voucher** (`voucher`)
+   - Pinned vouchers
+   - Endpoint: `/api/v1/voucher/products`
+
+4. **Bill Payment** (`billpayment`)
+   - Bill payment services with prevend
+   - Endpoint: `/api/v1/billpayment/products`
+   - Purchase: `/api/v1/billpayment/pay`
+
+5. **Prepaid Utility** (`prepaidutility`)
+   - Prepaid electricity with prevend
+   - Endpoint: `/api/v1/prepaidutility/products`
+   - Maps from `electricity` VAS type
+
+#### **Authentication Service**
+
+The `MobileMartAuthService` handles:
+- OAuth 2.0 token generation
+- Token caching and refresh
+- Automatic token renewal before expiry
+- Error handling and retry logic
+
+**Example Usage:**
+```javascript
+const MobileMartAuthService = require('./services/mobilemartAuthService');
+const authService = new MobileMartAuthService();
+
+// Get access token (automatically cached and refreshed)
+const token = await authService.getAccessToken();
+
+// Make authenticated request
+const response = await authService.makeAuthenticatedRequest(
+  'GET',
+  '/airtime/products'
+);
+```
+
+#### **VAS Type Normalization**
+
+The `MobileMartController` includes a `normalizeVasType()` method that maps common VAS types to MobileMart Fulcrum naming:
+
+```javascript
+normalizeVasType(vasType) {
+  const mapping = {
+    'airtime': 'airtime',
+    'data': 'data',
+    'voucher': 'voucher',
+    'billpayment': 'billpayment',
+    'bill_payment': 'billpayment',
+    'electricity': 'prepaidutility',
+    'prepaidutility': 'prepaidutility',
+    'utility': 'prepaidutility'
+  };
+  return mapping[vasType.toLowerCase()] || vasType.toLowerCase();
+}
+```
+
+#### **Error Handling**
+
+MobileMart Fulcrum API returns standard error codes:
+- `1000` - ProductDoesNotExist
+- `1001` - AmountInvalid
+- `1002` - CannotSourceProduct
+- `1006` - UserNotAuthenticated
+- `1008` - MerchantCreditLimitReached
+
+#### **Environment Variables**
+
+```env
+MOBILEMART_LIVE_INTEGRATION=true
+MOBILEMART_CLIENT_ID=your_client_id
+MOBILEMART_CLIENT_SECRET=your_client_secret
+MOBILEMART_API_URL=https://uat.fulcrumswitch.com  # Optional (auto-detected)
+MOBILEMART_TOKEN_URL=/connect/token  # Optional (default)
+```
+
+#### **Current Status**
+
+- ✅ **OAuth Endpoint**: Discovered (`/connect/token`)
+- ✅ **API Structure**: Updated to match documentation
+- ✅ **Base URL**: Corrected to `fulcrumswitch.com`
+- ✅ **VAS Type Mapping**: Implemented
+- ⚠️ **Credentials**: Awaiting verification from MobileMart support
 
 ---
 
@@ -175,6 +291,37 @@ WHERE metadata->>'requestId' IS NOT NULL
 - All operations rolled back on error
 - No partial updates
 - ACID compliance maintained
+
+#### **Transaction Filtering**
+
+The platform filters internal accounting transactions from user-facing transaction history:
+
+**Filtered Transaction Types:**
+- `vat_payable` - VAT payable to SARS
+- `mymoolah_revenue` - Platform revenue
+- `zapper_float_credit` - Zapper float credits
+- `float_credit` - General float credits
+- `revenue` - Revenue transactions
+
+**Filter Implementation:**
+- **Location**: `controllers/walletController.js` (lines 475-520)
+- **Method**: Backend filtering before sending to frontend
+- **Pattern Matching**: Transaction type + description pattern matching
+- **Database Preservation**: All filtered transactions remain in database
+
+**Filtered Out:**
+- VAT payable transactions
+- MyMoolah revenue transactions
+- Zapper float credit transactions
+
+**Displayed to Users:**
+- Zapper payment transactions
+- Zapper transaction fees
+- All other customer-facing transactions
+
+See `docs/TRANSACTION_FILTER.md` for complete documentation.
+
+---
 
 #### **Reconciliation Scripts**
 

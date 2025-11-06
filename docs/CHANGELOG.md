@@ -1,5 +1,57 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2025-11-06 (Latest)
+- **Transaction Filter**: Implemented comprehensive filter for internal accounting transactions
+- **Filter Verification**: Confirmed VAT, revenue, and float credit transactions remain in database
+- **Frontend Cleanup**: Removed internal accounting transactions from user-facing transaction history
+- **Documentation**: Consolidated transaction filter documentation
+
+## 2025-11-05
+- **MobileMart Fulcrum Integration**: Updated integration with correct API endpoints and structure
+- **OAuth Endpoint Discovery**: Found correct OAuth endpoint (`/connect/token`)
+- **API Structure Updates**: Updated all endpoints to match MobileMart Fulcrum documentation
+- **Base URL Correction**: Changed from `api.mobilemart.co.za` to `fulcrumswitch.com`
+- **VAS Type Normalization**: Added mapping for MobileMart Fulcrum VAS types
+- **Wallet Balance Reconciliation**: Fixed balance calculation to exclude internal accounting transactions
+
+**Last Updated**: November 6, 2025  
+**Version**: 2.4.5 - Transaction Filter Implementation  
+**Status**: ✅ **TRANSACTION FILTER IMPLEMENTED AND VERIFIED**
+
+---
+
+## 🚀 **VERSION 2.4.4 - MOBILEMART FULCRUM INTEGRATION UPDATES** (November 5, 2025)
+
+### **🔌 MobileMart Fulcrum Integration Updates**
+- ✅ **OAuth Endpoint Discovery**: Found correct endpoint `/connect/token` (IdentityServer4/OpenIddict pattern)
+- ✅ **Base URL Correction**: Updated from `api.mobilemart.co.za` to `fulcrumswitch.com`
+- ✅ **API Structure Updates**: Updated all endpoints to match MobileMart Fulcrum documentation
+- ✅ **VAS Type Normalization**: Added mapping for electricity → prepaidutility, bill_payment → billpayment
+- ✅ **Product Endpoints**: Updated to `/api/v1/{vasType}/products` structure
+- ✅ **Purchase Endpoints**: Updated to `/api/v1/{vasType}/purchase` structure
+- ✅ **Environment Support**: Added UAT and PROD environment detection
+- ⚠️ **Credentials Verification**: Awaiting MobileMart support to verify credentials
+
+#### **API Endpoint Updates**
+- **OAuth Token**: `/connect/token` (was `/oauth/token`)
+- **Products**: `/api/v1/{vasType}/products` (was `/api/v1/products/{vasType}`)
+- **Purchase**: `/api/v1/{vasType}/purchase` (was `/api/v1/purchase/{vasType}`)
+- **Bill Payment**: `/api/v1/billpayment/pay` (special endpoint)
+
+#### **VAS Types Supported**
+- **Airtime**: Pinned and Pinless
+- **Data**: Pinned and Pinless
+- **Voucher**: Pinned vouchers
+- **Bill Payment**: Bill payments with prevend
+- **Prepaid Utility**: Electricity with prevend
+
+#### **Environment Configuration**
+- **UAT**: `https://uat.fulcrumswitch.com` (default for development)
+- **PROD**: `https://fulcrumswitch.com` (for production)
+- **Auto-detection**: Uses UAT in development, PROD in production
+
+---
+
 ## 2025-11-04 (Latest)
 - **CRITICAL FIX**: Banking-Grade Duplicate Transaction Prevention implemented
 - **Optimistic Locking**: Replaced row-level locking with optimistic locking for high-volume systems

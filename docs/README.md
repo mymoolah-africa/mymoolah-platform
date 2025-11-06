@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: January 9, 2025  
-**Version**: 2.4.3 - Banking-Grade Duplicate Transaction Prevention  
-**Status**: ✅ **DUPLICATE PREVENTION COMPLETE** ✅ **BANKING-GRADE CONCURRENCY**
+**Last Updated**: November 6, 2025  
+**Version**: 2.4.5 - Transaction Filter Implementation  
+**Status**: ✅ **TRANSACTION FILTER IMPLEMENTED AND VERIFIED**
 
 ---
 
@@ -39,6 +39,24 @@ The platform now includes **banking-grade duplicate transaction prevention** wit
 - **Race Condition Prevention**: Fixed race conditions in payment request approval flow
 - **Balance Reconciliation**: Automated balance verification and reconciliation
 - **Deadlock-Free**: Optimistic locking eliminates deadlock risk
+
+### **🔍 NEW: Transaction Filter Implementation**
+
+The platform now includes **comprehensive transaction filtering** that:
+- **Removes Internal Accounting**: Filters out VAT, MyMoolah revenue, and Zapper float credit transactions from user-facing history
+- **Preserves Database Records**: All filtered transactions remain in database for accounting and compliance
+- **Backend Filtering**: Filter applied server-side before data reaches frontend
+- **Verified**: Confirmed all filtered transactions remain in database, only hidden from frontend
+
+### **🔌 NEW: MobileMart Fulcrum Integration Updates**
+
+The platform has been updated with **correct MobileMart Fulcrum API integration**:
+- **OAuth Endpoint**: Discovered correct endpoint `/connect/token`
+- **API Structure**: Updated to match MobileMart Fulcrum documentation
+- **Base URL**: Corrected to `fulcrumswitch.com`
+- **VAS Types**: Support for Airtime, Data, Voucher, Bill Payment, Prepaid Utility
+- **Environment Support**: UAT and PROD environment detection
+- **Status**: Code complete, awaiting credential verification
 
 ### **📱 Enhanced QR Code Scanning**
 

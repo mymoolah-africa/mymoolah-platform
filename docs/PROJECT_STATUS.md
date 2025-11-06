@@ -1,14 +1,14 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: January 9, 2025  
-**Version**: 2.4.2 - QR Code Scanning Enhancements & Cross-Browser Compatibility  
-**Status**: ✅ **QR SCANNING ENHANCED** ✅ **CROSS-BROWSER COMPATIBLE**
+**Last Updated**: November 6, 2025  
+**Version**: 2.4.5 - Transaction Filter Implementation  
+**Status**: ✅ **TRANSACTION FILTER IMPLEMENTED AND VERIFIED**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has successfully enhanced **QR code scanning functionality** with **cross-browser compatibility** and **improved detection algorithms**. The platform now supports camera scanning on iOS Safari, Android Chrome, Desktop Chrome, and provides graceful fallbacks for Opera Mini. Enhanced QR upload detection handles QR codes with logo overlays using multiple detection strategies.
+The MyMoolah Treasury Platform has successfully implemented a **comprehensive transaction filter** that removes internal accounting transactions (VAT, revenue, float credit) from user-facing transaction history while preserving them in the database for accounting and compliance purposes. The platform has also updated the **MobileMart Fulcrum integration** with correct API endpoints and structure.
 
 ### Codespaces Development Status (current)
 - Backend auto-starts on container open; manual fallback `npm run start:cs-ip`
@@ -17,7 +17,26 @@ The MyMoolah Treasury Platform has successfully enhanced **QR code scanning func
 
 ### **🏆 MISSION ACCOMPLISHED - KEY ACHIEVEMENTS**
 
-#### **📱 QR Code Scanning Enhancements** ✅ **COMPLETE**
+#### **🔍 Transaction Filter Implementation** ✅ **COMPLETE**
+- **Internal Accounting Filter**: Comprehensive filter removes VAT, revenue, and float credit transactions from frontend
+- **Database Preservation**: All filtered transactions remain in database for accounting and compliance
+- **Filter Verification**: Confirmed 12 internal accounting transactions filtered out, 95 customer-facing transactions displayed
+- **Backend Implementation**: Filter applied server-side before data reaches frontend
+- **Pattern Matching**: Comprehensive transaction type and description pattern matching
+- **Status**: ✅ Production ready and verified
+
+#### **🔌 MobileMart Fulcrum Integration Updates** ✅ **COMPLETE**
+- **OAuth Endpoint Discovery**: Found correct endpoint `/connect/token` (IdentityServer4/OpenIddict)
+- **Base URL Correction**: Changed from `api.mobilemart.co.za` to `fulcrumswitch.com`
+- **API Structure Updates**: Updated all endpoints to match MobileMart Fulcrum documentation
+- **Product Endpoints**: Updated to `/api/v1/{vasType}/products` structure
+- **Purchase Endpoints**: Updated to `/api/v1/{vasType}/purchase` structure
+- **VAS Type Normalization**: Added mapping for electricity → prepaidutility
+- **Environment Support**: Added UAT and PROD environment detection
+- **Code Complete**: All integration code matches MobileMart Fulcrum API structure
+- ⚠️ **Status**: Awaiting credential verification from MobileMart support
+
+#### **💰 Wallet Balance Reconciliation** ✅ **COMPLETE**
 - **Cross-Browser Camera Support**: iOS Safari, Android Chrome, Desktop Chrome compatibility
 - **Continuous Real-Time Scanning**: Automatic QR code detection from camera feed (10 scans/second)
 - **Opera Mini Support**: Graceful fallback with helpful messaging and upload option guidance

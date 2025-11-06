@@ -476,18 +476,46 @@ class WalletController {
       // Keep only customer-facing transactions (actual payments and fees)
       const filteredRows = deduplicatedRows.filter((tx) => {
         const desc = (tx.description || '').toLowerCase();
+        const type = (tx.type || '').toLowerCase();
         
-        // Hide internal accounting entries
-        if (desc.includes('vat payable') || 
-            desc.includes('vat payable to') ||
-            desc.includes('mymoolah revenue') ||
-            desc.includes('revenue from') ||
-            desc.includes('float credit') ||
-            desc.includes('float credit from')) {
+        // CRITICAL: Filter by transaction type first (most reliable)
+        const internalAccountingTypes = [
+          'vat_payable',
+          'mymoolah_revenue',
+          'zapper_float_credit',
+          'float_credit',
+          'revenue'
+        ];
+        if (internalAccountingTypes.includes(type)) {
           return false;
         }
         
-        // Keep all other transactions (including "Zapper payment to" and "Zapper transaction fee")
+        // CRITICAL: Filter by description patterns (comprehensive matching)
+        // VAT patterns
+        if (desc.includes('vat payable') || 
+            desc.includes('vat payable to') ||
+            desc.includes('vat to') ||
+            (desc.includes('vat') && desc.includes('payable'))) {
+          return false;
+        }
+        
+        // Revenue patterns
+        if (desc.includes('mymoolah revenue') ||
+            desc.includes('revenue from') ||
+            desc.includes('revenue f') ||
+            (desc.includes('revenue') && desc.includes('mymoolah'))) {
+          return false;
+        }
+        
+        // Float credit patterns
+        if (desc.includes('float credit') ||
+            desc.includes('float credit from') ||
+            desc.includes('zapper float credit') ||
+            (desc.includes('float') && desc.includes('credit'))) {
+          return false;
+        }
+        
+        // Keep all customer-facing transactions (including "Zapper payment to" and "Zapper transaction fee")
         return true;
       });
 
