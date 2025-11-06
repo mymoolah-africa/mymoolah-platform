@@ -61,7 +61,6 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
   );
   
   if (isQRTransaction) {
-    console.log(`🔍 [ICON] QR transaction detected: ${description.substring(0, 50)}`);
     return <QrCode style={{ ...iconStyle, color: iconColor }} />;
   }
   

@@ -474,7 +474,6 @@ class WalletController {
 
       // Filter out internal accounting transactions (float credits, revenue, VAT)
       // Keep only customer-facing transactions (actual payments and fees)
-      console.log(`🔍 [FILTER] Starting filter - ${deduplicatedRows.length} transactions before filter`);
       const filteredRows = deduplicatedRows.filter((tx) => {
         const desc = (tx.description || '').toLowerCase();
         const type = (tx.type || '').toLowerCase();
@@ -488,7 +487,6 @@ class WalletController {
           'revenue'
         ];
         if (internalAccountingTypes.includes(type)) {
-          console.log(`🔍 [FILTER] Filtered out by type: ${type} - ${desc.substring(0, 60)}`);
           return false;
         }
         
@@ -498,7 +496,6 @@ class WalletController {
             desc.includes('vat payable to') ||
             desc.includes('vat to') ||
             (desc.includes('vat') && desc.includes('payable'))) {
-          console.log(`🔍 [FILTER] Filtered out VAT: ${desc.substring(0, 60)}`);
           return false;
         }
         
@@ -507,7 +504,6 @@ class WalletController {
             desc.includes('revenue from') ||
             desc.includes('revenue f') ||
             (desc.includes('revenue') && desc.includes('mymoolah'))) {
-          console.log(`🔍 [FILTER] Filtered out revenue: ${desc.substring(0, 60)}`);
           return false;
         }
         
@@ -516,14 +512,12 @@ class WalletController {
             desc.includes('float credit from') ||
             desc.includes('zapper float credit') ||
             (desc.includes('float') && desc.includes('credit'))) {
-          console.log(`🔍 [FILTER] Filtered out float credit: ${desc.substring(0, 60)}`);
           return false;
         }
         
         // Keep all customer-facing transactions (including "Zapper payment to" and "Zapper transaction fee")
         return true;
       });
-      console.log(`🔍 [FILTER] Filter complete - ${filteredRows.length} transactions after filter (removed ${deduplicatedRows.length - filteredRows.length})`);
 
       // Generate next cursor for pagination (based on original transactions, not filtered)
       const nextCursor = transactions.length > 0 ? 
