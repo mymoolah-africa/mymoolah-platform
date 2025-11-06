@@ -49,7 +49,7 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <Zap style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 5. QR/ZAPPER PAYMENT TRANSACTIONS (QR Code icons)
+  // 5. QR/ZAPPER PAYMENT TRANSACTIONS (QR Code icons) - CHECK BEFORE OTHER TRANSACTIONS
   const metadata = transaction.metadata || {};
   const isQRTransaction = (
     description.includes('qr payment') ||
@@ -61,6 +61,7 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
   );
   
   if (isQRTransaction) {
+    console.log(`🔍 [ICON] QR transaction detected: ${description.substring(0, 50)}`);
     return <QrCode style={{ ...iconStyle, color: iconColor }} />;
   }
   
