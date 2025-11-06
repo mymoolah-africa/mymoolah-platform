@@ -13,7 +13,25 @@ const MobileMartAuthService = require('../services/mobilemartAuthService');
 class MobileMartController {
     constructor() {
         this.authService = new MobileMartAuthService();
-    
+    }
+
+    /**
+     * Normalize VAS type to match MobileMart Fulcrum API naming
+     * @param {string} vasType - VAS type from request
+     * @returns {string} Normalized VAS type
+     */
+    normalizeVasType(vasType) {
+        const mapping = {
+            'airtime': 'airtime',
+            'data': 'data',
+            'voucher': 'voucher',
+            'billpayment': 'billpayment',
+            'bill_payment': 'billpayment',
+            'electricity': 'prepaidutility',
+            'prepaidutility': 'prepaidutility',
+            'utility': 'prepaidutility'
+        };
+        return mapping[vasType.toLowerCase()] || vasType.toLowerCase();
     }
 
     /**
@@ -51,10 +69,12 @@ class MobileMartController {
             if (!vasType) {
                 return res.status(400).json({ success: false, error: 'VAS type is required' });
             }
-            // Example: /products/airtime, /products/data, /products/electricity
+            // MobileMart Fulcrum API structure: /api/v1/{vasType}/products
+            // VAS types: airtime, data, voucher, billpayment, prepaidutility
+            const normalizedVasType = this.normalizeVasType(vasType);
             const response = await this.authService.makeAuthenticatedRequest(
                 'GET',
-                `/products/${vasType}`
+                `/${normalizedVasType}/products`
             );
             res.json({
                 success: true,
@@ -110,10 +130,13 @@ class MobileMartController {
                 ...(meterNumber && { meterNumber }),
                 ...rest
             };
-            // POST to /purchase/{vasType}
+            // MobileMart Fulcrum API structure: /api/v1/{vasType}/purchase or /api/v1/{vasType}/pay
+            // VAS types: airtime, data, voucher, billpayment, prepaidutility
+            const normalizedVasType = this.normalizeVasType(vasType);
+            const endpoint = vasType === 'billpayment' ? `/${normalizedVasType}/pay` : `/${normalizedVasType}/purchase`;
             const response = await this.authService.makeAuthenticatedRequest(
                 'POST',
-                `/purchase/${vasType}`,
+                endpoint,
                 requestData
             );
             res.json({

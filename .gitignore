@@ -3,3 +3,7 @@ node_modules/
 .env.*
 backups/
 /certs/
+reports/
+*.backup
+*.backup2
+.DS_Store

@@ -12,8 +12,18 @@ const axios = require('axios');
 
 class MobileMartAuthService {
     constructor() {
-        this.baseUrl = process.env.MOBILEMART_API_URL || 'https://api.mobilemart.co.za';
-        this.tokenUrl = `${this.baseUrl}/oauth/token`;
+        // MobileMart Fulcrum API base URL
+        // UAT: https://uat.fulcrumswitch.com
+        // PROD: https://fulcrumswitch.com (or provided via env)
+        // Note: Use UAT for testing, PROD URL provided after compliance testing
+        const defaultBaseUrl = process.env.NODE_ENV === 'production' 
+            ? 'https://fulcrumswitch.com' 
+            : 'https://uat.fulcrumswitch.com';
+        this.baseUrl = process.env.MOBILEMART_API_URL || defaultBaseUrl;
+        
+        // OAuth token endpoint - MobileMart Fulcrum uses /connect/token (IdentityServer4/OpenIddict pattern)
+        // This endpoint accepts POST requests with client_credentials grant type
+        this.tokenUrl = process.env.MOBILEMART_TOKEN_URL || `${this.baseUrl}/connect/token`;
         this.apiVersion = 'v1';
         this.apiUrl = `${this.baseUrl}/api/${this.apiVersion}`;
         
@@ -58,38 +68,88 @@ class MobileMartAuthService {
         try {
 
             
+            // Log request details for debugging
+            console.log('🔍 MobileMart Token Request:', {
+                url: this.tokenUrl,
+                method: 'POST',
+                grant_type: 'client_credentials',
+                client_id: this.clientId?.substring(0, 10) + '...',
+                has_secret: !!this.clientSecret
+            });
+            
+            // Try form-urlencoded format (OAuth 2.0 standard)
+            const formData = new URLSearchParams();
+            formData.append('grant_type', 'client_credentials');
+            formData.append('client_id', this.clientId);
+            formData.append('client_secret', this.clientSecret);
+            
             const response = await axios.post(this.tokenUrl, 
-                {
-                    grant_type: 'client_credentials',
-                    client_id: this.clientId,
-                    client_secret: this.clientSecret
-                },
+                formData.toString(),
                 {
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json'
                     },
-                    timeout: 10000
+                    timeout: 10000,
+                    // Handle SSL certificate issues (for development/testing)
+                    httpsAgent: process.env.NODE_ENV === 'production' ? undefined : 
+                        new (require('https').Agent)({ rejectUnauthorized: false }),
+                    validateStatus: function (status) {
+                        return status >= 200 && status < 600; // Accept all status codes for debugging
+                    }
                 }
             );
 
+            // Log full response details
+            console.log('🔍 MobileMart HTTP Response:', {
+                status: response.status,
+                statusText: response.statusText,
+                headers: response.headers,
+                data: response.data,
+                dataType: typeof response.data
+            });
+
             if (response.status !== 200) {
-                throw new Error(`Token request failed with status ${response.status}`);
+                throw new Error(`Token request failed with status ${response.status}: ${JSON.stringify(response.data)}`);
             }
 
             const tokenData = response.data;
             
-            if (!tokenData.access_token || !tokenData.expires_in) {
-                throw new Error('Invalid token response from MobileMart API');
+            // Handle empty response or different response formats
+            if (!tokenData || (typeof tokenData === 'string' && tokenData.trim() === '')) {
+                throw new Error(`Empty response from MobileMart API. Status: ${response.status}, Headers: ${JSON.stringify(response.headers)}`);
+            }
+            
+            // Handle different response formats
+            let accessToken, expiresIn;
+            if (typeof tokenData === 'string') {
+                try {
+                    const parsed = JSON.parse(tokenData);
+                    accessToken = parsed.access_token || parsed.token || parsed.accessToken;
+                    expiresIn = parsed.expires_in || parsed.expires || parsed.expiresIn;
+                } catch (e) {
+                    throw new Error(`Invalid token response format: ${tokenData}`);
+                }
+            } else if (typeof tokenData === 'object') {
+                accessToken = tokenData.access_token || tokenData.token || tokenData.accessToken;
+                expiresIn = tokenData.expires_in || tokenData.expires || tokenData.expiresIn;
+            }
+            
+            if (!accessToken || !expiresIn) {
+                throw new Error(`Invalid token response from MobileMart API. Response: ${JSON.stringify(tokenData)}`);
             }
 
             // Set token expiry time (subtract buffer time)
-            const expiryTime = Date.now() + (tokenData.expires_in * 1000) - (this.tokenRefreshBuffer * 1000);
+            const expiryTime = Date.now() + (expiresIn * 1000) - (this.tokenRefreshBuffer * 1000);
             
-            this.accessToken = tokenData.access_token;
+            this.accessToken = accessToken;
             this.tokenExpiry = expiryTime;
 
-
-            return tokenData;
+            return {
+                access_token: accessToken,
+                expires_in: expiresIn,
+                token_type: tokenData.token_type || 'Bearer'
+            };
 
         } catch (error) {
             console.error('❌ MobileMart Auth Service: Error requesting access token:', error.message);
@@ -146,7 +206,10 @@ class MobileMartAuthService {
                 method: method.toLowerCase(),
                 url: url,
                 headers: headers,
-                timeout: 30000
+                timeout: 30000,
+                // Handle SSL certificate issues (for development/testing)
+                httpsAgent: process.env.NODE_ENV === 'production' ? undefined : 
+                    new (require('https').Agent)({ rejectUnauthorized: false })
             };
 
             if (data && ['post', 'put', 'patch'].includes(method.toLowerCase())) {
@@ -181,7 +244,10 @@ class MobileMartAuthService {
                         method: method.toLowerCase(),
                         url: url,
                         headers: headers,
-                        timeout: 30000
+                        timeout: 30000,
+                        // Handle SSL certificate issues (for development/testing)
+                        httpsAgent: process.env.NODE_ENV === 'production' ? undefined : 
+                            new (require('https').Agent)({ rejectUnauthorized: false })
                     };
 
                     if (data && ['post', 'put', 'patch'].includes(method.toLowerCase())) {

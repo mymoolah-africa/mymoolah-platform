@@ -1,17 +1,16 @@
-## Recent Updates (2025-01-09)
+**Last Updated**: November 5, 2025  
+**Version**: 2.4.4 - MobileMart Fulcrum Integration Updates
+**Status**: ✅ **MOBILEMART INTEGRATION UPDATED** ⚠️ **AWAITING CREDENTIAL VERIFICATION**
 
-- **QR Code Scanning**: Enhanced camera QR scanning with cross-browser compatibility (iOS Safari, Android Chrome, Opera Mini)
-- **QR Upload**: Enhanced QR code detection with 6 detection strategies for logos and overlays
-- **Mobile UX**: Fixed button responsiveness on mobile devices with proper touch handling
-- `GET /api/v1/vouchers/balance-summary`: Logic confirmed to use multiple queries with status rules (active + pending_payment contributes to active total). Cross-user redemption rules clarified and documented in `VOUCHER_BUSINESS_LOGIC.md`.
-- `GET /api/v1/wallets/balance`: Used by front-end header badges (Vouchers, Send Money, QR Payment). Response consumed with thousands separators in UI.
-- `GET /api/v1/wallets/transactions`: Keyset pagination active with trimmed payloads.
+---
 
-# MyMoolah Treasury Platform - API Documentation
+## Recent Updates (2025-11-05)
 
-**Last Updated**: January 9, 2025  
-**Version**: 2.4.2 - QR Code Scanning Enhancements & Cross-Browser Compatibility
-**Status**: ✅ **QR SCANNING ENHANCED** ✅ **CROSS-BROWSER COMPATIBLE**
+- **MobileMart Fulcrum Integration**: Updated with correct API endpoints and structure
+- **OAuth Endpoint**: Discovered correct endpoint `/connect/token`
+- **API Structure**: Updated to match MobileMart Fulcrum documentation
+- **Base URL**: Corrected to `fulcrumswitch.com`
+- **Wallet Balance Reconciliation**: Fixed balance calculation to exclude internal accounting transactions
 
 ---
 
@@ -406,6 +405,115 @@ GET /api/v1/admin/catalog/sync/status
 ```
 
 **Description**: Retrieves the status of recent catalog synchronization operations (admin only).
+
+---
+
+## 🔌 **MOBILEMART FULCRUM API**
+
+### **MobileMart Fulcrum Integration**
+
+MyMoolah integrates with **MobileMart Fulcrum API** for VAS (Value Added Services) including airtime, data, vouchers, bill payments, and prepaid utilities.
+
+#### **Configuration**
+- **Base URL**: `https://uat.fulcrumswitch.com` (UAT) or `https://fulcrumswitch.com` (PROD)
+- **OAuth Endpoint**: `/connect/token`
+- **API Version**: v1
+- **Authentication**: OAuth 2.0 Client Credentials
+
+#### **1. Health Check**
+```http
+GET /api/v1/mobilemart/health
+```
+
+**Description**: Checks MobileMart integration health status.
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "data": {
+    "status": "healthy",
+    "token_valid": true,
+    "api_url": "https://uat.fulcrumswitch.com/api/v1",
+    "timestamp": "2025-11-05T12:00:00Z"
+  }
+}
+```
+
+#### **2. Get Products by VAS Type**
+```http
+GET /api/v1/mobilemart/products/:vasType
+```
+
+**Description**: Retrieves available products for a specific VAS type from MobileMart.
+
+**VAS Types**:
+- `airtime` - Mobile airtime (pinned and pinless)
+- `data` - Mobile data packages (pinned and pinless)
+- `voucher` - Pinned vouchers
+- `billpayment` - Bill payment services
+- `prepaidutility` - Prepaid electricity (electricity)
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "data": {
+    "vasType": "airtime",
+    "products": [
+      {
+        "merchantProductId": "MTN_AIR_10",
+        "name": "MTN Airtime R10",
+        "amount": 10.00,
+        "currency": "ZAR",
+        "network": "MTN",
+        "type": "pinless"
+      }
+    ]
+  }
+}
+```
+
+#### **3. Purchase Product**
+```http
+POST /api/v1/mobilemart/purchase/:vasType
+```
+
+**Description**: Purchases a product from MobileMart.
+
+**Request Body**:
+```json
+{
+  "merchantProductId": "MTN_AIR_10",
+  "mobileNumber": "+27123456789",
+  "amount": 10.00,
+  "requestId": "unique-request-id"
+}
+```
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "data": {
+    "transaction": {
+      "transactionId": "MM_123456789",
+      "requestId": "unique-request-id",
+      "status": "completed",
+      "amount": 10.00,
+      "timestamp": "2025-11-05T12:00:00Z"
+    }
+  }
+}
+```
+
+#### **Error Codes**
+MobileMart Fulcrum API returns standard error codes:
+- `1000` - ProductDoesNotExist
+- `1001` - AmountInvalid
+- `1002` - CannotSourceProduct
+- `1006` - UserNotAuthenticated
+- `1008` - MerchantCreditLimitReached
 
 ---
 

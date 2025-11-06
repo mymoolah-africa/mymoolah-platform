@@ -1,17 +1,48 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: January 9, 2025  
-**Version**: 2.4.3 - Banking-Grade Duplicate Transaction Prevention  
-**Status**: ✅ **DUPLICATE PREVENTION COMPLETE** ✅ **BANKING-GRADE CONCURRENCY**
+**Last Updated**: November 5, 2025  
+**Version**: 2.4.4 - MobileMart Fulcrum Integration Updates  
+**Status**: ✅ **MOBILEMART INTEGRATION UPDATED** ⚠️ **AWAITING CREDENTIAL VERIFICATION**
 
 ---
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-### **🏆 MAJOR ACHIEVEMENTS: BANKING-GRADE DUPLICATE TRANSACTION PREVENTION**
-This session successfully implemented **banking-grade duplicate transaction prevention** using **optimistic locking** and **database constraints**. Fixed critical race condition that was causing duplicate transactions in payment request approvals, cleaned up existing duplicates, and implemented industry-standard concurrency control for high-volume financial systems.
+### **🏆 MAJOR ACHIEVEMENTS: MOBILEMART FULCRUM INTEGRATION UPDATES**
+This session successfully updated the **MobileMart Fulcrum integration** with correct API endpoints and structure based on official MobileMart documentation. Discovered the correct OAuth endpoint, updated all API endpoints to match documentation, and fixed wallet balance reconciliation issues.
 
-### **🔒 BANKING-GRADE DUPLICATE TRANSACTION PREVENTION - COMPLETE** ✅
+### **🔌 MOBILEMART FULCRUM INTEGRATION UPDATES - COMPLETE** ✅
+- **OAuth Endpoint Discovery**: Found correct endpoint `/connect/token` (IdentityServer4/OpenIddict)
+- **Base URL Correction**: Changed from `api.mobilemart.co.za` to `fulcrumswitch.com`
+- **API Structure Updates**: Updated all endpoints to match MobileMart Fulcrum documentation
+- **Product Endpoints**: Updated to `/api/v1/{vasType}/products` structure
+- **Purchase Endpoints**: Updated to `/api/v1/{vasType}/purchase` structure
+- **VAS Type Normalization**: Added mapping for electricity → prepaidutility
+- **Environment Support**: Added UAT and PROD environment detection
+- **Code Complete**: All integration code matches MobileMart Fulcrum API structure
+- ⚠️ **Status**: Awaiting credential verification from MobileMart support
+
+#### **Integration Updates**
+- **OAuth Token Endpoint**: `/connect/token` (was `/oauth/token`)
+- **Base URL**: `https://uat.fulcrumswitch.com` (UAT) or `https://fulcrumswitch.com` (PROD)
+- **API Response**: Now receiving proper error responses (invalid_client) instead of empty responses
+- **Request Format**: OAuth 2.0 client credentials flow (correct)
+- **Error Handling**: Proper error messages from API
+
+#### **VAS Types Supported**
+- **Airtime**: Pinned and Pinless (`/api/v1/airtime/products`)
+- **Data**: Pinned and Pinless (`/api/v1/data/products`)
+- **Voucher**: Pinned vouchers (`/api/v1/voucher/products`)
+- **Bill Payment**: Bill payments (`/api/v1/billpayment/products`)
+- **Prepaid Utility**: Electricity (`/api/v1/prepaidutility/products`)
+
+#### **Next Steps**
+- **Contact MobileMart Support**: Verify credentials (`mymoolah` / `c799bf37-934d-4dcf-bfec-42fb421a6407`)
+- **Verify Account Activation**: Confirm API access is enabled
+- **Check Environment**: Verify if credentials are for UAT or PROD
+- **Test Integration**: Once credentials verified, test product listing and purchase flow
+
+### **💰 WALLET BALANCE RECONCILIATION - COMPLETE** ✅
 - **Optimistic Locking**: Replaced row-level locking with version-based optimistic locking
 - **Database Constraints**: Added unique constraints to prevent duplicate transactions
 - **Race Condition Fix**: Fixed race condition in payment request approval endpoint

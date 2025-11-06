@@ -318,7 +318,7 @@ class SecurityConfig {
     }
 
     // Check MobileMart credentials
-    if (process.env.MOBILEMART_API_KEY && process.env.MOBILEMART_API_ENDPOINT) {
+    if (process.env.MOBILEMART_CLIENT_ID && process.env.MOBILEMART_CLIENT_SECRET) {
       credentials.mobilemart = true;
     }
 
