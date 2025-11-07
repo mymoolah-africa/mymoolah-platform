@@ -1,6 +1,16 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-11-06 (Latest)
+## 2025-11-07 (Latest)
+- **MobileMart (Fulcrum)**: Production credentials confirmed working by MobileMart; UAT access pending via WhatsApp after we share a cellphone number. Created status and UAT next-steps docs.
+
+**Docs**:
+- `integrations/mobilemart/MOBILEMART_STATUS_2025-11-07.md`
+- `integrations/mobilemart/MOBILEMART_UAT_TESTING_NEXT_STEPS.md`
+
+**Action Needed**:
+- Provide cellphone number for UAT creds; supply alert/balance email recipients and frequency; run UAT test pack.
+
+## 2025-11-06
 - **Transaction Filter**: Implemented comprehensive filter for internal accounting transactions
 - **Filter Verification**: Confirmed VAT, revenue, and float credit transactions remain in database
 - **Frontend Cleanup**: Removed internal accounting transactions from user-facing transaction history
