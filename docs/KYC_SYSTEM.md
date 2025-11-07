@@ -7,10 +7,12 @@ The MyMoolah KYC (Know Your Customer) automation system provides automated docum
 ## Features
 
 ### ✅ **Automated Document Processing**
-- **AI OCR Processing**: Uses OpenAI GPT-4 Vision for document text extraction
+- **AI OCR Processing**: Uses OpenAI GPT-4 Vision for document text extraction (primary)
+- **Tesseract OCR Fallback**: Automatic fallback to Tesseract OCR when OpenAI is unavailable
 - **Document Validation**: Validates South African ID documents and proof of address
 - **Automatic Approval**: Instantly approves verified documents
 - **Retry Logic**: Allows 2 retry attempts before manual review
+- **Zero Downtime**: KYC processing works even with invalid OpenAI API keys
 
 ### ✅ **Security & Compliance**
 - **Secure File Storage**: Documents stored in encrypted storage
@@ -118,6 +120,27 @@ const checkKYCForDebit = async (req, res, next) => {
 
 ## AI OCR Processing
 
+### OCR Processing Architecture
+
+The KYC system uses a **two-tier OCR processing architecture** with automatic fallback:
+
+1. **Primary OCR (OpenAI GPT-4 Vision)**: High-accuracy AI-powered document extraction
+2. **Fallback OCR (Tesseract)**: Automatic fallback when OpenAI is unavailable
+
+### Fallback Mechanism
+
+The system automatically falls back to Tesseract OCR in the following scenarios:
+- **OpenAI API Key Invalid**: When API key is invalid or expired (401 error)
+- **OpenAI API Rate Limit**: When API rate limit is exceeded (429 error)
+- **Network Errors**: When OpenAI API is unreachable
+- **OpenAI Unavailable**: When OpenAI service is temporarily unavailable
+
+**Benefits**:
+- ✅ **Zero Downtime**: KYC processing continues even when OpenAI fails
+- ✅ **Automatic Recovery**: No manual intervention required
+- ✅ **Reliable Processing**: Tesseract OCR ensures document processing continues
+- ✅ **Transparent to Users**: Fallback is seamless and invisible to users
+
 ### OpenAI Integration
 ```javascript
 const response = await openai.chat.completions.create({
@@ -143,7 +166,7 @@ const response = await openai.chat.completions.create({
 ## Error Handling
 
 ### Retry Logic
-- **First Attempt**: Process document with AI OCR
+- **First Attempt**: Process document with AI OCR (OpenAI) or Tesseract (if OpenAI unavailable)
 - **Second Attempt**: If validation fails, provide specific feedback
 - **Third Attempt**: If still failing, escalate to manual review
 
@@ -165,8 +188,11 @@ if (validationResult.attempts >= 2) {
 
 ### Required Environment Variables
 ```bash
-# OpenAI Configuration
+# OpenAI Configuration (Optional - Tesseract fallback works without it)
 OPENAI_API_KEY=your_openai_api_key_here
+
+# Note: KYC processing works without OpenAI API key using Tesseract OCR fallback
+# However, OpenAI provides better OCR accuracy for document extraction
 
 # Support Configuration
 SUPPORT_EMAIL=kyc-support@mymoolah.africa
