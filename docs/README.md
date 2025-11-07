@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: November 6, 2025  
-**Version**: 2.4.5 - Transaction Filter Implementation  
-**Status**: ✅ **TRANSACTION FILTER IMPLEMENTED AND VERIFIED**
+**Last Updated**: November 7, 2025  
+**Version**: 2.4.6 - KYC OpenAI Fallback Fix  
+**Status**: ✅ **KYC FALLBACK WORKING - SYSTEM FULLY FUNCTIONAL**
 
 ---
 
@@ -48,6 +48,15 @@ The platform now includes **comprehensive transaction filtering** that:
 - **Backend Filtering**: Filter applied server-side before data reaches frontend
 - **Verified**: Confirmed all filtered transactions remain in database, only hidden from frontend
 
+### **🆔 NEW: KYC OpenAI Fallback Fix**
+
+The platform now includes **improved KYC OCR fallback mechanism** to Tesseract when OpenAI API fails:
+- **Automatic Fallback**: System automatically uses Tesseract OCR when OpenAI is unavailable
+- **Error Handling**: Robust error handling for API failures (401, 429, network errors)
+- **Zero Downtime**: KYC processing continues to work even with invalid OpenAI API keys
+- **Tested & Verified**: Comprehensive test suite confirms fallback works in all scenarios
+- **Status**: ✅ Fully functional - KYC processing works without OpenAI
+
 ### **🔌 NEW: MobileMart Fulcrum Integration Updates**
 
 The platform has been updated with **correct MobileMart Fulcrum API integration**:
@@ -56,7 +65,7 @@ The platform has been updated with **correct MobileMart Fulcrum API integration*
 - **Base URL**: Corrected to `fulcrumswitch.com`
 - **VAS Types**: Support for Airtime, Data, Voucher, Bill Payment, Prepaid Utility
 - **Environment Support**: UAT and PROD environment detection
-- **Status**: Code complete, awaiting credential verification
+- **Status**: Code complete, awaiting UAT credentials via WhatsApp
 
 ### **📱 Enhanced QR Code Scanning**
 

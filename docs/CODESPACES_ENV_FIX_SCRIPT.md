@@ -71,3 +71,4 @@ git ls-files | grep "\.env"
 - ✅ Future `git pull` will work smoothly
 - ✅ Each environment keeps its own `.env`
 
+

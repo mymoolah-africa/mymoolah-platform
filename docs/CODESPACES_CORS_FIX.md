@@ -70,3 +70,4 @@ After restart:
 
 **Status:** ⚠️ **UPDATE CORS_ORIGINS IN .env**
 
+

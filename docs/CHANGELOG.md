@@ -1,14 +1,41 @@
 # MyMoolah Treasury Platform - Changelog
 
 ## 2025-11-07 (Latest)
-- **MobileMart (Fulcrum)**: Production credentials confirmed working by MobileMart; UAT access pending via WhatsApp after we share a cellphone number. Created status and UAT next-steps docs.
+- **KYC OpenAI Fallback Fix**: Improved KYC OCR fallback mechanism to Tesseract when OpenAI API fails. System now automatically uses Tesseract OCR when OpenAI is unavailable or API key is invalid. Fallback tested and verified working.
+
+**KYC Improvements**:
+- **Early Fallback Detection**: Check for local file path before attempting OpenAI call
+- **Immediate Tesseract Fallback**: Use Tesseract OCR immediately if OpenAI unavailable
+- **Error Handling**: Robust error handling with proper fallback triggering on API failures (401, 429, network errors)
+- **Testing**: Comprehensive test suite created for fallback mechanism
+- **Status**: ✅ KYC processing fully functional without OpenAI (Tesseract fallback working)
+
+**Files Created**:
+- `scripts/test-kyc-ocr-fallback.js` - Comprehensive fallback testing
+- `scripts/test-openai-kyc.js` - OpenAI integration testing
+- `docs/KYC_OPENAI_FALLBACK_FIX.md` - Fallback fix documentation
+- `docs/OPENAI_KYC_FIX.md` - API key fix guide
+
+**User Data Management**:
+- **User Deletion**: Deleted all records for user ID 5 (Hendrik Daniël Botes, mobile 0798569159) including KYC records, transactions, wallets, and all related data
+- **KYC Record Cleanup**: Removed all KYC records for user ID 5 to allow fresh registration
+- **Database Cleanup**: Cascading delete performed across all related tables
+
+**MobileMart (Fulcrum)**:
+- Production credentials confirmed working by MobileMart
+- UAT access pending via WhatsApp after we share a cellphone number
+- Created status and UAT next-steps docs
 
 **Docs**:
 - `integrations/mobilemart/MOBILEMART_STATUS_2025-11-07.md`
 - `integrations/mobilemart/MOBILEMART_UAT_TESTING_NEXT_STEPS.md`
+- `docs/KYC_OPENAI_FALLBACK_FIX.md`
+- `docs/OPENAI_KYC_FIX.md`
 
 **Action Needed**:
-- Provide cellphone number for UAT creds; supply alert/balance email recipients and frequency; run UAT test pack.
+- ✅ **KYC Fallback**: Working correctly (no action needed)
+- ⚠️ **OpenAI API Key**: Update `OPENAI_API_KEY` in `.env` when convenient (optional - Tesseract fallback works)
+- 📋 **MobileMart**: Provide cellphone number for UAT creds; supply alert/balance email recipients and frequency; run UAT test pack.
 
 ## 2025-11-06
 - **Transaction Filter**: Implemented comprehensive filter for internal accounting transactions
@@ -24,9 +51,9 @@
 - **VAS Type Normalization**: Added mapping for MobileMart Fulcrum VAS types
 - **Wallet Balance Reconciliation**: Fixed balance calculation to exclude internal accounting transactions
 
-**Last Updated**: November 6, 2025  
-**Version**: 2.4.5 - Transaction Filter Implementation  
-**Status**: ✅ **TRANSACTION FILTER IMPLEMENTED AND VERIFIED**
+**Last Updated**: November 7, 2025  
+**Version**: 2.4.6 - KYC OpenAI Fallback Fix  
+**Status**: ✅ **KYC FALLBACK WORKING - SYSTEM FULLY FUNCTIONAL**
 
 ---
 
