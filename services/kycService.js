@@ -563,23 +563,38 @@ class KYCService {
 
   // Process document OCR using OpenAI with fallback to Tesseract
   async processDocumentOCR(documentUrl, documentType) {
+    // Check if we have a local file path for fallback
+    const hasLocalFile = documentUrl && documentUrl.startsWith('/uploads/');
+    let localFilePath = null;
+    
+    if (hasLocalFile) {
+      localFilePath = require('path').join(__dirname, '..', documentUrl);
+    }
+
     try {
       // Initialize OpenAI if not already done
       await this.initializeOpenAI();
 
-      // If OpenAI is not available, throw to trigger fallback
+      // If OpenAI is not available, use Tesseract fallback immediately
       if (!this.openai) {
-        throw new Error('OpenAI API not available for OCR processing');
+        if (hasLocalFile) {
+          console.log('ℹ️  OpenAI not available, using Tesseract OCR fallback');
+          const tText = await this.runTesseractOCR(localFilePath);
+          const parsed = this.parseSouthAfricanIdText(tText);
+          return parsed;
+        }
+        throw new Error('OpenAI API not available and no local file for Tesseract fallback');
       }
 
       // Handle local file paths by converting to base64
       let imageData = null;
       let mimeType = 'image/jpeg';
-      let localFilePath = null;
       
       if (documentUrl.startsWith('/uploads/')) {
-
-        localFilePath = require('path').join(__dirname, '..', documentUrl);
+        // localFilePath already set above if hasLocalFile is true
+        if (!localFilePath) {
+          localFilePath = require('path').join(__dirname, '..', documentUrl);
+        }
         const fs = require('fs');
         const path = require('path');
         
@@ -651,16 +666,34 @@ class KYCService {
     } catch (error) {
       console.error('❌ Error processing OCR (primary):', error);
       // Final fallback: try Tesseract if local file is available
-      try {
-        if (documentUrl.startsWith('/uploads/')) {
-          const localFilePath = require('path').join(__dirname, '..', documentUrl);
+      // This handles cases where OpenAI API fails (401, 429, network errors, etc.)
+      if (hasLocalFile && localFilePath) {
+        try {
+          console.log('ℹ️  Attempting Tesseract OCR fallback due to OpenAI error...');
           const tText = await this.runTesseractOCR(localFilePath);
           const parsed = this.parseSouthAfricanIdText(tText);
+          console.log('✅ Tesseract OCR fallback successful');
           return parsed;
+        } catch (fallbackError) {
+          console.error('❌ Fallback OCR also failed:', fallbackError);
+          // If fallback also fails, throw the original error with fallback failure info
+          throw new Error(`OCR processing failed: ${error.message}. Fallback also failed: ${fallbackError.message}`);
         }
-      } catch (fallbackError) {
-        console.error('❌ Fallback OCR also failed:', fallbackError);
+      } else if (hasLocalFile) {
+        // localFilePath should already be set, but if not, try to set it again
+        try {
+          const fallbackFilePath = require('path').join(__dirname, '..', documentUrl);
+          console.log('ℹ️  Attempting Tesseract OCR fallback due to OpenAI error...');
+          const tText = await this.runTesseractOCR(fallbackFilePath);
+          const parsed = this.parseSouthAfricanIdText(tText);
+          console.log('✅ Tesseract OCR fallback successful');
+          return parsed;
+        } catch (fallbackError) {
+          console.error('❌ Fallback OCR also failed:', fallbackError);
+          throw new Error(`OCR processing failed: ${error.message}. Fallback also failed: ${fallbackError.message}`);
+        }
       }
+      // If no local file available, throw the original error
       throw new Error(`OCR processing failed: ${error.message}`);
     }
   }
