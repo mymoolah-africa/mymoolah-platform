@@ -9,6 +9,9 @@ require('dotenv').config();
 if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require')) {
   // Set NODE_ENV to production to use SSL config from config.json
   process.env.NODE_ENV = process.env.NODE_ENV || 'production';
+  
+  // Also set NODE_TLS_REJECT_UNAUTHORIZED for Cloud SQL certificate issues
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
 const { sequelize, Transaction, Wallet, User } = require('../models');
