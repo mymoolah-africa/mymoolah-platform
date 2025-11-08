@@ -23,6 +23,23 @@ module.exports = {
     const isInteger = currentType.includes('INTEGER') || currentType.includes('integer') || currentType === 'INTEGER';
     
     if (isInteger) {
+      // First, drop any foreign key constraints on walletId
+      const constraints = await queryInterface.sequelize.query(
+        `SELECT conname, conrelid::regclass AS table_name
+         FROM pg_constraint
+         WHERE conrelid = 'vas_transactions'::regclass
+         AND contype = 'f'
+         AND conkey::text LIKE '%walletId%'`,
+        { type: Sequelize.QueryTypes.SELECT }
+      );
+      
+      for (const constraint of constraints) {
+        await queryInterface.sequelize.query(
+          `ALTER TABLE vas_transactions DROP CONSTRAINT IF EXISTS "${constraint.conname}"`,
+          { type: Sequelize.QueryTypes.RAW }
+        );
+      }
+      
       // Convert INTEGER to STRING
       // First, get all records and their corresponding wallet IDs
       const records = await queryInterface.sequelize.query(
