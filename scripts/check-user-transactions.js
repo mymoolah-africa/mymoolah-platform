@@ -4,6 +4,13 @@
  */
 
 require('dotenv').config();
+
+// Configure SSL for Cloud SQL connections
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require')) {
+  // Set NODE_ENV to production to use SSL config from config.json
+  process.env.NODE_ENV = process.env.NODE_ENV || 'production';
+}
+
 const { sequelize, Transaction, Wallet, User } = require('../models');
 
 async function checkUserTransactions(userId) {
