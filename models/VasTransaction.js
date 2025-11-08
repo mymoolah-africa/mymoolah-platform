@@ -7,6 +7,16 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
+    transactionId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        notEmpty: true,
+        len: [10, 50],
+      },
+      comment: 'Unique transaction identifier'
+    },
     userId: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -77,6 +87,10 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'vas_transactions',
     timestamps: true,
     indexes: [
+      {
+        unique: true,
+        fields: ['transactionId'],
+      },
       { fields: ['userId'] },
       { fields: ['beneficiaryId'] },
       { fields: ['vasType'] },
@@ -84,7 +98,15 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['status'] },
       { fields: ['reference'] },
       { fields: ['createdAt'] }
-    ]
+    ],
+    hooks: {
+      beforeCreate: (vasTransaction) => {
+        // Generate transaction ID if not provided
+        if (!vasTransaction.transactionId) {
+          vasTransaction.transactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        }
+      },
+    },
   });
 
   VasTransaction.associate = function(models) {
