@@ -78,6 +78,26 @@ async function checkUserTransactions(userId) {
       console.log(`  - ${tx.transactionId}: R${tx.amount} - ${tx.description || 'No description'} (${tx.status}) - ${tx.createdAt}`);
     });
     
+    // Check for R50,000 transaction specifically
+    const r50000Transactions = allTransactions.filter(tx => 
+      parseFloat(tx.amount) === 50000 || parseFloat(tx.amount) === 5000000
+    );
+    
+    console.log(`\n🔍 Transactions with R50,000 amount: ${r50000Transactions.length}`);
+    r50000Transactions.forEach(tx => {
+      console.log(`  - ${tx.transactionId}: ${tx.type} - R${tx.amount} - ${tx.description || 'No description'} (${tx.status}) - ${tx.createdAt}`);
+    });
+    
+    // Check oldest transactions (might be the initial deposit)
+    const oldestTransactions = allTransactions
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      .slice(0, 5);
+    
+    console.log(`\n📅 Oldest 5 transactions:`);
+    oldestTransactions.forEach(tx => {
+      console.log(`  - ${tx.transactionId}: ${tx.type} - R${tx.amount} - ${tx.description || 'No description'} (${tx.status}) - ${tx.createdAt}`);
+    });
+    
     // Check what would be filtered out
     console.log(`\n🔍 Checking filter logic...`);
     const filteredOut = allTransactions.filter((tx) => {
