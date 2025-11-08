@@ -184,8 +184,14 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
       });
     }
 
-    // Sort products by amount (price) for better UX
-    products.sort((a, b) => a.price - b.price);
+    // Sort products by highest commission, then by lowest price
+    products.sort((a, b) => {
+      const commissionDiff = (b.commission || 0) - (a.commission || 0);
+      if (commissionDiff !== 0) {
+        return commissionDiff;
+      }
+      return (a.price || 0) - (b.price || 0);
+    });
 
     // Only show products for the specific beneficiary's network
     // International products are not shown for specific network beneficiaries
@@ -223,8 +229,19 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
  * @security Banking-grade transaction processing with idempotency
  */
 router.post('/airtime-data/purchase', auth, async (req, res) => {
+  const context = {
+    beneficiaryId: req.body?.beneficiaryId,
+    productId: req.body?.productId,
+    amount: req.body?.amount,
+    idempotencyKey: req.body?.idempotencyKey
+  };
+
+  const beneficiaryId = context.beneficiaryId;
+  const productId = context.productId;
+  const amount = context.amount;
+  const idempotencyKey = context.idempotencyKey;
+
   try {
-    const { beneficiaryId, productId, amount, idempotencyKey } = req.body;
     
     // Banking-grade input validation
     const requiredFields = { beneficiaryId, productId, amount, idempotencyKey };
@@ -256,7 +273,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     }
 
     // Get beneficiary details
-    const { Beneficiary } = require('../models');
+    const { Beneficiary, VasTransaction, Wallet, Transaction, User, sequelize } = require('../models');
     const beneficiary = await Beneficiary.findOne({
       where: { id: beneficiaryId, userId: req.user.id }
     });
@@ -301,33 +318,74 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         error: 'Amount cannot have more than 2 decimal places'
       });
     }
+
+    const normalizedAmount = parseFloat(amount.toFixed(2));
+    if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid amount received'
+      });
+    }
     
     // Banking-grade transaction processing with idempotency
-    const { VasTransaction } = require('../models');
-    
     // Check for existing transaction with same idempotency key
     const existingTransaction = await VasTransaction.findOne({
       where: { reference: idempotencyKey }
     });
     
     if (existingTransaction) {
+      let existingLedger = null;
+      if (existingTransaction.metadata?.walletTransactionId) {
+        existingLedger = await Transaction.findOne({
+          where: { transactionId: existingTransaction.metadata.walletTransactionId }
+        });
+      }
+      
       // Return existing transaction (idempotency)
       return res.json({
         success: true,
         data: {
-          transactionId: existingTransaction.id,
-          status: existingTransaction.status,
+          transactionId: existingLedger?.transactionId || existingTransaction.id,
+          walletTransactionId: existingLedger?.transactionId || existingTransaction.metadata?.walletTransactionId || null,
+          status: existingLedger?.status || existingTransaction.status,
           reference: idempotencyKey,
-          message: 'Transaction already processed'
+          message: 'Transaction already processed',
+          beneficiaryIsMyMoolahUser: Boolean(existingTransaction.metadata?.beneficiaryUserId)
         }
       });
     }
     
     // Banking-grade database transaction with rollback capability
-    const sequelize = require('../models').sequelize;
     const transaction = await sequelize.transaction();
-    
+    let committedVasTransaction;
+    let committedLedgerTransaction;
+    let updatedWalletBalance = null;
+
     try {
+      const wallet = await Wallet.findOne({
+        where: { userId: req.user.id },
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+
+      if (!wallet) {
+        await transaction.rollback();
+        return res.status(404).json({
+          success: false,
+          error: 'Wallet not found'
+        });
+      }
+
+      const debitCheck = wallet.canDebit(normalizedAmount);
+      if (!debitCheck.allowed) {
+        await transaction.rollback();
+        return res.status(400).json({
+          success: false,
+          error: debitCheck.reason || 'Insufficient balance',
+          errorCode: 'INSUFFICIENT_FUNDS'
+        });
+      }
+
       // Create a new transaction record with banking-grade validation
       const vasTransaction = await VasTransaction.create({
         userId: req.user.id,
@@ -335,7 +393,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         vasType: type,
         supplierId: supplier,
         supplierProductId: productCode,
-        amount: amount * 100, // Convert to cents
+        amount: Math.round(normalizedAmount * 100), // store in cents
         mobileNumber: beneficiary.identifier,
         status: 'completed',
         reference: idempotencyKey,
@@ -344,7 +402,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           type,
           userId: req.user.id,
           simulated: true,
-          originalAmount: amountInCents ? parseInt(amountInCents) / 100 : amount,
+          originalAmount: amountInCents ? parseInt(amountInCents, 10) / 100 : normalizedAmount,
           processedAt: new Date().toISOString(),
           version: '1.0'
         }
@@ -356,11 +414,46 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         timesPaid: beneficiary.timesPaid + 1
       }, { transaction });
       
+      // Debit purchaser wallet
+      await wallet.debit(normalizedAmount, 'payment', { transaction });
+
+      // Create wallet ledger transaction
+      const ledgerTransaction = await Transaction.create({
+        userId: req.user.id,
+        walletId: wallet.walletId,
+        amount: normalizedAmount,
+        type: 'payment',
+        status: 'completed',
+        description: `${type === 'airtime' ? 'Airtime' : 'Data'} purchase for ${beneficiary.name}`,
+        metadata: {
+          beneficiaryId,
+          beneficiaryPhone: beneficiary.identifier,
+          supplierCode: supplier,
+          supplierProductId: productCode,
+          idempotencyKey,
+          vasTransactionId: vasTransaction.id,
+          vasType: type,
+          amountCents: Math.round(normalizedAmount * 100),
+          channel: 'overlay_services'
+        },
+        currency: wallet.currency
+      }, { transaction });
+
+      // Link wallet ledger transaction to vas transaction metadata
+      await vasTransaction.update({
+        metadata: {
+          ...(vasTransaction.metadata || {}),
+          walletTransactionId: ledgerTransaction.transactionId,
+          walletId: wallet.walletId
+        }
+      }, { transaction });
+
       // Commit the transaction
       await transaction.commit();
       
-      // Use the committed transaction data
-      const committedTransaction = vasTransaction;
+      committedVasTransaction = vasTransaction;
+      committedLedgerTransaction = ledgerTransaction;
+      updatedWalletBalance = parseFloat(wallet.balance);
       
     } catch (dbError) {
       // Rollback transaction on database error
@@ -369,8 +462,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       console.error(`❌ [DB_TXN_ERR] Database transaction failed:`, {
         error: dbError.message,
         userId: req.user?.id,
-        beneficiaryId,
-        idempotencyKey,
+        beneficiaryId: context.beneficiaryId,
+        idempotencyKey: context.idempotencyKey,
         timestamp: new Date().toISOString()
       });
       
@@ -381,33 +474,35 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       });
     }
     
-    // Simulate successful result
-    const result = {
-      success: true,
-      data: {
-        transactionId: committedTransaction.id,
-        status: 'completed',
-        reference: idempotencyKey
-      }
-    };
-
-    // Check if beneficiary is a MyMoolah user
-    const { User } = require('../models');
+    const resultTransactionId = committedLedgerTransaction?.transactionId || committedVasTransaction?.id;
     const beneficiaryUser = await User.findOne({
       where: { phone: beneficiary.identifier }
     });
 
+    if (beneficiaryUser && committedVasTransaction) {
+      try {
+        await committedVasTransaction.update({
+          metadata: {
+            ...(committedVasTransaction.metadata || {}),
+            beneficiaryUserId: beneficiaryUser.id
+          }
+        });
+      } catch (updateError) {
+        console.warn('⚠️ Failed to persist beneficiaryUserId on vasTransaction:', updateError.message);
+      }
+    }
+
     // Prepare receipt data
     const receiptData = {
-      transactionId: result.data?.transactionId || `TXN_${Date.now()}`,
+      transactionId: resultTransactionId || `TXN_${Date.now()}`,
       reference: idempotencyKey,
-      amount: amount,
+      amount: normalizedAmount,
       type: type,
       productId: productId,
       beneficiaryName: beneficiary.name,
       beneficiaryPhone: beneficiary.identifier,
       purchasedAt: new Date().toISOString(),
-      status: result.data?.status || 'completed'
+      status: 'completed'
     };
 
     // Send notification to beneficiary if they are a MyMoolah user
@@ -457,10 +552,12 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     res.json({
       success: true,
       data: {
-        transactionId: result.data?.transactionId || `TXN_${Date.now()}`,
-        status: result.data?.status || 'completed',
+        transactionId: resultTransactionId || `TXN_${Date.now()}`,
+        walletTransactionId: resultTransactionId || null,
+        status: 'completed',
         reference: idempotencyKey,
-        beneficiaryIsMyMoolahUser: !!beneficiaryUser
+        beneficiaryIsMyMoolahUser: !!beneficiaryUser,
+        walletBalance: updatedWalletBalance
       }
     });
 
@@ -472,10 +569,10 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       error: error.message,
       stack: error.stack,
       userId: req.user?.id,
-      beneficiaryId,
-      productId,
-      amount,
-      idempotencyKey,
+      beneficiaryId: context.beneficiaryId,
+      productId: context.productId,
+      amount: context.amount,
+      idempotencyKey: context.idempotencyKey,
       timestamp: new Date().toISOString()
     });
     

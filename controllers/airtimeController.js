@@ -609,113 +609,198 @@ async function getFlashPromotions() {
 
 async function processAirtimePurchase(purchaseData) {
   // TODO: Integrate with actual supplier APIs
-  // For now, simulate successful purchase
-  
+  // Current implementation simulates supplier confirmation while keeping ledger banking-grade
   const { userId, networkId, amount, type, recipientPhone } = purchaseData;
-  
-  // Create transaction record
-  const transaction = await require('../models').Transaction.create({
-    userId,
-    type: 'airtime_purchase',
-    amount: -amount, // Debit from wallet
-    description: `${type === 'voucher' ? 'Airtime Voucher' : 'Airtime Top-Up'} - ${getNetworkName(networkId)}`,
-    status: 'completed',
-    metadata: {
-      networkId,
-      type,
-      recipientPhone,
-      supplier: 'Flash', // Default supplier for now
-      reference: `AIR-${Date.now()}`
-    }
-  });
+  const normalizedAmount = Number(amount);
 
-  // Update wallet balance
-  await require('../models').Wallet.decrement('balance', {
-    by: amount,
-    where: { userId }
-  });
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    throw new Error('Invalid airtime purchase amount');
+  }
+
+  const {
+    sequelize,
+    Wallet,
+    Transaction,
+    Notification
+  } = require('../models');
+
+  const transaction = await sequelize.transaction();
+  let ledgerTransaction;
+  let reference = `AIR-${Date.now()}`;
+  let wallet;
+
+  try {
+    wallet = await Wallet.findOne({
+      where: { userId },
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+
+    if (!wallet) {
+      throw new Error('Wallet not found for airtime purchase');
+    }
+
+    const debitCheck = wallet.canDebit(normalizedAmount);
+    if (!debitCheck.allowed) {
+      const err = new Error(debitCheck.reason || 'Insufficient balance');
+      err.code = 'INSUFFICIENT_FUNDS';
+      throw err;
+    }
+
+    await wallet.debit(normalizedAmount, 'payment', { transaction });
+
+    ledgerTransaction = await Transaction.create({
+      userId,
+      walletId: wallet.walletId,
+      amount: normalizedAmount,
+      type: 'payment',
+      status: 'completed',
+      description: `${type === 'voucher' ? 'Airtime Voucher' : 'Airtime Top-Up'} - ${getNetworkName(networkId)}`,
+      metadata: {
+        networkId,
+        type,
+        recipientPhone,
+        supplier: 'Flash',
+        reference,
+        channel: 'legacy_airtime_controller'
+      },
+      currency: wallet.currency
+    }, { transaction });
+
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 
   // Generate PIN for voucher purchases
   let pin = null;
   if (type === 'voucher') {
     pin = generateVoucherPin();
-    
-    // Store PIN securely for notification delivery
-    await require('../models').Notification.create({
-      userId,
-      type: 'airtime_voucher',
-      title: 'Airtime Voucher PIN',
-      message: `Your ${getNetworkName(networkId)} airtime voucher PIN is: ${pin}`,
-      data: {
-        pin,
-        networkId,
-        amount,
-        reference: transaction.metadata.reference
-      },
-      status: 'unread'
-    });
+
+    try {
+      await Notification.create({
+        userId,
+        type: 'airtime_voucher',
+        title: 'Airtime Voucher PIN',
+        message: `Your ${getNetworkName(networkId)} airtime voucher PIN is: ${pin}`,
+        data: {
+          pin,
+          networkId,
+          amount: normalizedAmount,
+          reference,
+          transactionId: ledgerTransaction.transactionId
+        },
+        status: 'unread'
+      });
+    } catch (notifError) {
+      console.error('❌ Failed to create voucher notification:', notifError.message);
+    }
   }
 
   return {
-    transactionId: transaction.id,
+    transactionId: ledgerTransaction.transactionId,
     status: 'completed',
-    amount,
+    amount: normalizedAmount,
     networkId,
     type,
     recipientPhone,
     pin,
-    reference: transaction.metadata.reference,
+    reference,
     completedAt: new Date().toISOString()
   };
 }
 
 async function processEeziAirtimePurchase(purchaseData) {
   // TODO: Integrate with Flash API for eeziAirtime
-  // For now, simulate successful purchase
-  
+  // Current implementation keeps wallet ledger consistent while simulating supplier confirmation
   const { userId, amount, recipientPhone } = purchaseData;
-  
-  // Create transaction record
-  const transaction = await require('../models').Transaction.create({
-    userId,
-    type: 'eezi_airtime',
-    amount: -amount, // Debit from wallet
-    description: `eeziAirtime Top-Up - ${recipientPhone}`,
-    status: 'completed',
-    metadata: {
-      type: 'eeziAirtime',
-      recipientPhone,
-      supplier: 'Flash',
-      reference: `EEZI-${Date.now()}`
-    }
-  });
+  const normalizedAmount = Number(amount);
 
-  // Update wallet balance
-  await require('../models').Wallet.decrement('balance', {
-    by: amount,
-    where: { userId }
-  });
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    throw new Error('Invalid eeziAirtime amount');
+  }
+
+  const {
+    sequelize,
+    Wallet,
+    Transaction,
+    Notification
+  } = require('../models');
+
+  const transaction = await sequelize.transaction();
+  let ledgerTransaction;
+  const reference = `EEZI-${Date.now()}`;
+  let wallet;
+
+  try {
+    wallet = await Wallet.findOne({
+      where: { userId },
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+
+    if (!wallet) {
+      throw new Error('Wallet not found for eeziAirtime purchase');
+    }
+
+    const debitCheck = wallet.canDebit(normalizedAmount);
+    if (!debitCheck.allowed) {
+      const err = new Error(debitCheck.reason || 'Insufficient balance');
+      err.code = 'INSUFFICIENT_FUNDS';
+      throw err;
+    }
+
+    await wallet.debit(normalizedAmount, 'payment', { transaction });
+
+    ledgerTransaction = await Transaction.create({
+      userId,
+      walletId: wallet.walletId,
+      amount: normalizedAmount,
+      type: 'payment',
+      status: 'completed',
+      description: `eeziAirtime Top-Up - ${recipientPhone}`,
+      metadata: {
+        type: 'eeziAirtime',
+        recipientPhone,
+        supplier: 'Flash',
+        reference,
+        channel: 'legacy_airtime_controller'
+      },
+      currency: wallet.currency
+    }, { transaction });
+
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 
   // Send notification
-  await require('../models').Notification.create({
-    userId,
-    type: 'eezi_airtime',
-    title: 'eeziAirtime Purchase Complete',
-    message: `Your eeziAirtime top-up of R${amount.toFixed(2)} to ${recipientPhone} has been processed.`,
-    data: {
-      amount,
-      recipientPhone,
-      reference: transaction.metadata.reference
-    },
-    status: 'unread'
-  });
+  try {
+    await Notification.create({
+      userId,
+      type: 'eezi_airtime',
+      title: 'eeziAirtime Purchase Complete',
+      message: `Your eeziAirtime top-up of R${normalizedAmount.toFixed(2)} to ${recipientPhone} has been processed.`,
+      data: {
+        amount: normalizedAmount,
+        recipientPhone,
+        reference,
+        transactionId: ledgerTransaction.transactionId
+      },
+      status: 'unread'
+    });
+  } catch (notifError) {
+    console.error('❌ Failed to create eeziAirtime notification:', notifError.message);
+  }
 
   return {
-    transactionId: transaction.id,
+    transactionId: ledgerTransaction.transactionId,
     status: 'completed',
-    amount,
+    amount: normalizedAmount,
     recipientPhone,
-    reference: transaction.metadata.reference,
+    reference,
     completedAt: new Date().toISOString()
   };
 }
