@@ -415,6 +415,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         beneficiaryId: beneficiary.id,
         vasProductId: vasProduct.id,
         vasType: type,
+        transactionType: vasProduct.transactionType || 'topup',
         supplierId: supplier,
         supplierProductId: productCode,
         amount: Math.round(normalizedAmount * 100), // store in cents

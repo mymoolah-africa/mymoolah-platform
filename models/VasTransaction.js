@@ -42,6 +42,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       comment: 'Type of VAS transaction'
     },
+    transactionType: {
+      type: DataTypes.ENUM('voucher', 'topup', 'direct'),
+      allowNull: false,
+      comment: 'Type of transaction (voucher, topup, direct)'
+    },
     supplierId: {
       type: DataTypes.STRING,
       allowNull: false,
