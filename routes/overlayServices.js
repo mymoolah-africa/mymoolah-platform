@@ -386,8 +386,12 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         });
       }
 
+      // Generate transactionId for VasTransaction
+      const vasTransactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      
       // Create a new transaction record with banking-grade validation
       const vasTransaction = await VasTransaction.create({
+        transactionId: vasTransactionId,
         userId: req.user.id,
         beneficiaryId: beneficiary.id,
         vasType: type,
