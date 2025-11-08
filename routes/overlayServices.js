@@ -289,8 +289,26 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     const parts = productId.split('_');
     const type = parts[0];
     const supplier = parts[1];
-    const productCode = parts[2];
-    const amountInCents = parts[3];
+    const productCode = parts.slice(2, -1).join('_'); // Everything between supplier and amount
+    const amountInCents = parts[parts.length - 1];
+    
+    // Find the VasProduct record to get vasProductId
+    const { VasProduct } = require('../models');
+    const vasProduct = await VasProduct.findOne({
+      where: {
+        supplierId: supplier,
+        supplierProductId: productCode,
+        vasType: type,
+        isActive: true
+      }
+    });
+    
+    if (!vasProduct) {
+      return res.status(404).json({
+        success: false,
+        error: 'Product not found in catalog'
+      });
+    }
     
     // Banking-grade amount validation
     const maxAmount = 1000;
@@ -395,6 +413,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         userId: req.user.id,
         walletId: wallet.walletId,
         beneficiaryId: beneficiary.id,
+        vasProductId: vasProduct.id,
         vasType: type,
         supplierId: supplier,
         supplierProductId: productCode,

@@ -32,6 +32,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'Beneficiary ID if applicable'
     },
+    vasProductId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      comment: 'VAS Product ID from vas_products table'
+    },
     vasType: {
       type: DataTypes.ENUM('airtime', 'data', 'electricity', 'bill_payment'),
       allowNull: false,
