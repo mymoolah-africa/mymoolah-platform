@@ -393,6 +393,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       const vasTransaction = await VasTransaction.create({
         transactionId: vasTransactionId,
         userId: req.user.id,
+        walletId: wallet.walletId,
         beneficiaryId: beneficiary.id,
         vasType: type,
         supplierId: supplier,

@@ -22,6 +22,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       comment: 'User who made the transaction'
     },
+    walletId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      comment: 'Wallet ID of the user who made the transaction'
+    },
     beneficiaryId: {
       type: DataTypes.INTEGER,
       allowNull: true,
