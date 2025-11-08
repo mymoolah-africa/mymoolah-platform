@@ -2,6 +2,7 @@ const OpenAI = require('openai');
 const path = require('path');
 const sharp = require('sharp');
 const Tesseract = require('tesseract.js');
+const fs = require('fs').promises;
 
 function normalizeName(name) {
   if (!name) return '';
@@ -439,8 +440,127 @@ class KYCService {
   }
 
   async runTesseractOCR(localFilePath) {
-    // Preprocess: autorotate, upscale moderately, grayscale, increase contrast, binarize, sharpen
-    const preprocessedPath = localFilePath.replace(/(\.[a-z]+)$/i, '.preprocessed$1');
+    // Enhanced preprocessing for South African ID documents
+    // Strategy: Multiple preprocessing attempts with best result selection
+    
+    const preprocessedPaths = [];
+    const strategies = [
+      {
+        name: 'high_contrast',
+        process: async (input, output) => {
+          await sharp(input)
+            .rotate()
+            .resize({ width: 2400, withoutEnlargement: true })
+            .greyscale()
+            .normalise()
+            .sharpen({ sigma: 2, flat: 1, jagged: 2 })
+            .modulate({ brightness: 1.1, saturation: 0 })
+            .linear(1.2, -(128 * 0.2))
+            .toFile(output);
+        }
+      },
+      {
+        name: 'adaptive_threshold',
+        process: async (input, output) => {
+          await sharp(input)
+            .rotate()
+            .resize({ width: 2400, withoutEnlargement: true })
+            .greyscale()
+            .normalise()
+            .threshold(128)
+            .sharpen({ sigma: 2.5 })
+            .toFile(output);
+        }
+      },
+      {
+        name: 'color_channel',
+        process: async (input, output) => {
+          await sharp(input)
+            .rotate()
+            .resize({ width: 2400, withoutEnlargement: true })
+            .extractChannel('red') // Extract red channel to reduce green background interference
+            .greyscale()
+            .normalise()
+            .sharpen({ sigma: 2 })
+            .linear(1.3, -(128 * 0.3))
+            .toFile(output);
+        }
+      }
+    ];
+
+    const ocrResults = [];
+
+    // Try each preprocessing strategy
+    for (const strategy of strategies) {
+      try {
+        const preprocessedPath = localFilePath.replace(/(\.[a-z]+)$/i, `.${strategy.name}$1`);
+        preprocessedPaths.push(preprocessedPath);
+        
+        await strategy.process(localFilePath, preprocessedPath);
+
+        // Try multiple PSM modes for best results
+        const psmModes = [6, 11, 12, 13];
+        
+        for (const psm of psmModes) {
+          try {
+            const { data } = await Tesseract.recognize(preprocessedPath, 'eng', {
+              tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:/- ',
+              preserve_interword_spaces: '1',
+              psm: psm,
+              oem: 1  // LSTM neural nets
+            });
+
+            const text = data.text || '';
+            const confidence = data.confidence || 0;
+
+            // Score this result
+            const idMatch = text.match(/\b(\d{13})\b/);
+            const surnameMatch = text.toUpperCase().match(/\bSURNAME\b[:\s]*([A-Z' -]+)/) || 
+                                text.toUpperCase().match(/\bVAN\b[:\s]*([A-Z' -]+)/);
+            const namesMatch = text.toUpperCase().match(/\bFORENAMES?\b[:\s]*([A-Z' -]+)/) ||
+                             text.toUpperCase().match(/\bVOORNAME\b[:\s]*([A-Z' -]+)/);
+
+            const score = (confidence / 100) + 
+                         (idMatch ? 0.3 : 0) + 
+                         (surnameMatch ? 0.2 : 0) + 
+                         (namesMatch ? 0.2 : 0);
+
+            ocrResults.push({
+              text,
+              confidence,
+              score,
+              strategy: strategy.name,
+              psm,
+              idMatch: !!idMatch,
+              surnameMatch: !!surnameMatch,
+              namesMatch: !!namesMatch
+            });
+          } catch (psmError) {
+            // Continue with next PSM mode
+          }
+        }
+      } catch (strategyError) {
+        console.warn(`⚠️  Preprocessing strategy ${strategy.name} failed:`, strategyError.message);
+      }
+    }
+
+    // Cleanup preprocessed files
+    for (const path of preprocessedPaths) {
+      await fs.unlink(path).catch(() => {});
+    }
+
+    // Select best result based on score
+    if (ocrResults.length > 0) {
+      ocrResults.sort((a, b) => b.score - a.score);
+      const bestResult = ocrResults[0];
+      
+      console.log(`✅ Best OCR result: ${bestResult.strategy} PSM${bestResult.psm} (confidence: ${bestResult.confidence.toFixed(1)}%)`);
+      
+      return bestResult.text;
+    }
+
+    // Fallback to original simple preprocessing if all strategies fail
+    const fallbackPath = localFilePath.replace(/(\.[a-z]+)$/i, '.fallback$1');
     await sharp(localFilePath)
       .rotate()
       .resize({ width: 1600, withoutEnlargement: true })
@@ -448,14 +568,16 @@ class KYCService {
       .normalise()
       .threshold(140)
       .sharpen()
-      .toFile(preprocessedPath);
+      .toFile(fallbackPath);
 
-    const { data } = await Tesseract.recognize(preprocessedPath, 'eng', {
+    const { data } = await Tesseract.recognize(fallbackPath, 'eng', {
       tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:/- ',
       preserve_interword_spaces: '1',
-      psm: 6, // Assume a single uniform block of text
-      oem: 1  // LSTM neural nets
+      psm: 6,
+      oem: 1
     });
+
+    await fs.unlink(fallbackPath).catch(() => {});
     return data.text || '';
   }
 
@@ -467,24 +589,63 @@ class KYCService {
     const oneLine = text.replace(/\s+/g, ' ');
     const upper = text.toUpperCase();
 
-    // 1) Try labelled fields (English & common Afrikaans variants)
-    const surnameMatch = upper.match(/\bSURNAME\b[:\s]*([A-Z' -]+)/) || upper.match(/\bVAN\b[:\s]*([A-Z' -]+)/);
-    const namesMatch = upper.match(/\bNAMES?\b[:\s]*([A-Z' -]+)/) || upper.match(/\bNAME\b[:\s]*([A-Z' -]+)/);
-    const idMatch = oneLine.match(/(?:Identity|Identiteit|ID|ID\.?|ID\s*No\.?|ID\s*Nr\.?|ID\s*Number|Identity\s*No\.?)[^0-9]*([0-9 ]{6,})/i);
-    const dobMatch = oneLine.match(/(?:Date\s*of\s*Birth|Geboortedatum)[:\s]*([0-9]{1,2}\s*[A-Z]{3}\s*[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})/i);
+    // 1) Try labelled fields (English & common Afrikaans variants) - Enhanced patterns
+    const surnameMatch = upper.match(/\b(?:VAN\s*\/\s*)?SURNAME\b[:\s]*([A-Z' -]{2,})/i) || 
+                        upper.match(/\bVAN\b[:\s]*([A-Z' -]{2,})/i) ||
+                        upper.match(/SURNAME\s*([A-Z' -]{2,})/i);
+    const namesMatch = upper.match(/\b(?:VOORNAME\s*\/\s*)?FORENAMES?\b[:\s]*([A-Z' -]{2,})/i) ||
+                      upper.match(/\bVOORNAME\b[:\s]*([A-Z' -]{2,})/i) ||
+                      upper.match(/FORENAMES?\s*([A-Z' -]{2,})/i);
+    const idMatch = oneLine.match(/(?:Identity|Identiteit|ID|ID\.?|ID\s*No\.?|ID\s*Nr\.?|ID\s*Number|Identity\s*No\.?|I\.D\.No\.?)[:\s]*([0-9\s]{10,})/i) ||
+                   oneLine.match(/\b(\d{2}\s*\d{2}\s*\d{2}\s*\d{4}\s*\d{2}\s*\d{1})\b/); // SA ID format with spaces
+    const dobMatch = oneLine.match(/(?:Date\s*of\s*Birth|GEBOORTEDATUM|Geboortedatum|DATE\s*OF\s*BIRTH)[:\s\/]*([0-9]{4}-[0-9]{2}-[0-9]{2}|[0-9]{1,2}\s*[A-Z]{3}\s*[0-9]{4})/i);
 
     if (surnameMatch) {
-      const s = surnameMatch[1].trim();
-      results.surname = s;
-      results.fullName = results.fullName ? `${results.fullName} ${s}` : s;
+      const s = surnameMatch[1].trim().replace(/\s+/g, ' ');
+      // Clean up common OCR errors
+      const cleaned = s.replace(/[^A-Z' -]/g, '').trim();
+      if (cleaned.length >= 2) {
+        results.surname = cleaned;
+        results.fullName = results.fullName ? `${results.fullName} ${cleaned}` : cleaned;
+      }
     }
     if (namesMatch) {
-      const names = namesMatch[1].trim();
-      results.firstNames = names;
-      results.fullName = results.fullName ? `${names} ${results.fullName}` : names;
+      const names = namesMatch[1].trim().replace(/\s+/g, ' ');
+      // Clean up common OCR errors
+      const cleaned = names.replace(/[^A-Z' -]/g, '').trim();
+      if (cleaned.length >= 2) {
+        results.firstNames = cleaned;
+        results.fullName = results.fullName ? `${cleaned} ${results.fullName}` : cleaned;
+      }
     }
-    if (idMatch) results.idNumber = idMatch[1].replace(/\D/g, '').slice(0, 13);
-    if (dobMatch) results.dateOfBirth = dobMatch[1].trim();
+    if (idMatch) {
+      // Extract and clean ID number
+      const rawId = idMatch[1].replace(/\s+/g, '').replace(/\D/g, '');
+      if (rawId.length === 13) {
+        results.idNumber = rawId;
+      } else if (rawId.length > 13) {
+        results.idNumber = rawId.slice(0, 13);
+      } else if (rawId.length >= 10) {
+        // Try to pad or fix partial IDs
+        results.idNumber = rawId.padEnd(13, '0').slice(0, 13);
+      }
+    }
+    if (dobMatch) {
+      const dob = dobMatch[1].trim();
+      // Normalize date format to YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+        results.dateOfBirth = dob;
+      } else if (/^\d{1,2}\s+[A-Z]{3}\s+\d{4}$/i.test(dob)) {
+        // Convert "16 JAN 1992" to "1992-01-16"
+        const months = { JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
+                        JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12' };
+        const parts = dob.toUpperCase().split(/\s+/);
+        if (parts.length === 3 && months[parts[1]]) {
+          const day = parts[0].padStart(2, '0');
+          results.dateOfBirth = `${parts[2]}-${months[parts[1]]}-${day}`;
+        }
+      }
+    }
 
     // 2) Fallbacks
     // ID number: any 13 consecutive digits
@@ -505,30 +666,49 @@ class KYCService {
     const onlyLetters = (txt) => txt.replace(/[^A-Z'\-\s]/g, '').trim();
 
     if (!results.fullName) {
-      let surIdx = lines.findIndex(l => /(\bSURNAME\b|VAN\s*\/\s*SURNAME|VAN\s+SURNAME)/.test(l));
-      let namesIdx = lines.findIndex(l => /(FORENAMES|VOORNAME)/.test(l));
+      // Enhanced pattern matching for SA ID book layout
+      let surIdx = lines.findIndex(l => /(\bVAN\s*\/\s*SURNAME|VAN\s+SURNAME|\bSURNAME\b)/i.test(l));
+      let namesIdx = lines.findIndex(l => /(VOORNAME\s*\/\s*FORENAMES|VOORNAME|FORENAMES)/i.test(l));
       let surnameVal = null;
       let namesVal = null;
+      
       if (surIdx >= 0) {
-        // Scan up to 3 lines below to skip empty/noisy lines
-        for (let k = 1; k <= 3 && surIdx + k < lines.length; k++) {
+        // Scan up to 5 lines below to find surname (more tolerant)
+        for (let k = 1; k <= 5 && surIdx + k < lines.length; k++) {
           const raw = lines[surIdx + k];
-          // Ignore the S.A. BURGER/CITIZEN line completely
-          if (/S\.?A\.?\s*\.?BURGER|CITIZEN/.test(raw)) continue;
+          // Ignore common noise lines
+          if (/S\.?A\.?\s*\.?BURGER|CITIZEN|SOUTH\s*AFRICA|SUID-AFRIKA|I\.?D\.?No/i.test(raw)) continue;
           const cand = onlyLetters(raw).replace(/\s+/g, ' ').trim();
-          if (cand && /^[A-Z'\-]{3,}$/.test(cand)) { surnameVal = cand; break; }
+          // More lenient: allow 2+ characters, allow hyphens and apostrophes
+          if (cand && /^[A-Z'\-]{2,}$/.test(cand) && cand.length <= 30) { 
+            surnameVal = cand; 
+            break; 
+          }
         }
       }
-      if (namesIdx >= 0 && namesIdx + 1 < lines.length) {
-        const cand = onlyLetters(lines[namesIdx + 1]);
-        if (cand && /[A-Z]/.test(cand)) namesVal = cand.replace(/\s+/g, ' ').trim();
+      
+      if (namesIdx >= 0) {
+        // Scan up to 3 lines below FORENAMES label
+        for (let k = 1; k <= 3 && namesIdx + k < lines.length; k++) {
+          const raw = lines[namesIdx + k];
+          // Ignore noise
+          if (/S\.?A\.?\s*\.?BURGER|CITIZEN|I\.?D\.?No/i.test(raw)) continue;
+          const cand = onlyLetters(raw).replace(/\s+/g, ' ').trim();
+          if (cand && /[A-Z]/.test(cand) && cand.length <= 50) {
+            namesVal = cand;
+            break;
+          }
+        }
       }
+      
       if (surnameVal || namesVal) {
-        const first = namesVal ? namesVal.split(/\s+/)[0] : '';
-        const last = surnameVal || '';
-        const full = `${first} ${last}`.trim();
-        if (last.length > 0) results.surname = last;
-        if (first.length > 0) results.firstNames = first;
+        // Handle multiple forenames properly
+        const forenames = namesVal ? namesVal.split(/\s+/).filter(w => w.length > 0).join(' ') : '';
+        const surname = surnameVal || '';
+        const full = `${forenames} ${surname}`.trim();
+        
+        if (surname.length > 0) results.surname = surname;
+        if (forenames.length > 0) results.firstNames = forenames;
         if (full.length > 0) results.fullName = full;
       }
     }
@@ -595,10 +775,8 @@ class KYCService {
         if (!localFilePath) {
           localFilePath = require('path').join(__dirname, '..', documentUrl);
         }
-        const fs = require('fs');
-        const path = require('path');
         
-        const fileBuffer = fs.readFileSync(localFilePath);
+        const fileBuffer = await fs.readFile(localFilePath);
         imageData = fileBuffer.toString('base64');
         
         // Determine MIME type based on file extension
@@ -619,13 +797,59 @@ class KYCService {
         throw new Error('Only local file processing is currently supported');
       }
 
-      // Use real OpenAI vision API for OCR
+      // Enhanced OpenAI prompt for South African ID documents
       const prompt = documentType === 'id_document' 
-        ? "Extract the following information from this identity document (South African ID book/card, South African passport, or international passport): Full name, ID/Passport number, Date of birth, Nationality, Document type (ID/Passport), Country of issue. Return as JSON format with exact values as they appear on the document."
+        ? `You are extracting information from a South African Identity Document (ID book). 
+
+The document has a green background with security patterns. Look for:
+1. ID NUMBER: A 13-digit number (format: YYMMDDGSSSCAZ) usually near the top with a barcode
+2. SURNAME/VAN: The surname appears after "VAN/SURNAME" label, usually in bold uppercase
+3. FORENAMES/VOORNAME: The forenames appear after "VOORNAME/FORENAMES" label, usually in bold uppercase
+4. DATE OF BIRTH: Format YYYY-MM-DD or DD MMM YYYY, appears after "GEBOORTEDATUM/DATE OF BIRTH"
+5. DATE ISSUED: Format YYYY-MM-DD, appears after "DATUM UITGEREIK/DATE ISSUED"
+6. COUNTRY OF BIRTH: Usually "SUID-AFRIKA" or "SOUTH AFRICA"
+
+IMPORTANT:
+- Extract EXACT text as it appears on the document
+- For ID number, extract all 13 digits without spaces
+- For names, preserve capitalization and spacing exactly
+- For dates, use YYYY-MM-DD format
+- Ignore security patterns, watermarks, and background text
+- Focus on the right page which contains personal details
+
+Return ONLY valid JSON in this exact format:
+{
+  "idNumber": "9201165204087",
+  "surname": "BOTES",
+  "forenames": "HENDRIK DANIEL",
+  "fullName": "HENDRIK DANIEL BOTES",
+  "dateOfBirth": "1992-01-16",
+  "dateIssued": "2008-04-03",
+  "countryOfBirth": "SOUTH AFRICA"
+}`
         : "Extract the following information from this South African proof of address document: Street address, City, Postal code, Province. Return as JSON format.";
 
       
       
+      // Preprocess image for better OCR quality before sending to OpenAI
+      let enhancedImageData = imageData;
+      try {
+        const enhancedBuffer = await sharp(localFilePath)
+          .rotate()
+          .resize({ width: 2400, withoutEnlargement: true })
+          .greyscale()
+          .normalise()
+          .sharpen({ sigma: 2, flat: 1, jagged: 2 })
+          .modulate({ brightness: 1.1, saturation: 0 })
+          .linear(1.2, -(128 * 0.2))
+          .toBuffer();
+        
+        enhancedImageData = enhancedBuffer.toString('base64');
+      } catch (preprocessError) {
+        console.warn('⚠️  Image preprocessing failed, using original:', preprocessError.message);
+        // Continue with original image
+      }
+
       const response = await this.openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{
@@ -635,12 +859,14 @@ class KYCService {
             { 
               type: "image_url", 
               image_url: {
-                url: `data:${mimeType};base64,${imageData}`
+                url: `data:${mimeType};base64,${enhancedImageData}`,
+                detail: "high" // Request high detail for better OCR
               }
             }
           ]
         }],
-        max_tokens: 500
+        max_tokens: 500,
+        temperature: 0.1 // Low temperature for more accurate extraction
       });
 
       const content = response.choices[0].message.content || '';
@@ -654,11 +880,36 @@ class KYCService {
       
       
       const parsedFromOpenAI = this.parseOCRResults(content, documentType);
-      if (documentType === 'id_document' && (!parsedFromOpenAI.fullName || !parsedFromOpenAI.idNumber)) {
-
-        const tText = await this.runTesseractOCR(localFilePath);
-        const parsed = this.parseSouthAfricanIdText(tText);
-        return parsed.fullName || parsed.idNumber ? parsed : parsedFromOpenAI;
+      
+      // Enhanced validation: If critical fields are missing, try Tesseract fallback
+      if (documentType === 'id_document') {
+        const hasIdNumber = parsedFromOpenAI.idNumber && /^\d{13}$/.test(parsedFromOpenAI.idNumber.replace(/\D/g, ''));
+        const hasSurname = parsedFromOpenAI.surname && parsedFromOpenAI.surname.trim().length >= 2;
+        const hasForenames = parsedFromOpenAI.forenames && parsedFromOpenAI.forenames.trim().length >= 2;
+        
+        if (!hasIdNumber || (!hasSurname && !hasForenames)) {
+          console.log('⚠️  OpenAI OCR missing critical fields, trying Tesseract fallback...');
+          const tText = await this.runTesseractOCR(localFilePath);
+          const parsed = this.parseSouthAfricanIdText(tText);
+          
+          // Merge results: prefer OpenAI but fill missing fields from Tesseract
+          const merged = {
+            ...parsedFromOpenAI,
+            idNumber: parsedFromOpenAI.idNumber || parsed.idNumber,
+            surname: parsedFromOpenAI.surname || parsed.surname,
+            forenames: parsedFromOpenAI.forenames || parsed.firstNames,
+            fullName: parsedFromOpenAI.fullName || parsed.fullName,
+            dateOfBirth: parsedFromOpenAI.dateOfBirth || parsed.dateOfBirth
+          };
+          
+          // Use Tesseract result if it has more complete data
+          if ((parsed.idNumber && parsed.surname) && (!hasIdNumber || !hasSurname)) {
+            console.log('✅ Using Tesseract result (more complete)');
+            return parsed;
+          }
+          
+          return merged;
+        }
       }
 
       return parsedFromOpenAI;
@@ -709,23 +960,66 @@ class KYCService {
         const lower = Object.fromEntries(
           Object.entries(raw).map(([k, v]) => [String(k).toLowerCase().trim(), v])
         );
+        // Enhanced parsing for South African ID format
+        const surname = lower['surname'] || lower['last name'] || lower['lastname'] || null;
+        const forenames = lower['forenames'] || lower['forename'] || lower['first names'] || lower['firstnames'] || lower['first name'] || lower['firstname'] || null;
+        const fullName = lower['full name'] || lower['name'] || lower['names'] || lower['fullname'] || null;
+        
+        // Build full name from components if not provided
+        let finalFullName = fullName;
+        if (!finalFullName && (surname || forenames)) {
+          const parts = [];
+          if (forenames) parts.push(forenames);
+          if (surname) parts.push(surname);
+          finalFullName = parts.join(' ').trim();
+        }
+        
         const canonical = {
-          fullName:
-            lower['full name'] || lower['name'] || lower['names'] || lower['fullname'] || null,
-          idNumber:
-            (lower['id/passport number'] || lower['identity number'] || lower['id number'] || lower['passport number'] || lower['id']) || null,
-          licenseNumber:
-            (lower['license number'] || lower['driving license number'] || lower['license']) || null,
-          dateOfBirth:
-            lower['date of birth'] || lower['dob'] || null,
+          surname: surname ? String(surname).trim() : null,
+          forenames: forenames ? String(forenames).trim() : null,
+          firstNames: forenames ? String(forenames).trim() : null, // Alias for compatibility
+          fullName: finalFullName ? String(finalFullName).trim() : null,
+          idNumber: (lower['idnumber'] || lower['id/passport number'] || lower['identity number'] || lower['id number'] || lower['passport number'] || lower['id'] || null),
+          licenseNumber: (lower['license number'] || lower['driving license number'] || lower['license'] || null),
+          dateOfBirth: (lower['dateofbirth'] || lower['date of birth'] || lower['dob'] || null),
+          dateIssued: (lower['dateissued'] || lower['date issued'] || null),
           nationality: lower['nationality'] || null,
           documentType: lower['document type'] || lower['doctype'] || null,
-          countryOfIssue: lower['country of issue'] || lower['country'] || null
+          countryOfIssue: (lower['countryofbirth'] || lower['country of birth'] || lower['country of issue'] || lower['country'] || null)
         };
-        // Ensure strings
+        
+        // Clean and normalize ID number (remove spaces, ensure 13 digits)
+        if (canonical.idNumber) {
+          canonical.idNumber = String(canonical.idNumber).replace(/\s+/g, '').replace(/\D/g, '').slice(0, 13);
+          if (canonical.idNumber.length !== 13) {
+            canonical.idNumber = null; // Invalid length
+          }
+        }
+        
+        // Normalize date format
+        if (canonical.dateOfBirth) {
+          const dob = String(canonical.dateOfBirth).trim();
+          // Convert various formats to YYYY-MM-DD
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+            canonical.dateOfBirth = dob;
+          } else if (/^\d{1,2}\s+[A-Z]{3}\s+\d{4}$/i.test(dob)) {
+            const months = { JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
+                            JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12' };
+            const parts = dob.toUpperCase().split(/\s+/);
+            if (parts.length === 3 && months[parts[1]]) {
+              const day = parts[0].padStart(2, '0');
+              canonical.dateOfBirth = `${parts[2]}-${months[parts[1]]}-${day}`;
+            }
+          }
+        }
+        
+        // Ensure all string fields are trimmed
         Object.keys(canonical).forEach(key => {
-          if (canonical[key] != null) canonical[key] = String(canonical[key]).trim();
+          if (canonical[key] != null && typeof canonical[key] === 'string') {
+            canonical[key] = canonical[key].trim();
+          }
         });
+        
         return canonical;
       }
 
