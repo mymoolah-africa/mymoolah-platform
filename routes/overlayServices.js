@@ -452,7 +452,10 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       await wallet.debit(normalizedAmount, 'payment', { transaction });
 
       // Create wallet ledger transaction
+      const ledgerTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
       const ledgerTransaction = await Transaction.create({
+        transactionId: ledgerTransactionId,
         userId: req.user.id,
         walletId: wallet.walletId,
         amount: normalizedAmount,
