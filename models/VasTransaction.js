@@ -62,6 +62,17 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       comment: 'Transaction amount in cents'
     },
+    fee: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: 'Transaction fee in cents'
+    },
+    totalAmount: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      comment: 'Total amount including fees in cents'
+    },
     mobileNumber: {
       type: DataTypes.STRING,
       allowNull: true,

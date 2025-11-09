@@ -407,6 +407,10 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       // Generate transactionId for VasTransaction
       const vasTransactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
       
+      const amountInCentsValue = Math.round(normalizedAmount * 100);
+      const feeInCents = 0;
+      const totalAmountInCents = amountInCentsValue + feeInCents;
+
       // Create a new transaction record with banking-grade validation
       const vasTransaction = await VasTransaction.create({
         transactionId: vasTransactionId,
@@ -418,7 +422,9 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         transactionType: vasProduct.transactionType || 'topup',
         supplierId: supplier,
         supplierProductId: productCode,
-        amount: Math.round(normalizedAmount * 100), // store in cents
+        amount: amountInCentsValue, // store in cents
+        fee: feeInCents,
+        totalAmount: totalAmountInCents,
         mobileNumber: beneficiary.identifier,
         status: 'completed',
         reference: idempotencyKey,
@@ -428,6 +434,9 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           userId: req.user.id,
           simulated: true,
           originalAmount: amountInCents ? parseInt(amountInCents, 10) / 100 : normalizedAmount,
+          amountCents: amountInCentsValue,
+          feeCents: feeInCents,
+          totalAmountCents: totalAmountInCents,
           processedAt: new Date().toISOString(),
           version: '1.0'
         }
