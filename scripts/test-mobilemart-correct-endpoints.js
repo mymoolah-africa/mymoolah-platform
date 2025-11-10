@@ -73,6 +73,7 @@ async function testCorrectEndpoints() {
         { path: '/voucher/products', vasType: 'voucher', desc: 'Voucher Products' },
         { path: '/bill-payment/products', vasType: 'billpayment', desc: 'Bill Payment Products' },  // CORRECTED: Uses hyphen
         { path: '/prepaidutility/products', vasType: 'prepaidutility', desc: 'Prepaid Utility Products' },
+        { path: '/prepaid-utility/products', vasType: 'prepaidutility', desc: 'Prepaid Utility Products (hyphen variant)' },  // Test hyphen variant
     ];
     
     logSection('Testing Correct Endpoint Paths');
