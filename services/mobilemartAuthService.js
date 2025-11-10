@@ -237,7 +237,17 @@ class MobileMartAuthService {
             return response.data;
 
         } catch (error) {
-            console.error(`❌ MobileMart Auth Service: Error making request to ${endpoint}:`, error.message);
+            // Log full error details for debugging
+            if (error.response) {
+                console.error(`❌ MobileMart Auth Service: Error making request to ${endpoint}:`, {
+                    status: error.response.status,
+                    statusText: error.response.statusText,
+                    data: error.response.data,
+                    message: error.message
+                });
+            } else {
+                console.error(`❌ MobileMart Auth Service: Error making request to ${endpoint}:`, error.message);
+            }
             
             // If it's an authentication error, try to refresh token and retry once
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {

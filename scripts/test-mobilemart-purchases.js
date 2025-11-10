@@ -148,6 +148,7 @@ async function testPurchases() {
             logInfo(`  Product: ${product.productName}`);
             logInfo(`  Mobile: ${requestData.mobileNumber}`);
             logInfo(`  Amount: ${requestData.amount || 'Fixed'}`);
+            logInfo(`  Request Data: ${JSON.stringify(requestData, null, 2)}`);
             
             const response = await authService.makeAuthenticatedRequest(
                 'POST',
@@ -163,8 +164,15 @@ async function testPurchases() {
                 results.push({ type: 'Airtime Pinless', success: false, error: 'Unexpected response' });
             }
         } catch (error) {
-            logError(`❌ Airtime Pinless: ${error.message}`);
-            results.push({ type: 'Airtime Pinless', success: false, error: error.message });
+            // Log full error details
+            if (error.response?.data) {
+                logError(`❌ Airtime Pinless: ${error.message}`);
+                logInfo(`  Error Details: ${JSON.stringify(error.response.data, null, 2)}`);
+                results.push({ type: 'Airtime Pinless', success: false, error: error.message, details: error.response.data });
+            } else {
+                logError(`❌ Airtime Pinless: ${error.message}`);
+                results.push({ type: 'Airtime Pinless', success: false, error: error.message });
+            }
         }
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
@@ -222,6 +230,7 @@ async function testPurchases() {
             
             logInfo(`  Product: ${product.productName}`);
             logInfo(`  Mobile: ${requestData.mobileNumber}`);
+            logInfo(`  Request Data: ${JSON.stringify(requestData, null, 2)}`);
             
             const response = await authService.makeAuthenticatedRequest(
                 'POST',
@@ -237,8 +246,15 @@ async function testPurchases() {
                 results.push({ type: 'Data Pinless', success: false, error: 'Unexpected response' });
             }
         } catch (error) {
-            logError(`❌ Data Pinless: ${error.message}`);
-            results.push({ type: 'Data Pinless', success: false, error: error.message });
+            // Log full error details
+            if (error.response?.data) {
+                logError(`❌ Data Pinless: ${error.message}`);
+                logInfo(`  Error Details: ${JSON.stringify(error.response.data, null, 2)}`);
+                results.push({ type: 'Data Pinless', success: false, error: error.message, details: error.response.data });
+            } else {
+                logError(`❌ Data Pinless: ${error.message}`);
+                results.push({ type: 'Data Pinless', success: false, error: error.message });
+            }
         }
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
@@ -331,23 +347,27 @@ async function testPurchases() {
             logInfo(`  Product: ${product.productName}`);
             logInfo(`  Account: ${prevendData.AccountNumber}`);
             
-            // Build query string for prevend
+            // Build query string for prevend (Note: v2 endpoint, not v1)
             const prevendQuery = `AccountNumber=${encodeURIComponent(prevendData.AccountNumber)}&MerchantProductId=${encodeURIComponent(prevendData.MerchantProductId)}&RequestId=${encodeURIComponent(prevendData.RequestId)}`;
-            const prevendResponse = await authService.makeAuthenticatedRequest(
-                'GET',
-                `/v2/bill-payment/prevend?${prevendQuery}`
-            );
+            // Use full URL since it's v2 (not v1)
+            const prevendUrl = `${authService.baseUrl}/v2/bill-payment/prevend?${prevendQuery}`;
+            const headers = await authService.generateRequestHeaders();
+            const axios = require('axios');
+            const prevendResponse = await axios.get(prevendUrl, {
+                headers,
+                httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false })
+            });
             
-            if (prevendResponse.transactionId) {
-                logSuccess(`✅ Bill Payment Prevend: Transaction ID ${prevendResponse.transactionId}`);
+            if (prevendResponse.data?.transactionId) {
+                logSuccess(`✅ Bill Payment Prevend: Transaction ID ${prevendResponse.data.transactionId}`);
                 
                 // Now do purchase
                 logInfo('Testing: Bill Payment Purchase');
                 const purchaseData = {
                     requestId: `TEST_${Date.now()}_BILL_PAY`,
-                    prevendTransactionId: prevendResponse.transactionId,
+                    prevendTransactionId: prevendResponse.data.transactionId,
                     tenderType: 'CreditCard',
-                    amount: prevendResponse.amountDue || 100
+                    amount: prevendResponse.data.amountDue || 100
                 };
                 
                 const purchaseResponse = await authService.makeAuthenticatedRequest(
@@ -396,7 +416,7 @@ async function testPurchases() {
             const utilPrevendQuery = `MeterNumber=${encodeURIComponent(prevendData.MeterNumber)}&MerchantProductId=${encodeURIComponent(prevendData.MerchantProductId)}&RequestId=${encodeURIComponent(prevendData.RequestId)}&Amount=${prevendData.Amount}`;
             const prevendResponse = await authService.makeAuthenticatedRequest(
                 'GET',
-                `/v1/utility/prevend?${utilPrevendQuery}`
+                `/utility/prevend?${utilPrevendQuery}`  // Fixed: removed /v1/ prefix (apiUrl already has it)
             );
             
             if (prevendResponse.transactionId) {
