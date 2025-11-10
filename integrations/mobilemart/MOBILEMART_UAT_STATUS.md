@@ -7,9 +7,9 @@
 
 ## 📊 **Overview**
 
-MobileMart Fulcrum API integration is currently in UAT testing phase. Product listing endpoints are fully functional, and 4 out of 7 purchase types are working successfully.
+MobileMart Fulcrum API integration is currently in UAT testing phase. Product listing endpoints are fully functional, and 6 out of 7 purchase types are working successfully.
 
-**Success Rate:** 57% (4/7 purchase types working)
+**Success Rate:** 86% (6/7 purchase types working)
 
 ---
 
@@ -36,53 +36,53 @@ All 5 VAS types are working and returning products:
 
 ### **3. Purchase Transactions** ✅
 
-#### **Working Purchase Types (4/7):**
+#### **Working Purchase Types (6/7):**
 
-1. **Airtime Pinned** ✅
+1. **Airtime Pinless** ✅ **FIXED!**
+   - **Status:** Working
+   - **Type:** Direct topup (mobile number required)
+   - **Fix:** Provider-based mobile number selection
+   - **Example Transaction ID:** `a5c3eeb0-459c-4b2a-a82a-753c0502c1b4`
+
+2. **Airtime Pinned** ✅
    - **Status:** Working
    - **Type:** Voucher-based (no mobile number required)
-   - **Example Transaction ID:** `c57442ce-4ad4-4643-88e0-e26035134886`
+   - **Example Transaction ID:** `064d96e4-59f5-47bd-bb9f-2693a38b6adf`
 
-2. **Data Pinned** ✅
+3. **Data Pinless** ✅ **FIXED!**
+   - **Status:** Working
+   - **Type:** Direct topup (mobile number required)
+   - **Fix:** Provider-based mobile number selection
+   - **Example Transaction ID:** `0fc159f5-9892-4438-bba4-31fdd23d014d`
+
+4. **Data Pinned** ✅
    - **Status:** Working
    - **Type:** Voucher-based (no mobile number required)
-   - **Example Transaction ID:** `a6c52dd4-6097-4ea9-859c-efd87973b04b`
+   - **Example Transaction ID:** `e568578d-7e9a-4482-aed9-e446fb329660`
 
-3. **Voucher** ✅
+5. **Voucher** ✅
    - **Status:** Working
    - **Type:** Generic voucher purchase
-   - **Example Transaction ID:** `9b27b8d8-ce13-4029-be4d-985a32836e00`
+   - **Example Transaction ID:** `49bfca95-733d-43c9-8c26-e2ebb3d8100d`
 
-4. **Utility** ✅
-   - **Status:** Working (FIXED!)
+6. **Utility** ✅
+   - **Status:** Working
    - **Type:** Prepaid utility (electricity)
-   - **Fix:** Corrected transaction ID access from prevend response
-   - **Example Transaction ID:** `a7d606fe-8645-469a-b01b-8e94aeb1f4f9`
+   - **Example Transaction ID:** `d40df748-05f0-4d1e-bc15-514dd22fee50`
 
 ---
 
 ## ⚠️ **Known Issues**
 
-### **1. Airtime Pinless** ❌
-- **Error:** 1013 - "Mobile Number is invalid"
-- **Mobile Number Tested:** `0720012345` (local format)
-- **Issue:** MobileMart UAT rejecting test mobile numbers
-- **Status:** Requires valid UAT test mobile numbers from MobileMart
-- **Action:** Contact MobileMart support for valid test numbers
-
-### **2. Data Pinless** ❌
-- **Error:** 1013 - "Mobile Number is invalid"
-- **Mobile Number Tested:** `0720012345` (local format)
-- **Issue:** MobileMart UAT rejecting test mobile numbers
-- **Status:** Requires valid UAT test mobile numbers from MobileMart
-- **Action:** Contact MobileMart support for valid test numbers
-
-### **3. Bill Payment** ❌
-- **Error:** 400 Bad Request
-- **Account Number Tested:** `1234567890` (dummy)
-- **Issue:** Requires valid account number for prevend
-- **Status:** Expected - needs real account number for testing
-- **Action:** Use valid account number from MobileMart test pack or real account for UAT
+### **1. Bill Payment** ❌
+- **Error:** 400 Bad Request - Error Code 1002
+- **Error Message:** "Cannot source product. Product cannot be sourced due to upstream provider issue."
+- **Product Tested:** DSTV / Multichoice Bill Payment
+- **Account Used:** `135609708` (DSTV test account)
+- **Transaction ID:** `118c85be-1a39-4e41-b1e8-bca327f803b3`
+- **Root Cause:** **Upstream provider issue** (MobileMart's provider, not our code)
+- **Status:** This is a provider-side issue, not an integration code issue
+- **Action:** Contact MobileMart support about DSTV product availability in UAT
 
 ---
 
@@ -98,10 +98,15 @@ All 5 VAS types are working and returning products:
 - **Fix:** Corrected transaction ID access from prevend response
 - **Result:** Utility purchase now working
 
-### **3. Mobile Number Format** ⏳
+### **3. Mobile Number Format** ✅ **FIXED!**
 - **Issue:** Both local and international formats rejected
-- **Status:** Code updated to use local format, but UAT requires valid test numbers
-- **Action:** Contact MobileMart support for valid UAT test mobile numbers
+- **Fix:** Provider-based mobile number selection using valid UAT test numbers
+- **Status:** ✅ Working - Airtime Pinless and Data Pinless both working
+- **Test Numbers Used:**
+  - Vodacom: `0829802807`
+  - MTN: `0830012300`
+  - CellC: `0840012300`
+  - Telkom: `0850012345`
 
 ### **4. Bill Payment Endpoint** ✅
 - **Issue:** Bill Payment uses v2 endpoint for prevend
@@ -200,15 +205,15 @@ MOBILEMART_SCOPE=api
 
 ## 🚀 **Status Summary**
 
-**Current Status:** ✅ **UAT TESTING IN PROGRESS**
+**Current Status:** ✅ **UAT TESTING IN PROGRESS - 6/7 WORKING**
 
 - ✅ **Authentication:** Working
 - ✅ **Product Listing:** All 5 VAS types working (65 products)
-- ✅ **Purchase Transactions:** 4/7 working (57% success rate)
-- ⚠️ **Pinless Transactions:** Awaiting valid UAT test mobile numbers
-- ⚠️ **Bill Payment:** Awaiting valid account numbers
+- ✅ **Purchase Transactions:** 6/7 working (86% success rate)
+- ✅ **Pinless Transactions:** Working with provider-based mobile number selection
+- ⚠️ **Bill Payment:** Upstream provider issue (Error 1002) - not a code issue
 
-**Next Milestone:** Complete pinless transaction testing with valid UAT test mobile numbers
+**Next Milestone:** Resolve Bill Payment upstream provider issue with MobileMart support
 
 ---
 
