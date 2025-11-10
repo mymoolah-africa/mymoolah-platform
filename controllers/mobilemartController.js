@@ -69,7 +69,7 @@ class MobileMartController {
             if (!vasType) {
                 return res.status(400).json({ success: false, error: 'VAS type is required' });
             }
-            // MobileMart Fulcrum API structure: /api/v1/{vasType}/products
+            // MobileMart Fulcrum API structure: /v1/{vasType}/products (from Swagger docs)
             // VAS types: airtime, data, voucher, billpayment, prepaidutility
             const normalizedVasType = this.normalizeVasType(vasType);
             const response = await this.authService.makeAuthenticatedRequest(
