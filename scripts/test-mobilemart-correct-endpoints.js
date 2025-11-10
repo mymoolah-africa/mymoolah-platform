@@ -57,12 +57,13 @@ async function testCorrectEndpoints() {
     }
     
     // Test correct endpoints based on Swagger
+    // Note: apiUrl already includes /v1, so endpoints should be /{vasType}/products
     const endpoints = [
-        { path: '/v1/airtime/products', vasType: 'airtime', desc: 'Airtime Products' },
-        { path: '/v1/data/products', vasType: 'data', desc: 'Data Products' },
-        { path: '/v1/voucher/products', vasType: 'voucher', desc: 'Voucher Products' },
-        { path: '/v1/billpayment/products', vasType: 'billpayment', desc: 'Bill Payment Products' },
-        { path: '/v1/prepaidutility/products', vasType: 'prepaidutility', desc: 'Prepaid Utility Products' },
+        { path: '/airtime/products', vasType: 'airtime', desc: 'Airtime Products' },
+        { path: '/data/products', vasType: 'data', desc: 'Data Products' },
+        { path: '/voucher/products', vasType: 'voucher', desc: 'Voucher Products' },
+        { path: '/billpayment/products', vasType: 'billpayment', desc: 'Bill Payment Products' },
+        { path: '/prepaidutility/products', vasType: 'prepaidutility', desc: 'Prepaid Utility Products' },
     ];
     
     logSection('Testing Correct Endpoint Paths');
