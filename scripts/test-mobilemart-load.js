@@ -447,8 +447,20 @@ class PurchaseHandlers {
     }
 
     async executeMixed() {
-        const types = ['airtime-pinless', 'airtime-pinned', 'data-pinless', 'data-pinned', 'voucher', 'utility'];
-        const randomType = types[Math.floor(Math.random() * types.length)];
+        // Get available types from test products
+        const availableTypes = [];
+        if (this.testProducts.airtime?.pinless) availableTypes.push('airtime-pinless');
+        if (this.testProducts.airtime?.pinned) availableTypes.push('airtime-pinned');
+        if (this.testProducts.data?.pinless) availableTypes.push('data-pinless');
+        if (this.testProducts.data?.pinned) availableTypes.push('data-pinned');
+        if (this.testProducts.voucher) availableTypes.push('voucher');
+        if (this.testProducts.utility) availableTypes.push('utility');
+        
+        if (availableTypes.length === 0) {
+            throw new Error('No products available for mixed mode');
+        }
+        
+        const randomType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
         return this.execute(randomType);
     }
 
@@ -485,20 +497,22 @@ class LoadTestRunner {
         this.pendingTransactions = 0;
     }
 
-    async run() {
+    async run(typesToTest = []) {
         logSection('MOBILEMART HIGH-VOLUME LOAD TEST');
         logWarning(`⚠️  WARNING: This will generate ${options.tps * options.duration} transactions!`);
         logWarning(`⚠️  Target TPS: ${options.tps}, Duration: ${options.duration}s, Type: ${options.type}`);
         logInfo(`Press Ctrl+C to stop early\n`);
         
-        // Determine which types to test
-        let typesToTest = [];
-        if (options.type === 'all') {
-            typesToTest = ['airtime-pinless', 'airtime-pinned', 'data-pinless', 'data-pinned', 'voucher', 'utility'];
-        } else if (options.type === 'mixed') {
-            typesToTest = ['mixed'];
-        } else {
-            typesToTest = [options.type];
+        // Use provided types or determine from options
+        if (typesToTest.length === 0) {
+            if (options.type === 'mixed') {
+                typesToTest = ['mixed']; // Mixed mode handled separately
+            } else if (options.type === 'all') {
+                // Will be determined from available products
+                typesToTest = this.availableTypes || [];
+            } else {
+                typesToTest = [options.type];
+            }
         }
         
         // Warmup period
@@ -553,9 +567,18 @@ class LoadTestRunner {
                     break;
                 }
                 
-                const type = options.type === 'mixed' 
-                    ? 'mixed' 
-                    : typesToTest[this.transactionCount % typesToTest.length];
+                let type;
+                if (options.type === 'mixed') {
+                    // Random selection from available types
+                    type = typesToTest.length > 0 
+                        ? typesToTest[Math.floor(Math.random() * typesToTest.length)]
+                        : 'mixed';
+                } else {
+                    // Sequential selection from available types
+                    type = typesToTest.length > 0 
+                        ? typesToTest[this.transactionCount % typesToTest.length]
+                        : options.type;
+                }
                 
                 // Execute transaction asynchronously (don't wait)
                 this.executeTransaction(type, typesToTest).catch(err => {
@@ -657,55 +680,137 @@ async function main() {
             process.exit(1);
         }
         
-        // Fetch test products
+        // Fetch test products with retry logic
         logSection('Fetching Test Products');
         const testProducts = {};
         
+        // Helper function to fetch products with retry
+        const fetchProductsWithRetry = async (endpoint, retries = 3, timeout = 60000) => {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    // Create a promise with timeout
+                    const fetchPromise = authService.makeAuthenticatedRequest('GET', endpoint);
+                    const timeoutPromise = new Promise((_, reject) => 
+                        setTimeout(() => reject(new Error('Request timeout')), timeout)
+                    );
+                    
+                    const products = await Promise.race([fetchPromise, timeoutPromise]);
+                    return products;
+                } catch (error) {
+                    if (i === retries - 1) {
+                        throw error;
+                    }
+                    logWarning(`Attempt ${i + 1} failed for ${endpoint}, retrying... (${error.message})`);
+                    await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1))); // Exponential backoff
+                }
+            }
+        };
+        
+        // Fetch products with error handling (continue even if some fail)
         try {
             // Airtime products
-            const airtimeProducts = await authService.makeAuthenticatedRequest('GET', '/airtime/products');
-            if (Array.isArray(airtimeProducts) && airtimeProducts.length > 0) {
-                const pinlessAirtime = airtimeProducts.filter(p => p.pinned === false);
-                const pinnedAirtime = airtimeProducts.filter(p => p.pinned === true);
-                testProducts.airtime = {
-                    pinless: pinlessAirtime.length > 0 ? pinlessAirtime[0] : null,
-                    pinned: pinnedAirtime.length > 0 ? pinnedAirtime[0] : null
-                };
-                logSuccess(`Found ${airtimeProducts.length} airtime products`);
+            try {
+                const airtimeProducts = await fetchProductsWithRetry('/airtime/products', 3, 60000);
+                if (Array.isArray(airtimeProducts) && airtimeProducts.length > 0) {
+                    const pinlessAirtime = airtimeProducts.filter(p => p.pinned === false);
+                    const pinnedAirtime = airtimeProducts.filter(p => p.pinned === true);
+                    testProducts.airtime = {
+                        pinless: pinlessAirtime.length > 0 ? pinlessAirtime[0] : null,
+                        pinned: pinnedAirtime.length > 0 ? pinnedAirtime[0] : null
+                    };
+                    logSuccess(`Found ${airtimeProducts.length} airtime products`);
+                }
+            } catch (error) {
+                logWarning(`Failed to fetch airtime products: ${error.message}`);
             }
             
             // Data products
-            const dataProducts = await authService.makeAuthenticatedRequest('GET', '/data/products');
-            if (Array.isArray(dataProducts) && dataProducts.length > 0) {
-                const pinlessData = dataProducts.filter(p => p.pinned === false);
-                const pinnedData = dataProducts.filter(p => p.pinned === true);
-                testProducts.data = {
-                    pinless: pinlessData.length > 0 ? pinlessData[0] : null,
-                    pinned: pinnedData.length > 0 ? pinnedData[0] : null
-                };
-                logSuccess(`Found ${dataProducts.length} data products`);
+            try {
+                const dataProducts = await fetchProductsWithRetry('/data/products', 3, 60000);
+                if (Array.isArray(dataProducts) && dataProducts.length > 0) {
+                    const pinlessData = dataProducts.filter(p => p.pinned === false);
+                    const pinnedData = dataProducts.filter(p => p.pinned === true);
+                    testProducts.data = {
+                        pinless: pinlessData.length > 0 ? pinlessData[0] : null,
+                        pinned: pinnedData.length > 0 ? pinnedData[0] : null
+                    };
+                    logSuccess(`Found ${dataProducts.length} data products`);
+                }
+            } catch (error) {
+                logWarning(`Failed to fetch data products: ${error.message}`);
             }
             
             // Voucher products
-            const voucherProducts = await authService.makeAuthenticatedRequest('GET', '/voucher/products');
-            if (Array.isArray(voucherProducts) && voucherProducts.length > 0) {
-                testProducts.voucher = voucherProducts[0];
-                logSuccess(`Found ${voucherProducts.length} voucher products`);
+            try {
+                const voucherProducts = await fetchProductsWithRetry('/voucher/products', 3, 60000);
+                if (Array.isArray(voucherProducts) && voucherProducts.length > 0) {
+                    testProducts.voucher = voucherProducts[0];
+                    logSuccess(`Found ${voucherProducts.length} voucher products`);
+                }
+            } catch (error) {
+                logWarning(`Failed to fetch voucher products: ${error.message}`);
             }
             
             // Utility products
-            const utilityProducts = await authService.makeAuthenticatedRequest('GET', '/utility/products');
-            if (Array.isArray(utilityProducts) && utilityProducts.length > 0) {
-                testProducts.utility = utilityProducts[0];
-                logSuccess(`Found ${utilityProducts.length} utility products`);
+            try {
+                const utilityProducts = await fetchProductsWithRetry('/utility/products', 3, 60000);
+                if (Array.isArray(utilityProducts) && utilityProducts.length > 0) {
+                    testProducts.utility = utilityProducts[0];
+                    logSuccess(`Found ${utilityProducts.length} utility products`);
+                }
+            } catch (error) {
+                logWarning(`Failed to fetch utility products: ${error.message}`);
             }
         } catch (error) {
             logError(`Error fetching products: ${error.message}`);
+        }
+        
+        // Check if we have at least one product type available
+        const availableTypes = [];
+        if (testProducts.airtime?.pinless || testProducts.airtime?.pinned) availableTypes.push('airtime');
+        if (testProducts.data?.pinless || testProducts.data?.pinned) availableTypes.push('data');
+        if (testProducts.voucher) availableTypes.push('voucher');
+        if (testProducts.utility) availableTypes.push('utility');
+        
+        if (availableTypes.length === 0) {
+            logError('No products available for testing. Please check your connection and try again.');
             process.exit(1);
         }
         
-        // Validate test products based on type
-        if (options.type !== 'mixed' && options.type !== 'all') {
+        logInfo(`Available product types: ${availableTypes.join(', ')}`);
+        
+        // Validate test products based on type and adjust available types
+        let typesToTest = [];
+        if (options.type === 'all') {
+            // Test all available types
+            if (testProducts.airtime?.pinless) typesToTest.push('airtime-pinless');
+            if (testProducts.airtime?.pinned) typesToTest.push('airtime-pinned');
+            if (testProducts.data?.pinless) typesToTest.push('data-pinless');
+            if (testProducts.data?.pinned) typesToTest.push('data-pinned');
+            if (testProducts.voucher) typesToTest.push('voucher');
+            if (testProducts.utility) typesToTest.push('utility');
+            
+            if (typesToTest.length === 0) {
+                logError('No products available for testing. Please check your connection and try again.');
+                process.exit(1);
+            }
+            logInfo(`Will test ${typesToTest.length} available types: ${typesToTest.join(', ')}`);
+        } else if (options.type === 'mixed') {
+            // Mixed mode - use all available types
+            if (testProducts.airtime?.pinless) typesToTest.push('airtime-pinless');
+            if (testProducts.airtime?.pinned) typesToTest.push('airtime-pinned');
+            if (testProducts.data?.pinless) typesToTest.push('data-pinless');
+            if (testProducts.data?.pinned) typesToTest.push('data-pinned');
+            if (testProducts.voucher) typesToTest.push('voucher');
+            if (testProducts.utility) typesToTest.push('utility');
+            
+            if (typesToTest.length === 0) {
+                logError('No products available for testing. Please check your connection and try again.');
+                process.exit(1);
+            }
+            logInfo(`Mixed mode: Will randomly select from ${typesToTest.length} available types`);
+        } else {
+            // Single type - validate it's available
             const requiredProducts = {
                 'airtime-pinless': testProducts.airtime?.pinless,
                 'airtime-pinned': testProducts.airtime?.pinned,
@@ -717,13 +822,16 @@ async function main() {
             
             if (!requiredProducts[options.type]) {
                 logError(`Required product for type '${options.type}' is not available`);
+                logInfo(`Available types: ${availableTypes.join(', ')}`);
                 process.exit(1);
             }
+            typesToTest = [options.type];
         }
         
         // Initialize metrics and runner
         const metrics = new MetricsTracker();
         const runner = new LoadTestRunner(authService, testProducts, metrics);
+        runner.availableTypes = typesToTest; // Pass available types to runner
         
         // Handle graceful shutdown
         process.on('SIGINT', () => {
@@ -732,7 +840,7 @@ async function main() {
         });
         
         // Run load test
-        await runner.run();
+        await runner.run(typesToTest);
         
         // Print results
         metrics.printReport();
