@@ -144,7 +144,7 @@ async function testPurchases() {
                 requestId: `TEST_${Date.now()}_AIR_PINLESS`,
                 merchantProductId: product.merchantProductId,
                 tenderType: 'CreditCard',
-                mobileNumber: '27720012345',  // Test number in international format (27 = SA country code)
+                mobileNumber: '0720012345',  // Test number from MobileMart test pack (local format)
                 amount: product.fixedAmount ? product.amount : (product.amount || 20)  // Always include amount
             };
             
@@ -424,14 +424,17 @@ async function testPurchases() {
                 `/utility/prevend?${utilPrevendQuery}`  // Fixed: removed /v1/ prefix (apiUrl already has it)
             );
             
-            if (prevendResponse.transactionId) {
-                logSuccess(`✅ Utility Prevend: Transaction ID ${prevendResponse.transactionId}`);
+            // Access transaction ID from response data
+            const prevendTransactionId = prevendResponse.transactionId || prevendResponse.data?.transactionId || prevendResponse.data?.transactionLabels?.transactionLabels?.id;
+            
+            if (prevendTransactionId) {
+                logSuccess(`✅ Utility Prevend: Transaction ID ${prevendTransactionId}`);
                 
-                // Now do purchase
+                // Now do purchase (use transaction ID immediately)
                 logInfo('Testing: Utility Purchase');
                 const purchaseData = {
                     requestId: `TEST_${Date.now()}_UTIL_PAY`,
-                    prevendTransactionId: prevendResponse.transactionId,
+                    prevendTransactionId: prevendTransactionId,
                     tenderType: 'CreditCard'
                 };
                 
