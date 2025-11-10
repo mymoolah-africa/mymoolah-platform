@@ -75,34 +75,30 @@ async function testPurchases() {
     let testProducts = {};
     
     try {
-        // Get Airtime products (PINLESS ONLY - per frontend requirements)
+        // Get Airtime products (TEST BOTH PINNED AND PINLESS, but only sync pinless to catalog)
         const airtimeProducts = await authService.makeAuthenticatedRequest('GET', '/airtime/products');
         if (Array.isArray(airtimeProducts) && airtimeProducts.length > 0) {
-            // Only get pinless products (pinned === false)
             const pinlessAirtime = airtimeProducts.filter(p => p.pinned === false);
-            if (pinlessAirtime.length > 0) {
-                testProducts.airtime = {
-                    pinless: pinlessAirtime[0]  // Use first pinless product
-                };
-                logSuccess(`Found ${airtimeProducts.length} airtime products (${pinlessAirtime.length} pinless)`);
-            } else {
-                logWarning(`No pinless airtime products found (frontend requirement)`);
-            }
+            const pinnedAirtime = airtimeProducts.filter(p => p.pinned === true);
+            testProducts.airtime = {
+                pinless: pinlessAirtime.length > 0 ? pinlessAirtime[0] : null,
+                pinned: pinnedAirtime.length > 0 ? pinnedAirtime[0] : null
+            };
+            logSuccess(`Found ${airtimeProducts.length} airtime products (${pinlessAirtime.length} pinless, ${pinnedAirtime.length} pinned)`);
+            logInfo(`  Note: Testing both, but only pinless will sync to catalog`);
         }
         
-        // Get Data products (PINLESS ONLY - per frontend requirements)
+        // Get Data products (TEST BOTH PINNED AND PINLESS, but only sync pinless to catalog)
         const dataProducts = await authService.makeAuthenticatedRequest('GET', '/data/products');
         if (Array.isArray(dataProducts) && dataProducts.length > 0) {
-            // Only get pinless products (pinned === false)
             const pinlessData = dataProducts.filter(p => p.pinned === false);
-            if (pinlessData.length > 0) {
-                testProducts.data = {
-                    pinless: pinlessData[0]  // Use first pinless product
-                };
-                logSuccess(`Found ${dataProducts.length} data products (${pinlessData.length} pinless)`);
-            } else {
-                logWarning(`No pinless data products found (frontend requirement)`);
-            }
+            const pinnedData = dataProducts.filter(p => p.pinned === true);
+            testProducts.data = {
+                pinless: pinlessData.length > 0 ? pinlessData[0] : null,
+                pinned: pinnedData.length > 0 ? pinnedData[0] : null
+            };
+            logSuccess(`Found ${dataProducts.length} data products (${pinlessData.length} pinless, ${pinnedData.length} pinned)`);
+            logInfo(`  Note: Testing both, but only pinless will sync to catalog`);
         }
         
         // Get Voucher products
@@ -173,7 +169,46 @@ async function testPurchases() {
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    // Test 2: Data Pinless
+    // Test 2: Airtime Pinned
+    if (testProducts.airtime?.pinned) {
+        try {
+            logInfo('Testing: Airtime Pinned Purchase');
+            const product = testProducts.airtime.pinned;
+            const requestData = {
+                requestId: `TEST_${Date.now()}_AIR_PINNED`,
+                merchantProductId: product.merchantProductId,
+                tenderType: 'CreditCard',
+                ...(product.fixedAmount ? {} : { amount: product.amount || 20 })
+            };
+            
+            logInfo(`  Product: ${product.productName}`);
+            logInfo(`  Amount: ${requestData.amount || 'Fixed'}`);
+            logInfo(`  Note: Testing pinned (will NOT sync to catalog)`);
+            
+            const response = await authService.makeAuthenticatedRequest(
+                'POST',
+                '/airtime/pinned',
+                requestData
+            );
+            
+            if (response.transactionId) {
+                logSuccess(`✅ Airtime Pinned: Transaction ID ${response.transactionId}`);
+                if (response.additionalDetails?.pin) {
+                    logInfo(`  PIN: ${response.additionalDetails.pin}`);
+                }
+                results.push({ type: 'Airtime Pinned', success: true, transactionId: response.transactionId });
+            } else {
+                logError(`❌ Airtime Pinned: Unexpected response`);
+                results.push({ type: 'Airtime Pinned', success: false, error: 'Unexpected response' });
+            }
+        } catch (error) {
+            logError(`❌ Airtime Pinned: ${error.message}`);
+            results.push({ type: 'Airtime Pinned', success: false, error: error.message });
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    // Test 3: Data Pinless
     if (testProducts.data?.pinless) {
         try {
             logInfo('Testing: Data Pinless Purchase');
@@ -208,7 +243,44 @@ async function testPurchases() {
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    // Test 3: Voucher
+    // Test 4: Data Pinned
+    if (testProducts.data?.pinned) {
+        try {
+            logInfo('Testing: Data Pinned Purchase');
+            const product = testProducts.data.pinned;
+            const requestData = {
+                requestId: `TEST_${Date.now()}_DATA_PINNED`,
+                merchantProductId: product.merchantProductId,
+                tenderType: 'CreditCard'
+            };
+            
+            logInfo(`  Product: ${product.productName}`);
+            logInfo(`  Note: Testing pinned (will NOT sync to catalog)`);
+            
+            const response = await authService.makeAuthenticatedRequest(
+                'POST',
+                '/data/pinned',
+                requestData
+            );
+            
+            if (response.transactionId) {
+                logSuccess(`✅ Data Pinned: Transaction ID ${response.transactionId}`);
+                if (response.additionalDetails?.pin) {
+                    logInfo(`  PIN: ${response.additionalDetails.pin}`);
+                }
+                results.push({ type: 'Data Pinned', success: true, transactionId: response.transactionId });
+            } else {
+                logError(`❌ Data Pinned: Unexpected response`);
+                results.push({ type: 'Data Pinned', success: false, error: 'Unexpected response' });
+            }
+        } catch (error) {
+            logError(`❌ Data Pinned: ${error.message}`);
+            results.push({ type: 'Data Pinned', success: false, error: error.message });
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    // Test 5: Voucher
     if (testProducts.voucher) {
         try {
             logInfo('Testing: Voucher Purchase');
@@ -243,7 +315,7 @@ async function testPurchases() {
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    // Test 4: Bill Payment (requires prevend)
+    // Test 6: Bill Payment (requires prevend)
     if (testProducts.billPayment) {
         try {
             logInfo('Testing: Bill Payment Prevend');
@@ -302,7 +374,7 @@ async function testPurchases() {
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
     
-    // Test 5: Utility (requires prevend)
+    // Test 7: Utility (requires prevend)
     if (testProducts.utility) {
         try {
             logInfo('Testing: Utility Prevend');

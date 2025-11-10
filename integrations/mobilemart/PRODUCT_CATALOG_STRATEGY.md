@@ -123,13 +123,14 @@ PROD API → Full Product Sync → Production Catalog
 
 ### **Frontend Requirements:**
 - ✅ **Pinless Only:** Frontend supports pinless airtime/data only
-- ✅ **No Pinned:** Pinned products not needed for now
+- ✅ **Pinned Testing:** Test pinned products but don't sync to catalog
 - ✅ **Future:** Can add pinned support later if needed
 
 ### **Product Filtering:**
-- When syncing, filter to **pinless only** for airtime/data
-- Skip pinned products (not supported by frontend)
-- Can add pinned later without breaking changes
+- **Testing:** Test both pinned and pinless products
+- **Catalog Sync:** When syncing production, filter to **pinless only** for airtime/data
+- **Pinned Products:** Test now, but exclude from catalog sync
+- **Future:** Can add pinned to catalog later without breaking changes
 
 ---
 
