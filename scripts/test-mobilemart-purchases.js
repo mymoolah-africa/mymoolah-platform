@@ -261,6 +261,8 @@ async function testPurchases() {
             const provider = (product.contentCreator || '').toLowerCase();
             const mobileNumber = testNumbers[provider] || testNumbers.vodacom;  // Default to Vodacom
             
+            logInfo(`  Provider: ${provider} (${mobileNumber})`);
+            
             // Data pinless doesn't require amount (product determines it)
             const requestData = {
                 requestId: `TEST_${Date.now()}_DATA_PINLESS`,
