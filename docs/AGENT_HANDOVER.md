@@ -40,16 +40,24 @@ This session successfully implemented **improved KYC OCR fallback mechanism** to
 - **Database Cleanup**: Cascading delete performed across all related tables
 - **Status**: ✅ User data completely removed, ready for fresh registration
 
-### **🔌 MOBILEMART FULCRUM INTEGRATION UPDATES - COMPLETE** ✅
-- **OAuth Endpoint Discovery**: Found correct endpoint `/connect/token` (IdentityServer4/OpenIddict)
-- **Base URL Correction**: Changed from `api.mobilemart.co.za` to `fulcrumswitch.com`
-- **API Structure Updates**: Updated all endpoints to match MobileMart Fulcrum documentation
-- **Product Endpoints**: Updated to `/api/v1/{vasType}/products` structure
-- **Purchase Endpoints**: Updated to `/api/v1/{vasType}/purchase` structure
-- **VAS Type Normalization**: Added mapping for electricity → prepaidutility
-- **Environment Support**: Added UAT and PROD environment detection
-- **Code Complete**: All integration code matches MobileMart Fulcrum API structure
-- ⚠️ **Status**: Awaiting credential verification from MobileMart support
+### **🔌 MOBILEMART FULCRUM INTEGRATION UAT TESTING - IN PROGRESS** ✅
+- **UAT Credentials**: Configured and tested successfully
+- **OAuth Endpoint**: `/connect/token` working correctly
+- **Base URL**: `https://uat.fulcrumswitch.com` (UAT) configured
+- **Product Endpoints**: All 5 VAS types verified working (Airtime, Data, Voucher, Bill Payment, Utility)
+- **API Structure**: Corrected to `/v1/{vasType}/products` (removed duplicate /api/)
+- **Purchase Testing**: 4/7 purchase types working (57% success rate)
+  - ✅ Airtime Pinned: Working
+  - ✅ Data Pinned: Working
+  - ✅ Voucher: Working
+  - ✅ Utility: Working (fixed transaction ID access)
+  - ❌ Airtime Pinless: Mobile number format issue
+  - ❌ Data Pinless: Mobile number format issue
+  - ❌ Bill Payment: Requires valid account number
+- **Endpoint Fixes**: Fixed utility purchase transaction ID access, corrected API paths
+- **Catalog Sync**: Script created to sync both pinned and pinless products to catalog
+- **Mobile Number Issue**: Pinless transactions require valid UAT test mobile numbers from MobileMart
+- ⚠️ **Status**: Product listing working, 4/7 purchase types working, awaiting valid UAT test mobile numbers
 
 #### **Integration Updates**
 - **OAuth Token Endpoint**: `/connect/token` (was `/oauth/token`)
