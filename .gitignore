@@ -7,3 +7,9 @@ reports/
 *.backup
 *.backup2
 .DS_Store
+
+# Local-only
+.env
+.gcp-sa.json
+uploads/
+idempotencyKey
