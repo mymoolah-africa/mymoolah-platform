@@ -144,7 +144,7 @@ async function testPurchases() {
                 requestId: `TEST_${Date.now()}_AIR_PINLESS`,
                 merchantProductId: product.merchantProductId,
                 tenderType: 'CreditCard',
-                mobileNumber: '0720012345',  // Test number from MobileMart test pack (local format)
+                mobileNumber: '0829802807',  // Vodacom test number (valid UAT)
                 amount: product.fixedAmount ? product.amount : (product.amount || 20)  // Always include amount
             };
             
@@ -220,17 +220,34 @@ async function testPurchases() {
     }
     
     // Test 3: Data Pinless
+    // Valid UAT test numbers:
+    // - Vodacom: 0829802807
+    // - MTN: 0830012300, 0737111113
+    // - CellC: 0840012300
+    // - Telkom: 0850012345
     if (testProducts.data?.pinless) {
         try {
             logInfo('Testing: Data Pinless Purchase');
             const product = testProducts.data.pinless;
+            
+            // Map product provider to test mobile number
+            const testNumbers = {
+                'vodacom': '0829802807',
+                'mtn': '0830012300',
+                'cellc': '0840012300',
+                'telkom': '0850012345'
+            };
+            
+            // Get provider from product (contentCreator field)
+            const provider = (product.contentCreator || '').toLowerCase();
+            const mobileNumber = testNumbers[provider] || testNumbers.vodacom;  // Default to Vodacom
             
             // Data pinless doesn't require amount (product determines it)
             const requestData = {
                 requestId: `TEST_${Date.now()}_DATA_PINLESS`,
                 merchantProductId: product.merchantProductId,
                 tenderType: 'CreditCard',
-                mobileNumber: '0720012345'  // Test number from MobileMart test pack (local format)
+                mobileNumber: mobileNumber
             };
             
             logInfo(`  Product: ${product.productName}`);
@@ -342,15 +359,19 @@ async function testPurchases() {
             logInfo('Testing: Bill Payment Prevend');
             const product = testProducts.billPayment;
             
+            // Use valid DSTV test account numbers
+            const testAccountNumbers = ['135609708', '135520754'];  // DSTV test accounts
+            const accountNumber = testAccountNumbers[0];  // Use first DSTV account
+            
             // First, do prevend
             const prevendData = {
-                AccountNumber: '1234567890',  // Test account number
+                AccountNumber: accountNumber,
                 MerchantProductId: product.merchantProductId,
                 RequestId: `TEST_${Date.now()}_BILL_PREVEND`
             };
             
             logInfo(`  Product: ${product.productName}`);
-            logInfo(`  Account: ${prevendData.AccountNumber}`);
+            logInfo(`  Account: ${prevendData.AccountNumber} (DSTV test account)`);
             
             // Build query string for prevend (Note: v2 endpoint, not v1)
             const prevendQuery = `AccountNumber=${encodeURIComponent(prevendData.AccountNumber)}&MerchantProductId=${encodeURIComponent(prevendData.MerchantProductId)}&RequestId=${encodeURIComponent(prevendData.RequestId)}`;
