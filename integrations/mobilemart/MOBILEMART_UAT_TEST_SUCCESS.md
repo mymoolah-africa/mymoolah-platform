@@ -1,7 +1,8 @@
 # MobileMart UAT Test Success Report
 
 **Date:** November 10, 2025  
-**Status:** ✅ **6/7 PURCHASE TYPES WORKING** (86% success rate)
+**Status:** ✅ **6/7 PURCHASE TYPES WORKING** (86% success rate)  
+**Latest Test:** November 10, 2025 14:01 UTC
 
 ---
 
@@ -70,14 +71,17 @@
 ## ⚠️ **Remaining Issue (1/7)**
 
 ### **Bill Payment** ⚠️
-- **Error:** 400 Bad Request
-- **Product Tested:** Ekurhuleni West College
+- **Error:** 400 Bad Request - Error Code 1002
+- **Error Message:** "Cannot source product. Product cannot be sourced due to upstream provider issue."
+- **Product Tested:** DSTV / Multichoice Bill Payment
 - **Account Used:** `135609708` (DSTV test account)
-- **Issue:** Account number may not match product type (Ekurhuleni is education, not DSTV)
+- **Transaction ID:** `118c85be-1a39-4e41-b1e8-bca327f803b3`
+- **Root Cause:** **Upstream provider issue** (MobileMart's provider, not our code)
+- **Status:** This is a provider-side issue, not an integration code issue
 - **Next Steps:** 
-  - Find DSTV product in catalog
-  - Or use Pay@ account (`11347901450000300`) for Oudtshoorn Municipality products
-  - Or find education-specific test account
+  - Contact MobileMart support about DSTV product availability in UAT
+  - Try alternative bill payment products (if available)
+  - Verify account activation for bill payment products
 
 ---
 
@@ -90,7 +94,7 @@
 | Data Pinless | ✅ **WORKING** | `3f215dd3-ebbb-4f78-856d-035e4c2695d2` | Vodacom: 0829802807 |
 | Data Pinned | ✅ Working | `c183dfb3-f662-43d0-adfb-2dbc0ba01e54` | Voucher-based |
 | Voucher | ✅ Working | `351e3230-1e51-497e-a09f-74a768582120` | Generic voucher |
-| Bill Payment | ⚠️ Failing | - | Account/product mismatch |
+| Bill Payment | ⚠️ Failing | `118c85be-1a39-4e41-b1e8-bca327f803b3` | Upstream provider issue (Error 1002) |
 | Utility | ✅ Working | `443ce70b-165b-4e66-b412-28ae5cfccd2b` | Electricity |
 
 **Success Rate:** 6/7 (86%)
@@ -173,7 +177,16 @@ The Bill Payment test is failing with a 400 error. Possible causes:
 
 ---
 
-**Last Updated:** November 10, 2025  
-**Test Run:** Successful with valid UAT test numbers  
+**Last Updated:** November 10, 2025 14:01 UTC  
+**Latest Test Run:** ✅ **6/7 WORKING** (86% success rate)  
 **Success Rate:** 6/7 (86%) - **+29% improvement from initial 4/7!**
+
+**Latest Transaction IDs:**
+- Airtime Pinless: `a5c3eeb0-459c-4b2a-a82a-753c0502c1b4`
+- Airtime Pinned: `064d96e4-59f5-47bd-bb9f-2693a38b6adf`
+- Data Pinless: `0fc159f5-9892-4438-bba4-31fdd23d014d`
+- Data Pinned: `e568578d-7e9a-4482-aed9-e446fb329660`
+- Voucher: `49bfca95-733d-43c9-8c26-e2ebb3d8100d`
+- Utility: `d40df748-05f0-4d1e-bc15-514dd22fee50`
+- Bill Payment: ❌ Error 1002 (upstream provider issue)
 
