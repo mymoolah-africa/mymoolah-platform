@@ -13,3 +13,6 @@ reports/
 .gcp-sa.json
 uploads/
 idempotencyKey
+
+# Node modules
+mymoolah-wallet-frontend/node_modules/
