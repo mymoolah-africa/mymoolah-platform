@@ -26,6 +26,13 @@
 - **Test Data:** 8 Fixed Pinned MNO Airtime & Data Products (Vodacom, MTN, CellC, Telkom)
 - **Note:** Uses `<product value>` instead of mobile numbers (voucher-based products)
 
+### **Test Pack 4: Variable Pinned Airtime**
+**Source:** [Fulcrum UAT Test Pack - Variable Pinned Airtime Electrum](https://docs.google.com/spreadsheets/d/1ePVQckBpmEbxJloOfsgxrmOb4QiE8LCw/edit?gid=323034757#gid=323034757)
+
+- **Total Tests:** 4 Compliance Tests
+- **Test Data:** 4 Variable Pinned MNO Products (Vodacom, MTN, CellC, Telkom)
+- **Note:** Uses specific Rand values (R10, R20, R30, R40) for voucher-based variable purchases
+
 ---
 
 ## 🧪 **Test Cases**
@@ -142,6 +149,30 @@
 
 ---
 
+### **Test Pack 4: Variable Pinned Airtime**
+
+#### **VPA-001: Purchase Variable Pinned Airtime (Vodacom)**
+- **Value:** R10 (voucher-based, variable amount)
+- **Network:** Vodacom
+- **Type:** Variable Pinned Airtime
+
+#### **VPA-002: Purchase Variable Pinned Airtime (MTN)**
+- **Value:** R20 (voucher-based, variable amount)
+- **Network:** MTN
+- **Type:** Variable Pinned Airtime
+
+#### **VPA-003: Purchase Variable Pinned Airtime (CellC)**
+- **Value:** R30 (voucher-based, variable amount)
+- **Network:** CellC
+- **Type:** Variable Pinned Airtime
+
+#### **VPA-004: Purchase Variable Pinned Airtime (Telkom)**
+- **Value:** R40 (voucher-based, variable amount)
+- **Network:** Telkom
+- **Type:** Variable Pinned Airtime
+
+---
+
 ## 📊 **Expected Response Structure**
 
 The test pack shows the expected JSON response structure for successful purchases:
@@ -250,10 +281,13 @@ The test pack shows the expected JSON response structure for successful purchase
 - **Fixed Pinless Data:** Fixed denomination data purchases (direct topup)
 - **Fixed Pinned Airtime:** Fixed denomination airtime vouchers (voucher-based)
 - **Fixed Pinned Data:** Fixed denomination data vouchers (voucher-based)
+- **Variable Pinned Airtime:** Variable amount airtime vouchers (voucher-based)
 
-**Key Difference:**
+**Key Differences:**
 - **Pinless:** Direct topup to mobile number (no voucher code)
 - **Pinned:** Voucher-based products with PIN codes (requires voucher redemption)
+- **Variable:** Customer-specified amount (R10, R20, R30, R40, etc.)
+- **Fixed:** Pre-defined denomination products
 
 ### **4. Product Information:**
 - `productId`: Used for purchase requests (from product listing endpoint)
@@ -304,12 +338,13 @@ The test pack shows the expected JSON response structure for successful purchase
 
 3. **Run UAT Tests:**
    - Use test mobile numbers from test packs 1 & 2
-   - Use product values from test pack 3 (Fixed Pinned)
+   - Use product values from test packs 3 & 4 (Fixed/Variable Pinned)
    - Test all 4 networks (Vodacom, MTN, CellC, Telkom)
    - **Test Pack 1:** Variable Pinless Airtime (4 tests)
    - **Test Pack 2:** Fixed Pinless Airtime (4 tests) + Fixed Pinless Data (4 tests)
    - **Test Pack 3:** Fixed Pinned Airtime (4 tests) + Fixed Pinned Data (4 tests)
-   - **Total:** 20 compliance tests across all product types
+   - **Test Pack 4:** Variable Pinned Airtime (4 tests) - R10/R20/R30/R40
+   - **Total:** 24 compliance tests across all product types
    - Verify response structure matches expected format
 
 4. **Contact Support:**
@@ -326,6 +361,7 @@ The test pack shows the expected JSON response structure for successful purchase
 - **Variable Pinless Airtime Test Pack:** https://docs.google.com/spreadsheets/d/1klxUAZWhm5f2vK3AndHe6GOi1ZukRbAK/edit?gid=752812717#gid=752812717
 - **Fixed Pinless Airtime & Data Test Pack:** https://docs.google.com/spreadsheets/d/1Od-XIhVT5A3zh4iVVRa8mU42amf5HBg6/edit?gid=794722755#gid=794722755
 - **Fixed Pinned Airtime & Data Test Pack:** https://docs.google.com/spreadsheets/d/1sbt4UPNG8cWvVilUqR3EKKdo_K27SV2w/edit?gid=383898377#gid=383898377
+- **Variable Pinned Airtime Test Pack:** https://docs.google.com/spreadsheets/d/1ePVQckBpmEbxJloOfsgxrmOb4QiE8LCw/edit?gid=323034757#gid=323034757
 - **Contact:** support@mobilemart.co.za
 - **Last Updated:** 24 April 2024
 
@@ -340,7 +376,8 @@ The test pack shows the expected JSON response structure for successful purchase
 | 2 | Fixed Pinless Data | 4 | Mobile numbers | All 4 |
 | 3 | Fixed Pinned Airtime | 4 | Product values | All 4 |
 | 3 | Fixed Pinned Data | 4 | Product values | All 4 |
-| **Total** | **5 types** | **20** | **Mixed** | **All 4** |
+| 4 | Variable Pinned Airtime | 4 | R10/R20/R30/R40 | All 4 |
+| **Total** | **6 types** | **24** | **Mixed** | **All 4** |
 
 ---
 
