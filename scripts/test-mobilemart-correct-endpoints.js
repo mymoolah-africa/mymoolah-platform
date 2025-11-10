@@ -44,8 +44,17 @@ function logSection(title) {
 async function testCorrectEndpoints() {
     logSection('MOBILEMART CORRECT ENDPOINT PATHS TEST');
     logInfo('Using CORRECT paths from Swagger: /v1/{vasType}/products');
+    logInfo('Note: apiUrl already includes /v1, so endpoints are /{vasType}/products');
+    
+    // Enable debug logging
+    process.env.DEBUG_MOBILEMART = 'true';
     
     const authService = new MobileMartAuthService();
+    
+    // Show URL construction
+    logInfo(`Base URL: ${authService.baseUrl}`);
+    logInfo(`API URL: ${authService.apiUrl}`);
+    console.log('');
     
     // Verify auth
     try {
