@@ -82,6 +82,9 @@ class MobileMartAuthService {
             formData.append('grant_type', 'client_credentials');
             formData.append('client_id', this.clientId);
             formData.append('client_secret', this.clientSecret);
+            // Add scope parameter (required by MobileMart Fulcrum API)
+            const scope = process.env.MOBILEMART_SCOPE || 'api';
+            formData.append('scope', scope);
             
             const response = await axios.post(this.tokenUrl, 
                 formData.toString(),
