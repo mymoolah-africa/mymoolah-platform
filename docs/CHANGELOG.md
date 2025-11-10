@@ -40,6 +40,15 @@
 - UAT access pending via WhatsApp after we share a cellphone number
 - Created status and UAT next-steps docs
 
+- **VAS Commission VAT Allocation**:
+  - Split VAS supplier commission into VAT (15%) and net revenue with inclusive calculation
+  - Persist commission, VAT, and net values on `vas_transactions` metadata and tax transaction records
+  - Post balanced ledger journals to MM commission clearing, VAT control, and revenue accounts while keeping customer-facing histories gross-only
+
+- **Codespaces Backend Startup Script**:
+  - Added `scripts/start-codespace-backend.sh` for one-command Codespaces backend launches
+  - Automatically resets the Redis container (or local server) before running `npm run start:cs-ip`, eliminating repeated ECONNREFUSED warnings
+
 **Docs**:
 - `integrations/mobilemart/MOBILEMART_STATUS_2025-11-07.md`
 - `integrations/mobilemart/MOBILEMART_UAT_TESTING_NEXT_STEPS.md`
