@@ -100,47 +100,148 @@ class MobileMartController {
     /**
      * Purchase a VAS product (airtime, data, electricity, etc.)
      * @route POST /api/v1/mobilemart/purchase/:vasType
-     * @body { merchantProductId, amount, mobileNumber/accountNumber/meterNumber, etc. }
+     * @body { requestId, merchantProductId, tenderType, amount, mobileNumber, prevendTransactionId, etc. }
+     * 
+     * Request schemas per VAS type:
+     * - Airtime Pinless: requestId, merchantProductId, tenderType, mobileNumber, amount (optional)
+     * - Airtime Pinned: requestId, merchantProductId, tenderType, amount (optional)
+     * - Data Pinless: requestId, merchantProductId, tenderType, mobileNumber
+     * - Data Pinned: requestId, merchantProductId, tenderType
+     * - Voucher: requestId, merchantProductId, tenderType, amount (optional)
+     * - Bill Payment: requestId, prevendTransactionId, tenderType, amount, tenderPan (optional)
+     * - Utility: requestId, prevendTransactionId, tenderType, tenderPan (optional)
      */
     async purchaseProduct(req, res) {
         try {
             const { vasType } = req.params;
-            const { merchantProductId, amount, mobileNumber, accountNumber, meterNumber, reference, ...rest } = req.body;
-            // Validate required fields
-            if (!vasType || !merchantProductId || !amount) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'VAS type, merchantProductId, and amount are required'
-                });
-            }
-            // Validate amount
-            if (!Number.isInteger(amount) || amount <= 0) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Amount must be a positive integer (in cents)'
-                });
-            }
-            // Validate reference (optional, but recommended for idempotency)
-            const txnReference = reference || `MM_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-            // Build request payload
-            const requestData = {
-                merchantProductId,
-                amount,
-                reference: txnReference,
-                ...(mobileNumber && { mobileNumber }),
-                ...(accountNumber && { accountNumber }),
-                ...(meterNumber && { meterNumber }),
-                ...rest
-            };
-            // MobileMart Fulcrum API structure: /api/v1/{vasType}/purchase or /api/v1/{vasType}/pay
-            // VAS types: airtime, data, voucher, billpayment, prepaidutility
+            const { 
+                requestId, 
+                merchantProductId, 
+                tenderType = 'CreditCard',  // Default to CreditCard
+                amount, 
+                mobileNumber, 
+                prevendTransactionId,
+                tenderPan,
+                pinned,  // Boolean to determine pinned vs pinless
+                ...rest 
+            } = req.body;
+            
+            // Generate requestId if not provided
+            const txnRequestId = requestId || `MM_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+            
+            // Validate required fields based on VAS type
             const normalizedVasType = this.normalizeVasType(vasType);
-            const endpoint = vasType === 'billpayment' ? `/${normalizedVasType}/pay` : `/${normalizedVasType}/purchase`;
+            
+            if (!merchantProductId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'merchantProductId is required'
+                });
+            }
+            
+            // Build request payload according to MobileMart API schemas
+            let requestData = {
+                requestId: txnRequestId,
+                merchantProductId,
+                tenderType
+            };
+            
+            // VAS-specific request construction
+            if (normalizedVasType === 'bill-payment') {
+                // Bill Payment requires prevend flow
+                if (!prevendTransactionId) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'prevendTransactionId is required for bill payment. Call /v2/bill-payment/prevend first.'
+                    });
+                }
+                if (!amount) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'amount is required for bill payment'
+                    });
+                }
+                requestData = {
+                    requestId: txnRequestId,
+                    prevendTransactionId,
+                    tenderType,
+                    amount,
+                    ...(tenderPan && { tenderPan })
+                };
+            } else if (normalizedVasType === 'utility') {
+                // Utility requires prevend flow
+                if (!prevendTransactionId) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'prevendTransactionId is required for utility. Call /v1/utility/prevend first.'
+                    });
+                }
+                requestData = {
+                    requestId: txnRequestId,
+                    prevendTransactionId,
+                    tenderType,
+                    ...(tenderPan && { tenderPan })
+                };
+            } else if (normalizedVasType === 'airtime' || normalizedVasType === 'data') {
+                // Airtime/Data: Check if pinned or pinless
+                const isPinned = pinned !== undefined ? pinned : false;  // Default to pinless
+                
+                if (isPinned) {
+                    // Pinned: no mobileNumber needed
+                    requestData = {
+                        requestId: txnRequestId,
+                        merchantProductId,
+                        tenderType,
+                        ...(amount && { amount })  // Optional for FixedAmount products
+                    };
+                } else {
+                    // Pinless: mobileNumber required
+                    if (!mobileNumber) {
+                        return res.status(400).json({
+                            success: false,
+                            error: 'mobileNumber is required for pinless airtime/data'
+                        });
+                    }
+                    requestData = {
+                        requestId: txnRequestId,
+                        merchantProductId,
+                        tenderType,
+                        mobileNumber,
+                        ...(amount && { amount })  // Optional for FixedAmount products
+                    };
+                }
+            } else if (normalizedVasType === 'voucher') {
+                // Voucher: amount optional for FixedAmount products
+                requestData = {
+                    requestId: txnRequestId,
+                    merchantProductId,
+                    tenderType,
+                    ...(amount && { amount })
+                };
+            }
+            
+            // Determine endpoint based on VAS type and pinned/pinless
+            let endpoint;
+            if (normalizedVasType === 'bill-payment') {
+                endpoint = '/v2/bill-payment/pay';  // Note: v2 for bill payment
+            } else if (normalizedVasType === 'utility') {
+                endpoint = '/v1/utility/purchase';
+            } else if (normalizedVasType === 'airtime' || normalizedVasType === 'data') {
+                const isPinned = pinned !== undefined ? pinned : false;
+                endpoint = isPinned 
+                    ? `/v1/${normalizedVasType}/pinned`
+                    : `/v1/${normalizedVasType}/pinless`;
+            } else {
+                // Voucher
+                endpoint = `/v1/${normalizedVasType}/purchase`;
+            }
+            
             const response = await this.authService.makeAuthenticatedRequest(
                 'POST',
                 endpoint,
                 requestData
             );
+            
             res.json({
                 success: true,
                 data: {
