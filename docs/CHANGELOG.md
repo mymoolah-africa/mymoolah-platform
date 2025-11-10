@@ -1,6 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-11-07 (Latest)
+## 2025-11-10 (Latest)
+- **MobileMart UAT Testing**: Comprehensive UAT testing of MobileMart Fulcrum API integration. 4/7 purchase types working (57% success rate). Product listing endpoints verified, purchase transactions tested, catalog sync script created.
+
+**MobileMart UAT Testing**:
+- **Product Endpoints**: All 5 VAS types verified (Airtime, Data, Voucher, Bill Payment, Utility)
+- **Purchase Testing**: 4/7 purchase types working (Airtime Pinned, Data Pinned, Voucher, Utility)
+- **Endpoint Fixes**: Corrected API paths (/v1 instead of /api/v1), fixed utility purchase transaction ID access
+- **Mobile Number Issue**: Pinless transactions require valid UAT test mobile numbers from MobileMart
+- **Catalog Sync**: Created script to sync both pinned and pinless products to catalog for UAT testing
+- **Status**: ✅ Product listing working, ✅ 4/7 purchase types working, ⚠️ Awaiting valid UAT test mobile numbers
+
+**Files Created**:
+- `scripts/test-mobilemart-purchases.js` - Comprehensive purchase test suite
+- `scripts/sync-mobilemart-uat-catalog.js` - Catalog sync script (pinned + pinless)
+- `integrations/mobilemart/PURCHASE_TEST_STATUS.md` - Purchase test status
+- `integrations/mobilemart/MOBILE_NUMBER_FORMAT_ISSUE.md` - Mobile number format documentation
+- `integrations/mobilemart/PURCHASE_TEST_FIXES.md` - Purchase test fixes documentation
+
+## 2025-11-07
 - **KYC OCR Quality Improvements**: Dramatically improved OCR quality for South African ID documents. Enhanced OpenAI prompts, added image preprocessing, implemented multi-strategy Tesseract OCR, and improved text parsing. Expected accuracy improvement: +50% overall success rate.
 
 **OCR Improvements**:
@@ -35,10 +53,14 @@
 - **KYC Record Cleanup**: Removed all KYC records for user ID 5 to allow fresh registration
 - **Database Cleanup**: Cascading delete performed across all related tables
 
-**MobileMart (Fulcrum)**:
-- Production credentials confirmed working by MobileMart
-- UAT access pending via WhatsApp after we share a cellphone number
-- Created status and UAT next-steps docs
+**MobileMart (Fulcrum) UAT Testing**:
+- UAT credentials configured and tested
+- Product listing endpoints: All 5 VAS types working (Airtime, Data, Voucher, Bill Payment, Utility)
+- Purchase endpoints: 4/7 working (Airtime Pinned, Data Pinned, Voucher, Utility)
+- Endpoint fixes: Corrected API paths, fixed utility purchase transaction ID access
+- Mobile number format: Pinless transactions require valid UAT test mobile numbers from MobileMart
+- Catalog sync: Script created to sync both pinned and pinless products to catalog
+- Status: ✅ Product listing working, ✅ 4/7 purchase types working, ⚠️ Awaiting valid UAT test mobile numbers
 
 - **VAS Commission VAT Allocation**:
   - Split VAS supplier commission into VAT (15%) and net revenue with inclusive calculation
@@ -74,9 +96,9 @@
 - **VAS Type Normalization**: Added mapping for MobileMart Fulcrum VAS types
 - **Wallet Balance Reconciliation**: Fixed balance calculation to exclude internal accounting transactions
 
-**Last Updated**: November 7, 2025  
-**Version**: 2.4.6 - KYC OpenAI Fallback Fix  
-**Status**: ✅ **KYC FALLBACK WORKING - SYSTEM FULLY FUNCTIONAL**
+**Last Updated**: November 10, 2025  
+**Version**: 2.4.7 - MobileMart UAT Testing  
+**Status**: ✅ **MOBILEMART UAT TESTING IN PROGRESS - 4/7 PURCHASE TYPES WORKING**
 
 ---
 

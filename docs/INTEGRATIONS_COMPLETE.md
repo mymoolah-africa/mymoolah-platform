@@ -16,15 +16,23 @@
 - **Products**: 22 active products configured
 - **Status**: Fully tested and integrated
 
-**2. MOBILEMART INTEGRATION** ✅ **UPDATED WITH FULCRUM API**
+**2. MOBILEMART INTEGRATION** ✅ **UAT TESTING IN PROGRESS**
 - **VAS Services**: Airtime, Data, Voucher, Bill Payment, Prepaid Utility (Electricity)
 - **API Version**: MobileMart Fulcrum API v1
-- **OAuth Endpoint**: `/connect/token` (IdentityServer4/OpenIddict)
-- **Base URL**: `https://uat.fulcrumswitch.com` (UAT) or `https://fulcrumswitch.com` (PROD)
-- **API Structure**: Updated to match MobileMart Fulcrum documentation
-- **Product Endpoints**: `/api/v1/{vasType}/products`
-- **Purchase Endpoints**: `/api/v1/{vasType}/purchase` or `/api/v1/{vasType}/pay`
-- **Status**: Code complete, awaiting credential verification
+- **OAuth Endpoint**: `/connect/token` (IdentityServer4/OpenIddict) - ✅ Working
+- **Base URL**: `https://uat.fulcrumswitch.com` (UAT) - ✅ Configured
+- **API Structure**: Corrected to `/v1/{vasType}/products` (removed duplicate /api/)
+- **Product Endpoints**: ✅ All 5 VAS types working (65 products total)
+- **Purchase Endpoints**: ✅ 4/7 purchase types working (57% success rate)
+  - ✅ Airtime Pinned: Working
+  - ✅ Data Pinned: Working
+  - ✅ Voucher: Working
+  - ✅ Utility: Working
+  - ❌ Airtime Pinless: Mobile number format issue
+  - ❌ Data Pinless: Mobile number format issue
+  - ❌ Bill Payment: Requires valid account number
+- **Catalog Sync**: Script created to sync both pinned and pinless products
+- **Status**: ✅ Product listing working, ✅ 4/7 purchase types working, ⚠️ Awaiting valid UAT test mobile numbers
 
 **3. PEACH PAYMENTS INTEGRATION** ✅ **100% COMPLETE**
 - **Sandbox Integration**: Complete Peach Payments sandbox integration with working PayShap
