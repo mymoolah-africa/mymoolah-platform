@@ -256,9 +256,11 @@ async function testPurchases() {
             logInfo(`  Product: ${product.productName}`);
             logInfo(`  Account: ${prevendData.AccountNumber}`);
             
+            // Build query string for prevend
+            const prevendQuery = `AccountNumber=${encodeURIComponent(prevendData.AccountNumber)}&MerchantProductId=${encodeURIComponent(prevendData.MerchantProductId)}&RequestId=${encodeURIComponent(prevendData.RequestId)}`;
             const prevendResponse = await authService.makeAuthenticatedRequest(
                 'GET',
-                `/v1/utility/prevend?AccountNumber=${prevendData.AccountNumber}&MerchantProductId=${prevendData.MerchantProductId}&RequestId=${prevendData.RequestId}`
+                `/v2/bill-payment/prevend?${prevendQuery}`
             );
             
             if (prevendResponse.transactionId) {
@@ -315,9 +317,11 @@ async function testPurchases() {
             logInfo(`  Meter: ${prevendData.MeterNumber}`);
             logInfo(`  Amount: ${prevendData.Amount}`);
             
+            // Build query string for prevend
+            const utilPrevendQuery = `MeterNumber=${encodeURIComponent(prevendData.MeterNumber)}&MerchantProductId=${encodeURIComponent(prevendData.MerchantProductId)}&RequestId=${encodeURIComponent(prevendData.RequestId)}&Amount=${prevendData.Amount}`;
             const prevendResponse = await authService.makeAuthenticatedRequest(
                 'GET',
-                `/v1/utility/prevend?MeterNumber=${prevendData.MeterNumber}&MerchantProductId=${prevendData.MerchantProductId}&RequestId=${prevendData.RequestId}&Amount=${prevendData.Amount}`
+                `/v1/utility/prevend?${utilPrevendQuery}`
             );
             
             if (prevendResponse.transactionId) {
