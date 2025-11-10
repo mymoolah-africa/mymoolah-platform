@@ -36,6 +36,10 @@ function logInfo(message) {
     log(`ℹ️  ${message}`, 'blue');
 }
 
+function logWarning(message) {
+    log(`⚠️  ${message}`, 'yellow');
+}
+
 function logSection(title) {
     console.log('\n' + '='.repeat(80));
     log(title, 'cyan');
