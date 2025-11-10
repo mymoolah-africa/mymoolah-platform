@@ -137,12 +137,15 @@ async function testPurchases() {
         try {
             logInfo('Testing: Airtime Pinless Purchase');
             const product = testProducts.airtime.pinless;
+            
+            // For pinless, always include amount (even for fixed amount products)
+            // MobileMart API may require amount field for pinless transactions
             const requestData = {
                 requestId: `TEST_${Date.now()}_AIR_PINLESS`,
                 merchantProductId: product.merchantProductId,
                 tenderType: 'CreditCard',
                 mobileNumber: '0720012345',  // Test number from MobileMart test pack
-                ...(product.fixedAmount ? {} : { amount: product.amount || 20 })
+                amount: product.fixedAmount ? product.amount : (product.amount || 20)  // Always include amount
             };
             
             logInfo(`  Product: ${product.productName}`);
@@ -221,11 +224,13 @@ async function testPurchases() {
         try {
             logInfo('Testing: Data Pinless Purchase');
             const product = testProducts.data.pinless;
+            
+            // Data pinless doesn't require amount (product determines it)
             const requestData = {
                 requestId: `TEST_${Date.now()}_DATA_PINLESS`,
                 merchantProductId: product.merchantProductId,
                 tenderType: 'CreditCard',
-                mobileNumber: '0720012345'
+                mobileNumber: '0720012345'  // Test number from MobileMart test pack
             };
             
             logInfo(`  Product: ${product.productName}`);
