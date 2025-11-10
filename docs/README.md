@@ -57,15 +57,16 @@ The platform now includes **improved KYC OCR fallback mechanism** to Tesseract w
 - **Tested & Verified**: Comprehensive test suite confirms fallback works in all scenarios
 - **Status**: ✅ Fully functional - KYC processing works without OpenAI
 
-### **🔌 NEW: MobileMart Fulcrum Integration Updates**
+### **🔌 NEW: MobileMart Fulcrum UAT Testing**
 
-The platform has been updated with **correct MobileMart Fulcrum API integration**:
-- **OAuth Endpoint**: Discovered correct endpoint `/connect/token`
-- **API Structure**: Updated to match MobileMart Fulcrum documentation
-- **Base URL**: Corrected to `fulcrumswitch.com`
-- **VAS Types**: Support for Airtime, Data, Voucher, Bill Payment, Prepaid Utility
-- **Environment Support**: UAT and PROD environment detection
-- **Status**: Code complete, awaiting UAT credentials via WhatsApp
+The platform is currently testing **MobileMart Fulcrum API integration in UAT**:
+- **Product Endpoints**: ✅ All 5 VAS types working (65 products)
+- **Purchase Testing**: ✅ 4/7 purchase types working (57% success rate)
+- **OAuth Endpoint**: `/connect/token` working correctly
+- **API Structure**: Corrected to `/v1/{vasType}/products` structure
+- **Base URL**: `https://uat.fulcrumswitch.com` (UAT) configured
+- **VAS Types**: Airtime, Data, Voucher, Bill Payment, Utility
+- **Status**: ✅ Product listing working, ✅ 4/7 purchase types working, ⚠️ Awaiting valid UAT test mobile numbers
 
 ### **📱 Enhanced QR Code Scanning**
 
@@ -312,9 +313,11 @@ The system automatically selects the **best supplier** for each transaction base
 - **Real-Time**: Live pricing and availability
 
 #### **MobileMart Integration**
-- **API Version**: MobileMart Partner API
-- **Products**: 45+ products across multiple categories
-- **Categories**: Airtime, Data, Electricity, Gaming
+- **API Version**: MobileMart Fulcrum API v1
+- **UAT Status**: ✅ Product listing working, ✅ 4/7 purchase types working
+- **Products**: 65 products available in UAT (7 airtime, 45 data, 8 voucher, 4 bill payment, 1 utility)
+- **Categories**: Airtime, Data, Voucher, Bill Payment, Utility
+- **Purchase Types**: Airtime Pinned ✅, Data Pinned ✅, Voucher ✅, Utility ✅, Airtime Pinless ⚠️, Data Pinless ⚠️, Bill Payment ⚠️
 - **Commission Structure**: Fixed commission rates
 - **Real-Time**: Live pricing and availability
 
