@@ -230,7 +230,7 @@ async function testPurchases() {
                 requestId: `TEST_${Date.now()}_DATA_PINLESS`,
                 merchantProductId: product.merchantProductId,
                 tenderType: 'CreditCard',
-                mobileNumber: '0720012345'  // Test number from MobileMart test pack
+                mobileNumber: '27720012345'  // Test number in international format (27 = SA country code)
             };
             
             logInfo(`  Product: ${product.productName}`);
