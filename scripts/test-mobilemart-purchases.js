@@ -133,10 +133,27 @@ async function testPurchases() {
     const results = [];
     
     // Test 1: Airtime Pinless
+    // Valid UAT test numbers:
+    // - Vodacom: 0829802807
+    // - MTN: 0830012300, 0737111113
+    // - CellC: 0840012300
+    // - Telkom: 0850012345
     if (testProducts.airtime?.pinless) {
         try {
             logInfo('Testing: Airtime Pinless Purchase');
             const product = testProducts.airtime.pinless;
+            
+            // Map product provider to test mobile number
+            const testNumbers = {
+                'vodacom': '0829802807',
+                'mtn': '0830012300',
+                'cellc': '0840012300',
+                'telkom': '0850012345'
+            };
+            
+            // Get provider from product (contentCreator field)
+            const provider = (product.contentCreator || '').toLowerCase();
+            const mobileNumber = testNumbers[provider] || testNumbers.vodacom;  // Default to Vodacom
             
             // For pinless, always include amount (even for fixed amount products)
             // MobileMart API may require amount field for pinless transactions
@@ -144,12 +161,14 @@ async function testPurchases() {
                 requestId: `TEST_${Date.now()}_AIR_PINLESS`,
                 merchantProductId: product.merchantProductId,
                 tenderType: 'CreditCard',
-                mobileNumber: '0829802807',  // Vodacom test number (valid UAT)
+                mobileNumber: mobileNumber,
                 amount: product.fixedAmount ? product.amount : (product.amount || 20)  // Always include amount
             };
             
+            logInfo(`  Provider: ${provider} (${mobileNumber})`);
+            
             logInfo(`  Product: ${product.productName}`);
-            logInfo(`  Mobile: ${requestData.mobileNumber}`);
+            logInfo(`  Mobile: ${requestData.mobileNumber} (${provider})`);
             logInfo(`  Amount: ${requestData.amount || 'Fixed'}`);
             logInfo(`  Request Data: ${JSON.stringify(requestData, null, 2)}`);
             
@@ -251,7 +270,7 @@ async function testPurchases() {
             };
             
             logInfo(`  Product: ${product.productName}`);
-            logInfo(`  Mobile: ${requestData.mobileNumber}`);
+            logInfo(`  Mobile: ${requestData.mobileNumber} (${provider})`);
             logInfo(`  Request Data: ${JSON.stringify(requestData, null, 2)}`);
             
             const response = await authService.makeAuthenticatedRequest(
