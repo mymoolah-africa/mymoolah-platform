@@ -25,10 +25,12 @@ class MobileMartController {
             'airtime': 'airtime',
             'data': 'data',
             'voucher': 'voucher',
-            'billpayment': 'billpayment',
-            'bill_payment': 'billpayment',
+            'billpayment': 'bill-payment',  // CORRECTED: Uses hyphen in API path
+            'bill_payment': 'bill-payment',
+            'bill-payment': 'bill-payment',
             'electricity': 'prepaidutility',
             'prepaidutility': 'prepaidutility',
+            'prepaid-utility': 'prepaidutility',  // Check if this uses hyphen too
             'utility': 'prepaidutility'
         };
         return mapping[vasType.toLowerCase()] || vasType.toLowerCase();

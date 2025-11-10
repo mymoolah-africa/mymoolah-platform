@@ -71,7 +71,7 @@ async function testCorrectEndpoints() {
         { path: '/airtime/products', vasType: 'airtime', desc: 'Airtime Products' },
         { path: '/data/products', vasType: 'data', desc: 'Data Products' },
         { path: '/voucher/products', vasType: 'voucher', desc: 'Voucher Products' },
-        { path: '/billpayment/products', vasType: 'billpayment', desc: 'Bill Payment Products' },
+        { path: '/bill-payment/products', vasType: 'billpayment', desc: 'Bill Payment Products' },  // CORRECTED: Uses hyphen
         { path: '/prepaidutility/products', vasType: 'prepaidutility', desc: 'Prepaid Utility Products' },
     ];
     
