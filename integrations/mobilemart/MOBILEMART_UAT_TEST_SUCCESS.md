@@ -156,6 +156,24 @@
 
 **Status:** ✅ **6/7 WORKING - EXCELLENT PROGRESS!**
 
+---
+
+## 🎯 **Bill Payment Investigation**
+
+The Bill Payment test is failing with a 400 error. Possible causes:
+1. **Account/Product Mismatch:** Using DSTV account (`135609708`) with "Ekurhuleni West College" product (education, not DSTV)
+2. **Product Not Available:** The product may not be active in UAT
+3. **Account Format:** Account number format may be incorrect
+
+**Next Steps:**
+- Check if DSTV product exists in catalog
+- Try Pay@ account (`11347901450000300`) for Oudtshoorn Municipality products
+- Check error details in next test run (improved logging added)
+- Contact MobileMart for product-specific test accounts if needed
+
+---
+
 **Last Updated:** November 10, 2025  
-**Test Run:** Successful with valid UAT test numbers
+**Test Run:** Successful with valid UAT test numbers  
+**Success Rate:** 6/7 (86%) - **+29% improvement from initial 4/7!**
 
