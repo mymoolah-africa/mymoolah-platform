@@ -12,6 +12,145 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
+const supplierPricingService = require('../services/supplierPricingService');
+const ledgerService = require('../services/ledgerService');
+const { TaxTransaction } = require('../models');
+
+const VAT_RATE = Number(process.env.VAT_RATE || 0.15);
+const LEDGER_ACCOUNT_MM_COMMISSION_CLEARING = process.env.LEDGER_ACCOUNT_MM_COMMISSION_CLEARING || null;
+const LEDGER_ACCOUNT_COMMISSION_REVENUE = process.env.LEDGER_ACCOUNT_COMMISSION_REVENUE || null;
+const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL || null;
+
+async function allocateCommissionAndVat({
+  supplierCode,
+  serviceType,
+  amountInCents,
+  vasTransaction,
+  walletTransactionId,
+  idempotencyKey,
+  purchaserUserId,
+}) {
+  try {
+    const normalizedSupplierCode = (supplierCode || '').toUpperCase();
+    if (!normalizedSupplierCode || !amountInCents || !vasTransaction) {
+      return;
+    }
+
+    const commissionRatePct = await supplierPricingService.getCommissionRatePct(
+      normalizedSupplierCode,
+      serviceType
+    );
+
+    if (!commissionRatePct || Number(commissionRatePct) <= 0) {
+      return;
+    }
+
+    const commissionCents = supplierPricingService.computeCommission(amountInCents, commissionRatePct);
+    if (!commissionCents) {
+      return;
+    }
+
+    const vatCents = Math.round(commissionCents * VAT_RATE / (1 + VAT_RATE));
+    const netCommissionCents = commissionCents - vatCents;
+
+    const existingMetadata = vasTransaction.metadata || {};
+    await vasTransaction.update({
+      metadata: {
+        ...existingMetadata,
+        commission: {
+          supplierCode: normalizedSupplierCode,
+          serviceType,
+          ratePct: Number(commissionRatePct),
+          amountCents: commissionCents,
+          vatCents,
+          netAmountCents: netCommissionCents,
+          vatRate: VAT_RATE,
+        },
+      },
+    });
+
+    const taxTransactionId = `TAX-${uuidv4()}`;
+    const now = new Date();
+    const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    const taxPayload = {
+      taxTransactionId,
+      originalTransactionId: walletTransactionId || vasTransaction.transactionId,
+      taxCode: 'VAT_15',
+      taxName: 'VAT 15%',
+      taxType: 'vat',
+      baseAmount: Number((netCommissionCents / 100).toFixed(2)),
+      taxAmount: Number((vatCents / 100).toFixed(2)),
+      totalAmount: Number((commissionCents / 100).toFixed(2)),
+      taxRate: VAT_RATE,
+      calculationMethod: 'inclusive',
+      businessContext: 'wallet_user',
+      transactionType: serviceType,
+      entityId: normalizedSupplierCode,
+      entityType: 'supplier',
+      taxPeriod,
+      taxYear: now.getFullYear(),
+      status: 'calculated',
+      metadata: {
+        idempotencyKey,
+        purchaserUserId,
+        vatRate: VAT_RATE,
+        commissionRatePct: Number(commissionRatePct),
+      },
+    };
+
+    try {
+      await TaxTransaction.create(taxPayload);
+    } catch (taxErr) {
+      console.error('⚠️ Failed to persist tax transaction for VAS commission:', taxErr.message);
+    }
+
+    if (
+      LEDGER_ACCOUNT_MM_COMMISSION_CLEARING &&
+      LEDGER_ACCOUNT_COMMISSION_REVENUE &&
+      LEDGER_ACCOUNT_VAT_CONTROL
+    ) {
+      const commissionAmountRand = Number((commissionCents / 100).toFixed(2));
+      const vatAmountRand = Number((vatCents / 100).toFixed(2));
+      const netAmountRand = Number((netCommissionCents / 100).toFixed(2));
+
+      try {
+        await ledgerService.postJournalEntry({
+          reference: `VAS-COMMISSION-${walletTransactionId || vasTransaction.transactionId}`,
+          description: `VAS commission allocation (${serviceType.toUpperCase()} - ${normalizedSupplierCode})`,
+          lines: [
+            {
+              accountCode: LEDGER_ACCOUNT_MM_COMMISSION_CLEARING,
+              dc: 'debit',
+              amount: commissionAmountRand,
+              memo: 'Commission clearing (VAS)',
+            },
+            {
+              accountCode: LEDGER_ACCOUNT_VAT_CONTROL,
+              dc: 'credit',
+              amount: vatAmountRand,
+              memo: 'VAT payable on VAS commission (15%)',
+            },
+            {
+              accountCode: LEDGER_ACCOUNT_COMMISSION_REVENUE,
+              dc: 'credit',
+              amount: netAmountRand,
+              memo: 'VAS commission revenue (net of VAT)',
+            },
+          ],
+        });
+      } catch (ledgerErr) {
+        console.error('⚠️ Failed to post VAS commission journal:', ledgerErr.message);
+      }
+    } else {
+      console.warn(
+        '⚠️ VAS commission ledger posting skipped: missing LEDGER_ACCOUNT_MM_COMMISSION_CLEARING, LEDGER_ACCOUNT_COMMISSION_REVENUE, or LEDGER_ACCOUNT_VAT_CONTROL env vars'
+      );
+    }
+  } catch (err) {
+    console.error('⚠️ VAS commission/VAT allocation failed:', err.message);
+  }
+}
 
 // ========================================
 // AIRTIME & DATA OVERLAY ENDPOINTS
@@ -290,7 +429,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     const type = parts[0];
     const supplier = parts[1];
     const productCode = parts.slice(2, -1).join('_'); // Everything between supplier and amount
-    const amountInCents = parts[parts.length - 1];
+    const productAmountInCents = parts[parts.length - 1];
     
     // Find the VasProduct record to get vasProductId
     const { VasProduct } = require('../models');
@@ -344,6 +483,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         error: 'Invalid amount received'
       });
     }
+
+    const amountInCentsValue = Math.round(normalizedAmount * 100);
     
     // Banking-grade transaction processing with idempotency
     // Check for existing transaction with same idempotency key
@@ -407,7 +548,6 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       // Generate transactionId for VasTransaction
       const vasTransactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
       
-      const amountInCentsValue = Math.round(normalizedAmount * 100);
       const feeInCents = 0;
       const totalAmountInCents = amountInCentsValue + feeInCents;
 
@@ -433,7 +573,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           type,
           userId: req.user.id,
           simulated: true,
-          originalAmount: amountInCents ? parseInt(amountInCents, 10) / 100 : normalizedAmount,
+          originalAmount: productAmountInCents ? parseInt(productAmountInCents, 10) / 100 : normalizedAmount,
           amountCents: amountInCentsValue,
           feeCents: feeInCents,
           totalAmountCents: totalAmountInCents,
@@ -470,7 +610,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           idempotencyKey,
           vasTransactionId: vasTransaction.id,
           vasType: type,
-          amountCents: Math.round(normalizedAmount * 100),
+          amountCents: amountInCentsValue,
           channel: 'overlay_services'
         },
         currency: wallet.currency
@@ -527,6 +667,18 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       } catch (updateError) {
         console.warn('⚠️ Failed to persist beneficiaryUserId on vasTransaction:', updateError.message);
       }
+    }
+
+    if (committedVasTransaction) {
+      await allocateCommissionAndVat({
+        supplierCode: supplier,
+        serviceType: type,
+        amountInCents: amountInCentsValue,
+        vasTransaction: committedVasTransaction,
+        walletTransactionId: committedLedgerTransaction?.transactionId || null,
+        idempotencyKey,
+        purchaserUserId: req.user.id,
+      });
     }
 
     // Prepare receipt data
@@ -846,13 +998,14 @@ router.post('/electricity/purchase', auth, async (req, res) => {
 
     // If we get here, meter is valid - proceed with purchase
     // Create electricity transaction
+    const amountInCentsValue = Math.round(Number(amount) * 100);
     const transaction = await VasTransaction.create({
       userId: req.user.id,
       beneficiaryId: beneficiary.id,
       vasType: 'electricity',
       supplierId: 'flash',
       supplierProductId: 'FLASH_ELECTRICITY_PREPAID',
-      amount: amount * 100, // Convert to cents
+      amount: amountInCentsValue, // Convert to cents
       mobileNumber: beneficiary.identifier, // Using identifier as meter number
       status: 'completed',
       reference: idempotencyKey,
@@ -862,7 +1015,9 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         userId: req.user.id,
         simulated: true,
         meterNumber: beneficiary.identifier,
-        meterType: beneficiary.metadata?.meterType || 'Prepaid'
+        meterType: beneficiary.metadata?.meterType || 'Prepaid',
+        amountCents: amountInCentsValue,
+        processedAt: new Date().toISOString()
       }
     });
     
@@ -881,6 +1036,16 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     await beneficiary.update({
       lastPaidAt: new Date(),
       timesPaid: beneficiary.timesPaid + 1
+    });
+
+    await allocateCommissionAndVat({
+      supplierCode: transaction.supplierId,
+      serviceType: 'electricity',
+      amountInCents: amountInCentsValue,
+      vasTransaction: transaction,
+      walletTransactionId: null,
+      idempotencyKey,
+      purchaserUserId: req.user.id,
     });
 
     // Check if beneficiary is a MyMoolah user
@@ -1090,6 +1255,7 @@ router.post('/bills/pay', auth, async (req, res) => {
 
     // Simulate bill payment using database
     const { VasTransaction } = require('../models');
+    const amountInCentsValue = Math.round(Number(amount) * 100);
     
     // Create a simulated bill payment transaction
     const transaction = await VasTransaction.create({
@@ -1098,7 +1264,7 @@ router.post('/bills/pay', auth, async (req, res) => {
       vasType: 'bill_payment',
       supplierId: 'flash',
       supplierProductId: 'FLASH_BILL_PAYMENT',
-      amount: amount * 100, // Convert to cents
+      amount: amountInCentsValue, // Convert to cents
       mobileNumber: beneficiary.identifier, // Using identifier as account number
       status: 'completed',
       reference: idempotencyKey,
@@ -1108,7 +1274,9 @@ router.post('/bills/pay', auth, async (req, res) => {
         userId: req.user.id,
         simulated: true,
         billerName: beneficiary.metadata?.billerName || 'Unknown Biller',
-        accountNumber: beneficiary.identifier
+        accountNumber: beneficiary.identifier,
+        amountCents: amountInCentsValue,
+        processedAt: new Date().toISOString()
       }
     });
     
@@ -1118,6 +1286,16 @@ router.post('/bills/pay', auth, async (req, res) => {
     await beneficiary.update({
       lastPaidAt: new Date(),
       timesPaid: beneficiary.timesPaid + 1
+    });
+
+    await allocateCommissionAndVat({
+      supplierCode: transaction.supplierId,
+      serviceType: 'bill_payment',
+      amountInCents: amountInCentsValue,
+      vasTransaction: transaction,
+      walletTransactionId: null,
+      idempotencyKey,
+      purchaserUserId: req.user.id,
     });
 
     // Check if beneficiary is a MyMoolah user
