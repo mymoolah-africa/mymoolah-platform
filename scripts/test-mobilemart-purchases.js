@@ -111,8 +111,18 @@ async function testPurchases() {
         // Get Bill Payment products
         const billPaymentProducts = await authService.makeAuthenticatedRequest('GET', '/bill-payment/products');
         if (Array.isArray(billPaymentProducts) && billPaymentProducts.length > 0) {
-            testProducts.billPayment = billPaymentProducts[0];
+            // Try to find DSTV product first, otherwise use first product
+            const dstvProduct = billPaymentProducts.find(p => 
+                p.productName && (p.productName.toLowerCase().includes('dstv') || p.productName.toLowerCase().includes('multichoice'))
+            );
+            testProducts.billPayment = dstvProduct || billPaymentProducts[0];
             logSuccess(`Found ${billPaymentProducts.length} bill payment products`);
+            if (dstvProduct) {
+                logInfo(`  Using DSTV product: ${dstvProduct.productName}`);
+            } else {
+                logInfo(`  Using first product: ${testProducts.billPayment.productName}`);
+                logWarning(`  Note: May need to match account number to product type`);
+            }
         }
         
         // Get Utility products
