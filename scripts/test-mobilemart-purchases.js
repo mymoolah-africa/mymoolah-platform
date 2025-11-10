@@ -75,31 +75,34 @@ async function testPurchases() {
     let testProducts = {};
     
     try {
-        // Get Airtime products
+        // Get Airtime products (PINLESS ONLY - per frontend requirements)
         const airtimeProducts = await authService.makeAuthenticatedRequest('GET', '/airtime/products');
         if (Array.isArray(airtimeProducts) && airtimeProducts.length > 0) {
-            // Find a fixed amount product for testing
-            const fixedAirtime = airtimeProducts.find(p => p.fixedAmount === true);
-            const pinlessAirtime = airtimeProducts.find(p => p.pinned === false);
-            const pinnedAirtime = airtimeProducts.find(p => p.pinned === true);
-            testProducts.airtime = {
-                pinless: pinlessAirtime || airtimeProducts[0],
-                pinned: pinnedAirtime || airtimeProducts[0],
-                fixed: fixedAirtime || airtimeProducts[0]
-            };
-            logSuccess(`Found ${airtimeProducts.length} airtime products`);
+            // Only get pinless products (pinned === false)
+            const pinlessAirtime = airtimeProducts.filter(p => p.pinned === false);
+            if (pinlessAirtime.length > 0) {
+                testProducts.airtime = {
+                    pinless: pinlessAirtime[0]  // Use first pinless product
+                };
+                logSuccess(`Found ${airtimeProducts.length} airtime products (${pinlessAirtime.length} pinless)`);
+            } else {
+                logWarning(`No pinless airtime products found (frontend requirement)`);
+            }
         }
         
-        // Get Data products
+        // Get Data products (PINLESS ONLY - per frontend requirements)
         const dataProducts = await authService.makeAuthenticatedRequest('GET', '/data/products');
         if (Array.isArray(dataProducts) && dataProducts.length > 0) {
-            const pinlessData = dataProducts.find(p => p.pinned === false);
-            const pinnedData = dataProducts.find(p => p.pinned === true);
-            testProducts.data = {
-                pinless: pinlessData || dataProducts[0],
-                pinned: pinnedData || dataProducts[0]
-            };
-            logSuccess(`Found ${dataProducts.length} data products`);
+            // Only get pinless products (pinned === false)
+            const pinlessData = dataProducts.filter(p => p.pinned === false);
+            if (pinlessData.length > 0) {
+                testProducts.data = {
+                    pinless: pinlessData[0]  // Use first pinless product
+                };
+                logSuccess(`Found ${dataProducts.length} data products (${pinlessData.length} pinless)`);
+            } else {
+                logWarning(`No pinless data products found (frontend requirement)`);
+            }
         }
         
         // Get Voucher products
