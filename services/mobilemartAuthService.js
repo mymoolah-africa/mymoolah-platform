@@ -206,6 +206,11 @@ class MobileMartAuthService {
             const headers = await this.generateRequestHeaders();
             const url = `${this.apiUrl}${endpoint}`;
             
+            // Debug: Log the exact URL being called
+            if (process.env.DEBUG_MOBILEMART === 'true') {
+                console.log(`🔍 MobileMart Request: ${method.toUpperCase()} ${url}`);
+            }
+            
             const config = {
                 method: method.toLowerCase(),
                 url: url,
