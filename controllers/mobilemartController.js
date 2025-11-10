@@ -28,10 +28,10 @@ class MobileMartController {
             'billpayment': 'bill-payment',  // CORRECTED: Uses hyphen in API path
             'bill_payment': 'bill-payment',
             'bill-payment': 'bill-payment',
-            'electricity': 'prepaidutility',
-            'prepaidutility': 'prepaidutility',
-            'prepaid-utility': 'prepaidutility',  // Check if this uses hyphen too
-            'utility': 'prepaidutility'
+            'electricity': 'utility',  // CORRECTED: Maps to 'utility' not 'prepaidutility'
+            'prepaidutility': 'utility',  // CORRECTED: API uses 'utility' not 'prepaidutility'
+            'prepaid-utility': 'utility',  // CORRECTED: API uses 'utility'
+            'utility': 'utility'  // CORRECTED: Direct mapping
         };
         return mapping[vasType.toLowerCase()] || vasType.toLowerCase();
     }
