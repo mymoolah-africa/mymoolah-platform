@@ -9,6 +9,13 @@
  */
 
 require('dotenv').config();
+
+// Fix SSL certificate verification for database connection
+if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require')) {
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    process.env.NODE_ENV = 'production';
+}
+
 const MobileMartAuthService = require('../services/mobilemartAuthService');
 const { VasProduct, sequelize } = require('../models');
 const { Op } = require('sequelize');

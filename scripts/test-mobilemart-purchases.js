@@ -144,7 +144,7 @@ async function testPurchases() {
                 requestId: `TEST_${Date.now()}_AIR_PINLESS`,
                 merchantProductId: product.merchantProductId,
                 tenderType: 'CreditCard',
-                mobileNumber: '0720012345',  // Test number from MobileMart test pack
+                mobileNumber: '27720012345',  // Test number in international format (27 = SA country code)
                 amount: product.fixedAmount ? product.amount : (product.amount || 20)  // Always include amount
             };
             
@@ -437,7 +437,7 @@ async function testPurchases() {
                 
                 const purchaseResponse = await authService.makeAuthenticatedRequest(
                     'POST',
-                    '/v1/utility/purchase',
+                    '/utility/purchase',  // Fixed: removed /v1/ prefix (apiUrl already has it)
                     purchaseData
                 );
                 
