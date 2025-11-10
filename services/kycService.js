@@ -71,246 +71,139 @@ function tolerantFirstNameMatch(docFirst, userFirst) {
 }
 
 function lightFirstNameMatch(docFirst, userFirst) {
-  const a = normalizeName(docFirst);
-  const b = normalizeName(userFirst);
-  
-  if (!a || !b) return { matches: false, similarity: 0, reason: 'Empty name' };
-  if (a === b) return { matches: true, similarity: 1.0, reason: 'Exact match' };
-  
-  // Common nickname mappings
-  const nicknames = {
-    'robert': ['bob', 'rob', 'robby'],
-    'michael': ['mike', 'mikey', 'mick'],
-    'william': ['bill', 'billy', 'will', 'willy'],
-    'richard': ['rick', 'ricky', 'dick'],
-    'james': ['jim', 'jimmy'],
-    'john': ['jon', 'johnny', 'jack'],
-    'david': ['dave', 'davey'],
-    'christopher': ['chris', 'topher'],
-    'matthew': ['matt', 'matty'],
-    'andrew': ['andy', 'drew'],
-    'daniel': ['dan', 'danny'],
-    'nicholas': ['nick', 'nicky'],
-    'joseph': ['joe', 'joey'],
-    'thomas': ['tom', 'tommy'],
-    'charles': ['charlie', 'chuck'],
-    'anthony': ['tony', 'ant'],
-    'mark': ['marc'],
-    'donald': ['don', 'donny'],
-    'steven': ['steve', 'stevie'],
-    'paul': ['paulie'],
-    'kenneth': ['ken', 'kenny'],
-    'ronald': ['ron', 'ronnie'],
-    'kevin': ['kev'],
-    'jason': ['jay'],
-    'edward': ['ed', 'eddie', 'ted'],
-    'brian': ['brian'],
-    'ronald': ['ron', 'ronnie'],
-    'anthony': ['tony', 'ant'],
-    'kevin': ['kev'],
-    'jason': ['jay'],
-    'matthew': ['matt', 'matty'],
-    'gary': ['gary'],
-    'timothy': ['tim', 'timmy'],
-    'jose': ['jose'],
-    'larry': ['larry'],
-    'jeffrey': ['jeff'],
-    'frank': ['frankie'],
-    'scott': ['scott'],
-    'eric': ['eric'],
-    'stephen': ['steve', 'stevie'],
-    'andrew': ['andy', 'drew'],
-    'raymond': ['ray'],
-    'gregory': ['greg'],
-    'joshua': ['josh'],
-    'jerry': ['jerry'],
-    'dennis': ['dennis'],
-    'walter': ['walt'],
-    'peter': ['pete'],
-    'harold': ['harry', 'hal'],
-    'douglas': ['doug'],
-    'henry': ['hank'],
-    'carl': ['carl'],
-    'arthur': ['art', 'artie'],
-    'ryan': ['ryan'],
-    'roger': ['rog'],
-    'joe': ['joey'],
-    'juan': ['juan'],
-    'jack': ['jackie'],
-    'albert': ['al', 'bert'],
-    'jonathan': ['jon', 'jonny'],
-    'justin': ['justin'],
-    'terry': ['terry'],
-    'gerald': ['gerry', 'jerry'],
-    'keith': ['keith'],
-    'samuel': ['sam', 'sammy'],
-    'willie': ['will'],
-    'ralph': ['ralph'],
-    'lawrence': ['larry', 'lawrence'],
-    'nicholas': ['nick', 'nicky'],
-    'roy': ['roy'],
-    'benjamin': ['ben', 'benny'],
-    'bruce': ['bruce'],
-    'brandon': ['brandon'],
-    'adam': ['adam'],
-    'harry': ['harry'],
-    'fred': ['freddie'],
-    'wayne': ['wayne'],
-    'billy': ['bill'],
-    'steve': ['steve'],
-    'louis': ['lou', 'louie'],
-    'jeremy': ['jeremy'],
-    'aaron': ['aaron'],
-    'randy': ['randy'],
-    'howard': ['howie'],
-    'eugene': ['gene'],
-    'carlos': ['carlos'],
-    'russell': ['russ'],
-    'bobby': ['bob'],
-    'victor': ['vic'],
-    'martin': ['marty'],
-    'ernest': ['ernie'],
-    'phillip': ['phil'],
-    'todd': ['todd'],
-    'jesse': ['jesse'],
-    'craig': ['craig'],
-    'alan': ['al'],
-    'shawn': ['shawn'],
-    'clarence': ['clarence'],
-    'sean': ['sean'],
-    'philip': ['phil'],
-    'chris': ['chris'],
-    'johnny': ['john'],
-    'earl': ['earl'],
-    'jimmy': ['jim'],
-    'antonio': ['tony'],
-    'danny': ['dan'],
-    'bryan': ['brian'],
-    'tony': ['tony'],
-    'luis': ['lou'],
-    'mike': ['mike'],
-    'stanley': ['stan'],
-    'leonard': ['len', 'lenny'],
-    'nathan': ['nate'],
-    'dale': ['dale'],
-    'manuel': ['manuel'],
-    'rodney': ['rod'],
-    'curtis': ['curt'],
-    'norman': ['norm'],
-    'allen': ['al'],
-    'marvin': ['marv'],
-    'vincent': ['vince'],
-    'glenn': ['glenn'],
-    'jeffery': ['jeff'],
-    'travis': ['travis'],
-    'jeff': ['jeff'],
-    'chad': ['chad'],
-    'jacob': ['jake'],
-    'lee': ['lee'],
-    'melvin': ['mel'],
-    'alfred': ['alf', 'alfie'],
-    'kyle': ['kyle'],
-    'francis': ['frank', 'frankie'],
-    'bradley': ['brad'],
-    'jesus': ['jesus'],
-    'herbert': ['herb'],
-    'frederick': ['fred', 'freddie'],
-    'ray': ['ray'],
-    'joel': ['joel'],
-    'edwin': ['ed', 'eddie'],
-    'don': ['don'],
-    'eddie': ['ed'],
-    'ricky': ['rick'],
-    'troy': ['troy'],
-    'randall': ['randy'],
-    'barry': ['barry'],
-    'alexander': ['alex'],
-    'bernard': ['bernard'],
-    'marcus': ['marc'],
-    'micheal': ['mike'],
-    'theodore': ['ted', 'teddy'],
-    'clifford': ['cliff'],
-    'miguel': ['mike'],
-    'jay': ['jay'],
-    'homer': ['homer'],
-    'gerard': ['gerry'],
-    'doug': ['doug'],
-    'kenny': ['ken'],
-    'robin': ['rob'],
-    'lee': ['lee'],
-    'derek': ['derek'],
-    'warren': ['warren'],
-    'darrell': ['darrell'],
-    'jerome': ['jerry'],
-    'floyd': ['floyd'],
-    'leo': ['leo'],
-    'alvin': ['al'],
-    'tim': ['tim'],
-    'wesley': ['wes'],
-    'gordon': ['gord'],
-    'dean': ['dean'],
-    'greg': ['greg'],
-    'jorge': ['george'],
-    'dustin': ['dusty'],
-    'pedro': ['pete'],
-    'derrick': ['derek'],
-    'dan': ['dan'],
-    'lewis': ['lew'],
-    'zachary': ['zach'],
-    'corey': ['corey'],
-    'herman': ['herm'],
-    'maurice': ['maurice'],
-    'vernon': ['vern'],
-    'roberto': ['rob', 'bob'],
-    'clyde': ['clyde'],
-    'glen': ['glenn'],
-    'hector': ['hector'],
-    'shane': ['shane'],
-    'ricardo': ['rick'],
-    'sam': ['sam'],
-    'rick': ['rick'],
-    'lester': ['les'],
-    'brent': ['brent'],
-    'ramon': ['ramon'],
-    'charlie': ['charlie'],
-    'tyler': ['tyler'],
-    'gilbert': ['gil'],
-    'gene': ['gene']
-  };
-  
-  // Check for nickname matches
-  const normalizedA = a.toLowerCase();
-  const normalizedB = b.toLowerCase();
-  
-  // Check if either name is a nickname of the other
-  if (nicknames[normalizedA] && nicknames[normalizedA].includes(normalizedB)) {
-    return { matches: true, similarity: 0.95, reason: 'Nickname match' };
-  }
-  if (nicknames[normalizedB] && nicknames[normalizedB].includes(normalizedA)) {
-    return { matches: true, similarity: 0.95, reason: 'Nickname match' };
-  }
-  
-  // Check for exact match
-  if (normalizedA === normalizedB) {
-    return { matches: true, similarity: 1.0, reason: 'Exact match' };
-  }
-  
-  // Check for prefix matches (for abbreviations like "J." vs "John")
-  if ((normalizedA.startsWith(normalizedB) || normalizedB.startsWith(normalizedA)) && 
-      Math.min(normalizedA.length, normalizedB.length) >= 2) {
-    return { matches: true, similarity: 0.9, reason: 'Prefix match' };
-  }
-  
-  // Check for similarity using Jaro-Winkler
-  const similarity = jaroWinkler(normalizedA, normalizedB);
-  
-  // More lenient threshold for first names
-  if (similarity >= 0.75) {
-    return { matches: true, similarity, reason: 'Similarity match' };
-  }
-  
-  return { matches: false, similarity, reason: 'No match' };
+  // FIRST NAMES ARE COMPLETELY IGNORED - Always return match
+  // Users may enter different first names than on official documents
+  // (e.g., initials like "HD" for "Hennie Daniël", "JP" for "Johan Petrus",
+  // nicknames, abbreviations, etc.) - all are acceptable
+  return { matches: true, similarity: 1.0, reason: 'First names ignored - always accepted' };
 }
+
+function isValidSouthAfricanId(idNumber) {
+  const digits = (idNumber || '').replace(/\D/g, '');
+  if (!/^\d{13}$/.test(digits)) return false;
+  // Luhn checksum
+  let sum = 0;
+  let shouldDouble = false;
+  for (let i = digits.length - 1; i >= 0; i -= 1) {
+    let d = parseInt(digits[i], 10);
+    if (shouldDouble) {
+      d *= 2;
+      if (d > 9) d -= 9;
+    }
+    sum += d;
+    shouldDouble = !shouldDouble;
+  }
+  return sum % 10 === 0;
+}
+
+// Normalize commonly misread OCR characters to digits for SA IDs
+function normalizeIdDigits(raw) {
+  const s = (raw || '').toString().toUpperCase().replace(/\s|[^0-9A-Z]/g, '');
+  return s
+    .replace(/O/g, '0')
+    .replace(/[I|l]/g, '1')
+    .replace(/B/g, '8')
+    .replace(/S/g, '5')
+    .replace(/Z/g, '2')
+    .replace(/G/g, '6')
+    .replace(/Q/g, '0')
+    .replace(/D/g, '0')
+    .replace(/[^0-9]/g, '');
+}
+
+// Normalize surname text from OCR for robust matching
+function normalizeSurnameOCR(raw) {
+  const s = (raw || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9\s'-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Join stray internal spaces like "BH OES" => "BHOES"
+  const compact = s.replace(/\b([A-Z])\s+([A-Z]{2,})\b/g, '$1$2').replace(/\s+/g, '');
+
+  // Map common OCR digit/letter confusions back to letters
+  return compact
+    .replace(/0/g, 'O')
+    .replace(/1/g, 'I')
+    .replace(/5/g, 'S')
+    .replace(/2/g, 'Z')
+    .replace(/8/g, 'B')
+    .replace(/6/g, 'G')
+    .replace(/4/g, 'A');
+}
+
+// Normalize name for comparison (removes diacritics, converts to uppercase)
+function normalizeName(name) {
+  return (name || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .trim();
+}
+
+// Helper to split full name into first and last
+function splitFullName(fullName) {
+  if (!fullName) return { first: '', last: '' };
+  const parts = fullName.trim().split(/\s+/);
+  if (parts.length === 1) return { first: parts[0], last: '' };
+  return { first: parts.slice(0, -1).join(' '), last: parts[parts.length - 1] };
+}
+
+// Jaro-Winkler distance for fuzzy string matching
+function jaroWinkler(s1, s2) {
+  if (s1 === s2) return 1.0;
+  if (!s1 || !s2) return 0.0;
+  
+  const jaro = jaroDistance(s1, s2);
+  const prefixLength = commonPrefixLength(s1, s2, 4);
+  return jaro + (0.1 * prefixLength * (1 - jaro));
+}
+
+function jaroDistance(s1, s2) {
+  const matchWindow = Math.floor(Math.max(s1.length, s2.length) / 2) - 1;
+  const s1Matches = new Array(s1.length).fill(false);
+  const s2Matches = new Array(s2.length).fill(false);
+  
+  let matches = 0;
+  for (let i = 0; i < s1.length; i++) {
+    const start = Math.max(0, i - matchWindow);
+    const end = Math.min(i + matchWindow + 1, s2.length);
+    for (let j = start; j < end; j++) {
+      if (s2Matches[j] || s1[i] !== s2[j]) continue;
+      s1Matches[i] = true;
+      s2Matches[j] = true;
+      matches++;
+      break;
+    }
+  }
+  
+  if (matches === 0) return 0.0;
+  
+  let transpositions = 0;
+  let k = 0;
+  for (let i = 0; i < s1.length; i++) {
+    if (!s1Matches[i]) continue;
+    while (!s2Matches[k]) k++;
+    if (s1[i] !== s2[k]) transpositions++;
+    k++;
+  }
+  
+  return (matches / s1.length + matches / s2.length + (matches - transpositions / 2) / matches) / 3.0;
+}
+
+function commonPrefixLength(s1, s2, maxLen) {
+  let len = 0;
+  for (let i = 0; i < Math.min(maxLen, s1.length, s2.length); i++) {
+    if (s1[i] === s2[i]) len++;
+    else break;
+  }
+  return len;
+}
+
+// First names are completely ignored - no nickname mappings needed
 
 function isValidSouthAfricanId(idNumber) {
   const digits = (idNumber || '').replace(/\D/g, '');
@@ -1090,49 +983,65 @@ Return ONLY valid JSON in this exact format:
         return validation;
       }
 
-      // Required fields
+      // Required fields for validation
+      // Note: Full name is not strictly required - we only need surname
       const fullName = (ocrResults && ocrResults.fullName) || '';
+      const surname = (ocrResults && ocrResults.surname) || '';
       const idNumber = (ocrResults && ocrResults.idNumber) || '';
       const licenseNumber = (ocrResults && ocrResults.licenseNumber) || '';
-      const dateOfBirth = (ocrResults && ocrResults.dateOfBirth) || '';
-      if (!fullName) validation.issues.push('Full name not found on document');
-      if (!idNumber && !licenseNumber) validation.issues.push('ID/Passport/License number not found on document');
-      if (!dateOfBirth) validation.issues.push('Date of birth not found on document');
-
-      // Early return if basics missing
-      if (validation.issues.length > 0) {
+      
+      // CRITICAL: ID/Passport/License number is required
+      if (!idNumber && !licenseNumber) {
+        validation.issues.push('ID/Passport/License number not found on document');
         return validation;
       }
+      
+      // CRITICAL: Surname is required (can be extracted from fullName if surname field missing)
+      if (!surname && !fullName) {
+        validation.issues.push('Surname not found on document (required for validation)');
+        return validation;
+      }
+      
+      // Note: First names and date of birth are NOT required for validation
+      // We only validate ID Number and Surname against user registration
 
-      // Enhanced name matching with surname priority only (first name ignored)
-      const docSurname = ocrResults.surname || '';
-      const { first: docFirst, last: docLast } = splitFullName(fullName);
-      const surnameForCompare = docSurname || docLast;
-      const userFirst = normalizeName(user.firstName || '');
-      const userLast = normalizeName(user.lastName || '');
-
-      // Priority 1: Surname must match (robust normalization)
-      // Pre-compute ID match (used to decide tolerance or skip when surname cannot be confidently extracted)
+      // CRITICAL VALIDATION RULES:
+      // 1. ID Number MUST match exactly (for SA ID, Passport, Driver's License, Temporary ID)
+      // 2. Surname MUST match exactly
+      // 3. First names are IGNORED - differences are acceptable and do not cause failure
+      
       const documentType = this.determineDocumentType(ocrResults);
       const registeredId = normalizeIdDigits(user.idNumber || '');
       const docIdForMatch = normalizeIdDigits(ocrResults.idNumber || ocrResults.licenseNumber || '');
-      const idMatches = documentType === 'sa_id' && registeredId && docIdForMatch && registeredId === docIdForMatch;
-
-      // If SA ID matches registration exactly, accept immediately to avoid false negatives from surname OCR.
-      if (idMatches) {
-        validation.confidence = 100;
-        validation.isValid = true;
+      
+      // CRITICAL CHECK 1: ID Number must match exactly
+      // Applies to: SA ID, Passport, Driver's License, Temporary ID Certificate
+      if (registeredId && docIdForMatch) {
+        if (registeredId !== docIdForMatch) {
+          validation.issues.push(`ID/Passport/License number mismatch: Document shows "${ocrResults.idNumber || ocrResults.licenseNumber}" but registration shows "${user.idNumber}"`);
+          // ID mismatch is critical - fail immediately
+          return validation;
+        }
+      } else if (!docIdForMatch) {
+        validation.issues.push('ID/Passport/License number not found on document');
         return validation;
       }
+
+      // CRITICAL CHECK 2: Surname must match exactly
+      const docSurname = ocrResults.surname || '';
+      const { first: docFirst, last: docLast } = splitFullName(fullName);
+      const surnameForCompare = docSurname || docLast;
+      const userLast = normalizeName(user.lastName || '');
 
       if (surnameForCompare && userLast) {
         const docLastNorm = normalizeSurnameOCR(surnameForCompare);
         const userLastNorm = normalizeSurnameOCR(userLast);
         if (docLastNorm !== userLastNorm) {
           const similarity = jaroWinkler(docLastNorm, userLastNorm);
-          const threshold = 0.999;
+          const threshold = 0.999; // Very strict for surname
           if (similarity < threshold) {
-            validation.issues.push(`Surname mismatch (${surnameForCompare} vs ${user.firstName} ${user.lastName})`);
+            validation.issues.push(`Surname mismatch: Document shows "${surnameForCompare}" but registration shows "${user.lastName}"`);
+            // Surname mismatch is critical - fail immediately
             return validation;
           }
         }
@@ -1141,22 +1050,15 @@ Return ONLY valid JSON in this exact format:
         return validation;
       }
 
-      // Priority 2: Light first name matching (flexible)
+      // FIRST NAMES: COMPLETELY IGNORED - No validation performed
+      // Users may enter different first names than on official documents
+      // (e.g., initials like "HD" for "Hennie Daniël", "JP" for "Johan Petrus",
+      // nicknames, abbreviations, etc.) - all are acceptable and never cause failure
+      const userFirst = normalizeName(user.firstName || '');
       if (docFirst && userFirst) {
-        const firstMatchResult = lightFirstNameMatch(docFirst, userFirst);
-        if (!firstMatchResult.matches) {
-          // Log the mismatch but don't fail validation
-  
-          validation.tolerantNameMatch = true; // Allow manual review
-        }
-      }
-
-      // Enforce ID number match with what was captured at registration (only for SA IDs)
-      const registeredId2 = normalizeIdDigits(user.idNumber || '');
-      const docId2 = normalizeIdDigits(idNumber || licenseNumber || '');
-      if (documentType === 'sa_id' && registeredId2 && docId2 && registeredId2 !== docId2) {
-        // If both are 13 digits and docId has OCR ambiguities, still mismatch triggers failure
-        validation.issues.push('ID number does not match the number captured at registration');
+        // Log for reference only - never fails validation
+        console.log(`ℹ️  First names ignored in validation: Document="${docFirst}" vs Registration="${userFirst}"`);
+        validation.tolerantNameMatch = true; // Flag for logging/reporting only
       }
 
       // Check document format based on type
@@ -1195,21 +1097,28 @@ Return ONLY valid JSON in this exact format:
         validation.issues.push('Unable to determine document type (ID, Temporary ID, Passport, or Driving License)');
       }
 
-      // Enhanced confidence calculation with surname priority
-      const checks = [
-        // Surname match (critical - must pass)
-        validation.issues.findIndex(i => i.toLowerCase().includes('surname')) === -1,
-        // ID/Passport/License number (critical - must pass)
-        validation.issues.findIndex(i => i.toLowerCase().includes('id') || i.toLowerCase().includes('passport') || i.toLowerCase().includes('license')) === -1,
-        // Date of birth (critical - must pass)
-        validation.issues.findIndex(i => i.toLowerCase().includes('birth')) === -1
+      // Enhanced confidence calculation - only ID Number and Surname are critical
+      // First names are NOT included in validation checks
+      const criticalChecks = [
+        // ID/Passport/License number match (CRITICAL - must pass)
+        validation.issues.findIndex(i => 
+          i.toLowerCase().includes('id') || 
+          i.toLowerCase().includes('passport') || 
+          i.toLowerCase().includes('license') ||
+          i.toLowerCase().includes('number')
+        ) === -1,
+        // Surname match (CRITICAL - must pass)
+        validation.issues.findIndex(i => i.toLowerCase().includes('surname')) === -1
       ];
       
-      const criticalChecks = checks.filter(Boolean).length;
-      const criticalConfidence = (criticalChecks / checks.length) * 100;
+      const passedCriticalChecks = criticalChecks.filter(Boolean).length;
+      const criticalConfidence = (passedCriticalChecks / criticalChecks.length) * 100;
       
-      // Confidence: surname + id + dob only
+      // Confidence based on ID + Surname only (first names excluded)
       validation.confidence = Math.min(100, criticalConfidence);
+      
+      // Validation passes if no critical issues (ID and Surname match)
+      // First name differences do NOT cause validation failure
       validation.isValid = validation.issues.length === 0;
 
       
