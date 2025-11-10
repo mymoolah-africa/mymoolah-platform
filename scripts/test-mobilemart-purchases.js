@@ -445,8 +445,15 @@ async function testPurchases() {
                 results.push({ type: 'Bill Payment', success: false, error: 'Prevend failed or needs valid account' });
             }
         } catch (error) {
-            logError(`❌ Bill Payment: ${error.message}`);
-            results.push({ type: 'Bill Payment', success: false, error: error.message });
+            // Log full error details for Bill Payment debugging
+            if (error.response?.data) {
+                logError(`❌ Bill Payment: ${error.message}`);
+                logInfo(`  Error Details: ${JSON.stringify(error.response.data, null, 2)}`);
+                results.push({ type: 'Bill Payment', success: false, error: error.message, details: error.response.data });
+            } else {
+                logError(`❌ Bill Payment: ${error.message}`);
+                results.push({ type: 'Bill Payment', success: false, error: error.message });
+            }
         }
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
