@@ -2,13 +2,21 @@
 require("dotenv").config();
 const { spawn } = require("child_process");
 
-function ensureSslTrue(url) {
+function configureDatabaseUrl(url) {
   try {
     const u = new URL(url);
-    const p = u.searchParams;
-    p.set("ssl","true");
-    p.delete("sslmode");
-    u.search = p.toString();
+    
+    // If using Cloud SQL Auth Proxy (127.0.0.1:6543), disable SSL
+    if (u.hostname === '127.0.0.1' && u.port === '6543') {
+      u.searchParams.set("sslmode", "disable");
+      u.searchParams.delete("ssl");
+      console.log('ℹ️  Using Cloud SQL Auth Proxy - SSL disabled');
+      return u.toString();
+    }
+    
+    // For direct connections, enable SSL
+    u.searchParams.set("ssl", "true");
+    u.searchParams.delete("sslmode");
     return u.toString();
   } catch {
     console.error("Invalid DATABASE_URL");
@@ -21,8 +29,8 @@ if (!process.env.DATABASE_URL) {
   process.exit(1);
 }
 
-process.env.DATABASE_URL = ensureSslTrue(process.env.DATABASE_URL);
-process.env.PGSSLMODE = "no-verify";
+process.env.DATABASE_URL = configureDatabaseUrl(process.env.DATABASE_URL);
+process.env.PGSSLMODE = process.env.DATABASE_URL.includes('sslmode=disable') ? "disable" : "no-verify";
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 const child = spawn("node", ["server.js"], { stdio: "inherit" });
