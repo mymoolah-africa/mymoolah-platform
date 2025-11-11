@@ -8,9 +8,13 @@
 ## 🔍 **Issues Identified**
 
 ### **1. Pinless Airtime/Data - Mobile Number Format**
-- **Error:** 1013 - "Mobile Number is invalid"
-- **Issue:** Mobile number `0720012345` rejected
-- **Fix:** Use international format `27720012345` (27 = South Africa country code)
+- **Initial Error:** 1013 - "Mobile Number is invalid"
+- **Root Cause:** Using numbers not valid for UAT and/or wrong format
+- **Fix:** Use provider-based valid UAT test numbers in local format  
+  - Vodacom: `0829802807`  
+  - MTN: `0830012300`  
+  - CellC: `0840012300`  
+  - Telkom: `0850012345`
 
 ### **2. Utility Purchase - Double /v1/ in URL**
 - **Error:** 405 Method Not Allowed
@@ -55,18 +59,15 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=requi
 
 ---
 
-## 📝 **Mobile Number Format Requirements**
+## 📝 **Mobile Number Format Guidance (UAT)**
+- Use provider-based valid UAT test numbers in local format (leading 0)
+- Do not convert to international format for UAT pinless tests
 
-MobileMart API requires mobile numbers in **international format**:
-- **Format:** `27` + mobile number (without leading 0)
-- **Example:** `0720012345` → `27720012345`
-- **Country Code:** 27 (South Africa)
-
-### **Test Numbers from MobileMart Test Pack:**
-- Vodacom: `0720012345` → `27720012345`
-- MTN: `0830012300` → `27830012300`
-- CellC: `0840000000` → `27840000000`
-- Telkom: `0850012345` → `27850012345`
+### **Validated UAT Test Numbers (Local Format):**
+- Vodacom: `0829802807`
+- MTN: `0830012300`
+- CellC: `0840012300`
+- Telkom: `0850012345`
 
 ---
 
@@ -80,10 +81,10 @@ node scripts/test-mobilemart-purchases.js
 ```
 
 **Expected Results:**
-- ✅ Airtime Pinless: Should work with international format
-- ✅ Data Pinless: Should work with international format
-- ✅ Utility Purchase: Should work with corrected URL
-- ⚠️ Bill Payment: Still needs valid account number
+- ✅ Airtime Pinless: Working with local-format provider numbers
+- ✅ Data Pinless: Working with local-format provider numbers
+- ✅ Utility Purchase: Working with corrected URL
+- ⚠️ Bill Payment (DSTV): Upstream provider issue (Error 1002)
 
 ---
 
