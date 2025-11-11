@@ -95,7 +95,11 @@ if (validCredentials.mobilemart) {
 
 }
 
+// CORS must be applied BEFORE helmet to allow cross-origin requests
+app.use(cors(config.corsConfig));
+
 // Enhanced Security Middleware with TLS 1.3 Compliance
+const isDevelopment = process.env.NODE_ENV === 'development';
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -104,7 +108,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      connectSrc: ["'self'", "https://api.mymoolah.com", "https://*.flash.co.za", "https://*.mobilemart.co.za"],
+      connectSrc: ["'self'", "https://api.mymoolah.com", "https://*.flash.co.za", "https://*.mobilemart.co.za", "https://*.github.dev"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
@@ -136,13 +140,15 @@ app.use(helmet({
       gyroscope: []
     }
   },
-  crossOriginEmbedderPolicy: {
+  // Relax CORP policy in development to allow Codespaces CORS
+  crossOriginEmbedderPolicy: isDevelopment ? false : {
     policy: 'require-corp'
   },
   crossOriginOpenerPolicy: {
     policy: 'same-origin'
   },
-  crossOriginResourcePolicy: {
+  // Relax CORP policy in development to allow Codespaces CORS
+  crossOriginResourcePolicy: isDevelopment ? false : {
     policy: 'same-origin'
   }
 }));
@@ -254,9 +260,6 @@ const validateRequest = (req, res, next) => {
   }
   next();
 };
-
-// CORS configuration
-app.use(cors(config.corsConfig));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
