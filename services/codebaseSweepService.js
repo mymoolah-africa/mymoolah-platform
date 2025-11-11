@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
 const OpenAI = require('openai');
+const fg = require('fast-glob');
 
 /**
  * 🚀 MyMoolah Codebase Sweep Service
@@ -124,22 +125,54 @@ class CodebaseSweepService {
   async discoverFiles() {
     const discoveredFiles = [];
     
+    // Verify project root exists
+    try {
+      await fs.access(this.projectRoot);
+    } catch (error) {
+      console.error(`❌ Project root does not exist: ${this.projectRoot}`);
+      return [];
+    }
+    
     for (const [category, patterns] of Object.entries(this.scanPatterns)) {
       for (const pattern of patterns) {
         try {
-          const files = await this.glob(pattern);
-          discoveredFiles.push(...files.map(file => ({
-            path: file,
-            category,
-            type: path.extname(file)
-          })));
+          // Use fast-glob to find files matching the pattern
+          const files = await fg(pattern, {
+            cwd: this.projectRoot,
+            absolute: true,
+            ignore: ['**/node_modules/**', '**/.git/**', '**/backups/**', '**/dist/**', '**/build/**'],
+            onlyFiles: true,
+            caseSensitiveMatch: false
+          });
+          
+          if (files.length > 0) {
+            discoveredFiles.push(...files.map(file => ({
+              path: file,
+              category,
+              type: path.extname(file)
+            })));
+          }
         } catch (error) {
           console.warn(`⚠️ Warning: Could not scan pattern ${pattern}:`, error.message);
         }
       }
     }
     
-    return discoveredFiles;
+    // Remove duplicates (same file might match multiple patterns)
+    const uniqueFiles = Array.from(
+      new Map(discoveredFiles.map(file => [file.path, file])).values()
+    );
+    
+    // Log discovery summary by category
+    if (uniqueFiles.length > 0) {
+      const byCategory = {};
+      uniqueFiles.forEach(file => {
+        byCategory[file.category] = (byCategory[file.category] || 0) + 1;
+      });
+      console.log(`📁 File discovery summary:`, byCategory);
+    }
+    
+    return uniqueFiles;
   }
 
   /**
@@ -533,91 +566,6 @@ Generate a comprehensive list of support questions organized by category.`
     }
   }
 
-  /**
-   * 🌐 Simple glob pattern matching (basic implementation)
-   */
-  async glob(pattern) {
-    const files = [];
-    
-    try {
-      // Basic glob implementation for common patterns
-      if (pattern.includes('**')) {
-        // Recursive search
-        await this.recursiveSearch(pattern, files);
-      } else {
-        // Simple pattern
-        const matches = await this.simplePatternSearch(pattern);
-        files.push(...matches);
-      }
-    } catch (error) {
-      console.warn(`⚠️ Glob pattern ${pattern} failed:`, error.message);
-    }
-    
-    return files;
-  }
-
-  /**
-   * 🔍 Recursive file search
-   */
-  async recursiveSearch(pattern, files, currentPath = this.projectRoot) {
-    try {
-      const items = await fs.readdir(currentPath, { withFileTypes: true });
-      
-      for (const item of items) {
-        const fullPath = path.join(currentPath, item.name);
-        
-        if (item.isDirectory() && !item.name.startsWith('.') && item.name !== 'node_modules') {
-          await this.recursiveSearch(pattern, files, fullPath);
-        } else if (item.isFile()) {
-          if (this.matchesPattern(fullPath, pattern)) {
-            files.push(fullPath);
-          }
-        }
-      }
-    } catch (error) {
-      // Ignore permission errors for system directories
-    }
-  }
-
-  /**
-   * 🎯 Simple pattern matching
-   */
-  matchesPattern(filepath, pattern) {
-    const relativePath = path.relative(this.projectRoot, filepath);
-    
-    // Convert glob pattern to regex
-    let regexPattern = pattern
-      .replace(/\*\*/g, '.*') // ** -> .*
-      .replace(/\*/g, '[^/]*') // * -> [^/]*
-      .replace(/\./g, '\\.') // . -> \.
-      .replace(/\//g, '\\/'); // / -> \/
-    
-    const regex = new RegExp(`^${regexPattern}$`);
-    return regex.test(relativePath);
-  }
-
-  /**
-   * 🔍 Simple pattern search
-   */
-  async simplePatternSearch(pattern) {
-    const files = [];
-    const searchPath = pattern.replace(/\*\*\/\*\*\/\*\.(js|ts)/, '');
-    
-    try {
-      const fullPath = path.join(this.projectRoot, searchPath);
-      const items = await fs.readdir(fullPath, { withFileTypes: true });
-      
-      for (const item of items) {
-        if (item.isFile() && (item.name.endsWith('.js') || item.name.endsWith('.ts'))) {
-          files.push(path.join(fullPath, item.name));
-        }
-      }
-    } catch (error) {
-      // Pattern not found, return empty array
-    }
-    
-    return files;
-  }
 
   /**
    * 📊 Get current discovered capabilities
