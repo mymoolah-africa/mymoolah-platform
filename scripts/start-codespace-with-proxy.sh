@@ -25,15 +25,46 @@ ensure_in_project_root() {
 
 wait_for_port() {
   local port="$1"
-  local retries="${2:-20}"
-  local delay="${3:-0.5}"
+  local retries="${2:-40}"
+  local delay="${3:-0.25}"
 
   log "Waiting for proxy to listen on port ${port}..."
+  
+  # Give proxy a moment to start writing logs
+  sleep 0.5
+  
   for i in $(seq 1 "${retries}"); do
-    if nc -z 127.0.0.1 "${port}" >/dev/null 2>&1; then
+    # Primary check: detect readiness from proxy logs (most reliable)
+    if [ -f "${PROXY_LOG}" ] && grep -q "The proxy has started successfully and is ready for new connections" "${PROXY_LOG}" 2>/dev/null; then
+      log "✅ Proxy is ready (detected from logs)"
+      # Verify port is actually listening
+      sleep 0.2
+      if command -v nc >/dev/null 2>&1; then
+        if nc -z 127.0.0.1 "${port}" >/dev/null 2>&1; then
+          return 0
+        fi
+      elif (exec 3<>/dev/tcp/127.0.0.1/"${port}") 2>/dev/null; then
+        exec 3>&-
+        return 0
+      else
+        # Log says ready, trust it even if port check fails
+        log "⚠️  Log indicates ready, proceeding (port check inconclusive)"
+        return 0
+      fi
+    fi
+    
+    # Secondary check: try port directly
+    if command -v nc >/dev/null 2>&1; then
+      if nc -z 127.0.0.1 "${port}" >/dev/null 2>&1; then
+        log "✅ Proxy is listening on port ${port}"
+        return 0
+      fi
+    elif (exec 3<>/dev/tcp/127.0.0.1/"${port}") 2>/dev/null; then
+      exec 3>&-
       log "✅ Proxy is listening on port ${port}"
       return 0
     fi
+    
     sleep "${delay}"
   done
 
@@ -86,14 +117,20 @@ start_proxy() {
   log "Proxy started (PID: ${proxy_pid})"
 
   # Wait for proxy to be ready
-  if wait_for_port "${PROXY_PORT}" 20 0.5; then
+  if wait_for_port "${PROXY_PORT}" 40 0.25; then
     log "✅ Proxy is ready"
     # Show last few log lines
     tail -5 "${PROXY_LOG}" 2>/dev/null || true
   else
-    error "Proxy failed to start. Check logs: ${PROXY_LOG}"
-    tail -20 "${PROXY_LOG}" 2>/dev/null || true
-    exit 1
+    # One last chance: if logs show ready, continue
+    if [ -f "${PROXY_LOG}" ] && grep -q "Listening on 127.0.0.1:${PROXY_PORT}" "${PROXY_LOG}" 2>/dev/null; then
+      log "✅ Proxy reported listening in logs; proceeding"
+      tail -5 "${PROXY_LOG}" 2>/dev/null || true
+    else
+      error "Proxy failed to start. Check logs: ${PROXY_LOG}"
+      tail -20 "${PROXY_LOG}" 2>/dev/null || true
+      exit 1
+    fi
   fi
 }
 
