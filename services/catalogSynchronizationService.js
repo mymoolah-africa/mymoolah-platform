@@ -43,6 +43,21 @@ class CatalogSynchronizationService {
   }
 
   /**
+   * Start only the daily synchronization (02:00), without frequent updates.
+   * Useful for staging/dev where frequent updates are shadowed until prod.
+   */
+  startDailyOnly() {
+    if (this.isRunning) {
+      console.log('🔄 Catalog synchronization service already running');
+      return;
+    }
+    console.log('🚀 Starting catalog synchronization service (daily only)…');
+    this.isRunning = true;
+    this.scheduleDailySweep();
+    console.log('✅ Catalog synchronization service (daily only) started');
+  }
+
+  /**
    * Stop the catalog synchronization service
    */
   stop() {
