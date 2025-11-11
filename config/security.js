@@ -166,10 +166,16 @@ class SecurityConfig {
     this.corsConfig = {
       origin: (origin, callback) => {
         // Allow non-browser requests (no origin)
-        if (!origin) return callback(null, true);
+        if (!origin) {
+          return callback(null, true);
+        }
 
-        if (allowedOrigins.includes(origin)) return callback(null, true);
+        // Check explicit allowed origins
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        }
 
+        // Allow LAN IPs in development
         if (isDev && devLanFrontendRegex.test(origin)) {
           return callback(null, true);
         }
@@ -179,7 +185,12 @@ class SecurityConfig {
           return callback(null, true);
         }
 
-        return callback(new Error('Not allowed by CORS'), false);
+        // In development, log rejected origins for debugging
+        if (isDev) {
+          console.log(`⚠️  CORS: Origin "${origin}" not allowed. Allowed origins:`, allowedOrigins);
+        }
+
+        return callback(new Error(`CORS: Origin "${origin}" not allowed by CORS policy`), false);
       },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
