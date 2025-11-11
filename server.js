@@ -486,6 +486,18 @@ const initializeBackgroundServices = async () => {
     await databasePerformanceMonitor.startMonitoring();
     console.log('✅ Database Performance Monitor started');
     
+    // Start Catalog Synchronization (daily only at 02:00; shadow 10-minute updates until prod)
+    try {
+      const catalogSyncService = new CatalogSynchronizationService();
+      if (process.env.ENABLE_CATALOG_SYNC !== 'false') {
+        catalogSyncService.startDailyOnly();
+      } else {
+        console.log('⚠️  Catalog synchronization disabled via ENABLE_CATALOG_SYNC=false');
+      }
+    } catch (catalogErr) {
+      console.error('❌ Failed to start Catalog Synchronization Service:', catalogErr.message);
+    }
+    
     console.log('🎉 All background services started successfully');
   } catch (error) {
     console.error('❌ Error starting background services:', error.message);
