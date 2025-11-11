@@ -98,7 +98,17 @@ class CodebaseSweepService {
       await this.saveSweepResults(aiAnalysis);
       
       console.log('✅ Codebase sweep completed successfully');
-      console.log(`📊 Discovered ${aiAnalysis.totalSupportQuestions} possible support questions`);
+      
+      // Safely log support questions count
+      const supportQuestionsCount = aiAnalysis?.totalSupportQuestions ?? 
+                                   (aiAnalysis?.categories ? 
+                                     Object.values(aiAnalysis.categories).flat().length : 0);
+      
+      if (supportQuestionsCount > 0) {
+        console.log(`📊 Discovered ${supportQuestionsCount} possible support questions`);
+      } else {
+        console.log('📊 Support questions analysis completed (no questions generated)');
+      }
       
       return aiAnalysis;
       
@@ -312,7 +322,28 @@ Generate a comprehensive list of support questions organized by category.`
       // Try to extract JSON from the response
       const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // Ensure the response has the expected structure
+        if (!parsed.totalSupportQuestions && parsed.categories) {
+          // Calculate total from categories if not provided
+          parsed.totalSupportQuestions = Object.values(parsed.categories)
+            .flat()
+            .filter(q => typeof q === 'string' || (q && q.question))
+            .length;
+        }
+        
+        // Ensure categories exist
+        if (!parsed.categories) {
+          parsed.categories = {};
+        }
+        
+        // Ensure timestamp exists
+        if (!parsed.sweepTimestamp) {
+          parsed.sweepTimestamp = new Date().toISOString();
+        }
+        
+        return parsed;
       }
       
       // Fallback: parse text response
