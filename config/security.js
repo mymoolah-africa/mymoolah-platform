@@ -160,6 +160,8 @@ class SecurityConfig {
     const allowedOrigins = this.getCorsOrigins();
     const isDev = process.env.NODE_ENV !== 'production';
     const devLanFrontendRegex = /^http:\/\/192\.168\.[0-9]{1,3}\.[0-9]{1,3}:3000$/;
+    // Allow Codespaces GitHub.dev domains in development
+    const codespacesRegex = /^https:\/\/.*\.github\.dev$/;
 
     this.corsConfig = {
       origin: (origin, callback) => {
@@ -169,6 +171,11 @@ class SecurityConfig {
         if (allowedOrigins.includes(origin)) return callback(null, true);
 
         if (isDev && devLanFrontendRegex.test(origin)) {
+          return callback(null, true);
+        }
+
+        // Allow Codespaces GitHub.dev domains in development
+        if (isDev && codespacesRegex.test(origin)) {
           return callback(null, true);
         }
 
