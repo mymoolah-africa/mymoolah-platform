@@ -292,8 +292,11 @@ class PurchaseHandlers {
         const provider = this.getProviderFromProduct(product);
         const mobileNumber = TEST_DATA.mobileNumbers[provider] || TEST_DATA.mobileNumbers.vodacom;
         
+        // Generate unique request ID (max 36 characters as per MobileMart API)
+        const requestId = `LT${Date.now().toString().slice(-10)}${(++this.requestCounter % 10000).toString().padStart(4, '0')}AP`;
+        
         const requestData = {
-            requestId: `LOAD_TEST_${Date.now()}_${++this.requestCounter}_AIR_PINLESS`,
+            requestId: requestId,
             merchantProductId: product.merchantProductId,
             tenderType: 'CreditCard',
             mobileNumber: mobileNumber,
@@ -315,8 +318,11 @@ class PurchaseHandlers {
         const product = this.testProducts.airtime?.pinned;
         if (!product) throw new Error('No pinned airtime product available');
         
+        // Generate unique request ID (max 36 characters as per MobileMart API)
+        const requestId = `LT${Date.now().toString().slice(-10)}${(++this.requestCounter % 10000).toString().padStart(4, '0')}AD`;
+        
         const requestData = {
-            requestId: `LOAD_TEST_${Date.now()}_${++this.requestCounter}_AIR_PINNED`,
+            requestId: requestId,
             merchantProductId: product.merchantProductId,
             tenderType: 'CreditCard'
         };
@@ -339,8 +345,11 @@ class PurchaseHandlers {
         const provider = this.getProviderFromProduct(product);
         const mobileNumber = TEST_DATA.mobileNumbers[provider] || TEST_DATA.mobileNumbers.vodacom;
         
+        // Generate unique request ID (max 36 characters as per MobileMart API)
+        const requestId = `LT${Date.now().toString().slice(-10)}${(++this.requestCounter % 10000).toString().padStart(4, '0')}DP`;
+        
         const requestData = {
-            requestId: `LOAD_TEST_${Date.now()}_${++this.requestCounter}_DATA_PINLESS`,
+            requestId: requestId,
             merchantProductId: product.merchantProductId,
             tenderType: 'CreditCard',
             mobileNumber: mobileNumber
@@ -361,8 +370,11 @@ class PurchaseHandlers {
         const product = this.testProducts.data?.pinned;
         if (!product) throw new Error('No pinned data product available');
         
+        // Generate unique request ID (max 36 characters as per MobileMart API)
+        const requestId = `LT${Date.now().toString().slice(-10)}${(++this.requestCounter % 10000).toString().padStart(4, '0')}DD`;
+        
         const requestData = {
-            requestId: `LOAD_TEST_${Date.now()}_${++this.requestCounter}_DATA_PINNED`,
+            requestId: requestId,
             merchantProductId: product.merchantProductId,
             tenderType: 'CreditCard'
         };
@@ -382,8 +394,11 @@ class PurchaseHandlers {
         const product = this.testProducts.voucher;
         if (!product) throw new Error('No voucher product available');
         
+        // Generate unique request ID (max 36 characters as per MobileMart API)
+        const requestId = `LT${Date.now().toString().slice(-10)}${(++this.requestCounter % 10000).toString().padStart(4, '0')}VC`;
+        
         const requestData = {
-            requestId: `LOAD_TEST_${Date.now()}_${++this.requestCounter}_VOUCHER`,
+            requestId: requestId,
             merchantProductId: product.merchantProductId,
             tenderType: 'CreditCard',
             amount: product.fixedAmount ? product.amount : (product.amount || 50)
@@ -405,10 +420,14 @@ class PurchaseHandlers {
         if (!product) throw new Error('No utility product available');
         
         // First, do prevend
+        // Generate unique request ID (max 36 characters as per MobileMart API)
+        const prevendRequestId = `LT${Date.now().toString().slice(-10)}${(++this.requestCounter % 10000).toString().padStart(4, '0')}UP`;
+        const purchaseRequestId = `LT${Date.now().toString().slice(-10)}${(++this.requestCounter % 10000).toString().padStart(4, '0')}UR`;
+        
         const prevendData = {
             MeterNumber: TEST_DATA.utilityMeter,
             MerchantProductId: product.merchantProductId,
-            RequestId: `LOAD_TEST_${Date.now()}_${++this.requestCounter}_UTIL_PREVEND`,
+            RequestId: prevendRequestId,
             Amount: TEST_DATA.utilityAmount
         };
         
@@ -428,7 +447,7 @@ class PurchaseHandlers {
             
             // Now do purchase
             const purchaseData = {
-                requestId: `LOAD_TEST_${Date.now()}_${++this.requestCounter}_UTIL_PURCHASE`,
+                requestId: purchaseRequestId,
                 prevendTransactionId: prevendResponse.transactionId || prevendResponse.data?.transactionId,
                 tenderType: 'CreditCard',
                 tenderPan: '4111111111111111' // Test card

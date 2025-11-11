@@ -17,6 +17,12 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Mojaloop Compliance**: FSPIOP standards for financial services interoperability
 - **Microservices Architecture**: Scalable, maintainable service-oriented design
 
+### **Development & Deployment Workflow**
+- **Development Environment**: GitHub Codespaces (UAT credentials, test accounts)
+- **Staging Environment**: Google Cloud Services Staging (Production credentials, test accounts) - **Recommended**
+- **Production Environment**: Google Cloud Services Production (Production credentials, real customers)
+- **See:** `DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow documentation
+
 ---
 
 ## 🏗️ **PRODUCT CATALOG ARCHITECTURE**

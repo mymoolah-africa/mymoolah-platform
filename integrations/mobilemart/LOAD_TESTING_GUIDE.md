@@ -123,17 +123,24 @@ node scripts/test-mobilemart-load.js --tps 1000 --duration 10 --type airtime-pin
 
 ## ⚠️ **Important Notes**
 
-### **1. UAT Environment**
-- **This script makes REAL API calls to MobileMart UAT**
-- All transactions are real and will be processed
-- Use test products and test accounts only
-- Be mindful of rate limits and account restrictions
+### **1. UAT Environment Limitations** ⚠️ **CRITICAL**
+- **UAT has strict rate limits that prevent load testing**
+- **Rate limits trigger immediately at 100+ TPS**
+- **Load testing in UAT is not feasible**
+- **Recommendation: Perform load testing in production environment only**
 
-### **2. Rate Limiting**
-- MobileMart UAT may have rate limiting in place
-- High TPS tests (500+) may trigger rate limits
-- Monitor error rates and adjust TPS accordingly
-- Contact MobileMart support for rate limit information
+### **2. Production Environment** ✅ **RECOMMENDED**
+- **Load testing should be performed in production**
+- **Production environment should have higher rate limits**
+- **Coordinate with MobileMart before production load testing**
+- **Use production credentials and test accounts**
+
+### **2. Rate Limiting** ⚠️ **UAT LIMITATION**
+- **UAT has strict rate limits that prevent load testing**
+- **Rate limits trigger immediately at 100+ TPS**
+- **Production environment should have higher rate limits**
+- **Contact MobileMart support for production rate limit information**
+- **See `UAT_RATE_LIMITING.md` for details**
 
 ### **3. Test Data**
 - Uses valid UAT test mobile numbers:
@@ -316,5 +323,6 @@ LOAD TEST RESULTS
 ---
 
 **Last Updated:** November 10, 2025  
-**Status:** ✅ **Load Testing Script Ready for Use**
+**Status:** ✅ **Load Testing Script Ready for Production Use**  
+**Note:** ⚠️ **UAT rate limits prevent load testing - use production environment**
 
