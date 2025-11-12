@@ -15,16 +15,59 @@
 
 require('dotenv').config();
 
-// Check if we should use Cloud SQL Auth Proxy (Codespaces)
-// If DATABASE_URL contains 127.0.0.1:6543, we're using the proxy
-const useProxy = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('127.0.0.1:6543');
+// Check if Cloud SQL Auth Proxy is running (Codespaces)
+// If proxy is running on port 6543, override DATABASE_URL to use it
+const fs = require('fs');
+const { execSync } = require('child_process');
 
-if (useProxy) {
-  console.log('ℹ️  Using Cloud SQL Auth Proxy connection (127.0.0.1:6543)');
-  console.log('   Make sure the proxy is running: ./scripts/one-click-restart-and-start.sh\n');
-} else {
-  console.log('ℹ️  Using direct database connection');
-  console.log('   DATABASE_URL:', process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@') : 'not set\n');
+let useProxy = false;
+let proxyRunning = false;
+
+// Check if proxy is running on port 6543
+try {
+  // Check if port 6543 is listening
+  execSync('nc -z 127.0.0.1 6543 2>/dev/null || true', { stdio: 'ignore' });
+  // Alternative check: look for proxy process
+  try {
+    const proxyPids = execSync('pgrep -f "cloud-sql-proxy.*6543" 2>/dev/null || true', { encoding: 'utf8' }).trim();
+    proxyRunning = proxyPids.length > 0;
+  } catch (e) {
+    // pgrep not available or no matches
+  }
+  
+  // If proxy is running, override DATABASE_URL to use it
+  if (proxyRunning && process.env.DATABASE_URL) {
+    try {
+      const originalUrl = new URL(process.env.DATABASE_URL);
+      originalUrl.hostname = '127.0.0.1';
+      originalUrl.port = '6543';
+      originalUrl.searchParams.set('sslmode', 'disable');
+      process.env.DATABASE_URL = originalUrl.toString();
+      useProxy = true;
+      console.log('ℹ️  Cloud SQL Auth Proxy detected - using proxy connection (127.0.0.1:6543)\n');
+    } catch (urlError) {
+      console.log('⚠️  Could not parse DATABASE_URL, using as-is\n');
+    }
+  } else if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('127.0.0.1:6543')) {
+    useProxy = true;
+    console.log('ℹ️  Using Cloud SQL Auth Proxy connection (from DATABASE_URL)\n');
+  } else {
+    console.log('ℹ️  Using direct database connection');
+    console.log('   DATABASE_URL:', process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@') : 'not set');
+    if (!proxyRunning) {
+      console.log('   💡 Tip: In Codespaces, start the proxy first: ./scripts/one-click-restart-and-start.sh\n');
+    } else {
+      console.log('');
+    }
+  }
+} catch (error) {
+  // Fallback to checking DATABASE_URL
+  if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('127.0.0.1:6543')) {
+    useProxy = true;
+    console.log('ℹ️  Using Cloud SQL Auth Proxy connection (from DATABASE_URL)\n');
+  } else {
+    console.log('ℹ️  Using direct database connection\n');
+  }
 }
 
 const { Transaction, SupplierFloat, TaxTransaction, sequelize } = require('../models');
