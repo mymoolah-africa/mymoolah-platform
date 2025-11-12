@@ -124,15 +124,28 @@ class ZapperService {
 
   /**
    * Decode Zapper QR code
-   * Based on Postman collection: GET /v1/codes/{code} (code in URL path)
+   * Based on Postman collection: GET /v1/codes/{code} (code in URL path, base64 encoded)
    */
   async decodeQRCode(qrCode) {
     try {
       await this.authenticate();
 
-      // Postman shows GET /v1/codes/{code} with code in URL path (base64 encoded)
-      // URL encode the QR code for the path
-      const encodedCode = encodeURIComponent(qrCode);
+      // Zapper API expects the QR code to be base64 encoded in the URL path
+      // If it's already a URL string (like http://2.zap.pe?...), we need to base64 encode it
+      let encodedCode;
+      
+      // Check if QR code is already base64 encoded (contains only base64 chars and ends with =)
+      const base64Pattern = /^[A-Za-z0-9+/]+=*$/;
+      if (base64Pattern.test(qrCode) && qrCode.length > 20) {
+        // Already base64 encoded, use as-is (but URL encode for path)
+        encodedCode = encodeURIComponent(qrCode);
+      } else {
+        // It's a URL string, base64 encode it first
+        // Convert string to base64
+        const base64String = Buffer.from(qrCode, 'utf8').toString('base64');
+        // Then URL encode for the path
+        encodedCode = encodeURIComponent(base64String);
+      }
       
       const response = await axios.get(
         `${this.baseURL}/codes/${encodedCode}`,
@@ -145,6 +158,10 @@ class ZapperService {
 
     } catch (error) {
       console.error('❌ Zapper QR decode failed:', error.response?.data || error.message);
+      if (error.response) {
+        console.error('   Status:', error.response.status);
+        console.error('   Response:', JSON.stringify(error.response.data, null, 2));
+      }
       throw new Error('Failed to decode QR code with Zapper');
     }
   }

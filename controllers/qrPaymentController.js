@@ -284,13 +284,16 @@ class QRPaymentController {
       // Only return active merchants
       merchants = merchants.filter(m => m.isActive);
 
+      // Frontend expects { merchants: [...] } in response.data
       res.json({
         success: true,
         data: {
           merchants,
           total: merchants.length,
           timestamp: new Date().toISOString()
-        }
+        },
+        // Include merchants at root level for frontend (apiService expects response.data.merchants)
+        merchants
       });
 
     } catch (error) {
