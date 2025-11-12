@@ -70,9 +70,10 @@ const handleExpiredVouchers = async () => {
           transactionDescription = EASYPAY_EXPIRATION_CONFIG.REFUND_DESCRIPTION_WITH_FEE;
         }
 
-        // Update voucher status to expired
+        // Update voucher status to expired and debit voucher balance
         await voucher.update({ 
           status: 'expired',
+          balance: 0, // Debit voucher balance - set to 0 on expiry
           metadata: {
             ...voucher.metadata,
             expiredAt: new Date().toISOString(),
@@ -152,7 +153,7 @@ const handleExpiredVouchers = async () => {
         }
 
         const voucherCode = isEasyPayVoucher ? voucher.easyPayCode : voucher.voucherCode;
-
+        console.log(`✅ Processed expired ${isEasyPayVoucher ? 'EasyPay' : 'MM'} voucher ${voucherCode}: Refunded R${refundAmount} to wallet`);
 
       } catch (error) {
         const voucherCode = isEasyPayVoucher ? voucher.easyPayCode : voucher.voucherCode;
@@ -160,7 +161,9 @@ const handleExpiredVouchers = async () => {
       }
     }
 
-    
+    if (expiredVouchers.length > 0) {
+      console.log(`✅ Voucher expiration handler completed: Processed ${expiredVouchers.length} expired voucher(s)`);
+    }
 
   } catch (error) {
     // Retry/backoff on transient connection errors
@@ -1021,13 +1024,15 @@ exports.getVoucherBalanceSummary = async (req, res) => {
 };
 
 // List all vouchers for authenticated user (for dashboard)
+// Only returns active vouchers (status: 'active' or 'pending_payment') - expired/cancelled/redeemed are excluded
 exports.listAllVouchersForMe = async (req, res) => {
   try {
     const userId = req.user.id;
     
     const vouchers = await Voucher.findAll({
       where: {
-        userId: userId
+        userId: userId,
+        status: { [Op.in]: ['active', 'pending_payment'] } // Only active vouchers (active + pending_payment)
       },
       order: [['createdAt', 'DESC']]
     });
