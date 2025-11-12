@@ -268,15 +268,16 @@ class ZapperService {
 
   /**
    * Health check
-   * Note: Health check may require authentication token
+   * Note: Health endpoint only requires x-api-key, not Bearer token
    */
   async healthCheck() {
     try {
-      // Try with authentication first
-      await this.authenticate();
-      
+      // Health endpoint only needs x-api-key (no Bearer token)
       const response = await axios.get(`${this.baseURL}/health`, {
-        headers: this.getAuthHeaders(true)
+        headers: {
+          'x-api-key': this.xApiKey,
+          'Content-Type': 'application/json'
+        }
       });
 
       return {
@@ -287,26 +288,13 @@ class ZapperService {
       };
 
     } catch (error) {
-      // If auth fails, try without token (some health endpoints don't need auth)
-      try {
-        const response = await axios.get(`${this.baseURL}/health`, {
-          headers: this.getAuthHeaders(false)
-        });
-        return {
-          status: 'healthy',
-          service: 'Zapper API',
-          timestamp: new Date().toISOString(),
-          data: response.data
-        };
-      } catch (fallbackError) {
-        console.error('❌ Zapper health check failed:', error.response?.data || error.message);
-        return {
-          status: 'unhealthy',
-          service: 'Zapper API',
-          timestamp: new Date().toISOString(),
-          error: error.message
-        };
-      }
+      console.error('❌ Zapper health check failed:', error.response?.data || error.message);
+      return {
+        status: 'unhealthy',
+        service: 'Zapper API',
+        timestamp: new Date().toISOString(),
+        error: error.message
+      };
     }
   }
 
