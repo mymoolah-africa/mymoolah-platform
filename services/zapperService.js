@@ -373,17 +373,30 @@ class ZapperService {
 
   /**
    * Health check
-   * Note: Health endpoint only requires x-api-key, not Bearer token
+   * Note: In UAT, health endpoint may require Bearer token
    */
   async healthCheck() {
     try {
-      // Health endpoint only needs x-api-key (no Bearer token)
-      const response = await axios.get(`${this.baseURL}/health`, {
-        headers: {
-          'x-api-key': this.xApiKey,
-          'Content-Type': 'application/json'
+      // Try with just x-api-key first (as per docs)
+      let response;
+      try {
+        response = await axios.get(`${this.baseURL}/health`, {
+          headers: {
+            'x-api-key': this.xApiKey,
+            'Content-Type': 'application/json'
+          }
+        });
+      } catch (error) {
+        // If that fails, try with Bearer token (UAT may require it)
+        if (error.response?.status === 401 || error.response?.data?.message?.includes('Authentication')) {
+          await this.authenticate();
+          response = await axios.get(`${this.baseURL}/health`, {
+            headers: this.getAuthHeaders()
+          });
+        } else {
+          throw error;
         }
-      });
+      }
 
       return {
         status: 'healthy',
