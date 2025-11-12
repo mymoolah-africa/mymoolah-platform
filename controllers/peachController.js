@@ -802,4 +802,232 @@ exports.getPayShapTestScenarios = async (req, res) => {
   }
 };
 
+/**
+ * 🆕 UAT: Handle Peach Payments webhook
+ * Receives webhook notifications from Peach Payments
+ * For UAT: Basic implementation without signature validation (to be added when Peach provides details)
+ */
+exports.handleWebhook = async (req, res) => {
+  try {
+    const webhookPayload = req.body;
+    const headers = req.headers;
+    
+    console.log('📥 Peach Payments Webhook Received:');
+    console.log('   Headers:', JSON.stringify(headers, null, 2));
+    console.log('   Payload:', JSON.stringify(webhookPayload, null, 2));
+    
+    // TODO: Validate webhook signature when Peach provides validation method
+    // For UAT: Log signature header if present
+    if (headers['x-peach-signature'] || headers['x-signature'] || headers['signature']) {
+      console.log('   ⚠️  Signature present but not validated (awaiting validation method from Peach)');
+    }
+    
+    // Extract payment identifiers from webhook
+    // Peach may send different formats, try common fields
+    const merchantTransactionId = webhookPayload.merchantTransactionId || 
+                                  webhookPayload.id ||
+                                  webhookPayload.checkoutId;
+    
+    const checkoutId = webhookPayload.checkoutId || 
+                       webhookPayload.id || 
+                       webhookPayload.paymentId;
+    
+    const resultCode = webhookPayload.result?.code || 
+                      webhookPayload.resultCode || 
+                      webhookPayload.code;
+    
+    const resultDescription = webhookPayload.result?.description || 
+                             webhookPayload.resultDescription || 
+                             webhookPayload.description ||
+                             webhookPayload.message;
+    
+    const status = webhookPayload.status || 
+                   webhookPayload.paymentStatus ||
+                   (resultCode === '000.100.110' || resultCode?.startsWith('000.') ? 'success' : 
+                    resultCode?.startsWith('100.') ? 'failed' : 'processing');
+    
+    // Find payment record
+    let payment = null;
+    if (merchantTransactionId) {
+      payment = await PeachPayment.findOne({
+        where: { merchantTransactionId }
+      });
+    }
+    
+    if (!payment && checkoutId) {
+      payment = await PeachPayment.findOne({
+        where: { peachReference: checkoutId }
+      });
+    }
+    
+    if (!payment) {
+      console.log('   ⚠️  Payment record not found for webhook');
+      // Still return 200 to prevent retries for unknown payments
+      return res.status(200).json({
+        success: true,
+        message: 'Webhook received but payment not found (may be from different environment)'
+      });
+    }
+    
+    // Update payment record
+    const updateData = {
+      status: status,
+      resultCode: resultCode || null,
+      resultDescription: resultDescription || null,
+      webhookReceivedAt: new Date(),
+      rawResponse: {
+        ...(payment.rawResponse || {}),
+        webhook: webhookPayload,
+        webhookHeaders: headers,
+        webhookReceivedAt: new Date().toISOString()
+      }
+    };
+    
+    await payment.update(updateData);
+    
+    console.log(`   ✅ Payment updated: ${payment.merchantTransactionId} → ${status}`);
+    
+    // TODO: Apply ledger effects when status is 'success'
+    // For UAT: Log that ledger effects should be applied
+    if (status === 'success' || resultCode === '000.100.110') {
+      console.log('   💰 Payment successful - Ledger effects should be applied (not implemented for UAT)');
+      // In production: credit wallet, debit float, post ledger entries
+    }
+    
+    // Always return 200 to acknowledge webhook receipt
+    res.status(200).json({
+      success: true,
+      message: 'Webhook processed',
+      paymentId: payment.merchantTransactionId,
+      status: status
+    });
+    
+  } catch (error) {
+    console.error('❌ Peach webhook error:', error);
+    // Still return 200 to prevent retries on our errors
+    // Log error for investigation
+    res.status(200).json({
+      success: false,
+      message: 'Webhook received but processing failed',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * 🆕 UAT: Poll payment status from Peach Payments
+ * Attempts to check payment status via Checkout V2 status endpoint
+ */
+exports.pollPaymentStatus = async (req, res) => {
+  try {
+    const { checkoutId, merchantTransactionId } = req.body;
+    
+    if (!checkoutId && !merchantTransactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Either checkoutId or merchantTransactionId is required'
+      });
+    }
+    
+    // Find payment record
+    let payment = null;
+    if (merchantTransactionId) {
+      payment = await PeachPayment.findOne({
+        where: { merchantTransactionId }
+      });
+    } else if (checkoutId) {
+      payment = await PeachPayment.findOne({
+        where: { peachReference: checkoutId }
+      });
+    }
+    
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+    
+    // Try to get status from Peach Payments API
+    // Note: This endpoint may need to be confirmed with Peach
+    const token = await peachClient.getAccessToken();
+    const cfg = peachClient.getConfig();
+    
+    const axios = require('axios');
+    const statusId = checkoutId || payment.peachReference;
+    
+    if (!statusId) {
+      return res.status(400).json({
+        success: false,
+        message: 'No checkout ID available for status check'
+      });
+    }
+    
+    // Try Checkout V2 status endpoint (common pattern)
+    try {
+      const statusUrl = `${cfg.checkoutBase}/v2/checkouts/${statusId}/payment`;
+      const response = await axios.get(statusUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      });
+      
+      const peachStatus = response.data;
+      
+      // Update payment record
+      const status = peachStatus.result?.code === '000.100.110' ? 'success' :
+                     peachStatus.result?.code?.startsWith('100.') ? 'failed' :
+                     peachStatus.status || payment.status;
+      
+      await payment.update({
+        status: status,
+        resultCode: peachStatus.result?.code || null,
+        resultDescription: peachStatus.result?.description || null,
+        rawResponse: {
+          ...(payment.rawResponse || {}),
+          statusCheck: peachStatus,
+          statusCheckedAt: new Date().toISOString()
+        }
+      });
+      
+      return res.json({
+        success: true,
+        data: {
+          merchantTransactionId: payment.merchantTransactionId,
+          status: status,
+          resultCode: peachStatus.result?.code,
+          resultDescription: peachStatus.result?.description,
+          peachData: peachStatus
+        }
+      });
+      
+    } catch (apiError) {
+      console.error('Status check API error:', apiError.response?.data || apiError.message);
+      
+      // Return current database status if API call fails
+      return res.json({
+        success: true,
+        data: {
+          merchantTransactionId: payment.merchantTransactionId,
+          status: payment.status,
+          resultCode: payment.resultCode,
+          resultDescription: payment.resultDescription,
+          note: 'Status from database (API check failed - endpoint may need confirmation)',
+          apiError: apiError.response?.data || apiError.message
+        }
+      });
+    }
+    
+  } catch (error) {
+    console.error('Poll payment status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to poll payment status',
+      message: error.message
+    });
+  }
+};
+
 
