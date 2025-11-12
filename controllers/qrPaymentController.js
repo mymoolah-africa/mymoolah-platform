@@ -780,7 +780,7 @@ class QRPaymentController {
           amount: feeInclVat, // Fee amount (what user paid as fee)
           type: 'payment', // Same type as payment so it shows in history
           status: 'completed',
-          description: `Zapper Transaction Fee (incl VAT)`,
+          description: `Zapper Transaction Fee`,
           currency: decodedData.currency || 'ZAR',
           fee: 0, // Fee is the amount itself, not an additional fee
           reference: `${finalReference}_FEE`,
