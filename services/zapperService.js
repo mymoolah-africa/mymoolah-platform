@@ -124,14 +124,18 @@ class ZapperService {
 
   /**
    * Decode Zapper QR code
+   * Based on Postman collection: GET /v1/codes/{code} (code in URL path)
    */
   async decodeQRCode(qrCode) {
     try {
       await this.authenticate();
 
-      const response = await axios.post(
-        `${this.baseURL}/codes/decode`,
-        { code: qrCode },
+      // Postman shows GET /v1/codes/{code} with code in URL path (base64 encoded)
+      // URL encode the QR code for the path
+      const encodedCode = encodeURIComponent(qrCode);
+      
+      const response = await axios.get(
+        `${this.baseURL}/codes/${encodedCode}`,
         {
           headers: this.getAuthHeaders()
         }
@@ -264,11 +268,15 @@ class ZapperService {
 
   /**
    * Health check
+   * Note: Health check may require authentication token
    */
   async healthCheck() {
     try {
+      // Try with authentication first
+      await this.authenticate();
+      
       const response = await axios.get(`${this.baseURL}/health`, {
-        headers: this.getAuthHeaders(false)
+        headers: this.getAuthHeaders(true)
       });
 
       return {
@@ -279,13 +287,26 @@ class ZapperService {
       };
 
     } catch (error) {
-      console.error('❌ Zapper health check failed:', error.response?.data || error.message);
-      return {
-        status: 'unhealthy',
-        service: 'Zapper API',
-        timestamp: new Date().toISOString(),
-        error: error.message
-      };
+      // If auth fails, try without token (some health endpoints don't need auth)
+      try {
+        const response = await axios.get(`${this.baseURL}/health`, {
+          headers: this.getAuthHeaders(false)
+        });
+        return {
+          status: 'healthy',
+          service: 'Zapper API',
+          timestamp: new Date().toISOString(),
+          data: response.data
+        };
+      } catch (fallbackError) {
+        console.error('❌ Zapper health check failed:', error.response?.data || error.message);
+        return {
+          status: 'unhealthy',
+          service: 'Zapper API',
+          timestamp: new Date().toISOString(),
+          error: error.message
+        };
+      }
     }
   }
 
