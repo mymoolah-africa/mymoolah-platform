@@ -740,9 +740,9 @@ class QRPaymentController {
           transaction: t 
         });
 
-        // Create transaction record (shows payment amount + fee to user)
+        // Create payment transaction record (shows payment amount to merchant)
         const transactionId = `QR_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-        const transaction = await Transaction.create({
+        const paymentTransaction = await Transaction.create({
           transactionId: transactionId,
           userId: userId,
           walletId: wallet.walletId,
@@ -751,7 +751,7 @@ class QRPaymentController {
           status: 'completed',
           description: `QR Payment to ${merchantInfo.name}`,
           currency: decodedData.currency || 'ZAR',
-          fee: feeInclVat, // Fee incl VAT (shown to user)
+          fee: 0, // Fee shown as separate transaction
           reference: finalReference,
           metadata: {
             qrCode: qrCode,
@@ -766,12 +766,42 @@ class QRPaymentController {
               vatRate: VAT_RATE
             },
             zapperFloatAccount: zapperFloat.floatAccountNumber,
-            totalDebitAmount: totalDebitAmount
+            totalDebitAmount: totalDebitAmount,
+            isZapperPayment: true
           }
         }, { transaction: t });
 
+        // Create separate fee transaction record (shows fee to user)
+        const feeTransactionId = `QR_FEE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        const feeTransaction = await Transaction.create({
+          transactionId: feeTransactionId,
+          userId: userId,
+          walletId: wallet.walletId,
+          amount: feeInclVat, // Fee amount (what user paid as fee)
+          type: 'payment', // Same type as payment so it shows in history
+          status: 'completed',
+          description: `Zapper Transaction Fee`,
+          currency: decodedData.currency || 'ZAR',
+          fee: 0, // Fee is the amount itself, not an additional fee
+          reference: `${finalReference}_FEE`,
+          metadata: {
+            originalTransactionId: transactionId,
+            feeBreakdown: {
+              feeInclVat: feeBreakdown.feeInclVat,
+              vatAmount: feeBreakdown.vatAmount,
+              netFeeAmount: feeBreakdown.netFeeAmount,
+              vatRate: VAT_RATE
+            },
+            isZapperFee: true,
+            merchantName: merchantInfo.name
+          }
+        }, { transaction: t });
+        
+        console.log(`✅ Created Zapper fee transaction: ${feeTransactionId} | Amount: R${feeInclVat.toFixed(2)} | Description: ${feeTransaction.description}`);
+
         return {
-          transaction,
+          transaction: paymentTransaction,
+          feeTransaction: feeTransaction,
           merchant: merchantInfo,
           amount: finalAmount,
           fee: feeInclVat,

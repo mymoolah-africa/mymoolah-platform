@@ -2032,7 +2032,7 @@ export function QRPaymentPage() {
                       color: '#92400e'
                     }}
                   >
-                    Service Fee
+                    Zapper Transaction Fee
                   </span>
                   <span 
                     style={{
