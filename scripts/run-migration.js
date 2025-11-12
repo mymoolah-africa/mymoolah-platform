@@ -101,15 +101,14 @@ if (isDirectConnection) {
 }
 
 function runMigration() {
-
-if (isProxy) {
-  console.log('ℹ️  Using Cloud SQL Auth Proxy connection');
-  console.log(`   Host: ${dbUrl.hostname}:${dbUrl.port}`);
-  console.log(`   Database: ${dbUrl.pathname.replace('/', '')}`);
-} else {
-  console.log('ℹ️  Using direct database connection');
-  console.log(`   Host: ${dbUrl.hostname}:${dbUrl.port}`);
-}
+  if (isProxy || dbUrl.hostname === '127.0.0.1') {
+    console.log('ℹ️  Using Cloud SQL Auth Proxy connection');
+    console.log(`   Host: ${dbUrl.hostname}:${dbUrl.port}`);
+    console.log(`   Database: ${dbUrl.pathname.replace('/', '')}`);
+  } else {
+    console.log('ℹ️  Using direct database connection');
+    console.log(`   Host: ${dbUrl.hostname}:${dbUrl.port}`);
+  }
 
   console.log('');
   console.log(`🚀 Running: sequelize-cli db:${command} ${args}`);
