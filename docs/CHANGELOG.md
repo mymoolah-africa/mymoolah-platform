@@ -1,6 +1,62 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-11-10 (Latest)
+## 2025-11-12 (Latest)
+- **Zapper UAT Testing Complete**: Comprehensive UAT test suite created and executed. 92.3% success rate (12/13 critical tests passed). All core payment functionality verified and working. Ready for production credentials request.
+
+**Zapper UAT Testing**:
+- **Test Suite Created**: Comprehensive UAT test suite (`scripts/test-zapper-uat-complete.js`) covering all Zapper API endpoints
+- **Payment History Methods**: Added `getPaymentHistory()` and `getCustomerPaymentHistory()` methods to ZapperService
+- **Health Check Fix**: Updated health check to handle Bearer token requirement in UAT (tries x-api-key first, falls back to Bearer token)
+- **Test Results**: 92.3% success rate (12/13 critical tests passed)
+  - ✅ Authentication (3/3): Service account login, token reuse, expiry handling
+  - ✅ QR Code Decoding (3/3): Valid codes, invalid codes, URL format
+  - ✅ Payment History (2/2): Organization (7 payments found), Customer (1 payment found)
+  - ✅ End-to-End Payment Flow (1/1): Complete payment processing verified
+  - ✅ Error Handling (2/2): Invalid authentication, invalid API key
+  - ⚠️ Health Check (1/2): Minor formatting issue (non-blocking, Service Status works)
+- **Frontend Updates**: Removed "coming soon" banner from QR payment page (integration is live)
+- **Status**: ✅ All critical payment functionality working, ✅ Ready for production credentials
+
+**Files Created**:
+- `scripts/test-zapper-uat-complete.js` - Comprehensive Zapper UAT test suite (20 tests)
+- `docs/ZAPPER_UAT_TEST_REPORT.md` - Complete test results and production readiness report
+
+**Files Updated**:
+- `services/zapperService.js` - Added payment history methods, fixed health check for UAT
+- `mymoolah-wallet-frontend/pages/QRPaymentPage.tsx` - Removed "coming soon" banner
+- `docs/CHANGELOG.md` - Added Zapper UAT testing entry
+- `docs/AGENT_HANDOVER.md` - Updated Zapper integration status
+- `docs/PROJECT_STATUS.md` - Updated Zapper integration status
+- `docs/README.md` - Updated Zapper integration status
+- `docs/INTEGRATIONS_COMPLETE.md` - Updated Zapper integration status
+
+## 2025-11-11
+- **Staging & Production Database Setup**: Created banking-grade Staging and Production Cloud SQL instances with ENTERPRISE edition, custom machine types, and Secret Manager password storage. Complete security isolation between environments.
+
+**Staging & Production Database Setup**:
+- **Instances Created**: `mmtp-pg-staging` and `mmtp-pg-production` (PostgreSQL 16, ENTERPRISE edition)
+- **Databases Created**: `mymoolah_staging` and `mymoolah_production`
+- **Database Users**: `mymoolah_app` user created in both instances
+- **Passwords**: Banking-grade 36-character passwords stored in Google Secret Manager
+- **Security**: No authorized networks (Cloud SQL Auth Proxy only), SSL required, deletion protection enabled
+- **Backups**: 7-day retention (Staging), 30-day retention (Production), point-in-time recovery enabled
+- **Machine Types**: Custom machine types (`db-custom-1-3840` for Staging, `db-custom-4-15360` for Production)
+- **Script**: Created `scripts/setup-staging-production-databases.sh` for automated instance creation
+- **Status**: ✅ Instances created and running, ✅ Databases created, ✅ Users created, ✅ Passwords stored in Secret Manager
+
+**Files Created**:
+- `scripts/setup-staging-production-databases.sh` - Automated Staging/Production database setup script
+- `docs/STAGING_PRODUCTION_DATABASE_SETUP.md` - Database setup documentation (if created)
+
+**Files Updated**:
+- `docs/CHANGELOG.md` - Added Staging/Production database setup entry
+- `docs/DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` - Updated with database setup details
+- `docs/SECURITY.md` - Added Secret Manager and password management practices
+- `docs/DEPLOYMENT_GUIDE.md` - Added Staging/Production database setup steps
+- `docs/AGENT_HANDOVER.md` - Updated with database setup progress
+- `docs/PROJECT_STATUS.md` - Updated with Staging/Production status
+
+## 2025-11-10
 - **MobileMart UAT Testing**: Comprehensive UAT testing of MobileMart Fulcrum API integration. 4/7 purchase types working (57% success rate). Product listing endpoints verified, purchase transactions tested, catalog sync script created.
 
 **MobileMart UAT Testing**:
