@@ -40,6 +40,9 @@ function getConfig() {
   };
 }
 
+// Export getConfig for use in controllers
+module.exports.getConfig = getConfig;
+
 async function getAccessToken() {
   const cfg = getConfig();
   const url = `${cfg.authBase}/api/oauth/token`;

@@ -51,6 +51,12 @@ router.delete('/payments/:merchantTransactionId', auth, peachController.cancelPa
 // User payment history
 router.get('/users/:userId/payments', auth, peachController.getUserPayments);
 
+// 🆕 UAT: Webhook endpoint (no auth required - Peach will call this)
+router.post('/webhook', peachController.handleWebhook);
+
+// 🆕 UAT: Payment status polling
+router.post('/poll-status', peachController.pollPaymentStatus);
+
 module.exports = router;
 
 
