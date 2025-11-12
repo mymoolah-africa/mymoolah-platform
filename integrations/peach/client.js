@@ -151,7 +151,7 @@ module.exports = {
    * Create a Checkout V2 session for PayShap and return the API payload.
    * This uses Bearer JWT minted by the auth service and returns a redirectUrl.
    */
-  async createCheckoutPayShap({ amount, currency = 'ZAR', description, shopperResultUrl = 'http://localhost:3001/health', debtorPhone, debtorAccountNumber }) {
+  async createCheckoutPayShap({ amount, currency = 'ZAR', description, shopperResultUrl = 'http://localhost:3001/health', debtorPhone, debtorAccountNumber, bankCode, bankName }) {
     const cfg = getConfig();
     const token = await getAccessToken();
     const url = `${cfg.checkoutBase}/v2/checkout`;
@@ -173,7 +173,14 @@ module.exports = {
       body.customer = { mobile: debtorPhone };
     } else if (debtorAccountNumber) {
       // Direct bank account number
+      // Note: Checkout V2 may require bankCode for account numbers
       body.customer = { accountNumber: debtorAccountNumber };
+      if (bankCode) {
+        body.customer.bankCode = bankCode;
+      }
+      if (bankName) {
+        body.customer.bankName = bankName;
+      }
     }
 
     const headers = { Authorization: `Bearer ${token}`, Referer: cfg.referer };
