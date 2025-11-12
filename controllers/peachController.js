@@ -181,10 +181,19 @@ exports.initiatePayShapRpp = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ PayShap RPP initiation error:', error.response?.data || error.message);
-    return res.status(500).json({ 
+    console.error('❌ Full error details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      stack: error.stack
+    });
+    return res.status(error.response?.status || 500).json({ 
       success: false, 
       message: 'Failed to initiate PayShap payment', 
-      details: error.response?.data || error.message 
+      details: error.response?.data || error.message,
+      errorCode: error.response?.data?.result?.code || error.response?.data?.error?.code,
+      errorDescription: error.response?.data?.result?.description || error.response?.data?.error?.description
     });
   }
 };
@@ -355,10 +364,19 @@ exports.initiatePayShapRtp = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ PayShap RTP initiation error:', error.response?.data || error.message);
-    return res.status(500).json({ 
+    console.error('❌ Full error details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      stack: error.stack
+    });
+    return res.status(error.response?.status || 500).json({ 
       success: false, 
       message: 'Failed to initiate PayShap RTP request', 
-      details: error.response?.data || error.message 
+      details: error.response?.data || error.message,
+      errorCode: error.response?.data?.result?.code || error.response?.data?.error?.code,
+      errorDescription: error.response?.data?.result?.description || error.response?.data?.error?.description
     });
   }
 };
@@ -735,10 +753,19 @@ exports.requestMoneyViaPayShap = async (req, res) => {
 
   } catch (error) {
     console.error('❌ Request Money via PayShap error:', error.response?.data || error.message);
-    return res.status(500).json({ 
+    console.error('❌ Full error details:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      stack: error.stack
+    });
+    return res.status(error.response?.status || 500).json({ 
       success: false, 
       message: 'Failed to create money request', 
-      details: error.response?.data || error.message 
+      details: error.response?.data || error.message,
+      errorCode: error.response?.data?.result?.code || error.response?.data?.error?.code,
+      errorDescription: error.response?.data?.result?.description || error.response?.data?.error?.description
     });
   }
 };
