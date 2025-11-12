@@ -107,11 +107,13 @@ export interface QRValidationResult {
 }
 
 export interface QRPaymentResult {
-  paymentId: string;
+  paymentId?: string;
+  transactionId?: string;
   status: 'pending' | 'completed' | 'failed';
   amount: number;
+  fee?: number;
   reference: string;
-  qrCode: string;
+  qrCode?: string;
   merchant?: QRMerchant;
 }
 
@@ -370,11 +372,11 @@ class ApiService {
   }
 
   async initiateQRPayment(qrCode: string, amount: number, walletId: string, reference?: string): Promise<QRPaymentResult> {
-    const response = await this.request<QRPaymentResult>('/api/v1/qr/payment/initiate', {
+    const response = await this.request<{ success: boolean; data: QRPaymentResult }>('/api/v1/qr/payment/initiate', {
       method: 'POST',
       body: JSON.stringify({ qrCode, amount, walletId, reference }),
     });
-    return response.data!
+    return response.data!.data || response.data! as QRPaymentResult;
   }
 
   async confirmQRPayment(paymentId: string, otp?: string): Promise<any> {
