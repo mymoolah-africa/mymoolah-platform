@@ -463,6 +463,7 @@ class WalletController {
         status: t.status,
         description: t.description,
         currency: t.currency || 'ZAR',
+        fee: t.fee ? parseFloat(t.fee) : 0,
         createdAt: t.createdAt,
         // Essential fields for frontend icon classification
         senderWalletId: t.senderWalletId,

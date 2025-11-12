@@ -778,11 +778,11 @@ class QRPaymentController {
           userId: userId,
           walletId: wallet.walletId,
           amount: feeInclVat, // Fee amount (what user paid as fee)
-          type: 'payment',
+          type: 'payment', // Same type as payment so it shows in history
           status: 'completed',
           description: `Zapper Transaction Fee (incl VAT)`,
           currency: decodedData.currency || 'ZAR',
-          fee: 0,
+          fee: 0, // Fee is the amount itself, not an additional fee
           reference: `${finalReference}_FEE`,
           metadata: {
             originalTransactionId: transactionId,
@@ -796,6 +796,8 @@ class QRPaymentController {
             merchantName: merchantInfo.name
           }
         }, { transaction: t });
+        
+        console.log(`✅ Created Zapper fee transaction: ${feeTransactionId} | Amount: R${feeInclVat.toFixed(2)} | Description: ${feeTransaction.description}`);
 
         return {
           transaction: paymentTransaction,
