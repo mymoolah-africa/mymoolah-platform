@@ -7,9 +7,26 @@
  * 3. Updates transactions that need correction
  * 4. Creates missing TaxTransaction records
  * 5. Updates Zapper float account balance
+ * 
+ * Usage:
+ *   - In Codespaces: Make sure Cloud SQL Auth Proxy is running, then run this script
+ *   - Locally: Ensure DATABASE_URL is set correctly
  */
 
 require('dotenv').config();
+
+// Check if we should use Cloud SQL Auth Proxy (Codespaces)
+// If DATABASE_URL contains 127.0.0.1:6543, we're using the proxy
+const useProxy = process.env.DATABASE_URL && process.env.DATABASE_URL.includes('127.0.0.1:6543');
+
+if (useProxy) {
+  console.log('ℹ️  Using Cloud SQL Auth Proxy connection (127.0.0.1:6543)');
+  console.log('   Make sure the proxy is running: ./scripts/one-click-restart-and-start.sh\n');
+} else {
+  console.log('ℹ️  Using direct database connection');
+  console.log('   DATABASE_URL:', process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@') : 'not set\n');
+}
+
 const { Transaction, SupplierFloat, TaxTransaction, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const ledgerService = require('../services/ledgerService');
@@ -154,6 +171,21 @@ async function allocateZapperFeeAndVat({
 
 async function auditAndUpdateZapperTransactions() {
   console.log('🔍 Auditing Zapper QR Payment Transactions...\n');
+
+  // Test database connection first
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Database connection established\n');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    if (useProxy) {
+      console.error('\n⚠️  Make sure the Cloud SQL Auth Proxy is running:');
+      console.error('   ./scripts/one-click-restart-and-start.sh\n');
+    } else {
+      console.error('\n⚠️  Check your DATABASE_URL configuration\n');
+    }
+    throw error;
+  }
 
   try {
     // Find all QR payment transactions
