@@ -316,6 +316,62 @@ class ZapperService {
   }
 
   /**
+   * Get payment history for organization
+   * Based on Postman collection: GET /v1/payments
+   */
+  async getPaymentHistory(options = {}) {
+    try {
+      await this.authenticate();
+
+      const params = new URLSearchParams();
+      if (options.customerReference) {
+        params.append('customerReference', options.customerReference);
+      }
+      if (options.limit) {
+        params.append('limit', options.limit);
+      }
+      if (options.offset) {
+        params.append('offset', options.offset);
+      }
+      if (options.fromDate) {
+        params.append('fromDate', options.fromDate);
+      }
+      if (options.toDate) {
+        params.append('toDate', options.toDate);
+      }
+
+      const queryString = params.toString();
+      const url = queryString ? `${this.baseURL}/payments?${queryString}` : `${this.baseURL}/payments`;
+
+      const response = await axios.get(url, {
+        headers: this.getAuthHeaders()
+      });
+
+      return response.data;
+
+    } catch (error) {
+      console.error('❌ Zapper payment history failed:', error.response?.data || error.message);
+      throw new Error('Failed to get payment history from Zapper');
+    }
+  }
+
+  /**
+   * Get payment history for a specific customer
+   * Based on Postman collection: GET /v1/payments?customerReference=CUST-0001
+   */
+  async getCustomerPaymentHistory(customerReference, options = {}) {
+    try {
+      return await this.getPaymentHistory({
+        ...options,
+        customerReference
+      });
+    } catch (error) {
+      console.error('❌ Zapper customer payment history failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * Health check
    * Note: Health endpoint only requires x-api-key, not Bearer token
    */
