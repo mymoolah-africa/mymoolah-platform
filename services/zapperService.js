@@ -194,14 +194,42 @@ class ZapperService {
 
   /**
    * Process wallet payment at merchant
+   * Based on Postman collection: POST /v1/payments
+   * 
+   * @param {Object} paymentData - Payment data object
+   * @param {string} paymentData.reference - Payment reference
+   * @param {string} paymentData.code - QR code (base64 encoded)
+   * @param {number} paymentData.amount - Amount in cents
+   * @param {string} paymentData.paymentUTCDate - Payment UTC date (optional)
+   * @param {Object} paymentData.customer - Customer object { id, firstName, lastName }
+   * @param {Object} paymentData.paymentMethod - Payment method object { external: { reference, status } }
    */
-  async processWalletPayment(merchantId, paymentData) {
+  async processWalletPayment(paymentData) {
     try {
       await this.authenticate();
 
+      // Build request body according to Postman collection format
+      const requestBody = {
+        reference: paymentData.reference,
+        code: paymentData.code, // Base64 encoded QR code
+        amount: Math.round(paymentData.amount * 100), // Convert to cents
+        paymentUTCDate: paymentData.paymentUTCDate || new Date().toISOString(),
+        customer: {
+          id: paymentData.customer?.id || 'CUST-UNKNOWN',
+          firstName: paymentData.customer?.firstName || 'Customer',
+          lastName: paymentData.customer?.lastName || 'Unknown'
+        },
+        paymentMethod: {
+          external: {
+            reference: paymentData.reference,
+            status: 'success'
+          }
+        }
+      };
+
       const response = await axios.post(
-        `${this.baseURL}/merchants/${merchantId}/process-payment`,
-        paymentData,
+        `${this.baseURL}/payments`,
+        requestBody,
         {
           headers: this.getAuthHeaders()
         }
@@ -211,6 +239,10 @@ class ZapperService {
 
     } catch (error) {
       console.error('❌ Zapper payment processing failed:', error.response?.data || error.message);
+      if (error.response) {
+        console.error('   Status:', error.response.status);
+        console.error('   Response:', JSON.stringify(error.response.data, null, 2));
+      }
       throw new Error('Failed to process payment with Zapper');
     }
   }
