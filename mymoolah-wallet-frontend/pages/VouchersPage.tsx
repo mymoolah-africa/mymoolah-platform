@@ -49,6 +49,16 @@ import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Separator } from '../components/ui/separator';
@@ -155,6 +165,11 @@ export function VouchersPage() {
     walletBalance?: string;
     type: 'easypay' | 'mm_voucher' | 'third_party';
   } | null>(null);
+
+  // Cancel confirmation modal state
+  const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
+  const [voucherToCancel, setVoucherToCancel] = useState<MMVoucher | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   // Voucher formatting functions
   const generateMMVoucherCode = (): string => {
@@ -870,24 +885,18 @@ export function VouchersPage() {
     });
   };
 
-  // Handle cancelling EasyPay voucher
-  const handleCancelEasyPayVoucher = async (voucher: MMVoucher) => {
-    try {
-      // Show confirmation dialog
-      const confirmed = window.confirm(
-        `Cancel this EasyPay voucher?\n\n` +
-        `EasyPay Number: ${voucher.easyPayNumber}\n` +
-        `Amount: R ${voucher.originalAmount}\n\n` +
-        `This will:\n` +
-        `• Cancel the voucher immediately\n` +
-        `• Refund R ${voucher.originalAmount} to your wallet\n` +
-        `• This action cannot be undone\n\n` +
-        `Are you sure you want to cancel?`
-      );
+  // Handle opening cancel confirmation modal
+  const handleCancelEasyPayVoucher = (voucher: MMVoucher) => {
+    setVoucherToCancel(voucher);
+    setShowCancelConfirmModal(true);
+  };
 
-      if (!confirmed) {
-        return;
-      }
+  // Handle confirming cancellation
+  const handleConfirmCancel = async () => {
+    if (!voucherToCancel) return;
+
+    try {
+      setIsCancelling(true);
 
       // Show loading state
       const loadingToast = document.createElement('div');
@@ -910,7 +919,7 @@ export function VouchersPage() {
 
       // Make API call
       const token = getSessionToken();
-      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/${voucher.id}/cancel`, {
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/${voucherToCancel.id}/cancel`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -953,6 +962,10 @@ export function VouchersPage() {
       // Refresh vouchers list
       await fetchVouchers();
 
+      // Close modal
+      setShowCancelConfirmModal(false);
+      setVoucherToCancel(null);
+
     } catch (error) {
       console.error('Error cancelling voucher:', error);
       
@@ -977,6 +990,8 @@ export function VouchersPage() {
       setTimeout(() => {
         document.body.removeChild(errorToast);
       }, 3000);
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -3232,6 +3247,104 @@ export function VouchersPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel EasyPay Voucher Confirmation Modal */}
+      <AlertDialog open={showCancelConfirmModal} onOpenChange={setShowCancelConfirmModal}>
+        <AlertDialogContent style={{ zIndex: 9999 }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '20px',
+              fontWeight: '700',
+              color: '#1f2937',
+              marginBottom: '12px'
+            }}>
+              Cancel this EasyPay voucher?
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '14px',
+              color: '#6b7280',
+              lineHeight: '1.6'
+            }}>
+              {voucherToCancel && (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937' }}>
+                      EasyPay Number: {voucherToCancel.easyPayNumber}
+                    </p>
+                    <p style={{ margin: '0', fontWeight: '600', color: '#1f2937' }}>
+                      Amount: R {voucherToCancel.originalAmount}
+                    </p>
+                  </div>
+                  <div style={{ marginTop: '16px' }}>
+                    <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937' }}>
+                      This will:
+                    </p>
+                    <ul style={{ margin: '0 0 16px 0', paddingLeft: '20px', listStyle: 'disc' }}>
+                      <li>Cancel the voucher immediately</li>
+                      <li>Refund R {voucherToCancel.originalAmount} to your wallet</li>
+                      <li>This action cannot be undone</li>
+                    </ul>
+                  </div>
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter style={{
+            display: 'flex',
+            gap: '12px',
+            marginTop: '24px'
+          }}>
+            <AlertDialogCancel
+              onClick={() => {
+                setShowCancelConfirmModal(false);
+                setVoucherToCancel(null);
+              }}
+              disabled={isCancelling}
+              style={{
+                flex: 1,
+                height: '44px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '500',
+                borderRadius: '8px'
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmCancel}
+              disabled={isCancelling}
+              style={{
+                flex: 1,
+                height: '44px',
+                backgroundColor: '#dc2626',
+                color: '#ffffff',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '600',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: isCancelling ? 'not-allowed' : 'pointer',
+                opacity: isCancelling ? 0.6 : 1
+              }}
+              onMouseOver={(e) => {
+                if (!isCancelling) {
+                  e.currentTarget.style.backgroundColor = '#b91c1c';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!isCancelling) {
+                  e.currentTarget.style.backgroundColor = '#dc2626';
+                }
+              }}
+            >
+              {isCancelling ? 'Cancelling...' : 'OK'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

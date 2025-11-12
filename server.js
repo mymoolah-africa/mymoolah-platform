@@ -489,6 +489,15 @@ const initializeBackgroundServices = async () => {
     await databasePerformanceMonitor.startMonitoring();
     console.log('✅ Database Performance Monitor started');
     
+    // Start Voucher Expiration Handler (runs every hour to auto-refund expired vouchers)
+    try {
+      const { startExpirationHandler } = require('./controllers/voucherController');
+      startExpirationHandler();
+      console.log('✅ Voucher expiration handler started (runs every hour)');
+    } catch (error) {
+      console.error('❌ Failed to start voucher expiration handler:', error.message);
+    }
+    
     // Start Catalog Synchronization (daily only at 02:00; shadow 10-minute updates until prod)
     try {
       const catalogSyncService = new CatalogSynchronizationService();
