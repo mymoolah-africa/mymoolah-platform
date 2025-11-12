@@ -441,6 +441,7 @@ class WalletController {
           'status',
           'description',
           'currency',
+          'fee',
           'createdAt',
           'senderWalletId',
           'receiverWalletId',
