@@ -141,6 +141,7 @@ class QRPaymentController {
 
   /**
    * Validate QR code and get merchant details
+   * Uses Zapper API first, falls back to local decoding
    */
   async validateQRCode(req, res) {
     try {
@@ -155,8 +156,41 @@ class QRPaymentController {
 
       const { qrCode, amount } = req.body;
 
-      // Decode and validate QR code
-      const decodedData = this.decodeGenericQR(qrCode);
+      // Try Zapper API first for real Zapper QR codes
+      let decodedData = null;
+      let zapperDecoded = false;
+      
+      try {
+        // Attempt to decode with Zapper API
+        const zapperResult = await this.zapperService.decodeQRCode(qrCode);
+        
+        // Transform Zapper API response to our format
+        if (zapperResult && zapperResult.merchant) {
+          decodedData = {
+            type: 'zapper',
+            merchant: zapperResult.merchant.merchantName,
+            merchantId: zapperResult.merchant.merchantReference,
+            amount: zapperResult.invoice ? (zapperResult.invoice.amount / 100) : 0, // Convert cents to rands
+            currency: zapperResult.invoice?.currencyISOCode || 'ZAR',
+            reference: zapperResult.invoice?.orderReference || zapperResult.invoice?.invoiceReference || `ZAP_${Date.now()}`,
+            description: `Payment to ${zapperResult.merchant.merchantName}`,
+            isRealZapper: true,
+            zapperData: zapperResult
+          };
+          zapperDecoded = true;
+          console.log('✅ QR code decoded via Zapper API:', decodedData);
+        }
+      } catch (zapperError) {
+        console.log('⚠️ Zapper API decode failed, trying local fallback:', zapperError.message);
+        // Fall back to local decoding
+        decodedData = this.decodeGenericQR(qrCode);
+      }
+
+      // If Zapper API didn't work, try local decoding
+      if (!decodedData) {
+        decodedData = this.decodeGenericQR(qrCode);
+      }
+
       if (!decodedData) {
         return res.status(400).json({
           success: false,
@@ -168,11 +202,25 @@ class QRPaymentController {
       // Extract merchant information
       const merchantInfo = this.extractMerchantInfo(decodedData);
       if (!merchantInfo) {
-        return res.status(400).json({
-          success: false,
-          error: 'Unsupported merchant',
-          message: 'QR code is not from a supported merchant'
-        });
+        // For real Zapper QR codes, create a generic merchant if not in our list
+        if (decodedData.isRealZapper && decodedData.merchant) {
+          merchantInfo = {
+            id: `zapper_${decodedData.merchantId || 'generic'}`,
+            name: decodedData.merchant,
+            logo: '🏪',
+            category: 'General',
+            locations: 'Nationwide',
+            qrType: 'zapper',
+            isActive: true,
+            isRealZapper: true
+          };
+        } else {
+          return res.status(400).json({
+            success: false,
+            error: 'Unsupported merchant',
+            message: 'QR code is not from a supported merchant'
+          });
+        }
       }
 
       // Validate amount if provided
@@ -197,6 +245,7 @@ class QRPaymentController {
             reference: decodedData.reference,
             description: decodedData.description
           },
+          zapperDecoded,
           timestamp: new Date().toISOString()
         }
       });
