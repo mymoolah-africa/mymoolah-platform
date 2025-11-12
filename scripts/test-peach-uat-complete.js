@@ -152,8 +152,19 @@ async function testPayShapRpp() {
         `Invalid response: ${JSON.stringify(response.data)}`);
     }
   } catch (error) {
-    logTest('PayShap RPP with Bank Account', 'fail', 
-      error.response?.data?.message || error.message);
+    const errorDetails = error.response?.data || {};
+    const errorMsg = errorDetails.message || errorDetails.details || error.message;
+    const errorCode = errorDetails.errorCode || errorDetails.result?.code;
+    const errorDesc = errorDetails.errorDescription || errorDetails.result?.description;
+    
+    let fullError = errorMsg;
+    if (errorCode) fullError += ` (Code: ${errorCode})`;
+    if (errorDesc) fullError += ` - ${errorDesc}`;
+    if (error.response?.data) {
+      fullError += ` | Full Response: ${JSON.stringify(error.response.data).substring(0, 200)}`;
+    }
+    
+    logTest('PayShap RPP with Bank Account', 'fail', fullError);
   }
   
   // Test 3: RPP validation (missing amount)
@@ -221,8 +232,19 @@ async function testPayShapRtp() {
         `Invalid response: ${JSON.stringify(response.data)}`);
     }
   } catch (error) {
-    logTest('PayShap RTP with Bank Account', 'fail', 
-      error.response?.data?.message || error.message);
+    const errorDetails = error.response?.data || {};
+    const errorMsg = errorDetails.message || errorDetails.details || error.message;
+    const errorCode = errorDetails.errorCode || errorDetails.result?.code;
+    const errorDesc = errorDetails.errorDescription || errorDetails.result?.description;
+    
+    let fullError = errorMsg;
+    if (errorCode) fullError += ` (Code: ${errorCode})`;
+    if (errorDesc) fullError += ` - ${errorDesc}`;
+    if (error.response?.data) {
+      fullError += ` | Full Response: ${JSON.stringify(error.response.data).substring(0, 200)}`;
+    }
+    
+    logTest('PayShap RTP with Bank Account', 'fail', fullError);
   }
 }
 
@@ -250,8 +272,19 @@ async function testRequestMoney() {
         `Invalid response: ${JSON.stringify(response.data)}`);
     }
   } catch (error) {
-    logTest('Request Money (Test Mode)', 'fail', 
-      error.response?.data?.message || error.message);
+    const errorDetails = error.response?.data || {};
+    const errorMsg = errorDetails.message || errorDetails.details || error.message;
+    const errorCode = errorDetails.errorCode || errorDetails.result?.code;
+    const errorDesc = errorDetails.errorDescription || errorDetails.result?.description;
+    
+    let fullError = errorMsg;
+    if (errorCode) fullError += ` (Code: ${errorCode})`;
+    if (errorDesc) fullError += ` - ${errorDesc}`;
+    if (error.response?.data) {
+      fullError += ` | Full Response: ${JSON.stringify(error.response.data).substring(0, 200)}`;
+    }
+    
+    logTest('Request Money (Test Mode)', 'fail', fullError);
   }
   
   // Test 2: Request Money validation (missing payer name)
