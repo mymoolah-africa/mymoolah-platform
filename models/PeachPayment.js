@@ -1,7 +1,7 @@
 module.exports = (sequelize, DataTypes) => {
   const PeachPayment = sequelize.define('PeachPayment', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    type: { type: DataTypes.ENUM('payshap_rpp', 'payshap_rtp'), allowNull: false },
+    type: { type: DataTypes.ENUM('payshap_rpp', 'payshap_rtp', 'request_money_payshap'), allowNull: false },
     merchantTransactionId: { type: DataTypes.STRING, allowNull: false, unique: true },
     peachReference: { type: DataTypes.STRING, allowNull: true },
     amount: { type: DataTypes.DECIMAL(15, 2), allowNull: false },
