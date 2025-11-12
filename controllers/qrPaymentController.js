@@ -234,20 +234,22 @@ class QRPaymentController {
         }
       }
 
+      // Frontend expects { qrCode, merchant, paymentDetails, isValid } at root level
+      // apiService.request returns { success: true, data: <backend_response> }
+      // So we return the validation result directly (not nested in data)
       res.json({
         success: true,
-        data: {
-          qrCode,
-          merchant: merchantInfo,
-          paymentDetails: {
-            amount: decodedData.amount !== undefined ? decodedData.amount : (amount || 0),
-            currency: decodedData.currency || 'ZAR',
-            reference: decodedData.reference,
-            description: decodedData.description
-          },
-          zapperDecoded,
-          timestamp: new Date().toISOString()
-        }
+        qrCode,
+        merchant: merchantInfo,
+        paymentDetails: {
+          amount: decodedData.amount !== undefined ? decodedData.amount : (amount || 0),
+          currency: decodedData.currency || 'ZAR',
+          reference: decodedData.reference,
+          description: decodedData.description
+        },
+        isValid: true,
+        zapperDecoded,
+        timestamp: new Date().toISOString()
       });
 
     } catch (error) {
