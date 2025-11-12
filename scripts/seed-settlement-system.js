@@ -124,6 +124,29 @@ async function seedSettlementSystem() {
           settlementCurrency: 'ZAR',
           payshapOnly: true
         }
+      },
+      {
+        supplierId: 'zapper',
+        supplierName: 'Zapper',
+        floatAccountNumber: 'ZAPPER_FLOAT_001',
+        floatAccountName: 'Zapper QR Payments Float',
+        currentBalance: 0.00,
+        initialBalance: 0.00,
+        minimumBalance: 0.00,
+        maximumBalance: 1000000.00,
+        settlementPeriod: 'real_time',
+        settlementMethod: 'prefunded',
+        status: 'active',
+        isActive: true,
+        bankAccountNumber: null,
+        bankCode: null,
+        bankName: null,
+        metadata: {
+          supplierType: 'qr_payment_processor',
+          settlementCurrency: 'ZAR',
+          feeStructure: 'per_transaction',
+          defaultFeeInclVat: 3.00
+        }
       }
     ];
 
