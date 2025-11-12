@@ -8,7 +8,7 @@ const { validationResult } = require('express-validator');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 const ZapperService = require('../services/zapperService');
-const axios = require('axios');
+const { Wallet, Transaction, sequelize } = require('../models');
 
 class QRPaymentController {
   constructor() {
@@ -412,7 +412,7 @@ class QRPaymentController {
   // PAYMENT PROCESSING METHODS
 
   /**
-   * Initiate QR payment
+   * Initiate QR payment - processes payment immediately and creates transaction
    */
   async initiatePayment(req, res) {
     try {
@@ -426,12 +426,86 @@ class QRPaymentController {
       }
 
       const { qrCode, amount, walletId, reference } = req.body;
+      const userId = req.user?.id;
 
-      // Generate payment ID
-      const paymentId = uuidv4();
+      if (!userId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Unauthorized',
+          message: 'User authentication required'
+        });
+      }
 
-      // Decode QR code
-      const decodedData = this.decodeGenericQR(qrCode);
+      // Validate amount
+      const paymentAmount = parseFloat(amount);
+      if (!paymentAmount || paymentAmount <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid amount',
+          message: 'Payment amount must be greater than 0'
+        });
+      }
+
+      // Get user's wallet
+      const wallet = await Wallet.findOne({
+        where: { userId: userId }
+      });
+
+      if (!wallet) {
+        return res.status(404).json({
+          success: false,
+          error: 'Wallet not found',
+          message: 'User wallet not found'
+        });
+      }
+
+      // Validate wallet ID matches
+      if (walletId && wallet.walletId !== walletId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Wallet mismatch',
+          message: 'Wallet ID does not match user wallet'
+        });
+      }
+
+      // Check sufficient balance
+      if (parseFloat(wallet.balance) < paymentAmount) {
+        return res.status(400).json({
+          success: false,
+          error: 'Insufficient balance',
+          message: `Insufficient balance. Available: R${parseFloat(wallet.balance).toFixed(2)}`
+        });
+      }
+
+      // Decode QR code (try Zapper API first, then local)
+      let decodedData = null;
+      let zapperDecoded = false;
+      
+      try {
+        const zapperResult = await this.zapperService.decodeQRCode(qrCode);
+        if (zapperResult && zapperResult.merchant) {
+          decodedData = {
+            type: 'zapper',
+            merchant: zapperResult.merchant.merchantName,
+            merchantId: zapperResult.merchant.merchantReference,
+            amount: zapperResult.invoice ? (zapperResult.invoice.amount / 100) : paymentAmount,
+            currency: zapperResult.invoice?.currencyISOCode || 'ZAR',
+            reference: zapperResult.invoice?.orderReference || zapperResult.invoice?.invoiceReference || reference || `ZAP_${Date.now()}`,
+            description: `Payment to ${zapperResult.merchant.merchantName}`,
+            isRealZapper: true,
+            zapperData: zapperResult
+          };
+          zapperDecoded = true;
+        }
+      } catch (zapperError) {
+        console.log('⚠️ Zapper API decode failed, trying local fallback:', zapperError.message);
+        decodedData = this.decodeGenericQR(qrCode);
+      }
+
+      if (!decodedData) {
+        decodedData = this.decodeGenericQR(qrCode);
+      }
+
       if (!decodedData) {
         return res.status(400).json({
           success: false,
@@ -441,7 +515,20 @@ class QRPaymentController {
       }
 
       // Extract merchant information
-      const merchantInfo = this.extractMerchantInfo(decodedData);
+      let merchantInfo = this.extractMerchantInfo(decodedData);
+      if (!merchantInfo && decodedData.isRealZapper && decodedData.merchant) {
+        merchantInfo = {
+          id: `zapper_${decodedData.merchantId || 'generic'}`,
+          name: decodedData.merchant,
+          logo: '🏪',
+          category: 'General',
+          locations: 'Nationwide',
+          qrType: 'zapper',
+          isActive: true,
+          isRealZapper: true
+        };
+      }
+
       if (!merchantInfo) {
         return res.status(400).json({
           success: false,
@@ -450,38 +537,91 @@ class QRPaymentController {
         });
       }
 
-      // Create payment record
-      const payment = {
-        id: paymentId,
-        qrCode,
-        amount: parseFloat(amount),
-        walletId,
-        reference: reference || `QR_${Date.now()}`,
-        merchant: merchantInfo,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes
-      };
+      // Use amount from request (user-entered) or QR code, but prefer request amount
+      const finalAmount = paymentAmount || (decodedData.amount || 0);
+      const finalReference = reference || decodedData.reference || `QR_${Date.now()}`;
 
-      // Store payment (in production, this would be in database)
-      this.pendingPayments.set(paymentId, payment);
+      // Process payment within a transaction
+      const result = await sequelize.transaction(async (t) => {
+        // Debit wallet
+        await wallet.debit(finalAmount, 'qr_payment', { transaction: t });
+
+        // Create transaction record
+        const transactionId = `QR_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        const transaction = await Transaction.create({
+          transactionId: transactionId,
+          userId: userId,
+          walletId: wallet.walletId,
+          amount: finalAmount,
+          type: 'payment',
+          status: 'completed',
+          description: `QR Payment to ${merchantInfo.name}`,
+          currency: decodedData.currency || 'ZAR',
+          fee: 0.00,
+          reference: finalReference,
+          metadata: {
+            qrCode: qrCode,
+            merchantId: merchantInfo.id,
+            merchantName: merchantInfo.name,
+            zapperDecoded: zapperDecoded,
+            zapperData: decodedData.zapperData || null
+          }
+        }, { transaction: t });
+
+        // Try to process with Zapper API (non-blocking)
+        let zapperTransactionId = null;
+        if (zapperDecoded && merchantInfo.isRealZapper) {
+          try {
+            const zapperResult = await this.zapperService.processWalletPayment(
+              merchantInfo.id,
+              {
+                walletId: wallet.walletId,
+                amount: finalAmount,
+                reference: finalReference,
+                merchantId: merchantInfo.id
+              }
+            );
+            zapperTransactionId = zapperResult.transactionId || zapperResult.id;
+          } catch (zapperError) {
+            console.error('⚠️ Zapper payment processing failed (non-blocking):', zapperError.message);
+            // Continue - transaction is already created
+          }
+        }
+
+        return {
+          transaction,
+          zapperTransactionId,
+          merchant: merchantInfo,
+          amount: finalAmount,
+          reference: finalReference
+        };
+      });
+
+      // Reload wallet to get updated balance
+      await wallet.reload();
 
       res.json({
         success: true,
         data: {
-          paymentId,
-          payment,
-          nextStep: 'confirm',
+          paymentId: result.transaction.transactionId,
+          transactionId: result.transaction.transactionId,
+          merchant: result.merchant,
+          amount: result.amount,
+          currency: decodedData.currency || 'ZAR',
+          reference: result.reference,
+          status: 'completed',
+          walletBalance: parseFloat(wallet.balance),
+          zapperTransactionId: result.zapperTransactionId,
           timestamp: new Date().toISOString()
         }
       });
 
     } catch (error) {
-      console.error('Payment initiation error:', error);
+      console.error('❌ Payment initiation error:', error);
       res.status(500).json({
         success: false,
         error: 'Payment initiation failed',
-        message: 'Failed to initiate payment'
+        message: error.message || 'Failed to process payment'
       });
     }
   }
