@@ -1546,31 +1546,6 @@ export function QRPaymentPage() {
               </Card>
             </div>
 
-            {/* Coming Soon Alert */}
-            <Alert 
-              style={{
-                borderRadius: 'var(--mobile-border-radius)',
-                border: '1px solid #f59e0b',
-                backgroundColor: '#fef3c7',
-                marginBottom: '1.5rem'
-              }}
-            >
-              <AlertTriangle className="h-4 w-4 text-orange-600" />
-              <AlertDescription>
-                <p 
-                  style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: 'var(--mobile-font-base)',
-                    fontWeight: 'var(--font-weight-medium)',
-                    color: '#92400e',
-                    margin: 0
-                  }}
-                >
-                  QR Code payments are coming soon! We're integrating with Zapper to bring you seamless QR payments at thousands of merchants.
-                </p>
-              </AlertDescription>
-            </Alert>
-
             {/* Featured Merchants */}
             <div className="mb-6">
               <h3 
