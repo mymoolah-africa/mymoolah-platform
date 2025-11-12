@@ -8,7 +8,7 @@ const { validationResult } = require('express-validator');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 const ZapperService = require('../services/zapperService');
-const { Wallet, Transaction, sequelize } = require('../models');
+const { Wallet, Transaction, User, sequelize } = require('../models');
 
 class QRPaymentController {
   constructor() {
@@ -541,6 +541,9 @@ class QRPaymentController {
       const finalAmount = paymentAmount || (decodedData.amount || 0);
       const finalReference = reference || decodedData.reference || `QR_${Date.now()}`;
 
+      // Get user information for Zapper payment (outside transaction for better performance)
+      const user = await User.findByPk(userId);
+
       // Process payment within a transaction
       const result = await sequelize.transaction(async (t) => {
         // Debit wallet
@@ -568,34 +571,49 @@ class QRPaymentController {
           }
         }, { transaction: t });
 
-        // Try to process with Zapper API (non-blocking)
-        let zapperTransactionId = null;
-        if (zapperDecoded && merchantInfo.isRealZapper) {
-          try {
-            const zapperResult = await this.zapperService.processWalletPayment(
-              merchantInfo.id,
-              {
-                walletId: wallet.walletId,
-                amount: finalAmount,
-                reference: finalReference,
-                merchantId: merchantInfo.id
-              }
-            );
-            zapperTransactionId = zapperResult.transactionId || zapperResult.id;
-          } catch (zapperError) {
-            console.error('⚠️ Zapper payment processing failed (non-blocking):', zapperError.message);
-            // Continue - transaction is already created
-          }
-        }
-
         return {
           transaction,
-          zapperTransactionId,
           merchant: merchantInfo,
           amount: finalAmount,
           reference: finalReference
         };
       });
+
+      // Try to process with Zapper API (non-blocking, outside transaction)
+      let zapperTransactionId = null;
+      if (zapperDecoded && merchantInfo.isRealZapper) {
+        try {
+          // Base64 encode the QR code for Zapper API
+          const base64QRCode = Buffer.from(qrCode, 'utf8').toString('base64');
+          
+          const zapperResult = await this.zapperService.processWalletPayment({
+            reference: finalReference,
+            code: base64QRCode,
+            amount: finalAmount, // Will be converted to cents in service
+            paymentUTCDate: new Date().toISOString(),
+            customer: {
+              id: `CUST-${userId}`,
+              firstName: user?.firstName || 'Customer',
+              lastName: user?.lastName || 'Unknown'
+            }
+          });
+          
+          zapperTransactionId = zapperResult.id || zapperResult.transactionId || zapperResult.reference;
+          
+          // Optionally update transaction metadata with Zapper transaction ID
+          if (zapperTransactionId) {
+            await result.transaction.update({
+              metadata: {
+                ...result.transaction.metadata,
+                zapperTransactionId: zapperTransactionId
+              }
+            });
+          }
+        } catch (zapperError) {
+          console.error('⚠️ Zapper payment processing failed (non-blocking):', zapperError.message);
+          // Continue - transaction is already created
+        }
+      }
 
       // Reload wallet to get updated balance
       await wallet.reload();
@@ -611,7 +629,7 @@ class QRPaymentController {
           reference: result.reference,
           status: 'completed',
           walletBalance: parseFloat(wallet.balance),
-          zapperTransactionId: result.zapperTransactionId,
+          zapperTransactionId: zapperTransactionId,
           timestamp: new Date().toISOString()
         }
       });
