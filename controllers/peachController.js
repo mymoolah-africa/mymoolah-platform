@@ -248,6 +248,15 @@ exports.initiatePayShapRtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'amount is required' });
     }
 
+    // Validate amount is positive
+    const amountNum = Number(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'amount must be a positive number greater than 0' 
+      });
+    }
+
     // Validate payment method
     if (!creditorPhone && !creditorAccountNumber) {
       return res.status(400).json({ 
