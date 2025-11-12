@@ -24,6 +24,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Alert, AlertDescription } from '../components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import { isOperaMini, isCameraSupported } from '../utils/browserSupport';
 
 export function QRPaymentPage() {
@@ -47,6 +50,17 @@ export function QRPaymentPage() {
   const [qrValidationResult, setQrValidationResult] = useState<QRValidationResult | null>(null);
   const [currentPayment, setCurrentPayment] = useState<QRPaymentResult | null>(null);
   const [walletBalance, setWalletBalance] = useState<string>('R0.00');
+  
+  // Modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [confirmAmount, setConfirmAmount] = useState<string>('');
+  const [pendingPaymentData, setPendingPaymentData] = useState<{
+    qrCode: string;
+    amount: number;
+    merchant: QRMerchant;
+    reference: string;
+  } | null>(null);
 
   // Load featured merchants on component mount
   useEffect(() => {
@@ -577,42 +591,20 @@ export function QRPaymentPage() {
       const validationResult = await apiService.validateQRCode(code);
       setQrValidationResult(validationResult);
       
-      // If validation successful, initiate payment
+      // If validation successful, show confirm modal
       if (validationResult.merchant) {
-        // Check if amount is 0 or missing - prompt user to enter amount
-        let paymentAmount = validationResult.paymentDetails.amount;
+        // Check if amount is 0 or missing - will prompt in confirm modal
+        let paymentAmount = validationResult.paymentDetails.amount || 0;
         
-        if (!paymentAmount || paymentAmount <= 0) {
-          const userAmount = prompt(
-            `QR Code validated!\n\nMerchant: ${validationResult.merchant.name}\n\nThis QR code doesn't have an amount. Please enter the payment amount (R):`,
-            ''
-          );
-          
-          if (!userAmount || userAmount.trim() === '') {
-            throw new Error('Payment amount is required. Please enter an amount to proceed.');
-          }
-          
-          const parsedAmount = parseFloat(userAmount.replace(/[^0-9.]/g, ''));
-          if (isNaN(parsedAmount) || parsedAmount <= 0) {
-            throw new Error('Invalid amount. Please enter a valid amount greater than 0.');
-          }
-          
-          paymentAmount = parsedAmount;
-        }
-        
-        const paymentResult = await apiService.initiateQRPayment(
-          code,
-          paymentAmount,
-          user?.walletId || 'default',
-          validationResult.paymentDetails.reference
-        );
-        setCurrentPayment(paymentResult);
-        
-        // Refresh wallet balance after payment
-        await fetchWalletBalance();
-        
-        // Show success message
-        alert(`✅ Payment successful!\n\nMerchant: ${validationResult.merchant.name}\nAmount: R${paymentAmount.toFixed(2)}\n\nTransaction ID: ${paymentResult.transactionId || paymentResult.paymentId}\n\nCheck your transaction history for details.`);
+        // Store payment data for confirmation
+        setPendingPaymentData({
+          qrCode: code,
+          amount: paymentAmount,
+          merchant: validationResult.merchant,
+          reference: validationResult.paymentDetails.reference || `TestRefStatic${Date.now()}`
+        });
+        setConfirmAmount(paymentAmount > 0 ? paymentAmount.toString() : '');
+        setShowConfirmModal(true);
       } else {
         throw new Error('QR code validation failed. The QR code may not be a valid payment code.');
       }
@@ -620,6 +612,9 @@ export function QRPaymentPage() {
       stopCamera();
       
     } catch (err: any) {
+      // Close modals on error
+      setShowConfirmModal(false);
+      setShowSuccessModal(false);
       console.error('QR processing error:', err);
       
       // Provide specific error messages
@@ -648,6 +643,52 @@ export function QRPaymentPage() {
       }
       
       setError(errorMsg);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Handle confirm payment
+  const handleConfirmPayment = async () => {
+    if (!pendingPaymentData) return;
+    
+    try {
+      setIsProcessing(true);
+      
+      // Get amount from confirm modal (user may have edited it)
+      const paymentAmount = parseFloat(confirmAmount) || pendingPaymentData.amount;
+      
+      if (paymentAmount <= 0) {
+        setError('Payment amount must be greater than 0.');
+        return;
+      }
+      
+      // Close confirm modal
+      setShowConfirmModal(false);
+      
+      // Initiate payment
+      const paymentResult = await apiService.initiateQRPayment(
+        pendingPaymentData.qrCode,
+        paymentAmount,
+        user?.walletId || 'default',
+        pendingPaymentData.reference
+      );
+      
+      setCurrentPayment(paymentResult);
+      
+      // Refresh wallet balance after payment
+      await fetchWalletBalance();
+      
+      // Show success modal
+      setShowSuccessModal(true);
+      
+      // Clear pending data
+      setPendingPaymentData(null);
+      
+    } catch (err: any) {
+      console.error('Payment error:', err);
+      setError(err.message || 'Payment failed. Please try again.');
+      setShowConfirmModal(false);
     } finally {
       setIsProcessing(false);
     }
@@ -1690,6 +1731,406 @@ export function QRPaymentPage() {
           </>
         )}
       </div>
+
+      {/* Confirm Payment Modal */}
+      <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+        <DialogContent 
+          style={{
+            maxWidth: '400px',
+            width: '90vw',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            padding: '24px',
+            border: 'none',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            zIndex: 9999
+          }}
+          aria-describedby="confirm-payment-description"
+        >
+          <DialogHeader>
+            <DialogTitle 
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '20px',
+                fontWeight: '700',
+                color: '#1f2937',
+                marginBottom: '16px'
+              }}
+            >
+              Confirm Payment
+            </DialogTitle>
+            <DialogDescription id="confirm-payment-description" className="sr-only">
+              Confirm payment details before proceeding
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Merchant */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Label 
+                style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1f2937'
+                }}
+              >
+                Merchant
+              </Label>
+              <Input
+                value={pendingPaymentData?.merchant.name || ''}
+                readOnly
+                style={{
+                  width: '200px',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '8px 12px'
+                }}
+              />
+            </div>
+            
+            {/* Total Amount */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Label 
+                style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1f2937'
+                }}
+              >
+                Total Amount (ZAR)
+              </Label>
+              <Input
+                type="number"
+                value={confirmAmount}
+                onChange={(e) => setConfirmAmount(e.target.value)}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                style={{
+                  width: '200px',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '8px 12px'
+                }}
+              />
+            </div>
+            
+            {/* Reference */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Label 
+                style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1f2937'
+                }}
+              >
+                Reference
+              </Label>
+              <Input
+                value={pendingPaymentData?.reference || ''}
+                readOnly
+                style={{
+                  width: '200px',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  backgroundColor: '#f3f4f6',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  padding: '8px 12px'
+                }}
+              />
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+            <Button
+              onClick={() => {
+                setShowConfirmModal(false);
+                setPendingPaymentData(null);
+              }}
+              disabled={isProcessing}
+              style={{
+                flex: 1,
+                backgroundColor: '#ffffff',
+                color: '#6b7280',
+                border: '1px solid #e5e7eb',
+                borderRadius: '8px',
+                padding: '12px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: isProcessing ? 'not-allowed' : 'pointer'
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleConfirmPayment}
+              disabled={isProcessing || !confirmAmount || parseFloat(confirmAmount) <= 0}
+              style={{
+                flex: 1,
+                background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '12px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: (isProcessing || !confirmAmount || parseFloat(confirmAmount) <= 0) ? 'not-allowed' : 'pointer',
+                opacity: (isProcessing || !confirmAmount || parseFloat(confirmAmount) <= 0) ? 0.6 : 1
+              }}
+            >
+              {isProcessing ? 'Processing...' : 'Approve & Pay'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Successful Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent 
+          style={{
+            maxWidth: '400px',
+            width: '90vw',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            padding: '0',
+            border: 'none',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            zIndex: 9999,
+            overflow: 'hidden'
+          }}
+          aria-describedby="payment-success-description"
+        >
+          <div id="payment-success-description" className="sr-only">
+            Payment successful notification
+          </div>
+          
+          {/* Gradient Header */}
+          <div 
+            style={{
+              background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+              padding: '32px 24px',
+              textAlign: 'center'
+            }}
+          >
+            <div 
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                backgroundColor: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px auto'
+              }}
+            >
+              <CheckCircle style={{ width: '32px', height: '32px', color: '#86BE41' }} />
+            </div>
+            <h2 
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '24px',
+                fontWeight: '700',
+                color: '#ffffff',
+                margin: '0 0 8px 0'
+              }}
+            >
+              Payment Successful!
+            </h2>
+            <p 
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                color: '#ffffff',
+                margin: 0,
+                opacity: 0.9
+              }}
+            >
+              Your Zapper payment has been processed
+            </p>
+          </div>
+          
+          {/* Transaction Details */}
+          <div style={{ padding: '24px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Merchant */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#6b7280'
+                  }}
+                >
+                  Merchant
+                </span>
+                <span 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#1f2937'
+                  }}
+                >
+                  {pendingPaymentData?.merchant.name || currentPayment?.merchant?.name || 'Unknown'}
+                </span>
+              </div>
+              
+              {/* Amount */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#6b7280'
+                  }}
+                >
+                  Amount
+                </span>
+                <span 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#1f2937'
+                  }}
+                >
+                  R{currentPayment?.amount?.toFixed(2) || parseFloat(confirmAmount || '0').toFixed(2)}
+                </span>
+              </div>
+              
+              {/* Service Fee */}
+              {currentPayment?.fee && (
+                <div 
+                  style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    backgroundColor: '#fff7ed',
+                    padding: '12px',
+                    borderRadius: '8px'
+                  }}
+                >
+                  <span 
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#92400e'
+                    }}
+                  >
+                    Service Fee
+                  </span>
+                  <span 
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '700',
+                      color: '#c2410c'
+                    }}
+                  >
+                    R{currentPayment.fee.toFixed(2)}
+                  </span>
+                </div>
+              )}
+              
+              {/* New Balance */}
+              <div 
+                style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  backgroundColor: '#f0fdf4',
+                  padding: '12px',
+                  borderRadius: '8px'
+                }}
+              >
+                <span 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#166534'
+                  }}
+                >
+                  New Balance
+                </span>
+                <span 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '700',
+                    color: '#16a34a'
+                  }}
+                >
+                  {walletBalance}
+                </span>
+              </div>
+              
+              {/* Transaction ID */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                <span 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    color: '#9ca3af'
+                  }}
+                >
+                  Transaction ID
+                </span>
+                <span 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    color: '#6b7280'
+                  }}
+                >
+                  {currentPayment?.transactionId || currentPayment?.paymentId || 'N/A'}
+                </span>
+              </div>
+            </div>
+            
+            {/* Done Button */}
+            <Button
+              onClick={() => {
+                setShowSuccessModal(false);
+                setCurrentPayment(null);
+                setPendingPaymentData(null);
+              }}
+              style={{
+                width: '100%',
+                marginTop: '24px',
+                background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '12px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '16px',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              Done
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
