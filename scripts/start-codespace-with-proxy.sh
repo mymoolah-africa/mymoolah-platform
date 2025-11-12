@@ -105,6 +105,64 @@ ensure_proxy_binary() {
   fi
 }
 
+ensure_adc_valid() {
+  log "Checking Application Default Credentials (ADC)..."
+  
+  # Check if ADC exist
+  if ! gcloud auth application-default print-access-token >/dev/null 2>&1; then
+    log "⚠️  ADC not found"
+    return 1
+  fi
+  
+  # Test if ADC work by trying to access Cloud SQL API (more specific test)
+  # This will fail if ADC are expired or invalid
+  local test_output
+  test_output=$(gcloud sql instances describe mmtp-pg --project=mymoolah-db --format="value(name)" 2>&1)
+  local test_exit=$?
+  
+  if [ $test_exit -eq 0 ] && [ -n "$test_output" ]; then
+    log "✅ ADC are valid"
+    return 0
+  fi
+  
+  # Check for specific expired token error
+  if echo "$test_output" | grep -q "invalid_grant\|invalid_rapt\|reauth"; then
+    log "⚠️  ADC expired (invalid_grant/reauth error detected)"
+  else
+    log "⚠️  ADC may be invalid or expired"
+  fi
+  
+  # Check if we're in an interactive terminal
+  if [ -t 0 ] && [ -t 1 ]; then
+    log "Refreshing credentials (interactive mode)..."
+    log "You will need to authenticate via device code..."
+    log ""
+    
+    if gcloud auth application-default login --no-launch-browser; then
+      log "✅ ADC refreshed successfully"
+      # Verify the refresh worked
+      if gcloud sql instances describe mmtp-pg --project=mymoolah-db --format="value(name)" >/dev/null 2>&1; then
+        log "✅ ADC verification successful"
+        return 0
+      else
+        error "❌ ADC refresh completed but verification failed"
+        return 1
+      fi
+    else
+      error "❌ Failed to refresh ADC"
+      return 1
+    fi
+  else
+    # Non-interactive mode - provide instructions
+    error "❌ ADC expired or invalid (non-interactive mode)"
+    error "Please run this command to refresh ADC:"
+    error "   gcloud auth application-default login --no-launch-browser"
+    error ""
+    error "Then restart the backend server."
+    return 1
+  fi
+}
+
 start_proxy() {
   log "Starting Cloud SQL Auth Proxy on port ${PROXY_PORT}..."
   nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
@@ -181,6 +239,7 @@ trap cleanup EXIT INT TERM
 main() {
   ensure_in_project_root
   ensure_gcloud_loaded
+  ensure_adc_valid || exit 1
   stop_existing_proxy
   ensure_proxy_binary
   start_proxy
