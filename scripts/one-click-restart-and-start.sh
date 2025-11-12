@@ -76,7 +76,18 @@ main() {
   ensure_in_project_root
 
   log "Killing running jobs (backend and proxy)..."
+  # Kill proxy by name pattern (catches all variations)
+  kill_if_running "cloud-sql-proxy"
   kill_if_running "${PROXY_NAME}"
+  # Kill any process using port 6543 (proxy port)
+  if command -v lsof >/dev/null 2>&1; then
+    local port_pid=$(lsof -ti:6543 2>/dev/null || true)
+    if [ -n "${port_pid}" ]; then
+      log "Killing process using port 6543 (PID: ${port_pid})"
+      kill "${port_pid}" 2>/dev/null || true
+      sleep 1
+    fi
+  fi
   kill_if_running "node scripts/start-cs-ip.js"
   kill_if_running "node server.js"
   kill_if_running "node .*server.js"

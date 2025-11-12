@@ -73,12 +73,46 @@ wait_for_port() {
 }
 
 stop_existing_proxy() {
-  local pid
-  pid=$(pgrep -f "cloud-sql-proxy.*${PROXY_PORT}" || true)
-  if [ -n "${pid}" ]; then
-    log "Stopping existing proxy (PID: ${pid})"
-    kill "${pid}" 2>/dev/null || true
+  log "Checking for existing proxy instances..."
+  
+  # Method 1: Find by port (most reliable)
+  local port_pid
+  if command -v lsof >/dev/null 2>&1; then
+    port_pid=$(lsof -ti:${PROXY_PORT} 2>/dev/null || true)
+    if [ -n "${port_pid}" ]; then
+      log "Found proxy using port ${PROXY_PORT} (PID: ${port_pid})"
+      kill "${port_pid}" 2>/dev/null || true
+      sleep 1
+    fi
+  fi
+  
+  # Method 2: Find by process name pattern (catch all variations)
+  local proxy_pids
+  proxy_pids=$(pgrep -f "cloud-sql-proxy" 2>/dev/null || true)
+  if [ -n "${proxy_pids}" ]; then
+    for pid in ${proxy_pids}; do
+      # Check if this process is actually using our port
+      if lsof -p "${pid}" 2>/dev/null | grep -q ":${PROXY_PORT}" || [ -z "${port_pid}" ]; then
+        log "Stopping existing proxy process (PID: ${pid})"
+        kill "${pid}" 2>/dev/null || true
+      fi
+    done
     sleep 1
+  fi
+  
+  # Method 3: Kill any process listening on the port (fallback)
+  if command -v fuser >/dev/null 2>&1; then
+    fuser -k ${PROXY_PORT}/tcp 2>/dev/null || true
+    sleep 1
+  fi
+  
+  # Verify port is free
+  if command -v lsof >/dev/null 2>&1; then
+    if lsof -ti:${PROXY_PORT} >/dev/null 2>&1; then
+      warn "Port ${PROXY_PORT} still in use after cleanup attempt"
+    else
+      log "✅ Port ${PROXY_PORT} is free"
+    fi
   fi
 }
 
@@ -140,13 +174,31 @@ ensure_adc_valid() {
     
     if gcloud auth application-default login --no-launch-browser; then
       log "✅ ADC refreshed successfully"
-      # Verify the refresh worked
+      # Give credentials a moment to propagate
+      sleep 2
+      
+      # Verify the refresh worked - try multiple verification methods
+      local verify_ok=false
+      
+      # Method 1: Test Cloud SQL API access
       if gcloud sql instances describe mmtp-pg --project=mymoolah-db --format="value(name)" >/dev/null 2>&1; then
+        verify_ok=true
+      # Method 2: Test if we can get an access token
+      elif gcloud auth application-default print-access-token >/dev/null 2>&1; then
+        # Token exists, might work even if describe fails (permissions issue)
+        log "⚠️  ADC token exists but Cloud SQL API test failed (may be permissions issue)"
+        log "⚠️  Proceeding anyway - proxy will test connectivity"
+        verify_ok=true
+      fi
+      
+      if [ "$verify_ok" = true ]; then
         log "✅ ADC verification successful"
         return 0
       else
         error "❌ ADC refresh completed but verification failed"
-        return 1
+        error "⚠️  Continuing anyway - proxy will attempt connection and report errors"
+        # Don't exit - let proxy try and fail with clear error if ADC still don't work
+        return 0
       fi
     else
       error "❌ Failed to refresh ADC"
