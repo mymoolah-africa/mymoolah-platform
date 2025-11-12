@@ -29,20 +29,40 @@ if (config.use_env_variable) {
   }
   sequelize = new Sequelize(url, {
     ...options,
-    pool: { max: 20, min: 0, acquire: 30000, idle: 10000 },
+    // Optimized connection pool for Cloud SQL Auth Proxy
+    // min: 2 keeps connections warm to avoid cold starts
+    // idle: 30000 (30s) prevents frequent connection churn
+    pool: { 
+      max: 20, 
+      min: 2,  // Keep 2 connections warm to avoid cold starts
+      acquire: 30000, 
+      idle: 30000,  // Increased from 10s to 30s to reduce connection churn
+      evict: 10000  // Check for idle connections every 10s
+    },
     dialectOptions: {
       ...(options.dialectOptions || {}),
-      keepAlive: true
+      keepAlive: true,
+      // TCP keepalive to prevent connection drops
+      keepAliveInitialDelayMillis: 0
     },
     logging: false
   });
 } else {
   sequelize = new Sequelize(config.database, config.username, config.password, {
     ...config,
-    pool: { max: 20, min: 0, acquire: 30000, idle: 10000 },
+    // Optimized connection pool
+    pool: { 
+      max: 20, 
+      min: 2,  // Keep 2 connections warm to avoid cold starts
+      acquire: 30000, 
+      idle: 30000,  // Increased from 10s to 30s to reduce connection churn
+      evict: 10000  // Check for idle connections every 10s
+    },
     dialectOptions: {
       ...(config.dialectOptions || {}),
-      keepAlive: true
+      keepAlive: true,
+      // TCP keepalive to prevent connection drops
+      keepAliveInitialDelayMillis: 0
     },
     logging: false
   });

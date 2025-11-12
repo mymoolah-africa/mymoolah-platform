@@ -31,13 +31,16 @@ class WalletController {
 
   // Get user's wallet balance
   async getBalance(req, res) {
+    const startTime = Date.now();
     try {
       const userId = req.user.id;
 
       // Get wallet by userId
+      const queryStart = Date.now();
       const wallet = await Wallet.findOne({
         where: { userId: userId }
       });
+      const queryTime = Date.now() - queryStart;
       
       if (!wallet) {
         return res.status(404).json({
@@ -45,6 +48,9 @@ class WalletController {
           message: 'Wallet not found'
         });
       }
+
+      const totalTime = Date.now() - startTime;
+      console.log(`⏱️  Wallet Balance Performance: Total=${totalTime}ms | Query=${queryTime}ms`);
 
       res.json({
         success: true,
@@ -59,7 +65,8 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error getting balance:', error);
+      const totalTime = Date.now() - startTime;
+      console.error(`❌ Error getting balance (${totalTime}ms):`, error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',
@@ -404,6 +411,7 @@ class WalletController {
 
   // Get transaction history - OPTIMIZED with keyset pagination and trimmed payloads
   async getTransactionHistory(req, res) {
+    const startTime = Date.now();
     try {
       const userId = req.user.id;
       const { cursor, limit = 10 } = req.query;
@@ -420,6 +428,7 @@ class WalletController {
       }
 
       // Fetch transactions with keyset pagination
+      const queryStart = Date.now();
       const transactions = await Transaction.findAll({
         where: whereClause,
         order: [['createdAt', 'DESC']],
@@ -438,8 +447,10 @@ class WalletController {
           'metadata'
         ]
       });
+      const queryTime = Date.now() - queryStart;
 
       // Transform to trimmed payload with banking-grade type mapping
+      const transformStart = Date.now();
       const normalizedRows = transactions.map((t) => ({
         id: t.id,
         transactionId: t.transactionId,
@@ -523,6 +534,10 @@ class WalletController {
       const nextCursor = transactions.length > 0 ? 
         transactions[transactions.length - 1].createdAt.toISOString() : null;
 
+      const transformTime = Date.now() - transformStart;
+      const totalTime = Date.now() - startTime;
+      console.log(`⏱️  Transaction History Performance: Total=${totalTime}ms | Query=${queryTime}ms | Transform=${transformTime}ms | Count=${transactions.length}`);
+
       res.json({
         success: true,
         message: 'Transaction history retrieved successfully',
@@ -537,7 +552,8 @@ class WalletController {
       });
 
     } catch (error) {
-      console.error('❌ Error getting transaction history:', error);
+      const totalTime = Date.now() - startTime;
+      console.error(`❌ Error getting transaction history (${totalTime}ms):`, error);
       res.status(500).json({
         success: false,
         message: 'Internal server error',
