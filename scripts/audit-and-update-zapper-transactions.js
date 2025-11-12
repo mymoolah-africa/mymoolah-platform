@@ -7,9 +7,69 @@
  * 3. Updates transactions that need correction
  * 4. Creates missing TaxTransaction records
  * 5. Updates Zapper float account balance
+ * 
+ * Usage:
+ *   - In Codespaces: Make sure Cloud SQL Auth Proxy is running, then run this script
+ *   - Locally: Ensure DATABASE_URL is set correctly
  */
 
 require('dotenv').config();
+
+// Check if Cloud SQL Auth Proxy is running (Codespaces)
+// If proxy is running on port 6543, override DATABASE_URL to use it
+const fs = require('fs');
+const { execSync } = require('child_process');
+
+let useProxy = false;
+let proxyRunning = false;
+
+// Check if proxy is running on port 6543
+try {
+  // Check if port 6543 is listening
+  execSync('nc -z 127.0.0.1 6543 2>/dev/null || true', { stdio: 'ignore' });
+  // Alternative check: look for proxy process
+  try {
+    const proxyPids = execSync('pgrep -f "cloud-sql-proxy.*6543" 2>/dev/null || true', { encoding: 'utf8' }).trim();
+    proxyRunning = proxyPids.length > 0;
+  } catch (e) {
+    // pgrep not available or no matches
+  }
+  
+  // If proxy is running, override DATABASE_URL to use it
+  if (proxyRunning && process.env.DATABASE_URL) {
+    try {
+      const originalUrl = new URL(process.env.DATABASE_URL);
+      originalUrl.hostname = '127.0.0.1';
+      originalUrl.port = '6543';
+      originalUrl.searchParams.set('sslmode', 'disable');
+      process.env.DATABASE_URL = originalUrl.toString();
+      useProxy = true;
+      console.log('ℹ️  Cloud SQL Auth Proxy detected - using proxy connection (127.0.0.1:6543)\n');
+    } catch (urlError) {
+      console.log('⚠️  Could not parse DATABASE_URL, using as-is\n');
+    }
+  } else if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('127.0.0.1:6543')) {
+    useProxy = true;
+    console.log('ℹ️  Using Cloud SQL Auth Proxy connection (from DATABASE_URL)\n');
+  } else {
+    console.log('ℹ️  Using direct database connection');
+    console.log('   DATABASE_URL:', process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]+@/, ':****@') : 'not set');
+    if (!proxyRunning) {
+      console.log('   💡 Tip: In Codespaces, start the proxy first: ./scripts/one-click-restart-and-start.sh\n');
+    } else {
+      console.log('');
+    }
+  }
+} catch (error) {
+  // Fallback to checking DATABASE_URL
+  if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('127.0.0.1:6543')) {
+    useProxy = true;
+    console.log('ℹ️  Using Cloud SQL Auth Proxy connection (from DATABASE_URL)\n');
+  } else {
+    console.log('ℹ️  Using direct database connection\n');
+  }
+}
+
 const { Transaction, SupplierFloat, TaxTransaction, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const ledgerService = require('../services/ledgerService');
@@ -154,6 +214,21 @@ async function allocateZapperFeeAndVat({
 
 async function auditAndUpdateZapperTransactions() {
   console.log('🔍 Auditing Zapper QR Payment Transactions...\n');
+
+  // Test database connection first
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Database connection established\n');
+  } catch (error) {
+    console.error('❌ Database connection failed:', error.message);
+    if (useProxy) {
+      console.error('\n⚠️  Make sure the Cloud SQL Auth Proxy is running:');
+      console.error('   ./scripts/one-click-restart-and-start.sh\n');
+    } else {
+      console.error('\n⚠️  Check your DATABASE_URL configuration\n');
+    }
+    throw error;
+  }
 
   try {
     // Find all QR payment transactions
