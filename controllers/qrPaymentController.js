@@ -200,7 +200,7 @@ class QRPaymentController {
       }
 
       // Extract merchant information
-      const merchantInfo = this.extractMerchantInfo(decodedData);
+      let merchantInfo = this.extractMerchantInfo(decodedData);
       if (!merchantInfo) {
         // For real Zapper QR codes, create a generic merchant if not in our list
         if (decodedData.isRealZapper && decodedData.merchant) {
