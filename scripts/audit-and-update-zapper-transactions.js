@@ -116,12 +116,14 @@ async function allocateZapperFeeAndVat({
 
     // Check if TaxTransaction already exists (only if table exists)
     let existingTaxTx = null;
+    let taxTableExists = true;
     try {
       existingTaxTx = await TaxTransaction.findOne({
         where: { originalTransactionId: walletTransactionId }
       });
     } catch (taxTableError) {
       if (taxTableError.message && (taxTableError.message.includes('does not exist') || taxTableError.original?.message?.includes('does not exist'))) {
+        taxTableExists = false;
         console.log(`  ⚠️  TaxTransaction table doesn't exist - skipping tax record creation`);
         // Continue with ledger entries even if tax table doesn't exist
       } else {
@@ -129,7 +131,7 @@ async function allocateZapperFeeAndVat({
       }
     }
 
-    if (!existingTaxTx && existingTaxTx !== undefined) {
+    if (!existingTaxTx && taxTableExists) {
       // Create TaxTransaction record (only if table exists)
       const taxTransactionId = `TAX-ZAPPER-${uuidv4()}`;
       const now = new Date();
