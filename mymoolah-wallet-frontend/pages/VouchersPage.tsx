@@ -919,7 +919,7 @@ export function VouchersPage() {
 
       // Make API call
       const token = getSessionToken();
-      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/${voucher.id}/cancel`, {
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/${voucherToCancel.id}/cancel`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
