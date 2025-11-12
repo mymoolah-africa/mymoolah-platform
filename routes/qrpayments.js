@@ -9,6 +9,7 @@ const express = require('express');
 const router = express.Router();
 const { body, validationResult } = require('express-validator');
 const QRPaymentController = require('../controllers/qrPaymentController');
+const authMiddleware = require('../middleware/auth');
 
 // Initialize QR Payment Controller
 const qrPaymentController = new QRPaymentController();
@@ -68,7 +69,7 @@ router.post('/merchants/:merchantId/validate', [
  * @desc    Initiate QR payment
  * @access  Private
  */
-router.post('/payment/initiate', [
+router.post('/payment/initiate', authMiddleware, [
   body('qrCode').notEmpty().withMessage('QR code is required'),
   body('amount').isNumeric().withMessage('Amount must be numeric'),
   body('walletId').notEmpty().withMessage('Wallet ID is required'),
