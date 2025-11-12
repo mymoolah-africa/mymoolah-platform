@@ -298,7 +298,7 @@ app.use('/api/v1/dtmercury', dtMercuryRoutes);
 app.use('/api/v1/ledger', ledgerRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/suppliers', supplierComparisonRoutes);
-app.use('/api/v1/qr-payments', qrPaymentRoutes);
+app.use('/api/v1/qr', qrPaymentRoutes);
 app.use('/api/v1/requests', requestRoutes);
 app.use('/api/v1/sweep', sweepRoutes);
 app.use('/api/v1/send-money', sendMoneyRoutes);
