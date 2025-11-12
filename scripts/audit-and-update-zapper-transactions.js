@@ -303,10 +303,19 @@ async function auditAndUpdateZapperTransactions() {
       const hasFeeBreakdown = metadata.feeBreakdown && metadata.feeBreakdown.feeInclVat;
       const hasZapperFloat = metadata.zapperFloatAccount === ZAPPER_FLOAT_ACCOUNT_NUMBER;
 
-      // Check if TaxTransaction exists
-      const taxTx = await TaxTransaction.findOne({
-        where: { originalTransactionId: tx.transactionId }
-      });
+      // Check if TaxTransaction exists (only if table exists)
+      let taxTx = null;
+      try {
+        taxTx = await TaxTransaction.findOne({
+          where: { originalTransactionId: tx.transactionId }
+        });
+      } catch (taxTableError) {
+        if (taxTableError.message && taxTableError.message.includes('does not exist')) {
+          console.log(`   ⚠️  TaxTransaction table doesn't exist yet - will skip tax record creation`);
+        } else {
+          throw taxTableError;
+        }
+      }
 
       if (needsFeeUpdate || !hasFeeBreakdown || !hasZapperFloat || !taxTx) {
         console.log(`   🔧 Needs correction:`);
@@ -346,17 +355,25 @@ async function auditAndUpdateZapperTransactions() {
           console.log(`   ✅ Credited Zapper float: R${paymentAmount.toFixed(2)}`);
         }
 
-        // Create TaxTransaction if missing
+        // Create TaxTransaction if missing (only if table exists)
         if (!taxTx) {
           const merchantName = metadata.merchantName || 'Unknown Merchant';
-          await allocateZapperFeeAndVat({
-            feeInclVat: ZAPPER_DEFAULT_FEE_INCL_VAT,
-            walletTransactionId: tx.transactionId,
-            idempotencyKey: `ZAPPER-${tx.transactionId}`,
-            userId: tx.userId,
-            paymentAmount: paymentAmount,
-            merchantName: merchantName
-          });
+          try {
+            await allocateZapperFeeAndVat({
+              feeInclVat: ZAPPER_DEFAULT_FEE_INCL_VAT,
+              walletTransactionId: tx.transactionId,
+              idempotencyKey: `ZAPPER-${tx.transactionId}`,
+              userId: tx.userId,
+              paymentAmount: paymentAmount,
+              merchantName: merchantName
+            });
+          } catch (taxError) {
+            if (taxError.message && taxError.message.includes('does not exist')) {
+              console.log(`   ⚠️  Skipped TaxTransaction creation (table doesn't exist)`);
+            } else {
+              throw taxError;
+            }
+          }
         }
 
         totalFeeAmount += ZAPPER_DEFAULT_FEE_INCL_VAT;
