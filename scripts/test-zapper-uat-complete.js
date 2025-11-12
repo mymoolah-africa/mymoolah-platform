@@ -158,19 +158,32 @@ async function testPaymentProcessing(zapperService) {
   // Get a test user and wallet from database
   let testUser, testWallet;
   try {
-    testUser = await User.findOne({ where: { phoneNumber: '0825571055' } });
-    if (!testUser) {
-      logTest('Payment Processing Setup', 'skip', 'Test user not found - skipping payment tests');
+    // Check if we're in Codespaces (using proxy) or local
+    const dbUrl = process.env.DATABASE_URL || '';
+    if (dbUrl.includes('127.0.0.1:6543') || dbUrl.includes('localhost:6543')) {
+      // Using proxy - connection should work
+      testUser = await User.findOne({ where: { phoneNumber: '0825571055' } });
+      if (!testUser) {
+        logTest('Payment Processing Setup', 'skip', 'Test user not found - skipping payment tests');
+        return;
+      }
+      testWallet = await Wallet.findOne({ where: { userId: testUser.id } });
+      if (!testWallet) {
+        logTest('Payment Processing Setup', 'skip', 'Test wallet not found - skipping payment tests');
+        return;
+      }
+      logTest('Payment Processing Setup', 'pass', `User: ${testUser.phoneNumber}, Balance: R${testWallet.balance}`);
+    } else {
+      // Direct connection - may timeout
+      logTest('Payment Processing Setup', 'skip', 'Direct DB connection detected - use Cloud SQL Auth Proxy in Codespaces');
       return;
     }
-    testWallet = await Wallet.findOne({ where: { userId: testUser.id } });
-    if (!testWallet) {
-      logTest('Payment Processing Setup', 'skip', 'Test wallet not found - skipping payment tests');
-      return;
-    }
-    logTest('Payment Processing Setup', 'pass', `User: ${testUser.phoneNumber}, Balance: R${testWallet.balance}`);
   } catch (error) {
-    logTest('Payment Processing Setup', 'skip', `Database error: ${error.message}`);
+    if (error.message.includes('ETIMEDOUT') || error.message.includes('ECONNREFUSED')) {
+      logTest('Payment Processing Setup', 'skip', `Database connection timeout - ensure Cloud SQL Auth Proxy is running: ./scripts/one-click-restart-and-start.sh`);
+    } else {
+      logTest('Payment Processing Setup', 'skip', `Database error: ${error.message}`);
+    }
     return;
   }
   
@@ -277,14 +290,22 @@ async function testErrorScenarios(zapperService) {
   try {
     const originalKey = zapperService.xApiKey;
     zapperService.xApiKey = 'INVALID_KEY';
+    zapperService.identityToken = null; // Clear token to force re-auth attempt
     
     try {
-      await zapperService.healthCheck();
-      logTest('Invalid API Key Handling', 'fail', 'Should have thrown an error');
+      const health = await zapperService.healthCheck();
+      // Health check returns an object with status, not throws
+      if (health.status === 'unhealthy') {
+        logTest('Invalid API Key Handling', 'pass', 'Correctly rejected invalid API key');
+      } else {
+        logTest('Invalid API Key Handling', 'fail', 'Should have returned unhealthy status');
+      }
     } catch (error) {
+      // If it throws, that's also acceptable
       logTest('Invalid API Key Handling', 'pass', 'Correctly rejected invalid API key');
     } finally {
       zapperService.xApiKey = originalKey;
+      zapperService.identityToken = null; // Reset
     }
   } catch (error) {
     logTest('Invalid API Key Handling', 'fail', error.message);
