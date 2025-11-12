@@ -579,16 +579,40 @@ export function QRPaymentPage() {
       
       // If validation successful, initiate payment
       if (validationResult.merchant) {
+        // Check if amount is 0 or missing - prompt user to enter amount
+        let paymentAmount = validationResult.paymentDetails.amount;
+        
+        if (!paymentAmount || paymentAmount <= 0) {
+          const userAmount = prompt(
+            `QR Code validated!\n\nMerchant: ${validationResult.merchant.name}\n\nThis QR code doesn't have an amount. Please enter the payment amount (R):`,
+            ''
+          );
+          
+          if (!userAmount || userAmount.trim() === '') {
+            throw new Error('Payment amount is required. Please enter an amount to proceed.');
+          }
+          
+          const parsedAmount = parseFloat(userAmount.replace(/[^0-9.]/g, ''));
+          if (isNaN(parsedAmount) || parsedAmount <= 0) {
+            throw new Error('Invalid amount. Please enter a valid amount greater than 0.');
+          }
+          
+          paymentAmount = parsedAmount;
+        }
+        
         const paymentResult = await apiService.initiateQRPayment(
           code,
-          validationResult.paymentDetails.amount,
+          paymentAmount,
           user?.walletId || 'default',
           validationResult.paymentDetails.reference
         );
         setCurrentPayment(paymentResult);
         
+        // Refresh wallet balance after payment
+        await fetchWalletBalance();
+        
         // Show success message
-        alert(`✅ QR Code validated successfully!\n\nMerchant: ${validationResult.merchant.name}\nAmount: R${validationResult.paymentDetails.amount.toFixed(2)}\n\nPayment initiated! Check your transaction history.`);
+        alert(`✅ Payment successful!\n\nMerchant: ${validationResult.merchant.name}\nAmount: R${paymentAmount.toFixed(2)}\n\nTransaction ID: ${paymentResult.transactionId || paymentResult.paymentId}\n\nCheck your transaction history for details.`);
       } else {
         throw new Error('QR code validation failed. The QR code may not be a valid payment code.');
       }
