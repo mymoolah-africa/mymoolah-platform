@@ -293,7 +293,8 @@ async function auditAndUpdateZapperTransactions() {
       });
       console.log(`✅ Created Zapper float account: ${ZAPPER_FLOAT_ACCOUNT_NUMBER}\n`);
     } else {
-      console.log(`✅ Zapper float account exists: ${zapperFloat.floatAccountNumber} (Balance: R${zapperFloat.currentBalance.toFixed(2)})\n`);
+      const balance = parseFloat(zapperFloat.currentBalance || 0);
+      console.log(`✅ Zapper float account exists: ${zapperFloat.floatAccountNumber} (Balance: R${balance.toFixed(2)})\n`);
     }
 
     let correctedCount = 0;
@@ -414,7 +415,8 @@ async function auditAndUpdateZapperTransactions() {
     console.log(`   Corrected: ${correctedCount}`);
     console.log(`   Total float credited: R${totalFloatCredit.toFixed(2)}`);
     console.log(`   Total fees: R${totalFeeAmount.toFixed(2)}`);
-    console.log(`   Zapper float balance: R${zapperFloat.currentBalance.toFixed(2)}`);
+    const finalBalance = parseFloat(zapperFloat.currentBalance || 0);
+    console.log(`   Zapper float balance: R${finalBalance.toFixed(2)}`);
     console.log(`\n✅ Audit and update completed!`);
 
   } catch (error) {
