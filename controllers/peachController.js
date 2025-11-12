@@ -80,6 +80,15 @@ exports.initiatePayShapRpp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'amount is required' });
     }
 
+    // Validate amount is positive
+    const amountNum = Number(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'amount must be a positive number greater than 0' 
+      });
+    }
+
     // Validate payment method
     if (!debtorPhone && !debtorAccountNumber) {
       return res.status(400).json({ 
@@ -126,12 +135,15 @@ exports.initiatePayShapRpp = async (req, res) => {
     }
 
     // For sandbox and quick wiring, prefer Checkout V2 (Bearer JWT, redirect flow)
+    // Note: Bank account payments may require bankCode - Checkout V2 may handle this differently
     const response = await peachClient.createCheckoutPayShap({ 
       amount, 
       currency, 
       description,
       debtorPhone,
-      debtorAccountNumber
+      debtorAccountNumber,
+      bankCode, // Pass bankCode if provided (may be required for account numbers)
+      bankName  // Pass bankName if provided
     });
 
     // Map minimal fields
@@ -234,6 +246,15 @@ exports.initiatePayShapRtp = async (req, res) => {
 
     if (!amount) {
       return res.status(400).json({ success: false, message: 'amount is required' });
+    }
+
+    // Validate amount is positive
+    const amountNum = Number(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'amount must be a positive number greater than 0' 
+      });
     }
 
     // Validate payment method
