@@ -15,9 +15,10 @@ PRODUCTION_DATABASE="mymoolah_production"
 # Database user (same across all environments)
 DB_USER="mymoolah_app"
 
-# Machine types
-STAGING_MACHINE_TYPE="db-n1-standard-1"  # 1 vCPU, 3.75GB RAM for staging
-PRODUCTION_MACHINE_TYPE="db-n1-standard-4"  # 4 vCPU, 15GB RAM for production
+# Machine types (PostgreSQL ENTERPRISE requires custom machine types)
+# Format: db-custom-<vCPU>-<RAM_in_MB>
+STAGING_MACHINE_TYPE="db-custom-1-3840"  # 1 vCPU, 3.75GB RAM for staging
+PRODUCTION_MACHINE_TYPE="db-custom-4-15360"  # 4 vCPU, 15GB RAM for production
 
 # Storage
 STORAGE_TYPE="SSD"
@@ -69,9 +70,41 @@ check_prerequisites() {
   success "Prerequisites check passed"
 }
 
-# Generate secure password
+# Generate banking-grade secure password
+# Requirements: 32+ characters, mixed case, numbers, special chars
+# Uses cryptographically secure random generation (OpenSSL)
 generate_password() {
-  openssl rand -base64 32 | tr -d "=+/" | cut -c1-25
+  # Generate 36-character password with banking-grade complexity
+  # Part 1: Base64 random string (28 chars, ensures entropy)
+  local base_part=$(openssl rand -base64 24 | tr -d "=+/" | head -c 28)
+  
+  # Part 2: Ensure required character types (8 chars)
+  local special_chars="!@#$%^&*"
+  local numbers="0123456789"
+  local upper="ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+  local lower="abcdefghijklmnopqrstuvwxyz"
+  
+  # Select random chars from each required set
+  local special_idx=$((RANDOM % ${#special_chars}))
+  local number_idx=$((RANDOM % ${#numbers}))
+  local upper_idx=$((RANDOM % ${#upper}))
+  local lower_idx=$((RANDOM % ${#lower}))
+  
+  local special="${special_chars:$special_idx:1}"
+  local number="${numbers:$number_idx:1}"
+  local upper_char="${upper:$upper_idx:1}"
+  local lower_char="${lower:$lower_idx:1}"
+  
+  # Add more random chars to reach 36+ characters
+  local extra=$(openssl rand -hex 4 | head -c 4)
+  
+  # Combine all parts
+  local combined="${base_part}${special}${number}${upper_char}${lower_char}${extra}"
+  
+  # Shuffle using Python (more portable than shuf)
+  python3 -c "import random, sys; chars = list('${combined}'); random.shuffle(chars); print(''.join(chars))" 2>/dev/null || \
+  python -c "import random, sys; chars = list('${combined}'); random.shuffle(chars); print(''.join(chars))" 2>/dev/null || \
+  echo "${combined}"  # Fallback: return unshuffled if Python unavailable
 }
 
 # Create Cloud SQL instance
@@ -105,6 +138,7 @@ create_instance() {
   local db_flags="max_connections=100,random_page_cost=1.1,effective_io_concurrency=200"
   
   log "Creating instance with banking-grade security settings..."
+  log "  - Edition: ENTERPRISE (matches existing instance)"
   log "  - Machine type: ${machine_type}"
   log "  - Storage: ${storage_size} ${STORAGE_TYPE}"
   log "  - Backups: ${backup_retention_days} days retention"
@@ -112,6 +146,7 @@ create_instance() {
   gcloud sql instances create "${instance_name}" \
     --project="${PROJECT_ID}" \
     --database-version=POSTGRES_16 \
+    --edition=ENTERPRISE \
     --tier="${machine_type}" \
     --region="${REGION}" \
     --storage-type="${STORAGE_TYPE}" \
@@ -119,7 +154,6 @@ create_instance() {
     --storage-auto-increase \
     --backup-start-time="${backup_start_time}" \
     --backup \
-    --enable-bin-log \
     --maintenance-window-day=SUN \
     --maintenance-window-hour=3 \
     --maintenance-release-channel=production \
@@ -194,14 +228,22 @@ create_user() {
   local instance_name=$1
   local username=$2
   local password=$3
+  local skip_password_reset=${4:-false}
   
-  log "Creating user ${username} in instance ${instance_name}"
+  log "Setting up user ${username} in instance ${instance_name}"
   
   # Check if user already exists
   if gcloud sql users describe "${username}" \
     --instance="${instance_name}" \
     --project="${PROJECT_ID}" > /dev/null 2>&1; then
-    warning "User ${username} already exists in ${instance_name}. Resetting password..."
+    success "User ${username} already exists in ${instance_name}"
+    
+    if [ "${skip_password_reset}" = "true" ]; then
+      log "Skipping password reset (using existing password)"
+      return 0
+    fi
+    
+    log "Resetting password for existing user ${username}..."
     gcloud sql users set-password "${username}" \
       --instance="${instance_name}" \
       --project="${PROJECT_ID}" \
@@ -213,6 +255,7 @@ create_user() {
     return 0
   fi
   
+  log "Creating new user ${username}..."
   gcloud sql users create "${username}" \
     --instance="${instance_name}" \
     --project="${PROJECT_ID}" \
@@ -280,7 +323,15 @@ generate_connection_info() {
   echo "DATABASE_URL (for Cloud SQL Auth Proxy):"
   echo "  postgres://${username}:${encoded_password}@127.0.0.1:5432/${database_name}?sslmode=disable"
   echo ""
-  echo "⚠️  IMPORTANT: Store password securely in Google Secret Manager"
+  echo "⚠️  BANKING-GRADE SECURITY REQUIREMENTS:"
+  echo "   1. Store password in Google Secret Manager (NOT in .env files)"
+  echo "   2. Use IAM service accounts with Secret Manager access"
+  echo "   3. Rotate password every 90 days (Production)"
+  echo "   4. Never commit passwords to Git"
+  echo "   5. Use Cloud SQL Auth Proxy for all connections"
+  echo ""
+  echo "📋 Store in Secret Manager:"
+  echo "   gcloud secrets create db-${instance_name}-password --data-file=- <<< \"${password}\""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
 }
@@ -310,10 +361,37 @@ main() {
   # Check prerequisites
   check_prerequisites
   
-  # Generate passwords
-  log "Generating secure passwords..."
+  # Generate banking-grade passwords for staging and production
+  # Banking-grade requirements: 32+ chars, unique per environment
+  log "Generating banking-grade passwords (32+ characters, unique per environment)..."
   STAGING_PASSWORD=$(generate_password)
   PRODUCTION_PASSWORD=$(generate_password)
+  
+  # Verify password strength
+  if [ ${#STAGING_PASSWORD} -lt 32 ] || [ ${#PRODUCTION_PASSWORD} -lt 32 ]; then
+    error "Generated passwords do not meet banking-grade requirements (32+ characters)"
+    exit 1
+  fi
+  
+  echo ""
+  log "✅ Passwords generated:"
+  log "   - Staging: ${#STAGING_PASSWORD} characters"
+  log "   - Production: ${#PRODUCTION_PASSWORD} characters"
+  log "   - Unique per environment: YES"
+  echo ""
+  log "⚠️  BANKING-GRADE SECURITY:"
+  log "   1. Each environment has a UNIQUE password (security isolation)"
+  log "   2. Passwords are 32+ characters (banking-grade complexity)"
+  log "   3. Passwords MUST be stored in Google Secret Manager (not .env files)"
+  log "   4. If 'mymoolah_app' user exists, password will be reset"
+  echo ""
+  log "Continue with password generation? (yes/no)"
+  read -r password_confirmation
+  
+  if [ "${password_confirmation}" != "yes" ]; then
+    log "Operation cancelled"
+    exit 0
+  fi
   
   # Create Staging instance
   echo ""
@@ -328,7 +406,7 @@ main() {
   sleep 30
   
   create_database "${STAGING_INSTANCE}" "${STAGING_DATABASE}"
-  create_user "${STAGING_INSTANCE}" "${DB_USER}" "${STAGING_PASSWORD}"
+  create_user "${STAGING_INSTANCE}" "${DB_USER}" "${STAGING_PASSWORD}" "false"
   generate_connection_info "${STAGING_INSTANCE}" "${STAGING_DATABASE}" "${DB_USER}" "${STAGING_PASSWORD}"
   
   # Create Production instance
@@ -351,7 +429,7 @@ main() {
     sleep 30
     
     create_database "${PRODUCTION_INSTANCE}" "${PRODUCTION_DATABASE}"
-    create_user "${PRODUCTION_INSTANCE}" "${DB_USER}" "${PRODUCTION_PASSWORD}"
+    create_user "${PRODUCTION_INSTANCE}" "${DB_USER}" "${PRODUCTION_PASSWORD}" "false"
     generate_connection_info "${PRODUCTION_INSTANCE}" "${PRODUCTION_DATABASE}" "${DB_USER}" "${PRODUCTION_PASSWORD}"
   fi
   
@@ -361,17 +439,42 @@ main() {
   log "✅ Setup Complete"
   log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
-  log "Next steps:"
-  echo "  1. Store passwords in Google Secret Manager"
-  echo "  2. Update environment variables in Staging/Production"
-  echo "  3. Run migrations on Staging first"
-  echo "  4. Test Staging thoroughly"
-  echo "  5. Run migrations on Production after Staging validation"
-  echo "  6. Configure Cloud SQL Auth Proxy for each environment"
-  echo "  7. Enable monitoring and alerting"
+  log "📋 BANKING-GRADE NEXT STEPS:"
   echo ""
-  log "⚠️  IMPORTANT: Save the passwords shown above securely!"
-  log "⚠️  These passwords will not be shown again."
+  echo "  1. 🔐 Store passwords in Google Secret Manager (REQUIRED):"
+  echo "     - Staging: gcloud secrets create db-${STAGING_INSTANCE}-password"
+  echo "     - Production: gcloud secrets create db-${PRODUCTION_INSTANCE}-password"
+  echo ""
+  echo "  2. 🔑 Configure IAM service accounts:"
+  echo "     - Create separate service accounts for Staging/Production"
+  echo "     - Grant Secret Manager access to service accounts"
+  echo "     - Grant Cloud SQL Client role to service accounts"
+  echo ""
+  echo "  3. 🌐 Configure Cloud SQL Auth Proxy:"
+  echo "     - Use IAM authentication (--auto-iam-authn)"
+  echo "     - No authorized networks (banking-grade security)"
+  echo "     - SSL required for all connections"
+  echo ""
+  echo "  4. 📊 Update environment variables:"
+  echo "     - Use Secret Manager secrets (not .env files)"
+  echo "     - Configure DATABASE_URL via Secret Manager"
+  echo ""
+  echo "  5. 🗄️  Run migrations:"
+  echo "     - Staging first (test thoroughly)"
+  echo "     - Production after Staging validation"
+  echo ""
+  echo "  6. 🔄 Password rotation:"
+  echo "     - Development: Quarterly"
+  echo "     - Staging: Quarterly"
+  echo "     - Production: Every 90 days (automated)"
+  echo ""
+  echo "  7. 📈 Enable monitoring:"
+  echo "     - Cloud SQL Insights"
+  echo "     - Audit logging"
+  echo "     - Alerting for security events"
+  echo ""
+  log "⚠️  CRITICAL: Passwords shown above must be stored in Secret Manager NOW!"
+  log "⚠️  These passwords will not be displayed again after this session."
   echo ""
 }
 

@@ -3401,7 +3401,7 @@ export function VouchersPage() {
               gap: '8px'
             }}>
               <AlertCircle style={{ width: '20px', height: '20px' }} />
-              Invalid Voucher Amount
+              Validation Error
             </AlertDialogTitle>
             <AlertDialogDescription style={{
               fontFamily: 'Montserrat, sans-serif',
@@ -3410,32 +3410,21 @@ export function VouchersPage() {
               marginTop: '8px',
               lineHeight: '1.5'
             }}>
-              {validationErrorMessage || 'Please check your input and try again.'}
+              {validationErrorMessage || 'An unknown validation error occurred.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '12px',
-            marginTop: '16px'
-          }}>
-            <AlertDialogAction
-              onClick={() => setShowValidationErrorModal(false)}
-              style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '14px',
-                fontWeight: '600',
-                backgroundColor: '#86BE41',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '10px 20px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s ease'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#75a835'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#86BE41'}
-            >
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowValidationErrorModal(false)} style={{
+              height: '44px',
+              backgroundColor: '#86BE41',
+              color: '#ffffff',
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '14px',
+              fontWeight: '600',
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer'
+            }}>
               OK
             </AlertDialogAction>
           </AlertDialogFooter>
