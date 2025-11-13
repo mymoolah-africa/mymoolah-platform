@@ -33,6 +33,9 @@ router.get('/', authMiddleware, voucherController.listAllVouchersForMe);
 // Get voucher by code
 router.get('/code/:voucher_code', voucherController.getVoucherByCode);
 
+// POST /api/v1/vouchers/:voucherId/cancel - Cancel EasyPay voucher with full refund (must come before /:voucher_id routes)
+router.post('/:voucherId/cancel', authMiddleware, voucherController.cancelEasyPayVoucher);
+
 // Get voucher redemption history
 router.get('/:voucher_id/redemptions', voucherController.getVoucherRedemptions);
 
@@ -41,8 +44,5 @@ router.get('/redeemed', authMiddleware, voucherController.listRedeemedVouchersFo
 
 // POST /api/v1/vouchers/trigger-expiration - Manual trigger for EasyPay expiration handler (admin only)
 router.post('/trigger-expiration', authMiddleware, voucherController.triggerExpirationHandler);
-
-// POST /api/v1/vouchers/:voucherId/cancel - Cancel EasyPay voucher with full refund
-router.post('/:voucherId/cancel', authMiddleware, voucherController.cancelEasyPayVoucher);
 
 module.exports = router;
