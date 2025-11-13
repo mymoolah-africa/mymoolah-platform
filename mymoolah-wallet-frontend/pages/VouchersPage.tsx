@@ -171,6 +171,10 @@ export function VouchersPage() {
   const [voucherToCancel, setVoucherToCancel] = useState<MMVoucher | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
 
+  // Validation error modal state
+  const [showValidationErrorModal, setShowValidationErrorModal] = useState(false);
+  const [validationErrorMessage, setValidationErrorMessage] = useState<string>('');
+
   // Voucher formatting functions
   const generateMMVoucherCode = (): string => {
     // Generate 16 numerical digits grouped in 4 groups of 4 with spaces
@@ -517,7 +521,8 @@ export function VouchersPage() {
   // Generate new voucher
   const handleGenerateVoucher = async () => {
     if (!sellAmount || parseFloat(sellAmount) <= 0) {
-      alert('Please enter a valid amount');
+      setValidationErrorMessage('Please enter a valid amount');
+      setShowValidationErrorModal(true);
       return;
     }
 
@@ -526,12 +531,14 @@ export function VouchersPage() {
     // Validate amount based on voucher type
     if (sellVoucherType === 'easypay_voucher') {
       if (amount < 50 || amount > 4000) {
-        alert('EasyPay vouchers must be between R 50 and R 4000');
+        setValidationErrorMessage('EasyPay vouchers must be between R 50 and R 4000');
+        setShowValidationErrorModal(true);
         return;
       }
     } else {
       if (amount < 5 || amount > 4000) {
-        alert('Voucher amount must be between R 5 and R 4000');
+        setValidationErrorMessage('Voucher amount must be between R 5 and R 4000');
+        setShowValidationErrorModal(true);
         return;
       }
     }
@@ -885,8 +892,40 @@ export function VouchersPage() {
     });
   };
 
+  // Check if voucher is expired
+  const isVoucherExpired = (voucher: MMVoucher): boolean => {
+    if (!voucher.expiryDate) return false;
+    return new Date(voucher.expiryDate) < new Date();
+  };
+
   // Handle opening cancel confirmation modal
   const handleCancelEasyPayVoucher = (voucher: MMVoucher) => {
+    // Check if voucher is expired before showing modal
+    if (isVoucherExpired(voucher)) {
+      // Show error message for expired vouchers
+      const errorToast = document.createElement('div');
+      errorToast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #dc2626;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      errorToast.textContent = 'Cannot cancel expired voucher. It will be automatically refunded.';
+      document.body.appendChild(errorToast);
+      setTimeout(() => {
+        document.body.removeChild(errorToast);
+      }, 4000);
+      return;
+    }
+    
     setVoucherToCancel(voucher);
     setShowCancelConfirmModal(true);
   };
@@ -1540,7 +1579,7 @@ export function VouchersPage() {
                         </div>
 
                         {/* EasyPay Pending Expiry Information with Cancel Button */}
-                        {voucher.type === 'easypay_voucher' && voucher.status === 'pending_payment' && (
+                        {voucher.type === 'easypay_voucher' && voucher.status === 'pending_payment' && !isVoucherExpired(voucher) && (
                           <div style={{ 
                             marginTop: '8px',
                             display: 'flex',
@@ -2615,7 +2654,7 @@ export function VouchersPage() {
                         </div>
 
                         {/* EasyPay Pending Expiry Information with Cancel Button */}
-                        {voucher.type === 'easypay_voucher' && voucher.status === 'pending_payment' && (
+                        {voucher.type === 'easypay_voucher' && voucher.status === 'pending_payment' && !isVoucherExpired(voucher) && (
                           <div style={{ 
                             marginTop: '8px',
                             display: 'flex',
@@ -3341,6 +3380,61 @@ export function VouchersPage() {
               }}
             >
               {isCancelling ? 'Cancelling...' : 'OK'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Validation Error Modal */}
+      <AlertDialog open={showValidationErrorModal} onOpenChange={setShowValidationErrorModal}>
+        <AlertDialogContent style={{ zIndex: 9999 }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#dc2626',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <AlertCircle style={{ width: '20px', height: '20px' }} />
+              Invalid Voucher Amount
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '14px',
+              color: '#374151',
+              marginTop: '8px',
+              lineHeight: '1.5'
+            }}>
+              {validationErrorMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '12px',
+            marginTop: '16px'
+          }}>
+            <AlertDialogAction
+              onClick={() => setShowValidationErrorModal(false)}
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '600',
+                backgroundColor: '#86BE41',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#75a835'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#86BE41'}
+            >
+              OK
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
