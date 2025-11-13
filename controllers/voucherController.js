@@ -1134,9 +1134,10 @@ exports.cancelEasyPayVoucher = async (req, res) => {
     const refundAmount = parseFloat(voucher.originalAmount);
 
     try {
-      // Update voucher status to cancelled
+      // Update voucher status to cancelled and debit voucher balance (same as expiration)
       await voucher.update({ 
         status: 'cancelled',
+        balance: 0, // Debit voucher balance - set to 0 on cancellation (same as expiration)
         metadata: {
           ...voucher.metadata,
           cancelledAt: new Date().toISOString(),
