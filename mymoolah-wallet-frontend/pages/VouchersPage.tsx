@@ -3288,48 +3288,45 @@ export function VouchersPage() {
       </Dialog>
 
       {/* Cancel EasyPay Voucher Confirmation Modal */}
-      <AlertDialog open={showCancelConfirmModal} onOpenChange={setShowCancelConfirmModal}>
-        <AlertDialogContent style={{ zIndex: 9999 }}>
-          <AlertDialogHeader>
-            <AlertDialogTitle style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: '20px',
-              fontWeight: '700',
-              color: '#1f2937',
-              marginBottom: '12px'
-            }}>
-              Cancel this EasyPay voucher?
-            </AlertDialogTitle>
-            <AlertDialogDescription style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: '14px',
-              color: '#6b7280',
-              lineHeight: '1.6'
-            }}>
-              {voucherToCancel && (
-                <>
-                  <div style={{ marginBottom: '16px' }}>
-                    <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937' }}>
-                      EasyPay Number: {voucherToCancel.easyPayNumber}
-                    </p>
-                    <p style={{ margin: '0', fontWeight: '600', color: '#1f2937' }}>
-                      Amount: R {voucherToCancel.originalAmount}
-                    </p>
-                  </div>
-                  <div style={{ marginTop: '16px' }}>
-                    <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937' }}>
-                      This will:
-                    </p>
-                    <ul style={{ margin: '0 0 16px 0', paddingLeft: '20px', listStyle: 'disc' }}>
-                      <li>Cancel the voucher immediately</li>
-                      <li>Refund R {voucherToCancel.originalAmount} to your wallet</li>
-                      <li>This action cannot be undone</li>
-                    </ul>
-                  </div>
-                </>
-              )}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
+      {showCancelConfirmModal && voucherToCancel && (
+        <AlertDialog open={showCancelConfirmModal} onOpenChange={setShowCancelConfirmModal}>
+          <AlertDialogContent style={{ zIndex: 9999 }}>
+            <AlertDialogHeader>
+              <AlertDialogTitle style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '20px',
+                fontWeight: '700',
+                color: '#1f2937',
+                marginBottom: '12px'
+              }}>
+                Cancel this EasyPay voucher?
+              </AlertDialogTitle>
+              <AlertDialogDescription style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                color: '#6b7280',
+                lineHeight: '1.6'
+              }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937' }}>
+                    EasyPay Number: {voucherToCancel.easyPayNumber}
+                  </p>
+                  <p style={{ margin: '0', fontWeight: '600', color: '#1f2937' }}>
+                    Amount: R {voucherToCancel.originalAmount}
+                  </p>
+                </div>
+                <div style={{ marginTop: '16px' }}>
+                  <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937' }}>
+                    This will:
+                  </p>
+                  <ul style={{ margin: '0 0 16px 0', paddingLeft: '20px', listStyle: 'disc' }}>
+                    <li>Cancel the voucher immediately</li>
+                    <li>Refund R {voucherToCancel.originalAmount} to your wallet</li>
+                    <li>This action cannot be undone</li>
+                  </ul>
+                </div>
+              </AlertDialogDescription>
+            </AlertDialogHeader>
           <AlertDialogFooter style={{
             display: 'flex',
             gap: '12px',
@@ -3386,59 +3383,61 @@ export function VouchersPage() {
       </AlertDialog>
 
       {/* Validation Error Modal */}
-      <AlertDialog open={showValidationErrorModal} onOpenChange={setShowValidationErrorModal}>
-        <AlertDialogContent style={{ zIndex: 9999 }}>
-          <AlertDialogHeader>
-            <AlertDialogTitle style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: '18px',
-              fontWeight: '600',
-              color: '#dc2626',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
-              <AlertCircle style={{ width: '20px', height: '20px' }} />
-              Invalid Voucher Amount
-            </AlertDialogTitle>
-            <AlertDialogDescription style={{
-              fontFamily: 'Montserrat, sans-serif',
-              fontSize: '14px',
-              color: '#374151',
-              marginTop: '8px',
-              lineHeight: '1.5'
-            }}>
-              {validationErrorMessage}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '12px',
-            marginTop: '16px'
-          }}>
-            <AlertDialogAction
-              onClick={() => setShowValidationErrorModal(false)}
-              style={{
+      {showValidationErrorModal && (
+        <AlertDialog open={showValidationErrorModal} onOpenChange={setShowValidationErrorModal}>
+          <AlertDialogContent style={{ zIndex: 9999 }}>
+            <AlertDialogHeader>
+              <AlertDialogTitle style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '18px',
+                fontWeight: '600',
+                color: '#dc2626',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <AlertCircle style={{ width: '20px', height: '20px' }} />
+                Invalid Voucher Amount
+              </AlertDialogTitle>
+              <AlertDialogDescription style={{
                 fontFamily: 'Montserrat, sans-serif',
                 fontSize: '14px',
-                fontWeight: '600',
-                backgroundColor: '#86BE41',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '10px 20px',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s ease'
-              }}
-              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#75a835'}
-              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#86BE41'}
-            >
-              OK
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+                color: '#374151',
+                marginTop: '8px',
+                lineHeight: '1.5'
+              }}>
+                {validationErrorMessage || 'Please check your input and try again.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter style={{
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '12px',
+              marginTop: '16px'
+            }}>
+              <AlertDialogAction
+                onClick={() => setShowValidationErrorModal(false)}
+                style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  backgroundColor: '#86BE41',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '10px 20px',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease'
+                }}
+                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#75a835'}
+                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#86BE41'}
+              >
+                OK
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
