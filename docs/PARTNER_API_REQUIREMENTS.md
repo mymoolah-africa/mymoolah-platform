@@ -101,6 +101,9 @@ This document outlines what needs to be implemented on MyMoolah's side to enable
    - Looks up customer by MSISDN (creates if doesn't exist)
    - Issues voucher on behalf of customer
    - Returns voucher details
+   - **Payment Flow Model Support**:
+     - **Direct Payment Model** (e.g., Zapper): Customer payment processed by partner before API call. No wallet balance check required.
+     - **Float-Based Model**: Check customer wallet balance before issuance. Return 402 if insufficient.
 
 2. Customer auto-creation logic:
    - If customer doesn't exist, create minimal user account
@@ -110,6 +113,11 @@ This document outlines what needs to be implemented on MyMoolah's side to enable
 3. Partner reference tracking:
    - Store `partner_reference` in voucher metadata
    - Enable query by partner reference
+
+4. Payment flow model configuration:
+   - Add `payment_model` field to `partners` table (`direct_payment` or `float_based`)
+   - Check partner's payment model before processing voucher issuance
+   - Skip wallet balance check for Direct Payment partners
 
 **Files to Create/Modify**:
 - `controllers/partnerVoucherController.js` (NEW)
@@ -449,4 +457,5 @@ For questions about implementation:
 
 **Document Status**: Requirements Complete  
 **Next Review**: After Phase 1 Implementation
+
 

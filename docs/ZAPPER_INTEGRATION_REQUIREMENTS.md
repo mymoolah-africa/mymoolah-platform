@@ -26,13 +26,28 @@ Zapper customers will be able to purchase MyMoolah vouchers (MMVouchers) through
 
 ### Integration Flow
 
+**Important**: Zapper processes customer payments directly through their payment gateway. MyMoolah API is called **only after** payment is successfully processed.
+
 ```
-Zapper Customer → Zapper App → Zapper Backend → MyMoolah Partner API → MMVoucher Issued
-                                                      ↓
-                                              Customer Wallet Credited
-                                                      ↓
-                                              Webhook Notification → Zapper
+Zapper Customer → Zapper App → Customer Pays with Linked Card → Zapper Payment Gateway
+                                                                      ↓
+                                                              Payment Success?
+                                                                      ↓
+                                                              Yes → Zapper Backend → MyMoolah Partner API → MMVoucher Issued
+                                                                      ↓
+                                                              Customer Wallet Credited
+                                                                      ↓
+                                                              Webhook Notification → Zapper
+                                                                      
+                                                              No → Payment Failed (API not called)
 ```
+
+**Key Points**:
+- Customer payment is processed by Zapper **before** API call to MyMoolah
+- If card payment fails, MyMoolah API is **not called**
+- MyMoolah API assumes payment has been successfully processed when called
+- No pre-funded float account required for Zapper
+- Voucher is issued immediately upon successful API call
 
 ---
 
@@ -267,21 +282,32 @@ function verifyWebhookSignature(payload, signature, secret) {
 
 ## 🧪 Testing
 
+### Payment Flow Testing
+
+**Important**: Since Zapper processes customer payments before calling MyMoolah API, test scenarios should simulate the post-payment state:
+
+1. **Simulate successful card payment** → Call MyMoolah API → Verify voucher issued
+2. **Simulate failed card payment** → Verify MyMoolah API is not called (handled by Zapper)
+3. **Test API call after payment success** → Verify voucher issuance works correctly
+
 ### UAT Test Scenarios
 
-1. **Successful Voucher Issuance**
+1. **Successful Voucher Issuance (Post-Payment)**
+   - **Scenario**: Customer card payment succeeds → Zapper calls API
    - Amount: R50.00
    - Valid MSISDN: `27825571055`
    - Expected: 201 Created with voucher code
+   - **Note**: Customer wallet balance is not checked (payment already processed by Zapper)
 
-2. **Insufficient Balance**
-   - Amount: R1000.00
-   - MSISDN with low balance
-   - Expected: 402 Payment Required
+2. **Customer Wallet Balance (Not Applicable for Zapper)**
+   - **Scenario**: This test is for float-based partners only
+   - For Zapper: Customer pays with card, so wallet balance is irrelevant
+   - **Skip this test for Zapper integration**
 
 3. **Invalid Amount**
    - Amount: R5000.00 (exceeds max)
    - Expected: 400 Bad Request
+   - **Note**: This validation happens at MyMoolah API level
 
 4. **Invalid MSISDN Format**
    - MSISDN: `0825571055` (wrong format)
@@ -290,6 +316,12 @@ function verifyWebhookSignature(payload, signature, secret) {
 5. **Duplicate Request (Idempotency)**
    - Same `X-Request-ID` and `partner_reference`
    - Expected: Same voucher (idempotent)
+   - **Use Case**: If Zapper retries API call due to network issues
+
+6. **New Customer Creation**
+   - MSISDN: `27821234567` (new customer)
+   - Expected: Customer account created automatically, voucher issued
+   - **Note**: MyMoolah will create customer account if it doesn't exist
 
 ### Test Data
 

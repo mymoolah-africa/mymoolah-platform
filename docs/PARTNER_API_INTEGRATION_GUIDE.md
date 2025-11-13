@@ -27,6 +27,25 @@
 
 The MyMoolah Partner API enables third-party platforms (like Zapper, 1 Voucher, OTT, etc.) to integrate with MyMoolah to sell MMVouchers to their customers. This API follows **Mojaloop standards** and **ISO 20022 banking standards** for secure, reliable financial transactions.
 
+### Payment Flow Models
+
+The Partner API supports two payment flow models:
+
+#### 1. **Direct Payment Model** (e.g., Zapper)
+- Customer pays partner directly (via card, bank transfer, etc.)
+- Partner processes payment **before** calling MyMoolah API
+- MyMoolah API is called **only after** payment succeeds
+- **No pre-funded float account required**
+- If payment fails, API is not called (handled by partner)
+
+#### 2. **Float-Based Model** (e.g., other partners)
+- Partner maintains a pre-funded account with MyMoolah
+- Voucher issuance debits partner's float account
+- Customer wallet balance is checked before issuance
+- Requires sufficient float balance
+
+**Important**: The payment model is configured per partner. Zapper uses the Direct Payment Model.
+
 ### Key Features
 
 - **RESTful API**: Standard HTTP/HTTPS REST API
@@ -35,6 +54,7 @@ The MyMoolah Partner API enables third-party platforms (like Zapper, 1 Voucher, 
 - **Real-Time Processing**: Immediate voucher issuance
 - **Webhook Support**: Event notifications for transaction status
 - **Comprehensive Error Handling**: Detailed error codes and messages
+- **Flexible Payment Models**: Supports both direct payment and float-based flows
 
 ### Supported Environments
 
@@ -267,7 +287,7 @@ X-Correlation-ID: {correlation_id}
 }
 ```
 
-**402 Payment Required** - Insufficient balance:
+**402 Payment Required** - Insufficient balance (Float-Based Partners only):
 ```json
 {
   "success": false,
@@ -280,6 +300,8 @@ X-Correlation-ID: {correlation_id}
   }
 }
 ```
+
+> **Note**: This error is only applicable to **Float-Based Partners**. For **Direct Payment Partners** (like Zapper), customer payment is processed before the API call, so this error will not occur.
 
 **404 Not Found** - Customer not found:
 ```json
@@ -457,17 +479,19 @@ All error responses follow this structure:
 
 ### Error Codes
 
-| Error Code | HTTP Status | Description |
-|------------|-------------|-------------|
-| `VALIDATION_ERROR` | 400 | Request validation failed |
-| `UNAUTHORIZED` | 401 | Authentication required or failed |
-| `INSUFFICIENT_BALANCE` | 402 | Customer wallet has insufficient funds |
-| `FORBIDDEN` | 403 | Access denied |
-| `NOT_FOUND` | 404 | Resource not found |
-| `CONFLICT` | 409 | Resource conflict (e.g., duplicate request) |
-| `RATE_LIMIT_EXCEEDED` | 429 | Too many requests |
-| `SERVER_ERROR` | 500 | Internal server error |
-| `SERVICE_UNAVAILABLE` | 503 | Service temporarily unavailable |
+| Error Code | HTTP Status | Description | Applicable To |
+|------------|-------------|-------------|--------------|
+| `VALIDATION_ERROR` | 400 | Request validation failed | All partners |
+| `UNAUTHORIZED` | 401 | Authentication required or failed | All partners |
+| `INSUFFICIENT_BALANCE` | 402 | Customer wallet has insufficient funds | **Float-Based Partners only** |
+| `FORBIDDEN` | 403 | Access denied | All partners |
+| `NOT_FOUND` | 404 | Resource not found | All partners |
+| `CONFLICT` | 409 | Resource conflict (e.g., duplicate request) | All partners |
+| `RATE_LIMIT_EXCEEDED` | 429 | Too many requests | All partners |
+| `SERVER_ERROR` | 500 | Internal server error | All partners |
+| `SERVICE_UNAVAILABLE` | 503 | Service temporarily unavailable | All partners |
+
+> **Note**: `INSUFFICIENT_BALANCE` (402) is only returned for Float-Based Partners. Direct Payment Partners (like Zapper) process customer payment before calling the API, so this error will not occur.
 
 ### Retry Logic
 
@@ -601,10 +625,11 @@ MyMoolah will retry failed webhooks:
    - Valid MSISDN: `27825571055`
    - Expected: 201 Created with voucher code
 
-2. **Insufficient Balance**:
+2. **Insufficient Balance** (Float-Based Partners only):
    - Amount: R1000.00
    - MSISDN with low balance
    - Expected: 402 Payment Required
+   - **Note**: This test is **not applicable** to Direct Payment Partners (like Zapper), as customer payment is processed before the API call
 
 3. **Invalid Amount**:
    - Amount: R5000.00 (exceeds max)
@@ -772,7 +797,7 @@ curl -X POST https://api.mymoolah.com/api/v1/partner/vouchers/issue \
 }
 ```
 
-**Insufficient Balance**:
+**Insufficient Balance** (Float-Based Partners only):
 ```json
 {
   "success": false,
@@ -789,6 +814,8 @@ curl -X POST https://api.mymoolah.com/api/v1/partner/vouchers/issue \
 }
 ```
 
+> **Note**: This error is only applicable to Float-Based Partners. Direct Payment Partners (like Zapper) will not receive this error, as customer payment is processed before the API call.
+
 ---
 
 ## 🔄 Version History
@@ -801,4 +828,5 @@ curl -X POST https://api.mymoolah.com/api/v1/partner/vouchers/issue \
 
 **Document Status**: ✅ Production Ready  
 **Next Review**: 2026-02-12
+
 
