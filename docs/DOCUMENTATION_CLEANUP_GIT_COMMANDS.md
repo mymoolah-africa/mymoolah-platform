@@ -33,16 +33,7 @@ All critical files verified and preserved."
 
 ---
 
-## 📋 **GIT PUSH COMMAND**
-
-```bash
-cd /Users/andremacbookpro/mymoolah && \
-git push origin main
-```
-
----
-
-## 📋 **COMPLETE WORKFLOW (Both Commands)**
+## 📋 **COMPLETE COMMIT + PUSH (Single Command)**
 
 ```bash
 cd /Users/andremacbookpro/mymoolah && \
@@ -67,6 +58,24 @@ Phases completed:
 
 All critical files verified and preserved." && \
 git push origin main
+```
+
+---
+
+## 📋 **PULL IN CODESPACES (After Push)**
+
+**Repository**: mymoolah-platform  
+**Codespace**: bug-free doodle
+
+```bash
+# In Codespaces terminal (you're already in /workspaces/mymoolah-platform):
+git pull origin main
+```
+
+**Or if you need to change directory first:**
+```bash
+cd /workspaces/mymoolah-platform && \
+git pull origin main
 ```
 
 ---
