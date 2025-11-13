@@ -1,0 +1,590 @@
+STANDARD BANK TPPP APPLICATION
+PASA CHECKLIST RESPONSE
+
+
+Application Date: [TO BE FILLED]
+TPPP Name: MyMoolah Treasury Platform
+Sponsor Bank: Standard Bank
+Document Version: 1.0
+Prepared For: Standard Bank & PASA
+
+
+TABLE OF CONTENTS
+
+1. Company Registration Details
+2. TPPP Creditor Account Number
+3. TPPP Registered Services to be Enabled
+4. Agent Appointments
+5. Record Keeping Requirements
+6. Operational and Technical Compliance
+7. Organizational Structure
+8. Additional Supporting Documentation
+9. Declaration
+
+
+1. COMPANY REGISTRATION DETAILS
+
+1.1 Company Information
+
+Company Name: [TO BE FILLED - MyMoolah (Pty) Ltd]
+
+Registration Number: [TO BE FILLED]
+
+Company Type: [TO BE FILLED - Private Company]
+
+Date of Incorporation: [TO BE FILLED]
+
+Registered Address: [TO BE FILLED]
+
+Physical Address: [TO BE FILLED]
+
+Tax Number: [TO BE FILLED]
+
+
+1.2 Directors and Key Personnel
+
+Director 1: [TO BE FILLED]
+
+Director 2: [TO BE FILLED]
+
+Chief Technology Officer: [TO BE FILLED]
+
+Compliance Officer: [TO BE FILLED]
+
+
+1.3 Supporting Documentation
+
+The following supporting documentation is required and will be provided:
+
+- Certificate of Incorporation
+- Memorandum of Association
+- Articles of Association
+- Tax Clearance Certificate
+- FICA Registration Certificate
+- Directors' Identity Documents
+
+Status: PLACEHOLDER - TO BE COMPLETED
+
+
+2. TPPP CREDITOR ACCOUNT NUMBER
+
+2.1 Standard Bank Account Details
+
+TPPP Creditor Account Number: [TO BE FILLED - Standard Bank Account Number]
+
+Account Name: [TO BE FILLED - MyMoolah Treasury Platform TPPP Account]
+
+Account Type: [TO BE FILLED - Business Current Account]
+
+Branch Code: [TO BE FILLED]
+
+Account Opening Date: [TO BE FILLED]
+
+
+2.2 Account Purpose
+
+The TPPP Creditor Account serves as the central house account for all MyMoolah Treasury Platform operations:
+
+- Receives client prefunding (B2B clients)
+- Receives consumer deposits via RTP/RPP (Real-Time Payments/Request to Pay)
+- Sources prefunding for supplier floats
+- Processes settlements to suppliers
+- Manages commission and fee collection
+- Maintains float balances for operational liquidity
+
+
+2.3 Account Structure
+
+The platform maintains a clear separation of funds:
+
+TPPP Creditor Account (Standard Bank)
+    - House/Master Account (TPPP Account)
+    - Client Prefunded Floats (Liability accounts per B2B client)
+    - Supplier Prefunded Floats (Asset accounts per supplier)
+    - Consumer Wallets (Liability accounts per user)
+    - MyMoolah House Accounts
+        - Commission/Fees Revenue
+        - VAT Control
+        - Interchange/Clearing Control
+
+Status: PLACEHOLDER - TO BE COMPLETED WITH ACTUAL ACCOUNT NUMBER
+
+
+3. TPPP REGISTERED SERVICES TO BE ENABLED
+
+3.1 Core Payment Services
+
+MyMoolah Treasury Platform operates as a Third-Party Payment Provider offering the following registered services:
+
+
+3.1.1 Digital Wallet Services
+
+- Consumer Wallet Management: Secure storage and management of user funds
+- Peer-to-Peer (P2P) Transfers: Instantaneous money transfers between MyMoolah users
+- Wallet Deposits: RTP/RPP integration for real-time wallet funding
+- Wallet Withdrawals: Real-time payment processing to bank accounts
+
+
+3.1.2 Value-Added Services (VAS)
+
+- Airtime Purchases: Mobile network airtime top-ups (Vodacom, MTN, Cell C, Telkom)
+- Data Purchases: Mobile data bundle purchases for all major networks
+- Electricity Purchases: Prepaid electricity voucher purchases
+- Digital Vouchers: Gaming, entertainment, and retail voucher purchases
+- Bill Payments: Utility and municipal bill payment processing
+
+
+3.1.3 Merchant Payment Services
+
+- QR Code Payments: Zapper integration for merchant point-of-sale payments
+- Real-Time Payments: PayShap integration via DT Mercury and Peach Payments
+- Request to Pay (RTP): Real-time payment request processing
+- Request Payment (RPP): Real-time payment initiation
+
+
+3.2 Integration Partners
+
+Airtime & Data Providers:
+- Flash Partner API v4 (22 active products)
+- MobileMart Fulcrum API v1 (65 products across 5 VAS types)
+
+Payment Processors:
+- DT Mercury (PayShap RTP/RPP)
+- Peach Payments (PayShap RTP/RPP)
+- Zapper (QR Code Payments - 25,000+ merchants)
+
+Voucher Providers:
+- EasyPay (Digital vouchers)
+- 1Voucher (Gaming and entertainment vouchers)
+
+Bill Payment Aggregators:
+- Multiple municipal and utility billers (150+ billers)
+
+
+3.3 Service Capabilities
+
+Total Ultimate Creditors Serviced: 25,204+
+
+- VAS Providers: 45+
+- Bill Payment Providers: 150+
+- Retail & Restaurant Merchants: 25,000+
+- Financial Institutions (Banks): 9
+
+Status: COMPLETE - All services documented and operational
+
+
+4. AGENT APPOINTMENTS
+
+4.1 Agent Appointment Framework
+
+MyMoolah operates under a clear agent appointment framework in compliance with PASA requirements. The platform acts as:
+
+
+4.1.1 Beneficiary Service Provider (BSP)
+
+When acting as a Beneficiary Service Provider, MyMoolah has been appointed as an agent of each beneficiary (merchant, supplier, biller) through formal agreements.
+
+Proof of Agreements:
+- Flash Partner Agreement (Agent of Flash for airtime/data services)
+- MobileMart Fulcrum Agreement (Agent of MobileMart for VAS services)
+- EasyPay Agreement (Agent of EasyPay for voucher services)
+- Zapper Merchant Agreement (Agent of merchants for QR payments)
+- DT Mercury Agreement (Agent of DT Mercury for PayShap services)
+- Peach Payments Agreement (Agent of Peach Payments for PayShap services)
+- Bill Payment Aggregator Agreements (Agent of billers for bill payment services)
+
+
+4.1.2 Payer Service Provider (PSP)
+
+When acting as a Payer Service Provider, MyMoolah has been appointed as an agent of each payer (consumer, B2B client) through Terms and Conditions acceptance.
+
+Proof of Agreements:
+- Consumer Terms and Conditions (Digital acceptance on wallet registration)
+- B2B Client Agreements (Formal contracts for prefunded float clients)
+- Merchant Onboarding Agreements (For merchants accepting MyMoolah payments)
+
+
+4.2 Agent Appointment Evidence
+
+Code Implementation - Terms Acceptance Tracking:
+
+The platform tracks Terms and Conditions acceptance through the User model with the following fields:
+
+- termsAccepted: Boolean flag indicating user acceptance
+- termsAcceptedAt: Timestamp of acceptance
+- termsVersion: Version of Terms and Conditions accepted
+
+Code Implementation - Supplier Agreement Tracking:
+
+The platform tracks supplier agreements through the Supplier model with the following fields:
+
+- agreementSigned: Boolean flag indicating agreement signing
+- agreementSignedAt: Date of supplier agreement signing
+- agreementDocumentUrl: URL to signed supplier agreement document
+
+
+4.3 Compliance Verification
+
+All agent appointments are:
+- Documented in the platform database
+- Tracked with timestamps and version control
+- Stored with supporting documentation
+- Subject to regular compliance audits
+- Maintained for the required retention period
+
+Status: PLACEHOLDER - TO BE COMPLETED WITH ACTUAL AGREEMENT DOCUMENTS
+
+
+5. RECORD KEEPING REQUIREMENTS
+
+5.1 Record Keeping Compliance
+
+MyMoolah maintains comprehensive records of all payments to third persons in compliance with PASA requirements. All records include:
+
+- Date: Timestamp of the transaction
+- Amount: Transaction amount in ZAR
+- Beneficiary: Complete beneficiary identification (merchant ID, supplier ID, account number, etc.)
+- Transaction Reference: Unique transaction identifier
+- Payment Method: Method of payment (RTP, RPP, QR, VAS, etc.)
+- Status: Transaction status (completed, failed, pending, etc.)
+
+
+5.2 Record Retention Period
+
+Retention Period: Five (5) years from transaction date, as required by PASA regulations.
+
+
+5.3 Technical Implementation
+
+Transaction Record Model:
+
+The platform maintains complete transaction records through the Transaction model, which includes:
+- Unique transaction identifier
+- Transaction amount (DECIMAL 15,2 for banking-grade precision)
+- Transaction type (send, receive, deposit, withdraw, transfer, payment, refund, fee)
+- Transaction status (pending, processing, completed, failed, cancelled, reversed)
+- Description including beneficiary details
+- Metadata in JSONB format for additional beneficiary information
+- Created timestamp (retention period starts from this date)
+
+Payment Record Model:
+
+The platform maintains payment records through the Payment model, which includes:
+- Payment reference (unique)
+- Amount paid in cents
+- Payment date (date for retention period calculation)
+- Beneficiary merchant identifier
+- External transaction ID
+- Payment status
+
+Journal Entry Record (Double-Entry Accounting):
+
+The platform maintains immutable audit trail through JournalEntry and JournalLine models:
+- Journal entry reference (links to transaction)
+- Journal entry description including beneficiary details
+- Posted date (retention period starts from this date)
+- Journal lines with account identifiers and beneficiary details in memos
+
+
+5.4 Record Retrieval Capabilities
+
+The platform provides comprehensive transaction history queries with:
+- Date range filtering (start date and end date)
+- Transaction type filtering
+- Status filtering
+- Pagination support (limit and offset)
+- Related wallet information included
+
+
+5.5 Audit Trail Implementation
+
+Immutable Journal Posting:
+
+The platform implements atomic journal entry posting with:
+- Validation requiring at least two lines
+- Validation ensuring debits equal credits (within 0.000001 tolerance)
+- Atomic database transactions ensuring data integrity
+- Journal lines created with beneficiary details in memos
+- Complete rollback on error
+
+
+5.6 Data Archiving Strategy
+
+The platform implements automated archiving for transactions older than 5 years:
+- Archive table structure matches active transaction table
+- Annual archiving function maintains referential integrity
+- Related journal entries archived simultaneously
+- Archived data remains accessible for audit purposes
+
+
+5.7 Attestation and Audit
+
+Attestation Statement:
+
+MyMoolah Treasury Platform hereby attests that:
+
+1. All payment records to third persons are maintained in the platform database
+2. Records include date, amount, and beneficiary identification
+3. Records are retained for a minimum period of five (5) years
+4. Records are stored in an immutable format (journal entries cannot be modified)
+5. Records are accessible for audit purposes through standard database queries
+6. Records are backed up daily with point-in-time recovery capabilities
+7. Records are archived after the retention period while maintaining accessibility
+
+Audit Capabilities:
+
+- Full transaction history queries with date range filtering
+- Complete journal entry audit trail with double-entry accounting
+- Beneficiary identification in transaction metadata and journal memos
+- Immutable record storage (no modification after posting)
+- Daily database backups with 30-day retention
+- Point-in-time recovery capabilities
+- Compliance record tracking system
+
+Status: COMPLETE - Fully implemented with code evidence
+
+
+6. OPERATIONAL AND TECHNICAL COMPLIANCE
+
+6.1 TPPP Compliance Statement
+
+MyMoolah Treasury Platform operates as a Third-Party Payment Provider (TPPP) in compliance with all PASA TPPP requirements. The platform provides payments to third persons and processes payment instructions through established banking and payment clearing house (PCH) system operator channels.
+
+
+6.2 Operational Requirements Compliance
+
+6.2.1 Security Standards
+
+TLS 1.3 Implementation:
+
+The platform implements TLS 1.3 with banking-grade security:
+- Minimum and maximum version enforced as TLS 1.3
+- Strong cipher suites (AES-256-GCM-SHA384, ChaCha20-Poly1305-SHA256, AES-128-GCM-SHA256)
+- Perfect Forward Secrecy with ECDHE key exchange
+- Certificate validation enabled
+- OCSP stapling enabled
+
+Security Headers:
+
+The platform implements comprehensive security headers:
+- HTTP Strict Transport Security (HSTS) with 1-year max age
+- Content Security Policy (CSP) with strict resource controls
+- X-Content-Type-Options: nosniff
+- X-Frame-Options: DENY
+- X-XSS-Protection: 1; mode=block
+- Referrer-Policy: strict-origin-when-cross-origin
+
+
+6.2.2 Rate Limiting and Input Validation
+
+Rate Limiting:
+
+The platform implements sophisticated rate limiting:
+- General API rate limiting: 100 requests per 15 minutes in production
+- Financial transaction rate limiting: 10 transactions per minute in production
+- Standard rate limit headers included in responses
+
+Input Validation:
+
+The platform implements comprehensive input validation:
+- Request validation middleware checks all inputs
+- Validation errors returned in structured format
+- Field-level error messages provided
+- Input sanitization applied before processing
+
+
+6.2.3 Authentication and Authorization
+
+JWT Authentication:
+
+The platform uses enhanced JWT authentication:
+- HS512 algorithm (stronger than HS256)
+- Short token expiry: 1 hour in production
+- Clock tolerance: 30 seconds for clock skew
+- Secure token validation with issuer and audience checks
+
+
+6.3 Technical Requirements Compliance
+
+6.3.1 Atomic Transaction Processing
+
+Atomic VAS Purchase:
+
+The platform implements atomic transaction processing:
+- Database transactions ensure all-or-nothing execution
+- Row-level locking prevents concurrent modifications
+- Balance validation before transaction execution
+- Wallet debit and transaction creation in single atomic operation
+- Journal entry posting included in same transaction
+- Complete rollback on any error
+
+
+6.3.2 Double-Entry Accounting
+
+Balanced Journal Entries:
+
+The platform enforces double-entry accounting principles:
+- At least two lines required per journal entry
+- Debits must equal credits (within 0.000001 tolerance)
+- Atomic database transactions ensure integrity
+- Validation enforced at application level before database commit
+
+
+6.3.3 Idempotency
+
+Idempotent Processing:
+
+The platform implements idempotency for financial transactions:
+- Idempotency key required in request headers
+- Existing transactions returned if key matches
+- Prevents duplicate transaction processing
+- Ensures consistent API behavior
+
+
+6.3.4 Audit Logging
+
+Comprehensive Audit Trail:
+
+The platform implements comprehensive audit logging:
+- User ID tracking for all operations
+- Endpoint and method logging
+- IP address and user agent capture
+- Request body sanitization before logging
+- Timestamp for all audit entries
+
+
+6.4 Performance Standards
+
+Performance Monitoring:
+
+The platform implements performance monitoring:
+- Response time tracking for all endpoints
+- Performance metrics logged to database
+- Automatic alerts for performance threshold violations (200ms threshold)
+- Endpoint-level performance analysis
+
+
+6.5 Compliance Certifications
+
+Current Certifications:
+- ISO 27001 (Information Security Management) - Pending
+- PCI DSS Level 1 (Payment Card Industry Data Security Standard) - Pending
+- FICA Registration - Pending
+- PASA TPPP Registration - Pending
+
+Status: COMPLETE - Technical compliance demonstrated with code evidence
+
+
+7. ORGANIZATIONAL STRUCTURE
+
+7.1 Company Structure
+
+MyMoolah (Pty) Ltd operates as a dedicated Third-Party Payment Provider (TPPP) with a focused organizational structure designed to deliver secure, compliant payment services.
+
+
+7.2 Organizational Chart
+
+MyMoolah (Pty) Ltd
+
+    Payment Processing Department
+        - Wallet Services Team
+        - VAS Services Team
+        - Payment Operations Team
+
+    Technology Department
+        - Platform Development Team
+        - Infrastructure Team
+        - Security Team
+
+    Compliance Department
+        - Regulatory Compliance
+        - Risk Management
+        - Audit & Reporting
+
+    Business Operations Department
+        - Client Services
+        - Supplier Relations
+        - Business Development
+
+
+7.3 Key Personnel
+
+- Chief Executive Officer: [TO BE FILLED]
+- Chief Technology Officer: [TO BE FILLED]
+- Compliance Officer: [TO BE FILLED]
+- Head of Payment Operations: [TO BE FILLED]
+- Head of Risk Management: [TO BE FILLED]
+
+
+7.4 Business Operations
+
+Core Business Activities:
+- Payment processing and wallet management
+- Value-Added Services (VAS) distribution
+- Merchant payment services
+- Bill payment processing
+- Real-time payment processing (RTP/RPP)
+
+Revenue Streams:
+- Transaction fees
+- VAS commissions
+- Merchant service fees
+- Bill payment processing fees
+
+Status: PLACEHOLDER - TO BE COMPLETED WITH ACTUAL ORGANIZATIONAL DETAILS
+
+
+8. ADDITIONAL SUPPORTING DOCUMENTATION
+
+8.1 Technical Architecture Documentation
+
+- Banking-Grade Architecture Document (docs/BANKING_GRADE_ARCHITECTURE.md)
+- Security Documentation (docs/SECURITY.md)
+- Development Guide (docs/DEVELOPMENT_GUIDE.md)
+
+
+8.2 Compliance Documentation
+
+- Compliance Record Model (models/ComplianceRecord.js)
+- Audit Logging Implementation (middleware/auditLogger.js)
+- Record Retention Policy (scripts/data_archiving_strategy.sql)
+
+
+8.3 Integration Documentation
+
+- Flash Integration (services/flashAuthService.js)
+- MobileMart Integration (services/mobilemartAuthService.js)
+- Peach Payments Integration (services/peachPaymentsService.js)
+- Zapper Integration (services/zapperService.js)
+
+
+9. DECLARATION
+
+I, [TO BE FILLED - Authorized Signatory], on behalf of MyMoolah Treasury Platform, hereby declare that:
+
+1. All information provided in this application is true and correct to the best of my knowledge
+2. MyMoolah operates exclusively as a Third-Party Payment Provider (TPPP) in compliance with all PASA TPPP requirements
+3. MyMoolah maintains comprehensive records of all payments to third persons
+4. All records are retained for a minimum period of five (5) years
+5. MyMoolah has proper agent appointments in place for all beneficiaries and payers
+6. MyMoolah meets all operational and technical requirements for TPPP operations
+7. MyMoolah processes payment instructions through established banking and PCH system operator channels
+
+Signature: [TO BE FILLED]
+
+Name: [TO BE FILLED]
+
+Position: [TO BE FILLED]
+
+Date: [TO BE FILLED]
+
+
+Document Status: DRAFT - PLACEHOLDERS TO BE COMPLETED
+
+Next Review Date: [TO BE FILLED]
+
+Version Control: This document is version-controlled and all changes are tracked
+
+
+END OF DOCUMENT
+

@@ -1,0 +1,85 @@
+ANNEXURE A: OVERVIEW OF NATURE OF BUSINESS / BUSINESS MODEL
+
+MyMoolah Treasury Platform: A Mojaloop-Aligned Financial Services Ecosystem
+
+
+1. EXECUTIVE SUMMARY
+
+MyMoolah operates a sophisticated Treasury Platform as a Service (TPaaS) that serves as the foundation for a comprehensive suite of digital financial services. Our mission is to foster financial inclusion by providing secure, accessible, and efficient payment solutions to unbanked and underbanked populations across Africa. By leveraging a robust, banking-grade architecture and adhering to Mojaloop principles, MyMoolah bridges the gap between traditional banking infrastructure and modern digital commerce, enabling seamless value exchange for individuals and small businesses.
+
+Our business model is centered on a digital wallet ecosystem that integrates a wide array of Value-Added Services (VAS), including airtime, data, bill payments, and digital vouchers. As a Third-Party Payment Provider (TPPP), our goal is to extend the reach of formal financial services, drive economic empowerment, and create a more inclusive financial landscape.
+
+
+2. BUSINESS MODEL
+
+The MyMoolah business model is architected around three core pillars: a centralized Treasury Platform, a user-facing Digital Wallet, and an extensive network of integrated Value-Added Services.
+
+
+2.1 Treasury Platform as a Service (TPaaS)
+
+Our banking-grade Treasury Platform is the cornerstone of our operations, providing a secure, scalable, and compliant infrastructure for managing financial transactions. Key capabilities include:
+
+- Double-Entry Ledger System: Ensures full auditability and financial integrity for all transactions.
+- Float and Settlement Management: Automated management of float accounts and settlement with service providers.
+- Multi-Supplier Integration: A unified API layer for seamless integration with multiple VAS providers and financial institutions.
+- Mojaloop-Aligned Architecture: Designed for interoperability and real-time clearing, in alignment with Mojaloop principles.
+
+
+2.2 Digital Wallet Ecosystem
+
+The MyMoolah digital wallet is the primary interface for our users, offering a secure and user-friendly platform for managing funds and accessing services. The wallet supports:
+
+- Secure Value Storage: Encrypted and secure storage of user funds.
+- Peer-to-Peer (P2P) Transfers: Instantaneous and low-cost money transfers between MyMoolah users.
+- QR Code Payments: Zapper integration for seamless merchant payments.
+- Bill Payments and VAS Purchases: A comprehensive marketplace for essential digital services.
+
+
+2.3 Value-Added Services (VAS) Marketplace
+
+Our platform integrates with leading service providers to offer a wide range of VAS, creating a one-stop-shop for our users' daily transactional needs. Key integrations include:
+
+- Airtime and Data: Flash and MobileMart for all major mobile networks.
+- Digital Vouchers: EasyPay and other providers for retail, gaming, and entertainment.
+- Bill Payments: Utility and other bill payments through integrated partners.
+- Real-Time Payments: PayShap integration via DT Mercury and Peach Payments for real-time bank transfers.
+
+
+3. TARGET MARKET
+
+Our primary target market comprises two key segments:
+
+- Unbanked and Underbanked Consumers: Individuals who lack access to traditional banking services but have mobile phones. MyMoolah provides them with a secure and accessible entry point into the digital economy.
+
+- Small and Medium-sized Enterprises (SMEs): Informal merchants and small businesses that require low-cost, efficient payment acceptance and disbursement solutions. Our platform enables them to participate in digital commerce and grow their businesses.
+
+
+4. REVENUE STREAMS
+
+MyMoolah generates revenue through a diversified set of streams, ensuring a sustainable and scalable business model:
+
+- Commissions on VAS Sales: A percentage-based commission on all airtime, data, voucher, and other VAS products sold through the platform.
+
+- Transaction Fees: Nominal fees on specific transaction types, such as bill payments and real-time transfers, designed to be significantly lower than traditional banking fees.
+
+- Merchant Services: Fees for payment processing and other value-added services offered to our SME clients.
+
+
+5. TECHNOLOGY AND SECURITY
+
+Our platform is built on a modern, secure, and scalable technology stack designed to meet the rigorous standards of the financial services industry.
+
+- Technology: Node.js backend with a PostgreSQL database, architected for high availability and low latency.
+
+- Security: Banking-grade security measures, including TLS 1.3, end-to-end encryption, JWT-based authentication, and comprehensive rate limiting.
+
+- Compliance: Adherence to Mojaloop principles for interoperability and real-time clearing, with a commitment to meeting all regulatory requirements for TPPPs.
+
+
+6. CONCLUSION
+
+MyMoolah's business model is strategically designed to address a critical gap in the financial services market. By combining a robust, banking-grade Treasury Platform with a user-friendly digital wallet and a comprehensive VAS marketplace, we are creating a powerful ecosystem for financial inclusion. Our alignment with Mojaloop principles and our unwavering commitment to security and compliance position us as a trusted partner for financial institutions and a vital enabler of economic empowerment for our users.
+
+
+END OF ANNEXURE A
+
