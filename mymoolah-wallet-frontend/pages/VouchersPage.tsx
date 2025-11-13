@@ -3381,6 +3381,7 @@ export function VouchersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      )}
 
       {/* Validation Error Modal */}
       {showValidationErrorModal && (
