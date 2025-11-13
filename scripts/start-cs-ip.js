@@ -33,14 +33,5 @@ process.env.DATABASE_URL = configureDatabaseUrl(process.env.DATABASE_URL);
 process.env.PGSSLMODE = process.env.DATABASE_URL.includes('sslmode=disable') ? "disable" : "no-verify";
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
-// Use nodemon in development for auto-reload, fallback to node if not available
-const useNodemon = process.env.NODE_ENV !== 'production' && process.env.USE_NODEMON !== 'false';
-const command = useNodemon ? "nodemon" : "node";
-const args = useNodemon ? ["server.js"] : ["server.js"];
-
-if (useNodemon) {
-  console.log('🔄 Using nodemon for auto-reload (backend will restart on file changes)');
-}
-
-const child = spawn(command, args, { stdio: "inherit" });
+const child = spawn("node", ["server.js"], { stdio: "inherit" });
 child.on("exit", (code) => process.exit(code));
