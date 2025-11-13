@@ -3288,45 +3288,50 @@ export function VouchersPage() {
       </Dialog>
 
       {/* Cancel EasyPay Voucher Confirmation Modal */}
-      {showCancelConfirmModal && voucherToCancel && (
-        <AlertDialog open={showCancelConfirmModal} onOpenChange={setShowCancelConfirmModal}>
-          <AlertDialogContent style={{ zIndex: 9999 }}>
-            <AlertDialogHeader>
-              <AlertDialogTitle style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '20px',
-                fontWeight: '700',
-                color: '#1f2937',
-                marginBottom: '12px'
-              }}>
-                Cancel this EasyPay voucher?
-              </AlertDialogTitle>
-              <AlertDialogDescription style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '14px',
-                color: '#6b7280',
-                lineHeight: '1.6'
-              }}>
-                <div style={{ marginBottom: '16px' }}>
-                  <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937' }}>
-                    EasyPay Number: {voucherToCancel.easyPayNumber}
-                  </p>
-                  <p style={{ margin: '0', fontWeight: '600', color: '#1f2937' }}>
-                    Amount: R {voucherToCancel.originalAmount}
-                  </p>
-                </div>
-                <div style={{ marginTop: '16px' }}>
-                  <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937' }}>
-                    This will:
-                  </p>
-                  <ul style={{ margin: '0 0 16px 0', paddingLeft: '20px', listStyle: 'disc' }}>
-                    <li>Cancel the voucher immediately</li>
-                    <li>Refund R {voucherToCancel.originalAmount} to your wallet</li>
-                    <li>This action cannot be undone</li>
-                  </ul>
-                </div>
-              </AlertDialogDescription>
-            </AlertDialogHeader>
+      <AlertDialog open={showCancelConfirmModal && !!voucherToCancel} onOpenChange={setShowCancelConfirmModal}>
+        <AlertDialogContent style={{ zIndex: 9999 }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '20px',
+              fontWeight: '700',
+              color: '#1f2937',
+              marginBottom: '12px'
+            }}>
+              Cancel this EasyPay voucher?
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '14px',
+              color: '#6b7280',
+              lineHeight: '1.6'
+            }}>
+              {voucherToCancel ? (
+                <>
+                  <div style={{ marginBottom: '16px' }}>
+                    <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937' }}>
+                      EasyPay Number: {voucherToCancel.easyPayNumber}
+                    </p>
+                    <p style={{ margin: '0', fontWeight: '600', color: '#1f2937' }}>
+                      Amount: R {voucherToCancel.originalAmount}
+                    </p>
+                  </div>
+                  <div style={{ marginTop: '16px' }}>
+                    <p style={{ margin: '0 0 8px 0', fontWeight: '600', color: '#1f2937' }}>
+                      This will:
+                    </p>
+                    <ul style={{ margin: '0 0 16px 0', paddingLeft: '20px', listStyle: 'disc' }}>
+                      <li>Cancel the voucher immediately</li>
+                      <li>Refund R {voucherToCancel.originalAmount} to your wallet</li>
+                      <li>This action cannot be undone</li>
+                    </ul>
+                  </div>
+                </>
+              ) : (
+                'Loading voucher details...'
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
           <AlertDialogFooter style={{
             display: 'flex',
             gap: '12px',
@@ -3381,11 +3386,9 @@ export function VouchersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      )}
 
       {/* Validation Error Modal */}
-      {showValidationErrorModal && (
-        <AlertDialog open={showValidationErrorModal} onOpenChange={setShowValidationErrorModal}>
+      <AlertDialog open={showValidationErrorModal} onOpenChange={setShowValidationErrorModal}>
           <AlertDialogContent style={{ zIndex: 9999 }}>
             <AlertDialogHeader>
               <AlertDialogTitle style={{
@@ -3435,10 +3438,9 @@ export function VouchersPage() {
               >
                 OK
               </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
