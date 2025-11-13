@@ -3384,6 +3384,61 @@ export function VouchersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Validation Error Modal */}
+      <AlertDialog open={showValidationErrorModal} onOpenChange={setShowValidationErrorModal}>
+        <AlertDialogContent style={{ zIndex: 9999 }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#dc2626',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <AlertCircle style={{ width: '20px', height: '20px' }} />
+              Invalid Voucher Amount
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '14px',
+              color: '#374151',
+              marginTop: '8px',
+              lineHeight: '1.5'
+            }}>
+              {validationErrorMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '12px',
+            marginTop: '16px'
+          }}>
+            <AlertDialogAction
+              onClick={() => setShowValidationErrorModal(false)}
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '600',
+                backgroundColor: '#86BE41',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '10px 20px',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s ease'
+              }}
+              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#75a835'}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#86BE41'}
+            >
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
