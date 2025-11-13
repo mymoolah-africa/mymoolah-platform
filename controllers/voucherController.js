@@ -1090,8 +1090,14 @@ exports.cancelEasyPayVoucher = async (req, res) => {
   try {
     const { voucherId } = req.params;
     
+    console.log(`🔄 Cancellation request for voucher ID: ${voucherId}, User ID: ${req.user?.id}`);
+    
     if (!voucherId) {
       return res.status(400).json({ error: 'Voucher ID is required' });
+    }
+
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Authentication required' });
     }
 
     // Find the voucher (both EasyPay and MM vouchers)
@@ -1104,10 +1110,13 @@ exports.cancelEasyPayVoucher = async (req, res) => {
     });
 
     if (!voucher) {
+      console.log(`❌ Voucher not found: ID=${voucherId}, User=${req.user.id}`);
       return res.status(404).json({ 
         error: 'Voucher not found or cannot be cancelled' 
       });
     }
+
+    console.log(`✅ Found voucher: ${voucher.easyPayCode || voucher.voucherCode}, Status: ${voucher.status}, Amount: ${voucher.originalAmount}`);
 
     // Check if voucher has already expired
     if (voucher.expiresAt && new Date() > voucher.expiresAt) {
@@ -1134,61 +1143,69 @@ exports.cancelEasyPayVoucher = async (req, res) => {
     const refundAmount = parseFloat(voucher.originalAmount);
 
     try {
-      // Update voucher status to cancelled and debit voucher balance (same as expiration)
-      await voucher.update({ 
-        status: 'cancelled',
-        balance: 0, // Debit voucher balance - set to 0 on cancellation (same as expiration)
-        metadata: {
-          ...voucher.metadata,
-          cancelledAt: new Date().toISOString(),
-          cancellationReason: 'user_requested',
-          cancelledBy: req.user.id,
-          refundAmount: refundAmount,
-          auditTrail: {
-            action: 'easypay_voucher_cancellation',
-            userInitiated: true,
-            processedAt: new Date().toISOString(),
-            originalStatus: 'pending_payment',
-            newStatus: 'cancelled'
+      // Use transaction to ensure atomicity (same as expiration handler)
+      await sequelize.transaction(async (t) => {
+        // Update voucher status to cancelled and debit voucher balance (same as expiration)
+        await voucher.update({ 
+          status: 'cancelled',
+          balance: 0, // Debit voucher balance - set to 0 on cancellation (same as expiration)
+          metadata: {
+            ...voucher.metadata,
+            cancelledAt: new Date().toISOString(),
+            cancellationReason: 'user_requested',
+            cancelledBy: req.user.id,
+            refundAmount: refundAmount,
+            auditTrail: {
+              action: 'easypay_voucher_cancellation',
+              userInitiated: true,
+              processedAt: new Date().toISOString(),
+              originalStatus: voucher.status,
+              newStatus: 'cancelled'
+            }
           }
-        }
+        }, { transaction: t });
+
+        // Credit user's wallet with full refund
+        await wallet.credit(refundAmount, 'easypay_cancellation_refund', { transaction: t });
+      
+        // Create refund transaction record
+        const refundTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await Transaction.create({
+          transactionId: refundTransactionId,
+          userId: req.user.id,
+          walletId: wallet.walletId,
+          amount: refundAmount,
+          type: 'refund',
+          status: 'completed',
+          description: 'EasyPay voucher cancelled - full refund',
+          currency: 'ZAR',
+          fee: 0.00,
+          metadata: {
+            voucherId: voucher.id,
+            voucherCode: voucher.easyPayCode,
+            voucherType: 'easypay_cancelled',
+            originalAmount: voucher.originalAmount,
+            refundAmount: refundAmount,
+            cancellationReason: 'user_requested',
+            cancelledAt: new Date().toISOString(),
+            auditTrail: {
+              processedAt: new Date().toISOString(),
+              handler: 'user_cancellation',
+              action: 'easypay_voucher_cancellation',
+              userInitiated: true,
+              originalStatus: voucher.status,
+              newStatus: 'cancelled'
+            }
+          }
+        }, { transaction: t });
+
+        console.log(`✅ Voucher cancelled: ${voucher.easyPayCode || voucher.voucherCode}, Refunded: R${refundAmount}, New wallet balance: R${wallet.balance}`);
+        
+        return { refundTransactionId };
       });
 
-      // Credit user's wallet with full refund
-      await wallet.credit(refundAmount, 'easypay_cancellation_refund');
-      
-      // Create refund transaction record
-      const refundTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await Transaction.create({
-        transactionId: refundTransactionId,
-        userId: req.user.id,
-        walletId: wallet.walletId,
-        amount: refundAmount,
-        type: 'refund',
-        status: 'completed',
-        description: 'EasyPay voucher cancelled - full refund',
-        currency: 'ZAR',
-        fee: 0.00,
-        metadata: {
-          voucherId: voucher.id,
-          voucherCode: voucher.easyPayCode,
-          voucherType: 'easypay_cancelled',
-          originalAmount: voucher.originalAmount,
-          refundAmount: refundAmount,
-          cancellationReason: 'user_requested',
-          cancelledAt: new Date().toISOString(),
-          auditTrail: {
-            processedAt: new Date().toISOString(),
-            handler: 'user_cancellation',
-            action: 'easypay_voucher_cancellation',
-            userInitiated: true,
-            originalStatus: 'pending_payment',
-            newStatus: 'cancelled'
-          }
-        }
-      });
-
-      
+      // Reload wallet to get updated balance
+      await wallet.reload();
 
       res.json({
         success: true,
