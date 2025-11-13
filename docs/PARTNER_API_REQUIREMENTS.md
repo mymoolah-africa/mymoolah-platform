@@ -58,6 +58,7 @@ This document outlines what needs to be implemented on MyMoolah's side to enable
      api_secret_hash VARCHAR(255) NOT NULL,
      webhook_secret VARCHAR(255),
      webhook_url TEXT,
+     payment_model VARCHAR(50) DEFAULT 'float_based',
      status VARCHAR(50) DEFAULT 'active',
      environment VARCHAR(50) DEFAULT 'uat',
      rate_limit_per_minute INTEGER DEFAULT 100,
@@ -65,6 +66,8 @@ This document outlines what needs to be implemented on MyMoolah's side to enable
      updated_at TIMESTAMP DEFAULT NOW()
    );
    ```
+   
+   -- payment_model values: 'direct_payment' (e.g., Zapper) or 'float_based' (default)
 
 2. Create `partner_auth` endpoint:
    - `POST /api/v1/partner/auth/token`
