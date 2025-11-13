@@ -1,9 +1,9 @@
 # MyMoolah Deployment Guide
 
-## 🚀 Current Deployment Procedures (January 9, 2025 - QR Code Scanning Enhancements & Cross-Browser Compatibility)
+## 🚀 Current Deployment Procedures (November 11, 2025 - Staging & Production Database Setup)
 
 **Status**: ✅ **VALIDATED** - All deployment procedures tested and working
-**New**: Enhanced QR code scanning with cross-browser compatibility (iOS Safari, Android Chrome, Opera Mini) and improved detection algorithms.
+**New**: Staging and Production Cloud SQL instances created with banking-grade security, Secret Manager integration, and complete environment isolation.
 
 ## 📋 Deployment Overview
 
@@ -25,7 +25,8 @@
 ### **Deployment Environments**
 - **Local Development**: Backend 3001, Frontend 3000. DB is PostgreSQL via Cloud SQL proxy.
 - **Cloud Development**: PostgreSQL (Cloud SQL) recommended. Backend 3001, Frontend 3000.
-- **Production**: PostgreSQL (Cloud SQL/AlloyDB), HA recommended.
+- **Staging**: PostgreSQL (Cloud SQL `mmtp-pg-staging` → `mymoolah_staging`). Backend 3001, Frontend 3000.
+- **Production**: PostgreSQL (Cloud SQL `mmtp-pg-production` → `mymoolah_production`), HA recommended.
 
 ## 🔧 Local Deployment
 
@@ -70,39 +71,76 @@ curl http://192.168.3.160:3000
 ```
 
 ### **Database Setup (Cloud SQL for PostgreSQL)**
+
+#### **Development Database**
 ```bash
-# Instance example: mmtp-pg (PostgreSQL 16, africa-south1-c)
+# Instance: mmtp-pg (PostgreSQL 16, africa-south1)
 # Connection name: mymoolah-db:africa-south1:mmtp-pg
-# Public IP enabled; authorise your IPv4 or use Cloud SQL Auth Proxy
-
-# Install psql (macOS)
-brew install libpq
-export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
-
-# Create DB and grants (replace YOUR_DB_PASSWORD, PUBLIC_IP)
-PGPASSWORD='YOUR_DB_PASSWORD' psql "host=PUBLIC_IP port=5432 user=mymoolah_user dbname=postgres sslmode=require" -v ON_ERROR_STOP=1 \
-  -c "CREATE DATABASE mymoolah;" \
-  -c "GRANT ALL PRIVILEGES ON DATABASE mymoolah TO mymoolah_user;"
-
-PGPASSWORD='YOUR_DB_PASSWORD' psql "host=PUBLIC_IP port=5432 user=mymoolah_user dbname=mymoolah sslmode=require" -v ON_ERROR_STOP=1 \
-  -c "GRANT ALL ON SCHEMA public TO mymoolah_user;" \
-  -c "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO mymoolah_user;"
+# Database: mymoolah
+# User: mymoolah_app
+# Access: Cloud SQL Auth Proxy recommended
 
 # Recommended local connectivity via Cloud SQL Auth Proxy
-```
 bash scripts/setup-cloud-sql-proxy.sh
 ./bin/cloud-sql-proxy --address 127.0.0.1 --port 5433 mymoolah-db:africa-south1:mmtp-pg
-```
 
-# Backend .env (proxy on 127.0.0.1:5433, least-priv user)
-# DATABASE_URL=postgres://mymoolah_app:YOUR_APP_PASSWORD@127.0.0.1:5433/mymoolah
+# Backend .env (proxy on 127.0.0.1:5433)
+# DATABASE_URL=postgres://mymoolah_app:YOUR_APP_PASSWORD@127.0.0.1:5433/mymoolah?sslmode=disable
 # DB_DIALECT=postgres
-
-Note: The proxy is only required for the backend when `DATABASE_URL` points to `127.0.0.1:5433`. If you use the instance public IP with `sslmode=require` and your IP is authorized, you can stop the proxy.
 
 # Install PG driver and run migrations
 npm i pg pg-hstore
 DATABASE_URL="$DATABASE_URL" npx sequelize-cli db:migrate
+```
+
+#### **Staging Database** ✅ **CREATED** (November 11, 2025)
+```bash
+# Instance: mmtp-pg-staging (PostgreSQL 16, ENTERPRISE edition, africa-south1)
+# Connection name: mymoolah-db:africa-south1:mmtp-pg-staging
+# Database: mymoolah_staging
+# User: mymoolah_app
+# Machine Type: db-custom-1-3840 (1 vCPU, 3.75 GB RAM)
+# Storage: 20GB SSD with auto-increase
+# Backups: 7-day retention, point-in-time recovery enabled
+# Security: No authorized networks (Cloud SQL Auth Proxy only), SSL required
+# Password: Stored in Google Secret Manager (db-mmtp-pg-staging-password)
+
+# Setup script (automated):
+./scripts/setup-staging-production-databases.sh
+
+# Access via Cloud SQL Auth Proxy:
+./bin/cloud-sql-proxy --address 127.0.0.1 --port 5434 mymoolah-db:africa-south1:mmtp-pg-staging
+
+# Retrieve password from Secret Manager:
+gcloud secrets versions access latest --secret="db-mmtp-pg-staging-password" --project=mymoolah-db
+
+# Backend .env (Staging):
+# DATABASE_URL=postgres://mymoolah_app:$(gcloud secrets versions access latest --secret="db-mmtp-pg-staging-password" --project=mymoolah-db)@127.0.0.1:5434/mymoolah_staging?sslmode=disable
+```
+
+#### **Production Database** ✅ **CREATED** (November 11, 2025)
+```bash
+# Instance: mmtp-pg-production (PostgreSQL 16, ENTERPRISE edition, africa-south1)
+# Connection name: mymoolah-db:africa-south1:mmtp-pg-production
+# Database: mymoolah_production
+# User: mymoolah_app
+# Machine Type: db-custom-4-15360 (4 vCPU, 15 GB RAM)
+# Storage: 100GB SSD with auto-increase
+# Backups: 30-day retention, point-in-time recovery enabled
+# Security: No authorized networks (Cloud SQL Auth Proxy only), SSL required, deletion protection
+# Password: Stored in Google Secret Manager (db-mmtp-pg-production-password)
+
+# Setup script (automated):
+./scripts/setup-staging-production-databases.sh
+
+# Access via Cloud SQL Auth Proxy:
+./bin/cloud-sql-proxy --address 127.0.0.1 --port 5435 mymoolah-db:africa-south1:mmtp-pg-production
+
+# Retrieve password from Secret Manager:
+gcloud secrets versions access latest --secret="db-mmtp-pg-production-password" --project=mymoolah-db
+
+# Backend .env (Production):
+# DATABASE_URL=postgres://mymoolah_app:$(gcloud secrets versions access latest --secret="db-mmtp-pg-production-password" --project=mymoolah-db)@127.0.0.1:5435/mymoolah_production?sslmode=disable
 ```
 
 ### **Logo System Verification**

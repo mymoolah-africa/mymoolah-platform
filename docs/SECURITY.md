@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: January 9, 2025  
-**Version**: 2.4.3 - Banking-Grade Duplicate Transaction Prevention
-**Status**: ✅ **DUPLICATE PREVENTION COMPLETE** ✅ **BANKING-GRADE CONCURRENCY**
+**Last Updated**: November 11, 2025  
+**Version**: 2.4.8 - Staging & Production Database Setup with Secret Manager
+**Status**: ✅ **DUPLICATE PREVENTION COMPLETE** ✅ **BANKING-GRADE CONCURRENCY** ✅ **SECRET MANAGER INTEGRATED** ✅ **STAGING/PRODUCTION DATABASES SECURED**
 
 ---
 
@@ -478,6 +478,70 @@ const loggingConfig = {
 - **Financial Compliance**: Transaction audit trails
 - **Security Compliance**: Security event logging
 - **Performance Logging**: System performance metrics
+
+---
+
+## 🔐 **SECRET MANAGEMENT & PASSWORD SECURITY**
+
+### **Google Secret Manager Integration**
+
+The platform uses **Google Secret Manager** for secure credential storage in Staging and Production environments, following banking-grade security practices.
+
+#### **Secret Manager Configuration**
+
+**Staging Environment:**
+- **Database Password**: Stored in `db-mmtp-pg-staging-password`
+- **Access**: IAM service accounts with Secret Manager access
+- **Rotation**: Quarterly password rotation
+- **Storage**: Google Secret Manager (encrypted at rest)
+
+**Production Environment:**
+- **Database Password**: Stored in `db-mmtp-pg-production-password`
+- **Access**: IAM service accounts with Secret Manager access
+- **Rotation**: Every 90 days (automated)
+- **Storage**: Google Secret Manager (encrypted at rest)
+
+#### **Password Security Standards**
+
+**Banking-Grade Password Requirements:**
+- **Length**: 32+ characters (Staging/Production)
+- **Complexity**: Mixed case, numbers, special characters
+- **Uniqueness**: Unique password per environment (security isolation)
+- **Generation**: Cryptographically secure random generation (OpenSSL)
+- **Storage**: Google Secret Manager (never in .env files for Staging/Production)
+- **Rotation**: Quarterly (Staging), 90 days (Production)
+
+#### **Environment Isolation**
+
+**Security Isolation:**
+- ✅ **Development**: `.env` file (local only, never committed)
+- ✅ **Staging**: Google Secret Manager (`db-mmtp-pg-staging-password`)
+- ✅ **Production**: Google Secret Manager (`db-mmtp-pg-production-password`)
+- ✅ **Unique Passwords**: Each environment has a unique password
+- ✅ **No Password Sharing**: Passwords never shared between environments
+
+#### **Secret Manager Best Practices**
+
+**Access Control:**
+- ✅ IAM service accounts with least privilege
+- ✅ Secret Manager Secret Accessor role
+- ✅ Cloud SQL Client role for database access
+- ✅ No human access to production secrets
+- ✅ Audit logging for all secret access
+
+**Password Rotation:**
+- ✅ Automated rotation every 90 days (Production)
+- ✅ Manual rotation quarterly (Staging)
+- ✅ Zero-downtime rotation with connection pooling
+- ✅ Old password versions retained for rollback
+- ✅ Audit trail for all password changes
+
+**Security Features:**
+- ✅ Encryption at rest (AES-256)
+- ✅ Encryption in transit (TLS 1.3)
+- ✅ Access logging and audit trails
+- ✅ Version control for secrets
+- ✅ Automatic expiration and alerts
 
 ---
 
