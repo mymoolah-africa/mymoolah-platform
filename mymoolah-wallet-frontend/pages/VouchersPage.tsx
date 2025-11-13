@@ -3389,7 +3389,7 @@ export function VouchersPage() {
 
       {/* Validation Error Modal */}
       <AlertDialog open={showValidationErrorModal} onOpenChange={setShowValidationErrorModal}>
-          <AlertDialogContent style={{ zIndex: 9999 }}>
+        <AlertDialogContent style={{ zIndex: 9999 }}>
             <AlertDialogHeader>
               <AlertDialogTitle style={{
                 fontFamily: 'Montserrat, sans-serif',
@@ -3438,9 +3438,9 @@ export function VouchersPage() {
               >
                 OK
               </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
     </div>
   );
 }
