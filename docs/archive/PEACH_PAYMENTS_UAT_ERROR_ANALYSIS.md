@@ -217,3 +217,4 @@ type: { type: DataTypes.ENUM('payshap_rpp', 'payshap_rtp', 'request_money_paysha
 **Report Generated**: November 12, 2025  
 **Status**: ✅ **ERRORS IDENTIFIED - FIXES APPLIED - MIGRATION REQUIRED**
 
+

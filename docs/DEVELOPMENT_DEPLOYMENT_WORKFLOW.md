@@ -16,16 +16,27 @@ This document outlines the development and deployment workflow for the MyMoolah 
 ### **Development Environment (Codespaces/GitHub)**
 - **Purpose:** Active development and testing
 - **Location:** GitHub Codespaces
-- **Database:** Google Cloud SQL (shared development database)
+- **Database:** Google Cloud SQL (`mmtp-pg` - Development database `mymoolah`)
 - **Integrations:** UAT/Test credentials
 - **Status:** ✅ **Current Setup**
+
+### **Staging Environment (Google Cloud Services)**
+- **Purpose:** Production-like testing and validation
+- **Location:** Google Cloud Platform (GCP)
+- **Database:** Google Cloud SQL (`mmtp-pg-staging` - Staging database `mymoolah_staging`)
+- **Instance:** `mmtp-pg-staging` (PostgreSQL 16, ENTERPRISE edition, `db-custom-1-3840`)
+- **Password Storage:** Google Secret Manager (`db-mmtp-pg-staging-password`)
+- **Integrations:** Production credentials (with test accounts)
+- **Status:** ✅ **Created and Running** (November 11, 2025)
 
 ### **Production Environment (Google Cloud Services)**
 - **Purpose:** Live production deployment
 - **Location:** Google Cloud Platform (GCP)
-- **Database:** Google Cloud SQL (production database)
-- **Integrations:** Production credentials
-- **Status:** ⏳ **Planned Deployment**
+- **Database:** Google Cloud SQL (`mmtp-pg-production` - Production database `mymoolah_production`)
+- **Instance:** `mmtp-pg-production` (PostgreSQL 16, ENTERPRISE edition, `db-custom-4-15360`)
+- **Password Storage:** Google Secret Manager (`db-mmtp-pg-production-password`)
+- **Integrations:** Production credentials (with real accounts)
+- **Status:** ✅ **Created and Running** (November 11, 2025)
 
 ---
 
@@ -67,7 +78,7 @@ External Integrations (UAT/Test Credentials)
 
 ---
 
-### **2. Staging Phase (Optional but Recommended)**
+### **2. Staging Phase (✅ IMPLEMENTED)**
 
 #### **2.1 Staging Environment**
 ```
@@ -75,7 +86,7 @@ GitHub Repository (Main Branch)
     ↓
 Staging Environment (GCS Staging)
     ↓
-Google Cloud SQL (Staging Database)
+Google Cloud SQL (mmtp-pg-staging → mymoolah_staging)
     ↓
 External Integrations (Production Credentials + Test Accounts)
 ```
@@ -83,9 +94,16 @@ External Integrations (Production Credentials + Test Accounts)
 **Characteristics:**
 - ✅ Production-like environment
 - ✅ Production credentials (but test accounts)
-- ✅ Database: Staging database (separate from production)
+- ✅ Database: `mymoolah_staging` (separate from production)
+- ✅ Instance: `mmtp-pg-staging` (PostgreSQL 16, ENTERPRISE edition)
+- ✅ Machine Type: `db-custom-1-3840` (1 vCPU, 3.75 GB RAM)
+- ✅ Storage: 20GB SSD with auto-increase
+- ✅ Backups: 7-day retention, point-in-time recovery enabled
+- ✅ Security: No authorized networks (Cloud SQL Auth Proxy only), SSL required
+- ✅ Password: Stored in Google Secret Manager (`db-mmtp-pg-staging-password`)
 - ✅ Test transactions with production APIs
 - ✅ Final validation before production
+- ✅ Status: **Created and Running** (November 11, 2025)
 
 #### **2.2 Staging Testing**
 - **Production Credentials:** Use production API credentials
@@ -103,7 +121,7 @@ External Integrations (Production Credentials + Test Accounts)
 
 ---
 
-### **3. Production Phase (Google Cloud Services)**
+### **3. Production Phase (✅ IMPLEMENTED)**
 
 #### **3.1 Production Environment**
 ```
@@ -111,7 +129,7 @@ GitHub Repository (Main Branch - Production Ready)
     ↓
 Google Cloud Services (Production)
     ↓
-Google Cloud SQL (Production Database)
+Google Cloud SQL (mmtp-pg-production → mymoolah_production)
     ↓
 External Integrations (Production Credentials + Real Accounts)
 ```
@@ -119,9 +137,16 @@ External Integrations (Production Credentials + Real Accounts)
 **Characteristics:**
 - ✅ Live production deployment
 - ✅ Production credentials
-- ✅ Database: Production database
+- ✅ Database: `mymoolah_production` (separate from staging)
+- ✅ Instance: `mmtp-pg-production` (PostgreSQL 16, ENTERPRISE edition)
+- ✅ Machine Type: `db-custom-4-15360` (4 vCPU, 15 GB RAM)
+- ✅ Storage: 100GB SSD with auto-increase
+- ✅ Backups: 30-day retention, point-in-time recovery enabled
+- ✅ Security: No authorized networks (Cloud SQL Auth Proxy only), SSL required, deletion protection
+- ✅ Password: Stored in Google Secret Manager (`db-mmtp-pg-production-password`)
 - ✅ Real transactions
 - ✅ Real customers and data
+- ✅ Status: **Created and Running** (November 11, 2025)
 
 #### **3.2 Production Deployment**
 - **Deployment Method:** Automated deployment from GitHub
@@ -344,23 +369,32 @@ MOBILEMART_API_URL=https://fulcrumswitch.com
 5. Create pull request
 6. Code review and merge
 
-### **Step 2: Staging (GCS Staging)** ⚠️ **RECOMMENDED**
-1. Create staging environment in GCS
-2. Configure production credentials
-3. Use test accounts for transactions
-4. Deploy code from GitHub
-5. Test production integrations
-6. Validate functionality
-7. Load testing (if applicable)
-8. Performance testing
+### **Step 2: Staging (GCS Staging)** ✅ **IMPLEMENTED** (November 11, 2025)
+1. ✅ Create staging environment in GCS (`mmtp-pg-staging`)
+2. ✅ Create staging database (`mymoolah_staging`)
+3. ✅ Create database user (`mymoolah_app`)
+4. ✅ Store password in Google Secret Manager
+5. ⏳ Configure production credentials
+6. ⏳ Use test accounts for transactions
+7. ⏳ Deploy code from GitHub
+8. ⏳ Test production integrations
+9. ⏳ Validate functionality
+10. ⏳ Load testing (if applicable)
+11. ⏳ Performance testing
+12. ⏳ Run database migrations
 
-### **Step 3: Production (GCS Production)**
-1. Deploy to production environment
-2. Use production credentials
-3. Use real customer accounts
-4. Monitor production traffic
-5. Handle issues if they arise
-6. Rollback if necessary
+### **Step 3: Production (GCS Production)** ✅ **INFRASTRUCTURE READY** (November 11, 2025)
+1. ✅ Create production environment in GCS (`mmtp-pg-production`)
+2. ✅ Create production database (`mymoolah_production`)
+3. ✅ Create database user (`mymoolah_app`)
+4. ✅ Store password in Google Secret Manager
+5. ⏳ Deploy to production environment
+6. ⏳ Use production credentials
+7. ⏳ Use real customer accounts
+8. ⏳ Run database migrations
+9. ⏳ Monitor production traffic
+10. ⏳ Handle issues if they arise
+11. ⏳ Rollback if necessary
 
 ---
 
@@ -393,10 +427,14 @@ MOBILEMART_API_URL=https://fulcrumswitch.com
 - ✅ Different configuration for each environment
 
 ### **2. Credential Management**
-- ✅ Store credentials in environment variables
-- ✅ Use secure secret management
+- ✅ Store credentials in environment variables (Development)
+- ✅ Store credentials in Google Secret Manager (Staging/Production)
+- ✅ Use secure secret management (Google Secret Manager)
 - ✅ Never commit credentials to Git
-- ✅ Rotate credentials regularly
+- ✅ Rotate credentials regularly (90 days for Production)
+- ✅ Banking-grade password complexity (32+ characters)
+- ✅ Unique passwords per environment (security isolation)
+- ✅ IAM service accounts for Secret Manager access
 
 ### **3. Testing Strategy**
 - ✅ Test with UAT credentials in development
@@ -516,6 +554,6 @@ Production (GCS Production) → Production Credentials → Real Customers
 
 ---
 
-**Last Updated:** November 10, 2025  
-**Status:** 📋 **DEVELOPMENT WORKFLOW DOCUMENTATION - COMPLETE**
+**Last Updated:** November 11, 2025  
+**Status:** 📋 **DEVELOPMENT WORKFLOW DOCUMENTATION - COMPLETE** ✅ **STAGING/PRODUCTION DATABASES CREATED**
 
