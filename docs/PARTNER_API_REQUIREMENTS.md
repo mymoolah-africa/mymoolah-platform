@@ -386,8 +386,20 @@ models/
 - Rate limiting
 
 ### UAT Test Scenarios
+
+**For Direct Payment Partners (e.g., Zapper)**:
+1. Successful voucher issuance (post-payment)
+2. Invalid MSISDN format
+3. Duplicate partner reference (idempotency)
+4. New customer auto-creation
+5. Webhook delivery success
+6. Webhook delivery failure and retry
+7. Rate limit enforcement
+8. **Note**: Insufficient balance test is NOT applicable (payment processed before API call)
+
+**For Float-Based Partners**:
 1. Successful voucher issuance
-2. Insufficient balance handling
+2. Insufficient balance handling (402 error)
 3. Invalid MSISDN format
 4. Duplicate partner reference (idempotency)
 5. Webhook delivery success
