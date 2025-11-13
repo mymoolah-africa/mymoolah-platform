@@ -35,6 +35,16 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../components/ui/alert-dialog';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Badge } from '../components/ui/badge';
 import { Separator } from '../components/ui/separator';
@@ -77,6 +87,8 @@ export function ProfilePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   
   // Form state
   const [profileForm, setProfileForm] = useState({
@@ -242,15 +254,20 @@ export function ProfilePage() {
     }
   };
 
-  // Handle logout
-  const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to log out of MyMoolah?')) {
-      try {
-        await logout();
-        navigate('/login');
-      } catch (error) {
-        alert('Logout failed. Please try again.');
-      }
+  // Handle logout button click - show modal
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  // Handle logout confirmation
+  const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      setIsLoggingOut(false);
+      alert('Logout failed. Please try again.');
     }
   };
 
@@ -546,7 +563,7 @@ export function ProfilePage() {
         <div style={{ marginTop: '32px', marginBottom: '24px' }}>
           <Separator style={{ marginBottom: '24px' }} />
           <button
-            onClick={handleLogout}
+            onClick={handleLogoutClick}
             style={{
               width: '100%',
               backgroundColor: '#fef2f2',
@@ -985,6 +1002,85 @@ export function ProfilePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Logout Confirmation Modal */}
+      <AlertDialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
+        <AlertDialogContent style={{ zIndex: 9999 }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '20px',
+              fontWeight: '700',
+              color: '#1f2937',
+              marginBottom: '12px'
+            }}>
+              Log Out of MyMoolah?
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '14px',
+              color: '#6b7280',
+              lineHeight: '1.6'
+            }}>
+              Are you sure you want to log out of your MyMoolah account? You will need to log in again to access your wallet and services.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter style={{
+            display: 'flex',
+            gap: '12px',
+            marginTop: '24px'
+          }}>
+            <AlertDialogCancel
+              onClick={() => setShowLogoutModal(false)}
+              disabled={isLoggingOut}
+              style={{
+                flex: 1,
+                height: '44px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '500',
+                borderRadius: '8px',
+                backgroundColor: '#ffffff',
+                color: '#374151',
+                border: '1px solid #d1d5db',
+                cursor: isLoggingOut ? 'not-allowed' : 'pointer',
+                opacity: isLoggingOut ? 0.6 : 1
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogoutConfirm}
+              disabled={isLoggingOut}
+              style={{
+                flex: 1,
+                height: '44px',
+                backgroundColor: '#dc2626',
+                color: '#ffffff',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '600',
+                borderRadius: '8px',
+                border: 'none',
+                cursor: isLoggingOut ? 'not-allowed' : 'pointer',
+                opacity: isLoggingOut ? 0.6 : 1
+              }}
+              onMouseOver={(e) => {
+                if (!isLoggingOut) {
+                  e.currentTarget.style.backgroundColor = '#b91c1c';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (!isLoggingOut) {
+                  e.currentTarget.style.backgroundColor = '#dc2626';
+                }
+              }}
+            >
+              {isLoggingOut ? 'Logging out...' : 'Log Out'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
