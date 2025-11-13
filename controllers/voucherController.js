@@ -1144,7 +1144,7 @@ exports.cancelEasyPayVoucher = async (req, res) => {
 
     try {
       // Use transaction to ensure atomicity (same as expiration handler)
-      await sequelize.transaction(async (t) => {
+      const result = await sequelize.transaction(async (t) => {
         // Update voucher status to cancelled and debit voucher balance (same as expiration)
         await voucher.update({ 
           status: 'cancelled',
@@ -1199,10 +1199,12 @@ exports.cancelEasyPayVoucher = async (req, res) => {
           }
         }, { transaction: t });
 
-        console.log(`✅ Voucher cancelled: ${voucher.easyPayCode || voucher.voucherCode}, Refunded: R${refundAmount}, New wallet balance: R${wallet.balance}`);
+        console.log(`✅ Voucher cancelled: ${voucher.easyPayCode || voucher.voucherCode}, Refunded: R${refundAmount}`);
         
         return { refundTransactionId };
       });
+
+      const { refundTransactionId } = result;
 
       // Reload wallet to get updated balance
       await wallet.reload();
