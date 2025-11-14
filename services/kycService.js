@@ -332,147 +332,39 @@ class KYCService {
     return this.openai;
   }
 
-  async runTesseractOCR(localFilePath) {
-    // Enhanced preprocessing for South African ID documents
-    // Strategy: Multiple preprocessing attempts with best result selection
-    
-    const preprocessedPaths = [];
-    const strategies = [
-      {
-        name: 'high_contrast',
-        process: async (input, output) => {
-          await sharp(input)
-            .rotate()
-            .resize({ width: 2400, withoutEnlargement: true })
-            .greyscale()
-            .normalise()
-            .sharpen({ sigma: 2, flat: 1, jagged: 2 })
-            .modulate({ brightness: 1.1, saturation: 0 })
-            .linear(1.2, -(128 * 0.2))
-            .toFile(output);
-        }
-      },
-      {
-        name: 'adaptive_threshold',
-        process: async (input, output) => {
-          await sharp(input)
-            .rotate()
-            .resize({ width: 2400, withoutEnlargement: true })
-            .greyscale()
-            .normalise()
-            .threshold(128)
-            .sharpen({ sigma: 2.5 })
-            .toFile(output);
-        }
-      },
-      {
-        name: 'color_channel',
-        process: async (input, output) => {
-          await sharp(input)
-            .rotate()
-            .resize({ width: 2400, withoutEnlargement: true })
-            .extractChannel('red') // Extract red channel to reduce green background interference
-            .greyscale()
-            .normalise()
-            .sharpen({ sigma: 2 })
-            .linear(1.3, -(128 * 0.3))
-            .toFile(output);
-        }
-      }
-    ];
-
-    const ocrResults = [];
-
-    // Try each preprocessing strategy
-    for (const strategy of strategies) {
-      try {
-        const preprocessedPath = localFilePath.replace(/(\.[a-z]+)$/i, `.${strategy.name}$1`);
-        preprocessedPaths.push(preprocessedPath);
-        
-        await strategy.process(localFilePath, preprocessedPath);
-
-        // Try multiple PSM modes for best results
-        const psmModes = [6, 11, 12, 13];
-        
-        for (const psm of psmModes) {
-          try {
-            const { data } = await Tesseract.recognize(preprocessedPath, 'eng', {
-              tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:/- ',
-              preserve_interword_spaces: '1',
-              psm: psm,
-              oem: 1  // LSTM neural nets
-            });
-
-            const text = data.text || '';
-            const confidence = data.confidence || 0;
-
-            // Score this result
-            const idMatch = text.match(/\b(\d{13})\b/);
-            const surnameMatch = text.toUpperCase().match(/\bSURNAME\b[:\s]*([A-Z' -]+)/) || 
-                                text.toUpperCase().match(/\bVAN\b[:\s]*([A-Z' -]+)/);
-            const namesMatch = text.toUpperCase().match(/\bFORENAMES?\b[:\s]*([A-Z' -]+)/) ||
-                             text.toUpperCase().match(/\bVOORNAME\b[:\s]*([A-Z' -]+)/);
-
-            const score = (confidence / 100) + 
-                         (idMatch ? 0.3 : 0) + 
-                         (surnameMatch ? 0.2 : 0) + 
-                         (namesMatch ? 0.2 : 0);
-
-            ocrResults.push({
-              text,
-              confidence,
-              score,
-              strategy: strategy.name,
-              psm,
-              idMatch: !!idMatch,
-              surnameMatch: !!surnameMatch,
-              namesMatch: !!namesMatch
-            });
-          } catch (psmError) {
-            // Continue with next PSM mode
-          }
-        }
-      } catch (strategyError) {
-        console.warn(`⚠️  Preprocessing strategy ${strategy.name} failed:`, strategyError.message);
-      }
-    }
-
-    // Cleanup preprocessed files
-    for (const path of preprocessedPaths) {
-      await fs.unlink(path).catch(() => {});
-    }
-
-    // Select best result based on score
-    if (ocrResults.length > 0) {
-      ocrResults.sort((a, b) => b.score - a.score);
-      const bestResult = ocrResults[0];
+  // Simplified, reliable image preprocessing for OCR
+  async preprocessImageForOCR(localFilePath) {
+    try {
+      console.log('🔄 Preprocessing image for OCR...');
       
-      console.log(`✅ Best OCR result: ${bestResult.strategy} PSM${bestResult.psm} (confidence: ${bestResult.confidence.toFixed(1)}%)`);
+      const enhancedBuffer = await sharp(localFilePath)
+        .rotate()                    // Auto-rotate
+        .resize({ width: 2000, withoutEnlargement: true })  // Optimal size for OCR
+        .greyscale()                 // Reduce color noise
+        .normalise()                 // Enhance contrast
+        .sharpen()                   // Simple sharpening
+        .toBuffer();
       
-      return bestResult.text;
+      console.log('✅ Image preprocessing successful');
+      return enhancedBuffer.toString('base64');
+    } catch (error) {
+      console.error('❌ Image preprocessing failed:', error.message);
+      // Fallback: read original file
+      const fileBuffer = await fs.readFile(localFilePath);
+      console.log('⚠️  Using original image (preprocessing failed)');
+      return fileBuffer.toString('base64');
     }
-
-    // Fallback to original simple preprocessing if all strategies fail
-    const fallbackPath = localFilePath.replace(/(\.[a-z]+)$/i, '.fallback$1');
-    await sharp(localFilePath)
-      .rotate()
-      .resize({ width: 1600, withoutEnlargement: true })
-      .grayscale()
-      .normalise()
-      .threshold(140)
-      .sharpen()
-      .toFile(fallbackPath);
-
-    const { data } = await Tesseract.recognize(fallbackPath, 'eng', {
-      tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789:/- ',
-      preserve_interword_spaces: '1',
-      psm: 6,
-      oem: 1
-    });
-
-    await fs.unlink(fallbackPath).catch(() => {});
-    return data.text || '';
   }
+
+  // Legacy Tesseract OCR method - kept for backward compatibility but not used
+  async runTesseractOCR(localFilePath) {
+    // This method is deprecated - using simplified OpenAI approach instead
+    // Kept for backward compatibility only
+    console.warn('⚠️  runTesseractOCR is deprecated - using OpenAI OCR instead');
+    throw new Error('Tesseract OCR is no longer used. Please use OpenAI OCR.');
+  }
+
+  // Legacy Tesseract method removed - using simplified OpenAI approach
 
   parseSouthAfricanIdText(plainText) {
     const text = (plainText || '').replace(/\r/g, '').trim();
@@ -634,65 +526,60 @@ class KYCService {
     return results;
   }
 
-  // Process document OCR using OpenAI with fallback to Tesseract
+  // Process document OCR using OpenAI with retry logic and manual review fallback
   async processDocumentOCR(documentUrl, documentType) {
-    // Check if we have a local file path for fallback
-    const hasLocalFile = documentUrl && documentUrl.startsWith('/uploads/');
-    let localFilePath = null;
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1 second
     
-    if (hasLocalFile) {
-      localFilePath = require('path').join(__dirname, '..', documentUrl);
+    // Validate file path
+    if (!documentUrl || !documentUrl.startsWith('/uploads/')) {
+      throw new Error('Invalid document URL. Only local file processing is supported.');
     }
-
+    
+    const localFilePath = require('path').join(__dirname, '..', documentUrl);
+    
+    // Check if file exists
     try {
-      // Initialize OpenAI if not already done
-      await this.initializeOpenAI();
-
-      // If OpenAI is not available, use Tesseract fallback immediately
-      if (!this.openai) {
-        if (hasLocalFile) {
-          console.log('ℹ️  OpenAI not available, using Tesseract OCR fallback');
-          const tText = await this.runTesseractOCR(localFilePath);
-          const parsed = this.parseSouthAfricanIdText(tText);
-          return parsed;
-        }
-        throw new Error('OpenAI API not available and no local file for Tesseract fallback');
-      }
-
-      // Handle local file paths by converting to base64
-      let imageData = null;
-      let mimeType = 'image/jpeg';
-      
-      if (documentUrl.startsWith('/uploads/')) {
-        // localFilePath already set above if hasLocalFile is true
-        if (!localFilePath) {
-          localFilePath = require('path').join(__dirname, '..', documentUrl);
-        }
-        
-        const fileBuffer = await fs.readFile(localFilePath);
-        imageData = fileBuffer.toString('base64');
-        
-        // Determine MIME type based on file extension
-        const ext = path.extname(localFilePath).toLowerCase();
-        if (['.jpg', '.jpeg'].includes(ext)) {
-          mimeType = 'image/jpeg';
-        } else if (ext === '.png') {
-          mimeType = 'image/png';
-        } else if (ext === '.pdf') {
-          throw new Error('PDF files are not supported for OCR processing. Please upload an image file (JPEG or PNG).');
-        } else {
-          throw new Error('Unsupported file type. Please upload an image file (JPEG or PNG).');
-        }
-        
-
-      } else {
-        // For remote URLs, we'd need to fetch and convert
-        throw new Error('Only local file processing is currently supported');
-      }
-
-      // Enhanced OpenAI prompt for South African ID documents
-      const prompt = documentType === 'id_document' 
-        ? `You are extracting information from a South African Identity Document (ID book). 
+      await fs.access(localFilePath);
+    } catch (error) {
+      throw new Error(`Document file not found: ${documentUrl}`);
+    }
+    
+    // Initialize OpenAI
+    await this.initializeOpenAI();
+    
+    if (!this.openai) {
+      console.error('❌ OpenAI API not available');
+      throw new Error('OCR service unavailable. Please contact support.');
+    }
+    
+    // Determine MIME type
+    const ext = path.extname(localFilePath).toLowerCase();
+    let mimeType = 'image/jpeg';
+    if (ext === '.png') {
+      mimeType = 'image/png';
+    } else if (['.jpg', '.jpeg'].includes(ext)) {
+      mimeType = 'image/jpeg';
+    } else if (ext === '.pdf') {
+      throw new Error('PDF files are not supported. Please upload an image file (JPEG or PNG).');
+    } else {
+      throw new Error('Unsupported file type. Please upload an image file (JPEG or PNG).');
+    }
+    
+    // Preprocess image
+    let imageData;
+    try {
+      imageData = await this.preprocessImageForOCR(localFilePath);
+    } catch (preprocessError) {
+      console.error('❌ Image preprocessing error:', preprocessError.message);
+      // Fallback to original image
+      const fileBuffer = await fs.readFile(localFilePath);
+      imageData = fileBuffer.toString('base64');
+    }
+    
+    // Enhanced OpenAI prompt for South African ID documents
+    const prompt = documentType === 'id_document' 
+      ? `You are extracting information from a South African Identity Document (ID book). 
 
 The document has a green background with security patterns. Look for:
 1. ID NUMBER: A 13-digit number (format: YYMMDDGSSSCAZ) usually near the top with a barcode
@@ -720,125 +607,134 @@ Return ONLY valid JSON in this exact format:
   "dateIssued": "2008-04-03",
   "countryOfBirth": "SOUTH AFRICA"
 }`
-        : "Extract the following information from this South African proof of address document: Street address, City, Postal code, Province. Return as JSON format.";
-
-      
-      
-      // Preprocess image for better OCR quality before sending to OpenAI
-      let enhancedImageData = imageData;
+      : "Extract the following information from this South African proof of address document: Street address, City, Postal code, Province. Return as JSON format.";
+    
+    // Retry logic for OpenAI API calls
+    let lastError;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const enhancedBuffer = await sharp(localFilePath)
-          .rotate()
-          .resize({ width: 2400, withoutEnlargement: true })
-          .greyscale()
-          .normalise()
-          .sharpen({ sigma: 2, flat: 1, jagged: 2 })
-          .modulate({ brightness: 1.1, saturation: 0 })
-          .linear(1.2, -(128 * 0.2))
-          .toBuffer();
+        console.log(`🔄 OpenAI OCR attempt ${attempt}/${MAX_RETRIES}...`);
         
-        enhancedImageData = enhancedBuffer.toString('base64');
-      } catch (preprocessError) {
-        console.warn('⚠️  Image preprocessing failed, using original:', preprocessError.message);
-        // Continue with original image
-      }
-
-      const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
-        messages: [{
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            { 
-              type: "image_url", 
-              image_url: {
-                url: `data:${mimeType};base64,${enhancedImageData}`,
-                detail: "high" // Request high detail for better OCR
+        const response = await this.openai.chat.completions.create({
+          model: "gpt-4o",
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              { 
+                type: "image_url", 
+                image_url: {
+                  url: `data:${mimeType};base64,${imageData}`,
+                  detail: "high"
+                }
               }
-            }
-          ]
-        }],
-        max_tokens: 500,
-        temperature: 0.1 // Low temperature for more accurate extraction
-      });
-
-      const content = response.choices[0].message.content || '';
-      if (/i\s*can'?t\s*help/i.test(content) || /unable to extract/i.test(content)) {
-
-        const tText = await this.runTesseractOCR(localFilePath);
-        const parsed = this.parseSouthAfricanIdText(tText);
-        return parsed;
-      }
-
-      
-      
-      const parsedFromOpenAI = this.parseOCRResults(content, documentType);
-      
-      // Enhanced validation: If critical fields are missing, try Tesseract fallback
-      if (documentType === 'id_document') {
-        const hasIdNumber = parsedFromOpenAI.idNumber && /^\d{13}$/.test(parsedFromOpenAI.idNumber.replace(/\D/g, ''));
-        const hasSurname = parsedFromOpenAI.surname && parsedFromOpenAI.surname.trim().length >= 2;
-        const hasForenames = parsedFromOpenAI.forenames && parsedFromOpenAI.forenames.trim().length >= 2;
+            ]
+          }],
+          max_tokens: 500,
+          temperature: 0.1
+        });
         
-        if (!hasIdNumber || (!hasSurname && !hasForenames)) {
-          console.log('⚠️  OpenAI OCR missing critical fields, trying Tesseract fallback...');
-          const tText = await this.runTesseractOCR(localFilePath);
-          const parsed = this.parseSouthAfricanIdText(tText);
+        const content = response.choices[0].message.content || '';
+        
+        // Check if OpenAI couldn't help
+        if (/i\s*can'?t\s*help/i.test(content) || /unable to extract/i.test(content)) {
+          throw new Error('OpenAI could not extract information from document');
+        }
+        
+        // Parse results
+        const parsedResults = this.parseOCRResults(content, documentType);
+        
+        // Validate critical fields
+        if (documentType === 'id_document') {
+          const hasIdNumber = parsedResults.idNumber && /^\d{13}$/.test(parsedResults.idNumber.replace(/\D/g, ''));
+          const hasName = (parsedResults.surname || parsedResults.fullName) && 
+                         (parsedResults.surname?.trim().length >= 2 || parsedResults.fullName?.trim().length >= 2);
           
-          // Merge results: prefer OpenAI but fill missing fields from Tesseract
-          const merged = {
-            ...parsedFromOpenAI,
-            idNumber: parsedFromOpenAI.idNumber || parsed.idNumber,
-            surname: parsedFromOpenAI.surname || parsed.surname,
-            forenames: parsedFromOpenAI.forenames || parsed.firstNames,
-            fullName: parsedFromOpenAI.fullName || parsed.fullName,
-            dateOfBirth: parsedFromOpenAI.dateOfBirth || parsed.dateOfBirth
-          };
-          
-          // Use Tesseract result if it has more complete data
-          if ((parsed.idNumber && parsed.surname) && (!hasIdNumber || !hasSurname)) {
-            console.log('✅ Using Tesseract result (more complete)');
-            return parsed;
+          if (!hasIdNumber || !hasName) {
+            console.warn('⚠️  OpenAI OCR missing critical fields');
+            throw new Error('Critical fields missing from OCR extraction');
           }
-          
-          return merged;
+        }
+        
+        console.log('✅ OpenAI OCR successful');
+        return parsedResults;
+        
+      } catch (error) {
+        lastError = error;
+        console.error(`❌ OpenAI OCR attempt ${attempt} failed:`, error.message);
+        
+        // If it's a rate limit or temporary error, retry
+        if (attempt < MAX_RETRIES && (
+          error.message.includes('rate limit') || 
+          error.message.includes('timeout') ||
+          error.status === 429 ||
+          error.status === 503
+        )) {
+          const delay = RETRY_DELAY * attempt; // Exponential backoff
+          console.log(`⏳ Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          continue;
+        }
+        
+        // If it's a permanent error or last attempt, break
+        if (attempt === MAX_RETRIES || error.status === 401 || error.status === 400) {
+          break;
         }
       }
+    }
+    
+    // All retries failed - throw error (will be caught and queued for manual review)
+    console.error('❌ All OpenAI OCR attempts failed. Queueing for manual review.');
+    throw new Error(`OCR processing failed after ${MAX_RETRIES} attempts: ${lastError?.message || 'Unknown error'}`);
+  }
 
-      return parsedFromOpenAI;
+  // Queue document for manual review
+  async queueForManualReview(userId, documentType, documentUrl, error, ocrResults = null) {
+    try {
+      const { sequelize } = require('../models');
+      const Kyc = require('../models/Kyc')(sequelize, require('sequelize').DataTypes);
       
-    } catch (error) {
-      console.error('❌ Error processing OCR (primary):', error);
-      // Final fallback: try Tesseract if local file is available
-      // This handles cases where OpenAI API fails (401, 429, network errors, etc.)
-      if (hasLocalFile && localFilePath) {
-        try {
-          console.log('ℹ️  Attempting Tesseract OCR fallback due to OpenAI error...');
-          const tText = await this.runTesseractOCR(localFilePath);
-          const parsed = this.parseSouthAfricanIdText(tText);
-          console.log('✅ Tesseract OCR fallback successful');
-          return parsed;
-        } catch (fallbackError) {
-          console.error('❌ Fallback OCR also failed:', fallbackError);
-          // If fallback also fails, throw the original error with fallback failure info
-          throw new Error(`OCR processing failed: ${error.message}. Fallback also failed: ${fallbackError.message}`);
+      // Create or update KYC record with manual review status
+      const [kycRecord, created] = await Kyc.findOrCreate({
+        where: { userId, documentType },
+        defaults: {
+          userId,
+          documentType,
+          documentUrl,
+          status: 'pending_review',
+          ocrResults: ocrResults || {},
+          errorMessage: error?.message || 'OCR processing failed',
+          reviewReason: 'OCR_FAILED',
+          createdAt: new Date(),
+          updatedAt: new Date()
         }
-      } else if (hasLocalFile) {
-        // localFilePath should already be set, but if not, try to set it again
-        try {
-          const fallbackFilePath = require('path').join(__dirname, '..', documentUrl);
-          console.log('ℹ️  Attempting Tesseract OCR fallback due to OpenAI error...');
-          const tText = await this.runTesseractOCR(fallbackFilePath);
-          const parsed = this.parseSouthAfricanIdText(tText);
-          console.log('✅ Tesseract OCR fallback successful');
-          return parsed;
-        } catch (fallbackError) {
-          console.error('❌ Fallback OCR also failed:', fallbackError);
-          throw new Error(`OCR processing failed: ${error.message}. Fallback also failed: ${fallbackError.message}`);
-        }
+      });
+      
+      if (!created) {
+        await kycRecord.update({
+          status: 'pending_review',
+          documentUrl,
+          ocrResults: ocrResults || {},
+          errorMessage: error?.message || 'OCR processing failed',
+          reviewReason: 'OCR_FAILED',
+          updatedAt: new Date()
+        });
       }
-      // If no local file available, throw the original error
-      throw new Error(`OCR processing failed: ${error.message}`);
+      
+      console.log(`📋 Document queued for manual review: User ${userId}, Type: ${documentType}`);
+      
+      // TODO: Send notification to admin/support team
+      // await this.notifySupportTeam(userId, documentType, error);
+      
+      return {
+        success: false,
+        status: 'pending_review',
+        message: 'Your document has been submitted for manual review. We will notify you once verification is complete.',
+        requiresManualReview: true
+      };
+    } catch (error) {
+      console.error('❌ Error queueing for manual review:', error);
+      throw error;
     }
   }
 
@@ -1204,75 +1100,77 @@ Return ONLY valid JSON in this exact format:
     }
   }
 
-  // Process KYC submission with retry tracking
+  // Process KYC submission with simplified OCR and manual review fallback
   async processKYCSubmission(userId, documentType, documentUrl, retryCount = 0) {
     try {
+      console.log(`🔄 Processing KYC submission: User ${userId}, Type: ${documentType}, Retry: ${retryCount}`);
       
-      
-      // Process OCR
-      const ocrResults = await this.processDocumentOCR(documentUrl, documentType);
-      
+      let ocrResults;
+      try {
+        // Process OCR with simplified OpenAI approach
+        ocrResults = await this.processDocumentOCR(documentUrl, documentType);
+        console.log('✅ OCR processing successful');
+      } catch (ocrError) {
+        console.error('❌ OCR processing failed:', ocrError.message);
+        
+        // Queue for manual review instead of using Tesseract fallback
+        return await this.queueForManualReview(userId, documentType, documentUrl, ocrError);
+      }
       
       // Validate document against user information
-      
       const validation = await this.validateDocumentAgainstUser(ocrResults, userId);
       
-
-      // Add retry information to response
+      // Build response
       const response = {
-        success: validation.isValid, // Set success based on validation result
+        success: validation.isValid,
         ocrResults,
         validation,
         acceptedDocuments: this.getAcceptedDocuments(documentType),
         retryCount,
-        canRetry: retryCount < 1 // Allow one retry
+        canRetry: retryCount < 1
       };
-
       
-
-      // Manual review path for first name mismatches (surname matches but first name doesn't)
+      // Handle validation results
       if (validation.tolerantNameMatch && validation.issues.length === 0) {
-        response.status = 'review';
+        // First name mismatch - queue for manual review
+        response.status = 'pending_review';
         response.message = 'Surname matches but first name differs. Requires manual review.';
         response.canRetry = false;
-        response.escalateToSupport = true;
-
+        response.requiresManualReview = true;
+        
+        await this.queueForManualReview(userId, documentType, documentUrl, 
+          new Error('First name mismatch'), ocrResults);
+        
         return response;
       }
-
-      // If validation failed and this is the first attempt, allow retry
+      
       if (!validation.isValid && retryCount === 0) {
+        // First attempt failed - allow retry
         response.status = 'retry';
         response.message = validation.issues.join('. ');
-        response.success = false; // Ensure success is false for validation failures
-
+        response.success = false;
       } else if (!validation.isValid && retryCount >= 1) {
-        // Second failure - escalate to support
-        response.status = 'failed';
-        response.message = validation.issues.join('. ');
-        response.escalateToSupport = true;
-        response.success = false; // Ensure success is false for validation failures
-
+        // Second failure - queue for manual review
+        response.status = 'pending_review';
+        response.message = 'Document validation failed after retry. Your document has been submitted for manual review.';
+        response.requiresManualReview = true;
+        response.success = false;
+        
+        await this.queueForManualReview(userId, documentType, documentUrl, 
+          new Error(validation.issues.join('. ')), ocrResults);
       } else if (validation.isValid) {
         // Validation passed
         response.status = 'approved';
         response.message = 'KYC verification successful';
-
+        response.success = true;
       }
-
       
       return response;
     } catch (error) {
-      console.error('❌ Error processing KYC submission:', error);
-      return {
-        success: false,
-        error: error.message,
-        message: error.message,
-        status: 'retry',
-        acceptedDocuments: this.getAcceptedDocuments(documentType),
-        retryCount,
-        canRetry: retryCount < 1
-      };
+      console.error('❌ Error in processKYCSubmission:', error);
+      
+      // Final fallback: queue for manual review
+      return await this.queueForManualReview(userId, documentType, documentUrl, error);
     }
   }
 
