@@ -1,19 +1,11 @@
 #!/bin/bash
 
 # Run Tier Fee System Migrations
-# Execute this script in Codespaces where DATABASE_URL is configured
+# Execute this script in Codespaces where DATABASE_URL is configured in .env
+# Sequelize CLI will automatically load .env file via dotenv
 
 echo "🔄 Running Tier Fee System Migrations..."
-echo ""
-
-# Check if DATABASE_URL is set
-if [ -z "$DATABASE_URL" ]; then
-  echo "❌ ERROR: DATABASE_URL environment variable is not set"
-  echo "Please ensure you're running this in Codespaces or have DATABASE_URL configured"
-  exit 1
-fi
-
-echo "✅ DATABASE_URL is configured"
+echo "Note: DATABASE_URL will be loaded from .env file automatically"
 echo ""
 
 # Run migrations in order
