@@ -646,13 +646,34 @@ Return ONLY valid JSON in this exact format:
         
         // Validate critical fields
         if (documentType === 'id_document') {
-          const hasIdNumber = parsedResults.idNumber && /^\d{13}$/.test(parsedResults.idNumber.replace(/\D/g, ''));
-          const hasName = (parsedResults.surname || parsedResults.fullName) && 
-                         (parsedResults.surname?.trim().length >= 2 || parsedResults.fullName?.trim().length >= 2);
+          // Clean and validate ID number (remove spaces, dashes, etc.)
+          const cleanedIdNumber = parsedResults.idNumber ? parsedResults.idNumber.replace(/\D/g, '') : '';
+          const hasIdNumber = cleanedIdNumber.length === 13 && /^\d{13}$/.test(cleanedIdNumber);
+          
+          // Check for name (surname, forenames, or fullName)
+          const hasName = (parsedResults.surname?.trim().length >= 2) || 
+                         (parsedResults.forenames?.trim().length >= 2) ||
+                         (parsedResults.fullName?.trim().length >= 2);
+          
+          // Log what was extracted for debugging
+          console.log('📋 OCR Extraction Results:', {
+            idNumber: parsedResults.idNumber,
+            cleanedIdNumber: cleanedIdNumber,
+            hasIdNumber: hasIdNumber,
+            surname: parsedResults.surname,
+            forenames: parsedResults.forenames,
+            fullName: parsedResults.fullName,
+            hasName: hasName
+          });
           
           if (!hasIdNumber || !hasName) {
-            console.warn('⚠️  OpenAI OCR missing critical fields');
-            throw new Error('Critical fields missing from OCR extraction');
+            console.warn('⚠️  OpenAI OCR missing critical fields', {
+              idNumberPresent: !!parsedResults.idNumber,
+              idNumberValid: hasIdNumber,
+              namePresent: hasName,
+              extractedData: parsedResults
+            });
+            throw new Error(`Critical fields missing from OCR extraction. ID Number: ${hasIdNumber ? 'OK' : 'MISSING/INVALID'}, Name: ${hasName ? 'OK' : 'MISSING'}`);
           }
         }
         
@@ -694,17 +715,31 @@ Return ONLY valid JSON in this exact format:
       const { sequelize } = require('../models');
       const Kyc = require('../models/Kyc')(sequelize, require('sequelize').DataTypes);
       
+      // Convert frontend documentType to database enum value
+      const dbDocumentType = documentType === 'id_document' ? 'id_card' : 
+                            documentType === 'proof_of_address' ? 'utility_bill' : 
+                            documentType;
+      
+      // Prepare reviewer notes with error details
+      const reviewerNotes = `OCR Processing Failed: ${error?.message || 'Unknown error'}\n` +
+                           `Review Reason: OCR_FAILED\n` +
+                           `OCR Results: ${ocrResults ? JSON.stringify(ocrResults, null, 2) : 'None'}`;
+      
       // Create or update KYC record with manual review status
       const [kycRecord, created] = await Kyc.findOrCreate({
-        where: { userId, documentType },
+        where: { 
+          userId, 
+          documentType: dbDocumentType 
+        },
         defaults: {
           userId,
-          documentType,
-          documentUrl,
-          status: 'pending_review',
-          ocrResults: ocrResults || {},
-          errorMessage: error?.message || 'OCR processing failed',
-          reviewReason: 'OCR_FAILED',
+          documentType: dbDocumentType,
+          documentNumber: ocrResults?.idNumber || 'PENDING',
+          documentImageUrl: documentUrl,
+          ocrData: ocrResults || {},
+          status: 'under_review',
+          reviewerNotes: reviewerNotes,
+          submittedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date()
         }
@@ -712,23 +747,22 @@ Return ONLY valid JSON in this exact format:
       
       if (!created) {
         await kycRecord.update({
-          status: 'pending_review',
-          documentUrl,
-          ocrResults: ocrResults || {},
-          errorMessage: error?.message || 'OCR processing failed',
-          reviewReason: 'OCR_FAILED',
+          documentImageUrl: documentUrl,
+          ocrData: ocrResults || {},
+          status: 'under_review',
+          reviewerNotes: reviewerNotes,
           updatedAt: new Date()
         });
       }
       
-      console.log(`📋 Document queued for manual review: User ${userId}, Type: ${documentType}`);
+      console.log(`📋 Document queued for manual review: User ${userId}, Type: ${dbDocumentType}`);
       
       // TODO: Send notification to admin/support team
       // await this.notifySupportTeam(userId, documentType, error);
       
       return {
         success: false,
-        status: 'pending_review',
+        status: 'under_review',
         message: 'Your document has been submitted for manual review. We will notify you once verification is complete.',
         requiresManualReview: true
       };
@@ -1133,7 +1167,7 @@ Return ONLY valid JSON in this exact format:
       // Handle validation results
       if (validation.tolerantNameMatch && validation.issues.length === 0) {
         // First name mismatch - queue for manual review
-        response.status = 'pending_review';
+        response.status = 'under_review';
         response.message = 'Surname matches but first name differs. Requires manual review.';
         response.canRetry = false;
         response.requiresManualReview = true;
@@ -1151,7 +1185,7 @@ Return ONLY valid JSON in this exact format:
         response.success = false;
       } else if (!validation.isValid && retryCount >= 1) {
         // Second failure - queue for manual review
-        response.status = 'pending_review';
+        response.status = 'under_review';
         response.message = 'Document validation failed after retry. Your document has been submitted for manual review.';
         response.requiresManualReview = true;
         response.success = false;
