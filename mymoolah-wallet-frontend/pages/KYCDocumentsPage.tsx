@@ -185,6 +185,15 @@ export function KYCDocumentsPage() {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.message || errorData.error || 'Failed to upload documents';
+        
+        // If it's a 401/403, don't throw - let the auth system handle it
+        if (response.status === 401 || response.status === 403) {
+          console.error('Authentication error during KYC upload:', errorMessage);
+          setError('Your session has expired. Please log in again.');
+          setIsLoading(false);
+          return;
+        }
+        
         throw new Error(errorMessage);
       }
 
@@ -216,14 +225,20 @@ export function KYCDocumentsPage() {
 
       // Update user KYC status in context based on backend response
       if (updateKYCStatus) {
-        if (data.success && data.status === 'approved') {
-          // KYC was successful, update to verified
-  
-          updateKYCStatus('verified');
-        } else {
-          // Documents uploaded but not yet verified
-  
-          updateKYCStatus('documents_uploaded');
+        try {
+          if (data.success && data.status === 'approved') {
+            // KYC was successful, update to verified
+            await updateKYCStatus('verified');
+          } else if (data.status === 'pending_review') {
+            // Documents queued for manual review
+            await updateKYCStatus('under_review');
+          } else {
+            // Documents uploaded but not yet verified
+            await updateKYCStatus('documents_uploaded');
+          }
+        } catch (statusError) {
+          console.error('Failed to update KYC status in context:', statusError);
+          // Don't block navigation if status update fails
         }
       }
 

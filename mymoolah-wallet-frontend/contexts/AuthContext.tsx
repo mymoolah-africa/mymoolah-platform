@@ -341,7 +341,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (response.ok) {
           const responseData = await safeJsonParse(response);
-          if (responseData) {
+          if (responseData && responseData.user) {
+            // Backend returns { success: true, user: {...} }
+            setUser({
+              ...responseData.user,
+              kycVerified: responseData.user.kycStatus === 'verified'
+            });
+          } else if (responseData) {
+            // Fallback: if responseData is the user object directly
             setUser({
               ...responseData,
               kycVerified: responseData.kycStatus === 'verified'
