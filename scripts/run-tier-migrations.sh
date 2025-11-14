@@ -19,6 +19,39 @@ if [ -f .env ]; then
     export "$line"
   done < .env
   echo "✅ .env file loaded"
+  
+  # Check if Cloud SQL Auth Proxy is running (Codespaces)
+  PROXY_PORT="6543"
+  proxy_running=false
+  
+  # Check if proxy is running on port 6543
+  if command -v nc >/dev/null 2>&1; then
+    if nc -z 127.0.0.1 ${PROXY_PORT} 2>/dev/null; then
+      proxy_running=true
+    fi
+  elif command -v pgrep >/dev/null 2>&1; then
+    if pgrep -f "cloud-sql-proxy.*${PROXY_PORT}" >/dev/null 2>&1; then
+      proxy_running=true
+    fi
+  fi
+  
+  # If proxy is running, update DATABASE_URL to use it
+  if [ "$proxy_running" = true ] && [ -n "$DATABASE_URL" ]; then
+    echo "🔗 Cloud SQL Auth Proxy detected on port ${PROXY_PORT}"
+    # Update DATABASE_URL to use proxy (127.0.0.1:6543)
+    export DATABASE_URL=$(node -e "
+      const u = new URL(process.env.DATABASE_URL);
+      u.hostname = '127.0.0.1';
+      u.port = '${PROXY_PORT}';
+      u.searchParams.set('sslmode', 'disable');
+      console.log(u.toString());
+    " 2>/dev/null || echo "$DATABASE_URL")
+    echo "✅ Updated DATABASE_URL to use proxy connection"
+  elif [ -n "$DATABASE_URL" ] && [[ "$DATABASE_URL" == *"34.35.84.201"* ]]; then
+    echo "⚠️  Warning: Direct database connection detected"
+    echo "   If in Codespaces, start Cloud SQL Auth Proxy first:"
+    echo "   ./scripts/one-click-restart-and-start.sh"
+  fi
   echo ""
 else
   echo "⚠️  Warning: .env file not found"
