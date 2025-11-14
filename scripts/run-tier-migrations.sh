@@ -58,47 +58,21 @@ else
   echo ""
 fi
 
-# Run migrations in order
-echo "📦 Migration 1: Creating supplier_tier_fees table..."
-npx sequelize-cli db:migrate --name 20251114_create_supplier_tier_fees
-
-if [ $? -eq 0 ]; then
-  echo "✅ Migration 1 complete"
-else
-  echo "❌ Migration 1 failed"
-  exit 1
-fi
-
+# Run all pending migrations (Sequelize will only run what's needed)
+echo "📦 Running all pending migrations..."
 echo ""
-echo "📦 Migration 2: Creating tier_criteria table..."
-npx sequelize-cli db:migrate --name 20251114_create_tier_criteria
+
+npx sequelize-cli db:migrate
 
 if [ $? -eq 0 ]; then
-  echo "✅ Migration 2 complete"
+  echo ""
+  echo "✅ All migrations completed successfully"
 else
-  echo "❌ Migration 2 failed"
-  exit 1
-fi
-
-echo ""
-echo "📦 Migration 3: Creating user_tier_history table..."
-npx sequelize-cli db:migrate --name 20251114_create_user_tier_history
-
-if [ $? -eq 0 ]; then
-  echo "✅ Migration 3 complete"
-else
-  echo "❌ Migration 3 failed"
-  exit 1
-fi
-
-echo ""
-echo "📦 Migration 4: Adding tier fields to users table..."
-npx sequelize-cli db:migrate --name 20251114_add_tier_to_users
-
-if [ $? -eq 0 ]; then
-  echo "✅ Migration 4 complete"
-else
-  echo "❌ Migration 4 failed"
+  echo ""
+  echo "❌ Migration failed"
+  echo ""
+  echo "💡 If you see permission errors, you may need to run the manual SQL script:"
+  echo "   migrations/20251114_add_tier_to_users_manual.sql"
   exit 1
 fi
 
