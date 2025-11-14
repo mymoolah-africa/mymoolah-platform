@@ -35,12 +35,46 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
     }
 
     // Get user's current tier
-    const user = await User.findByPk(userId, { attributes: ['tier_level'] });
-    if (!user) {
-      throw new Error(`User ${userId} not found`);
-    }
+    // Handle case where tier_level column might not exist yet (graceful degradation)
+    let tierLevel = 'bronze'; // Default fallback
     
-    const tierLevel = user.tier_level || 'bronze';
+    try {
+      // Check if tier_level column exists in users table
+      const [columnCheck] = await sequelize.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' 
+          AND column_name = 'tier_level'
+        LIMIT 1
+      `, { type: sequelize.QueryTypes.SELECT });
+      
+      if (columnCheck && columnCheck.column_name === 'tier_level') {
+        // Column exists, query user's tier
+        const [user] = await sequelize.query(`
+          SELECT tier_level 
+          FROM users 
+          WHERE id = :userId
+          LIMIT 1
+        `, {
+          replacements: { userId },
+          type: sequelize.QueryTypes.SELECT
+        });
+        
+        if (!user) {
+          throw new Error(`User ${userId} not found`);
+        }
+        
+        tierLevel = user.tier_level || 'bronze';
+      } else {
+        // Column doesn't exist yet, default to bronze
+        console.warn(`⚠️  tier_level column not found in users table, defaulting to bronze tier for all users`);
+        tierLevel = 'bronze';
+      }
+    } catch (error) {
+      // If query fails for any reason, default to bronze and continue
+      console.warn(`⚠️  Could not determine tier for user ${userId}, defaulting to bronze:`, error.message);
+      tierLevel = 'bronze';
+    }
     
     // Get fee configuration from database
     const [config] = await sequelize.query(`
@@ -180,8 +214,33 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
  */
 async function getTierFeePreview(userId, supplierCode, serviceType) {
   try {
-    const user = await User.findByPk(userId, { attributes: ['tier_level'] });
-    const tierLevel = user?.tier_level || 'bronze';
+    // Handle missing tier_level column gracefully
+    let tierLevel = 'bronze';
+    try {
+      const [columnCheck] = await sequelize.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' 
+          AND column_name = 'tier_level'
+        LIMIT 1
+      `, { type: sequelize.QueryTypes.SELECT });
+      
+      if (columnCheck) {
+        const [user] = await sequelize.query(`
+          SELECT tier_level 
+          FROM users 
+          WHERE id = :userId
+          LIMIT 1
+        `, {
+          replacements: { userId },
+          type: sequelize.QueryTypes.SELECT
+        });
+        tierLevel = user?.tier_level || 'bronze';
+      }
+    } catch (error) {
+      // Default to bronze if column doesn't exist
+      tierLevel = 'bronze';
+    }
     
     const [config] = await sequelize.query(`
       SELECT 
