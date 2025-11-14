@@ -1,10 +1,57 @@
 require('dotenv').config();
-const { sequelize } = require('../models');
-const User = require('../models/User')(sequelize, require('sequelize').DataTypes);
-const Wallet = require('../models/Wallet')(sequelize, require('sequelize').DataTypes);
-const Kyc = require('../models/Kyc')(sequelize, require('sequelize').DataTypes);
+const net = require('net');
 
-async function resetMyKYC() {
+// Check if Cloud SQL Auth Proxy is running and update DATABASE_URL if needed
+const PROXY_PORT = 6543;
+function checkProxyAndUpdateEnv() {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(1000);
+    
+    socket.on('connect', () => {
+      socket.destroy();
+      // Proxy is running - update DATABASE_URL
+      if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('34.35.84.201')) {
+        try {
+          const url = new URL(process.env.DATABASE_URL);
+          url.hostname = '127.0.0.1';
+          url.port = PROXY_PORT.toString();
+          url.searchParams.set('sslmode', 'disable');
+          process.env.DATABASE_URL = url.toString();
+          console.log('🔗 Using Cloud SQL Auth Proxy on port 6543');
+        } catch (e) {
+          console.log('⚠️  Could not parse DATABASE_URL, using as-is');
+        }
+      }
+      resolve();
+    });
+    
+    socket.on('timeout', () => {
+      socket.destroy();
+      console.log('⚠️  Cloud SQL Auth Proxy not detected, using direct connection');
+      resolve();
+    });
+    
+    socket.on('error', () => {
+      console.log('⚠️  Cloud SQL Auth Proxy not detected, using direct connection');
+      resolve();
+    });
+    
+    socket.connect(PROXY_PORT, '127.0.0.1');
+  });
+}
+
+// Initialize and run
+(async () => {
+  // Wait for proxy check before loading models
+  await checkProxyAndUpdateEnv();
+
+  const { sequelize } = require('../models');
+  const User = require('../models/User')(sequelize, require('sequelize').DataTypes);
+  const Wallet = require('../models/Wallet')(sequelize, require('sequelize').DataTypes);
+  const Kyc = require('../models/Kyc')(sequelize, require('sequelize').DataTypes);
+
+  async function resetMyKYC() {
   const userId = 1; // Your user ID
   const phoneNumber = '0825571055'; // Your phone number for verification
   
@@ -72,5 +119,6 @@ async function resetMyKYC() {
   }
 }
 
-resetMyKYC();
+  resetMyKYC();
+})();
 
