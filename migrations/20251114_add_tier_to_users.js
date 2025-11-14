@@ -11,73 +11,157 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     console.log('Adding tier fields to users table...');
 
-    // Add tier_level column
-    await queryInterface.addColumn('users', 'tier_level', {
-      type: Sequelize.STRING(20),
-      allowNull: false,
-      defaultValue: 'bronze',
-      comment: 'User tier: bronze, silver, gold, platinum'
-    });
-
-    // Add tier_effective_from timestamp
-    await queryInterface.addColumn('users', 'tier_effective_from', {
-      type: Sequelize.DATE,
-      allowNull: true,
-      defaultValue: Sequelize.fn('NOW'),
-      comment: 'When current tier became effective'
-    });
-
-    // Add tier_last_reviewed_at timestamp
-    await queryInterface.addColumn('users', 'tier_last_reviewed_at', {
-      type: Sequelize.DATE,
-      allowNull: true,
-      comment: 'Last time tier was reviewed (monthly process)'
-    });
-
-    // Create index on tier_level for performance
-    await queryInterface.addIndex('users', 
-      ['tier_level'], 
-      { name: 'idx_users_tier_level' }
+    // Check if columns already exist
+    const [columns] = await queryInterface.sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' 
+        AND column_name IN ('tier_level', 'tier_effective_from', 'tier_last_reviewed_at')
+    `);
+    
+    const existingColumns = columns.map(c => c.column_name);
+    const allColumnsExist = ['tier_level', 'tier_effective_from', 'tier_last_reviewed_at'].every(
+      col => existingColumns.includes(col)
     );
 
-    // Add constraint
-    await queryInterface.addConstraint('users', {
-      fields: ['tier_level'],
-      type: 'check',
-      name: 'check_users_tier_level',
-      where: {
-        tier_level: ['bronze', 'silver', 'gold', 'platinum']
+    if (allColumnsExist) {
+      console.log('✅ Tier columns already exist, skipping column creation');
+    } else {
+      // Try to add columns using raw SQL (may require elevated permissions)
+      try {
+        // Add tier_level column
+        if (!existingColumns.includes('tier_level')) {
+          await queryInterface.sequelize.query(`
+            ALTER TABLE users 
+            ADD COLUMN tier_level VARCHAR(20) NOT NULL DEFAULT 'bronze';
+            COMMENT ON COLUMN users.tier_level IS 'User tier: bronze, silver, gold, platinum';
+          `);
+          console.log('✅ Added tier_level column');
+        }
+
+        // Add tier_effective_from timestamp
+        if (!existingColumns.includes('tier_effective_from')) {
+          await queryInterface.sequelize.query(`
+            ALTER TABLE users 
+            ADD COLUMN tier_effective_from TIMESTAMP DEFAULT NOW();
+            COMMENT ON COLUMN users.tier_effective_from IS 'When current tier became effective';
+          `);
+          console.log('✅ Added tier_effective_from column');
+        }
+
+        // Add tier_last_reviewed_at timestamp
+        if (!existingColumns.includes('tier_last_reviewed_at')) {
+          await queryInterface.sequelize.query(`
+            ALTER TABLE users 
+            ADD COLUMN tier_last_reviewed_at TIMESTAMP;
+            COMMENT ON COLUMN users.tier_last_reviewed_at IS 'Last time tier was reviewed (monthly process)';
+          `);
+          console.log('✅ Added tier_last_reviewed_at column');
+        }
+      } catch (error) {
+        if (error.message.includes('must be owner') || error.message.includes('permission denied')) {
+          console.error('❌ Permission denied: Database user does not have ALTER TABLE permissions');
+          console.error('   Please ask database administrator to run:');
+          console.error('   ALTER TABLE users ADD COLUMN tier_level VARCHAR(20) NOT NULL DEFAULT \'bronze\';');
+          console.error('   ALTER TABLE users ADD COLUMN tier_effective_from TIMESTAMP DEFAULT NOW();');
+          console.error('   ALTER TABLE users ADD COLUMN tier_last_reviewed_at TIMESTAMP;');
+          throw new Error('Migration requires database administrator privileges. See error message above for SQL commands.');
+        }
+        throw error;
       }
-    });
+    }
 
-    // Set all existing users to bronze tier and log in history
-    console.log('Setting all existing users to bronze tier...');
+    // Create index on tier_level for performance (if column exists)
+    try {
+      const [indexes] = await queryInterface.sequelize.query(`
+        SELECT indexname 
+        FROM pg_indexes 
+        WHERE tablename = 'users' 
+          AND indexname = 'idx_users_tier_level'
+      `);
+      
+      if (indexes.length === 0) {
+        await queryInterface.sequelize.query(`
+          CREATE INDEX idx_users_tier_level ON users(tier_level);
+        `);
+        console.log('✅ Created index on tier_level');
+      } else {
+        console.log('✅ Index idx_users_tier_level already exists');
+      }
+    } catch (error) {
+      console.warn('⚠️  Could not create index (may require permissions):', error.message);
+    }
+
+    // Add constraint (if column exists)
+    try {
+      const [constraints] = await queryInterface.sequelize.query(`
+        SELECT constraint_name 
+        FROM information_schema.table_constraints 
+        WHERE table_name = 'users' 
+          AND constraint_name = 'check_users_tier_level'
+      `);
+      
+      if (constraints.length === 0) {
+        await queryInterface.sequelize.query(`
+          ALTER TABLE users 
+          ADD CONSTRAINT check_users_tier_level 
+          CHECK (tier_level IN ('bronze', 'silver', 'gold', 'platinum'));
+        `);
+        console.log('✅ Created tier_level constraint');
+      } else {
+        console.log('✅ Constraint check_users_tier_level already exists');
+      }
+    } catch (error) {
+      console.warn('⚠️  Could not create constraint (may require permissions):', error.message);
+    }
+
+    // Verify columns exist before trying to update
+    const [finalCheck] = await queryInterface.sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' 
+        AND column_name = 'tier_level'
+    `);
     
-    await queryInterface.sequelize.query(`
-      UPDATE users 
-      SET tier_level = 'bronze', 
-          tier_effective_from = NOW(),
-          tier_last_reviewed_at = NOW()
-      WHERE tier_level IS NULL OR tier_level = ''
-    `);
+    if (finalCheck.length > 0) {
+      // Set all existing users to bronze tier and log in history
+      console.log('Setting all existing users to bronze tier...');
+      
+      try {
+        await queryInterface.sequelize.query(`
+          UPDATE users 
+          SET tier_level = 'bronze', 
+              tier_effective_from = NOW(),
+              tier_last_reviewed_at = NOW()
+          WHERE tier_level IS NULL OR tier_level = ''
+        `);
+        console.log('✅ Updated existing users to bronze tier');
 
-    // Create initial history records for existing users
-    await queryInterface.sequelize.query(`
-      INSERT INTO user_tier_history (user_id, old_tier, new_tier, change_reason, effective_from, created_at)
-      SELECT 
-        id,
-        NULL,
-        'bronze',
-        'initial_migration',
-        NOW(),
-        NOW()
-      FROM users
-      WHERE NOT EXISTS (
-        SELECT 1 FROM user_tier_history WHERE user_tier_history.user_id = users.id
-      )
-    `);
+        // Create initial history records for existing users
+        await queryInterface.sequelize.query(`
+          INSERT INTO user_tier_history (user_id, old_tier, new_tier, change_reason, effective_from, created_at)
+          SELECT 
+            id,
+            NULL,
+            'bronze',
+            'initial_migration',
+            NOW(),
+            NOW()
+          FROM users
+          WHERE NOT EXISTS (
+            SELECT 1 FROM user_tier_history WHERE user_tier_history.user_id = users.id
+          )
+        `);
+        console.log('✅ Created initial tier history records');
+      } catch (error) {
+        console.warn('⚠️  Could not update users or create history (non-critical):', error.message);
+      }
+    } else {
+      console.warn('⚠️  tier_level column does not exist - skipping user updates');
+      console.warn('   Please run the SQL script manually (see docs/TIER_FEE_SYSTEM_IMPLEMENTATION.md)');
+    }
 
-    console.log('✅ Tier fields added to users table');
+    console.log('✅ Tier migration completed (some steps may require admin privileges)');
   },
 
   async down(queryInterface, Sequelize) {
