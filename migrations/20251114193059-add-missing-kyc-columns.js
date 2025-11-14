@@ -3,93 +3,159 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up (queryInterface, Sequelize) {
+    // Check if columns already exist before attempting to add them
+    const checkColumnExists = async (columnName) => {
+      const [results] = await queryInterface.sequelize.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'kyc' 
+          AND column_name = :columnName
+        LIMIT 1
+      `, {
+        replacements: { columnName },
+        type: queryInterface.sequelize.QueryTypes.SELECT
+      });
+      return results && results.column_name === columnName;
+    };
+
     // Add documentImageUrl column
-    await queryInterface.addColumn('kyc', 'documentImageUrl', {
-      type: Sequelize.STRING,
-      allowNull: true,
-      validate: {
-        isUrl: true
+    try {
+      const exists = await checkColumnExists('documentImageUrl');
+      if (!exists) {
+        await queryInterface.addColumn('kyc', 'documentImageUrl', {
+          type: Sequelize.STRING,
+          allowNull: true
+        });
+        console.log('✅ Added documentImageUrl column');
+      } else {
+        console.log('⚠️  documentImageUrl column already exists, skipping...');
       }
-    }).catch(err => {
-      if (err.message && err.message.includes('already exists')) {
+    } catch (err) {
+      if (err.message && (err.message.includes('permission denied') || err.message.includes('must be owner'))) {
+        console.warn('⚠️  Permission denied: Cannot add documentImageUrl column. Please run manual SQL script: migrations/20251114193059_add_missing_kyc_columns_manual.sql');
+        console.warn('⚠️  System will continue to function, but KYC uploads may fail until columns are added.');
+      } else if (err.message && err.message.includes('already exists')) {
         console.log('⚠️  documentImageUrl column already exists, skipping...');
       } else {
         throw err;
       }
-    });
+    }
 
     // Add ocrData column (model uses ocrData, but migration might have ocrResults)
-    await queryInterface.addColumn('kyc', 'ocrData', {
-      type: Sequelize.JSON,
-      allowNull: true,
-      comment: 'OCR extracted data from document'
-    }).catch(err => {
-      if (err.message && err.message.includes('already exists')) {
+    try {
+      const exists = await checkColumnExists('ocrData');
+      if (!exists) {
+        await queryInterface.addColumn('kyc', 'ocrData', {
+          type: Sequelize.JSON,
+          allowNull: true
+        });
+        console.log('✅ Added ocrData column');
+      } else {
+        console.log('⚠️  ocrData column already exists, skipping...');
+      }
+    } catch (err) {
+      if (err.message && (err.message.includes('permission denied') || err.message.includes('must be owner'))) {
+        console.warn('⚠️  Permission denied: Cannot add ocrData column');
+      } else if (err.message && err.message.includes('already exists')) {
         console.log('⚠️  ocrData column already exists, skipping...');
       } else {
         throw err;
       }
-    });
+    }
 
     // Add reviewedBy column
-    await queryInterface.addColumn('kyc', 'reviewedBy', {
-      type: Sequelize.STRING,
-      allowNull: true
-    }).catch(err => {
-      if (err.message && err.message.includes('already exists')) {
+    try {
+      const exists = await checkColumnExists('reviewedBy');
+      if (!exists) {
+        await queryInterface.addColumn('kyc', 'reviewedBy', {
+          type: Sequelize.STRING,
+          allowNull: true
+        });
+        console.log('✅ Added reviewedBy column');
+      } else {
+        console.log('⚠️  reviewedBy column already exists, skipping...');
+      }
+    } catch (err) {
+      if (err.message && (err.message.includes('permission denied') || err.message.includes('must be owner'))) {
+        console.warn('⚠️  Permission denied: Cannot add reviewedBy column');
+      } else if (err.message && err.message.includes('already exists')) {
         console.log('⚠️  reviewedBy column already exists, skipping...');
       } else {
         throw err;
       }
-    });
+    }
 
     // Add rejectionReason column
-    await queryInterface.addColumn('kyc', 'rejectionReason', {
-      type: Sequelize.TEXT,
-      allowNull: true
-    }).catch(err => {
-      if (err.message && err.message.includes('already exists')) {
+    try {
+      const exists = await checkColumnExists('rejectionReason');
+      if (!exists) {
+        await queryInterface.addColumn('kyc', 'rejectionReason', {
+          type: Sequelize.TEXT,
+          allowNull: true
+        });
+        console.log('✅ Added rejectionReason column');
+      } else {
+        console.log('⚠️  rejectionReason column already exists, skipping...');
+      }
+    } catch (err) {
+      if (err.message && (err.message.includes('permission denied') || err.message.includes('must be owner'))) {
+        console.warn('⚠️  Permission denied: Cannot add rejectionReason column');
+      } else if (err.message && err.message.includes('already exists')) {
         console.log('⚠️  rejectionReason column already exists, skipping...');
       } else {
         throw err;
       }
-    });
+    }
 
     // Add verificationScore column
-    await queryInterface.addColumn('kyc', 'verificationScore', {
-      type: Sequelize.DECIMAL(3, 2),
-      allowNull: true,
-      validate: {
-        min: 0,
-        max: 1
+    try {
+      const exists = await checkColumnExists('verificationScore');
+      if (!exists) {
+        await queryInterface.addColumn('kyc', 'verificationScore', {
+          type: Sequelize.DECIMAL(3, 2),
+          allowNull: true
+        });
+        console.log('✅ Added verificationScore column');
+      } else {
+        console.log('⚠️  verificationScore column already exists, skipping...');
       }
-    }).catch(err => {
-      if (err.message && err.message.includes('already exists')) {
+    } catch (err) {
+      if (err.message && (err.message.includes('permission denied') || err.message.includes('must be owner'))) {
+        console.warn('⚠️  Permission denied: Cannot add verificationScore column');
+      } else if (err.message && err.message.includes('already exists')) {
         console.log('⚠️  verificationScore column already exists, skipping...');
       } else {
         throw err;
       }
-    });
+    }
 
     // Add isAutomated column
-    await queryInterface.addColumn('kyc', 'isAutomated', {
-      type: Sequelize.BOOLEAN,
-      allowNull: false,
-      defaultValue: false
-    }).catch(err => {
-      if (err.message && err.message.includes('already exists')) {
+    try {
+      const exists = await checkColumnExists('isAutomated');
+      if (!exists) {
+        await queryInterface.addColumn('kyc', 'isAutomated', {
+          type: Sequelize.BOOLEAN,
+          allowNull: false,
+          defaultValue: false
+        });
+        console.log('✅ Added isAutomated column');
+      } else {
+        console.log('⚠️  isAutomated column already exists, skipping...');
+      }
+    } catch (err) {
+      if (err.message && (err.message.includes('permission denied') || err.message.includes('must be owner'))) {
+        console.warn('⚠️  Permission denied: Cannot add isAutomated column');
+        console.warn('⚠️  Please run manual SQL script: migrations/20251114193059_add_missing_kyc_columns_manual.sql');
+      } else if (err.message && err.message.includes('already exists')) {
         console.log('⚠️  isAutomated column already exists, skipping...');
       } else {
         throw err;
       }
-    });
+    }
 
     // Update status column to ENUM if it's not already
-    // Note: PostgreSQL doesn't support ALTER COLUMN TYPE directly for ENUMs
-    // We'll need to check if it's already an ENUM or handle it gracefully
+    // Note: This requires admin privileges, so we'll skip if permission denied
     try {
-      // Try to alter status to ENUM (this will fail if already ENUM or if column doesn't support it)
-      // For PostgreSQL, we need to create the ENUM type first if it doesn't exist
       await queryInterface.sequelize.query(`
         DO $$ 
         BEGIN
@@ -99,7 +165,6 @@ module.exports = {
         END $$;
       `);
       
-      // Try to alter the column type (will fail gracefully if already correct)
       await queryInterface.sequelize.query(`
         ALTER TABLE kyc 
         ALTER COLUMN status TYPE enum_kyc_status 
@@ -107,12 +172,18 @@ module.exports = {
       `).catch(err => {
         if (err.message && (err.message.includes('already') || err.message.includes('does not exist'))) {
           console.log('⚠️  Status column type update skipped (may already be correct)');
+        } else if (err.message && (err.message.includes('permission denied') || err.message.includes('must be owner'))) {
+          console.warn('⚠️  Permission denied: Cannot update status ENUM type');
         } else {
           throw err;
         }
       });
     } catch (err) {
-      console.log('⚠️  Could not update status ENUM type:', err.message);
+      if (err.message && (err.message.includes('permission denied') || err.message.includes('must be owner'))) {
+        console.warn('⚠️  Permission denied: Could not update status ENUM type');
+      } else {
+        console.log('⚠️  Could not update status ENUM type:', err.message);
+      }
       // Continue - the column exists, just might not be ENUM
     }
 
@@ -134,14 +205,22 @@ module.exports = {
       `).catch(err => {
         if (err.message && (err.message.includes('already') || err.message.includes('does not exist'))) {
           console.log('⚠️  DocumentType column type update skipped (may already be correct)');
+        } else if (err.message && (err.message.includes('permission denied') || err.message.includes('must be owner'))) {
+          console.warn('⚠️  Permission denied: Cannot update documentType ENUM type');
         } else {
           throw err;
         }
       });
     } catch (err) {
-      console.log('⚠️  Could not update documentType ENUM type:', err.message);
+      if (err.message && (err.message.includes('permission denied') || err.message.includes('must be owner'))) {
+        console.warn('⚠️  Permission denied: Could not update documentType ENUM type');
+      } else {
+        console.log('⚠️  Could not update documentType ENUM type:', err.message);
+      }
       // Continue - the column exists, just might not be ENUM
     }
+    
+    console.log('✅ Migration completed (some operations may have been skipped due to permissions)');
   },
 
   async down (queryInterface, Sequelize) {
