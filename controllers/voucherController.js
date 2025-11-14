@@ -1032,7 +1032,7 @@ exports.listAllVouchersForMe = async (req, res) => {
     const vouchers = await Voucher.findAll({
       where: {
         userId: userId,
-        status: { [Op.in]: ['active', 'pending_payment'] } // Only active vouchers (active + pending_payment)
+        // Removed status filter to show all vouchers in history
       },
       order: [['createdAt', 'DESC']]
     });
