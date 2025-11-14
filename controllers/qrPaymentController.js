@@ -8,31 +8,20 @@ const { validationResult } = require('express-validator');
 const QRCode = require('qrcode');
 const { v4: uuidv4 } = require('uuid');
 const ZapperService = require('../services/zapperService');
+const tierFeeService = require('../services/tierFeeService');
 const { Wallet, Transaction, User, SupplierFloat, TaxTransaction, sequelize } = require('../models');
 const ledgerService = require('../services/ledgerService');
 
 // Zapper fee configuration (banking-grade, Mojaloop-aligned)
 const VAT_RATE = Number(process.env.VAT_RATE || 0.15);
-const ZAPPER_DEFAULT_FEE_INCL_VAT = Number(process.env.ZAPPER_DEFAULT_FEE_INCL_VAT || 3.00); // R3.00 default
 const LEDGER_ACCOUNT_MM_COMMISSION_CLEARING = process.env.LEDGER_ACCOUNT_MM_COMMISSION_CLEARING || null;
 const LEDGER_ACCOUNT_COMMISSION_REVENUE = process.env.LEDGER_ACCOUNT_COMMISSION_REVENUE || null;
 const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL || null;
 const ZAPPER_FLOAT_ACCOUNT_NUMBER = process.env.ZAPPER_FLOAT_ACCOUNT_NUMBER || 'ZAPPER_FLOAT_001';
 
 /**
- * Get Zapper fee for a user/wallet (configurable per user, defaults to R3.00 incl VAT)
- * Future: Can be extended to fetch from UserSettings or Wallet metadata
- */
-function getZapperFeeInclVat(userId, walletId) {
-  // TODO: Implement per-user/wallet fee configuration
-  // For now, return default fee
-  return ZAPPER_DEFAULT_FEE_INCL_VAT;
-}
-
-/**
- * Calculate VAT and net fee from inclusive fee amount
- * @param {number} feeInclVat - Fee amount including VAT (e.g., R3.00)
- * @returns {object} { feeInclVat, vatAmount, netFeeAmount }
+ * DEPRECATED: Replaced by tierFeeService.calculateTierFees()
+ * Kept for backward compatibility during migration
  */
 function calculateZapperFeeBreakdown(feeInclVat) {
   const vatAmount = Number((feeInclVat * VAT_RATE / (1 + VAT_RATE)).toFixed(2));
@@ -677,17 +666,34 @@ class QRPaymentController {
       const finalAmount = paymentAmount || (decodedData.amount || 0);
       const finalReference = reference || decodedData.reference || `QR_${Date.now()}`;
 
-      // Calculate Zapper fee (incl VAT) - configurable per user/wallet
-      const feeInclVat = getZapperFeeInclVat(userId, wallet.walletId);
-      const feeBreakdown = calculateZapperFeeBreakdown(feeInclVat);
-      const totalDebitAmount = Number((finalAmount + feeInclVat).toFixed(2));
+      // Calculate tier-based fees using generic service
+      const finalAmountCents = Math.round(finalAmount * 100);
+      const fees = await tierFeeService.calculateTierFees(
+        userId,
+        'ZAPPER',
+        'qr_payment',
+        finalAmountCents
+      );
 
-      // Check sufficient balance (payment amount + fee)
+      // Convert back to Rands for wallet operations
+      const totalDebitAmount = fees.totalUserPaysCents / 100;
+      const feeInclVat = fees.totalFeeCents / 100;
+      const supplierCost = fees.supplierCostCents / 100;
+      const mmFee = fees.mmFeeCents / 100;
+
+      // Check sufficient balance (payment amount + total fee)
       if (parseFloat(wallet.balance) < totalDebitAmount) {
         return res.status(400).json({
           success: false,
           error: 'Insufficient balance',
-          message: `Insufficient balance. Required: R${totalDebitAmount.toFixed(2)} (Payment: R${finalAmount.toFixed(2)} + Fee: R${feeInclVat.toFixed(2)}). Available: R${parseFloat(wallet.balance).toFixed(2)}`
+          message: `Insufficient balance. Required: ${fees.display.totalUserPays} (Payment: ${fees.display.transactionAmount} + Fee: ${fees.display.totalFee}). Available: R${parseFloat(wallet.balance).toFixed(2)}`,
+          breakdown: {
+            paymentAmount: fees.display.transactionAmount,
+            zapperCost: fees.display.supplierCost,
+            mmFee: fees.display.mmFee,
+            totalFee: fees.display.totalFee,
+            tierLevel: fees.display.tierLevel
+          }
         });
       }
 
@@ -730,13 +736,16 @@ class QRPaymentController {
       // Process payment within a transaction
       const dbTransactionStart = Date.now();
       const result = await sequelize.transaction(async (t) => {
-        // Debit wallet (payment amount + fee)
+        // Debit wallet (payment amount + total fee)
         await wallet.debit(totalDebitAmount, 'qr_payment', { transaction: t });
 
-        // Credit Zapper float account with net payment amount (NOT including fee)
-        // The fee is MyMoolah revenue, not Zapper's
+        // Credit Zapper float account with:
+        // 1. Payment amount (goes to merchant)
+        // 2. Zapper's pass-through fee (supplier cost)
+        // MM's fee stays as revenue
+        const zapperTotalAmount = finalAmount + supplierCost;
         await zapperFloat.increment('currentBalance', { 
-          by: finalAmount, 
+          by: zapperTotalAmount, 
           transaction: t 
         });
 
@@ -759,11 +768,12 @@ class QRPaymentController {
             merchantName: merchantInfo.name,
             zapperDecoded: zapperDecoded,
             zapperData: decodedData.zapperData || null,
-            feeBreakdown: {
-              feeInclVat: feeBreakdown.feeInclVat,
-              vatAmount: feeBreakdown.vatAmount,
-              netFeeAmount: feeBreakdown.netFeeAmount,
-              vatRate: VAT_RATE
+            tierFeeBreakdown: {
+              tierLevel: fees.tierLevel,
+              supplierCost: fees.display.supplierCost,
+              mmFee: fees.display.mmFee,
+              totalFee: fees.display.totalFee,
+              mmNetRevenue: fees.display.netRevenue
             },
             zapperFloatAccount: zapperFloat.floatAccountNumber,
             totalDebitAmount: totalDebitAmount,
@@ -771,13 +781,13 @@ class QRPaymentController {
           }
         }, { transaction: t });
 
-        // Create separate fee transaction record (shows fee to user)
+        // Create separate fee transaction record (shows combined fee to user)
         const feeTransactionId = `QR_FEE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
         const feeTransaction = await Transaction.create({
           transactionId: feeTransactionId,
           userId: userId,
           walletId: wallet.walletId,
-          amount: feeInclVat, // Fee amount (what user paid as fee)
+          amount: feeInclVat, // Total fee (Zapper cost + MM fee)
           type: 'payment', // Same type as payment so it shows in history
           status: 'completed',
           description: `Zapper Transaction Fee`,
@@ -786,18 +796,24 @@ class QRPaymentController {
           reference: `${finalReference}_FEE`,
           metadata: {
             originalTransactionId: transactionId,
-            feeBreakdown: {
-              feeInclVat: feeBreakdown.feeInclVat,
-              vatAmount: feeBreakdown.vatAmount,
-              netFeeAmount: feeBreakdown.netFeeAmount,
-              vatRate: VAT_RATE
+            tierLevel: fees.tierLevel,
+            tierFeeBreakdown: {
+              supplierCost: fees.display.supplierCost,
+              supplierCostCents: fees.supplierCostCents,
+              mmFee: fees.display.mmFee,
+              mmFeeCents: fees.mmFeeCents,
+              totalFee: fees.display.totalFee,
+              totalFeeCents: fees.totalFeeCents,
+              mmVatAmount: fees.display.netRevenue, // VAT on MM's fee only
+              mmNetRevenue: fees.mmFeeNetRevenue
             },
             isZapperFee: true,
-            merchantName: merchantInfo.name
+            merchantName: merchantInfo.name,
+            feeConfig: fees.feeConfig
           }
         }, { transaction: t });
         
-        console.log(`✅ Created Zapper fee transaction: ${feeTransactionId} | Amount: R${feeInclVat.toFixed(2)} | Description: ${feeTransaction.description}`);
+        console.log(`✅ Created Zapper fee transaction: ${feeTransactionId} | Amount: ${fees.display.totalFee} | Tier: ${fees.display.tierLevel} | MM Revenue: ${fees.display.netRevenue}`);
 
         return {
           transaction: paymentTransaction,
@@ -805,17 +821,22 @@ class QRPaymentController {
           merchant: merchantInfo,
           amount: finalAmount,
           fee: feeInclVat,
+          mmFee: mmFee,
+          supplierCost: supplierCost,
+          tierLevel: fees.tierLevel,
           reference: finalReference,
-          zapperFloat
+          zapperFloat,
+          fees: fees
         };
       });
       dbTransactionTime = Date.now() - dbTransactionStart;
 
-      // Allocate fee to VAT control and MM revenue accounts (non-blocking, similar to VAS)
+      // Allocate MM's fee (only) to VAT control and revenue accounts (non-blocking)
+      // Zapper's cost is pass-through and goes to supplier float
       const idempotencyKey = `ZAPPER-${result.transaction.transactionId}`;
       setImmediate(async () => {
         await allocateZapperFeeAndVat({
-          feeInclVat: result.fee,
+          feeInclVat: result.mmFee, // Only MM's portion, not Zapper's cost
           walletTransactionId: result.transaction.transactionId,
           idempotencyKey,
           userId,
@@ -882,12 +903,19 @@ class QRPaymentController {
           transactionId: result.transaction.transactionId,
           merchant: result.merchant,
           amount: result.amount, // Payment amount (to merchant)
-          fee: result.fee, // Fee incl VAT (shown to user)
+          fee: result.fee, // Total fee (Zapper cost + MM fee)
           currency: decodedData.currency || 'ZAR',
           reference: result.reference,
           status: 'completed',
           walletBalance: parseFloat(wallet.balance),
           zapperTransactionId: null, // Will be updated in background
+          tierLevel: result.tierLevel,
+          feeBreakdown: {
+            supplierCost: result.fees.display.supplierCost,
+            mmFee: result.fees.display.mmFee,
+            totalFee: result.fees.display.totalFee,
+            tierLevel: result.fees.display.tierLevel
+          },
           timestamp: new Date().toISOString()
         }
       });

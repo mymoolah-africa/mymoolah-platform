@@ -235,5 +235,41 @@ module.exports = (sequelize, DataTypes) => {
     await this.save();
   };
 
+  // Tier-related methods
+  User.prototype.getTierLevel = function() {
+    return this.tier_level || 'bronze';
+  };
+
+  User.prototype.getTierDisplay = function() {
+    const tier = this.getTierLevel();
+    return tier.charAt(0).toUpperCase() + tier.slice(1);
+  };
+
+  User.prototype.isBronzeTier = function() {
+    return this.getTierLevel() === 'bronze';
+  };
+
+  User.prototype.isSilverTier = function() {
+    return this.getTierLevel() === 'silver';
+  };
+
+  User.prototype.isGoldTier = function() {
+    return this.getTierLevel() === 'gold';
+  };
+
+  User.prototype.isPlatinumTier = function() {
+    return this.getTierLevel() === 'platinum';
+  };
+
+  User.prototype.getTierBadge = function() {
+    const badges = {
+      bronze: '🥉',
+      silver: '🥈',
+      gold: '🥇',
+      platinum: '💎'
+    };
+    return badges[this.getTierLevel()] || '🥉';
+  };
+
   return User;
 };

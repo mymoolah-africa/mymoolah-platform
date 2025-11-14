@@ -498,6 +498,33 @@ const initializeBackgroundServices = async () => {
       console.error('❌ Failed to start voucher expiration handler:', error.message);
     }
     
+    // Start Monthly Tier Review (runs 1st of each month at 2 AM)
+    try {
+      const cron = require('node-cron');
+      const userTierService = require('./services/userTierService');
+      
+      // Schedule monthly tier review: 1st of every month at 2:00 AM SAST
+      cron.schedule('0 2 1 * *', async () => {
+        console.log('🔄 Running scheduled monthly tier review...');
+        try {
+          const results = await userTierService.processMonthlyTierReview();
+          if (results.success) {
+            console.log(`✅ Monthly tier review complete: ${results.promoted} promoted, ${results.demoted} demoted, ${results.unchanged} unchanged`);
+          } else {
+            console.error('❌ Monthly tier review failed:', results.error);
+          }
+        } catch (error) {
+          console.error('❌ Monthly tier review error:', error.message);
+        }
+      }, {
+        timezone: 'Africa/Johannesburg'
+      });
+      
+      console.log('✅ Monthly tier review scheduler started (1st of month at 2:00 AM SAST)');
+    } catch (error) {
+      console.error('❌ Failed to start monthly tier review:', error.message);
+    }
+    
     // Start Catalog Synchronization (daily only at 02:00; shadow 10-minute updates until prod)
     try {
       const catalogSyncService = new CatalogSynchronizationService();
