@@ -360,7 +360,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error('KYC status update failed:', error);
-      throw error;
+      // Don't throw - just log the error to prevent user from being cleared
+      // The status update is not critical for the upload flow
     }
   };
 
