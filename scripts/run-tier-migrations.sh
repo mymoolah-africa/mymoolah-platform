@@ -9,9 +9,15 @@ echo ""
 # Load .env file if it exists
 if [ -f .env ]; then
   echo "📄 Loading .env file..."
-  set -a
-  source .env
-  set +a
+  # Export variables from .env, ignoring comments, empty lines, and separator lines
+  while IFS= read -r line || [ -n "$line" ]; do
+    # Skip comments, empty lines, and lines that don't contain '='
+    if [[ "$line" =~ ^[[:space:]]*# ]] || [[ -z "$line" ]] || [[ ! "$line" =~ = ]]; then
+      continue
+    fi
+    # Export the variable
+    export "$line"
+  done < .env
   echo "✅ .env file loaded"
   echo ""
 else
