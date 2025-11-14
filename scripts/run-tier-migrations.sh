@@ -2,11 +2,22 @@
 
 # Run Tier Fee System Migrations
 # Execute this script in Codespaces where DATABASE_URL is configured in .env
-# Sequelize CLI will automatically load .env file via dotenv
 
 echo "🔄 Running Tier Fee System Migrations..."
-echo "Note: DATABASE_URL will be loaded from .env file automatically"
 echo ""
+
+# Load .env file if it exists
+if [ -f .env ]; then
+  echo "📄 Loading .env file..."
+  set -a
+  source .env
+  set +a
+  echo "✅ .env file loaded"
+  echo ""
+else
+  echo "⚠️  Warning: .env file not found"
+  echo ""
+fi
 
 # Run migrations in order
 echo "📦 Migration 1: Creating supplier_tier_fees table..."
