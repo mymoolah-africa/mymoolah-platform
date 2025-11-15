@@ -31,15 +31,17 @@
 ## Rule 2: Agent Handover & Session Continuity (MANDATORY)
 - **NEW SESSION REQUIREMENT**: When starting a new chat/session, you are a new agent. You MUST read previous agent work to maintain continuity.
 - **MANDATORY RULES CONFIRMATION (FIRST ACTION - BEFORE ANYTHING ELSE)**:
-  - **Read this rules file**: `docs/CURSOR_2.0_RULES_FINAL.md` (you are reading it now)
-  - **Explicit confirmation required**: Agent MUST provide explicit confirmation to user that:
-    1. ✅ I have read `docs/CURSOR_2.0_RULES_FINAL.md` and understand all rules
-    2. ✅ I will follow Rule 1 (Git Workflow) - check status before pull, commit locally, user pushes
-    3. ✅ I will follow Rule 2 (Session Continuity) - read handover docs and session logs
-    4. ✅ I will follow all other rules (Working Directory, Definition of Done, Security, Documentation, Testing, etc.)
-    5. ✅ I understand I am a new agent and must read previous agent work before starting
-  - **Confirmation format**: Agent must state clearly: "I confirm I have read and will follow all rules in CURSOR_2.0_RULES_FINAL.md"
-  - **User verification**: User can verify agent has read rules by checking for this confirmation message
+  - **MUST READ THE RULES FILE**: Agent MUST use `read_file` tool to actually read `docs/CURSOR_2.0_RULES_FINAL.md` (not just claim to have read it)
+  - **PROOF OF READING REQUIRED**: Agent MUST provide evidence that reading was completed by:
+    1. **Actually reading the file**: Use `read_file` tool on `docs/CURSOR_2.0_RULES_FINAL.md` and show it was read
+    2. **Summarize key rules**: Provide a brief summary of at least 3-5 key rules to prove understanding (e.g., "Rule 1: Git workflow requires checking status before pull, Rule 2: Session continuity requires reading handover docs, Rule 5: Banking-grade security with TLS 1.3, etc.")
+    3. **Confirm specific details**: Mention specific details from the rules (e.g., "I understand the workflow is: Local → Commit → Push → Pull in Codespaces")
+    4. **State confirmation**: Explicitly state: "✅ Rules reading completed - I have read `docs/CURSOR_2.0_RULES_FINAL.md` and will follow all rules"
+  - **User verification**: User can verify agent actually read rules by:
+    - Checking that `read_file` tool was used on the rules file
+    - Verifying the agent provides specific details/summaries from the rules
+    - Confirming the agent mentions specific rule numbers and details
+  - **NO WORK UNTIL CONFIRMED**: Agent must NOT proceed with any work until rules reading is confirmed with evidence
 - **At session start (AFTER RULES CONFIRMATION)**: 
   1. Read `docs/agent_handover.md` (contains previous session summary, current status, next priorities)
   2. Read `docs/agent_role_template.md` (operating charter and constraints)
@@ -104,7 +106,11 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 - Get explicit approval before destructive actions. User prefers to review and run changes themselves. Do not start/stop user servers (only indicate restart requirements).
 
 ## Quick Pre-Work Checklist (NEW SESSION - DO FIRST)
-- **STEP 0 - MANDATORY RULES CONFIRMATION**: Read `docs/CURSOR_2.0_RULES_FINAL.md` and provide explicit confirmation to user that I have read and will follow all rules
+- **STEP 0 - MANDATORY RULES CONFIRMATION**: 
+  - Use `read_file` tool to actually read `docs/CURSOR_2.0_RULES_FINAL.md`
+  - Provide proof of reading: Summarize 3-5 key rules, mention specific details, confirm understanding
+  - State: "✅ Rules reading completed - I have read `docs/CURSOR_2.0_RULES_FINAL.md` and will follow all rules"
+  - **NO WORK UNTIL THIS IS COMPLETE**
 - **I am a new agent**: Acknowledge this is a new chat/session and I need to read previous agent work
 - Read `docs/agent_handover.md` (previous session summary and current status)
 - **Read recent session logs** in `docs/session_logs/` (read 2-3 most recent files for chat history context)
