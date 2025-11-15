@@ -700,9 +700,13 @@ Return ONLY valid JSON in this exact format (no additional text):
         
         // Validate critical fields
         if (documentType === 'id_document') {
-          // Clean and validate ID number (remove spaces, dashes, etc.)
-          const cleanedIdNumber = parsedResults.idNumber ? parsedResults.idNumber.replace(/\D/g, '') : '';
-          const hasIdNumber = cleanedIdNumber.length === 13 && /^\d{13}$/.test(cleanedIdNumber);
+          // Clean ID/passport number (remove spaces, keep alphanumeric for passports)
+          const rawIdNumber = parsedResults.idNumber ? String(parsedResults.idNumber).trim().replace(/\s+/g, '') : '';
+          
+          // Check if it's a 13-digit SA ID or a 6-9 character passport number
+          const isSAId = /^\d{13}$/.test(rawIdNumber);
+          const isPassport = /^[A-Z0-9]{6,9}$/i.test(rawIdNumber);
+          const hasIdNumber = isSAId || isPassport;
           
           // Check for name (surname, forenames, or fullName)
           const hasName = (parsedResults.surname?.trim().length >= 2) || 
@@ -712,7 +716,9 @@ Return ONLY valid JSON in this exact format (no additional text):
           // Log what was extracted for debugging
           console.log('📋 OCR Extraction Results:', {
             idNumber: parsedResults.idNumber,
-            cleanedIdNumber: cleanedIdNumber,
+            rawIdNumber: rawIdNumber,
+            isSAId: isSAId,
+            isPassport: isPassport,
             hasIdNumber: hasIdNumber,
             surname: parsedResults.surname,
             forenames: parsedResults.forenames,
@@ -1004,11 +1010,27 @@ Return ONLY valid JSON in this exact format (no additional text):
             countryOfIssue: (lower['countryofbirth'] || lower['country of birth'] || lower['country of issue'] || lower['country'] || null)
           };
           
-          // Clean and normalize ID number (remove spaces, ensure 13 digits)
+          // Clean and normalize ID/passport number
           if (canonical.idNumber) {
-            canonical.idNumber = String(canonical.idNumber).replace(/\s+/g, '').replace(/\D/g, '').slice(0, 13);
-            if (canonical.idNumber.length !== 13) {
-              canonical.idNumber = null; // Invalid length
+            const cleaned = String(canonical.idNumber).trim().replace(/\s+/g, '');
+            // Check if it's a 13-digit SA ID or a 6-9 character passport number
+            const isSAId = /^\d{13}$/.test(cleaned);
+            const isPassport = /^[A-Z0-9]{6,9}$/i.test(cleaned);
+            
+            if (isSAId) {
+              // SA ID: keep only digits, ensure 13 digits
+              canonical.idNumber = cleaned.replace(/\D/g, '').slice(0, 13);
+            } else if (isPassport) {
+              // Passport: keep alphanumeric, uppercase
+              canonical.idNumber = cleaned.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 9);
+            } else {
+              // Invalid format - try to preserve if it looks reasonable
+              const alphanumeric = cleaned.replace(/[^A-Z0-9]/gi, '');
+              if (alphanumeric.length >= 6 && alphanumeric.length <= 13) {
+                canonical.idNumber = alphanumeric.toUpperCase();
+              } else {
+                canonical.idNumber = null; // Invalid format
+              }
             }
           }
           
