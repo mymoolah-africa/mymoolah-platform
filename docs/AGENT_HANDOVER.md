@@ -1,14 +1,126 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: November 12, 2025  
-**Version**: 2.4.9 - Zapper UAT Testing Complete  
-**Status**: ✅ **ZAPPER UAT TESTING COMPLETE** ✅ **READY FOR PRODUCTION CREDENTIALS** ✅ **92.3% SUCCESS RATE**
+---
+
+## ⚠️ **CRITICAL: NEW AGENTS MUST READ RULES FIRST** ⚠️
+
+**BEFORE DOING ANY WORK, YOU MUST:**
+
+1. **Read `docs/CURSOR_2.0_RULES_FINAL.md`** using `read_file` tool
+2. **Provide proof of reading** (summarize 3-5 key rules, mention specific details)
+3. **State explicitly**: "✅ Rules reading completed - I have read `docs/CURSOR_2.0_RULES_FINAL.md` and will follow all rules"
+4. **NO WORK UNTIL CONFIRMED** - You cannot proceed with any work until rules reading is confirmed with evidence
+
+**This is MANDATORY per Rule 2. Failure to do this will result in incorrect work.**
+
+---
+
+**Last Updated**: November 15, 2025  
+**Version**: 2.4.11 - GCP Staging Deployment Scripts  
+**Status**: ✅ **GCP DEPLOYMENT SCRIPTS READY** ✅ **MANDATORY RULES CONFIRMATION REQUIRED**
 
 ---
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-### **🏆 MAJOR ACHIEVEMENTS: ZAPPER UAT TESTING COMPLETE**
+### **🚀 MAJOR ACHIEVEMENTS: GCP STAGING DEPLOYMENT SCRIPTS COMPLETE**
+This session created comprehensive deployment scripts and documentation for migrating the entire MyMoolah Treasury Platform (MMTP) to Google Cloud Staging. All scripts follow banking-grade security standards, Mojaloop FSPIOP compliance, and cost-optimized architecture. Scripts are ready for execution - user needs to authenticate with gcloud and run them in sequence.
+
+### **📋 GCP STAGING DEPLOYMENT - SCRIPTS READY** ✅
+- **Database Setup Script**: `scripts/setup-staging-database.sh` - Creates database, user, stores password in Secret Manager
+- **Secrets Setup Script**: `scripts/setup-secrets-staging.sh` - Stores all Zapper and application secrets
+- **Service Account Script**: `scripts/create-cloud-run-service-account.sh` - Creates IAM service account with permissions
+- **Docker Build Script**: `scripts/build-and-push-docker.sh` - Builds and pushes Docker image to GCR
+- **Cloud Run Deployment**: `scripts/deploy-cloud-run-staging.sh` - Deploys service with cost-optimized configuration
+- **Migrations Script**: `scripts/run-migrations-staging.sh` - Runs database migrations via Cloud SQL Auth Proxy
+- **Testing Script**: `scripts/test-staging-service.sh` - Tests deployed service endpoints
+- **Documentation**: `docs/GCP_STAGING_DEPLOYMENT.md` - Complete deployment guide
+- **Dockerfile Updated**: Cloud Run compatible (non-root user, PORT env var, health checks)
+- **Server.js Updated**: Reads `process.env.PORT` for Cloud Run compatibility
+- **Status**: ✅ All scripts created and ready, ⏳ Awaiting user execution (requires gcloud auth)
+
+### **📋 CURSOR 2.0 RULES IMPLEMENTATION - COMPLETE** ✅
+- **Rules Documentation**: Created `docs/CURSOR_2.0_RULES_FINAL.md` with comprehensive 10-rule system
+- **Git Workflow Clarification**: Confirmed workflow: Local → Commit → Push (user) → Pull in Codespaces
+- **Safe Pull Procedure**: Added requirement to check git status before pulling
+- **Mandatory Rules Confirmation**: Implemented requirement for agents to read rules file and provide proof of understanding
+- **Session Logging System**: Created session log template and documentation
+- **Files Created**: 9 files including rules docs, session logs template, and scripts
+- **Status**: ✅ All rules documented, ✅ Git workflow clarified, ✅ Confirmation requirement implemented, ✅ All changes pushed to GitHub
+
+#### **Key Rules Implemented**
+- **Rule 1**: Git Workflow - Check status before pull, commit locally, user pushes
+- **Rule 2**: Session Continuity - Read handover docs, session logs, mandatory rules confirmation
+- **Rule 3**: Working Directory Constraints - Only work in `/mymoolah/`, Figma pages read-only
+- **Rule 4**: Definition of Done - 8 requirements for every task
+- **Rule 5**: Banking-Grade Security - TLS 1.3, JWT HS512, rate limiting
+- **Rule 6**: Documentation - Update all docs after each change
+- **Rule 7**: Testing Requirements - >90% coverage, custom tests
+- **Rule 8**: Error Handling - Comprehensive validation and safe messaging
+- **Rule 9**: Performance - <200ms API, database aggregation, caching
+- **Rule 10**: Communication - Address as André, patient explanations
+
+#### **Mandatory Rules Confirmation**
+- **Requirement**: Agents MUST use `read_file` tool to read `docs/CURSOR_2.0_RULES_FINAL.md`
+- **Proof Required**: Must summarize 3-5 key rules and mention specific details
+- **No Work Until Confirmed**: Agents cannot proceed until rules reading is confirmed with evidence
+- **User Verification**: User can verify by checking for `read_file` tool usage and evidence of understanding
+
+#### **Git Workflow Confirmed**
+- **Official Workflow**: Local Development → Commit Locally → Push to GitHub (user) → Pull in Codespaces
+- **Safe Pull Procedure**: Always check `git status` first, commit/stash uncommitted changes before pulling
+- **GitHub is Source of Truth**: All environments sync from GitHub after local push
+
+#### **Files Created/Updated**
+- `docs/CURSOR_2.0_RULES_FINAL.md` - Main rules file (MUST READ FIRST)
+- `docs/CURSOR_2.0_AGENT_RULES.md` - Initial rules version
+- `docs/CURSOR_2.0_RULES_CONCISE.md` - Concise rules version
+- `docs/SESSION_LOGGING_PROCESS.md` - Session logging documentation
+- `docs/session_logs/TEMPLATE.md` - Session log template
+- `docs/session_logs/README.md` - Session logs documentation
+- `docs/session_logs/EXAMPLE.md` - Example session log
+- `scripts/create-session-log.sh` - Session log creation script
+- `docs/session_logs/2025-11-15_1012_cursor-2.0-rules-implementation.md` - This session's log
+
+#### **Next Steps**
+- ⏳ **User Action**: Test new rules by restarting Cursor and verifying new agent reads rules and provides confirmation
+- ⏳ **Next Agent**: Must follow Rule 2 and provide mandatory rules confirmation with proof of reading
+- ⏳ **Verification**: User should verify that new agent uses `read_file` tool and provides evidence
+
+### **🚀 GCP STAGING DEPLOYMENT - SCRIPTS READY** ✅
+- **Deployment Scripts Created**: 7 comprehensive scripts for complete platform migration
+- **Architecture**: Banking-grade, Mojaloop-compliant, cost-optimized (scale to zero, start light)
+- **Configuration**: Cloud Run (1 vCPU, 1Gi memory, 0-10 instances), Cloud SQL, Secret Manager
+- **Security**: IAM service accounts, Secret Manager for all credentials, TLS 1.3, non-root Docker user
+- **Documentation**: Complete deployment guide with troubleshooting and scaling guidelines
+- **Status**: ✅ Scripts ready, ⏳ Awaiting user execution (requires gcloud authentication)
+
+#### **Deployment Scripts Created**
+1. `scripts/setup-staging-database.sh` - Database and user setup
+2. `scripts/setup-secrets-staging.sh` - Secret Manager configuration
+3. `scripts/create-cloud-run-service-account.sh` - IAM service account
+4. `scripts/build-and-push-docker.sh` - Docker image build and push
+5. `scripts/deploy-cloud-run-staging.sh` - Cloud Run deployment
+6. `scripts/run-migrations-staging.sh` - Database migrations
+7. `scripts/test-staging-service.sh` - Service testing
+
+#### **Files Modified**
+- `Dockerfile` - Cloud Run optimizations (non-root user, PORT env var, health checks)
+- `server.js` - Cloud Run PORT compatibility (`process.env.PORT || config.port || 8080`)
+
+#### **Files Created**
+- `docs/GCP_STAGING_DEPLOYMENT.md` - Complete deployment guide
+- `scripts/README_DEPLOYMENT.md` - Quick reference for all scripts
+- All 7 deployment scripts (executable, ready to run)
+
+#### **Next Steps for User**
+1. **Authenticate**: `gcloud auth login` and `gcloud config set project mymoolah-db`
+2. **Run Scripts**: Execute scripts in sequence (see `scripts/README_DEPLOYMENT.md`)
+3. **Test**: Verify service is working after deployment
+4. **Monitor**: Set up monitoring and alerts
+5. **Production**: Repeat process for production environment
+
+### **🏆 PREVIOUS SESSION: ZAPPER UAT TESTING COMPLETE**
 This session successfully completed comprehensive UAT testing of the Zapper QR payment integration. Created comprehensive test suite with 20 tests, achieved 92.3% success rate (12/13 critical tests passed), verified all core payment functionality, and confirmed readiness for production credentials request.
 
 ### **🔍 ZAPPER UAT TESTING - COMPLETE** ✅

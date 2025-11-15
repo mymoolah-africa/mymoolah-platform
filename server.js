@@ -31,7 +31,8 @@ const app = express();
 
 // Get configuration from security config
 const config = securityConfig.getConfig();
-const port = config.port || 3001; // Changed fallback port to 3001
+// Cloud Run sets PORT automatically, fallback to config.port or 8080 (Cloud Run default)
+const port = process.env.PORT || config.port || 8080;
 
 // Import core routes
 const authRoutes = require('./routes/auth.js');
