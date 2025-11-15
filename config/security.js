@@ -161,7 +161,8 @@ class SecurityConfig {
     const isDev = process.env.NODE_ENV !== 'production';
     const devLanFrontendRegex = /^http:\/\/192\.168\.[0-9]{1,3}\.[0-9]{1,3}:3000$/;
     // Allow Codespaces GitHub.dev domains in all environments (development and production)
-    const codespacesRegex = /^https:\/\/.*\.github\.dev$/;
+    // Matches both *.github.dev and *.app.github.dev (Codespaces preview URLs)
+    const codespacesRegex = /^https:\/\/.*\.(app\.)?github\.dev$/;
 
     this.corsConfig = {
       origin: (origin, callback) => {
