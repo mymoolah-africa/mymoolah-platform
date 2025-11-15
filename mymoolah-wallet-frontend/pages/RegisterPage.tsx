@@ -77,13 +77,13 @@ const validateIdNumber = (value: string): IdValidationResult => {
 const getIdPlaceholderText = (t: IdType) => {
   switch (t) {
     case 'south_african_id':
-      return '13 digits (SA ID)';
+      return '13 digits (e.g., 6411055084084)';
     case 'south_african_driving_license':
       return '12 chars (e.g., 60460002CSK4)';
     case 'passport':
-      return '6–9 alphanumeric';
+      return '6-9 alphanumeric (e.g., A05529179)';
     default:
-      return 'ID / Passport / Licence';
+      return '13-digit SA ID or 6-9 char passport';
   }
 };
 
@@ -533,8 +533,13 @@ export function RegisterPage() {
                       color: "#374151",
                     }}
                   >
-                    ID Number / Passport
+                    ID Number / Passport Number
                   </Label>
+                  <p className="text-xs text-gray-500 mt-1 mb-2" style={{
+                    fontFamily: "Montserrat, sans-serif",
+                  }}>
+                    Enter your 13-digit South African ID number or international passport number (6-9 alphanumeric characters)
+                  </p>
                   <div className="relative">
                     <Input
                       id="idNumber"

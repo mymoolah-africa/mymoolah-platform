@@ -79,8 +79,10 @@ router.post('/register', [
           throw new Error('Driving license format must be AA999999AA');
         }
       } else if (idType === 'passport') {
+        // Accept international passport numbers: 6-9 alphanumeric characters
+        // Supports all African countries and international passports
         if (!/^[A-Z0-9]{6,9}$/i.test(v)) {
-          throw new Error('Passport number must be 6–9 alphanumeric characters');
+          throw new Error('Passport number must be 6-9 alphanumeric characters (e.g., A05529179)');
         }
       }
       return true;
