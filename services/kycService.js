@@ -1172,23 +1172,40 @@ Return ONLY valid JSON in this exact format (no additional text):
         docIdRaw: ocrResults.idNumber || ocrResults.licenseNumber
       });
       
+      // TEMPORARY TESTING EXCEPTION: User ID 1 can test any document type
+      // This allows testing OCR with different document formats without ID number matching
+      const isTestingUser = userId === 1;
+      
       // CRITICAL CHECK 1: ID Number must match exactly
       // Applies to: SA ID, Passport, Driver's License, Temporary ID Certificate
-      if (registeredId && docIdForMatch) {
-        if (registeredId !== docIdForMatch) {
-          console.warn('⚠️  ID/Passport number mismatch:', {
-            registered: registeredId,
-            document: docIdForMatch
-          });
-          validation.issues.push(`ID/Passport/License number mismatch: Document shows "${ocrResults.idNumber || ocrResults.licenseNumber}" but registration shows "${user.idNumber}"`);
-          // ID mismatch is critical - fail immediately
+      // EXCEPTION: User ID 1 (testing) - skip ID number matching, only require document has ID/passport number
+      if (isTestingUser) {
+        console.log('🧪 TESTING MODE: User ID 1 - skipping ID number matching validation');
+        // For testing user, only check that document has an ID/passport number (format validation happens later)
+        if (!docIdForMatch) {
+          validation.issues.push('ID/Passport/License number not found on document');
           return validation;
         } else {
-          console.log('✅ ID/Passport number matches');
+          console.log('✅ Testing mode: Document has ID/Passport number (format will be validated)');
         }
-      } else if (!docIdForMatch) {
-        validation.issues.push('ID/Passport/License number not found on document');
-        return validation;
+      } else {
+        // Normal validation: ID number must match exactly
+        if (registeredId && docIdForMatch) {
+          if (registeredId !== docIdForMatch) {
+            console.warn('⚠️  ID/Passport number mismatch:', {
+              registered: registeredId,
+              document: docIdForMatch
+            });
+            validation.issues.push(`ID/Passport/License number mismatch: Document shows "${ocrResults.idNumber || ocrResults.licenseNumber}" but registration shows "${user.idNumber}"`);
+            // ID mismatch is critical - fail immediately
+            return validation;
+          } else {
+            console.log('✅ ID/Passport number matches');
+          }
+        } else if (!docIdForMatch) {
+          validation.issues.push('ID/Passport/License number not found on document');
+          return validation;
+        }
       }
 
       // CRITICAL CHECK 2: Surname must match exactly
