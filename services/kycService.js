@@ -1164,13 +1164,27 @@ Return ONLY valid JSON in this exact format (no additional text):
       const registeredId = normalizeIdDigits(user.idNumber || '');
       const docIdForMatch = normalizeIdDigits(ocrResults.idNumber || ocrResults.licenseNumber || '');
       
+      console.log('🔍 ID/Passport number comparison:', {
+        registeredId: registeredId,
+        docIdForMatch: docIdForMatch,
+        documentType: documentType,
+        registeredIdRaw: user.idNumber,
+        docIdRaw: ocrResults.idNumber || ocrResults.licenseNumber
+      });
+      
       // CRITICAL CHECK 1: ID Number must match exactly
       // Applies to: SA ID, Passport, Driver's License, Temporary ID Certificate
       if (registeredId && docIdForMatch) {
         if (registeredId !== docIdForMatch) {
+          console.warn('⚠️  ID/Passport number mismatch:', {
+            registered: registeredId,
+            document: docIdForMatch
+          });
           validation.issues.push(`ID/Passport/License number mismatch: Document shows "${ocrResults.idNumber || ocrResults.licenseNumber}" but registration shows "${user.idNumber}"`);
           // ID mismatch is critical - fail immediately
           return validation;
+        } else {
+          console.log('✅ ID/Passport number matches');
         }
       } else if (!docIdForMatch) {
         validation.issues.push('ID/Passport/License number not found on document');
@@ -1372,7 +1386,14 @@ Return ONLY valid JSON in this exact format (no additional text):
       }
       
       // Validate document against user information
+      console.log('🔍 Validating document against user registration...');
       const validation = await this.validateDocumentAgainstUser(ocrResults, userId);
+      console.log('📋 Validation results:', {
+        isValid: validation.isValid,
+        issues: validation.issues,
+        tolerantNameMatch: validation.tolerantNameMatch,
+        confidence: validation.confidence
+      });
       
       // Build response
       const response = {
