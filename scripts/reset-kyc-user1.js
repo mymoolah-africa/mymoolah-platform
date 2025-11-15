@@ -1,16 +1,24 @@
+require('dotenv').config();
 const { Sequelize } = require('sequelize');
 
-// Use Codespaces database URL directly (override any .env settings)
-const DATABASE_URL = 'postgres://mymoolah_app:B0t3s%40Mymoolah@34.35.84.201:5432/mymoolah?sslmode=require';
+// Use DATABASE_URL from environment (should use Cloud SQL Auth Proxy in Codespaces)
+// If not set, fall back to direct connection (for local testing)
+const DATABASE_URL = process.env.DATABASE_URL || 'postgres://mymoolah_app:B0t3s%40Mymoolah@34.35.84.201:5432/mymoolah?sslmode=require';
+
+// Parse URL to determine if we need SSL
+const url = new URL(DATABASE_URL);
+const isProxy = url.hostname === '127.0.0.1' || url.hostname === 'localhost';
 
 const sequelize = new Sequelize(DATABASE_URL, {
   dialect: 'postgres',
   logging: false,
   dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false
-    }
+    ...(isProxy ? {} : {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    })
   }
 });
 
