@@ -64,7 +64,7 @@ export function KYCDocumentsPage() {
     }
   });
 
-  // Camera capture state
+  // Camera capture state (kept for potential future use, but not currently used)
   const [showCamera, setShowCamera] = useState(false);
   const [activeDocumentType, setActiveDocumentType] = useState<DocumentType>('identity');
 
@@ -93,30 +93,12 @@ export function KYCDocumentsPage() {
     setError('');
   };
 
+  // Camera capture handler - not currently used (removed from UI)
+  // File input with accept="image/*" provides native camera option on mobile
   const handleCameraCapture = async (type: DocumentType) => {
+    // This function is kept for potential future use but not called from UI
     setActiveDocumentType(type);
-    
-    try {
-      // Check if camera is available
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: 'environment',  // Prefer back camera
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        } 
-      });
-      
-      // For now, we'll simulate camera capture
-      // In production, you'd implement full camera interface
-      setShowCamera(true);
-      
-      // Stop the stream immediately (just checking availability)
-      stream.getTracks().forEach(track => track.stop());
-      
-    } catch (error) {
-      setError('Camera not available. Please use file upload instead.');
-      console.error('Camera access failed:', error);
-    }
+    setShowCamera(true);
   };
 
   const handleFileUpload = (type: DocumentType) => {
@@ -333,7 +315,10 @@ export function KYCDocumentsPage() {
         {/* Documents Section */}
         <div className="flex-1" style={{ padding: 'var(--mobile-padding)', paddingBottom: '2rem' }}>
           {kycFeedback && (
-            <Card className="border-0 shadow-xl mb-4" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+            <Card className="bg-white border border-gray-200 mb-4" style={{ 
+              borderRadius: 'var(--mobile-border-radius)',
+              boxShadow: 'var(--mobile-shadow)'
+            }}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="h-5 w-5 text-red-600 mt-1" />
@@ -397,7 +382,10 @@ export function KYCDocumentsPage() {
 
           <div className="space-y-4">
             {/* Identity Document Upload */}
-            <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+            <Card className="bg-white border border-gray-200" style={{ 
+              borderRadius: 'var(--mobile-border-radius)',
+              boxShadow: 'var(--mobile-shadow)'
+            }}>
               <CardHeader className="pb-4">
                 <CardTitle className="flex items-center gap-3" style={{ 
                   fontFamily: 'Montserrat, sans-serif', 
@@ -482,38 +470,24 @@ export function KYCDocumentsPage() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {/* Upload Options */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <Button
-                        onClick={() => handleCameraCapture('identity')}
-                        variant="outline"
-                        className="h-20 flex-col border-[#86BE41] text-[#86BE41] hover:bg-[#86BE41] hover:text-white"
-                        style={{ 
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: 'var(--mobile-font-small)',
-                          fontWeight: 'var(--font-weight-medium)',
-                          borderRadius: 'var(--mobile-border-radius)'
-                        }}
-                      >
-                        <Camera className="w-6 h-6 mb-1" />
-                        Take Photo
-                      </Button>
-                      
-                      <Button
-                        onClick={() => handleFileUpload('identity')}
-                        variant="outline"
-                        className="h-20 flex-col border-[#86BE41] text-[#86BE41] hover:bg-[#86BE41] hover:text-white"
-                        style={{ 
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: 'var(--mobile-font-small)',
-                          fontWeight: 'var(--font-weight-medium)',
-                          borderRadius: 'var(--mobile-border-radius)'
-                        }}
-                      >
-                        <Upload className="w-6 h-6 mb-1" />
-                        Browse Files
-                      </Button>
-                    </div>
+                    {/* Upload Button */}
+                    <Button
+                      onClick={() => handleFileUpload('identity')}
+                      variant="outline"
+                      className="w-full border-[#86BE41] text-[#86BE41] hover:bg-[#86BE41] hover:text-white"
+                      style={{ 
+                        height: 'var(--mobile-touch-target)',
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        borderRadius: 'var(--mobile-border-radius)',
+                        borderWidth: '1px',
+                        borderStyle: 'solid'
+                      }}
+                    >
+                      <Upload className="w-5 h-5 mr-2" />
+                      Add SAID or Passport
+                    </Button>
                     
                     <p className="text-xs text-gray-500 text-center" style={{ 
                       fontFamily: 'Montserrat, sans-serif', 
@@ -540,7 +514,10 @@ export function KYCDocumentsPage() {
 
             {/* Upload Progress */}
             {isLoading && uploadProgress > 0 && (
-              <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+              <Card className="bg-white border border-gray-200" style={{ 
+                borderRadius: 'var(--mobile-border-radius)',
+                boxShadow: 'var(--mobile-shadow)'
+              }}>
                 <CardContent style={{ paddingTop: '1.5rem' }}>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
@@ -588,7 +565,10 @@ export function KYCDocumentsPage() {
             </Button>
 
             {/* Help Section */}
-            <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
+            <Card className="bg-white border border-gray-200" style={{ 
+              borderRadius: 'var(--mobile-border-radius)',
+              boxShadow: 'var(--mobile-shadow)'
+            }}>
               <CardContent style={{ paddingTop: '1.5rem', paddingBottom: '1.5rem' }}>
                 <div className="flex items-start gap-3">
                   <HelpCircle className="w-5 h-5 text-[#2D8CCA] mt-0.5 flex-shrink-0" />
