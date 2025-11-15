@@ -791,19 +791,20 @@ Return ONLY valid JSON in this exact format (no additional text):
                            `Review Reason: OCR_FAILED\n` +
                            `OCR Results: ${ocrResults ? JSON.stringify(ocrResults, null, 2) : 'None'}`;
       
-      // Check if documentImageUrl column exists
+      // Check which columns exist in the kyc table
       let hasDocumentImageUrlColumn = false;
+      let hasOcrDataColumn = false;
       try {
         const [results] = await sequelize.query(`
           SELECT column_name 
           FROM information_schema.columns 
           WHERE table_name = 'kyc' 
-            AND column_name = 'documentImageUrl'
-          LIMIT 1
+            AND column_name IN ('documentImageUrl', 'ocrData')
         `);
-        hasDocumentImageUrlColumn = results && results.length > 0;
+        hasDocumentImageUrlColumn = results.some(r => r.column_name === 'documentImageUrl');
+        hasOcrDataColumn = results.some(r => r.column_name === 'ocrData');
       } catch (checkError) {
-        console.warn('⚠️  Could not check for documentImageUrl column:', checkError.message);
+        console.warn('⚠️  Could not check for kyc table columns:', checkError.message);
       }
       
       // Try to add column if it doesn't exist (may fail due to permissions)
@@ -837,34 +838,44 @@ Return ONLY valid JSON in this exact format (no additional text):
         });
         
         if (existing) {
-          // Update existing record (without documentImageUrl column)
+          // Update existing record (only include columns that exist)
+          const updateFields = ['"status" = \'under_review\'', '"reviewerNotes" = :reviewerNotes', '"updatedAt" = NOW()'];
+          if (hasOcrDataColumn) {
+            updateFields.push('"ocrData" = :ocrData::jsonb');
+          }
+          
           await sequelize.query(`
             UPDATE "kyc" 
-            SET "ocrData" = :ocrData::jsonb,
-                "status" = 'under_review',
-                "reviewerNotes" = :reviewerNotes,
-                "updatedAt" = NOW()
+            SET ${updateFields.join(', ')}
             WHERE "id" = :id
           `, {
             replacements: {
               id: existing.id,
-              ocrData: JSON.stringify(ocrResults || {}),
+              ...(hasOcrDataColumn ? { ocrData: JSON.stringify(ocrResults || {}) } : {}),
               reviewerNotes: reviewerNotes
             }
           });
         } else {
-          // Insert new record (without documentImageUrl column)
+          // Insert new record (only include columns that exist)
+          const insertColumns = ['"userId"', '"documentType"', '"documentNumber"', '"status"', '"reviewerNotes"', '"submittedAt"', '"createdAt"', '"updatedAt"'];
+          const insertValues = [':userId', ':documentType', ':documentNumber', '\'under_review\'', ':reviewerNotes', 'NOW()', 'NOW()', 'NOW()'];
+          
+          if (hasOcrDataColumn) {
+            insertColumns.splice(3, 0, '"ocrData"');
+            insertValues.splice(3, 0, ':ocrData::jsonb');
+          }
+          
           await sequelize.query(`
             INSERT INTO "kyc" 
-            ("userId", "documentType", "documentNumber", "ocrData", "status", "reviewerNotes", "submittedAt", "createdAt", "updatedAt")
+            (${insertColumns.join(', ')})
             VALUES 
-            (:userId, :documentType, :documentNumber, :ocrData::jsonb, 'under_review', :reviewerNotes, NOW(), NOW(), NOW())
+            (${insertValues.join(', ')})
           `, {
             replacements: {
               userId,
               documentType: dbDocumentType,
               documentNumber: ocrResults?.idNumber || 'PENDING',
-              ocrData: JSON.stringify(ocrResults || {}),
+              ...(hasOcrDataColumn ? { ocrData: JSON.stringify(ocrResults || {}) } : {}),
               reviewerNotes: reviewerNotes
             }
           });
