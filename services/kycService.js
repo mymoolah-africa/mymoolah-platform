@@ -1243,11 +1243,21 @@ Return ONLY valid JSON in this exact format (no additional text):
       }
 
       // Check document format based on type
+      // Use raw values for format validation (don't normalize passport numbers)
+      const rawIdForFormat = idNumber ? String(idNumber).trim().replace(/\s+/g, '') : '';
+      const rawLicenseForFormat = licenseNumber ? String(licenseNumber).trim().replace(/\s+/g, '') : '';
       const rawId = normalizeIdDigits(idNumber);
       const rawLicense = normalizeIdDigits(licenseNumber);
       
+      console.log('🔍 Document format validation:', {
+        documentType: documentType,
+        rawIdForFormat: rawIdForFormat,
+        rawId: rawId,
+        rawLicenseForFormat: rawLicenseForFormat
+      });
+      
       if (documentType === 'sa_id') {
-        if (!/^\d{13}$/.test(rawId) || !isValidSouthAfricanId(rawId)) {
+        if (!/^\d{13}$/.test(rawIdForFormat) || !isValidSouthAfricanId(rawId)) {
           validation.issues.push('Invalid South African ID number (format/checksum)');
         }
       } else if (documentType === 'sa_temporary_id') {
@@ -1261,7 +1271,7 @@ Return ONLY valid JSON in this exact format (no additional text):
           validation.issues.push('Temporary ID certificate has expired. Please use a valid, unexpired temporary ID.');
         }
       } else if (documentType === 'sa_driving_license') {
-        if (!isValidSouthAfricanDrivingLicense(rawLicense) && !isValidSouthAfricanDrivingLicense(rawId)) {
+        if (!isValidSouthAfricanDrivingLicense(rawLicenseForFormat) && !isValidSouthAfricanDrivingLicense(rawIdForFormat)) {
           validation.issues.push('Invalid South African driving license number (format: 2 letters + 6 digits + 2 letters)');
         }
         
@@ -1271,8 +1281,11 @@ Return ONLY valid JSON in this exact format (no additional text):
           validation.issues.push('Driving license has expired. Please use a valid, unexpired license.');
         }
       } else if (documentType === 'passport') {
-        if (!/^[A-Z0-9]{6,9}$/i.test(rawId)) {
+        // Use raw value for passport validation (preserve alphanumeric)
+        if (!/^[A-Z0-9]{6,9}$/i.test(rawIdForFormat)) {
           validation.issues.push('Invalid passport number format (must be 6-9 alphanumeric characters)');
+        } else {
+          console.log('✅ Passport number format is valid');
         }
       } else {
         validation.issues.push('Unable to determine document type (ID, Temporary ID, Passport, or Driving License)');
@@ -1337,30 +1350,34 @@ Return ONLY valid JSON in this exact format (no additional text):
     
     // Check country of issue
     if (ocrResults.countryOfIssue && ocrResults.countryOfIssue.toLowerCase().includes('south africa')) {
-      return 'sa_id';
+      // Don't assume SA ID - could be passport too
     }
     
-    // Check ID number format to determine type
-    const idNumber = ocrResults.idNumber ? ocrResults.idNumber.replace(/\s/g, '') : '';
-    const licenseNumber = ocrResults.licenseNumber ? ocrResults.licenseNumber.replace(/\s/g, '') : '';
+    // Check ID number format to determine type (use RAW value before normalization)
+    const idNumber = ocrResults.idNumber ? String(ocrResults.idNumber).trim().replace(/\s+/g, '') : '';
+    const licenseNumber = ocrResults.licenseNumber ? String(ocrResults.licenseNumber).trim().replace(/\s+/g, '') : '';
     
     // South African driving license format: 2 letters + 6 digits + 2 letters
-    if (isValidSouthAfricanDrivingLicense(licenseNumber) || 
-        /^[A-Z]{2}\d{6}[A-Z]{2}$/i.test(idNumber)) {
+    if (licenseNumber && (isValidSouthAfricanDrivingLicense(licenseNumber) || 
+        /^[A-Z]{2}\d{6}[A-Z]{2}$/i.test(licenseNumber))) {
+      return 'sa_driving_license';
+    }
+    if (idNumber && /^[A-Z]{2}\d{6}[A-Z]{2}$/i.test(idNumber)) {
       return 'sa_driving_license';
     }
     
-    // South African ID numbers are exactly 13 digits
-    if (/^\d{13}$/.test(idNumber)) {
-      return 'sa_id';
-    }
-    
-    // Passport numbers are typically 6-9 alphanumeric characters
-    if (/^[A-Z0-9]{6,9}$/i.test(idNumber)) {
+    // Passport numbers are 6-9 alphanumeric characters (check FIRST before SA ID)
+    // This is important because passport numbers can start with letters
+    if (idNumber && /^[A-Z0-9]{6,9}$/i.test(idNumber) && !/^\d{13}$/.test(idNumber)) {
       return 'passport';
     }
     
-    // Default to passport if we can't determine (more permissive)
+    // South African ID numbers are exactly 13 digits (all numeric)
+    if (idNumber && /^\d{13}$/.test(idNumber)) {
+      return 'sa_id';
+    }
+    
+    // Default to passport if we can't determine (more permissive for international documents)
     return 'passport';
   }
 
