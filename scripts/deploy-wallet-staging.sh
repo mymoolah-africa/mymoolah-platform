@@ -59,7 +59,7 @@ deploy_service() {
     --platform managed \
     --region "${REGION}" \
     --memory 256Mi \
-    --cpu 0.5 \
+    --cpu 1 \
     --min-instances 0 \
     --max-instances 10 \
     --timeout 60 \
@@ -108,7 +108,7 @@ main() {
   echo "URL: ${service_url}"
   echo ""
   echo "Configuration:"
-  echo "  - CPU: 0.5 vCPU"
+  echo "  - CPU: 1 vCPU"
   echo "  - Memory: 256Mi"
   echo "  - Min Instances: 0 (scale to zero)"
   echo "  - Max Instances: 10"

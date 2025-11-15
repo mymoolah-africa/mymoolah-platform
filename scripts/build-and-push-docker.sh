@@ -61,31 +61,23 @@ configure_docker() {
   success "Docker configured for GCR"
 }
 
-# Build Docker image
-build_image() {
-  log "Building Docker image: ${FULL_IMAGE_NAME}"
+# Build and push Docker image (using buildx for cross-platform support)
+build_and_push_image() {
+  log "Building and pushing Docker image: ${FULL_IMAGE_NAME}"
+  log "Platform: linux/amd64 (required for Cloud Run)"
   
-  docker build \
+  # Use buildx to build for linux/amd64 and push directly
+  docker buildx build \
+    --platform linux/amd64 \
     --tag "${FULL_IMAGE_NAME}" \
     --file Dockerfile \
+    --push \
     . || {
-    error "Failed to build Docker image"
+    error "Failed to build and push Docker image"
     return 1
   }
   
-  success "Docker image built successfully"
-}
-
-# Push Docker image
-push_image() {
-  log "Pushing Docker image to GCR..."
-  
-  docker push "${FULL_IMAGE_NAME}" || {
-    error "Failed to push Docker image"
-    return 1
-  }
-  
-  success "Docker image pushed successfully: ${FULL_IMAGE_NAME}"
+  success "Docker image built and pushed successfully: ${FULL_IMAGE_NAME}"
 }
 
 # Main execution
@@ -101,11 +93,8 @@ main() {
   # Configure Docker
   configure_docker
   
-  # Build image
-  build_image
-  
-  # Push image
-  push_image
+  # Build and push image (single command for efficiency)
+  build_and_push_image
   
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

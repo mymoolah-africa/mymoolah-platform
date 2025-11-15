@@ -74,13 +74,56 @@ construct_database_url() {
   echo "postgres://mymoolah_app:\${DB_PASSWORD}@/mymoolah_staging?host=/cloudsql/${CLOUD_SQL_INSTANCE}&sslmode=require"
 }
 
+# Construct DATABASE_URL from password secret
+construct_database_url_from_secret() {
+  log "Constructing DATABASE_URL from Secret Manager..."
+  
+  # Get the password from Secret Manager
+  local db_password=$(gcloud secrets versions access latest \
+    --secret="db-mmtp-pg-staging-password" \
+    --project="${PROJECT_ID}" 2>/dev/null)
+  
+  if [ -z "${db_password}" ]; then
+    error "Failed to retrieve database password from Secret Manager"
+    return 1
+  fi
+  
+  # URL encode the password (handle special characters like @, :, /, etc.)
+  # Use Python for reliable URL encoding
+  local encoded_password=$(python3 <<EOF
+import urllib.parse
+import sys
+password = sys.stdin.read().strip()
+print(urllib.parse.quote(password, safe=''))
+EOF
+<<< "${db_password}")
+  
+  # Construct DATABASE_URL for Cloud Run (Unix socket connection)
+  # Format: postgres://user:password@/database?host=/cloudsql/connection-name&sslmode=require
+  # Note: The @ after password is the URL separator, not part of the password
+  local database_url="postgres://mymoolah_app:${encoded_password}@/mymoolah_staging?host=/cloudsql/${CLOUD_SQL_INSTANCE}&sslmode=require"
+  
+  # Verify the URL doesn't have double-encoded @
+  if [[ "${database_url}" == *"%40"* ]] && [[ "${db_password}" != *"@"* ]]; then
+    warning "WARNING: URL contains %40 but password doesn't contain @ - possible encoding issue"
+    warning "Password length: ${#db_password}, Encoded length: ${#encoded_password}"
+  fi
+  
+  echo "${database_url}"
+}
+
 # Deploy Cloud Run service
 deploy_service() {
   log "Deploying Cloud Run service: ${SERVICE_NAME}"
   
-  # Note: DATABASE_URL will be constructed at runtime
-  # We'll need to create a startup script or use Cloud Build to inject the password
-  # For now, we'll set it as an environment variable that reads from Secret Manager
+  # Construct DATABASE_URL before deployment
+  local database_url=$(construct_database_url_from_secret)
+  if [ -z "${database_url}" ]; then
+    error "Failed to construct DATABASE_URL"
+    return 1
+  fi
+  
+  log "Deploying with DATABASE_URL configured..."
   
   gcloud run deploy "${SERVICE_NAME}" \
     --image "${IMAGE_NAME}" \
@@ -88,7 +131,7 @@ deploy_service() {
     --region "${REGION}" \
     --service-account "${SERVICE_ACCOUNT}" \
     --add-cloudsql-instances "${CLOUD_SQL_INSTANCE}" \
-    --set-env-vars "NODE_ENV=staging,PORT=8080" \
+    --set-env-vars "NODE_ENV=production,CLOUD_SQL_INSTANCE=${CLOUD_SQL_INSTANCE}" \
     --set-secrets "ZAPPER_API_URL=zapper-prod-api-url:latest,ZAPPER_ORG_ID=zapper-prod-org-id:latest,ZAPPER_API_TOKEN=zapper-prod-api-token:latest,ZAPPER_X_API_KEY=zapper-prod-x-api-key:latest,JWT_SECRET=jwt-secret-staging:latest,SESSION_SECRET=session-secret-staging:latest,DB_PASSWORD=db-mmtp-pg-staging-password:latest" \
     --memory 1Gi \
     --cpu 1 \
@@ -160,11 +203,8 @@ main() {
   # Check prerequisites
   check_prerequisites
   
-  # Deploy service
+  # Deploy service (DATABASE_URL is set during deployment)
   deploy_service
-  
-  # Set DATABASE_URL
-  set_database_url
   
   # Get service URL
   local service_url=$(get_service_url)
