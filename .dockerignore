@@ -1,0 +1,76 @@
+# Dependencies (installed in Dockerfile)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Backups (should not be in Docker image)
+backups/
+*.tar.gz
+*.zip
+*.gz
+
+# Git (not needed in image)
+.git/
+.gitignore
+.gitattributes
+
+# Development files
+.env.local
+.env.development
+.env.test
+*.log
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage/
+.nyc_output/
+*.test.js
+*.spec.js
+
+# Documentation (not needed in runtime)
+docs/
+*.md
+!README.md
+
+# Scripts (only needed for migrations, but not in image)
+scripts/
+migrations/
+
+# Frontend (separate deployment)
+mymoolah-wallet-frontend/
+
+# Portal (separate application - ports 3002/3003)
+portal/
+
+# Cloud SQL Proxy (not needed in Cloud Run - uses Cloud SQL connectors)
+bin/cloud-sql-proxy
+cloud-sql-proxy
+*.proxy
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+dist/
+build/
+*.map
+
+# Docker files themselves
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
