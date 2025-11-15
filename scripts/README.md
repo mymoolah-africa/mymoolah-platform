@@ -4,13 +4,106 @@ This directory contains utility scripts for managing and maintaining the MyMoola
 
 ## Available Scripts
 
+### KYC Reset Scripts
+
+#### `reset-kyc-via-api.sh` ⭐ **RECOMMENDED**
+
+**Purpose**: Reset KYC status for a user via API endpoint (uses existing backend database connection).
+
+**Usage**:
+```bash
+# Reset KYC for user ID 1 (default)
+./scripts/reset-kyc-via-api.sh
+
+# Or use curl directly
+curl -X POST http://localhost:3001/api/v1/kyc/reset/1 \
+  -H "x-admin-key: $ADMIN_API_KEY" \
+  -H "Content-Type: application/json"
+```
+
+**What it does**:
+- Deletes all KYC records for the specified user
+- Resets wallet KYC verification to `false`
+- Resets user KYC status to `not_started`
+
+**Requirements**:
+- Backend server must be running
+- `ADMIN_API_KEY` environment variable set (or any value if not set)
+
+**Example Output**:
+```json
+{"success":true,"message":"KYC reset completed","data":{"userId":1,"deleted":0}}
+```
+
+**Status**: ✅ **ACTIVE** - Recommended method for resetting KYC in Codespaces
+
+---
+
+#### `reset-kyc-user1.js`
+
+**Purpose**: Reset KYC status for user ID 1 using direct database connection.
+
+**Usage**:
+```bash
+node scripts/reset-kyc-user1.js
+```
+
+**What it does**:
+- Connects to database using existing models setup
+- Deletes all KYC records for user ID 1
+- Resets wallet KYC verification
+- Resets user KYC status to `not_started`
+
+**Requirements**:
+- Database connection configured in `.env`
+- Cloud SQL Auth Proxy running (if in Codespaces)
+
+**Status**: ⚠️ **MAY HANG** - Use `reset-kyc-via-api.sh` instead if connection issues occur
+
+---
+
+#### `reset-my-kyc.js`
+
+**Purpose**: Reset KYC status for user ID 1 with phone number verification (local development).
+
+**Usage**:
+```bash
+node scripts/reset-my-kyc.js
+```
+
+**What it does**:
+- Verifies user exists and phone number matches
+- Deletes all KYC records
+- Resets wallet and user KYC status
+
+**Requirements**:
+- Local database connection
+- Phone number verification (safety check)
+
+**Status**: ⚠️ **LOCAL ONLY** - Requires local database connection
+
+---
+
+#### `reset-kyc-codespaces.js`
+
+**Purpose**: Reset KYC status using Codespaces-compatible database connection.
+
+**Usage**:
+```bash
+node scripts/reset-kyc-codespaces.js
+```
+
+**Status**: ⚠️ **ALTERNATIVE** - Use `reset-kyc-via-api.sh` instead
+
+---
+
 ### `cleanup-kyc.js` (DEPRECATED - SQLite only)
 
 **Status**: ❌ **REMOVED** - This script was SQLite-specific and has been removed as we now use PostgreSQL exclusively.
 
 **Previous Purpose**: Cleaned up KYC data for users in the SQLite database.
 
-**Replacement**: Use direct database queries or API endpoints for PostgreSQL operations.
+**Replacement**: Use `reset-kyc-via-api.sh` for PostgreSQL operations.
 
 ## Running Scripts
 
