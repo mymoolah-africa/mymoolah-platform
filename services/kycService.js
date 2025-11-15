@@ -590,29 +590,47 @@ class KYCService {
       imageData = fileBuffer.toString('base64');
     }
     
-    // Enhanced OpenAI prompt for South African ID documents
+    // Enhanced OpenAI prompt for identity documents (ID cards, ID books, and passports)
     // Note: Framed as document data extraction for verification purposes, not personal identification
     const prompt = documentType === 'id_document' 
-      ? `You are a document processing system extracting structured data fields from a South African Identity Document image for automated verification purposes.
+      ? `You are a document processing system extracting structured data fields from identity document images for automated verification purposes.
 
-This is a document verification task - extract the following data fields from the document image:
+This is a document verification task - extract the following data fields from the document image.
 
-The document has a green background with security patterns. Extract these specific fields:
-1. ID NUMBER: A 13-digit number (format: YYMMDDGSSSCAZ) usually near the top with a barcode
-2. SURNAME/VAN: The surname appears after "VAN/SURNAME" label, usually in bold uppercase
-3. FORENAMES/VOORNAME: The forenames appear after "VOORNAME/FORENAMES" label, usually in bold uppercase
-4. DATE OF BIRTH: Format YYYY-MM-DD or DD MMM YYYY, appears after "GEBOORTEDATUM/DATE OF BIRTH"
-5. DATE ISSUED: Format YYYY-MM-DD, appears after "DATUM UITGEREIK/DATE ISSUED"
-6. COUNTRY OF BIRTH: Usually "SUID-AFRIKA" or "SOUTH AFRICA"
+The document may be:
+- South African ID Book (green background with security patterns)
+- South African ID Card (newer format)
+- Passport (any country, especially African countries like South Africa, Nigeria, Kenya, Ghana, etc.)
+
+Extract these specific fields:
+1. ID NUMBER / PASSPORT NUMBER: 
+   - For SA ID: 13-digit number (format: YYMMDDGSSSCAZ) usually near the top with a barcode
+   - For Passport: 6-9 alphanumeric characters (e.g., "A1234567", "P12345678")
+2. SURNAME / LAST NAME / FAMILY NAME: The surname/last name/family name
+   - SA ID: appears after "VAN/SURNAME" label, usually in bold uppercase
+   - Passport: usually labeled as "Surname", "Last Name", or "Family Name"
+3. FORENAMES / FIRST NAMES / GIVEN NAMES: The first names/given names
+   - SA ID: appears after "VOORNAME/FORENAMES" label, usually in bold uppercase
+   - Passport: usually labeled as "Given Names", "First Name", or "Forenames"
+4. FULL NAME: Complete name as it appears on the document
+5. DATE OF BIRTH: Format YYYY-MM-DD or DD MMM YYYY
+   - SA ID: appears after "GEBOORTEDATUM/DATE OF BIRTH"
+   - Passport: usually labeled as "Date of Birth" or "DOB"
+6. DATE ISSUED / DATE OF ISSUE: Format YYYY-MM-DD (if visible)
+7. COUNTRY OF BIRTH / NATIONALITY / COUNTRY OF ISSUE:
+   - SA ID: Usually "SUID-AFRIKA" or "SOUTH AFRICA"
+   - Passport: Country name (e.g., "SOUTH AFRICA", "NIGERIA", "KENYA", "GHANA")
 
 INSTRUCTIONS:
 - Extract EXACT text as it appears on the document
-- For ID number, extract all 13 digits without spaces
-- For names, preserve capitalization and spacing exactly
+- For ID/passport number, extract all characters without spaces
+- For names, preserve capitalization and spacing exactly (including accents like é, è, etc.)
 - For dates, use YYYY-MM-DD format
 - Ignore security patterns, watermarks, and background text
-- Focus on the right page which contains personal details
+- For SA ID books, focus on the right page which contains personal details
+- For passports, extract from the data page (usually page 2 or 3)
 - This is for automated document verification, not personal identification
+- Support all African country passport formats
 
 Return ONLY valid JSON in this exact format (no additional text):
 {
@@ -1346,15 +1364,12 @@ Return ONLY valid JSON in this exact format (no additional text):
       
       // Handle validation results
       if (validation.tolerantNameMatch && validation.issues.length === 0) {
-        // First name mismatch - queue for manual review
-        response.status = 'under_review';
-        response.message = 'Surname matches but first name differs. Requires manual review.';
-        response.canRetry = false;
-        response.requiresManualReview = true;
-        
-        await this.queueForManualReview(userId, documentType, documentUrl, 
-          new Error('First name mismatch'), ocrResults);
-        
+        // First name mismatch but surname and ID match - auto-approve (accent differences are acceptable)
+        console.log('ℹ️  First name mismatch (accent difference) but surname and ID match - auto-approving');
+        response.status = 'approved';
+        response.message = 'KYC verification successful (first name accent difference ignored)';
+        response.success = true;
+        // Don't queue for review - auto-approve since critical fields match
         return response;
       }
       

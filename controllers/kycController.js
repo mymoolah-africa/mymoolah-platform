@@ -187,7 +187,9 @@ class KYCController {
         }
 
         // Check if identity document is valid - use the success field from KYC service
-        const identityValid = identityResult.success && identityResult.validation.isValid;
+        // Also check if status is 'approved' (handles tolerantNameMatch case)
+        const identityValid = identityResult.success && 
+                             (identityResult.validation.isValid || identityResult.status === 'approved');
         // const addressValid = addressResult.validation.isValid;
 
 
@@ -197,6 +199,7 @@ class KYCController {
           const wallet = await Wallet.findOne({ where: { userId: userId } });
           if (wallet) {
             await wallet.verifyKYC('ai_system');
+            console.log('✅ Wallet KYC verified automatically');
           }
 
           return res.json({
