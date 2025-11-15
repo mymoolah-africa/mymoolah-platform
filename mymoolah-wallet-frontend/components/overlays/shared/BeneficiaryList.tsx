@@ -234,7 +234,21 @@ export function BeneficiaryList({
             filteredBeneficiaries.map((beneficiary) => (
               <div
                 key={beneficiary.id}
-                onClick={() => onSelect(beneficiary)}
+                onClick={(e) => {
+                  // Only trigger onSelect if click is not on a button
+                  const target = e.target as HTMLElement;
+                  if (!target.closest('button')) {
+                    onSelect(beneficiary);
+                  }
+                }}
+                onTouchEnd={(e) => {
+                  // Handle touch events for mobile
+                  const target = e.target as HTMLElement;
+                  if (!target.closest('button')) {
+                    e.preventDefault();
+                    onSelect(beneficiary);
+                  }
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -244,7 +258,10 @@ export function BeneficiaryList({
                   border: `2px solid ${selectedBeneficiary?.id === beneficiary.id ? '#86BE41' : '#e2e8f0'}`,
                   backgroundColor: selectedBeneficiary?.id === beneficiary.id ? '#86BE41/5' : '#ffffff',
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease'
+                  transition: 'all 0.2s ease',
+                  position: 'relative',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none'
                 }}
                 onMouseOver={(e) => {
                   if (selectedBeneficiary?.id !== beneficiary.id) {
@@ -259,7 +276,13 @@ export function BeneficiaryList({
                   }
                 }}
               >
-                <div className="flex items-center gap-3 flex-1">
+                <div 
+                  className="flex items-center gap-3 flex-1"
+                  style={{
+                    pointerEvents: 'auto',
+                    minWidth: 0
+                  }}
+                >
                   {/* Avatar with Type Icon */}
                   <div style={{
                     width: '40px',
@@ -326,22 +349,44 @@ export function BeneficiaryList({
                 </div>
                 
                 {/* Action Buttons */}
-                <div className="flex gap-1">
+                <div 
+                  className="flex gap-1"
+                  style={{
+                    pointerEvents: 'auto',
+                    flexShrink: 0
+                  }}
+                  onClick={(e) => {
+                    // Prevent parent onClick from firing when clicking buttons
+                    e.stopPropagation();
+                  }}
+                  onTouchEnd={(e) => {
+                    // Prevent parent touch event from firing when clicking buttons
+                    e.stopPropagation();
+                  }}
+                >
                   {/* Edit Button */}
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
+                      e.preventDefault();
+                      onEdit(beneficiary);
+                    }}
+                    onTouchEnd={(e) => {
+                      e.stopPropagation();
+                      e.preventDefault();
                       onEdit(beneficiary);
                     }}
                     style={{
                       minWidth: '44px',
                       minHeight: '44px',
-                      padding: '0'
+                      padding: '0',
+                      pointerEvents: 'auto',
+                      zIndex: 10
                     }}
                   >
-                    <Edit2 style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+                    <Edit2 style={{ width: '16px', height: '16px', color: '#6b7280', pointerEvents: 'none' }} />
                   </Button>
                   
                   {/* Remove Button */}
@@ -351,15 +396,23 @@ export function BeneficiaryList({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
+                        e.preventDefault();
+                        onRemove(beneficiary);
+                      }}
+                      onTouchEnd={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
                         onRemove(beneficiary);
                       }}
                       style={{
                         minWidth: '44px',
                         minHeight: '44px',
-                        padding: '0'
+                        padding: '0',
+                        pointerEvents: 'auto',
+                        zIndex: 10
                       }}
                     >
-                      <X style={{ width: '16px', height: '16px', color: '#dc2626' }} />
+                      <X style={{ width: '16px', height: '16px', color: '#dc2626', pointerEvents: 'none' }} />
                     </Button>
                   )}
                 </div>
