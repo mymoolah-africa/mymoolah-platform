@@ -18,8 +18,8 @@ export interface LogEntry {
 }
 
 class LoggingService {
-  private isDevelopment = process.env.NODE_ENV === 'development';
-  private isProduction = process.env.NODE_ENV === 'production';
+  private isDevelopment = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development');
+  private isProduction = (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production');
   
   // Log levels that should be shown in current environment
   private getVisibleLevels(): LogLevel[] {

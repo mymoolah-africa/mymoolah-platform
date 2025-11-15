@@ -376,7 +376,7 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({ qrCode, amount, walletId, reference }),
     });
-    return response.data!.data || response.data! as QRPaymentResult;
+    return response.data?.data || (response.data as unknown as QRPaymentResult);
   }
 
   async confirmQRPayment(paymentId: string, otp?: string): Promise<any> {
