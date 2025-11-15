@@ -12,6 +12,14 @@ const db = {};
 let sequelize;
 if (config.use_env_variable) {
   const url = process.env[config.use_env_variable];
+  
+  // Validate DATABASE_URL is set
+  if (!url) {
+    console.error(`❌ ERROR: ${config.use_env_variable} environment variable is not set!`);
+    console.error('📋 Available env vars:', Object.keys(process.env).filter(k => k.includes('DATABASE') || k.includes('DB')).join(', '));
+    throw new Error(`${config.use_env_variable} environment variable is required but not set`);
+  }
+  
   // Clone config so we can safely tweak connection options per environment
   const options = { ...config };
   try {
