@@ -232,9 +232,16 @@ export function BeneficiaryList({
             </div>
           ) : (
             filteredBeneficiaries.map((beneficiary) => (
-              <div
+              <button
                 key={beneficiary.id}
+                type="button"
                 onClick={() => onSelect(beneficiary)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    onSelect(beneficiary);
+                  }
+                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -248,7 +255,10 @@ export function BeneficiaryList({
                   position: 'relative',
                   userSelect: 'none',
                   WebkitUserSelect: 'none',
-                  touchAction: 'manipulation'
+                  touchAction: 'manipulation',
+                  width: '100%',
+                  textAlign: 'left',
+                  outline: 'none'
                 }}
                 onMouseOver={(e) => {
                   if (selectedBeneficiary?.id !== beneficiary.id) {
@@ -261,6 +271,13 @@ export function BeneficiaryList({
                     e.currentTarget.style.borderColor = '#e2e8f0';
                     e.currentTarget.style.backgroundColor = '#ffffff';
                   }
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.outline = '2px solid #86BE41';
+                  e.currentTarget.style.outlineOffset = '2px';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.outline = 'none';
                 }}
               >
                 <div 
@@ -382,7 +399,7 @@ export function BeneficiaryList({
                     </Button>
                   )}
                 </div>
-              </div>
+              </button>
             ))
           )}
         </div>
