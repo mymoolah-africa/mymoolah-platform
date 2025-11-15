@@ -267,13 +267,32 @@ function isValidSouthAfricanDrivingLicense(licenseNumber) {
   return /^[A-Z]{2}\d{6}[A-Z]{2}$/.test(clean);
 }
 
-function isDrivingLicenseValid(expiryDate) {
+function isDrivingLicenseValid(expiryDate, validFromDate = null) {
   if (!expiryDate) return false;
   
   try {
-    const expiry = new Date(expiryDate);
     const today = new Date();
-    return expiry > today;
+    today.setHours(0, 0, 0, 0); // Normalize to start of day
+    
+    const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+    
+    // Check if expired
+    if (expiry <= today) {
+      return false;
+    }
+    
+    // If valid from date is provided, check that current date is after valid from
+    if (validFromDate) {
+      const validFrom = new Date(validFromDate);
+      validFrom.setHours(0, 0, 0, 0);
+      
+      if (today < validFrom) {
+        return false; // License not yet valid
+      }
+    }
+    
+    return true;
   } catch (error) {
     return false;
   }
@@ -291,7 +310,23 @@ function isTemporaryIDValid(expiryDate) {
   
   try {
     const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return expiry > today;
+  } catch (error) {
+    return false;
+  }
+}
+
+function isPassportValid(expiryDate) {
+  if (!expiryDate) return false;
+  
+  try {
+    const expiry = new Date(expiryDate);
+    expiry.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     return expiry > today;
   } catch (error) {
     return false;
@@ -603,21 +638,33 @@ The document may be:
 - Passport (any country, especially African countries like South Africa, Nigeria, Kenya, Ghana, etc.)
 
 Extract these specific fields:
-1. ID NUMBER / PASSPORT NUMBER: 
+1. ID NUMBER / PASSPORT NUMBER / LICENSE NUMBER: 
    - For SA ID: 13-digit number (format: YYMMDDGSSSCAZ) usually near the top with a barcode
    - For Passport: 6-9 alphanumeric characters (e.g., "A1234567", "P12345678")
+   - For Driver's License: May be in format "02/6411055084084" (two digits + "/" + 13-digit ID) OR license format "AB123456CD" (2 letters + 6 digits + 2 letters)
 2. SURNAME / LAST NAME / FAMILY NAME: The surname/last name/family name
    - SA ID: appears after "VAN/SURNAME" label, usually in bold uppercase
    - Passport: usually labeled as "Surname", "Last Name", or "Family Name"
-3. FORENAMES / FIRST NAMES / GIVEN NAMES: The first names/given names
+   - Driver's License: Usually in CAPS format with initials then surname (e.g., "A BOTES" where "A" is initial and "BOTES" is surname)
+3. FORENAMES / FIRST NAMES / GIVEN NAMES: The first names/given names (optional for driver's license)
    - SA ID: appears after "VOORNAME/FORENAMES" label, usually in bold uppercase
    - Passport: usually labeled as "Given Names", "First Name", or "Forenames"
+   - Driver's License: Usually shown as initials in CAPS (e.g., "A" for "André") - may not be present as full names
 4. FULL NAME: Complete name as it appears on the document
-5. DATE OF BIRTH: Format YYYY-MM-DD or DD MMM YYYY
+   - Driver's License: Usually "INITIALS SURNAME" in CAPS (e.g., "A BOTES")
+5. DATE OF BIRTH: Format YYYY-MM-DD or DD MMM YYYY or DD/MM/YYYY
    - SA ID: appears after "GEBOORTEDATUM/DATE OF BIRTH"
    - Passport: usually labeled as "Date of Birth" or "DOB"
-6. DATE ISSUED / DATE OF ISSUE: Format YYYY-MM-DD (if visible)
-7. COUNTRY OF BIRTH / NATIONALITY / COUNTRY OF ISSUE:
+   - Driver's License: usually labeled as "Date of Birth" or "DOB"
+6. DATE ISSUED / DATE OF ISSUE: Format YYYY-MM-DD or DD/MM/YYYY (if visible)
+7. VALID / VALID DATES / VALIDITY PERIOD: For Driver's License - format "DD/MM/YYYY - DD/MM/YYYY"
+   - Driver's License: Shows as date range "dd/mm/yyyy - dd/mm/yyyy" (e.g., "15/01/2020 - 15/01/2030")
+   - Extract the SECOND date as the expiry date (the date after the "-")
+   - IMPORTANT: Only the second date (expiry) is used for validation - license must not be expired
+8. VALID TO / VALID TO DATE / EXPIRY DATE / EXPIRATION DATE: Format YYYY-MM-DD or DD/MM/YYYY
+   - Driver's License: The second date in the validity period (e.g., "15/01/2030" from "15/01/2020 - 15/01/2030")
+   - Passport: usually labeled as "Date of Expiry", "Expires", or "Expiry Date"
+9. COUNTRY OF BIRTH / NATIONALITY / COUNTRY OF ISSUE:
    - SA ID: Usually "SUID-AFRIKA" or "SOUTH AFRICA"
    - Passport: Country name (e.g., "SOUTH AFRICA", "NIGERIA", "KENYA", "GHANA")
 
@@ -640,8 +687,19 @@ Return ONLY valid JSON in this exact format (no additional text):
   "fullName": "HENDRIK DANIEL BOTES",
   "dateOfBirth": "1992-01-16",
   "dateIssued": "2008-04-03",
+  "validFrom": "2020-01-15",
+  "expiryDate": "2030-01-15",
   "countryOfBirth": "SOUTH AFRICA"
-}`
+}
+
+Note: For Driver's License:
+- ID number may be in format "02/6411055084084" (extract the 13-digit part)
+- Name is usually "INITIALS SURNAME" in CAPS (e.g., "A BOTES")
+- Valid dates are in format "dd/mm/yyyy - dd/mm/yyyy" (extract the SECOND date as expiryDate)
+- Only expiry date is validated (license must not be expired)
+- Forenames may not be present - surname is sufficient
+
+For Passport, include "expiryDate" (or "dateOfExpiry").`
       : "Extract the following information from this South African proof of address document: Street address, City, Postal code, Province. Return as JSON format.";
     
     // Retry logic for OpenAI API calls
@@ -674,16 +732,29 @@ Return ONLY valid JSON in this exact format (no additional text):
         // Log raw OpenAI response for debugging
         console.log('📄 Raw OpenAI OCR Response:', content.substring(0, 500)); // First 500 chars
         
-        // Check if OpenAI refused due to content policy
-        if (/i'?m\s*unable/i.test(content) || 
+        // Check if OpenAI refused due to content policy - CHECK FIRST before parsing
+        // Detect various refusal patterns from OpenAI
+        const isRefusal = /i'?m\s*sorry/i.test(content) ||
+            /i'?m\s*unable/i.test(content) || 
             /can'?t\s*help/i.test(content) || 
+            /can'?t\s*extract/i.test(content) ||
+            /can'?t\s*assist/i.test(content) ||
             /unable to assist/i.test(content) ||
             /unable to provide/i.test(content) ||
             /unable to extract/i.test(content) ||
             /identifying.*individuals/i.test(content) ||
-            /personal.*documents/i.test(content)) {
+            /personal.*documents/i.test(content) ||
+            /i\s*can'?t/i.test(content);
+        
+        // Also check if response is not JSON and contains refusal language
+        const hasJson = /\{[\s\S]*\}/.test(content);
+        if (isRefusal || (!hasJson && /sorry|can'?t|unable/i.test(content))) {
           console.warn('⚠️  OpenAI refused due to content policy - will use Tesseract fallback');
-          throw new Error('OpenAI content policy refusal - using Tesseract fallback');
+          console.warn('📄 OpenAI response:', content.substring(0, 200));
+          const refusalError = new Error('OpenAI content policy refusal - using Tesseract fallback');
+          refusalError.isContentPolicyRefusal = true;
+          refusalError.openaiResponse = content; // Store response for later check
+          throw refusalError;
         }
         
         // Check if content is empty
@@ -745,8 +816,14 @@ Return ONLY valid JSON in this exact format (no additional text):
         console.error(`❌ OpenAI OCR attempt ${attempt} failed:`, error.message);
         
         // Check if it's a content policy refusal (from our detection above)
-        if (error.message.includes('content policy refusal')) {
+        if (error.isContentPolicyRefusal || error.message.includes('content policy refusal')) {
           // Don't retry - go straight to Tesseract fallback
+          console.log('🔄 Content policy refusal detected - will use Tesseract fallback after all attempts');
+          // Preserve the refusal flag and response for later check
+          if (error.openaiResponse) {
+            lastError.openaiResponse = error.openaiResponse;
+          }
+          lastError.isContentPolicyRefusal = true;
           break;
         }
         
@@ -771,12 +848,17 @@ Return ONLY valid JSON in this exact format (no additional text):
     }
     
     // All retries failed - try Tesseract fallback if OpenAI refused
-    const wasContentPolicyRefusal = lastError?.message && 
-      (lastError.message.includes('content policy') || 
-       lastError.message.includes('content policy refusal'));
+    // Check if it was a content policy refusal
+    const wasContentPolicyRefusal = lastError?.isContentPolicyRefusal ||
+      (lastError?.message && lastError.message.includes('content policy refusal')) ||
+      // Also check the OpenAI response content if we have it
+      (lastError?.openaiResponse && (
+        /i'?m\s*sorry/i.test(lastError.openaiResponse) || 
+        /can'?t\s*extract|can'?t\s*assist|can'?t\s*help|unable/i.test(lastError.openaiResponse)
+      ));
     
     if (wasContentPolicyRefusal) {
-      console.log('🔄 OpenAI refused - falling back to Tesseract OCR...');
+      console.log('🔄 OpenAI content policy refusal confirmed - falling back to Tesseract OCR...');
       try {
         const tesseractText = await this.runTesseractOCR(localFilePath);
         const parsedResults = this.parseSouthAfricanIdText(tesseractText);
@@ -1005,6 +1087,9 @@ Return ONLY valid JSON in this exact format (no additional text):
             licenseNumber: (lower['license number'] || lower['driving license number'] || lower['license'] || null),
             dateOfBirth: (lower['dateofbirth'] || lower['date of birth'] || lower['dob'] || null),
             dateIssued: (lower['dateissued'] || lower['date issued'] || null),
+            validFrom: (lower['validfrom'] || lower['valid from'] || lower['validfromdate'] || lower['valid from date'] || null),
+            validTo: (lower['validto'] || lower['valid to'] || lower['validtodate'] || lower['valid to date'] || null),
+            expiryDate: (lower['expirydate'] || lower['expiry date'] || lower['expirationdate'] || lower['expiration date'] || lower['dateofexpiry'] || lower['date of expiry'] || lower['passportexpirydate'] || lower['passport expiry date'] || lower['licenseexpirydate'] || lower['license expiry date'] || null),
             nationality: lower['nationality'] || null,
             documentType: lower['document type'] || lower['doctype'] || null,
             countryOfIssue: (lower['countryofbirth'] || lower['country of birth'] || lower['country of issue'] || lower['country'] || null)
@@ -1012,7 +1097,15 @@ Return ONLY valid JSON in this exact format (no additional text):
           
           // Clean and normalize ID/passport number
           if (canonical.idNumber) {
-            const cleaned = String(canonical.idNumber).trim().replace(/\s+/g, '');
+            let cleaned = String(canonical.idNumber).trim().replace(/\s+/g, '');
+            
+            // Handle SA driver's license ID format: "02/6411055084084" -> extract "6411055084084"
+            // Pattern: two digits followed by "/" then 13 digits
+            const driverLicenseIdMatch = cleaned.match(/^\d{2}\/(\d{13})$/);
+            if (driverLicenseIdMatch) {
+              cleaned = driverLicenseIdMatch[1]; // Extract just the 13-digit ID
+            }
+            
             // Check if it's a 13-digit SA ID or a 6-9 character passport number
             const isSAId = /^\d{13}$/.test(cleaned);
             const isPassport = /^[A-Z0-9]{6,9}$/i.test(cleaned);
@@ -1034,21 +1127,72 @@ Return ONLY valid JSON in this exact format (no additional text):
             }
           }
           
-          // Normalize date format
-          if (canonical.dateOfBirth) {
-            const dob = String(canonical.dateOfBirth).trim();
+          // Handle driver's license number format: "02/6411055084084" -> extract "6411055084084"
+          if (canonical.licenseNumber) {
+            let cleaned = String(canonical.licenseNumber).trim().replace(/\s+/g, '');
+            const driverLicenseIdMatch = cleaned.match(/^\d{2}\/(\d{13})$/);
+            if (driverLicenseIdMatch) {
+              cleaned = driverLicenseIdMatch[1]; // Extract just the 13-digit ID
+            }
+            canonical.licenseNumber = cleaned;
+          }
+          
+          // Normalize date format (for all date fields)
+          const normalizeDate = (dateStr) => {
+            if (!dateStr) return null;
+            const date = String(dateStr).trim();
             // Convert various formats to YYYY-MM-DD
-            if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
-              canonical.dateOfBirth = dob;
-            } else if (/^\d{1,2}\s+[A-Z]{3}\s+\d{4}$/i.test(dob)) {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+              return date;
+            } else if (/^\d{1,2}\s+[A-Z]{3}\s+\d{4}$/i.test(date)) {
               const months = { JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
                               JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12' };
-              const parts = dob.toUpperCase().split(/\s+/);
+              const parts = date.toUpperCase().split(/\s+/);
               if (parts.length === 3 && months[parts[1]]) {
                 const day = parts[0].padStart(2, '0');
-                canonical.dateOfBirth = `${parts[2]}-${months[parts[1]]}-${day}`;
+                return `${parts[2]}-${months[parts[1]]}-${day}`;
+              }
+            } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
+              // Handle dd/mm/yyyy format (common in SA driver's licenses)
+              const parts = date.split('/');
+              if (parts.length === 3) {
+                const day = parts[0].padStart(2, '0');
+                const month = parts[1].padStart(2, '0');
+                const year = parts[2];
+                return `${year}-${month}-${day}`;
+              }
+            } else if (/^\d{1,2}\/\d{1,2}\/\d{4}\s*-\s*\d{1,2}\/\d{1,2}\/\d{4}$/.test(date)) {
+              // Handle date range format: "dd/mm/yyyy - dd/mm/yyyy" (SA driver's license)
+              // Extract the second date (expiry date)
+              const parts = date.split(/\s*-\s*/);
+              if (parts.length === 2) {
+                const expiryPart = parts[1].trim();
+                const expiryParts = expiryPart.split('/');
+                if (expiryParts.length === 3) {
+                  const day = expiryParts[0].padStart(2, '0');
+                  const month = expiryParts[1].padStart(2, '0');
+                  const year = expiryParts[2];
+                  return `${year}-${month}-${day}`;
+                }
               }
             }
+            return date; // Return as-is if format not recognized
+          };
+          
+          if (canonical.dateOfBirth) {
+            canonical.dateOfBirth = normalizeDate(canonical.dateOfBirth);
+          }
+          if (canonical.dateIssued) {
+            canonical.dateIssued = normalizeDate(canonical.dateIssued);
+          }
+          if (canonical.validFrom) {
+            canonical.validFrom = normalizeDate(canonical.validFrom);
+          }
+          if (canonical.validTo) {
+            canonical.validTo = normalizeDate(canonical.validTo);
+          }
+          if (canonical.expiryDate) {
+            canonical.expiryDate = normalizeDate(canonical.expiryDate);
           }
           
           // Ensure all string fields are trimmed
@@ -1209,8 +1353,23 @@ Return ONLY valid JSON in this exact format (no additional text):
       }
 
       // CRITICAL CHECK 2: Surname must match exactly
-      const docSurname = ocrResults.surname || '';
-      const { first: docFirst, last: docLast } = splitFullName(fullName);
+      // For driver's license: name is in CAPS format "INITIALS SURNAME" (e.g., "A BOTES")
+      // Extract surname from full name if it's in driver's license format
+      let docSurname = ocrResults.surname || '';
+      let { first: docFirst, last: docLast } = splitFullName(fullName);
+      
+      // Handle driver's license name format: "A BOTES" where "A" is initial and "BOTES" is surname
+      if (documentType === 'sa_driving_license' && fullName && !docSurname) {
+        // Full name is usually "INITIALS SURNAME" in CAPS
+        const nameParts = fullName.trim().split(/\s+/);
+        if (nameParts.length >= 2) {
+          // Last part is surname, everything before is initials
+          docSurname = nameParts[nameParts.length - 1];
+          docFirst = nameParts.slice(0, -1).join(' '); // All parts except last are initials
+          docLast = docSurname;
+        }
+      }
+      
       const surnameForCompare = docSurname || docLast;
       const userLast = normalizeName(user.lastName || '');
 
@@ -1271,14 +1430,33 @@ Return ONLY valid JSON in this exact format (no additional text):
           validation.issues.push('Temporary ID certificate has expired. Please use a valid, unexpired temporary ID.');
         }
       } else if (documentType === 'sa_driving_license') {
-        if (!isValidSouthAfricanDrivingLicense(rawLicenseForFormat) && !isValidSouthAfricanDrivingLicense(rawIdForFormat)) {
-          validation.issues.push('Invalid South African driving license number (format: 2 letters + 6 digits + 2 letters)');
+        // SA Driver's License can have ID number format "02/6411055084084" or license format "AB123456CD"
+        // Check if it's a valid license format OR if it's an ID number (which is also acceptable)
+        const isLicenseFormat = isValidSouthAfricanDrivingLicense(rawLicenseForFormat) || isValidSouthAfricanDrivingLicense(rawIdForFormat);
+        const isIdNumberFormat = /^\d{13}$/.test(rawIdForFormat) || /^\d{13}$/.test(rawLicenseForFormat);
+        
+        if (!isLicenseFormat && !isIdNumberFormat) {
+          validation.issues.push('Invalid South African driving license format. Expected license number (2 letters + 6 digits + 2 letters) or ID number (13 digits, may include prefix like "02/").');
         }
         
         // Check if driving license is still valid (not expired)
-        const expiryDate = ocrResults.expiryDate || ocrResults.licenseExpiryDate;
-        if (expiryDate && !isDrivingLicenseValid(expiryDate)) {
-          validation.issues.push('Driving license has expired. Please use a valid, unexpired license.');
+        // SA Driver's License shows dates as "dd/mm/yyyy - dd/mm/yyyy" - we only check the second date (expiry)
+        const expiryDate = ocrResults.expiryDate || ocrResults.licenseExpiryDate || ocrResults.validTo || ocrResults.validToDate;
+        
+        if (expiryDate) {
+          // Only check expiry - not valid from (SA driver's license validation)
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          const expiry = new Date(expiryDate);
+          expiry.setHours(0, 0, 0, 0);
+          
+          if (expiry <= today) {
+            validation.issues.push('Driving license has expired. Please use a valid, unexpired license.');
+          } else {
+            console.log('✅ Driving license expiration date is valid');
+          }
+        } else {
+          validation.issues.push('Driving license expiration date not found. Please ensure the license shows valid dates.');
         }
       } else if (documentType === 'passport') {
         // Use raw value for passport validation (preserve alphanumeric)
@@ -1286,6 +1464,19 @@ Return ONLY valid JSON in this exact format (no additional text):
           validation.issues.push('Invalid passport number format (must be 6-9 alphanumeric characters)');
         } else {
           console.log('✅ Passport number format is valid');
+        }
+        
+        // Check if passport is still valid (not expired)
+        const expiryDate = ocrResults.expiryDate || ocrResults.passportExpiryDate || ocrResults.dateOfExpiry || ocrResults.validTo || ocrResults.validToDate;
+        if (expiryDate) {
+          if (!isPassportValid(expiryDate)) {
+            validation.issues.push('Passport has expired. Please use a valid, unexpired passport.');
+          } else {
+            console.log('✅ Passport expiration date is valid');
+          }
+        } else {
+          // Expiration date is recommended but not always visible - warn but don't fail
+          console.warn('⚠️  Passport expiration date not found in OCR results');
         }
       } else {
         validation.issues.push('Unable to determine document type (ID, Temporary ID, Passport, or Driving License)');
