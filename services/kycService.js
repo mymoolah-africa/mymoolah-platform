@@ -636,13 +636,25 @@ Return ONLY valid JSON in this exact format:
         
         const content = response.choices[0].message.content || '';
         
+        // Log raw OpenAI response for debugging
+        console.log('📄 Raw OpenAI OCR Response:', content.substring(0, 500)); // First 500 chars
+        
         // Check if OpenAI couldn't help
         if (/i\s*can'?t\s*help/i.test(content) || /unable to extract/i.test(content)) {
           throw new Error('OpenAI could not extract information from document');
         }
         
+        // Check if content is empty
+        if (!content || content.trim().length === 0) {
+          console.error('❌ OpenAI returned empty content');
+          throw new Error('OpenAI returned empty response');
+        }
+        
         // Parse results
         const parsedResults = this.parseOCRResults(content, documentType);
+        
+        // Log parsed results for debugging
+        console.log('🔍 Parsed OCR Results:', JSON.stringify(parsedResults, null, 2));
         
         // Validate critical fields
         if (documentType === 'id_document') {
@@ -713,7 +725,6 @@ Return ONLY valid JSON in this exact format:
   async queueForManualReview(userId, documentType, documentUrl, error, ocrResults = null) {
     try {
       const { sequelize } = require('../models');
-      const Kyc = require('../models/Kyc')(sequelize, require('sequelize').DataTypes);
       
       // Convert frontend documentType to database enum value
       const dbDocumentType = documentType === 'id_document' ? 'id_card' : 
@@ -725,24 +736,43 @@ Return ONLY valid JSON in this exact format:
                            `Review Reason: OCR_FAILED\n` +
                            `OCR Results: ${ocrResults ? JSON.stringify(ocrResults, null, 2) : 'None'}`;
       
+      // Ensure documentImageUrl column exists before using Sequelize
+      try {
+        await sequelize.query(`
+          ALTER TABLE "kyc" ADD COLUMN IF NOT EXISTS "documentImageUrl" VARCHAR(255);
+        `);
+        console.log('✅ Verified documentImageUrl column exists');
+      } catch (colError) {
+        // If column already exists or permission denied, that's okay
+        if (!colError.message.includes('already exists') && !colError.message.includes('permission denied')) {
+          console.warn('⚠️  Could not verify/add documentImageUrl column:', colError.message);
+        }
+      }
+      
+      // Now use Sequelize model (column should exist now)
+      const Kyc = require('../models/Kyc')(sequelize, require('sequelize').DataTypes);
+      
+      // Build record data
+      const recordData = {
+        userId,
+        documentType: dbDocumentType,
+        documentNumber: ocrResults?.idNumber || 'PENDING',
+        documentImageUrl: documentUrl,
+        ocrData: ocrResults || {},
+        status: 'under_review',
+        reviewerNotes: reviewerNotes,
+        submittedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
       // Create or update KYC record with manual review status
       const [kycRecord, created] = await Kyc.findOrCreate({
         where: { 
           userId, 
           documentType: dbDocumentType 
         },
-        defaults: {
-          userId,
-          documentType: dbDocumentType,
-          documentNumber: ocrResults?.idNumber || 'PENDING',
-          documentImageUrl: documentUrl,
-          ocrData: ocrResults || {},
-          status: 'under_review',
-          reviewerNotes: reviewerNotes,
-          submittedAt: new Date(),
-          createdAt: new Date(),
-          updatedAt: new Date()
-        }
+        defaults: recordData
       });
       
       if (!created) {
@@ -766,84 +796,103 @@ Return ONLY valid JSON in this exact format:
         message: 'Your document has been submitted for manual review. We will notify you once verification is complete.',
         requiresManualReview: true
       };
-    } catch (error) {
-      console.error('❌ Error queueing for manual review:', error);
-      throw error;
+    } catch (dbError) {
+      console.error('❌ Error queueing for manual review:', dbError);
+      
+      // Return error response instead of throwing (so user gets feedback)
+      return {
+        success: false,
+        status: 'error',
+        message: 'Error processing document. Please try again or contact support.',
+        error: dbError.message,
+        requiresManualReview: true
+      };
     }
   }
 
   // Parse OCR results
   parseOCRResults(ocrText, documentType) {
     try {
+      if (!ocrText || typeof ocrText !== 'string') {
+        console.warn('⚠️  parseOCRResults: Invalid input', typeof ocrText);
+        return {};
+      }
+      
       // Try to parse as JSON first
       const jsonMatch = ocrText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const raw = JSON.parse(jsonMatch[0]);
-        // Normalize common key variants to canonical fields
-        const lower = Object.fromEntries(
-          Object.entries(raw).map(([k, v]) => [String(k).toLowerCase().trim(), v])
-        );
-        // Enhanced parsing for South African ID format
-        const surname = lower['surname'] || lower['last name'] || lower['lastname'] || null;
-        const forenames = lower['forenames'] || lower['forename'] || lower['first names'] || lower['firstnames'] || lower['first name'] || lower['firstname'] || null;
-        const fullName = lower['full name'] || lower['name'] || lower['names'] || lower['fullname'] || null;
-        
-        // Build full name from components if not provided
-        let finalFullName = fullName;
-        if (!finalFullName && (surname || forenames)) {
-          const parts = [];
-          if (forenames) parts.push(forenames);
-          if (surname) parts.push(surname);
-          finalFullName = parts.join(' ').trim();
-        }
-        
-        const canonical = {
-          surname: surname ? String(surname).trim() : null,
-          forenames: forenames ? String(forenames).trim() : null,
-          firstNames: forenames ? String(forenames).trim() : null, // Alias for compatibility
-          fullName: finalFullName ? String(finalFullName).trim() : null,
-          idNumber: (lower['idnumber'] || lower['id/passport number'] || lower['identity number'] || lower['id number'] || lower['passport number'] || lower['id'] || null),
-          licenseNumber: (lower['license number'] || lower['driving license number'] || lower['license'] || null),
-          dateOfBirth: (lower['dateofbirth'] || lower['date of birth'] || lower['dob'] || null),
-          dateIssued: (lower['dateissued'] || lower['date issued'] || null),
-          nationality: lower['nationality'] || null,
-          documentType: lower['document type'] || lower['doctype'] || null,
-          countryOfIssue: (lower['countryofbirth'] || lower['country of birth'] || lower['country of issue'] || lower['country'] || null)
-        };
-        
-        // Clean and normalize ID number (remove spaces, ensure 13 digits)
-        if (canonical.idNumber) {
-          canonical.idNumber = String(canonical.idNumber).replace(/\s+/g, '').replace(/\D/g, '').slice(0, 13);
-          if (canonical.idNumber.length !== 13) {
-            canonical.idNumber = null; // Invalid length
+        try {
+          const raw = JSON.parse(jsonMatch[0]);
+          // Normalize common key variants to canonical fields
+          const lower = Object.fromEntries(
+            Object.entries(raw).map(([k, v]) => [String(k).toLowerCase().trim(), v])
+          );
+          // Enhanced parsing for South African ID format
+          const surname = lower['surname'] || lower['last name'] || lower['lastname'] || null;
+          const forenames = lower['forenames'] || lower['forename'] || lower['first names'] || lower['firstnames'] || lower['first name'] || lower['firstname'] || null;
+          const fullName = lower['full name'] || lower['name'] || lower['names'] || lower['fullname'] || null;
+          
+          // Build full name from components if not provided
+          let finalFullName = fullName;
+          if (!finalFullName && (surname || forenames)) {
+            const parts = [];
+            if (forenames) parts.push(forenames);
+            if (surname) parts.push(surname);
+            finalFullName = parts.join(' ').trim();
           }
-        }
-        
-        // Normalize date format
-        if (canonical.dateOfBirth) {
-          const dob = String(canonical.dateOfBirth).trim();
-          // Convert various formats to YYYY-MM-DD
-          if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
-            canonical.dateOfBirth = dob;
-          } else if (/^\d{1,2}\s+[A-Z]{3}\s+\d{4}$/i.test(dob)) {
-            const months = { JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
-                            JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12' };
-            const parts = dob.toUpperCase().split(/\s+/);
-            if (parts.length === 3 && months[parts[1]]) {
-              const day = parts[0].padStart(2, '0');
-              canonical.dateOfBirth = `${parts[2]}-${months[parts[1]]}-${day}`;
+          
+          const canonical = {
+            surname: surname ? String(surname).trim() : null,
+            forenames: forenames ? String(forenames).trim() : null,
+            firstNames: forenames ? String(forenames).trim() : null, // Alias for compatibility
+            fullName: finalFullName ? String(finalFullName).trim() : null,
+            idNumber: (lower['idnumber'] || lower['id/passport number'] || lower['identity number'] || lower['id number'] || lower['passport number'] || lower['id'] || null),
+            licenseNumber: (lower['license number'] || lower['driving license number'] || lower['license'] || null),
+            dateOfBirth: (lower['dateofbirth'] || lower['date of birth'] || lower['dob'] || null),
+            dateIssued: (lower['dateissued'] || lower['date issued'] || null),
+            nationality: lower['nationality'] || null,
+            documentType: lower['document type'] || lower['doctype'] || null,
+            countryOfIssue: (lower['countryofbirth'] || lower['country of birth'] || lower['country of issue'] || lower['country'] || null)
+          };
+          
+          // Clean and normalize ID number (remove spaces, ensure 13 digits)
+          if (canonical.idNumber) {
+            canonical.idNumber = String(canonical.idNumber).replace(/\s+/g, '').replace(/\D/g, '').slice(0, 13);
+            if (canonical.idNumber.length !== 13) {
+              canonical.idNumber = null; // Invalid length
             }
           }
-        }
-        
-        // Ensure all string fields are trimmed
-        Object.keys(canonical).forEach(key => {
-          if (canonical[key] != null && typeof canonical[key] === 'string') {
-            canonical[key] = canonical[key].trim();
+          
+          // Normalize date format
+          if (canonical.dateOfBirth) {
+            const dob = String(canonical.dateOfBirth).trim();
+            // Convert various formats to YYYY-MM-DD
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+              canonical.dateOfBirth = dob;
+            } else if (/^\d{1,2}\s+[A-Z]{3}\s+\d{4}$/i.test(dob)) {
+              const months = { JAN: '01', FEB: '02', MAR: '03', APR: '04', MAY: '05', JUN: '06',
+                              JUL: '07', AUG: '08', SEP: '09', OCT: '10', NOV: '11', DEC: '12' };
+              const parts = dob.toUpperCase().split(/\s+/);
+              if (parts.length === 3 && months[parts[1]]) {
+                const day = parts[0].padStart(2, '0');
+                canonical.dateOfBirth = `${parts[2]}-${months[parts[1]]}-${day}`;
+              }
+            }
           }
-        });
-        
-        return canonical;
+          
+          // Ensure all string fields are trimmed
+          Object.keys(canonical).forEach(key => {
+            if (canonical[key] != null && typeof canonical[key] === 'string') {
+              canonical[key] = canonical[key].trim();
+            }
+          });
+          
+          return canonical;
+        } catch (jsonError) {
+          console.error('❌ Error parsing JSON from OCR:', jsonError.message);
+          console.error('📄 JSON text that failed:', jsonMatch[0].substring(0, 200));
+          // Continue to fallback text parsing
+        }
       }
 
       // Fallback to text parsing
