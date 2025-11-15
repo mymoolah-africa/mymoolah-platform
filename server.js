@@ -1,7 +1,35 @@
+// Early startup logging for Cloud Run debugging (use stderr for immediate output)
+process.stderr.write('🚀 Starting MyMoolah Backend Server...\n');
+process.stderr.write(`📋 Node version: ${process.version}\n`);
+process.stderr.write(`📋 Working directory: ${process.cwd()}\n`);
+process.stderr.write(`📋 Environment: ${process.env.NODE_ENV || 'development'}\n`);
+process.stderr.write(`📋 PORT: ${process.env.PORT || 'not set'}\n`);
+process.stderr.write(`📋 User: ${process.getuid ? process.getuid() : 'unknown'}\n`);
+try {
+  const fs = require('fs');
+  const files = fs.readdirSync('/app').slice(0, 5).join(', ');
+  process.stderr.write(`📋 Files in /app: ${files}\n`);
+} catch (e) {
+  process.stderr.write(`📋 Error reading /app: ${e.message}\n`);
+}
+console.log('🚀 Starting MyMoolah Backend Server...');
+console.log('📋 Node version:', process.version);
+console.log('📋 Working directory:', process.cwd());
+console.log('📋 Environment:', process.env.NODE_ENV || 'development');
+console.log('📋 PORT:', process.env.PORT || 'not set');
+
 // Load environment variables and security configuration
+console.log('📋 Loading environment variables...');
 require('dotenv').config();
+console.log('✅ Environment variables loaded');
+
+console.log('📋 Loading security configuration...');
 const securityConfig = require('./config/security');
+console.log('✅ Security configuration loaded');
+
+console.log('📋 Loading TLS configuration...');
 const tlsConfig = require('./config/tls');
+console.log('✅ TLS configuration loaded');
 
 // Process error handling
 process.on('unhandledRejection', (reason, promise) => {
@@ -28,6 +56,10 @@ const {
 } = require('./middleware/securityMiddleware');
 const { secureLogging, secureErrorLogging } = require('./middleware/secureLogging');
 const app = express();
+
+// Trust proxy for Cloud Run (required for express-rate-limit to work correctly)
+// Cloud Run uses a reverse proxy, so we need to trust X-Forwarded-* headers
+app.set('trust proxy', true);
 
 // Get configuration from security config
 const config = securityConfig.getConfig();
@@ -427,8 +459,10 @@ const startServer = () => {
       
       const httpsServer = tlsConfig.createHTTPSServer(app, certificatePath, keyPath);
       
-      httpsServer.listen(port, () => {
-        console.log(`🚀 MyMoolah Treasury Platform HTTPS Server running on port ${port}`);
+      // Cloud Run requires listening on 0.0.0.0 (all interfaces)
+      const host = process.env.HOST || '0.0.0.0';
+      httpsServer.listen(port, host, () => {
+        console.log(`🚀 MyMoolah Treasury Platform HTTPS Server running on ${host}:${port}`);
         console.log(`🔒 TLS 1.3 Enabled: ${tlsConfig.getConfigSummary().version.min}`);
         console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
         console.log(`📊 Security Headers: ${tlsConfig.getConfigSummary().securityHeaders.length} configured`);
@@ -444,8 +478,10 @@ const startServer = () => {
       return httpsServer;
     } else {
       // Start HTTP server (development only)
-      const httpServer = app.listen(port, () => {
-        console.log(`🚀 MyMoolah Treasury Platform HTTP Server running on port ${port}`);
+      // Cloud Run requires listening on 0.0.0.0 (all interfaces)
+      const host = process.env.HOST || '0.0.0.0';
+      const httpServer = app.listen(port, host, () => {
+        console.log(`🚀 MyMoolah Treasury Platform HTTP Server running on ${host}:${port}`);
         console.log(`⚠️  TLS Disabled - Not recommended for production`);
         console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
         console.log(`📊 Security Headers: ${Object.keys(config.securityHeaders).length} configured`);
@@ -461,6 +497,23 @@ const startServer = () => {
 
 // Start the server
 const server = startServer();
+
+// Ensure process doesn't exit if server fails to start
+if (!server) {
+  console.error('❌ Failed to start server - server object is null');
+  process.exit(1);
+}
+
+// Keep process alive
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // Don't exit - log and continue
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit - log and continue
+});
 
 // Start background services after server initialization
 const CodebaseSweepService = require('./services/codebaseSweepService');
@@ -546,8 +599,11 @@ const initializeBackgroundServices = async () => {
   }
 };
 
-// Start background services
-initializeBackgroundServices();
+// Start background services (non-blocking - don't fail server startup if services fail)
+initializeBackgroundServices().catch((error) => {
+  console.error('⚠️  Background services initialization failed (server will continue):', error.message);
+  // Don't exit - server should still run even if background services fail
+});
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
