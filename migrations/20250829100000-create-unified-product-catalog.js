@@ -2,25 +2,37 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Create product types enum
+    // Create product types enum (if not exists)
     await queryInterface.sequelize.query(`
-      CREATE TYPE "enum_product_types" AS ENUM (
-        'airtime', 'data', 'electricity', 'voucher', 'bill_payment', 'cash_out'
-      );
+      DO $$ BEGIN
+        CREATE TYPE "enum_product_types" AS ENUM (
+          'airtime', 'data', 'electricity', 'voucher', 'bill_payment', 'cash_out'
+        );
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
-    // Create product status enum
+    // Create product status enum (if not exists)
     await queryInterface.sequelize.query(`
-      CREATE TYPE "enum_product_status" AS ENUM (
-        'active', 'inactive', 'discontinued', 'maintenance'
-      );
+      DO $$ BEGIN
+        CREATE TYPE "enum_product_status" AS ENUM (
+          'active', 'inactive', 'discontinued', 'maintenance'
+        );
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
-    // Create order status enum
+    // Create order status enum (if not exists)
     await queryInterface.sequelize.query(`
-      CREATE TYPE "enum_order_status" AS ENUM (
-        'pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded'
-      );
+      DO $$ BEGIN
+        CREATE TYPE "enum_order_status" AS ENUM (
+          'pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded'
+        );
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
     `);
 
     // Create product brands table
