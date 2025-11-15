@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: November 11, 2025  
-**Version**: 2.4.8 - Staging & Production Database Setup  
-**Status**: ✅ **STAGING/PRODUCTION DATABASES CREATED** ✅ **SECRET MANAGER CONFIGURED** ✅ **BANKING-GRADE SECURITY ISOLATION**
+**Last Updated**: November 15, 2025  
+**Version**: 2.4.12 - KYC Driver's License Validation  
+**Status**: ✅ **KYC DRIVER'S LICENSE VALIDATION COMPLETE** ✅ **DOCUMENT TYPE DETECTION IMPROVED** ✅ **OPENAI REFUSAL HANDLING ENHANCED**
 
 ---
 
@@ -29,13 +29,24 @@ The MyMoolah Treasury Platform has successfully created **banking-grade Staging 
 - **Status**: ✅ Instances created and running, ✅ Databases created, ✅ Users created, ✅ Passwords stored
 - **Impact**: Complete security isolation between environments, banking-grade password management
 
+#### **🆔 KYC Driver's License Validation** ✅ **COMPLETE**
+- **ID Number Format Support**: Handles "02/6411055084084" format (extracts "6411055084084") and standard license format "AB123456CD"
+- **Name Format Handling**: Handles CAPS format "INITIALS SURNAME" (e.g., "A BOTES") - extracts surname from last part
+- **Date Format Support**: Handles "dd/mm/yyyy - dd/mm/yyyy" format - extracts second date as expiry, only validates expiry
+- **Document Type Detection**: Improved detection using validity period fields (validFrom and expiryDate) to distinguish driver's licenses from SA IDs
+- **OpenAI Refusal Detection**: Enhanced early detection of content policy refusals before JSON parsing, automatic Tesseract OCR fallback
+- **Testing Exception Update**: ID validation now ACTIVE for user ID 1 for SA IDs and driver's licenses, SKIPPED only for passports
+- **Status**: ✅ Implementation complete, ✅ Tested and verified working
+- **Impact**: Complete support for SA driver's licenses with proper format handling and validation
+
 #### **🆔 KYC OpenAI Fallback Fix** ✅ **COMPLETE**
 - **Early Fallback Detection**: Check for local file path before attempting OpenAI call
 - **Immediate Tesseract Fallback**: Use Tesseract OCR immediately if OpenAI unavailable
 - **Error Handling**: Robust error handling with proper fallback triggering on API failures
+- **Content Policy Refusal Handling**: Enhanced detection of OpenAI refusals with automatic Tesseract fallback
 - **Testing**: Comprehensive test suite created and verified
 - **Status**: ✅ KYC processing fully functional without OpenAI (Tesseract fallback working)
-- **Impact**: Users can complete KYC verification even when OpenAI API key is invalid
+- **Impact**: Users can complete KYC verification even when OpenAI API key is invalid or refuses to process documents
 
 #### **🔍 Transaction Filter Implementation** ✅ **COMPLETE**
 - **Internal Accounting Filter**: Comprehensive filter removes VAT, revenue, and float credit transactions from frontend

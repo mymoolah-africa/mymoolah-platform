@@ -106,10 +106,18 @@ const checkKYCForDebit = async (req, res, next) => {
 ## Document Validation Rules
 
 ### ID Documents
-- **Accepted Types**: South African ID Book, Passport, Temporary ID Certificate
+- **Accepted Types**: South African ID Book, South African ID Card, South African Passport, South African Driving License, Temporary ID Certificate, International Passport
 - **Required Fields**: Full name, ID number, Date of birth
-- **Validation**: 13-digit ID number format validation
+- **Validation**: 13-digit ID number format validation (SA ID), 6-9 alphanumeric passport number format, driver's license format validation
 - **Confidence Threshold**: 80% minimum for auto-approval
+
+### South African Driver's License
+- **ID Number Format**: May appear as "02/6411055084084" (two digits + "/" + 13-digit ID) OR standard license format "AB123456CD" (2 letters + 6 digits + 2 letters)
+- **Name Format**: Usually "INITIALS SURNAME" in CAPS (e.g., "A BOTES" where "A" is initial and "BOTES" is surname)
+- **Valid Dates**: Format "dd/mm/yyyy - dd/mm/yyyy" (e.g., "15/01/2020 - 15/01/2030")
+- **Validation**: Only the second date (expiry) is validated - license must not be expired (current date < expiry date)
+- **Document Type Detection**: Automatically detected using validity period fields (validFrom and expiryDate) - driver's licenses have validity periods, SA IDs don't
+- **Format Support**: Accepts both ID number format (13 digits) and license number format (2 letters + 6 digits + 2 letters)
 
 ### Proof of Address
 - **Accepted Types**: Utility bill, Bank statement, Municipal account, Insurance policy
@@ -134,12 +142,20 @@ The system automatically falls back to Tesseract OCR in the following scenarios:
 - **OpenAI API Rate Limit**: When API rate limit is exceeded (429 error)
 - **Network Errors**: When OpenAI API is unreachable
 - **OpenAI Unavailable**: When OpenAI service is temporarily unavailable
+- **Content Policy Refusal**: When OpenAI refuses to process document due to content policy (e.g., "I'm sorry, but I can't extract information from this document")
+
+**Enhanced Refusal Detection**:
+- **Early Detection**: Checks for refusal messages BEFORE attempting JSON parsing
+- **Pattern Matching**: Detects "I'm sorry", "can't extract", "can't assist", "unable" messages
+- **Automatic Fallback**: Immediately triggers Tesseract OCR when OpenAI refuses
+- **Preserved Flags**: Refusal flags preserved through retry loop for proper fallback triggering
 
 **Benefits**:
 - ✅ **Zero Downtime**: KYC processing continues even when OpenAI fails
 - ✅ **Automatic Recovery**: No manual intervention required
 - ✅ **Reliable Processing**: Tesseract OCR ensures document processing continues
 - ✅ **Transparent to Users**: Fallback is seamless and invisible to users
+- ✅ **Content Policy Handling**: Automatically handles OpenAI content policy refusals
 
 ### OpenAI Integration
 ```javascript
@@ -251,6 +267,29 @@ describe('KYC System', () => {
 - **Manual Review Queue**: Alert if queue >50 documents
 - **Processing Delays**: Alert if average time >30 seconds
 
+## Document Type Detection
+
+The system automatically detects document types using multiple indicators:
+
+### Detection Logic
+1. **Explicit Document Type**: Checks if OCR explicitly identifies document type
+2. **ID Number Format**: Analyzes ID number format (13-digit SA ID, 6-9 alphanumeric passport, license format)
+3. **Validity Period Fields**: Checks for `validFrom` and `expiryDate` fields (driver's licenses have validity periods, SA IDs don't)
+4. **Country of Issue**: Uses country information when available
+
+### Driver's License Detection
+- **Primary Indicator**: Presence of both `validFrom` and `expiryDate` fields
+- **Secondary Indicator**: ID number format (13-digit ID or license format "AB123456CD")
+- **Result**: Correctly distinguishes driver's licenses from SA IDs even when both have 13-digit ID numbers
+
+## Testing Exception (User ID 1)
+
+For testing purposes, user ID 1 has a special exception:
+- **ID Validation ACTIVE for**: SA ID cards, old ID books, SA driver's licenses
+- **ID Validation SKIPPED for**: Passports only
+- **Purpose**: Allows testing passport OCR with different passport formats without ID number matching
+- **Note**: This exception is temporary and should be removed once passport validation is confirmed working
+
 ## Future Enhancements
 
 ### Planned Features
@@ -281,6 +320,6 @@ describe('KYC System', () => {
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated: July 31, 2025
+**Version**: 2.4.12  
+**Last Updated**: November 15, 2025  
 **Maintainer**: MyMoolah Development Team 

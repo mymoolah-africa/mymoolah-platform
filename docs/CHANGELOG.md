@@ -1,6 +1,27 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-11-12 (Latest)
+## 2025-11-15 (Latest)
+- **KYC Driver's License Validation**: Comprehensive validation for South African driver's licenses with unique format support. Improved document type detection and OpenAI content policy refusal handling.
+
+**KYC Driver's License Validation**:
+- **ID Number Format Support**: Handles "02/6411055084084" format (extracts "6411055084084") and standard license format "AB123456CD"
+- **Name Format Handling**: Handles CAPS format "INITIALS SURNAME" (e.g., "A BOTES") - extracts surname from last part
+- **Date Format Support**: Handles "dd/mm/yyyy - dd/mm/yyyy" format - extracts second date as expiry, only validates expiry
+- **Document Type Detection**: Improved detection using validity period fields (validFrom and expiryDate) to distinguish driver's licenses from SA IDs
+- **OpenAI Refusal Detection**: Enhanced early detection of content policy refusals before JSON parsing, automatic Tesseract OCR fallback
+- **Testing Exception Update**: ID validation now ACTIVE for user ID 1 for SA IDs and driver's licenses, SKIPPED only for passports
+- **Validation Logic**: Only checks if license is expired (not between dates), accepts both ID number and license number formats
+- **Status**: ✅ Implementation complete, ✅ Tested and verified working
+
+**Files Updated**:
+- `services/kycService.js` - Driver's license validation, ID number parsing, date normalization, name parsing, document type detection, refusal detection
+- `docs/CHANGELOG.md` - Added KYC driver's license validation entry
+- `docs/KYC_SYSTEM.md` - Updated with driver's license validation details
+- `docs/AGENT_HANDOVER.md` - Updated KYC status
+- `docs/PROJECT_STATUS.md` - Updated KYC status
+- `docs/session_logs/2025-11-15_1452_kyc-drivers-license-validation.md` - Session log created
+
+## 2025-11-12
 - **Zapper UAT Testing Complete**: Comprehensive UAT test suite created and executed. 92.3% success rate (12/13 critical tests passed). All core payment functionality verified and working. Ready for production credentials request.
 
 **Zapper UAT Testing**:

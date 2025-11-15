@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: November 10, 2025  
-**Version**: 2.4.7 - MobileMart UAT Testing  
-**Status**: ✅ **KYC FALLBACK WORKING** ✅ **MOBILEMART UAT TESTING - 4/7 PURCHASE TYPES WORKING**
+**Last Updated**: November 15, 2025  
+**Version**: 2.4.12 - KYC Driver's License Validation  
+**Status**: ✅ **KYC DRIVER'S LICENSE VALIDATION COMPLETE** ✅ **DOCUMENT TYPE DETECTION IMPROVED** ✅ **OPENAI REFUSAL HANDLING ENHANCED**
 
 ---
 
@@ -48,12 +48,23 @@ The platform now includes **comprehensive transaction filtering** that:
 - **Backend Filtering**: Filter applied server-side before data reaches frontend
 - **Verified**: Confirmed all filtered transactions remain in database, only hidden from frontend
 
-### **🆔 NEW: KYC OpenAI Fallback Fix**
+### **🆔 NEW: KYC Driver's License Validation**
 
-The platform now includes **improved KYC OCR fallback mechanism** to Tesseract when OpenAI API fails:
+The platform now includes **comprehensive validation for South African driver's licenses**:
+- **ID Number Format Support**: Handles "02/6411055084084" format (extracts "6411055084084") and standard license format "AB123456CD"
+- **Name Format Handling**: Handles CAPS format "INITIALS SURNAME" (e.g., "A BOTES") - extracts surname from last part
+- **Date Format Support**: Handles "dd/mm/yyyy - dd/mm/yyyy" format - extracts second date as expiry, only validates expiry
+- **Document Type Detection**: Improved detection using validity period fields (validFrom and expiryDate) to distinguish driver's licenses from SA IDs
+- **OpenAI Refusal Detection**: Enhanced early detection of content policy refusals before JSON parsing, automatic Tesseract OCR fallback
+- **Status**: ✅ Implementation complete, ✅ Tested and verified working
+
+### **🆔 KYC OpenAI Fallback Fix**
+
+The platform includes **improved KYC OCR fallback mechanism** to Tesseract when OpenAI API fails:
 - **Automatic Fallback**: System automatically uses Tesseract OCR when OpenAI is unavailable
 - **Error Handling**: Robust error handling for API failures (401, 429, network errors)
-- **Zero Downtime**: KYC processing continues to work even with invalid OpenAI API keys
+- **Content Policy Refusal**: Enhanced detection of OpenAI refusals with automatic Tesseract fallback
+- **Zero Downtime**: KYC processing continues to work even with invalid OpenAI API keys or content policy refusals
 - **Tested & Verified**: Comprehensive test suite confirms fallback works in all scenarios
 - **Status**: ✅ Fully functional - KYC processing works without OpenAI
 
