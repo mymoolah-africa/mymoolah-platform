@@ -720,6 +720,12 @@ Return ONLY valid JSON in this exact format (no additional text):
         lastError = error;
         console.error(`❌ OpenAI OCR attempt ${attempt} failed:`, error.message);
         
+        // Check if it's a content policy refusal (from our detection above)
+        if (error.message.includes('content policy refusal')) {
+          // Don't retry - go straight to Tesseract fallback
+          break;
+        }
+        
         // If it's a rate limit or temporary error, retry
         if (attempt < MAX_RETRIES && (
           error.message.includes('rate limit') || 
@@ -743,8 +749,7 @@ Return ONLY valid JSON in this exact format (no additional text):
     // All retries failed - try Tesseract fallback if OpenAI refused
     const wasContentPolicyRefusal = lastError?.message && 
       (lastError.message.includes('content policy') || 
-       lastError.message.includes('unable to assist') ||
-       lastError.message.includes('unable to provide'));
+       lastError.message.includes('content policy refusal'));
     
     if (wasContentPolicyRefusal) {
       console.log('🔄 OpenAI refused - falling back to Tesseract OCR...');
