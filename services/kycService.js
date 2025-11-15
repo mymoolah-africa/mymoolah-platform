@@ -1316,24 +1316,29 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         docIdRaw: ocrResults.idNumber || ocrResults.licenseNumber
       });
       
-      // TEMPORARY TESTING EXCEPTION: User ID 1 can test any document type
-      // This allows testing OCR with different document formats without ID number matching
+      // TEMPORARY TESTING EXCEPTION: User ID 1 can test passports without ID matching
+      // ID validation is ACTIVE for: SA ID cards, old ID books, SA driver's licenses
+      // ID validation is SKIPPED for: Passports only
       const isTestingUser = userId === 1;
+      const isPassport = documentType === 'passport';
+      const skipIdMatching = isTestingUser && isPassport;
       
       // CRITICAL CHECK 1: ID Number must match exactly
       // Applies to: SA ID, Passport, Driver's License, Temporary ID Certificate
-      // EXCEPTION: User ID 1 (testing) - skip ID number matching, only require document has ID/passport number
-      if (isTestingUser) {
-        console.log('🧪 TESTING MODE: User ID 1 - skipping ID number matching validation');
-        // For testing user, only check that document has an ID/passport number (format validation happens later)
+      // EXCEPTION: User ID 1 (testing) - skip ID number matching ONLY for passports
+      // For SA ID cards, old ID books, and SA driver's licenses, ID validation is ACTIVE for user ID 1
+      if (skipIdMatching) {
+        console.log('🧪 TESTING MODE: User ID 1 - skipping ID number matching validation for passport');
+        // For testing user with passport, only check that document has a passport number (format validation happens later)
         if (!docIdForMatch) {
           validation.issues.push('ID/Passport/License number not found on document');
           return validation;
         } else {
-          console.log('✅ Testing mode: Document has ID/Passport number (format will be validated)');
+          console.log('✅ Testing mode: Document has Passport number (format will be validated)');
         }
       } else {
         // Normal validation: ID number must match exactly
+        // This applies to: SA ID, Driver's License, Temporary ID, and Passports (for non-testing users)
         if (registeredId && docIdForMatch) {
           if (registeredId !== docIdForMatch) {
             console.warn('⚠️  ID/Passport number mismatch:', {
