@@ -1,21 +1,32 @@
 # MyMoolah Agent Rules - Cursor 2.0
 
 ## Rule 1: Git Workflow (CRITICAL)
-- **Before work (SAFE PULL PROCEDURE)**:
-  1. **Check git status first**: `git status` to see if there are uncommitted changes
+- **OFFICIAL WORKFLOW (CONFIRMED)**:
+  - **Local Development**: Work on local machine → Make changes → Test
+  - **Commit Locally**: `git add . && git commit -m "[description]"` (AI agent does this automatically)
+  - **Push to GitHub**: `git push origin main` (User does this - AI agent does NOT push)
+  - **Pull in Codespaces**: `git pull origin main` (After pushing, pull in Codespaces/other environments)
+  - **GitHub is source of truth**: All environments sync from GitHub after local push
+
+- **Before work (SAFE PULL PROCEDURE - CHECK STATUS FIRST)**:
+  1. **ALWAYS check git status first**: `git status` to see current state
   2. **If uncommitted changes exist**: 
      - **Option A (Recommended)**: Commit them first, then pull: `git add . && git commit -m "[description]"` then `git pull origin main`
      - **Option B**: Stash them temporarily: `git stash` then `git pull origin main` then `git stash pop` (if you need to keep working on them)
-  3. **If no uncommitted changes**: Safe to pull: `git pull origin main`
-  4. **If local commits not pushed**: Push first, then pull: `git push origin main` then `git pull origin main`
+  3. **If local commits exist but not pushed**: Push first, then pull: `git push origin main` then `git pull origin main`
+  4. **If no uncommitted changes and up to date**: Safe to pull: `git pull origin main`
+  5. **If working tree clean and ahead of origin**: Push first, then pull in other environments
+
 - **During work**: Make changes, test, update documentation
+
 - **After work (AI AGENT AUTOMATED)**:
   1. Stage and commit session log and handover: `git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/agent_handover.md && git commit -m "docs: session log and handover update - [description]"`
   2. Stage and commit all other changes: `git add . && git commit -m "[descriptive message for code changes]"`
   3. **DO NOT push** - Inform user that commits are ready, user will push
-- **User action**: User runs `git push origin main` when ready to push
-- **Workflow**: Local work → Commit → Push to GitHub → Pull in Codespaces/other environments
-- **GitHub is source of truth**: Always check status before pulling. AI agent commits automatically. User pushes when ready.
+
+- **User action (REQUIRED)**: User runs `git push origin main` when ready to push to GitHub
+
+- **CRITICAL RULE**: Never pull without checking status first. Uncommitted changes must be committed or stashed before pulling. Local commits must be pushed before pulling in other environments.
 
 ## Rule 2: Agent Handover & Session Continuity (MANDATORY)
 - **NEW SESSION REQUIREMENT**: When starting a new chat/session, you are a new agent. You MUST read previous agent work to maintain continuity.
@@ -89,8 +100,11 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 - Read `docs/changelog.md` (recent changes)
 - Read `docs/agent_role_template.md` (operating charter)
 - Read `docs/readme.md` (system overview)
-- **Check git status**: `git status` (check for uncommitted changes first)
-- **Pull safely**: If no uncommitted changes, `git pull origin main` (if uncommitted changes exist, commit or stash first)
+- **Check git status FIRST**: `git status` (ALWAYS check for uncommitted changes before pulling)
+- **Pull safely based on status**:
+  - If uncommitted changes: Commit or stash first, then pull
+  - If local commits not pushed: Push first, then pull
+  - If clean and up to date: Safe to pull `git pull origin main`
 - `git log --oneline -10` (review recent commits)
 - Check pending migrations/incomplete work
 - Review relevant documentation for current task
