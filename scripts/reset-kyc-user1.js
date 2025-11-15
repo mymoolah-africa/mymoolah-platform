@@ -10,8 +10,14 @@ async function resetKYC(userId) {
   try {
     console.log(`🔄 Resetting KYC status for user ID ${userId}...`);
     
-    // Test connection
-    await sequelize.authenticate();
+    // Test connection with timeout
+    console.log('⏳ Connecting to database...');
+    const connectionPromise = sequelize.authenticate();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Connection timeout after 10 seconds')), 10000)
+    );
+    
+    await Promise.race([connectionPromise, timeoutPromise]);
     console.log('✅ Database connection established');
     
     // Verify user exists
