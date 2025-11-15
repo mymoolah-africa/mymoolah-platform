@@ -234,21 +234,7 @@ export function BeneficiaryList({
             filteredBeneficiaries.map((beneficiary) => (
               <div
                 key={beneficiary.id}
-                onClick={(e) => {
-                  // Only trigger onSelect if click is not on a button
-                  const target = e.target as HTMLElement;
-                  if (!target.closest('button')) {
-                    onSelect(beneficiary);
-                  }
-                }}
-                onTouchEnd={(e) => {
-                  // Handle touch events for mobile
-                  const target = e.target as HTMLElement;
-                  if (!target.closest('button')) {
-                    e.preventDefault();
-                    onSelect(beneficiary);
-                  }
-                }}
+                onClick={() => onSelect(beneficiary)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -261,7 +247,8 @@ export function BeneficiaryList({
                   transition: 'all 0.2s ease',
                   position: 'relative',
                   userSelect: 'none',
-                  WebkitUserSelect: 'none'
+                  WebkitUserSelect: 'none',
+                  touchAction: 'manipulation'
                 }}
                 onMouseOver={(e) => {
                   if (selectedBeneficiary?.id !== beneficiary.id) {
@@ -279,7 +266,6 @@ export function BeneficiaryList({
                 <div 
                   className="flex items-center gap-3 flex-1"
                   style={{
-                    pointerEvents: 'auto',
                     minWidth: 0
                   }}
                 >
@@ -352,16 +338,8 @@ export function BeneficiaryList({
                 <div 
                   className="flex gap-1"
                   style={{
-                    pointerEvents: 'auto',
-                    flexShrink: 0
-                  }}
-                  onClick={(e) => {
-                    // Prevent parent onClick from firing when clicking buttons
-                    e.stopPropagation();
-                  }}
-                  onTouchEnd={(e) => {
-                    // Prevent parent touch event from firing when clicking buttons
-                    e.stopPropagation();
+                    flexShrink: 0,
+                    zIndex: 10
                   }}
                 >
                   {/* Edit Button */}
@@ -370,23 +348,17 @@ export function BeneficiaryList({
                     size="sm"
                     onClick={(e) => {
                       e.stopPropagation();
-                      e.preventDefault();
-                      onEdit(beneficiary);
-                    }}
-                    onTouchEnd={(e) => {
-                      e.stopPropagation();
-                      e.preventDefault();
                       onEdit(beneficiary);
                     }}
                     style={{
                       minWidth: '44px',
                       minHeight: '44px',
                       padding: '0',
-                      pointerEvents: 'auto',
-                      zIndex: 10
+                      position: 'relative',
+                      zIndex: 20
                     }}
                   >
-                    <Edit2 style={{ width: '16px', height: '16px', color: '#6b7280', pointerEvents: 'none' }} />
+                    <Edit2 style={{ width: '16px', height: '16px', color: '#6b7280' }} />
                   </Button>
                   
                   {/* Remove Button */}
@@ -396,23 +368,17 @@ export function BeneficiaryList({
                       size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
-                        e.preventDefault();
-                        onRemove(beneficiary);
-                      }}
-                      onTouchEnd={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
                         onRemove(beneficiary);
                       }}
                       style={{
                         minWidth: '44px',
                         minHeight: '44px',
                         padding: '0',
-                        pointerEvents: 'auto',
-                        zIndex: 10
+                        position: 'relative',
+                        zIndex: 20
                       }}
                     >
-                      <X style={{ width: '16px', height: '16px', color: '#dc2626', pointerEvents: 'none' }} />
+                      <X style={{ width: '16px', height: '16px', color: '#dc2626' }} />
                     </Button>
                   )}
                 </div>
