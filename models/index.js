@@ -152,6 +152,10 @@ db.GoogleReviewResponse = require('./GoogleReviewResponse')(sequelize, Sequelize
 db.GoogleReviewAnalytics = require('./GoogleReviewAnalytics')(sequelize, Sequelize.DataTypes);
 db.GoogleApiConfig = require('./GoogleApiConfig')(sequelize, Sequelize.DataTypes);
 
+// Beneficiary normalization tables (payment methods & service accounts)
+db.BeneficiaryPaymentMethod = require('./BeneficiaryPaymentMethod')(sequelize, Sequelize.DataTypes);
+db.BeneficiaryServiceAccount = require('./BeneficiaryServiceAccount')(sequelize, Sequelize.DataTypes);
+
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
