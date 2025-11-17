@@ -1149,6 +1149,37 @@ class UnifiedBeneficiaryService {
               console.log(`[Filter] Beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) included in airtime-data list via normalized table`);
             }
           }
+          
+          // Fallback: If beneficiary has MyMoolah wallet (payment method), they can receive airtime/data
+          // Check normalized payment methods
+          if (!shouldInclude) {
+            const paymentMethods = await BeneficiaryPaymentMethod.findAll({
+              where: { 
+                beneficiaryId: beneficiaryData.id, 
+                isActive: true,
+                methodType: 'mymoolah'
+              }
+            });
+            shouldInclude = paymentMethods.length > 0;
+            if (shouldInclude) {
+              console.log(`[Filter] Beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) included in airtime-data list via MyMoolah wallet fallback`);
+            }
+          }
+          
+          // Also check JSONB for MyMoolah payment method
+          if (!shouldInclude && beneficiaryData.paymentMethods?.mymoolah) {
+            shouldInclude = true;
+            console.log(`[Filter] Beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) included in airtime-data list via MyMoolah wallet (JSONB)`);
+          }
+          
+          // Final fallback: If beneficiary has msisdn (MyMoolah wallet number) and accountType is mymoolah
+          if (!shouldInclude && beneficiaryData.msisdn && 
+              !beneficiaryData.msisdn.startsWith('NON_MSI_') &&
+              (beneficiaryData.accountType === 'mymoolah' || !beneficiaryData.accountType)) {
+            // Likely a MyMoolah wallet beneficiary that can receive airtime/data
+            shouldInclude = true;
+            console.log(`[Filter] Beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) included in airtime-data list via msisdn fallback (${beneficiaryData.msisdn})`);
+          }
           break;
           
         case 'electricity':
