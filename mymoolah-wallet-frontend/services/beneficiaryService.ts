@@ -231,18 +231,17 @@ class BeneficiaryService {
   }): Promise<PaymentBeneficiary> {
     const serviceType = options.accountType === 'bank' ? 'bank' : 'mymoolah';
     
-    // For MyMoolah, msisdn is required. For bank accounts, use payShapReference or msisdn if provided
-    let normalizedMsisdn: string;
+    // For MyMoolah, msisdn is required. For bank accounts, we don't use MSISDN (backend generates NON_MSI_ identifier)
+    let normalizedMsisdn: string | undefined;
     if (serviceType === 'mymoolah') {
       if (!options.msisdn) {
         throw new Error('MSISDN is required for MyMoolah accounts');
       }
       normalizedMsisdn = this.normalizeMsisdn(options.msisdn);
     } else {
-      // For bank accounts, use payShapReference if provided, otherwise msisdn, or generate NON_MSI_ identifier
-      normalizedMsisdn = options.payShapReference 
-        ? this.normalizeMsisdn(options.payShapReference)
-        : (options.msisdn ? this.normalizeMsisdn(options.msisdn) : '');
+      // For bank accounts, we don't pass MSISDN - backend will generate NON_MSI_ identifier
+      // PayShap reference is stored separately in serviceData
+      normalizedMsisdn = undefined;
     }
 
     const serviceData =
@@ -251,7 +250,9 @@ class BeneficiaryService {
             bankName: options.bankName,
             accountNumber: options.accountNumber,
             accountType: 'cheque',
-            payShapReference: options.payShapReference || options.msisdn || null, // PayShap reference (recipient MSISDN)
+            payShapReference: options.payShapReference 
+              ? this.normalizeMsisdn(options.payShapReference) // Normalize PayShap reference (remove spaces, format correctly)
+              : (options.msisdn ? this.normalizeMsisdn(options.msisdn) : null), // PayShap reference (recipient MSISDN)
             isDefault: true
           }
         : {
@@ -261,7 +262,7 @@ class BeneficiaryService {
 
     const created = await this.createOrUpdateBeneficiary({
       name: options.name,
-      msisdn: normalizedMsisdn && normalizedMsisdn.length > 0 ? normalizedMsisdn : undefined, // Optional for bank accounts (backend will use NON_MSI_ identifier if undefined)
+      msisdn: normalizedMsisdn, // undefined for bank accounts (backend will use NON_MSI_ identifier)
       serviceType,
       serviceData
     });

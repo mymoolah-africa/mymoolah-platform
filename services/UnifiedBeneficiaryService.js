@@ -245,34 +245,45 @@ class UnifiedBeneficiaryService {
         throw new Error('Beneficiary name is required');
       }
 
-      // Derive MSISDN from serviceData if not provided
-      let primaryMsisdn = msisdn;
-      if (!primaryMsisdn) {
-        // Try to extract from serviceData
-        if (serviceData?.walletMsisdn) {
-          primaryMsisdn = serviceData.walletMsisdn;
-        } else if (serviceData?.msisdn) {
-          primaryMsisdn = serviceData.msisdn;
-        } else if (serviceData?.mobileNumber) {
-          primaryMsisdn = serviceData.mobileNumber;
-        }
-        // For non-MSI services (electricity, biller, bank), use a placeholder or generate from name
-        if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller' || serviceType === 'bank')) {
-          // Generate a stable identifier from name for non-MSI services
-          // For bank accounts, we use account number as the identifier, but still need an MSISDN for the beneficiary record
-          primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
-        }
-      }
-
-      // Bank accounts don't require MSISDN - they use account numbers
-      // But we still need an identifier for the beneficiary record
-      if (!primaryMsisdn && serviceType !== 'bank') {
-        throw new Error('MSISDN is required. Provide msisdn or ensure serviceData contains walletMsisdn/msisdn/mobileNumber');
-      }
-      
-      // For bank accounts, if no MSISDN provided, use NON_MSI_ identifier
-      if (!primaryMsisdn && serviceType === 'bank') {
+      // For bank accounts, always use NON_MSI_ identifier (don't use PayShap reference as primary MSISDN)
+      // PayShap reference is stored separately in the payment method
+      let primaryMsisdn;
+      if (serviceType === 'bank') {
+        // Always generate NON_MSI_ identifier for bank accounts
         primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
+        
+        // Validate PayShap reference separately if provided (it's a mobile number for PayShap)
+        if (serviceData?.payShapReference) {
+          try {
+            // Validate the PayShap reference as a mobile number
+            this.validateMsisdn(serviceData.payShapReference);
+          } catch (error) {
+            throw new Error(`Invalid PayShap reference (must be a valid South African mobile number): ${error.message}`);
+          }
+        }
+      } else {
+        // For non-bank services, derive MSISDN from msisdn parameter or serviceData
+        primaryMsisdn = msisdn;
+        if (!primaryMsisdn) {
+          // Try to extract from serviceData
+          if (serviceData?.walletMsisdn) {
+            primaryMsisdn = serviceData.walletMsisdn;
+          } else if (serviceData?.msisdn) {
+            primaryMsisdn = serviceData.msisdn;
+          } else if (serviceData?.mobileNumber) {
+            primaryMsisdn = serviceData.mobileNumber;
+          }
+          // For non-MSI services (electricity, biller), use a placeholder or generate from name
+          if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller')) {
+            // Generate a stable identifier from name for non-MSI services
+            primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
+          }
+        }
+
+        // MSISDN is required for non-bank services (except electricity/biller which use NON_MSI_)
+        if (!primaryMsisdn && serviceType !== 'electricity' && serviceType !== 'biller') {
+          throw new Error('MSISDN is required. Provide msisdn or ensure serviceData contains walletMsisdn/msisdn/mobileNumber');
+        }
       }
 
       // 1) Resolve / create the party-level beneficiary (one per user + msisdn)
