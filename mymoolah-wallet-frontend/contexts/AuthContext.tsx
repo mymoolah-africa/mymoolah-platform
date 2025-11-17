@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { validateDemoCredentials, isDemoMode, getDemoCredentials } from '../config/app-config';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken as getSessionToken, setToken as setSessionToken, removeToken as removeSessionToken } from '../utils/authToken';
@@ -299,6 +299,92 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('mymoolah_kyc_status');
     setUser(null);
   };
+
+  // Inactivity detection and auto-logout (banking-grade security)
+  // Session timeout: 15 minutes of inactivity (banking-grade standard, configurable in APP_CONFIG.SECURITY.sessionTimeout)
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const warningShownRef = useRef(false);
+
+  useEffect(() => {
+    // Only set up inactivity detection if user is logged in
+    if (!user) {
+      // Clear timers when user logs out
+      if (inactivityTimerRef.current) {
+        clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = null;
+      }
+      if (warningTimerRef.current) {
+        clearTimeout(warningTimerRef.current);
+        warningTimerRef.current = null;
+      }
+      warningShownRef.current = false;
+      return;
+    }
+
+    const SESSION_TIMEOUT = APP_CONFIG.SECURITY.sessionTimeout || 15 * 60 * 1000; // 15 minutes default (banking-grade standard)
+    const WARNING_TIME = 60 * 1000; // Show warning 1 minute before logout
+
+    const resetInactivityTimer = () => {
+      // Clear existing timers
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+      warningShownRef.current = false;
+
+      // Set warning timer (1 minute before logout)
+      warningTimerRef.current = setTimeout(() => {
+        warningShownRef.current = true;
+        // Show warning to user
+        const shouldContinue = window.confirm(
+          'You have been inactive for a while. You will be logged out in 1 minute for security.\n\n' +
+          'Click OK to stay logged in, or Cancel to log out now.'
+        );
+
+        if (shouldContinue) {
+          // User wants to stay logged in - reset timer
+          resetInactivityTimer();
+        } else {
+          // User chose to log out now
+          logout();
+        }
+      }, SESSION_TIMEOUT - WARNING_TIME);
+
+      // Set logout timer
+      inactivityTimerRef.current = setTimeout(() => {
+        if (warningShownRef.current) {
+          // Warning was shown and user didn't respond - auto logout
+          alert('You have been logged out due to inactivity for security reasons.');
+          logout();
+        } else {
+          // No warning shown (shouldn't happen, but handle it)
+          logout();
+        }
+      }, SESSION_TIMEOUT);
+    };
+
+    // Track user activity events
+    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    const handleUserActivity = () => {
+      resetInactivityTimer();
+    };
+
+    // Add activity listeners
+    activityEvents.forEach(event => {
+      document.addEventListener(event, handleUserActivity, { passive: true });
+    });
+
+    // Initialize timer
+    resetInactivityTimer();
+
+    // Cleanup
+    return () => {
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, handleUserActivity);
+      });
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    };
+  }, [user, logout]); // Re-run when user state changes (login/logout)
 
   const refreshToken = async () => {
     try {

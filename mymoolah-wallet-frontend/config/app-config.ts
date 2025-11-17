@@ -93,7 +93,7 @@ export const APP_CONFIG = {
   
   // Security Settings - UPDATED FOR COMPLEX PASSWORD SYSTEM
   SECURITY: {
-    sessionTimeout: 30 * 60 * 1000, // 30 minutes
+    sessionTimeout: 15 * 60 * 1000, // 15 minutes (banking-grade standard)
     maxLoginAttempts: 3,
     // Updated password requirements (removed pinLength)
     passwordRequirements: {
