@@ -45,7 +45,7 @@ Review Structure:
             content: prompt
           }
         ],
-        max_tokens: 300,
+        max_completion_tokens: 300,
         temperature: 0.7
       });
 
@@ -170,7 +170,7 @@ Analyze for:
 4. Overall quality and engagement`
           }
         ],
-        max_tokens: 200,
+        max_completion_tokens: 200,
         temperature: 0.3
       });
 
@@ -220,7 +220,7 @@ Generate a response that shows excellent customer service and engagement.`;
             content: prompt
           }
         ],
-        max_tokens: 150,
+        max_completion_tokens: 150,
         temperature: 0.6
       });
 
