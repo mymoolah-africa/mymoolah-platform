@@ -36,43 +36,51 @@ class UnifiedBeneficiaryService {
       // Enrich beneficiaries with normalized table data for filtering
       const enrichedBeneficiaries = await Promise.all(
         beneficiaries.map(async (beneficiary) => {
+          // Convert to plain object to allow modifications
+          const beneficiaryData = beneficiary.toJSON ? beneficiary.toJSON() : beneficiary;
+          
           // If JSONB fields are empty or null, populate them from normalized tables
-          const hasLegacyPaymentMethods = beneficiary.paymentMethods && 
-            (beneficiary.paymentMethods.mymoolah || 
-             (Array.isArray(beneficiary.paymentMethods.bankAccounts) && beneficiary.paymentMethods.bankAccounts.length > 0));
+          const hasLegacyPaymentMethods = beneficiaryData.paymentMethods && 
+            (beneficiaryData.paymentMethods.mymoolah || 
+             (Array.isArray(beneficiaryData.paymentMethods.bankAccounts) && beneficiaryData.paymentMethods.bankAccounts.length > 0));
           
           if (!hasLegacyPaymentMethods) {
             const paymentMethods = await BeneficiaryPaymentMethod.findAll({
-              where: { beneficiaryId: beneficiary.id, isActive: true }
+              where: { beneficiaryId: beneficiaryData.id, isActive: true }
             });
             if (paymentMethods.length > 0) {
               // Populate JSONB from normalized data
-              beneficiary.paymentMethods = this.normalizedToLegacyPaymentMethods(paymentMethods);
+              beneficiaryData.paymentMethods = this.normalizedToLegacyPaymentMethods(paymentMethods);
+              console.log(`[Beneficiary Enrichment] Populated paymentMethods for beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) from normalized tables`);
             }
           }
           
-          const hasLegacyServices = (beneficiary.vasServices && 
-            ((Array.isArray(beneficiary.vasServices.airtime) && beneficiary.vasServices.airtime.length > 0) ||
-             (Array.isArray(beneficiary.vasServices.data) && beneficiary.vasServices.data.length > 0))) ||
-            (beneficiary.utilityServices && 
-             (Array.isArray(beneficiary.utilityServices.electricity) && beneficiary.utilityServices.electricity.length > 0));
+          const hasLegacyServices = (beneficiaryData.vasServices && 
+            ((Array.isArray(beneficiaryData.vasServices.airtime) && beneficiaryData.vasServices.airtime.length > 0) ||
+             (Array.isArray(beneficiaryData.vasServices.data) && beneficiaryData.vasServices.data.length > 0))) ||
+            (beneficiaryData.utilityServices && 
+             (Array.isArray(beneficiaryData.utilityServices.electricity) && beneficiaryData.utilityServices.electricity.length > 0));
           
           if (!hasLegacyServices) {
             const serviceAccounts = await BeneficiaryServiceAccount.findAll({
-              where: { beneficiaryId: beneficiary.id, isActive: true }
+              where: { beneficiaryId: beneficiaryData.id, isActive: true }
             });
             if (serviceAccounts.length > 0) {
               const { vasServices, utilityServices } = this.normalizedToLegacyServiceAccounts(serviceAccounts);
-              if (!beneficiary.vasServices) beneficiary.vasServices = vasServices;
-              if (!beneficiary.utilityServices) beneficiary.utilityServices = utilityServices;
+              if (!beneficiaryData.vasServices) beneficiaryData.vasServices = vasServices;
+              if (!beneficiaryData.utilityServices) beneficiaryData.utilityServices = utilityServices;
+              console.log(`[Beneficiary Enrichment] Populated service accounts for beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) from normalized tables`);
             }
           }
+          
+          // Merge enriched data back into the model instance
+          Object.assign(beneficiary, beneficiaryData);
           
           return beneficiary;
         })
       );
 
-      const filtered = this.filterBeneficiariesByService(enrichedBeneficiaries, serviceType);
+      const filtered = await this.filterBeneficiariesByServiceWithNormalized(enrichedBeneficiaries, serviceType);
       return this.formatBeneficiariesForService(filtered, serviceType);
     } catch (error) {
       console.error('Error getting beneficiaries by service:', error);
@@ -1070,6 +1078,112 @@ class UnifiedBeneficiaryService {
     });
     
     return { vasServices, utilityServices };
+  }
+
+  /**
+   * Filter beneficiaries by service type, also checking normalized tables
+   */
+  async filterBeneficiariesByServiceWithNormalized(beneficiaries, serviceType) {
+    const filtered = [];
+    
+    for (const beneficiary of beneficiaries) {
+      const beneficiaryData = beneficiary.toJSON ? beneficiary.toJSON() : beneficiary;
+      const hasLegacyType = (types = []) => types.includes(beneficiaryData.accountType);
+      let shouldInclude = false;
+      
+      switch (serviceType) {
+        case 'payment':
+          // Check JSONB first
+          shouldInclude = Boolean(
+            beneficiaryData.paymentMethods?.mymoolah ||
+            (beneficiaryData.paymentMethods?.bankAccounts || []).length ||
+            hasLegacyType(['mymoolah', 'bank'])
+          );
+          
+          // If not found in JSONB, check normalized tables
+          if (!shouldInclude) {
+            const paymentMethods = await BeneficiaryPaymentMethod.findAll({
+              where: { 
+                beneficiaryId: beneficiaryData.id, 
+                isActive: true,
+                methodType: { [Op.in]: ['mymoolah', 'bank'] }
+              }
+            });
+            shouldInclude = paymentMethods.length > 0;
+            if (shouldInclude) {
+              console.log(`[Filter] Beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) included in payment list via normalized table`);
+            }
+          }
+          break;
+          
+        case 'airtime-data':
+          // Check JSONB first
+          shouldInclude = Boolean(
+            (beneficiaryData.vasServices?.airtime || []).length ||
+            (beneficiaryData.vasServices?.data || []).length ||
+            hasLegacyType(['airtime', 'data'])
+          );
+          
+          // If not found in JSONB, check normalized tables
+          if (!shouldInclude) {
+            const serviceAccounts = await BeneficiaryServiceAccount.findAll({
+              where: { 
+                beneficiaryId: beneficiaryData.id, 
+                isActive: true,
+                serviceType: { [Op.in]: ['airtime', 'data'] }
+              }
+            });
+            shouldInclude = serviceAccounts.length > 0;
+            if (shouldInclude) {
+              console.log(`[Filter] Beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) included in airtime-data list via normalized table`);
+            }
+          }
+          break;
+          
+        case 'electricity':
+          shouldInclude = Boolean(
+            (beneficiaryData.utilityServices?.electricity || []).length ||
+            (beneficiaryData.utilityServices?.water || []).length ||
+            beneficiaryData.accountType === 'electricity'
+          );
+          
+          // If not found in JSONB, check normalized tables
+          if (!shouldInclude) {
+            const serviceAccounts = await BeneficiaryServiceAccount.findAll({
+              where: { 
+                beneficiaryId: beneficiaryData.id, 
+                isActive: true,
+                serviceType: 'electricity'
+              }
+            });
+            shouldInclude = serviceAccounts.length > 0;
+          }
+          break;
+          
+        case 'biller':
+          shouldInclude = Boolean(
+            (beneficiaryData.billerServices?.accounts || []).length ||
+            beneficiaryData.accountType === 'biller'
+          );
+          break;
+          
+        case 'voucher':
+          shouldInclude = Boolean(
+            beneficiaryData.voucherServices ||
+            beneficiaryData.accountType === 'voucher'
+          );
+          break;
+          
+        default:
+          shouldInclude = true;
+      }
+      
+      if (shouldInclude) {
+        filtered.push(beneficiary);
+      }
+    }
+    
+    return filtered;
   }
 
   filterBeneficiariesByService(beneficiaries, serviceType) {
