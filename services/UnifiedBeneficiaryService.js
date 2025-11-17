@@ -220,12 +220,15 @@ class UnifiedBeneficiaryService {
       }
 
       // 1) Resolve / create the party-level beneficiary (one per user + msisdn)
+      const legacyFields = this.getLegacyFieldValues(serviceType, serviceData, primaryMsisdn);
+
       const beneficiary = await this.ensureBeneficiaryForParty(userId, {
         name,
         msisdn: primaryMsisdn,
         isFavorite,
         notes,
-        preferredServiceType: serviceType
+        preferredServiceType: serviceType,
+        legacyFields
       });
 
       // Ensure legacy columns (identifier/accountType/bankName) stay populated
@@ -261,59 +264,85 @@ class UnifiedBeneficiaryService {
     }
   }
 
-  async ensureLegacyColumns(beneficiary, { serviceType, serviceData, primaryMsisdn }) {
-    const legacyFields = this.getLegacyFieldValues(serviceType, serviceData, primaryMsisdn);
-    const updates = {};
-
-    if (!beneficiary.identifier && legacyFields.identifier) {
-      updates.identifier = legacyFields.identifier;
-    }
-    if (!beneficiary.accountType && legacyFields.accountType) {
-      updates.accountType = legacyFields.accountType;
-    }
-    if (legacyFields.bankName && beneficiary.bankName !== legacyFields.bankName) {
-      updates.bankName = legacyFields.bankName;
-    }
-
-    if (Object.keys(updates).length > 0) {
-      await beneficiary.update(updates);
+  getLegacyFieldValues(serviceType, serviceData = {}, primaryMsisdn) {
+    try {
+      switch (serviceType) {
+        case 'mymoolah':
+          return {
+            identifier: this.validateMsisdn(primaryMsisdn),
+            accountType: 'mymoolah'
+          };
+        case 'bank':
+          return {
+            identifier: serviceData.accountNumber || primaryMsisdn,
+            accountType: 'bank',
+            bankName: serviceData.bankName || null
+          };
+        case 'airtime':
+        case 'data':
+          return {
+            identifier: this.validateMsisdn(serviceData.msisdn || serviceData.mobileNumber || primaryMsisdn),
+            accountType: serviceType
+          };
+        case 'electricity':
+          return {
+            identifier: serviceData.meterNumber || primaryMsisdn,
+            accountType: 'electricity'
+          };
+        case 'biller':
+          return {
+            identifier: serviceData.accountNumber || primaryMsisdn,
+            accountType: 'biller'
+          };
+        default:
+          return {
+            identifier: this.validateMsisdn(primaryMsisdn),
+            accountType: serviceType || 'mymoolah'
+          };
+      }
+    } catch (error) {
+      // Fallback: ensure we always return valid values
+      console.warn('Error in getLegacyFieldValues, using fallback:', error.message);
+      return {
+        identifier: primaryMsisdn || 'UNKNOWN',
+        accountType: serviceType || 'mymoolah'
+      };
     }
   }
 
-  getLegacyFieldValues(serviceType, serviceData = {}, primaryMsisdn) {
-    switch (serviceType) {
-      case 'mymoolah':
-        return {
-          identifier: this.validateMsisdn(primaryMsisdn),
-          accountType: 'mymoolah'
-        };
-      case 'bank':
-        return {
-          identifier: serviceData.accountNumber,
-          accountType: 'bank',
-          bankName: serviceData.bankName || null
-        };
-      case 'airtime':
-      case 'data':
-        return {
-          identifier: serviceData.msisdn || serviceData.mobileNumber || primaryMsisdn,
-          accountType: serviceType
-        };
-      case 'electricity':
-        return {
-          identifier: serviceData.meterNumber,
-          accountType: 'electricity'
-        };
-      case 'biller':
-        return {
-          identifier: serviceData.accountNumber,
-          accountType: 'biller'
-        };
-      default:
-        return {
-          identifier: primaryMsisdn,
-          accountType: serviceType
-        };
+  /**
+   * Ensure legacy columns (identifier, accountType, bankName) are populated
+   * This is a safety net in case they weren't set during creation
+   */
+  async ensureLegacyColumns(beneficiary, { serviceType, serviceData = {}, primaryMsisdn }) {
+    try {
+      const needsUpdate = !beneficiary.identifier || !beneficiary.accountType;
+      if (!needsUpdate) {
+        return beneficiary; // Already set
+      }
+
+      const legacyFields = this.getLegacyFieldValues(serviceType, serviceData, primaryMsisdn);
+      const updates = {};
+
+      if (!beneficiary.identifier && legacyFields.identifier) {
+        updates.identifier = legacyFields.identifier;
+      }
+      if (!beneficiary.accountType && legacyFields.accountType) {
+        updates.accountType = legacyFields.accountType;
+      }
+      if (!beneficiary.bankName && legacyFields.bankName) {
+        updates.bankName = legacyFields.bankName;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await beneficiary.update(updates);
+      }
+
+      return beneficiary;
+    } catch (error) {
+      console.error('Error ensuring legacy columns:', error);
+      // Don't throw - this is a safety net, not critical
+      return beneficiary;
     }
   }
 
@@ -409,10 +438,15 @@ class UnifiedBeneficiaryService {
    * Ensure there is exactly one beneficiary record for this user + msisdn.
    * If it exists, update name / flags; otherwise create it.
    */
-  async ensureBeneficiaryForParty(userId, { name, msisdn, isFavorite = false, notes = null, preferredServiceType }) {
+  async ensureBeneficiaryForParty(userId, { name, msisdn, isFavorite = false, notes = null, preferredServiceType, legacyFields = {} }) {
     const tx = await sequelize.transaction();
     try {
       const formattedMsisdn = this.validateMsisdn(msisdn);
+      
+      // Ensure legacyFields is always an object with valid values
+      const safeLegacyFields = legacyFields || {};
+      const identifier = safeLegacyFields.identifier || formattedMsisdn || 'UNKNOWN';
+      const accountType = safeLegacyFields.accountType || preferredServiceType || 'mymoolah';
 
       // Look up by (userId, msisdn). This aligns with the unique index on beneficiaries.
       let beneficiary = await Beneficiary.findOne({
@@ -430,7 +464,10 @@ class UnifiedBeneficiaryService {
             msisdn: formattedMsisdn,
             isFavorite,
             notes,
-            preferredPaymentMethod: preferredServiceType || null
+            preferredPaymentMethod: preferredServiceType || null,
+            identifier: identifier,
+            accountType: accountType,
+            bankName: safeLegacyFields.bankName || null
           },
           { transaction: tx }
         );
@@ -446,6 +483,16 @@ class UnifiedBeneficiaryService {
         }
         if (preferredServiceType && beneficiary.preferredPaymentMethod !== preferredServiceType) {
           updates.preferredPaymentMethod = preferredServiceType;
+        }
+        // CRITICAL: Always ensure identifier/accountType are set (required fields)
+        if (!beneficiary.identifier) {
+          updates.identifier = identifier;
+        }
+        if (!beneficiary.accountType) {
+          updates.accountType = accountType;
+        }
+        if (!beneficiary.bankName && safeLegacyFields.bankName) {
+          updates.bankName = safeLegacyFields.bankName;
         }
         if (Object.keys(updates).length > 0) {
           await beneficiary.update(updates, { transaction: tx });
