@@ -86,9 +86,10 @@ router.post('/', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating/updating beneficiary:', error);
-    res.status(500).json({
+    const isValidationError = /invalid|required/i.test(error.message || '');
+    res.status(isValidationError ? 400 : 500).json({
       success: false,
-      message: 'Failed to create/update beneficiary',
+      message: error.message || 'Failed to create/update beneficiary',
       error: error.message
     });
   }

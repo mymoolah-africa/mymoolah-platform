@@ -60,9 +60,8 @@ class UnifiedBeneficiaryService {
     const cleanNumber = msisdn.replace(/\D/g, '');
     
     // Check if it's a valid SA mobile number
-    // SA mobile numbers start with 27 (country code) + 7 or 8 (mobile prefix) + 8 digits
-    // Or just 7 or 8 + 8 digits (without country code)
-    const saMobileRegex = /^(27)?[78]\d{8}$/;
+    // Accepts 0XXXXXXXXX, 27XXXXXXXXX, or XXXXXXXX (we'll normalize to 0XXXXXXXXX)
+    const saMobileRegex = /^(?:27|0)?[6-8]\d{8}$/;
     
     if (!saMobileRegex.test(cleanNumber)) {
       throw new Error('Invalid South African mobile number format');

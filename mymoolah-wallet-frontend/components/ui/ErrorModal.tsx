@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog';
 import { Button } from './button';
 import { AlertCircle, X } from 'lucide-react';
 
@@ -54,9 +54,6 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
             <AlertCircle className={`w-5 h-5 ${getIconColor()}`} />
             {title}
           </DialogTitle>
-          <div id="error-modal-description" className="sr-only">
-            {message || 'Error dialog content'}
-          </div>
           {showCloseButton && (
             <Button
               variant="ghost"
@@ -67,6 +64,9 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
               <X className="h-4 w-4" />
             </Button>
           )}
+          <DialogDescription id="error-modal-description" className="sr-only">
+            {message || 'Error dialog content'}
+          </DialogDescription>
         </DialogHeader>
         
         <div className="py-4">
