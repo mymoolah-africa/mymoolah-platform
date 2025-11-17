@@ -18,7 +18,7 @@ class GoogleReviewService {
       const prompt = this.buildReviewPrompt(feedback);
       
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-5',
         messages: [
           {
             role: 'system',
@@ -64,7 +64,7 @@ Review Structure:
           confidence: analysis.confidence,
           seoScore: analysis.seoScore,
           keywords: analysis.keywords,
-          model: 'gpt-4',
+          model: 'gpt-5',
           tokens: response.usage?.total_tokens || 0
         },
         status: 'generated'
@@ -152,7 +152,7 @@ Generate a natural, engaging review that sounds like it was written by a real us
   async analyzeReviewQuality(reviewContent, originalFeedback) {
     try {
       const analysis = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-5',
         messages: [
           {
             role: 'system',
@@ -209,7 +209,7 @@ REQUIREMENTS:
 Generate a response that shows excellent customer service and engagement.`;
 
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
+        model: 'gpt-5',
         messages: [
           {
             role: 'system',
@@ -227,7 +227,7 @@ Generate a response that shows excellent customer service and engagement.`;
       return {
         responseContent: response.choices[0].message.content.trim(),
         aiGenerationData: {
-          model: 'gpt-4',
+          model: 'gpt-5',
           tokens: response.usage?.total_tokens || 0,
           reviewRating: reviewRating
         }

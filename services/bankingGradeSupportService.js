@@ -252,7 +252,7 @@ class BankingGradeSupportService {
   async performAIClassification(message) {
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-5",
         messages: [
           {
             role: "system",
@@ -1124,7 +1124,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
   async getTechnicalSupport(message, language) {
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-4",
+        model: "gpt-5",
         messages: [
           {
             role: "system",
