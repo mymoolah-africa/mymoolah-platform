@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Search, Plus, Edit2, Smartphone, Zap, FileText, Check, X } from 'lucide-react';
+import { Search, Plus, Edit2, Smartphone, Zap, FileText, Check, X, ChevronDown, Wallet, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
 import { Badge } from '../../ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 
-interface Beneficiary {
+// Legacy format (backward compatible)
+interface LegacyBeneficiary {
   id: string;
   name: string;
   identifier: string; // MSISDN, meter number, or account reference
@@ -24,11 +26,39 @@ interface Beneficiary {
   updatedAt: string;
 }
 
+// New unified format (with multiple accounts)
+interface BeneficiaryAccount {
+  id: number;
+  type: 'mymoolah' | 'bank' | 'mobile_money' | 'airtime' | 'data' | 'electricity' | 'biller' | 'voucher';
+  identifier: string;
+  label?: string;
+  isDefault: boolean;
+  metadata?: Record<string, any>;
+}
+
+interface UnifiedBeneficiary {
+  id: number;
+  name: string;
+  msisdn?: string;
+  accounts: BeneficiaryAccount[];
+  isFavorite: boolean;
+  notes?: string;
+  preferredPaymentMethod?: string;
+  lastPaidAt?: string;
+  timesPaid: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Union type for backward compatibility
+type Beneficiary = LegacyBeneficiary | UnifiedBeneficiary;
+
 interface BeneficiaryListProps {
   type?: 'all' | 'airtime' | 'data' | 'electricity' | 'biller';
   beneficiaries: Beneficiary[];
   selectedBeneficiary?: Beneficiary | null;
-  onSelect: (beneficiary: Beneficiary) => void;
+  selectedAccountId?: number | null; // For unified beneficiaries with multiple accounts
+  onSelect: (beneficiary: Beneficiary, accountId?: number) => void; // accountId for unified format
   onAddNew: () => void;
   onEdit: (beneficiary: Beneficiary) => void;
   onRemove?: (beneficiary: Beneficiary) => void;
@@ -39,10 +69,38 @@ interface BeneficiaryListProps {
   showFilters?: boolean;
 }
 
+// Helper to check if beneficiary is unified format
+function isUnifiedBeneficiary(b: Beneficiary): b is UnifiedBeneficiary {
+  return 'accounts' in b && Array.isArray((b as UnifiedBeneficiary).accounts);
+}
+
+// Helper to get accounts for a beneficiary (unified or legacy)
+function getBeneficiaryAccounts(b: Beneficiary): BeneficiaryAccount[] {
+  if (isUnifiedBeneficiary(b)) {
+    return b.accounts;
+  }
+  // Legacy format - create single account
+  return [{
+    id: parseInt(b.id) * 1000,
+    type: b.accountType as any,
+    identifier: b.identifier,
+    label: b.bankName ? `${b.bankName} Account` : b.accountType,
+    isDefault: true,
+    metadata: b.metadata || {}
+  }];
+}
+
+// Helper to get default account
+function getDefaultAccount(b: Beneficiary): BeneficiaryAccount | null {
+  const accounts = getBeneficiaryAccounts(b);
+  return accounts.find(a => a.isDefault) || accounts[0] || null;
+}
+
 export function BeneficiaryList({
   type = 'all',
   beneficiaries,
   selectedBeneficiary,
+  selectedAccountId,
   onSelect,
   onAddNew,
   onEdit,
@@ -55,14 +113,22 @@ export function BeneficiaryList({
 }: BeneficiaryListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>(type);
+  const [expandedBeneficiaries, setExpandedBeneficiaries] = useState<Set<string>>(new Set());
 
   // Filter beneficiaries based on search and type
   const filteredBeneficiaries = beneficiaries.filter(beneficiary => {
     const matchesSearch = 
       beneficiary.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      beneficiary.identifier.toLowerCase().includes(searchQuery.toLowerCase());
+      (isUnifiedBeneficiary(beneficiary) 
+        ? beneficiary.accounts.some(a => a.identifier.toLowerCase().includes(searchQuery.toLowerCase()))
+        : beneficiary.identifier.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesType = filterType === 'all' || beneficiary.accountType === filterType;
+    // For unified format, check if any account matches the filter type
+    const matchesType = filterType === 'all' || 
+      (isUnifiedBeneficiary(beneficiary)
+        ? beneficiary.accounts.some(a => a.type === filterType || 
+          (filterType === 'airtime-data' && (a.type === 'airtime' || a.type === 'data')))
+        : beneficiary.accountType === filterType);
     
     return matchesSearch && matchesType;
   });
@@ -81,7 +147,7 @@ export function BeneficiaryList({
     }
   };
 
-  const getValidationStatus = (beneficiary: Beneficiary) => {
+  const getValidationStatus = (beneficiary: LegacyBeneficiary) => {
     const isValid = beneficiary.metadata?.isValid !== false;
     return isValid ? (
       <Check style={{ width: '14px', height: '14px', color: '#16a34a' }} />
@@ -231,176 +297,321 @@ export function BeneficiaryList({
               </Button>
             </div>
           ) : (
-            filteredBeneficiaries.map((beneficiary) => (
-              <button
-                key={beneficiary.id}
-                type="button"
-                onClick={() => onSelect(beneficiary)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onSelect(beneficiary);
-                  }
-                }}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px',
-                  borderRadius: '12px',
-                  border: `2px solid ${selectedBeneficiary?.id === beneficiary.id ? '#86BE41' : '#e2e8f0'}`,
-                  backgroundColor: selectedBeneficiary?.id === beneficiary.id ? '#86BE41/5' : '#ffffff',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  position: 'relative',
-                  userSelect: 'none',
-                  WebkitUserSelect: 'none',
-                  touchAction: 'manipulation',
-                  width: '100%',
-                  textAlign: 'left',
-                  outline: 'none'
-                }}
-                onMouseOver={(e) => {
-                  if (selectedBeneficiary?.id !== beneficiary.id) {
-                    e.currentTarget.style.borderColor = '#86BE41/50';
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  if (selectedBeneficiary?.id !== beneficiary.id) {
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                  }
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.outline = '2px solid #86BE41';
-                  e.currentTarget.style.outlineOffset = '2px';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.outline = 'none';
-                }}
-              >
-                <div 
-                  className="flex items-center gap-3 flex-1"
+            filteredBeneficiaries.map((beneficiary) => {
+              const accounts = getBeneficiaryAccounts(beneficiary);
+              const defaultAccount = getDefaultAccount(beneficiary);
+              const hasMultipleAccounts = accounts.length > 1;
+              const beneficiaryIdStr = String(beneficiary.id);
+              const isExpanded = expandedBeneficiaries.has(beneficiaryIdStr);
+              const isSelected = selectedBeneficiary?.id === beneficiary.id;
+              
+              // Determine which account to show/use
+              const displayAccount = selectedAccountId && isSelected
+                ? accounts.find(a => a.id === selectedAccountId) || defaultAccount
+                : defaultAccount;
+              
+              return (
+                <div
+                  key={beneficiary.id}
                   style={{
-                    minWidth: 0
-                  }}
-                >
-                  {/* Avatar with Type Icon */}
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    backgroundColor: '#f3f4f6',
-                    borderRadius: '12px',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    {getTypeIcon(beneficiary.accountType)}
-                  </div>
-                  
-                  {/* Beneficiary Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: '#1f2937'
-                      }}>
-                        {beneficiary.name}
-                      </p>
-                      {getValidationStatus(beneficiary)}
-                    </div>
-                    
-                    <p style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '12px',
-                      color: '#6b7280'
-                    }}>
-                      {beneficiary.identifier}
-                    </p>
-                    
-                    {/* Metadata Chips */}
-                    <div className="flex gap-1 mt-1">
-                      {beneficiary.metadata?.network && (
-                        <Badge 
-                          variant="secondary"
-                          style={{
-                            fontSize: '10px',
-                            backgroundColor: '#e2e8f0',
-                            color: '#6b7280'
-                          }}
-                        >
-                          {beneficiary.metadata.network}
-                        </Badge>
-                      )}
-                      {beneficiary.metadata?.meterType && (
-                        <Badge 
-                          variant="secondary"
-                          style={{
-                            fontSize: '10px',
-                            backgroundColor: '#e2e8f0',
-                            color: '#6b7280'
-                          }}
-                        >
-                          {beneficiary.metadata.meterType}
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Action Buttons */}
-                <div 
-                  className="flex gap-1"
-                  style={{
-                    flexShrink: 0,
-                    zIndex: 10
+                    flexDirection: 'column',
+                    gap: '8px'
                   }}
                 >
-                  {/* Edit Button */}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(beneficiary);
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (hasMultipleAccounts && !isExpanded) {
+                        toggleAccountSelector(beneficiaryIdStr);
+                      } else {
+                        onSelect(beneficiary, displayAccount?.id);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        if (hasMultipleAccounts && !isExpanded) {
+                          toggleAccountSelector(beneficiaryIdStr);
+                        } else {
+                          onSelect(beneficiary, displayAccount?.id);
+                        }
+                      }
                     }}
                     style={{
-                      minWidth: '44px',
-                      minHeight: '44px',
-                      padding: '0',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px',
+                      borderRadius: '12px',
+                      border: `2px solid ${isSelected ? '#86BE41' : '#e2e8f0'}`,
+                      backgroundColor: isSelected ? 'rgba(134, 190, 65, 0.05)' : '#ffffff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
                       position: 'relative',
-                      zIndex: 20
+                      userSelect: 'none',
+                      WebkitUserSelect: 'none',
+                      touchAction: 'manipulation',
+                      width: '100%',
+                      textAlign: 'left',
+                      outline: 'none'
+                    }}
+                    onMouseOver={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = 'rgba(134, 190, 65, 0.5)';
+                        e.currentTarget.style.backgroundColor = '#f9fafb';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      if (!isSelected) {
+                        e.currentTarget.style.borderColor = '#e2e8f0';
+                        e.currentTarget.style.backgroundColor = '#ffffff';
+                      }
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.outline = '2px solid #86BE41';
+                      e.currentTarget.style.outlineOffset = '2px';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.outline = 'none';
                     }}
                   >
-                    <Edit2 style={{ width: '16px', height: '16px', color: '#6b7280' }} />
-                  </Button>
-                  
-                  {/* Remove Button */}
-                  {onRemove && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemove(beneficiary);
-                      }}
+                    <div 
+                      className="flex items-center gap-3 flex-1"
                       style={{
-                        minWidth: '44px',
-                        minHeight: '44px',
-                        padding: '0',
-                        position: 'relative',
-                        zIndex: 20
+                        minWidth: 0
                       }}
                     >
-                      <X style={{ width: '16px', height: '16px', color: '#dc2626' }} />
-                    </Button>
+                      {/* Avatar with Type Icon */}
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        backgroundColor: '#f3f4f6',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {displayAccount ? getTypeIcon(displayAccount.type) : getTypeIcon(isUnifiedBeneficiary(beneficiary) ? 'mymoolah' : (beneficiary as LegacyBeneficiary).accountType)}
+                      </div>
+                      
+                      {/* Beneficiary Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <p style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#1f2937'
+                          }}>
+                            {beneficiary.name}
+                          </p>
+                          {isUnifiedBeneficiary(beneficiary) ? null : getValidationStatus(beneficiary as LegacyBeneficiary)}
+                          {hasMultipleAccounts && (
+                            <Badge 
+                              variant="secondary"
+                              style={{
+                                fontSize: '10px',
+                                backgroundColor: '#e2e8f0',
+                                color: '#6b7280',
+                                padding: '2px 6px'
+                              }}
+                            >
+                              {accounts.length} accounts
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {displayAccount ? (
+                          <>
+                            <p style={{
+                              fontFamily: 'Montserrat, sans-serif',
+                              fontSize: '12px',
+                              color: '#6b7280'
+                            }}>
+                              {displayAccount.label || displayAccount.identifier}
+                            </p>
+                            {displayAccount.metadata?.network && (
+                              <Badge 
+                                variant="secondary"
+                                style={{
+                                  fontSize: '10px',
+                                  backgroundColor: '#e2e8f0',
+                                  color: '#6b7280',
+                                  marginTop: '4px'
+                                }}
+                              >
+                                {displayAccount.metadata.network}
+                              </Badge>
+                            )}
+                          </>
+                        ) : (
+                          <p style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '12px',
+                            color: '#6b7280'
+                          }}>
+                            {isUnifiedBeneficiary(beneficiary) ? beneficiary.accounts[0]?.identifier : (beneficiary as LegacyBeneficiary).identifier}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div 
+                      className="flex gap-1 items-center"
+                      style={{
+                        flexShrink: 0,
+                        zIndex: 10
+                      }}
+                    >
+                      {/* Account Selector Toggle (if multiple accounts) */}
+                      {hasMultipleAccounts && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleAccountSelector(beneficiaryIdStr);
+                          }}
+                          style={{
+                            minWidth: '32px',
+                            minHeight: '32px',
+                            padding: '0',
+                            position: 'relative',
+                            zIndex: 20
+                          }}
+                        >
+                          <ChevronDown 
+                            style={{ 
+                              width: '16px', 
+                              height: '16px', 
+                              color: '#6b7280',
+                              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                              transition: 'transform 0.2s ease'
+                            }} 
+                          />
+                        </Button>
+                      )}
+                      
+                      {/* Edit Button */}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(beneficiary);
+                        }}
+                        style={{
+                          minWidth: '44px',
+                          minHeight: '44px',
+                          padding: '0',
+                          position: 'relative',
+                          zIndex: 20
+                        }}
+                      >
+                        <Edit2 style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+                      </Button>
+                      
+                      {/* Remove Button */}
+                      {onRemove && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemove(beneficiary);
+                          }}
+                          style={{
+                            minWidth: '44px',
+                            minHeight: '44px',
+                            padding: '0',
+                            position: 'relative',
+                            zIndex: 20
+                          }}
+                        >
+                          <X style={{ width: '16px', height: '16px', color: '#dc2626' }} />
+                        </Button>
+                      )}
+                    </div>
+                  </button>
+                  
+                  {/* Account Selector Dropdown (when expanded) */}
+                  {hasMultipleAccounts && isExpanded && (
+                    <div
+                      style={{
+                        padding: '8px',
+                        backgroundColor: '#f9fafb',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        marginTop: '-4px'
+                      }}
+                    >
+                      {accounts.map((account) => (
+                        <button
+                          key={account.id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelect(beneficiary, account.id);
+                            toggleAccountSelector(beneficiaryIdStr);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            backgroundColor: selectedAccountId === account.id ? 'rgba(134, 190, 65, 0.1)' : 'transparent',
+                            border: selectedAccountId === account.id ? '1px solid #86BE41' : '1px solid transparent',
+                            cursor: 'pointer',
+                            marginBottom: '4px',
+                            textAlign: 'left'
+                          }}
+                        >
+                          <div className="flex items-center gap-2 flex-1">
+                            {getTypeIcon(account.type)}
+                            <div>
+                              <p style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                color: '#1f2937',
+                                margin: 0
+                              }}>
+                                {account.label || account.identifier}
+                              </p>
+                              <p style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontSize: '11px',
+                                color: '#6b7280',
+                                margin: 0
+                              }}>
+                                {account.identifier}
+                              </p>
+                            </div>
+                          </div>
+                          {account.isDefault && (
+                            <Badge 
+                              variant="secondary"
+                              style={{
+                                fontSize: '9px',
+                                backgroundColor: '#86BE41',
+                                color: '#ffffff',
+                                padding: '2px 6px'
+                              }}
+                            >
+                              Default
+                            </Badge>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
-              </button>
-            ))
+              );
+            })
           )}
         </div>
 

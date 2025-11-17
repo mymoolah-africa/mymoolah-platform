@@ -15,6 +15,11 @@ error() {
   printf '[proxy-startup][error] %s\n' "$*" >&2
 }
 
+# Warning helper (non-fatal)
+warn() {
+  printf '[proxy-startup][warn] %s\n' "$*" >&2
+}
+
 ensure_in_project_root() {
   if [ ! -d "${ROOT_DIR}" ]; then
     error "Expected project directory at ${ROOT_DIR} not found."

@@ -1,4 +1,9 @@
-const { Beneficiary } = require('../models');
+const {
+  Beneficiary,
+  BeneficiaryPaymentMethod,
+  BeneficiaryServiceAccount,
+  sequelize
+} = require('../models');
 const { Op } = require('sequelize');
 
 class UnifiedBeneficiaryService {
@@ -76,10 +81,17 @@ class UnifiedBeneficiaryService {
   /**
    * Validate MSISDN format (South African mobile numbers)
    * Matches the same validation used in registration/login process
+   * Also handles non-MSI identifiers (for electricity, biller accounts, etc.)
    */
   validateMsisdn(msisdn) {
     if (!msisdn || typeof msisdn !== 'string') {
-      throw new Error('Mobile number is required');
+      throw new Error('Identifier is required');
+    }
+
+    // Handle non-MSI identifiers (for electricity, biller, etc.)
+    if (msisdn.startsWith('NON_MSI_')) {
+      // Return as-is for non-MSI identifiers
+      return msisdn;
     }
 
     // Remove all non-digit characters
@@ -209,57 +221,68 @@ class UnifiedBeneficiaryService {
     try {
       const {
         name,
-        msisdn, // NEW: MSISDN field
+        msisdn, // primary party MSISDN (optional - will derive from serviceData if not provided)
         serviceType,
         serviceData,
         isFavorite = false,
         notes = null
       } = data;
 
-      // Validate MSISDN format and get formatted version
-      const formattedMsisdn = this.validateMsisdn(msisdn);
-
-      // Check if current user already has a beneficiary with this MSISDN
-      // (This allows different users to have beneficiaries with same MSISDN)
-      const existingUserBeneficiary = await this.checkUserMsisdnExists(userId, msisdn);
-      if (existingUserBeneficiary) {
-        throw new Error(`You already have a beneficiary with mobile number ${msisdn}`);
+      if (!name) {
+        throw new Error('Beneficiary name is required');
       }
 
-      // Note: We allow different users to have beneficiaries with same MSISDN
-      // This is correct for banking scenarios where multiple users might pay the same person
+      // Derive MSISDN from serviceData if not provided
+      let primaryMsisdn = msisdn;
+      if (!primaryMsisdn) {
+        // Try to extract from serviceData
+        if (serviceData?.walletMsisdn) {
+          primaryMsisdn = serviceData.walletMsisdn;
+        } else if (serviceData?.msisdn) {
+          primaryMsisdn = serviceData.msisdn;
+        } else if (serviceData?.mobileNumber) {
+          primaryMsisdn = serviceData.mobileNumber;
+        }
+        // For non-MSI services (electricity, biller), use a placeholder or generate from name
+        if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller')) {
+          // Generate a stable identifier from name for non-MSI services
+          primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
+        }
+      }
 
-      // Check if beneficiary with same name exists for this user
-      let beneficiary = await Beneficiary.findOne({
-        where: { userId, name }
+      if (!primaryMsisdn) {
+        throw new Error('MSISDN is required. Provide msisdn or ensure serviceData contains walletMsisdn/msisdn/mobileNumber');
+      }
+
+      // 1) Resolve / create the party-level beneficiary (one per user + msisdn)
+      const beneficiary = await this.ensureBeneficiaryForParty(userId, {
+        name,
+        msisdn: primaryMsisdn,
+        isFavorite,
+        notes,
+        preferredServiceType: serviceType
       });
 
-      if (beneficiary) {
-        // Update existing beneficiary with new service
-        await this.addServiceToBeneficiary(beneficiary, serviceType, serviceData);
-        return beneficiary;
+      // 2) Persist the concrete method / service in the new normalized tables
+      if (serviceType === 'mymoolah' || serviceType === 'bank' || serviceType === 'mobile_money') {
+        await this.addOrUpdatePaymentMethod(userId, {
+          beneficiaryId: beneficiary.id,
+          serviceType,
+          serviceData
+        });
       } else {
-        // Create new beneficiary
-        const beneficiaryData = {
-          userId,
-          name,
-          msisdn: formattedMsisdn, // Use formatted MSISDN
-          isFavorite,
-          notes,
-          preferredPaymentMethod: serviceType,
-          // Legacy fields for backward compatibility
-          accountType: this.mapServiceTypeToLegacy(serviceType),
-          identifier: this.getIdentifierFromServiceData(serviceType, serviceData),
-          bankName: serviceType === 'bank' ? serviceData.bankName : null,
-          metadata: {}
-        };
-
-        // Add service-specific data
-        beneficiaryData[this.getServiceField(serviceType)] = serviceData;
-
-        beneficiary = await Beneficiary.create(beneficiaryData);
-        return beneficiary;
+        await this.addOrUpdateServiceAccount(userId, {
+          beneficiaryId: beneficiary.id,
+          serviceType,
+          serviceData
+        });
       }
+
+      // 3) Backwards‑compatibility: mirror into legacy JSONB fields so existing
+      //    code that reads Beneficiary.paymentMethods / vasServices still works.
+      await this.addServiceToBeneficiary(beneficiary, serviceType, serviceData);
+
+      return beneficiary;
     } catch (error) {
       console.error('Error creating/updating beneficiary:', error);
       throw error;
@@ -347,6 +370,337 @@ class UnifiedBeneficiaryService {
     } catch (error) {
       console.error('Error getting beneficiary services:', error);
       throw error;
+    }
+  }
+
+  // ------------------------------------------------------------------------
+  // NEW MODEL: PARTY-LEVEL BENEFICIARY + NORMALIZED PAYMENT / SERVICE ROWS
+  // ------------------------------------------------------------------------
+
+  /**
+   * Ensure there is exactly one beneficiary record for this user + msisdn.
+   * If it exists, update name / flags; otherwise create it.
+   */
+  async ensureBeneficiaryForParty(userId, { name, msisdn, isFavorite = false, notes = null, preferredServiceType }) {
+    const tx = await sequelize.transaction();
+    try {
+      const formattedMsisdn = this.validateMsisdn(msisdn);
+
+      // Look up by (userId, msisdn). This aligns with the unique index on beneficiaries.
+      let beneficiary = await Beneficiary.findOne({
+        where: { userId, msisdn: formattedMsisdn },
+        transaction: tx,
+        lock: tx.LOCK.UPDATE
+      });
+
+      if (!beneficiary) {
+        // No existing party for this MSISDN → create new beneficiary (party)
+        beneficiary = await Beneficiary.create(
+          {
+            userId,
+            name,
+            msisdn: formattedMsisdn,
+            isFavorite,
+            notes,
+            preferredPaymentMethod: preferredServiceType || null
+          },
+          { transaction: tx }
+        );
+      } else {
+        // Update display fields if they have changed (non‑destructive)
+        const updates = {};
+        if (name && beneficiary.name !== name) updates.name = name;
+        if (typeof isFavorite === 'boolean' && beneficiary.isFavorite !== isFavorite) {
+          updates.isFavorite = isFavorite;
+        }
+        if (typeof notes === 'string' && notes !== beneficiary.notes) {
+          updates.notes = notes;
+        }
+        if (preferredServiceType && beneficiary.preferredPaymentMethod !== preferredServiceType) {
+          updates.preferredPaymentMethod = preferredServiceType;
+        }
+        if (Object.keys(updates).length > 0) {
+          await beneficiary.update(updates, { transaction: tx });
+        }
+      }
+
+      await tx.commit();
+      return beneficiary;
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
+  }
+
+  /**
+   * Add or update a payment method for a beneficiary.
+   * - Supports multiple methods per beneficiary (e.g. multiple bank accounts).
+   * - If isDefault is true, clears other defaults for the same methodType.
+   */
+  async addOrUpdatePaymentMethod(userId, { beneficiaryId, serviceType, serviceData }) {
+    if (!beneficiaryId) {
+      throw new Error('beneficiaryId is required to add a payment method');
+    }
+
+    const { methodType, walletMsisdn, bankName, accountNumber, accountType, branchCode, provider, mobileMoneyId, isDefault } =
+      this.normalizePaymentServiceData(serviceType, serviceData);
+
+    const tx = await sequelize.transaction();
+    try {
+      // Ensure the beneficiary belongs to this user
+      const beneficiary = await Beneficiary.findOne({
+        where: { id: beneficiaryId, userId },
+        transaction: tx,
+        lock: tx.LOCK.UPDATE
+      });
+      if (!beneficiary) {
+        throw new Error('Beneficiary not found for current user');
+      }
+
+      // If this should become the default, clear existing defaults for same methodType
+      if (isDefault) {
+        await BeneficiaryPaymentMethod.update(
+          { isDefault: false },
+          {
+            where: { beneficiaryId, methodType },
+            transaction: tx
+          }
+        );
+      }
+
+      // Try to find an existing method by (beneficiary, methodType, accountNumber/walletMsisdn/mobileMoneyId)
+      const primaryKeyValue = accountNumber || walletMsisdn || mobileMoneyId;
+      let existing = null;
+      if (primaryKeyValue) {
+        existing = await BeneficiaryPaymentMethod.findOne({
+          where: {
+            beneficiaryId,
+            methodType,
+            [Op.or]: [
+              { accountNumber: primaryKeyValue },
+              { walletMsisdn: primaryKeyValue },
+              { mobileMoneyId: primaryKeyValue }
+            ]
+          },
+          transaction: tx,
+          lock: tx.LOCK.UPDATE
+        });
+      }
+
+      if (existing) {
+        await existing.update(
+          {
+            walletMsisdn,
+            bankName,
+            accountNumber,
+            accountType,
+            branchCode,
+            provider,
+            mobileMoneyId,
+            isActive: true,
+            isDefault: isDefault ?? existing.isDefault
+          },
+          { transaction: tx }
+        );
+      } else {
+        await BeneficiaryPaymentMethod.create(
+          {
+            beneficiaryId,
+            methodType,
+            walletMsisdn,
+            bankName,
+            accountNumber,
+            accountType,
+            branchCode,
+            provider,
+            mobileMoneyId,
+            isActive: true,
+            isDefault: !!isDefault
+          },
+          { transaction: tx }
+        );
+      }
+
+      await tx.commit();
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
+  }
+
+  /**
+   * Add or update a service account (VAS, electricity, biller, etc.) for a beneficiary.
+   * Supports multiple accounts per serviceType and default selection.
+   */
+  async addOrUpdateServiceAccount(userId, { beneficiaryId, serviceType, serviceData }) {
+    if (!beneficiaryId) {
+      throw new Error('beneficiaryId is required to add a service account');
+    }
+
+    const normalized = this.normalizeServiceAccountData(serviceType, serviceData);
+    const { serviceType: normalizedType, serviceData: normalizedData, isDefault } = normalized;
+
+    const tx = await sequelize.transaction();
+    try {
+      const beneficiary = await Beneficiary.findOne({
+        where: { id: beneficiaryId, userId },
+        transaction: tx,
+        lock: tx.LOCK.UPDATE
+      });
+      if (!beneficiary) {
+        throw new Error('Beneficiary not found for current user');
+      }
+
+      if (isDefault) {
+        await BeneficiaryServiceAccount.update(
+          { isDefault: false },
+          {
+            where: { beneficiaryId, serviceType: normalizedType },
+            transaction: tx
+          }
+        );
+      }
+
+      const identifierKey = this.getServiceIdentifierKey(normalizedType);
+      const identifierValue = normalizedData[identifierKey];
+
+      let existing = null;
+      if (identifierKey && identifierValue) {
+        existing = await BeneficiaryServiceAccount.findOne({
+          where: {
+            beneficiaryId,
+            serviceType: normalizedType,
+            serviceData: {
+              [identifierKey]: identifierValue
+            }
+          },
+          transaction: tx,
+          lock: tx.LOCK.UPDATE
+        });
+      }
+
+      if (existing) {
+        await existing.update(
+          {
+            serviceData: normalizedData,
+            isActive: true,
+            isDefault: isDefault ?? existing.isDefault
+          },
+          { transaction: tx }
+        );
+      } else {
+        await BeneficiaryServiceAccount.create(
+          {
+            beneficiaryId,
+            serviceType: normalizedType,
+            serviceData: normalizedData,
+            isActive: true,
+            isDefault: !!isDefault
+          },
+          { transaction: tx }
+        );
+      }
+
+      await tx.commit();
+    } catch (err) {
+      await tx.rollback();
+      throw err;
+    }
+  }
+
+  /**
+   * Normalize payment method input coming from various flows into the canonical
+   * fields on BeneficiaryPaymentMethod.
+   */
+  normalizePaymentServiceData(serviceType, serviceData = {}) {
+    const methodType = serviceType; // for now we align names
+
+    const normalized = {
+      methodType,
+      walletMsisdn: null,
+      bankName: null,
+      accountNumber: null,
+      accountType: null,
+      branchCode: null,
+      provider: null,
+      mobileMoneyId: null,
+      isDefault: !!serviceData.isDefault
+    };
+
+    if (methodType === 'mymoolah') {
+      normalized.walletMsisdn = serviceData.walletMsisdn || serviceData.walletId || serviceData.mobileNumber || null;
+    } else if (methodType === 'bank') {
+      normalized.bankName = serviceData.bankName || null;
+      normalized.accountNumber = serviceData.accountNumber || null;
+      normalized.accountType = serviceData.accountType || null;
+      normalized.branchCode = serviceData.branchCode || null;
+    } else if (methodType === 'mobile_money') {
+      normalized.provider = serviceData.provider || null;
+      normalized.mobileMoneyId = serviceData.mobileMoneyId || serviceData.walletId || serviceData.msisdn || null;
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Normalize service account data into a canonical JSON structure.
+   */
+  normalizeServiceAccountData(serviceType, serviceData = {}) {
+    const base = {
+      serviceType,
+      serviceData: { ...serviceData },
+      isDefault: !!serviceData.isDefault
+    };
+
+    switch (serviceType) {
+      case 'airtime':
+      case 'data':
+        base.serviceData = {
+          msisdn: serviceData.msisdn || serviceData.mobileNumber || null,
+          network: serviceData.network || null,
+          label: serviceData.label || null
+        };
+        break;
+      case 'electricity':
+        base.serviceData = {
+          meterNumber: serviceData.meterNumber || null,
+          meterType: serviceData.meterType || null,
+          provider: serviceData.provider || null,
+          label: serviceData.label || null
+        };
+        break;
+      case 'biller':
+        base.serviceData = {
+          accountNumber: serviceData.accountNumber || null,
+          billerName: serviceData.billerName || null,
+          category: serviceData.category || serviceData.billerCategory || null,
+          reference: serviceData.reference || null,
+          label: serviceData.label || null
+        };
+        break;
+      default:
+        // Leave as‑is for future types
+        break;
+    }
+
+    return base;
+  }
+
+  /**
+   * Determine the primary identifier key for a given service type.
+   * This is used when de‑duplicating service accounts.
+   */
+  getServiceIdentifierKey(serviceType) {
+    switch (serviceType) {
+      case 'airtime':
+      case 'data':
+        return 'msisdn';
+      case 'electricity':
+        return 'meterNumber';
+      case 'biller':
+        return 'accountNumber';
+      default:
+        return null;
     }
   }
 

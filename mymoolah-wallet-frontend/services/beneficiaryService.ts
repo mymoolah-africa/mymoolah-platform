@@ -1,221 +1,365 @@
-import { apiClient } from './apiClient';
+/**
+ * Unified Beneficiary Service
+ * 
+ * This service handles all beneficiary-related API calls using the new
+ * unified beneficiary architecture (one person = one beneficiary, multiple accounts).
+ */
 
-// ========================================
-// BENEFICIARY TYPES & INTERFACES
-// ========================================
+import { APP_CONFIG } from '../config/app-config';
+import { getToken } from '../utils/authToken';
 
-export interface BaseBeneficiary {
-  id: string;
+const API_BASE = APP_CONFIG.API.baseUrl;
+
+export interface BeneficiaryAccount {
+  id: number;
+  type: 'mymoolah' | 'bank' | 'mobile_money' | 'airtime' | 'data' | 'electricity' | 'biller' | 'voucher';
+  identifier: string; // account number, MSISDN, meter number, etc.
+  label?: string;
+  isDefault: boolean;
+  metadata?: {
+    bankName?: string;
+    accountType?: string;
+    branchCode?: string;
+    network?: string;
+    meterType?: string;
+    provider?: string;
+    billerName?: string;
+    [key: string]: any;
+  };
+}
+
+export interface UnifiedBeneficiary {
+  id: number;
   name: string;
-  msisdn: string; // NEW: Mobile number (MSISDN)
-  identifier: string;
-  userId: string;
-  createdAt: string;
-  updatedAt: string;
+  msisdn?: string;
+  accounts: BeneficiaryAccount[];
+  isFavorite: boolean;
+  notes?: string;
+  preferredPaymentMethod?: string;
   lastPaidAt?: string;
   timesPaid: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface PaymentBeneficiary extends BaseBeneficiary {
-  accountType: 'mymoolah' | 'bank';
-  bankName?: string;
-  // Legacy properties for backward compatibility with SendMoneyPage
-  lastPaid?: Date;
-  isFavorite: boolean;
-  totalPaid: number;
-  paymentCount: number;
-  avatar?: string;
-  metadata?: {
-    isFavorite?: boolean;
-    totalPaid?: number;
-    paymentCount?: number;
-    avatar?: string;
-  };
-}
-
-export interface ServiceBeneficiary extends BaseBeneficiary {
-  accountType: 'airtime' | 'data' | 'electricity' | 'biller';
-  metadata?: {
-    network?: string; // For airtime/data
-    meterType?: string; // For electricity
-    billerName?: string; // For bills
-    billerCategory?: string;
-    isValid?: boolean; // Validation status
-    isFavorite?: boolean;
-    totalPaid?: number;
-    paymentCount?: number;
-  };
-}
-
-export type Beneficiary = PaymentBeneficiary | ServiceBeneficiary;
-
-// ========================================
-// SERVICE-SPECIFIC BENEFICIARY MANAGEMENT
-// ========================================
-
-export const beneficiaryService = {
-  // ========================================
-  // PAYMENT BENEFICIARIES (Send Money)
-  // ========================================
-  
-  // Get ONLY payment beneficiaries (mymoolah and bank)
-  async getPaymentBeneficiaries(search?: string): Promise<PaymentBeneficiary[]> {
-    const params = new URLSearchParams();
-    params.append('type', 'mymoolah');
-    params.append('type', 'bank');
-    if (search) params.append('search', search);
-    
-    const response = await apiClient.get(`/api/v1/beneficiaries?${params.toString()}`);
-    const beneficiaries = (response.data as any).beneficiaries || [];
-    
-    // Map backend data to include legacy properties for SendMoneyPage compatibility
-    return beneficiaries.map((b: any) => ({
-      ...b,
-      lastPaid: b.lastPaidAt ? new Date(b.lastPaidAt) : undefined,
-      isFavorite: b.metadata?.isFavorite || false,
-      totalPaid: b.metadata?.totalPaid || 0,
-      paymentCount: b.timesPaid || 0,
-      avatar: b.metadata?.avatar
-    }));
-  },
-
-  // ========================================
-  // AIRTIME & DATA BENEFICIARIES
-  // ========================================
-  
-  // Get ONLY airtime and data beneficiaries
-  async getAirtimeDataBeneficiaries(search?: string): Promise<ServiceBeneficiary[]> {
-    const params = new URLSearchParams();
-    params.append('type', 'airtime');
-    params.append('type', 'data');
-    if (search) params.append('search', search);
-    
-    const response = await apiClient.get(`/api/v1/beneficiaries?${params.toString()}`);
-    return (response.data as any).beneficiaries || [];
-  },
-
-  // ========================================
-  // ELECTRICITY BENEFICIARIES
-  // ========================================
-  
-  // Get ONLY electricity beneficiaries
-  async getElectricityBeneficiaries(search?: string): Promise<ServiceBeneficiary[]> {
-    const params = new URLSearchParams();
-    params.append('type', 'electricity');
-    if (search) params.append('search', search);
-    
-    const response = await apiClient.get(`/api/v1/beneficiaries?${params.toString()}`);
-    return (response.data as any).beneficiaries || [];
-  },
-
-  // ========================================
-  // BILL PAYMENT BENEFICIARIES
-  // ========================================
-  
-  // Get ONLY bill payment beneficiaries
-  async getBillPaymentBeneficiaries(search?: string): Promise<ServiceBeneficiary[]> {
-    const params = new URLSearchParams();
-    params.append('type', 'biller');
-    if (search) params.append('search', search);
-    
-    const response = await apiClient.get(`/api/v1/beneficiaries?${params.toString()}`);
-    return (response.data as any).beneficiaries || [];
-  },
-
-  // ========================================
-  // VOUCHER BENEFICIARIES (3rd Party)
-  // ========================================
-  
-  // Get ONLY voucher beneficiaries (if any)
-  async getVoucherBeneficiaries(search?: string): Promise<ServiceBeneficiary[]> {
-    // Note: Vouchers typically don't have beneficiaries in the same way
-    // This is kept for future extensibility
-    return [];
-  },
-
-  // ========================================
-  // UNIVERSAL BENEFICIARY OPERATIONS
-  // ========================================
-  
-  // Get all beneficiaries with optional type filtering
-  async getAllBeneficiaries(type?: string, search?: string): Promise<Beneficiary[]> {
-    const params = new URLSearchParams();
-    if (type) params.append('type', type);
-    if (search) params.append('search', search);
-    
-    const response = await apiClient.get(`/api/v1/beneficiaries?${params.toString()}`);
-    return (response.data as any).beneficiaries || [];
-  },
-
-  // Search beneficiaries across all types
-  async searchBeneficiaries(query: string, type?: string): Promise<Beneficiary[]> {
-    const params = new URLSearchParams({ q: query });
-    if (type) params.append('type', type);
-    
-    const response = await apiClient.get(`/api/v1/beneficiaries/search?${params.toString()}`);
-    return (response.data as any).beneficiaries || [];
-  },
-
-  // Create or update beneficiary
-  async saveBeneficiary(data: {
-    name: string;
-    identifier: string;
-    accountType: string;
+export interface CreateBeneficiaryRequest {
+  name: string;
+  msisdn?: string;
+  serviceType: 'mymoolah' | 'bank' | 'mobile_money' | 'airtime' | 'data' | 'electricity' | 'biller' | 'voucher';
+  serviceData: {
+    walletMsisdn?: string;
     bankName?: string;
-    metadata?: any;
-  }): Promise<Beneficiary> {
-    const response = await apiClient.post('/api/v1/beneficiaries', data);
-    return response.data as Beneficiary;
-  },
+    accountNumber?: string;
+    accountType?: string;
+    branchCode?: string;
+    provider?: string;
+    mobileMoneyId?: string;
+    msisdn?: string;
+    network?: string;
+    meterNumber?: string;
+    meterType?: string;
+    accountNumber?: string;
+    billerName?: string;
+    label?: string;
+    isDefault?: boolean;
+    [key: string]: any;
+  };
+  isFavorite?: boolean;
+  notes?: string;
+}
 
-  // Update beneficiary
-  async updateBeneficiary(id: string, data: {
-    name?: string;
-    identifier?: string;
-    bankName?: string;
-    metadata?: any;
-  }): Promise<Beneficiary> {
-    const response = await apiClient.put(`/api/v1/beneficiaries/${id}`, data);
-    return response.data as Beneficiary;
-  },
+export interface AddServiceRequest {
+  serviceType: string;
+  serviceData: Record<string, any>;
+}
 
-  // Delete beneficiary
-  async deleteBeneficiary(id: string): Promise<void> {
-    await apiClient.delete(`/api/v1/beneficiaries/${id}`);
-  },
+class BeneficiaryService {
+  private async request<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<{ success: boolean; data?: T; message?: string; error?: string }> {
+    try {
+      const url = `${API_BASE}${endpoint}`;
+      const token = getToken();
+      
+      const config: RequestInit = {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { Authorization: `Bearer ${token}` }),
+          ...options.headers,
+        },
+        ...options,
+      };
 
-  // Remove beneficiary (alias for deleteBeneficiary)
-  async removeBeneficiary(id: string): Promise<void> {
-    await apiClient.delete(`/api/v1/beneficiaries/${id}`);
+      const response = await fetch(url, config);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || data.error || `HTTP ${response.status}`);
+      }
+
+      return {
+        success: true,
+        data: data.data || data
+      };
+    } catch (error) {
+      console.error(`Beneficiary API Error (${endpoint}):`, error);
+      throw error;
+    }
   }
-};
 
-// ========================================
-// TYPE GUARDS & UTILITIES
-// ========================================
+  /**
+   * Get beneficiaries filtered by service type
+   * @param serviceType - 'payment', 'airtime-data', 'electricity', 'biller', 'voucher'
+   * @param search - Optional search query
+   */
+  async getBeneficiariesByService(
+    serviceType: 'payment' | 'airtime-data' | 'electricity' | 'biller' | 'voucher',
+    search: string = ''
+  ): Promise<UnifiedBeneficiary[]> {
+    const response = await this.request<{ beneficiaries: any[] }>(
+      `/api/v1/unified-beneficiaries/by-service/${serviceType}${search ? `?search=${encodeURIComponent(search)}` : ''}`
+    );
+    
+    // Transform legacy format to unified format
+    return (response.data?.beneficiaries || []).map(this.transformLegacyBeneficiary);
+  }
 
-export const isPaymentBeneficiary = (beneficiary: Beneficiary): beneficiary is PaymentBeneficiary => {
-  return beneficiary.accountType === 'mymoolah' || beneficiary.accountType === 'bank';
-};
+  /**
+   * Create or update a beneficiary
+   */
+  async createOrUpdateBeneficiary(request: CreateBeneficiaryRequest): Promise<UnifiedBeneficiary> {
+    const response = await this.request<any>(
+      '/api/v1/unified-beneficiaries',
+      {
+        method: 'POST',
+        body: JSON.stringify(request)
+      }
+    );
+    
+    return this.transformLegacyBeneficiary(response.data);
+  }
 
-export const isServiceBeneficiary = (beneficiary: Beneficiary): beneficiary is ServiceBeneficiary => {
-  return ['airtime', 'data', 'electricity', 'biller'].includes(beneficiary.accountType);
-};
+  /**
+   * Add a service/account to an existing beneficiary
+   */
+  async addServiceToBeneficiary(
+    beneficiaryId: number,
+    request: AddServiceRequest
+  ): Promise<void> {
+    await this.request(
+      `/api/v1/unified-beneficiaries/${beneficiaryId}/services`,
+      {
+        method: 'POST',
+        body: JSON.stringify(request)
+      }
+    );
+  }
 
-export const isAirtimeDataBeneficiary = (beneficiary: Beneficiary): beneficiary is ServiceBeneficiary => {
-  return beneficiary.accountType === 'airtime' || beneficiary.accountType === 'data';
-};
+  /**
+   * Remove a service/account from a beneficiary
+   */
+  async removeServiceFromBeneficiary(
+    beneficiaryId: number,
+    serviceType: string,
+    serviceId: string
+  ): Promise<void> {
+    await this.request(
+      `/api/v1/unified-beneficiaries/${beneficiaryId}/services/${serviceType}/${serviceId}`,
+      {
+        method: 'DELETE'
+      }
+    );
+  }
 
-export const isElectricityBeneficiary = (beneficiary: Beneficiary): beneficiary is ServiceBeneficiary => {
-  return beneficiary.accountType === 'electricity';
-};
+  /**
+   * Get all services/accounts for a specific beneficiary
+   */
+  async getBeneficiaryServices(beneficiaryId: number): Promise<UnifiedBeneficiary> {
+    const response = await this.request<any>(
+      `/api/v1/unified-beneficiaries/${beneficiaryId}/services`
+    );
+    
+    return this.transformLegacyBeneficiary(response.data);
+  }
 
-export const isBillPaymentBeneficiary = (beneficiary: Beneficiary): beneficiary is ServiceBeneficiary => {
-  return beneficiary.accountType === 'biller';
-};
+  /**
+   * Update beneficiary metadata (favorite, notes, preferred method)
+   */
+  async updateBeneficiary(
+    beneficiaryId: number,
+    updates: {
+      isFavorite?: boolean;
+      notes?: string;
+      preferredPaymentMethod?: string;
+    }
+  ): Promise<void> {
+    await this.request(
+      `/api/v1/unified-beneficiaries/${beneficiaryId}`,
+      {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      }
+    );
+  }
 
-// ========================================
-// EXPORT DEFAULT
-// ========================================
+  /**
+   * Search beneficiaries across all services
+   */
+  async searchBeneficiaries(
+    query: string,
+    serviceType?: string
+  ): Promise<UnifiedBeneficiary[]> {
+    const params = new URLSearchParams({ q: query });
+    if (serviceType) params.append('serviceType', serviceType);
+    
+    const response = await this.request<{ beneficiaries: any[] }>(
+      `/api/v1/unified-beneficiaries/search?${params.toString()}`
+    );
+    
+    return (response.data?.beneficiaries || []).map(this.transformLegacyBeneficiary);
+  }
 
-export default beneficiaryService;
+  /**
+   * Transform legacy beneficiary format to unified format
+   * This bridges the gap between old JSONB structure and new normalized tables
+   */
+  private transformLegacyBeneficiary(legacy: any): UnifiedBeneficiary {
+    const accounts: BeneficiaryAccount[] = [];
+    
+    // Extract payment methods
+    if (legacy.paymentMethods) {
+      // MyMoolah wallet
+      if (legacy.paymentMethods.mymoolah) {
+        accounts.push({
+          id: legacy.id * 1000 + 1, // Generate stable ID
+          type: 'mymoolah',
+          identifier: legacy.paymentMethods.mymoolah.walletId || legacy.paymentMethods.mymoolah.walletMsisdn || legacy.identifier,
+          label: 'MyMoolah Wallet',
+          isDefault: legacy.preferredPaymentMethod === 'mymoolah',
+          metadata: legacy.paymentMethods.mymoolah
+        });
+      }
+      
+      // Bank accounts
+      if (legacy.paymentMethods.bankAccounts && Array.isArray(legacy.paymentMethods.bankAccounts)) {
+        legacy.paymentMethods.bankAccounts.forEach((bank: any, idx: number) => {
+          accounts.push({
+            id: legacy.id * 1000 + 10 + idx,
+            type: 'bank',
+            identifier: bank.accountNumber,
+            label: bank.label || `${bank.bankName} ${bank.accountType}`,
+            isDefault: legacy.preferredPaymentMethod === 'bank' && idx === 0,
+            metadata: {
+              bankName: bank.bankName,
+              accountType: bank.accountType,
+              branchCode: bank.branchCode,
+              ...bank
+            }
+          });
+        });
+      }
+    }
+    
+    // Extract service accounts (airtime, data, electricity, etc.)
+    if (legacy.vasServices) {
+      if (legacy.vasServices.airtime && Array.isArray(legacy.vasServices.airtime)) {
+        legacy.vasServices.airtime.forEach((service: any, idx: number) => {
+          accounts.push({
+            id: legacy.id * 1000 + 100 + idx,
+            type: 'airtime',
+            identifier: service.mobileNumber || service.msisdn,
+            label: service.label || `Airtime - ${service.network || ''}`,
+            isDefault: false,
+            metadata: {
+              network: service.network,
+              ...service
+            }
+          });
+        });
+      }
+      
+      if (legacy.vasServices.data && Array.isArray(legacy.vasServices.data)) {
+        legacy.vasServices.data.forEach((service: any, idx: number) => {
+          accounts.push({
+            id: legacy.id * 1000 + 200 + idx,
+            type: 'data',
+            identifier: service.mobileNumber || service.msisdn,
+            label: service.label || `Data - ${service.network || ''}`,
+            isDefault: false,
+            metadata: {
+              network: service.network,
+              ...service
+            }
+          });
+        });
+      }
+    }
+    
+    if (legacy.utilityServices) {
+      if (legacy.utilityServices.electricity && Array.isArray(legacy.utilityServices.electricity)) {
+        legacy.utilityServices.electricity.forEach((service: any, idx: number) => {
+          accounts.push({
+            id: legacy.id * 1000 + 300 + idx,
+            type: 'electricity',
+            identifier: service.meterNumber,
+            label: service.label || `Electricity - ${service.provider || ''}`,
+            isDefault: false,
+            metadata: {
+              meterType: service.meterType,
+              provider: service.provider,
+              ...service
+            }
+          });
+        });
+      }
+    }
+    
+    if (legacy.billerServices) {
+      if (legacy.billerServices.accounts && Array.isArray(legacy.billerServices.accounts)) {
+        legacy.billerServices.accounts.forEach((account: any, idx: number) => {
+          accounts.push({
+            id: legacy.id * 1000 + 400 + idx,
+            type: 'biller',
+            identifier: account.accountNumber,
+            label: account.label || `${account.billerName} - ${account.accountNumber}`,
+            isDefault: false,
+            metadata: {
+              billerName: account.billerName,
+              category: account.category,
+              ...account
+            }
+          });
+        });
+      }
+    }
+    
+    // If no accounts found, create a default one from legacy identifier
+    if (accounts.length === 0 && legacy.identifier) {
+      accounts.push({
+        id: legacy.id * 1000,
+        type: (legacy.accountType as any) || 'mymoolah',
+        identifier: legacy.identifier,
+        label: legacy.bankName ? `${legacy.bankName} Account` : 'Default',
+        isDefault: true,
+        metadata: legacy.metadata || {}
+      });
+    }
+    
+    return {
+      id: legacy.id,
+      name: legacy.name,
+      msisdn: legacy.msisdn || legacy.identifier,
+      accounts,
+      isFavorite: legacy.isFavorite || false,
+      notes: legacy.notes,
+      preferredPaymentMethod: legacy.preferredPaymentMethod,
+      lastPaidAt: legacy.lastPaidAt,
+      timesPaid: legacy.timesPaid || 0,
+      createdAt: legacy.createdAt,
+      updatedAt: legacy.updatedAt
+    };
+  }
+}
+
+export const beneficiaryService = new BeneficiaryService();
