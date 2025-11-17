@@ -526,14 +526,18 @@ const initializeBackgroundServices = async () => {
     
     // Start Codebase Sweep Service
     console.log('🔄 Checking Codebase Sweep Service...');
-    if (process.env.OPENAI_API_KEY) {
+    if (process.env.OPENAI_API_KEY && process.env.ENABLE_CODEBASE_SWEEP !== 'false') {
       console.log('🔄 Initializing Codebase Sweep Service...');
       const codebaseSweepService = new CodebaseSweepService();
       console.log('🔄 Starting Codebase Sweep Service scheduler...');
       await codebaseSweepService.startScheduler();
       console.log('✅ Codebase Sweep Service started');
     } else {
-      console.log('⚠️  Codebase Sweep Service skipped - OPENAI_API_KEY not configured');
+      if (!process.env.OPENAI_API_KEY) {
+        console.log('⚠️  Codebase Sweep Service skipped - OPENAI_API_KEY not configured');
+      } else {
+        console.log('⚠️  Codebase Sweep Service disabled - ENABLE_CODEBASE_SWEEP=false (disabled for development)');
+      }
     }
     
     console.log('🔄 Codebase Sweep Service section completed, moving to Database Monitor...');
