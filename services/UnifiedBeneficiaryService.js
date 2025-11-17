@@ -12,53 +12,14 @@ class UnifiedBeneficiaryService {
    */
   async getBeneficiariesByService(userId, serviceType, search = '') {
     try {
-      const whereClause = {
-        userId,
-        [Op.or]: [
-          { name: { [Op.iLike]: `%${search}%` } },
-          { identifier: { [Op.iLike]: `%${search}%` } }
-        ]
-      };
+      const whereClause = { userId };
 
-      // Add service-specific filtering
-      switch (serviceType) {
-        case 'payment':
-          whereClause[Op.or] = [
-            { paymentMethods: { [Op.not]: null } },
-            { 'paymentMethods.mymoolah': { [Op.not]: null } },
-            { 'paymentMethods.bankAccounts': { [Op.not]: null } }
-          ];
-          break;
-          
-        case 'airtime-data':
-          whereClause[Op.or] = [
-            { vasServices: { [Op.not]: null } },
-            { 'vasServices.airtime': { [Op.not]: null } },
-            { 'vasServices.data': { [Op.not]: null } }
-          ];
-          break;
-          
-        case 'electricity':
-          whereClause[Op.or] = [
-            { utilityServices: { [Op.not]: null } },
-            { 'utilityServices.electricity': { [Op.not]: null } }
-          ];
-          break;
-          
-        case 'biller':
-          whereClause[Op.or] = [
-            { billerServices: { [Op.not]: null } },
-            { 'billerServices.accounts': { [Op.not]: null } }
-          ];
-          break;
-          
-        case 'voucher':
-          whereClause[Op.or] = [
-            { voucherServices: { [Op.not]: null } },
-            { 'voucherServices.gaming': { [Op.not]: null } },
-            { 'voucherServices.streaming': { [Op.not]: null } }
-          ];
-          break;
+      if (search && search.trim().length > 0) {
+        whereClause[Op.or] = [
+          { name: { [Op.iLike]: `%${search}%` } },
+          { identifier: { [Op.iLike]: `%${search}%` } },
+          { msisdn: { [Op.iLike]: `%${search}%` } }
+        ];
       }
 
       const beneficiaries = await Beneficiary.findAll({
@@ -71,7 +32,8 @@ class UnifiedBeneficiaryService {
         ]
       });
 
-      return this.formatBeneficiariesForService(beneficiaries, serviceType);
+      const filtered = this.filterBeneficiariesByService(beneficiaries, serviceType);
+      return this.formatBeneficiariesForService(filtered, serviceType);
     } catch (error) {
       console.error('Error getting beneficiaries by service:', error);
       throw error;
@@ -161,6 +123,10 @@ class UnifiedBeneficiaryService {
         id: beneficiary.id,
         name: beneficiary.name,
         userId: beneficiary.userId,
+        msisdn: beneficiary.msisdn,
+        identifier: beneficiary.identifier,
+        accountType: beneficiary.accountType,
+        bankName: beneficiary.bankName,
         createdAt: beneficiary.createdAt,
         updatedAt: beneficiary.updatedAt,
         lastPaidAt: beneficiary.lastPaidAt,
@@ -176,9 +142,9 @@ class UnifiedBeneficiaryService {
             ...base,
             paymentMethods: beneficiary.paymentMethods,
             // Legacy compatibility
-            accountType: this.getLegacyAccountType(beneficiary.paymentMethods),
-            identifier: this.getPrimaryIdentifier(beneficiary.paymentMethods),
-            bankName: this.getBankName(beneficiary.paymentMethods)
+            accountType: this.getLegacyAccountType(beneficiary.paymentMethods, beneficiary.accountType),
+            identifier: this.getPrimaryIdentifier(beneficiary.paymentMethods, base),
+            bankName: this.getBankName(beneficiary.paymentMethods, beneficiary.bankName)
           };
           
         case 'airtime-data':
@@ -186,8 +152,8 @@ class UnifiedBeneficiaryService {
             ...base,
             vasServices: beneficiary.vasServices,
             // Legacy compatibility
-            accountType: this.getVasAccountType(beneficiary.vasServices),
-            identifier: this.getVasIdentifier(beneficiary.vasServices)
+            accountType: this.getVasAccountType(beneficiary.vasServices, beneficiary.accountType),
+            identifier: this.getVasIdentifier(beneficiary.vasServices, base.identifier)
           };
           
         case 'electricity':
@@ -196,7 +162,7 @@ class UnifiedBeneficiaryService {
             utilityServices: beneficiary.utilityServices,
             // Legacy compatibility
             accountType: 'electricity',
-            identifier: this.getUtilityIdentifier(beneficiary.utilityServices)
+            identifier: this.getUtilityIdentifier(beneficiary.utilityServices, base.identifier)
           };
           
         case 'biller':
@@ -205,7 +171,7 @@ class UnifiedBeneficiaryService {
             billerServices: beneficiary.billerServices,
             // Legacy compatibility
             accountType: 'biller',
-            identifier: this.getBillerIdentifier(beneficiary.billerServices)
+            identifier: this.getBillerIdentifier(beneficiary.billerServices, base.identifier)
           };
           
         default:
@@ -820,44 +786,89 @@ class UnifiedBeneficiaryService {
   }
 
   // Legacy compatibility helpers
-  getLegacyAccountType(paymentMethods) {
+  getLegacyAccountType(paymentMethods, fallback) {
     if (paymentMethods?.mymoolah) return 'mymoolah';
     if (paymentMethods?.bankAccounts?.length > 0) return 'bank';
+    if (fallback && ['mymoolah', 'bank'].includes(fallback)) {
+      return fallback;
+    }
     return 'mymoolah';
   }
 
-  getPrimaryIdentifier(paymentMethods) {
+  getPrimaryIdentifier(paymentMethods, fallback = {}) {
     if (paymentMethods?.mymoolah?.walletId) return paymentMethods.mymoolah.walletId;
+    if (paymentMethods?.mymoolah?.walletMsisdn) return paymentMethods.mymoolah.walletMsisdn;
     if (paymentMethods?.bankAccounts?.length > 0) return paymentMethods.bankAccounts[0].accountNumber;
-    return null;
+    return fallback.identifier || fallback.msisdn || null;
   }
 
-  getBankName(paymentMethods) {
+  getBankName(paymentMethods, fallback) {
     if (paymentMethods?.bankAccounts?.length > 0) return paymentMethods.bankAccounts[0].bankName;
-    return null;
+    return fallback || null;
   }
 
-  getVasAccountType(vasServices) {
+  getVasAccountType(vasServices, fallback) {
     if (vasServices?.airtime?.length > 0) return 'airtime';
     if (vasServices?.data?.length > 0) return 'data';
+    if (fallback && ['airtime', 'data'].includes(fallback)) return fallback;
     return 'airtime';
   }
 
-  getVasIdentifier(vasServices) {
+  getVasIdentifier(vasServices, fallback) {
     if (vasServices?.airtime?.length > 0) return vasServices.airtime[0].mobileNumber;
     if (vasServices?.data?.length > 0) return vasServices.data[0].mobileNumber;
-    return null;
+    return fallback || null;
   }
 
-  getUtilityIdentifier(utilityServices) {
+  getUtilityIdentifier(utilityServices, fallback) {
     if (utilityServices?.electricity?.length > 0) return utilityServices.electricity[0].meterNumber;
     if (utilityServices?.water?.length > 0) return utilityServices.water[0].accountNumber;
-    return null;
+    return fallback || null;
   }
 
-  getBillerIdentifier(billerServices) {
+  getBillerIdentifier(billerServices, fallback) {
     if (billerServices?.accounts?.length > 0) return billerServices.accounts[0].accountNumber;
-    return null;
+    return fallback || null;
+  }
+
+  filterBeneficiariesByService(beneficiaries, serviceType) {
+    return beneficiaries.filter((beneficiary) => {
+      const hasLegacyType = (types = []) => types.includes(beneficiary.accountType);
+      switch (serviceType) {
+        case 'payment':
+          return Boolean(
+            beneficiary.paymentMethods?.mymoolah ||
+            (beneficiary.paymentMethods?.bankAccounts || []).length ||
+            hasLegacyType(['mymoolah', 'bank']) ||
+            beneficiary.identifier ||
+            beneficiary.msisdn
+          );
+        case 'airtime-data':
+          return Boolean(
+            (beneficiary.vasServices?.airtime || []).length ||
+            (beneficiary.vasServices?.data || []).length ||
+            hasLegacyType(['airtime', 'data'])
+          );
+        case 'electricity':
+          return Boolean(
+            (beneficiary.utilityServices?.electricity || []).length ||
+            (beneficiary.utilityServices?.water || []).length ||
+            beneficiary.accountType === 'electricity'
+          );
+        case 'biller':
+          return Boolean(
+            (beneficiary.billerServices?.accounts || []).length ||
+            beneficiary.accountType === 'biller'
+          );
+        case 'voucher':
+          return Boolean(
+            beneficiary.voucherServices ||
+            beneficiary.accountType === 'voucher'
+          );
+        default:
+          return true;
+      }
+    });
   }
 }
 

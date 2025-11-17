@@ -10,6 +10,12 @@
 
 The unified beneficiary system has been implemented following banking-grade and Mojaloop FSPIOP standards. The new architecture ensures **one beneficiary = one person/entity**, with support for multiple payment methods and service accounts per beneficiary.
 
+### 🔁 2025-11-17 Compatibility Refresh
+- Restored compatibility with legacy beneficiaries that only stored `accountType` + `identifier`
+- API now filters per service type in application code, so historical records are included even if JSONB payment metadata is null
+- Frontend mapping keeps legacy identifiers/MSISDNs, ensuring Send Money can render and prefill existing contacts
+- Beneficiary cards were refactored to remove nested buttons, fixing the Codespaces/mobile tap issue reported on 17 Nov
+
 ---
 
 ## 🏗️ **Architecture Overview**

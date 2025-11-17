@@ -32,6 +32,9 @@ export interface UnifiedBeneficiary {
   id: number;
   name: string;
   msisdn?: string;
+  identifier?: string;
+  accountType?: string;
+  bankName?: string;
   accounts: BeneficiaryAccount[];
   isFavorite: boolean;
   notes?: string;
@@ -414,6 +417,8 @@ class BeneficiaryService {
       id: legacy.id,
       name: legacy.name,
       msisdn: legacy.msisdn || legacy.identifier,
+      identifier: legacy.identifier,
+      accountType: legacy.accountType,
       accounts,
       isFavorite: legacy.isFavorite || false,
       notes: legacy.notes,
@@ -438,18 +443,26 @@ class BeneficiaryService {
       paymentAccounts[0] ||
       null;
 
+    const fallbackAccountType = (beneficiary as any)?.accountType as 'mymoolah' | 'bank' | undefined;
     const accountType =
-      primaryAccount?.type === 'bank' ? 'bank' : 'mymoolah';
+      primaryAccount?.type === 'bank'
+        ? 'bank'
+        : (primaryAccount?.type === 'mymoolah'
+            ? 'mymoolah'
+            : (fallbackAccountType || 'mymoolah'));
 
     const identifier =
       accountType === 'bank'
-        ? primaryAccount?.identifier || ''
-        : beneficiary.msisdn || primaryAccount?.identifier || '';
+        ? (primaryAccount?.identifier || (beneficiary as any)?.identifier || '')
+        : beneficiary.msisdn ||
+          primaryAccount?.identifier ||
+          (beneficiary as any)?.identifier ||
+          '';
 
     return {
       id: `b-${beneficiary.id ?? idx}`,
       name: beneficiary.name,
-      msisdn: beneficiary.msisdn || primaryAccount?.identifier,
+      msisdn: beneficiary.msisdn || primaryAccount?.identifier || (beneficiary as any)?.identifier,
       identifier,
       accountType,
       bankName: primaryAccount?.metadata?.bankName,

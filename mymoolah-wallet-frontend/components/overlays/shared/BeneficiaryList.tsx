@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Search, Plus, Edit2, Smartphone, Zap, FileText, Check, X, ChevronDown, Wallet, Building2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Input } from '../../ui/input';
@@ -114,6 +114,18 @@ export function BeneficiaryList({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>(type);
   const [expandedBeneficiaries, setExpandedBeneficiaries] = useState<Set<string>>(new Set());
+
+  const toggleAccountSelector = useCallback((beneficiaryId: string) => {
+    setExpandedBeneficiaries(prev => {
+      const next = new Set(prev);
+      if (next.has(beneficiaryId)) {
+        next.delete(beneficiaryId);
+      } else {
+        next.add(beneficiaryId);
+      }
+      return next;
+    });
+  }, []);
 
   // Filter beneficiaries based on search and type
   const filteredBeneficiaries = beneficiaries.filter(beneficiary => {
@@ -319,8 +331,9 @@ export function BeneficiaryList({
                     gap: '8px'
                   }}
                 >
-                  <button
-                    type="button"
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
                       if (hasMultipleAccounts && !isExpanded) {
                         toggleAccountSelector(beneficiaryIdStr);
@@ -534,7 +547,7 @@ export function BeneficiaryList({
                         </Button>
                       )}
                     </div>
-                  </button>
+                  </div>
                   
                   {/* Account Selector Dropdown (when expanded) */}
                   {hasMultipleAccounts && isExpanded && (
