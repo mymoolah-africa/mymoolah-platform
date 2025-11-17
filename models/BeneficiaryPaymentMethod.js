@@ -65,6 +65,11 @@ module.exports = (sequelize, DataTypes) => {
       verifiedAt: {
         type: DataTypes.DATE,
         allowNull: true
+      },
+      payShapReference: {
+        type: DataTypes.STRING(20),
+        allowNull: true,
+        comment: 'PayShap reference (recipient MSISDN) - REQUIRED for PayShap bank transfers to wallets'
       }
     },
     {

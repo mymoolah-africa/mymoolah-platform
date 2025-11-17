@@ -223,13 +223,27 @@ class BeneficiaryService {
    */
   async createPaymentBeneficiary(options: {
     name: string;
-    msisdn: string;
+    msisdn?: string; // Optional for bank accounts
     accountType: 'mymoolah' | 'bank';
     bankName?: string;
     accountNumber?: string;
+    payShapReference?: string; // PayShap reference (recipient MSISDN) - REQUIRED for bank accounts
   }): Promise<PaymentBeneficiary> {
-    const normalizedMsisdn = this.normalizeMsisdn(options.msisdn);
     const serviceType = options.accountType === 'bank' ? 'bank' : 'mymoolah';
+    
+    // For MyMoolah, msisdn is required. For bank accounts, use payShapReference or msisdn if provided
+    let normalizedMsisdn: string;
+    if (serviceType === 'mymoolah') {
+      if (!options.msisdn) {
+        throw new Error('MSISDN is required for MyMoolah accounts');
+      }
+      normalizedMsisdn = this.normalizeMsisdn(options.msisdn);
+    } else {
+      // For bank accounts, use payShapReference if provided, otherwise msisdn, or generate NON_MSI_ identifier
+      normalizedMsisdn = options.payShapReference 
+        ? this.normalizeMsisdn(options.payShapReference)
+        : (options.msisdn ? this.normalizeMsisdn(options.msisdn) : '');
+    }
 
     const serviceData =
       serviceType === 'bank'
@@ -237,6 +251,7 @@ class BeneficiaryService {
             bankName: options.bankName,
             accountNumber: options.accountNumber,
             accountType: 'cheque',
+            payShapReference: options.payShapReference || options.msisdn || null, // PayShap reference (recipient MSISDN)
             isDefault: true
           }
         : {
@@ -246,7 +261,7 @@ class BeneficiaryService {
 
     const created = await this.createOrUpdateBeneficiary({
       name: options.name,
-      msisdn: normalizedMsisdn,
+      msisdn: normalizedMsisdn && normalizedMsisdn.length > 0 ? normalizedMsisdn : undefined, // Optional for bank accounts (backend will use NON_MSI_ identifier if undefined)
       serviceType,
       serviceData
     });
@@ -504,10 +519,12 @@ class BeneficiaryService {
     beneficiary: UnifiedBeneficiary,
     idx: number = 0
   ): PaymentBeneficiary {
+    // Filter to only payment accounts (mymoolah and bank)
     const paymentAccounts = (beneficiary.accounts || []).filter(
       (account) => account.type === 'mymoolah' || account.type === 'bank'
     );
 
+    // Find primary account (default or first)
     const primaryAccount =
       paymentAccounts.find((account) => account.isDefault) ||
       paymentAccounts[0] ||
@@ -548,7 +565,8 @@ class BeneficiaryService {
       metadata: {
         preferredPaymentMethod: beneficiary.preferredPaymentMethod
       },
-      accounts: beneficiary.accounts
+      // Include only payment accounts (mymoolah and bank) for account selector
+      accounts: paymentAccounts.length > 0 ? paymentAccounts : undefined
     };
   }
 

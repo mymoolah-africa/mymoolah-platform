@@ -2338,24 +2338,26 @@ export function SendMoneyPage() {
                 />
               </div>
 
-              {/* Mobile Number (MSISDN) - NEW FIELD */}
-              <div>
-                <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Mobile Number</Label>
-                <Input
-                  placeholder="e.g., 078 123 4567"
-                  value={editingBeneficiary.msisdn || ''}
-                  onChange={(e) => setEditingBeneficiary(prev => prev ? { ...prev, msisdn: e.target.value } : null)}
-                  style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: 'var(--mobile-font-base)',
-                    height: 'var(--mobile-touch-target)'
-                  }}
-                  className="font-mono"
-                />
-                <p className="text-sm text-gray-500 mt-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-                  This number uniquely identifies the beneficiary
-                </p>
-              </div>
+              {/* Mobile Number (MSISDN) - Required for MyMoolah, optional for Bank */}
+              {editingBeneficiary.accountType !== 'bank' && (
+                <div>
+                  <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Mobile Number <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="e.g., 078 123 4567"
+                    value={editingBeneficiary.msisdn || ''}
+                    onChange={(e) => setEditingBeneficiary(prev => prev ? { ...prev, msisdn: e.target.value } : null)}
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: 'var(--mobile-font-base)',
+                      height: 'var(--mobile-touch-target)'
+                    }}
+                    className="font-mono"
+                  />
+                  <p className="text-sm text-gray-500 mt-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                    This number uniquely identifies the beneficiary
+                  </p>
+                </div>
+              )}
 
               {/* Account Type */}
               <div>
@@ -2430,6 +2432,30 @@ export function SendMoneyPage() {
                       Enter the bank account number (8-12 digits)
                     </p>
                   </div>
+                  
+                  {/* PayShap Reference (Recipient Mobile Number) - REQUIRED for PayShap */}
+                  <div>
+                    <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                      Reference (Recipient Mobile Number) <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      placeholder="e.g., 078 123 4567"
+                      value={(editingBeneficiary as any).payShapReference || editingBeneficiary.msisdn || ''}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        setEditingBeneficiary(prev => prev ? { ...prev, msisdn: value, payShapReference: value } : null);
+                      }}
+                      style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        height: 'var(--mobile-touch-target)'
+                      }}
+                      className="font-mono"
+                    />
+                    <p className="text-sm text-gray-500 mt-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                      <strong>Required for PayShap:</strong> Recipient's mobile number (MSISDN). This MUST be used as the reference for deposits into wallets.
+                    </p>
+                  </div>
                 </>
               )}
 
@@ -2452,8 +2478,9 @@ export function SendMoneyPage() {
                       return;
                     }
                     
-                    if (!editingBeneficiary.msisdn?.trim()) {
-                      showError('Validation Error', 'Mobile number is required', 'warning');
+                    // MSISDN required for MyMoolah, optional for Bank
+                    if (editingBeneficiary.accountType !== 'bank' && !editingBeneficiary.msisdn?.trim()) {
+                      showError('Validation Error', 'Mobile number is required for MyMoolah accounts', 'warning');
                       return;
                     }
                     
@@ -2470,16 +2497,31 @@ export function SendMoneyPage() {
                         showError('Validation Error', 'Account number must be 8-12 digits', 'warning');
                         return;
                       }
+                      // PayShap Reference (recipient mobile number) is REQUIRED for bank accounts
+                      const payShapRef = (editingBeneficiary as any).payShapReference || editingBeneficiary.msisdn;
+                      if (!payShapRef?.trim()) {
+                        showError('Validation Error', 'Reference (Recipient Mobile Number) is required for PayShap bank transfers', 'warning');
+                        return;
+                      }
+                      if (!validateMobileNumber(payShapRef)) {
+                        showError('Validation Error', 'Reference must be a valid South African mobile number (e.g., 078 123 4567)', 'warning');
+                        return;
+                      }
                     }
                     
                     try {
                       // Update beneficiary via backend API
                       const updated = await beneficiaryService.createPaymentBeneficiary({
                         name: editingBeneficiary.name.trim(),
-                        msisdn: editingBeneficiary.msisdn.trim(),
+                        msisdn: editingBeneficiary.accountType === 'bank' 
+                          ? ((editingBeneficiary as any).payShapReference || editingBeneficiary.msisdn || '').trim()
+                          : editingBeneficiary.msisdn.trim(),
                         accountType: editingBeneficiary.accountType,
                         bankName: editingBeneficiary.accountType === 'bank' ? editingBeneficiary.bankName?.trim() : undefined,
-                        accountNumber: editingBeneficiary.accountType === 'bank' ? editingBeneficiary.identifier.trim() : undefined
+                        accountNumber: editingBeneficiary.accountType === 'bank' ? editingBeneficiary.identifier.trim() : undefined,
+                        payShapReference: editingBeneficiary.accountType === 'bank' 
+                          ? ((editingBeneficiary as any).payShapReference || editingBeneficiary.msisdn || '').trim()
+                          : undefined
                       });
                       
                       // Update local state

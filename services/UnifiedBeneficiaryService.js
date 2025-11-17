@@ -256,15 +256,23 @@ class UnifiedBeneficiaryService {
         } else if (serviceData?.mobileNumber) {
           primaryMsisdn = serviceData.mobileNumber;
         }
-        // For non-MSI services (electricity, biller), use a placeholder or generate from name
-        if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller')) {
+        // For non-MSI services (electricity, biller, bank), use a placeholder or generate from name
+        if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller' || serviceType === 'bank')) {
           // Generate a stable identifier from name for non-MSI services
+          // For bank accounts, we use account number as the identifier, but still need an MSISDN for the beneficiary record
           primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
         }
       }
 
-      if (!primaryMsisdn) {
+      // Bank accounts don't require MSISDN - they use account numbers
+      // But we still need an identifier for the beneficiary record
+      if (!primaryMsisdn && serviceType !== 'bank') {
         throw new Error('MSISDN is required. Provide msisdn or ensure serviceData contains walletMsisdn/msisdn/mobileNumber');
+      }
+      
+      // For bank accounts, if no MSISDN provided, use NON_MSI_ identifier
+      if (!primaryMsisdn && serviceType === 'bank') {
+        primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
       }
 
       // 1) Resolve / create the party-level beneficiary (one per user + msisdn)
@@ -573,7 +581,7 @@ class UnifiedBeneficiaryService {
       throw new Error('beneficiaryId is required to add a payment method');
     }
 
-    const { methodType, walletMsisdn, bankName, accountNumber, accountType, branchCode, provider, mobileMoneyId, isDefault } =
+    const { methodType, walletMsisdn, bankName, accountNumber, accountType, branchCode, provider, mobileMoneyId, payShapReference, isDefault } =
       this.normalizePaymentServiceData(serviceType, serviceData);
 
     const tx = await sequelize.transaction();
@@ -628,6 +636,7 @@ class UnifiedBeneficiaryService {
             branchCode,
             provider,
             mobileMoneyId,
+            payShapReference,
             isActive: true,
             isDefault: isDefault ?? existing.isDefault
           },
@@ -645,6 +654,7 @@ class UnifiedBeneficiaryService {
             branchCode,
             provider,
             mobileMoneyId,
+            payShapReference,
             isActive: true,
             isDefault: !!isDefault
           },
@@ -755,6 +765,7 @@ class UnifiedBeneficiaryService {
       branchCode: null,
       provider: null,
       mobileMoneyId: null,
+      payShapReference: null, // PayShap reference (recipient MSISDN) - REQUIRED for PayShap bank transfers
       isDefault: !!serviceData.isDefault
     };
 
@@ -765,6 +776,8 @@ class UnifiedBeneficiaryService {
       normalized.accountNumber = serviceData.accountNumber || null;
       normalized.accountType = serviceData.accountType || null;
       normalized.branchCode = serviceData.branchCode || null;
+      // PayShap reference MUST be the recipient's mobile number (MSISDN) for deposits into wallets
+      normalized.payShapReference = serviceData.payShapReference || serviceData.reference || serviceData.msisdn || null;
     } else if (methodType === 'mobile_money') {
       normalized.provider = serviceData.provider || null;
       normalized.mobileMoneyId = serviceData.mobileMoneyId || serviceData.walletId || serviceData.msisdn || null;
