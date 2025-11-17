@@ -41,13 +41,29 @@ const { sequelize } = require('../models');
     console.log('   KYC Status:', user.kycStatus || 'N/A');
     console.log('   Wallet KYC Verified:', user.walletKycVerified ? 'Yes' : 'No');
     
+    // First, check which columns exist in the kyc table
+    const [columnCheck] = await sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'kyc' 
+      AND table_schema = 'public'
+    `, {
+      type: sequelize.QueryTypes.SELECT
+    });
+    
+    const existingColumns = columnCheck.map(c => c.column_name);
+    const baseColumns = ['id', 'userId', 'documentType', 'documentNumber', 'status', 'submittedAt', 'createdAt', 'updatedAt'];
+    const optionalColumns = ['reviewedAt', 'reviewerNotes', 'rejectionReason', 'verificationScore', 'isAutomated'];
+    
+    // Build SELECT list with only existing columns
+    const selectColumns = [
+      ...baseColumns.filter(col => existingColumns.includes(col)),
+      ...optionalColumns.filter(col => existingColumns.includes(col))
+    ].map(col => `"${col}"`).join(', ');
+    
     // Use raw SQL to avoid missing column issues
     const [kycResults] = await sequelize.query(`
-      SELECT 
-        id, "userId", "documentType", "documentNumber", 
-        status, "submittedAt", "reviewedAt", "reviewerNotes", 
-        "rejectionReason", "verificationScore", "isAutomated", 
-        "createdAt", "updatedAt"
+      SELECT ${selectColumns}
       FROM kyc 
       WHERE "userId" = :userId 
       ORDER BY "createdAt" DESC 
