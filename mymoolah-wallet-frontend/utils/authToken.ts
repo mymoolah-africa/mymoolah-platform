@@ -1,12 +1,10 @@
 // Token helpers to isolate auth tokens per browser tab
-// Prefer sessionStorage (tab-scoped). Fallback to localStorage for legacy tokens.
+// Uses sessionStorage only - tokens cleared when tab closes
 
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
-  const sessionToken = sessionStorage.getItem('mymoolah_token');
-  if (sessionToken) return sessionToken;
-  const legacy = localStorage.getItem('mymoolah_token');
-  return legacy;
+  // Only use sessionStorage - no localStorage fallback to avoid demo tokens
+  return sessionStorage.getItem('mymoolah_token');
 }
 
 export function setToken(token: string) {
