@@ -457,6 +457,14 @@ class UnifiedBeneficiaryService {
 
       if (!beneficiary) {
         // No existing party for this MSISDN → create new beneficiary (party)
+        // CRITICAL: Ensure identifier and accountType are never null (database constraint)
+        if (!identifier || identifier === 'UNKNOWN') {
+          throw new Error(`Invalid identifier for beneficiary creation: ${identifier}. MSISDN: ${formattedMsisdn}, PreferredServiceType: ${preferredServiceType}`);
+        }
+        if (!accountType) {
+          throw new Error(`Invalid accountType for beneficiary creation: ${accountType}. PreferredServiceType: ${preferredServiceType}`);
+        }
+        
         beneficiary = await Beneficiary.create(
           {
             userId,
