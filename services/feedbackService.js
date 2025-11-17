@@ -61,8 +61,7 @@ class FeedbackService {
             }`
           }
         ],
-        max_completion_tokens: 1000,
-        temperature: 0.3
+        max_completion_tokens: 1000
       });
 
       const analysisContent = analysis.choices[0].message.content;
@@ -94,8 +93,7 @@ class FeedbackService {
             content: contentPrompt
           }
         ],
-        max_completion_tokens: 1500,
-        temperature: 0.7
+        max_completion_tokens: 1500
       });
 
       const content = generation.choices[0].message.content;
@@ -155,8 +153,7 @@ class FeedbackService {
             content: seoPrompt
           }
         ],
-        max_completion_tokens: 800,
-        temperature: 0.3
+        max_completion_tokens: 800
       });
 
       const seoContent = generation.choices[0].message.content;
@@ -200,8 +197,7 @@ class FeedbackService {
             content: prompt
           }
         ],
-        max_completion_tokens: 500,
-        temperature: 0.8
+        max_completion_tokens: 500
       });
 
       return {
