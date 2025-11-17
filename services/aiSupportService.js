@@ -47,6 +47,12 @@ class BankingGradeAISupportService {
    * 🚀 Initialize codebase sweep service
    */
   async initializeCodebaseSweep() {
+    // Skip if disabled via environment variable
+    if (process.env.ENABLE_CODEBASE_SWEEP === 'false') {
+      console.log('⚠️  Codebase Sweep Service disabled - ENABLE_CODEBASE_SWEEP=false');
+      return;
+    }
+    
     try {
       console.log('🚀 Initializing MyMoolah codebase sweep service...');
       await this.codebaseSweep.startScheduler();
