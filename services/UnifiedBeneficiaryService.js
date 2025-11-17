@@ -228,6 +228,13 @@ class UnifiedBeneficiaryService {
         preferredServiceType: serviceType
       });
 
+      // Ensure legacy columns (identifier/accountType/bankName) stay populated
+      await this.ensureLegacyColumns(beneficiary, {
+        serviceType,
+        serviceData,
+        primaryMsisdn
+      });
+
       // 2) Persist the concrete method / service in the new normalized tables
       if (serviceType === 'mymoolah' || serviceType === 'bank' || serviceType === 'mobile_money') {
         await this.addOrUpdatePaymentMethod(userId, {
@@ -251,6 +258,62 @@ class UnifiedBeneficiaryService {
     } catch (error) {
       console.error('Error creating/updating beneficiary:', error);
       throw error;
+    }
+  }
+
+  async ensureLegacyColumns(beneficiary, { serviceType, serviceData, primaryMsisdn }) {
+    const legacyFields = this.getLegacyFieldValues(serviceType, serviceData, primaryMsisdn);
+    const updates = {};
+
+    if (!beneficiary.identifier && legacyFields.identifier) {
+      updates.identifier = legacyFields.identifier;
+    }
+    if (!beneficiary.accountType && legacyFields.accountType) {
+      updates.accountType = legacyFields.accountType;
+    }
+    if (legacyFields.bankName && beneficiary.bankName !== legacyFields.bankName) {
+      updates.bankName = legacyFields.bankName;
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await beneficiary.update(updates);
+    }
+  }
+
+  getLegacyFieldValues(serviceType, serviceData = {}, primaryMsisdn) {
+    switch (serviceType) {
+      case 'mymoolah':
+        return {
+          identifier: this.validateMsisdn(primaryMsisdn),
+          accountType: 'mymoolah'
+        };
+      case 'bank':
+        return {
+          identifier: serviceData.accountNumber,
+          accountType: 'bank',
+          bankName: serviceData.bankName || null
+        };
+      case 'airtime':
+      case 'data':
+        return {
+          identifier: serviceData.msisdn || serviceData.mobileNumber || primaryMsisdn,
+          accountType: serviceType
+        };
+      case 'electricity':
+        return {
+          identifier: serviceData.meterNumber,
+          accountType: 'electricity'
+        };
+      case 'biller':
+        return {
+          identifier: serviceData.accountNumber,
+          accountType: 'biller'
+        };
+      default:
+        return {
+          identifier: primaryMsisdn,
+          accountType: serviceType
+        };
     }
   }
 
