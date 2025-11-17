@@ -138,7 +138,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkAuthStatus = useCallback(async () => {
+  const checkAuthStatus = useCallback(async (retryCount = 0) => {
+    const MAX_RETRIES = 2;
+    const REQUEST_TIMEOUT = 5000; // 5 seconds timeout
+    
     try {
       const token = getSessionToken();
       if (token && token.startsWith('demo-token-')) {
@@ -162,24 +165,68 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(mockUser);
       } else if (token) {
         // Real authentication - validate token with backend
-        const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/auth/verify`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        // Use AbortController for timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
         
-        if (response.ok) {
-          const responseData = await safeJsonParse(response);
-          if (responseData && responseData.user) {
-            setUser(mapBackendUserToContextUser(responseData.user));
-          } else {
+        try {
+          const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/auth/verify`, {
+            headers: { Authorization: `Bearer ${token}` },
+            signal: controller.signal
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            const responseData = await safeJsonParse(response);
+            if (responseData && responseData.user) {
+              setUser(mapBackendUserToContextUser(responseData.user));
+            } else {
+              // Invalid response format - log out (security: assume token invalid)
+              removeSessionToken();
+            }
+          } else if (response.status === 401 || response.status === 403) {
+            // Explicitly unauthorized/forbidden - token is invalid, log out immediately
+            console.warn('Token validation failed: Unauthorized/Forbidden');
             removeSessionToken();
+          } else {
+            // Server error (500, 503, etc.) or other non-auth errors
+            // Don't log out - might be temporary backend issue
+            // Retry if we haven't exceeded max retries
+            if (retryCount < MAX_RETRIES) {
+              console.warn(`Token verification failed with status ${response.status}, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+              return checkAuthStatus(retryCount + 1);
+            } else {
+              console.warn('Token verification failed after retries, but keeping user logged in (may be temporary backend issue)');
+              // Keep user logged in - backend will validate on next API call
+            }
           }
-        } else {
-          removeSessionToken();
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId);
+          
+          // Check if it's an abort (timeout) or network error
+          if (fetchError.name === 'AbortError' || fetchError.message?.includes('timeout')) {
+            // Request timed out - retry if we haven't exceeded max retries
+            if (retryCount < MAX_RETRIES) {
+              console.warn(`Token verification timed out, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
+              return checkAuthStatus(retryCount + 1);
+            } else {
+              console.warn('Token verification timed out after retries, but keeping user logged in (may be network issue)');
+              // Keep user logged in - network may be temporarily unavailable
+            }
+          } else {
+            // Other network errors (offline, CORS, etc.)
+            console.warn('Token verification network error, but keeping user logged in:', fetchError.message);
+            // Keep user logged in - network issue, not auth issue
+          }
         }
       }
     } catch (error) {
-      console.error('Auth check failed:', error);
-      removeSessionToken();
+      // Unexpected error - don't log out, might be temporary
+      console.error('Auth check unexpected error (keeping user logged in):', error);
+      // Keep user logged in - error might be temporary
     } finally {
       setIsLoading(false);
     }
@@ -200,8 +247,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Also check auth status when tab regains focus (handles app minimization on mobile)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        // Tab/app is visible again - verify token is still valid
-        checkAuthStatus();
+        // Tab/app is visible again
+        const token = getSessionToken();
+        
+        // Only verify if:
+        // 1. Token exists but user is not set (need to restore session)
+        // 2. OR user is set (background verification, won't log out on network errors)
+        if (token) {
+          // Background verification - won't log out on network errors (handled by checkAuthStatus)
+          // This ensures token is still valid without disrupting user experience
+          checkAuthStatus();
+        }
+        // If no token exists, user is already logged out - no action needed
       }
     };
     
