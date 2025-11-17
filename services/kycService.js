@@ -771,13 +771,17 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         
         // Validate critical fields
         if (documentType === 'id_document') {
-          // Clean ID/passport number (remove spaces, keep alphanumeric for passports)
+          // Clean ID/passport/license number (remove spaces, keep alphanumeric for passports)
           const rawIdNumber = parsedResults.idNumber ? String(parsedResults.idNumber).trim().replace(/\s+/g, '') : '';
+          const rawLicenseNumber = parsedResults.licenseNumber ? String(parsedResults.licenseNumber).trim().replace(/\s+/g, '') : '';
           
           // Check if it's a 13-digit SA ID or a 6-9 character passport number
           const isSAId = /^\d{13}$/.test(rawIdNumber);
           const isPassport = /^[A-Z0-9]{6,9}$/i.test(rawIdNumber);
-          const hasIdNumber = isSAId || isPassport;
+          // Check for driver's license formats: "02/13-digit" or license format "AB123456CD"
+          const isDriverLicenseId = /^\d{2}\/\d{13}$/.test(rawIdNumber) || /^\d{2}\/\d{13}$/.test(rawLicenseNumber);
+          const isDriverLicenseFormat = /^[A-Z]{2}\d{6}[A-Z]{2}$/i.test(rawLicenseNumber) || /^[A-Z]{2}\d{6}[A-Z]{2}$/i.test(rawIdNumber);
+          const hasIdNumber = isSAId || isPassport || isDriverLicenseId || isDriverLicenseFormat;
           
           // Check for name (surname, forenames, or fullName)
           const hasName = (parsedResults.surname?.trim().length >= 2) || 
@@ -787,9 +791,13 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
           // Log what was extracted for debugging
           console.log('📋 OCR Extraction Results:', {
             idNumber: parsedResults.idNumber,
+            licenseNumber: parsedResults.licenseNumber,
             rawIdNumber: rawIdNumber,
+            rawLicenseNumber: rawLicenseNumber,
             isSAId: isSAId,
             isPassport: isPassport,
+            isDriverLicenseId: isDriverLicenseId,
+            isDriverLicenseFormat: isDriverLicenseFormat,
             hasIdNumber: hasIdNumber,
             surname: parsedResults.surname,
             forenames: parsedResults.forenames,
@@ -800,11 +808,12 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
           if (!hasIdNumber || !hasName) {
             console.warn('⚠️  OpenAI OCR missing critical fields', {
               idNumberPresent: !!parsedResults.idNumber,
+              licenseNumberPresent: !!parsedResults.licenseNumber,
               idNumberValid: hasIdNumber,
               namePresent: hasName,
               extractedData: parsedResults
             });
-            throw new Error(`Critical fields missing from OCR extraction. ID Number: ${hasIdNumber ? 'OK' : 'MISSING/INVALID'}, Name: ${hasName ? 'OK' : 'MISSING'}`);
+            throw new Error(`Critical fields missing from OCR extraction. ID/License Number: ${hasIdNumber ? 'OK' : 'MISSING/INVALID'}, Name: ${hasName ? 'OK' : 'MISSING'}`);
           }
         }
         
@@ -1571,6 +1580,16 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
       return 'sa_driving_license';
     }
     
+    // Check for SA driver's license ID format: "02/13-digit" or "XX/13-digit" (specific to driver's licenses)
+    // This format appears on SA driver's licenses before the actual ID number
+    const rawIdForCheck = ocrResults.idNumber ? String(ocrResults.idNumber).trim() : '';
+    const rawLicenseForCheck = ocrResults.licenseNumber ? String(ocrResults.licenseNumber).trim() : '';
+    if ((rawIdForCheck && /^\d{2}\/\d{13}$/.test(rawIdForCheck)) || 
+        (rawLicenseForCheck && /^\d{2}\/\d{13}$/.test(rawLicenseForCheck))) {
+      // "02/6411055084084" format is specific to SA driver's licenses
+      return 'sa_driving_license';
+    }
+    
     // Passport numbers are 6-9 alphanumeric characters (check FIRST before SA ID)
     // This is important because passport numbers can start with letters
     if (idNumber && /^[A-Z0-9]{6,9}$/i.test(idNumber) && !/^\d{13}$/.test(idNumber)) {
@@ -1579,7 +1598,9 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
     
     // South African ID numbers are exactly 13 digits (all numeric)
     // Only classify as SA ID if it doesn't have validity period fields (driver's license indicator)
-    if (idNumber && /^\d{13}$/.test(idNumber) && !hasValidFrom && !hasExpiryDate) {
+    // AND doesn't have the "02/13-digit" format
+    if (idNumber && /^\d{13}$/.test(idNumber) && !hasValidFrom && !hasExpiryDate && 
+        !/^\d{2}\/\d{13}$/.test(rawIdForCheck) && !/^\d{2}\/\d{13}$/.test(rawLicenseForCheck)) {
       return 'sa_id';
     }
     
