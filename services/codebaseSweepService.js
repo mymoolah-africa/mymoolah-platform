@@ -37,10 +37,13 @@ class CodebaseSweepService {
   async startScheduler() {
     console.log('🚀 Starting MyMoolah Codebase Sweep Scheduler...');
     
-    // Run initial sweep in background (non-blocking)
-    this.performSweep().catch(error => {
-      console.error('⚠️  Initial codebase sweep failed:', error.message);
-    });
+    // Run initial sweep in background after 10 second delay (non-blocking)
+    // This allows server to fully start before the heavy OpenAI API call
+    setTimeout(() => {
+      this.performSweep().catch(error => {
+        console.error('⚠️  Initial codebase sweep failed:', error.message);
+      });
+    }, 10000); // 10 second delay
     
     // Schedule daily sweeps
     setInterval(async () => {
