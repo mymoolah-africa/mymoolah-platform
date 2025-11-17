@@ -22,6 +22,7 @@ class UnifiedBeneficiaryService {
         ];
       }
 
+      // Fetch beneficiaries
       const beneficiaries = await Beneficiary.findAll({
         where: whereClause,
         order: [
@@ -32,7 +33,46 @@ class UnifiedBeneficiaryService {
         ]
       });
 
-      const filtered = this.filterBeneficiariesByService(beneficiaries, serviceType);
+      // Enrich beneficiaries with normalized table data for filtering
+      const enrichedBeneficiaries = await Promise.all(
+        beneficiaries.map(async (beneficiary) => {
+          // If JSONB fields are empty or null, populate them from normalized tables
+          const hasLegacyPaymentMethods = beneficiary.paymentMethods && 
+            (beneficiary.paymentMethods.mymoolah || 
+             (Array.isArray(beneficiary.paymentMethods.bankAccounts) && beneficiary.paymentMethods.bankAccounts.length > 0));
+          
+          if (!hasLegacyPaymentMethods) {
+            const paymentMethods = await BeneficiaryPaymentMethod.findAll({
+              where: { beneficiaryId: beneficiary.id, isActive: true }
+            });
+            if (paymentMethods.length > 0) {
+              // Populate JSONB from normalized data
+              beneficiary.paymentMethods = this.normalizedToLegacyPaymentMethods(paymentMethods);
+            }
+          }
+          
+          const hasLegacyServices = (beneficiary.vasServices && 
+            ((Array.isArray(beneficiary.vasServices.airtime) && beneficiary.vasServices.airtime.length > 0) ||
+             (Array.isArray(beneficiary.vasServices.data) && beneficiary.vasServices.data.length > 0))) ||
+            (beneficiary.utilityServices && 
+             (Array.isArray(beneficiary.utilityServices.electricity) && beneficiary.utilityServices.electricity.length > 0));
+          
+          if (!hasLegacyServices) {
+            const serviceAccounts = await BeneficiaryServiceAccount.findAll({
+              where: { beneficiaryId: beneficiary.id, isActive: true }
+            });
+            if (serviceAccounts.length > 0) {
+              const { vasServices, utilityServices } = this.normalizedToLegacyServiceAccounts(serviceAccounts);
+              if (!beneficiary.vasServices) beneficiary.vasServices = vasServices;
+              if (!beneficiary.utilityServices) beneficiary.utilityServices = utilityServices;
+            }
+          }
+          
+          return beneficiary;
+        })
+      );
+
+      const filtered = this.filterBeneficiariesByService(enrichedBeneficiaries, serviceType);
       return this.formatBeneficiariesForService(filtered, serviceType);
     } catch (error) {
       console.error('Error getting beneficiaries by service:', error);
@@ -946,6 +986,90 @@ class UnifiedBeneficiaryService {
   getBillerIdentifier(billerServices, fallback) {
     if (billerServices?.accounts?.length > 0) return billerServices.accounts[0].accountNumber;
     return fallback || null;
+  }
+
+  /**
+   * Convert normalized payment methods to legacy JSONB format
+   */
+  normalizedToLegacyPaymentMethods(paymentMethods) {
+    const legacy = {};
+    
+    paymentMethods.forEach((method) => {
+      if (method.methodType === 'mymoolah') {
+        legacy.mymoolah = {
+          walletId: method.walletMsisdn || method.walletId,
+          walletMsisdn: method.walletMsisdn,
+          isActive: method.isActive,
+          isDefault: method.isDefault
+        };
+      } else if (method.methodType === 'bank') {
+        if (!legacy.bankAccounts) legacy.bankAccounts = [];
+        legacy.bankAccounts.push({
+          accountNumber: method.accountNumber,
+          bankName: method.bankName,
+          accountType: method.accountType || 'cheque',
+          branchCode: method.branchCode,
+          isActive: method.isActive,
+          isDefault: method.isDefault
+        });
+      } else if (method.methodType === 'mobile_money') {
+        if (!legacy.mobileMoney) legacy.mobileMoney = [];
+        legacy.mobileMoney.push({
+          mobileMoneyId: method.mobileMoneyId,
+          provider: method.provider,
+          isActive: method.isActive,
+          isDefault: method.isDefault
+        });
+      }
+    });
+    
+    return legacy;
+  }
+
+  /**
+   * Convert normalized service accounts to legacy JSONB format
+   */
+  normalizedToLegacyServiceAccounts(serviceAccounts) {
+    const vasServices = {};
+    const utilityServices = {};
+    
+    serviceAccounts.forEach((account) => {
+      const serviceData = account.serviceData || {};
+      
+      if (account.serviceType === 'airtime') {
+        if (!vasServices.airtime) vasServices.airtime = [];
+        vasServices.airtime.push({
+          mobileNumber: serviceData.msisdn || serviceData.mobileNumber,
+          msisdn: serviceData.msisdn || serviceData.mobileNumber,
+          network: serviceData.network,
+          isActive: account.isActive,
+          isDefault: account.isDefault,
+          ...serviceData
+        });
+      } else if (account.serviceType === 'data') {
+        if (!vasServices.data) vasServices.data = [];
+        vasServices.data.push({
+          mobileNumber: serviceData.msisdn || serviceData.mobileNumber,
+          msisdn: serviceData.msisdn || serviceData.mobileNumber,
+          network: serviceData.network,
+          isActive: account.isActive,
+          isDefault: account.isDefault,
+          ...serviceData
+        });
+      } else if (account.serviceType === 'electricity') {
+        if (!utilityServices.electricity) utilityServices.electricity = [];
+        utilityServices.electricity.push({
+          meterNumber: serviceData.meterNumber,
+          meterType: serviceData.meterType,
+          provider: serviceData.provider,
+          isActive: account.isActive,
+          isDefault: account.isDefault,
+          ...serviceData
+        });
+      }
+    });
+    
+    return { vasServices, utilityServices };
   }
 
   filterBeneficiariesByService(beneficiaries, serviceType) {
