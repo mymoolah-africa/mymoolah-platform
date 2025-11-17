@@ -42,7 +42,7 @@ const { sequelize } = require('../models');
     console.log('   Wallet KYC Verified:', user.walletKycVerified ? 'Yes' : 'No');
     
     // First, check which columns exist in the kyc table
-    const [columnCheck] = await sequelize.query(`
+    const columnResult = await sequelize.query(`
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_name = 'kyc' 
@@ -51,7 +51,10 @@ const { sequelize } = require('../models');
       type: sequelize.QueryTypes.SELECT
     });
     
-    const existingColumns = columnCheck.map(c => c.column_name);
+    // Handle different result formats
+    const columnRows = Array.isArray(columnResult) ? columnResult : (columnResult[0] || []);
+    const existingColumns = columnRows.map(c => c.column_name || c);
+    
     const baseColumns = ['id', 'userId', 'documentType', 'documentNumber', 'status', 'submittedAt', 'createdAt', 'updatedAt'];
     const optionalColumns = ['reviewedAt', 'reviewerNotes', 'rejectionReason', 'verificationScore', 'isAutomated'];
     
@@ -62,7 +65,7 @@ const { sequelize } = require('../models');
     ].map(col => `"${col}"`).join(', ');
     
     // Use raw SQL to avoid missing column issues
-    const [kycResults] = await sequelize.query(`
+    const kycResult = await sequelize.query(`
       SELECT ${selectColumns}
       FROM kyc 
       WHERE "userId" = :userId 
@@ -72,6 +75,8 @@ const { sequelize } = require('../models');
       replacements: { userId: user.id },
       type: sequelize.QueryTypes.SELECT
     });
+    
+    const kycResults = Array.isArray(kycResult) ? kycResult : (kycResult[0] || []);
     
     console.log('   KYC Records:', kycResults.length);
     
