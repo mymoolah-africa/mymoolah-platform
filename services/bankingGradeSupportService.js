@@ -283,7 +283,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
             content: `Classify: "${message}"`
           }
         ],
-        max_tokens: 150,
+        max_completion_tokens: 150,
         temperature: 0.1
       });
       
@@ -1140,7 +1140,7 @@ Be friendly but professional.`
             content: message
           }
         ],
-        max_tokens: 200,
+        max_completion_tokens: 200,
         temperature: 0.7
       });
       

@@ -1193,7 +1193,7 @@ Return JSON: {"isSimpleQuery": true/false, "queryType": "exact_type_with_undersc
             content: `Classify: "${message}"`
           }
         ],
-        max_tokens: 150,
+        max_completion_tokens: 150,
         temperature: 0.1
       });
       
@@ -1561,7 +1561,7 @@ Remember: You're helping real people with their money, so be encouraging and sup
             content: message
           }
         ],
-        max_tokens: 200,
+        max_completion_tokens: 200,
         temperature: 0.7
       });
 

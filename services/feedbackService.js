@@ -61,7 +61,7 @@ class FeedbackService {
             }`
           }
         ],
-        max_tokens: 1000,
+        max_completion_tokens: 1000,
         temperature: 0.3
       });
 
@@ -94,7 +94,7 @@ class FeedbackService {
             content: contentPrompt
           }
         ],
-        max_tokens: 1500,
+        max_completion_tokens: 1500,
         temperature: 0.7
       });
 
@@ -155,7 +155,7 @@ class FeedbackService {
             content: seoPrompt
           }
         ],
-        max_tokens: 800,
+        max_completion_tokens: 800,
         temperature: 0.3
       });
 
@@ -200,7 +200,7 @@ class FeedbackService {
             content: prompt
           }
         ],
-        max_tokens: 500,
+        max_completion_tokens: 500,
         temperature: 0.8
       });
 

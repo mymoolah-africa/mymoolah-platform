@@ -98,7 +98,7 @@ async function testModelAvailability() {
               content: 'Say "Hello, GPT-5.1 test successful!" if you can read this.'
             }
           ],
-          max_tokens: 50
+          max_completion_tokens: 50
         });
         
         const responseText = testResponse.choices[0]?.message?.content || 'No response';
