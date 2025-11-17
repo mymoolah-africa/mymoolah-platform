@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { validateDemoCredentials, isDemoMode, getDemoCredentials } from '../config/app-config';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken as getSessionToken, setToken as setSessionToken, removeToken as removeSessionToken } from '../utils/authToken';
@@ -138,19 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for stored auth token on app start
-    checkAuthStatus();
-    
-    // REMOVED: Harmful polling interval for token refresh
-    // Token refresh will now happen on-demand when API calls fail
-    // This follows Mojaloop and banking best practices for scalability
-    // 
-    // FUTURE: Will implement proper token refresh on API failure
-    // FUTURE: Will add WebSocket-based token validation
-  }, []);
-
-  const checkAuthStatus = async () => {
+  const checkAuthStatus = useCallback(async () => {
     try {
       const token = getSessionToken();
       if (token && token.startsWith('demo-token-')) {
@@ -195,7 +183,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    // Check for stored auth token on app start
+    checkAuthStatus();
+    
+    // Listen for cross-tab logout events (when user logs out in another tab)
+    const handleCrossTabLogout = () => {
+      setUser(null);
+      setIsLoading(false);
+    };
+    
+    window.addEventListener('mymoolah_logout', handleCrossTabLogout);
+    
+    // Also check auth status when tab regains focus (handles app minimization on mobile)
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Tab/app is visible again - verify token is still valid
+        checkAuthStatus();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('mymoolah_logout', handleCrossTabLogout);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+    
+    // REMOVED: Harmful polling interval for token refresh
+    // Token refresh will now happen on-demand when API calls fail
+    // This follows Mojaloop and banking best practices for scalability
+    // 
+    // FUTURE: Will implement proper token refresh on API failure
+    // FUTURE: Will add WebSocket-based token validation
+  }, [checkAuthStatus]);
 
   const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
