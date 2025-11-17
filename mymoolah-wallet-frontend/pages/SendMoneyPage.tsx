@@ -2382,30 +2382,55 @@ export function SendMoneyPage() {
 
               {/* Bank Name (only for bank accounts) */}
               {editingBeneficiary.accountType === 'bank' && (
-                <div>
-                  <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Bank Name</Label>
-                  <Select 
-                    value={editingBeneficiary.bankName || ''} 
-                    onValueChange={(value) => 
-                      setEditingBeneficiary(prev => prev ? { ...prev, bankName: value } : null)
-                    }
-                  >
-                    <SelectTrigger style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: 'var(--mobile-font-base)',
-                      height: 'var(--mobile-touch-target)'
-                    }}>
-                      <SelectValue placeholder="Select bank" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SA_BANKS.map(bank => (
-                        <SelectItem key={bank.code} value={bank.name}>
-                          {bank.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                <>
+                  <div>
+                    <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Bank Name</Label>
+                    <Select 
+                      value={editingBeneficiary.bankName || ''} 
+                      onValueChange={(value) => 
+                        setEditingBeneficiary(prev => prev ? { ...prev, bankName: value } : null)
+                      }
+                    >
+                      <SelectTrigger style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        height: 'var(--mobile-touch-target)'
+                      }}>
+                        <SelectValue placeholder="Select bank" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SA_BANKS.map(bank => (
+                          <SelectItem key={bank.code} value={bank.name}>
+                            {bank.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {/* Account Number (only for bank accounts) */}
+                  <div>
+                    <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Account Number <span className="text-red-500">*</span></Label>
+                    <Input
+                      placeholder="e.g., 1234567890"
+                      value={editingBeneficiary.identifier || ''}
+                      onChange={(e) => {
+                        // Only allow digits
+                        const value = e.target.value.replace(/\D/g, '');
+                        setEditingBeneficiary(prev => prev ? { ...prev, identifier: value } : null);
+                      }}
+                      style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        height: 'var(--mobile-touch-target)'
+                      }}
+                      className="font-mono"
+                    />
+                    <p className="text-sm text-gray-500 mt-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                      Enter the bank account number (8-12 digits)
+                    </p>
+                  </div>
+                </>
               )}
 
               {/* Action Buttons */}
@@ -2418,16 +2443,59 @@ export function SendMoneyPage() {
                   Cancel
                 </Button>
                 <Button 
-                  onClick={() => {
-                    if (editingBeneficiary) {
+                  onClick={async () => {
+                    if (!editingBeneficiary) return;
+                    
+                    // Validate required fields
+                    if (!editingBeneficiary.name?.trim()) {
+                      showError('Validation Error', 'Beneficiary name is required', 'warning');
+                      return;
+                    }
+                    
+                    if (!editingBeneficiary.msisdn?.trim()) {
+                      showError('Validation Error', 'Mobile number is required', 'warning');
+                      return;
+                    }
+                    
+                    if (editingBeneficiary.accountType === 'bank') {
+                      if (!editingBeneficiary.bankName?.trim()) {
+                        showError('Validation Error', 'Bank name is required for bank accounts', 'warning');
+                        return;
+                      }
+                      if (!editingBeneficiary.identifier?.trim()) {
+                        showError('Validation Error', 'Account number is required for bank accounts', 'warning');
+                        return;
+                      }
+                      if (!/^[0-9]{8,12}$/.test(editingBeneficiary.identifier)) {
+                        showError('Validation Error', 'Account number must be 8-12 digits', 'warning');
+                        return;
+                      }
+                    }
+                    
+                    try {
+                      // Update beneficiary via backend API
+                      const updated = await beneficiaryService.createPaymentBeneficiary({
+                        name: editingBeneficiary.name.trim(),
+                        msisdn: editingBeneficiary.msisdn.trim(),
+                        accountType: editingBeneficiary.accountType,
+                        bankName: editingBeneficiary.accountType === 'bank' ? editingBeneficiary.bankName?.trim() : undefined,
+                        accountNumber: editingBeneficiary.accountType === 'bank' ? editingBeneficiary.identifier.trim() : undefined
+                      });
+                      
+                      // Update local state
                       setBeneficiaries(prev => 
                         prev.map(b => 
-                          b.id === editingBeneficiary.id ? editingBeneficiary : b
+                          b.id === editingBeneficiary.id ? updated : b
                         )
                       );
+                      
+                      setShowEditBeneficiaryModal(false);
+                      setEditingBeneficiary(null);
+                      showError('Success', 'Beneficiary updated successfully', 'info');
+                    } catch (error: any) {
+                      logError('SendMoneyPage', 'Failed to update beneficiary', error as Error);
+                      showError('Error', error?.message || 'Failed to update beneficiary. Please try again.', 'error');
                     }
-                    setShowEditBeneficiaryModal(false);
-                    setEditingBeneficiary(null);
                   }}
                   className="flex-1 bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] text-white"
                 >
