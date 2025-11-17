@@ -1114,6 +1114,17 @@ class UnifiedBeneficiaryService {
               console.log(`[Filter] Beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) included in payment list via normalized table`);
             }
           }
+          
+          // Fallback: If beneficiary has msisdn (not NON_MSI_) and accountType is not electricity/biller, include as payment
+          if (!shouldInclude && beneficiaryData.msisdn && 
+              !beneficiaryData.msisdn.startsWith('NON_MSI_') &&
+              beneficiaryData.accountType !== 'electricity' && 
+              beneficiaryData.accountType !== 'biller' &&
+              beneficiaryData.accountType !== 'voucher') {
+            // Likely a payment beneficiary (MyMoolah wallet) created before unified system
+            shouldInclude = true;
+            console.log(`[Filter] Beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) included in payment list via fallback (msisdn: ${beneficiaryData.msisdn})`);
+          }
           break;
           
         case 'airtime-data':
