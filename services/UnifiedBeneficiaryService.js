@@ -953,12 +953,12 @@ class UnifiedBeneficiaryService {
       const hasLegacyType = (types = []) => types.includes(beneficiary.accountType);
       switch (serviceType) {
         case 'payment':
+          // ONLY return beneficiaries with payment methods (mymoolah or bank)
+          // Do NOT include electricity, biller, or other service-only beneficiaries
           return Boolean(
             beneficiary.paymentMethods?.mymoolah ||
             (beneficiary.paymentMethods?.bankAccounts || []).length ||
-            hasLegacyType(['mymoolah', 'bank']) ||
-            beneficiary.identifier ||
-            beneficiary.msisdn
+            hasLegacyType(['mymoolah', 'bank'])
           );
         case 'airtime-data':
           return Boolean(
