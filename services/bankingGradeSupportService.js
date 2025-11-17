@@ -283,8 +283,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
             content: `Classify: "${message}"`
           }
         ],
-        max_completion_tokens: 150,
-        temperature: 0.1
+        max_completion_tokens: 150
       });
       
       return JSON.parse(completion.choices[0].message.content);
@@ -1140,8 +1139,7 @@ Be friendly but professional.`
             content: message
           }
         ],
-        max_completion_tokens: 200,
-        temperature: 0.7
+        max_completion_tokens: 200
       });
       
       const response = {

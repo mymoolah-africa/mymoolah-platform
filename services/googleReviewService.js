@@ -45,8 +45,7 @@ Review Structure:
             content: prompt
           }
         ],
-        max_completion_tokens: 300,
-        temperature: 0.7
+        max_completion_tokens: 300
       });
 
       const reviewContent = response.choices[0].message.content;
@@ -170,8 +169,7 @@ Analyze for:
 4. Overall quality and engagement`
           }
         ],
-        max_completion_tokens: 200,
-        temperature: 0.3
+        max_completion_tokens: 200
       });
 
       const analysisContent = analysis.choices[0].message.content;
@@ -220,8 +218,7 @@ Generate a response that shows excellent customer service and engagement.`;
             content: prompt
           }
         ],
-        max_completion_tokens: 150,
-        temperature: 0.6
+        max_completion_tokens: 150
       });
 
       return {
