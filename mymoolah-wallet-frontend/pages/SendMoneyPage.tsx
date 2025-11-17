@@ -21,6 +21,7 @@ import {
   Loader2,
   Wallet,
   ChevronRight,
+  ChevronDown,
   Edit2,
   X
 } from 'lucide-react';
@@ -247,6 +248,10 @@ export function SendMoneyPage() {
   // Payment Modal State
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<PaymentBeneficiary | null>(null);
+  // Track selected account ID for beneficiaries with multiple accounts (beneficiaryId -> accountId)
+  const [selectedAccountIds, setSelectedAccountIds] = useState<Record<string, number>>({});
+  // Track expanded account selectors (beneficiaryId -> boolean)
+  const [expandedAccountSelectors, setExpandedAccountSelectors] = useState<Record<string, boolean>>({});
   
   // Confirmation Modal State
   const [showPaymentConfirmationModal, setShowPaymentConfirmationModal] = useState(false);
@@ -516,9 +521,59 @@ export function SendMoneyPage() {
     setShowPayNow(true);
   };
 
+  // Helper: Get selected account for a beneficiary (or default)
+  const getSelectedAccount = (b: PaymentBeneficiary) => {
+    if (!b.accounts || b.accounts.length === 0) {
+      return null; // No accounts, use legacy format
+    }
+    const selectedAccountId = selectedAccountIds[b.id];
+    if (selectedAccountId) {
+      const account = b.accounts.find(a => a.id === selectedAccountId);
+      if (account) return account;
+    }
+    // Return default account or first account
+    return b.accounts.find(a => a.isDefault) || b.accounts[0] || null;
+  };
+
+  // Helper: Toggle account selector expansion
+  const toggleAccountSelector = (beneficiaryId: string) => {
+    setExpandedAccountSelectors(prev => ({
+      ...prev,
+      [beneficiaryId]: !prev[beneficiaryId]
+    }));
+  };
+
+  // Helper: Select account for a beneficiary
+  const selectAccount = (beneficiaryId: string, accountId: number) => {
+    setSelectedAccountIds(prev => ({
+      ...prev,
+      [beneficiaryId]: accountId
+    }));
+    setExpandedAccountSelectors(prev => ({
+      ...prev,
+      [beneficiaryId]: false // Collapse after selection
+    }));
+  };
+
   // Prefill from a saved beneficiary (Frequent list)
-  const prefillFromBeneficiary = (b: PaymentBeneficiary) => {
-    setSelectedAccountType(b.accountType);
+  const prefillFromBeneficiary = (b: PaymentBeneficiary, accountId?: number) => {
+    // If accountId provided, use that account; otherwise use selected or default
+    const account = accountId 
+      ? b.accounts?.find(a => a.id === accountId)
+      : getSelectedAccount(b);
+    
+    // Determine account type and details from selected account or legacy format
+    let accountType: 'mymoolah' | 'bank' = b.accountType;
+    let identifier = b.identifier;
+    let bankName = b.bankName;
+    
+    if (account) {
+      accountType = account.type === 'bank' ? 'bank' : 'mymoolah';
+      identifier = account.identifier;
+      bankName = account.metadata?.bankName || b.bankName;
+    }
+    
+    setSelectedAccountType(accountType);
     const toDisplaySA = (num: string): string => {
       const digits = String(num || '').replace(/\D/g, '');
       if (!digits) return '';
@@ -527,17 +582,24 @@ export function SendMoneyPage() {
       if (digits.length === 9) return '27' + digits;
       return digits;
     };
-    if (b.accountType === 'mymoolah') {
+    if (accountType === 'mymoolah') {
       setNewBeneficiary(prev => ({ 
         ...prev, 
         name: b.name, 
-        identifier: b.identifier, // Keep original format (078XXXXXXXX)
-        msisdn: b.identifier, // Also set msisdn for MyMoolah users
+        identifier: identifier, // Keep original format (078XXXXXXXX)
+        msisdn: identifier, // Also set msisdn for MyMoolah users
         bankName: '', 
         accountNumber: '' 
       }));
     } else {
-      setNewBeneficiary(prev => ({ ...prev, name: b.name, identifier: b.identifier, bankName: b.bankName || '', accountNumber: b.identifier }));
+      // Bank account: use identifier and bankName from selected account
+      setNewBeneficiary(prev => ({ 
+        ...prev, 
+        name: b.name, 
+        identifier: identifier, // Use identifier from selected account
+        bankName: bankName || '', 
+        accountNumber: identifier // Account number is the identifier for bank accounts
+      }));
     }
     setPaymentAmount('');
     setPaymentReference('');
@@ -1544,122 +1606,297 @@ export function SendMoneyPage() {
         </div>
         
         <div className="space-y-3 mb-8">
-          {filteredBeneficiaries.map((beneficiary) => (
-            <Card 
-              key={beneficiary.id}
-              className="hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => prefillFromBeneficiary(beneficiary)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  {/* Avatar */}
-                  <div className="w-12 h-12 bg-[#2D8CCA] rounded-full flex items-center justify-center text-white font-bold">
-                    {beneficiary.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                  </div>
+          {filteredBeneficiaries.map((beneficiary) => {
+            const hasMultipleAccounts = beneficiary.accounts && beneficiary.accounts.length > 1;
+            const selectedAccount = getSelectedAccount(beneficiary);
+            const isExpanded = expandedAccountSelectors[beneficiary.id] || false;
+            const displayAccount = selectedAccount || null;
+            const accountType = displayAccount 
+              ? (displayAccount.type === 'bank' ? 'bank' : 'mymoolah')
+              : beneficiary.accountType;
+            const accountIdentifier = displayAccount 
+              ? displayAccount.identifier 
+              : beneficiary.identifier;
+            const accountBankName = displayAccount?.metadata?.bankName || beneficiary.bankName;
+            
+            return (
+              <div key={beneficiary.id} className="space-y-2">
+                <Card 
+                  className="hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => {
+                    if (hasMultipleAccounts && !isExpanded) {
+                      toggleAccountSelector(beneficiary.id);
+                    } else {
+                      prefillFromBeneficiary(beneficiary);
+                    }
+                  }}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      {/* Avatar */}
+                      <div className="w-12 h-12 bg-[#2D8CCA] rounded-full flex items-center justify-center text-white font-bold">
+                        {beneficiary.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                      </div>
 
-                  {/* Beneficiary Info */}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-base)',
-                        fontWeight: 'var(--font-weight-medium)',
-                        color: '#1f2937'
-                      }}>
-                        {beneficiary.name}
-                      </h3>
-                      {beneficiary.isFavorite && (
-                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                      )}
+                      {/* Beneficiary Info */}
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: 'var(--mobile-font-base)',
+                            fontWeight: 'var(--font-weight-medium)',
+                            color: '#1f2937'
+                          }}>
+                            {beneficiary.name}
+                          </h3>
+                          {beneficiary.isFavorite && (
+                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                          )}
+                          {hasMultipleAccounts && (
+                            <Badge 
+                              variant="secondary"
+                              style={{
+                                fontSize: '10px',
+                                backgroundColor: '#e2e8f0',
+                                color: '#6b7280',
+                                padding: '2px 6px'
+                              }}
+                            >
+                              {beneficiary.accounts.length} accounts
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-2 mb-1">
+                          {getAccountTypeBadge(accountType)}
+                        </div>
+
+                        {/* Account Identifier */}
+                        <p style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: 'var(--mobile-font-small)',
+                          color: '#6b7280'
+                        }}>
+                          {accountType === 'mymoolah' ? (
+                            <>📱 {accountIdentifier}</>
+                          ) : (
+                            <>
+                              🏦 {accountBankName || 'Bank'} • {accountIdentifier}
+                            </>
+                          )}
+                        </p>
+
+                        {beneficiary.lastPaid ? (
+                          <p style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: 'var(--mobile-font-small)',
+                            color: '#6b7280'
+                          }}>
+                            Last paid: {formatDate(beneficiary.lastPaid)}
+                          </p>
+                        ) : (
+                          <p style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: 'var(--mobile-font-small)',
+                            color: '#6b7280'
+                          }}>
+                            Never paid
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Quick Actions */}
+                      <div className="flex flex-col items-end gap-2">
+                        {/* Account Selector Toggle (if multiple accounts) */}
+                        {hasMultipleAccounts && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-8 h-8 p-0 hover:bg-gray-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleAccountSelector(beneficiary.id);
+                            }}
+                            style={{
+                              minWidth: '32px',
+                              minHeight: '32px'
+                            }}
+                          >
+                            <ChevronDown 
+                              className="w-4 h-4 text-gray-500"
+                              style={{
+                                transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                transition: 'transform 0.2s ease'
+                              }}
+                            />
+                          </Button>
+                        )}
+                        
+                        {/* Pay Button */}
+                        <Button
+                          size="sm"
+                          className="bg-[#86BE41] hover:bg-[#7AB139] text-white px-3 py-1"
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            prefillFromBeneficiary(beneficiary); 
+                          }}
+                        >
+                          <Send className="w-3 h-3 mr-1" />
+                          Pay
+                        </Button>
+                        
+                        {/* Edit & Remove Buttons */}
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-8 h-8 p-0 hover:bg-gray-100"
+                            onClick={(e) => { e.stopPropagation(); handleEditBeneficiary(beneficiary); }}
+                            style={{
+                              minWidth: '32px',
+                              minHeight: '32px'
+                            }}
+                          >
+                            <Edit2 className="w-3 h-3 text-gray-500 hover:text-[#2D8CCA]" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="w-8 h-8 p-0 hover:bg-red-50"
+                            onClick={(e) => { e.stopPropagation(); handleRemoveBeneficiary(beneficiary); }}
+                            style={{
+                              minWidth: '32px',
+                              minHeight: '32px'
+                            }}
+                          >
+                            <X className="w-3 h-3 text-gray-500 hover:text-red-500" />
+                          </Button>
+                        </div>
+                        
+                        {/* Payment Count */}
+                        {beneficiary.paymentCount > 0 && (
+                          <span style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '10px',
+                            color: '#6b7280'
+                          }}>
+                            {beneficiary.paymentCount} payments
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2 mb-1">
-                      {getAccountTypeBadge(beneficiary.accountType)}
-                    </div>
-
-                    {/* Mobile Number (MSISDN) */}
-                    <p style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: 'var(--mobile-font-small)',
-                      color: '#6b7280'
-                    }}>
-                      📱 {beneficiary.accountType === 'mymoolah' ? beneficiary.identifier : (beneficiary.msisdn || 'No mobile number')}
-                    </p>
-
-                    {beneficiary.lastPaid ? (
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-small)',
-                        color: '#6b7280'
-                      }}>
-                        Last paid: {formatDate(beneficiary.lastPaid)}
-                      </p>
-                    ) : (
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-small)',
-                        color: '#6b7280'
-                      }}>
-                        Never paid
-                      </p>
-                    )}
+                  </CardContent>
+                </Card>
+                
+                {/* Account Selector Dropdown (when expanded) */}
+                {hasMultipleAccounts && isExpanded && beneficiary.accounts && (
+                  <div
+                    className="account-selector-dropdown"
+                    style={{
+                      padding: '8px',
+                      backgroundColor: '#f9fafb',
+                      borderRadius: '8px',
+                      border: '1px solid #e2e8f0',
+                      marginTop: '-8px',
+                      marginLeft: '16px',
+                      marginRight: '16px',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+                      transition: 'all 0.2s ease-out',
+                      opacity: 1,
+                      transform: 'translateY(0)'
+                    }}
+                  >
+                    {beneficiary.accounts.map((account) => {
+                      const isSelected = selectedAccountIds[beneficiary.id] === account.id || 
+                        (!selectedAccountIds[beneficiary.id] && account.isDefault);
+                      return (
+                        <button
+                          key={account.id}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            selectAccount(beneficiary.id, account.id);
+                            prefillFromBeneficiary(beneficiary, account.id);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            width: '100%',
+                            padding: '10px 12px',
+                            borderRadius: '6px',
+                            backgroundColor: isSelected ? 'rgba(134, 190, 65, 0.1)' : 'transparent',
+                            border: isSelected ? '1px solid #86BE41' : '1px solid transparent',
+                            cursor: 'pointer',
+                            marginBottom: '4px',
+                            textAlign: 'left',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseOver={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = '#f3f4f6';
+                            }
+                          }}
+                          onMouseOut={(e) => {
+                            if (!isSelected) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-3 flex-1">
+                            {account.type === 'mymoolah' ? (
+                              <Wallet className="w-4 h-4 text-[#86BE41]" />
+                            ) : (
+                              <Building2 className="w-4 h-4 text-[#2D8CCA]" />
+                            )}
+                            <div>
+                              <p style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontSize: '13px',
+                                fontWeight: '500',
+                                color: '#1f2937',
+                                margin: 0
+                              }}>
+                                {account.type === 'mymoolah' 
+                                  ? 'MyMoolah Wallet'
+                                  : `${account.metadata?.bankName || 'Bank'} Account`}
+                              </p>
+                              <p style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontSize: '12px',
+                                color: '#6b7280',
+                                margin: 0
+                              }}>
+                                {account.identifier}
+                              </p>
+                            </div>
+                          </div>
+                          {isSelected && (
+                            <div style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              backgroundColor: '#86BE41',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}>
+                              <div style={{
+                                width: '8px',
+                                height: '8px',
+                                borderRadius: '50%',
+                                backgroundColor: '#ffffff'
+                              }} />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
-
-                  {/* Quick Actions */}
-                  <div className="flex flex-col items-end gap-2">
-                    {/* Pay Button */}
-                    <Button
-                      size="sm"
-                      className="bg-[#86BE41] hover:bg-[#7AB139] text-white px-3 py-1"
-                      onClick={(e) => { e.stopPropagation(); prefillFromBeneficiary(beneficiary); }}
-                    >
-                      <Send className="w-3 h-3 mr-1" />
-                      Pay
-                    </Button>
-                    
-                    {/* Edit & Remove Buttons */}
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="w-8 h-8 p-0 hover:bg-gray-100"
-                        onClick={(e) => { e.stopPropagation(); handleEditBeneficiary(beneficiary); }}
-                        style={{
-                          minWidth: '32px',
-                          minHeight: '32px'
-                        }}
-                      >
-                        <Edit2 className="w-3 h-3 text-gray-500 hover:text-[#2D8CCA]" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="w-8 h-8 p-0 hover:bg-red-50"
-                        onClick={(e) => { e.stopPropagation(); handleRemoveBeneficiary(beneficiary); }}
-                        style={{
-                          minWidth: '32px',
-                          minHeight: '32px'
-                        }}
-                      >
-                        <X className="w-3 h-3 text-gray-500 hover:text-red-500" />
-                      </Button>
-                    </div>
-                    
-                    {/* Payment Count */}
-                    {beneficiary.paymentCount > 0 && (
-                      <span style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '10px',
-                        color: '#6b7280'
-                      }}>
-                        {beneficiary.paymentCount} payments
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
 
 
