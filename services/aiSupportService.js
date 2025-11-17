@@ -1165,7 +1165,7 @@ class BankingGradeAISupportService {
   async classifyQueryWithAI(message) {
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-5.0",
+        model: "gpt-5",
         messages: [
           {
             role: "system",
@@ -1537,7 +1537,7 @@ Return JSON: {"isSimpleQuery": true/false, "queryType": "exact_type_with_undersc
   async handleComplexQuery(message, language, context) {
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-5.0",
+        model: "gpt-5",
         messages: [
           {
             role: "system",

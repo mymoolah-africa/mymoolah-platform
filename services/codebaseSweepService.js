@@ -285,7 +285,7 @@ class CodebaseSweepService {
       const simplifiedCapabilities = this.simplifyForAI(consolidatedCapabilities);
       
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-5.0",
+        model: "gpt-5",
         messages: [
           {
             role: "system",

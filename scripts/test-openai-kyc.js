@@ -64,15 +64,15 @@ async function testOpenAIConfiguration() {
     console.log('✅ OpenAI API connection successful');
     console.log(`   Available models: ${testResponse.data.length} models found`);
     
-    // Check if gpt-5.0 is available
-    const gpt50Available = testResponse.data.some(model => 
-      model.id.includes('gpt-5.0') || model.id.includes('gpt-5')
+    // Check if gpt-5 is available
+    const gpt5Available = testResponse.data.some(model => 
+      model.id.includes('gpt-5') || model.id.includes('gpt5')
     );
     
-    if (gpt50Available) {
-      console.log('✅ GPT-5.0 model is available');
+    if (gpt5Available) {
+      console.log('✅ GPT-5 model is available');
     } else {
-      console.log('⚠️  GPT-5.0 model not found in available models');
+      console.log('⚠️  GPT-5 model not found in available models');
       console.log('   Available models:', testResponse.data.map(m => m.id).join(', '));
     }
   } catch (error) {
@@ -137,7 +137,7 @@ async function testOpenAIConfiguration() {
 
       // Make Vision API call
       const response = await openai.chat.completions.create({
-        model: "gpt-5.0",
+        model: "gpt-5",
         messages: [{
           role: "user",
           content: [
