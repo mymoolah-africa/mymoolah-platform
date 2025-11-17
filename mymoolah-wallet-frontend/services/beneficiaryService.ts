@@ -42,6 +42,26 @@ export interface UnifiedBeneficiary {
   updatedAt: string;
 }
 
+export interface PaymentBeneficiary {
+  id: string;
+  name: string;
+  msisdn?: string;
+  identifier: string;
+  accountType: 'mymoolah' | 'bank';
+  bankName?: string;
+  userId?: string | number;
+  createdAt?: string;
+  updatedAt?: string;
+  timesPaid?: number;
+  lastPaidAt?: string;
+  lastPaid?: Date;
+  isFavorite?: boolean;
+  totalPaid?: number;
+  paymentCount?: number;
+  metadata?: Record<string, any>;
+  accounts?: BeneficiaryAccount[];
+}
+
 export interface CreateBeneficiaryRequest {
   name: string;
   msisdn?: string;
@@ -123,6 +143,50 @@ class BeneficiaryService {
     
     // Transform legacy format to unified format
     return (response.data?.beneficiaries || []).map(this.transformLegacyBeneficiary);
+  }
+
+  /**
+   * Get payment beneficiaries (MyMoolah + Bank)
+   */
+  async getPaymentBeneficiaries(search: string = ''): Promise<PaymentBeneficiary[]> {
+    const unified = await this.getBeneficiariesByService('payment', search);
+    return unified.map((beneficiary, idx) => this.mapToPaymentBeneficiary(beneficiary, idx));
+  }
+
+  /**
+   * Create or update a payment beneficiary (MyMoolah wallet or Bank account)
+   */
+  async createPaymentBeneficiary(options: {
+    name: string;
+    msisdn: string;
+    accountType: 'mymoolah' | 'bank';
+    bankName?: string;
+    accountNumber?: string;
+  }): Promise<PaymentBeneficiary> {
+    const normalizedMsisdn = this.normalizeMsisdn(options.msisdn);
+    const serviceType = options.accountType === 'bank' ? 'bank' : 'mymoolah';
+
+    const serviceData =
+      serviceType === 'bank'
+        ? {
+            bankName: options.bankName,
+            accountNumber: options.accountNumber,
+            accountType: 'cheque',
+            isDefault: true
+          }
+        : {
+            walletMsisdn: normalizedMsisdn,
+            isDefault: true
+          };
+
+    const created = await this.createOrUpdateBeneficiary({
+      name: options.name,
+      msisdn: normalizedMsisdn,
+      serviceType,
+      serviceData
+    });
+
+    return this.mapToPaymentBeneficiary(created);
   }
 
   /**
@@ -359,6 +423,60 @@ class BeneficiaryService {
       createdAt: legacy.createdAt,
       updatedAt: legacy.updatedAt
     };
+  }
+
+  private mapToPaymentBeneficiary(
+    beneficiary: UnifiedBeneficiary,
+    idx: number = 0
+  ): PaymentBeneficiary {
+    const paymentAccounts = (beneficiary.accounts || []).filter(
+      (account) => account.type === 'mymoolah' || account.type === 'bank'
+    );
+
+    const primaryAccount =
+      paymentAccounts.find((account) => account.isDefault) ||
+      paymentAccounts[0] ||
+      null;
+
+    const accountType =
+      primaryAccount?.type === 'bank' ? 'bank' : 'mymoolah';
+
+    const identifier =
+      accountType === 'bank'
+        ? primaryAccount?.identifier || ''
+        : beneficiary.msisdn || primaryAccount?.identifier || '';
+
+    return {
+      id: `b-${beneficiary.id ?? idx}`,
+      name: beneficiary.name,
+      msisdn: beneficiary.msisdn || primaryAccount?.identifier,
+      identifier,
+      accountType,
+      bankName: primaryAccount?.metadata?.bankName,
+      userId: (beneficiary as any)?.userId,
+      createdAt: beneficiary.createdAt,
+      updatedAt: beneficiary.updatedAt,
+      timesPaid: beneficiary.timesPaid || 0,
+      lastPaidAt: beneficiary.lastPaidAt,
+      lastPaid: beneficiary.lastPaidAt ? new Date(beneficiary.lastPaidAt) : undefined,
+      isFavorite: beneficiary.isFavorite,
+      totalPaid: (beneficiary as any)?.metadata?.totalPaid ?? 0,
+      paymentCount: beneficiary.timesPaid || 0,
+      metadata: {
+        preferredPaymentMethod: beneficiary.preferredPaymentMethod
+      },
+      accounts: beneficiary.accounts
+    };
+  }
+
+  private normalizeMsisdn(value: string): string {
+    if (!value) return '';
+    const digits = String(value).replace(/\D/g, '');
+    if (!digits) return '';
+    if (digits.startsWith('27')) return '0' + digits.slice(-9);
+    if (digits.startsWith('0')) return digits;
+    if (digits.length === 9) return '0' + digits;
+    return digits;
   }
 }
 

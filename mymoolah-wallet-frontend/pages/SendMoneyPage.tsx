@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, type RecipientInfo, type RecipientMethod, type PaymentQuote, type TransferResult } from '../services/apiService';
@@ -198,6 +198,19 @@ export function SendMoneyPage() {
   
   // State Management
   const [beneficiaries, setBeneficiaries] = useState<PaymentBeneficiary[]>([]);
+  const [beneficiariesLoading, setBeneficiariesLoading] = useState(false);
+
+  const loadBeneficiaries = useCallback(async () => {
+    try {
+      setBeneficiariesLoading(true);
+      const backendBeneficiaries = await beneficiaryService.getPaymentBeneficiaries();
+      setBeneficiaries(backendBeneficiaries);
+    } catch (error) {
+      logError('SendMoneyPage', 'Failed to load beneficiaries', error as Error);
+    } finally {
+      setBeneficiariesLoading(false);
+    }
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'alphabetical' | 'lastPaid' | 'favorite'>('lastPaid');
   const [filterType, setFilterType] = useState<'all' | 'mymoolah' | 'bank'>('all');
@@ -409,71 +422,8 @@ export function SendMoneyPage() {
 
   // Initial data load from backend
   useEffect(() => {
-    const load = async () => {
-      try {
-        // Load beneficiaries from localStorage (temporary until backend API is ready)
-        try {
-          const savedContacts = JSON.parse(localStorage.getItem('mymoolah_contacts') || '[]');
-          // Filter contacts by the CURRENT USER ID to prevent cross-user access
-          const userContacts = savedContacts.filter((contact: any) => 
-            contact.userId === CURRENT_USER_ID
-          );
-          const mappedBeneficiaries: PaymentBeneficiary[] = userContacts.map((contact: any, index: number) => ({
-            id: String(index + 1),
-            name: contact.name,
-            identifier: contact.identifier,
-            accountType: contact.accountType,
-            userId: contact.userId || CURRENT_USER_ID, // Use the stored userId, fallback to current user
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            timesPaid: contact.paymentCount || 0,
-            lastPaid: contact.lastPaid ? new Date(contact.lastPaid) : undefined,
-            isFavorite: contact.isFavorite || false,
-            totalPaid: contact.totalPaid || 0,
-            paymentCount: contact.paymentCount || 0
-          }));
-          // Fetch ONLY payment beneficiaries (mymoolah and bank) from backend
-          let backendBeneficiaries: PaymentBeneficiary[] = [];
-          try {
-            // Use the new service-specific beneficiary service
-            const paymentBeneficiaries = await beneficiaryService.getPaymentBeneficiaries();
-            
-            backendBeneficiaries = paymentBeneficiaries.map((b: any, idx: number) => ({
-              id: `b-${b.id || idx}`,
-              name: b.name,
-              msisdn: b.msisdn || '', // NEW: MSISDN field
-              identifier: b.identifier,
-              accountType: b.accountType === 'bank' ? 'bank' : 'mymoolah',
-              userId: b.userId || CURRENT_USER_ID,
-              createdAt: b.createdAt || new Date().toISOString(),
-              updatedAt: b.updatedAt || new Date().toISOString(),
-              timesPaid: b.timesPaid || 0,
-              lastPaid: b.lastPaidAt ? new Date(b.lastPaidAt) : undefined,
-              isFavorite: b.metadata?.isFavorite || false,
-              totalPaid: b.metadata?.totalPaid || 0,
-              paymentCount: b.timesPaid || 0,
-              bankName: b.bankName || ''
-            }));
-                  } catch (e) {
-          // Non-fatal; continue with local only
-        }
-        setBeneficiaries([...
-          backendBeneficiaries,
-          ...mappedBeneficiaries,
-        ]);
-      } catch (e) {
-        logError('SendMoneyPage', 'Failed to load saved contacts', e as Error);
-      }
-
-        // When beneficiaries API is ready, replace localStorage with:
-        // const beneficiaries = await apiService.getBeneficiaries();
-        // setBeneficiaries(beneficiaries);
-              } catch (e) {
-          logError('SendMoneyPage', 'Failed to load initial data', e as Error);
-        }
-      };
-      load();
-    }, []);
+    loadBeneficiaries();
+  }, [loadBeneficiaries]);
 
   // Compute last 10 most recent transactions (wallet + bank only; exclude vouchers)
   const lastTenSendTx = useMemo(() => {
@@ -732,37 +682,20 @@ export function SendMoneyPage() {
     }
 
     try {
-              // When beneficiaries API is ready, use this instead:
-      // const data = await apiService.addBeneficiary({
-      //   name: newBeneficiary.name,
-      //   identifier: newBeneficiary.identifier,
-      //   accountType: selectedAccountType,
-      //   bankName: selectedAccountType === 'bank' ? newBeneficiary.bankName : undefined
-      // });
-
-      const beneficiary: PaymentBeneficiary = {
-        id: Date.now().toString(),
-        name: newBeneficiary.name,
-        msisdn: newBeneficiary.msisdn, // MANDATORY: MSISDN for all beneficiaries
-        identifier: selectedAccountType === 'mymoolah' ? newBeneficiary.msisdn : newBeneficiary.identifier, // For MyMoolah: mobile number IS account number, for Bank: separate account number
+      const createdBeneficiary = await beneficiaryService.createPaymentBeneficiary({
+        name: newBeneficiary.name.trim(),
+        msisdn: newBeneficiary.msisdn.trim(),
         accountType: selectedAccountType,
-        userId: CURRENT_USER_ID,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        timesPaid: 0,
-        bankName: selectedAccountType === 'bank' ? newBeneficiary.bankName : undefined,
-        lastPaid: undefined,
-        isFavorite: false,
-        totalPaid: 0,
-        paymentCount: 0
-      };
+        bankName: selectedAccountType === 'bank' ? newBeneficiary.bankName?.trim() : undefined,
+        accountNumber: selectedAccountType === 'bank' ? newBeneficiary.identifier.trim() : undefined
+      });
 
-      setBeneficiaries(prev => [...prev, beneficiary]);
+      setBeneficiaries(prev => [createdBeneficiary, ...prev.filter(b => b.id !== createdBeneficiary.id)]);
       setNewBeneficiary({ name: '', msisdn: '', identifier: '', bankName: '', accountNumber: '' });
       setShowAddBeneficiary(false);
 
       // Show confirmation modal asking if user wants to make payment now
-      setBeneficiaryForPayment(beneficiary);
+      setBeneficiaryForPayment(createdBeneficiary);
       setShowPaymentConfirmationModal(true);
     } catch (error: any) {
       logError('SendMoneyPage', 'Failed to add beneficiary', error as Error);

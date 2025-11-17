@@ -78,6 +78,8 @@ The unified beneficiary system has been implemented following banking-grade and 
   - `removeServiceFromBeneficiary()` - Remove account
   - `getBeneficiaryServices()` - Get all accounts for beneficiary
   - `transformLegacyBeneficiary()` - Bridges old and new formats
+  - `getPaymentBeneficiaries()` - Returns payment beneficiaries in UI-ready format
+  - `createPaymentBeneficiary()` - Creates MyMoolah or bank beneficiaries via API
 
 #### **Components**
 - ✅ `mymoolah-wallet-frontend/components/overlays/shared/BeneficiaryList.tsx` - Enhanced component
@@ -86,6 +88,11 @@ The unified beneficiary system has been implemented following banking-grade and 
   - Account selector dropdown when beneficiary has multiple accounts
   - Default account selection and display
   - Maintains existing UI/UX patterns
+
+#### **Pages**
+- ✅ `mymoolah-wallet-frontend/pages/SendMoneyPage.tsx`
+  - Loads beneficiaries directly from the unified API (localStorage fallback removed)
+  - Adding a beneficiary now persists via the API (wallet + bank)
 
 ### **Testing**
 
