@@ -23,5 +23,3 @@ export function removeToken() {
     localStorage.removeItem('mymoolah_token');
   } catch {}
 }
-
-
