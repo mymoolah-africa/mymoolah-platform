@@ -41,18 +41,34 @@ const { sequelize } = require('../models');
     console.log('   KYC Status:', user.kycStatus || 'N/A');
     console.log('   Wallet KYC Verified:', user.walletKycVerified ? 'Yes' : 'No');
     
-    const kycCount = await Kyc.count({ where: { userId: user.id } });
-    console.log('   KYC Records:', kycCount);
+    // Use raw SQL to avoid missing column issues
+    const [kycResults] = await sequelize.query(`
+      SELECT 
+        id, "userId", "documentType", "documentNumber", 
+        status, "submittedAt", "reviewedAt", "reviewerNotes", 
+        "rejectionReason", "verificationScore", "isAutomated", 
+        "createdAt", "updatedAt"
+      FROM kyc 
+      WHERE "userId" = :userId 
+      ORDER BY "createdAt" DESC 
+      LIMIT 5
+    `, {
+      replacements: { userId: user.id },
+      type: sequelize.QueryTypes.SELECT
+    });
     
-    if (kycCount > 0) {
-      const kycRecords = await Kyc.findAll({ 
-        where: { userId: user.id },
-        order: [['createdAt', 'DESC']],
-        limit: 5
-      });
+    console.log('   KYC Records:', kycResults.length);
+    
+    if (kycResults.length > 0) {
       console.log('\n📄 Recent KYC Records:');
-      kycRecords.forEach((record, idx) => {
+      kycResults.forEach((record, idx) => {
         console.log(`   ${idx + 1}. Type: ${record.documentType || 'N/A'}, Status: ${record.status || 'N/A'}, Submitted: ${record.submittedAt ? new Date(record.submittedAt).toLocaleString() : 'N/A'}`);
+        if (record.reviewerNotes) {
+          console.log(`      Notes: ${record.reviewerNotes.substring(0, 100)}${record.reviewerNotes.length > 100 ? '...' : ''}`);
+        }
+        if (record.rejectionReason) {
+          console.log(`      Rejection: ${record.rejectionReason}`);
+        }
       });
     }
     
