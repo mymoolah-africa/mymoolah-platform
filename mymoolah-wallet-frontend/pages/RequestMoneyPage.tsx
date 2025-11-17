@@ -1264,6 +1264,46 @@ export function RequestMoneyPage() {
               />
             </div>
 
+            {/* MSISDN (Requester's Mobile Number) - Read-only, pre-populated */}
+            <div>
+              <Label htmlFor="requesterMsisdn" style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '500',
+                color: '#374151',
+                marginBottom: '6px',
+                display: 'block'
+              }}>
+                Your Mobile Number (MSISDN) <span style={{ color: '#6b7280', fontSize: '12px', fontWeight: '400' }}>(Auto-filled)</span>
+              </Label>
+              <Input
+                id="requesterMsisdn"
+                type="text"
+                value={user?.phoneNumber || ''}
+                disabled
+                readOnly
+                style={{
+                  height: '44px',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '400',
+                  borderRadius: '12px',
+                  border: '1px solid #d1d5db',
+                  backgroundColor: '#f3f4f6',
+                  color: '#6b7280',
+                  cursor: 'not-allowed'
+                }}
+              />
+              <p style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '12px',
+                color: '#6b7280',
+                marginTop: '4px'
+              }}>
+                This number will be sent to Standard Bank to identify your wallet when payment is received.
+              </p>
+            </div>
+
             {/* Recurring schedule fields */}
             {requestMode === 'recurring' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>

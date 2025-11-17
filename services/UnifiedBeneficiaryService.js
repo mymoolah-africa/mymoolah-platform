@@ -245,22 +245,11 @@ class UnifiedBeneficiaryService {
         throw new Error('Beneficiary name is required');
       }
 
-      // For bank accounts, always use NON_MSI_ identifier (don't use PayShap reference as primary MSISDN)
-      // PayShap reference is stored separately in the payment method
+      // For bank accounts, always use NON_MSI_ identifier
       let primaryMsisdn;
       if (serviceType === 'bank') {
         // Always generate NON_MSI_ identifier for bank accounts
         primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
-        
-        // Validate PayShap reference separately if provided (it's a mobile number for PayShap)
-        if (serviceData?.payShapReference) {
-          try {
-            // Validate the PayShap reference as a mobile number
-            this.validateMsisdn(serviceData.payShapReference);
-          } catch (error) {
-            throw new Error(`Invalid PayShap reference (must be a valid South African mobile number): ${error.message}`);
-          }
-        }
       } else {
         // For non-bank services, derive MSISDN from msisdn parameter or serviceData
         primaryMsisdn = msisdn;
@@ -592,7 +581,7 @@ class UnifiedBeneficiaryService {
       throw new Error('beneficiaryId is required to add a payment method');
     }
 
-    const { methodType, walletMsisdn, bankName, accountNumber, accountType, branchCode, provider, mobileMoneyId, payShapReference, isDefault } =
+    const { methodType, walletMsisdn, bankName, accountNumber, accountType, branchCode, provider, mobileMoneyId, isDefault } =
       this.normalizePaymentServiceData(serviceType, serviceData);
 
     const tx = await sequelize.transaction();
@@ -647,7 +636,6 @@ class UnifiedBeneficiaryService {
             branchCode,
             provider,
             mobileMoneyId,
-            payShapReference,
             isActive: true,
             isDefault: isDefault ?? existing.isDefault
           },
@@ -665,7 +653,6 @@ class UnifiedBeneficiaryService {
             branchCode,
             provider,
             mobileMoneyId,
-            payShapReference,
             isActive: true,
             isDefault: !!isDefault
           },
@@ -776,7 +763,6 @@ class UnifiedBeneficiaryService {
       branchCode: null,
       provider: null,
       mobileMoneyId: null,
-      payShapReference: null, // PayShap reference (recipient MSISDN) - REQUIRED for PayShap bank transfers
       isDefault: !!serviceData.isDefault
     };
 
@@ -787,8 +773,6 @@ class UnifiedBeneficiaryService {
       normalized.accountNumber = serviceData.accountNumber || null;
       normalized.accountType = serviceData.accountType || null;
       normalized.branchCode = serviceData.branchCode || null;
-      // PayShap reference MUST be the recipient's mobile number (MSISDN) for deposits into wallets
-      normalized.payShapReference = serviceData.payShapReference || serviceData.reference || serviceData.msisdn || null;
     } else if (methodType === 'mobile_money') {
       normalized.provider = serviceData.provider || null;
       normalized.mobileMoneyId = serviceData.mobileMoneyId || serviceData.walletId || serviceData.msisdn || null;

@@ -227,7 +227,6 @@ class BeneficiaryService {
     accountType: 'mymoolah' | 'bank';
     bankName?: string;
     accountNumber?: string;
-    payShapReference?: string; // PayShap reference (recipient MSISDN) - REQUIRED for bank accounts
   }): Promise<PaymentBeneficiary> {
     const serviceType = options.accountType === 'bank' ? 'bank' : 'mymoolah';
     
@@ -250,9 +249,6 @@ class BeneficiaryService {
             bankName: options.bankName,
             accountNumber: options.accountNumber,
             accountType: 'cheque',
-            payShapReference: options.payShapReference 
-              ? this.normalizeMsisdn(options.payShapReference) // Normalize PayShap reference (remove spaces, format correctly)
-              : (options.msisdn ? this.normalizeMsisdn(options.msisdn) : null), // PayShap reference (recipient MSISDN)
             isDefault: true
           }
         : {
