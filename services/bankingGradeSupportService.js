@@ -283,10 +283,37 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
             content: `Classify: "${message}"`
           }
         ],
-        max_completion_tokens: 150
+        max_completion_tokens: 150,
+        response_format: { type: "json_object" }
       });
       
-      const rawContent = completion?.choices?.[0]?.message?.content || '';
+      const choice = completion?.choices?.[0];
+      let rawContent = choice?.message?.content;
+
+      if (Array.isArray(rawContent)) {
+        rawContent = rawContent
+          .map(part => {
+            if (!part) return '';
+            if (typeof part === 'string') return part;
+            if (typeof part.text === 'string') return part.text;
+            if (Array.isArray(part.text)) {
+              return part.text.join('');
+            }
+            if (part.value) return String(part.value);
+            return '';
+          })
+          .join('');
+      }
+
+      if (typeof rawContent !== 'string') {
+        rawContent = rawContent ? String(rawContent) : '';
+      }
+      
+      rawContent = rawContent.trim();
+      if (!rawContent) {
+        console.warn('⚠️ AI classification returned empty content', JSON.stringify(choice?.message || {}));
+      }
+
       const parsed = this.parseClassificationResponse(rawContent);
       if (!parsed || !parsed.category) {
         throw new Error('Classification response missing category');
