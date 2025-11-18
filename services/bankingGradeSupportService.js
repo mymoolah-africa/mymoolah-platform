@@ -241,6 +241,32 @@ class BankingGradeSupportService {
     if (lowerMessage.includes('voucher') || lowerMessage.includes('vouchers')) {
       return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
     }
+
+    // Password / login help
+    if (lowerMessage.includes('password') || lowerMessage.includes('forgot pin') || lowerMessage.includes('reset pin')) {
+      return { category: 'PASSWORD_SUPPORT', confidence: 0.95, requiresAI: false };
+    }
+
+    // Phone / contact info changes
+    if (
+      lowerMessage.includes('phone number') ||
+      lowerMessage.includes('mobile number') ||
+      lowerMessage.includes('msisdn') ||
+      lowerMessage.includes('change my number') ||
+      lowerMessage.includes('update my number')
+    ) {
+      return { category: 'PROFILE_UPDATE', confidence: 0.9, requiresAI: false };
+    }
+
+    // Deposit / payment reflection
+    if (
+      lowerMessage.includes('deposit') ||
+      lowerMessage.includes('not reflecting') ||
+      lowerMessage.includes('funds missing') ||
+      lowerMessage.includes('payment pending')
+    ) {
+      return { category: 'PAYMENT_STATUS', confidence: 0.9, requiresAI: false };
+    }
     
     return null; // No simple pattern match found
   }
@@ -395,6 +421,12 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         
       case 'VOUCHER_MANAGEMENT':
         return await this.getVoucherSummary(userId, language);
+      
+      case 'PASSWORD_SUPPORT':
+        return await this.getPasswordSupport(language);
+
+      case 'PROFILE_UPDATE':
+        return await this.getProfileUpdateGuidance(userId, language);
         
       case 'SETTLEMENT_QUERIES':
         return await this.getSettlementStatus(userId, language);
@@ -417,6 +449,78 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
       default:
         return await this.getGenericResponse(message, language);
     }
+  }
+
+  /**
+   * 🔐 Password Support Guidance
+   */
+  async getPasswordSupport(language) {
+    const response = {
+      type: 'PASSWORD_SUPPORT',
+      data: {
+        steps: [
+          'From the login screen tap "Forgot Password"',
+          'Enter your registered mobile number (must match your profile)',
+          'Enter the OTP sent to your phone to verify ownership',
+          'Set a new banking-grade password (8+ chars, letter + number + special)',
+          'Log in again using the new password'
+        ],
+        manualAssistance: 'If you no longer have access to your mobile number, contact support with proof of identity.'
+      },
+      message: this.getLocalizedMessage('password_support', language),
+      timestamp: new Date().toISOString(),
+      compliance: {
+        iso20022: true,
+        mojaloop: true,
+        auditTrail: true
+      }
+    };
+
+    return response;
+  }
+
+  /**
+   * 📱 Profile / Phone Update Guidance
+   */
+  async getProfileUpdateGuidance(userId, language) {
+    const result = await this.sequelize.query(`
+      SELECT phoneNumber, "kycStatus"
+      FROM users
+      WHERE id = :userId
+    `, {
+      replacements: { userId },
+      type: Sequelize.QueryTypes.SELECT,
+      raw: true
+    });
+
+    const user = result?.[0] || {};
+
+    const response = {
+      type: 'PROFILE_UPDATE',
+      data: {
+        currentPhone: user.phoneNumber || null,
+        kycStatus: user.kycStatus || 'unknown',
+        steps: [
+          'From the Profile screen choose "Security & Settings"',
+          'Select "Update Mobile Number"',
+          'Verify your current device with OTP',
+          'Enter the new number and confirm with a second OTP',
+          'Complete biometric or KYC re-validation if prompted'
+        ],
+        manualAssistance: 'If you lost access to your old number, contact support with SA ID or passport so we can re-bind your account.'
+      },
+      message: this.getLocalizedMessage('profile_update', language, {
+        currentPhone: user.phoneNumber ? `+${user.phoneNumber}` : 'your registered number'
+      }),
+      timestamp: new Date().toISOString(),
+      compliance: {
+        iso20022: true,
+        mojaloop: true,
+        auditTrail: true
+      }
+    };
+
+    return response;
   }
 
   /**
@@ -718,6 +822,20 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         zu: "Ngiyaqonda umbuzo wakho. Sicela unikeze imininingwane eqondile ukuze ngikusize kangcono.",
         xh: "Ndiyaqonda umbuzo wakho. Sicela unikeze imininingwane eqondile ukuze ndikusize kangcono.",
         st: "Ke utloisisa potso ea hao. Ke kopa u fane ka lintlha tse tsepameng hore ke ka u thusa hantle."
+      },
+      password_support: {
+        en: "To reset your password: 1) Tap 'Forgot Password' on the login screen, 2) Enter your registered mobile number, 3) Verify the OTP we send, 4) Choose a new secure password (8+ characters, letter + number + special). If you no longer have access to your phone, contact support with your SA ID/passport for manual verification.",
+        af: "Om jou wagwoord te herstel: 1) Tik 'Wagwoord vergeet' op die aanmeldskerm, 2) Voer jou geregistreerde selfoonnommer in, 3) Bevestig die OTP wat ons stuur, 4) Kies 'n nuwe veilige wagwoord (8+ karakters, letter + nommer + spesiale). As jy nie meer toegang tot jou foon het nie, kontak ondersteuning met jou SA ID/paspoort vir handmatige verifikasie.",
+        zu: "Ukusetha kabusha iphasiwedi: 1) Cofa 'Ngikhohliwe iphasiwedi' ekhasini lokungena, 2) Faka inombolo yakho yoselula ebhalisiwe, 3) Qinisekisa i-OTP esikuthumela yona, 4) Khetha iphasiwedi entsha evikelekile (8+ izinhlamvu, uhlamvu + inombolo + uphawu olukhethekile). Uma ungasakwazi ukufinyelela ku-inombolo endala, xhumana nokusekelwa ne-ID yakho ye-SA noma iphasiphothi.",
+        xh: "Ukuseta kwakhona ipaswedi: 1) Cofa 'Ndilibele ipaswedi' kwiphepha lokungena, 2) Ngenisa inombolo yakho yefowuni ebhalisiweyo, 3) Qinisekisa i-OTP esiyithumelayo, 4) Khetha ipaswedi entsha ekhuselekileyo (8+ iimpawu, unobumba + inani + uphawu olukhethekileyo). Ukuba awusenayo ifowuni endala, qhagamshelana nenkxaso ngesiqinisekiso sakho se-SA ID okanye ipasipoti.",
+        st: "Ho seta phasewete hape: 1) Tobetsa 'Lebetse Phasewete' skrineng sa ho kena, 2) Kenya nomoro ea hao ea mohala e ngolisitsoeng, 3) Netefatsa OTP eo re e romelang, 4) Khetha phasewete e ncha e sireletsehileng (8+ litlhaku, lengolo + palo + letshwao le khethehileng). Ha o sa khone ho kena ka nomoro ea khale, ikopanye le tšehetso ka SA ID kapa pasepoto."
+      },
+      profile_update: {
+        en: "To change your registered mobile number: 1) Open Profile → Security & Settings, 2) Select 'Update Mobile Number', 3) Verify your current device with OTP, 4) Enter the new number, 5) Confirm via OTP and biometric/KYC if requested. Bring SA ID/passport if you lost access to your old number.",
+        af: "Om jou geregistreerde selfoonnommer te verander: 1) Maak Profiel → Sekuriteit & Instellings oop, 2) Kies 'Werk selfoonnommer by', 3) Bevestig jou huidige toestel met OTP, 4) Voer die nuwe nommer in, 5) Bevestig via OTP en biometrie/KYC indien versoek. Bring jou SA ID/paspoort as jy nie meer toegang tot die ou nommer het nie.",
+        zu: "Ukushintsha inombolo yakho ebhalisiwe: 1) Vula Iprofayela → Ezokuphepha & Izilungiselelo, 2) Khetha 'Buyekeza Inombolo Yoselula', 3) Qinisekisa idivayisi yamanje nge-OTP, 4) Faka inombolo entsha, 5) Qinisekisa nge-OTP kanye ne-biometric/KYC uma kucelwa. Lethela i-SA ID/iphasiphothi uma ungasekho nenombolo endala.",
+        xh: "Ukutshintsha inombolo yakho ebhalisiweyo: 1) Vula iProfayile → uKhuseleko & Iisetingi, 2) Khetha 'Hlaziya iNombolo Yefowuni', 3) Qinisekisa isixhobo sakho sangoku nge-OTP, 4) Ngenisa inombolo entsha, 5) Qinisekisa nge-OTP kunye ne-biometric/KYC ukuba kuceliwe. Zisa i-SA ID okanye ipasipoti ukuba awusenayo inombolo endala.",
+        st: "Ho fetola nomoro ea mohala e ngolisitsoeng: 1) Bula Profilo → Tšireletso & Di-setting, 2) Khetha 'Ntlafatsa Nomoro ea Mohala', 3) Netefatsa sesebediswa sa hona joale ka OTP, 4) Kenya nomoro e ncha, 5) Netefatsa ka OTP le biometric/KYC haeba ho kōptjoa. Tlisa SA ID kapa pasepoto haeba o lahlehetsoe ke nomoro ea khale."
       }
     };
     
