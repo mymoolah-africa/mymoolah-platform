@@ -103,12 +103,22 @@ class BeneficiaryService {
   ): Promise<{ success: boolean; data?: T; message?: string; error?: string }> {
     try {
       const url = `${API_BASE}${endpoint}`;
-      const token = getToken();
+      let token = getToken();
+      
+      // Filter out demo tokens - they should not be sent to the backend
+      if (token && token.startsWith('demo-token-')) {
+        token = null;
+      }
+      
+      // Check if token is required (most beneficiary endpoints require auth)
+      if (!token) {
+        throw new Error('Access token required. Please log in again.');
+      }
       
       const config: RequestInit = {
         headers: {
           'Content-Type': 'application/json',
-          ...(token && { Authorization: `Bearer ${token}` }),
+          Authorization: `Bearer ${token}`,
           ...options.headers,
         },
         ...options,
@@ -118,6 +128,10 @@ class BeneficiaryService {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle 401 Unauthorized - token might be expired
+        if (response.status === 401) {
+          throw new Error('Session expired. Please log in again.');
+        }
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
       }
 
