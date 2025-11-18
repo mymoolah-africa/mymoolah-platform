@@ -156,16 +156,31 @@ db.GoogleApiConfig = require('./GoogleApiConfig')(sequelize, Sequelize.DataTypes
 db.BeneficiaryPaymentMethod = require('./BeneficiaryPaymentMethod')(sequelize, Sequelize.DataTypes);
 db.BeneficiaryServiceAccount = require('./BeneficiaryServiceAccount')(sequelize, Sequelize.DataTypes);
 
-// Re-run associations after loading BeneficiaryPaymentMethod and BeneficiaryServiceAccount
-// This ensures Beneficiary.hasMany associations are set up correctly
-if (db.Beneficiary && db.Beneficiary.associate) {
-  db.Beneficiary.associate(db);
-}
+// Re-run associations ONLY for the newly loaded models (BeneficiaryPaymentMethod and BeneficiaryServiceAccount)
+// Do NOT re-run Beneficiary.associate as it will duplicate the 'user' association
 if (db.BeneficiaryPaymentMethod && db.BeneficiaryPaymentMethod.associate) {
   db.BeneficiaryPaymentMethod.associate(db);
 }
 if (db.BeneficiaryServiceAccount && db.BeneficiaryServiceAccount.associate) {
   db.BeneficiaryServiceAccount.associate(db);
+}
+
+// Manually add the hasMany associations to Beneficiary after both models are loaded
+// This avoids re-running the entire associate function which would duplicate the 'user' association
+if (db.Beneficiary && db.BeneficiaryPaymentMethod && db.BeneficiaryServiceAccount) {
+  // Add hasMany associations directly (they weren't set up in the initial associate call)
+  if (!db.Beneficiary.associations.paymentMethodRecords) {
+    db.Beneficiary.hasMany(db.BeneficiaryPaymentMethod, {
+      foreignKey: 'beneficiaryId',
+      as: 'paymentMethodRecords'
+    });
+  }
+  if (!db.Beneficiary.associations.serviceAccountRecords) {
+    db.Beneficiary.hasMany(db.BeneficiaryServiceAccount, {
+      foreignKey: 'beneficiaryId',
+      as: 'serviceAccountRecords'
+    });
+  }
 }
 
 db.sequelize = sequelize;
