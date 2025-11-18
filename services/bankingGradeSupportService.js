@@ -286,12 +286,69 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         max_completion_tokens: 150
       });
       
-      return JSON.parse(completion.choices[0].message.content);
+      const rawContent = completion?.choices?.[0]?.message?.content || '';
+      const parsed = this.parseClassificationResponse(rawContent);
+      if (!parsed || !parsed.category) {
+        throw new Error('Classification response missing category');
+      }
+      
+      return parsed;
       
     } catch (error) {
       console.error('❌ AI classification failed:', error);
+      if (error?.rawContent) {
+        console.error('📝 Raw classification content:', error.rawContent);
+      }
       return this.fallbackClassification(message);
     }
+  }
+
+  /**
+   * 🛡️ Parse AI Classification Safely
+   */
+  parseClassificationResponse(rawContent = '') {
+    let content = rawContent.trim();
+    if (!content) {
+      const err = new Error('Empty classification response');
+      err.rawContent = rawContent;
+      throw err;
+    }
+
+    // Remove Markdown fences if present
+    if (content.startsWith('```')) {
+      content = content.replace(/^```json/i, '').replace(/^```/, '');
+      content = content.replace(/```$/, '').trim();
+    }
+
+    // Extract JSON object if extra text surrounds it
+    const firstBrace = content.indexOf('{');
+    const lastBrace = content.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1) {
+      content = content.slice(firstBrace, lastBrace + 1);
+    }
+
+    try {
+      return JSON.parse(content);
+    } catch (parseErr) {
+      const sanitized = this.basicJSONSanitize(content);
+      try {
+        return JSON.parse(sanitized);
+      } catch (finalErr) {
+        finalErr.rawContent = rawContent;
+        throw finalErr;
+      }
+    }
+  }
+
+  /**
+   * 🧹 Minimal JSON Sanitizer (last resort)
+   */
+  basicJSONSanitize(str) {
+    // Replace single quotes with double quotes when it looks like JSON
+    let sanitized = str.replace(/'/g, '"');
+    // Ensure property names are quoted
+    sanitized = sanitized.replace(/([{,\s])([A-Za-z0-9_]+)\s*:/g, '$1"$2":');
+    return sanitized;
   }
 
   /**
