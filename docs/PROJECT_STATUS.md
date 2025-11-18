@@ -1,21 +1,34 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: November 15, 2025  
-**Version**: 2.4.12 - KYC Driver's License Validation  
-**Status**: ✅ **KYC DRIVER'S LICENSE VALIDATION COMPLETE** ✅ **DOCUMENT TYPE DETECTION IMPROVED** ✅ **OPENAI REFUSAL HANDLING ENHANCED**
+**Last Updated**: November 18, 2025  
+**Version**: 2.4.13 - GPT-5 Upgrade & Codebase Sweep Optimization  
+**Status**: ✅ **GPT-5 UPGRADE COMPLETE** ✅ **CODEBASE SWEEP OPTIMIZED** ✅ **STARTUP PERFORMANCE IMPROVED**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has successfully created **banking-grade Staging and Production Cloud SQL instances** with ENTERPRISE edition, custom machine types, and Secret Manager password storage. Complete security isolation between environments with unique passwords and Google Secret Manager integration. The platform also has improved KYC OCR fallback mechanism, comprehensive transaction filtering, and MobileMart Fulcrum integration.
+The MyMoolah Treasury Platform has successfully upgraded all OpenAI models to GPT-5, optimized the codebase sweep service for better performance and token management, and enhanced the startup script with automatic credential refresh. The platform also has improved KYC OCR fallback mechanism, comprehensive transaction filtering, and MobileMart Fulcrum integration.
 
 ### Codespaces Development Status (current)
 - Backend auto-starts on container open; manual fallback `npm run start:cs-ip`
 - Frontend on port 3000 with CORS set to the forwarded URL
 - Redis optional; when absent, logs are suppressed and in‑memory cache is used
+- Codebase sweep can be disabled via `ENABLE_CODEBASE_SWEEP=false` to save OpenAI tokens
+- Startup script automatically refreshes Google Cloud ADC credentials if needed
 
 ### **🏆 MISSION ACCOMPLISHED - KEY ACHIEVEMENTS**
+
+#### **🤖 GPT-5 Upgrade & Codebase Sweep Optimization** ✅ **COMPLETE**
+- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-5.0` to `gpt-5` (17 occurrences across 8 files)
+- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
+- **Temperature Parameter**: Removed all `temperature` parameters (GPT-5 only supports default value of 1)
+- **Codebase Sweep Disable**: Added `ENABLE_CODEBASE_SWEEP` environment variable to disable service during development (saves OpenAI tokens)
+- **Startup Performance**: Added 10-second delay before initial codebase sweep to improve server startup time (GPT-5 API calls are slower)
+- **ADC Auto-Refresh**: Enhanced startup script to automatically check and refresh Google Cloud Application Default Credentials
+- **Beneficiary Token Handling**: Improved token validation and error handling in beneficiary service (filters demo tokens, better error messages)
+- **Status**: ✅ All GPT-5 compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
+- **Impact**: Platform now uses latest GPT-5 models, reduced OpenAI token consumption during development, faster server startup
 
 #### **🗄️ Staging & Production Database Setup** ✅ **COMPLETE**
 - **Staging Instance**: `mmtp-pg-staging` (PostgreSQL 16, ENTERPRISE edition)

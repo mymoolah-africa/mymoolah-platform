@@ -1,6 +1,48 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-11-15 (Latest)
+## 2025-11-18 (Latest)
+- **GPT-5 Upgrade & Codebase Sweep Optimization**: Upgraded all OpenAI models from GPT-4/GPT-5.0 to GPT-5, fixed API compatibility issues, added codebase sweep disable feature, and improved startup performance.
+
+**GPT-5 Upgrade & Codebase Sweep Optimization**:
+- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-5.0` to `gpt-5` (17 occurrences across 8 files)
+- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
+- **Temperature Parameter**: Removed all `temperature` parameters (GPT-5 only supports default value of 1)
+- **Codebase Sweep Disable**: Added `ENABLE_CODEBASE_SWEEP` environment variable to disable service during development (saves OpenAI tokens)
+- **Startup Performance**: Added 10-second delay before initial codebase sweep to improve server startup time
+- **ADC Auto-Refresh**: Enhanced startup script to automatically check and refresh Google Cloud Application Default Credentials
+- **Beneficiary Token Handling**: Improved token validation and error handling in beneficiary service
+- **Status**: ✅ All GPT-5 compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
+
+**Files Updated**:
+- `services/kycService.js` - GPT-5 model, max_completion_tokens
+- `services/codebaseSweepService.js` - GPT-5 model, max_completion_tokens, startup delay, disable feature
+- `services/bankingGradeSupportService.js` - GPT-5 model, max_completion_tokens
+- `services/aiSupportService.js` - GPT-5 model, max_completion_tokens
+- `services/googleReviewService.js` - GPT-5 model, max_completion_tokens
+- `services/feedbackService.js` - GPT-5 model, max_completion_tokens
+- `controllers/feedbackController.js` - GPT-5 model, max_completion_tokens
+- `scripts/test-openai-kyc.js` - GPT-5 model, max_completion_tokens
+- `server.js` - Codebase sweep disable check
+- `scripts/start-codespace-with-proxy.sh` - ADC auto-refresh logic
+- `mymoolah-wallet-frontend/services/beneficiaryService.ts` - Token validation improvements
+
+## 2025-11-17
+- **Unified Beneficiaries Backfill & UI Fixes**: Restored beneficiary listings and improved Send Money UI accessibility. API now gracefully returns legacy beneficiaries (accountType/identifier fallback) and frontend no longer nests buttons, eliminating the Codespaces click issue.
+
+**Unified Beneficiaries Backfill & UI Fixes**:
+- **API Filtering**: `UnifiedBeneficiaryService` now filters beneficiaries in application code so legacy records without JSONB payment metadata are returned for the `payment` service type.
+- **Legacy Fallbacks**: Added identifier/accountType fallbacks so existing MyMoolah/bank beneficiaries appear in the new unified response shape.
+- **Frontend Mapping**: `beneficiaryService.ts` now preserves legacy identifiers when transforming API results, ensuring Send Money cards have identifiers/MSISDNs.
+- **UI Accessibility**: `BeneficiaryList` wraps each card in a focusable `<div role="button">` instead of nested buttons, fixing the DOM nesting warning and restoring tap behaviour in Codespaces/mobile.
+- **Status**: ✅ Beneficiaries display again; ✅ DOM warning resolved; ✅ Backwards compatibility maintained.
+
+**Files Updated**:
+- `services/UnifiedBeneficiaryService.js`
+- `mymoolah-wallet-frontend/services/beneficiaryService.ts`
+- `mymoolah-wallet-frontend/components/overlays/shared/BeneficiaryList.tsx`
+- `docs/CHANGELOG.md`
+
+## 2025-11-15
 - **KYC Driver's License Validation**: Comprehensive validation for South African driver's licenses with unique format support. Improved document type detection and OpenAI content policy refusal handling.
 
 **KYC Driver's License Validation**:
