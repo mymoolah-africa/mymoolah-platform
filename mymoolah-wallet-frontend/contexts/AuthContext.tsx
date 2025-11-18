@@ -153,7 +153,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const checkAuthStatus = async () => {
     try {
       const token = getSessionToken();
-      if (token && token.startsWith('demo-token-')) {
+      
+      // If no token found, clear user state (user needs to log in)
+      if (!token) {
+        setUser(null);
+        removeSessionToken();
+        setIsLoading(false);
+        return;
+      }
+      
+      if (token.startsWith('demo-token-')) {
         // Demo mode - restore user session
         const demoCredentials = getDemoCredentials();
         
@@ -172,7 +181,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           kycVerified: kycStatus === 'verified'
         };
         setUser(mockUser);
-      } else if (token) {
+      } else {
         // Real authentication - validate token with backend
         const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/auth/verify`, {
           headers: { Authorization: `Bearer ${token}` }
@@ -183,14 +192,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (responseData && responseData.user) {
             setUser(mapBackendUserToContextUser(responseData.user));
           } else {
+            setUser(null);
             removeSessionToken();
           }
         } else {
+          // Token is invalid or expired - clear user state
+          setUser(null);
           removeSessionToken();
         }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
+      setUser(null);
       removeSessionToken();
     } finally {
       setIsLoading(false);
