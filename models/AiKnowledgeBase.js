@@ -14,6 +14,17 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
+    faqId: {
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'External FAQ identifier'
+    },
+    audience: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      defaultValue: 'end-user',
+      comment: 'Target audience: end-user | business | developer | internal'
+    },
     category: {
       type: DataTypes.STRING(50),
       allowNull: false,
@@ -28,6 +39,16 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: false,
       comment: 'Standard answer or solution'
+    },
+    keywords: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'Comma-separated keywords'
+    },
+    relatedIds: {
+      type: DataTypes.STRING(120),
+      allowNull: true,
+      comment: 'Comma-separated related FAQ IDs'
     },
     confidenceScore: {
       type: DataTypes.DECIMAL(3, 2),
@@ -75,6 +96,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       {
         fields: ['isActive']
+      },
+      {
+        fields: ['faqId']
       }
     ]
   });

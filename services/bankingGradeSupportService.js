@@ -10,7 +10,7 @@
 
 const { OpenAI } = require('openai');
 const Redis = require('ioredis');
-const { Sequelize, Op } = require('sequelize');
+const { Sequelize } = require('sequelize');
 const models = require('../models');
 
 class BankingGradeSupportService {
@@ -50,28 +50,9 @@ class BankingGradeSupportService {
     };
     
     this.supportLanguages = ['en', 'af', 'zu', 'xh', 'st'];
-    this.knowledgeKeywordMap = [
-      { category: 'account_password', keywords: ['forgot password', 'reset password', 'password reset'] },
-      { category: 'session_security', keywords: ['log out', 'logout', 'session', 'minimise', 'minimize'] },
-      { category: 'kyc_documents', keywords: ['kyc', 'id document', 'proof of address', 'identity'] },
-      { category: 'kyc_drivers_license', keywords: ['driver', 'licence', 'license'] },
-      { category: 'kyc_passport', keywords: ['passport'] },
-      { category: 'kyc_fallback', keywords: ['openai', 'tesseract', 'ocr'] },
-      { category: 'payments_transaction_fee', keywords: ['transaction fee', 'fee description'] },
-      { category: 'payments_payshap', keywords: ['payshap', 'request money', 'rtp', 'rpp'] },
-      { category: 'beneficiary_multi_account', keywords: ['beneficiary', 'multiple accounts', 'send money contact'] },
-      { category: 'beneficiary_payshap_reference', keywords: ['reference', 'msisdn reference'] },
-      { category: 'beneficiary_visibility', keywords: ['beneficiary not showing', 'airtime beneficiary'] },
-      { category: 'vas_mobilemart', keywords: ['mobilemart', 'fulcrum'] },
-      { category: 'vas_flash', keywords: ['flash'] },
-      { category: 'integrations_peach', keywords: ['peach payments', 'pay shapp', 'pay-shap'] },
-      { category: 'integrations_zapper', keywords: ['zapper', 'qr payment'] },
-      { category: 'api_base_url', keywords: ['base url', 'api url'] },
-      { category: 'api_rate_limits', keywords: ['rate limit', 'throttle'] },
-      { category: 'api_error_format', keywords: ['error format', 'error response'] },
-      { category: 'support_ai_limit', keywords: ['ai limit', 'support limit', 'gpt'] }
-    ];
     this.knowledgeModel = models?.AiKnowledgeBase || null;
+    this.knowledgeCache = { entries: [], loadedAt: 0 };
+    this.knowledgeCacheTTL = 5 * 60 * 1000; // 5 minutes
     this.inMemoryAiUsage = new Map();
 
     // 🚀 Initialize Core Services (sync for now)
@@ -1451,18 +1432,37 @@ Be friendly but professional.`
     return response;
   }
 
-  /**
-   * 📚 Knowledge Base Matching
-   */
-  extractKnowledgeCategories(message = '') {
-    const lowered = (message || '').toLowerCase();
-    const matches = new Set();
-    this.knowledgeKeywordMap.forEach(entry => {
-      if (entry.keywords.some(keyword => lowered.includes(keyword))) {
-        matches.add(entry.category);
+  async loadKnowledgeEntries(force = false) {
+    if (!this.knowledgeModel) return [];
+    const now = Date.now();
+    if (!force && this.knowledgeCache.entries.length && now - this.knowledgeCache.loadedAt < this.knowledgeCacheTTL) {
+      return this.knowledgeCache.entries;
+    }
+    const entries = await this.knowledgeModel.findAll({ where: { isActive: true } });
+    this.knowledgeCache = { entries, loadedAt: now };
+    return entries;
+  }
+
+  scoreKnowledgeMatch(entry, normalizedMessage) {
+    if (!normalizedMessage) return 0;
+    let score = 0;
+    const normalizedQuestion = entry.question?.trim().toLowerCase() || '';
+    if (normalizedQuestion === normalizedMessage) score += 5;
+    if (normalizedQuestion && normalizedMessage.includes(normalizedQuestion)) score += 3;
+    if (normalizedQuestion && normalizedQuestion.includes(normalizedMessage)) score += 2;
+    const entryKeywords = (entry.keywords || '')
+      .split(',')
+      .map(k => k.trim().toLowerCase())
+      .filter(Boolean);
+    entryKeywords.forEach(keyword => {
+      if (normalizedMessage.includes(keyword)) {
+        score += 2;
       }
     });
-    return Array.from(matches);
+    if (normalizedMessage.includes(entry.category)) {
+      score += 1;
+    }
+    return score;
   }
 
   async findKnowledgeBaseAnswer(message = '', language = 'en') {
@@ -1470,38 +1470,27 @@ Be friendly but professional.`
       if (!this.knowledgeModel) return null;
       const normalizedLanguage = this.supportLanguages.includes(language) ? language : 'en';
       const languagesToCheck = normalizedLanguage === 'en' ? ['en'] : [normalizedLanguage, 'en'];
-      const lowered = (message || '').toLowerCase();
-      const categories = this.extractKnowledgeCategories(lowered);
+      const normalizedMessage = (message || '').trim().toLowerCase();
+      if (!normalizedMessage) return null;
 
-      for (const lang of languagesToCheck) {
-        for (const category of categories) {
-          const entry = await this.knowledgeModel.findOne({
-            where: { category, language: lang, isActive: true },
-            order: [['confidenceScore', 'DESC']]
-          });
-          if (entry) {
-            await entry.increment('usageCount');
-            return this.buildKnowledgeResponse(entry);
-          }
-        }
+      const entries = await this.loadKnowledgeEntries();
+      const candidates = entries.filter(entry => languagesToCheck.includes(entry.language));
+
+      const exactMatch = candidates.find(entry => (entry.question || '').trim().toLowerCase() === normalizedMessage);
+      if (exactMatch) {
+        await exactMatch.increment('usageCount');
+        return this.buildKnowledgeResponse(exactMatch);
       }
 
-      const fallbackKeywords = lowered.split(/\s+/).filter(word => word.length > 3).slice(0, 3);
-      for (const lang of languagesToCheck) {
-        for (const keyword of fallbackKeywords) {
-          const entry = await this.knowledgeModel.findOne({
-            where: {
-              language: lang,
-              isActive: true,
-              question: { [Op.iLike]: `%${keyword}%` }
-            },
-            order: [['confidenceScore', 'DESC']]
-          });
-          if (entry) {
-            await entry.increment('usageCount');
-            return this.buildKnowledgeResponse(entry);
-          }
-        }
+      const scoredCandidates = candidates
+        .map(entry => ({ entry, score: this.scoreKnowledgeMatch(entry, normalizedMessage) }))
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score || (Number(b.entry.confidenceScore || 0) - Number(a.entry.confidenceScore || 0)));
+
+      if (scoredCandidates.length) {
+        const top = scoredCandidates[0].entry;
+        await top.increment('usageCount');
+        return this.buildKnowledgeResponse(top);
       }
 
       return null;
@@ -1516,8 +1505,11 @@ Be friendly but professional.`
       type: 'KNOWLEDGE_BASE',
       data: {
         source: 'knowledge_base',
+        faqId: entry.faqId || null,
+        audience: entry.audience || 'end-user',
         category: entry.category,
         language: entry.language,
+        keywords: entry.keywords || '',
         confidence: Number(entry.confidenceScore || 0.8)
       },
       message: entry.answer,
