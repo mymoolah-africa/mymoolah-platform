@@ -257,6 +257,17 @@ const initialKnowledgeBase = [
     isActive: true
   },
   {
+    faqId: 'Q11.2',
+    audience: 'end-user',
+    category: 'fees',
+    question: 'What are the transaction fees?',
+    answer: 'MyMoolah uses a tier-based fee system. Your fee depends on your tier (Bronze, Silver, Gold, Platinum) and the transaction type. For QR payments: Bronze tier pays R3.00 MyMoolah fee plus 0.4% Zapper fee. Fees are always shown on the confirmation screen before you complete the transaction.',
+    keywords: 'transaction fees, tier fees, fee structure, bronze silver gold platinum',
+    confidenceScore: 0.95,
+    language: 'en',
+    isActive: true
+  },
+  {
     faqId: 'Q11.3',
     audience: 'end-user',
     category: 'fees',
@@ -264,6 +275,28 @@ const initialKnowledgeBase = [
     answer: 'Fees vary by channel, destination, partner, and promotional period. Always review the fee on the confirmation screen before accepting.',
     keywords: 'unexpected fee, higher fee',
     confidenceScore: 0.88,
+    language: 'en',
+    isActive: true
+  },
+  {
+    faqId: 'Q11.4',
+    audience: 'end-user',
+    category: 'fees',
+    question: 'How do I get lower transaction fees?',
+    answer: 'Your tier determines your fees. To get lower fees, increase your monthly transaction count and value. Silver tier (10+ transactions AND R5,000+ monthly) pays R2.75, Gold (25+ transactions AND R15,000+ monthly) pays R2.50, and Platinum (50+ transactions AND R30,000+ monthly) pays R2.25. Your tier is reviewed monthly on the 1st.',
+    keywords: 'lower fees, tier upgrade, silver gold platinum, reduce fees',
+    confidenceScore: 0.92,
+    language: 'en',
+    isActive: true
+  },
+  {
+    faqId: 'Q11.5',
+    audience: 'end-user',
+    category: 'fees',
+    question: 'What is my current tier?',
+    answer: 'Your tier is based on your monthly transaction count AND monthly transaction value. Bronze (default): R3.00 fee. Silver: 10+ transactions AND R5,000+ monthly = R2.75 fee. Gold: 25+ transactions AND R15,000+ monthly = R2.50 fee. Platinum: 50+ transactions AND R30,000+ monthly = R2.25 fee. Tiers are reviewed on the 1st of each month.',
+    keywords: 'my tier, bronze silver gold platinum, tier status, current tier',
+    confidenceScore: 0.93,
     language: 'en',
     isActive: true
   },
