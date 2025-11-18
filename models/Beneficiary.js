@@ -134,13 +134,14 @@ module.exports = (sequelize, DataTypes) => {
   Beneficiary.associate = (models) => {
     Beneficiary.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
     // Unified beneficiary associations
+    // Note: Using different aliases to avoid collision with JSONB attributes
     Beneficiary.hasMany(models.BeneficiaryPaymentMethod, { 
       foreignKey: 'beneficiaryId', 
-      as: 'paymentMethods' 
+      as: 'paymentMethodRecords' // Different from JSONB 'paymentMethods' attribute
     });
     Beneficiary.hasMany(models.BeneficiaryServiceAccount, { 
       foreignKey: 'beneficiaryId', 
-      as: 'serviceAccounts' 
+      as: 'serviceAccountRecords' // Different from JSONB 'vasServices'/'utilityServices' attributes
     });
   };
 

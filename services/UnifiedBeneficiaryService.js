@@ -29,14 +29,14 @@ class UnifiedBeneficiaryService {
         include: [
           {
             model: BeneficiaryPaymentMethod,
-            as: 'paymentMethods',
+            as: 'paymentMethodRecords', // Association alias (different from JSONB 'paymentMethods')
             required: false,
             where: { isActive: true },
             attributes: ['id', 'methodType', 'walletMsisdn', 'bankName', 'accountNumber', 'accountType', 'branchCode', 'provider', 'mobileMoneyId', 'isDefault', 'isActive']
           },
           {
             model: BeneficiaryServiceAccount,
-            as: 'serviceAccounts',
+            as: 'serviceAccountRecords', // Association alias (different from JSONB attributes)
             required: false,
             where: { isActive: true },
             attributes: ['id', 'serviceType', 'serviceData', 'isDefault', 'isActive']
@@ -59,9 +59,10 @@ class UnifiedBeneficiaryService {
           (beneficiaryData.paymentMethods.mymoolah || 
            (Array.isArray(beneficiaryData.paymentMethods.bankAccounts) && beneficiaryData.paymentMethods.bankAccounts.length > 0));
         
-        if (!hasLegacyPaymentMethods && beneficiaryData.paymentMethods && beneficiaryData.paymentMethods.length > 0) {
-          // Use the already-fetched paymentMethods from include
-          beneficiaryData.paymentMethods = this.normalizedToLegacyPaymentMethods(beneficiaryData.paymentMethods);
+        // Use the association alias 'paymentMethodRecords' (not the JSONB 'paymentMethods')
+        if (!hasLegacyPaymentMethods && beneficiaryData.paymentMethodRecords && beneficiaryData.paymentMethodRecords.length > 0) {
+          // Use the already-fetched paymentMethodRecords from include
+          beneficiaryData.paymentMethods = this.normalizedToLegacyPaymentMethods(beneficiaryData.paymentMethodRecords);
         }
         
         const hasLegacyServices = (beneficiaryData.vasServices && 
@@ -70,9 +71,10 @@ class UnifiedBeneficiaryService {
           (beneficiaryData.utilityServices && 
            (Array.isArray(beneficiaryData.utilityServices.electricity) && beneficiaryData.utilityServices.electricity.length > 0));
         
-        if (!hasLegacyServices && beneficiaryData.serviceAccounts && beneficiaryData.serviceAccounts.length > 0) {
-          // Use the already-fetched serviceAccounts from include
-          const { vasServices, utilityServices } = this.normalizedToLegacyServiceAccounts(beneficiaryData.serviceAccounts);
+        // Use the association alias 'serviceAccountRecords' (not JSONB attributes)
+        if (!hasLegacyServices && beneficiaryData.serviceAccountRecords && beneficiaryData.serviceAccountRecords.length > 0) {
+          // Use the already-fetched serviceAccountRecords from include
+          const { vasServices, utilityServices } = this.normalizedToLegacyServiceAccounts(beneficiaryData.serviceAccountRecords);
           if (!beneficiaryData.vasServices) beneficiaryData.vasServices = vasServices;
           if (!beneficiaryData.utilityServices) beneficiaryData.utilityServices = utilityServices;
         }
@@ -1105,8 +1107,9 @@ class UnifiedBeneficiaryService {
       let shouldInclude = false;
       
       // Extract normalized data from includes (already fetched)
-      const paymentMethods = Array.isArray(beneficiaryData.paymentMethods) ? beneficiaryData.paymentMethods : [];
-      const serviceAccounts = Array.isArray(beneficiaryData.serviceAccounts) ? beneficiaryData.serviceAccounts : [];
+      // Use association aliases, not JSONB attributes
+      const paymentMethods = Array.isArray(beneficiaryData.paymentMethodRecords) ? beneficiaryData.paymentMethodRecords : [];
+      const serviceAccounts = Array.isArray(beneficiaryData.serviceAccountRecords) ? beneficiaryData.serviceAccountRecords : [];
       
       switch (serviceType) {
         case 'payment':
