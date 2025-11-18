@@ -147,10 +147,39 @@ ensure_proxy_binary() {
 ensure_adc_valid() {
   log "Checking Application Default Credentials (ADC)..."
   
+  # Ensure gcloud is authenticated first
+  if ! gcloud auth list --filter=status:ACTIVE --format="value(account)" | grep -q .; then
+    log "⚠️  No active gcloud authentication found"
+    if [ -t 0 ] && [ -t 1 ]; then
+      log "Attempting to authenticate gcloud (interactive mode)..."
+      log "You will need to authenticate via device code..."
+      log ""
+      if gcloud auth login --no-launch-browser; then
+        log "✅ gcloud authentication successful"
+      else
+        error "❌ Failed to authenticate gcloud"
+        return 1
+      fi
+    else
+      error "❌ No active gcloud authentication (non-interactive mode)"
+      error "Please run: gcloud auth login --no-launch-browser"
+      return 1
+    fi
+  fi
+  
+  # Ensure project is set
+  local current_project
+  current_project=$(gcloud config get-value project 2>/dev/null || echo "")
+  if [ -z "$current_project" ] || [ "$current_project" != "mymoolah-db" ]; then
+    log "Setting gcloud project to mymoolah-db..."
+    gcloud config set project mymoolah-db >/dev/null 2>&1
+    log "✅ Project set to mymoolah-db"
+  fi
+  
   # Check if ADC exist
-  if ! gcloud auth application-default print-access-token >/dev/null 2>&1; then
-    log "⚠️  ADC not found"
-    return 1
+  local adc_exists=false
+  if gcloud auth application-default print-access-token >/dev/null 2>&1; then
+    adc_exists=true
   fi
   
   # Test if ADC work by trying to access Cloud SQL API (more specific test)
@@ -164,16 +193,21 @@ ensure_adc_valid() {
     return 0
   fi
   
-  # Check for specific expired token error
-  if echo "$test_output" | grep -q "invalid_grant\|invalid_rapt\|reauth"; then
-    log "⚠️  ADC expired (invalid_grant/reauth error detected)"
+  # ADC either don't exist or are expired - attempt to refresh
+  if [ "$adc_exists" = false ]; then
+    log "⚠️  ADC not found"
   else
-    log "⚠️  ADC may be invalid or expired"
+    # Check for specific expired token error
+    if echo "$test_output" | grep -q "invalid_grant\|invalid_rapt\|reauth"; then
+      log "⚠️  ADC expired (invalid_grant/reauth error detected)"
+    else
+      log "⚠️  ADC may be invalid or expired"
+    fi
   fi
   
   # Check if we're in an interactive terminal
   if [ -t 0 ] && [ -t 1 ]; then
-    log "Refreshing credentials (interactive mode)..."
+    log "Attempting to refresh Application Default Credentials (interactive mode)..."
     log "You will need to authenticate via device code..."
     log ""
     
@@ -212,8 +246,10 @@ ensure_adc_valid() {
   else
     # Non-interactive mode - provide instructions
     error "❌ ADC expired or invalid (non-interactive mode)"
-    error "Please run this command to refresh ADC:"
+    error "Please run these commands to refresh ADC:"
+    error "   gcloud auth login --no-launch-browser"
     error "   gcloud auth application-default login --no-launch-browser"
+    error "   gcloud config set project mymoolah-db"
     error ""
     error "Then restart the backend server."
     return 1
