@@ -154,7 +154,7 @@ All routes properly configured with validation middleware.
 
 **Transaction Types Supported**:
 - `zapper_payment` - Zapper payment transaction
-- `zapper_fee` - Zapper transaction fee
+- `zapper_fee` - Transaction fee line
 - `zapper_float_credit` - Zapper float credit
 
 **Metadata Fields**:

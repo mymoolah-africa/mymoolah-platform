@@ -149,9 +149,9 @@ The following transactions **ARE displayed** to users:
 - **Description:** "Zapper payment to [recipient]"
 - **Status:** ✅ **Displayed**
 
-### **2. Zapper Transaction Fee**
-- **Type:** `zapper_fee`
-- **Description:** "Zapper transaction fee" or "Zapper payment fee"
+### **2. Transaction Fee**
+- **Type:** `zapper_fee` (customer-visible fee line)
+- **Description:** "Transaction Fee"
 - **Status:** ✅ **Displayed**
 
 ### **3. All Other Customer Transactions**

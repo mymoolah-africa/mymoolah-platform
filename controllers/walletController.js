@@ -528,7 +528,7 @@ class WalletController {
           return false;
         }
         
-        // Keep all customer-facing transactions (including "Zapper payment to" and "Zapper transaction fee")
+        // Keep all customer-facing transactions (including "Zapper payment to" and "Transaction Fee")
         return true;
       });
 

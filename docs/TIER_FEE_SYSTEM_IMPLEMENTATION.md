@@ -37,7 +37,7 @@ Zapper fee (0.4%):    R   2.00  (pass-through to Zapper)
 MM Bronze fee:        R   3.00  (MM revenue)
 ───────────────────────────────────
 Total user pays:      R 505.00
-Transaction history:  "Zapper Transaction Fee: -R5.00"
+Transaction history:  "Transaction Fee: -R5.00"
 ```
 
 ---
@@ -325,7 +325,7 @@ Check server logs for:
 2. Scan Zapper QR code (or use test QR)
 3. Verify fee shows based on tier
 4. Complete payment
-5. Check transaction history shows "Zapper Transaction Fee"
+5. Check transaction history shows "Transaction Fee"
 6. Verify tier level shown in response
 
 ---

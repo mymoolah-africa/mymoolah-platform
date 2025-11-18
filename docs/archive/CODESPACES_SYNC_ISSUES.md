@@ -39,11 +39,11 @@
 - Frontend QR icon code exists and is committed (`00cca0d5`)
 - Code checks for `description.includes('zapper')`
 - BUT: If filtered transactions reach frontend, they'll also show QR icons
-- If filter works correctly, only "Zapper payment" and "Zapper fee" should show QR icons
+- If filter works correctly, only "Zapper payment" and the transaction fee line should show QR icons
 
 **Expected Behavior:**
 - "Zapper payment to..." → QR icon ✅
-- "Zapper transaction fee" → QR icon ✅
+- "Transaction Fee" → QR icon ✅
 - "VAT payable..." → Filtered out (shouldn't reach frontend) ❌
 - "MyMoolah revenue..." → Filtered out (shouldn't reach frontend) ❌
 - "Zapper float credit..." → Filtered out (shouldn't reach frontend) ❌
@@ -111,7 +111,7 @@ npm run dev
 - [ ] Frontend rebuilt/restarted
 - [ ] Browser cache cleared
 - [ ] "Zapper payment" shows QR icon ✅
-- [ ] "Zapper transaction fee" shows QR icon ✅
+- [ ] "Transaction Fee" shows QR icon ✅
 
 ---
 
@@ -119,7 +119,7 @@ npm run dev
 
 **Transaction History Should Show:**
 - ✅ "Zapper payment to DillonDev" - QR icon (red)
-- ✅ "Zapper transaction fee" - QR icon (red)
+- ✅ "Transaction Fee" - QR icon (red)
 - ❌ "VAT payable..." - NOT VISIBLE (filtered)
 - ❌ "MyMoolah revenue..." - NOT VISIBLE (filtered)
 - ❌ "Zapper float credit..." - NOT VISIBLE (filtered)

@@ -108,7 +108,7 @@ When fetching transactions, you should see:
 When rendering transactions, you should see:
 ```
 🔍 [ICON] QR transaction detected: zapper payment to...
-🔍 [ICON] QR transaction detected: zapper transaction fee
+🔍 [ICON] QR transaction detected: transaction fee
 ```
 
 **If you DON'T see these logs:**
@@ -162,7 +162,7 @@ When rendering transactions, you should see:
 
 **Transaction History Should Show:**
 - ✅ "Zapper payment to DillonDev" - QR icon (red)
-- ✅ "Zapper transaction fee" - QR icon (red)
+- ✅ "Transaction Fee" - QR icon (red)
 - ❌ "VAT payable..." - NOT VISIBLE
 - ❌ "MyMoolah revenue..." - NOT VISIBLE
 - ❌ "Zapper float credit..." - NOT VISIBLE

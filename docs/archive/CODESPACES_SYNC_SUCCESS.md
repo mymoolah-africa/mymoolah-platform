@@ -34,7 +34,7 @@
 
 ### **Transaction History Now Shows:**
 - ✅ "Zapper payment to..." - QR icon (red) ✅
-- ✅ "Zapper transaction fee" - QR icon (red) ✅
+- ✅ "Transaction Fee" - QR icon (red) ✅
 - ❌ "VAT payable..." - NOT VISIBLE ✅
 - ❌ "MyMoolah revenue..." - NOT VISIBLE ✅
 - ❌ "Zapper float credit..." - NOT VISIBLE ✅

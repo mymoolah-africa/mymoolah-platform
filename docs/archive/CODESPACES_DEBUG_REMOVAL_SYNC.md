@@ -8,7 +8,7 @@
 ## 🔴 **PROBLEM**
 
 Debug logs still appearing in Codespaces frontend console:
-- `[ICON] QR transaction detected: zapper transaction fee`
+- `[ICON] QR transaction detected: transaction fee`
 - `[ICON] QR transaction detected: zapper payment to dillondev`
 
 **Reason:** Codespaces hasn't pulled the latest code yet.

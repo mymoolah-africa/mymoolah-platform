@@ -322,7 +322,7 @@ The platform filters internal accounting transactions from user-facing transacti
 
 **Displayed to Users:**
 - Zapper payment transactions
-- Zapper transaction fees
+- Transaction fees
 - All other customer-facing transactions
 
 See `docs/TRANSACTION_FILTER.md` for complete documentation.
