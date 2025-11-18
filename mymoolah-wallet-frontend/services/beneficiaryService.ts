@@ -110,15 +110,12 @@ class BeneficiaryService {
         token = null;
       }
       
-      // Check if token is required (most beneficiary endpoints require auth)
-      if (!token) {
-        throw new Error('Access token required. Please log in again.');
-      }
-      
+      // Handle missing token gracefully (same as apiClient.ts)
+      // Let the backend return 401/403 if token is missing
       const config: RequestInit = {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(token && { Authorization: `Bearer ${token}` }),
           ...options.headers,
         },
         ...options,
@@ -128,9 +125,9 @@ class BeneficiaryService {
       const data = await response.json();
 
       if (!response.ok) {
-        // Handle 401 Unauthorized - token might be expired
-        if (response.status === 401) {
-          throw new Error('Session expired. Please log in again.');
+        // Handle 401 Unauthorized - token might be expired or missing
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(data.message || data.error || 'Session expired. Please log in again.');
         }
         throw new Error(data.message || data.error || `HTTP ${response.status}`);
       }
