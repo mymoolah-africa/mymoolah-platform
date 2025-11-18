@@ -133,6 +133,15 @@ module.exports = (sequelize, DataTypes) => {
 
   Beneficiary.associate = (models) => {
     Beneficiary.belongsTo(models.User, { foreignKey: 'userId', as: 'user' });
+    // Unified beneficiary associations
+    Beneficiary.hasMany(models.BeneficiaryPaymentMethod, { 
+      foreignKey: 'beneficiaryId', 
+      as: 'paymentMethods' 
+    });
+    Beneficiary.hasMany(models.BeneficiaryServiceAccount, { 
+      foreignKey: 'beneficiaryId', 
+      as: 'serviceAccounts' 
+    });
   };
 
   return Beneficiary;

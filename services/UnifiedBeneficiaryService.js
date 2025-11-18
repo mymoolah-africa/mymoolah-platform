@@ -9,6 +9,7 @@ const { Op } = require('sequelize');
 class UnifiedBeneficiaryService {
   /**
    * Get beneficiaries filtered by service type for specific pages
+   * OPTIMIZED: Uses JOINs instead of N+1 queries for banking-grade performance
    */
   async getBeneficiariesByService(userId, serviceType, search = '') {
     try {
@@ -22,9 +23,25 @@ class UnifiedBeneficiaryService {
         ];
       }
 
-      // Fetch beneficiaries
+      // OPTIMIZED: Fetch beneficiaries with all related data in a single query using JOINs
       const beneficiaries = await Beneficiary.findAll({
         where: whereClause,
+        include: [
+          {
+            model: BeneficiaryPaymentMethod,
+            as: 'paymentMethods',
+            required: false,
+            where: { isActive: true },
+            attributes: ['id', 'methodType', 'walletMsisdn', 'bankName', 'accountNumber', 'accountType', 'branchCode', 'provider', 'mobileMoneyId', 'isDefault', 'isActive']
+          },
+          {
+            model: BeneficiaryServiceAccount,
+            as: 'serviceAccounts',
+            required: false,
+            where: { isActive: true },
+            attributes: ['id', 'serviceType', 'serviceData', 'isDefault', 'isActive']
+          }
+        ],
         order: [
           ['isFavorite', 'DESC'],
           ['lastPaidAt', 'DESC NULLS LAST'],
@@ -33,54 +50,41 @@ class UnifiedBeneficiaryService {
         ]
       });
 
-      // Enrich beneficiaries with normalized table data for filtering
-      const enrichedBeneficiaries = await Promise.all(
-        beneficiaries.map(async (beneficiary) => {
-          // Convert to plain object to allow modifications
-          const beneficiaryData = beneficiary.toJSON ? beneficiary.toJSON() : beneficiary;
-          
-          // If JSONB fields are empty or null, populate them from normalized tables
-          const hasLegacyPaymentMethods = beneficiaryData.paymentMethods && 
-            (beneficiaryData.paymentMethods.mymoolah || 
-             (Array.isArray(beneficiaryData.paymentMethods.bankAccounts) && beneficiaryData.paymentMethods.bankAccounts.length > 0));
-          
-          if (!hasLegacyPaymentMethods) {
-            const paymentMethods = await BeneficiaryPaymentMethod.findAll({
-              where: { beneficiaryId: beneficiaryData.id, isActive: true }
-            });
-            if (paymentMethods.length > 0) {
-              // Populate JSONB from normalized data
-              beneficiaryData.paymentMethods = this.normalizedToLegacyPaymentMethods(paymentMethods);
-              console.log(`[Beneficiary Enrichment] Populated paymentMethods for beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) from normalized tables`);
-            }
-          }
-          
-          const hasLegacyServices = (beneficiaryData.vasServices && 
-            ((Array.isArray(beneficiaryData.vasServices.airtime) && beneficiaryData.vasServices.airtime.length > 0) ||
-             (Array.isArray(beneficiaryData.vasServices.data) && beneficiaryData.vasServices.data.length > 0))) ||
-            (beneficiaryData.utilityServices && 
-             (Array.isArray(beneficiaryData.utilityServices.electricity) && beneficiaryData.utilityServices.electricity.length > 0));
-          
-          if (!hasLegacyServices) {
-            const serviceAccounts = await BeneficiaryServiceAccount.findAll({
-              where: { beneficiaryId: beneficiaryData.id, isActive: true }
-            });
-            if (serviceAccounts.length > 0) {
-              const { vasServices, utilityServices } = this.normalizedToLegacyServiceAccounts(serviceAccounts);
-              if (!beneficiaryData.vasServices) beneficiaryData.vasServices = vasServices;
-              if (!beneficiaryData.utilityServices) beneficiaryData.utilityServices = utilityServices;
-              console.log(`[Beneficiary Enrichment] Populated service accounts for beneficiary ${beneficiaryData.id} (${beneficiaryData.name}) from normalized tables`);
-            }
-          }
-          
-          // Merge enriched data back into the model instance
-          Object.assign(beneficiary, beneficiaryData);
-          
-          return beneficiary;
-        })
-      );
+      // Enrich beneficiaries with normalized table data (now from already-fetched includes)
+      const enrichedBeneficiaries = beneficiaries.map((beneficiary) => {
+        const beneficiaryData = beneficiary.toJSON ? beneficiary.toJSON() : beneficiary;
+        
+        // Populate JSONB from normalized tables if empty (using already-fetched includes)
+        const hasLegacyPaymentMethods = beneficiaryData.paymentMethods && 
+          (beneficiaryData.paymentMethods.mymoolah || 
+           (Array.isArray(beneficiaryData.paymentMethods.bankAccounts) && beneficiaryData.paymentMethods.bankAccounts.length > 0));
+        
+        if (!hasLegacyPaymentMethods && beneficiaryData.paymentMethods && beneficiaryData.paymentMethods.length > 0) {
+          // Use the already-fetched paymentMethods from include
+          beneficiaryData.paymentMethods = this.normalizedToLegacyPaymentMethods(beneficiaryData.paymentMethods);
+        }
+        
+        const hasLegacyServices = (beneficiaryData.vasServices && 
+          ((Array.isArray(beneficiaryData.vasServices.airtime) && beneficiaryData.vasServices.airtime.length > 0) ||
+           (Array.isArray(beneficiaryData.vasServices.data) && beneficiaryData.vasServices.data.length > 0))) ||
+          (beneficiaryData.utilityServices && 
+           (Array.isArray(beneficiaryData.utilityServices.electricity) && beneficiaryData.utilityServices.electricity.length > 0));
+        
+        if (!hasLegacyServices && beneficiaryData.serviceAccounts && beneficiaryData.serviceAccounts.length > 0) {
+          // Use the already-fetched serviceAccounts from include
+          const { vasServices, utilityServices } = this.normalizedToLegacyServiceAccounts(beneficiaryData.serviceAccounts);
+          if (!beneficiaryData.vasServices) beneficiaryData.vasServices = vasServices;
+          if (!beneficiaryData.utilityServices) beneficiaryData.utilityServices = utilityServices;
+        }
+        
+        // Merge enriched data back into the model instance
+        Object.assign(beneficiary, beneficiaryData);
+        
+        return beneficiary;
+      });
 
-      const filtered = await this.filterBeneficiariesByServiceWithNormalized(enrichedBeneficiaries, serviceType);
+      // OPTIMIZED: Filter in-memory using already-fetched data (no additional queries)
+      const filtered = this.filterBeneficiariesByServiceWithNormalizedOptimized(enrichedBeneficiaries, serviceType);
       return this.formatBeneficiariesForService(filtered, serviceType);
     } catch (error) {
       console.error('Error getting beneficiaries by service:', error);
@@ -1089,7 +1093,131 @@ class UnifiedBeneficiaryService {
   }
 
   /**
+   * OPTIMIZED: Filter beneficiaries by service type using already-fetched data (no additional queries)
+   * This method uses the includes from getBeneficiariesByService, eliminating N+1 queries
+   */
+  filterBeneficiariesByServiceWithNormalizedOptimized(beneficiaries, serviceType) {
+    const filtered = [];
+    
+    for (const beneficiary of beneficiaries) {
+      const beneficiaryData = beneficiary.toJSON ? beneficiary.toJSON() : beneficiary;
+      const hasLegacyType = (types = []) => types.includes(beneficiaryData.accountType);
+      let shouldInclude = false;
+      
+      // Extract normalized data from includes (already fetched)
+      const paymentMethods = Array.isArray(beneficiaryData.paymentMethods) ? beneficiaryData.paymentMethods : [];
+      const serviceAccounts = Array.isArray(beneficiaryData.serviceAccounts) ? beneficiaryData.serviceAccounts : [];
+      
+      switch (serviceType) {
+        case 'payment':
+          // Check JSONB first
+          shouldInclude = Boolean(
+            beneficiaryData.paymentMethods?.mymoolah ||
+            (beneficiaryData.paymentMethods?.bankAccounts || []).length ||
+            hasLegacyType(['mymoolah', 'bank'])
+          );
+          
+          // If not found in JSONB, check normalized tables (from includes - no query needed)
+          if (!shouldInclude) {
+            const hasPaymentMethod = paymentMethods.some(pm => 
+              pm.isActive && (pm.methodType === 'mymoolah' || pm.methodType === 'bank')
+            );
+            shouldInclude = hasPaymentMethod;
+          }
+          
+          // Fallback: If beneficiary has msisdn (not NON_MSI_) and accountType is not electricity/biller, include as payment
+          if (!shouldInclude && beneficiaryData.msisdn && 
+              !beneficiaryData.msisdn.startsWith('NON_MSI_') &&
+              beneficiaryData.accountType !== 'electricity' && 
+              beneficiaryData.accountType !== 'biller' &&
+              beneficiaryData.accountType !== 'voucher') {
+            shouldInclude = true;
+          }
+          break;
+          
+        case 'airtime-data':
+          // Check JSONB first
+          shouldInclude = Boolean(
+            (beneficiaryData.vasServices?.airtime || []).length ||
+            (beneficiaryData.vasServices?.data || []).length ||
+            hasLegacyType(['airtime', 'data'])
+          );
+          
+          // If not found in JSONB, check normalized tables (from includes - no query needed)
+          if (!shouldInclude) {
+            const hasAirtimeData = serviceAccounts.some(sa => 
+              sa.isActive && (sa.serviceType === 'airtime' || sa.serviceType === 'data')
+            );
+            shouldInclude = hasAirtimeData;
+          }
+          
+          // Fallback: If beneficiary has MyMoolah wallet (payment method), they can receive airtime/data
+          // Check normalized payment methods (from includes - no query needed)
+          if (!shouldInclude) {
+            const hasMyMoolahWallet = paymentMethods.some(pm => 
+              pm.isActive && pm.methodType === 'mymoolah'
+            );
+            shouldInclude = hasMyMoolahWallet;
+          }
+          
+          // Also check JSONB for MyMoolah payment method
+          if (!shouldInclude && beneficiaryData.paymentMethods?.mymoolah) {
+            shouldInclude = true;
+          }
+          
+          // Final fallback: If beneficiary has msisdn (MyMoolah wallet number) and accountType is mymoolah
+          if (!shouldInclude && beneficiaryData.msisdn && 
+              !beneficiaryData.msisdn.startsWith('NON_MSI_') &&
+              (beneficiaryData.accountType === 'mymoolah' || !beneficiaryData.accountType)) {
+            shouldInclude = true;
+          }
+          break;
+          
+        case 'electricity':
+          shouldInclude = Boolean(
+            (beneficiaryData.utilityServices?.electricity || []).length ||
+            (beneficiaryData.utilityServices?.water || []).length ||
+            beneficiaryData.accountType === 'electricity'
+          );
+          
+          // If not found in JSONB, check normalized tables (from includes - no query needed)
+          if (!shouldInclude) {
+            const hasElectricity = serviceAccounts.some(sa => 
+              sa.isActive && sa.serviceType === 'electricity'
+            );
+            shouldInclude = hasElectricity;
+          }
+          break;
+          
+        case 'biller':
+          shouldInclude = Boolean(
+            (beneficiaryData.billerServices?.accounts || []).length ||
+            beneficiaryData.accountType === 'biller'
+          );
+          break;
+          
+        case 'voucher':
+          shouldInclude = Boolean(
+            beneficiaryData.voucherServices ||
+            beneficiaryData.accountType === 'voucher'
+          );
+          break;
+          
+        default:
+          shouldInclude = true;
+      }
+      
+      if (shouldInclude) {
+        filtered.push(beneficiary);
+      }
+    }
+    
+    return filtered;
+  }
+
+  /**
    * Filter beneficiaries by service type, also checking normalized tables
+   * @deprecated Use filterBeneficiariesByServiceWithNormalizedOptimized instead (no N+1 queries)
    */
   async filterBeneficiariesByServiceWithNormalized(beneficiaries, serviceType) {
     const filtered = [];

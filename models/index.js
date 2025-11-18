@@ -156,6 +156,18 @@ db.GoogleApiConfig = require('./GoogleApiConfig')(sequelize, Sequelize.DataTypes
 db.BeneficiaryPaymentMethod = require('./BeneficiaryPaymentMethod')(sequelize, Sequelize.DataTypes);
 db.BeneficiaryServiceAccount = require('./BeneficiaryServiceAccount')(sequelize, Sequelize.DataTypes);
 
+// Re-run associations after loading BeneficiaryPaymentMethod and BeneficiaryServiceAccount
+// This ensures Beneficiary.hasMany associations are set up correctly
+if (db.Beneficiary && db.Beneficiary.associate) {
+  db.Beneficiary.associate(db);
+}
+if (db.BeneficiaryPaymentMethod && db.BeneficiaryPaymentMethod.associate) {
+  db.BeneficiaryPaymentMethod.associate(db);
+}
+if (db.BeneficiaryServiceAccount && db.BeneficiaryServiceAccount.associate) {
+  db.BeneficiaryServiceAccount.associate(db);
+}
+
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
