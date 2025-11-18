@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: November 15, 2025  
-**Version**: 2.4.12 - KYC Driver's License Validation  
-**Status**: ✅ **KYC DRIVER'S LICENSE VALIDATION COMPLETE** ✅ **DOCUMENT TYPE DETECTION IMPROVED** ✅ **OPENAI REFUSAL HANDLING ENHANCED**
+**Last Updated**: November 18, 2025  
+**Version**: 2.4.13 - GPT-5 Upgrade & Codebase Sweep Optimization  
+**Status**: ✅ **GPT-5 UPGRADE COMPLETE** ✅ **CODEBASE SWEEP OPTIMIZED** ✅ **STARTUP PERFORMANCE IMPROVED**
 
 ---
 
@@ -57,6 +57,17 @@ The platform now includes **comprehensive validation for South African driver's 
 - **Document Type Detection**: Improved detection using validity period fields (validFrom and expiryDate) to distinguish driver's licenses from SA IDs
 - **OpenAI Refusal Detection**: Enhanced early detection of content policy refusals before JSON parsing, automatic Tesseract OCR fallback
 - **Status**: ✅ Implementation complete, ✅ Tested and verified working
+
+### **🤖 NEW: GPT-5 Upgrade & Codebase Sweep Optimization**
+
+The platform has been upgraded to use **OpenAI GPT-5** across all AI services:
+- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-5.0` to `gpt-5` (17 occurrences across 8 files)
+- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
+- **Temperature Parameter**: Removed all `temperature` parameters (GPT-5 only supports default value of 1)
+- **Codebase Sweep Disable**: Added `ENABLE_CODEBASE_SWEEP` environment variable to disable service during development (saves OpenAI tokens)
+- **Startup Performance**: Added 10-second delay before initial codebase sweep to improve server startup time
+- **ADC Auto-Refresh**: Enhanced startup script to automatically check and refresh Google Cloud Application Default Credentials
+- **Status**: ✅ All GPT-5 compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
 
 ### **🆔 KYC OpenAI Fallback Fix**
 

@@ -14,10 +14,11 @@ The **MyMoolah Codebase Sweep System** is an intelligent, automated service that
 - 🔄 **Runs daily** to stay current with code changes
 
 ### **Intelligent Analysis**
-- 🤖 **Uses OpenAI GPT-4** to understand code context
+- 🤖 **Uses OpenAI GPT-5** to understand code context (upgraded from GPT-4)
 - 📊 **Generates support questions** based on discovered capabilities
 - 🎯 **Categorizes questions** by feature area
 - 💡 **Identifies common user scenarios** and problems
+- ⚙️ **Configurable**: Can be disabled during development to save OpenAI tokens
 
 ### **Real-Time Updates**
 - ⚡ **Immediate integration** with AI support system
@@ -149,6 +150,9 @@ OPENAI_API_KEY=your_openai_api_key_here
 SWEEP_INTERVAL=86400000  # 24 hours in milliseconds
 MAX_FILES_PER_SWEEP=1000 # Maximum files to analyze per sweep
 OPENAI_MAX_TOKENS=2000   # Maximum tokens for OpenAI analysis
+
+# Disable service (development)
+ENABLE_CODEBASE_SWEEP=false  # Set to false to disable service and save OpenAI tokens
 ```
 
 ### **Sweep Intervals**
@@ -161,6 +165,35 @@ this.sweepInterval = 12 * 60 * 60 * 1000; // 12 hours
 this.sweepInterval = 7 * 24 * 60 * 60 * 1000; // Weekly
 ```
 
+### **Disabling the Service (Development)**
+
+To save OpenAI tokens during development, you can disable the codebase sweep service:
+
+```bash
+# Add to your .env file
+ENABLE_CODEBASE_SWEEP=false
+```
+
+**When disabled:**
+- Service will not initialize on startup
+- No OpenAI API calls will be made
+- No tokens consumed
+- Server starts faster
+
+**To re-enable for production:**
+- Remove `ENABLE_CODEBASE_SWEEP=false` from `.env`, or
+- Set `ENABLE_CODEBASE_SWEEP=true`
+
+### **Startup Performance Optimization**
+
+The service includes a **10-second delay** before the initial sweep runs:
+- Allows server to fully start before heavy GPT-5 API call
+- Improves perceived startup time
+- Server is immediately available for requests
+- Initial sweep runs in background after delay
+
+This optimization is especially important with GPT-5, which has slower API response times than GPT-4.
+
 ## **📈 Performance & Scalability**
 
 ### **Optimization Features**
@@ -170,12 +203,14 @@ this.sweepInterval = 7 * 24 * 60 * 60 * 1000; // Weekly
 - 📊 **Token limit management** for cost optimization
 
 ### **Scalability Metrics**
-| Codebase Size | Files | Processing Time | OpenAI Cost |
-|---------------|-------|-----------------|-------------|
-| **Small** | < 100 | ~30 seconds | $0.01 |
-| **Medium** | 100-500 | ~2 minutes | $0.05 |
-| **Large** | 500-1000 | ~5 minutes | $0.10 |
-| **Enterprise** | 1000+ | ~10 minutes | $0.20 |
+| Codebase Size | Files | Processing Time | OpenAI Cost (GPT-5) |
+|---------------|-------|-----------------|---------------------|
+| **Small** | < 100 | ~45 seconds | $0.02 |
+| **Medium** | 100-500 | ~3 minutes | $0.08 |
+| **Large** | 500-1000 | ~7 minutes | $0.15 |
+| **Enterprise** | 1000+ | ~15 minutes | $0.30 |
+
+**Note**: GPT-5 processing times are slightly longer than GPT-4, but provide better analysis quality.
 
 ## **🧪 Testing & Development**
 
