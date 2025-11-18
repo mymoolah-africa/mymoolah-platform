@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { validateDemoCredentials, isDemoMode, getDemoCredentials } from '../config/app-config';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken as getSessionToken, setToken as setSessionToken, removeToken as removeSessionToken } from '../utils/authToken';
@@ -138,13 +138,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkAuthStatus = useCallback(async (retryCount = 0) => {
-    const MAX_RETRIES = 2;
-    const REQUEST_TIMEOUT = 5000; // 5 seconds timeout
+  useEffect(() => {
+    // Check for stored auth token on app start
+    checkAuthStatus();
     
+    // REMOVED: Harmful polling interval for token refresh
+    // Token refresh will now happen on-demand when API calls fail
+    // This follows Mojaloop and banking best practices for scalability
+    // 
+    // FUTURE: Will implement proper token refresh on API failure
+    // FUTURE: Will add WebSocket-based token validation
+  }, []);
+
+  const checkAuthStatus = async () => {
     try {
       const token = getSessionToken();
-      if (token && token.startsWith('demo-token-')) {
+      
+      // If no token found, clear user state (user needs to log in)
+      if (!token) {
+        setUser(null);
+        removeSessionToken();
+        setIsLoading(false);
+        return;
+      }
+      
+      if (token.startsWith('demo-token-')) {
         // Demo mode - restore user session
         const demoCredentials = getDemoCredentials();
         
@@ -163,119 +181,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           kycVerified: kycStatus === 'verified'
         };
         setUser(mockUser);
-      } else if (token) {
+      } else {
         // Real authentication - validate token with backend
-        // Use AbortController for timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+        const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/auth/verify`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         
-        try {
-          const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/auth/verify`, {
-            headers: { Authorization: `Bearer ${token}` },
-            signal: controller.signal
-          });
-          
-          clearTimeout(timeoutId);
-          
-          if (response.ok) {
-            const responseData = await safeJsonParse(response);
-            if (responseData && responseData.user) {
-              setUser(mapBackendUserToContextUser(responseData.user));
-            } else {
-              // Invalid response format - log out (security: assume token invalid)
-              removeSessionToken();
-            }
-          } else if (response.status === 401 || response.status === 403) {
-            // Explicitly unauthorized/forbidden - token is invalid, log out immediately
-            console.warn('Token validation failed: Unauthorized/Forbidden');
+        if (response.ok) {
+          const responseData = await safeJsonParse(response);
+          if (responseData && responseData.user) {
+            setUser(mapBackendUserToContextUser(responseData.user));
+          } else {
+            setUser(null);
             removeSessionToken();
-          } else {
-            // Server error (500, 503, etc.) or other non-auth errors
-            // Don't log out - might be temporary backend issue
-            // Retry if we haven't exceeded max retries
-            if (retryCount < MAX_RETRIES) {
-              console.warn(`Token verification failed with status ${response.status}, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
-              await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
-              return checkAuthStatus(retryCount + 1);
-            } else {
-              console.warn('Token verification failed after retries, but keeping user logged in (may be temporary backend issue)');
-              // Keep user logged in - backend will validate on next API call
-            }
           }
-        } catch (fetchError: any) {
-          clearTimeout(timeoutId);
-          
-          // Check if it's an abort (timeout) or network error
-          if (fetchError.name === 'AbortError' || fetchError.message?.includes('timeout')) {
-            // Request timed out - retry if we haven't exceeded max retries
-            if (retryCount < MAX_RETRIES) {
-              console.warn(`Token verification timed out, retrying... (${retryCount + 1}/${MAX_RETRIES})`);
-              await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))); // Exponential backoff
-              return checkAuthStatus(retryCount + 1);
-            } else {
-              console.warn('Token verification timed out after retries, but keeping user logged in (may be network issue)');
-              // Keep user logged in - network may be temporarily unavailable
-            }
-          } else {
-            // Other network errors (offline, CORS, etc.)
-            console.warn('Token verification network error, but keeping user logged in:', fetchError.message);
-            // Keep user logged in - network issue, not auth issue
-          }
+        } else {
+          // Token is invalid or expired - clear user state
+          setUser(null);
+          removeSessionToken();
         }
       }
     } catch (error) {
-      // Unexpected error - don't log out, might be temporary
-      console.error('Auth check unexpected error (keeping user logged in):', error);
-      // Keep user logged in - error might be temporary
+      console.error('Auth check failed:', error);
+      setUser(null);
+      removeSessionToken();
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    // Check for stored auth token on app start
-    checkAuthStatus();
-    
-    // Listen for cross-tab logout events (when user logs out in another tab)
-    const handleCrossTabLogout = () => {
-      setUser(null);
-      setIsLoading(false);
-    };
-    
-    window.addEventListener('mymoolah_logout', handleCrossTabLogout);
-    
-    // Also check auth status when tab regains focus (handles app minimization on mobile)
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        // Tab/app is visible again
-        const token = getSessionToken();
-        
-        // Only verify if:
-        // 1. Token exists but user is not set (need to restore session)
-        // 2. OR user is set (background verification, won't log out on network errors)
-        if (token) {
-          // Background verification - won't log out on network errors (handled by checkAuthStatus)
-          // This ensures token is still valid without disrupting user experience
-          checkAuthStatus();
-        }
-        // If no token exists, user is already logged out - no action needed
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      window.removeEventListener('mymoolah_logout', handleCrossTabLogout);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-    
-    // REMOVED: Harmful polling interval for token refresh
-    // Token refresh will now happen on-demand when API calls fail
-    // This follows Mojaloop and banking best practices for scalability
-    // 
-    // FUTURE: Will implement proper token refresh on API failure
-    // FUTURE: Will add WebSocket-based token validation
-  }, [checkAuthStatus]);
+  };
 
   const login = async (credentials: LoginCredentials) => {
     setIsLoading(true);
@@ -356,92 +289,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('mymoolah_kyc_status');
     setUser(null);
   };
-
-  // Inactivity detection and auto-logout (banking-grade security)
-  // Session timeout: 15 minutes of inactivity (banking-grade standard, configurable in APP_CONFIG.SECURITY.sessionTimeout)
-  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const warningShownRef = useRef(false);
-
-  useEffect(() => {
-    // Only set up inactivity detection if user is logged in
-    if (!user) {
-      // Clear timers when user logs out
-      if (inactivityTimerRef.current) {
-        clearTimeout(inactivityTimerRef.current);
-        inactivityTimerRef.current = null;
-      }
-      if (warningTimerRef.current) {
-        clearTimeout(warningTimerRef.current);
-        warningTimerRef.current = null;
-      }
-      warningShownRef.current = false;
-      return;
-    }
-
-    const SESSION_TIMEOUT = APP_CONFIG.SECURITY.sessionTimeout || 15 * 60 * 1000; // 15 minutes default (banking-grade standard)
-    const WARNING_TIME = 60 * 1000; // Show warning 1 minute before logout
-
-    const resetInactivityTimer = () => {
-      // Clear existing timers
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
-      warningShownRef.current = false;
-
-      // Set warning timer (1 minute before logout)
-      warningTimerRef.current = setTimeout(() => {
-        warningShownRef.current = true;
-        // Show warning to user
-        const shouldContinue = window.confirm(
-          'You have been inactive for a while. You will be logged out in 1 minute for security.\n\n' +
-          'Click OK to stay logged in, or Cancel to log out now.'
-        );
-
-        if (shouldContinue) {
-          // User wants to stay logged in - reset timer
-          resetInactivityTimer();
-        } else {
-          // User chose to log out now
-          logout();
-        }
-      }, SESSION_TIMEOUT - WARNING_TIME);
-
-      // Set logout timer
-      inactivityTimerRef.current = setTimeout(() => {
-        if (warningShownRef.current) {
-          // Warning was shown and user didn't respond - auto logout
-          alert('You have been logged out due to inactivity for security reasons.');
-          logout();
-        } else {
-          // No warning shown (shouldn't happen, but handle it)
-          logout();
-        }
-      }, SESSION_TIMEOUT);
-    };
-
-    // Track user activity events
-    const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    const handleUserActivity = () => {
-      resetInactivityTimer();
-    };
-
-    // Add activity listeners
-    activityEvents.forEach(event => {
-      document.addEventListener(event, handleUserActivity, { passive: true });
-    });
-
-    // Initialize timer
-    resetInactivityTimer();
-
-    // Cleanup
-    return () => {
-      activityEvents.forEach(event => {
-        document.removeEventListener(event, handleUserActivity);
-      });
-      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
-    };
-  }, [user, logout]); // Re-run when user state changes (login/logout)
 
   const refreshToken = async () => {
     try {
