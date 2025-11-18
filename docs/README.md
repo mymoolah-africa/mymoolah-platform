@@ -69,6 +69,12 @@ The platform has been upgraded to use **OpenAI GPT-5** across all AI services:
 - **ADC Auto-Refresh**: Enhanced startup script to automatically check and refresh Google Cloud Application Default Credentials
 - **Status**: ✅ All GPT-5 compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
 
+### **📚 NEW: FAQ Library & Support Safeguards**
+
+- **Comprehensive FAQ**: `docs/FAQ_MASTER.md` now centralises customer, supplier, and API FAQs used by the support assistant.
+- **Knowledge Base Seeding**: Run `node scripts/seed-support-knowledge-base.js` after editing the FAQ to refresh `ai_knowledge_base`.
+- **AI Usage Limit**: Support calls to GPT-5 are limited to 5 per user per 24 hours; FAQ answers are unlimited and served locally first.
+
 ### **🆔 KYC OpenAI Fallback Fix**
 
 The platform includes **improved KYC OCR fallback mechanism** to Tesseract when OpenAI API fails:

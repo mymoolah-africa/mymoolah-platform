@@ -10,7 +10,7 @@
 
 const { OpenAI } = require('openai');
 const Redis = require('ioredis');
-const { Sequelize } = require('sequelize');
+const { Sequelize, Op } = require('sequelize');
 const models = require('../models');
 
 class BankingGradeSupportService {
@@ -22,6 +22,8 @@ class BankingGradeSupportService {
       cacheTTL: 300, // 5 minutes
       rateLimitWindow: 3600, // 1 hour
       rateLimitMax: 100, // 100 queries per hour per user
+      aiDailyLimit: 5,
+      aiLimitWindow: 86400, // 24 hours
       
       // Security & Compliance
       auditLogging: true,
@@ -46,6 +48,31 @@ class BankingGradeSupportService {
       averageResponseTime: 0,
       errorRate: 0
     };
+    
+    this.supportLanguages = ['en', 'af', 'zu', 'xh', 'st'];
+    this.knowledgeKeywordMap = [
+      { category: 'account_password', keywords: ['forgot password', 'reset password', 'password reset'] },
+      { category: 'session_security', keywords: ['log out', 'logout', 'session', 'minimise', 'minimize'] },
+      { category: 'kyc_documents', keywords: ['kyc', 'id document', 'proof of address', 'identity'] },
+      { category: 'kyc_drivers_license', keywords: ['driver', 'licence', 'license'] },
+      { category: 'kyc_passport', keywords: ['passport'] },
+      { category: 'kyc_fallback', keywords: ['openai', 'tesseract', 'ocr'] },
+      { category: 'payments_transaction_fee', keywords: ['transaction fee', 'fee description'] },
+      { category: 'payments_payshap', keywords: ['payshap', 'request money', 'rtp', 'rpp'] },
+      { category: 'beneficiary_multi_account', keywords: ['beneficiary', 'multiple accounts', 'send money contact'] },
+      { category: 'beneficiary_payshap_reference', keywords: ['reference', 'msisdn reference'] },
+      { category: 'beneficiary_visibility', keywords: ['beneficiary not showing', 'airtime beneficiary'] },
+      { category: 'vas_mobilemart', keywords: ['mobilemart', 'fulcrum'] },
+      { category: 'vas_flash', keywords: ['flash'] },
+      { category: 'integrations_peach', keywords: ['peach payments', 'pay shapp', 'pay-shap'] },
+      { category: 'integrations_zapper', keywords: ['zapper', 'qr payment'] },
+      { category: 'api_base_url', keywords: ['base url', 'api url'] },
+      { category: 'api_rate_limits', keywords: ['rate limit', 'throttle'] },
+      { category: 'api_error_format', keywords: ['error format', 'error response'] },
+      { category: 'support_ai_limit', keywords: ['ai limit', 'support limit', 'gpt'] }
+    ];
+    this.knowledgeModel = models?.AiKnowledgeBase || null;
+    this.inMemoryAiUsage = new Map();
 
     // 🚀 Initialize Core Services (sync for now)
     this.initialized = true;
@@ -136,6 +163,15 @@ class BankingGradeSupportService {
       // 📊 Audit Logging
       this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
       
+      // 📚 Knowledge Base Lookup
+      const knowledgeResponse = await this.findKnowledgeBaseAnswer(message, language);
+      if (knowledgeResponse) {
+        const responseTime = Date.now() - startTime;
+        this.updatePerformanceMetrics(responseTime, true);
+        this.auditLog('KNOWLEDGE_BASE_HIT', { queryId, userId, category: knowledgeResponse?.data?.category, timestamp: new Date() });
+        return this.formatResponse(knowledgeResponse, queryId);
+      }
+
       // 🎯 Query Classification
       const queryType = await this.classifyQuery(message, userId);
       
@@ -169,6 +205,14 @@ class BankingGradeSupportService {
       
     } catch (error) {
       console.error('❌ Error in processSupportQuery:', error);
+      
+      if (error?.code === 'AI_LIMIT_EXCEEDED') {
+        const limitResponse = this.buildAiLimitResponse(language);
+        const responseTime = Date.now() - startTime;
+        this.updatePerformanceMetrics(responseTime, false);
+        this.auditLog('AI_LIMIT_REACHED', { queryId, userId, timestamp: new Date() });
+        return this.formatResponse(limitResponse, queryId);
+      }
       
       // 📊 Error Handling & Metrics
       const responseTime = Date.now() - startTime;
@@ -207,7 +251,7 @@ class BankingGradeSupportService {
     }
     
     // 🤖 AI Classification
-    const classification = await this.performAIClassification(message);
+    const classification = await this.performAIClassification(message, userId);
     
     // 💾 Cache Classification
     await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(classification)); // Use optional chaining
@@ -275,8 +319,9 @@ class BankingGradeSupportService {
    * 🤖 AI-Powered Query Classification
    * Mojaloop & Banking Standards Aware
    */
-  async performAIClassification(message) {
+  async performAIClassification(message, userId) {
     try {
+      await this.registerAiCall(userId);
       const completion = await this.openai.chat.completions.create({
         model: "gpt-5",
         messages: [
@@ -444,7 +489,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         return await this.getAccountDetails(userId, language);
         
       case 'TECHNICAL_SUPPORT':
-        return await this.getTechnicalSupport(message, language);
+        return await this.getTechnicalSupport(message, language, userId);
         
       default:
         return await this.getGenericResponse(message, language);
@@ -1322,8 +1367,9 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
   /**
    * 🔧 Get Technical Support (AI-Powered)
    */
-  async getTechnicalSupport(message, language) {
+  async getTechnicalSupport(message, language, userId) {
     try {
+      await this.registerAiCall(userId);
       const completion = await this.openai.chat.completions.create({
         model: "gpt-5",
         messages: [
@@ -1403,6 +1449,139 @@ Be friendly but professional.`
     };
     
     return response;
+  }
+
+  /**
+   * 📚 Knowledge Base Matching
+   */
+  extractKnowledgeCategories(message = '') {
+    const lowered = (message || '').toLowerCase();
+    const matches = new Set();
+    this.knowledgeKeywordMap.forEach(entry => {
+      if (entry.keywords.some(keyword => lowered.includes(keyword))) {
+        matches.add(entry.category);
+      }
+    });
+    return Array.from(matches);
+  }
+
+  async findKnowledgeBaseAnswer(message = '', language = 'en') {
+    try {
+      if (!this.knowledgeModel) return null;
+      const normalizedLanguage = this.supportLanguages.includes(language) ? language : 'en';
+      const languagesToCheck = normalizedLanguage === 'en' ? ['en'] : [normalizedLanguage, 'en'];
+      const lowered = (message || '').toLowerCase();
+      const categories = this.extractKnowledgeCategories(lowered);
+
+      for (const lang of languagesToCheck) {
+        for (const category of categories) {
+          const entry = await this.knowledgeModel.findOne({
+            where: { category, language: lang, isActive: true },
+            order: [['confidenceScore', 'DESC']]
+          });
+          if (entry) {
+            await entry.increment('usageCount');
+            return this.buildKnowledgeResponse(entry);
+          }
+        }
+      }
+
+      const fallbackKeywords = lowered.split(/\s+/).filter(word => word.length > 3).slice(0, 3);
+      for (const lang of languagesToCheck) {
+        for (const keyword of fallbackKeywords) {
+          const entry = await this.knowledgeModel.findOne({
+            where: {
+              language: lang,
+              isActive: true,
+              question: { [Op.iLike]: `%${keyword}%` }
+            },
+            order: [['confidenceScore', 'DESC']]
+          });
+          if (entry) {
+            await entry.increment('usageCount');
+            return this.buildKnowledgeResponse(entry);
+          }
+        }
+      }
+
+      return null;
+    } catch (error) {
+      console.error('⚠️ Knowledge base lookup failed:', error);
+      return null;
+    }
+  }
+
+  buildKnowledgeResponse(entry) {
+    return {
+      type: 'KNOWLEDGE_BASE',
+      data: {
+        source: 'knowledge_base',
+        category: entry.category,
+        language: entry.language,
+        confidence: Number(entry.confidenceScore || 0.8)
+      },
+      message: entry.answer,
+      timestamp: new Date().toISOString(),
+      compliance: {
+        iso20022: true,
+        mojaloop: true,
+        auditTrail: true
+      }
+    };
+  }
+
+  async registerAiCall(userId) {
+    if (!userId) return;
+    const limit = this.config.aiDailyLimit || 5;
+    const windowSeconds = this.config.aiLimitWindow || 86400;
+    const redisKey = `support_ai_calls:${userId}`;
+
+    if (this.redis) {
+      const newCount = await this.redis.incr(redisKey);
+      if (newCount === 1) {
+        await this.redis.expire(redisKey, windowSeconds);
+      }
+      if (newCount > limit) {
+        await this.redis.decr(redisKey);
+        const error = new Error('AI usage limit reached for today');
+        error.code = 'AI_LIMIT_EXCEEDED';
+        throw error;
+      }
+      return;
+    }
+
+    const now = Date.now();
+    const existing = this.inMemoryAiUsage.get(userId) || { count: 0, expiresAt: now + windowSeconds * 1000 };
+    if (now > existing.expiresAt) {
+      existing.count = 0;
+      existing.expiresAt = now + windowSeconds * 1000;
+    }
+    if (existing.count >= limit) {
+      const error = new Error('AI usage limit reached for today');
+      error.code = 'AI_LIMIT_EXCEEDED';
+      throw error;
+    }
+    existing.count += 1;
+    this.inMemoryAiUsage.set(userId, existing);
+  }
+
+  buildAiLimitResponse(language = 'en') {
+    return {
+      type: 'AI_LIMIT',
+      data: {
+        source: 'knowledge_base',
+        category: 'support_ai_limit',
+        language,
+        aiLimit: this.config.aiDailyLimit
+      },
+      message: `You have reached the GPT support limit of ${this.config.aiDailyLimit} answers in a 24-hour window. Please retry tomorrow or consult the FAQ library.`,
+      timestamp: new Date().toISOString(),
+      compliance: {
+        iso20022: true,
+        mojaloop: true,
+        auditTrail: true
+      }
+    };
   }
 }
 
