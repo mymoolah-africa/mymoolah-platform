@@ -1621,8 +1621,8 @@ export function SendMoneyPage() {
             
             return (
               <div key={beneficiary.id} className="space-y-2">
-                <Card 
-                  className="hover:shadow-md transition-shadow cursor-pointer"
+            <Card 
+              className="hover:shadow-md transition-shadow cursor-pointer"
                   onClick={() => {
                     if (hasMultipleAccounts && !isExpanded) {
                       toggleAccountSelector(beneficiary.id);
@@ -1630,28 +1630,28 @@ export function SendMoneyPage() {
                       prefillFromBeneficiary(beneficiary);
                     }
                   }}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      {/* Avatar */}
-                      <div className="w-12 h-12 bg-[#2D8CCA] rounded-full flex items-center justify-center text-white font-bold">
-                        {beneficiary.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                      </div>
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  {/* Avatar */}
+                  <div className="w-12 h-12 bg-[#2D8CCA] rounded-full flex items-center justify-center text-white font-bold">
+                    {beneficiary.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                  </div>
 
-                      {/* Beneficiary Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 style={{
-                            fontFamily: 'Montserrat, sans-serif',
-                            fontSize: 'var(--mobile-font-base)',
-                            fontWeight: 'var(--font-weight-medium)',
-                            color: '#1f2937'
-                          }}>
-                            {beneficiary.name}
-                          </h3>
-                          {beneficiary.isFavorite && (
-                            <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                          )}
+                  {/* Beneficiary Info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-base)',
+                        fontWeight: 'var(--font-weight-medium)',
+                        color: '#1f2937'
+                      }}>
+                        {beneficiary.name}
+                      </h3>
+                      {beneficiary.isFavorite && (
+                        <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                      )}
                           {hasMultipleAccounts && (
                             <Badge 
                               variant="secondary"
@@ -1665,18 +1665,18 @@ export function SendMoneyPage() {
                               {beneficiary.accounts.length} accounts
                             </Badge>
                           )}
-                        </div>
-                        
-                        <div className="flex items-center gap-2 mb-1">
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mb-1">
                           {getAccountTypeBadge(accountType)}
-                        </div>
+                    </div>
 
                         {/* Account Identifier */}
-                        <p style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: 'var(--mobile-font-small)',
-                          color: '#6b7280'
-                        }}>
+                    <p style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: 'var(--mobile-font-small)',
+                      color: '#6b7280'
+                    }}>
                           {accountType === 'mymoolah' ? (
                             <>📱 {accountIdentifier}</>
                           ) : (
@@ -1684,29 +1684,29 @@ export function SendMoneyPage() {
                               🏦 {accountBankName || 'Bank'} • {accountIdentifier}
                             </>
                           )}
-                        </p>
+                    </p>
 
-                        {beneficiary.lastPaid ? (
-                          <p style={{
-                            fontFamily: 'Montserrat, sans-serif',
-                            fontSize: 'var(--mobile-font-small)',
-                            color: '#6b7280'
-                          }}>
-                            Last paid: {formatDate(beneficiary.lastPaid)}
-                          </p>
-                        ) : (
-                          <p style={{
-                            fontFamily: 'Montserrat, sans-serif',
-                            fontSize: 'var(--mobile-font-small)',
-                            color: '#6b7280'
-                          }}>
-                            Never paid
-                          </p>
-                        )}
-                      </div>
+                    {beneficiary.lastPaid ? (
+                      <p style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-small)',
+                        color: '#6b7280'
+                      }}>
+                        Last paid: {formatDate(beneficiary.lastPaid)}
+                      </p>
+                    ) : (
+                      <p style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: 'var(--mobile-font-small)',
+                        color: '#6b7280'
+                      }}>
+                        Never paid
+                      </p>
+                    )}
+                  </div>
 
-                      {/* Quick Actions */}
-                      <div className="flex flex-col items-end gap-2">
+                  {/* Quick Actions */}
+                  <div className="flex flex-col items-end gap-2">
                         {/* Account Selector Toggle (if multiple accounts) */}
                         {hasMultipleAccounts && (
                           <Button
@@ -1732,61 +1732,61 @@ export function SendMoneyPage() {
                           </Button>
                         )}
                         
-                        {/* Pay Button */}
-                        <Button
-                          size="sm"
-                          className="bg-[#86BE41] hover:bg-[#7AB139] text-white px-3 py-1"
+                    {/* Pay Button */}
+                    <Button
+                      size="sm"
+                      className="bg-[#86BE41] hover:bg-[#7AB139] text-white px-3 py-1"
                           onClick={(e) => { 
                             e.stopPropagation(); 
                             prefillFromBeneficiary(beneficiary); 
                           }}
-                        >
-                          <Send className="w-3 h-3 mr-1" />
-                          Pay
-                        </Button>
-                        
-                        {/* Edit & Remove Buttons */}
-                        <div className="flex items-center gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="w-8 h-8 p-0 hover:bg-gray-100"
-                            onClick={(e) => { e.stopPropagation(); handleEditBeneficiary(beneficiary); }}
-                            style={{
-                              minWidth: '32px',
-                              minHeight: '32px'
-                            }}
-                          >
-                            <Edit2 className="w-3 h-3 text-gray-500 hover:text-[#2D8CCA]" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="w-8 h-8 p-0 hover:bg-red-50"
-                            onClick={(e) => { e.stopPropagation(); handleRemoveBeneficiary(beneficiary); }}
-                            style={{
-                              minWidth: '32px',
-                              minHeight: '32px'
-                            }}
-                          >
-                            <X className="w-3 h-3 text-gray-500 hover:text-red-500" />
-                          </Button>
-                        </div>
-                        
-                        {/* Payment Count */}
-                        {beneficiary.paymentCount > 0 && (
-                          <span style={{
-                            fontFamily: 'Montserrat, sans-serif',
-                            fontSize: '10px',
-                            color: '#6b7280'
-                          }}>
-                            {beneficiary.paymentCount} payments
-                          </span>
-                        )}
-                      </div>
+                    >
+                      <Send className="w-3 h-3 mr-1" />
+                      Pay
+                    </Button>
+                    
+                    {/* Edit & Remove Buttons */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-8 h-8 p-0 hover:bg-gray-100"
+                        onClick={(e) => { e.stopPropagation(); handleEditBeneficiary(beneficiary); }}
+                        style={{
+                          minWidth: '32px',
+                          minHeight: '32px'
+                        }}
+                      >
+                        <Edit2 className="w-3 h-3 text-gray-500 hover:text-[#2D8CCA]" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-8 h-8 p-0 hover:bg-red-50"
+                        onClick={(e) => { e.stopPropagation(); handleRemoveBeneficiary(beneficiary); }}
+                        style={{
+                          minWidth: '32px',
+                          minHeight: '32px'
+                        }}
+                      >
+                        <X className="w-3 h-3 text-gray-500 hover:text-red-500" />
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                    
+                    {/* Payment Count */}
+                    {beneficiary.paymentCount > 0 && (
+                      <span style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '10px',
+                        color: '#6b7280'
+                      }}>
+                        {beneficiary.paymentCount} payments
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
                 
                 {/* Account Selector Dropdown (when expanded) */}
                 {hasMultipleAccounts && isExpanded && beneficiary.accounts && (
@@ -2340,23 +2340,23 @@ export function SendMoneyPage() {
 
               {/* Mobile Number (MSISDN) - Required for MyMoolah, optional for Bank */}
               {editingBeneficiary.accountType !== 'bank' && (
-                <div>
+              <div>
                   <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Mobile Number <span className="text-red-500">*</span></Label>
-                  <Input
-                    placeholder="e.g., 078 123 4567"
-                    value={editingBeneficiary.msisdn || ''}
-                    onChange={(e) => setEditingBeneficiary(prev => prev ? { ...prev, msisdn: e.target.value } : null)}
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: 'var(--mobile-font-base)',
-                      height: 'var(--mobile-touch-target)'
-                    }}
-                    className="font-mono"
-                  />
-                  <p className="text-sm text-gray-500 mt-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
-                    This number uniquely identifies the beneficiary
-                  </p>
-                </div>
+                <Input
+                  placeholder="e.g., 078 123 4567"
+                  value={editingBeneficiary.msisdn || ''}
+                  onChange={(e) => setEditingBeneficiary(prev => prev ? { ...prev, msisdn: e.target.value } : null)}
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: 'var(--mobile-font-base)',
+                    height: 'var(--mobile-touch-target)'
+                  }}
+                  className="font-mono"
+                />
+                <p className="text-sm text-gray-500 mt-1" style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                  This number uniquely identifies the beneficiary
+                </p>
+              </div>
               )}
 
               {/* Account Type */}
@@ -2385,30 +2385,30 @@ export function SendMoneyPage() {
               {/* Bank Name (only for bank accounts) */}
               {editingBeneficiary.accountType === 'bank' && (
                 <>
-                  <div>
-                    <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Bank Name</Label>
-                    <Select 
-                      value={editingBeneficiary.bankName || ''} 
-                      onValueChange={(value) => 
-                        setEditingBeneficiary(prev => prev ? { ...prev, bankName: value } : null)
-                      }
-                    >
-                      <SelectTrigger style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-base)',
-                        height: 'var(--mobile-touch-target)'
-                      }}>
-                        <SelectValue placeholder="Select bank" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SA_BANKS.map(bank => (
-                          <SelectItem key={bank.code} value={bank.name}>
-                            {bank.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div>
+                  <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Bank Name</Label>
+                  <Select 
+                    value={editingBeneficiary.bankName || ''} 
+                    onValueChange={(value) => 
+                      setEditingBeneficiary(prev => prev ? { ...prev, bankName: value } : null)
+                    }
+                  >
+                    <SelectTrigger style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: 'var(--mobile-font-base)',
+                      height: 'var(--mobile-touch-target)'
+                    }}>
+                      <SelectValue placeholder="Select bank" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SA_BANKS.map(bank => (
+                        <SelectItem key={bank.code} value={bank.name}>
+                          {bank.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                   
                   {/* Account Number (only for bank accounts) */}
                   <div>
@@ -2493,8 +2493,8 @@ export function SendMoneyPage() {
                         )
                       );
                       
-                      setShowEditBeneficiaryModal(false);
-                      setEditingBeneficiary(null);
+                    setShowEditBeneficiaryModal(false);
+                    setEditingBeneficiary(null);
                       showError('Success', 'Beneficiary updated successfully', 'info');
                     } catch (error: any) {
                       logError('SendMoneyPage', 'Failed to update beneficiary', error as Error);

@@ -58,9 +58,9 @@ export interface PaymentBeneficiary {
   timesPaid?: number;
   lastPaidAt?: string;
   lastPaid?: Date;
-  isFavorite?: boolean;
-  totalPaid?: number;
-  paymentCount?: number;
+    isFavorite?: boolean;
+    totalPaid?: number;
+    paymentCount?: number;
   metadata?: Record<string, any>;
   accounts?: BeneficiaryAccount[];
 }
@@ -87,7 +87,7 @@ export interface CreateBeneficiaryRequest {
     isDefault?: boolean;
     [key: string]: any;
   };
-  isFavorite?: boolean;
+    isFavorite?: boolean;
   notes?: string;
 }
 
@@ -345,10 +345,10 @@ class BeneficiaryService {
       isFavorite?: boolean;
       notes?: string;
       preferredPaymentMethod?: string;
-      name?: string;
-      identifier?: string;
-      bankName?: string;
-      metadata?: any;
+    name?: string;
+    identifier?: string;
+    bankName?: string;
+    metadata?: any;
     }
   ): Promise<UnifiedBeneficiary> {
     const id = typeof beneficiaryId === 'string' ? parseInt(beneficiaryId, 10) : beneficiaryId;
@@ -399,7 +399,7 @@ class BeneficiaryService {
           isDefault: legacy.preferredPaymentMethod === 'mymoolah',
           metadata: legacy.paymentMethods.mymoolah
         });
-      }
+  }
       
       // Bank accounts
       if (legacy.paymentMethods.bankAccounts && Array.isArray(legacy.paymentMethods.bankAccounts)) {
