@@ -12,18 +12,27 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Check if tax_transactions table exists first
-    const [tableExists] = await queryInterface.sequelize.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.tables 
-        WHERE table_schema = 'public' 
-        AND table_name = 'tax_transactions'
-      );
-    `);
+    try {
+      // Check if tax_transactions table exists first
+      const [tableCheck] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'tax_transactions'
+        ) as exists;
+      `);
 
-    if (!tableExists[0].exists) {
-      console.log('⚠️ tax_transactions table does not exist. Skipping VAT direction migration.');
-      console.log('⚠️ Please ensure migration 20250814_create_reseller_compliance_tax.js has run first.');
+      const tableExists = tableCheck[0]?.exists;
+
+      if (!tableExists) {
+        console.log('⚠️ tax_transactions table does not exist. Skipping VAT direction migration.');
+        console.log('⚠️ Please ensure migration 20250814_create_reseller_compliance_tax.js has run successfully first.');
+        return;
+      }
+    } catch (error) {
+      // If we can't even check for the table, it probably doesn't exist
+      console.log('⚠️ Could not verify tax_transactions table existence. Skipping VAT direction migration.');
+      console.log('⚠️ Error:', error.message);
       return;
     }
 
