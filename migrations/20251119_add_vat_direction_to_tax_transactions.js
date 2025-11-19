@@ -12,29 +12,31 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Check if tax_transactions table exists first - wrap in try-catch for safety
-    let tableExists = false;
+    // Wrap entire migration in try-catch to handle missing table gracefully
     try {
-      const [tableCheck] = await queryInterface.sequelize.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
-          AND table_name = 'tax_transactions'
-        ) as exists;
-      `);
-      tableExists = tableCheck[0]?.exists === true;
-    } catch (checkError) {
-      // If check fails, assume table doesn't exist
-      console.log('⚠️ Could not verify tax_transactions table existence:', checkError.message);
-      tableExists = false;
-    }
+      // Check if tax_transactions table exists first
+      let tableExists = false;
+      try {
+        const [tableCheck] = await queryInterface.sequelize.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = 'tax_transactions'
+          ) as exists;
+        `);
+        tableExists = tableCheck[0]?.exists === true;
+      } catch (checkError) {
+        // If check fails, assume table doesn't exist
+        console.log('⚠️ Could not verify tax_transactions table existence:', checkError.message);
+        tableExists = false;
+      }
 
-    if (!tableExists) {
-      console.log('⚠️ tax_transactions table does not exist. Skipping VAT direction migration.');
-      console.log('⚠️ Please ensure migration 20250814_create_reseller_compliance_tax.js has run successfully first.');
-      console.log('⚠️ This migration will be skipped and can be run later when the table exists.');
-      return;
-    }
+      if (!tableExists) {
+        console.log('⚠️ tax_transactions table does not exist. Skipping VAT direction migration.');
+        console.log('⚠️ Please ensure migration 20250814_create_reseller_compliance_tax.js has run successfully first.');
+        console.log('⚠️ This migration will be skipped and can be run later when the table exists.');
+        return;
+      }
 
     // Create ENUM type for VAT direction (PostgreSQL requires explicit type creation)
     await queryInterface.sequelize.query(`
@@ -124,14 +126,30 @@ module.exports = {
       });
     }
 
-    // Update existing records to be output VAT (current behavior)
-    await queryInterface.sequelize.query(`
-      UPDATE tax_transactions
-      SET 
-        vat_direction = 'output'::enum_tax_transactions_vat_direction,
-        is_claimable = false
-      WHERE vat_direction IS NULL
-    `);
+      // Update existing records to be output VAT (current behavior)
+      try {
+        await queryInterface.sequelize.query(`
+          UPDATE tax_transactions
+          SET 
+            vat_direction = 'output'::enum_tax_transactions_vat_direction,
+            is_claimable = false
+          WHERE vat_direction IS NULL
+        `);
+      } catch (updateError) {
+        // If update fails (e.g., no records), that's okay
+        console.log('⚠️ Could not update existing records:', updateError.message);
+      }
+    } catch (error) {
+      // Catch any other errors (like "relation does not exist") and handle gracefully
+      if (error.message && error.message.includes('does not exist')) {
+        console.log('⚠️ tax_transactions table does not exist. Skipping VAT direction migration.');
+        console.log('⚠️ Please ensure migration 20250814_create_reseller_compliance_tax.js has run successfully first.');
+        console.log('⚠️ This migration will be skipped and can be run later when the table exists.');
+        return; // Exit gracefully instead of throwing
+      }
+      // Re-throw if it's a different error
+      throw error;
+    }
   },
 
   async down(queryInterface, Sequelize) {
