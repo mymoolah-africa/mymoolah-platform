@@ -4,6 +4,12 @@ const auth = require('../middleware/auth');
 const peachController = require('../controllers/peachController');
 
 /**
+ * Middleware to capture raw body for webhook signature validation
+ * Webhook signature validation requires the raw request body (not parsed JSON)
+ */
+const rawBodyMiddleware = express.raw({ type: 'application/json', limit: '10mb' });
+
+/**
  * Peach Payments API Routes
  * 
  * Peach Payments offers multiple payment services:
@@ -51,8 +57,22 @@ router.delete('/payments/:merchantTransactionId', auth, peachController.cancelPa
 // User payment history
 router.get('/users/:userId/payments', auth, peachController.getUserPayments);
 
-// 🆕 UAT: Webhook endpoint (no auth required - Peach will call this)
-router.post('/webhook', peachController.handleWebhook);
+// 🆕 Webhook endpoint (no auth required - Peach will call this)
+// Uses raw body middleware for signature validation
+router.post('/webhook', rawBodyMiddleware, (req, res, next) => {
+  // Store raw body for signature validation
+  req.rawBody = req.body.toString('utf8');
+  // Parse JSON body for processing
+  try {
+    req.body = JSON.parse(req.rawBody);
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid JSON payload'
+    });
+  }
+  next();
+}, peachController.handleWebhook);
 
 // 🆕 UAT: Payment status polling
 router.post('/poll-status', peachController.pollPaymentStatus);

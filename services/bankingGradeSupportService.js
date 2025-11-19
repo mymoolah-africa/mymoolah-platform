@@ -1365,18 +1365,19 @@ CRITICAL TRANSACTION FEE INFORMATION:
 - Fees are shown BEFORE you confirm any transaction
 
 TIER FEE STRUCTURE (for Zapper QR payments):
-- Bronze (default): R3.00 MyMoolah fee + 0.4% Zapper fee (pass-through)
-- Silver (10+ transactions AND R5,000+ monthly): R2.75 MyMoolah fee + 0.4% Zapper fee
-- Gold (25+ transactions AND R15,000+ monthly): R2.50 MyMoolah fee + 0.4% Zapper fee
-- Platinum (50+ transactions AND R30,000+ monthly): R2.25 MyMoolah fee + 0.4% Zapper fee
+- Bronze (default): 1.50% total fee (includes 0.40% Zapper cost)
+- Silver (10+ transactions AND R5,000+ monthly): 1.40% total fee
+- Gold (25+ transactions AND R15,000+ monthly): 1.20% total fee
+- Platinum (50+ transactions AND R30,000+ monthly): 1.00% total fee
 - Tier review happens monthly on the 1st at 2:00 AM SAST
 
 EXAMPLE: R500 QR payment (Bronze tier):
 - Payment to merchant: R500.00
-- Zapper fee (0.4%): R2.00 (pass-through to Zapper)
-- MyMoolah Bronze fee: R3.00
-- Total user pays: R505.00
-- Transaction history shows: "Transaction Fee: -R5.00"
+- Total tier fee (1.50%): R7.50
+  - Includes Zapper pass-through (0.40% = R2.00)
+  - Includes MyMoolah revenue (1.10% = R5.50, VAT applied)
+- Total user pays: R507.50
+- Transaction history shows: "Transaction Fee: -R7.50"
 
 OTHER TRANSACTION TYPES:
 - Cash-out fees: Vary by amount, partner, and programme (shown before confirmation)

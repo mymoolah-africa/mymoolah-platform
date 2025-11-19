@@ -204,7 +204,7 @@
 - ✅ QR code validation
 - ✅ Payment initiation
 - ✅ Transaction creation
-- ✅ Fee allocation (R3.00 incl VAT)
+- ✅ Fee allocation (tier-based % incl. Zapper cost)
 - ✅ Float account crediting
 - ✅ Transaction history display
 

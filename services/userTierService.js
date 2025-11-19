@@ -409,12 +409,12 @@ function getTierBenefitMessage(tierLevel) {
  */
 function getTierFeeDisplay(tierLevel) {
   const fees = {
-    bronze: 'R3.00',
-    silver: 'R2.75',
-    gold: 'R2.50',
-    platinum: 'R2.25'
+    bronze: '1.50% (incl. Zapper 0.40%)',
+    silver: '1.40% (incl. Zapper 0.40%)',
+    gold: '1.20% (incl. Zapper 0.40%)',
+    platinum: '1.00% (incl. Zapper 0.40%)'
   };
-  return fees[tierLevel] || 'R3.00';
+  return fees[tierLevel] || '1.50% (incl. Zapper 0.40%)';
 }
 
 module.exports = {

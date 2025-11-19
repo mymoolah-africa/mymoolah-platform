@@ -32,12 +32,13 @@ Total User Pays = Transaction Amount + Supplier Cost + MM Tier Fee
 
 ### Example: Zapper R500 QR Payment (Bronze Tier)
 ```
-Payment to merchant:  R 500.00
-Zapper fee (0.4%):    R   2.00  (pass-through to Zapper)
-MM Bronze fee:        R   3.00  (MM revenue)
-───────────────────────────────────
-Total user pays:      R 505.00
-Transaction history:  "Transaction Fee: -R5.00"
+Payment to merchant:      R 500.00
+Total tier fee (1.50%):   R   7.50
+  - Zapper cost (0.40%):  R   2.00  (pass-through)
+  - MM Bronze share:      R   5.50  (VAT inclusive)
+────────────────────────────────────
+Total user pays:          R 507.50
+Transaction history:      "Transaction Fee: -R7.50"
 ```
 
 ---
@@ -46,12 +47,12 @@ Transaction history:  "Transaction Fee: -R5.00"
 
 ### Tier Thresholds (Monthly Review):
 
-| Tier | Min Transactions | Min Value | MM Fee (Zapper) | MM Net Revenue |
-|------|------------------|-----------|-----------------|----------------|
-| **Bronze** | 0 | R0 | R3.00 | R2.61 |
-| **Silver** | 10 | R5,000 | R2.75 | R2.39 |
-| **Gold** | 25 | R15,000 | R2.50 | R2.17 |
-| **Platinum** | 50 | R30,000 | R2.25 | R1.96 |
+| Tier | Min Transactions | Min Value | Total Fee (incl. Zapper 0.40%) | MM Share (percentage) |
+|------|------------------|-----------|---------------------------------|-----------------------|
+| **Bronze** | 0 | R0 | 1.50% | 1.10% |
+| **Silver** | 10 | R5,000 | 1.40% | 1.00% |
+| **Gold** | 25 | R15,000 | 1.20% | 0.80% |
+| **Platinum** | 50 | R30,000 | 1.00% | 0.60% |
 
 **Logic**: Both conditions must be met (AND logic)  
 **Review**: 1st of every month at 2:00 AM SAST  
@@ -192,8 +193,8 @@ Added tier fields:
     "tierLevel": "bronze",
     "feeBreakdown": {
       "supplierCost": "R2.00",
-      "mmFee": "R3.00",
-      "totalFee": "R5.00",
+      "mmFee": "R5.50",
+      "totalFee": "R7.50",
       "tierLevel": "Bronze"
     }
   }
@@ -243,7 +244,7 @@ All configurations stored in database, editable via:
 
 ### Logs Generated:
 ```
-✅ Created Zapper fee transaction: QR_FEE_... | Amount: R5.00 | Tier: Bronze | MM Revenue: R2.61
+✅ Created Zapper fee transaction: QR_FEE_... | Amount: R7.50 | Tier: Bronze | MM Revenue: R4.78
 🔄 Starting monthly tier review for 2025-11
 👥 Found 1,234 active users to review
 ✅ User 123 tier promoted: bronze → silver
@@ -337,7 +338,7 @@ Check server logs for:
 #### Test 1: Bronze Tier User (Default)
 ```javascript
 // Any new or low-activity user
-Expected Fee: R3.00 + 0.4% = R5.00 on R500 payment
+Expected Fee: 1.50% total = R7.50 on a R500 payment (includes Zapper cost)
 ```
 
 #### Test 2: Tier Calculation
@@ -346,7 +347,7 @@ Expected Fee: R3.00 + 0.4% = R5.00 on R500 payment
 UPDATE users SET tier_level = 'silver' WHERE id = 123;
 
 -- Test payment
-Expected Fee: R2.75 + 0.4% = R4.75 on R500 payment
+Expected Fee: 1.40% total = R7.00 on R500 payment
 ```
 
 #### Test 3: Monthly Review (Force Run)
@@ -439,9 +440,9 @@ Response:
   "tierLevel": "silver",
   "supplierCode": "ZAPPER",
   "serviceType": "qr_payment",
-  "mmFeeDisplay": "R2.75",
+  "mmFeeDisplay": "1.40%",
   "supplierCostDisplay": "0.40%",
-  "message": "As a silver member, your fee is R2.75"
+  "message": "As a silver member, your fee is 1.40% (incl. Zapper cost)"
 }
 ```
 
@@ -525,7 +526,7 @@ Before marking complete, verify:
 
 ### What Works Right Now:
 ✅ Zapper QR payments charge tier-based fees  
-✅ Bronze tier users pay R3.00 + 0.4%  
+✅ Bronze tier users pay 1.50% (incl. Zapper 0.40%)  
 ✅ Database tracks all tier changes  
 ✅ Monthly cron job ready to review tiers on 1st of next month  
 ✅ All users default to Bronze tier  

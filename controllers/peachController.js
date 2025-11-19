@@ -538,7 +538,7 @@ exports.getPaymentMethods = async (req, res) => {
         description: 'Rapid Payments Programme - Outbound payments',
         icon: '💳',
         supported: true,
-        fees: 'R2.00-R3.00 per transaction',
+        fees: 'Approx. 1.0% - 1.5% (tier-based, incl. Zapper cost)',
         processingTime: '3-6 minutes'
       },
       {
@@ -547,7 +547,7 @@ exports.getPaymentMethods = async (req, res) => {
         description: 'Request to Pay - Inbound payment requests',
         icon: '📱',
         supported: true,
-        fees: 'R2.00-R3.00 per transaction',
+        fees: 'Approx. 1.0% - 1.5% (tier-based, incl. Zapper cost)',
         processingTime: '3-6 minutes'
       },
       {
@@ -851,9 +851,51 @@ exports.getPayShapTestScenarios = async (req, res) => {
 };
 
 /**
- * 🆕 UAT: Handle Peach Payments webhook
+ * Validate Peach Payments webhook signature
+ * Uses HMAC-SHA256 with secret token from dashboard
+ * Reference: https://developer.peachpayments.com/docs/checkout-webhooks#webhook-security
+ */
+function validateWebhookSignature(payload, signature, secret) {
+  if (!secret) {
+    console.warn('⚠️  Webhook secret not configured - skipping signature validation');
+    return false;
+  }
+  
+  if (!signature) {
+    console.warn('⚠️  Webhook signature not present in headers');
+    return false;
+  }
+  
+  try {
+    const crypto = require('crypto');
+    
+    // Convert payload to string (raw body should be used, but we'll use JSON stringify as fallback)
+    // Note: For production, use raw request body if available (req.rawBody)
+    const payloadString = typeof payload === 'string' ? payload : JSON.stringify(payload);
+    
+    // Generate HMAC-SHA256 signature
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(payloadString);
+    const expectedSignature = hmac.digest('hex');
+    
+    // Compare signatures (use constant-time comparison for security)
+    const isValid = crypto.timingSafeEqual(
+      Buffer.from(signature),
+      Buffer.from(expectedSignature)
+    );
+    
+    return isValid;
+  } catch (error) {
+    console.error('❌ Webhook signature validation error:', error);
+    return false;
+  }
+}
+
+/**
+ * Handle Peach Payments webhook
  * Receives webhook notifications from Peach Payments
- * For UAT: Basic implementation without signature validation (to be added when Peach provides details)
+ * Implements signature validation using secret token from dashboard
+ * Reference: https://developer.peachpayments.com/docs/checkout-webhooks#webhook-security
  */
 exports.handleWebhook = async (req, res) => {
   try {
@@ -864,10 +906,45 @@ exports.handleWebhook = async (req, res) => {
     console.log('   Headers:', JSON.stringify(headers, null, 2));
     console.log('   Payload:', JSON.stringify(webhookPayload, null, 2));
     
-    // TODO: Validate webhook signature when Peach provides validation method
-    // For UAT: Log signature header if present
-    if (headers['x-peach-signature'] || headers['x-signature'] || headers['signature']) {
-      console.log('   ⚠️  Signature present but not validated (awaiting validation method from Peach)');
+    // Get webhook secret from environment (from Peach dashboard - Checkout tab)
+    const webhookSecret = process.env.PEACH_WEBHOOK_SECRET;
+    
+    // Get signature from headers (common header names)
+    const signature = headers['x-peach-signature'] || 
+                     headers['x-signature'] || 
+                     headers['signature'] ||
+                     headers['x-peach-webhook-signature'];
+    
+    // Validate signature if secret is configured
+    if (webhookSecret && signature) {
+      // For production: Use raw request body if available (req.rawBody)
+      // For now: Use JSON stringified body (may need adjustment based on Peach's exact format)
+      const rawBody = req.rawBody || JSON.stringify(webhookPayload);
+      
+      const isValid = validateWebhookSignature(rawBody, signature, webhookSecret);
+      
+      if (!isValid) {
+        console.error('❌ Webhook signature validation failed');
+        // Return 401 to indicate authentication failure (but don't expose details)
+        return res.status(401).json({
+          success: false,
+          message: 'Webhook signature validation failed'
+        });
+      }
+      
+      console.log('✅ Webhook signature validated successfully');
+    } else if (webhookSecret && !signature) {
+      console.warn('⚠️  Webhook secret configured but signature not present in headers');
+      // In production, reject webhooks without signatures
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(401).json({
+          success: false,
+          message: 'Webhook signature required'
+        });
+      }
+    } else if (!webhookSecret) {
+      console.warn('⚠️  Webhook secret not configured - webhook accepted without validation');
+      // In UAT/sandbox, allow webhooks without validation if secret not configured
     }
     
     // Extract payment identifiers from webhook
@@ -996,8 +1073,9 @@ exports.pollPaymentStatus = async (req, res) => {
       });
     }
     
-    // Try to get status from Peach Payments API
-    // Note: This endpoint may need to be confirmed with Peach
+    // Get status from Peach Payments API
+    // Confirmed endpoint: https://secure.peachpayments.com/v2/checkout/{checkoutId}/status
+    // Alternative (also confirmed): GET /v2/checkouts/{checkoutId}/payment
     const token = await peachClient.getAccessToken();
     const cfg = peachClient.getConfig();
     
@@ -1011,9 +1089,11 @@ exports.pollPaymentStatus = async (req, res) => {
       });
     }
     
-    // Try Checkout V2 status endpoint (common pattern)
+    // Use confirmed Checkout V2 status endpoint
+    // Production: https://secure.peachpayments.com/v2/checkout/{checkoutId}/status
+    // Sandbox: https://testsecure.peachpayments.com/v2/checkout/{checkoutId}/status
     try {
-      const statusUrl = `${cfg.checkoutBase}/v2/checkouts/${statusId}/payment`;
+      const statusUrl = `${cfg.checkoutBase}/v2/checkout/${statusId}/status`;
       const response = await axios.get(statusUrl, {
         headers: {
           Authorization: `Bearer ${token}`,

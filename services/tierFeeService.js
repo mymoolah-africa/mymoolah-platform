@@ -7,16 +7,73 @@
  * Supports: Zapper, Flash, EasyPay, MobileMart, and all future suppliers
  * 
  * Banking-grade fee calculation with:
- * - Fixed fees (e.g., R3.00)
+ * - Fixed fees (e.g., R5.00)
  * - Percentage fees (e.g., 0.4%)
  * - Hybrid fees (fixed + percentage)
  * - VAT breakdown for compliance
  * - Audit trail for all calculations
  */
 
-const { User, sequelize } = require('../models');
+const { sequelize } = require('../models');
 
 const VAT_RATE = Number(process.env.VAT_RATE || 0.15);
+let devTierOverrideLogged = false;
+
+/**
+ * Determine the user's tier level with graceful fallbacks
+ * Applies development override for Andre (user 1) to always be platinum
+ */
+async function determineUserTierLevel(userId) {
+  let tierLevel = 'bronze';
+
+  try {
+    // Check if tier_level column exists in users table
+    const [columnCheck] = await sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' 
+        AND column_name = 'tier_level'
+      LIMIT 1
+    `, { type: sequelize.QueryTypes.SELECT });
+
+    if (columnCheck && columnCheck.column_name === 'tier_level') {
+      // Column exists, query user's tier
+      const [user] = await sequelize.query(`
+        SELECT tier_level 
+        FROM users 
+        WHERE id = :userId
+        LIMIT 1
+      `, {
+        replacements: { userId },
+        type: sequelize.QueryTypes.SELECT
+      });
+
+      if (!user) {
+        throw new Error(`User ${userId} not found`);
+      }
+
+      tierLevel = user.tier_level || 'bronze';
+    } else {
+      console.warn(`⚠️  tier_level column not found in users table, defaulting to bronze tier for all users`);
+      tierLevel = 'bronze';
+    }
+  } catch (error) {
+    console.warn(`⚠️  Could not determine tier for user ${userId}, defaulting to bronze:`, error.message);
+    tierLevel = 'bronze';
+  }
+
+  // Development override: Andre (user 1) is always platinum in non-production
+  const runtimeEnv = (process.env.MYMOOLAH_ENV || process.env.NODE_ENV || 'development').toLowerCase();
+  if (Number(userId) === 1 && runtimeEnv !== 'production') {
+    if (!devTierOverrideLogged) {
+      console.info('🔒 Dev tier override: forcing user 1 to platinum tier for Zapper fee calculations');
+      devTierOverrideLogged = true;
+    }
+    tierLevel = 'platinum';
+  }
+
+  return tierLevel;
+}
 
 /**
  * Calculate tier-based fees for any supplier/service combination
@@ -34,47 +91,7 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
       throw new Error('Invalid parameters for tier fee calculation');
     }
 
-    // Get user's current tier
-    // Handle case where tier_level column might not exist yet (graceful degradation)
-    let tierLevel = 'bronze'; // Default fallback
-    
-    try {
-      // Check if tier_level column exists in users table
-      const [columnCheck] = await sequelize.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'users' 
-          AND column_name = 'tier_level'
-        LIMIT 1
-      `, { type: sequelize.QueryTypes.SELECT });
-      
-      if (columnCheck && columnCheck.column_name === 'tier_level') {
-        // Column exists, query user's tier
-        const [user] = await sequelize.query(`
-          SELECT tier_level 
-          FROM users 
-          WHERE id = :userId
-          LIMIT 1
-        `, {
-          replacements: { userId },
-          type: sequelize.QueryTypes.SELECT
-        });
-        
-        if (!user) {
-          throw new Error(`User ${userId} not found`);
-        }
-        
-        tierLevel = user.tier_level || 'bronze';
-      } else {
-        // Column doesn't exist yet, default to bronze
-        console.warn(`⚠️  tier_level column not found in users table, defaulting to bronze tier for all users`);
-        tierLevel = 'bronze';
-      }
-    } catch (error) {
-      // If query fails for any reason, default to bronze and continue
-      console.warn(`⚠️  Could not determine tier for user ${userId}, defaulting to bronze:`, error.message);
-      tierLevel = 'bronze';
-    }
+    const tierLevel = await determineUserTierLevel(userId);
     
     // Get fee configuration from database
     const [config] = await sequelize.query(`
@@ -214,33 +231,7 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
  */
 async function getTierFeePreview(userId, supplierCode, serviceType) {
   try {
-    // Handle missing tier_level column gracefully
-    let tierLevel = 'bronze';
-    try {
-      const [columnCheck] = await sequelize.query(`
-        SELECT column_name 
-        FROM information_schema.columns 
-        WHERE table_name = 'users' 
-          AND column_name = 'tier_level'
-        LIMIT 1
-      `, { type: sequelize.QueryTypes.SELECT });
-      
-      if (columnCheck) {
-        const [user] = await sequelize.query(`
-          SELECT tier_level 
-          FROM users 
-          WHERE id = :userId
-          LIMIT 1
-        `, {
-          replacements: { userId },
-          type: sequelize.QueryTypes.SELECT
-        });
-        tierLevel = user?.tier_level || 'bronze';
-      }
-    } catch (error) {
-      // Default to bronze if column doesn't exist
-      tierLevel = 'bronze';
-    }
+    const tierLevel = await determineUserTierLevel(userId);
     
     const [config] = await sequelize.query(`
       SELECT 
@@ -352,7 +343,7 @@ async function getAllTierFees(supplierCode, serviceType) {
 }
 
 /**
- * Format cents to Rand display (e.g., 300 -> "R3.00")
+ * Format cents to Rand display (e.g., 750 -> "R7.50")
  */
 function formatCentsToRands(cents) {
   return `R${(cents / 100).toFixed(2)}`;
@@ -396,6 +387,7 @@ module.exports = {
   getTierFeePreview,
   getAllTierFees,
   validateFeeConfig,
-  formatCentsToRands
+  formatCentsToRands,
+  determineUserTierLevel
 };
 

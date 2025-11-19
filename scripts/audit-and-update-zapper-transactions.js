@@ -76,11 +76,22 @@ const ledgerService = require('../services/ledgerService');
 const { v4: uuidv4 } = require('uuid');
 
 const VAT_RATE = Number(process.env.VAT_RATE || 0.15);
-const ZAPPER_DEFAULT_FEE_INCL_VAT = Number(process.env.ZAPPER_DEFAULT_FEE_INCL_VAT || 3.00);
+const ZAPPER_TOTAL_FEE_PERCENT_BY_TIER = {
+  bronze: 0.015,
+  silver: 0.014,
+  gold: 0.012,
+  platinum: 0.010
+};
 const ZAPPER_FLOAT_ACCOUNT_NUMBER = process.env.ZAPPER_FLOAT_ACCOUNT_NUMBER || 'ZAPPER_FLOAT_001';
 const LEDGER_ACCOUNT_MM_COMMISSION_CLEARING = process.env.LEDGER_ACCOUNT_MM_COMMISSION_CLEARING || null;
 const LEDGER_ACCOUNT_COMMISSION_REVENUE = process.env.LEDGER_ACCOUNT_COMMISSION_REVENUE || null;
 const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL || null;
+
+function getExpectedTotalFee(paymentAmount, tierLevel = 'bronze') {
+  const tierKey = (tierLevel || 'bronze').toLowerCase();
+  const percentage = ZAPPER_TOTAL_FEE_PERCENT_BY_TIER[tierKey] || ZAPPER_TOTAL_FEE_PERCENT_BY_TIER.bronze;
+  return Number((paymentAmount * percentage).toFixed(2));
+}
 
 /**
  * Calculate VAT and net fee from inclusive fee amount
@@ -320,7 +331,9 @@ async function auditAndUpdateZapperTransactions() {
       // Check if transaction needs correction
       const currentFee = parseFloat(tx.fee || 0);
       const paymentAmount = parseFloat(tx.amount);
-      const needsFeeUpdate = currentFee !== ZAPPER_DEFAULT_FEE_INCL_VAT;
+      const tierLevel = (metadata?.feeBreakdown?.tierLevel || metadata?.tierLevel || 'bronze').toLowerCase();
+      const expectedFeeAmount = getExpectedTotalFee(paymentAmount, tierLevel);
+      const needsFeeUpdate = Math.abs(currentFee - expectedFeeAmount) > 0.01;
       const hasFeeBreakdown = metadata.feeBreakdown && metadata.feeBreakdown.feeInclVat;
       const hasZapperFloat = metadata.zapperFloatAccount === ZAPPER_FLOAT_ACCOUNT_NUMBER;
 
@@ -340,34 +353,35 @@ async function auditAndUpdateZapperTransactions() {
 
       if (needsFeeUpdate || !hasFeeBreakdown || !hasZapperFloat || !taxTx) {
         console.log(`   🔧 Needs correction:`);
-        if (needsFeeUpdate) console.log(`      - Fee is R${currentFee.toFixed(2)}, should be R${ZAPPER_DEFAULT_FEE_INCL_VAT.toFixed(2)}`);
+        if (needsFeeUpdate) console.log(`      - Fee is R${currentFee.toFixed(2)}, should be R${expectedFeeAmount.toFixed(2)} (tier: ${tierLevel})`);
         if (!hasFeeBreakdown) console.log(`      - Missing fee breakdown in metadata`);
         if (!hasZapperFloat) console.log(`      - Missing Zapper float account reference`);
         if (!taxTx) console.log(`      - Missing TaxTransaction record`);
 
         // Calculate correct fee breakdown
-        const feeBreakdown = calculateZapperFeeBreakdown(ZAPPER_DEFAULT_FEE_INCL_VAT);
-        const totalDebitAmount = Number((paymentAmount + ZAPPER_DEFAULT_FEE_INCL_VAT).toFixed(2));
+        const feeBreakdown = calculateZapperFeeBreakdown(expectedFeeAmount);
+        const totalDebitAmount = Number((paymentAmount + expectedFeeAmount).toFixed(2));
 
         // Update transaction
         await tx.update({
-          fee: ZAPPER_DEFAULT_FEE_INCL_VAT,
+          fee: expectedFeeAmount,
           metadata: {
             ...metadata,
             feeBreakdown: {
               feeInclVat: feeBreakdown.feeInclVat,
               vatAmount: feeBreakdown.vatAmount,
               netFeeAmount: feeBreakdown.netFeeAmount,
-              vatRate: VAT_RATE
+              vatRate: VAT_RATE,
+              tierLevel
             },
             zapperFloatAccount: ZAPPER_FLOAT_ACCOUNT_NUMBER,
             totalDebitAmount: totalDebitAmount,
             correctedAt: new Date().toISOString(),
-            correctionReason: 'Fee structure update - added R3.00 fee incl VAT'
+            correctionReason: 'Fee structure update - applied tier percentage fee (incl. Zapper cost)'
           }
         });
 
-        console.log(`   ✅ Updated transaction with fee: R${ZAPPER_DEFAULT_FEE_INCL_VAT.toFixed(2)}`);
+        console.log(`   ✅ Updated transaction with fee: R${expectedFeeAmount.toFixed(2)}`);
 
         // Credit Zapper float account (if not already credited)
         if (!hasZapperFloat) {
@@ -381,7 +395,7 @@ async function auditAndUpdateZapperTransactions() {
           const merchantName = metadata.merchantName || 'Unknown Merchant';
           try {
             await allocateZapperFeeAndVat({
-              feeInclVat: ZAPPER_DEFAULT_FEE_INCL_VAT,
+              feeInclVat: expectedFeeAmount,
               walletTransactionId: tx.transactionId,
               idempotencyKey: `ZAPPER-${tx.transactionId}`,
               userId: tx.userId,
@@ -397,7 +411,7 @@ async function auditAndUpdateZapperTransactions() {
           }
         }
 
-        totalFeeAmount += ZAPPER_DEFAULT_FEE_INCL_VAT;
+        totalFeeAmount += expectedFeeAmount;
         correctedCount++;
       } else {
         console.log(`   ✅ Transaction is correct`);
