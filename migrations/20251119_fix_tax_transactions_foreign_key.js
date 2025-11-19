@@ -39,6 +39,24 @@ module.exports = {
       `, { transaction });
 
       if (tables.length > 0) {
+        // First, ensure transactionId has a unique constraint/index (required for foreign key)
+        const [uniqueIndexes] = await queryInterface.sequelize.query(`
+          SELECT indexname
+          FROM pg_indexes
+          WHERE tablename = 'transactions'
+            AND indexdef LIKE '%transactionId%'
+            AND indexdef LIKE '%UNIQUE%'
+        `, { transaction });
+
+        if (uniqueIndexes.length === 0) {
+          // Create unique index on transactionId if it doesn't exist
+          await queryInterface.sequelize.query(`
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_transaction_id_unique
+            ON transactions("transactionId")
+            WHERE "transactionId" IS NOT NULL
+          `, { transaction });
+        }
+
         // Add the correct foreign key constraint
         await queryInterface.addConstraint('tax_transactions', {
           fields: ['originalTransactionId'],
