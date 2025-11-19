@@ -379,9 +379,10 @@ class QRPaymentController {
       
       // Fallback: Parse tip from URL if not in API response
       // URL format: [34|0.00|3,40|278|13 indicates tip enabled
-      // Pattern: 40|278|13 might indicate tip (40 = field code, 278 = tip percent * 10, 13 = ?)
+      // Pattern: 40|278|13 or 40|278| indicates tip (40 = field code, 278 = tip percent * 10)
       if (!tipEnabled) {
-        const tipMatch = qrCode.match(/40\|(\d+)\|/);
+        // More flexible regex to match 40|278|13 or 40|278| or 40|278,
+        const tipMatch = qrCode.match(/40\|(\d+)(?:\||,|:)/);
         if (tipMatch) {
           tipEnabled = true;
           // If tip percentage is encoded (e.g., 278 = 27.8%), divide by 10
@@ -392,6 +393,7 @@ class QRPaymentController {
           if (!defaultTipPercent || defaultTipPercent > 100 || defaultTipPercent < 0) {
             defaultTipPercent = 10;
           }
+          console.log(`✅ Tip detected from URL: ${tipEnabled}, defaultPercent: ${defaultTipPercent}`);
         }
       }
       
@@ -816,13 +818,13 @@ class QRPaymentController {
           transaction: t 
         });
 
-        // Create payment transaction record (shows payment amount to merchant)
+        // Create payment transaction record (shows invoice amount only, tip is in metadata but not displayed)
         const transactionId = `QR_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
         const paymentTransaction = await Transaction.create({
           transactionId: transactionId,
           userId: userId,
           walletId: wallet.walletId,
-          amount: finalAmount, // Payment amount (what user paid to merchant)
+          amount: paymentAmount, // Invoice amount (base payment excluding tip) - only this and fee are visible in history
           type: 'payment',
           status: 'completed',
           description: `QR Payment to ${merchantInfo.name}`,
@@ -835,9 +837,9 @@ class QRPaymentController {
             merchantName: merchantInfo.name,
             zapperDecoded: zapperDecoded,
             zapperData: decodedData.zapperData || null,
-            paymentAmount: paymentAmount, // Base payment amount (excluding tip)
-            tipAmount: tip, // Tip amount (if any)
-            totalAmount: finalAmount, // Payment + tip
+            paymentAmount: paymentAmount, // Base payment amount (excluding tip) - shown in transaction history
+            tipAmount: tip, // Tip amount (if any) - stored in metadata but NOT displayed in transaction history
+            totalAmount: finalAmount, // Payment + tip - for internal accounting only
             tierFeeBreakdown: {
               tierLevel: fees.tierLevel,
               supplierCost: fees.display.supplierCost,

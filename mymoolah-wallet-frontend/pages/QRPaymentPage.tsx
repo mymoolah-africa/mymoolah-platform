@@ -66,6 +66,7 @@ export function QRPaymentPage() {
     customReferenceLabel?: string | null;
   } | null>(null);
   const [tipAmount, setTipAmount] = useState<string>('');
+  const [selectedTipPercent, setSelectedTipPercent] = useState<number | null>(null); // 5, 10, 15, 20 or null
   const [customReference, setCustomReference] = useState<string>('');
 
   // Helper functions to determine field visibility based on QR type
@@ -112,9 +113,26 @@ export function QRPaymentPage() {
     return pendingPaymentData.amount ? pendingPaymentData.amount.toFixed(2) : '0.00';
   };
 
+  const getBaseAmount = (): number => {
+    return parseFloat(confirmAmount || '0') || pendingPaymentData?.amount || 0;
+  };
+
+  const getTipAmount = (): number => {
+    // If Own Amount is entered, use that
+    if (tipAmount && tipAmount.trim() !== '') {
+      return parseFloat(tipAmount) || 0;
+    }
+    // If percentage button is selected, calculate from base amount
+    if (selectedTipPercent !== null) {
+      const base = getBaseAmount();
+      return (base * selectedTipPercent) / 100;
+    }
+    return 0;
+  };
+
   const getTotalPaymentAmount = (): number => {
-    const amount = parseFloat(confirmAmount || '0') || pendingPaymentData?.amount || 0;
-    const tip = parseFloat(tipAmount || '0') || 0;
+    const amount = getBaseAmount();
+    const tip = getTipAmount();
     return amount + tip;
   };
 
@@ -680,8 +698,9 @@ export function QRPaymentPage() {
           customReferenceLabel: customReferenceLabel
         });
         setConfirmAmount(paymentAmount > 0 ? paymentAmount.toString() : '');
-        // Initialize tip amount if tip is enabled (default to 0, user can enter)
+        // Initialize tip state if tip is enabled (no default selection, user must choose)
         setTipAmount(tipEnabled ? '' : '');
+        setSelectedTipPercent(null); // Reset tip percentage selection
         // Initialize custom reference if editable (pre-populate with reference value)
         setCustomReference(referenceEditable && validationResult.paymentDetails.reference ? validationResult.paymentDetails.reference : '');
         setShowConfirmModal(true);
@@ -736,8 +755,8 @@ export function QRPaymentPage() {
       setIsProcessing(true);
       
       // Get amount from confirm modal (user may have edited it) or use pre-populated amount
-      const paymentAmount = parseFloat(confirmAmount || '0') || pendingPaymentData.amount || 0;
-      const tip = parseFloat(tipAmount || '0') || 0;
+      const paymentAmount = getBaseAmount();
+      const tip = getTipAmount();
       
       if (paymentAmount <= 0) {
         setError('Payment amount must be greater than 0.');
@@ -1847,7 +1866,7 @@ export function QRPaymentPage() {
                   textAlign: 'center'
                 }}
               >
-                {pendingPaymentData.tipEnabled && tipAmount ? (
+                {pendingPaymentData.tipEnabled && (selectedTipPercent !== null || (tipAmount && tipAmount.trim() !== '')) ? (
                   <>
                     Pay R{getTotalPaymentAmount().toFixed(2)} to {pendingPaymentData.merchant.name}
                   </>
@@ -1857,34 +1876,6 @@ export function QRPaymentPage() {
                   </>
                 )}
               </p>
-              {pendingPaymentData.tipEnabled && tipAmount && (
-                <>
-                  <p
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: '#475569',
-                      margin: '4px 0 0 0',
-                      textAlign: 'center'
-                    }}
-                  >
-                    TIP: R{parseFloat(tipAmount || '0').toFixed(2)}
-                  </p>
-                  <p
-                    style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: '#475569',
-                      margin: '4px 0 0 0',
-                      textAlign: 'center'
-                    }}
-                  >
-                    PAYMENT (EXCLUDING TIP): R{getDisplayAmount()}
-                  </p>
-                </>
-              )}
               {shouldShowReferenceInSummary() && (
                 <p
                   style={{
@@ -1943,7 +1934,7 @@ export function QRPaymentPage() {
                     color: '#1f2937'
                   }}
                 >
-                  Total Amount (ZAR)
+                  Total Amount
                 </Label>
                 <Input
                   type="number"
@@ -1966,7 +1957,7 @@ export function QRPaymentPage() {
             
             {/* Tip Field - Only shown when tip is enabled */}
             {shouldShowTipField() && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <Label 
                   style={{
                     fontFamily: 'Montserrat, sans-serif',
@@ -1975,49 +1966,105 @@ export function QRPaymentPage() {
                     color: '#1f2937'
                   }}
                 >
-                  Tip {pendingPaymentData.defaultTipPercent ? `(Default: ${pendingPaymentData.defaultTipPercent}%)` : ''}
+                  Tip
                 </Label>
-                <Input
-                  type="number"
-                  value={tipAmount}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setTipAmount(value);
-                    // Auto-calculate tip if user enters percentage or if default percent is set
-                    if (pendingPaymentData.defaultTipPercent && confirmAmount) {
-                      const amount = parseFloat(confirmAmount);
-                      if (amount > 0) {
-                        // If user clears the field, show empty
-                        if (value === '') {
-                          setTipAmount('');
-                        } else {
-                          // Allow user to enter either amount or percentage
-                          // If value is small (< 100), treat as percentage
-                          const tipValue = parseFloat(value);
-                          if (tipValue < 100 && tipValue > 0) {
-                            // Treat as percentage
-                            const calculatedTip = (amount * tipValue) / 100;
-                            setTipAmount(calculatedTip.toFixed(2));
+                
+                {/* Tip Percentage Buttons - Horizontal Layout */}
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
+                  {[5, 10, 15, 20].map((percent) => (
+                    <button
+                      key={percent}
+                      type="button"
+                      onClick={() => {
+                        setSelectedTipPercent(percent);
+                        setTipAmount(''); // Clear Own Amount when percentage is selected
+                      }}
+                      style={{
+                        flex: '1',
+                        minWidth: '60px',
+                        height: '44px',
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: selectedTipPercent === percent ? '#ffffff' : '#1f2937',
+                        backgroundColor: selectedTipPercent === percent ? '#3b82f6' : '#f3f4f6',
+                        border: selectedTipPercent === percent ? '2px solid #3b82f6' : '2px solid #e5e7eb',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedTipPercent !== percent) {
+                          e.currentTarget.style.backgroundColor = '#e5e7eb';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedTipPercent !== percent) {
+                          e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        }
+                      }}
+                    >
+                      {percent}%
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Own Amount Field - Below buttons */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Label 
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#6b7280'
+                    }}
+                  >
+                    Own Amount
+                  </Label>
+                  <Input
+                    type="number"
+                    value={tipAmount}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const baseAmount = getBaseAmount();
+                      const maxTip = baseAmount; // 100% of base amount
+                      
+                      if (value === '') {
+                        setTipAmount('');
+                        setSelectedTipPercent(null); // Clear percentage selection
+                      } else {
+                        const tipValue = parseFloat(value);
+                        if (!isNaN(tipValue) && tipValue >= 0) {
+                          // Validate: limit to 100% of base amount
+                          if (tipValue > maxTip) {
+                            setTipAmount(maxTip.toFixed(2));
+                          } else {
+                            setTipAmount(value);
                           }
-                          // Otherwise treat as absolute amount
+                          setSelectedTipPercent(null); // Clear percentage selection when Own Amount is used
                         }
                       }
-                    }
-                  }}
-                  placeholder={pendingPaymentData.defaultTipPercent && confirmAmount ? 
-                    `Auto: R${((parseFloat(confirmAmount || '0') * (pendingPaymentData.defaultTipPercent || 10)) / 100).toFixed(2)}` : 
-                    "0.00"}
-                  min="0"
-                  step="0.01"
-                  style={{
-                    width: '200px',
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px',
-                    padding: '8px 12px'
-                  }}
-                />
+                    }}
+                    onFocus={() => {
+                      setSelectedTipPercent(null); // Clear percentage selection when Own Amount is focused
+                    }}
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    max={getBaseAmount()}
+                    style={{
+                      width: '200px',
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '8px',
+                      padding: '8px 12px'
+                    }}
+                  />
+                </div>
               </div>
             )}
             
