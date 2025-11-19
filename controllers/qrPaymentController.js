@@ -34,11 +34,17 @@ function calculateZapperFeeBreakdown(feeInclVat) {
 }
 
 /**
- * Allocate Zapper fee to VAT control and MM revenue accounts (banking-grade)
- * Similar to allocateCommissionAndVat for VAS transactions
+ * Allocate Zapper fees with proper input and output VAT tracking (banking-grade)
+ * Creates separate TaxTransaction records for input VAT (paid to Zapper) and output VAT (charged to user)
+ * Posts ledger entries with proper VAT separation for reconciliation
  */
 async function allocateZapperFeeAndVat({
-  feeInclVat,
+  mmFeeExclVat,
+  mmFeeInclVat,
+  mmVat,
+  supplierCostExclVat,
+  supplierCostInclVat,
+  supplierVat,
   walletTransactionId,
   idempotencyKey,
   userId,
@@ -46,49 +52,93 @@ async function allocateZapperFeeAndVat({
   merchantName
 }) {
   try {
-    if (!feeInclVat || feeInclVat <= 0) {
+    if (!mmFeeExclVat || mmFeeExclVat <= 0) {
       return; // No fee to allocate
     }
 
-    const feeBreakdown = calculateZapperFeeBreakdown(feeInclVat);
-    const { vatAmount, netFeeAmount } = feeBreakdown;
-
-    // Create TaxTransaction record for VAT tracking
-    const taxTransactionId = `TAX-ZAPPER-${uuidv4()}`;
     const now = new Date();
     const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
 
-    const taxPayload = {
-      taxTransactionId,
-      originalTransactionId: walletTransactionId,
-      taxCode: 'VAT_15',
-      taxName: 'VAT 15%',
-      taxType: 'vat',
-      baseAmount: netFeeAmount,
-      taxAmount: vatAmount,
-      totalAmount: feeInclVat,
-      taxRate: VAT_RATE,
-      calculationMethod: 'inclusive',
-      businessContext: 'wallet_user',
-      transactionType: 'zapper_qr_payment',
-      entityId: 'ZAPPER',
-      entityType: 'payment_processor',
-      taxPeriod,
-      taxYear: now.getFullYear(),
-      status: 'calculated',
-      metadata: {
-        idempotencyKey,
-        userId,
-        vatRate: VAT_RATE,
-        paymentAmount,
-        merchantName
-      },
-    };
+    // Create TaxTransaction record for INPUT VAT (paid to Zapper - claimable)
+    if (supplierVat > 0) {
+      const inputTaxTransactionId = `TAX-ZAPPER-INPUT-${uuidv4()}`;
+      const inputTaxPayload = {
+        taxTransactionId: inputTaxTransactionId,
+        originalTransactionId: walletTransactionId,
+        taxCode: 'VAT_15',
+        taxName: 'VAT 15% (Input)',
+        taxType: 'vat',
+        baseAmount: supplierCostExclVat,
+        taxAmount: supplierVat,
+        totalAmount: supplierCostInclVat,
+        taxRate: VAT_RATE,
+        calculationMethod: 'exclusive',
+        businessContext: 'wallet_user',
+        transactionType: 'zapper_qr_payment',
+        entityId: 'ZAPPER',
+        entityType: 'supplier',
+        taxPeriod,
+        taxYear: now.getFullYear(),
+        status: 'calculated',
+        vat_direction: 'input',
+        supplier_code: 'ZAPPER',
+        is_claimable: true,
+        metadata: {
+          idempotencyKey,
+          userId,
+          vatRate: VAT_RATE,
+          paymentAmount,
+          merchantName,
+          vatType: 'input'
+        },
+      };
 
-    try {
-      await TaxTransaction.create(taxPayload);
-    } catch (taxErr) {
-      console.error('⚠️ Failed to persist tax transaction for Zapper fee:', taxErr.message);
+      try {
+        await TaxTransaction.create(inputTaxPayload);
+      } catch (taxErr) {
+        console.error('⚠️ Failed to persist input VAT transaction:', taxErr.message);
+      }
+    }
+
+    // Create TaxTransaction record for OUTPUT VAT (charged to user - payable)
+    if (mmVat > 0) {
+      const outputTaxTransactionId = `TAX-ZAPPER-OUTPUT-${uuidv4()}`;
+      const outputTaxPayload = {
+        taxTransactionId: outputTaxTransactionId,
+        originalTransactionId: walletTransactionId,
+        taxCode: 'VAT_15',
+        taxName: 'VAT 15% (Output)',
+        taxType: 'vat',
+        baseAmount: mmFeeExclVat,
+        taxAmount: mmVat,
+        totalAmount: mmFeeInclVat,
+        taxRate: VAT_RATE,
+        calculationMethod: 'exclusive',
+        businessContext: 'wallet_user',
+        transactionType: 'zapper_qr_payment',
+        entityId: 'ZAPPER',
+        entityType: 'payment_processor',
+        taxPeriod,
+        taxYear: now.getFullYear(),
+        status: 'calculated',
+        vat_direction: 'output',
+        supplier_code: null,
+        is_claimable: false,
+        metadata: {
+          idempotencyKey,
+          userId,
+          vatRate: VAT_RATE,
+          paymentAmount,
+          merchantName,
+          vatType: 'output'
+        },
+      };
+
+      try {
+        await TaxTransaction.create(outputTaxPayload);
+      } catch (taxErr) {
+        console.error('⚠️ Failed to persist output VAT transaction:', taxErr.message);
+      }
     }
 
     // Post ledger entries for VAT and revenue allocation
@@ -105,20 +155,26 @@ async function allocateZapperFeeAndVat({
             {
               accountCode: LEDGER_ACCOUNT_MM_COMMISSION_CLEARING,
               dc: 'debit',
-              amount: feeInclVat,
-              memo: 'Zapper fee clearing',
+              amount: mmFeeInclVat,
+              memo: 'MM fee clearing (VAT inclusive)',
             },
             {
               accountCode: LEDGER_ACCOUNT_VAT_CONTROL,
               dc: 'credit',
-              amount: vatAmount,
-              memo: 'VAT payable on Zapper fee (15%)',
+              amount: mmVat,
+              memo: 'Output VAT payable (charged to user)',
+            },
+            {
+              accountCode: LEDGER_ACCOUNT_VAT_CONTROL,
+              dc: 'debit',
+              amount: supplierVat,
+              memo: 'Input VAT claimable (paid to Zapper)',
             },
             {
               accountCode: LEDGER_ACCOUNT_COMMISSION_REVENUE,
               dc: 'credit',
-              amount: netFeeAmount,
-              memo: 'Zapper fee revenue (net of VAT)',
+              amount: mmFeeExclVat,
+              memo: 'MM fee revenue (net of VAT)',
             },
           ],
         });
@@ -744,10 +800,15 @@ class QRPaymentController {
       );
 
       // Convert back to Rands for wallet operations
+      // Use VAT-inclusive amounts for user-facing and supplier crediting
       const totalDebitAmount = fees.totalUserPaysCents / 100;
       const feeInclVat = fees.totalFeeCents / 100;
-      const supplierCost = fees.supplierCostCents / 100;
-      const mmFee = fees.mmFeeCents / 100;
+      const supplierCostInclVat = fees.supplierCostInclVatCents / 100; // VAT-inclusive (what we pay Zapper)
+      const mmFeeInclVat = fees.mmFeeInclVatCents / 100; // VAT-inclusive (what user pays)
+      const supplierCostExclVat = fees.supplierCostCents / 100; // VAT-exclusive (base cost)
+      const mmFeeExclVat = fees.mmFeeCents / 100; // VAT-exclusive (base fee)
+      const supplierVat = fees.supplierVatCents / 100; // Input VAT (claimable)
+      const mmVat = fees.mmVatCents / 100; // Output VAT (payable)
 
       // Check sufficient balance (payment amount + total fee)
       if (parseFloat(wallet.balance) < totalDebitAmount) {
@@ -810,9 +871,9 @@ class QRPaymentController {
         // Credit Zapper float account with:
         // 1. Payment amount (goes to merchant)
         // 2. Tip amount (goes to merchant)
-        // 3. Zapper's pass-through fee (supplier cost)
+        // 3. Zapper's pass-through fee (supplier cost + VAT) - VAT inclusive
         // MM's fee stays as revenue
-        const zapperTotalAmount = finalAmount + supplierCost; // finalAmount already includes tip
+        const zapperTotalAmount = finalAmount + supplierCostInclVat; // finalAmount already includes tip, supplierCostInclVat includes VAT
         await zapperFloat.increment('currentBalance', { 
           by: zapperTotalAmount, 
           transaction: t 
@@ -842,8 +903,12 @@ class QRPaymentController {
             totalAmount: finalAmount, // Payment + tip - for internal accounting only
             tierFeeBreakdown: {
               tierLevel: fees.tierLevel,
-              supplierCost: fees.display.supplierCost,
-              mmFee: fees.display.mmFee,
+              supplierCost: fees.display.supplierCost, // VAT-inclusive (what we pay)
+              supplierCostExclVat: (fees.supplierCostCents / 100).toFixed(2),
+              supplierVat: fees.display.supplierVat,
+              mmFee: fees.display.mmFee, // VAT-inclusive (what user pays)
+              mmFeeExclVat: (fees.mmFeeCents / 100).toFixed(2),
+              mmVat: fees.display.mmVat,
               totalFee: fees.display.totalFee,
               mmNetRevenue: fees.display.netRevenue
             },
@@ -870,13 +935,16 @@ class QRPaymentController {
             originalTransactionId: transactionId,
             tierLevel: fees.tierLevel,
             tierFeeBreakdown: {
-              supplierCost: fees.display.supplierCost,
-              supplierCostCents: fees.supplierCostCents,
-              mmFee: fees.display.mmFee,
-              mmFeeCents: fees.mmFeeCents,
+              supplierCost: fees.display.supplierCost, // VAT-inclusive
+              supplierCostExclVat: fees.supplierCostCents,
+              supplierCostInclVat: fees.supplierCostInclVatCents,
+              supplierVat: fees.supplierVatCents,
+              mmFee: fees.display.mmFee, // VAT-inclusive
+              mmFeeExclVat: fees.mmFeeCents,
+              mmFeeInclVat: fees.mmFeeInclVatCents,
+              mmVat: fees.mmVatCents, // Output VAT
               totalFee: fees.display.totalFee,
               totalFeeCents: fees.totalFeeCents,
-              mmVatAmount: fees.display.netRevenue, // VAT on MM's fee only
               mmNetRevenue: fees.mmFeeNetRevenue
             },
             isZapperFee: true,
@@ -893,8 +961,12 @@ class QRPaymentController {
           merchant: merchantInfo,
           amount: finalAmount,
           fee: feeInclVat,
-          mmFee: mmFee,
-          supplierCost: supplierCost,
+          mmFee: mmFeeInclVat, // VAT-inclusive (what user pays)
+          mmFeeExclVat: mmFeeExclVat, // VAT-exclusive (base fee)
+          supplierCost: supplierCostInclVat, // VAT-inclusive (what we pay Zapper)
+          supplierCostExclVat: supplierCostExclVat, // VAT-exclusive (base cost)
+          supplierVat: supplierVat, // Input VAT (claimable)
+          mmVat: mmVat, // Output VAT (payable)
           tierLevel: fees.tierLevel,
           reference: finalReference,
           zapperFloat,
@@ -903,16 +975,21 @@ class QRPaymentController {
       });
       dbTransactionTime = Date.now() - dbTransactionStart;
 
-      // Allocate MM's fee (only) to VAT control and revenue accounts (non-blocking)
-      // Zapper's cost is pass-through and goes to supplier float
+      // Allocate fees with proper input and output VAT tracking (non-blocking)
+      // Creates separate TaxTransaction records for input VAT (Zapper) and output VAT (MM)
       const idempotencyKey = `ZAPPER-${result.transaction.transactionId}`;
       setImmediate(async () => {
         await allocateZapperFeeAndVat({
-          feeInclVat: result.mmFee, // Only MM's portion, not Zapper's cost
+          mmFeeExclVat: result.mmFeeExclVat,
+          mmFeeInclVat: result.mmFee,
+          mmVat: result.mmVat,
+          supplierCostExclVat: result.supplierCostExclVat,
+          supplierCostInclVat: result.supplierCost,
+          supplierVat: result.supplierVat,
           walletTransactionId: result.transaction.transactionId,
           idempotencyKey,
           userId,
-          paymentAmount: finalAmount,
+          paymentAmount: paymentAmount,
           merchantName: merchantInfo.name
         });
       });

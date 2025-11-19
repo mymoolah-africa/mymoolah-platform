@@ -93,15 +93,19 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
 
     const tierLevel = await determineUserTierLevel(userId);
     
-    // Get fee configuration from database
+    // Get fee configuration from database (including VAT settings)
     const [config] = await sequelize.query(`
       SELECT 
         supplier_fee_type,
         supplier_fixed_fee_cents,
         supplier_percentage_fee,
+        supplier_vat_rate,
+        supplier_vat_inclusive,
         mm_fee_type,
         mm_fixed_fee_cents,
-        mm_percentage_fee
+        mm_percentage_fee,
+        mm_vat_rate,
+        mm_vat_inclusive
       FROM supplier_tier_fees
       WHERE supplier_code = :supplierCode
         AND service_type = :serviceType
@@ -122,59 +126,98 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
       );
     }
     
-    // Calculate supplier's cost to MM
-    let supplierCostCents = 0;
+    // Get VAT rates (default to 0.15 if not set)
+    const supplierVatRate = parseFloat(config.supplier_vat_rate) || VAT_RATE;
+    const mmVatRate = parseFloat(config.mm_vat_rate) || VAT_RATE;
+    const supplierVatInclusive = config.supplier_vat_inclusive || false;
+    const mmVatInclusive = config.mm_vat_inclusive !== undefined ? config.mm_vat_inclusive : true;
+    
+    // Calculate supplier's cost to MM (VAT EXCLUSIVE - base amount)
+    let supplierCostExclVatCents = 0;
     
     switch (config.supplier_fee_type) {
       case 'fixed':
-        supplierCostCents = parseInt(config.supplier_fixed_fee_cents) || 0;
+        supplierCostExclVatCents = parseInt(config.supplier_fixed_fee_cents) || 0;
+        // If stored as inclusive, extract exclusive amount
+        if (supplierVatInclusive) {
+          supplierCostExclVatCents = Math.round(supplierCostExclVatCents / (1 + supplierVatRate));
+        }
         break;
         
       case 'percentage':
-        supplierCostCents = Math.round(
+        supplierCostExclVatCents = Math.round(
           transactionAmountCents * parseFloat(config.supplier_percentage_fee)
         );
+        // If stored as inclusive, extract exclusive amount
+        if (supplierVatInclusive) {
+          supplierCostExclVatCents = Math.round(supplierCostExclVatCents / (1 + supplierVatRate));
+        }
         break;
         
       case 'hybrid':
-        supplierCostCents = (parseInt(config.supplier_fixed_fee_cents) || 0) + 
-          Math.round(transactionAmountCents * parseFloat(config.supplier_percentage_fee));
+        const fixedPart = parseInt(config.supplier_fixed_fee_cents) || 0;
+        const percentagePart = Math.round(transactionAmountCents * parseFloat(config.supplier_percentage_fee));
+        supplierCostExclVatCents = fixedPart + percentagePart;
+        // If stored as inclusive, extract exclusive amount
+        if (supplierVatInclusive) {
+          supplierCostExclVatCents = Math.round(supplierCostExclVatCents / (1 + supplierVatRate));
+        }
         break;
         
       default:
         throw new Error(`Invalid supplier fee type: ${config.supplier_fee_type}`);
     }
     
-    // Calculate MM's fee to user
-    let mmFeeCents = 0;
+    // Calculate supplier VAT (input VAT - claimable)
+    const supplierVatCents = Math.round(supplierCostExclVatCents * supplierVatRate);
+    const supplierCostInclVatCents = supplierCostExclVatCents + supplierVatCents;
+    
+    // Calculate MM's fee to user (VAT EXCLUSIVE - base amount)
+    let mmFeeExclVatCents = 0;
     
     switch (config.mm_fee_type) {
       case 'fixed':
-        mmFeeCents = parseInt(config.mm_fixed_fee_cents) || 0;
+        mmFeeExclVatCents = parseInt(config.mm_fixed_fee_cents) || 0;
+        // If stored as inclusive, extract exclusive amount
+        if (mmVatInclusive) {
+          mmFeeExclVatCents = Math.round(mmFeeExclVatCents / (1 + mmVatRate));
+        }
         break;
         
       case 'percentage':
-        mmFeeCents = Math.round(
+        mmFeeExclVatCents = Math.round(
           transactionAmountCents * parseFloat(config.mm_percentage_fee)
         );
+        // If stored as inclusive, extract exclusive amount
+        if (mmVatInclusive) {
+          mmFeeExclVatCents = Math.round(mmFeeExclVatCents / (1 + mmVatRate));
+        }
         break;
         
       case 'hybrid':
-        mmFeeCents = (parseInt(config.mm_fixed_fee_cents) || 0) + 
-          Math.round(transactionAmountCents * parseFloat(config.mm_percentage_fee));
+        const mmFixedPart = parseInt(config.mm_fixed_fee_cents) || 0;
+        const mmPercentagePart = Math.round(transactionAmountCents * parseFloat(config.mm_percentage_fee));
+        mmFeeExclVatCents = mmFixedPart + mmPercentagePart;
+        // If stored as inclusive, extract exclusive amount
+        if (mmVatInclusive) {
+          mmFeeExclVatCents = Math.round(mmFeeExclVatCents / (1 + mmVatRate));
+        }
         break;
         
       default:
         throw new Error(`Invalid MM fee type: ${config.mm_fee_type}`);
     }
     
-    // Calculate totals
-    const totalFeeCents = supplierCostCents + mmFeeCents;
+    // Calculate MM VAT (output VAT - payable)
+    const mmVatCents = Math.round(mmFeeExclVatCents * mmVatRate);
+    const mmFeeInclVatCents = mmFeeExclVatCents + mmVatCents;
+    
+    // Calculate totals (using VAT-inclusive amounts for user-facing totals)
+    const totalFeeCents = supplierCostInclVatCents + mmFeeInclVatCents;
     const totalUserPaysCents = transactionAmountCents + totalFeeCents;
     
-    // Calculate VAT breakdown (on MM's fee only - supplier cost is pass-through)
-    const mmFeeVatAmount = Math.round((mmFeeCents * VAT_RATE) / (1 + VAT_RATE));
-    const mmFeeNetRevenue = mmFeeCents - mmFeeVatAmount;
+    // MM's net revenue (exclusive of VAT)
+    const mmFeeNetRevenue = mmFeeExclVatCents;
     
     // Return complete breakdown
     return {
@@ -183,12 +226,23 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
       serviceType,
       tierLevel,
       
-      // Amounts (in cents)
+      // Amounts (in cents) - VAT EXCLUSIVE (base amounts)
       transactionAmountCents,
-      supplierCostCents,
-      mmFeeCents,
-      mmFeeVatAmount,
+      supplierCostCents: supplierCostExclVatCents, // Base cost (VAT exclusive)
+      mmFeeCents: mmFeeExclVatCents, // Base fee (VAT exclusive)
+      
+      // VAT amounts
+      supplierVatCents, // Input VAT (paid to supplier, claimable)
+      mmVatCents, // Output VAT (charged to user, payable)
+      
+      // VAT-inclusive amounts (for crediting supplier and charging user)
+      supplierCostInclVatCents, // Total to credit supplier float
+      mmFeeInclVatCents, // Total to charge user
+      
+      // Net revenue (MM's fee exclusive of VAT)
       mmFeeNetRevenue,
+      
+      // Totals (VAT inclusive for user-facing)
       totalFeeCents,
       totalUserPaysCents,
       
@@ -197,20 +251,27 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
         supplierFeeType: config.supplier_fee_type,
         supplierFixedFeeCents: config.supplier_fixed_fee_cents,
         supplierPercentageFee: config.supplier_percentage_fee,
+        supplierVatRate: supplierVatRate,
+        supplierVatInclusive: supplierVatInclusive,
         mmFeeType: config.mm_fee_type,
         mmFixedFeeCents: config.mm_fixed_fee_cents,
-        mmPercentageFee: config.mm_percentage_fee
+        mmPercentageFee: config.mm_percentage_fee,
+        mmVatRate: mmVatRate,
+        mmVatInclusive: mmVatInclusive
       },
       
-      // Display values (in Rands for frontend)
+      // Display values (in Rands for frontend - VAT inclusive for user-facing)
       display: {
         transactionAmount: formatCentsToRands(transactionAmountCents),
-        supplierCost: formatCentsToRands(supplierCostCents),
-        mmFee: formatCentsToRands(mmFeeCents),
+        supplierCost: formatCentsToRands(supplierCostInclVatCents), // Show inclusive (what we pay supplier)
+        mmFee: formatCentsToRands(mmFeeInclVatCents), // Show inclusive (what user pays)
         totalFee: formatCentsToRands(totalFeeCents),
         totalUserPays: formatCentsToRands(totalUserPaysCents),
         netRevenue: formatCentsToRands(mmFeeNetRevenue),
-        tierLevel: tierLevel.charAt(0).toUpperCase() + tierLevel.slice(1)
+        tierLevel: tierLevel.charAt(0).toUpperCase() + tierLevel.slice(1),
+        // VAT breakdown for display
+        supplierVat: formatCentsToRands(supplierVatCents),
+        mmVat: formatCentsToRands(mmVatCents)
       }
     };
     
