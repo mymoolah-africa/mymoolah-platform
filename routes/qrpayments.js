@@ -73,7 +73,8 @@ router.post('/payment/initiate', authMiddleware, [
   body('qrCode').notEmpty().withMessage('QR code is required'),
   body('amount').isNumeric().withMessage('Amount must be numeric'),
   body('walletId').notEmpty().withMessage('Wallet ID is required'),
-  body('reference').optional().isString().withMessage('Reference must be string')
+  body('reference').optional().isString().withMessage('Reference must be string'),
+  body('tipAmount').optional().isNumeric().withMessage('Tip amount must be numeric')
 ], qrPaymentController.initiatePayment.bind(qrPaymentController));
 
 /**
