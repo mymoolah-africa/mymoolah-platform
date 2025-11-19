@@ -241,29 +241,29 @@ module.exports = {
 
     // Add foreign key constraints only if referenced tables exist
     try {
-      const [mymoolahTxExists] = await queryInterface.sequelize.query(`
+      const [transactionsExists] = await queryInterface.sequelize.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_schema = 'public' 
-          AND table_name = 'mymoolah_transactions'
+          AND table_name = 'transactions'
         ) as exists;
       `);
 
-      if (mymoolahTxExists[0]?.exists === true) {
+      if (transactionsExists[0]?.exists === true) {
         try {
           await queryInterface.addConstraint('tax_transactions', {
             fields: ['originalTransactionId'],
             type: 'foreign key',
             name: 'tax_transactions_originalTransactionId_fkey',
             references: {
-              table: 'mymoolah_transactions',
+              table: 'transactions',
               field: 'transactionId'
             },
             onDelete: 'CASCADE',
             onUpdate: 'CASCADE'
           });
         } catch (fkError) {
-          console.log('⚠️ Could not add foreign key to mymoolah_transactions:', fkError.message);
+          console.log('⚠️ Could not add foreign key to transactions:', fkError.message);
         }
       }
 
