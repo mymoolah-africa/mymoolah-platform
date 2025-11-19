@@ -239,6 +239,64 @@ module.exports = {
     await queryInterface.addIndex('tax_transactions', ['status']);
     await queryInterface.addIndex('tax_transactions', ['createdAt']);
 
+    // Add foreign key constraints only if referenced tables exist
+    try {
+      const [mymoolahTxExists] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'mymoolah_transactions'
+        ) as exists;
+      `);
+
+      if (mymoolahTxExists[0]?.exists === true) {
+        try {
+          await queryInterface.addConstraint('tax_transactions', {
+            fields: ['originalTransactionId'],
+            type: 'foreign key',
+            name: 'tax_transactions_originalTransactionId_fkey',
+            references: {
+              table: 'mymoolah_transactions',
+              field: 'transactionId'
+            },
+            onDelete: 'CASCADE',
+            onUpdate: 'CASCADE'
+          });
+        } catch (fkError) {
+          console.log('⚠️ Could not add foreign key to mymoolah_transactions:', fkError.message);
+        }
+      }
+
+      const [taxConfigExists] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'tax_configurations'
+        ) as exists;
+      `);
+
+      if (taxConfigExists[0]?.exists === true) {
+        try {
+          await queryInterface.addConstraint('tax_transactions', {
+            fields: ['taxCode'],
+            type: 'foreign key',
+            name: 'tax_transactions_taxCode_fkey',
+            references: {
+              table: 'tax_configurations',
+              field: 'taxCode'
+            },
+            onDelete: 'RESTRICT',
+            onUpdate: 'CASCADE'
+          });
+        } catch (fkError) {
+          console.log('⚠️ Could not add foreign key to tax_configurations:', fkError.message);
+        }
+      }
+    } catch (constraintError) {
+      console.log('⚠️ Could not add foreign key constraints:', constraintError.message);
+      console.log('⚠️ Table created but foreign keys skipped. They can be added later.');
+    }
+
     console.log('✅ tax_transactions table created successfully.');
   },
 
