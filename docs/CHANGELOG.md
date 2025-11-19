@@ -1,6 +1,29 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-11-18 (Latest)
+## 2025-11-19 (Latest)
+- **Zapper VAT Transaction Fee & Referential Integrity**: Implemented comprehensive VAT calculation for Zapper transaction fees with proper input/output VAT tracking, created database schema for VAT reconciliation, and enforced banking-grade referential integrity with foreign key constraints.
+
+**Zapper VAT Transaction Fee & Referential Integrity**:
+- **VAT Calculation System**: Complete VAT calculation with exclusive/inclusive amounts, input/output VAT tracking
+- **Database Schema**: Added VAT tracking columns to supplier_tier_fees, VAT direction enum to tax_transactions, supplier_vat_reconciliation table
+- **Referential Integrity**: Created unique constraint on transactions.transactionId and foreign key constraint on tax_transactions.originalTransactionId
+- **Fee Structure**: Updated to VAT-inclusive percentages (Bronze 1.265%, Silver 1.15%, Gold 0.92%, Platinum 0.69%)
+- **Zapper Fee**: 0.4% VAT-exclusive (0.46% VAT-inclusive) properly allocated to Zapper float account
+- **VAT Transactions**: Two TaxTransaction records created per payment - input VAT (supplier, claimable) and output VAT (MM, payable)
+- **Status**: ✅ All VAT calculations working correctly, ✅ Referential integrity enforced, ✅ Payment processing tested successfully
+
+**Files Updated**:
+- `services/tierFeeService.js` - Added comprehensive VAT calculation logic for all fee types
+- `controllers/qrPaymentController.js` - Updated VAT allocation to create separate input/output VAT transactions
+- `migrations/20251119_add_vat_tracking_to_supplier_tier_fees.js` - Added VAT columns
+- `migrations/20251119_add_vat_direction_to_tax_transactions.js` - Added VAT direction tracking
+- `migrations/20251119_create_supplier_vat_reconciliation.js` - Created VAT reconciliation table
+- `migrations/20251119_ensure_tax_transactions_table_exists.js` - Ensured tax_transactions table exists
+- `migrations/20251119_fix_tax_transactions_foreign_key.js` - Fixed foreign key constraint
+- `migrations/20251119_ensure_tax_transactions_foreign_key_integrity.js` - Final referential integrity migration
+- `routes/qrpayments.js` - Added tipAmount validation
+
+## 2025-11-18
 - **GPT-5 Upgrade & Codebase Sweep Optimization**: Upgraded all OpenAI models from GPT-4/GPT-5.0 to GPT-5, fixed API compatibility issues, added codebase sweep disable feature, and improved startup performance.
 
 **GPT-5 Upgrade & Codebase Sweep Optimization**:
