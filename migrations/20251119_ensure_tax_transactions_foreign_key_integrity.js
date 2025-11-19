@@ -104,6 +104,44 @@ module.exports = {
       } catch (indexError) {
         if (indexError.message.includes('already exists') || indexError.message.includes('duplicate key value')) {
           console.log('✅ Unique index already exists');
+        } else if (indexError.message.includes('permission') || indexError.message.includes('owner')) {
+          // Permission denied - check if index exists (maybe created by DBA)
+          console.warn('⚠️ Permission denied to create index. Checking if index exists...');
+          
+          const [recheckIndexes] = await queryInterface.sequelize.query(`
+            SELECT indexname, indexdef
+            FROM pg_indexes
+            WHERE tablename = 'transactions'
+              AND schemaname = 'public'
+              AND (
+                indexname LIKE '%transaction_id%' OR 
+                indexdef LIKE '%transactionId%'
+              )
+          `);
+          
+          const hasUniqueIndexAfterCheck = recheckIndexes.some(idx => 
+            idx.indexdef && (
+              idx.indexdef.includes('UNIQUE') || 
+              idx.indexname === 'idx_transactions_transaction_id' ||
+              idx.indexname === 'idx_transactions_transaction_id_unique'
+            )
+          );
+          
+          if (hasUniqueIndexAfterCheck) {
+            console.log('✅ Unique index exists (created by DBA). Proceeding with foreign key creation.');
+          } else {
+            // Index doesn't exist and we can't create it - provide instructions
+            console.error('\n❌ CRITICAL: Cannot create unique index due to permissions.');
+            console.error('📋 A database administrator must create the index manually:');
+            console.error('\n   CREATE UNIQUE INDEX idx_transactions_transaction_id_unique');
+            console.error('   ON transactions("transactionId")');
+            console.error('   WHERE "transactionId" IS NOT NULL;');
+            console.error('\n   OR (if NULLs are not allowed):');
+            console.error('\n   CREATE UNIQUE INDEX idx_transactions_transaction_id_unique');
+            console.error('   ON transactions("transactionId");');
+            console.error('\n⚠️  Foreign key constraint cannot be created without this index.');
+            throw new Error(`CRITICAL: Unique index required but cannot be created due to permissions. DBA must create index manually. See error output above for SQL.`);
+          }
         } else {
           // Try without WHERE clause
           try {
@@ -115,6 +153,39 @@ module.exports = {
           } catch (indexError2) {
             if (indexError2.message.includes('already exists') || indexError2.message.includes('duplicate key value')) {
               console.log('✅ Unique index already exists');
+            } else if (indexError2.message.includes('permission') || indexError2.message.includes('owner')) {
+              // Same permission check as above
+              console.warn('⚠️ Permission denied to create index. Checking if index exists...');
+              
+              const [recheckIndexes2] = await queryInterface.sequelize.query(`
+                SELECT indexname, indexdef
+                FROM pg_indexes
+                WHERE tablename = 'transactions'
+                  AND schemaname = 'public'
+                  AND (
+                    indexname LIKE '%transaction_id%' OR 
+                    indexdef LIKE '%transactionId%'
+                  )
+              `);
+              
+              const hasUniqueIndexAfterCheck2 = recheckIndexes2.some(idx => 
+                idx.indexdef && (
+                  idx.indexdef.includes('UNIQUE') || 
+                  idx.indexname === 'idx_transactions_transaction_id' ||
+                  idx.indexname === 'idx_transactions_transaction_id_unique'
+                )
+              );
+              
+              if (hasUniqueIndexAfterCheck2) {
+                console.log('✅ Unique index exists (created by DBA). Proceeding with foreign key creation.');
+              } else {
+                console.error('\n❌ CRITICAL: Cannot create unique index due to permissions.');
+                console.error('📋 A database administrator must create the index manually:');
+                console.error('\n   CREATE UNIQUE INDEX idx_transactions_transaction_id_unique');
+                console.error('   ON transactions("transactionId");');
+                console.error('\n⚠️  Foreign key constraint cannot be created without this index.');
+                throw new Error(`CRITICAL: Unique index required but cannot be created due to permissions. DBA must create index manually. See error output above for SQL.`);
+              }
             } else {
               throw new Error(`CRITICAL: Failed to create unique index: ${indexError2.message}. This is required for banking-grade referential integrity.`);
             }
@@ -125,7 +196,46 @@ module.exports = {
       console.log('✅ Unique constraint/index already exists on transactions.transactionId');
     }
 
-    // Step 6: Check if foreign key constraint exists (outside transaction)
+    // Step 6: Final verification - ensure unique constraint/index exists before creating foreign key
+    const [finalCheckConstraints] = await queryInterface.sequelize.query(`
+      SELECT constraint_name
+      FROM information_schema.table_constraints
+      WHERE table_name = 'transactions'
+        AND constraint_type = 'UNIQUE'
+        AND constraint_name IN (
+          SELECT constraint_name
+          FROM information_schema.key_column_usage
+          WHERE table_name = 'transactions'
+            AND column_name = 'transactionId'
+        )
+    `);
+
+    const [finalCheckIndexes] = await queryInterface.sequelize.query(`
+      SELECT indexname, indexdef
+      FROM pg_indexes
+      WHERE tablename = 'transactions'
+        AND schemaname = 'public'
+        AND (
+          indexname LIKE '%transaction_id%' OR 
+          indexdef LIKE '%transactionId%'
+        )
+    `);
+
+    const finalHasUniqueIndex = finalCheckIndexes.some(idx => 
+      idx.indexdef && (
+        idx.indexdef.includes('UNIQUE') || 
+        idx.indexname === 'idx_transactions_transaction_id' ||
+        idx.indexname === 'idx_transactions_transaction_id_unique'
+      )
+    );
+
+    const finalHasUniqueConstraint = finalCheckConstraints.length > 0 || finalHasUniqueIndex;
+
+    if (!finalHasUniqueConstraint) {
+      throw new Error('CRITICAL: Unique constraint/index on transactions.transactionId does not exist and could not be created. Foreign key constraint cannot be created without this. Please ensure the unique index exists before running this migration.');
+    }
+
+    // Step 7: Check if foreign key constraint exists (outside transaction)
     const [existingFk] = await queryInterface.sequelize.query(`
       SELECT constraint_name
       FROM information_schema.table_constraints
@@ -134,7 +244,7 @@ module.exports = {
         AND constraint_type = 'FOREIGN KEY'
     `);
 
-    // Step 7: Create foreign key constraint if it doesn't exist (in transaction for atomicity)
+    // Step 8: Create foreign key constraint if it doesn't exist (in transaction for atomicity)
     if (existingFk.length === 0) {
       console.log('🔧 Creating foreign key constraint for banking-grade referential integrity...');
       
