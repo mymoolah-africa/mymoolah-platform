@@ -698,9 +698,14 @@ export function QRPaymentPage() {
           customReferenceLabel: customReferenceLabel
         });
         setConfirmAmount(paymentAmount > 0 ? paymentAmount.toString() : '');
-        // Initialize tip state if tip is enabled (no default selection, user must choose)
-        setTipAmount(tipEnabled ? '' : '');
-        setSelectedTipPercent(null); // Reset tip percentage selection
+        // Initialize tip state if tip is enabled (default to 10% selected)
+        if (tipEnabled) {
+          setTipAmount('');
+          setSelectedTipPercent(10); // Default to 10% when tip is enabled
+        } else {
+          setTipAmount('');
+          setSelectedTipPercent(null);
+        }
         // Initialize custom reference if editable (pre-populate with reference value)
         setCustomReference(referenceEditable && validationResult.paymentDetails.reference ? validationResult.paymentDetails.reference : '');
         setShowConfirmModal(true);
@@ -1971,7 +1976,7 @@ export function QRPaymentPage() {
                 
                 {/* Tip Percentage Buttons - Horizontal Layout */}
                 <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
-                  {[5, 10, 15, 20].map((percent) => (
+                  {[0, 10, 15, 20].map((percent) => (
                     <button
                       key={percent}
                       type="button"
