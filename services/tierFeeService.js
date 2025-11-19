@@ -145,23 +145,23 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
         break;
         
       case 'percentage':
+        // Stored percentage is always VAT-exclusive (net base amount)
         supplierCostExclVatCents = Math.round(
           transactionAmountCents * parseFloat(config.supplier_percentage_fee)
         );
-        // If stored as inclusive, extract exclusive amount
-        if (supplierVatInclusive) {
-          supplierCostExclVatCents = Math.round(supplierCostExclVatCents / (1 + supplierVatRate));
-        }
+        // supplier_vat_inclusive flag means "supplier charges VAT-inclusive", not "stored value is inclusive"
+        // Since stored value is already exclusive, we don't need to divide
+        // VAT will be added in the next step to get the inclusive amount
         break;
         
       case 'hybrid':
         const fixedPart = parseInt(config.supplier_fixed_fee_cents) || 0;
         const percentagePart = Math.round(transactionAmountCents * parseFloat(config.supplier_percentage_fee));
+        // Stored values are always VAT-exclusive (net base amounts)
         supplierCostExclVatCents = fixedPart + percentagePart;
-        // If stored as inclusive, extract exclusive amount
-        if (supplierVatInclusive) {
-          supplierCostExclVatCents = Math.round(supplierCostExclVatCents / (1 + supplierVatRate));
-        }
+        // supplier_vat_inclusive flag means "supplier charges VAT-inclusive", not "stored value is inclusive"
+        // Since stored values are already exclusive, we don't need to divide
+        // VAT will be added in the next step to get the inclusive amount
         break;
         
       default:
@@ -185,23 +185,23 @@ async function calculateTierFees(userId, supplierCode, serviceType, transactionA
         break;
         
       case 'percentage':
+        // Stored percentage is always VAT-exclusive (net base amount)
         mmFeeExclVatCents = Math.round(
           transactionAmountCents * parseFloat(config.mm_percentage_fee)
         );
-        // If stored as inclusive, extract exclusive amount
-        if (mmVatInclusive) {
-          mmFeeExclVatCents = Math.round(mmFeeExclVatCents / (1 + mmVatRate));
-        }
+        // mm_vat_inclusive flag means "user pays VAT-inclusive", not "stored value is inclusive"
+        // Since stored value is already exclusive, we don't need to divide
+        // VAT will be added in the next step to get the inclusive amount
         break;
         
       case 'hybrid':
         const mmFixedPart = parseInt(config.mm_fixed_fee_cents) || 0;
         const mmPercentagePart = Math.round(transactionAmountCents * parseFloat(config.mm_percentage_fee));
+        // Stored values are always VAT-exclusive (net base amounts)
         mmFeeExclVatCents = mmFixedPart + mmPercentagePart;
-        // If stored as inclusive, extract exclusive amount
-        if (mmVatInclusive) {
-          mmFeeExclVatCents = Math.round(mmFeeExclVatCents / (1 + mmVatRate));
-        }
+        // mm_vat_inclusive flag means "user pays VAT-inclusive", not "stored value is inclusive"
+        // Since stored values are already exclusive, we don't need to divide
+        // VAT will be added in the next step to get the inclusive amount
         break;
         
       default:
