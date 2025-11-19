@@ -291,13 +291,27 @@ class QRPaymentController {
         
         // Transform Zapper API response to our format
         if (zapperResult && zapperResult.merchant) {
+          // Extract tip information from merchant features
+          const tipEnabled = zapperResult.merchant?.features?.tipEnabled || false;
+          const defaultTipPercent = zapperResult.merchant?.features?.defaultTipPercent || (tipEnabled ? 10 : null);
+          
+          // Extract reference - check for empty strings explicitly
+          let reference = null;
+          if (zapperResult.invoice?.orderReference && zapperResult.invoice.orderReference.trim() !== '') {
+            reference = zapperResult.invoice.orderReference;
+          } else if (zapperResult.invoice?.invoiceReference && zapperResult.invoice.invoiceReference.trim() !== '') {
+            reference = zapperResult.invoice.invoiceReference;
+          }
+          
           decodedData = {
             type: 'zapper',
             merchant: zapperResult.merchant.merchantName,
             merchantId: zapperResult.merchant.merchantReference,
             amount: zapperResult.invoice ? (zapperResult.invoice.amount / 100) : 0, // Convert cents to rands
             currency: zapperResult.invoice?.currencyISOCode || 'ZAR',
-            reference: zapperResult.invoice?.orderReference || zapperResult.invoice?.invoiceReference || `ZAP_${Date.now()}`,
+            reference: reference, // null if no reference provided
+            tipEnabled: tipEnabled,
+            defaultTipPercent: defaultTipPercent,
             description: `Payment to ${zapperResult.merchant.merchantName}`,
             isRealZapper: true,
             zapperData: zapperResult
@@ -359,6 +373,39 @@ class QRPaymentController {
         }
       }
 
+      // Extract tip information from decoded data or URL fallback
+      let tipEnabled = decodedData.tipEnabled || false;
+      let defaultTipPercent = decodedData.defaultTipPercent || null;
+      
+      // Fallback: Parse tip from URL if not in API response
+      // URL format: [34|0.00|3,40|278|13 indicates tip enabled
+      // Pattern: 40|278|13 might indicate tip (40 = field code, 278 = tip percent * 10, 13 = ?)
+      if (!tipEnabled) {
+        const tipMatch = qrCode.match(/40\|(\d+)\|/);
+        if (tipMatch) {
+          tipEnabled = true;
+          // If tip percentage is encoded (e.g., 278 = 27.8%), divide by 10
+          // Otherwise assume it's a percentage (e.g., 10 = 10%)
+          const tipValue = parseInt(tipMatch[1]);
+          defaultTipPercent = tipValue > 100 ? (tipValue / 10) : tipValue;
+          // Default to 10% if value seems invalid or if not provided
+          if (!defaultTipPercent || defaultTipPercent > 100 || defaultTipPercent < 0) {
+            defaultTipPercent = 10;
+          }
+        }
+      }
+      
+      // Detect custom/editable reference from URL format
+      // Pattern: 33|REF12345|1|CustomRef: indicates custom editable reference
+      // Format: 33|<reference>|1|<customLabel>:
+      let referenceEditable = false;
+      let customReferenceLabel = null;
+      const customRefMatch = qrCode.match(/33\|([^|]+)\|1\|([^:]+):/);
+      if (customRefMatch) {
+        referenceEditable = true;
+        customReferenceLabel = customRefMatch[2]; // e.g., "CustomRef"
+      }
+      
       // Frontend expects { qrCode, merchant, paymentDetails, isValid } at root level
       // apiService.request returns { success: true, data: <backend_response> }
       // So we return the validation result directly (not nested in data)
@@ -366,11 +413,15 @@ class QRPaymentController {
         success: true,
         qrCode,
         merchant: merchantInfo,
-        paymentDetails: {
+          paymentDetails: {
           amount: decodedData.amount !== undefined ? decodedData.amount : (amount || 0),
           currency: decodedData.currency || 'ZAR',
           reference: decodedData.reference,
-          description: decodedData.description
+          description: decodedData.description,
+          tipEnabled: tipEnabled,
+          defaultTipPercent: defaultTipPercent,
+          referenceEditable: referenceEditable,
+          customReferenceLabel: customReferenceLabel
         },
         isValid: true,
         zapperDecoded,
@@ -550,7 +601,7 @@ class QRPaymentController {
         });
       }
 
-      const { qrCode, amount, walletId, reference } = req.body;
+      const { qrCode, amount, walletId, reference, tipAmount } = req.body;
       const userId = req.user?.id;
 
       if (!userId) {
@@ -593,12 +644,16 @@ class QRPaymentController {
         });
       }
 
-      // Check sufficient balance
-      if (parseFloat(wallet.balance) < paymentAmount) {
+      // Parse tip amount (if provided)
+      const tip = tipAmount ? parseFloat(tipAmount) : 0;
+      
+      // Check sufficient balance (payment + tip)
+      const totalPaymentAmount = paymentAmount + tip;
+      if (parseFloat(wallet.balance) < totalPaymentAmount) {
         return res.status(400).json({
           success: false,
           error: 'Insufficient balance',
-          message: `Insufficient balance. Available: R${parseFloat(wallet.balance).toFixed(2)}`
+          message: `Insufficient balance. Required: R${totalPaymentAmount.toFixed(2)} (Payment: R${paymentAmount.toFixed(2)}${tip > 0 ? ` + Tip: R${tip.toFixed(2)}` : ''}). Available: R${parseFloat(wallet.balance).toFixed(2)}`
         });
       }
 
@@ -609,13 +664,23 @@ class QRPaymentController {
       try {
         const zapperResult = await this.zapperService.decodeQRCode(qrCode);
         if (zapperResult && zapperResult.merchant) {
+          // Extract reference - check for empty strings explicitly
+          let ref = null;
+          if (zapperResult.invoice?.orderReference && zapperResult.invoice.orderReference.trim() !== '') {
+            ref = zapperResult.invoice.orderReference;
+          } else if (zapperResult.invoice?.invoiceReference && zapperResult.invoice.invoiceReference.trim() !== '') {
+            ref = zapperResult.invoice.invoiceReference;
+          } else if (reference && reference.trim() !== '') {
+            ref = reference;
+          }
+          
           decodedData = {
             type: 'zapper',
             merchant: zapperResult.merchant.merchantName,
             merchantId: zapperResult.merchant.merchantReference,
             amount: zapperResult.invoice ? (zapperResult.invoice.amount / 100) : paymentAmount,
             currency: zapperResult.invoice?.currencyISOCode || 'ZAR',
-            reference: zapperResult.invoice?.orderReference || zapperResult.invoice?.invoiceReference || reference || `ZAP_${Date.now()}`,
+            reference: ref, // null if no reference provided
             description: `Payment to ${zapperResult.merchant.merchantName}`,
             isRealZapper: true,
             zapperData: zapperResult
@@ -663,8 +728,9 @@ class QRPaymentController {
       }
 
       // Use amount from request (user-entered) or QR code, but prefer request amount
-      const finalAmount = paymentAmount || (decodedData.amount || 0);
-      const finalReference = reference || decodedData.reference || `QR_${Date.now()}`;
+      // Add tip to the final amount (tip goes to merchant)
+      const finalAmount = (paymentAmount || (decodedData.amount || 0)) + tip;
+      const finalReference = reference || decodedData.reference || null;
 
       // Calculate tier-based fees using generic service
       const finalAmountCents = Math.round(finalAmount * 100);
@@ -741,9 +807,10 @@ class QRPaymentController {
 
         // Credit Zapper float account with:
         // 1. Payment amount (goes to merchant)
-        // 2. Zapper's pass-through fee (supplier cost)
+        // 2. Tip amount (goes to merchant)
+        // 3. Zapper's pass-through fee (supplier cost)
         // MM's fee stays as revenue
-        const zapperTotalAmount = finalAmount + supplierCost;
+        const zapperTotalAmount = finalAmount + supplierCost; // finalAmount already includes tip
         await zapperFloat.increment('currentBalance', { 
           by: zapperTotalAmount, 
           transaction: t 
@@ -768,6 +835,9 @@ class QRPaymentController {
             merchantName: merchantInfo.name,
             zapperDecoded: zapperDecoded,
             zapperData: decodedData.zapperData || null,
+            paymentAmount: paymentAmount, // Base payment amount (excluding tip)
+            tipAmount: tip, // Tip amount (if any)
+            totalAmount: finalAmount, // Payment + tip
             tierFeeBreakdown: {
               tierLevel: fees.tierLevel,
               supplierCost: fees.display.supplierCost,
@@ -1192,10 +1262,17 @@ class QRPaymentController {
       const merchant = this.extractMerchantFromZapperURL(url);
       
       // Extract a cleaner reference from the transaction ID
-      let reference = transactionId;
-      if (reference && reference.includes('[')) {
-        // Remove the complex part after the bracket
-        reference = reference.split('[')[0];
+      // Production QR codes may not have a reference - only extract if present
+      let reference = null;
+      if (transactionId && transactionId.includes('[')) {
+        // Remove the complex part after the bracket to get base reference
+        const baseRef = transactionId.split('[')[0];
+        // Only use if it looks like a valid reference (not just merchant IDs)
+        // Production format: 41791:51169:7 - this is merchant:site:invoice, not a user reference
+        // If it contains colons, it's likely not a user reference
+        if (baseRef && !baseRef.includes(':')) {
+          reference = baseRef;
+        }
       }
       
       return {
@@ -1203,7 +1280,7 @@ class QRPaymentController {
         merchant: merchant || 'Zapper Merchant',
         amount: amount || 0,
         currency: 'ZAR',
-        reference: reference || `ZAP_${Date.now()}`,
+        reference: reference, // null if no reference (matches production QR behavior)
         originalUrl: url,
         isRealZapper: true
       };
@@ -1252,13 +1329,23 @@ class QRPaymentController {
 
   /**
    * Extract merchant from Zapper URL
+   * Production format: http://2.zap.pe?t=6&i=41791:51169:7[34|0.00|3:10[39|ZAR,38|Dillon Prod Test
+   * Merchant name appears after "38|" and can contain spaces
    */
   extractMerchantFromZapperURL(url) {
     try {
-      // Look for merchant name in the URL
-      const merchantMatch = url.match(/\|(\w+)$/);
-      if (merchantMatch) {
-        return merchantMatch[1];
+      // Look for merchant name pattern: 38|Merchant Name (at end of URL or before end)
+      // Handle both with and without spaces in merchant name
+      const merchantMatch = url.match(/38\|([^,]+?)(?:$|,)/);
+      if (merchantMatch && merchantMatch[1]) {
+        return merchantMatch[1].trim();
+      }
+      
+      // Fallback: Look for merchant name after last pipe before end
+      // Pattern: |MerchantName (allowing spaces and special chars)
+      const fallbackMatch = url.match(/\|([^|\[\]]+?)(?:$|,)/);
+      if (fallbackMatch && fallbackMatch[1]) {
+        return fallbackMatch[1].trim();
       }
       
       // Alternative: extract from domain or path

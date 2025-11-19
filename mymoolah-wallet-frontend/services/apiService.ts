@@ -371,10 +371,10 @@ class ApiService {
     return response.data;
   }
 
-  async initiateQRPayment(qrCode: string, amount: number, walletId: string, reference?: string): Promise<QRPaymentResult> {
+  async initiateQRPayment(qrCode: string, amount: number, walletId: string, reference?: string, tipAmount?: number): Promise<QRPaymentResult> {
     const response = await this.request<{ success: boolean; data: QRPaymentResult }>('/api/v1/qr/payment/initiate', {
       method: 'POST',
-      body: JSON.stringify({ qrCode, amount, walletId, reference }),
+      body: JSON.stringify({ qrCode, amount, walletId, reference, tipAmount }),
     });
     return response.data?.data || (response.data as unknown as QRPaymentResult);
   }

@@ -59,8 +59,74 @@ export function QRPaymentPage() {
     qrCode: string;
     amount: number;
     merchant: QRMerchant;
-    reference: string;
+    reference: string | null;
+    tipEnabled?: boolean;
+    defaultTipPercent?: number | null;
+    referenceEditable?: boolean;
+    customReferenceLabel?: string | null;
   } | null>(null);
+  const [tipAmount, setTipAmount] = useState<string>('');
+  const [customReference, setCustomReference] = useState<string>('');
+
+  // Helper functions to determine field visibility based on QR type
+  const shouldShowAmountField = (): boolean => {
+    if (!pendingPaymentData) return false;
+    const hasPrePopulatedAmount = pendingPaymentData.amount > 0;
+    const isTipEnabled = pendingPaymentData.tipEnabled || false;
+    
+    // Show amount field when:
+    // 1. Amount is 0 (no pre-population, user must enter)
+    // 2. Tip is enabled (makes amount editable even if pre-populated)
+    // Hide when: amount is pre-populated AND tip is not enabled (non-editable)
+    return !hasPrePopulatedAmount || isTipEnabled;
+  };
+
+  const shouldShowTipField = (): boolean => {
+    return pendingPaymentData?.tipEnabled || false;
+  };
+
+  const shouldShowReferenceField = (): boolean => {
+    // Show reference field only when it's editable (custom reference)
+    return pendingPaymentData?.referenceEditable || false;
+  };
+
+  const shouldShowReferenceInSummary = (): boolean => {
+    // Show reference in summary when it exists (static or custom)
+    return !!pendingPaymentData?.reference;
+  };
+
+  const getReferenceLabel = (): string => {
+    if (!pendingPaymentData) return 'REFERENCE';
+    if (pendingPaymentData.referenceEditable && pendingPaymentData.customReferenceLabel) {
+      return pendingPaymentData.customReferenceLabel.toUpperCase();
+    }
+    return 'REFERENCE';
+  };
+
+  const getDisplayAmount = (): string => {
+    if (!pendingPaymentData) return '0.00';
+    // Use confirmAmount if set, otherwise use pre-populated amount
+    if (confirmAmount) {
+      return parseFloat(confirmAmount).toFixed(2);
+    }
+    return pendingPaymentData.amount ? pendingPaymentData.amount.toFixed(2) : '0.00';
+  };
+
+  const getTotalPaymentAmount = (): number => {
+    const amount = parseFloat(confirmAmount || '0') || pendingPaymentData?.amount || 0;
+    const tip = parseFloat(tipAmount || '0') || 0;
+    return amount + tip;
+  };
+
+  const isValidPayment = (): boolean => {
+    if (!pendingPaymentData) return false;
+    
+    // Get the effective amount (from input or pre-populated)
+    const effectiveAmount = parseFloat(confirmAmount || '0') || pendingPaymentData.amount || 0;
+    
+    // Payment is valid if amount > 0
+    return effectiveAmount > 0;
+  };
 
   // Load featured merchants on component mount
   useEffect(() => {
@@ -597,13 +663,27 @@ export function QRPaymentPage() {
         let paymentAmount = validationResult.paymentDetails.amount || 0;
         
         // Store payment data for confirmation
+        // Reference: only set if provided by QR code (null/undefined if not provided)
+        const tipEnabled = validationResult.paymentDetails.tipEnabled || false;
+        const defaultTipPercent = validationResult.paymentDetails.defaultTipPercent || null;
+        const referenceEditable = validationResult.paymentDetails.referenceEditable || false;
+        const customReferenceLabel = validationResult.paymentDetails.customReferenceLabel || null;
+        
         setPendingPaymentData({
           qrCode: code,
           amount: paymentAmount,
           merchant: validationResult.merchant,
-          reference: validationResult.paymentDetails.reference || `TestRefStatic${Date.now()}`
+          reference: validationResult.paymentDetails.reference || null,
+          tipEnabled: tipEnabled,
+          defaultTipPercent: defaultTipPercent,
+          referenceEditable: referenceEditable,
+          customReferenceLabel: customReferenceLabel
         });
         setConfirmAmount(paymentAmount > 0 ? paymentAmount.toString() : '');
+        // Initialize tip amount if tip is enabled (default to 0, user can enter)
+        setTipAmount(tipEnabled ? '' : '');
+        // Initialize custom reference if editable (pre-populate with reference value)
+        setCustomReference(referenceEditable && validationResult.paymentDetails.reference ? validationResult.paymentDetails.reference : '');
         setShowConfirmModal(true);
       } else {
         throw new Error('QR code validation failed. The QR code may not be a valid payment code.');
@@ -655,8 +735,9 @@ export function QRPaymentPage() {
     try {
       setIsProcessing(true);
       
-      // Get amount from confirm modal (user may have edited it)
-      const paymentAmount = parseFloat(confirmAmount) || pendingPaymentData.amount;
+      // Get amount from confirm modal (user may have edited it) or use pre-populated amount
+      const paymentAmount = parseFloat(confirmAmount || '0') || pendingPaymentData.amount || 0;
+      const tip = parseFloat(tipAmount || '0') || 0;
       
       if (paymentAmount <= 0) {
         setError('Payment amount must be greater than 0.');
@@ -666,12 +747,18 @@ export function QRPaymentPage() {
       // Close confirm modal
       setShowConfirmModal(false);
       
-      // Initiate payment
+      // Use custom reference if editable, otherwise use original reference
+      const finalReference = pendingPaymentData.referenceEditable && customReference 
+        ? customReference 
+        : pendingPaymentData.reference;
+      
+      // Initiate payment (tip is sent separately, backend will add it to total)
       const paymentResult = await apiService.initiateQRPayment(
         pendingPaymentData.qrCode,
         paymentAmount,
         user?.walletId || 'default',
-        pendingPaymentData.reference
+        finalReference,
+        tip > 0 ? tip : undefined
       );
       
       setCurrentPayment(paymentResult);
@@ -1739,6 +1826,84 @@ export function QRPaymentPage() {
             </DialogDescription>
           </DialogHeader>
           
+          {/* Payment Summary */}
+          {pendingPaymentData && (
+            <div 
+              style={{
+                backgroundColor: '#f0f9ff',
+                border: '1px solid #bae6fd',
+                borderRadius: '8px',
+                padding: '16px',
+                marginBottom: '16px'
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                  margin: '0 0 8px 0',
+                  textAlign: 'center'
+                }}
+              >
+                {pendingPaymentData.tipEnabled && tipAmount ? (
+                  <>
+                    Pay R{getTotalPaymentAmount().toFixed(2)} to {pendingPaymentData.merchant.name}
+                  </>
+                ) : (
+                  <>
+                    Pay R{getDisplayAmount()} to {pendingPaymentData.merchant.name}
+                  </>
+                )}
+              </p>
+              {pendingPaymentData.tipEnabled && tipAmount && (
+                <>
+                  <p
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#475569',
+                      margin: '4px 0 0 0',
+                      textAlign: 'center'
+                    }}
+                  >
+                    TIP: R{parseFloat(tipAmount || '0').toFixed(2)}
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#475569',
+                      margin: '4px 0 0 0',
+                      textAlign: 'center'
+                    }}
+                  >
+                    PAYMENT (EXCLUDING TIP): R{getDisplayAmount()}
+                  </p>
+                </>
+              )}
+              {shouldShowReferenceInSummary() && (
+                <p
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#475569',
+                    margin: '8px 0 0 0',
+                    textAlign: 'center'
+                  }}
+                >
+                  {pendingPaymentData.referenceEditable 
+                    ? `${getReferenceLabel()}: ${customReference || pendingPaymentData.reference || ''}`
+                    : `REFERENCE: ${pendingPaymentData.reference}`}
+                </p>
+              )}
+            </div>
+          )}
+          
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Merchant */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1767,62 +1932,124 @@ export function QRPaymentPage() {
               />
             </div>
             
-            {/* Total Amount */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Label 
-                style={{
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#1f2937'
-                }}
-              >
-                Total Amount (ZAR)
-              </Label>
-              <Input
-                type="number"
-                value={confirmAmount}
-                onChange={(e) => setConfirmAmount(e.target.value)}
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                style={{
-                  width: '200px',
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '14px',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  padding: '8px 12px'
-                }}
-              />
-            </div>
+            {/* Total Amount Field - Conditionally shown based on QR type */}
+            {shouldShowAmountField() && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Label 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#1f2937'
+                  }}
+                >
+                  Total Amount (ZAR)
+                </Label>
+                <Input
+                  type="number"
+                  value={confirmAmount}
+                  onChange={(e) => setConfirmAmount(e.target.value)}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  style={{
+                    width: '200px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '8px 12px'
+                  }}
+                />
+              </div>
+            )}
             
-            {/* Reference */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Label 
-                style={{
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  color: '#1f2937'
-                }}
-              >
-                Reference
-              </Label>
-              <Input
-                value={pendingPaymentData?.reference || ''}
-                readOnly
-                style={{
-                  width: '200px',
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '14px',
-                  backgroundColor: '#f3f4f6',
-                  border: '1px solid #e5e7eb',
-                  borderRadius: '8px',
-                  padding: '8px 12px'
-                }}
-              />
-            </div>
+            {/* Tip Field - Only shown when tip is enabled */}
+            {shouldShowTipField() && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Label 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#1f2937'
+                  }}
+                >
+                  Tip {pendingPaymentData.defaultTipPercent ? `(Default: ${pendingPaymentData.defaultTipPercent}%)` : ''}
+                </Label>
+                <Input
+                  type="number"
+                  value={tipAmount}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setTipAmount(value);
+                    // Auto-calculate tip if user enters percentage or if default percent is set
+                    if (pendingPaymentData.defaultTipPercent && confirmAmount) {
+                      const amount = parseFloat(confirmAmount);
+                      if (amount > 0) {
+                        // If user clears the field, show empty
+                        if (value === '') {
+                          setTipAmount('');
+                        } else {
+                          // Allow user to enter either amount or percentage
+                          // If value is small (< 100), treat as percentage
+                          const tipValue = parseFloat(value);
+                          if (tipValue < 100 && tipValue > 0) {
+                            // Treat as percentage
+                            const calculatedTip = (amount * tipValue) / 100;
+                            setTipAmount(calculatedTip.toFixed(2));
+                          }
+                          // Otherwise treat as absolute amount
+                        }
+                      }
+                    }
+                  }}
+                  placeholder={pendingPaymentData.defaultTipPercent && confirmAmount ? 
+                    `Auto: R${((parseFloat(confirmAmount || '0') * (pendingPaymentData.defaultTipPercent || 10)) / 100).toFixed(2)}` : 
+                    "0.00"}
+                  min="0"
+                  step="0.01"
+                  style={{
+                    width: '200px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '8px 12px'
+                  }}
+                />
+              </div>
+            )}
+            
+            {/* Custom/Editable Reference Field - Only shown when reference is editable */}
+            {shouldShowReferenceField() && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Label 
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#1f2937'
+                  }}
+                >
+                  {getReferenceLabel()}
+                </Label>
+                <Input
+                  type="text"
+                  value={customReference}
+                  onChange={(e) => setCustomReference(e.target.value)}
+                  placeholder={pendingPaymentData.reference || ''}
+                  style={{
+                    width: '200px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '8px 12px'
+                  }}
+                />
+              </div>
+            )}
           </div>
           
           <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
@@ -1849,7 +2076,7 @@ export function QRPaymentPage() {
             </Button>
             <Button
               onClick={handleConfirmPayment}
-              disabled={isProcessing || !confirmAmount || parseFloat(confirmAmount) <= 0}
+              disabled={isProcessing || !isValidPayment()}
               style={{
                 flex: 1,
                 background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
