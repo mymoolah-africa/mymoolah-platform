@@ -87,10 +87,108 @@ module.exports = {
       )
     );
 
-    const hasUniqueConstraint = uniqueConstraints.length > 0 || hasUniqueIndex;
+    const hasUniqueConstraint = uniqueConstraints.length > 0;
+    const hasUniqueIndexOnly = hasUniqueIndex && !hasUniqueConstraint;
 
-    // Step 5: Create unique index if it doesn't exist (outside transaction - DDL best practice)
+    // Step 5: Create unique constraint if it doesn't exist
+    // PostgreSQL requires a UNIQUE CONSTRAINT (not just an index) for foreign keys
     if (!hasUniqueConstraint) {
+      if (hasUniqueIndexOnly) {
+        // We have a unique index but need a constraint - create constraint using existing index
+        console.log('🔧 Creating unique constraint using existing index...');
+        try {
+          await queryInterface.sequelize.query(`
+            ALTER TABLE transactions
+            ADD CONSTRAINT transactions_transactionId_unique
+            UNIQUE USING INDEX idx_transactions_transaction_id_unique
+          `);
+          console.log('✅ Created unique constraint using existing index');
+        } catch (constraintError) {
+          if (constraintError.message.includes('already exists') || constraintError.message.includes('duplicate')) {
+            console.log('✅ Unique constraint already exists');
+          } else if (constraintError.message.includes('permission') || constraintError.message.includes('owner')) {
+            console.warn('⚠️ Permission denied to create constraint. Checking if constraint exists...');
+            const [recheckConstraints] = await queryInterface.sequelize.query(`
+              SELECT constraint_name
+              FROM information_schema.table_constraints
+              WHERE table_name = 'transactions'
+                AND constraint_type = 'UNIQUE'
+                AND constraint_name IN (
+                  SELECT constraint_name
+                  FROM information_schema.key_column_usage
+                  WHERE table_name = 'transactions'
+                    AND column_name = 'transactionId'
+                )
+            `);
+            
+            if (recheckConstraints.length > 0) {
+              console.log('✅ Unique constraint exists (created by DBA). Proceeding with foreign key creation.');
+            } else {
+              console.error('\n❌ CRITICAL: Cannot create unique constraint due to permissions.');
+              console.error('📋 A database administrator must create the constraint manually:');
+              console.error('\n   ALTER TABLE transactions');
+              console.error('   ADD CONSTRAINT transactions_transactionId_unique');
+              console.error('   UNIQUE USING INDEX idx_transactions_transaction_id_unique;');
+              console.error('\n⚠️  Foreign key constraint cannot be created without this constraint.');
+              throw new Error(`CRITICAL: Unique constraint required but cannot be created due to permissions. DBA must create constraint manually. See error output above for SQL.`);
+            }
+          } else {
+            throw new Error(`CRITICAL: Failed to create unique constraint: ${constraintError.message}. This is required for banking-grade referential integrity.`);
+          }
+        }
+      } else {
+        // No index or constraint - create constraint (which will create index automatically)
+        console.log('🔧 Creating unique constraint on transactions.transactionId...');
+        
+        try {
+          await queryInterface.sequelize.query(`
+            ALTER TABLE transactions
+            ADD CONSTRAINT transactions_transactionId_unique
+            UNIQUE ("transactionId")
+          `);
+          console.log('✅ Created unique constraint on transactions.transactionId');
+        } catch (constraintError) {
+          if (constraintError.message.includes('already exists') || constraintError.message.includes('duplicate')) {
+            console.log('✅ Unique constraint already exists');
+          } else if (constraintError.message.includes('permission') || constraintError.message.includes('owner')) {
+            console.warn('⚠️ Permission denied to create constraint. Checking if constraint exists...');
+            const [recheckConstraints2] = await queryInterface.sequelize.query(`
+              SELECT constraint_name
+              FROM information_schema.table_constraints
+              WHERE table_name = 'transactions'
+                AND constraint_type = 'UNIQUE'
+                AND constraint_name IN (
+                  SELECT constraint_name
+                  FROM information_schema.key_column_usage
+                  WHERE table_name = 'transactions'
+                    AND column_name = 'transactionId'
+                )
+            `);
+            
+            if (recheckConstraints2.length > 0) {
+              console.log('✅ Unique constraint exists (created by DBA). Proceeding with foreign key creation.');
+            } else {
+              console.error('\n❌ CRITICAL: Cannot create unique constraint due to permissions.');
+              console.error('📋 A database administrator must create the constraint manually:');
+              console.error('\n   ALTER TABLE transactions');
+              console.error('   ADD CONSTRAINT transactions_transactionId_unique');
+              console.error('   UNIQUE ("transactionId");');
+              console.error('\n⚠️  Foreign key constraint cannot be created without this constraint.');
+              throw new Error(`CRITICAL: Unique constraint required but cannot be created due to permissions. DBA must create constraint manually. See error output above for SQL.`);
+            }
+          } else {
+            throw new Error(`CRITICAL: Failed to create unique constraint: ${constraintError.message}. This is required for banking-grade referential integrity.`);
+          }
+        }
+      }
+    } else {
+      console.log('✅ Unique constraint already exists on transactions.transactionId');
+    }
+
+    // Legacy code - keeping for reference but should not execute if constraint exists
+    if (false && !hasUniqueConstraint && !hasUniqueIndexOnly) {
+      // Old code path - create index first (should not execute)
+      console.log('🔧 Creating unique index on transactions.transactionId...');
       console.log('🔧 Creating unique index on transactions.transactionId...');
       
       // Try with WHERE clause first (allows NULLs, but we've already checked for NULLs)
