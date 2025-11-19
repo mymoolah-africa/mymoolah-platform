@@ -153,10 +153,68 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    // Remove VAT direction tracking columns
-    await queryInterface.removeColumn('tax_transactions', 'is_claimable');
-    await queryInterface.removeColumn('tax_transactions', 'supplier_code');
-    await queryInterface.removeColumn('tax_transactions', 'vat_direction');
+    // Check if table exists first
+    const [tableCheck] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'tax_transactions'
+      ) as exists;
+    `);
+
+    if (!tableCheck[0]?.exists) {
+      console.log('⚠️ tax_transactions table does not exist. Nothing to undo.');
+      return;
+    }
+
+    // Remove VAT direction tracking columns (check if they exist first)
+    try {
+      const [isClaimableExists] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'tax_transactions'
+          AND column_name = 'is_claimable'
+        ) as exists;
+      `);
+      if (isClaimableExists[0]?.exists === true) {
+        await queryInterface.removeColumn('tax_transactions', 'is_claimable');
+      }
+    } catch (error) {
+      console.log('⚠️ Could not remove is_claimable column:', error.message);
+    }
+
+    try {
+      const [supplierCodeExists] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'tax_transactions'
+          AND column_name = 'supplier_code'
+        ) as exists;
+      `);
+      if (supplierCodeExists[0]?.exists === true) {
+        await queryInterface.removeColumn('tax_transactions', 'supplier_code');
+      }
+    } catch (error) {
+      console.log('⚠️ Could not remove supplier_code column:', error.message);
+    }
+
+    try {
+      const [vatDirectionExists] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'tax_transactions'
+          AND column_name = 'vat_direction'
+        ) as exists;
+      `);
+      if (vatDirectionExists[0]?.exists === true) {
+        await queryInterface.removeColumn('tax_transactions', 'vat_direction');
+      }
+    } catch (error) {
+      console.log('⚠️ Could not remove vat_direction column:', error.message);
+    }
     
     // Drop ENUM type if it exists (only if no other columns use it)
     await queryInterface.sequelize.query(`
