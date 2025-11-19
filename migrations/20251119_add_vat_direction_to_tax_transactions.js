@@ -15,19 +15,20 @@ module.exports = {
     // Create ENUM type for VAT direction (PostgreSQL requires explicit type creation)
     await queryInterface.sequelize.query(`
       DO $$ BEGIN
-        CREATE TYPE "enum_tax_transactions_vat_direction" AS ENUM('input', 'output');
+        CREATE TYPE enum_tax_transactions_vat_direction AS ENUM('input', 'output');
       EXCEPTION
         WHEN duplicate_object THEN null;
       END $$;
     `);
 
-    // Add VAT direction column
-    await queryInterface.addColumn('tax_transactions', 'vat_direction', {
-      type: Sequelize.ENUM('input', 'output'),
-      allowNull: true,
-      defaultValue: 'output',
-      comment: 'VAT direction: input (paid to supplier, claimable) or output (charged to customer, payable)'
-    });
+    // Add VAT direction column using raw SQL to ensure ENUM type is used correctly
+    await queryInterface.sequelize.query(`
+      ALTER TABLE tax_transactions 
+      ADD COLUMN vat_direction enum_tax_transactions_vat_direction 
+      DEFAULT 'output'::enum_tax_transactions_vat_direction;
+      
+      COMMENT ON COLUMN tax_transactions.vat_direction IS 'VAT direction: input (paid to supplier, claimable) or output (charged to customer, payable)';
+    `);
 
     // Add supplier code for input VAT tracking
     await queryInterface.addColumn('tax_transactions', 'supplier_code', {
@@ -48,7 +49,7 @@ module.exports = {
     await queryInterface.sequelize.query(`
       UPDATE tax_transactions
       SET 
-        vat_direction = 'output',
+        vat_direction = 'output'::enum_tax_transactions_vat_direction,
         is_claimable = false
       WHERE vat_direction IS NULL
     `);
@@ -62,7 +63,7 @@ module.exports = {
     
     // Drop ENUM type if it exists (only if no other columns use it)
     await queryInterface.sequelize.query(`
-      DROP TYPE IF EXISTS "enum_tax_transactions_vat_direction";
+      DROP TYPE IF EXISTS enum_tax_transactions_vat_direction;
     `);
   }
 };
