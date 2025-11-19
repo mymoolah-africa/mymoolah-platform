@@ -12,6 +12,15 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Create ENUM type for VAT direction (PostgreSQL requires explicit type creation)
+    await queryInterface.sequelize.query(`
+      DO $$ BEGIN
+        CREATE TYPE "enum_tax_transactions_vat_direction" AS ENUM('input', 'output');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `);
+
     // Add VAT direction column
     await queryInterface.addColumn('tax_transactions', 'vat_direction', {
       type: Sequelize.ENUM('input', 'output'),
@@ -51,7 +60,10 @@ module.exports = {
     await queryInterface.removeColumn('tax_transactions', 'supplier_code');
     await queryInterface.removeColumn('tax_transactions', 'vat_direction');
     
-    // Note: ENUM type removal may require manual DROP TYPE if no other columns use it
+    // Drop ENUM type if it exists (only if no other columns use it)
+    await queryInterface.sequelize.query(`
+      DROP TYPE IF EXISTS "enum_tax_transactions_vat_direction";
+    `);
   }
 };
 
