@@ -1928,7 +1928,7 @@ export function QRPaymentPage() {
               />
             </div>
             
-            {/* Total Amount Field - Conditionally shown based on QR type */}
+            {/* Bill Amount Field - Conditionally shown based on QR type */}
             {shouldShowAmountField() && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Label 
@@ -1939,7 +1939,7 @@ export function QRPaymentPage() {
                     color: '#1f2937'
                   }}
                 >
-                  Total Amount
+                  Bill Amount
                 </Label>
                 <Input
                   type="number"
