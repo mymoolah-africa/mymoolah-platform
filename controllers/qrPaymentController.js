@@ -117,7 +117,7 @@ async function allocateZapperFeeAndVat({
         businessContext: 'wallet_user',
         transactionType: 'zapper_qr_payment',
         entityId: 'ZAPPER',
-        entityType: 'payment_processor',
+        entityType: 'supplier',
         taxPeriod,
         taxYear: now.getFullYear(),
         status: 'calculated',
@@ -794,7 +794,8 @@ class QRPaymentController {
       // Use amount from request (user-entered) or QR code, but prefer request amount
       // Add tip to the final amount (tip goes to merchant)
       const finalAmount = (paymentAmount || (decodedData.amount || 0)) + tip;
-      const finalReference = reference || decodedData.reference || null;
+      // Generate reference if none provided (Zapper API requires non-null reference)
+      const finalReference = reference || decodedData.reference || `ZAP_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
       // Calculate tier-based fees using generic service
       const finalAmountCents = Math.round(finalAmount * 100);
