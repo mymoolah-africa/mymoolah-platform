@@ -672,11 +672,15 @@ class QRPaymentController {
 
       // Validate amount
       const paymentAmount = parseFloat(amount);
-      if (!paymentAmount || paymentAmount <= 0) {
+      if (isNaN(paymentAmount) || paymentAmount <= 0) {
         return res.status(400).json({
           success: false,
           error: 'Invalid amount',
-          message: 'Payment amount must be greater than 0'
+          message: 'Payment amount must be greater than 0. Please enter a valid amount.',
+          details: {
+            receivedAmount: amount,
+            parsedAmount: paymentAmount
+          }
         });
       }
 
