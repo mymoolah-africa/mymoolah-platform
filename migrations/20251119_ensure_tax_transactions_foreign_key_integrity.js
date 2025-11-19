@@ -89,7 +89,43 @@ module.exports = {
 
     const hasUniqueConstraint = uniqueConstraints.length > 0 || hasUniqueIndex;
 
-    // Step 5: Check if foreign key constraint exists (outside transaction)
+    // Step 5: Create unique index if it doesn't exist (outside transaction - DDL best practice)
+    if (!hasUniqueConstraint) {
+      console.log('🔧 Creating unique index on transactions.transactionId...');
+      
+      // Try with WHERE clause first (allows NULLs, but we've already checked for NULLs)
+      try {
+        await queryInterface.sequelize.query(`
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_transaction_id_unique
+          ON transactions("transactionId")
+          WHERE "transactionId" IS NOT NULL
+        `);
+        console.log('✅ Created unique index on transactions.transactionId');
+      } catch (indexError) {
+        if (indexError.message.includes('already exists') || indexError.message.includes('duplicate key value')) {
+          console.log('✅ Unique index already exists');
+        } else {
+          // Try without WHERE clause
+          try {
+            await queryInterface.sequelize.query(`
+              CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_transaction_id_unique
+              ON transactions("transactionId")
+            `);
+            console.log('✅ Created unique index on transactions.transactionId (without WHERE clause)');
+          } catch (indexError2) {
+            if (indexError2.message.includes('already exists') || indexError2.message.includes('duplicate key value')) {
+              console.log('✅ Unique index already exists');
+            } else {
+              throw new Error(`CRITICAL: Failed to create unique index: ${indexError2.message}. This is required for banking-grade referential integrity.`);
+            }
+          }
+        }
+      }
+    } else {
+      console.log('✅ Unique constraint/index already exists on transactions.transactionId');
+    }
+
+    // Step 6: Check if foreign key constraint exists (outside transaction)
     const [existingFk] = await queryInterface.sequelize.query(`
       SELECT constraint_name
       FROM information_schema.table_constraints
@@ -98,81 +134,42 @@ module.exports = {
         AND constraint_type = 'FOREIGN KEY'
     `);
 
-    // Now start transaction for DDL operations only
-    const transaction = await queryInterface.sequelize.transaction();
-    try {
+    // Step 7: Create foreign key constraint if it doesn't exist (in transaction for atomicity)
+    if (existingFk.length === 0) {
+      console.log('🔧 Creating foreign key constraint for banking-grade referential integrity...');
+      
+      const transaction = await queryInterface.sequelize.transaction();
+      try {
 
-      // Step 6: Create unique index if it doesn't exist
-      if (!hasUniqueConstraint) {
-        console.log('🔧 Creating unique index on transactions.transactionId...');
+        await queryInterface.addConstraint('tax_transactions', {
+          fields: ['originalTransactionId'],
+          type: 'foreign key',
+          name: 'tax_transactions_originalTransactionId_fkey',
+          references: {
+            table: 'transactions',
+            field: 'transactionId'
+          },
+          onDelete: 'CASCADE',
+          onUpdate: 'CASCADE',
+          transaction
+        });
+        console.log('✅ Created foreign key constraint on tax_transactions.originalTransactionId');
         
-        // Try with WHERE clause first (allows NULLs, but we've already checked for NULLs)
-        try {
-          await queryInterface.sequelize.query(`
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_transaction_id_unique
-            ON transactions("transactionId")
-            WHERE "transactionId" IS NOT NULL
-          `, { transaction });
-          console.log('✅ Created unique index on transactions.transactionId');
-        } catch (indexError) {
-          if (indexError.message.includes('already exists') || indexError.message.includes('duplicate key value')) {
-            console.log('✅ Unique index already exists');
-          } else {
-            // Try without WHERE clause
-            try {
-              await queryInterface.sequelize.query(`
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_transaction_id_unique
-                ON transactions("transactionId")
-              `, { transaction });
-              console.log('✅ Created unique index on transactions.transactionId (without WHERE clause)');
-            } catch (indexError2) {
-              if (indexError2.message.includes('already exists') || indexError2.message.includes('duplicate key value')) {
-                console.log('✅ Unique index already exists');
-              } else {
-                throw new Error(`CRITICAL: Failed to create unique index: ${indexError2.message}. This is required for banking-grade referential integrity.`);
-              }
-            }
-          }
-        }
-      } else {
-        console.log('✅ Unique constraint/index already exists on transactions.transactionId');
-      }
-
-      // Step 7: Create foreign key constraint if it doesn't exist
-      if (existingFk.length === 0) {
-        console.log('🔧 Creating foreign key constraint for banking-grade referential integrity...');
+        await transaction.commit();
+        console.log('✅ Banking-grade referential integrity ensured for tax_transactions');
+      } catch (fkError) {
+        await transaction.rollback();
         
-        try {
-          await queryInterface.addConstraint('tax_transactions', {
-            fields: ['originalTransactionId'],
-            type: 'foreign key',
-            name: 'tax_transactions_originalTransactionId_fkey',
-            references: {
-              table: 'transactions',
-              field: 'transactionId'
-            },
-            onDelete: 'CASCADE',
-            onUpdate: 'CASCADE',
-            transaction
-          });
-          console.log('✅ Created foreign key constraint on tax_transactions.originalTransactionId');
-        } catch (fkError) {
-          if (fkError.message.includes('already exists') || fkError.message.includes('duplicate')) {
-            console.log('✅ Foreign key constraint already exists');
-          } else {
-            throw new Error(`CRITICAL: Failed to create foreign key constraint: ${fkError.message}. Referential integrity is required for banking-grade systems.`);
-          }
+        if (fkError.message.includes('already exists') || fkError.message.includes('duplicate')) {
+          console.log('✅ Foreign key constraint already exists');
+        } else {
+          console.error('❌ CRITICAL ERROR:', fkError.message);
+          throw new Error(`CRITICAL: Failed to create foreign key constraint: ${fkError.message}. Referential integrity is required for banking-grade systems.`);
         }
-      } else {
-        console.log('✅ Foreign key constraint already exists');
       }
-
-      await transaction.commit();
+    } else {
+      console.log('✅ Foreign key constraint already exists');
       console.log('✅ Banking-grade referential integrity ensured for tax_transactions');
-    } catch (error) {
-      await transaction.rollback();
-      console.error('❌ CRITICAL ERROR:', error.message);
-      throw error;
     }
   },
 
