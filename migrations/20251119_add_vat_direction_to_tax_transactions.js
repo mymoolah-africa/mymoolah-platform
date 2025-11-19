@@ -12,8 +12,9 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Check if tax_transactions table exists first - wrap in try-catch for safety
+    let tableExists = false;
     try {
-      // Check if tax_transactions table exists first
       const [tableCheck] = await queryInterface.sequelize.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
@@ -21,18 +22,17 @@ module.exports = {
           AND table_name = 'tax_transactions'
         ) as exists;
       `);
+      tableExists = tableCheck[0]?.exists === true;
+    } catch (checkError) {
+      // If check fails, assume table doesn't exist
+      console.log('⚠️ Could not verify tax_transactions table existence:', checkError.message);
+      tableExists = false;
+    }
 
-      const tableExists = tableCheck[0]?.exists;
-
-      if (!tableExists) {
-        console.log('⚠️ tax_transactions table does not exist. Skipping VAT direction migration.');
-        console.log('⚠️ Please ensure migration 20250814_create_reseller_compliance_tax.js has run successfully first.');
-        return;
-      }
-    } catch (error) {
-      // If we can't even check for the table, it probably doesn't exist
-      console.log('⚠️ Could not verify tax_transactions table existence. Skipping VAT direction migration.');
-      console.log('⚠️ Error:', error.message);
+    if (!tableExists) {
+      console.log('⚠️ tax_transactions table does not exist. Skipping VAT direction migration.');
+      console.log('⚠️ Please ensure migration 20250814_create_reseller_compliance_tax.js has run successfully first.');
+      console.log('⚠️ This migration will be skipped and can be run later when the table exists.');
       return;
     }
 
@@ -46,16 +46,23 @@ module.exports = {
     `);
 
     // Check if column already exists
-    const [columnExists] = await queryInterface.sequelize.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'tax_transactions'
-        AND column_name = 'vat_direction'
-      );
-    `);
+    let columnExists = false;
+    try {
+      const [columnCheck] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'tax_transactions'
+          AND column_name = 'vat_direction'
+        ) as exists;
+      `);
+      columnExists = columnCheck[0]?.exists === true;
+    } catch (checkError) {
+      console.log('⚠️ Could not check for vat_direction column:', checkError.message);
+      columnExists = false;
+    }
 
-    if (!columnExists[0].exists) {
+    if (!columnExists) {
       // Add VAT direction column using raw SQL to ensure ENUM type is used correctly
       await queryInterface.sequelize.query(`
         ALTER TABLE tax_transactions 
@@ -67,16 +74,23 @@ module.exports = {
     }
 
     // Add supplier code for input VAT tracking (check if exists first)
-    const [supplierCodeExists] = await queryInterface.sequelize.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'tax_transactions'
-        AND column_name = 'supplier_code'
-      );
-    `);
+    let supplierCodeExists = false;
+    try {
+      const [supplierCodeCheck] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'tax_transactions'
+          AND column_name = 'supplier_code'
+        ) as exists;
+      `);
+      supplierCodeExists = supplierCodeCheck[0]?.exists === true;
+    } catch (checkError) {
+      console.log('⚠️ Could not check for supplier_code column:', checkError.message);
+      supplierCodeExists = false;
+    }
 
-    if (!supplierCodeExists[0].exists) {
+    if (!supplierCodeExists) {
       await queryInterface.addColumn('tax_transactions', 'supplier_code', {
         type: Sequelize.STRING(50),
         allowNull: true,
@@ -85,16 +99,23 @@ module.exports = {
     }
 
     // Add claimable flag for input VAT (check if exists first)
-    const [isClaimableExists] = await queryInterface.sequelize.query(`
-      SELECT EXISTS (
-        SELECT FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'tax_transactions'
-        AND column_name = 'is_claimable'
-      );
-    `);
+    let isClaimableExists = false;
+    try {
+      const [isClaimableCheck] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_schema = 'public' 
+          AND table_name = 'tax_transactions'
+          AND column_name = 'is_claimable'
+        ) as exists;
+      `);
+      isClaimableExists = isClaimableCheck[0]?.exists === true;
+    } catch (checkError) {
+      console.log('⚠️ Could not check for is_claimable column:', checkError.message);
+      isClaimableExists = false;
+    }
 
-    if (!isClaimableExists[0].exists) {
+    if (!isClaimableExists) {
       await queryInterface.addColumn('tax_transactions', 'is_claimable', {
         type: Sequelize.BOOLEAN,
         allowNull: false,
