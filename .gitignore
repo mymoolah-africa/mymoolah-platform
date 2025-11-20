@@ -16,3 +16,10 @@ idempotencyKey
 
 # Node modules
 mymoolah-wallet-frontend/node_modules/
+
+# Binary files
+cloud-sql-proxy
+bin/cloud-sql-proxy
+*.exe
+*.dmg
+*.pkg
