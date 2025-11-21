@@ -3,9 +3,10 @@
 set -euo pipefail
 
 ROOT_DIR="/workspaces/mymoolah-platform"
-PROXY_PORT="6543"
+PROXY_PORT="${PROXY_PORT:-6543}"
 PROXY_LOG="/tmp/cloud-sql-proxy.log"
-INSTANCE_CONN_NAME="mymoolah-db:africa-south1:mmtp-pg"
+INSTANCE_CONN_NAME="${INSTANCE_CONN_NAME:-mymoolah-db:africa-south1:mmtp-pg}"
+ENV_FILE="${ENV_FILE:-.env}"
 
 log() {
   printf '[proxy-startup] %s\n' "$*"
@@ -136,12 +137,50 @@ ensure_gcloud_loaded() {
 }
 
 ensure_proxy_binary() {
-  if [ ! -f "./cloud-sql-proxy" ]; then
-    log "Downloading Cloud SQL Auth Proxy..."
-    curl -sLo cloud-sql-proxy https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.3/cloud-sql-proxy.linux.amd64
-    chmod +x ./cloud-sql-proxy
-    log "✅ Proxy binary ready"
+  if [ -f "./cloud-sql-proxy" ]; then
+    return
   fi
+
+  local os arch proxy_url
+  os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  arch="$(uname -m)"
+
+  case "${os}" in
+    linux)
+      case "${arch}" in
+        x86_64|amd64)
+          proxy_url="https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.3/cloud-sql-proxy.linux.amd64"
+          ;;
+        arm64|aarch64)
+          proxy_url="https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.3/cloud-sql-proxy.linux.arm64"
+          ;;
+        *)
+          error "Unsupported Linux architecture '${arch}' for Cloud SQL Proxy"
+          ;;
+      esac
+      ;;
+    darwin)
+      case "${arch}" in
+        x86_64|amd64)
+          proxy_url="https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.3/cloud-sql-proxy.darwin.amd64"
+          ;;
+        arm64|aarch64)
+          proxy_url="https://storage.googleapis.com/cloud-sql-connectors/cloud-sql-proxy/v2.11.3/cloud-sql-proxy.darwin.arm64"
+          ;;
+        *)
+          error "Unsupported macOS architecture '${arch}' for Cloud SQL Proxy"
+          ;;
+      esac
+      ;;
+    *)
+      error "Unsupported operating system '${os}' for Cloud SQL Proxy download"
+      ;;
+  esac
+
+  log "Downloading Cloud SQL Auth Proxy for ${os}/${arch}..."
+  curl -sSL -o cloud-sql-proxy "${proxy_url}"
+  chmod +x ./cloud-sql-proxy
+  log "✅ Proxy binary ready"
 }
 
 ensure_adc_valid() {
@@ -286,22 +325,29 @@ start_proxy() {
 }
 
 build_local_db_url() {
-  if [ ! -f .env ]; then
-    error ".env file not found"
+  if [ ! -f "${ENV_FILE}" ]; then
+    error "Environment file '${ENV_FILE}' not found"
     exit 1
   fi
 
-  # Load .env and build local proxy URL
-  export DATABASE_URL=$(node -e "
-    require('dotenv').config();
-    const u = new URL(process.env.DATABASE_URL);
-    u.hostname = '127.0.0.1';
-    u.port = '${PROXY_PORT}';
-    u.searchParams.set('sslmode', 'disable');
-    console.log(u.toString());
-  ")
+  # Load env file and build local proxy URL
+  export NODE_ENV_FILE="${ENV_FILE}"
+  export DATABASE_URL=$(
+    node - <<'NODE'
+const path = process.env.NODE_ENV_FILE || '.env';
+require('dotenv').config({ path });
+if (!process.env.DATABASE_URL) {
+  throw new Error(`DATABASE_URL not set in ${path}`);
+}
+const u = new URL(process.env.DATABASE_URL);
+u.hostname = '127.0.0.1';
+u.port = process.env.PROXY_PORT || '6543';
+u.searchParams.set('sslmode', 'disable');
+console.log(u.toString());
+NODE
+  )
 
-  log "✅ DATABASE_URL configured for proxy: postgres://...@127.0.0.1:${PROXY_PORT}/..."
+  log "✅ DATABASE_URL configured from ${ENV_FILE} via proxy: postgres://...@127.0.0.1:${PROXY_PORT}/..."
 }
 
 start_backend() {

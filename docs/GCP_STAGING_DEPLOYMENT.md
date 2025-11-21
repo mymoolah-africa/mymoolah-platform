@@ -224,6 +224,89 @@ This script:
 
 ---
 
+### Step 8: Attach Custom Domains with HTTPS Load Balancer
+
+> Cloud Run in `africa-south1` does not yet support direct domain mappings.  
+> To keep latency in-region while meeting banking-grade TLS requirements, use a global HTTPS load balancer that terminates TLS and routes to the staging Cloud Run services.
+
+1. **Reserve a global static IP**  
+   ```bash
+   gcloud compute addresses create mymoolah-staging-ip --global
+   gcloud compute addresses describe mymoolah-staging-ip --global --format='value(address)'
+   ```
+
+2. **Create serverless NEGs for each staging service**  
+   ```bash
+   gcloud compute network-endpoint-groups create moolah-backend-staging-neg \
+     --region=africa-south1 \
+     --network-endpoint-type=serverless \
+     --cloud-run-service=mymoolah-backend-staging
+
+   gcloud compute network-endpoint-groups create neg-staging-wallet \
+     --region=africa-south1 \
+     --network-endpoint-type=serverless \
+     --cloud-run-service=mymoolah-wallet-staging
+   ```
+
+3. **Create backend services and attach the NEGs**  
+   ```bash
+   gcloud compute backend-services create be-staging-backend \
+     --global --load-balancing-scheme=EXTERNAL_MANAGED --protocol=HTTP --timeout=30s
+   gcloud compute backend-services add-backend be-staging-backend \
+     --global --network-endpoint-group=moolah-backend-staging-neg \
+     --network-endpoint-group-region=africa-south1
+
+   gcloud compute backend-services create be-staging-wallet \
+     --global --load-balancing-scheme=EXTERNAL_MANAGED --protocol=HTTP --timeout=30s
+   gcloud compute backend-services add-backend be-staging-wallet \
+     --global --network-endpoint-group=neg-staging-wallet \
+     --network-endpoint-group-region=africa-south1
+   ```
+
+4. **Provision managed TLS for the staging domains**  
+   ```bash
+   gcloud compute ssl-certificates create cert-staging \
+     --domains=staging.mymoolah.africa,stagingwallet.mymoolah.africa
+   ```
+
+5. **Create URL map and HTTPS proxy**  
+   ```bash
+   gcloud compute url-maps create urlmap-staging \
+     --default-service=be-staging-backend
+
+   gcloud compute url-maps add-path-matcher urlmap-staging \
+     --path-matcher-name=wallet-matcher \
+     --default-service=be-staging-wallet \
+     --new-hosts=stagingwallet.mymoolah.africa
+
+   gcloud compute target-https-proxies create https-proxy-staging \
+     --url-map=urlmap-staging \
+     --ssl-certificates=cert-staging
+   ```
+
+6. **Expose the proxy via a global forwarding rule**  
+   ```bash
+   gcloud compute forwarding-rules create fr-staging \
+     --global \
+     --load-balancing-scheme=EXTERNAL_MANAGED \
+     --address=mymoolah-staging-ip \
+     --target-https-proxy=https-proxy-staging \
+     --ports=443
+   ```
+
+7. **Point DNS at the load balancer**  
+   - `staging.mymoolah.africa` → `A` → `<static IP>`
+   - `stagingwallet.mymoolah.africa` → `A` → `<static IP>`
+
+8. **Verify certificate status**  
+   ```bash
+   gcloud compute ssl-certificates describe cert-staging \
+     --format='value(managed.status)'
+   ```
+   Wait for the status to reach `ACTIVE`, then test both `https://staging.mymoolah.africa` and `https://stagingwallet.mymoolah.africa`.
+
+---
+
 ## Manual Testing
 
 ### Test Health Endpoint
