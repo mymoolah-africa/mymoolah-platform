@@ -23,3 +23,5 @@ bin/cloud-sql-proxy
 *.exe
 *.dmg
 *.pkg
+actions
+chemaname = public
