@@ -22,9 +22,10 @@
 - **After work (AI AGENT AUTOMATED)**:
   1. Stage and commit session log and handover: `git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/agent_handover.md && git commit -m "docs: session log and handover update - [description]"`
   2. Stage and commit all other changes: `git add . && git commit -m "[descriptive message for code changes]"`
-  3. **DO NOT push** - Inform user that commits are ready, user will push
+  3. **Push to GitHub**: `git push origin main` (AI agent pushes automatically after commits)
+  4. **Inform user**: Tell user that changes are pushed and ready to pull in Codespaces
 
-- **User action (REQUIRED)**: User runs `git push origin main` when ready to push to GitHub
+- **User action (REQUIRED)**: After AI agent pushes, user pulls in Codespaces: `git pull origin main` (in Codespaces terminal)
 
 - **CRITICAL RULE**: Never pull without checking status first. Uncommitted changes must be committed or stashed before pulling. Local commits must be pushed before pulling in other environments.
 
@@ -135,8 +136,9 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 - **Stage session log and handover**: `git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/agent_handover.md`
 - **Commit session log and handover**: `git commit -m "docs: session log and handover update - [brief description]"`
 - **Stage and commit all other changes**: `git add . && git commit -m "[descriptive commit message for code changes]"`
-- **Inform user**: Tell user all changes are committed and ready to push (DO NOT push - user will push)
-- **User action required**: User will run `git push origin main` when ready
+- **Push to GitHub**: `git push origin main` (AI agent pushes automatically)
+- **Inform user**: Tell user all changes are pushed and ready to pull in Codespaces
+- **User action required**: User will run `git pull origin main` in Codespaces when ready
 - **Important**: Create session log when work is done, not waiting for session end (user may close chat, lose connection, etc.)
 
 ## Session Logging System (REQUIRED - FULLY AUTOMATED BY AI AGENT)
@@ -153,10 +155,11 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
   - **AI agent MUST create and fill in** session log file completely with: session summary, tasks completed, key decisions, files modified, issues encountered, next steps, and important context for next agent
   - **AI agent MUST update** `docs/agent_handover.md` with official handover
   - **AI agent MUST commit** both files to git (separate commit for session log/handover, then commit for code changes)
-  - **AI agent MUST inform user** that files are committed and ready to push (user will push)
+  - **AI agent MUST push** all commits to GitHub: `git push origin main`
+  - **AI agent MUST inform user** that changes are pushed and ready to pull in Codespaces
 - **Integration**: Session logs (detailed chat history) + Agent handover (official status) = Complete continuity
-- **User action**: User only needs to review and run `git push origin main` when ready
+- **User action**: User pulls in Codespaces: `git pull origin main` (in Codespaces terminal)
 
 ## CRITICAL REMINDERS
-GitHub is source of truth. Documentation is mandatory. Session logging is required for continuity and MUST be done automatically by AI agent when work is complete (create, fill in, commit) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. AI agent commits session log and handover automatically - user only pushes to git.
+GitHub is source of truth. Documentation is mandatory. Session logging is required for continuity and MUST be done automatically by AI agent when work is complete (create, fill in, commit, push) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. AI agent commits and pushes session log and handover automatically - user pulls in Codespaces when ready.
 
