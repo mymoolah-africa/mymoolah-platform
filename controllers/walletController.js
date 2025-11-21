@@ -428,11 +428,16 @@ class WalletController {
       }
 
       // Fetch transactions with keyset pagination
+      // For dashboard (limit <= 10), fetch more to ensure we get enough non-fee transactions after filtering
+      const requestedLimit = parseInt(limit);
+      const isDashboard = requestedLimit <= 10;
+      const fetchLimit = isDashboard ? 50 : Math.min(requestedLimit, 100); // Fetch 50 for dashboard to ensure 10 non-fee results
+      
       const queryStart = Date.now();
       const transactions = await Transaction.findAll({
         where: whereClause,
         order: [['createdAt', 'DESC']],
-        limit: Math.min(parseInt(limit), 100), // Cap at 100 for performance
+        limit: fetchLimit,
         attributes: [
           'id',
           'transactionId',
@@ -486,7 +491,8 @@ class WalletController {
       const deduplicatedRows = Array.from(uniqueTransactions.values());
 
       // Filter out internal accounting transactions (float credits, revenue, VAT)
-      // Keep only customer-facing transactions (actual payments and fees)
+      // Dashboard (limit <= 10): Also exclude Transaction Fees
+      // Transactions page (limit > 10): Keep Transaction Fees, exclude only internal accounting
       const filteredRows = deduplicatedRows.filter((tx) => {
         const desc = (tx.description || '').toLowerCase();
         const type = (tx.type || '').toLowerCase();
@@ -528,9 +534,18 @@ class WalletController {
           return false;
         }
         
-        // Keep all customer-facing transactions (including "Zapper payment to" and "Transaction Fee")
+        // Dashboard: Exclude Transaction Fees
+        // Transactions page: Keep Transaction Fees
+        if (isDashboard && desc === 'transaction fee') {
+          return false;
+        }
+        
+        // Keep all customer-facing transactions
         return true;
       });
+
+      // Limit filtered results to requested limit (especially for dashboard)
+      const limitedRows = filteredRows.slice(0, requestedLimit);
 
       // Generate next cursor for pagination (based on original transactions, not filtered)
       const nextCursor = transactions.length > 0 ? 
@@ -544,11 +559,11 @@ class WalletController {
         success: true,
         message: 'Transaction history retrieved successfully',
         data: {
-          transactions: filteredRows,
+          transactions: limitedRows,
           pagination: {
-            hasMore: transactions.length === parseInt(limit),
+            hasMore: transactions.length === fetchLimit,
             nextCursor: nextCursor,
-            count: filteredRows.length
+            count: limitedRows.length
           }
         }
       });
