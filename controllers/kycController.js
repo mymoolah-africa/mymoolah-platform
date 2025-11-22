@@ -235,7 +235,7 @@ class KYCController {
             
             // Create notification for validation failure
             try {
-              await notificationService.createNotification(
+              const notif = await notificationService.createNotification(
                 userId,
                 'maintenance', // Using maintenance type for failures
                 'KYC Verification Failed',
@@ -246,8 +246,10 @@ class KYCController {
                   source: 'system'
                 }
               );
+              console.log('✅ KYC failure notification created:', notif.id);
             } catch (notifError) {
-              console.warn('⚠️  Failed to create KYC failure notification:', notifError.message);
+              console.error('❌ Failed to create KYC failure notification:', notifError);
+              console.error('❌ Notification error stack:', notifError.stack);
             }
           }
         } catch (kycError) {

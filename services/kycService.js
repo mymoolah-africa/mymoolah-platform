@@ -723,7 +723,7 @@ Return JSON only:
                   type: "image_url", 
                   image_url: {
                     url: `data:${mimeType};base64,${imageData}`,
-                    detail: "low" // Low detail for fast processing - preprocessing enhances image quality for accuracy
+                    detail: "high" // High detail for accurate digit reading - prevents OCR errors like 05 vs 10
                   }
                 }
               ]
