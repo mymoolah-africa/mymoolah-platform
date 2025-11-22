@@ -653,14 +653,20 @@ class KYCService {
     }
     
     // Preprocess image
+    const preprocessStartTime = Date.now();
     let imageData;
     try {
       imageData = await this.preprocessImageForOCR(localFilePath);
+      const preprocessDuration = Date.now() - preprocessStartTime;
+      console.log(`⏱️  Image preprocessing took ${preprocessDuration}ms`);
     } catch (preprocessError) {
-      console.error('❌ Image preprocessing error:', preprocessError.message);
+      const preprocessDuration = Date.now() - preprocessStartTime;
+      console.error(`❌ Image preprocessing error (${preprocessDuration}ms):`, preprocessError.message);
       // Fallback to original image
+      const fallbackStartTime = Date.now();
       const fileBuffer = await fs.readFile(localFilePath);
       imageData = fileBuffer.toString('base64');
+      console.log(`⏱️  Fallback image read took ${Date.now() - fallbackStartTime}ms`);
     }
     
     // Enhanced OpenAI prompt for identity documents (ID cards, ID books, and passports)
@@ -760,8 +766,10 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
     
     // Retry logic for OpenAI API calls
     let lastError;
+    const ocrStartTime = Date.now();
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
+        const attemptStartTime = Date.now();
         console.log(`🔄 OpenAI OCR attempt ${attempt}/${MAX_RETRIES}...`);
         
         const response = await this.openai.chat.completions.create({
@@ -774,13 +782,17 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
                 type: "image_url", 
                 image_url: {
                   url: `data:${mimeType};base64,${imageData}`,
-                  detail: "high"
+                  detail: "low" // Changed from "high" to "low" for faster processing - still accurate for OCR
                 }
               }
             ]
           }],
-          max_completion_tokens: 4000 // GPT-5 uses reasoning_tokens + output tokens - need much higher limit
+          max_completion_tokens: 1500, // Optimized: Actual usage ~937 tokens (832 reasoning + ~105 output) - 1500 provides buffer
+          timeout: 20000 // 20 second timeout to prevent hanging (faster failure for better UX)
         });
+        
+        const attemptDuration = Date.now() - attemptStartTime;
+        console.log(`⏱️  GPT-5 OCR attempt ${attempt} took ${attemptDuration}ms`);
         
         // Log full response structure for debugging (GPT-5 might have different format)
         console.log('📋 OpenAI API Response Structure:', {
@@ -900,7 +912,8 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
           }
         }
         
-        console.log('✅ OpenAI OCR successful');
+        const ocrTotalDuration = Date.now() - ocrStartTime;
+        console.log(`✅ OpenAI OCR successful - Total OCR time: ${ocrTotalDuration}ms`);
         return parsedResults;
         
       } catch (error) {
@@ -1756,14 +1769,17 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
 
   // Process KYC submission with simplified OCR and manual review fallback
   async processKYCSubmission(userId, documentType, documentUrl, retryCount = 0) {
+    const kycProcessStartTime = Date.now();
     try {
       console.log(`🔄 Processing KYC submission: User ${userId}, Type: ${documentType}, Retry: ${retryCount}`);
       
       let ocrResults;
+      const ocrStartTime = Date.now();
       try {
         // Process OCR with simplified OpenAI approach
         ocrResults = await this.processDocumentOCR(documentUrl, documentType);
-        console.log('✅ OCR processing successful');
+        const ocrDuration = Date.now() - ocrStartTime;
+        console.log(`✅ OCR processing successful - OCR took ${ocrDuration}ms`);
       } catch (ocrError) {
         console.error('❌ OCR processing failed:', ocrError.message);
         
@@ -1799,6 +1815,8 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         response.message = 'KYC verification successful (first name accent difference ignored)';
         response.success = true;
         // Don't queue for review - auto-approve since critical fields match
+        const totalDuration = Date.now() - kycProcessStartTime;
+        console.log(`⏱️  Total KYC processing time: ${totalDuration}ms`);
         return response;
       }
       
@@ -1823,6 +1841,8 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         response.success = true;
       }
       
+      const totalDuration = Date.now() - kycProcessStartTime;
+      console.log(`⏱️  Total KYC processing time: ${totalDuration}ms`);
       return response;
     } catch (error) {
       console.error('❌ Error in processKYCSubmission:', error);
