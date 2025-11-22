@@ -87,7 +87,7 @@ const findUser = async (identifier) => {
 // Get KYC records for user
 const getKYCRecords = async (userId) => {
   const [results] = await sequelize.query(
-    `SELECT id, "userId", status, "documentType", "createdAt", "updatedAt", "verifiedAt", "verifiedBy"
+    `SELECT id, "userId", status, "documentType", "createdAt", "updatedAt", "reviewedAt", "reviewedBy", "submittedAt"
      FROM kyc
      WHERE "userId" = :userId
      ORDER BY "createdAt" DESC
@@ -165,15 +165,15 @@ const main = async () => {
     if (kycRecords && kycRecords.length > 0) {
       console.log(`📋 KYC Records (${kycRecords.length}):`);
       kycRecords.forEach((record, index) => {
-        console.log(`   ${index + 1}. Record ID: ${record.id}`);
-        console.log(`      Status: ${record.status}`);
-        console.log(`      Document Type: ${record.documentType || 'N/A'}`);
-        console.log(`      Created: ${record.createdAt}`);
-        if (record.verifiedAt) {
-          console.log(`      Verified: ${record.verifiedAt} by ${record.verifiedBy || 'N/A'}`);
-        }
-        console.log(`      Updated: ${record.updatedAt}`);
-        console.log('');
+      console.log(`   ${index + 1}. Record ID: ${record.id}`);
+      console.log(`      Status: ${record.status}`);
+      console.log(`      Document Type: ${record.documentType || 'N/A'}`);
+      console.log(`      Submitted: ${record.submittedAt || record.createdAt}`);
+      if (record.reviewedAt) {
+        console.log(`      Reviewed: ${record.reviewedAt} by ${record.reviewedBy || 'N/A'}`);
+      }
+      console.log(`      Updated: ${record.updatedAt}`);
+      console.log('');
       });
     } else {
       console.log('📋 KYC Records: None found');
