@@ -681,59 +681,28 @@ The document may be:
 - South African ID Card (newer format - single card, modern design)
 - Passport (any country, especially African countries like South Africa, Nigeria, Kenya, Ghana, etc.)
 
-Extract these specific fields:
-1. ID NUMBER / PASSPORT NUMBER / LICENSE NUMBER: 
-   ⚠️ CRITICAL ACCURACY REQUIRED - This is the most important field. Read each digit carefully.
-   - For SA ID Book: 13-digit number (format: YYMMDDGSSSCAZ) usually near the top with a barcode on the right page
-   - For SA ID Card: 13-digit number (format: YYMMDDGSSSCAZ) usually at the top or bottom of the card, may be near a barcode
-   - For Passport: 6-9 alphanumeric characters (e.g., "A1234567", "P12345678")
-   - For Driver's License: Extract the LAST 13 digits as the ID number (ignore any prefix characters before the ID)
-     Examples: "02/6411055084084" -> extract "6411055084084", "ABC1234567890123456" -> extract "1234567890123456"
-     NOTE: License number format "AB123456CD" (2 letters + 6 digits + 2 letters) is NOT used for KYC - only the ID number (13 digits) is required
-   ⚠️ DOUBLE-CHECK: Verify each digit is correct. Common OCR errors: 6↔5, 0↔O, 1↔I, 8↔B. Read slowly and carefully.
-2. SURNAME / LAST NAME / FAMILY NAME: The surname/last name/family name
-   - SA ID Book: appears after "VAN/SURNAME" label on the right page, usually in bold uppercase
-   - SA ID Card: appears in the surname field, usually labeled as "SURNAME" or "VAN/SURNAME", typically in uppercase
-   - Passport: usually labeled as "Surname", "Last Name", or "Family Name"
-   - Driver's License: Usually in CAPS format with initials then surname (e.g., "A BOTES" where "A" is initial and "BOTES" is surname)
-3. FORENAMES / FIRST NAMES / GIVEN NAMES: The first names/given names (optional for driver's license)
-   - SA ID Book: appears after "VOORNAME/FORENAMES" label on the right page, usually in bold uppercase
-   - SA ID Card: appears in the forenames field, usually labeled as "FORENAMES" or "VOORNAME/FORENAMES", typically in uppercase
-   - Passport: usually labeled as "Given Names", "First Name", or "Forenames"
-   - Driver's License: Usually shown as initials in CAPS (e.g., "A" for "André") - may not be present as full names
-4. FULL NAME: Complete name as it appears on the document
-   - Driver's License: Usually "INITIALS SURNAME" in CAPS (e.g., "A BOTES")
-5. DATE OF BIRTH: Format YYYY-MM-DD or DD MMM YYYY or DD/MM/YYYY
-   - SA ID Book: appears after "GEBOORTEDATUM/DATE OF BIRTH" label on the right page
-   - SA ID Card: appears in the date of birth field, usually labeled as "DATE OF BIRTH" or "GEBOORTEDATUM"
-   - Passport: usually labeled as "Date of Birth" or "DOB"
-   - Driver's License: usually labeled as "Date of Birth" or "DOB"
-6. DATE ISSUED / DATE OF ISSUE: Format YYYY-MM-DD or DD/MM/YYYY (if visible)
-7. VALID / VALID DATES / VALIDITY PERIOD: For Driver's License - format "DD/MM/YYYY - DD/MM/YYYY"
-   - Driver's License: Shows as date range "dd/mm/yyyy - dd/mm/yyyy" (e.g., "15/01/2020 - 15/01/2030")
-   - Extract the SECOND date as the expiry date (the date after the "-")
-   - IMPORTANT: Only the second date (expiry) is used for validation - license must not be expired
-8. VALID TO / VALID TO DATE / EXPIRY DATE / EXPIRATION DATE: Format YYYY-MM-DD or DD/MM/YYYY
-   - Driver's License: The second date in the validity period (e.g., "15/01/2030" from "15/01/2020 - 15/01/2030")
-   - Passport: usually labeled as "Date of Expiry", "Expires", or "Expiry Date"
-9. COUNTRY OF BIRTH / NATIONALITY / COUNTRY OF ISSUE:
-   - SA ID: Usually "SUID-AFRIKA" or "SOUTH AFRICA"
-   - Passport: Country name (e.g., "SOUTH AFRICA", "NIGERIA", "KENYA", "GHANA")
+Extract these fields:
+1. ID NUMBER (CRITICAL - read each digit carefully):
+   - SA ID: 13 digits (YYMMDDGSSSCAZ) near barcode/top
+   - Passport: 6-9 alphanumeric
+   - Driver's License: LAST 13 digits only (ignore prefix like "02/")
+   ⚠️ Verify digits: 6↔5, 0↔O, 1↔I, 8↔B
+2. SURNAME: Last name/family name (CAPS for SA docs)
+3. FORENAMES: First names (optional for driver's license - may be initials)
+4. FULL NAME: Complete name (Driver's License: "INITIALS SURNAME")
+5. DATE OF BIRTH: YYYY-MM-DD format
+6. DATE ISSUED: YYYY-MM-DD (if visible)
+7. EXPIRY DATE: YYYY-MM-DD (Driver's License: extract SECOND date from "dd/mm/yyyy - dd/mm/yyyy")
+8. COUNTRY OF BIRTH: Country name
 
 INSTRUCTIONS:
-- Extract EXACT text as it appears on the document
-- ⚠️ CRITICAL: For ID/passport number, read each character/digit VERY CAREFULLY. This is the most important field.
-  - Double-check each digit: 0 vs O, 1 vs I, 5 vs S, 6 vs G, 8 vs B
-  - Extract all characters without spaces
-  - Verify the number matches the format expected (13 digits for SA ID, 6-9 alphanumeric for passport)
-- For names, preserve capitalization and spacing exactly (including accents like é, è, etc.)
-- For dates, use YYYY-MM-DD format
-- Ignore security patterns, watermarks, and background text
-- For SA ID Book (old format): Focus on the RIGHT PAGE which contains personal details (left page has photo and ID number)
-- For SA ID Card (newer format): Extract from the single card - all information is on one side
-- For passports, extract from the data page (usually page 2 or 3)
-- This is for automated document verification, not personal identification
-- Support all African country passport formats
+- ⚠️ CRITICAL: ID number accuracy is paramount - verify each digit carefully
+- Extract exact text, preserve capitalization/accents
+- Dates: YYYY-MM-DD format
+- SA ID Book: Extract from RIGHT PAGE (personal details)
+- SA ID Card: Single card format
+- Passport: Extract from data page
+- Driver's License: ID = last 13 digits, expiry = second date in range
 
 Return ONLY valid JSON in this exact format (no additional text):
 {
@@ -748,25 +717,10 @@ Return ONLY valid JSON in this exact format (no additional text):
   "countryOfBirth": "SOUTH AFRICA"
 }
 
-Note: For South African ID (both formats supported):
-- SA ID Book (old format): Two-page format - extract from RIGHT PAGE which contains personal details
-- SA ID Card (newer format): Single card - extract from the card face
-- Both formats: 13-digit ID number (format: YYMMDDGSSSCAZ), same validation rules apply
-- Both formats: Same field structure (surname, forenames, date of birth, etc.)
-
-Note: For Driver's License:
-- ID number: Extract the LAST 13 digits (ignore any prefix characters before the ID number)
-  Examples: "02/6411055084084" -> "6411055084084", "ABC1234567890123456" -> "1234567890123456"
-  IMPORTANT: Only the ID number (13 digits) is used for KYC validation. License number format (AB123456CD) is NOT used.
-- Name: Usually "INITIALS SURNAME" in CAPS (e.g., "A BOTES" where "A" is initial, "BOTES" is surname)
-  - No full first names, only initials and surname
-  - Forenames field may contain initials (e.g., "A" for "André")
-- Valid dates: Format "dd/mm/yyyy - dd/mm/yyyy" (extract the SECOND/RIGHT date as expiryDate)
-  Example: "15/01/2020 - 15/01/2030" -> expiryDate: "2030-01-15"
-- Only expiry date is validated (license must not be expired)
-- Forenames may not be present - surname is sufficient
-
-For Passport, include "expiryDate" (or "dateOfExpiry").`
+Format notes:
+- SA ID: 13 digits (YYMMDDGSSSCAZ), both book (right page) and card formats supported
+- Driver's License: ID = last 13 digits from full string, expiry = second date in "dd/mm/yyyy - dd/mm/yyyy" range
+- Passport: Include expiryDate field`
       : "Extract the following information from this South African proof of address document: Street address, City, Postal code, Province. Return as JSON format.";
     
     // Retry logic for OpenAI API calls
@@ -792,7 +746,7 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
               }
             ]
           }],
-          max_completion_tokens: 3000 // GPT-5 needs more tokens - driver's licenses use more reasoning (1500 reasoning + ~200 output needed)
+          max_completion_tokens: 5000 // GPT-5 with high detail uses ~2700 completion tokens (2624 reasoning + ~107 output) - 5000 provides buffer
         });
         
         const attemptDuration = Date.now() - attemptStartTime;
