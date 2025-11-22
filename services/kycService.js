@@ -779,7 +779,22 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
               }
             ]
           }],
-          max_completion_tokens: 500
+          max_completion_tokens: 1000 // Increased for GPT-5 (was 500) - GPT-5 needs more tokens
+        });
+        
+        // Log full response structure for debugging (GPT-5 might have different format)
+        console.log('📋 OpenAI API Response Structure:', {
+          hasResponse: !!response,
+          hasChoices: !!(response?.choices),
+          choicesLength: response?.choices?.length || 0,
+          model: response?.model,
+          usage: response?.usage,
+          firstChoice: response?.choices?.[0] ? {
+            hasMessage: !!response.choices[0].message,
+            hasContent: !!response.choices[0].message?.content,
+            contentLength: response.choices[0].message?.content?.length || 0,
+            finishReason: response.choices[0].finish_reason
+          } : null
         });
         
         // Validate response structure
@@ -789,6 +804,12 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         }
         
         const content = response.choices[0]?.message?.content || '';
+        const finishReason = response.choices[0]?.finish_reason;
+        
+        // Log finish reason - GPT-5 might stop for different reasons
+        if (finishReason) {
+          console.log('📋 OpenAI Finish Reason:', finishReason);
+        }
         
         // Log raw OpenAI response for debugging
         console.log('📄 Raw OpenAI OCR Response:', content ? content.substring(0, 500) : '(empty)'); // First 500 chars
@@ -796,6 +817,9 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         // Log response metadata for debugging
         if (response.model) {
           console.log('📋 OpenAI Model Used:', response.model);
+        }
+        if (response.usage) {
+          console.log('📊 OpenAI Token Usage:', response.usage);
         }
         
         // Check if OpenAI refused due to content policy - CHECK FIRST before parsing
