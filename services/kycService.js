@@ -683,12 +683,14 @@ The document may be:
 
 Extract these specific fields:
 1. ID NUMBER / PASSPORT NUMBER / LICENSE NUMBER: 
+   ⚠️ CRITICAL ACCURACY REQUIRED - This is the most important field. Read each digit carefully.
    - For SA ID Book: 13-digit number (format: YYMMDDGSSSCAZ) usually near the top with a barcode on the right page
    - For SA ID Card: 13-digit number (format: YYMMDDGSSSCAZ) usually at the top or bottom of the card, may be near a barcode
    - For Passport: 6-9 alphanumeric characters (e.g., "A1234567", "P12345678")
    - For Driver's License: Extract the LAST 13 digits as the ID number (ignore any prefix characters before the ID)
      Examples: "02/6411055084084" -> extract "6411055084084", "ABC1234567890123456" -> extract "1234567890123456"
      NOTE: License number format "AB123456CD" (2 letters + 6 digits + 2 letters) is NOT used for KYC - only the ID number (13 digits) is required
+   ⚠️ DOUBLE-CHECK: Verify each digit is correct. Common OCR errors: 6↔5, 0↔O, 1↔I, 8↔B. Read slowly and carefully.
 2. SURNAME / LAST NAME / FAMILY NAME: The surname/last name/family name
    - SA ID Book: appears after "VAN/SURNAME" label on the right page, usually in bold uppercase
    - SA ID Card: appears in the surname field, usually labeled as "SURNAME" or "VAN/SURNAME", typically in uppercase
@@ -720,7 +722,10 @@ Extract these specific fields:
 
 INSTRUCTIONS:
 - Extract EXACT text as it appears on the document
-- For ID/passport number, extract all characters without spaces
+- ⚠️ CRITICAL: For ID/passport number, read each character/digit VERY CAREFULLY. This is the most important field.
+  - Double-check each digit: 0 vs O, 1 vs I, 5 vs S, 6 vs G, 8 vs B
+  - Extract all characters without spaces
+  - Verify the number matches the format expected (13 digits for SA ID, 6-9 alphanumeric for passport)
 - For names, preserve capitalization and spacing exactly (including accents like é, è, etc.)
 - For dates, use YYYY-MM-DD format
 - Ignore security patterns, watermarks, and background text
@@ -782,7 +787,7 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
                 type: "image_url", 
                 image_url: {
                   url: `data:${mimeType};base64,${imageData}`,
-                  detail: "low" // Changed from "high" to "low" for faster processing - still accurate for OCR
+                  detail: "high" // High detail for maximum OCR accuracy - critical for ID number extraction
                 }
               }
             ]
@@ -1467,27 +1472,52 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         docIdRaw: ocrResults.idNumber || ocrResults.licenseNumber
       });
       
-      // TEMPORARY TESTING EXCEPTION: User ID 1 can test passports and driver's licenses without ID matching
-      // ID validation is ACTIVE for: SA ID cards, old ID books
-      // ID validation is SKIPPED for: Passports and driver's licenses (testing only)
+      // OCR ACCURACY VALIDATION: Verify ID number matches date of birth (for SA IDs and driver's licenses)
+      // SA ID format: YYMMDDGSSSCAZ where YYMMDD is date of birth
+      if (docIdForMatch && docIdForMatch.length === 13 && ocrResults.dateOfBirth) {
+        const idYY = docIdForMatch.slice(0, 2);
+        const idMM = docIdForMatch.slice(2, 4);
+        const idDD = docIdForMatch.slice(4, 6);
+        const dobParts = ocrResults.dateOfBirth.split('-'); // Format: YYYY-MM-DD
+        if (dobParts.length === 3) {
+          const dobYY = dobParts[0].slice(-2); // Last 2 digits of year
+          const dobMM = dobParts[1];
+          const dobDD = dobParts[2];
+          
+          if (idYY !== dobYY || idMM !== dobMM || idDD !== dobDD) {
+            console.warn('⚠️  OCR ACCURACY WARNING: ID number date portion does not match extracted date of birth:', {
+              idNumberDate: `${idYY}-${idMM}-${idDD}`,
+              extractedDOB: `${dobYY}-${dobMM}-${dobDD}`,
+              fullDOB: ocrResults.dateOfBirth,
+              idNumber: docIdForMatch
+            });
+            // This suggests an OCR error - log warning but continue validation
+            // The ID mismatch check below will catch it if it doesn't match registration
+          } else {
+            console.log('✅ ID number date portion matches extracted date of birth');
+          }
+        }
+      }
+      
+      // TEMPORARY TESTING EXCEPTION: User ID 1 can test passports without ID matching
+      // ID validation is ACTIVE for: SA ID cards, old ID books, SA driver's licenses
+      // ID validation is SKIPPED for: Passports only
       const isTestingUser = userId === 1;
       const isPassport = documentType === 'passport';
-      const isDrivingLicense = documentType === 'sa_driving_license';
-      const skipIdMatching = isTestingUser && (isPassport || isDrivingLicense);
+      const skipIdMatching = isTestingUser && isPassport;
       
       // CRITICAL CHECK 1: ID Number must match exactly
       // Applies to: SA ID, Passport, Driver's License, Temporary ID Certificate
-      // EXCEPTION: User ID 1 (testing) - skip ID number matching for passports and driver's licenses
-      // For SA ID cards and old ID books, ID validation is ACTIVE for user ID 1
+      // EXCEPTION: User ID 1 (testing) - skip ID number matching ONLY for passports
+      // For SA ID cards, old ID books, and SA driver's licenses, ID validation is ACTIVE for user ID 1
       if (skipIdMatching) {
-        const docTypeName = isPassport ? 'passport' : 'driver\'s license';
-        console.log(`🧪 TESTING MODE: User ID 1 - skipping ID number matching validation for ${docTypeName}`);
-        // For testing user with passport/driver's license, only check that document has an ID number (format validation happens later)
+        console.log('🧪 TESTING MODE: User ID 1 - skipping ID number matching validation for passport');
+        // For testing user with passport, only check that document has a passport number (format validation happens later)
         if (!docIdForMatch) {
           validation.issues.push('ID/Passport/License number not found on document');
           return validation;
         } else {
-          console.log(`✅ Testing mode: Document has ${docTypeName} ID number (format will be validated)`);
+          console.log('✅ Testing mode: Document has Passport number (format will be validated)');
         }
       } else {
         // Normal validation: ID number must match exactly
