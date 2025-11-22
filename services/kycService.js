@@ -643,7 +643,7 @@ Extract these specific fields:
    - For Passport: 6-9 alphanumeric characters (e.g., "A1234567", "P12345678")
    - For Driver's License: Extract the LAST 13 digits as the ID number (ignore any prefix characters before the ID)
      Examples: "02/6411055084084" -> extract "6411055084084", "ABC1234567890123456" -> extract "1234567890123456"
-     OR license format "AB123456CD" (2 letters + 6 digits + 2 letters) - this is the license number, not the ID number
+     NOTE: License number format "AB123456CD" (2 letters + 6 digits + 2 letters) is NOT used for KYC - only the ID number (13 digits) is required
 2. SURNAME / LAST NAME / FAMILY NAME: The surname/last name/family name
    - SA ID: appears after "VAN/SURNAME" label, usually in bold uppercase
    - Passport: usually labeled as "Surname", "Last Name", or "Family Name"
@@ -697,6 +697,7 @@ Return ONLY valid JSON in this exact format (no additional text):
 Note: For Driver's License:
 - ID number: Extract the LAST 13 digits (ignore any prefix characters before the ID number)
   Examples: "02/6411055084084" -> "6411055084084", "ABC1234567890123456" -> "1234567890123456"
+  IMPORTANT: Only the ID number (13 digits) is used for KYC validation. License number format (AB123456CD) is NOT used.
 - Name: Usually "INITIALS SURNAME" in CAPS (e.g., "A BOTES" where "A" is initial, "BOTES" is surname)
   - No full first names, only initials and surname
   - Forenames field may contain initials (e.g., "A" for "André")
@@ -1477,13 +1478,15 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
           validation.issues.push('Temporary ID certificate has expired. Please use a valid, unexpired temporary ID.');
         }
       } else if (documentType === 'sa_driving_license') {
-        // SA Driver's License can have ID number format "02/6411055084084" or license format "AB123456CD"
-        // Check if it's a valid license format OR if it's an ID number (which is also acceptable)
-        const isLicenseFormat = isValidSouthAfricanDrivingLicense(rawLicenseForFormat) || isValidSouthAfricanDrivingLicense(rawIdForFormat);
-        const isIdNumberFormat = /^\d{13}$/.test(rawIdForFormat) || /^\d{13}$/.test(rawLicenseForFormat);
+        // SA Driver's License: Only validate the ID number (13 digits), NOT the license number format
+        // The ID number is the last 13 digits (prefix characters are ignored)
+        // License number format (AB123456CD) is NOT used for KYC validation
+        const isIdNumberFormat = /^\d{13}$/.test(rawIdForFormat);
         
-        if (!isLicenseFormat && !isIdNumberFormat) {
-          validation.issues.push('Invalid South African driving license format. Expected license number (2 letters + 6 digits + 2 letters) or ID number (13 digits, may include prefix like "02/").');
+        if (!isIdNumberFormat) {
+          validation.issues.push('Invalid South African ID number on driving license. Expected 13-digit ID number (prefix characters are ignored).');
+        } else if (!isValidSouthAfricanId(rawId)) {
+          validation.issues.push('Invalid South African ID number (checksum validation failed).');
         }
         
         // Check if driving license is still valid (not expired)
