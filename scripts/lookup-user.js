@@ -96,21 +96,36 @@ async function lookupUser(searchTerm) {
     // Check if it looks like a phone number (digits, possibly with + or spaces)
     else if (/^[\d\s\+\-\(\)]+$/.test(searchTerm.trim())) {
       const phoneClean = searchTerm.trim().replace(/[\s\+\-\(\)]/g, '');
+      // Handle South African numbers: if starts with 0, also try +27
+      let phoneVariants = [searchTerm.trim(), phoneClean];
+      if (phoneClean.startsWith('0')) {
+        // 0686772469 -> also try 686772469 and +27686772469
+        phoneVariants.push(phoneClean.substring(1)); // Remove leading 0
+        phoneVariants.push(`+27${phoneClean.substring(1)}`); // Add +27
+        phoneVariants.push(`27${phoneClean.substring(1)}`); // Add 27 without +
+      } else if (phoneClean.startsWith('27')) {
+        // 27686772469 -> also try +27 and 0
+        phoneVariants.push(`+${phoneClean}`);
+        phoneVariants.push(`0${phoneClean.substring(2)}`); // 0 + last 9 digits
+      } else if (phoneClean.startsWith('+27')) {
+        // +27686772469 -> also try without + and with 0
+        phoneVariants.push(phoneClean.substring(1)); // Remove +
+        phoneVariants.push(`0${phoneClean.substring(3)}`); // 0 + last 9 digits
+      }
+      
+      // Build LIKE conditions for all variants
+      const likeConditions = phoneVariants.map((_, idx) => `"phoneNumber" LIKE :phone${idx + 1}`).join(' OR ');
+      queryParams = {};
+      phoneVariants.forEach((variant, idx) => {
+        queryParams[`phone${idx + 1}`] = `%${variant}%`;
+      });
+      
       query = `
         SELECT id, "firstName", "lastName", "phoneNumber", "email", "kycStatus", "createdAt"
         FROM users
-        WHERE "phoneNumber" LIKE :phone1
-           OR "phoneNumber" LIKE :phone2
-           OR "phoneNumber" LIKE :phone3
-           OR REPLACE(REPLACE(REPLACE(REPLACE("phoneNumber", '+', ''), ' ', ''), '-', ''), '(', ''), ')', '') LIKE :phoneClean
+        WHERE ${likeConditions}
         ORDER BY id
       `;
-      queryParams = {
-        phone1: `%${searchTerm.trim()}%`,
-        phone2: `%${phoneClean}%`,
-        phone3: `%+27${phoneClean}%`,
-        phoneClean: `%${phoneClean}%`
-      };
     }
     // Otherwise treat as name search
     else {
