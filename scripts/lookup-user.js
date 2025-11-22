@@ -173,6 +173,13 @@ async function lookupUser(searchTerm) {
       }
     }
 
+    // Debug: show what we're searching for
+    if (process.env.DEBUG) {
+      console.log('\n🔍 Debug Info:');
+      console.log('Query:', query);
+      console.log('Params:', JSON.stringify(queryParams, null, 2));
+    }
+
     const results = await sequelize.query(query, {
       replacements: queryParams,
       type: Sequelize.QueryTypes.SELECT
@@ -180,6 +187,13 @@ async function lookupUser(searchTerm) {
 
     // Handle different result formats
     const users = Array.isArray(results) ? results : (results[0] || []);
+    
+    if (process.env.DEBUG) {
+      console.log('Results found:', users.length);
+      if (users.length > 0) {
+        console.log('Sample result:', users[0]);
+      }
+    }
 
     if (users.length === 0) {
       console.log('❌ No user found matching your search');
