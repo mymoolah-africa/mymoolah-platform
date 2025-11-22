@@ -1583,7 +1583,9 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
     
     // Check for driver's license indicators: validFrom and expiryDate fields
     // Driver's licenses have validity periods, SA IDs don't
-    const hasValidFrom = ocrResults.validFrom || ocrResults.validFromDate || ocrResults.dateIssued;
+    // NOTE: dateIssued is NOT a validity period indicator - SA ID books also have dateIssued
+    // Only check for actual validity period fields (validFrom/validTo/expiryDate)
+    const hasValidFrom = ocrResults.validFrom || ocrResults.validFromDate;
     const hasExpiryDate = ocrResults.expiryDate || ocrResults.licenseExpiryDate || ocrResults.validTo || ocrResults.validToDate;
     if (hasValidFrom && hasExpiryDate && idNumber && /^\d{13}$/.test(idNumber)) {
       // Has validity period AND 13-digit ID number = likely driver's license
@@ -1597,7 +1599,8 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
     }
     
     // South African ID numbers are exactly 13 digits (all numeric)
-    // Only classify as SA ID if it doesn't have validity period fields (driver's license indicator)
+    // Classify as SA ID if it's 13 digits and doesn't have validity period fields (driver's license indicator)
+    // dateIssued alone is NOT a validity period indicator - SA ID books have dateIssued too
     if (idNumber && /^\d{13}$/.test(idNumber) && !hasValidFrom && !hasExpiryDate) {
       return 'sa_id';
     }
