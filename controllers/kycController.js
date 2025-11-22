@@ -303,21 +303,32 @@ class KYCController {
         });
       }
 
-      // Get KYC record if exists (only select columns that exist in database)
-      const { Kyc } = require('../models');
-      const kycRecord = await Kyc.findOne({ 
-        where: { userId: userId },
-        order: [['createdAt', 'DESC']],
-        attributes: ['id', 'userId', 'documentType', 'documentNumber', 'ocrData', 'status', 'submittedAt', 'reviewedAt', 'reviewedBy', 'reviewerNotes', 'rejectionReason', 'verificationScore', 'isAutomated', 'createdAt', 'updatedAt']
-      });
+      // Get user to check kycStatus (frontend checks this, not just wallet.kycVerified)
+      const { User, Kyc } = require('../models');
+      const user = await User.findByPk(userId);
       
+      // Get KYC record if exists (only select columns that exist in database)
+      // Note: Database has ocrResults, not ocrData. Also some columns may not exist.
+      let kycRecord = null;
+      try {
+        kycRecord = await Kyc.findOne({ 
+          where: { userId: userId },
+          order: [['createdAt', 'DESC']],
+          attributes: ['id', 'userId', 'documentType', 'documentNumber', 'status', 'submittedAt', 'reviewedAt', 'reviewerNotes', 'createdAt', 'updatedAt']
+        });
+      } catch (kycError) {
+        // If KYC table query fails, continue without kycRecord
+        console.warn('⚠️  Could not fetch KYC record:', kycError.message);
+      }
+      
+      // Return user's kycStatus (what frontend checks) and wallet kycVerified
       res.json({
         success: true,
         kycVerified: wallet.kycVerified || false,
         kycVerifiedAt: wallet.kycVerifiedAt || null,
         kycVerifiedBy: wallet.kycVerifiedBy || null,
         walletId: wallet.walletId,
-        kycStatus: kycRecord ? kycRecord.status : 'not_started',
+        kycStatus: user?.kycStatus || (kycRecord ? kycRecord.status : 'not_started'),
         kycRecord: kycRecord ? {
           status: kycRecord.status,
           documentType: kycRecord.documentType,
