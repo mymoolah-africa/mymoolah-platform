@@ -709,7 +709,7 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         console.log(`🔄 OpenAI OCR attempt ${attempt}/${MAX_RETRIES}...`);
         
         const response = await this.openai.chat.completions.create({
-          model: "gpt-5",
+          model: "gpt-4o",
           messages: [{
             role: "user",
             content: [
@@ -759,7 +759,9 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         // Check if content is empty
         if (!content || content.trim().length === 0) {
           console.error('❌ OpenAI returned empty content');
-          throw new Error('OpenAI returned empty response');
+          const emptyError = new Error('OpenAI returned empty response');
+          emptyError.isEmptyResponse = true;
+          throw emptyError;
         }
         
         // Parse results
@@ -826,6 +828,17 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
           break;
         }
         
+        // Check if it's an empty response or invalid model error - should trigger fallback
+        if (error.isEmptyResponse || 
+            error.message.includes('empty response') ||
+            error.message.includes('invalid model') ||
+            error.code === 'invalid_model' ||
+            error.status === 404) {
+          console.log('🔄 Empty response or invalid model detected - will use Tesseract fallback after all attempts');
+          lastError.isEmptyResponse = true;
+          break;
+        }
+        
         // If it's a rate limit or temporary error, retry
         if (attempt < MAX_RETRIES && (
           error.message.includes('rate limit') || 
@@ -846,8 +859,8 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
       }
     }
     
-    // All retries failed - try Tesseract fallback if OpenAI refused
-    // Check if it was a content policy refusal
+    // All retries failed - try Tesseract fallback if OpenAI refused or returned empty
+    // Check if it was a content policy refusal or empty response
     const wasContentPolicyRefusal = lastError?.isContentPolicyRefusal ||
       (lastError?.message && lastError.message.includes('content policy refusal')) ||
       // Also check the OpenAI response content if we have it
@@ -856,8 +869,15 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         /can'?t\s*extract|can'?t\s*assist|can'?t\s*help|unable/i.test(lastError.openaiResponse)
       ));
     
-    if (wasContentPolicyRefusal) {
-      console.log('🔄 OpenAI content policy refusal confirmed - falling back to Tesseract OCR...');
+    const wasEmptyResponse = lastError?.isEmptyResponse ||
+      (lastError?.message && lastError.message.includes('empty response')) ||
+      (lastError?.message && lastError.message.includes('invalid model')) ||
+      lastError?.code === 'invalid_model' ||
+      lastError?.status === 404;
+    
+    if (wasContentPolicyRefusal || wasEmptyResponse) {
+      const reason = wasContentPolicyRefusal ? 'content policy refusal' : 'empty response or invalid model';
+      console.log(`🔄 OpenAI ${reason} confirmed - falling back to Tesseract OCR...`);
       try {
         const tesseractText = await this.runTesseractOCR(localFilePath);
         const parsedResults = this.parseSouthAfricanIdText(tesseractText);
@@ -872,7 +892,7 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         }
       } catch (tesseractError) {
         console.error('❌ Tesseract OCR fallback failed:', tesseractError.message);
-        throw new Error(`OCR processing failed: OpenAI refused and Tesseract failed - ${tesseractError.message}`);
+        throw new Error(`OCR processing failed: OpenAI ${reason} and Tesseract failed - ${tesseractError.message}`);
       }
     }
     
