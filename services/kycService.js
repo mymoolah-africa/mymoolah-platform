@@ -1357,6 +1357,8 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
       // 1. ID Number MUST match exactly (for SA ID, Passport, Driver's License, Temporary ID)
       // 2. Surname MUST match exactly
       // 3. First names are IGNORED - differences are acceptable and do not cause failure
+      // 4. Passports MUST be valid (not expired) - expiry date is MANDATORY
+      // 5. Driver's Licenses MUST be valid (not expired) - expiry date is MANDATORY
       
       const documentType = this.determineDocumentType(ocrResults);
       const registeredId = normalizeIdDigits(user.idNumber || '');
@@ -1527,7 +1529,7 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
           console.log('✅ Passport number format is valid');
         }
         
-        // Check if passport is still valid (not expired)
+        // Check if passport is still valid (not expired) - MANDATORY
         const expiryDate = ocrResults.expiryDate || ocrResults.passportExpiryDate || ocrResults.dateOfExpiry || ocrResults.validTo || ocrResults.validToDate;
         if (expiryDate) {
           if (!isPassportValid(expiryDate)) {
@@ -1536,8 +1538,8 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
             console.log('✅ Passport expiration date is valid');
           }
         } else {
-          // Expiration date is recommended but not always visible - warn but don't fail
-          console.warn('⚠️  Passport expiration date not found in OCR results');
+          // Expiration date is MANDATORY for passport validation
+          validation.issues.push('Passport expiration date not found. Please ensure the passport shows expiry date.');
         }
       } else {
         validation.issues.push('Unable to determine document type (ID, Temporary ID, Passport, or Driving License)');
