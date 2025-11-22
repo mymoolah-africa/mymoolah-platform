@@ -1,0 +1,180 @@
+#!/usr/bin/env node
+
+/**
+ * User Lookup Script
+ * 
+ * Usage:
+ *   node scripts/lookup-user.js <phone|name|userId>
+ * 
+ * Examples:
+ *   node scripts/lookup-user.js 0686772469
+ *   node scripts/lookup-user.js "Denise Botes"
+ *   node scripts/lookup-user.js 8
+ */
+
+require('dotenv').config();
+const { Sequelize } = require('sequelize');
+
+// Use proxy connection (same as backend) - works reliably
+const getDatabaseUrl = () => {
+  // Check if we're using proxy (local/Codespaces) or direct connection
+  const dbUrl = process.env.DATABASE_URL || '';
+  if (dbUrl.includes('127.0.0.1:6543') || dbUrl.includes('localhost:6543')) {
+    // Already using proxy
+    return dbUrl;
+  } else if (dbUrl.includes('127.0.0.1:5433') || dbUrl.includes('localhost:5433')) {
+    // Local proxy on 5433
+    return dbUrl;
+  } else {
+    // Try to use proxy connection (most reliable)
+    const match = dbUrl.match(/postgres:\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/);
+    if (match) {
+      const [, user, password, , database] = match;
+      // Use proxy on port 6543 (Codespaces) or 5433 (local)
+      const proxyPort = process.env.PROXY_PORT || '6543';
+      return `postgres://${user}:${password}@127.0.0.1:${proxyPort}/${database}`;
+    }
+  }
+  return dbUrl;
+};
+
+const sequelize = new Sequelize(getDatabaseUrl(), {
+  dialect: 'postgres',
+  logging: false,
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 10000,
+    idle: 10000
+  },
+  dialectOptions: {
+    // No SSL when using proxy
+    ssl: false
+  }
+});
+
+async function lookupUser(searchTerm) {
+  if (!searchTerm) {
+    console.error('❌ Error: Please provide a search term (phone number, name, or user ID)');
+    console.log('\nUsage:');
+    console.log('  node scripts/lookup-user.js <phone|name|userId>');
+    console.log('\nExamples:');
+    console.log('  node scripts/lookup-user.js 0686772469');
+    console.log('  node scripts/lookup-user.js "Denise Botes"');
+    console.log('  node scripts/lookup-user.js 8');
+    process.exit(1);
+  }
+
+  try {
+    console.log(`🔍 Searching for: "${searchTerm}"\n`);
+    console.log('Connecting to database...');
+    await sequelize.authenticate();
+    console.log('✅ Connected! Querying...\n');
+
+    let query;
+    let queryParams = {};
+
+    // Check if it's a numeric ID
+    if (/^\d+$/.test(searchTerm.trim())) {
+      query = `
+        SELECT id, "firstName", "lastName", "phoneNumber", "email", "kycStatus", "createdAt"
+        FROM users
+        WHERE id = :id
+        ORDER BY id
+      `;
+      queryParams = { id: parseInt(searchTerm.trim()) };
+    }
+    // Check if it looks like a phone number (digits, possibly with + or spaces)
+    else if (/^[\d\s\+\-\(\)]+$/.test(searchTerm.trim())) {
+      const phoneClean = searchTerm.trim().replace(/[\s\+\-\(\)]/g, '');
+      query = `
+        SELECT id, "firstName", "lastName", "phoneNumber", "email", "kycStatus", "createdAt"
+        FROM users
+        WHERE "phoneNumber" LIKE :phone1
+           OR "phoneNumber" LIKE :phone2
+           OR "phoneNumber" LIKE :phone3
+           OR REPLACE(REPLACE(REPLACE(REPLACE("phoneNumber", '+', ''), ' ', ''), '-', ''), '(', ''), ')', '') LIKE :phoneClean
+        ORDER BY id
+      `;
+      queryParams = {
+        phone1: `%${searchTerm.trim()}%`,
+        phone2: `%${phoneClean}%`,
+        phone3: `%+27${phoneClean}%`,
+        phoneClean: `%${phoneClean}%`
+      };
+    }
+    // Otherwise treat as name search
+    else {
+      const nameParts = searchTerm.trim().split(/\s+/);
+      if (nameParts.length >= 2) {
+        // First and last name
+        query = `
+          SELECT id, "firstName", "lastName", "phoneNumber", "email", "kycStatus", "createdAt"
+          FROM users
+          WHERE "firstName" ILIKE :firstName AND "lastName" ILIKE :lastName
+          ORDER BY id
+        `;
+        queryParams = {
+          firstName: `%${nameParts[0]}%`,
+          lastName: `%${nameParts.slice(1).join(' ')}%`
+        };
+      } else {
+        // Single name - search both first and last
+        query = `
+          SELECT id, "firstName", "lastName", "phoneNumber", "email", "kycStatus", "createdAt"
+          FROM users
+          WHERE "firstName" ILIKE :name OR "lastName" ILIKE :name
+          ORDER BY id
+        `;
+        queryParams = {
+          name: `%${nameParts[0]}%`
+        };
+      }
+    }
+
+    const [results] = await sequelize.query(query, {
+      replacements: queryParams,
+      type: Sequelize.QueryTypes.SELECT
+    });
+
+    if (results.length === 0) {
+      console.log('❌ No user found matching your search');
+      console.log('\n💡 Tips:');
+      console.log('  - Try searching by phone number (with or without +27)');
+      console.log('  - Try searching by full name (e.g., "John Doe")');
+      console.log('  - Try searching by user ID (numeric)');
+    } else {
+      console.log(`✅ Found ${results.length} user(s):\n`);
+      results.forEach((u, index) => {
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        console.log(`User #${index + 1}:`);
+        console.log(`  👤 User ID:     ${u.id}`);
+        console.log(`  📛 Name:        ${u.firstName || 'N/A'} ${u.lastName || 'N/A'}`);
+        console.log(`  📱 Phone:       ${u.phoneNumber || 'N/A'}`);
+        console.log(`  📧 Email:       ${u.email || 'N/A'}`);
+        console.log(`  ✅ KYC Status:  ${u.kycStatus || 'not_started'}`);
+        console.log(`  📅 Created:     ${u.createdAt ? new Date(u.createdAt).toLocaleString() : 'N/A'}`);
+        console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+        if (index < results.length - 1) console.log('');
+      });
+    }
+
+    await sequelize.close();
+    process.exit(0);
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+    if (error.message.includes('ECONNREFUSED')) {
+      console.error('\n💡 Connection failed. Make sure:');
+      console.error('  1. Cloud SQL Proxy is running (check with: ps aux | grep cloud-sql-proxy)');
+      console.error('  2. Backend server is running (it uses the proxy)');
+      console.error('  3. Proxy is listening on port 6543 (Codespaces) or 5433 (local)');
+    }
+    await sequelize.close();
+    process.exit(1);
+  }
+}
+
+// Get search term from command line arguments
+const searchTerm = process.argv[2];
+lookupUser(searchTerm);
+
