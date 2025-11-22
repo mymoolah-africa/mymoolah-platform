@@ -97,35 +97,52 @@ async function lookupUser(searchTerm) {
     else if (/^[\d\s\+\-\(\)]+$/.test(searchTerm.trim())) {
       const phoneClean = searchTerm.trim().replace(/[\s\+\-\(\)]/g, '');
       // Handle South African numbers: if starts with 0, also try +27
-      let phoneVariants = [searchTerm.trim(), phoneClean];
-      if (phoneClean.startsWith('0')) {
-        // 0686772469 -> also try 686772469 and +27686772469
-        phoneVariants.push(phoneClean.substring(1)); // Remove leading 0
-        phoneVariants.push(`+27${phoneClean.substring(1)}`); // Add +27
-        phoneVariants.push(`27${phoneClean.substring(1)}`); // Add 27 without +
-      } else if (phoneClean.startsWith('27')) {
-        // 27686772469 -> also try +27 and 0
-        phoneVariants.push(`+${phoneClean}`);
-        phoneVariants.push(`0${phoneClean.substring(2)}`); // 0 + last 9 digits
-      } else if (phoneClean.startsWith('+27')) {
-        // +27686772469 -> also try without + and with 0
-        phoneVariants.push(phoneClean.substring(1)); // Remove +
-        phoneVariants.push(`0${phoneClean.substring(3)}`); // 0 + last 9 digits
+      let phoneVariants = [searchTerm.trim()];
+      
+      // Always include cleaned version
+      if (phoneClean !== searchTerm.trim()) {
+        phoneVariants.push(phoneClean);
       }
       
-      // Build LIKE conditions for all variants
-      const likeConditions = phoneVariants.map((_, idx) => `"phoneNumber" LIKE :phone${idx + 1}`).join(' OR ');
-      queryParams = {};
-      phoneVariants.forEach((variant, idx) => {
-        queryParams[`phone${idx + 1}`] = `%${variant}%`;
-      });
+      if (phoneClean.startsWith('0') && phoneClean.length === 10) {
+        // 0784560585 -> also try 784560585, +27784560585, 27784560585
+        const withoutZero = phoneClean.substring(1);
+        phoneVariants.push(withoutZero);
+        phoneVariants.push(`+27${withoutZero}`);
+        phoneVariants.push(`27${withoutZero}`);
+      } else if (phoneClean.startsWith('27') && phoneClean.length === 11) {
+        // 27784560585 -> also try +27 and 0
+        phoneVariants.push(`+${phoneClean}`);
+        phoneVariants.push(`0${phoneClean.substring(2)}`);
+      } else if (phoneClean.startsWith('+27') && phoneClean.length === 12) {
+        // +27784560585 -> also try without + and with 0
+        phoneVariants.push(phoneClean.substring(1));
+        phoneVariants.push(`0${phoneClean.substring(3)}`);
+      }
+      
+      // Remove duplicates
+      phoneVariants = [...new Set(phoneVariants)];
+      
+      // Build query with multiple LIKE conditions
+      const conditions = phoneVariants.map((variant, idx) => {
+        const paramName = `phone${idx + 1}`;
+        queryParams[paramName] = `%${variant}%`;
+        return `"phoneNumber" LIKE :${paramName}`;
+      }).join(' OR ');
       
       query = `
         SELECT id, "firstName", "lastName", "phoneNumber", "email", "kycStatus", "createdAt"
         FROM users
-        WHERE ${likeConditions}
+        WHERE ${conditions}
         ORDER BY id
       `;
+      
+      // Debug output (can be removed later)
+      if (process.env.DEBUG) {
+        console.log('Phone variants:', phoneVariants);
+        console.log('Query:', query);
+        console.log('Params:', queryParams);
+      }
     }
     // Otherwise treat as name search
     else {
