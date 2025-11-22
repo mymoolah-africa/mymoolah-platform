@@ -173,93 +173,53 @@ class KYCController {
       
 
       // Process identity document only (POA masked for now)
-      try {
+      // Return immediately to prevent mobile app timeout (10s), process async
+      res.status(202).json({
+        success: true,
+        message: 'KYC document uploaded successfully. Processing in background...',
+        status: 'processing',
+        documentUrl: identityUrl,
+        checkStatusEndpoint: `/api/v1/kyc/status/${userId}`
+      });
 
-        const identityResult = await KYCService.processKYCSubmission(userId, 'id_document', identityUrl, parseInt(retryCount));
+      // Process async (don't await - let it run in background)
+      (async () => {
+        try {
+          const identityResult = await KYCService.processKYCSubmission(userId, 'id_document', identityUrl, parseInt(retryCount));
 
         // const addressResult = await KYCService.processKYCSubmission(userId, 'proof_of_address', addressUrl);
 
 
 
-        if (!identityResult.success) {
-          // Return structured validation outcome to the frontend (no server error)
-          return res.status(200).json(identityResult);
-        }
-
-        // Check if identity document is valid - use the success field from KYC service
-        // Also check if status is 'approved' (handles tolerantNameMatch case)
-        const identityValid = identityResult.success && 
-                             (identityResult.validation.isValid || identityResult.status === 'approved');
-        // const addressValid = addressResult.validation.isValid;
-
-
-
-        if (identityValid) {
-          // Auto-approve if identity document is valid (POA requirement masked)
-          const wallet = await Wallet.findOne({ where: { userId: userId } });
-          if (wallet) {
-            await wallet.verifyKYC('ai_system');
-            console.log('✅ Wallet KYC verified automatically');
+          if (!identityResult.success) {
+            console.log('❌ KYC validation failed:', identityResult.validation.issues);
+            // Store result in database for user to check later
+            // For now, just log - user can retry
+            return;
           }
 
-          return res.json({
-            success: true,
-            message: 'KYC verification successful',
-            status: 'approved',
-            walletVerified: true,
-            identityValid: true,
-            addressValid: true // Always true since POA is masked
-          });
-        } else {
-          // Handle retry logic
-          const currentRetryCount = parseInt(retryCount) || 0;
-          const canRetry = currentRetryCount < 1;
-          
-          if (canRetry) {
-            // First failure - allow retry
-            return res.json({
-              success: false,
-              message: identityResult.message || 'Identity document validation failed. Please try again with a clearer image.',
-              status: 'retry',
-              issues: identityResult.validation.issues,
-              identityValid,
-              addressValid: true, // Always true since POA is masked
-              retryCount: currentRetryCount + 1,
-              canRetry: true,
-              acceptedDocuments: {
-                identity: KYCService.getAcceptedDocuments('id_document'),
-                address: ['Proof of address requirement is temporarily disabled']
-              }
-            });
+          // Check if identity document is valid - use the success field from KYC service
+          // Also check if status is 'approved' (handles tolerantNameMatch case)
+          const identityValid = identityResult.success && 
+                               (identityResult.validation.isValid || identityResult.status === 'approved');
+
+          if (identityValid) {
+            // Auto-approve if identity document is valid (POA requirement masked)
+            const wallet = await Wallet.findOne({ where: { userId: userId } });
+            if (wallet) {
+              await wallet.verifyKYC('ai_system');
+              console.log('✅ Wallet KYC verified automatically');
+            }
           } else {
-            // Second failure - escalate to support
-    
-            
-            return res.json({
-              success: false,
-              message: identityResult.message || 'Document validation failed after retry. Please contact support for manual verification.',
-              status: 'failed',
-              issues: identityResult.validation.issues,
-              identityValid,
-              addressValid: true, // Always true since POA is masked
-              retryCount: currentRetryCount + 1,
-              canRetry: false,
-              escalateToSupport: true,
-              acceptedDocuments: {
-                identity: KYCService.getAcceptedDocuments('id_document'),
-                address: ['Proof of address requirement is temporarily disabled']
-              }
-            });
+            console.log('⚠️  KYC validation failed - user can retry:', identityResult.validation.issues);
           }
+        } catch (kycError) {
+          console.error('❌ KYC processing error (async):', kycError);
+          // Error logged - user can retry upload
         }
-      } catch (kycError) {
-        console.error('❌ KYC processing error:', kycError);
-        return res.status(500).json({
-          error: 'KYC_PROCESSING_ERROR',
-          message: 'Error processing KYC documents',
-          details: kycError.message
-        });
-      }
+      })();
+      
+      return; // Response already sent above
 
     } catch (error) {
       console.error('❌ Error uploading KYC documents:', error);
