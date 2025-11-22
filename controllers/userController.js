@@ -223,22 +223,33 @@ class UserController {
       
       // Only return safe fields
       const { id, email, firstName, lastName, phoneNumber, accountNumber, balance, status, kycStatus, createdAt, updatedAt, wallet } = user;
+      
+      // Determine final KYC status (prioritize user.kycStatus, fallback to wallet.kycVerified)
+      const finalKycStatus = kycStatus || (wallet?.kycVerified ? 'verified' : 'not_started');
+      const isKycVerified = finalKycStatus === 'verified' || wallet?.kycVerified === true;
+      
+      // Return user data - frontend expects this format
+      const userData = { 
+        id, 
+        email, 
+        firstName, 
+        lastName, 
+        phoneNumber, 
+        accountNumber, 
+        balance, 
+        status, 
+        kycStatus: finalKycStatus, // Always return a valid status (never null/undefined)
+        kycVerified: isKycVerified, // Include kycVerified field for frontend convenience
+        createdAt, 
+        updatedAt, 
+        wallet 
+      };
+      
       res.json({
         success: true,
-        data: { 
-          id, 
-          email, 
-          firstName, 
-          lastName, 
-          phoneNumber, 
-          accountNumber, 
-          balance, 
-          status, 
-          kycStatus: kycStatus || (wallet?.kycVerified ? 'verified' : 'not_started'), // Fallback to wallet status if user status is null
-          createdAt, 
-          updatedAt, 
-          wallet 
-        }
+        data: userData,
+        // Also include user fields at top level for frontend compatibility (some code spreads responseData directly)
+        ...userData
       });
     } catch (error) {
       console.error('❌ Error in getMe:', error);

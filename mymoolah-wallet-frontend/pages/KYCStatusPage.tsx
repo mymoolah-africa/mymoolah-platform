@@ -140,16 +140,29 @@ export function KYCStatusPage() {
   const stages = getStatusStages(currentStatus);
   const progressValue = getProgressValue(currentStatus);
 
-  // Auto-refresh for pending statuses
+  // Auto-refresh for pending statuses - poll faster (every 2 seconds) for better UX
   useEffect(() => {
     if (currentStatus === 'documents_uploaded' || currentStatus === 'under_review') {
       const interval = setInterval(() => {
         handleRefreshStatus();
-      }, 30000); // Refresh every 30 seconds
+      }, 2000); // Refresh every 2 seconds (faster than 30s for better UX)
 
       return () => clearInterval(interval);
     }
   }, [currentStatus]);
+
+  // Auto-navigate to dashboard when KYC is verified
+  useEffect(() => {
+    if (currentStatus === 'verified' && refreshUserStatus) {
+      // Refresh user status first, then navigate
+      refreshUserStatus().then(() => {
+        // Small delay to ensure state is updated
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 500);
+      });
+    }
+  }, [currentStatus, navigate, refreshUserStatus]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#86BE41] to-[#2D8CCA]">

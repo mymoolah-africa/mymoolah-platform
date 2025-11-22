@@ -79,7 +79,7 @@ function formatRegistrationDate(createdAt?: string): string {
 
 export function ProfilePage() {
   const navigate = useNavigate();
-  const { user, logout, updateKYCStatus, requiresKYC, changePassword } = useAuth();
+  const { user, logout, updateKYCStatus, requiresKYC, changePassword, refreshUserStatus } = useAuth();
   
   // State management
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -101,6 +101,13 @@ export function ProfilePage() {
     newPassword: '',
     confirmPassword: ''
   });
+
+  // Refresh user status when ProfilePage mounts to ensure latest KYC status
+  React.useEffect(() => {
+    if (refreshUserStatus) {
+      refreshUserStatus();
+    }
+  }, []); // Run once on mount
 
   // Ensure the form reflects the latest authenticated user data when the user changes
   // or when the Edit Profile dialog is opened
