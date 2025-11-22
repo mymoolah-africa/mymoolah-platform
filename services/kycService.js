@@ -710,20 +710,26 @@ Return JSON only:
         
         const response = await this.openai.chat.completions.create({
           model: "gpt-5",
-          messages: [{
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { 
-                type: "image_url", 
-                image_url: {
-                  url: `data:${mimeType};base64,${imageData}`,
-                  detail: "low" // Low detail for fast processing - preprocessing enhances image quality for accuracy
+          messages: [
+            {
+              role: "system",
+              content: "You are a fast, efficient OCR system. Extract data directly from the document image. Be concise - minimal reasoning, maximum accuracy. Return JSON only."
+            },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                { 
+                  type: "image_url", 
+                  image_url: {
+                    url: `data:${mimeType};base64,${imageData}`,
+                    detail: "low" // Low detail for fast processing - preprocessing enhances image quality for accuracy
+                  }
                 }
-              }
-            ]
-          }],
-          max_completion_tokens: 3000 // Increased for driver's licenses which require more reasoning - balance between speed and completion
+              ]
+            }
+          ],
+          max_completion_tokens: 5000 // Restored to 5000 - system message instructs GPT-5 to be efficient with reasoning tokens
         });
         
         const attemptDuration = Date.now() - attemptStartTime;
