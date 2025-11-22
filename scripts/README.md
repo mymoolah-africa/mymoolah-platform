@@ -4,6 +4,85 @@ This directory contains utility scripts for managing and maintaining the MyMoola
 
 ## Available Scripts
 
+### User Lookup Scripts
+
+#### `lookup-user.js` ⭐ **RECOMMENDED**
+
+**Purpose**: Comprehensive user lookup by phone number, name, or user ID.
+
+**Usage**:
+```bash
+node scripts/lookup-user.js` <phone|name|userId>
+```
+
+**Examples**:
+```bash
+node scripts/lookup-user.js 0686772469
+node scripts/lookup-user.js "Denise Botes"
+node scripts/lookup-user.js 8
+```
+
+**Status**: ✅ **ACTIVE** - Main user lookup script
+
+---
+
+### KYC Status Scripts
+
+#### `check-kyc-status.js` ⭐ **RECOMMENDED**
+
+**Purpose**: Comprehensive KYC status check showing user KYC status, wallet verification, and KYC records.
+
+**Usage**:
+```bash
+node scripts/check-kyc-status.js <identifier>
+```
+
+**Examples**:
+```bash
+node scripts/check-kyc-status.js 0686772469
+node scripts/check-kyc-status.js "Denise Botes"
+node scripts/check-kyc-status.js 8
+```
+
+**Status**: ✅ **ACTIVE** - Main KYC status check script
+
+---
+
+### Password Management Scripts
+
+#### `change-user-password.js`
+
+**Purpose**: Change user password by phone number, name, or user ID.
+
+**Usage**:
+```bash
+node scripts/change-user-password.js <identifier> <newPassword>
+```
+
+**Examples**:
+```bash
+node scripts/change-user-password.js 0686772469 "NewPassword123!"
+node scripts/change-user-password.js "Denise Botes" "NewPassword123!"
+node scripts/change-user-password.js 8 "NewPassword123!"
+```
+
+**Status**: ✅ **ACTIVE**
+
+---
+
+#### `verify-password.js`
+
+**Purpose**: Verify if a password matches the stored hash.
+
+**Usage**:
+```bash
+node scripts/verify-password.js <identifier> <password>
+```
+
+**Status**: ✅ **ACTIVE**
+
+---
+
 ### KYC Reset Scripts
 
 #### `reset-kyc-via-api.sh` ⭐ **RECOMMENDED**
@@ -39,71 +118,57 @@ curl -X POST http://localhost:3001/api/v1/kyc/reset/1 \
 
 ---
 
-#### `reset-kyc-user1.js`
+### Start Scripts
 
-**Purpose**: Reset KYC status for user ID 1 using direct database connection.
+#### `one-click-restart-and-start.sh` ⭐ **RECOMMENDED**
+
+**Purpose**: One-command script to restart proxy and backend in Codespaces.
 
 **Usage**:
 ```bash
-node scripts/reset-kyc-user1.js
+./scripts/one-click-restart-and-start.sh
 ```
 
 **What it does**:
-- Connects to database using existing models setup
-- Deletes all KYC records for user ID 1
-- Resets wallet KYC verification
-- Resets user KYC status to `not_started`
+- Stops existing proxy and backend processes
+- Starts Cloud SQL Auth Proxy
+- Starts Redis (Docker or local)
+- Starts backend server
 
-**Requirements**:
-- Database connection configured in `.env`
-- Cloud SQL Auth Proxy running (if in Codespaces)
-
-**Status**: ⚠️ **MAY HANG** - Use `reset-kyc-via-api.sh` instead if connection issues occur
+**Status**: ✅ **ACTIVE** - Main entry point for Codespaces
 
 ---
 
-#### `reset-my-kyc.js`
+#### `start-codespace-with-proxy.sh`
 
-**Purpose**: Reset KYC status for user ID 1 with phone number verification (local development).
+**Purpose**: Comprehensive startup script with proxy, Redis, and backend.
 
 **Usage**:
 ```bash
-node scripts/reset-my-kyc.js
+./scripts/start-codespace-with-proxy.sh
 ```
 
-**What it does**:
-- Verifies user exists and phone number matches
-- Deletes all KYC records
-- Resets wallet and user KYC status
-
-**Requirements**:
-- Local database connection
-- Phone number verification (safety check)
-
-**Status**: ⚠️ **LOCAL ONLY** - Requires local database connection
+**Status**: ✅ **ACTIVE** - Used by one-click-restart-and-start.sh
 
 ---
 
-#### `reset-kyc-codespaces.js`
+### MobileMart Test Scripts
 
-**Purpose**: Reset KYC status using Codespaces-compatible database connection.
+#### `test-mobilemart-uat-complete.js` ⭐ **RECOMMENDED**
 
-**Usage**:
-```bash
-node scripts/reset-kyc-codespaces.js
-```
+**Purpose**: Comprehensive MobileMart UAT testing script.
 
-**Status**: ⚠️ **ALTERNATIVE** - Use `reset-kyc-via-api.sh` instead
+**Status**: ✅ **ACTIVE**
 
 ---
 
-### `cleanup-kyc.js` (DEPRECATED - SQLite only)
+#### `test-mobilemart-uat-credentials.js`
 
-**Status**: ❌ **REMOVED** - This script was SQLite-specific and has been removed as we now use PostgreSQL exclusively.
+**Purpose**: Test MobileMart UAT credentials.
 
-**Previous Purpose**: Cleaned up KYC data for users in the SQLite database.
+**Status**: ✅ **ACTIVE**
 
-**Replacement**: Use `reset-kyc-via-api.sh` for PostgreSQL operations.
+---
 
 ## Running Scripts
 
@@ -132,9 +197,15 @@ When adding new scripts to this directory:
 ```
 scripts/
 ├── README.md           # This documentation file
+├── lookup-user.js      # User lookup utility
+├── check-kyc-status.js # KYC status check utility
+├── change-user-password.js # Password change utility
+├── verify-password.js  # Password verification utility
+├── reset-kyc-via-api.sh # KYC reset via API
+├── one-click-restart-and-start.sh # Main startup script
+├── start-codespace-with-proxy.sh # Comprehensive startup script
 ├── seed-*.js          # Database seeding scripts
-├── git-sync-local.sh  # Git synchronization script
-└── [future scripts]   # Additional utility scripts
+└── test-*.js          # Test scripts
 ```
 
 ## Troubleshooting
@@ -144,7 +215,7 @@ scripts/
 1. **Database Connection**: Ensure PostgreSQL is running and accessible
    ```bash
    # Check if Cloud SQL Proxy is running
-   lsof -i :5433
+   lsof -i :6543
    ```
 
 2. **Environment Variables**: Ensure .env file is properly configured
@@ -180,6 +251,6 @@ console.log(user.toJSON());
 All SQLite-specific scripts have been removed. The platform now uses PostgreSQL exclusively:
 
 - **Database**: PostgreSQL (Google Cloud SQL)
-- **Connection**: Via Cloud SQL Proxy on localhost:5433
+- **Connection**: Via Cloud SQL Proxy on localhost:6543
 - **Models**: Sequelize ORM with PostgreSQL dialect
-- **Scripts**: Use Sequelize models instead of direct SQLite queries 
+- **Scripts**: Use Sequelize models instead of direct SQLite queries
