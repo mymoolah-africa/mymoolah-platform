@@ -1,6 +1,7 @@
 const KYCService = require('../services/kycService');
 const { sequelize } = require('../models');
 const Wallet = require('../models/Wallet')(sequelize, require('sequelize').DataTypes);
+const notificationService = require('../services/notificationService');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -210,9 +211,44 @@ class KYCController {
             if (wallet) {
               await wallet.verifyKYC('ai_system');
               console.log('✅ Wallet KYC verified automatically');
+              
+              // Create notification for user
+              try {
+                await notificationService.createNotification(
+                  userId,
+                  'txn_wallet_credit', // Using existing type
+                  'KYC Verification Successful',
+                  'Your identity document has been verified successfully. Your wallet is now fully activated.',
+                  {
+                    severity: 'info',
+                    category: 'transaction',
+                    source: 'system'
+                  }
+                );
+                console.log('✅ KYC verification notification created');
+              } catch (notifError) {
+                console.warn('⚠️  Failed to create KYC notification:', notifError.message);
+              }
             }
           } else {
             console.log('⚠️  KYC validation failed - user can retry:', identityResult.validation.issues);
+            
+            // Create notification for validation failure
+            try {
+              await notificationService.createNotification(
+                userId,
+                'maintenance', // Using maintenance type for failures
+                'KYC Verification Failed',
+                identityResult.message || 'Document validation failed. Please try again with a clearer image.',
+                {
+                  severity: 'warning',
+                  category: 'transaction',
+                  source: 'system'
+                }
+              );
+            } catch (notifError) {
+              console.warn('⚠️  Failed to create KYC failure notification:', notifError.message);
+            }
           }
         } catch (kycError) {
           console.error('❌ KYC processing error (async):', kycError);
@@ -238,7 +274,16 @@ class KYCController {
   // Get KYC status
   async getKYCStatus(req, res) {
     try {
-      const { userId } = req.params;
+      // Use authenticated user ID if no userId param provided
+      const userId = req.params.userId || (req.user && req.user.id);
+      
+      if (!userId) {
+        return res.status(401).json({
+          error: 'UNAUTHORIZED',
+          message: 'Authentication required'
+        });
+      }
+
       const wallet = await Wallet.findOne({ where: { userId: userId } });
       
       if (!wallet) {
@@ -248,14 +293,26 @@ class KYCController {
         });
       }
 
-      const kycDetails = await Wallet.getKYCVerificationDetails(wallet.walletId);
+      // Get KYC record if exists
+      const { Kyc } = require('../models');
+      const kycRecord = await Kyc.findOne({ 
+        where: { userId: userId },
+        order: [['createdAt', 'DESC']]
+      });
       
       res.json({
         success: true,
-        kycVerified: kycDetails.kycVerified,
-        kycVerifiedAt: kycDetails.kycVerifiedAt,
-        kycVerifiedBy: kycDetails.kycVerifiedBy,
-        walletId: wallet.walletId
+        kycVerified: wallet.kycVerified || false,
+        kycVerifiedAt: wallet.kycVerifiedAt || null,
+        kycVerifiedBy: wallet.kycVerifiedBy || null,
+        walletId: wallet.walletId,
+        kycStatus: kycRecord ? kycRecord.status : 'not_started',
+        kycRecord: kycRecord ? {
+          status: kycRecord.status,
+          documentType: kycRecord.documentType,
+          submittedAt: kycRecord.submittedAt,
+          reviewedAt: kycRecord.reviewedAt
+        } : null
       });
 
     } catch (error) {
