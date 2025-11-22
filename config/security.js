@@ -162,7 +162,8 @@ class SecurityConfig {
     const devLanFrontendRegex = /^http:\/\/192\.168\.[0-9]{1,3}\.[0-9]{1,3}:3000$/;
     // Allow Codespaces GitHub.dev domains in all environments (development and production)
     // Matches both *.github.dev and *.app.github.dev (Codespaces preview URLs)
-    const codespacesRegex = /^https:\/\/.*\.(app\.)?github\.dev$/;
+    // More explicit regex to handle both patterns correctly
+    const codespacesRegex = /^https:\/\/.*\.(app\.github\.dev|github\.dev)$/;
 
     this.corsConfig = {
       origin: (origin, callback) => {
@@ -183,12 +184,16 @@ class SecurityConfig {
 
         // Allow Codespaces GitHub.dev domains (supports both development and production testing environments)
         if (codespacesRegex.test(origin)) {
+          if (isDev) {
+            console.log(`✅ CORS: Allowing Codespaces origin: ${origin}`);
+          }
           return callback(null, true);
         }
 
         // In development, log rejected origins for debugging
         if (isDev) {
           console.log(`⚠️  CORS: Origin "${origin}" not allowed. Allowed origins:`, allowedOrigins);
+          console.log(`⚠️  CORS: Regex test result:`, codespacesRegex.test(origin));
         }
 
         return callback(new Error(`CORS: Origin "${origin}" not allowed by CORS policy`), false);
