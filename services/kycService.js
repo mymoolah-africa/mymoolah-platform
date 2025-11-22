@@ -727,7 +727,7 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
         console.log(`🔄 OpenAI OCR attempt ${attempt}/${MAX_RETRIES}...`);
         
         const response = await this.openai.chat.completions.create({
-          model: "gpt-4o",
+          model: "gpt-5",
           messages: [{
             role: "user",
             content: [
