@@ -181,7 +181,9 @@ class KYCController {
         status: 'processing',
         documentUrl: identityUrl,
         checkStatusEndpoint: `/api/v1/kyc/status/${userId}`,
-        userId: userId
+        userId: userId,
+        pollInterval: 2000, // Suggest polling every 2 seconds (faster than 30s default)
+        estimatedProcessingTime: 10000 // ~10 seconds for OCR processing
       });
 
       // Process async (don't await - let it run in background)
@@ -321,6 +323,10 @@ class KYCController {
         console.warn('⚠️  Could not fetch KYC record:', kycError.message);
       }
       
+      // Determine final KYC status (prioritize user.kycStatus, fallback to wallet.kycVerified)
+      const finalKycStatus = user?.kycStatus || (wallet.kycVerified ? 'verified' : (kycRecord ? kycRecord.status : 'not_started'));
+      const isVerified = finalKycStatus === 'verified' || wallet.kycVerified === true;
+      
       // Return user's kycStatus (what frontend checks) and wallet kycVerified
       res.json({
         success: true,
@@ -328,7 +334,9 @@ class KYCController {
         kycVerifiedAt: wallet.kycVerifiedAt || null,
         kycVerifiedBy: wallet.kycVerifiedBy || null,
         walletId: wallet.walletId,
-        kycStatus: user?.kycStatus || (kycRecord ? kycRecord.status : 'not_started'),
+        kycStatus: finalKycStatus,
+        isComplete: isVerified, // Signal to frontend that KYC is complete and should navigate
+        shouldNavigate: isVerified, // Explicit signal for frontend navigation
         kycRecord: kycRecord ? {
           status: kycRecord.status,
           documentType: kycRecord.documentType,
