@@ -59,84 +59,105 @@ const sequelize = new Sequelize(dbUrl, {
   }
 });
 
-// Normalize South African phone number
-const normalizePhone = (phone) => {
-  if (!phone) return null;
-  // Remove all non-digit characters
-  let cleaned = phone.replace(/\D/g, '');
-  // Convert to standard format: 0XXXXXXXXX
-  if (cleaned.startsWith('27')) {
-    cleaned = '0' + cleaned.substring(2);
-  } else if (!cleaned.startsWith('0')) {
-    cleaned = '0' + cleaned;
-  }
-  return cleaned;
-};
-
 // Find user by identifier (ID, phone, or name)
 const findUser = async (identifier) => {
-  const isNumeric = /^\d+$/.test(identifier);
+  let query;
+  let queryParams = {};
   
-  if (isNumeric && identifier.length <= 10) {
-    // Likely a user ID
-    const [results] = await sequelize.query(
-      `SELECT id, email, "firstName", "lastName", "phoneNumber", "accountNumber", "kycStatus", "password_hash"
-       FROM users 
-       WHERE id = :id
-       ORDER BY id DESC
-       LIMIT 1`,
-      {
-        replacements: { id: parseInt(identifier) },
-        type: Sequelize.QueryTypes.SELECT
-      }
-    );
-    return results;
-  } else if (isNumeric || identifier.includes('+') || identifier.includes('0')) {
-    // Likely a phone number
-    const normalized = normalizePhone(identifier);
-    const variants = [
-      normalized,
-      normalized.replace(/^0/, '+27'),
-      normalized.replace(/^0/, '27'),
-      identifier // Original
-    ];
+  // Check if it's a numeric ID
+  if (/^\d+$/.test(identifier.trim()) && identifier.trim().length <= 10) {
+    query = `
+      SELECT id, email, "firstName", "lastName", "phoneNumber", "accountNumber", "kycStatus", "password_hash"
+      FROM users
+      WHERE id = :id
+      ORDER BY id DESC
+      LIMIT 1
+    `;
+    queryParams = { id: parseInt(identifier.trim()) };
+  }
+  // Check if it looks like a phone number (digits, possibly with + or spaces)
+  else if (/^[\d\s\+\-\(\)]+$/.test(identifier.trim())) {
+    const phoneClean = identifier.trim().replace(/[\s\+\-\(\)]/g, '');
+    // Handle South African numbers: if starts with 0, also try +27
+    let phoneVariants = [identifier.trim()];
     
-    const [results] = await sequelize.query(
-      `SELECT id, email, "firstName", "lastName", "phoneNumber", "accountNumber", "kycStatus", "password_hash"
-       FROM users 
-       WHERE "phoneNumber" = ANY(:variants)
-       ORDER BY id DESC
-       LIMIT 1`,
-      {
-        replacements: { variants },
-        type: Sequelize.QueryTypes.SELECT
-      }
-    );
-    return results;
-  } else {
-    // Likely a name
-    const nameParts = identifier.trim().split(/\s+/);
-    const firstName = nameParts[0];
-    const lastName = nameParts.slice(1).join(' ');
-    
-    let query = `SELECT id, email, "firstName", "lastName", "phoneNumber", "accountNumber", "kycStatus", "password_hash"
-                 FROM users 
-                 WHERE "firstName" ILIKE :firstName`;
-    const replacements = { firstName: `%${firstName}%` };
-    
-    if (lastName) {
-      query += ` AND "lastName" ILIKE :lastName`;
-      replacements.lastName = `%${lastName}%`;
+    // Always include cleaned version
+    if (phoneClean !== identifier.trim()) {
+      phoneVariants.push(phoneClean);
     }
     
-    query += ` ORDER BY id DESC LIMIT 1`;
+    if (phoneClean.startsWith('0') && phoneClean.length === 10) {
+      // 0686772469 -> also try 686772469, +27686772469, 27686772469
+      const withoutZero = phoneClean.substring(1);
+      phoneVariants.push(withoutZero);
+      phoneVariants.push(`+27${withoutZero}`);
+      phoneVariants.push(`27${withoutZero}`);
+    } else if (phoneClean.startsWith('27') && phoneClean.length === 11) {
+      // 27686772469 -> also try +27 and 0
+      phoneVariants.push(`+${phoneClean}`);
+      phoneVariants.push(`0${phoneClean.substring(2)}`);
+    } else if (phoneClean.startsWith('+27') && phoneClean.length === 12) {
+      // +27686772469 -> also try without + and with 0
+      phoneVariants.push(phoneClean.substring(1));
+      phoneVariants.push(`0${phoneClean.substring(3)}`);
+    }
     
-    const [results] = await sequelize.query(query, {
-      replacements,
-      type: Sequelize.QueryTypes.SELECT
-    });
-    return results;
+    // Remove duplicates
+    phoneVariants = [...new Set(phoneVariants)];
+    
+    // Build query with multiple LIKE conditions
+    const conditions = phoneVariants.map((variant, idx) => {
+      const paramName = `phone${idx + 1}`;
+      queryParams[paramName] = `%${variant}%`;
+      return `"phoneNumber" LIKE :${paramName}`;
+    }).join(' OR ');
+    
+    query = `
+      SELECT id, email, "firstName", "lastName", "phoneNumber", "accountNumber", "kycStatus", "password_hash"
+      FROM users
+      WHERE ${conditions}
+      ORDER BY id DESC
+      LIMIT 1
+    `;
   }
+  // Otherwise treat as name search
+  else {
+    const nameParts = identifier.trim().split(/\s+/);
+    if (nameParts.length >= 2) {
+      // First and last name
+      query = `
+        SELECT id, email, "firstName", "lastName", "phoneNumber", "accountNumber", "kycStatus", "password_hash"
+        FROM users
+        WHERE "firstName" ILIKE :firstName AND "lastName" ILIKE :lastName
+        ORDER BY id DESC
+        LIMIT 1
+      `;
+      queryParams = {
+        firstName: `%${nameParts[0]}%`,
+        lastName: `%${nameParts.slice(1).join(' ')}%`
+      };
+    } else {
+      // Just first name
+      query = `
+        SELECT id, email, "firstName", "lastName", "phoneNumber", "accountNumber", "kycStatus", "password_hash"
+        FROM users
+        WHERE "firstName" ILIKE :firstName OR "lastName" ILIKE :lastName
+        ORDER BY id DESC
+        LIMIT 1
+      `;
+      queryParams = {
+        firstName: `%${nameParts[0]}%`,
+        lastName: `%${nameParts[0]}%`
+      };
+    }
+  }
+  
+  const [results] = await sequelize.query(query, {
+    replacements: queryParams,
+    type: Sequelize.QueryTypes.SELECT
+  });
+  
+  return results;
 };
 
 // Main function
