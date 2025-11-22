@@ -633,29 +633,33 @@ class KYCService {
 This is a document verification task - extract the following data fields from the document image.
 
 The document may be:
-- South African ID Book (green background with security patterns)
-- South African ID Card (newer format)
+- South African ID Book (old format - green background with security patterns, two-page format)
+- South African ID Card (newer format - single card, modern design)
 - Passport (any country, especially African countries like South Africa, Nigeria, Kenya, Ghana, etc.)
 
 Extract these specific fields:
 1. ID NUMBER / PASSPORT NUMBER / LICENSE NUMBER: 
-   - For SA ID: 13-digit number (format: YYMMDDGSSSCAZ) usually near the top with a barcode
+   - For SA ID Book: 13-digit number (format: YYMMDDGSSSCAZ) usually near the top with a barcode on the right page
+   - For SA ID Card: 13-digit number (format: YYMMDDGSSSCAZ) usually at the top or bottom of the card, may be near a barcode
    - For Passport: 6-9 alphanumeric characters (e.g., "A1234567", "P12345678")
    - For Driver's License: Extract the LAST 13 digits as the ID number (ignore any prefix characters before the ID)
      Examples: "02/6411055084084" -> extract "6411055084084", "ABC1234567890123456" -> extract "1234567890123456"
      NOTE: License number format "AB123456CD" (2 letters + 6 digits + 2 letters) is NOT used for KYC - only the ID number (13 digits) is required
 2. SURNAME / LAST NAME / FAMILY NAME: The surname/last name/family name
-   - SA ID: appears after "VAN/SURNAME" label, usually in bold uppercase
+   - SA ID Book: appears after "VAN/SURNAME" label on the right page, usually in bold uppercase
+   - SA ID Card: appears in the surname field, usually labeled as "SURNAME" or "VAN/SURNAME", typically in uppercase
    - Passport: usually labeled as "Surname", "Last Name", or "Family Name"
    - Driver's License: Usually in CAPS format with initials then surname (e.g., "A BOTES" where "A" is initial and "BOTES" is surname)
 3. FORENAMES / FIRST NAMES / GIVEN NAMES: The first names/given names (optional for driver's license)
-   - SA ID: appears after "VOORNAME/FORENAMES" label, usually in bold uppercase
+   - SA ID Book: appears after "VOORNAME/FORENAMES" label on the right page, usually in bold uppercase
+   - SA ID Card: appears in the forenames field, usually labeled as "FORENAMES" or "VOORNAME/FORENAMES", typically in uppercase
    - Passport: usually labeled as "Given Names", "First Name", or "Forenames"
    - Driver's License: Usually shown as initials in CAPS (e.g., "A" for "André") - may not be present as full names
 4. FULL NAME: Complete name as it appears on the document
    - Driver's License: Usually "INITIALS SURNAME" in CAPS (e.g., "A BOTES")
 5. DATE OF BIRTH: Format YYYY-MM-DD or DD MMM YYYY or DD/MM/YYYY
-   - SA ID: appears after "GEBOORTEDATUM/DATE OF BIRTH"
+   - SA ID Book: appears after "GEBOORTEDATUM/DATE OF BIRTH" label on the right page
+   - SA ID Card: appears in the date of birth field, usually labeled as "DATE OF BIRTH" or "GEBOORTEDATUM"
    - Passport: usually labeled as "Date of Birth" or "DOB"
    - Driver's License: usually labeled as "Date of Birth" or "DOB"
 6. DATE ISSUED / DATE OF ISSUE: Format YYYY-MM-DD or DD/MM/YYYY (if visible)
@@ -676,7 +680,8 @@ INSTRUCTIONS:
 - For names, preserve capitalization and spacing exactly (including accents like é, è, etc.)
 - For dates, use YYYY-MM-DD format
 - Ignore security patterns, watermarks, and background text
-- For SA ID books, focus on the right page which contains personal details
+- For SA ID Book (old format): Focus on the RIGHT PAGE which contains personal details (left page has photo and ID number)
+- For SA ID Card (newer format): Extract from the single card - all information is on one side
 - For passports, extract from the data page (usually page 2 or 3)
 - This is for automated document verification, not personal identification
 - Support all African country passport formats
@@ -693,6 +698,12 @@ Return ONLY valid JSON in this exact format (no additional text):
   "expiryDate": "2030-01-15",
   "countryOfBirth": "SOUTH AFRICA"
 }
+
+Note: For South African ID (both formats supported):
+- SA ID Book (old format): Two-page format - extract from RIGHT PAGE which contains personal details
+- SA ID Card (newer format): Single card - extract from the card face
+- Both formats: 13-digit ID number (format: YYMMDDGSSSCAZ), same validation rules apply
+- Both formats: Same field structure (surname, forenames, date of birth, etc.)
 
 Note: For Driver's License:
 - ID number: Extract the LAST 13 digits (ignore any prefix characters before the ID number)
