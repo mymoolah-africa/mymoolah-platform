@@ -787,8 +787,7 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
               }
             ]
           }],
-          max_completion_tokens: 1500, // Optimized: Actual usage ~937 tokens (832 reasoning + ~105 output) - 1500 provides buffer
-          timeout: 20000 // 20 second timeout to prevent hanging (faster failure for better UX)
+          max_completion_tokens: 1500 // Optimized: Actual usage ~937 tokens (832 reasoning + ~105 output) - 1500 provides buffer
         });
         
         const attemptDuration = Date.now() - attemptStartTime;
