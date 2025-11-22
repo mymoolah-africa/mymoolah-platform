@@ -367,18 +367,17 @@ class KYCService {
     return this.openai;
   }
 
-  // Enhanced image preprocessing for OCR accuracy with low detail
+  // Simplified, fast image preprocessing for OCR
   async preprocessImageForOCR(localFilePath) {
     try {
       console.log('🔄 Preprocessing image for OCR...');
       
       const enhancedBuffer = await sharp(localFilePath)
-        .rotate()                    // Auto-rotate based on EXIF
+        .rotate()                    // Auto-rotate
         .resize({ width: 2000, withoutEnlargement: true })  // Optimal size for OCR
         .greyscale()                 // Reduce color noise
         .normalise()                 // Enhance contrast
-        .sharpen({ sigma: 1.5, m1: 1, m2: 2, x1: 2, y2: 10, y3: 20 })  // Enhanced sharpening for digit clarity
-        .modulate({ brightness: 1.1, saturation: 0 })  // Slight brightness boost
+        .sharpen()                   // Simple sharpening
         .toBuffer();
       
       console.log('✅ Image preprocessing successful');
@@ -747,7 +746,7 @@ Format notes:
               }
             ]
           }],
-          max_completion_tokens: 5000 // GPT-5 with high detail uses ~2700 completion tokens (2624 reasoning + ~107 output) - 5000 provides buffer
+          max_completion_tokens: 2000 // Limit reasoning tokens to force efficient processing - GPT-5 was using all 5000 for reasoning with none left for output
         });
         
         const attemptDuration = Date.now() - attemptStartTime;
