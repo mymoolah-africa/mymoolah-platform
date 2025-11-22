@@ -212,6 +212,14 @@ class KYCController {
               await wallet.verifyKYC('ai_system');
               console.log('✅ Wallet KYC verified automatically');
               
+              // Also update user's kycStatus so frontend sees the change
+              const { User } = require('../models');
+              const user = await User.findByPk(userId);
+              if (user) {
+                await user.update({ kycStatus: 'verified' });
+                console.log('✅ User KYC status updated to verified');
+              }
+              
               // Create notification for user
               try {
                 await notificationService.createNotification(
