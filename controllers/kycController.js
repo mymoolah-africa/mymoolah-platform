@@ -179,7 +179,8 @@ class KYCController {
         message: 'KYC document uploaded successfully. Processing in background...',
         status: 'processing',
         documentUrl: identityUrl,
-        checkStatusEndpoint: `/api/v1/kyc/status/${userId}`
+        checkStatusEndpoint: `/api/v1/kyc/status/${userId}`,
+        userId: userId
       });
 
       // Process async (don't await - let it run in background)

@@ -118,9 +118,13 @@ router.post('/upload-document', authenticateToken, upload.single('document'), as
   }
 });
 
-// Get KYC status
-router.get('/status/:userId', authenticateToken, async (req, res) => {
+// Get KYC status (with userId param or use authenticated user)
+router.get('/status/:userId?', authenticateToken, async (req, res) => {
   try {
+    // If no userId provided, use authenticated user
+    if (!req.params.userId && req.user && req.user.id) {
+      req.params.userId = req.user.id;
+    }
     await kycController.getKYCStatus(req, res);
   } catch (error) {
     console.error('❌ Error in KYC status route:', error);
