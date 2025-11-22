@@ -486,11 +486,49 @@ class KYCService {
       const any13 = oneLine.match(/\b(\d{13})\b/);
       if (any13) results.idNumber = any13[1];
     }
-    // ID number: if still missing, collapse all non-digits and take first 13
+    // ID number: if still missing, collapse all non-digits and find valid 13-digit ID
     if (!results.idNumber) {
       const digitsOnly = text.replace(/\D/g, '');
       if (digitsOnly.length >= 13) {
-        results.idNumber = digitsOnly.slice(0, 13);
+        // Try to find a valid 13-digit SA ID number
+        // SA ID format: YYMMDDGSSSCAZ (13 digits)
+        // Try multiple positions to find the correct ID
+        let foundId = null;
+        
+        // First, try to find a 13-digit number that passes Luhn checksum (SA ID validation)
+        for (let i = 0; i <= digitsOnly.length - 13; i++) {
+          const candidate = digitsOnly.slice(i, i + 13);
+          if (isValidSouthAfricanId(candidate)) {
+            foundId = candidate;
+            break;
+          }
+        }
+        
+        // If no valid ID found by checksum, try to find one that starts with valid date digits
+        // SA ID first 6 digits are date: YYMMDD (year 00-99, month 01-12, day 01-31)
+        if (!foundId) {
+          for (let i = 0; i <= digitsOnly.length - 13; i++) {
+            const candidate = digitsOnly.slice(i, i + 13);
+            const yy = parseInt(candidate.slice(0, 2), 10);
+            const mm = parseInt(candidate.slice(2, 4), 10);
+            const dd = parseInt(candidate.slice(4, 6), 10);
+            
+            // Check if it looks like a valid date (reasonable year, valid month, valid day)
+            if (yy >= 0 && yy <= 99 && mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31) {
+              foundId = candidate;
+              break;
+            }
+          }
+        }
+        
+        // Last resort: use the LAST 13 digits (most likely to be the ID if there are extra digits)
+        if (!foundId && digitsOnly.length > 13) {
+          foundId = digitsOnly.slice(-13);
+        } else if (!foundId) {
+          foundId = digitsOnly.slice(0, 13);
+        }
+        
+        results.idNumber = foundId;
       }
     }
 
@@ -744,10 +782,21 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
           max_completion_tokens: 500
         });
         
-        const content = response.choices[0].message.content || '';
+        // Validate response structure
+        if (!response || !response.choices || response.choices.length === 0) {
+          console.error('❌ OpenAI returned invalid response structure:', JSON.stringify(response, null, 2));
+          throw new Error('OpenAI returned invalid response structure');
+        }
+        
+        const content = response.choices[0]?.message?.content || '';
         
         // Log raw OpenAI response for debugging
-        console.log('📄 Raw OpenAI OCR Response:', content.substring(0, 500)); // First 500 chars
+        console.log('📄 Raw OpenAI OCR Response:', content ? content.substring(0, 500) : '(empty)'); // First 500 chars
+        
+        // Log response metadata for debugging
+        if (response.model) {
+          console.log('📋 OpenAI Model Used:', response.model);
+        }
         
         // Check if OpenAI refused due to content policy - CHECK FIRST before parsing
         // Detect various refusal patterns from OpenAI
@@ -833,6 +882,16 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
       } catch (error) {
         lastError = error;
         console.error(`❌ OpenAI OCR attempt ${attempt} failed:`, error.message);
+        
+        // Log full error details for debugging (especially for model errors)
+        if (error.status || error.code || error.response) {
+          console.error('📋 OpenAI API Error Details:', {
+            status: error.status,
+            code: error.code,
+            message: error.message,
+            response: error.response?.data || error.response?.statusText
+          });
+        }
         
         // Check if it's a content policy refusal (from our detection above)
         if (error.isContentPolicyRefusal || error.message.includes('content policy refusal')) {
