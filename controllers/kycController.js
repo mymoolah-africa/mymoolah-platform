@@ -295,11 +295,12 @@ class KYCController {
         });
       }
 
-      // Get KYC record if exists
+      // Get KYC record if exists (only select columns that exist in database)
       const { Kyc } = require('../models');
       const kycRecord = await Kyc.findOne({ 
         where: { userId: userId },
-        order: [['createdAt', 'DESC']]
+        order: [['createdAt', 'DESC']],
+        attributes: ['id', 'userId', 'documentType', 'documentNumber', 'ocrData', 'status', 'submittedAt', 'reviewedAt', 'reviewedBy', 'reviewerNotes', 'rejectionReason', 'verificationScore', 'isAutomated', 'createdAt', 'updatedAt']
       });
       
       res.json({
