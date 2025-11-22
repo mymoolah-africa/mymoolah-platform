@@ -21,15 +21,20 @@ const bcrypt = require('bcryptjs');
 
 // Database connection setup (same as lookup-user.js)
 const getDatabaseUrl = () => {
+  // Check if we're using proxy (local/Codespaces) or direct connection
   const dbUrl = process.env.DATABASE_URL || '';
-  if (dbUrl.includes('127.0.0.1:6543') || dbUrl.includes('localhost:6543')) {
-    return dbUrl;
-  } else if (dbUrl.includes('127.0.0.1:5433') || dbUrl.includes('localhost:5433')) {
-    return dbUrl;
+  
+  // If already using proxy, return as-is (but remove sslmode if present)
+  if (dbUrl.includes('127.0.0.1:6543') || dbUrl.includes('localhost:6543') || 
+      dbUrl.includes('127.0.0.1:5433') || dbUrl.includes('localhost:5433')) {
+    // Remove sslmode parameter - proxy doesn't need SSL
+    return dbUrl.replace(/[?&]sslmode=[^&]*/g, '').replace(/[?&]ssl=[^&]*/g, '');
   } else {
-    const match = dbUrl.match(/postgres:\/\/([^:]+):([^@]+)@([^\/]+)\/(.+)/);
+    // Try to use proxy connection (most reliable)
+    const match = dbUrl.match(/postgres:\/\/([^:]+):([^@]+)@([^\/]+)\/([^?]+)/);
     if (match) {
       const [, user, password, , database] = match;
+      // Use proxy on port 6543 (Codespaces) or 5433 (local)
       const proxyPort = process.env.PROXY_PORT || '6543';
       return `postgres://${user}:${password}@127.0.0.1:${proxyPort}/${database}`;
     }
@@ -37,10 +42,18 @@ const getDatabaseUrl = () => {
   return dbUrl;
 };
 
-const sequelize = new Sequelize(getDatabaseUrl(), {
+const dbUrl = getDatabaseUrl();
+const isProxyConnection = dbUrl.includes('127.0.0.1') || dbUrl.includes('localhost');
+
+const sequelize = new Sequelize(dbUrl, {
   dialect: 'postgres',
   logging: false,
-  pool: { max: 5, min: 0, acquire: 10000, idle: 10000 },
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 10000,
+    idle: 10000
+  },
   dialectOptions: {
     ssl: false // Disable SSL for proxy connections
   }
