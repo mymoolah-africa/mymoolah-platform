@@ -141,20 +141,23 @@ async function lookupUser(searchTerm) {
       }
     }
 
-    const [results] = await sequelize.query(query, {
+    const results = await sequelize.query(query, {
       replacements: queryParams,
       type: Sequelize.QueryTypes.SELECT
     });
 
-    if (results.length === 0) {
+    // Handle different result formats
+    const users = Array.isArray(results) ? results : (results[0] || []);
+
+    if (users.length === 0) {
       console.log('❌ No user found matching your search');
       console.log('\n💡 Tips:');
       console.log('  - Try searching by phone number (with or without +27)');
       console.log('  - Try searching by full name (e.g., "John Doe")');
       console.log('  - Try searching by user ID (numeric)');
     } else {
-      console.log(`✅ Found ${results.length} user(s):\n`);
-      results.forEach((u, index) => {
+      console.log(`✅ Found ${users.length} user(s):\n`);
+      users.forEach((u, index) => {
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
         console.log(`User #${index + 1}:`);
         console.log(`  👤 User ID:     ${u.id}`);
@@ -164,7 +167,7 @@ async function lookupUser(searchTerm) {
         console.log(`  ✅ KYC Status:  ${u.kycStatus || 'not_started'}`);
         console.log(`  📅 Created:     ${u.createdAt ? new Date(u.createdAt).toLocaleString() : 'N/A'}`);
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-        if (index < results.length - 1) console.log('');
+        if (index < users.length - 1) console.log('');
       });
     }
 
