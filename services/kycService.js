@@ -779,7 +779,7 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
               }
             ]
           }],
-          max_completion_tokens: 1000 // Increased for GPT-5 (was 500) - GPT-5 needs more tokens
+          max_completion_tokens: 4000 // GPT-5 uses reasoning_tokens + output tokens - need much higher limit
         });
         
         // Log full response structure for debugging (GPT-5 might have different format)
