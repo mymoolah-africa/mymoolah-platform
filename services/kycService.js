@@ -367,17 +367,18 @@ class KYCService {
     return this.openai;
   }
 
-  // Simplified, reliable image preprocessing for OCR
+  // Enhanced image preprocessing for OCR accuracy with low detail
   async preprocessImageForOCR(localFilePath) {
     try {
       console.log('🔄 Preprocessing image for OCR...');
       
       const enhancedBuffer = await sharp(localFilePath)
-        .rotate()                    // Auto-rotate
+        .rotate()                    // Auto-rotate based on EXIF
         .resize({ width: 2000, withoutEnlargement: true })  // Optimal size for OCR
         .greyscale()                 // Reduce color noise
         .normalise()                 // Enhance contrast
-        .sharpen()                   // Simple sharpening
+        .sharpen({ sigma: 1.5, m1: 1, m2: 2, x1: 2, y2: 10, y3: 20 })  // Enhanced sharpening for digit clarity
+        .modulate({ brightness: 1.1, saturation: 0 })  // Slight brightness boost
         .toBuffer();
       
       console.log('✅ Image preprocessing successful');
@@ -741,7 +742,7 @@ Format notes:
                 type: "image_url", 
                 image_url: {
                   url: `data:${mimeType};base64,${imageData}`,
-                  detail: "high" // High detail for maximum OCR accuracy - critical for ID number extraction
+                  detail: "low" // Low detail for fast processing - preprocessing enhances image quality for accuracy
                 }
               }
             ]
