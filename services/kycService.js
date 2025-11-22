@@ -709,7 +709,7 @@ Return JSON only:
         console.log(`🔄 OpenAI OCR attempt ${attempt}/${MAX_RETRIES}...`);
         
         const response = await this.openai.chat.completions.create({
-          model: "gpt-5",
+          model: "gpt-4o",
           messages: [
             {
               role: "system",
