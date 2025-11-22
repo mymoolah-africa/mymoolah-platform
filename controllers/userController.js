@@ -205,11 +205,12 @@ class UserController {
   async getMe(req, res) {
     try {
       const userId = req.user.id;
+      // Always fetch fresh data (no caching) to ensure KYC status is up-to-date
       const user = await User.findByPk(userId, {
         include: [{
           model: Wallet,
           as: 'wallet',
-          attributes: ['walletId', 'balance', 'currency', 'status']
+          attributes: ['walletId', 'balance', 'currency', 'status', 'kycVerified', 'kycVerifiedAt', 'kycVerifiedBy']
         }]
       });
       
@@ -217,11 +218,27 @@ class UserController {
         return res.status(404).json({ success: false, message: 'User not found' });
       }
       
+      // Reload user to ensure we have the latest kycStatus from database
+      await user.reload();
+      
       // Only return safe fields
       const { id, email, firstName, lastName, phoneNumber, accountNumber, balance, status, kycStatus, createdAt, updatedAt, wallet } = user;
       res.json({
         success: true,
-        data: { id, email, firstName, lastName, phoneNumber, accountNumber, balance, status, kycStatus, createdAt, updatedAt, wallet }
+        data: { 
+          id, 
+          email, 
+          firstName, 
+          lastName, 
+          phoneNumber, 
+          accountNumber, 
+          balance, 
+          status, 
+          kycStatus: kycStatus || (wallet?.kycVerified ? 'verified' : 'not_started'), // Fallback to wallet status if user status is null
+          createdAt, 
+          updatedAt, 
+          wallet 
+        }
       });
     } catch (error) {
       console.error('❌ Error in getMe:', error);
