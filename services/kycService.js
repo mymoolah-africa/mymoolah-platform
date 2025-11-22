@@ -641,7 +641,9 @@ Extract these specific fields:
 1. ID NUMBER / PASSPORT NUMBER / LICENSE NUMBER: 
    - For SA ID: 13-digit number (format: YYMMDDGSSSCAZ) usually near the top with a barcode
    - For Passport: 6-9 alphanumeric characters (e.g., "A1234567", "P12345678")
-   - For Driver's License: May be in format "02/6411055084084" (two digits + "/" + 13-digit ID) OR license format "AB123456CD" (2 letters + 6 digits + 2 letters)
+   - For Driver's License: Extract the LAST 13 digits as the ID number (ignore any prefix characters before the ID)
+     Examples: "02/6411055084084" -> extract "6411055084084", "ABC1234567890123456" -> extract "1234567890123456"
+     OR license format "AB123456CD" (2 letters + 6 digits + 2 letters) - this is the license number, not the ID number
 2. SURNAME / LAST NAME / FAMILY NAME: The surname/last name/family name
    - SA ID: appears after "VAN/SURNAME" label, usually in bold uppercase
    - Passport: usually labeled as "Surname", "Last Name", or "Family Name"
@@ -693,9 +695,13 @@ Return ONLY valid JSON in this exact format (no additional text):
 }
 
 Note: For Driver's License:
-- ID number may be in format "02/6411055084084" (extract the 13-digit part)
-- Name is usually "INITIALS SURNAME" in CAPS (e.g., "A BOTES")
-- Valid dates are in format "dd/mm/yyyy - dd/mm/yyyy" (extract the SECOND date as expiryDate)
+- ID number: Extract the LAST 13 digits (ignore any prefix characters before the ID number)
+  Examples: "02/6411055084084" -> "6411055084084", "ABC1234567890123456" -> "1234567890123456"
+- Name: Usually "INITIALS SURNAME" in CAPS (e.g., "A BOTES" where "A" is initial, "BOTES" is surname)
+  - No full first names, only initials and surname
+  - Forenames field may contain initials (e.g., "A" for "André")
+- Valid dates: Format "dd/mm/yyyy - dd/mm/yyyy" (extract the SECOND/RIGHT date as expiryDate)
+  Example: "15/01/2020 - 15/01/2030" -> expiryDate: "2030-01-15"
 - Only expiry date is validated (license must not be expired)
 - Forenames may not be present - surname is sufficient
 
@@ -1118,11 +1124,19 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
           if (canonical.idNumber) {
             let cleaned = String(canonical.idNumber).trim().replace(/\s+/g, '');
             
-            // Handle SA driver's license ID format: "02/6411055084084" -> extract "6411055084084"
-            // Pattern: two digits followed by "/" then 13 digits
-            const driverLicenseIdMatch = cleaned.match(/^\d{2}\/(\d{13})$/);
-            if (driverLicenseIdMatch) {
-              cleaned = driverLicenseIdMatch[1]; // Extract just the 13-digit ID
+            // Handle SA driver's license ID format: Extract LAST 13 digits (ignore any prefix)
+            // Examples: "02/6411055084084" -> "6411055084084", "ABC1234567890123456" -> "1234567890123456"
+            // Extract all digits and take the last 13
+            const allDigits = cleaned.replace(/\D/g, '');
+            if (allDigits.length >= 13) {
+              // Extract last 13 digits (driver's license has prefix chars that need to be ignored)
+              cleaned = allDigits.slice(-13);
+            } else {
+              // Try specific pattern match for "02/6411055084084" format (backward compatibility)
+              const driverLicenseIdMatch = cleaned.match(/^\d{2}\/(\d{13})$/);
+              if (driverLicenseIdMatch) {
+                cleaned = driverLicenseIdMatch[1]; // Extract just the 13-digit ID
+              }
             }
             
             // Check if it's a 13-digit SA ID or a 6-9 character passport number
@@ -1146,12 +1160,21 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
             }
           }
           
-          // Handle driver's license number format: "02/6411055084084" -> extract "6411055084084"
+          // Handle driver's license number format: Extract LAST 13 digits (ignore any prefix)
+          // Examples: "02/6411055084084" -> "6411055084084", "ABC1234567890123456" -> "1234567890123456"
           if (canonical.licenseNumber) {
             let cleaned = String(canonical.licenseNumber).trim().replace(/\s+/g, '');
-            const driverLicenseIdMatch = cleaned.match(/^\d{2}\/(\d{13})$/);
-            if (driverLicenseIdMatch) {
-              cleaned = driverLicenseIdMatch[1]; // Extract just the 13-digit ID
+            // Extract all digits and take the last 13 (driver's license has prefix chars that need to be ignored)
+            const allDigits = cleaned.replace(/\D/g, '');
+            if (allDigits.length >= 13) {
+              // Extract last 13 digits
+              cleaned = allDigits.slice(-13);
+            } else {
+              // Try specific pattern match for "02/6411055084084" format (backward compatibility)
+              const driverLicenseIdMatch = cleaned.match(/^\d{2}\/(\d{13})$/);
+              if (driverLicenseIdMatch) {
+                cleaned = driverLicenseIdMatch[1]; // Extract just the 13-digit ID
+              }
             }
             canonical.licenseNumber = cleaned;
           }
