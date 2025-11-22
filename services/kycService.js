@@ -787,7 +787,7 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
               }
             ]
           }],
-          max_completion_tokens: 1500 // Optimized: Actual usage ~937 tokens (832 reasoning + ~105 output) - 1500 provides buffer
+          max_completion_tokens: 3000 // GPT-5 needs more tokens - driver's licenses use more reasoning (1500 reasoning + ~200 output needed)
         });
         
         const attemptDuration = Date.now() - attemptStartTime;
@@ -1514,14 +1514,21 @@ For Passport, include "expiryDate" (or "dateOfExpiry").`
       let docSurname = ocrResults.surname || '';
       let { first: docFirst, last: docLast } = splitFullName(fullName);
       
-      // Handle driver's license name format: "A BOTES" where "A" is initial and "BOTES" is surname
-      if (documentType === 'sa_driving_license' && fullName && !docSurname) {
+      // Handle driver's license name format: "INITIALS SURNAME" (e.g., "RZ BOTES" where "RZ" are initials, "BOTES" is surname)
+      // ALWAYS extract last word from fullName for driver's licenses (Tesseract may extract initials as surname)
+      if (documentType === 'sa_driving_license' && fullName) {
         // Full name is usually "INITIALS SURNAME" in CAPS
-        const nameParts = fullName.trim().split(/\s+/);
+        const nameParts = fullName.trim().split(/\s+/).filter(p => p.length > 0);
         if (nameParts.length >= 2) {
-          // Last part is surname, everything before is initials
+          // Last part is ALWAYS surname for driver's licenses, everything before is initials
+          // Override any Tesseract-extracted surname with the last word from fullName
           docSurname = nameParts[nameParts.length - 1];
           docFirst = nameParts.slice(0, -1).join(' '); // All parts except last are initials
+          docLast = docSurname;
+          console.log(`ℹ️  Driver's license name format: Extracted surname "${docSurname}" from fullName "${fullName}" (last word)`);
+        } else if (nameParts.length === 1 && !docSurname) {
+          // Single word - use as surname
+          docSurname = nameParts[0];
           docLast = docSurname;
         }
       }
