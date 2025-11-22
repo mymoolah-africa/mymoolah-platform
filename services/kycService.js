@@ -672,39 +672,21 @@ class KYCService {
     // Enhanced OpenAI prompt for identity documents (ID cards, ID books, and passports)
     // Note: Framed as document data extraction for verification purposes, not personal identification
     const prompt = documentType === 'id_document' 
-      ? `You are a document processing system extracting structured data fields from identity document images for automated verification purposes.
+      ? `Extract structured data from identity document. Return ONLY valid JSON, no explanation.
 
-This is a document verification task - extract the following data fields from the document image.
+Fields to extract:
+1. idNumber: 13 digits for SA ID/Driver's License (last 13 digits for license), 6-9 alphanumeric for passport
+2. surname: Last name
+3. forenames: First names (initials OK for driver's license)
+4. fullName: Complete name
+5. dateOfBirth: YYYY-MM-DD
+6. dateIssued: YYYY-MM-DD (if visible)
+7. expiryDate: YYYY-MM-DD (for driver's license: second date from "dd/mm/yyyy - dd/mm/yyyy")
+8. countryOfBirth: Country name
 
-The document may be:
-- South African ID Book (old format - green background with security patterns, two-page format)
-- South African ID Card (newer format - single card, modern design)
-- Passport (any country, especially African countries like South Africa, Nigeria, Kenya, Ghana, etc.)
+CRITICAL: Verify ID digits carefully (6↔5, 0↔O, 1↔I, 8↔B).
 
-Extract these fields:
-1. ID NUMBER (CRITICAL - read each digit carefully):
-   - SA ID: 13 digits (YYMMDDGSSSCAZ) near barcode/top
-   - Passport: 6-9 alphanumeric
-   - Driver's License: LAST 13 digits only (ignore prefix like "02/")
-   ⚠️ Verify digits: 6↔5, 0↔O, 1↔I, 8↔B
-2. SURNAME: Last name/family name (CAPS for SA docs)
-3. FORENAMES: First names (optional for driver's license - may be initials)
-4. FULL NAME: Complete name (Driver's License: "INITIALS SURNAME")
-5. DATE OF BIRTH: YYYY-MM-DD format
-6. DATE ISSUED: YYYY-MM-DD (if visible)
-7. EXPIRY DATE: YYYY-MM-DD (Driver's License: extract SECOND date from "dd/mm/yyyy - dd/mm/yyyy")
-8. COUNTRY OF BIRTH: Country name
-
-INSTRUCTIONS:
-- ⚠️ CRITICAL: ID number accuracy is paramount - verify each digit carefully
-- Extract exact text, preserve capitalization/accents
-- Dates: YYYY-MM-DD format
-- SA ID Book: Extract from RIGHT PAGE (personal details)
-- SA ID Card: Single card format
-- Passport: Extract from data page
-- Driver's License: ID = last 13 digits, expiry = second date in range
-
-Return ONLY valid JSON in this exact format (no additional text):
+Return JSON only:
 {
   "idNumber": "9201165204087",
   "surname": "BOTES",
@@ -715,12 +697,7 @@ Return ONLY valid JSON in this exact format (no additional text):
   "validFrom": "2020-01-15",
   "expiryDate": "2030-01-15",
   "countryOfBirth": "SOUTH AFRICA"
-}
-
-Format notes:
-- SA ID: 13 digits (YYMMDDGSSSCAZ), both book (right page) and card formats supported
-- Driver's License: ID = last 13 digits from full string, expiry = second date in "dd/mm/yyyy - dd/mm/yyyy" range
-- Passport: Include expiryDate field`
+}`
       : "Extract the following information from this South African proof of address document: Street address, City, Postal code, Province. Return as JSON format.";
     
     // Retry logic for OpenAI API calls
@@ -746,7 +723,7 @@ Format notes:
               }
             ]
           }],
-          max_completion_tokens: 2000 // Limit reasoning tokens to force efficient processing - GPT-5 was using all 5000 for reasoning with none left for output
+          max_completion_tokens: 3000 // Increased for driver's licenses which require more reasoning - balance between speed and completion
         });
         
         const attemptDuration = Date.now() - attemptStartTime;
