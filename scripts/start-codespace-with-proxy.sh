@@ -223,13 +223,10 @@ ensure_adc_valid() {
     adc_file_exists=true
   fi
   
-  # Test if ADC work by trying to access Cloud SQL API (most reliable test)
-  local test_output
-  test_output=$(gcloud sql instances describe mmtp-pg --project=mymoolah-db --format="value(name)" 2>&1)
-  local test_exit=$?
-  
-  if [ $test_exit -eq 0 ] && [ -n "$test_output" ]; then
-    log "✅ ADC are valid"
+  # Test if ADC can generate access tokens (simpler, more reliable test)
+  # This works even if user doesn't have Cloud SQL API permissions
+  if gcloud auth application-default print-access-token >/dev/null 2>&1; then
+    log "✅ ADC are valid (can generate access tokens)"
     return 0
   fi
   
@@ -237,12 +234,8 @@ ensure_adc_valid() {
   if [ "$adc_file_exists" = false ]; then
     log "⚠️  ADC not found"
   else
-    # Check for specific expired token error
-    if echo "$test_output" | grep -q "invalid_grant\|invalid_rapt\|reauth"; then
-      log "⚠️  ADC expired (invalid_grant/reauth error detected)"
-    else
-      log "⚠️  ADC may be invalid or expired"
-    fi
+    # File exists but can't generate token - likely expired
+    log "⚠️  ADC file exists but cannot generate tokens (likely expired)"
   fi
   
   # Only attempt refresh if we're in an interactive terminal
@@ -256,20 +249,13 @@ ensure_adc_valid() {
       # Give credentials a moment to propagate
       sleep 2
       
-      # Verify the refresh worked
-      if gcloud sql instances describe mmtp-pg --project=mymoolah-db --format="value(name)" >/dev/null 2>&1; then
-        log "✅ ADC verification successful"
+      # Verify the refresh worked - test if we can generate tokens
+      if gcloud auth application-default print-access-token >/dev/null 2>&1; then
+        log "✅ ADC verification successful (can generate access tokens)"
         return 0
       else
-        # Token exists but API test failed - might be permissions, but let proxy try
-        if gcloud auth application-default print-access-token >/dev/null 2>&1; then
-          log "⚠️  ADC token exists but Cloud SQL API test failed (may be permissions issue)"
-          log "⚠️  Proceeding anyway - proxy will test connectivity"
-          return 0
-        else
-          error "❌ ADC refresh completed but verification failed"
-          return 1
-        fi
+        error "❌ ADC refresh completed but cannot generate tokens"
+        return 1
       fi
     else
       error "❌ Failed to refresh ADC"
