@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: November 19, 2025  
-**Version**: 2.4.15 - Zapper VAT Transaction Fee & Referential Integrity  
-**Status**: ✅ **ZAPPER VAT TRANSACTION FEE COMPLETE** ✅ **REFERENTIAL INTEGRITY ENFORCED** ✅ **BANKING-GRADE DATA INTEGRITY**
+**Last Updated**: November 26, 2025  
+**Version**: 2.4.18 - Peach Payments Integration Archival  
+**Status**: ✅ **PEACH INTEGRATION ARCHIVED** ✅ **ZAPPER VAT TRANSACTION FEE COMPLETE** ✅ **REFERENTIAL INTEGRITY ENFORCED** ✅ **BANKING-GRADE DATA INTEGRITY**
 
 ---
 
@@ -101,13 +101,16 @@ The MyMoolah Treasury Platform has successfully upgraded all OpenAI models to GP
 - **Mobile UX Fixes**: Proper touch handling and responsive buttons
 - **Error Handling**: Comprehensive error messages with troubleshooting guidance
 
-#### **💳 Peach Payments Integration** ✅ **100% COMPLETE**
-- **Sandbox Integration**: Complete Peach Payments sandbox integration with working PayShap
-- **API Integration**: Full API integration with OAuth 2.0 authentication
-- **PayShap RPP/RTP**: Working Request to Pay (RTP) and Request Payment (RPP) functionality
-- **Test Suite**: Comprehensive test suite with all scenarios passing
-- **Production Ready**: Code ready for production with float account setup
-- **Documentation**: Complete integration documentation and testing guides
+#### **📦 Peach Payments Integration** 📦 **ARCHIVED** (2025-11-26)
+- **Status**: Integration archived due to PayShap provider competition conflict
+- **Archive Type**: Soft archive (code preserved, functionality disabled)
+- **Sandbox Integration**: Complete Peach Payments sandbox integration with working PayShap (preserved)
+- **API Integration**: Full API integration with OAuth 2.0 authentication (preserved)
+- **PayShap RPP/RTP**: Working Request to Pay (RTP) and Request Payment (RPP) functionality (preserved)
+- **Test Suite**: Comprehensive test suite with all scenarios passing (preserved)
+- **Code Status**: All code preserved for potential reactivation
+- **Data Retention**: All transaction data preserved per banking compliance requirements
+- **Reactivation**: See `docs/archive/PEACH_ARCHIVAL_RECORD.md` for reactivation procedure
 
 #### **🔍 Zapper Integration Review** ✅ **COMPLETE**
 - **Code Review**: Complete review of existing Zapper integration code
@@ -145,35 +148,42 @@ The MyMoolah Treasury Platform has successfully upgraded all OpenAI models to GP
 
 ---
 
-## 💳 **PEACH PAYMENTS INTEGRATION STATUS**
+## 📦 **PEACH PAYMENTS INTEGRATION STATUS** (ARCHIVED)
 
-### **Integration Status: 100% COMPLETE** ✅
-The Peach Payments integration is **fully functional** with **working PayShap sandbox integration** and **production-ready code**.
+⚠️ **STATUS: ARCHIVED** (2025-11-26)  
+**Reason**: Peach Payments temporarily canceled integration agreement due to PayShap provider competition  
+**Archive Flag**: `PEACH_INTEGRATION_ARCHIVED=true` in `.env`  
+**See**: `docs/archive/PEACH_ARCHIVAL_RECORD.md` for complete details
 
-#### **Peach Payments Features Implemented**
-- **OAuth 2.0 Authentication**: Complete OAuth 2.0 flow with token management
-- **PayShap RPP (Request Payment)**: Outbound payment requests functionality
-- **PayShap RTP (Request to Pay)**: Inbound payment request handling
-- **Request Money**: MSISDN-based money request functionality
-- **Error Handling**: Comprehensive error handling and validation
-- **Test Suite**: Complete test suite with all scenarios passing
+### **Integration Status: ARCHIVED** 📦
+The Peach Payments integration has been **archived** but all code and data are **preserved** for potential reactivation. Routes are disabled, zero resource consumption.
 
-#### **Test Results - All Passing** ✅
-- **Health Check**: ✅ PASSED
-- **Payment Methods**: ✅ PASSED  
-- **Test Scenarios**: ✅ PASSED
-- **PayShap RPP**: ✅ PASSED
-- **PayShap RTP**: ✅ PASSED
-- **Request Money**: ✅ PASSED
-- **Error Handling**: ✅ PASSED
-- **Sandbox Integration**: ✅ PASSED (All 4 scenarios)
+#### **Peach Payments Features Implemented** (Preserved)
+- **OAuth 2.0 Authentication**: Complete OAuth 2.0 flow with token management (preserved)
+- **PayShap RPP (Request Payment)**: Outbound payment requests functionality (preserved)
+- **PayShap RTP (Request to Pay)**: Inbound payment request handling (preserved)
+- **Request Money**: MSISDN-based money request functionality (preserved)
+- **Error Handling**: Comprehensive error handling and validation (preserved)
+- **Test Suite**: Complete test suite with all scenarios passing (preserved)
+- **Status**: All features preserved but routes disabled due to archival
 
-#### **Production Readiness**
-- **Code**: Production-ready with proper error handling
-- **Security**: PCI DSS compliant implementation
-- **Documentation**: Complete integration documentation
-- **Testing**: Comprehensive test coverage
-- **Next Step**: Awaiting float account setup from Peach Payments
+#### **Test Results** (Historical - Preserved)
+- **Health Check**: ✅ PASSED (historical)
+- **Payment Methods**: ✅ PASSED (historical)
+- **Test Scenarios**: ✅ PASSED (historical)
+- **PayShap RPP**: ✅ PASSED (historical)
+- **PayShap RTP**: ✅ PASSED (historical)
+- **Request Money**: ✅ PASSED (historical)
+- **Error Handling**: ✅ PASSED (historical)
+- **Sandbox Integration**: ✅ PASSED (All 4 scenarios - historical)
+
+#### **Archival Status**
+- **Code**: All code preserved for potential reactivation
+- **Security**: PCI DSS compliant implementation (preserved)
+- **Documentation**: Complete integration documentation (preserved)
+- **Testing**: Comprehensive test coverage (preserved)
+- **Data**: All transaction data preserved per banking compliance
+- **Reactivation**: See `docs/archive/PEACH_ARCHIVAL_RECORD.md` for procedure
 
 ---
 
@@ -223,7 +233,7 @@ Comprehensive UAT test suite executed with 92.3% success rate. All critical paym
 #### **Product Variants System**
 - **Base Products**: 172 base products across all categories
 - **Product Variants**: 344 variants (2 per product: Flash + MobileMart)
-- **Supplier Integration**: 4 active suppliers (Flash, MobileMart, dtMercury, Peach)
+- **Supplier Integration**: 3 active suppliers (Flash, MobileMart, dtMercury) | Peach archived 2025-11-26
 - **Automatic Selection**: Commission-based supplier selection algorithm
 
 #### **Service Layer Architecture**
@@ -256,10 +266,12 @@ Comprehensive UAT test suite executed with 92.3% success rate. All critical paym
 - **Commission Structure**: Tiered commission rates
 - **Real-Time**: Live pricing and availability
 
-#### **Peach Payments Integration**
-- **API Version**: Peach Payments API
-- **Services**: Payment processing, card payments
-- **Integration**: Payment gateway for product purchases
+#### **Peach Payments Integration** 📦 **ARCHIVED** (2025-11-26)
+- **Status**: Archived due to PayShap provider competition conflict
+- **API Version**: Peach Payments API (preserved)
+- **Services**: Payment processing, card payments (preserved)
+- **Integration**: Payment gateway for product purchases (preserved)
+- **Reactivation**: See `docs/archive/PEACH_ARCHIVAL_RECORD.md`
 - **Security**: PCI DSS compliant
 
 ---
@@ -269,7 +281,7 @@ Comprehensive UAT test suite executed with 92.3% success rate. All critical paym
 ### **Product Catalog Coverage**
 - **Total Products**: 172 base products
 - **Total Variants**: 344 product variants
-- **Active Suppliers**: 4 (Flash, MobileMart, dtMercury, Peach)
+- **Active Suppliers**: 3 (Flash, MobileMart, dtMercury) | Peach archived 2025-11-26
 - **Categories**: 8 major product categories
 
 ### **Product Distribution by Type**
@@ -503,4 +515,4 @@ Your MyMoolah Treasury Platform is now **100% production ready** with:
 
 ---
 
-**🎯 Status: PEACH PAYMENTS INTEGRATION COMPLETE - ZAPPER INTEGRATION REVIEWED - PRODUCTION READY** 🎯 
+**🎯 Status: PEACH PAYMENTS INTEGRATION ARCHIVED - ZAPPER INTEGRATION REVIEWED - PRODUCTION READY** 🎯 
