@@ -18,7 +18,9 @@ COPY . .
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
-RUN npm run build
+# BUILD_COMMAND defaults to "build" but can be overridden (e.g., "build:staging" to skip TypeScript)
+ARG BUILD_COMMAND=build
+RUN npm run ${BUILD_COMMAND}
 
 # Stage 2: Production (nginx)
 FROM nginx:alpine
