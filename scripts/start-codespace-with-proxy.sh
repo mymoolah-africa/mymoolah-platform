@@ -197,6 +197,7 @@ ensure_adc_valid() {
         log "✅ gcloud authentication successful"
       else
         error "❌ Failed to authenticate gcloud"
+        error "Please run: gcloud auth login --no-launch-browser"
         return 1
       fi
     else
@@ -215,14 +216,14 @@ ensure_adc_valid() {
     log "✅ Project set to mymoolah-db"
   fi
   
-  # Check if ADC exist
-  local adc_exists=false
-  if gcloud auth application-default print-access-token >/dev/null 2>&1; then
-    adc_exists=true
+  # First, check if ADC file exists
+  local adc_file="${HOME}/.config/gcloud/application_default_credentials.json"
+  local adc_file_exists=false
+  if [ -f "$adc_file" ]; then
+    adc_file_exists=true
   fi
   
-  # Test if ADC work by trying to access Cloud SQL API (more specific test)
-  # This will fail if ADC are expired or invalid
+  # Test if ADC work by trying to access Cloud SQL API (most reliable test)
   local test_output
   test_output=$(gcloud sql instances describe mmtp-pg --project=mymoolah-db --format="value(name)" 2>&1)
   local test_exit=$?
@@ -232,8 +233,8 @@ ensure_adc_valid() {
     return 0
   fi
   
-  # ADC either don't exist or are expired - attempt to refresh
-  if [ "$adc_exists" = false ]; then
+  # ADC either don't exist or are expired
+  if [ "$adc_file_exists" = false ]; then
     log "⚠️  ADC not found"
   else
     # Check for specific expired token error
@@ -244,7 +245,7 @@ ensure_adc_valid() {
     fi
   fi
   
-  # Check if we're in an interactive terminal
+  # Only attempt refresh if we're in an interactive terminal
   if [ -t 0 ] && [ -t 1 ]; then
     log "Attempting to refresh Application Default Credentials (interactive mode)..."
     log "You will need to authenticate via device code..."
@@ -255,31 +256,25 @@ ensure_adc_valid() {
       # Give credentials a moment to propagate
       sleep 2
       
-      # Verify the refresh worked - try multiple verification methods
-      local verify_ok=false
-      
-      # Method 1: Test Cloud SQL API access
+      # Verify the refresh worked
       if gcloud sql instances describe mmtp-pg --project=mymoolah-db --format="value(name)" >/dev/null 2>&1; then
-        verify_ok=true
-      # Method 2: Test if we can get an access token
-      elif gcloud auth application-default print-access-token >/dev/null 2>&1; then
-        # Token exists, might work even if describe fails (permissions issue)
-        log "⚠️  ADC token exists but Cloud SQL API test failed (may be permissions issue)"
-        log "⚠️  Proceeding anyway - proxy will test connectivity"
-        verify_ok=true
-      fi
-      
-      if [ "$verify_ok" = true ]; then
         log "✅ ADC verification successful"
         return 0
       else
-        error "❌ ADC refresh completed but verification failed"
-        error "⚠️  Continuing anyway - proxy will attempt connection and report errors"
-        # Don't exit - let proxy try and fail with clear error if ADC still don't work
-        return 0
+        # Token exists but API test failed - might be permissions, but let proxy try
+        if gcloud auth application-default print-access-token >/dev/null 2>&1; then
+          log "⚠️  ADC token exists but Cloud SQL API test failed (may be permissions issue)"
+          log "⚠️  Proceeding anyway - proxy will test connectivity"
+          return 0
+        else
+          error "❌ ADC refresh completed but verification failed"
+          return 1
+        fi
       fi
     else
       error "❌ Failed to refresh ADC"
+      error "If device code flow fails, try running manually:"
+      error "   gcloud auth application-default login --no-launch-browser"
       return 1
     fi
   else
