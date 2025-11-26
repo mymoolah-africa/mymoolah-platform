@@ -352,7 +352,11 @@ class SecurityConfig {
     }
 
     // Check Peach Payments credentials
-    if (process.env.PEACH_CLIENT_ID && process.env.PEACH_CLIENT_SECRET && process.env.PEACH_MERCHANT_ID && process.env.PEACH_ENTITY_ID_PSH) {
+    const isPeachArchived = process.env.PEACH_INTEGRATION_ARCHIVED === 'true';
+    if (isPeachArchived) {
+      credentials.peach = false; // Force disabled even if credentials exist
+      console.log('⚠️  Peach Payments integration is ARCHIVED (competition conflict)');
+    } else if (process.env.PEACH_CLIENT_ID && process.env.PEACH_CLIENT_SECRET && process.env.PEACH_MERCHANT_ID && process.env.PEACH_ENTITY_ID_PSH) {
       credentials.peach = true;
     }
 

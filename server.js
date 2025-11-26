@@ -354,9 +354,20 @@ if (mobilemartRoutesLoaded) {
 }
 
 // Conditionally load Peach routes
-if (validCredentials.peach) {
+const isPeachArchived = process.env.PEACH_INTEGRATION_ARCHIVED === 'true';
+if (!isPeachArchived && validCredentials.peach) {
   app.use('/api/v1/peach', peachRoutes);
-
+} else if (isPeachArchived) {
+  console.log('📦 Peach Payments integration ARCHIVED - routes disabled');
+  // Provide archived status endpoint
+  app.get('/api/v1/peach/status', (req, res) => {
+    res.json({
+      status: 'archived',
+      reason: 'Integration temporarily canceled due to PayShap provider competition',
+      archivedDate: '2025-11-26',
+      reactivationProcedure: 'See docs/archive/PEACH_ARCHIVAL_RECORD.md'
+    });
+  });
 }
 
 // Health check endpoint with TLS information
@@ -373,7 +384,7 @@ app.get('/health', (req, res) => {
     services: {
       flash: flashRoutesLoaded,
       mobilemart: mobilemartRoutesLoaded,
-      peach: validCredentials.peach
+      peach: process.env.PEACH_INTEGRATION_ARCHIVED === 'true' ? 'archived' : validCredentials.peach
     },
     uptime: process.uptime(),
     memory: process.memoryUsage()

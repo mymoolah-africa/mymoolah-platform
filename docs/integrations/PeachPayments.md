@@ -1,5 +1,13 @@
 ## Peach Payments Integration (Sandbox)
 
+⚠️ **STATUS: ARCHIVED** ⚠️  
+**Archived Date**: 2025-11-26  
+**Reason**: Integration temporarily canceled due to PayShap provider competition  
+**Archive Flag**: `PEACH_INTEGRATION_ARCHIVED=true` in `.env`  
+**See**: `docs/archive/PEACH_ARCHIVAL_RECORD.md` for details
+
+---
+
 ### Overview
 Peach Payments provides card, A2A, Pay by Bank, and PayShap capabilities. This integration focuses on PayShap (RPP outbound and RTP request‑to‑pay) and uses Hosted Checkout V2 for sandbox, with a fallback to the Payments API when required.
 
