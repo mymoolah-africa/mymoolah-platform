@@ -8,7 +8,7 @@ set -euo pipefail
 PROJECT_ID="mymoolah-db"
 REGION="africa-south1"
 IMAGE_NAME="gcr.io/${PROJECT_ID}/mymoolah-wallet-staging:latest"
-STAGING_BACKEND_URL="https://mymoolah-backend-staging-4ekgjiko5a-bq.a.run.app"
+STAGING_BACKEND_URL="https://staging.mymoolah.africa"
 
 log() {
   echo "📋 [$(date +'%Y-%m-%d %H:%M:%S')] $*"
