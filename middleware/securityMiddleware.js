@@ -31,13 +31,15 @@ const createRateLimit = (windowMs, max, message, keyGenerator = null) => {
       retryAfter: Math.ceil(windowMs / 1000)
     },
     keyGenerator: keyGenerator || ((req) => {
-      // Use X-Forwarded-For header when behind proxy (Cloud Run)
-      // Trust proxy is set to 1 (trust first proxy only - Cloud Load Balancer)
-      return req.ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.connection.remoteAddress;
+      // Manually extract IP from X-Forwarded-For header (avoids trust proxy validation)
+      // Cloud Load Balancer sets X-Forwarded-For with client IP as first value
+      // Format: "client-ip, proxy-ip" - we use the first IP (client)
+      const forwarded = req.headers['x-forwarded-for'];
+      if (forwarded) {
+        return forwarded.split(',')[0].trim();
+      }
+      return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
     }),
-    // Tell express-rate-limit we're intentionally trusting the proxy (Cloud Load Balancer)
-    // This prevents the validation error while maintaining security (trust proxy: 1 = only first proxy)
-    trustProxy: true,
     handler: (req, res) => {
       res.status(429).json({
         status: 'error',

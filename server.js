@@ -49,8 +49,8 @@ const app = express();
 
 // Trust proxy for Cloud Run behind load balancer (banking-grade: trust only first proxy)
 // This is secure because Cloud Load Balancer is the only proxy in front of Cloud Run
-// MUST be set BEFORE requiring securityMiddleware to prevent express-rate-limit validation error
-// Using '1' instead of 'true' prevents express-rate-limit validation error
+// Note: We use custom IP extraction in rate limiters to avoid express-rate-limit validation errors
+// Setting to 1 (trust first proxy) for other middleware that needs it (cookies, etc.)
 app.set('trust proxy', 1);
 
 const {
@@ -232,8 +232,17 @@ const limiter = rateLimit({
   message: config.rateLimits.general.message,
   standardHeaders: true,
   legacyHeaders: false,
-  // Tell express-rate-limit we're intentionally trusting the proxy (Cloud Load Balancer)
-  trustProxy: true,
+  // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
+  // Cloud Load Balancer sets X-Forwarded-For with client IP as first value
+  keyGenerator: (req) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) {
+      // X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
+      // We trust only the first proxy (Cloud Load Balancer), so use the first IP
+      return forwarded.split(',')[0].trim();
+    }
+    return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+  },
   // In development, and for CORS preflight, skip limiting to avoid false CORS failures during polling
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
@@ -255,8 +264,14 @@ const authLimiter = rateLimit({
   message: config.rateLimits.auth.message,
   standardHeaders: true,
   legacyHeaders: false,
-  // Tell express-rate-limit we're intentionally trusting the proxy (Cloud Load Balancer)
-  trustProxy: true,
+  // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
+  keyGenerator: (req) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) {
+      return forwarded.split(',')[0].trim() + '-auth';
+    }
+    return (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown') + '-auth';
+  },
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
     res.status(429).json({
@@ -274,8 +289,14 @@ const financialLimiter = rateLimit({
   message: config.rateLimits.financial.message,
   standardHeaders: true,
   legacyHeaders: false,
-  // Tell express-rate-limit we're intentionally trusting the proxy (Cloud Load Balancer)
-  trustProxy: true,
+  // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
+  keyGenerator: (req) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) {
+      return forwarded.split(',')[0].trim() + '-financial';
+    }
+    return (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown') + '-financial';
+  },
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
     res.status(429).json({
