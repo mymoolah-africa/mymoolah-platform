@@ -7,9 +7,55 @@ const crypto = require('crypto');
 
 class ProductCatalogService {
   constructor() {
-    this.redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+    // Make Redis optional - gracefully degrade if Redis is unavailable
+    this.redis = null;
     this.cacheTTL = 300; // 5 minutes
     this.searchCacheTTL = 60; // 1 minute for search results
+    
+    // Only initialize Redis if REDIS_URL is explicitly set
+    // In Cloud Run, Redis is not available by default, so we skip it
+    if (process.env.REDIS_URL && process.env.REDIS_ENABLED !== 'false') {
+      try {
+        this.redis = new Redis(process.env.REDIS_URL, {
+          retryStrategy: (times) => {
+            // Stop retrying after 3 attempts
+            if (times > 3) {
+              console.warn('⚠️ Redis connection failed after 3 attempts, disabling Redis cache');
+              this.redis = null;
+              return null; // Stop retrying
+            }
+            return Math.min(times * 200, 2000);
+          },
+          maxRetriesPerRequest: 1,
+          lazyConnect: true, // Don't connect immediately
+          enableOfflineQueue: false, // Don't queue commands when offline
+          connectTimeout: 5000,
+          commandTimeout: 5000
+        });
+        
+        // Handle Redis errors gracefully
+        this.redis.on('error', (err) => {
+          console.warn('⚠️ Redis error:', err.message);
+          // Don't crash - just disable Redis
+          this.redis = null;
+        });
+        
+        this.redis.on('connect', () => {
+          console.log('✅ Redis connected for ProductCatalogService');
+        });
+        
+        // Try to connect (non-blocking)
+        this.redis.connect().catch((err) => {
+          console.warn('⚠️ Redis connection failed, disabling cache:', err.message);
+          this.redis = null;
+        });
+      } catch (error) {
+        console.warn('⚠️ Failed to initialize Redis, continuing without cache:', error.message);
+        this.redis = null;
+      }
+    } else {
+      console.log('ℹ️ Redis disabled for ProductCatalogService (REDIS_URL not set or REDIS_ENABLED=false)');
+    }
   }
 
   /**
@@ -22,10 +68,17 @@ class ProductCatalogService {
     const cacheKey = `featured_products:${limit}:${type || 'all'}`;
     
     try {
-      // Try cache first
-      const cached = await this.redis.get(cacheKey);
-      if (cached) {
-        return JSON.parse(cached);
+      // Try cache first (if Redis is available)
+      if (this.redis) {
+        try {
+          const cached = await this.redis.get(cacheKey);
+          if (cached) {
+            return JSON.parse(cached);
+          }
+        } catch (redisError) {
+          // Redis error - continue without cache
+          console.warn('⚠️ Redis cache read error, continuing without cache:', redisError.message);
+        }
       }
 
       // Build query
@@ -109,8 +162,15 @@ class ProductCatalogService {
         };
       });
 
-      // Cache result
-      await this.redis.setex(cacheKey, this.cacheTTL, JSON.stringify(transformed));
+      // Cache result (if Redis is available)
+      if (this.redis) {
+        try {
+          await this.redis.setex(cacheKey, this.cacheTTL, JSON.stringify(transformed));
+        } catch (redisError) {
+          // Redis error - continue without caching
+          console.warn('⚠️ Redis cache write error:', redisError.message);
+        }
+      }
 
       return transformed;
     } catch (error) {
@@ -139,11 +199,16 @@ class ProductCatalogService {
     const cacheKey = this.generateSearchCacheKey(params);
     
     try {
-      // Try cache first for non-empty queries
-      if (query.trim()) {
-        const cached = await this.redis.get(cacheKey);
-        if (cached) {
-          return JSON.parse(cached);
+      // Try cache first for non-empty queries (if Redis is available)
+      if (query.trim() && this.redis) {
+        try {
+          const cached = await this.redis.get(cacheKey);
+          if (cached) {
+            return JSON.parse(cached);
+          }
+        } catch (redisError) {
+          // Redis error - continue without cache
+          console.warn('⚠️ Redis cache read error, continuing without cache:', redisError.message);
         }
       }
 
@@ -284,9 +349,14 @@ class ProductCatalogService {
         }
       };
 
-      // Cache result for non-empty queries
-      if (query.trim()) {
-        await this.redis.setex(cacheKey, this.searchCacheTTL, JSON.stringify(result));
+      // Cache result for non-empty queries (if Redis is available)
+      if (query.trim() && this.redis) {
+        try {
+          await this.redis.setex(cacheKey, this.searchCacheTTL, JSON.stringify(result));
+        } catch (redisError) {
+          // Redis error - continue without caching
+          console.warn('⚠️ Redis cache write error:', redisError.message);
+        }
       }
 
       return result;
@@ -305,10 +375,17 @@ class ProductCatalogService {
     const cacheKey = `product:${productId}`;
     
     try {
-      // Try cache first
-      const cached = await this.redis.get(cacheKey);
-      if (cached) {
-        return JSON.parse(cached);
+      // Try cache first (if Redis is available)
+      if (this.redis) {
+        try {
+          const cached = await this.redis.get(cacheKey);
+          if (cached) {
+            return JSON.parse(cached);
+          }
+        } catch (redisError) {
+          // Redis error - continue without cache
+          console.warn('⚠️ Redis cache read error, continuing without cache:', redisError.message);
+        }
       }
 
       const product = await Product.findOne({
@@ -384,8 +461,15 @@ class ProductCatalogService {
         updatedAt: product.updatedAt
       };
 
-      // Cache result
-      await this.redis.setex(cacheKey, this.cacheTTL, JSON.stringify(result));
+      // Cache result (if Redis is available)
+      if (this.redis) {
+        try {
+          await this.redis.setex(cacheKey, this.cacheTTL, JSON.stringify(result));
+        } catch (redisError) {
+          // Redis error - continue without caching
+          console.warn('⚠️ Redis cache write error:', redisError.message);
+        }
+      }
 
       return result;
     } catch (error) {
@@ -402,10 +486,17 @@ class ProductCatalogService {
     const cacheKey = 'product_categories';
     
     try {
-      // Try cache first
-      const cached = await this.redis.get(cacheKey);
-      if (cached) {
-        return JSON.parse(cached);
+      // Try cache first (if Redis is available)
+      if (this.redis) {
+        try {
+          const cached = await this.redis.get(cacheKey);
+          if (cached) {
+            return JSON.parse(cached);
+          }
+        } catch (redisError) {
+          // Redis error - continue without cache
+          console.warn('⚠️ Redis cache read error, continuing without cache:', redisError.message);
+        }
       }
 
       const categories = await ProductBrand.findAll({
@@ -418,8 +509,15 @@ class ProductCatalogService {
 
       const result = categories.map(cat => cat.category).sort();
 
-      // Cache result
-      await this.redis.setex(cacheKey, this.cacheTTL * 2, JSON.stringify(result));
+      // Cache result (if Redis is available)
+      if (this.redis) {
+        try {
+          await this.redis.setex(cacheKey, this.cacheTTL * 2, JSON.stringify(result));
+        } catch (redisError) {
+          // Redis error - continue without caching
+          console.warn('⚠️ Redis cache write error:', redisError.message);
+        }
+      }
 
       return result;
     } catch (error) {
@@ -436,10 +534,17 @@ class ProductCatalogService {
     const cacheKey = 'product_types';
     
     try {
-      // Try cache first
-      const cached = await this.redis.get(cacheKey);
-      if (cached) {
-        return JSON.parse(cached);
+      // Try cache first (if Redis is available)
+      if (this.redis) {
+        try {
+          const cached = await this.redis.get(cacheKey);
+          if (cached) {
+            return JSON.parse(cached);
+          }
+        } catch (redisError) {
+          // Redis error - continue without cache
+          console.warn('⚠️ Redis cache read error, continuing without cache:', redisError.message);
+        }
       }
 
       const types = await Product.findAll({
@@ -452,8 +557,15 @@ class ProductCatalogService {
 
       const result = types.map(t => t.type).sort();
 
-      // Cache result
-      await this.redis.setex(cacheKey, this.cacheTTL * 2, JSON.stringify(result));
+      // Cache result (if Redis is available)
+      if (this.redis) {
+        try {
+          await this.redis.setex(cacheKey, this.cacheTTL * 2, JSON.stringify(result));
+        } catch (redisError) {
+          // Redis error - continue without caching
+          console.warn('⚠️ Redis cache write error:', redisError.message);
+        }
+      }
 
       return result;
     } catch (error) {
@@ -467,13 +579,19 @@ class ProductCatalogService {
    * @param {number} productId - Product ID
    */
   async invalidateProductCache(productId) {
+    if (!this.redis) {
+      return; // Redis not available, nothing to invalidate
+    }
+    
     try {
       await this.redis.del(`product:${productId}`);
-      await this.redis.del('featured_products:*');
+      // Note: Redis DEL doesn't support wildcards, so we skip the wildcard deletion
+      // In production, you'd use SCAN + DEL for pattern matching
       await this.redis.del('product_categories');
       await this.redis.del('product_types');
     } catch (error) {
-      console.error('Error invalidating product cache:', error);
+      // Redis error - not critical, just log
+      console.warn('⚠️ Error invalidating product cache:', error.message);
     }
   }
 
@@ -498,13 +616,21 @@ class ProductCatalogService {
       // Test database connection
       await Product.count();
       
-      // Test Redis connection
-      await this.redis.ping();
+      // Test Redis connection (if available)
+      let cacheStatus = 'not configured';
+      if (this.redis) {
+        try {
+          await this.redis.ping();
+          cacheStatus = 'connected';
+        } catch (redisError) {
+          cacheStatus = 'error';
+        }
+      }
       
       return {
         status: 'healthy',
         database: 'connected',
-        cache: 'connected',
+        cache: cacheStatus,
         timestamp: new Date().toISOString()
       };
     } catch (error) {
