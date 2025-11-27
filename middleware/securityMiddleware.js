@@ -31,8 +31,14 @@ const createRateLimit = (windowMs, max, message, keyGenerator = null) => {
       retryAfter: Math.ceil(windowMs / 1000)
     },
     keyGenerator: keyGenerator || ((req) => {
-      return req.ip || req.connection.remoteAddress;
+      // Use X-Forwarded-For header when behind proxy (Cloud Run)
+      // Trust proxy is set to 1 (trust first proxy only - Cloud Load Balancer)
+      return req.ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.connection.remoteAddress;
     }),
+    // Disable trust proxy validation - we're using trust proxy: 1 (secure, only trusts Cloud Load Balancer)
+    validate: {
+      trustProxy: false
+    },
     handler: (req, res) => {
       res.status(429).json({
         status: 'error',
