@@ -298,6 +298,7 @@ async function migrateUsers() {
         console.error(`   ❌ Failed to migrate user ${user.email}: ${error.message}`);
       }
     }
+    }
 
     if (usersToMigrate.length > 0) {
       console.log('');
