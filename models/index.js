@@ -28,17 +28,22 @@ if (config.use_env_variable) {
   // CRITICAL: Check DB_SSL environment variable first (most explicit and reliable)
   // If DB_SSL is explicitly set to false, disable SSL immediately
   const dbSslEnv = process.env.DB_SSL;
+  // Use both console.log and process.stderr.write for Cloud Run visibility
   console.log(`📋 [models/index.js] DB_SSL value: "${dbSslEnv}" (type: ${typeof dbSslEnv}, undefined: ${dbSslEnv === undefined})`);
+  process.stderr.write(`📋 [models/index.js] DB_SSL value: "${dbSslEnv}" (type: ${typeof dbSslEnv}, undefined: ${dbSslEnv === undefined})\n`);
   let shouldDisableSSL = false;
   let disableReason = '';
   
   if (dbSslEnv !== undefined) {
     // DB_SSL is set - use it explicitly
     const dbSslValue = dbSslEnv.toString().toLowerCase().trim();
+    console.log(`📋 [models/index.js] DB_SSL processed value: "${dbSslValue}"`);
+    process.stderr.write(`📋 [models/index.js] DB_SSL processed value: "${dbSslValue}"\n`);
     if (dbSslValue === 'false' || dbSslValue === '0' || dbSslValue === 'no' || dbSslValue === 'disable') {
       shouldDisableSSL = true;
       disableReason = 'DB_SSL environment variable set to false';
       console.log(`✅ SSL disabled via DB_SSL environment variable: ${dbSslEnv}`);
+      process.stderr.write(`✅ SSL disabled via DB_SSL environment variable: ${dbSslEnv}\n`);
     } else {
       console.log(`ℹ️ DB_SSL environment variable set to: ${dbSslEnv} (SSL enabled)`);
     }
