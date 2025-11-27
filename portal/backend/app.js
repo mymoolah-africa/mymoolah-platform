@@ -16,6 +16,11 @@ const { portalAuth } = require('./middleware/portalAuth');
 
 const app = express();
 
+// Trust proxy for Cloud Run behind load balancer
+// Cloud Run has exactly 1 proxy hop (Google Cloud Load Balancer)
+// Setting to 1 (not true) is secure and passes express-rate-limit validation
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {

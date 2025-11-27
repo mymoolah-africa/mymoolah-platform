@@ -441,6 +441,16 @@ app.get('/api/v1/security/config', (req, res) => {
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err);
   
+  // Handle express-rate-limit ValidationError (trust proxy validation)
+  if (err.name === 'ValidationError' && err.message && err.message.includes('trust proxy')) {
+    return res.status(400).json({
+      success: false,
+      error: 'Configuration error',
+      message: 'Rate limiter configuration issue detected',
+      timestamp: new Date().toISOString()
+    });
+  }
+  
   // Log error with TLS information
   const tlsInfo = req.socket.getTLSVersion ? {
     tlsVersion: req.socket.getTLSVersion(),
