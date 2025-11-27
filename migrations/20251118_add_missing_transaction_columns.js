@@ -56,12 +56,11 @@ module.exports = {
         // Make it NOT NULL after populating
         await queryInterface.changeColumn('transactions', 'transactionId', {
           type: Sequelize.STRING(255),
-          allowNull: false,
-          unique: true,
-          comment: 'Unique transaction identifier for audit trail'
+          allowNull: false
         }, { transaction });
         
-        // Create unique index
+        // Create unique constraint/index (banking-grade requirement)
+        // Note: Cannot add UNIQUE in changeColumn - must use separate constraint/index
         await queryInterface.addIndex('transactions', ['transactionId'], {
           unique: true,
           name: 'idx_transactions_transaction_id_unique',
