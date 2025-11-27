@@ -24,6 +24,48 @@ success() {
   echo "✅ [$(date +'%Y-%m-%d %H:%M:%S')] $*"
 }
 
+warning() {
+  echo "⚠️  [$(date +'%Y-%m-%d %H:%M:%S')] WARNING: $*" >&2
+}
+
+# Clean up disk space before build
+cleanup_disk_space() {
+  log "Cleaning up disk space before build..."
+  
+  # Check available disk space
+  if command -v df &> /dev/null; then
+    AVAILABLE_SPACE=$(df -BG . | tail -1 | awk '{print $4}' | sed 's/G//')
+    log "Available disk space: ${AVAILABLE_SPACE}GB"
+    
+    # If less than 2GB available, clean up Docker
+    if [ "${AVAILABLE_SPACE}" -lt 2 ]; then
+      warning "Low disk space detected (${AVAILABLE_SPACE}GB). Cleaning up Docker..."
+      
+      # Remove unused Docker resources
+      docker system prune -a --volumes -f > /dev/null 2>&1 || {
+        warning "Docker cleanup failed or not needed"
+      }
+      
+      # Check space again
+      NEW_SPACE=$(df -BG . | tail -1 | awk '{print $4}' | sed 's/G//')
+      FREED=$((NEW_SPACE - AVAILABLE_SPACE))
+      if [ "${FREED}" -gt 0 ]; then
+        success "Freed ${FREED}GB of disk space"
+      else
+        log "No additional space freed (current: ${NEW_SPACE}GB)"
+      fi
+    else
+      log "Sufficient disk space available (${AVAILABLE_SPACE}GB)"
+    fi
+  else
+    # If df not available, still try to clean Docker (safe operation)
+    log "Disk space check unavailable, performing Docker cleanup anyway..."
+    docker system prune -a --volumes -f > /dev/null 2>&1 || {
+      warning "Docker cleanup failed or not needed"
+    }
+  fi
+}
+
 # Check prerequisites
 check_prerequisites() {
   log "Checking prerequisites..."
@@ -86,6 +128,9 @@ main() {
   log "Project: ${PROJECT_ID}"
   log "Image: ${FULL_IMAGE_NAME}"
   echo ""
+  
+  # Clean up disk space before build (prevents "no space left on device" errors)
+  cleanup_disk_space
   
   # Check prerequisites
   check_prerequisites
