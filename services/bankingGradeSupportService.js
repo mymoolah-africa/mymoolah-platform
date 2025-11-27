@@ -75,7 +75,41 @@ class BankingGradeSupportService {
       });
 
       // Database Connection Pool
-      this.sequelize = new Sequelize(process.env.DATABASE_URL, {
+      // IMPORTANT: Detect Unix socket connections and disable SSL (same logic as models/index.js)
+      const dbUrl = process.env.DATABASE_URL;
+      let shouldDisableSSL = false;
+      let disableReason = '';
+      
+      if (dbUrl) {
+        try {
+          const parsed = new URL(dbUrl);
+          const host = (parsed.hostname || '').toLowerCase();
+          const isLocalProxy = host === '127.0.0.1' || host === 'localhost';
+          const isUnixSocket = !host || host === '' || dbUrl.includes('/cloudsql/');
+          const hasSslModeDisable = dbUrl.includes('sslmode=disable');
+          
+          if (isLocalProxy || isUnixSocket || hasSslModeDisable) {
+            shouldDisableSSL = true;
+            disableReason = isUnixSocket ? 'Unix socket' : (isLocalProxy ? 'local proxy' : 'sslmode=disable');
+          }
+        } catch (urlError) {
+          // If URL parsing fails, check for Unix socket indicators
+          if (dbUrl.includes('/cloudsql/') || dbUrl.includes('sslmode=disable')) {
+            shouldDisableSSL = true;
+            disableReason = 'Unix socket indicator or sslmode=disable detected';
+          }
+        }
+      }
+      
+      const dialectOptions = shouldDisableSSL ? {} : {
+        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+      };
+      
+      if (shouldDisableSSL) {
+        console.log(`✅ SSL disabled for BankingGradeSupportService (${disableReason})`);
+      }
+      
+      this.sequelize = new Sequelize(dbUrl, {
         dialect: 'postgres',
         pool: {
           max: 20,
@@ -84,15 +118,17 @@ class BankingGradeSupportService {
           idle: 10000
         },
         logging: false,
-        dialectOptions: {
-          ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-        }
+        dialectOptions
       });
 
       // Redis Cache for High Performance (with fallback)
-      // Only initialize Redis if REDIS_URL is explicitly set
+      // Only initialize Redis if REDIS_URL is explicitly set AND not empty
       // In Cloud Run, Redis is not available by default, so we skip it
-      if ((process.env.REDIS_URL || process.env.REDIS_HOST) && process.env.REDIS_ENABLED !== 'false') {
+      const hasRedisUrl = process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '';
+      const hasRedisHost = process.env.REDIS_HOST && process.env.REDIS_HOST.trim() !== '';
+      const redisEnabled = process.env.REDIS_ENABLED !== 'false';
+      
+      if ((hasRedisUrl || hasRedisHost) && redisEnabled) {
         try {
           // Parse REDIS_URL or use individual env vars
           // IMPORTANT: Don't default to localhost - only connect if explicitly configured
@@ -106,48 +142,55 @@ class BankingGradeSupportService {
             } : null);
 
           // Only create Redis client if we have a valid config
-          if (redisConfig) {
-            this.redis = new Redis(redisConfig, {
-              retryDelayOnFailover: 100,
-              maxRetriesPerRequest: 1,
-              lazyConnect: true, // Don't connect immediately
-              keepAlive: 30000,
-              family: 4,
-              connectTimeout: 5000,
-              commandTimeout: 5000,
-              retryDelayOnClusterDown: 300,
-              enableOfflineQueue: false, // Don't queue commands when offline
-              retryStrategy: (times) => {
-                // Stop retrying after 3 attempts
-                if (times > 3) {
-                  console.warn('⚠️ Redis connection failed after 3 attempts, disabling Redis cache');
-                  this.redis = null;
-                  this.inMemoryCache = new Map();
-                  return null; // Stop retrying
+          // CRITICAL: Don't create Redis client if config is invalid or empty
+          if (redisConfig && (hasRedisUrl || (hasRedisHost && process.env.REDIS_HOST.trim() !== ''))) {
+            try {
+              this.redis = new Redis(redisConfig, {
+                retryDelayOnFailover: 100,
+                maxRetriesPerRequest: 1,
+                lazyConnect: true, // Don't connect immediately
+                keepAlive: 30000,
+                family: 4,
+                connectTimeout: 5000,
+                commandTimeout: 5000,
+                retryDelayOnClusterDown: 300,
+                enableOfflineQueue: false, // Don't queue commands when offline
+                retryStrategy: (times) => {
+                  // Stop retrying after 3 attempts
+                  if (times > 3) {
+                    console.warn('⚠️ Redis connection failed after 3 attempts, disabling Redis cache');
+                    this.redis = null;
+                    this.inMemoryCache = new Map();
+                    return null; // Stop retrying
+                  }
+                  return Math.min(times * 200, 2000);
                 }
-                return Math.min(times * 200, 2000);
-              }
-            });
+              });
 
-            // Handle Redis errors gracefully
-            this.redis.on('error', (err) => {
-              console.warn('⚠️ Redis error:', err.message);
-              // Don't crash - just disable Redis
+              // Handle Redis errors gracefully BEFORE any connection attempt
+              this.redis.on('error', (err) => {
+                console.warn('⚠️ Redis error:', err.message);
+                // Don't crash - just disable Redis
+                this.redis = null;
+                if (!this.inMemoryCache) {
+                  this.inMemoryCache = new Map();
+                }
+              });
+
+              this.redis.on('connect', () => {
+                console.log('✅ Redis connected successfully for BankingGradeSupportService');
+              });
+
+              // DON'T call connect() here - let it connect lazily when first used
+              // This prevents connection attempts in Cloud Run where Redis is not available
+              console.log('✅ Redis client initialized (lazy connect enabled)');
+            } catch (redisInitError) {
+              console.warn('⚠️ Failed to create Redis client, using in-memory cache:', redisInitError.message);
               this.redis = null;
-              if (!this.inMemoryCache) {
-                this.inMemoryCache = new Map();
-              }
-            });
-
-            this.redis.on('connect', () => {
-              console.log('✅ Redis connected successfully for BankingGradeSupportService');
-            });
-
-            // DON'T call connect() here - let it connect lazily when first used
-            // This prevents connection attempts in Cloud Run where Redis is not available
-            console.log('✅ Redis client initialized (lazy connect enabled)');
+              this.inMemoryCache = new Map();
+            }
           } else {
-            console.log('ℹ️ Redis disabled for BankingGradeSupportService (no REDIS_URL or REDIS_HOST set)');
+            console.log('ℹ️ Redis disabled for BankingGradeSupportService (no valid REDIS_URL or REDIS_HOST set)');
             this.redis = null;
             this.inMemoryCache = new Map();
           }

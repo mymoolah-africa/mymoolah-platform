@@ -12,9 +12,12 @@ class ProductCatalogService {
     this.cacheTTL = 300; // 5 minutes
     this.searchCacheTTL = 60; // 1 minute for search results
     
-    // Only initialize Redis if REDIS_URL is explicitly set
+    // Only initialize Redis if REDIS_URL is explicitly set AND not empty
     // In Cloud Run, Redis is not available by default, so we skip it
-    if (process.env.REDIS_URL && process.env.REDIS_ENABLED !== 'false') {
+    const hasRedisUrl = process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '';
+    const redisEnabled = process.env.REDIS_ENABLED !== 'false';
+    
+    if (hasRedisUrl && redisEnabled) {
       try {
         this.redis = new Redis(process.env.REDIS_URL, {
           retryStrategy: (times) => {
