@@ -77,6 +77,7 @@ exports.handleCorsPreflight = (req, res) => {
 EOF
 
 # Deploy the Cloud Function
+# Note: For Gen2, CPU defaults to 0.083, so memory must be 128Mi-512Mi
 gcloud functions deploy "${FUNCTION_NAME}" \
   --gen2 \
   --runtime=nodejs20 \
@@ -87,8 +88,7 @@ gcloud functions deploy "${FUNCTION_NAME}" \
   --allow-unauthenticated \
   --service-account="${SERVICE_ACCOUNT}" \
   --project="${PROJECT_ID}" \
-  --cpu=1 \
-  --memory=512Mi \
+  --memory=256Mi \
   --timeout=10s \
   --max-instances=10 \
   --min-instances=0 || {
