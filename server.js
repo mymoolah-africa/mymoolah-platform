@@ -49,10 +49,11 @@ const app = express();
 
 // Trust proxy for Cloud Run behind load balancer (banking-grade: trust only first proxy)
 // Cloud Run has exactly 1 proxy hop (Google Cloud Load Balancer)
-// CRITICAL: Keep trust proxy disabled to prevent express-rate-limit validation errors
-// We'll manually extract IP from X-Forwarded-For header in keyGenerator functions
-// This prevents express-rate-limit from throwing ValidationError
-app.set('trust proxy', false);
+// Setting to 1 tells Express to trust exactly one proxy hop (Google Load Balancer) and no more
+// This is secure and required for Cloud Run (which always adds X-Forwarded-For header)
+// express-rate-limit validation is disabled via validate: { trustProxy: false } in all rate limiters
+// Rate limiters use manual IP extraction from X-Forwarded-For header
+app.set('trust proxy', 1);
 
 const {
   rateLimiters,
