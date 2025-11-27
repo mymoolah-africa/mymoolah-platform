@@ -53,7 +53,9 @@ if (config.use_env_variable) {
   }
   
   // Disable SSL if needed
-  let finalDialectOptions = { ...(options.dialectOptions || {}) };
+  // CRITICAL: Remove dialectOptions from options BEFORE spreading, to prevent Sequelize from merging SSL
+  const { dialectOptions: originalDialectOptions, ...optionsWithoutDialectOptions } = options;
+  let finalDialectOptions = { ...(originalDialectOptions || {}) };
   
   if (shouldDisableSSL) {
     // When using Cloud SQL Auth Proxy locally or Unix socket in Cloud Run:
@@ -90,7 +92,7 @@ if (config.use_env_variable) {
   }
   
   sequelize = new Sequelize(url, {
-    ...options,
+    ...optionsWithoutDialectOptions, // Spread options WITHOUT dialectOptions to prevent SSL merge
     // Optimized connection pool for Cloud SQL Auth Proxy
     // min: 2 keeps connections warm to avoid cold starts
     // idle: 30000 (30s) prevents frequent connection churn
