@@ -67,10 +67,12 @@ class WalletController {
     } catch (error) {
       const totalTime = Date.now() - startTime;
       console.error(`❌ Error getting balance (${totalTime}ms):`, error);
+      console.error('Error stack:', error.stack);
+      console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       res.status(500).json({
         success: false,
         message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'staging' ? error.message : 'Something went wrong'
       });
     }
   }
@@ -459,14 +461,21 @@ class WalletController {
         limit: fetchLimit,
         attributes: [
           'id',
+          'transactionId',
           'walletId',
           'amount',
           'type',
           'status',
           'description',
+          'currency',
+          'fee',
           'createdAt',
-          'updatedAt'
-        ]
+          'senderWalletId',
+          'receiverWalletId',
+          'metadata'
+        ],
+        raw: false, // Keep as model instances for hooks/associations
+        validate: false // Skip validation on read (data already validated on write)
       });
       const queryTime = Date.now() - queryStart;
 
@@ -474,7 +483,7 @@ class WalletController {
       const transformStart = Date.now();
       const normalizedRows = transactions.map((t) => ({
         id: t.id,
-        transactionId: t.transactionId || `tx_${t.id}`, // Generate ID if missing
+        transactionId: t.transactionId || `tx_${t.id}`, // Fallback if missing
         amount: parseFloat(t.amount || 0),
         type: t.type === 'credit' ? 'deposit' : 
               t.type === 'debit' ? 'payment' : 
@@ -482,13 +491,13 @@ class WalletController {
               t.type === 'receive' ? 'received' : t.type,
         status: t.status || 'completed',
         description: t.description || 'Transaction',
-        currency: 'ZAR', // Default since currency column doesn't exist in base schema
-        fee: 0, // Default since fee column doesn't exist in base schema
+        currency: t.currency || 'ZAR',
+        fee: t.fee ? parseFloat(t.fee) : 0,
         createdAt: t.createdAt,
         // Essential fields for frontend icon classification
-        senderWalletId: t.senderWalletId || null, // May not exist in base schema
-        receiverWalletId: t.receiverWalletId || null, // May not exist in base schema
-        metadata: {} // Default since metadata column doesn't exist in base schema
+        senderWalletId: t.senderWalletId || null,
+        receiverWalletId: t.receiverWalletId || null,
+        metadata: t.metadata || {}
       }));
 
       // CRITICAL FIX: Deduplicate by transaction ID to prevent duplicates
@@ -586,10 +595,12 @@ class WalletController {
     } catch (error) {
       const totalTime = Date.now() - startTime;
       console.error(`❌ Error getting transaction history (${totalTime}ms):`, error);
+      console.error('Error stack:', error.stack);
+      console.error('Error details:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
       res.status(500).json({
         success: false,
         message: 'Internal server error',
-        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        error: process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'staging' ? error.message : 'Something went wrong'
       });
     }
   }
