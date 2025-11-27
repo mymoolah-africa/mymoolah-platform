@@ -49,9 +49,10 @@ const app = express();
 
 // Trust proxy for Cloud Run behind load balancer (banking-grade: trust only first proxy)
 // Cloud Run has exactly 1 proxy hop (Google Cloud Load Balancer)
-// Setting to 1 (not true) is secure and passes express-rate-limit validation
-// This tells Express: "Trust the first proxy (Google Load Balancer), but treat the next IP as the actual client"
-app.set('trust proxy', 1);
+// CRITICAL: Keep trust proxy disabled to prevent express-rate-limit validation errors
+// We'll manually extract IP from X-Forwarded-For header in keyGenerator functions
+// This prevents express-rate-limit from throwing ValidationError
+app.set('trust proxy', false);
 
 const {
   rateLimiters,
@@ -225,24 +226,33 @@ app.get('/test', (req, res) => {
   });
 });
 
-// Enhanced Rate Limiting Middleware
-// CRITICAL: Temporarily disable trust proxy during rate limiter initialization
-// express-rate-limit validates trust proxy during initialization, even with validate: { trustProxy: false }
-// We'll set it back to 1 after creating the rate limiters
-const originalTrustProxy = app.get('trust proxy');
-app.set('trust proxy', false);
+// Helper function to extract client IP from X-Forwarded-For header
+// Cloud Run has exactly 1 proxy hop (Google Cloud Load Balancer)
+// Format: X-Forwarded-For: client-ip, proxy-ip
+// We want the first IP (client IP)
+const getClientIP = (req) => {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // X-Forwarded-For can contain multiple IPs: "client-ip, proxy-ip"
+    // Cloud Run has 1 proxy, so we take the first IP
+    const ips = forwardedFor.split(',').map(ip => ip.trim());
+    return ips[0] || req.ip || req.connection.remoteAddress;
+  }
+  return req.ip || req.connection.remoteAddress;
+};
 
-// With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
-// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
+// Enhanced Rate Limiting Middleware
+// With trust proxy disabled, we manually extract IP from X-Forwarded-For header
+// This prevents express-rate-limit from throwing ValidationError
 const limiter = rateLimit({
   windowMs: config.rateLimits.general.windowMs,
   max: config.rateLimits.general.max,
   message: config.rateLimits.general.message,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip, // Use req.ip directly - Express handles proxy correctly
+  keyGenerator: (req) => getClientIP(req), // Manually extract IP from X-Forwarded-For
   validate: {
-    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+    trustProxy: false // Disable validation - we handle proxy manually
   },
   // In development, and for CORS preflight, skip limiting to avoid false CORS failures during polling
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
@@ -263,9 +273,9 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   validate: {
-    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+    trustProxy: false // Disable validation - we handle proxy manually
   },
-  keyGenerator: (req) => req.ip + '-auth',
+  keyGenerator: (req) => getClientIP(req) + '-auth',
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
     res.status(429).json({
@@ -284,9 +294,9 @@ const financialLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   validate: {
-    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+    trustProxy: false // Disable validation - we handle proxy manually
   },
-  keyGenerator: (req) => req.ip + '-financial',
+  keyGenerator: (req) => getClientIP(req) + '-financial',
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
     res.status(429).json({
@@ -296,9 +306,6 @@ const financialLimiter = rateLimit({
     });
   }
 });
-
-// CRITICAL: Restore trust proxy setting after rate limiters are created
-app.set('trust proxy', originalTrustProxy || 1);
 
 // Apply rate limiting to all routes
 app.use(limiter);
