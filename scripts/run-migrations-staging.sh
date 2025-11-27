@@ -154,22 +154,10 @@ test_connection() {
   fi
 }
 
-# URL encode password for DATABASE_URL
+# URL encode password for DATABASE_URL using Python (more reliable)
 url_encode() {
   local string="${1}"
-  local strlen=${#string}
-  local encoded=""
-  local pos c o
-
-  for (( pos=0 ; pos<strlen ; pos++ )); do
-     c=${string:$pos:1}
-     case "$c" in
-        [-_.~a-zA-Z0-9] ) o="${c}" ;;
-        * ) printf -v o '%%%02x' "'$c" ;;
-     esac
-     encoded+="${o}"
-  done
-  echo "${encoded}"
+  echo -n "${string}" | python3 -c "import sys, urllib.parse; print(urllib.parse.quote(sys.stdin.read(), safe=''))"
 }
 
 # Run migrations
