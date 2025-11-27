@@ -197,10 +197,15 @@ class AuthController {
         });
       }
       
+      const originalIdentifier = identifier;
       identifier = normalizeSAMobileNumber(identifier);
       
-      // Find user by phone number
-      const user = await User.findOne({ 
+      // DEBUG: Log normalized phone number for troubleshooting
+      console.log(`🔍 [LOGIN] Original: ${originalIdentifier}, Normalized: ${identifier}`);
+      
+      // Find user by phone number - try both formats (+27 and 27)
+      // First try with +27 format (normalized)
+      let user = await User.findOne({ 
         where: { phoneNumber: identifier },
         include: [{
           model: Wallet,
@@ -209,12 +214,43 @@ class AuthController {
         }]
       });
       
+      // If not found with +27, try without + (27XXXXXXXXX)
+      if (!user && identifier.startsWith('+27')) {
+        const withoutPlus = identifier.substring(1); // Remove +
+        console.log(`🔍 [LOGIN] User not found with +27 format, trying without +: ${withoutPlus}`);
+        user = await User.findOne({ 
+          where: { phoneNumber: withoutPlus },
+          include: [{
+            model: Wallet,
+            as: 'wallet',
+            attributes: ['walletId', 'balance', 'currency', 'status']
+          }]
+        });
+      }
+      
+      // If still not found, try with 0 prefix (082XXXXXXXX)
+      if (!user && identifier.startsWith('+27')) {
+        const withZero = '0' + identifier.substring(3); // +2782... -> 082...
+        console.log(`🔍 [LOGIN] User not found with 27 format, trying with 0 prefix: ${withZero}`);
+        user = await User.findOne({ 
+          where: { phoneNumber: withZero },
+          include: [{
+            model: Wallet,
+            as: 'wallet',
+            attributes: ['walletId', 'balance', 'currency', 'status']
+          }]
+        });
+      }
+      
       if (!user) {
+        console.log(`❌ [LOGIN] User not found for phone number: ${identifier} (original: ${originalIdentifier})`);
         return res.status(401).json({ 
           success: false, 
           message: 'Invalid mobile number or password.' 
         });
       }
+      
+      console.log(`✅ [LOGIN] User found: ${user.id}, phoneNumber in DB: ${user.phoneNumber}`);
       
       // Check password
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
