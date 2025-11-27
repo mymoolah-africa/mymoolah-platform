@@ -92,58 +92,65 @@ class BankingGradeSupportService {
       // Redis Cache for High Performance (with fallback)
       // Only initialize Redis if REDIS_URL is explicitly set
       // In Cloud Run, Redis is not available by default, so we skip it
-      if (process.env.REDIS_URL && process.env.REDIS_ENABLED !== 'false') {
+      if ((process.env.REDIS_URL || process.env.REDIS_HOST) && process.env.REDIS_ENABLED !== 'false') {
         try {
           // Parse REDIS_URL or use individual env vars
+          // IMPORTANT: Don't default to localhost - only connect if explicitly configured
           const redisConfig = process.env.REDIS_URL ? 
             process.env.REDIS_URL : 
-            {
-              host: process.env.REDIS_HOST || '127.0.0.1',
+            (process.env.REDIS_HOST ? {
+              host: process.env.REDIS_HOST, // Don't default to localhost!
               port: parseInt(process.env.REDIS_PORT || '6379', 10),
               password: process.env.REDIS_PASSWORD,
               db: parseInt(process.env.REDIS_DB || '0', 10)
-            };
+            } : null);
 
-          this.redis = new Redis(redisConfig, {
-            retryDelayOnFailover: 100,
-            maxRetriesPerRequest: 1,
-            lazyConnect: true, // Don't connect immediately
-            keepAlive: 30000,
-            family: 4,
-            connectTimeout: 5000,
-            commandTimeout: 5000,
-            retryDelayOnClusterDown: 300,
-            enableOfflineQueue: false, // Don't queue commands when offline
-            retryStrategy: (times) => {
-              // Stop retrying after 3 attempts
-              if (times > 3) {
-                console.warn('⚠️ Redis connection failed after 3 attempts, disabling Redis cache');
-                this.redis = null;
-                this.inMemoryCache = new Map();
-                return null; // Stop retrying
+          // Only create Redis client if we have a valid config
+          if (redisConfig) {
+            this.redis = new Redis(redisConfig, {
+              retryDelayOnFailover: 100,
+              maxRetriesPerRequest: 1,
+              lazyConnect: true, // Don't connect immediately
+              keepAlive: 30000,
+              family: 4,
+              connectTimeout: 5000,
+              commandTimeout: 5000,
+              retryDelayOnClusterDown: 300,
+              enableOfflineQueue: false, // Don't queue commands when offline
+              retryStrategy: (times) => {
+                // Stop retrying after 3 attempts
+                if (times > 3) {
+                  console.warn('⚠️ Redis connection failed after 3 attempts, disabling Redis cache');
+                  this.redis = null;
+                  this.inMemoryCache = new Map();
+                  return null; // Stop retrying
+                }
+                return Math.min(times * 200, 2000);
               }
-              return Math.min(times * 200, 2000);
-            }
-          });
+            });
 
-          // Handle Redis errors gracefully
-          this.redis.on('error', (err) => {
-            console.warn('⚠️ Redis error:', err.message);
-            // Don't crash - just disable Redis
+            // Handle Redis errors gracefully
+            this.redis.on('error', (err) => {
+              console.warn('⚠️ Redis error:', err.message);
+              // Don't crash - just disable Redis
+              this.redis = null;
+              if (!this.inMemoryCache) {
+                this.inMemoryCache = new Map();
+              }
+            });
+
+            this.redis.on('connect', () => {
+              console.log('✅ Redis connected successfully for BankingGradeSupportService');
+            });
+
+            // DON'T call connect() here - let it connect lazily when first used
+            // This prevents connection attempts in Cloud Run where Redis is not available
+            console.log('✅ Redis client initialized (lazy connect enabled)');
+          } else {
+            console.log('ℹ️ Redis disabled for BankingGradeSupportService (no REDIS_URL or REDIS_HOST set)');
             this.redis = null;
-            if (!this.inMemoryCache) {
-              this.inMemoryCache = new Map();
-            }
-          });
-
-          this.redis.on('connect', () => {
-            console.log('✅ Redis connected successfully for BankingGradeSupportService');
-          });
-
-          // Try to connect (non-blocking)
-          await this.redis.connect();
-          await this.redis.ping();
-          console.log('✅ Redis connected successfully');
+            this.inMemoryCache = new Map();
+          }
         } catch (redisError) {
           console.warn('⚠️ Redis not available, using in-memory cache:', redisError.message);
           this.redis = null;

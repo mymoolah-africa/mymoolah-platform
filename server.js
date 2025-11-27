@@ -228,12 +228,14 @@ app.get('/test', (req, res) => {
 // Enhanced Rate Limiting Middleware
 // With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
 // Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
+// With trust proxy: 1, Express correctly sets req.ip to the client IP
 const limiter = rateLimit({
   windowMs: config.rateLimits.general.windowMs,
   max: config.rateLimits.general.max,
   message: config.rateLimits.general.message,
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => req.ip, // Use req.ip directly - Express handles proxy correctly
   validate: {
     trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
   },

@@ -44,11 +44,9 @@ class ProductCatalogService {
           console.log('✅ Redis connected for ProductCatalogService');
         });
         
-        // Try to connect (non-blocking)
-        this.redis.connect().catch((err) => {
-          console.warn('⚠️ Redis connection failed, disabling cache:', err.message);
-          this.redis = null;
-        });
+        // DON'T call connect() here - let it connect lazily when first used
+        // This prevents connection attempts in Cloud Run where Redis is not available
+        console.log('✅ Redis client initialized for ProductCatalogService (lazy connect enabled)');
       } catch (error) {
         console.warn('⚠️ Failed to initialize Redis, continuing without cache:', error.message);
         this.redis = null;
