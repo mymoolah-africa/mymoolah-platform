@@ -347,7 +347,7 @@ async function migrateTransactions() {
               WHEN type = 'send' AND status = 'completed' THEN -amount
               WHEN type = 'withdraw' AND status = 'completed' THEN -amount
               WHEN type = 'payment' AND status = 'completed' THEN -amount
-              WHEN type = 'fee' AND status = 'completed' THEN -fee
+              WHEN type = 'fee' AND status = 'completed' THEN -amount
               ELSE 0
             END), 0) as balance
           FROM transactions
