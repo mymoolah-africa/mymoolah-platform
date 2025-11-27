@@ -22,30 +22,52 @@ if (config.use_env_variable) {
   
   // Clone config so we can safely tweak connection options per environment
   const options = { ...config };
+  
+  // Check if SSL should be disabled (Unix socket, local proxy, or sslmode=disable in URL)
+  let shouldDisableSSL = false;
+  let disableReason = '';
+  
   try {
     const parsed = new URL(url);
     const host = (parsed.hostname || '').toLowerCase();
     const isLocalProxy = host === '127.0.0.1' || host === 'localhost';
     const isUnixSocket = !host || host === '' || url.includes('/cloudsql/');
+    const hasSslModeDisable = url.includes('sslmode=disable');
     
-    if (isLocalProxy || isUnixSocket) {
-      // When using Cloud SQL Auth Proxy locally or Unix socket in Cloud Run:
-      // Disable client-side SSL - the connection is already secure
-      // Deep clone to avoid mutating the original config and completely remove SSL
-      const { ssl, ...dialectOptionsWithoutSsl } = options.dialectOptions || {};
-      // Create new dialectOptions WITHOUT ssl property (not set to false, just absent)
-      options.dialectOptions = {
-        ...dialectOptionsWithoutSsl
-        // SSL property is completely removed - not present at all
-      };
-      // Ensure sslmode=disable is in the URL (start.sh already sets this, but double-check)
-      if (!url.includes('sslmode=')) {
-        url += (url.includes('?') ? '&' : '?') + 'sslmode=disable';
-      }
-      console.log('✅ SSL disabled for Unix socket connection - dialectOptions.ssl removed');
+    if (isLocalProxy) {
+      shouldDisableSSL = true;
+      disableReason = 'local proxy';
+    } else if (isUnixSocket) {
+      shouldDisableSSL = true;
+      disableReason = 'Unix socket';
+    } else if (hasSslModeDisable) {
+      shouldDisableSSL = true;
+      disableReason = 'sslmode=disable in URL';
     }
-  } catch (_) {
-    // Ignore URL parse errors; fall back to defaults
+  } catch (urlError) {
+    // If URL parsing fails, check for Unix socket indicators in the raw URL
+    if (url.includes('/cloudsql/') || url.includes('sslmode=disable')) {
+      shouldDisableSSL = true;
+      disableReason = 'Unix socket indicator or sslmode=disable detected';
+    }
+  }
+  
+  // Disable SSL if needed
+  if (shouldDisableSSL) {
+    // When using Cloud SQL Auth Proxy locally or Unix socket in Cloud Run:
+    // Disable client-side SSL - the connection is already secure
+    // Deep clone to avoid mutating the original config and completely remove SSL
+    const { ssl, ...dialectOptionsWithoutSsl } = options.dialectOptions || {};
+    // Create new dialectOptions WITHOUT ssl property (not set to false, just absent)
+    options.dialectOptions = {
+      ...dialectOptionsWithoutSsl
+      // SSL property is completely removed - not present at all
+    };
+    // Ensure sslmode=disable is in the URL (start.sh already sets this, but double-check)
+    if (!url.includes('sslmode=')) {
+      url += (url.includes('?') ? '&' : '?') + 'sslmode=disable';
+    }
+    console.log(`✅ SSL disabled for ${disableReason} connection - dialectOptions.ssl removed`);
   }
   sequelize = new Sequelize(url, {
     ...options,
