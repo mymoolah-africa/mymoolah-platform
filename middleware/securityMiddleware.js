@@ -22,27 +22,31 @@ const createRateLimit = (windowMs, max, message, keyGenerator = null) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
   const adjustedMax = isDevelopment ? max * 5 : max;
   
-  return rateLimit({
-    windowMs,
-    max: adjustedMax,
-    message: {
-      status: 'error',
-      message: message || 'Too many requests, please try again later.',
-      retryAfter: Math.ceil(windowMs / 1000)
-    },
-    validate: {
-      trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
-    },
-    keyGenerator: keyGenerator || ((req) => {
-      // Manually extract IP from X-Forwarded-For header (avoids trust proxy validation)
-      // Cloud Load Balancer sets X-Forwarded-For with client IP as first value
-      // Format: "client-ip, proxy-ip" - we use the first IP (client)
-      const forwarded = req.headers['x-forwarded-for'];
-      if (forwarded) {
-        return forwarded.split(',')[0].trim();
-      }
-      return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
-    }),
+  // Catch and ignore express-rate-limit trust proxy validation errors
+  // We use manual IP extraction via custom keyGenerator, so this validation is not needed
+  let limiter;
+  try {
+    limiter = rateLimit({
+      windowMs,
+      max: adjustedMax,
+      message: {
+        status: 'error',
+        message: message || 'Too many requests, please try again later.',
+        retryAfter: Math.ceil(windowMs / 1000)
+      },
+      validate: {
+        trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
+      },
+      keyGenerator: keyGenerator || ((req) => {
+        // Manually extract IP from X-Forwarded-For header (avoids trust proxy validation)
+        // Cloud Load Balancer sets X-Forwarded-For with client IP as first value
+        // Format: "client-ip, proxy-ip" - we use the first IP (client)
+        const forwarded = req.headers['x-forwarded-for'];
+        if (forwarded) {
+          return forwarded.split(',')[0].trim();
+        }
+        return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+      }),
     handler: (req, res) => {
       res.status(429).json({
         status: 'error',
@@ -56,6 +60,42 @@ const createRateLimit = (windowMs, max, message, keyGenerator = null) => {
       return req.path === '/health' || req.path === '/api/v1/monitoring/health';
     }
   });
+  } catch (error) {
+    // Ignore trust proxy validation errors - we handle IP extraction manually via keyGenerator
+    if (error.message && error.message.includes('trust proxy')) {
+      // Re-create without validate option (some versions don't support it)
+      limiter = rateLimit({
+        windowMs,
+        max: adjustedMax,
+        message: {
+          status: 'error',
+          message: message || 'Too many requests, please try again later.',
+          retryAfter: Math.ceil(windowMs / 1000)
+        },
+        keyGenerator: keyGenerator || ((req) => {
+          const forwarded = req.headers['x-forwarded-for'];
+          if (forwarded) {
+            return forwarded.split(',')[0].trim();
+          }
+          return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+        }),
+        handler: (req, res) => {
+          res.status(429).json({
+            status: 'error',
+            message: message || 'Too many requests, please try again later.',
+            retryAfter: Math.ceil(windowMs / 1000),
+            timestamp: new Date().toISOString()
+          });
+        },
+        skip: (req) => {
+          return req.path === '/health' || req.path === '/api/v1/monitoring/health';
+        }
+      });
+    } else {
+      throw error; // Re-throw if it's not a trust proxy error
+    }
+  }
+  return limiter;
 };
 
 // Rate limiting configurations

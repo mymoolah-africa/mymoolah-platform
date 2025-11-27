@@ -54,6 +54,14 @@ const app = express();
 // For cookies and other middleware, we handle X-Forwarded-Proto manually if needed
 app.set('trust proxy', false); // Explicitly false to prevent express-rate-limit validation
 
+// Ensure trust proxy stays false (some middleware might change it)
+app.use((req, res, next) => {
+  if (req.app.get('trust proxy') !== false) {
+    req.app.set('trust proxy', false);
+  }
+  next();
+});
+
 const {
   rateLimiters,
   securityHeaders,
