@@ -179,28 +179,11 @@ async function migrateTransactions() {
     // Migrate transactions
     console.log('📦 Migrating transactions...');
     
-    // Get all transactions - explicitly list columns (PostgreSQL returns lowercase from SELECT *)
+    // Get all transactions - only select columns that exist in the base schema
+    // The base migration only has: id, walletId, type, amount, description, status, createdAt, updatedAt
+    // Other columns may not exist, so we'll use SELECT * and handle missing columns gracefully
     const [uatTransactions] = await uatSequelize.query(`
-      SELECT 
-        id,
-        "transactionId",
-        "userId",
-        "walletId",
-        "senderWalletId",
-        "receiverWalletId",
-        type,
-        amount,
-        description,
-        fee,
-        currency,
-        status,
-        reference,
-        "paymentId",
-        "exchangeRate",
-        "failureReason",
-        "createdAt",
-        "updatedAt"
-      FROM transactions
+      SELECT * FROM transactions
       ORDER BY "createdAt" DESC
     `);
 
@@ -213,14 +196,19 @@ async function migrateTransactions() {
     }
 
     // Check existing transactions in staging
+    // Use id or a combination of walletId + amount + createdAt to identify duplicates
     const [existingTransactions] = await stagingSequelize.query(`
-      SELECT "transactionId" FROM transactions
+      SELECT id, "walletId", amount, "createdAt" FROM transactions
     `);
-    const existingTransactionIds = new Set(existingTransactions.map(t => t.transactionId));
-
-    const transactionsToMigrate = uatTransactions.filter(t => 
-      !existingTransactionIds.has(t.transactionId)
+    const existingTxSet = new Set(
+      existingTransactions.map(t => `${t.walletId}-${t.amount}-${t.createdAt}`)
     );
+
+    const transactionsToMigrate = uatTransactions.filter(t => {
+      const createdAt = t.createdAt || t.createdat || new Date();
+      const key = `${t.walletId}-${t.amount}-${createdAt}`;
+      return !existingTxSet.has(key);
+    });
 
     console.log(`📊 Transactions to migrate: ${transactionsToMigrate.length}`);
     console.log(`📊 Transactions to skip (already exist): ${uatTransactions.length - transactionsToMigrate.length}`);
@@ -234,7 +222,8 @@ async function migrateTransactions() {
     if (dryRun) {
       console.log('🔍 DRY RUN: Would migrate the following transactions:');
       transactionsToMigrate.slice(0, 10).forEach((t, idx) => {
-        console.log(`   ${idx + 1}. ${t.transactionId} - ${t.type} - R${t.amount} - ${t.walletId}`);
+        const txId = t.transactionId || t.transactionid || t.id || 'N/A';
+        console.log(`   ${idx + 1}. ${txId} - ${t.type} - R${t.amount} - ${t.walletId}`);
       });
       if (transactionsToMigrate.length > 10) {
         console.log(`   ... and ${transactionsToMigrate.length - 10} more`);
@@ -282,35 +271,37 @@ async function migrateTransactions() {
         const createdAt = uatTx.createdAt || uatTx.createdat || new Date();
         const updatedAt = uatTx.updatedAt || uatTx.updatedat || new Date();
 
+        // Only insert columns that exist in the base schema
+        // Base schema: id, walletId, type, amount, description, status, createdAt, updatedAt
+        // Note: transactionId, userId, etc. may not exist in the base schema
+        const txId = uatTx.transactionId || uatTx.transactionid || uatTx.id;
+        const description = uatTx.description || (txId ? `Transaction ${txId}` : `Transaction - ${uatTx.type || 'transfer'}`);
+        
         await stagingSequelize.query(`
           INSERT INTO transactions (
-            "transactionId", "userId", "walletId", "senderWalletId", "receiverWalletId",
-            type, amount, description, fee, currency, status, reference,
-            "paymentId", "exchangeRate", "failureReason",
-            "createdAt", "updatedAt"
+            "walletId",
+            type,
+            amount,
+            description,
+            status,
+            "createdAt",
+            "updatedAt"
           ) VALUES (
-            :transactionId, :userId, :walletId, :senderWalletId, :receiverWalletId,
-            :type, :amount, :description, :fee, :currency, :status, :reference,
-            :paymentId, :exchangeRate, :failureReason,
-            :createdAt, :updatedAt
+            :walletId,
+            :type,
+            :amount,
+            :description,
+            :status,
+            :createdAt,
+            :updatedAt
           )
         `, {
           replacements: {
-            transactionId: uatTx.transactionId || uatTx.transactionid,
-            userId: stagingUserId,
             walletId: stagingWalletId,
-            senderWalletId: stagingSenderWalletId,
-            receiverWalletId: stagingReceiverWalletId,
-            type: uatTx.type,
-            amount: uatTx.amount,
-            description: uatTx.description,
-            fee: uatTx.fee || 0,
-            currency: uatTx.currency || 'ZAR',
+            type: uatTx.type || 'transfer',
+            amount: uatTx.amount || 0,
+            description: description,
             status: uatTx.status || 'completed',
-            reference: uatTx.reference,
-            paymentId: uatTx.paymentId || uatTx.paymentid,
-            exchangeRate: uatTx.exchangeRate || uatTx.exchangerate,
-            failureReason: uatTx.failureReason || uatTx.failurereason,
             createdAt: createdAt,
             updatedAt: updatedAt
           }
@@ -323,7 +314,8 @@ async function migrateTransactions() {
       } catch (error) {
         errors++;
         if (errors <= 10) {
-          console.error(`   ❌ Failed to migrate transaction ${uatTx.transactionId}: ${error.message}`);
+          const txId = uatTx.transactionId || uatTx.transactionid || uatTx.id || 'unknown';
+          console.error(`   ❌ Failed to migrate transaction ${txId}: ${error.message}`);
         }
       }
     }
