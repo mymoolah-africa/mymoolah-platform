@@ -117,21 +117,17 @@ if (config.use_env_variable) {
   };
   
   if (shouldDisableSSL) {
-    // CRITICAL: For Unix socket connections, DO NOT include ssl property at all
-    // The pg driver will read sslmode=disable from the URL
-    // Including ssl: false might cause the driver to still try SSL
-    // Remove any ssl property that might have been added
-    const { ssl, ...dialectOptionsWithoutSsl } = finalDialectOptions;
-    finalDialectOptions = dialectOptionsWithoutSsl;
-    // EXPLICITLY ensure ssl is not in dialectOptions
-    delete finalDialectOptions.ssl;
-    console.log(`✅ SSL disabled for ${disableReason} connection - ssl property removed from dialectOptions`);
-    process.stderr.write(`✅ SSL disabled for ${disableReason} connection - ssl property removed from dialectOptions\n`);
-    console.log(`📋 Final dialectOptions (no ssl property):`, JSON.stringify(finalDialectOptions, null, 2));
+    // CRITICAL: For Unix socket connections, EXPLICITLY set ssl: false
+    // The pg driver requires explicit ssl: false to disable SSL
+    // Just removing the property or setting sslmode=disable in URL is not enough
+    finalDialectOptions.ssl = false;
+    console.log(`✅ SSL disabled for ${disableReason} connection - ssl explicitly set to false`);
+    process.stderr.write(`✅ SSL disabled for ${disableReason} connection - ssl explicitly set to false\n`);
+    console.log(`📋 Final dialectOptions:`, JSON.stringify(finalDialectOptions, null, 2));
     process.stderr.write(`📋 Final dialectOptions: ${JSON.stringify(finalDialectOptions)}\n`);
     console.log(`📋 URL has sslmode=disable: ${url.includes('sslmode=disable') ? '✅' : '❌'}`);
     process.stderr.write(`📋 URL has sslmode=disable: ${url.includes('sslmode=disable') ? '✅' : '❌'}\n`);
-  } else {
+  } else
     // For non-Unix socket connections, use SSL from config.json if needed
     if (config.dialectOptions && config.dialectOptions.ssl) {
       finalDialectOptions.ssl = config.dialectOptions.ssl;
@@ -156,11 +152,11 @@ if (config.use_env_variable) {
     logging: false
   };
   
-  // CRITICAL: If SSL should be disabled, ensure dialectOptions.ssl is completely absent
-  if (shouldDisableSSL && sequelizeOptions.dialectOptions.ssl !== undefined) {
-    delete sequelizeOptions.dialectOptions.ssl;
-    console.log(`🔒 Removed ssl from dialectOptions before Sequelize creation`);
-    process.stderr.write(`🔒 Removed ssl from dialectOptions before Sequelize creation\n`);
+  // CRITICAL: If SSL should be disabled, ensure dialectOptions.ssl is explicitly false
+  if (shouldDisableSSL) {
+    sequelizeOptions.dialectOptions.ssl = false;
+    console.log(`🔒 Explicitly set ssl: false in dialectOptions before Sequelize creation`);
+    process.stderr.write(`🔒 Explicitly set ssl: false in dialectOptions before Sequelize creation\n`);
   }
   
   sequelize = new Sequelize(url, sequelizeOptions);
