@@ -131,7 +131,7 @@ deploy_service() {
     --region "${REGION}" \
     --service-account "${SERVICE_ACCOUNT}" \
     --add-cloudsql-instances "${CLOUD_SQL_INSTANCE}" \
-    --set-env-vars "NODE_ENV=production,CLOUD_SQL_INSTANCE=${CLOUD_SQL_INSTANCE}" \
+    --set-env-vars "NODE_ENV=production,CLOUD_SQL_INSTANCE=${CLOUD_SQL_INSTANCE},CORS_ORIGINS=https://stagingwallet.mymoolah.africa" \
     --set-secrets "ZAPPER_API_URL=zapper-prod-api-url:latest,ZAPPER_ORG_ID=zapper-prod-org-id:latest,ZAPPER_API_TOKEN=zapper-prod-api-token:latest,ZAPPER_X_API_KEY=zapper-prod-x-api-key:latest,JWT_SECRET=jwt-secret-staging:latest,SESSION_SECRET=session-secret-staging:latest,DB_PASSWORD=db-mmtp-pg-staging-password:latest" \
     --memory 1Gi \
     --cpu 1 \
