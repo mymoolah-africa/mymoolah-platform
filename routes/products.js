@@ -9,17 +9,28 @@ const { body, query, param } = require('express-validator');
 
 const productController = new ProductController();
 
+// Custom IP extraction function (avoids trust proxy validation)
+const getClientIP = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+};
+
 // Rate limiting configuration
 const standardLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  message: 'Too many requests from this IP, please try again later.',
+  keyGenerator: getClientIP,
 });
 
 const purchaseLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10, // limit each IP to 10 purchase requests per windowMs
-  message: 'Too many purchase requests from this IP, please try again later.'
+  message: 'Too many purchase requests from this IP, please try again later.',
+  keyGenerator: (req) => getClientIP(req) + '-purchase',
 });
 
 // Validation schemas

@@ -1,5 +1,15 @@
 const rateLimit = require('express-rate-limit');
 
+// Custom IP extraction function (avoids trust proxy validation)
+const getClientIP = (req) => {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) {
+    // X-Forwarded-For: "client-ip, proxy-ip" - use first IP (client)
+    return forwarded.split(',')[0].trim();
+  }
+  return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+};
+
 // Rate limiter for authentication endpoints (stricter)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -10,6 +20,7 @@ const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => getClientIP(req) + '-auth',
 });
 
 // General API rate limiter
@@ -22,6 +33,7 @@ const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: getClientIP,
 });
 
 module.exports = {
