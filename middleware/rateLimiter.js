@@ -1,8 +1,23 @@
 const rateLimit = require('express-rate-limit');
 
+// Helper function to extract client IP from X-Forwarded-For header
+// Cloud Run has exactly 1 proxy hop (Google Cloud Load Balancer)
+// Format: X-Forwarded-For: client-ip, proxy-ip
+// We want the first IP (client IP)
+const getClientIP = (req) => {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // X-Forwarded-For can contain multiple IPs: "client-ip, proxy-ip"
+    // Cloud Run has 1 proxy, so we take the first IP
+    const ips = forwardedFor.split(',').map(ip => ip.trim());
+    return ips[0] || req.ip || req.connection.remoteAddress;
+  }
+  return req.ip || req.connection.remoteAddress;
+};
+
 // Rate limiter for authentication endpoints (stricter)
-// With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
-// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
+// With trust proxy disabled, we manually extract IP from X-Forwarded-For header
+// This prevents express-rate-limit from throwing ValidationError
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // limit each IP to 5 requests per windowMs
@@ -13,14 +28,14 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   validate: {
-    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+    trustProxy: false // Disable validation - we handle proxy manually
   },
-  keyGenerator: (req) => req.ip + '-auth',
+  keyGenerator: (req) => getClientIP(req) + '-auth',
 });
 
 // General API rate limiter
-// With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
-// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
+// With trust proxy disabled, we manually extract IP from X-Forwarded-For header
+// This prevents express-rate-limit from throwing ValidationError
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
@@ -31,9 +46,9 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   validate: {
-    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+    trustProxy: false // Disable validation - we handle proxy manually
   },
-  keyGenerator: (req) => req.ip,
+  keyGenerator: (req) => getClientIP(req),
 });
 
 module.exports = {

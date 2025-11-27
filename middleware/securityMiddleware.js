@@ -16,9 +16,24 @@ const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
 const { body, validationResult } = require('express-validator');
 
+// Helper function to extract client IP from X-Forwarded-For header
+// Cloud Run has exactly 1 proxy hop (Google Cloud Load Balancer)
+// Format: X-Forwarded-For: client-ip, proxy-ip
+// We want the first IP (client IP)
+const getClientIP = (req) => {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    // X-Forwarded-For can contain multiple IPs: "client-ip, proxy-ip"
+    // Cloud Run has 1 proxy, so we take the first IP
+    const ips = forwardedFor.split(',').map(ip => ip.trim());
+    return ips[0] || req.ip || req.connection.remoteAddress;
+  }
+  return req.ip || req.connection.remoteAddress;
+};
+
 // Enhanced rate limiting configurations
-// With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
-// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
+// With trust proxy disabled, we manually extract IP from X-Forwarded-For header
+// This prevents express-rate-limit from throwing ValidationError
 const createRateLimit = (windowMs, max, message, keyGenerator = null) => {
   // Development environment gets more lenient rate limiting
   const isDevelopment = process.env.NODE_ENV === 'development';
@@ -33,9 +48,9 @@ const createRateLimit = (windowMs, max, message, keyGenerator = null) => {
       retryAfter: Math.ceil(windowMs / 1000)
     },
     validate: {
-      trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+      trustProxy: false // Disable validation - we handle proxy manually
     },
-    keyGenerator: keyGenerator || ((req) => req.ip),
+    keyGenerator: keyGenerator || ((req) => getClientIP(req)),
     handler: (req, res) => {
       res.status(429).json({
         status: 'error',
