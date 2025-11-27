@@ -459,17 +459,13 @@ class WalletController {
         limit: fetchLimit,
         attributes: [
           'id',
-          'transactionId',
+          'walletId',
           'amount',
           'type',
           'status',
           'description',
-          'currency',
-          'fee',
           'createdAt',
-          'senderWalletId',
-          'receiverWalletId',
-          'metadata'
+          'updatedAt'
         ]
       });
       const queryTime = Date.now() - queryStart;
@@ -478,21 +474,21 @@ class WalletController {
       const transformStart = Date.now();
       const normalizedRows = transactions.map((t) => ({
         id: t.id,
-        transactionId: t.transactionId,
-        amount: parseFloat(t.amount),
+        transactionId: t.transactionId || `tx_${t.id}`, // Generate ID if missing
+        amount: parseFloat(t.amount || 0),
         type: t.type === 'credit' ? 'deposit' : 
               t.type === 'debit' ? 'payment' : 
               t.type === 'send' ? 'sent' : 
               t.type === 'receive' ? 'received' : t.type,
-        status: t.status,
-        description: t.description,
-        currency: t.currency || 'ZAR',
-        fee: t.fee ? parseFloat(t.fee) : 0,
+        status: t.status || 'completed',
+        description: t.description || 'Transaction',
+        currency: 'ZAR', // Default since currency column doesn't exist in base schema
+        fee: 0, // Default since fee column doesn't exist in base schema
         createdAt: t.createdAt,
         // Essential fields for frontend icon classification
-        senderWalletId: t.senderWalletId,
-        receiverWalletId: t.receiverWalletId,
-        metadata: t.metadata || {}
+        senderWalletId: t.senderWalletId || null, // May not exist in base schema
+        receiverWalletId: t.receiverWalletId || null, // May not exist in base schema
+        metadata: {} // Default since metadata column doesn't exist in base schema
       }));
 
       // CRITICAL FIX: Deduplicate by transaction ID to prevent duplicates
