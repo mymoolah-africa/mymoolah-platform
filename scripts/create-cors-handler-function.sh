@@ -87,7 +87,8 @@ gcloud functions deploy "${FUNCTION_NAME}" \
   --allow-unauthenticated \
   --service-account="${SERVICE_ACCOUNT}" \
   --project="${PROJECT_ID}" \
-  --memory=128MB \
+  --cpu=1 \
+  --memory=512Mi \
   --timeout=10s \
   --max-instances=10 \
   --min-instances=0 || {
