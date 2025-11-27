@@ -125,17 +125,33 @@ test_connection() {
   local password=$1
   log "Testing database connection..."
   
-  PGPASSWORD="${password}" psql \
+  local error_output=$(PGPASSWORD="${password}" psql \
     -h 127.0.0.1 \
     -p ${PROXY_PORT} \
     -U ${DB_USER} \
     -d ${STAGING_DATABASE} \
-    -c "SELECT version();" > /dev/null 2>&1 || {
-    error "Failed to connect to database"
-    return 1
-  }
+    -c "SELECT version();" 2>&1)
   
-  success "Database connection successful"
+  if [ $? -eq 0 ]; then
+    success "Database connection successful"
+    return 0
+  else
+    error "Failed to connect to database"
+    error "Connection details:"
+    error "  Host: 127.0.0.1"
+    error "  Port: ${PROXY_PORT}"
+    error "  User: ${DB_USER}"
+    error "  Database: ${STAGING_DATABASE}"
+    error "Error output: ${error_output}"
+    
+    # Check if proxy is actually running
+    if ! lsof -Pi :${PROXY_PORT} -sTCP:LISTEN -t >/dev/null 2>&1; then
+      error "Port ${PROXY_PORT} is not listening. Proxy may not be running correctly."
+      error "Please check: ps aux | grep cloud-sql-proxy"
+    fi
+    
+    return 1
+  fi
 }
 
 # URL encode password for DATABASE_URL
