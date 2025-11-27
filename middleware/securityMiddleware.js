@@ -35,10 +35,9 @@ const createRateLimit = (windowMs, max, message, keyGenerator = null) => {
       // Trust proxy is set to 1 (trust first proxy only - Cloud Load Balancer)
       return req.ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.connection.remoteAddress;
     }),
-    // Disable trust proxy validation - we're using trust proxy: 1 (secure, only trusts Cloud Load Balancer)
-    validate: {
-      trustProxy: false
-    },
+    // Tell express-rate-limit we're intentionally trusting the proxy (Cloud Load Balancer)
+    // This prevents the validation error while maintaining security (trust proxy: 1 = only first proxy)
+    trustProxy: true,
     handler: (req, res) => {
       res.status(429).json({
         status: 'error',
