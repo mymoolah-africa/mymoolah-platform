@@ -127,7 +127,7 @@ if (config.use_env_variable) {
     process.stderr.write(`📋 Final dialectOptions: ${JSON.stringify(finalDialectOptions)}\n`);
     console.log(`📋 URL has sslmode=disable: ${url.includes('sslmode=disable') ? '✅' : '❌'}`);
     process.stderr.write(`📋 URL has sslmode=disable: ${url.includes('sslmode=disable') ? '✅' : '❌'}\n`);
-  } else
+  } else {
     // For non-Unix socket connections, use SSL from config.json if needed
     if (config.dialectOptions && config.dialectOptions.ssl) {
       finalDialectOptions.ssl = config.dialectOptions.ssl;
