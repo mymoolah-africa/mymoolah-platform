@@ -48,25 +48,31 @@ const { body, validationResult } = require('express-validator');
 
 // Patch express-rate-limit's trustProxy validation to disable it
 // This is safe because we use custom keyGenerator functions that manually extract IPs
-// The validation checks request.app.get("trust proxy") === true and throws an error
-// We need to patch the internal validations object
 const rateLimitLib = rateLimitModule.default || rateLimitModule;
 
-// Access the internal validations object by requiring the module and patching it
-// The validations are in the dist/index.cjs file
+// Patch the validations object directly by accessing the internal module
+// The validations object is in the dist/index.cjs file and is a module-level variable
 try {
-  // Try to access validations through the module's internal structure
-  const rateLimitInternal = require('express-rate-limit/dist/index.cjs');
-  if (rateLimitInternal.validations && rateLimitInternal.validations.trustProxy) {
-    rateLimitInternal.validations.trustProxy = function(request) {
+  // Clear the module cache to force reload
+  delete require.cache[require.resolve('express-rate-limit')];
+  delete require.cache[require.resolve('express-rate-limit/dist/index.cjs')];
+  
+  // Require the internal module
+  const internalModule = require('express-rate-limit/dist/index.cjs');
+  
+  // Patch the validations.trustProxy function
+  if (internalModule && internalModule.validations && typeof internalModule.validations.trustProxy === 'function') {
+    internalModule.validations.trustProxy = function(request) {
       // Disable validation - we handle IP extraction manually via custom keyGenerator
-      // Do nothing - skip the validation check
+      // Do nothing - skip the validation check completely
       return;
     };
+    console.log('✅ Patched express-rate-limit trustProxy validation');
   }
 } catch (e) {
-  // If patching fails, we'll rely on setting trust proxy to false
-  console.warn('Could not patch express-rate-limit validations:', e.message);
+  // If patching fails, log warning but continue
+  console.warn('⚠️  Could not patch express-rate-limit validations:', e.message);
+  console.warn('   Falling back to trust proxy=false approach');
 }
 
 const rateLimit = rateLimitLib;
