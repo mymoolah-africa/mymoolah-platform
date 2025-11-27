@@ -54,23 +54,43 @@ function getDatabasePassword(secretName, isUAT = false) {
         
         // Manual parsing for passwords with @ symbol
         // Format: postgres://user:password@host:port/db
-        // If password has @, it might be: postgres://user:pass@word@host
-        // We need to find the LAST @ before the port or /
-        const dbMatch = urlString.match(/postgres:\/\/([^:]+):(.+)@([^:]+):(\d+)\/(.+)/);
-        if (dbMatch) {
-          const [, username, passwordPart, host, port, database] = dbMatch;
-          // passwordPart might contain @ symbols
-          // We need to find where password ends (before host:port)
-          // The host should not contain @, so find the last @ before host
-          const hostStart = urlString.indexOf(host);
-          const passwordEnd = urlString.lastIndexOf('@', hostStart - 1);
-          const passwordStart = urlString.indexOf(':', urlString.indexOf('://') + 3) + 1;
-          const password = urlString.substring(passwordStart, passwordEnd);
+        // If password has @, we need to find the @ before host:port
+        // Since host is 127.0.0.1, find @127.0.0.1 and extract password before it
+        const hostPattern = '@127.0.0.1:';
+        const hostIndex = urlString.indexOf(hostPattern);
+        if (hostIndex > 0) {
+          // Find the : after postgres://
+          const userPassStart = urlString.indexOf('://') + 3;
+          const passwordStart = urlString.indexOf(':', userPassStart) + 1;
+          const password = urlString.substring(passwordStart, hostIndex);
           
           try {
             return decodeURIComponent(password);
           } catch {
             return password;
+          }
+        }
+        
+        // Fallback: try to find @host:port pattern
+        const dbMatch = urlString.match(/postgres:\/\/([^:]+):(.+)@([^:]+):(\d+)\/(.+)/);
+        if (dbMatch) {
+          const [, username, passwordPart, host, port, database] = dbMatch;
+          // If host contains @, password wasn't extracted correctly
+          // Find the last @ before the known host
+          if (host.includes('@')) {
+            const knownHost = host.split('@').pop(); // Get part after last @
+            const hostPattern2 = `@${knownHost}:`;
+            const hostIndex2 = urlString.indexOf(hostPattern2);
+            if (hostIndex2 > 0) {
+              const userPassStart2 = urlString.indexOf('://') + 3;
+              const passwordStart2 = urlString.indexOf(':', userPassStart2) + 1;
+              const password2 = urlString.substring(passwordStart2, hostIndex2);
+              try {
+                return decodeURIComponent(password2);
+              } catch {
+                return password2;
+              }
+            }
           }
         }
         
