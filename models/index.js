@@ -102,8 +102,25 @@ if (config.use_env_variable) {
     console.log(`🔒 Final check: dialectOptions.ssl = ${finalDialectOptions.ssl}`);
   }
   
+  // CRITICAL: For Unix socket connections, ensure URL has sslmode=disable AND dialectOptions has ssl: false
+  // Sequelize's pg driver needs BOTH to be set correctly
+  if (shouldDisableSSL) {
+    // Ensure sslmode=disable is in URL
+    if (!url.includes('sslmode=')) {
+      url += (url.includes('?') ? '&' : '?') + 'sslmode=disable';
+    } else if (!url.includes('sslmode=disable')) {
+      // Replace any existing sslmode with disable
+      url = url.replace(/sslmode=[^&]*/, 'sslmode=disable');
+    }
+    // Ensure dialectOptions explicitly has ssl: false
+    finalDialectOptions.ssl = false;
+    console.log(`🔒 CRITICAL: Setting ssl: false in dialectOptions for Unix socket`);
+    console.log(`🔒 URL sslmode check: ${url.includes('sslmode=disable') ? '✅' : '❌'}`);
+  }
+  
   sequelize = new Sequelize(url, {
     ...optionsWithoutDialectOptions, // Spread options WITHOUT dialectOptions to prevent SSL merge
+    dialect: 'postgres', // Explicitly set dialect
     // Optimized connection pool for Cloud SQL Auth Proxy
     // min: 2 keeps connections warm to avoid cold starts
     // idle: 30000 (30s) prevents frequent connection churn
@@ -114,9 +131,14 @@ if (config.use_env_variable) {
       idle: 30000,  // Increased from 10s to 30s to reduce connection churn
       evict: 10000  // Check for idle connections every 10s
     },
-    dialectOptions: finalDialectOptions, // Use the final dialectOptions (SSL removed if needed)
+    dialectOptions: finalDialectOptions, // Use the final dialectOptions (ssl: false for Unix sockets)
     logging: false
   });
+  
+  // Final verification log
+  if (shouldDisableSSL) {
+    console.log(`✅ Sequelize instance created with ssl: false for Unix socket connection`);
+  }
 } else {
   sequelize = new Sequelize(config.database, config.username, config.password, {
     ...config,
