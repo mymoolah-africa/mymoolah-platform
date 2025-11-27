@@ -26,8 +26,11 @@ if (config.use_env_variable) {
     const parsed = new URL(url);
     const host = (parsed.hostname || '').toLowerCase();
     const isLocalProxy = host === '127.0.0.1' || host === 'localhost';
-    if (isLocalProxy) {
-      // When using Cloud SQL Auth Proxy locally, disable client-side SSL to the proxy
+    const isUnixSocket = !host || host === '' || url.includes('/cloudsql/');
+    
+    if (isLocalProxy || isUnixSocket) {
+      // When using Cloud SQL Auth Proxy locally or Unix socket in Cloud Run:
+      // Disable client-side SSL - the connection is already secure
       if (options.dialectOptions && options.dialectOptions.ssl) {
         delete options.dialectOptions.ssl;
       }

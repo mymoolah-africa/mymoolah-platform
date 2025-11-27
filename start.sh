@@ -26,7 +26,9 @@ if [ -n "${DB_PASSWORD}" ] && [ -n "${CLOUD_SQL_INSTANCE}" ]; then
   # URL encode the password using Node.js (more reliable than shell)
   # Use a here-document to safely pass the password to Node.js
   ENCODED_PASSWORD=$(node -e "const pwd = process.argv[1]; console.log(encodeURIComponent(pwd));" "${DB_PASSWORD}")
-  export DATABASE_URL="postgres://mymoolah_app:${ENCODED_PASSWORD}@/mymoolah_staging?host=/cloudsql/${CLOUD_SQL_INSTANCE}&sslmode=require"
+  # For Cloud Run with Unix socket: SSL is handled at socket level, use sslmode=disable
+  # The Unix socket connection is already secure (local socket, not network)
+  export DATABASE_URL="postgres://mymoolah_app:${ENCODED_PASSWORD}@/mymoolah_staging?host=/cloudsql/${CLOUD_SQL_INSTANCE}&sslmode=disable"
   echo "✅ DATABASE_URL constructed" >&2
 else
   echo "⚠️  WARNING: DB_PASSWORD or CLOUD_SQL_INSTANCE not set!" >&2
