@@ -179,10 +179,29 @@ async function migrateTransactions() {
     // Migrate transactions
     console.log('📦 Migrating transactions...');
     
-    // Get all transactions - use SELECT * to get all columns that exist
+    // Get all transactions - explicitly list columns (PostgreSQL returns lowercase from SELECT *)
     const [uatTransactions] = await uatSequelize.query(`
-      SELECT * FROM transactions
-      ORDER BY COALESCE("createdAt", created_at, CURRENT_TIMESTAMP) DESC
+      SELECT 
+        id,
+        "transactionId",
+        "userId",
+        "walletId",
+        "senderWalletId",
+        "receiverWalletId",
+        type,
+        amount,
+        description,
+        fee,
+        currency,
+        status,
+        reference,
+        "paymentId",
+        "exchangeRate",
+        "failureReason",
+        "createdAt",
+        "updatedAt"
+      FROM transactions
+      ORDER BY "createdAt" DESC
     `);
 
     console.log(`📊 Found ${uatTransactions.length} transactions in UAT`);
@@ -259,9 +278,9 @@ async function migrateTransactions() {
           continue;
         }
 
-        // Handle both camelCase and snake_case column names
-        const createdAt = uatTx.createdAt || uatTx.created_at || new Date();
-        const updatedAt = uatTx.updatedAt || uatTx.updated_at || new Date();
+        // Get timestamps (PostgreSQL returns quoted columns as-is, unquoted as lowercase)
+        const createdAt = uatTx.createdAt || uatTx.createdat || new Date();
+        const updatedAt = uatTx.updatedAt || uatTx.updatedat || new Date();
 
         await stagingSequelize.query(`
           INSERT INTO transactions (
