@@ -53,13 +53,14 @@ if (config.use_env_variable) {
   }
   
   // Disable SSL if needed
+  let finalDialectOptions = { ...(options.dialectOptions || {}) };
+  
   if (shouldDisableSSL) {
     // When using Cloud SQL Auth Proxy locally or Unix socket in Cloud Run:
     // Disable client-side SSL - the connection is already secure
-    // Deep clone to avoid mutating the original config and completely remove SSL
-    const { ssl, ...dialectOptionsWithoutSsl } = options.dialectOptions || {};
-    // Create new dialectOptions WITHOUT ssl property (not set to false, just absent)
-    options.dialectOptions = {
+    // Completely remove SSL property (not set to false, just absent)
+    const { ssl, ...dialectOptionsWithoutSsl } = finalDialectOptions;
+    finalDialectOptions = {
       ...dialectOptionsWithoutSsl
       // SSL property is completely removed - not present at all
     };
@@ -68,7 +69,26 @@ if (config.use_env_variable) {
       url += (url.includes('?') ? '&' : '?') + 'sslmode=disable';
     }
     console.log(`✅ SSL disabled for ${disableReason} connection - dialectOptions.ssl removed`);
+    console.log(`📋 Final dialectOptions (no SSL):`, JSON.stringify(finalDialectOptions, null, 2));
+  } else {
+    console.log(`ℹ️ SSL enabled (not Unix socket or sslmode=disable)`);
   }
+  
+  // Build final dialectOptions with keepAlive settings (but NO SSL if shouldDisableSSL)
+  finalDialectOptions = {
+    ...finalDialectOptions,
+    keepAlive: true,
+    // TCP keepalive to prevent connection drops
+    keepAliveInitialDelayMillis: 0
+  };
+  
+  // CRITICAL: Ensure SSL is NOT in finalDialectOptions for Unix socket connections
+  if (shouldDisableSSL && finalDialectOptions.ssl !== undefined) {
+    console.warn('⚠️ WARNING: SSL property still present in finalDialectOptions! Removing it...');
+    const { ssl, ...cleanDialectOptions } = finalDialectOptions;
+    finalDialectOptions = cleanDialectOptions;
+  }
+  
   sequelize = new Sequelize(url, {
     ...options,
     // Optimized connection pool for Cloud SQL Auth Proxy
@@ -81,12 +101,7 @@ if (config.use_env_variable) {
       idle: 30000,  // Increased from 10s to 30s to reduce connection churn
       evict: 10000  // Check for idle connections every 10s
     },
-    dialectOptions: {
-      ...(options.dialectOptions || {}),
-      keepAlive: true,
-      // TCP keepalive to prevent connection drops
-      keepAliveInitialDelayMillis: 0
-    },
+    dialectOptions: finalDialectOptions, // Use the final dialectOptions (SSL removed if needed)
     logging: false
   });
 } else {
