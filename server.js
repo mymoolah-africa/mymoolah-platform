@@ -57,9 +57,10 @@ const {
 const { secureLogging, secureErrorLogging } = require('./middleware/secureLogging');
 const app = express();
 
-// Trust proxy for Cloud Run (required for express-rate-limit to work correctly)
-// Cloud Run uses a reverse proxy, so we need to trust X-Forwarded-* headers
-app.set('trust proxy', true);
+// Trust proxy for Cloud Run behind load balancer (banking-grade: trust only first proxy)
+// This is secure because Cloud Load Balancer is the only proxy in front of Cloud Run
+// Using '1' instead of 'true' prevents express-rate-limit validation error
+app.set('trust proxy', 1);
 
 // Get configuration from security config
 const config = securityConfig.getConfig();
