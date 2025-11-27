@@ -203,10 +203,48 @@ class AuthController {
       // DEBUG: Log normalized phone number for troubleshooting
       console.log(`🔍 [LOGIN] Original: ${originalIdentifier}, Normalized: ${identifier}`);
       
-      // Find user by phone number - try both formats (+27 and 27)
-      // First try with +27 format (normalized)
-      let user = await User.findOne({ 
-        where: { phoneNumber: identifier },
+      // Build all possible phone number formats to search
+      const phoneFormats = [];
+      
+      // Add normalized format (+27XXXXXXXXX)
+      phoneFormats.push(identifier);
+      
+      // Add without + (27XXXXXXXXX)
+      if (identifier.startsWith('+27')) {
+        phoneFormats.push(identifier.substring(1));
+      }
+      
+      // Add with 0 prefix (082XXXXXXXX)
+      if (identifier.startsWith('+27')) {
+        phoneFormats.push('0' + identifier.substring(3));
+      }
+      
+      // Also try original format (in case it wasn't normalized correctly)
+      const originalCleaned = originalIdentifier.replace(/\D/g, '');
+      if (originalCleaned && !phoneFormats.includes(originalCleaned)) {
+        phoneFormats.push(originalCleaned);
+      }
+      
+      // Try with +27 prefix on original cleaned
+      if (originalCleaned.startsWith('0')) {
+        const withPlus27 = '+27' + originalCleaned.substring(1);
+        if (!phoneFormats.includes(withPlus27)) {
+          phoneFormats.push(withPlus27);
+        }
+      }
+      
+      // Remove duplicates
+      const uniqueFormats = [...new Set(phoneFormats)];
+      console.log(`🔍 [LOGIN] Searching for user with phone formats: ${uniqueFormats.join(', ')}`);
+      
+      // Use Sequelize Op.or to search all formats at once (more efficient)
+      const { Op } = require('sequelize');
+      const user = await User.findOne({ 
+        where: { 
+          phoneNumber: {
+            [Op.in]: uniqueFormats
+          }
+        },
         include: [{
           model: Wallet,
           as: 'wallet',
@@ -214,43 +252,15 @@ class AuthController {
         }]
       });
       
-      // If not found with +27, try without + (27XXXXXXXXX)
-      if (!user && identifier.startsWith('+27')) {
-        const withoutPlus = identifier.substring(1); // Remove +
-        console.log(`🔍 [LOGIN] User not found with +27 format, trying without +: ${withoutPlus}`);
-        user = await User.findOne({ 
-          where: { phoneNumber: withoutPlus },
-          include: [{
-            model: Wallet,
-            as: 'wallet',
-            attributes: ['walletId', 'balance', 'currency', 'status']
-          }]
-        });
-      }
-      
-      // If still not found, try with 0 prefix (082XXXXXXXX)
-      if (!user && identifier.startsWith('+27')) {
-        const withZero = '0' + identifier.substring(3); // +2782... -> 082...
-        console.log(`🔍 [LOGIN] User not found with 27 format, trying with 0 prefix: ${withZero}`);
-        user = await User.findOne({ 
-          where: { phoneNumber: withZero },
-          include: [{
-            model: Wallet,
-            as: 'wallet',
-            attributes: ['walletId', 'balance', 'currency', 'status']
-          }]
-        });
-      }
-      
       if (!user) {
-        console.log(`❌ [LOGIN] User not found for phone number: ${identifier} (original: ${originalIdentifier})`);
+        console.log(`❌ [LOGIN] User not found for any phone format. Searched: ${uniqueFormats.join(', ')} (original: ${originalIdentifier})`);
         return res.status(401).json({ 
           success: false, 
           message: 'Invalid mobile number or password.' 
         });
       }
       
-      console.log(`✅ [LOGIN] User found: ${user.id}, phoneNumber in DB: ${user.phoneNumber}`);
+      console.log(`✅ [LOGIN] User found: ${user.id}, phoneNumber in DB: ${user.phoneNumber} (matched format)`);
       
       // Check password
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
