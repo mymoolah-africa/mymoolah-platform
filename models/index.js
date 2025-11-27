@@ -123,9 +123,14 @@ if (config.use_env_variable) {
     // Remove any ssl property that might have been added
     const { ssl, ...dialectOptionsWithoutSsl } = finalDialectOptions;
     finalDialectOptions = dialectOptionsWithoutSsl;
+    // EXPLICITLY ensure ssl is not in dialectOptions
+    delete finalDialectOptions.ssl;
     console.log(`✅ SSL disabled for ${disableReason} connection - ssl property removed from dialectOptions`);
+    process.stderr.write(`✅ SSL disabled for ${disableReason} connection - ssl property removed from dialectOptions\n`);
     console.log(`📋 Final dialectOptions (no ssl property):`, JSON.stringify(finalDialectOptions, null, 2));
+    process.stderr.write(`📋 Final dialectOptions: ${JSON.stringify(finalDialectOptions)}\n`);
     console.log(`📋 URL has sslmode=disable: ${url.includes('sslmode=disable') ? '✅' : '❌'}`);
+    process.stderr.write(`📋 URL has sslmode=disable: ${url.includes('sslmode=disable') ? '✅' : '❌'}\n`);
   } else {
     // For non-Unix socket connections, use SSL from config.json if needed
     if (config.dialectOptions && config.dialectOptions.ssl) {
@@ -136,7 +141,8 @@ if (config.use_env_variable) {
   
   // CRITICAL: Create Sequelize with ONLY the options we want, preventing any merge from config.json
   // Don't spread config - explicitly set only what we need
-  sequelize = new Sequelize(url, {
+  // CRITICAL: For Unix sockets, ensure dialectOptions.ssl is explicitly undefined/absent
+  const sequelizeOptions = {
     dialect: 'postgres', // Explicitly set dialect
     // Optimized connection pool for Cloud SQL Auth Proxy
     pool: { 
@@ -148,11 +154,23 @@ if (config.use_env_variable) {
     },
     dialectOptions: finalDialectOptions, // Use ONLY our final dialectOptions (no merge from config.json, no ssl for Unix sockets)
     logging: false
-  });
+  };
+  
+  // CRITICAL: If SSL should be disabled, ensure dialectOptions.ssl is completely absent
+  if (shouldDisableSSL && sequelizeOptions.dialectOptions.ssl !== undefined) {
+    delete sequelizeOptions.dialectOptions.ssl;
+    console.log(`🔒 Removed ssl from dialectOptions before Sequelize creation`);
+    process.stderr.write(`🔒 Removed ssl from dialectOptions before Sequelize creation\n`);
+  }
+  
+  sequelize = new Sequelize(url, sequelizeOptions);
   
   // Final verification log
   if (shouldDisableSSL) {
-    console.log(`✅ Sequelize instance created with ssl: false for Unix socket connection`);
+    console.log(`✅ Sequelize instance created with ssl disabled for Unix socket connection`);
+    process.stderr.write(`✅ Sequelize instance created with ssl disabled for Unix socket connection\n`);
+    console.log(`📋 Final URL: ${url.replace(/:[^:@]+@/, ':****@')}`);
+    process.stderr.write(`📋 Final URL: ${url.replace(/:[^:@]+@/, ':****@')}\n`);
   }
 } else {
   sequelize = new Sequelize(config.database, config.username, config.password, {
