@@ -229,36 +229,34 @@ async function migrateUsers() {
     console.log(`📊 Users to skip (already exist): ${usersToSkip}`);
     console.log('');
 
-    if (usersToMigrate.length === 0) {
-      console.log('✅ All users already exist in staging');
-      return;
-    }
-
     // Show users that will be migrated
-    console.log('📋 Users to be migrated:');
-    usersToMigrate.slice(0, 10).forEach((user, idx) => {
-      console.log(`   ${idx + 1}. ${user.email} (${user.phoneNumber || 'no phone'})`);
-    });
-    if (usersToMigrate.length > 10) {
-      console.log(`   ... and ${usersToMigrate.length - 10} more`);
+    if (usersToMigrate.length > 0) {
+      console.log('📋 Users to be migrated:');
+      usersToMigrate.slice(0, 10).forEach((user, idx) => {
+        console.log(`   ${idx + 1}. ${user.email} (${user.phoneNumber || 'no phone'})`);
+      });
+      if (usersToMigrate.length > 10) {
+        console.log(`   ... and ${usersToMigrate.length - 10} more`);
+      }
+      console.log('');
     }
-    console.log('');
 
     if (dryRun) {
       console.log('🔍 DRY RUN: No changes made');
       console.log(`   Would migrate ${usersToMigrate.length} users`);
       if (includeWallets) {
-        console.log('   Would also migrate wallet data');
+        console.log('   Would also migrate wallet data for all UAT users');
       }
       return;
     }
 
-    // Migrate users
-    console.log('📦 Migrating users...');
+    // Migrate users (if any)
     let migrated = 0;
     let errors = 0;
-
-    for (const user of usersToMigrate) {
+    
+    if (usersToMigrate.length > 0) {
+      console.log('📦 Migrating users...');
+      for (const user of usersToMigrate) {
       try {
         await stagingSequelize.query(`
           INSERT INTO users (
@@ -301,27 +299,30 @@ async function migrateUsers() {
       }
     }
 
-    console.log('');
-    console.log(`✅ Migration complete!`);
-    console.log(`   Migrated: ${migrated} users`);
-    if (errors > 0) {
-      console.log(`   Errors: ${errors} users`);
+    if (usersToMigrate.length > 0) {
+      console.log('');
+      console.log(`✅ User migration complete!`);
+      console.log(`   Migrated: ${migrated} users`);
+      if (errors > 0) {
+        console.log(`   Errors: ${errors} users`);
+      }
+    } else {
+      console.log('✅ All users already exist in staging');
     }
 
-    // Migrate wallets if requested
+    // Migrate wallets if requested (for ALL UAT users, not just newly migrated ones)
     if (includeWallets) {
       console.log('');
       console.log('📦 Migrating wallets...');
       
-      // Get wallets from UAT for migrated users
-      const migratedUserIds = usersToMigrate.map(u => u.id);
+      // Get wallets from UAT for ALL active users (not just newly migrated)
+      // This ensures wallets are migrated even if users already existed
       const [uatWallets] = await uatSequelize.query(`
-        SELECT w.* FROM wallets w
+        SELECT w.*, u.email, u."phoneNumber" 
+        FROM wallets w
         INNER JOIN users u ON w."userId" = u.id
-        WHERE u.id IN (:userIds)
-      `, {
-        replacements: { userIds: migratedUserIds }
-      });
+        WHERE u.status = 'active'
+      `);
       
       console.log(`📊 Found ${uatWallets.length} wallets to migrate`);
       
