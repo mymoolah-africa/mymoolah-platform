@@ -8,16 +8,8 @@ const rateLimit = require('express-rate-limit');
 
 const catalogSyncController = new CatalogSyncController();
 
-// Custom IP extraction function (avoids trust proxy validation)
-const getClientIP = (req) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
-};
-
 // Rate limiting for catalog sync operations
+// With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
 const catalogSyncLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
@@ -27,10 +19,7 @@ const catalogSyncLimit = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
-  },
-  keyGenerator: getClientIP,
+  keyGenerator: (req) => req.ip,
 });
 
 // Apply rate limiting to all routes

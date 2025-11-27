@@ -1,16 +1,7 @@
 const rateLimit = require('express-rate-limit');
 
-// Custom IP extraction function (avoids trust proxy validation)
-const getClientIP = (req) => {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    // X-Forwarded-For: "client-ip, proxy-ip" - use first IP (client)
-    return forwarded.split(',')[0].trim();
-  }
-  return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
-};
-
 // Rate limiter for authentication endpoints (stricter)
+// With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // limit each IP to 5 requests per windowMs
@@ -20,13 +11,11 @@ const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
-  },
-  keyGenerator: (req) => getClientIP(req) + '-auth',
+  keyGenerator: (req) => req.ip + '-auth',
 });
 
 // General API rate limiter
+// With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
@@ -36,10 +25,7 @@ const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
-  },
-  keyGenerator: getClientIP,
+  keyGenerator: (req) => req.ip,
 });
 
 module.exports = {

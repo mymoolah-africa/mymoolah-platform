@@ -43,55 +43,15 @@ process.on('SIGINT', () => {
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimitModule = require('express-rate-limit');
+const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
-
-// Patch express-rate-limit's trustProxy validation to disable it
-// This is safe because we use custom keyGenerator functions that manually extract IPs
-const rateLimitLib = rateLimitModule.default || rateLimitModule;
-
-// Patch the validations object directly by accessing the internal module
-// The validations object is in the dist/index.cjs file and is a module-level variable
-try {
-  // Clear the module cache to force reload
-  delete require.cache[require.resolve('express-rate-limit')];
-  delete require.cache[require.resolve('express-rate-limit/dist/index.cjs')];
-  
-  // Require the internal module
-  const internalModule = require('express-rate-limit/dist/index.cjs');
-  
-  // Patch the validations.trustProxy function
-  if (internalModule && internalModule.validations && typeof internalModule.validations.trustProxy === 'function') {
-    internalModule.validations.trustProxy = function(request) {
-      // Disable validation - we handle IP extraction manually via custom keyGenerator
-      // Do nothing - skip the validation check completely
-      return;
-    };
-    console.log('✅ Patched express-rate-limit trustProxy validation');
-  }
-} catch (e) {
-  // If patching fails, log warning but continue
-  console.warn('⚠️  Could not patch express-rate-limit validations:', e.message);
-  console.warn('   Falling back to trust proxy=false approach');
-}
-
-const rateLimit = rateLimitLib;
 const app = express();
 
 // Trust proxy for Cloud Run behind load balancer (banking-grade: trust only first proxy)
-// This is secure because Cloud Load Balancer is the only proxy in front of Cloud Run
-// NOTE: We explicitly set trust proxy to FALSE to avoid express-rate-limit validation errors
-// Instead, we manually extract IPs from X-Forwarded-For headers in all rate limiters
-// For cookies and other middleware, we handle X-Forwarded-Proto manually if needed
-app.set('trust proxy', false); // Explicitly false to prevent express-rate-limit validation
-
-// Ensure trust proxy stays false (some middleware might change it)
-app.use((req, res, next) => {
-  if (req.app.get('trust proxy') !== false) {
-    req.app.set('trust proxy', false);
-  }
-  next();
-});
+// Cloud Run has exactly 1 proxy hop (Google Cloud Load Balancer)
+// Setting to 1 (not true) is secure and passes express-rate-limit validation
+// This tells Express: "Trust the first proxy (Google Load Balancer), but treat the next IP as the actual client"
+app.set('trust proxy', 1);
 
 const {
   rateLimiters,
@@ -266,31 +226,13 @@ app.get('/test', (req, res) => {
 });
 
 // Enhanced Rate Limiting Middleware
+// With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
 const limiter = rateLimit({
   windowMs: config.rateLimits.general.windowMs,
   max: config.rateLimits.general.max,
   message: config.rateLimits.general.message,
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
-  },
-  // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
-  // Cloud Load Balancer sets X-Forwarded-For with client IP as first value
-  keyGenerator: (req) => {
-    // CRITICAL: Force trust proxy to false before express-rate-limit validates it
-    // This prevents the validation error from being thrown
-    if (req.app.get('trust proxy') !== false) {
-      req.app.set('trust proxy', false);
-    }
-    const forwarded = req.headers['x-forwarded-for'];
-    if (forwarded) {
-      // X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
-      // We trust only the first proxy (Cloud Load Balancer), so use the first IP
-      return forwarded.split(',')[0].trim();
-    }
-    return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
-  },
   // In development, and for CORS preflight, skip limiting to avoid false CORS failures during polling
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
@@ -306,27 +248,14 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Stricter rate limiting for authentication endpoints
+// With trust proxy: 1, Express correctly sets req.ip to the client IP
 const authLimiter = rateLimit({
   windowMs: config.rateLimits.auth.windowMs,
   max: config.rateLimits.auth.max,
   message: config.rateLimits.auth.message,
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
-  },
-  // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
-  keyGenerator: (req) => {
-    // CRITICAL: Force trust proxy to false before express-rate-limit validates it
-    if (req.app.get('trust proxy') !== false) {
-      req.app.set('trust proxy', false);
-    }
-    const forwarded = req.headers['x-forwarded-for'];
-    if (forwarded) {
-      return forwarded.split(',')[0].trim() + '-auth';
-    }
-    return (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown') + '-auth';
-  },
+  keyGenerator: (req) => req.ip + '-auth',
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
     res.status(429).json({
@@ -338,27 +267,14 @@ const authLimiter = rateLimit({
 });
 
 // Financial transaction rate limiting
+// With trust proxy: 1, Express correctly sets req.ip to the client IP
 const financialLimiter = rateLimit({
   windowMs: config.rateLimits.financial.windowMs,
   max: config.rateLimits.financial.max,
   message: config.rateLimits.financial.message,
   standardHeaders: true,
   legacyHeaders: false,
-  validate: {
-    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
-  },
-  // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
-  keyGenerator: (req) => {
-    // CRITICAL: Force trust proxy to false before express-rate-limit validates it
-    if (req.app.get('trust proxy') !== false) {
-      req.app.set('trust proxy', false);
-    }
-    const forwarded = req.headers['x-forwarded-for'];
-    if (forwarded) {
-      return forwarded.split(',')[0].trim() + '-financial';
-    }
-    return (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown') + '-financial';
-  },
+  keyGenerator: (req) => req.ip + '-financial',
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
     res.status(429).json({
