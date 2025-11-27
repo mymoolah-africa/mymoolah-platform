@@ -49,9 +49,10 @@ const app = express();
 
 // Trust proxy for Cloud Run behind load balancer (banking-grade: trust only first proxy)
 // This is secure because Cloud Load Balancer is the only proxy in front of Cloud Run
-// Note: We use custom IP extraction in rate limiters to avoid express-rate-limit validation errors
-// Setting to 1 (trust first proxy) for other middleware that needs it (cookies, etc.)
-app.set('trust proxy', 1);
+// NOTE: We DON'T set trust proxy here to avoid express-rate-limit validation errors
+// Instead, we manually extract IPs from X-Forwarded-For headers in all rate limiters
+// For cookies and other middleware, we handle X-Forwarded-Proto manually if needed
+// app.set('trust proxy', 1); // Commented out to avoid express-rate-limit validation
 
 const {
   rateLimiters,
