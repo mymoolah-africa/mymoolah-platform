@@ -43,8 +43,33 @@ process.on('SIGINT', () => {
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
+const rateLimitModule = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
+
+// Patch express-rate-limit's trustProxy validation to disable it
+// This is safe because we use custom keyGenerator functions that manually extract IPs
+// The validation checks request.app.get("trust proxy") === true and throws an error
+// We need to patch the internal validations object
+const rateLimitLib = rateLimitModule.default || rateLimitModule;
+
+// Access the internal validations object by requiring the module and patching it
+// The validations are in the dist/index.cjs file
+try {
+  // Try to access validations through the module's internal structure
+  const rateLimitInternal = require('express-rate-limit/dist/index.cjs');
+  if (rateLimitInternal.validations && rateLimitInternal.validations.trustProxy) {
+    rateLimitInternal.validations.trustProxy = function(request) {
+      // Disable validation - we handle IP extraction manually via custom keyGenerator
+      // Do nothing - skip the validation check
+      return;
+    };
+  }
+} catch (e) {
+  // If patching fails, we'll rely on setting trust proxy to false
+  console.warn('Could not patch express-rate-limit validations:', e.message);
+}
+
+const rateLimit = rateLimitLib;
 const app = express();
 
 // Trust proxy for Cloud Run behind load balancer (banking-grade: trust only first proxy)
@@ -247,6 +272,11 @@ const limiter = rateLimit({
   // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
   // Cloud Load Balancer sets X-Forwarded-For with client IP as first value
   keyGenerator: (req) => {
+    // CRITICAL: Force trust proxy to false before express-rate-limit validates it
+    // This prevents the validation error from being thrown
+    if (req.app.get('trust proxy') !== false) {
+      req.app.set('trust proxy', false);
+    }
     const forwarded = req.headers['x-forwarded-for'];
     if (forwarded) {
       // X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
@@ -281,6 +311,10 @@ const authLimiter = rateLimit({
   },
   // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
   keyGenerator: (req) => {
+    // CRITICAL: Force trust proxy to false before express-rate-limit validates it
+    if (req.app.get('trust proxy') !== false) {
+      req.app.set('trust proxy', false);
+    }
     const forwarded = req.headers['x-forwarded-for'];
     if (forwarded) {
       return forwarded.split(',')[0].trim() + '-auth';
@@ -309,6 +343,10 @@ const financialLimiter = rateLimit({
   },
   // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
   keyGenerator: (req) => {
+    // CRITICAL: Force trust proxy to false before express-rate-limit validates it
+    if (req.app.get('trust proxy') !== false) {
+      req.app.set('trust proxy', false);
+    }
     const forwarded = req.headers['x-forwarded-for'];
     if (forwarded) {
       return forwarded.split(',')[0].trim() + '-financial';

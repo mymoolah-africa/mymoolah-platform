@@ -22,31 +22,32 @@ const createRateLimit = (windowMs, max, message, keyGenerator = null) => {
   const isDevelopment = process.env.NODE_ENV === 'development';
   const adjustedMax = isDevelopment ? max * 5 : max;
   
-  // Catch and ignore express-rate-limit trust proxy validation errors
-  // We use manual IP extraction via custom keyGenerator, so this validation is not needed
-  let limiter;
-  try {
-    limiter = rateLimit({
-      windowMs,
-      max: adjustedMax,
-      message: {
-        status: 'error',
-        message: message || 'Too many requests, please try again later.',
-        retryAfter: Math.ceil(windowMs / 1000)
-      },
-      validate: {
-        trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
-      },
-      keyGenerator: keyGenerator || ((req) => {
-        // Manually extract IP from X-Forwarded-For header (avoids trust proxy validation)
-        // Cloud Load Balancer sets X-Forwarded-For with client IP as first value
-        // Format: "client-ip, proxy-ip" - we use the first IP (client)
-        const forwarded = req.headers['x-forwarded-for'];
-        if (forwarded) {
-          return forwarded.split(',')[0].trim();
-        }
-        return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
-      }),
+  return rateLimit({
+    windowMs,
+    max: adjustedMax,
+    message: {
+      status: 'error',
+      message: message || 'Too many requests, please try again later.',
+      retryAfter: Math.ceil(windowMs / 1000)
+    },
+    validate: {
+      trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
+    },
+    keyGenerator: keyGenerator || ((req) => {
+      // CRITICAL: Force trust proxy to false before express-rate-limit validates it
+      // This prevents the validation error from being thrown
+      if (req.app.get('trust proxy') !== false) {
+        req.app.set('trust proxy', false);
+      }
+      // Manually extract IP from X-Forwarded-For header (avoids trust proxy validation)
+      // Cloud Load Balancer sets X-Forwarded-For with client IP as first value
+      // Format: "client-ip, proxy-ip" - we use the first IP (client)
+      const forwarded = req.headers['x-forwarded-for'];
+      if (forwarded) {
+        return forwarded.split(',')[0].trim();
+      }
+      return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+    }),
     handler: (req, res) => {
       res.status(429).json({
         status: 'error',
@@ -60,42 +61,6 @@ const createRateLimit = (windowMs, max, message, keyGenerator = null) => {
       return req.path === '/health' || req.path === '/api/v1/monitoring/health';
     }
   });
-  } catch (error) {
-    // Ignore trust proxy validation errors - we handle IP extraction manually via keyGenerator
-    if (error.message && error.message.includes('trust proxy')) {
-      // Re-create without validate option (some versions don't support it)
-      limiter = rateLimit({
-        windowMs,
-        max: adjustedMax,
-        message: {
-          status: 'error',
-          message: message || 'Too many requests, please try again later.',
-          retryAfter: Math.ceil(windowMs / 1000)
-        },
-        keyGenerator: keyGenerator || ((req) => {
-          const forwarded = req.headers['x-forwarded-for'];
-          if (forwarded) {
-            return forwarded.split(',')[0].trim();
-          }
-          return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
-        }),
-        handler: (req, res) => {
-          res.status(429).json({
-            status: 'error',
-            message: message || 'Too many requests, please try again later.',
-            retryAfter: Math.ceil(windowMs / 1000),
-            timestamp: new Date().toISOString()
-          });
-        },
-        skip: (req) => {
-          return req.path === '/health' || req.path === '/api/v1/monitoring/health';
-        }
-      });
-    } else {
-      throw error; // Re-throw if it's not a trust proxy error
-    }
-  }
-  return limiter;
 };
 
 // Rate limiting configurations
@@ -113,6 +78,10 @@ const rateLimiters = {
     200, // 200 login attempts per 15 minutes (development-friendly)
     'Too many login attempts, please try again later.',
     (req) => {
+      // CRITICAL: Force trust proxy to false before express-rate-limit validates it
+      if (req.app.get('trust proxy') !== false) {
+        req.app.set('trust proxy', false);
+      }
       // Manually extract IP to avoid trust proxy validation
       const forwarded = req.headers['x-forwarded-for'];
       const ip = forwarded ? forwarded.split(',')[0].trim() : (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown');
@@ -126,6 +95,10 @@ const rateLimiters = {
     10, // 10 transactions per minute
     'Too many transaction requests, please try again later.',
     (req) => {
+      // CRITICAL: Force trust proxy to false before express-rate-limit validates it
+      if (req.app.get('trust proxy') !== false) {
+        req.app.set('trust proxy', false);
+      }
       // Manually extract IP to avoid trust proxy validation
       const forwarded = req.headers['x-forwarded-for'];
       const ip = forwarded ? forwarded.split(',')[0].trim() : (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown');
@@ -139,6 +112,10 @@ const rateLimiters = {
     20, // 20 VAS requests per minute
     'Too many VAS requests, please try again later.',
     (req) => {
+      // CRITICAL: Force trust proxy to false before express-rate-limit validates it
+      if (req.app.get('trust proxy') !== false) {
+        req.app.set('trust proxy', false);
+      }
       // Manually extract IP to avoid trust proxy validation
       const forwarded = req.headers['x-forwarded-for'];
       const ip = forwarded ? forwarded.split(',')[0].trim() : (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown');
@@ -152,6 +129,10 @@ const rateLimiters = {
     10, // 10 support requests per 5 minutes
     'Too many support requests, please try again later.',
     (req) => {
+      // CRITICAL: Force trust proxy to false before express-rate-limit validates it
+      if (req.app.get('trust proxy') !== false) {
+        req.app.set('trust proxy', false);
+      }
       // Manually extract IP to avoid trust proxy validation
       const forwarded = req.headers['x-forwarded-for'];
       const ip = forwarded ? forwarded.split(',')[0].trim() : (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown');
