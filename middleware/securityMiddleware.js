@@ -69,7 +69,12 @@ const rateLimiters = {
     15 * 60 * 1000, // 15 minutes
     200, // 200 login attempts per 15 minutes (development-friendly)
     'Too many login attempts, please try again later.',
-    (req) => `${req.ip}-auth`
+    (req) => {
+      // Manually extract IP to avoid trust proxy validation
+      const forwarded = req.headers['x-forwarded-for'];
+      const ip = forwarded ? forwarded.split(',')[0].trim() : (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown');
+      return `${ip}-auth`;
+    }
   ),
 
   // Transaction rate limiting (very strict)
@@ -77,7 +82,12 @@ const rateLimiters = {
     60 * 1000, // 1 minute
     10, // 10 transactions per minute
     'Too many transaction requests, please try again later.',
-    (req) => `${req.ip}-transactions`
+    (req) => {
+      // Manually extract IP to avoid trust proxy validation
+      const forwarded = req.headers['x-forwarded-for'];
+      const ip = forwarded ? forwarded.split(',')[0].trim() : (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown');
+      return `${ip}-transactions`;
+    }
   ),
 
   // VAS rate limiting
@@ -85,7 +95,12 @@ const rateLimiters = {
     60 * 1000, // 1 minute
     20, // 20 VAS requests per minute
     'Too many VAS requests, please try again later.',
-    (req) => `${req.ip}-vas`
+    (req) => {
+      // Manually extract IP to avoid trust proxy validation
+      const forwarded = req.headers['x-forwarded-for'];
+      const ip = forwarded ? forwarded.split(',')[0].trim() : (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown');
+      return `${ip}-vas`;
+    }
   ),
 
   // Support rate limiting
@@ -93,7 +108,12 @@ const rateLimiters = {
     5 * 60 * 1000, // 5 minutes
     10, // 10 support requests per 5 minutes
     'Too many support requests, please try again later.',
-    (req) => `${req.ip}-support`
+    (req) => {
+      // Manually extract IP to avoid trust proxy validation
+      const forwarded = req.headers['x-forwarded-for'];
+      const ip = forwarded ? forwarded.split(',')[0].trim() : (req.connection.remoteAddress || req.socket.remoteAddress || 'unknown');
+      return `${ip}-support`;
+    }
   ),
 
   // DDoS protection (very strict)
