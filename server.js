@@ -232,6 +232,8 @@ const limiter = rateLimit({
   message: config.rateLimits.general.message,
   standardHeaders: true,
   legacyHeaders: false,
+  // Tell express-rate-limit we're intentionally trusting the proxy (Cloud Load Balancer)
+  trustProxy: true,
   // In development, and for CORS preflight, skip limiting to avoid false CORS failures during polling
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
@@ -253,6 +255,8 @@ const authLimiter = rateLimit({
   message: config.rateLimits.auth.message,
   standardHeaders: true,
   legacyHeaders: false,
+  // Tell express-rate-limit we're intentionally trusting the proxy (Cloud Load Balancer)
+  trustProxy: true,
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
     res.status(429).json({
@@ -270,6 +274,8 @@ const financialLimiter = rateLimit({
   message: config.rateLimits.financial.message,
   standardHeaders: true,
   legacyHeaders: false,
+  // Tell express-rate-limit we're intentionally trusting the proxy (Cloud Load Balancer)
+  trustProxy: true,
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
     res.status(429).json({
