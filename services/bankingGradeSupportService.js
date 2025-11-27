@@ -75,12 +75,25 @@ class BankingGradeSupportService {
       });
 
       // Database Connection Pool
-      // IMPORTANT: Detect Unix socket connections and disable SSL (same logic as models/index.js)
+      // IMPORTANT: Check DB_SSL environment variable first (most explicit)
+      // Then detect Unix socket connections and disable SSL (same logic as models/index.js)
       const dbUrl = process.env.DATABASE_URL;
       let shouldDisableSSL = false;
       let disableReason = '';
       
-      if (dbUrl) {
+      // CRITICAL: Check DB_SSL environment variable first (most explicit and reliable)
+      const dbSslEnv = process.env.DB_SSL;
+      if (dbSslEnv !== undefined) {
+        const dbSslValue = dbSslEnv.toString().toLowerCase().trim();
+        if (dbSslValue === 'false' || dbSslValue === '0' || dbSslValue === 'no' || dbSslValue === 'disable') {
+          shouldDisableSSL = true;
+          disableReason = 'DB_SSL environment variable set to false';
+          console.log(`✅ SSL disabled for BankingGradeSupportService via DB_SSL: ${dbSslEnv}`);
+        }
+      }
+      
+      // If DB_SSL not set, fall back to URL-based detection
+      if (!shouldDisableSSL && dbUrl) {
         try {
           const parsed = new URL(dbUrl);
           const host = (parsed.hostname || '').toLowerCase();
@@ -92,6 +105,7 @@ class BankingGradeSupportService {
             shouldDisableSSL = true;
             disableReason = isUnixSocket ? 'Unix socket' : (isLocalProxy ? 'local proxy' : 'sslmode=disable');
           }
+        }
         } catch (urlError) {
           // If URL parsing fails, check for Unix socket indicators
           if (dbUrl.includes('/cloudsql/') || dbUrl.includes('sslmode=disable')) {
