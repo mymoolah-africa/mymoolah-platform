@@ -33,13 +33,40 @@ function getDatabasePassword(secretName, isUAT = false) {
     if (process.env.DATABASE_URL) {
       try {
         const urlString = process.env.DATABASE_URL;
-        // Handle postgres://user:pass@host format
-        // URL parsing handles @ in password correctly if password is URL-encoded
-        // But if password contains @ and is not encoded, we need to parse manually
-        const match = urlString.match(/postgres:\/\/([^:]+):([^@]+)@/);
-        if (match) {
-          const [, username, password] = match;
-          // Decode if URL-encoded, otherwise use as-is
+        
+        // If password contains @ and is not URL-encoded, we need special handling
+        // Example: postgres://user:pass@word@host -> password is "pass@word"
+        // But URL parser will see password as "pass" and host as "word@host"
+        
+        // Try to parse as-is first (works if password is URL-encoded)
+        try {
+          const url = new URL(urlString);
+          if (url.password) {
+            const decoded = decodeURIComponent(url.password);
+            // Test if this works by checking if host looks valid
+            if (url.hostname && !url.hostname.includes('@')) {
+              return decoded;
+            }
+          }
+        } catch (e) {
+          // URL parsing failed, try manual parsing
+        }
+        
+        // Manual parsing for passwords with @ symbol
+        // Format: postgres://user:password@host:port/db
+        // If password has @, it might be: postgres://user:pass@word@host
+        // We need to find the LAST @ before the port or /
+        const dbMatch = urlString.match(/postgres:\/\/([^:]+):(.+)@([^:]+):(\d+)\/(.+)/);
+        if (dbMatch) {
+          const [, username, passwordPart, host, port, database] = dbMatch;
+          // passwordPart might contain @ symbols
+          // We need to find where password ends (before host:port)
+          // The host should not contain @, so find the last @ before host
+          const hostStart = urlString.indexOf(host);
+          const passwordEnd = urlString.lastIndexOf('@', hostStart - 1);
+          const passwordStart = urlString.indexOf(':', urlString.indexOf('://') + 3) + 1;
+          const password = urlString.substring(passwordStart, passwordEnd);
+          
           try {
             return decodeURIComponent(password);
           } catch {
@@ -47,13 +74,17 @@ function getDatabasePassword(secretName, isUAT = false) {
           }
         }
         
-        // Try standard URL parsing (works if password is URL-encoded)
-        const url = new URL(urlString);
-        if (url.password) {
-          return decodeURIComponent(url.password);
+        // Fallback: simple regex (will fail if password has @)
+        const match = urlString.match(/postgres:\/\/([^:]+):([^@]+)@/);
+        if (match) {
+          const [, username, password] = match;
+          try {
+            return decodeURIComponent(password);
+          } catch {
+            return password;
+          }
         }
       } catch (e) {
-        // Not a valid URL, continue
         console.log(`⚠️  Could not parse DATABASE_URL: ${e.message}`);
       }
     }
