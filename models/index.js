@@ -72,23 +72,23 @@ if (config.use_env_variable) {
   if (shouldDisableSSL) {
     // When using Cloud SQL Auth Proxy locally or Unix socket in Cloud Run:
     // Disable client-side SSL - the connection is already secure
-    // Completely remove SSL property (not set to false, just absent)
+    // CRITICAL: Explicitly set ssl: false (pg driver requires this, not just removal)
     const { ssl, ...dialectOptionsWithoutSsl } = finalDialectOptions;
     finalDialectOptions = {
-      ...dialectOptionsWithoutSsl
-      // SSL property is completely removed - not present at all
+      ...dialectOptionsWithoutSsl,
+      ssl: false // EXPLICITLY disable SSL for pg driver
     };
     // Ensure sslmode=disable is in the URL (start.sh already sets this, but double-check)
     if (!url.includes('sslmode=')) {
       url += (url.includes('?') ? '&' : '?') + 'sslmode=disable';
     }
-    console.log(`✅ SSL disabled for ${disableReason} connection - dialectOptions.ssl removed`);
-    console.log(`📋 Final dialectOptions (no SSL):`, JSON.stringify(finalDialectOptions, null, 2));
+    console.log(`✅ SSL disabled for ${disableReason} connection - dialectOptions.ssl set to false`);
+    console.log(`📋 Final dialectOptions (ssl: false):`, JSON.stringify(finalDialectOptions, null, 2));
   } else {
     console.log(`ℹ️ SSL enabled (not Unix socket or sslmode=disable)`);
   }
   
-  // Build final dialectOptions with keepAlive settings (but NO SSL if shouldDisableSSL)
+  // Build final dialectOptions with keepAlive settings
   finalDialectOptions = {
     ...finalDialectOptions,
     keepAlive: true,
@@ -96,11 +96,10 @@ if (config.use_env_variable) {
     keepAliveInitialDelayMillis: 0
   };
   
-  // CRITICAL: Ensure SSL is NOT in finalDialectOptions for Unix socket connections
-  if (shouldDisableSSL && finalDialectOptions.ssl !== undefined) {
-    console.warn('⚠️ WARNING: SSL property still present in finalDialectOptions! Removing it...');
-    const { ssl, ...cleanDialectOptions } = finalDialectOptions;
-    finalDialectOptions = cleanDialectOptions;
+  // CRITICAL: For Unix socket connections, ensure ssl is explicitly false
+  if (shouldDisableSSL) {
+    finalDialectOptions.ssl = false; // Force SSL to false
+    console.log(`🔒 Final check: dialectOptions.ssl = ${finalDialectOptions.ssl}`);
   }
   
   sequelize = new Sequelize(url, {
