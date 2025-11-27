@@ -25,66 +25,83 @@ class CachingService {
    * Initialize Redis and in-memory caches
    */
   async initializeCaches() {
-    try {
-      // Initialize Redis client
-      this.redisClient = redis.createClient({
-        host: process.env.REDIS_HOST || 'localhost',
-        port: process.env.REDIS_PORT || 6379,
-        password: process.env.REDIS_PASSWORD,
-        db: process.env.REDIS_DB || 0,
-        retry_strategy: (options) => {
-          if (options.error && options.error.code === 'ECONNREFUSED') {
-            console.log('⚠️ Redis connection refused, falling back to in-memory cache');
-            return false;
-          }
-          if (options.total_retry_time > 1000 * 60 * 60) {
-            console.log('⚠️ Redis retry time exhausted, falling back to in-memory cache');
-            return false;
-          }
-          if (options.attempt > 10) {
-            console.log('⚠️ Redis max retry attempts reached, falling back to in-memory cache');
-            return false;
-          }
-          return Math.min(options.attempt * 100, 3000);
-        }
-      });
+    // Initialize in-memory cache first (always available)
+    this.memoryCache = new NodeCache({
+      stdTTL: 300, // 5 minutes default TTL
+      checkperiod: 60, // Check for expired keys every minute
+      maxKeys: 1000, // Maximum 1000 keys in memory
+      useClones: false // Better performance
+    });
 
-      // Redis event handlers
-      this.redisClient.on('connect', () => {
-        console.log('✅ Redis connected successfully');
-        this.isRedisConnected = true;
-      });
+    // Only initialize Redis if explicitly configured
+    // In Cloud Run, Redis is not available by default, so we skip it
+    if ((process.env.REDIS_URL || process.env.REDIS_HOST) && process.env.REDIS_ENABLED !== 'false') {
+      try {
+        // Initialize Redis client - use REDIS_URL if available, otherwise use REDIS_HOST
+        // Redis v5 API - don't default to localhost!
+        const redisConfig = process.env.REDIS_URL ? 
+          { url: process.env.REDIS_URL } :
+          {
+            socket: {
+              host: process.env.REDIS_HOST, // Don't default to localhost!
+              port: parseInt(process.env.REDIS_PORT || '6379', 10),
+              connectTimeout: 5000,
+              reconnectStrategy: (retries) => {
+                if (retries > 3) {
+                  console.warn('⚠️ Redis max retry attempts reached, disabling Redis');
+                  this.redisClient = null;
+                  this.isRedisConnected = false;
+                  return false; // Stop retrying
+                }
+                return Math.min(retries * 200, 2000);
+              }
+            },
+            password: process.env.REDIS_PASSWORD,
+            database: parseInt(process.env.REDIS_DB || '0', 10)
+          };
 
-      this.redisClient.on('error', (err) => {
-        console.log('⚠️ Redis connection error:', err.message);
+        this.redisClient = redis.createClient(redisConfig);
+
+        // Redis event handlers
+        this.redisClient.on('connect', () => {
+          console.log('✅ Redis connected successfully');
+          this.isRedisConnected = true;
+        });
+
+        this.redisClient.on('error', (err) => {
+          console.warn('⚠️ Redis connection error:', err.message);
+          this.isRedisConnected = false;
+          // Don't crash - just disable Redis
+          this.redisClient = null;
+        });
+
+        this.redisClient.on('end', () => {
+          console.log('⚠️ Redis connection ended, using in-memory cache only');
+          this.isRedisConnected = false;
+          this.redisClient = null;
+        });
+
+        // Try to connect (non-blocking, won't crash if fails)
+        this.redisClient.connect().catch((err) => {
+          console.warn('⚠️ Redis connection failed, using in-memory cache only:', err.message);
+          this.redisClient = null;
+          this.isRedisConnected = false;
+        });
+
+        console.log('✅ Caching service initialized (Redis optional)');
+
+      } catch (error) {
+        console.warn('⚠️ Failed to initialize Redis, using in-memory cache only:', error.message);
+        this.redisClient = null;
         this.isRedisConnected = false;
-      });
-
-      this.redisClient.on('end', () => {
-        console.log('⚠️ Redis connection ended, using in-memory cache only');
-        this.isRedisConnected = false;
-      });
-
-      // Initialize in-memory cache
-      this.memoryCache = new NodeCache({
-        stdTTL: 300, // 5 minutes default TTL
-        checkperiod: 60, // Check for expired keys every minute
-        maxKeys: 1000, // Maximum 1000 keys in memory
-        useClones: false // Better performance
-      });
-
-      console.log('✅ Caching service initialized successfully');
-
-    } catch (error) {
-      console.error('❌ Failed to initialize caching service:', error);
-      // Fallback to in-memory cache only
-      this.memoryCache = new NodeCache({
-        stdTTL: 300,
-        checkperiod: 60,
-        maxKeys: 1000,
-        useClones: false
-      });
+      }
+    } else {
+      console.log('ℹ️ Redis disabled for CachingService (REDIS_URL/REDIS_HOST not set or REDIS_ENABLED=false)');
+      this.redisClient = null;
+      this.isRedisConnected = false;
     }
+
+    console.log('✅ Caching service initialized successfully');
   }
 
   /**
@@ -364,9 +381,13 @@ class CachingService {
       if (this.redisClient) {
         await this.redisClient.quit();
         console.log('✅ Redis connection closed');
+        this.redisClient = null;
+        this.isRedisConnected = false;
       }
     } catch (error) {
-      console.error('❌ Error closing Redis connection:', error);
+      console.warn('⚠️ Error closing Redis connection:', error.message);
+      this.redisClient = null;
+      this.isRedisConnected = false;
     }
   }
 }
