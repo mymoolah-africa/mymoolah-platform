@@ -1,6 +1,8 @@
 // controllers/authController.js
 
 const { User, Wallet } = require('../models'); // Use Sequelize models
+const { Sequelize } = require('sequelize');
+const { Op } = Sequelize;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -237,8 +239,7 @@ class AuthController {
       const uniqueFormats = [...new Set(phoneFormats)];
       console.log(`🔍 [LOGIN] Searching for user with phone formats: ${uniqueFormats.join(', ')}`);
       
-      // Use Sequelize Op.or to search all formats at once (more efficient)
-      const { Op } = require('sequelize');
+      // Use Sequelize Op.in to search all formats at once (more efficient)
       const user = await User.findOne({ 
         where: { 
           phoneNumber: {
