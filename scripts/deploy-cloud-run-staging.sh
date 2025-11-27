@@ -116,14 +116,10 @@ EOF
 deploy_service() {
   log "Deploying Cloud Run service: ${SERVICE_NAME}"
   
-  # Construct DATABASE_URL before deployment
-  local database_url=$(construct_database_url_from_secret)
-  if [ -z "${database_url}" ]; then
-    error "Failed to construct DATABASE_URL"
-    return 1
-  fi
+  # Note: DATABASE_URL is constructed at runtime in start.sh from DB_PASSWORD and CLOUD_SQL_INSTANCE
+  # This avoids URL encoding issues when passing through gcloud CLI
   
-  log "Deploying with DATABASE_URL configured..."
+  log "Deploying service..."
   
   gcloud run deploy "${SERVICE_NAME}" \
     --image "${IMAGE_NAME}" \
