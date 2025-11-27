@@ -26,7 +26,37 @@ const STAGING_DATABASE = 'mymoolah_staging';
 const STAGING_USER = 'mymoolah_app';
 
 // Get database passwords
-function getDatabasePassword(secretName) {
+function getDatabasePassword(secretName, isUAT = false) {
+  // For UAT, try environment variable first, then Secret Manager
+  if (isUAT) {
+    // Try DATABASE_URL from .env
+    if (process.env.DATABASE_URL) {
+      try {
+        const url = new URL(process.env.DATABASE_URL);
+        if (url.password) {
+          return decodeURIComponent(url.password);
+        }
+      } catch (e) {
+        // Not a valid URL, continue
+      }
+    }
+    
+    // Try DB_PASSWORD or DATABASE_PASSWORD env vars
+    if (process.env.DB_PASSWORD) {
+      return process.env.DB_PASSWORD;
+    }
+    if (process.env.DATABASE_PASSWORD) {
+      return process.env.DATABASE_PASSWORD;
+    }
+    
+    // Try to get from Cloud SQL user directly (if we have access)
+    console.log('⚠️  UAT password not found in environment variables');
+    console.log('   Please set DB_PASSWORD or DATABASE_URL environment variable');
+    console.log('   Or provide UAT password when prompted');
+    process.exit(1);
+  }
+  
+  // For staging, get from Secret Manager
   const { execSync } = require('child_process');
   try {
     return execSync(
@@ -52,8 +82,8 @@ console.log('');
 
 // Get passwords
 console.log('📋 Retrieving database passwords...');
-const uatPassword = getDatabasePassword('db-mmtp-pg-password');
-const stagingPassword = getDatabasePassword('db-mmtp-pg-staging-password');
+const uatPassword = getDatabasePassword('db-mmtp-pg-password', true); // UAT - try env vars first
+const stagingPassword = getDatabasePassword('db-mmtp-pg-staging-password', false); // Staging - from Secret Manager
 
 // Determine proxy ports (UAT typically uses 5433, staging uses 5434)
 const UAT_PROXY_PORT = process.env.UAT_PROXY_PORT || '5433';
