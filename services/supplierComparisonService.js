@@ -268,7 +268,7 @@ class SupplierComparisonService {
 
             const flashTrending = await FlashProduct.findAll({
                 where: whereClause,
-                order: [['isPromotional', 'DESC'], ['commission', 'ASC']],
+                order: [['commission', 'ASC']], // FlashProduct doesn't have isPromotional column
                 limit: 5
             });
 

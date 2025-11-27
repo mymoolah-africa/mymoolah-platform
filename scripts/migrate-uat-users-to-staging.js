@@ -312,8 +312,114 @@ async function migrateUsers() {
     if (includeWallets) {
       console.log('');
       console.log('📦 Migrating wallets...');
-      // TODO: Implement wallet migration
-      console.log('   ⚠️  Wallet migration not yet implemented');
+      
+      // Get wallets from UAT for migrated users
+      const migratedUserIds = usersToMigrate.map(u => u.id);
+      const [uatWallets] = await uatSequelize.query(`
+        SELECT w.* FROM wallets w
+        INNER JOIN users u ON w."userId" = u.id
+        WHERE u.id IN (:userIds)
+      `, {
+        replacements: { userIds: migratedUserIds }
+      });
+      
+      console.log(`📊 Found ${uatWallets.length} wallets to migrate`);
+      
+      if (uatWallets.length > 0) {
+        // Get staging user IDs (they might have different IDs)
+        const [stagingUsers] = await stagingSequelize.query(`
+          SELECT id, email, "phoneNumber" FROM users
+        `);
+        const userMap = new Map();
+        stagingUsers.forEach(u => {
+          userMap.set(u.email.toLowerCase(), u.id);
+          if (u.phoneNumber) {
+            userMap.set(u.phoneNumber, u.id);
+          }
+        });
+        
+        let walletsMigrated = 0;
+        let walletsSkipped = 0;
+        
+        for (const uatWallet of uatWallets) {
+          try {
+            // Find corresponding staging user
+            const [uatUser] = await uatSequelize.query(`
+              SELECT email, "phoneNumber" FROM users WHERE id = :userId
+            `, {
+              replacements: { userId: uatWallet.userId }
+            });
+            
+            if (uatUser.length === 0) continue;
+            
+            const stagingUserId = userMap.get(uatUser[0].email.toLowerCase()) || 
+                                  userMap.get(uatUser[0].phoneNumber);
+            
+            if (!stagingUserId) {
+              walletsSkipped++;
+              continue;
+            }
+            
+            // Check if wallet already exists
+            const [existing] = await stagingSequelize.query(`
+              SELECT id FROM wallets WHERE "userId" = :userId OR "walletId" = :walletId
+            `, {
+              replacements: { userId: stagingUserId, walletId: uatWallet.walletId }
+            });
+            
+            if (existing.length > 0) {
+              walletsSkipped++;
+              continue;
+            }
+            
+            // Migrate wallet
+            await stagingSequelize.query(`
+              INSERT INTO wallets (
+                "walletId", "userId", balance, currency, status,
+                "kycVerified", "kycVerifiedAt", "kycVerifiedBy",
+                "dailyLimit", "monthlyLimit", "dailySpent", "monthlySpent",
+                "lastTransactionAt", "createdAt", "updatedAt"
+              ) VALUES (
+                :walletId, :userId, :balance, :currency, :status,
+                :kycVerified, :kycVerifiedAt, :kycVerifiedBy,
+                :dailyLimit, :monthlyLimit, :dailySpent, :monthlySpent,
+                :lastTransactionAt, :createdAt, :updatedAt
+              )
+            `, {
+              replacements: {
+                walletId: uatWallet.walletId,
+                userId: stagingUserId,
+                balance: uatWallet.balance || 0,
+                currency: uatWallet.currency || 'ZAR',
+                status: uatWallet.status || 'active',
+                kycVerified: uatWallet.kycVerified || false,
+                kycVerifiedAt: uatWallet.kycVerifiedAt,
+                kycVerifiedBy: uatWallet.kycVerifiedBy,
+                dailyLimit: uatWallet.dailyLimit || 100000.00,
+                monthlyLimit: uatWallet.monthlyLimit || 1000000.00,
+                dailySpent: uatWallet.dailySpent || 0,
+                monthlySpent: uatWallet.monthlySpent || 0,
+                lastTransactionAt: uatWallet.lastTransactionAt,
+                createdAt: uatWallet.createdAt || uatWallet.created_at,
+                updatedAt: uatWallet.updatedAt || uatWallet.updated_at
+              }
+            });
+            
+            walletsMigrated++;
+            if (walletsMigrated % 5 === 0) {
+              console.log(`   ✅ Migrated ${walletsMigrated}/${uatWallets.length} wallets...`);
+            }
+          } catch (error) {
+            console.error(`   ❌ Failed to migrate wallet ${uatWallet.walletId}: ${error.message}`);
+          }
+        }
+        
+        console.log(`✅ Wallet migration complete!`);
+        console.log(`   Migrated: ${walletsMigrated} wallets`);
+        if (walletsSkipped > 0) {
+          console.log(`   Skipped: ${walletsSkipped} wallets (already exist or user not found)`);
+        }
+      }
     }
 
   } catch (error) {
