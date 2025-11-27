@@ -138,7 +138,7 @@ if (config.use_env_variable) {
   
   // CRITICAL: For Unix socket connections, parse URL and use explicit connection parameters
   // This ensures SSL is completely disabled at the pg driver level
-  let sequelize;
+  // NOTE: Use outer sequelize variable (declared at top of file), don't redeclare
   
   // CRITICAL: For Unix socket connections, ALWAYS use explicit parameters
   // This completely bypasses URL parsing and config.json SSL settings
