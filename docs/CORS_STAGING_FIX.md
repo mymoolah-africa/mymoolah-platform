@@ -1,67 +1,43 @@
-# CORS Preflight Fix for Staging Environment
+# CORS Staging Fix - RESOLVED
 
-## Issue
-Staging wallet frontend (`https://stagingwallet.mymoolah.africa`) cannot make API calls to staging backend (`https://staging.mymoolah.africa`) due to CORS preflight (OPTIONS) requests being blocked by Cloud Run IAM.
+## Issue (RESOLVED ✅)
+
+Staging wallet frontend (`https://stagingwallet.mymoolah.africa`) could not make API calls to staging backend (`https://staging.mymoolah.africa`) due to CORS preflight (OPTIONS) requests being blocked.
 
 ## Root Cause
-1. **Organization Policy**: "Domain restricted sharing" (`iam.allowedPolicyMemberDomains`) is **Active**
-2. **Cloud Run IAM**: Cannot add `allUsers` to Cloud Run service due to organization policy
-3. **CORS Preflight**: Browser sends OPTIONS request before actual API call, but Cloud Run IAM blocks it with 403
 
-## Banking-Grade Solution
+1. **Cloud Run IAM**: Blocked unauthenticated OPTIONS requests (CORS preflight)
+2. **Organization Policy**: Initially prevented adding `allUsers` to Cloud Run service
+3. **Redis Connection Errors**: Caused 500 errors on login endpoint
 
-### Option 1: Request Organization Policy Exception (Recommended)
+## Final Solution (Implemented)
 
-Request an exception to the "Domain restricted sharing" policy that allows `allUsers` for Cloud Run services, but only for OPTIONS requests (CORS preflight).
+### 1. Organization Policy Exception
+- Updated "Domain restricted sharing" policy to allow `allUsers` for Cloud Run services
+- This allows OPTIONS requests (metadata-only, no sensitive data)
 
-**Steps:**
-1. Go to Google Cloud Console → IAM & Admin → Organization Policies
-2. Find "Domain restricted sharing" policy
-3. Click "Manage policy"
-4. Add exception for project `mymoolah-db`
-5. Scope: Cloud Run services only
-6. Note: This allows OPTIONS requests (metadata only), actual API calls still require authentication
+### 2. Cloud Run IAM Configuration
+- Added `allUsers` with `roles/run.invoker` to `mymoolah-backend-staging`
+- Allows unauthenticated OPTIONS requests to reach the backend
+- Actual API calls (POST, GET, etc.) still require JWT authentication
 
-**Security Note**: OPTIONS requests are metadata-only (no sensitive data). Actual API calls (POST, GET, etc.) still require authentication via JWT tokens.
+### 3. Backend CORS Configuration
+- CORS configured in `config/security.js` and `server.js`
+- Backend validates origins and sets appropriate CORS headers
+- Works correctly with Cloud Run IAM
 
-### Option 2: Use Cloud Endpoints or API Gateway
-
-Configure Cloud Endpoints or API Gateway to handle CORS preflight at the edge before Cloud Run IAM.
-
-**Pros:**
-- Handles CORS at edge (before Cloud Run)
-- Maintains Cloud Run authentication for actual API calls
-- Banking-grade security
-
-**Cons:**
-- More complex setup
-- Additional cost
-- Requires API Gateway configuration
-
-### Option 3: Use Service Account Authentication (Not Recommended)
-
-Configure frontend to authenticate with a service account. **Not recommended** because:
-- Service account keys should not be exposed in frontend
-- Not suitable for browser-based applications
-- Security risk
+### 4. Redis Made Optional
+- Fixed Redis connection errors that caused 500 errors
+- `ProductCatalogService` and `BankingGradeSupportService` now gracefully degrade when Redis is unavailable
+- Services continue to work without Redis (no caching, but functional)
 
 ## Current Status
 
-- ✅ Backend CORS configuration is correct (`config/security.js`)
-- ✅ CORS headers configured at load balancer level
-- ✅ Backend handles OPTIONS requests properly
-- ❌ Cloud Run IAM blocks OPTIONS requests before they reach backend
-- ❌ Organization policy prevents adding `allUsers` to Cloud Run
-
-## Next Steps
-
-1. **Immediate**: Request organization policy exception for OPTIONS requests
-2. **Alternative**: Implement Cloud Endpoints/API Gateway solution
-3. **Testing**: Once fixed, test login flow from `https://stagingwallet.mymoolah.africa`
+✅ **RESOLVED** - CORS preflight requests work correctly
+✅ **RESOLVED** - Login endpoint works without Redis connection errors
+✅ **RESOLVED** - All troubleshooting artifacts cleaned up
 
 ## Testing
-
-After implementing the fix:
 
 ```bash
 # Test CORS preflight
@@ -75,9 +51,22 @@ curl -X OPTIONS \
 # Should return: HTTP/2 204 with CORS headers
 ```
 
+## Security Notes
+
+- ✅ OPTIONS requests are metadata-only (no sensitive data)
+- ✅ Backend CORS middleware validates origins
+- ✅ Actual API calls (POST, GET, PUT, DELETE) require JWT authentication
+- ✅ Standard banking practice for CORS implementation
+
+## Cleanup Completed
+
+- ✅ Removed unused Cloud Function (`cors-preflight-handler`)
+- ✅ Removed Cloud Armor policy (`allow-options-policy`)
+- ✅ Removed unused troubleshooting scripts
+- ✅ Updated documentation
+
 ## References
 
 - [Cloud Run IAM Documentation](https://cloud.google.com/run/docs/securing/managing-access)
 - [Organization Policy Documentation](https://cloud.google.com/resource-manager/docs/organization-policy/overview)
 - [CORS Preflight Requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS#preflighted_requests)
-
