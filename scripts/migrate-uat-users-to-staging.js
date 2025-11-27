@@ -380,12 +380,12 @@ async function migrateUsers() {
                 "walletId", "userId", balance, currency, status,
                 "kycVerified", "kycVerifiedAt", "kycVerifiedBy",
                 "dailyLimit", "monthlyLimit", "dailySpent", "monthlySpent",
-                "lastTransactionAt", "createdAt", "updatedAt"
+                "lastTransactionAt", created_at, updated_at
               ) VALUES (
                 :walletId, :userId, :balance, :currency, :status,
                 :kycVerified, :kycVerifiedAt, :kycVerifiedBy,
                 :dailyLimit, :monthlyLimit, :dailySpent, :monthlySpent,
-                :lastTransactionAt, :createdAt, :updatedAt
+                :lastTransactionAt, :created_at, :updated_at
               )
             `, {
               replacements: {
@@ -402,8 +402,8 @@ async function migrateUsers() {
                 dailySpent: uatWallet.dailySpent || 0,
                 monthlySpent: uatWallet.monthlySpent || 0,
                 lastTransactionAt: uatWallet.lastTransactionAt,
-                createdAt: uatWallet.createdAt || uatWallet.created_at,
-                updatedAt: uatWallet.updatedAt || uatWallet.updated_at
+                created_at: uatWallet.created_at || uatWallet.createdAt || new Date(),
+                updated_at: uatWallet.updated_at || uatWallet.updatedAt || new Date()
               }
             });
             
