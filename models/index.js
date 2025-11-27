@@ -135,31 +135,72 @@ if (config.use_env_variable) {
     console.log(`ℹ️ SSL enabled (not Unix socket or sslmode=disable)`);
   }
   
-  // CRITICAL: Create Sequelize with ONLY the options we want, preventing any merge from config.json
-  // Don't spread config - explicitly set only what we need
-  // CRITICAL: For Unix sockets, ensure dialectOptions.ssl is explicitly undefined/absent
-  const sequelizeOptions = {
-    dialect: 'postgres', // Explicitly set dialect
-    // Optimized connection pool for Cloud SQL Auth Proxy
-    pool: { 
-      max: 20, 
-      min: 2,  // Keep 2 connections warm to avoid cold starts
-      acquire: 30000, 
-      idle: 30000,  // Increased from 10s to 30s to reduce connection churn
-      evict: 10000  // Check for idle connections every 10s
-    },
-    dialectOptions: finalDialectOptions, // Use ONLY our final dialectOptions (no merge from config.json, no ssl for Unix sockets)
-    logging: false
-  };
+  // CRITICAL: For Unix socket connections, parse URL and use explicit connection parameters
+  // This ensures SSL is completely disabled at the pg driver level
+  let sequelize;
   
-  // CRITICAL: If SSL should be disabled, ensure dialectOptions.ssl is explicitly false
-  if (shouldDisableSSL) {
-    sequelizeOptions.dialectOptions.ssl = false;
-    console.log(`🔒 Explicitly set ssl: false in dialectOptions before Sequelize creation`);
-    process.stderr.write(`🔒 Explicitly set ssl: false in dialectOptions before Sequelize creation\n`);
+  if (shouldDisableSSL && url.includes('/cloudsql/')) {
+    // Parse URL for Unix socket connection
+    const urlMatch = url.match(/postgres:\/\/([^:]+):([^@]+)@\/([^?]+)\?host=([^&]+)/);
+    if (urlMatch) {
+      const [, username, password, database, socketPath] = urlMatch;
+      console.log(`📋 Using explicit Unix socket connection parameters`);
+      process.stderr.write(`📋 Using explicit Unix socket connection parameters\n`);
+      
+      sequelize = new Sequelize(database, username, password, {
+        dialect: 'postgres',
+        host: socketPath, // Unix socket path
+        dialectOptions: {
+          ...finalDialectOptions,
+          ssl: false // EXPLICITLY disable SSL
+        },
+        pool: { 
+          max: 20, 
+          min: 2,
+          acquire: 30000, 
+          idle: 30000,
+          evict: 10000
+        },
+        logging: false
+      });
+      
+      console.log(`✅ Sequelize created with explicit Unix socket parameters (SSL disabled)`);
+      process.stderr.write(`✅ Sequelize created with explicit Unix socket parameters (SSL disabled)\n`);
+    } else {
+      // Fallback to URL if parsing fails
+      console.log(`⚠️ Could not parse URL, using URL string with ssl: false`);
+      process.stderr.write(`⚠️ Could not parse URL, using URL string with ssl: false\n`);
+      sequelize = new Sequelize(url, {
+        dialect: 'postgres',
+        dialectOptions: {
+          ...finalDialectOptions,
+          ssl: false
+        },
+        pool: { 
+          max: 20, 
+          min: 2,
+          acquire: 30000, 
+          idle: 30000,
+          evict: 10000
+        },
+        logging: false
+      });
+    }
+  } else {
+    // Standard connection (not Unix socket)
+    sequelize = new Sequelize(url, {
+      dialect: 'postgres',
+      dialectOptions: finalDialectOptions,
+      pool: { 
+        max: 20, 
+        min: 2,
+        acquire: 30000, 
+        idle: 30000,
+        evict: 10000
+      },
+      logging: false
+    });
   }
-  
-  sequelize = new Sequelize(url, sequelizeOptions);
   
   // Final verification log
   if (shouldDisableSSL) {
