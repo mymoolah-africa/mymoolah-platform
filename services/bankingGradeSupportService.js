@@ -105,7 +105,6 @@ class BankingGradeSupportService {
             shouldDisableSSL = true;
             disableReason = isUnixSocket ? 'Unix socket' : (isLocalProxy ? 'local proxy' : 'sslmode=disable');
           }
-        }
         } catch (urlError) {
           // If URL parsing fails, check for Unix socket indicators
           if (dbUrl.includes('/cloudsql/') || dbUrl.includes('sslmode=disable')) {
