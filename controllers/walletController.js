@@ -417,8 +417,27 @@ class WalletController {
       const { cursor, limit = 10 } = req.query;
       const { Op } = require('sequelize');
 
-      // Build where clause for keyset pagination
-      const whereClause = { userId: userId };
+      // First, get the user's wallet to get walletId
+      const wallet = await Wallet.findOne({
+        where: { userId: userId }
+      });
+
+      if (!wallet) {
+        return res.status(404).json({
+          success: false,
+          message: 'Wallet not found'
+        });
+      }
+
+      // Build where clause for keyset pagination - use walletId instead of userId
+      // Query transactions where walletId matches (or senderWalletId/receiverWalletId for transfers)
+      const whereClause = {
+        [Op.or]: [
+          { walletId: wallet.walletId },
+          { senderWalletId: wallet.walletId },
+          { receiverWalletId: wallet.walletId }
+        ]
+      };
       if (cursor) {
         // Parse cursor (ISO timestamp string)
         const cursorDate = new Date(cursor);
