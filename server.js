@@ -226,9 +226,14 @@ app.get('/test', (req, res) => {
 });
 
 // Enhanced Rate Limiting Middleware
+// CRITICAL: Temporarily disable trust proxy during rate limiter initialization
+// express-rate-limit validates trust proxy during initialization, even with validate: { trustProxy: false }
+// We'll set it back to 1 after creating the rate limiters
+const originalTrustProxy = app.get('trust proxy');
+app.set('trust proxy', false);
+
 // With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
 // Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
-// With trust proxy: 1, Express correctly sets req.ip to the client IP
 const limiter = rateLimit({
   windowMs: config.rateLimits.general.windowMs,
   max: config.rateLimits.general.max,
@@ -250,12 +255,7 @@ const limiter = rateLimit({
   }
 });
 
-// Apply rate limiting to all routes
-app.use(limiter);
-
 // Stricter rate limiting for authentication endpoints
-// With trust proxy: 1, Express correctly sets req.ip to the client IP
-// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
 const authLimiter = rateLimit({
   windowMs: config.rateLimits.auth.windowMs,
   max: config.rateLimits.auth.max,
@@ -277,8 +277,6 @@ const authLimiter = rateLimit({
 });
 
 // Financial transaction rate limiting
-// With trust proxy: 1, Express correctly sets req.ip to the client IP
-// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
 const financialLimiter = rateLimit({
   windowMs: config.rateLimits.financial.windowMs,
   max: config.rateLimits.financial.max,
@@ -298,6 +296,12 @@ const financialLimiter = rateLimit({
     });
   }
 });
+
+// CRITICAL: Restore trust proxy setting after rate limiters are created
+app.set('trust proxy', originalTrustProxy || 1);
+
+// Apply rate limiting to all routes
+app.use(limiter);
 
 // Input Validation Middleware
 const validateRequest = (req, res, next) => {
