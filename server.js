@@ -227,12 +227,16 @@ app.get('/test', (req, res) => {
 
 // Enhanced Rate Limiting Middleware
 // With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
+// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
 const limiter = rateLimit({
   windowMs: config.rateLimits.general.windowMs,
   max: config.rateLimits.general.max,
   message: config.rateLimits.general.message,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+  },
   // In development, and for CORS preflight, skip limiting to avoid false CORS failures during polling
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
@@ -249,12 +253,16 @@ app.use(limiter);
 
 // Stricter rate limiting for authentication endpoints
 // With trust proxy: 1, Express correctly sets req.ip to the client IP
+// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
 const authLimiter = rateLimit({
   windowMs: config.rateLimits.auth.windowMs,
   max: config.rateLimits.auth.max,
   message: config.rateLimits.auth.message,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+  },
   keyGenerator: (req) => req.ip + '-auth',
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {
@@ -268,12 +276,16 @@ const authLimiter = rateLimit({
 
 // Financial transaction rate limiting
 // With trust proxy: 1, Express correctly sets req.ip to the client IP
+// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
 const financialLimiter = rateLimit({
   windowMs: config.rateLimits.financial.windowMs,
   max: config.rateLimits.financial.max,
   message: config.rateLimits.financial.message,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+  },
   keyGenerator: (req) => req.ip + '-financial',
   skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
   handler: (req, res) => {

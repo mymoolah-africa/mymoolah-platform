@@ -11,10 +11,14 @@ const userFavoritesController = new UserFavoritesController();
 
 // Rate limiting configuration
 // With trust proxy: 1, Express correctly sets req.ip to the client IP (after the first proxy)
+// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
 const standardLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many requests from this IP, please try again later.',
+  validate: {
+    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+  },
   keyGenerator: (req) => req.ip,
 });
 

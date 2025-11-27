@@ -9,12 +9,16 @@ const { body } = require('express-validator');
 const authController = new AuthController();
 
 // Rate limiting for authentication endpoints
+// Disable express-rate-limit's trust proxy validation (Express returns true even when set to 1)
 const loginLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // limit each IP to 5 login requests per windowMs
   message: 'Too many login attempts from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+  },
 });
 
 const generalLimit = rateLimit({
@@ -23,6 +27,9 @@ const generalLimit = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable validation - we handle proxy correctly with trust proxy: 1
+  },
 });
 
 // Validation schemas
