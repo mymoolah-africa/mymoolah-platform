@@ -31,13 +31,18 @@ if (config.use_env_variable) {
     if (isLocalProxy || isUnixSocket) {
       // When using Cloud SQL Auth Proxy locally or Unix socket in Cloud Run:
       // Disable client-side SSL - the connection is already secure
-      // Deep clone to avoid mutating the original config
+      // Deep clone to avoid mutating the original config and completely remove SSL
       const { ssl, ...dialectOptionsWithoutSsl } = options.dialectOptions || {};
-      options.dialectOptions = dialectOptionsWithoutSsl;
+      // Create new dialectOptions WITHOUT ssl property (not set to false, just absent)
+      options.dialectOptions = {
+        ...dialectOptionsWithoutSsl
+        // SSL property is completely removed - not present at all
+      };
       // Ensure sslmode=disable is in the URL (start.sh already sets this, but double-check)
       if (!url.includes('sslmode=')) {
         url += (url.includes('?') ? '&' : '?') + 'sslmode=disable';
       }
+      console.log('✅ SSL disabled for Unix socket connection - dialectOptions.ssl removed');
     }
   } catch (_) {
     // Ignore URL parse errors; fall back to defaults
