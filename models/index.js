@@ -11,7 +11,7 @@ const db = {};
 
 let sequelize;
 if (config.use_env_variable) {
-  const url = process.env[config.use_env_variable];
+  let url = process.env[config.use_env_variable];
   
   // Validate DATABASE_URL is set
   if (!url) {
@@ -31,8 +31,12 @@ if (config.use_env_variable) {
     if (isLocalProxy || isUnixSocket) {
       // When using Cloud SQL Auth Proxy locally or Unix socket in Cloud Run:
       // Disable client-side SSL - the connection is already secure
-      if (options.dialectOptions && options.dialectOptions.ssl) {
-        delete options.dialectOptions.ssl;
+      // Deep clone to avoid mutating the original config
+      const { ssl, ...dialectOptionsWithoutSsl } = options.dialectOptions || {};
+      options.dialectOptions = dialectOptionsWithoutSsl;
+      // Ensure sslmode=disable is in the URL (start.sh already sets this, but double-check)
+      if (!url.includes('sslmode=')) {
+        url += (url.includes('?') ? '&' : '?') + 'sslmode=disable';
       }
     }
   } catch (_) {
