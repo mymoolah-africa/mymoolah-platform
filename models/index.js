@@ -24,6 +24,12 @@ if (config.use_env_variable) {
   const options = { ...config };
   
   // Check if SSL should be disabled (Unix socket, local proxy, or sslmode=disable in URL)
+  // CRITICAL: Log DATABASE_URL format for debugging (redact password)
+  const urlForLogging = url.replace(/:[^:@]+@/, ':****@');
+  console.log(`📋 DATABASE_URL format: ${urlForLogging.substring(0, 100)}...`);
+  console.log(`📋 DATABASE_URL includes /cloudsql/: ${url.includes('/cloudsql/')}`);
+  console.log(`📋 DATABASE_URL includes sslmode=disable: ${url.includes('sslmode=disable')}`);
+  
   let shouldDisableSSL = false;
   let disableReason = '';
   
@@ -33,6 +39,8 @@ if (config.use_env_variable) {
     const isLocalProxy = host === '127.0.0.1' || host === 'localhost';
     const isUnixSocket = !host || host === '' || url.includes('/cloudsql/');
     const hasSslModeDisable = url.includes('sslmode=disable');
+    
+    console.log(`📋 URL parsing succeeded - host: "${host}", isUnixSocket: ${isUnixSocket}, hasSslModeDisable: ${hasSslModeDisable}`);
     
     if (isLocalProxy) {
       shouldDisableSSL = true;
@@ -46,11 +54,15 @@ if (config.use_env_variable) {
     }
   } catch (urlError) {
     // If URL parsing fails, check for Unix socket indicators in the raw URL
+    console.log(`📋 URL parsing failed (expected for Unix socket): ${urlError.message}`);
     if (url.includes('/cloudsql/') || url.includes('sslmode=disable')) {
       shouldDisableSSL = true;
       disableReason = 'Unix socket indicator or sslmode=disable detected';
+      console.log(`✅ SSL detection: ${disableReason}`);
     }
   }
+  
+  console.log(`📋 SSL detection result: shouldDisableSSL=${shouldDisableSSL}, reason="${disableReason}"`);
   
   // Disable SSL if needed
   // CRITICAL: Remove dialectOptions from options BEFORE spreading, to prevent Sequelize from merging SSL
