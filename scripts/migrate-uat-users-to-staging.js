@@ -32,12 +32,29 @@ function getDatabasePassword(secretName, isUAT = false) {
     // Try DATABASE_URL from .env
     if (process.env.DATABASE_URL) {
       try {
-        const url = new URL(process.env.DATABASE_URL);
+        const urlString = process.env.DATABASE_URL;
+        // Handle postgres://user:pass@host format
+        // URL parsing handles @ in password correctly if password is URL-encoded
+        // But if password contains @ and is not encoded, we need to parse manually
+        const match = urlString.match(/postgres:\/\/([^:]+):([^@]+)@/);
+        if (match) {
+          const [, username, password] = match;
+          // Decode if URL-encoded, otherwise use as-is
+          try {
+            return decodeURIComponent(password);
+          } catch {
+            return password;
+          }
+        }
+        
+        // Try standard URL parsing (works if password is URL-encoded)
+        const url = new URL(urlString);
         if (url.password) {
           return decodeURIComponent(url.password);
         }
       } catch (e) {
         // Not a valid URL, continue
+        console.log(`⚠️  Could not parse DATABASE_URL: ${e.message}`);
       }
     }
     
