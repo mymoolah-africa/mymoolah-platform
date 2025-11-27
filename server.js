@@ -233,6 +233,9 @@ const limiter = rateLimit({
   message: config.rateLimits.general.message,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
+  },
   // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
   // Cloud Load Balancer sets X-Forwarded-For with client IP as first value
   keyGenerator: (req) => {
@@ -265,6 +268,9 @@ const authLimiter = rateLimit({
   message: config.rateLimits.auth.message,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
+  },
   // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
   keyGenerator: (req) => {
     const forwarded = req.headers['x-forwarded-for'];
@@ -290,6 +296,9 @@ const financialLimiter = rateLimit({
   message: config.rateLimits.financial.message,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
+  },
   // Custom keyGenerator to extract IP from headers (avoids trust proxy validation)
   keyGenerator: (req) => {
     const forwarded = req.headers['x-forwarded-for'];

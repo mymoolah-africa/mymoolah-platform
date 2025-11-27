@@ -20,6 +20,9 @@ const authLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
+  },
   keyGenerator: (req) => getClientIP(req) + '-auth',
 });
 
@@ -33,6 +36,9 @@ const apiLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
+  },
   keyGenerator: getClientIP,
 });
 

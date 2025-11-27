@@ -27,6 +27,9 @@ const catalogSyncLimit = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: {
+    trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
+  },
   keyGenerator: getClientIP,
 });
 

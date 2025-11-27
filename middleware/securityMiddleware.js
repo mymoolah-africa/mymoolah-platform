@@ -30,6 +30,9 @@ const createRateLimit = (windowMs, max, message, keyGenerator = null) => {
       message: message || 'Too many requests, please try again later.',
       retryAfter: Math.ceil(windowMs / 1000)
     },
+    validate: {
+      trustProxy: false // Disable trust proxy validation (we use manual IP extraction)
+    },
     keyGenerator: keyGenerator || ((req) => {
       // Manually extract IP from X-Forwarded-For header (avoids trust proxy validation)
       // Cloud Load Balancer sets X-Forwarded-For with client IP as first value
