@@ -20,42 +20,60 @@ if (config.use_env_variable) {
     throw new Error(`${config.use_env_variable} environment variable is required but not set`);
   }
   
-  // Check if SSL should be disabled (Unix socket, local proxy, or sslmode=disable in URL)
-  // CRITICAL: Log DATABASE_URL format for debugging (redact password)
-  const urlForLogging = url.replace(/:[^:@]+@/, ':****@');
-  console.log(`📋 DATABASE_URL format: ${urlForLogging.substring(0, 100)}...`);
-  console.log(`📋 DATABASE_URL includes /cloudsql/: ${url.includes('/cloudsql/')}`);
-  console.log(`📋 DATABASE_URL includes sslmode=disable: ${url.includes('sslmode=disable')}`);
-  
+  // CRITICAL: Check DB_SSL environment variable first (most explicit and reliable)
+  // If DB_SSL is explicitly set to false, disable SSL immediately
+  const dbSslEnv = process.env.DB_SSL;
   let shouldDisableSSL = false;
   let disableReason = '';
   
-  try {
-    const parsed = new URL(url);
-    const host = (parsed.hostname || '').toLowerCase();
-    const isLocalProxy = host === '127.0.0.1' || host === 'localhost';
-    const isUnixSocket = !host || host === '' || url.includes('/cloudsql/');
-    const hasSslModeDisable = url.includes('sslmode=disable');
-    
-    console.log(`📋 URL parsing succeeded - host: "${host}", isUnixSocket: ${isUnixSocket}, hasSslModeDisable: ${hasSslModeDisable}`);
-    
-    if (isLocalProxy) {
+  if (dbSslEnv !== undefined) {
+    // DB_SSL is set - use it explicitly
+    const dbSslValue = dbSslEnv.toString().toLowerCase().trim();
+    if (dbSslValue === 'false' || dbSslValue === '0' || dbSslValue === 'no' || dbSslValue === 'disable') {
       shouldDisableSSL = true;
-      disableReason = 'local proxy';
-    } else if (isUnixSocket) {
-      shouldDisableSSL = true;
-      disableReason = 'Unix socket';
-    } else if (hasSslModeDisable) {
-      shouldDisableSSL = true;
-      disableReason = 'sslmode=disable in URL';
+      disableReason = 'DB_SSL environment variable set to false';
+      console.log(`✅ SSL disabled via DB_SSL environment variable: ${dbSslEnv}`);
+    } else {
+      console.log(`ℹ️ DB_SSL environment variable set to: ${dbSslEnv} (SSL enabled)`);
     }
-  } catch (urlError) {
-    // If URL parsing fails, check for Unix socket indicators in the raw URL
-    console.log(`📋 URL parsing failed (expected for Unix socket): ${urlError.message}`);
-    if (url.includes('/cloudsql/') || url.includes('sslmode=disable')) {
-      shouldDisableSSL = true;
-      disableReason = 'Unix socket indicator or sslmode=disable detected';
-      console.log(`✅ SSL detection: ${disableReason}`);
+  }
+  
+  // If DB_SSL not set, fall back to URL-based detection
+  if (!shouldDisableSSL) {
+    // Check if SSL should be disabled (Unix socket, local proxy, or sslmode=disable in URL)
+    // CRITICAL: Log DATABASE_URL format for debugging (redact password)
+    const urlForLogging = url.replace(/:[^:@]+@/, ':****@');
+    console.log(`📋 DATABASE_URL format: ${urlForLogging.substring(0, 100)}...`);
+    console.log(`📋 DATABASE_URL includes /cloudsql/: ${url.includes('/cloudsql/')}`);
+    console.log(`📋 DATABASE_URL includes sslmode=disable: ${url.includes('sslmode=disable')}`);
+    
+    try {
+      const parsed = new URL(url);
+      const host = (parsed.hostname || '').toLowerCase();
+      const isLocalProxy = host === '127.0.0.1' || host === 'localhost';
+      const isUnixSocket = !host || host === '' || url.includes('/cloudsql/');
+      const hasSslModeDisable = url.includes('sslmode=disable');
+      
+      console.log(`📋 URL parsing succeeded - host: "${host}", isUnixSocket: ${isUnixSocket}, hasSslModeDisable: ${hasSslModeDisable}`);
+      
+      if (isLocalProxy) {
+        shouldDisableSSL = true;
+        disableReason = 'local proxy';
+      } else if (isUnixSocket) {
+        shouldDisableSSL = true;
+        disableReason = 'Unix socket';
+      } else if (hasSslModeDisable) {
+        shouldDisableSSL = true;
+        disableReason = 'sslmode=disable in URL';
+      }
+    } catch (urlError) {
+      // If URL parsing fails, check for Unix socket indicators in the raw URL
+      console.log(`📋 URL parsing failed (expected for Unix socket): ${urlError.message}`);
+      if (url.includes('/cloudsql/') || url.includes('sslmode=disable')) {
+        shouldDisableSSL = true;
+        disableReason = 'Unix socket indicator or sslmode=disable detected';
+        console.log(`✅ SSL detection: ${disableReason}`);
+      }
     }
   }
   
