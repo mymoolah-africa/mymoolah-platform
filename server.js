@@ -45,6 +45,14 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
+const app = express();
+
+// Trust proxy for Cloud Run behind load balancer (banking-grade: trust only first proxy)
+// This is secure because Cloud Load Balancer is the only proxy in front of Cloud Run
+// MUST be set BEFORE requiring securityMiddleware to prevent express-rate-limit validation error
+// Using '1' instead of 'true' prevents express-rate-limit validation error
+app.set('trust proxy', 1);
+
 const {
   rateLimiters,
   securityHeaders,
@@ -55,12 +63,6 @@ const {
   corsConfig
 } = require('./middleware/securityMiddleware');
 const { secureLogging, secureErrorLogging } = require('./middleware/secureLogging');
-const app = express();
-
-// Trust proxy for Cloud Run behind load balancer (banking-grade: trust only first proxy)
-// This is secure because Cloud Load Balancer is the only proxy in front of Cloud Run
-// Using '1' instead of 'true' prevents express-rate-limit validation error
-app.set('trust proxy', 1);
 
 // Get configuration from security config
 const config = securityConfig.getConfig();
