@@ -80,11 +80,15 @@ if (config.use_env_variable) {
   };
   
   if (shouldDisableSSL) {
-    // CRITICAL: Explicitly set ssl: false for Unix socket connections
-    // The pg driver requires this to be explicitly false, not just omitted
-    finalDialectOptions.ssl = false;
-    console.log(`✅ SSL disabled for ${disableReason} connection - dialectOptions.ssl set to false`);
-    console.log(`📋 Final dialectOptions:`, JSON.stringify(finalDialectOptions, null, 2));
+    // CRITICAL: For Unix socket connections, DO NOT include ssl property at all
+    // The pg driver will read sslmode=disable from the URL
+    // Including ssl: false might cause the driver to still try SSL
+    // Remove any ssl property that might have been added
+    const { ssl, ...dialectOptionsWithoutSsl } = finalDialectOptions;
+    finalDialectOptions = dialectOptionsWithoutSsl;
+    console.log(`✅ SSL disabled for ${disableReason} connection - ssl property removed from dialectOptions`);
+    console.log(`📋 Final dialectOptions (no ssl property):`, JSON.stringify(finalDialectOptions, null, 2));
+    console.log(`📋 URL has sslmode=disable: ${url.includes('sslmode=disable') ? '✅' : '❌'}`);
   } else {
     // For non-Unix socket connections, use SSL from config.json if needed
     if (config.dialectOptions && config.dialectOptions.ssl) {
@@ -105,7 +109,7 @@ if (config.use_env_variable) {
       idle: 30000,  // Increased from 10s to 30s to reduce connection churn
       evict: 10000  // Check for idle connections every 10s
     },
-    dialectOptions: finalDialectOptions, // Use ONLY our final dialectOptions (no merge from config.json)
+    dialectOptions: finalDialectOptions, // Use ONLY our final dialectOptions (no merge from config.json, no ssl for Unix sockets)
     logging: false
   });
   
