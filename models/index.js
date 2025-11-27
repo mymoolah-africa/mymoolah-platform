@@ -89,9 +89,11 @@ if (config.use_env_variable) {
   }
   
   console.log(`📋 SSL detection result: shouldDisableSSL=${shouldDisableSSL}, reason="${disableReason}"`);
+  process.stderr.write(`📋 SSL detection result: shouldDisableSSL=${shouldDisableSSL}, reason="${disableReason}"\n`);
   
-  // CRITICAL: For Unix socket connections, ensure URL has sslmode=disable
-  if (shouldDisableSSL) {
+  // CRITICAL: For Unix socket connections, ALWAYS ensure URL has sslmode=disable
+  // Even if shouldDisableSSL is false, if URL contains /cloudsql/, force sslmode=disable
+  if (shouldDisableSSL || url.includes('/cloudsql/')) {
     if (!url.includes('sslmode=')) {
       url += (url.includes('?') ? '&' : '?') + 'sslmode=disable';
     } else if (!url.includes('sslmode=disable')) {
@@ -99,6 +101,12 @@ if (config.use_env_variable) {
       url = url.replace(/sslmode=[^&]*/, 'sslmode=disable');
     }
     console.log(`🔒 URL updated with sslmode=disable`);
+    process.stderr.write(`🔒 URL updated with sslmode=disable\n`);
+    // Force shouldDisableSSL to true if /cloudsql/ is present
+    if (url.includes('/cloudsql/')) {
+      shouldDisableSSL = true;
+      disableReason = disableReason || 'Unix socket (/cloudsql/) detected';
+    }
   }
   
   // Build dialectOptions - CRITICAL: Start fresh, don't merge from config.json
