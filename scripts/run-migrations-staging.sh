@@ -138,13 +138,34 @@ test_connection() {
   success "Database connection successful"
 }
 
+# URL encode password for DATABASE_URL
+url_encode() {
+  local string="${1}"
+  local strlen=${#string}
+  local encoded=""
+  local pos c o
+
+  for (( pos=0 ; pos<strlen ; pos++ )); do
+     c=${string:$pos:1}
+     case "$c" in
+        [-_.~a-zA-Z0-9] ) o="${c}" ;;
+        * ) printf -v o '%%%02x' "'$c" ;;
+     esac
+     encoded+="${o}"
+  done
+  echo "${encoded}"
+}
+
 # Run migrations
 run_migrations() {
   local password=$1
   log "Running database migrations..."
   
+  # URL encode password for DATABASE_URL (handles special characters)
+  local encoded_password=$(url_encode "${password}")
+  
   # Set DATABASE_URL
-  export DATABASE_URL="postgres://${DB_USER}:${password}@127.0.0.1:${PROXY_PORT}/${STAGING_DATABASE}?sslmode=disable"
+  export DATABASE_URL="postgres://${DB_USER}:${encoded_password}@127.0.0.1:${PROXY_PORT}/${STAGING_DATABASE}?sslmode=disable"
   export NODE_ENV=staging
   
   # Run migrations
