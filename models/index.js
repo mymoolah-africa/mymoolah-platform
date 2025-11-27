@@ -13,6 +13,11 @@ let sequelize;
 if (config.use_env_variable) {
   let url = process.env[config.use_env_variable];
   
+  // CRITICAL: Log startup to verify models/index.js is loading
+  console.log('📋 [models/index.js] Loading Sequelize configuration...');
+  console.log(`📋 [models/index.js] DB_SSL env var: ${process.env.DB_SSL || 'NOT SET'}`);
+  console.log(`📋 [models/index.js] NODE_ENV: ${process.env.NODE_ENV || 'NOT SET'}`);
+  
   // Validate DATABASE_URL is set
   if (!url) {
     console.error(`❌ ERROR: ${config.use_env_variable} environment variable is not set!`);
@@ -23,6 +28,7 @@ if (config.use_env_variable) {
   // CRITICAL: Check DB_SSL environment variable first (most explicit and reliable)
   // If DB_SSL is explicitly set to false, disable SSL immediately
   const dbSslEnv = process.env.DB_SSL;
+  console.log(`📋 [models/index.js] DB_SSL value: "${dbSslEnv}" (type: ${typeof dbSslEnv}, undefined: ${dbSslEnv === undefined})`);
   let shouldDisableSSL = false;
   let disableReason = '';
   
