@@ -6,6 +6,7 @@ const Sequelize = require('sequelize');
 const process = require('process');
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'development';
+// CRITICAL: Load config but IGNORE dialectOptions.ssl - we'll set it explicitly
 const config = require(__dirname + '/../config/config.json')[env];
 const db = {};
 
@@ -139,20 +140,30 @@ if (config.use_env_variable) {
   // This ensures SSL is completely disabled at the pg driver level
   let sequelize;
   
-  if (shouldDisableSSL && url.includes('/cloudsql/')) {
-    // Parse URL for Unix socket connection
+  // CRITICAL: For Unix socket connections, ALWAYS use explicit parameters
+  // This completely bypasses URL parsing and config.json SSL settings
+  if (url.includes('/cloudsql/')) {
+    // Parse URL: postgres://user:pass@/db?host=/cloudsql/instance&sslmode=disable
     const urlMatch = url.match(/postgres:\/\/([^:]+):([^@]+)@\/([^?]+)\?host=([^&]+)/);
     if (urlMatch) {
       const [, username, password, database, socketPath] = urlMatch;
-      console.log(`📋 Using explicit Unix socket connection parameters`);
-      process.stderr.write(`📋 Using explicit Unix socket connection parameters\n`);
+      const decodedPassword = decodeURIComponent(password);
       
-      sequelize = new Sequelize(database, username, password, {
+      console.log(`🔧 FORCING explicit Unix socket connection (bypassing URL string)`);
+      process.stderr.write(`🔧 FORCING explicit Unix socket connection (bypassing URL string)\n`);
+      console.log(`📋 Database: ${database}, Host: ${socketPath}`);
+      process.stderr.write(`📋 Database: ${database}, Host: ${socketPath}\n`);
+      
+      // Create Sequelize with explicit parameters - NO URL, NO config.json merge
+      sequelize = new Sequelize(database, username, decodedPassword, {
         dialect: 'postgres',
         host: socketPath, // Unix socket path
+        port: null, // No port for Unix socket
         dialectOptions: {
-          ...finalDialectOptions,
-          ssl: false // EXPLICITLY disable SSL
+          // CRITICAL: Only include what we explicitly want - NO merge from config.json
+          keepAlive: true,
+          keepAliveInitialDelayMillis: 0,
+          ssl: false // EXPLICITLY disable SSL - this is the key
         },
         pool: { 
           max: 20, 
@@ -164,33 +175,23 @@ if (config.use_env_variable) {
         logging: false
       });
       
-      console.log(`✅ Sequelize created with explicit Unix socket parameters (SSL disabled)`);
-      process.stderr.write(`✅ Sequelize created with explicit Unix socket parameters (SSL disabled)\n`);
+      console.log(`✅ Sequelize created with explicit parameters - SSL EXPLICITLY disabled`);
+      process.stderr.write(`✅ Sequelize created with explicit parameters - SSL EXPLICITLY disabled\n`);
     } else {
-      // Fallback to URL if parsing fails
-      console.log(`⚠️ Could not parse URL, using URL string with ssl: false`);
-      process.stderr.write(`⚠️ Could not parse URL, using URL string with ssl: false\n`);
-      sequelize = new Sequelize(url, {
-        dialect: 'postgres',
-        dialectOptions: {
-          ...finalDialectOptions,
-          ssl: false
-        },
-        pool: { 
-          max: 20, 
-          min: 2,
-          acquire: 30000, 
-          idle: 30000,
-          evict: 10000
-        },
-        logging: false
-      });
+      // If URL parsing fails, log error and throw
+      const errorMsg = `❌ CRITICAL: Could not parse Unix socket URL: ${url.replace(/:[^:@]+@/, ':****@')}`;
+      console.error(errorMsg);
+      process.stderr.write(`${errorMsg}\n`);
+      throw new Error('Failed to parse DATABASE_URL for Unix socket connection');
     }
   } else {
-    // Standard connection (not Unix socket)
+    // Standard TCP connection (not Unix socket) - use URL but still disable SSL if needed
     sequelize = new Sequelize(url, {
       dialect: 'postgres',
-      dialectOptions: finalDialectOptions,
+      dialectOptions: {
+        ...finalDialectOptions,
+        ssl: shouldDisableSSL ? false : (config.dialectOptions?.ssl || false)
+      },
       pool: { 
         max: 20, 
         min: 2,
