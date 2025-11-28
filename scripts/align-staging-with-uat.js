@@ -2,11 +2,9 @@
 /**
  * Align staging users, wallets, and transactions with UAT
  *
- * This script cross-references UAT users (IDs 1-6) and wallet ownership
- * against the staging database. It updates staging user profiles,
- * reassigns wallet ownership, realigns transaction userIds, and finally
- * recalculates wallet balances so that the staging dashboard reflects
- * the migrated data accurately.
+ * This script directly syncs UAT users (IDs 1-6) into staging users (IDs 1-6),
+ * overwriting any placeholder data. It then remaps wallet ownership and transaction
+ * userIds from the old staging IDs to the new ones, and recalculates balances.
  *
  * Requirements:
  *  - Cloud SQL proxy running for UAT on port 5433 and staging on 5434
@@ -28,11 +26,6 @@ const { Sequelize, QueryTypes } = require('sequelize');
 function normalizePhone(phone) {
   if (!phone) return null;
   return phone.replace(/[^0-9]/g, '').replace(/^0/, '');
-}
-
-function formatPhone(phone) {
-  if (!phone) return 'unknown';
-  return `+${normalizePhone(phone)}`;
 }
 
 function getSequelize(url, label) {
@@ -77,171 +70,153 @@ async function main() {
 
     console.log('📋 Fetching UAT user profiles (IDs 1-6) ...');
     const uatUsers = await uat.query(
-      `SELECT id, "firstName", "lastName", "phoneNumber", email
+      `SELECT id, "firstName", "lastName", "phoneNumber", email, password, status,
+              "kycStatus", "kycVerifiedAt", "kycVerifiedBy", "createdAt", "updatedAt"
          FROM users
         WHERE id IN (:ids)
         ORDER BY id`,
       { type: QueryTypes.SELECT, replacements: { ids: TARGET_USER_IDS } }
     );
 
-    if (uatUsers.length !== TARGET_USER_IDS.length) {
-      console.log('⚠️  Warning: Not all target UAT users were returned. Proceeding with available data.');
+    if (uatUsers.length === 0) {
+      console.error('❌ No UAT users found for IDs 1-6. Aborting.');
+      process.exit(1);
     }
 
-    const uatUsersById = new Map();
-    const uatUsersByPhone = new Map();
-    uatUsers.forEach((user) => {
-      const normalized = normalizePhone(user.phoneNumber);
-      uatUsersById.set(user.id, { ...user, normalized });
-      if (normalized) {
-        uatUsersByPhone.set(normalized, { ...user, normalized });
-      }
-    });
+    console.log(`📊 Found ${uatUsers.length} UAT users to sync.`);
 
-    console.log('📋 Fetching staging users...');
+    console.log('📋 Fetching staging users to build phone → ID map...');
     const stagingUsers = await staging.query(
-      `SELECT id, "firstName", "lastName", "phoneNumber", email
-         FROM users`,
+      `SELECT id, "phoneNumber" FROM users`,
       { type: QueryTypes.SELECT }
     );
 
-    const stagingUsersByPhone = new Map();
+    const stagingPhoneToId = new Map();
     stagingUsers.forEach((user) => {
       const normalized = normalizePhone(user.phoneNumber);
       if (normalized) {
-        stagingUsersByPhone.set(normalized, user);
+        stagingPhoneToId.set(normalized, user.id);
       }
     });
-
-    const uatToStagingUserMap = new Map();
-    const userProfileUpdates = [];
-    const missingUsers = [];
-
-    for (const user of uatUsers) {
-      const normalized = normalizePhone(user.phoneNumber);
-      const stagingUser = normalized ? stagingUsersByPhone.get(normalized) : null;
-
-      if (!stagingUser) {
-        missingUsers.push({ ...user, normalized });
-        continue;
-      }
-
-      uatToStagingUserMap.set(user.id, stagingUser.id);
-
-      const needsUpdate =
-        stagingUser.firstName !== user.firstName ||
-        stagingUser.lastName !== user.lastName ||
-        stagingUser.phoneNumber !== user.phoneNumber;
-
-      if (needsUpdate) {
-        userProfileUpdates.push({
-          id: stagingUser.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          phoneNumber: user.phoneNumber,
-        });
-      }
-    }
-
-    console.log(`📊 Found ${uatToStagingUserMap.size} matching users between UAT and staging.`);
-    if (missingUsers.length > 0) {
-      console.log('⚠️  Missing staging records for the following UAT users (match by phone failed):');
-      missingUsers.forEach((user) => {
-        console.log(`   - UAT ID ${user.id}: ${user.firstName} ${user.lastName} (${user.phoneNumber})`);
-      });
-      console.log('   Please create/import these users before rerunning the script.');
-      if (uatToStagingUserMap.size === 0) {
-        throw new Error('No staging users matched; aborting.');
-      }
-    }
 
     console.log('📋 Fetching wallet ownership from UAT...');
     const uatWallets = await uat.query(
-      `SELECT "walletId", "userId"
-         FROM wallets
-        WHERE "userId" IN (:ids)`,
+      `SELECT "walletId", "userId" FROM wallets WHERE "userId" IN (:ids)`,
       { type: QueryTypes.SELECT, replacements: { ids: TARGET_USER_IDS } }
     );
 
-    const uatWalletMap = new Map();
-    uatWallets.forEach((wallet) => {
-      uatWalletMap.set(wallet.walletId, wallet.userId);
-    });
-
     console.log('📋 Fetching staging wallets...');
     const stagingWallets = await staging.query(
-      `SELECT id, "walletId", "userId"
-         FROM wallets`,
+      `SELECT id, "walletId", "userId" FROM wallets`,
       { type: QueryTypes.SELECT }
     );
-
-    const walletUpdates = [];
-    const walletToUser = new Map();
-
-    stagingWallets.forEach((wallet) => {
-      if (!wallet.walletId) return;
-      const uatOwnerId = uatWalletMap.get(wallet.walletId);
-      if (!uatOwnerId) return;
-      const stagingOwnerId = uatToStagingUserMap.get(uatOwnerId);
-      if (!stagingOwnerId) return;
-
-      walletToUser.set(wallet.walletId, stagingOwnerId);
-
-      if (wallet.userId !== stagingOwnerId) {
-        walletUpdates.push({ walletId: wallet.walletId, stagingUserId: stagingOwnerId });
-      }
-    });
-
-    console.log(`📊 Wallets to update: ${walletUpdates.length}`);
-
-    console.log('📋 Identifying transactions needing user reassignment...');
-    const [stagingTransactions] = await staging.query(
-      `SELECT DISTINCT "walletId", "userId"
-         FROM transactions`
-    );
-
-    const transactionUpdates = [];
-    stagingTransactions.forEach((tx) => {
-      if (!tx.walletId) return;
-      const targetUserId = walletToUser.get(tx.walletId);
-      if (!targetUserId) return;
-      if (tx.userId !== targetUserId) {
-        transactionUpdates.push({ walletId: tx.walletId, stagingUserId: targetUserId });
-      }
-    });
-
-    console.log(`📊 Transactions to realign: ${transactionUpdates.length}`);
 
     const transaction = await staging.transaction();
 
     try {
-      for (const update of userProfileUpdates) {
+      const oldToNewUserIdMap = new Map();
+
+      for (const uatUser of uatUsers) {
+        const targetId = uatUser.id;
+        const normalized = normalizePhone(uatUser.phoneNumber);
+        const oldStagingId = normalized ? stagingPhoneToId.get(normalized) : null;
+
+        if (oldStagingId && oldStagingId !== targetId) {
+          oldToNewUserIdMap.set(oldStagingId, targetId);
+        }
+
         await staging.query(
-          `UPDATE users
-              SET "firstName" = :firstName,
-                  "lastName" = :lastName,
-                  "phoneNumber" = :phoneNumber,
-                  "updatedAt" = NOW()
-            WHERE id = :id`,
-          { transaction, replacements: update }
+          `INSERT INTO users (
+             id, "firstName", "lastName", "phoneNumber", email, password, status,
+             "kycStatus", "kycVerifiedAt", "kycVerifiedBy", "createdAt", "updatedAt"
+           ) VALUES (
+             :id, :firstName, :lastName, :phoneNumber, :email, :password, :status,
+             :kycStatus, :kycVerifiedAt, :kycVerifiedBy, :createdAt, :updatedAt
+           )
+           ON CONFLICT (id) DO UPDATE SET
+             "firstName" = EXCLUDED."firstName",
+             "lastName" = EXCLUDED."lastName",
+             "phoneNumber" = EXCLUDED."phoneNumber",
+             email = EXCLUDED.email,
+             password = EXCLUDED.password,
+             status = EXCLUDED.status,
+             "kycStatus" = EXCLUDED."kycStatus",
+             "kycVerifiedAt" = EXCLUDED."kycVerifiedAt",
+             "kycVerifiedBy" = EXCLUDED."kycVerifiedBy",
+             "updatedAt" = NOW()`,
+          {
+            transaction,
+            replacements: {
+              id: targetId,
+              firstName: uatUser.firstName,
+              lastName: uatUser.lastName,
+              phoneNumber: uatUser.phoneNumber,
+              email: uatUser.email,
+              password: uatUser.password,
+              status: uatUser.status || 'active',
+              kycStatus: uatUser.kycStatus || 'not_started',
+              kycVerifiedAt: uatUser.kycVerifiedAt,
+              kycVerifiedBy: uatUser.kycVerifiedBy,
+              createdAt: uatUser.createdAt || new Date(),
+              updatedAt: new Date(),
+            },
+          }
         );
       }
+
+      console.log(`✅ Synced ${uatUsers.length} user profiles into staging IDs 1-6.`);
+
+      const uatWalletMap = new Map();
+      uatWallets.forEach((wallet) => {
+        uatWalletMap.set(wallet.walletId, wallet.userId);
+      });
+
+      const walletUpdates = [];
+      const stagingWalletMap = new Map();
+
+      stagingWallets.forEach((wallet) => {
+        if (!wallet.walletId) return;
+        stagingWalletMap.set(wallet.walletId, wallet.userId);
+
+        const uatOwnerId = uatWalletMap.get(wallet.walletId);
+        if (!uatOwnerId) return;
+
+        const currentOwnerId = wallet.userId;
+        const newOwnerId = oldToNewUserIdMap.get(currentOwnerId) || uatOwnerId;
+
+        if (currentOwnerId !== newOwnerId) {
+          walletUpdates.push({ walletId: wallet.walletId, newUserId: newOwnerId });
+        }
+      });
+
+      console.log(`📊 Wallets to reassign: ${walletUpdates.length}`);
 
       for (const update of walletUpdates) {
         await staging.query(
-          `UPDATE wallets
-              SET "userId" = :stagingUserId,
-                  "updatedAt" = NOW()
-            WHERE "walletId" = :walletId`,
+          `UPDATE wallets SET "userId" = :newUserId, "updatedAt" = NOW() WHERE "walletId" = :walletId`,
           { transaction, replacements: update }
         );
       }
 
+      const [stagingTransactions] = await staging.query(
+        `SELECT DISTINCT "walletId", "userId" FROM transactions`
+      );
+
+      const transactionUpdates = [];
+      stagingTransactions.forEach((tx) => {
+        if (!tx.walletId) return;
+        const currentUserId = tx.userId;
+        const newUserId = oldToNewUserIdMap.get(currentUserId);
+        if (newUserId && currentUserId !== newUserId) {
+          transactionUpdates.push({ walletId: tx.walletId, newUserId });
+        }
+      });
+
+      console.log(`📊 Transactions to realign: ${transactionUpdates.length}`);
+
       for (const update of transactionUpdates) {
         await staging.query(
-          `UPDATE transactions
-              SET "userId" = :stagingUserId
-            WHERE "walletId" = :walletId`,
+          `UPDATE transactions SET "userId" = :newUserId WHERE "walletId" = :walletId`,
           { transaction, replacements: update }
         );
       }
@@ -264,33 +239,23 @@ async function main() {
           const balance = parseFloat(balanceResult[0]?.balance || 0);
 
           await staging.query(
-            `UPDATE wallets
-                SET balance = :balance,
-                    "updatedAt" = NOW()
-              WHERE "walletId" = :walletId`,
+            `UPDATE wallets SET balance = :balance, "updatedAt" = NOW() WHERE "walletId" = :walletId`,
             { transaction, replacements: { walletId, balance } }
           );
         }
       }
 
       await transaction.commit();
+
+      console.log('\n✅ Alignment complete!');
+      console.log(`   User profiles synced: ${uatUsers.length}`);
+      console.log(`   Wallets reassigned: ${walletUpdates.length}`);
+      console.log(`   Transactions realigned: ${transactionUpdates.length}`);
+      console.log(`   Wallet balances recalculated: ${affectedWalletIds.length}`);
+      console.log('\n📋 Staging users 1-6 now match UAT users 1-6.');
     } catch (error) {
       await transaction.rollback();
       throw error;
-    }
-
-    console.log('\n✅ Alignment complete!');
-    console.log(`   User profiles updated: ${userProfileUpdates.length}`);
-    console.log(`   Wallets reassigned: ${walletUpdates.length}`);
-    console.log(`   Transactions realigned: ${transactionUpdates.length}`);
-    console.log(`   Wallet balances recalculated: ${new Set(walletUpdates.map((w) => w.walletId)).size}`);
-
-    if (missingUsers.length > 0) {
-      console.log('\n⚠️  The following UAT users did not have staging counterparts:');
-      missingUsers.forEach((user) => {
-        console.log(`   - ${user.firstName} ${user.lastName} (${formatPhone(user.phoneNumber)})`);
-      });
-      console.log('   Please ensure they are migrated to staging and rerun the script.');
     }
   } catch (error) {
     console.error('\n❌ Alignment failed:', error.message);
