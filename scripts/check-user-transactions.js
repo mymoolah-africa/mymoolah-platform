@@ -4,6 +4,7 @@
  */
 
 require('dotenv').config();
+const { QueryTypes } = require('sequelize');
 
 // Configure SSL for Cloud SQL connections
 if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require')) {
@@ -21,7 +22,7 @@ async function checkUserTransactions(userId) {
     console.log(`\n🔍 Checking transactions for User ID: ${userId}\n`);
     
     // Get user info (use raw query to avoid camel/snake case issues)
-    const [userRows] = await sequelize.query(
+    const userRows = await sequelize.query(
       `
         SELECT
           id,
@@ -33,7 +34,7 @@ async function checkUserTransactions(userId) {
         WHERE id = :userId
         LIMIT 1
       `,
-      { replacements: { userId }, type: sequelize.QueryTypes.SELECT }
+      { replacements: { userId }, type: QueryTypes.SELECT }
     );
 
     if (!userRows || userRows.length === 0) {
@@ -47,7 +48,7 @@ async function checkUserTransactions(userId) {
     );
     
     // Get wallet info (raw query because table uses snake_case columns)
-    const [walletRows] = await sequelize.query(
+    const walletRows = await sequelize.query(
       `
         SELECT
           id,
@@ -70,7 +71,7 @@ async function checkUserTransactions(userId) {
         WHERE "userId" = :userId
         LIMIT 1
       `,
-      { replacements: { userId }, type: sequelize.QueryTypes.SELECT }
+      { replacements: { userId }, type: QueryTypes.SELECT }
     );
 
     if (!walletRows || walletRows.length === 0) {
@@ -81,7 +82,7 @@ async function checkUserTransactions(userId) {
     console.log(`✅ Wallet found: ${wallet.walletId}, Balance: R${wallet.balance}\n`);
     
     // Get ALL transactions for this user (no filters, no limit to find R50k deposit)
-    const [allTransactions] = await sequelize.query(
+    const allTransactions = await sequelize.query(
       `
         SELECT
           id,
@@ -104,7 +105,7 @@ async function checkUserTransactions(userId) {
         WHERE "userId" = :userId
         ORDER BY "createdAt" DESC
       `,
-      { replacements: { userId }, type: sequelize.QueryTypes.SELECT }
+      { replacements: { userId }, type: QueryTypes.SELECT }
     );
     
     console.log(`📊 Total transactions in database: ${allTransactions.length}\n`);
