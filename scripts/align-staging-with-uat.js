@@ -79,7 +79,7 @@ async function main() {
     const uatUsers = await uat.query(
       `SELECT id, "firstName", "lastName", "phoneNumber", email
          FROM users
-        WHERE id = ANY(:ids)
+        WHERE id IN (:ids)
         ORDER BY id`,
       { type: QueryTypes.SELECT, replacements: { ids: TARGET_USER_IDS } }
     );
@@ -159,7 +159,7 @@ async function main() {
     const uatWallets = await uat.query(
       `SELECT "walletId", "userId"
          FROM wallets
-        WHERE "userId" = ANY(:ids)`,
+        WHERE "userId" IN (:ids)`,
       { type: QueryTypes.SELECT, replacements: { ids: TARGET_USER_IDS } }
     );
 
