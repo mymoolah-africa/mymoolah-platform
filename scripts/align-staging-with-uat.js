@@ -70,7 +70,7 @@ async function main() {
 
     console.log('📋 Fetching UAT user profiles (IDs 1-6) ...');
     const uatUsers = await uat.query(
-      `SELECT id, "firstName", "lastName", "phoneNumber", email, password, status,
+      `SELECT id, "firstName", "lastName", "phoneNumber", email, status,
               "kycStatus", "kycVerifiedAt", "kycVerifiedBy", "createdAt", "updatedAt"
          FROM users
         WHERE id IN (:ids)
@@ -127,10 +127,10 @@ async function main() {
 
         await staging.query(
           `INSERT INTO users (
-             id, "firstName", "lastName", "phoneNumber", email, password, status,
+             id, "firstName", "lastName", "phoneNumber", email, status,
              "kycStatus", "kycVerifiedAt", "kycVerifiedBy", "createdAt", "updatedAt"
            ) VALUES (
-             :id, :firstName, :lastName, :phoneNumber, :email, :password, :status,
+             :id, :firstName, :lastName, :phoneNumber, :email, :status,
              :kycStatus, :kycVerifiedAt, :kycVerifiedBy, :createdAt, :updatedAt
            )
            ON CONFLICT (id) DO UPDATE SET
@@ -138,7 +138,6 @@ async function main() {
              "lastName" = EXCLUDED."lastName",
              "phoneNumber" = EXCLUDED."phoneNumber",
              email = EXCLUDED.email,
-             password = EXCLUDED.password,
              status = EXCLUDED.status,
              "kycStatus" = EXCLUDED."kycStatus",
              "kycVerifiedAt" = EXCLUDED."kycVerifiedAt",
@@ -152,7 +151,6 @@ async function main() {
               lastName: uatUser.lastName,
               phoneNumber: uatUser.phoneNumber,
               email: uatUser.email,
-              password: uatUser.password,
               status: uatUser.status || 'active',
               kycStatus: uatUser.kycStatus || 'not_started',
               kycVerifiedAt: uatUser.kycVerifiedAt,
