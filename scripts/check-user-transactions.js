@@ -32,48 +32,55 @@ const formatDate = (value) => {
   return Number.isNaN(date.getTime()) ? 'unknown date' : date.toISOString();
 };
 
+const normalizeUser = (row = {}) => ({
+  id: row.id,
+  firstName: row.firstName ?? row.firstname ?? row.first_name ?? '',
+  lastName: row.lastName ?? row.lastname ?? row.last_name ?? '',
+  phoneNumber: row.phoneNumber ?? row.phonenumber ?? row.phone_number ?? row.phone ?? null,
+  email: row.email ?? null
+});
+
+const normalizeWallet = (row = {}) => ({
+  walletId: row.walletId ?? row.wallet_id ?? null,
+  userId: row.userId ?? row.user_id ?? null,
+  balance: row.balance ?? 0,
+  currency: row.currency ?? 'ZAR',
+  status: row.status ?? 'unknown',
+  kycVerified: row.kycVerified ?? row.kyc_verified ?? null,
+  kycVerifiedAt: row.kycVerifiedAt ?? row.kyc_verified_at ?? null,
+  kycVerifiedBy: row.kycVerifiedBy ?? row.kyc_verified_by ?? null,
+  dailyLimit: row.dailyLimit ?? row.daily_limit ?? null,
+  monthlyLimit: row.monthlyLimit ?? row.monthly_limit ?? null,
+  dailySpent: row.dailySpent ?? row.daily_spent ?? null,
+  monthlySpent: row.monthlySpent ?? row.monthly_spent ?? null,
+  lastTransactionAt: row.lastTransactionAt ?? row.last_transaction_at ?? null,
+  createdAt: row.createdAt ?? row.created_at ?? null,
+  updatedAt: row.updatedAt ?? row.updated_at ?? null
+});
+
 async function fetchUser(userId) {
   const result = await sequelize.query(
     `
-      SELECT
-        id,
-        COALESCE("firstName", "first_name") AS "firstName",
-        COALESCE("lastName", "last_name")   AS "lastName",
-        COALESCE("phoneNumber", "phone_number", phone) AS "phoneNumber",
-        email
+      SELECT *
       FROM users
       WHERE id = :userId
       LIMIT 1
     `,
     { replacements: { userId }, type: QueryTypes.SELECT }
   );
-  return result[0];
+  return result[0] ? normalizeUser(result[0]) : undefined;
 }
 
 async function fetchWallets(userId) {
-  return sequelize.query(
+  const rows = await sequelize.query(
     `
-      SELECT
-        COALESCE("walletId", "wallet_id") AS "walletId",
-        COALESCE("userId", "user_id")     AS "userId",
-        balance,
-        currency,
-        status,
-        COALESCE("kycVerified", "kyc_verified")             AS "kycVerified",
-        COALESCE("kycVerifiedAt", "kyc_verified_at")         AS "kycVerifiedAt",
-        COALESCE("kycVerifiedBy", "kyc_verified_by")         AS "kycVerifiedBy",
-        COALESCE("dailyLimit", "daily_limit")                AS "dailyLimit",
-        COALESCE("monthlyLimit", "monthly_limit")            AS "monthlyLimit",
-        COALESCE("dailySpent", "daily_spent")                AS "dailySpent",
-        COALESCE("monthlySpent", "monthly_spent")            AS "monthlySpent",
-        COALESCE("lastTransactionAt", "last_transaction_at") AS "lastTransactionAt",
-        COALESCE("createdAt", created_at) AS "createdAt",
-        COALESCE("updatedAt", updated_at) AS "updatedAt"
+      SELECT *
       FROM wallets
       WHERE COALESCE("userId", "user_id") = :userId
     `,
     { replacements: { userId }, type: QueryTypes.SELECT }
   );
+  return rows.map(normalizeWallet);
 }
 
 async function fetchTransactionsByWalletIds(walletIds) {
