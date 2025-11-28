@@ -58,6 +58,44 @@ const normalizeWallet = (row = {}) => ({
   updatedAt: row.updatedAt ?? row.updated_at ?? null
 });
 
+const normalizeTransaction = (row = {}) => ({
+  id: row.id,
+  transactionId: row.transactionId ?? row.transaction_id ?? row.id ?? null,
+  walletId: row.walletId ?? row.wallet_id ?? null,
+  senderWalletId: row.senderWalletId ?? row.sender_wallet_id ?? null,
+  receiverWalletId: row.receiverWalletId ?? row.receiver_wallet_id ?? null,
+  userId: row.userId ?? row.user_id ?? null,
+  amount: row.amount ?? row.amount_cents ?? 0,
+  type: row.type ?? 'unknown',
+  status: row.status ?? 'unknown',
+  description: row.description ?? row.details ?? '',
+  currency: row.currency ?? row.currency_code ?? 'ZAR',
+  fee: row.fee ?? row.fee_amount ?? 0,
+  reference: row.reference ?? row.external_reference ?? null,
+  metadata: row.metadata ?? {},
+  createdAt: row.createdAt ?? row.created_at ?? null,
+  updatedAt: row.updatedAt ?? row.updated_at ?? null
+});
+
+const runQueryWithFallback = async (queryCandidates, replacements = {}) => {
+  let fallbackError = null;
+  for (const sql of queryCandidates) {
+    try {
+      return await sequelize.query(sql, { replacements, type: QueryTypes.SELECT });
+    } catch (error) {
+      if (error?.original?.code === '42703') {
+        fallbackError = error;
+        continue;
+      }
+      throw error;
+    }
+  }
+  if (fallbackError) {
+    throw fallbackError;
+  }
+  return [];
+};
+
 async function fetchUser(userId) {
   const result = await sequelize.query(
     `
@@ -72,86 +110,76 @@ async function fetchUser(userId) {
 }
 
 async function fetchWallets(userId) {
-  const rows = await sequelize.query(
+  const queryCandidates = [
     `
       SELECT *
       FROM wallets
-      WHERE COALESCE("userId", "user_id") = :userId
+      WHERE "userId" = :userId
     `,
-    { replacements: { userId }, type: QueryTypes.SELECT }
-  );
+    `
+      SELECT *
+      FROM wallets
+      WHERE "user_id" = :userId
+    `
+  ];
+
+  const rows = await runQueryWithFallback(queryCandidates, { userId });
   return rows.map(normalizeWallet);
 }
 
 async function fetchTransactionsByWalletIds(walletIds) {
   if (walletIds.length === 0) return [];
 
-  const clauses = walletIds.map(
-    (_, index) => `
-      COALESCE("walletId", "wallet_id") = :wallet${index}
-      OR COALESCE("senderWalletId", "sender_wallet_id") = :wallet${index}
-      OR COALESCE("receiverWalletId", "receiver_wallet_id") = :wallet${index}
-    `.trim()
-  );
+  const camelClauses = walletIds.map(
+    (_, index) => `"walletId" = :wallet${index} OR "senderWalletId" = :wallet${index} OR "receiverWalletId" = :wallet${index}`
+  ).join(' OR ');
+
+  const snakeClauses = walletIds.map(
+    (_, index) => `wallet_id = :wallet${index} OR sender_wallet_id = :wallet${index} OR receiver_wallet_id = :wallet${index}`
+  ).join(' OR ');
 
   const replacements = walletIds.reduce((acc, id, index) => {
     acc[`wallet${index}`] = id;
     return acc;
   }, {});
 
-  return sequelize.query(
+  const queryCandidates = [
     `
-      SELECT
-        id,
-        COALESCE("transactionId", transaction_id)            AS "transactionId",
-        COALESCE("walletId", wallet_id)                      AS "walletId",
-        COALESCE("senderWalletId", sender_wallet_id)         AS "senderWalletId",
-        COALESCE("receiverWalletId", receiver_wallet_id)     AS "receiverWalletId",
-        COALESCE("userId", user_id)                          AS "userId",
-        amount,
-        type,
-        status,
-        description,
-        currency,
-        COALESCE(fee, fee_amount, 0)                          AS "fee",
-        COALESCE(reference, external_reference)               AS "reference",
-        metadata,
-        COALESCE("createdAt", created_at)                    AS "createdAt",
-        COALESCE("updatedAt", updated_at)                    AS "updatedAt"
+      SELECT *
       FROM transactions
-      WHERE ${clauses.join(' OR ')}
-      ORDER BY COALESCE("createdAt", created_at, NOW()) DESC
+      WHERE ${camelClauses}
+      ORDER BY "createdAt" DESC NULLS LAST
     `,
-    { replacements, type: QueryTypes.SELECT }
-  );
+    `
+      SELECT *
+      FROM transactions
+      WHERE ${snakeClauses}
+      ORDER BY created_at DESC NULLS LAST
+    `
+  ];
+
+  const rows = await runQueryWithFallback(queryCandidates, replacements);
+  return rows.map(normalizeTransaction);
 }
 
 async function fetchTransactionsByUserId(userId) {
-  return sequelize.query(
+  const queryCandidates = [
     `
-      SELECT
-        id,
-        COALESCE("transactionId", transaction_id)            AS "transactionId",
-        COALESCE("walletId", wallet_id)                      AS "walletId",
-        COALESCE("senderWalletId", sender_wallet_id)         AS "senderWalletId",
-        COALESCE("receiverWalletId", receiver_wallet_id)     AS "receiverWalletId",
-        COALESCE("userId", user_id)                          AS "userId",
-        amount,
-        type,
-        status,
-        description,
-        currency,
-        COALESCE(fee, fee_amount, 0)                          AS "fee",
-        COALESCE(reference, external_reference)               AS "reference",
-        metadata,
-        COALESCE("createdAt", created_at)                    AS "createdAt",
-        COALESCE("updatedAt", updated_at)                    AS "updatedAt"
+      SELECT *
       FROM transactions
-      WHERE COALESCE("userId", user_id) = :userId
-      ORDER BY COALESCE("createdAt", created_at, NOW()) DESC
+      WHERE "userId" = :userId
+      ORDER BY "createdAt" DESC NULLS LAST
     `,
-    { replacements: { userId }, type: QueryTypes.SELECT }
-  );
+    `
+      SELECT *
+      FROM transactions
+      WHERE "user_id" = :userId
+      ORDER BY created_at DESC NULLS LAST
+    `
+  ];
+
+  const rows = await runQueryWithFallback(queryCandidates, { userId });
+  return rows.map(normalizeTransaction);
 }
 
 const groupTransactionsByType = (transactions) =>
