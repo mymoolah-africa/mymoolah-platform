@@ -20,8 +20,7 @@ module.exports = (sequelize) => {
     voucherCode: {
       type: DataTypes.STRING(255),
       allowNull: false,
-      unique: true,
-      field: 'voucherId' // Map to staging column name
+      unique: true
     },
     easyPayCode: {
       type: DataTypes.STRING(255),
@@ -30,8 +29,7 @@ module.exports = (sequelize) => {
     },
     originalAmount: {
       type: DataTypes.DECIMAL(15, 2),
-      allowNull: false,
-      field: 'amount' // Map to staging column name
+      allowNull: false
     },
     balance: {
       type: DataTypes.DECIMAL(15, 2),
@@ -46,13 +44,11 @@ module.exports = (sequelize) => {
     voucherType: {
       type: DataTypes.ENUM('standard', 'premium', 'business', 'corporate', 'student', 'senior', 'easypay_pending', 'easypay_active'),
       allowNull: false,
-      defaultValue: 'standard',
-      field: 'type' // Map to staging column name
+      defaultValue: 'standard'
     },
     expiresAt: {
       type: DataTypes.DATE,
-      allowNull: true,
-      field: 'expiryDate' // Map to staging column name
+      allowNull: true
     },
     redemptionCount: {
       type: DataTypes.INTEGER,
