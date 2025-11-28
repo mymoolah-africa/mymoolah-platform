@@ -249,11 +249,48 @@ async function checkUserTransactions(userId) {
     }
 
     if (!transactions || transactions.length === 0) {
+      console.log('⚠️  No transactions found in database for this user / wallet');
+
       try {
-        transactions = await fetchTransactionsByUserId(userId);
-      } catch {
-        // Column may not exist (legacy schema); ignore
+        const [{ count }] = await sequelize.query(
+          'SELECT COUNT(*)::int AS count FROM transactions',
+          { type: QueryTypes.SELECT }
+        );
+        console.log(`ℹ️  transactions table row count: ${count}`);
+
+        const sample = await runQueryWithFallback(
+          [
+            `
+              SELECT *
+              FROM transactions
+              ORDER BY "createdAt" DESC NULLS LAST
+              LIMIT 5
+            `,
+            `
+              SELECT *
+              FROM transactions
+              ORDER BY created_at DESC NULLS LAST
+              LIMIT 5
+            `
+          ]
+        );
+
+        if (sample.length === 0) {
+          console.log('ℹ️  transactions table currently empty.');
+        } else {
+          console.log('ℹ️  Sample transactions (no user match):');
+          sample.forEach((row) => {
+            const tx = normalizeTransaction(row);
+            console.log(
+              `  - ${tx.transactionId || 'N/A'} | wallet=${tx.walletId || 'N/A'} | amount=R${formatAmount(tx.amount)} | type=${tx.type} | created=${formatDate(tx.createdAt)}`
+            );
+          });
+        }
+      } catch (insightError) {
+        console.log('⚠️  Unable to compute global transaction insights:', insightError.message);
       }
+
+      return;
     }
 
     console.log(`📊 Total transactions fetched: ${transactions.length}\n`);
@@ -337,4 +374,3 @@ checkUserTransactions(userId).catch((error) => {
   console.error('❌ Unexpected error:', error);
   process.exit(1);
 });
-
