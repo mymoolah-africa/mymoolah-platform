@@ -20,27 +20,92 @@ async function checkUserTransactions(userId) {
   try {
     console.log(`\n🔍 Checking transactions for User ID: ${userId}\n`);
     
-    // Get user info
-    const user = await User.findByPk(userId);
-    if (!user) {
+    // Get user info (use raw query to avoid camel/snake case issues)
+    const [userRows] = await sequelize.query(
+      `
+        SELECT
+          id,
+          "firstName"  AS "firstName",
+          "lastName"   AS "lastName",
+          "phoneNumber" AS "phoneNumber",
+          email
+        FROM users
+        WHERE id = :userId
+        LIMIT 1
+      `,
+      { replacements: { userId }, type: sequelize.QueryTypes.SELECT }
+    );
+
+    if (!userRows || userRows.length === 0) {
       console.log(`❌ User ID ${userId} not found`);
       return;
     }
-    console.log(`✅ User found: ${user.firstName} ${user.lastName} (${user.phone})`);
+
+    const user = userRows[0];
+    console.log(
+      `✅ User found: ${user.firstName || ''} ${user.lastName || ''} (${user.phoneNumber || 'no phone'})`
+    );
     
-    // Get wallet info
-    const wallet = await Wallet.findOne({ where: { userId } });
-    if (!wallet) {
+    // Get wallet info (raw query because table uses snake_case columns)
+    const [walletRows] = await sequelize.query(
+      `
+        SELECT
+          id,
+          "walletId"          AS "walletId",
+          "userId"            AS "userId",
+          balance,
+          currency,
+          status,
+          "kycVerified"       AS "kycVerified",
+          "kycVerifiedAt"     AS "kycVerifiedAt",
+          "kycVerifiedBy"     AS "kycVerifiedBy",
+          "dailyLimit"        AS "dailyLimit",
+          "monthlyLimit"      AS "monthlyLimit",
+          "dailySpent"        AS "dailySpent",
+          "monthlySpent"      AS "monthlySpent",
+          "lastTransactionAt" AS "lastTransactionAt",
+          created_at          AS "createdAt",
+          updated_at          AS "updatedAt"
+        FROM wallets
+        WHERE "userId" = :userId
+        LIMIT 1
+      `,
+      { replacements: { userId }, type: sequelize.QueryTypes.SELECT }
+    );
+
+    if (!walletRows || walletRows.length === 0) {
       console.log(`❌ No wallet found for user ID ${userId}`);
       return;
     }
+    const wallet = walletRows[0];
     console.log(`✅ Wallet found: ${wallet.walletId}, Balance: R${wallet.balance}\n`);
     
     // Get ALL transactions for this user (no filters, no limit to find R50k deposit)
-    const allTransactions = await Transaction.findAll({
-      where: { userId },
-      order: [['createdAt', 'DESC']]
-    });
+    const [allTransactions] = await sequelize.query(
+      `
+        SELECT
+          id,
+          "transactionId"      AS "transactionId",
+          "walletId"           AS "walletId",
+          "userId"             AS "userId",
+          amount,
+          type,
+          status,
+          description,
+          currency,
+          fee,
+          "senderWalletId"     AS "senderWalletId",
+          "receiverWalletId"   AS "receiverWalletId",
+          reference,
+          "createdAt"          AS "createdAt",
+          "updatedAt"          AS "updatedAt",
+          metadata
+        FROM transactions
+        WHERE "userId" = :userId
+        ORDER BY "createdAt" DESC
+      `,
+      { replacements: { userId }, type: sequelize.QueryTypes.SELECT }
+    );
     
     console.log(`📊 Total transactions in database: ${allTransactions.length}\n`);
     
