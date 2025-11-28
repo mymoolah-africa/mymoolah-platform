@@ -210,7 +210,7 @@ async function main() {
 
       for (const update of walletUpdates) {
         await staging.query(
-          `UPDATE wallets SET "userId" = :newUserId, "updatedAt" = NOW() WHERE "walletId" = :walletId`,
+          `UPDATE wallets SET "userId" = :newUserId, updated_at = NOW() WHERE "walletId" = :walletId`,
           { transaction, replacements: update }
         );
       }
