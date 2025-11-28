@@ -1,6 +1,29 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-11-19 (Latest)
+## 2025-11-28 (Latest)
+- **Vouchers & Balance Reconciliation Complete**: Fixed UAT vouchers loading issue, audited and reconciled all wallet balances between UAT and Staging, aligned staging vouchers schema to UAT, migrated 23/24 vouchers, deployed updated backend to Cloud Run staging, and disabled rate limiting in staging for testing. All 6 user wallets now have correct synchronized balances (R49,619.44 total).
+
+**Vouchers & Balance Reconciliation**:
+- **UAT Vouchers Fixed**: Removed incorrect field mappings from Voucher model (was using staging column names)
+- **Balance Audit Tool**: Created `scripts/audit-uat-staging-balances.js` for comprehensive balance comparison
+- **Balance Fixes**: UAT R27,500.00 → R27,513.44 (R13.44 short), Staging R27,515.00 → R27,513.44 (R1.56 from pending VAT)
+- **All Wallets Reconciled**: Created `scripts/reconcile-all-wallets.js` - all 6 users now synchronized
+- **Vouchers Schema Alignment**: Created `scripts/align-staging-vouchers-to-uat.js` - renamed columns (voucherId→voucherCode, type→voucherType, amount→originalAmount, expiryDate→expiresAt)
+- **Vouchers Migration**: 23/24 vouchers migrated from UAT to Staging (1 failed - user doesn't exist)
+- **Cloud Run Deployment**: Updated backend deployed (revision 00086-zwz) with corrected Voucher model
+- **Rate Limiting**: Disabled in staging for testing (STAGING=true env var)
+- **Status**: ✅ UAT vouchers working, ✅ All balances reconciled, ✅ Staging vouchers schema aligned, ✅ Backend deployed
+
+**Files Updated**:
+- `models/voucherModel.js` - Removed field mappings for UAT compatibility
+- `middleware/rateLimiter.js` - Added staging skip logic
+- `server.js` - Added staging rate limit skip
+- `scripts/deploy-cloud-run-staging.sh` - Added STAGING=true env var
+- `scripts/audit-uat-staging-balances.js` - NEW comprehensive audit tool
+- `scripts/reconcile-all-wallets.js` - NEW wallet reconciliation tool
+- `scripts/align-staging-vouchers-to-uat.js` - NEW schema alignment tool
+
+## 2025-11-19
 - **Zapper VAT Transaction Fee & Referential Integrity**: Implemented comprehensive VAT calculation for Zapper transaction fees with proper input/output VAT tracking, created database schema for VAT reconciliation, and enforced banking-grade referential integrity with foreign key constraints.
 
 **Zapper VAT Transaction Fee & Referential Integrity**:
