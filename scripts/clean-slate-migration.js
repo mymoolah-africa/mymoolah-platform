@@ -340,7 +340,7 @@ async function main() {
           const balance = parseFloat(balanceResult[0]?.balance || 0);
 
           await staging.query(
-            `UPDATE wallets SET balance = :balance, updated_at = NOW() WHERE "walletId" = :walletId`,
+            `UPDATE wallets SET balance = :balance, "updatedAt" = NOW() WHERE "walletId" = :walletId`,
             { transaction, replacements: { walletId: wallet.walletId, balance } }
           );
         }
