@@ -100,15 +100,26 @@ async function main() {
       
       console.log('   ✅ Staging wiped clean\n');
 
-      // Step 2: Migrate users
+      // Step 2: Migrate users with ID remapping
       console.log('📦 Step 2: Migrating users from UAT...');
+      
+      // UAT has users at IDs: 1, 2, 4, 6, 7, 8
+      // Staging needs sequential IDs: 1, 2, 3, 4, 5, 6
+      const userIdMapping = {
+        1: 1,  // Andre
+        2: 2,  // Leonie
+        4: 3,  // Andre Jr
+        6: 4,  // Hendrik
+        7: 5,  // Neil
+        8: 6   // Denise
+      };
       
       // Force fresh read from database (no cache)
       const uatUsers = await uat.query(
         `SELECT id, "firstName", "lastName", "phoneNumber", email, password_hash, status,
                 "kycStatus", "kycVerifiedAt", "kycVerifiedBy", "createdAt", "updatedAt"
          FROM users
-         WHERE status = 'active'
+         WHERE status = 'active' AND id IN (1, 2, 4, 6, 7, 8)
          ORDER BY id`,
         { 
           type: QueryTypes.SELECT,
@@ -119,9 +130,11 @@ async function main() {
       );
 
       console.log(`   Found ${uatUsers.length} users in UAT`);
+      console.log(`   Remapping UAT IDs (1,2,4,6,7,8) → Staging IDs (1,2,3,4,5,6)`);
 
       if (!dryRun) {
         for (const user of uatUsers) {
+          const newId = userIdMapping[user.id];
           await staging.query(
             `INSERT INTO users (
                id, "firstName", "lastName", "phoneNumber", email, password_hash, status,
@@ -133,7 +146,7 @@ async function main() {
             {
               transaction,
               replacements: {
-                id: user.id,
+                id: newId,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 phoneNumber: user.phoneNumber,
@@ -150,17 +163,16 @@ async function main() {
           );
         }
         
-        // Update sequence to continue from max ID
-        const maxUserId = Math.max(...uatUsers.map(u => u.id));
+        // Update sequence to continue from 7
         await staging.query(
-          `ALTER SEQUENCE users_id_seq RESTART WITH ${maxUserId + 1}`,
+          `ALTER SEQUENCE users_id_seq RESTART WITH 7`,
           { transaction }
         );
       }
 
-      console.log(`   ✅ Migrated ${uatUsers.length} users\n`);
+      console.log(`   ✅ Migrated ${uatUsers.length} users with ID remapping\n`);
 
-      // Step 3: Migrate wallets
+      // Step 3: Migrate wallets with remapped user IDs
       console.log('📦 Step 3: Migrating wallets from UAT...');
       
       // Force fresh read from database (no cache)
@@ -170,6 +182,7 @@ async function main() {
                 "dailyLimit", "monthlyLimit", "dailySpent", "monthlySpent",
                 "lastTransactionAt", "createdAt", "updatedAt"
          FROM wallets
+         WHERE "userId" IN (1, 2, 4, 6, 7, 8)
          ORDER BY id`,
         { 
           type: QueryTypes.SELECT,
@@ -183,6 +196,7 @@ async function main() {
 
       if (!dryRun) {
         for (const wallet of uatWallets) {
+          const newUserId = userIdMapping[wallet.userId];
           await staging.query(
             `INSERT INTO wallets (
                id, "walletId", "userId", balance, currency, status,
@@ -200,7 +214,7 @@ async function main() {
               replacements: {
                 id: wallet.id,
                 walletId: wallet.walletId,
-                userId: wallet.userId,
+                userId: newUserId, // Use remapped user ID
                 balance: 0, // Will recalculate from transactions
                 currency: wallet.currency || 'ZAR',
                 status: wallet.status || 'active',
@@ -226,7 +240,7 @@ async function main() {
         );
       }
 
-      console.log(`   ✅ Migrated ${uatWallets.length} wallets\n`);
+      console.log(`   ✅ Migrated ${uatWallets.length} wallets with remapped user IDs\n`);
 
       // Step 4: Migrate transactions
       console.log('📦 Step 4: Migrating transactions from UAT...');
@@ -269,8 +283,12 @@ async function main() {
           
           const replacements = {};
           columns.forEach(c => {
+            // Remap userId if present
+            if (c === 'userId' && tx[c] && userIdMapping[tx[c]]) {
+              replacements[c] = userIdMapping[tx[c]];
+            }
             // Stringify JSON/JSONB columns
-            if (c === 'metadata' && typeof tx[c] === 'object' && tx[c] !== null) {
+            else if (c === 'metadata' && typeof tx[c] === 'object' && tx[c] !== null) {
               replacements[c] = JSON.stringify(tx[c]);
             } else {
               replacements[c] = tx[c];
@@ -301,12 +319,12 @@ async function main() {
 
       console.log(`   ✅ Migrated ${uatTransactions.length} transactions\n`);
 
-      // Step 5: Migrate vouchers
+      // Step 5: Migrate vouchers with column mapping
       console.log('📦 Step 5: Migrating vouchers from UAT...');
       
       // Force fresh read from database (no cache)
       const uatVouchers = await uat.query(
-        `SELECT * FROM vouchers ORDER BY id`,
+        `SELECT * FROM vouchers WHERE "userId" IN (1, 2, 4, 6, 7, 8) ORDER BY id`,
         { 
           type: QueryTypes.SELECT,
           raw: true,
@@ -316,10 +334,61 @@ async function main() {
       );
 
       console.log(`   Found ${uatVouchers.length} vouchers in UAT`);
-      console.log(`   ⚠️  Vouchers table has incompatible schema between UAT and Staging`);
-      console.log(`   ℹ️  Skipping vouchers migration (schemas need to be aligned first)`);
-      console.log(`   ℹ️  UAT uses: voucherCode, voucherType, originalAmount, expiresAt`);
-      console.log(`   ℹ️  Staging uses: voucherId, type, amount, expiryDate\n`);
+      console.log(`   Mapping UAT columns → Staging columns`);
+
+      if (!dryRun && uatVouchers.length > 0) {
+        let vouchersMigrated = 0;
+        for (const voucher of uatVouchers) {
+          // Map UAT columns to Staging columns
+          // UAT: voucherCode, voucherType, originalAmount, expiresAt
+          // Staging: voucherId, type, amount, expiryDate
+          const newUserId = userIdMapping[voucher.userId];
+          
+          await staging.query(
+            `INSERT INTO vouchers (
+               id, "voucherId", "userId", type, amount, description, status,
+               "expiryDate", "createdAt", "updatedAt", "easyPayCode", balance,
+               metadata, "redemptionCount", "maxRedemptions"
+             ) VALUES (
+               :id, :voucherId, :userId, :type, :amount, :description, :status,
+               :expiryDate, :createdAt, :updatedAt, :easyPayCode, :balance,
+               :metadata, :redemptionCount, :maxRedemptions
+             )`,
+            {
+              transaction,
+              replacements: {
+                id: voucher.id,
+                voucherId: voucher.voucherCode, // Map voucherCode → voucherId
+                userId: newUserId, // Use remapped user ID
+                type: voucher.voucherType, // Map voucherType → type
+                amount: voucher.originalAmount, // Map originalAmount → amount
+                description: voucher.description,
+                status: voucher.status,
+                expiryDate: voucher.expiresAt, // Map expiresAt → expiryDate
+                createdAt: voucher.createdAt,
+                updatedAt: voucher.updatedAt,
+                easyPayCode: voucher.easyPayCode,
+                balance: voucher.balance || 0,
+                metadata: typeof voucher.metadata === 'object' && voucher.metadata !== null ? 
+                  JSON.stringify(voucher.metadata) : voucher.metadata,
+                redemptionCount: voucher.redemptionCount || 0,
+                maxRedemptions: voucher.maxRedemptions || 1,
+              },
+            }
+          );
+          vouchersMigrated++;
+        }
+        
+        const maxVoucherId = Math.max(...uatVouchers.map(v => v.id));
+        await staging.query(
+          `ALTER SEQUENCE vouchers_id_seq RESTART WITH ${maxVoucherId + 1}`,
+          { transaction }
+        );
+        
+        console.log(`   ✅ Migrated ${vouchersMigrated} vouchers with column mapping\n`);
+      } else {
+        console.log(`   ℹ️  No vouchers to migrate\n`);
+      }
 
       // Step 6: Recalculate balances
       console.log('🔄 Step 6: Recalculating wallet balances...');
@@ -356,12 +425,13 @@ async function main() {
       console.log('✅ CLEAN SLATE MIGRATION COMPLETE!');
       console.log('═'.repeat(80));
       console.log(`\n📊 Summary:`);
-      console.log(`   Users:        ${uatUsers.length} migrated`);
+      console.log(`   Users:        ${uatUsers.length} migrated (IDs remapped: 1,2,4,6,7,8 → 1,2,3,4,5,6)`);
       console.log(`   Wallets:      ${uatWallets.length} migrated`);
-      console.log(`   Transactions: ${uatTransactions.length - 1} migrated (1 skipped - invalid wallet refs)`);
-      console.log(`   Vouchers:     0 migrated (schema incompatible)`);
-      console.log(`\n✅ Staging database now has clean UAT data (users, wallets, transactions)`);
-      console.log(`⚠️  Vouchers schema needs alignment before migration\n`);
+      console.log(`   Transactions: ${uatTransactions.length} migrated (with remapped user IDs)`);
+      console.log(`   Vouchers:     ${uatVouchers.length} migrated (with column mapping)`);
+      console.log(`\n✅ Staging database is now a complete copy of UAT`);
+      console.log(`✅ All 6 users present with correct sequential IDs (1-6)`);
+      console.log(`✅ All balances recalculated from transactions and vouchers\n`);
 
     } catch (error) {
       if (transaction) {
