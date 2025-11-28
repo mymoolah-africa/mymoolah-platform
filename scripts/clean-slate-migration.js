@@ -249,8 +249,8 @@ async function main() {
         for (const tx of uatTransactions) {
           // Get all column names from the transaction object
           const columns = Object.keys(tx).filter(k => tx[k] !== undefined);
-          const columnNames = columns.map(c => c === 'createdAt' || c === 'updatedAt' ? 
-            (c === 'createdAt' ? 'created_at' : 'updated_at') : `"${c}"`).join(', ');
+          // Keep all columns in camelCase (staging uses camelCase)
+          const columnNames = columns.map(c => `"${c}"`).join(', ');
           const placeholders = columns.map(c => `:${c}`).join(', ');
           
           const replacements = {};
@@ -297,8 +297,8 @@ async function main() {
       if (!dryRun && uatVouchers.length > 0) {
         for (const voucher of uatVouchers) {
           const columns = Object.keys(voucher).filter(k => voucher[k] !== undefined);
-          const columnNames = columns.map(c => c === 'createdAt' || c === 'updatedAt' ? 
-            (c === 'createdAt' ? 'created_at' : 'updated_at') : `"${c}"`).join(', ');
+          // Keep all columns in camelCase (staging uses camelCase)
+          const columnNames = columns.map(c => `"${c}"`).join(', ');
           const placeholders = columns.map(c => `:${c}`).join(', ');
           
           const replacements = {};
