@@ -75,19 +75,22 @@ async function main() {
       console.log('🗑️  Step 1: Wiping staging data...');
       
       if (!dryRun) {
+        // Temporarily disable foreign key checks
+        await staging.query('SET CONSTRAINTS ALL DEFERRED', { transaction });
+        
         // Delete in correct order (respecting foreign keys)
         // Use IF EXISTS or try/catch to handle missing tables
         const tablesToDelete = ['vouchers', 'transactions', 'wallets', 'kyc_documents', 'users'];
         
         for (const table of tablesToDelete) {
           try {
-            await staging.query(`DELETE FROM ${table}`, { transaction });
+            await staging.query(`TRUNCATE TABLE ${table} CASCADE`, { transaction });
             console.log(`   ✅ Cleared ${table}`);
           } catch (err) {
             if (err.message.includes('does not exist')) {
               console.log(`   ℹ️  Table ${table} doesn't exist, skipping`);
             } else {
-              throw err;
+              console.log(`   ⚠️  Could not clear ${table}: ${err.message}`);
             }
           }
         }
