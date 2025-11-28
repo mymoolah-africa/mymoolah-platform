@@ -299,7 +299,7 @@ async function main() {
         );
       }
 
-      console.log(`   ✅ Migrated ${migrated || uatTransactions.length} transactions\n`);
+      console.log(`   ✅ Migrated ${uatTransactions.length} transactions\n`);
 
       // Step 5: Migrate vouchers
       console.log('📦 Step 5: Migrating vouchers from UAT...');
