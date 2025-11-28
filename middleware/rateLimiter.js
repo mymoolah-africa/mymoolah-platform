@@ -31,6 +31,7 @@ const authLimiter = rateLimit({
     trustProxy: false // Disable validation - we handle proxy manually
   },
   keyGenerator: (req) => getClientIP(req) + '-auth',
+  skip: (req) => process.env.STAGING === 'true', // Skip entirely in staging for testing
 });
 
 // General API rate limiter
@@ -49,6 +50,7 @@ const apiLimiter = rateLimit({
     trustProxy: false // Disable validation - we handle proxy manually
   },
   keyGenerator: (req) => getClientIP(req),
+  skip: (req) => process.env.STAGING === 'true', // Skip entirely in staging for testing
 });
 
 module.exports = {

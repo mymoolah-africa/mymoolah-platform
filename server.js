@@ -255,8 +255,10 @@ const limiter = rateLimit({
   validate: {
     trustProxy: false // Disable validation - we handle proxy manually
   },
-  // In development, and for CORS preflight, skip limiting to avoid false CORS failures during polling
-  skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
+  // In development, staging, and for CORS preflight, skip limiting to avoid false CORS failures during polling
+  skip: (req) => req.method === 'OPTIONS' || 
+    (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') ||
+    process.env.STAGING === 'true',
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -277,7 +279,9 @@ const authLimiter = rateLimit({
     trustProxy: false // Disable validation - we handle proxy manually
   },
   keyGenerator: (req) => getClientIP(req) + '-auth',
-  skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
+  skip: (req) => req.method === 'OPTIONS' || 
+    (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') ||
+    process.env.STAGING === 'true',
   handler: (req, res) => {
     res.status(429).json({
       success: false,
@@ -298,7 +302,9 @@ const financialLimiter = rateLimit({
     trustProxy: false // Disable validation - we handle proxy manually
   },
   keyGenerator: (req) => getClientIP(req) + '-financial',
-  skip: (req) => req.method === 'OPTIONS' || (process.env.NODE_ENV && process.env.NODE_ENV !== 'production'),
+  skip: (req) => req.method === 'OPTIONS' || 
+    (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') ||
+    process.env.STAGING === 'true',
   handler: (req, res) => {
     res.status(429).json({
       success: false,
