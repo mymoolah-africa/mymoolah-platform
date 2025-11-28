@@ -116,6 +116,8 @@ async function main() {
     try {
       const oldToNewUserIdMap = new Map();
 
+      // Step 1: Build the mapping and identify users to temporarily remove
+      const oldStagingIdsToRemove = [];
       for (const uatUser of uatUsers) {
         const targetId = uatUser.id;
         const normalized = normalizePhone(uatUser.phoneNumber);
@@ -123,7 +125,22 @@ async function main() {
 
         if (oldStagingId && oldStagingId !== targetId) {
           oldToNewUserIdMap.set(oldStagingId, targetId);
+          oldStagingIdsToRemove.push(oldStagingId);
         }
+      }
+
+      // Step 2: Temporarily remove conflicting staging users (we'll remap their data later)
+      if (oldStagingIdsToRemove.length > 0) {
+        console.log(`🗑️  Temporarily removing ${oldStagingIdsToRemove.length} conflicting staging users...`);
+        await staging.query(
+          `DELETE FROM users WHERE id IN (:ids)`,
+          { transaction, replacements: { ids: oldStagingIdsToRemove } }
+        );
+      }
+
+      // Step 3: Insert/update UAT users into staging IDs 1-6
+      for (const uatUser of uatUsers) {
+        const targetId = uatUser.id;
 
         await staging.query(
           `INSERT INTO users (
