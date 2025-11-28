@@ -125,7 +125,7 @@ async function main() {
           await staging.query(
             `INSERT INTO users (
                id, "firstName", "lastName", "phoneNumber", email, password_hash, status,
-               "kycStatus", "kycVerifiedAt", "kycVerifiedBy", created_at, updated_at
+               "kycStatus", "kycVerifiedAt", "kycVerifiedBy", "createdAt", "updatedAt"
              ) VALUES (
                :id, :firstName, :lastName, :phoneNumber, :email, :passwordHash, :status,
                :kycStatus, :kycVerifiedAt, :kycVerifiedBy, :createdAt, :updatedAt
@@ -188,7 +188,7 @@ async function main() {
                id, "walletId", "userId", balance, currency, status,
                "kycVerified", "kycVerifiedAt", "kycVerifiedBy",
                "dailyLimit", "monthlyLimit", "dailySpent", "monthlySpent",
-               "lastTransactionAt", created_at, updated_at
+               "lastTransactionAt", "createdAt", "updatedAt"
              ) VALUES (
                :id, :walletId, :userId, :balance, :currency, :status,
                :kycVerified, :kycVerifiedAt, :kycVerifiedBy,
