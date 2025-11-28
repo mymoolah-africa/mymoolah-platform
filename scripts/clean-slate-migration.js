@@ -246,7 +246,21 @@ async function main() {
 
       if (!dryRun) {
         let migrated = 0;
+        let skipped = 0;
+        const validWalletIds = new Set(uatWallets.map(w => w.walletId));
+        
         for (const tx of uatTransactions) {
+          // Skip transactions with invalid wallet references
+          const hasInvalidWallet = 
+            (tx.walletId && !validWalletIds.has(tx.walletId)) ||
+            (tx.senderWalletId && !validWalletIds.has(tx.senderWalletId)) ||
+            (tx.receiverWalletId && !validWalletIds.has(tx.receiverWalletId));
+          
+          if (hasInvalidWallet) {
+            skipped++;
+            continue;
+          }
+          
           // Get all column names from the transaction object
           const columns = Object.keys(tx).filter(k => tx[k] !== undefined);
           // Keep all columns in camelCase (staging uses camelCase)
@@ -274,6 +288,10 @@ async function main() {
           }
         }
         
+        if (skipped > 0) {
+          console.log(`   ⚠️  Skipped ${skipped} transactions with invalid wallet references`);
+        }
+        
         const maxTxId = Math.max(...uatTransactions.map(t => t.id));
         await staging.query(
           `ALTER SEQUENCE transactions_id_seq RESTART WITH ${maxTxId + 1}`,
@@ -281,7 +299,7 @@ async function main() {
         );
       }
 
-      console.log(`   ✅ Migrated ${uatTransactions.length} transactions\n`);
+      console.log(`   ✅ Migrated ${migrated || uatTransactions.length} transactions\n`);
 
       // Step 5: Migrate vouchers
       console.log('📦 Step 5: Migrating vouchers from UAT...');
