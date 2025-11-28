@@ -24,12 +24,7 @@ async function checkUserTransactions(userId) {
     // Get user info (use raw query to avoid camel/snake case issues)
     const userRows = await sequelize.query(
       `
-        SELECT
-          id,
-          "firstName"  AS "firstName",
-          "lastName"   AS "lastName",
-          "phoneNumber" AS "phoneNumber",
-          email
+        SELECT *
         FROM users
         WHERE id = :userId
         LIMIT 1
@@ -43,30 +38,17 @@ async function checkUserTransactions(userId) {
     }
 
     const user = userRows[0];
+    const firstName = user.firstName || user.firstname || '';
+    const lastName = user.lastName || user.lastname || '';
+    const phone = user.phoneNumber || user.phonenumber || user.phone || 'no phone';
     console.log(
-      `✅ User found: ${user.firstName || ''} ${user.lastName || ''} (${user.phoneNumber || 'no phone'})`
+      `✅ User found: ${firstName} ${lastName} (${phone})`
     );
     
     // Get wallet info (raw query because table uses snake_case columns)
     const walletRows = await sequelize.query(
       `
-        SELECT
-          id,
-          "walletId"          AS "walletId",
-          "userId"            AS "userId",
-          balance,
-          currency,
-          status,
-          "kycVerified"       AS "kycVerified",
-          "kycVerifiedAt"     AS "kycVerifiedAt",
-          "kycVerifiedBy"     AS "kycVerifiedBy",
-          "dailyLimit"        AS "dailyLimit",
-          "monthlyLimit"      AS "monthlyLimit",
-          "dailySpent"        AS "dailySpent",
-          "monthlySpent"      AS "monthlySpent",
-          "lastTransactionAt" AS "lastTransactionAt",
-          created_at          AS "createdAt",
-          updated_at          AS "updatedAt"
+        SELECT *
         FROM wallets
         WHERE "userId" = :userId
         LIMIT 1
@@ -79,31 +61,18 @@ async function checkUserTransactions(userId) {
       return;
     }
     const wallet = walletRows[0];
-    console.log(`✅ Wallet found: ${wallet.walletId}, Balance: R${wallet.balance}\n`);
+    const walletId = wallet.walletId || wallet.walletid || wallet.id || 'unknown';
+    const walletBalance = wallet.balance || wallet.balance_amount || 0;
+    const walletCurrency = wallet.currency || wallet.currency_code || 'ZAR';
+    console.log(`✅ Wallet found: ${walletId}, Balance: R${walletBalance}\n`);
     
     // Get ALL transactions for this user (no filters, no limit to find R50k deposit)
     const allTransactions = await sequelize.query(
       `
-        SELECT
-          id,
-          "transactionId"      AS "transactionId",
-          "walletId"           AS "walletId",
-          "userId"             AS "userId",
-          amount,
-          type,
-          status,
-          description,
-          currency,
-          fee,
-          "senderWalletId"     AS "senderWalletId",
-          "receiverWalletId"   AS "receiverWalletId",
-          reference,
-          "createdAt"          AS "createdAt",
-          "updatedAt"          AS "updatedAt",
-          metadata
+        SELECT *
         FROM transactions
         WHERE "userId" = :userId
-        ORDER BY "createdAt" DESC
+        ORDER BY id DESC
       `,
       { replacements: { userId }, type: QueryTypes.SELECT }
     );
@@ -127,7 +96,12 @@ async function checkUserTransactions(userId) {
     Object.keys(byType).forEach(type => {
       console.log(`  ${type}: ${byType[type].length} transaction(s)`);
       byType[type].forEach(tx => {
-        console.log(`    - ${tx.transactionId}: R${tx.amount} - ${tx.description || 'No description'} (${tx.status}) - ${tx.createdAt}`);
+        const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
+        const amount = tx.amount || tx.amount_cents || 0;
+        const description = tx.description || tx.details || 'No description';
+        const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
+        const status = tx.status || 'unknown';
+        console.log(`    - ${transactionId}: R${amount} - ${description} (${status}) - ${created}`);
       });
     });
     
@@ -140,41 +114,68 @@ async function checkUserTransactions(userId) {
     
     console.log(`\n💰 Deposits found: ${deposits.length}`);
     deposits.forEach(tx => {
-      console.log(`  - ${tx.transactionId}: R${tx.amount} - ${tx.description || 'No description'} (${tx.status}) - ${tx.createdAt}`);
+      const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
+      const amount = tx.amount || 0;
+      const description = tx.description || tx.details || 'No description';
+      const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
+      const status = tx.status || 'unknown';
+      console.log(`  - ${transactionId}: R${amount} - ${description} (${status}) - ${created}`);
     });
     
     // Check for R50,000 transaction specifically (check both R50,000 and 5000000 cents)
     const r50000Transactions = allTransactions.filter(tx => {
-      const amount = parseFloat(tx.amount);
+      const amount = parseFloat(tx.amount || tx.amount_cents || 0);
       return amount === 50000 || amount === 5000000 || amount === 50000.00;
     });
     
     console.log(`\n🔍 Transactions with R50,000 amount: ${r50000Transactions.length}`);
     if (r50000Transactions.length > 0) {
       r50000Transactions.forEach(tx => {
-        console.log(`  - ${tx.transactionId}: ${tx.type} - R${tx.amount} - ${tx.description || 'No description'} (${tx.status}) - ${tx.createdAt}`);
+        const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
+        const amount = tx.amount || 0;
+        const description = tx.description || tx.details || 'No description';
+        const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
+        const status = tx.status || 'unknown';
+        console.log(`  - ${transactionId}: ${tx.type || 'unknown'} - R${amount} - ${description} (${status}) - ${created}`);
       });
     } else {
       console.log(`  ⚠️  No R50,000 transaction found!`);
       // Check for large amounts close to R50k
       const largeAmounts = allTransactions
-        .filter(tx => parseFloat(tx.amount) >= 40000 && parseFloat(tx.amount) <= 60000)
-        .sort((a, b) => parseFloat(b.amount) - parseFloat(a.amount))
+        .filter(tx => {
+          const amount = parseFloat(tx.amount || tx.amount_cents || 0);
+          return amount >= 40000 && amount <= 60000;
+        })
+        .sort((a, b) => {
+          const amountB = parseFloat(b.amount || b.amount_cents || 0);
+          const amountA = parseFloat(a.amount || a.amount_cents || 0);
+          return amountB - amountA;
+        })
         .slice(0, 10);
       console.log(`\n  💰 Largest transactions (R40k-R60k range):`);
       largeAmounts.forEach(tx => {
-        console.log(`    - ${tx.transactionId}: ${tx.type} - R${tx.amount} - ${tx.description || 'No description'} (${tx.status}) - ${tx.createdAt}`);
+        const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
+        const amount = tx.amount || 0;
+        const description = tx.description || tx.details || 'No description';
+        const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
+        const status = tx.status || 'unknown';
+        console.log(`    - ${transactionId}: ${tx.type || 'unknown'} - R${amount} - ${description} (${status}) - ${created}`);
       });
     }
     
     // Check oldest transactions (might be the initial deposit)
     const oldestTransactions = allTransactions
-      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      .sort((a, b) => new Date(a.createdAt || a.created_at || 0) - new Date(b.createdAt || b.created_at || 0))
       .slice(0, 5);
     
     console.log(`\n📅 Oldest 5 transactions:`);
     oldestTransactions.forEach(tx => {
-      console.log(`  - ${tx.transactionId}: ${tx.type} - R${tx.amount} - ${tx.description || 'No description'} (${tx.status}) - ${tx.createdAt}`);
+      const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
+      const amount = tx.amount || 0;
+      const description = tx.description || tx.details || 'No description';
+      const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
+      const status = tx.status || 'unknown';
+      console.log(`  - ${transactionId}: ${tx.type || 'unknown'} - R${amount} - ${description} (${status}) - ${created}`);
     });
     
     // Check what would be filtered out
