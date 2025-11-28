@@ -42,22 +42,27 @@ async function main() {
     await staging.authenticate();
     console.log('✅ Connection established\n');
 
-    // Find placeholder wallets (pattern: WAL20250729123456*)
-    console.log('📋 Finding placeholder wallets...');
-    const placeholderWallets = await staging.query(
+    // Find all wallets with R0 balance and no transactions
+    console.log('📋 Finding all wallets...');
+    const allWallets = await staging.query(
       `SELECT id, "walletId", "userId", balance, status 
        FROM wallets 
-       WHERE "walletId" LIKE 'WAL20250729123456%'
        ORDER BY id`,
       { type: QueryTypes.SELECT }
     );
 
+    console.log(`📊 Total wallets in staging: ${allWallets.length}\n`);
+
+    // Find placeholder wallets (pattern: WAL20250729123456* or similar test patterns)
+    console.log('📋 Finding potential placeholder wallets (R0 balance)...');
+    const placeholderWallets = allWallets.filter(w => parseFloat(w.balance) === 0);
+
     if (placeholderWallets.length === 0) {
-      console.log('✅ No placeholder wallets found');
+      console.log('✅ No wallets with R0 balance found');
       return;
     }
 
-    console.log(`📊 Found ${placeholderWallets.length} placeholder wallets:\n`);
+    console.log(`📊 Found ${placeholderWallets.length} wallets with R0 balance:\n`);
     console.table(placeholderWallets);
 
     // Check for transactions
@@ -91,12 +96,15 @@ async function main() {
     }
 
     if (safeToDelete.length === 0) {
-      console.log('\n✅ No placeholder wallets are safe to delete');
+      console.log('\n✅ No wallets are safe to delete (all have transactions or non-zero balance)');
       return;
     }
 
-    console.log(`\n🗑️  Wallets safe to delete: ${safeToDelete.length}`);
+    console.log(`\n🗑️  Wallets safe to delete (R0 balance, no transactions): ${safeToDelete.length}`);
     console.table(safeToDelete);
+
+    console.log('\n⚠️  About to delete these wallets. Press Ctrl+C to cancel, or wait 5 seconds to proceed...');
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     const transaction = await staging.transaction();
 
@@ -111,7 +119,7 @@ async function main() {
 
       await transaction.commit();
 
-      console.log(`\n✅ Cleanup complete! Deleted ${safeToDelete.length} placeholder wallets.`);
+      console.log(`\n✅ Cleanup complete! Deleted ${safeToDelete.length} wallets.`);
 
     } catch (error) {
       await transaction.rollback();
