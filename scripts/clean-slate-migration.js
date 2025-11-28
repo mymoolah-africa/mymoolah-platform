@@ -326,7 +326,12 @@ async function main() {
           
           const replacements = {};
           columns.forEach(c => {
-            replacements[c] = voucher[c];
+            // Stringify JSON/JSONB columns
+            if (typeof voucher[c] === 'object' && voucher[c] !== null && !(voucher[c] instanceof Date)) {
+              replacements[c] = JSON.stringify(voucher[c]);
+            } else {
+              replacements[c] = voucher[c];
+            }
           });
 
           await staging.query(
