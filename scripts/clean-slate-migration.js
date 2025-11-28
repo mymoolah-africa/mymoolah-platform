@@ -255,7 +255,12 @@ async function main() {
           
           const replacements = {};
           columns.forEach(c => {
-            replacements[c] = tx[c];
+            // Stringify JSON/JSONB columns
+            if (c === 'metadata' && typeof tx[c] === 'object' && tx[c] !== null) {
+              replacements[c] = JSON.stringify(tx[c]);
+            } else {
+              replacements[c] = tx[c];
+            }
           });
 
           await staging.query(
