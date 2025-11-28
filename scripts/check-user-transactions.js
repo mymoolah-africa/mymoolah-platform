@@ -1,377 +1,290 @@
+#!/usr/bin/env node
 /**
- * Diagnostic script to check transactions for a user
+ * Diagnostic script to inspect wallet transactions for a user.
+ * Works across environments where schemas differ (camelCase vs snake_case).
+ *
  * Usage: node scripts/check-user-transactions.js <userId>
  */
 
 require('dotenv').config();
 const { QueryTypes } = require('sequelize');
+const { sequelize } = require('../models');
 
-// Configure SSL for Cloud SQL connections
+// Honour Cloud SQL SSL configuration when DATABASE_URL forces sslmode=require
 if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=require')) {
-  // Set NODE_ENV to production to use SSL config from config.json
   process.env.NODE_ENV = process.env.NODE_ENV || 'production';
-  
-  // Also set NODE_TLS_REJECT_UNAUTHORIZED for Cloud SQL certificate issues
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
-const { sequelize, Transaction, Wallet, User } = require('../models');
+const numberFormatter = new Intl.NumberFormat('en-ZA', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+});
+
+const formatAmount = (value) => {
+  const amount = parseFloat(value ?? 0);
+  return Number.isFinite(amount) ? numberFormatter.format(amount) : '0.00';
+};
+
+const formatDate = (value) => {
+  if (!value) return 'unknown date';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'unknown date' : date.toISOString();
+};
+
+async function fetchUser(userId) {
+  const result = await sequelize.query(
+    `
+      SELECT
+        id,
+        COALESCE("firstName", "first_name") AS "firstName",
+        COALESCE("lastName", "last_name")   AS "lastName",
+        COALESCE("phoneNumber", "phone_number", phone) AS "phoneNumber",
+        email
+      FROM users
+      WHERE id = :userId
+      LIMIT 1
+    `,
+    { replacements: { userId }, type: QueryTypes.SELECT }
+  );
+  return result[0];
+}
+
+async function fetchWallets(userId) {
+  return sequelize.query(
+    `
+      SELECT
+        COALESCE("walletId", "wallet_id") AS "walletId",
+        COALESCE("userId", "user_id")     AS "userId",
+        balance,
+        currency,
+        status,
+        COALESCE("kycVerified", "kyc_verified")             AS "kycVerified",
+        COALESCE("kycVerifiedAt", "kyc_verified_at")         AS "kycVerifiedAt",
+        COALESCE("kycVerifiedBy", "kyc_verified_by")         AS "kycVerifiedBy",
+        COALESCE("dailyLimit", "daily_limit")                AS "dailyLimit",
+        COALESCE("monthlyLimit", "monthly_limit")            AS "monthlyLimit",
+        COALESCE("dailySpent", "daily_spent")                AS "dailySpent",
+        COALESCE("monthlySpent", "monthly_spent")            AS "monthlySpent",
+        COALESCE("lastTransactionAt", "last_transaction_at") AS "lastTransactionAt",
+        COALESCE("createdAt", created_at) AS "createdAt",
+        COALESCE("updatedAt", updated_at) AS "updatedAt"
+      FROM wallets
+      WHERE COALESCE("userId", "user_id") = :userId
+    `,
+    { replacements: { userId }, type: QueryTypes.SELECT }
+  );
+}
+
+async function fetchTransactionsByWalletIds(walletIds) {
+  if (walletIds.length === 0) return [];
+
+  const clauses = walletIds.map(
+    (_, index) => `
+      COALESCE("walletId", "wallet_id") = :wallet${index}
+      OR COALESCE("senderWalletId", "sender_wallet_id") = :wallet${index}
+      OR COALESCE("receiverWalletId", "receiver_wallet_id") = :wallet${index}
+    `.trim()
+  );
+
+  const replacements = walletIds.reduce((acc, id, index) => {
+    acc[`wallet${index}`] = id;
+    return acc;
+  }, {});
+
+  return sequelize.query(
+    `
+      SELECT
+        id,
+        COALESCE("transactionId", transaction_id)            AS "transactionId",
+        COALESCE("walletId", wallet_id)                      AS "walletId",
+        COALESCE("senderWalletId", sender_wallet_id)         AS "senderWalletId",
+        COALESCE("receiverWalletId", receiver_wallet_id)     AS "receiverWalletId",
+        COALESCE("userId", user_id)                          AS "userId",
+        amount,
+        type,
+        status,
+        description,
+        currency,
+        COALESCE(fee, fee_amount, 0)                          AS "fee",
+        COALESCE(reference, external_reference)               AS "reference",
+        metadata,
+        COALESCE("createdAt", created_at)                    AS "createdAt",
+        COALESCE("updatedAt", updated_at)                    AS "updatedAt"
+      FROM transactions
+      WHERE ${clauses.join(' OR ')}
+      ORDER BY COALESCE("createdAt", created_at, NOW()) DESC
+    `,
+    { replacements, type: QueryTypes.SELECT }
+  );
+}
+
+async function fetchTransactionsByUserId(userId) {
+  return sequelize.query(
+    `
+      SELECT
+        id,
+        COALESCE("transactionId", transaction_id)            AS "transactionId",
+        COALESCE("walletId", wallet_id)                      AS "walletId",
+        COALESCE("senderWalletId", sender_wallet_id)         AS "senderWalletId",
+        COALESCE("receiverWalletId", receiver_wallet_id)     AS "receiverWalletId",
+        COALESCE("userId", user_id)                          AS "userId",
+        amount,
+        type,
+        status,
+        description,
+        currency,
+        COALESCE(fee, fee_amount, 0)                          AS "fee",
+        COALESCE(reference, external_reference)               AS "reference",
+        metadata,
+        COALESCE("createdAt", created_at)                    AS "createdAt",
+        COALESCE("updatedAt", updated_at)                    AS "updatedAt"
+      FROM transactions
+      WHERE COALESCE("userId", user_id) = :userId
+      ORDER BY COALESCE("createdAt", created_at, NOW()) DESC
+    `,
+    { replacements: { userId }, type: QueryTypes.SELECT }
+  );
+}
+
+const groupTransactionsByType = (transactions) =>
+  transactions.reduce((acc, tx) => {
+    const key = tx.type || 'unknown';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(tx);
+    return acc;
+  }, {});
+
+function isInternalAccounting(tx) {
+  const description = (tx.description || '').toLowerCase();
+  const type = (tx.type || '').toLowerCase();
+
+  const internalTypes = ['vat_payable', 'mymoolah_revenue', 'zapper_float_credit', 'float_credit', 'revenue'];
+  if (internalTypes.includes(type)) return true;
+
+  if (description.includes('vat payable') ||
+      description.includes('vat payable to') ||
+      description.includes('vat to') ||
+      (description.includes('vat') && description.includes('payable'))) {
+    return true;
+  }
+
+  if (description.includes('mymoolah revenue') ||
+      description.includes('revenue from') ||
+      (description.includes('revenue') && description.includes('mymoolah'))) {
+    return true;
+  }
+
+  if (description.includes('float credit') ||
+      description.includes('zapper float credit') ||
+      (description.includes('float') && description.includes('credit'))) {
+    return true;
+  }
+
+  return false;
+}
 
 async function checkUserTransactions(userId) {
   try {
     console.log(`\n🔍 Checking transactions for User ID: ${userId}\n`);
-    
-    // Get user info (use raw query to avoid camel/snake case issues)
-    const userRows = await sequelize.query(
-      `
-        SELECT *
-        FROM users
-        WHERE id = :userId
-        LIMIT 1
-      `,
-      { replacements: { userId }, type: QueryTypes.SELECT }
-    );
 
-    if (!userRows || userRows.length === 0) {
+    const user = await fetchUser(userId);
+    if (!user) {
       console.log(`❌ User ID ${userId} not found`);
       return;
     }
+    console.log(`✅ User found: ${user.firstName || ''} ${user.lastName || ''} (${user.phoneNumber || 'no phone'})`);
 
-    const user = userRows[0];
-    const firstName = user.firstName || user.firstname || '';
-    const lastName = user.lastName || user.lastname || '';
-    const phone = user.phoneNumber || user.phonenumber || user.phone || 'no phone';
-    console.log(
-      `✅ User found: ${firstName} ${lastName} (${phone})`
-    );
-    
-    // Get wallet info (raw query because table uses snake_case columns)
-    const walletRows = await sequelize.query(
-      `
-        SELECT *
-        FROM wallets
-        WHERE "userId" = :userId
-        LIMIT 1
-      `,
-      { replacements: { userId }, type: QueryTypes.SELECT }
-    );
-
-    if (!walletRows || walletRows.length === 0) {
+    const wallets = await fetchWallets(userId);
+    if (!wallets || wallets.length === 0) {
       console.log(`❌ No wallet found for user ID ${userId}`);
       return;
     }
-    const wallet = walletRows[0];
-    const walletId = wallet.walletId || wallet.walletid || wallet.id || 'unknown';
-    const walletBalance = wallet.balance || wallet.balance_amount || 0;
-    const walletCurrency = wallet.currency || wallet.currency_code || 'ZAR';
-    console.log(`✅ Wallet found: ${walletId}, Balance: R${walletBalance}\n`);
-    
-    const walletIds = walletRows.map(w => w.walletId || w.walletid).filter(Boolean);
-    
-    if (walletIds.length === 0) {
-      console.log('⚠️  Wallet has no walletId value; cannot fetch transactions by wallet');
-    }
-    
-    // Get ALL transactions for this user (no filters, no limit to find R50k deposit)
-    let allTransactions = [];
+
+    wallets.forEach((wallet, index) => {
+      console.log(`✅ Wallet ${index + 1}: ${wallet.walletId || 'unknown'} | Balance: R${formatAmount(wallet.balance)} | Status: ${wallet.status}`);
+    });
+    console.log('');
+
+    const walletIds = wallets.map((wallet) => wallet.walletId).filter(Boolean);
+
+    let transactions = [];
     if (walletIds.length > 0) {
-      const walletConditions = walletIds
-        .map((_, idx) => `("walletId" = :wallet${idx} OR "senderWalletId" = :wallet${idx} OR "receiverWalletId" = :wallet${idx})`)
-        .join(' OR ');
-      const replacements = {};
-      walletIds.forEach((id, idx) => { replacements[`wallet${idx}`] = id; });
-      
-      allTransactions = await sequelize.query(
-        `
-          SELECT *
-          FROM transactions
-          WHERE ${walletConditions || 'false'}
-          ORDER BY id DESC
-        `,
-        { replacements, type: QueryTypes.SELECT }
-      );
-    } else {
-      allTransactions = [];
+      transactions = await fetchTransactionsByWalletIds(walletIds);
     }
 
-    // If nothing found but column userId might exist, try fallback
-    if (allTransactions.length === 0) {
+    if (!transactions || transactions.length === 0) {
       try {
-        const userTransactions = await sequelize.query(
-          `
-            SELECT *
-            FROM transactions
-            WHERE "userId" = :userId
-            ORDER BY id DESC
-          `,
-          { replacements: { userId }, type: QueryTypes.SELECT }
-        );
-        if (userTransactions.length > 0) {
-          allTransactions = userTransactions;
-        }
-      } catch (err) {
-        // Column might not exist; ignore
+        transactions = await fetchTransactionsByUserId(userId);
+      } catch {
+        // Column may not exist (legacy schema); ignore
       }
     }
 
-    console.log(`📊 Total transactions fetched: ${allTransactions.length}\n`);
-    
-    if (allTransactions.length === 0) {
+    console.log(`📊 Total transactions fetched: ${transactions.length}\n`);
+    if (!transactions || transactions.length === 0) {
       console.log('⚠️  No transactions found in database for this user / wallet');
       return;
     }
-    
-    // Group by type
-    const byType = {};
-    allTransactions.forEach(tx => {
-      const type = tx.type || 'unknown';
-      if (!byType[type]) byType[type] = [];
-      byType[type].push(tx);
-    });
-    
+
+    const transactionsByType = groupTransactionsByType(transactions);
     console.log('📋 Transactions by type:');
-    Object.keys(byType).forEach(type => {
-      console.log(`  ${type}: ${byType[type].length} transaction(s)`);
-      byType[type].forEach(tx => {
-        const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
-        const amount = tx.amount || tx.amount_cents || 0;
-        const description = tx.description || tx.details || 'No description';
-        const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
-        const status = tx.status || 'unknown';
-        console.log(`    - ${transactionId}: R${amount} - ${description} (${status}) - ${created}`);
+    Object.entries(transactionsByType).forEach(([type, list]) => {
+      console.log(`  ${type}: ${list.length} transaction(s)`);
+      list.forEach((tx) => {
+        console.log(`    - ${tx.transactionId || 'N/A'}: R${formatAmount(tx.amount)} - ${tx.description || 'No description'} (${tx.status}) - ${formatDate(tx.createdAt)}`);
       });
     });
-    
-    // Check for deposits specifically
-    const deposits = allTransactions.filter(tx => 
-      tx.type === 'deposit' || 
-      tx.type === 'credit' ||
-      (tx.description && tx.description.toLowerCase().includes('deposit'))
-    );
-    
+
+    const deposits = transactions.filter((tx) => {
+      const description = (tx.description || '').toLowerCase();
+      return tx.type === 'deposit' || tx.type === 'credit' || description.includes('deposit');
+    });
     console.log(`\n💰 Deposits found: ${deposits.length}`);
-    deposits.forEach(tx => {
-      const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
-      const amount = tx.amount || 0;
-      const description = tx.description || tx.details || 'No description';
-      const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
-      const status = tx.status || 'unknown';
-      console.log(`  - ${transactionId}: R${amount} - ${description} (${status}) - ${created}`);
+    deposits.forEach((tx) => {
+      console.log(`  - ${tx.transactionId || 'N/A'}: R${formatAmount(tx.amount)} - ${tx.description || 'No description'} (${tx.status}) - ${formatDate(tx.createdAt)}`);
     });
-    
-    // Check for R50,000 transaction specifically (check both R50,000 and 5000000 cents)
-    const r50000Transactions = allTransactions.filter(tx => {
-      const amount = parseFloat(tx.amount || tx.amount_cents || 0);
-      return amount === 50000 || amount === 5000000 || amount === 50000.00;
+
+    const fiftyKTransactions = transactions.filter((tx) => {
+      const amount = parseFloat(tx.amount ?? 0);
+      return amount === 50000 || amount === 5000000 || amount === 50000.0;
     });
-    
-    console.log(`\n🔍 Transactions with R50,000 amount: ${r50000Transactions.length}`);
-    if (r50000Transactions.length > 0) {
-      r50000Transactions.forEach(tx => {
-        const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
-        const amount = tx.amount || 0;
-        const description = tx.description || tx.details || 'No description';
-        const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
-        const status = tx.status || 'unknown';
-        console.log(`  - ${transactionId}: ${tx.type || 'unknown'} - R${amount} - ${description} (${status}) - ${created}`);
+    console.log(`\n🔍 Transactions with R50,000 amount: ${fiftyKTransactions.length}`);
+    if (fiftyKTransactions.length > 0) {
+      fiftyKTransactions.forEach((tx) => {
+        console.log(`  - ${tx.transactionId || 'N/A'}: ${tx.type || 'unknown'} - R${formatAmount(tx.amount)} - ${tx.description || 'No description'} (${tx.status}) - ${formatDate(tx.createdAt)}`);
       });
     } else {
-      console.log(`  ⚠️  No R50,000 transaction found!`);
-      // Check for large amounts close to R50k
-      const largeAmounts = allTransactions
-        .filter(tx => {
-          const amount = parseFloat(tx.amount || tx.amount_cents || 0);
+      console.log('  ⚠️  No R50,000 transaction found!');
+      const largeRange = transactions
+        .filter((tx) => {
+          const amount = parseFloat(tx.amount ?? 0);
           return amount >= 40000 && amount <= 60000;
         })
-        .sort((a, b) => {
-          const amountB = parseFloat(b.amount || b.amount_cents || 0);
-          const amountA = parseFloat(a.amount || a.amount_cents || 0);
-          return amountB - amountA;
-        })
+        .sort((a, b) => parseFloat(b.amount ?? 0) - parseFloat(a.amount ?? 0))
         .slice(0, 10);
-      console.log(`\n  💰 Largest transactions (R40k-R60k range):`);
-      largeAmounts.forEach(tx => {
-        const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
-        const amount = tx.amount || 0;
-        const description = tx.description || tx.details || 'No description';
-        const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
-        const status = tx.status || 'unknown';
-        console.log(`    - ${transactionId}: ${tx.type || 'unknown'} - R${amount} - ${description} (${status}) - ${created}`);
+      console.log('\n  💰 Largest transactions (R40k-R60k range):');
+      largeRange.forEach((tx) => {
+        console.log(`    - ${tx.transactionId || 'N/A'}: ${tx.type || 'unknown'} - R${formatAmount(tx.amount)} - ${tx.description || 'No description'} (${tx.status}) - ${formatDate(tx.createdAt)}`);
       });
     }
-    
-    // Check oldest transactions (might be the initial deposit)
-    const oldestTransactions = allTransactions
-      .sort((a, b) => new Date(a.createdAt || a.created_at || 0) - new Date(b.createdAt || b.created_at || 0))
+
+    const oldestTransactions = [...transactions]
+      .sort((a, b) => new Date(a.createdAt ?? 0) - new Date(b.createdAt ?? 0))
       .slice(0, 5);
-    
-    console.log(`\n📅 Oldest 5 transactions:`);
-    oldestTransactions.forEach(tx => {
-      const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
-      const amount = tx.amount || 0;
-      const description = tx.description || tx.details || 'No description';
-      const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
-      const status = tx.status || 'unknown';
-      console.log(`  - ${transactionId}: ${tx.type || 'unknown'} - R${amount} - ${description} (${status}) - ${created}`);
+    console.log('\n📅 Oldest 5 transactions:');
+    oldestTransactions.forEach((tx) => {
+      console.log(`  - ${tx.transactionId || 'N/A'}: ${tx.type || 'unknown'} - R${formatAmount(tx.amount)} - ${tx.description || 'No description'} (${tx.status}) - ${formatDate(tx.createdAt)}`);
     });
-      `
-        SELECT *
-        FROM transactions
-        WHERE "userId" = :userId
-        ORDER BY id DESC
-      `,
-      { replacements: { userId }, type: QueryTypes.SELECT }
-    );
-    
-    console.log(`📊 Total transactions in database: ${allTransactions.length}\n`);
-    
-    if (allTransactions.length === 0) {
-      console.log('⚠️  No transactions found in database for this user');
-      return;
-    }
-    
-    // Group by type
-    const byType = {};
-    allTransactions.forEach(tx => {
-      const type = tx.type || 'unknown';
-      if (!byType[type]) byType[type] = [];
-      byType[type].push(tx);
+
+    console.log('\n🔍 Checking filter logic...');
+    const filteredOut = transactions.filter(isInternalAccounting);
+    filteredOut.forEach((tx) => {
+      console.log(`  - ${tx.transactionId || 'N/A'}: ${tx.type || 'unknown'} - ${tx.description || 'No description'}`);
     });
-    
-    console.log('📋 Transactions by type:');
-    Object.keys(byType).forEach(type => {
-      console.log(`  ${type}: ${byType[type].length} transaction(s)`);
-      byType[type].forEach(tx => {
-        const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
-        const amount = tx.amount || tx.amount_cents || 0;
-        const description = tx.description || tx.details || 'No description';
-        const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
-        const status = tx.status || 'unknown';
-        console.log(`    - ${transactionId}: R${amount} - ${description} (${status}) - ${created}`);
-      });
-    });
-    
-    // Check for deposits specifically
-    const deposits = allTransactions.filter(tx => 
-      tx.type === 'deposit' || 
-      tx.type === 'credit' ||
-      (tx.description && tx.description.toLowerCase().includes('deposit'))
-    );
-    
-    console.log(`\n💰 Deposits found: ${deposits.length}`);
-    deposits.forEach(tx => {
-      const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
-      const amount = tx.amount || 0;
-      const description = tx.description || tx.details || 'No description';
-      const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
-      const status = tx.status || 'unknown';
-      console.log(`  - ${transactionId}: R${amount} - ${description} (${status}) - ${created}`);
-    });
-    
-    // Check for R50,000 transaction specifically (check both R50,000 and 5000000 cents)
-    const r50000Transactions = allTransactions.filter(tx => {
-      const amount = parseFloat(tx.amount || tx.amount_cents || 0);
-      return amount === 50000 || amount === 5000000 || amount === 50000.00;
-    });
-    
-    console.log(`\n🔍 Transactions with R50,000 amount: ${r50000Transactions.length}`);
-    if (r50000Transactions.length > 0) {
-      r50000Transactions.forEach(tx => {
-        const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
-        const amount = tx.amount || 0;
-        const description = tx.description || tx.details || 'No description';
-        const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
-        const status = tx.status || 'unknown';
-        console.log(`  - ${transactionId}: ${tx.type || 'unknown'} - R${amount} - ${description} (${status}) - ${created}`);
-      });
-    } else {
-      console.log(`  ⚠️  No R50,000 transaction found!`);
-      // Check for large amounts close to R50k
-      const largeAmounts = allTransactions
-        .filter(tx => {
-          const amount = parseFloat(tx.amount || tx.amount_cents || 0);
-          return amount >= 40000 && amount <= 60000;
-        })
-        .sort((a, b) => {
-          const amountB = parseFloat(b.amount || b.amount_cents || 0);
-          const amountA = parseFloat(a.amount || a.amount_cents || 0);
-          return amountB - amountA;
-        })
-        .slice(0, 10);
-      console.log(`\n  💰 Largest transactions (R40k-R60k range):`);
-      largeAmounts.forEach(tx => {
-        const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
-        const amount = tx.amount || 0;
-        const description = tx.description || tx.details || 'No description';
-        const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
-        const status = tx.status || 'unknown';
-        console.log(`    - ${transactionId}: ${tx.type || 'unknown'} - R${amount} - ${description} (${status}) - ${created}`);
-      });
-    }
-    
-    // Check oldest transactions (might be the initial deposit)
-    const oldestTransactions = allTransactions
-      .sort((a, b) => new Date(a.createdAt || a.created_at || 0) - new Date(b.createdAt || b.created_at || 0))
-      .slice(0, 5);
-    
-    console.log(`\n📅 Oldest 5 transactions:`);
-    oldestTransactions.forEach(tx => {
-      const created = tx.createdAt || tx.created_at || tx.createdat || 'unknown date';
-      const amount = tx.amount || 0;
-      const description = tx.description || tx.details || 'No description';
-      const transactionId = tx.transactionId || tx.transactionid || tx.id || 'N/A';
-      const status = tx.status || 'unknown';
-      console.log(`  - ${transactionId}: ${tx.type || 'unknown'} - R${amount} - ${description} (${status}) - ${created}`);
-    });
-    
-    // Check what would be filtered out
-    console.log(`\n🔍 Checking filter logic...`);
-    const filteredOut = allTransactions.filter((tx) => {
-      const desc = (tx.description || '').toLowerCase();
-      const type = (tx.type || '').toLowerCase();
-      
-      const internalAccountingTypes = [
-        'vat_payable',
-        'mymoolah_revenue',
-        'zapper_float_credit',
-        'float_credit',
-        'revenue'
-      ];
-      if (internalAccountingTypes.includes(type)) {
-        return true;
-      }
-      
-      if (desc.includes('vat payable') || 
-          desc.includes('vat payable to') ||
-          desc.includes('vat to') ||
-          (desc.includes('vat') && desc.includes('payable'))) {
-        return true;
-      }
-      
-      if (desc.includes('mymoolah revenue') ||
-          desc.includes('revenue from') ||
-          desc.includes('revenue f') ||
-          (desc.includes('revenue') && desc.includes('mymoolah'))) {
-        return true;
-      }
-      
-      if (desc.includes('float credit') ||
-          desc.includes('float credit from') ||
-          desc.includes('zapper float credit') ||
-          (desc.includes('float') && desc.includes('credit'))) {
-        return true;
-      }
-      
-      return false;
-    });
-    
     console.log(`⚠️  Transactions that would be filtered out: ${filteredOut.length}`);
-    filteredOut.forEach(tx => {
-      console.log(`  - ${tx.transactionId}: ${tx.type} - ${tx.description || 'No description'}`);
-    });
-    
-    console.log(`\n✅ Transactions that would be shown: ${allTransactions.length - filteredOut.length}\n`);
-    
+    console.log(`\n✅ Transactions that would be shown: ${transactions.length - filteredOut.length}\n`);
+
   } catch (error) {
     console.error('❌ Error:', error);
   } finally {
@@ -379,6 +292,14 @@ async function checkUserTransactions(userId) {
   }
 }
 
-const userId = process.argv[2] || 1;
-checkUserTransactions(parseInt(userId));
+const userId = Number.parseInt(process.argv[2] || '1', 10);
+if (Number.isNaN(userId)) {
+  console.error('❌ User ID must be a number');
+  process.exit(1);
+}
+
+checkUserTransactions(userId).catch((error) => {
+  console.error('❌ Unexpected error:', error);
+  process.exit(1);
+});
 
