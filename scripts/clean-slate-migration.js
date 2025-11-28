@@ -79,36 +79,21 @@ async function main() {
         await staging.query('SET CONSTRAINTS ALL DEFERRED', { transaction });
         
         // Delete in correct order (respecting foreign keys)
-        // Use IF EXISTS or try/catch to handle missing tables
-        const tablesToDelete = ['vouchers', 'transactions', 'wallets', 'kyc_documents', 'users'];
+        // Use TRUNCATE CASCADE to handle all foreign key constraints
+        const tablesToDelete = ['vouchers', 'transactions', 'wallets', 'users'];
         
         for (const table of tablesToDelete) {
           try {
-            await staging.query(`TRUNCATE TABLE ${table} CASCADE`, { transaction });
+            await staging.query(`TRUNCATE TABLE ${table} RESTART IDENTITY CASCADE`, { transaction });
             console.log(`   ✅ Cleared ${table}`);
           } catch (err) {
             if (err.message.includes('does not exist')) {
               console.log(`   ℹ️  Table ${table} doesn't exist, skipping`);
             } else {
-              console.log(`   ⚠️  Could not clear ${table}: ${err.message}`);
+              // If we can't truncate, this is a critical error
+              console.error(`   ❌ Failed to clear ${table}: ${err.message}`);
+              throw new Error(`Cannot proceed: Failed to clear ${table} table`);
             }
-          }
-        }
-        
-        // Reset sequences (only if they exist)
-        const sequences = [
-          'users_id_seq',
-          'wallets_id_seq', 
-          'transactions_id_seq',
-          'vouchers_id_seq'
-        ];
-        
-        for (const seq of sequences) {
-          try {
-            await staging.query(`ALTER SEQUENCE ${seq} RESTART WITH 1`, { transaction });
-          } catch (err) {
-            // Sequence might not exist, that's ok
-            console.log(`   ℹ️  Sequence ${seq} doesn't exist, skipping`);
           }
         }
       }
