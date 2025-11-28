@@ -76,17 +76,38 @@ async function main() {
       
       if (!dryRun) {
         // Delete in correct order (respecting foreign keys)
-        await staging.query('DELETE FROM vouchers', { transaction });
-        await staging.query('DELETE FROM transactions', { transaction });
-        await staging.query('DELETE FROM wallets', { transaction });
-        await staging.query('DELETE FROM kyc_documents', { transaction });
-        await staging.query('DELETE FROM users', { transaction });
+        // Use IF EXISTS or try/catch to handle missing tables
+        const tablesToDelete = ['vouchers', 'transactions', 'wallets', 'kyc_documents', 'users'];
         
-        // Reset sequences
-        await staging.query('ALTER SEQUENCE users_id_seq RESTART WITH 1', { transaction });
-        await staging.query('ALTER SEQUENCE wallets_id_seq RESTART WITH 1', { transaction });
-        await staging.query('ALTER SEQUENCE transactions_id_seq RESTART WITH 1', { transaction });
-        await staging.query('ALTER SEQUENCE vouchers_id_seq RESTART WITH 1', { transaction });
+        for (const table of tablesToDelete) {
+          try {
+            await staging.query(`DELETE FROM ${table}`, { transaction });
+            console.log(`   ✅ Cleared ${table}`);
+          } catch (err) {
+            if (err.message.includes('does not exist')) {
+              console.log(`   ℹ️  Table ${table} doesn't exist, skipping`);
+            } else {
+              throw err;
+            }
+          }
+        }
+        
+        // Reset sequences (only if they exist)
+        const sequences = [
+          'users_id_seq',
+          'wallets_id_seq', 
+          'transactions_id_seq',
+          'vouchers_id_seq'
+        ];
+        
+        for (const seq of sequences) {
+          try {
+            await staging.query(`ALTER SEQUENCE ${seq} RESTART WITH 1`, { transaction });
+          } catch (err) {
+            // Sequence might not exist, that's ok
+            console.log(`   ℹ️  Sequence ${seq} doesn't exist, skipping`);
+          }
+        }
       }
       
       console.log('   ✅ Staging wiped clean\n');
