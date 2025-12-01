@@ -2,13 +2,14 @@
  * Supplier Comparison Service - MyMoolah Treasury Platform
  * 
  * AI-powered service to compare deals and promotional offers from multiple suppliers
- * Scrapes Flash and MobileMart APIs to find the best deals for customers
+ * Uses normalized product_variants schema for consistent cross-supplier comparison
  * 
  * @author MyMoolah Development Team
- * @version 1.0.0
+ * @version 2.0.0 - Migrated to normalized schema
  */
 
-const { FlashProduct, MobileMartProduct } = require('../models');
+const { ProductVariant, Product, Supplier } = require('../models');
+const { Op } = require('sequelize');
 
 class SupplierComparisonService {
     constructor() {
@@ -37,8 +38,6 @@ class SupplierComparisonService {
      */
     async compareProducts(vasType, amount = null, provider = null) {
         try {
-    
-
             const comparison = {
                 vasType,
                 amount,
@@ -50,22 +49,25 @@ class SupplierComparisonService {
                 recommendations: []
             };
 
-            // Get products from both suppliers
-            const flashProducts = await this.getFlashProducts(vasType, amount, provider);
-            const mobilemartProducts = await this.getMobileMartProducts(vasType, amount, provider);
+            // Get products from all suppliers using normalized schema
+            const allProducts = await this.getProductVariants(vasType, amount, provider);
+
+            // Group by supplier
+            const flashProducts = allProducts.filter(p => p.supplier && p.supplier.code === 'FLASH');
+            const mobilemartProducts = allProducts.filter(p => p.supplier && p.supplier.code === 'MOBILEMART');
 
             comparison.suppliers.flash = {
                 name: 'Flash',
                 priority: 1,
                 productCount: flashProducts.length,
-                products: flashProducts
+                products: flashProducts.map(p => this.formatProductForResponse(p))
             };
 
             comparison.suppliers.mobilemart = {
                 name: 'MobileMart',
                 priority: 2,
                 productCount: mobilemartProducts.length,
-                products: mobilemartProducts
+                products: mobilemartProducts.map(p => this.formatProductForResponse(p))
             };
 
             // Find best deals
@@ -86,12 +88,16 @@ class SupplierComparisonService {
     }
 
     /**
-     * Get Flash products from database
+     * Get product variants from normalized schema
+     * @param {string} vasType - Type of VAS (airtime, data, electricity, etc.)
+     * @param {number} amount - Amount in cents
+     * @param {string} provider - Specific provider (MTN, Vodacom, etc.)
+     * @returns {Array} Product variants matching criteria
      */
-    async getFlashProducts(vasType, amount = null, provider = null) {
+    async getProductVariants(vasType, amount = null, provider = null) {
         const whereClause = {
-            isActive: true,
-            vasType: this.mapVasType(vasType, 'flash')
+            status: 'active',
+            vasType: vasType
         };
 
         if (provider) {
@@ -99,38 +105,57 @@ class SupplierComparisonService {
         }
 
         if (amount) {
-            whereClause.minAmount = { [require('sequelize').Op.lte]: amount };
-            whereClause.maxAmount = { [require('sequelize').Op.gte]: amount };
+            whereClause.minAmount = { [Op.lte]: amount };
+            whereClause.maxAmount = { [Op.gte]: amount };
         }
 
-        return await FlashProduct.findAll({
+        return await ProductVariant.findAll({
             where: whereClause,
-            order: [['commission', 'ASC'], ['isPromotional', 'DESC']]
+            include: [
+                {
+                    model: Product,
+                    as: 'product',
+                    attributes: ['id', 'name', 'type', 'status']
+                },
+                {
+                    model: Supplier,
+                    as: 'supplier',
+                    attributes: ['id', 'name', 'code', 'isActive']
+                }
+            ],
+            order: [['commission', 'ASC'], ['isPromotional', 'DESC'], ['priority', 'ASC']]
         });
     }
 
     /**
-     * Get MobileMart products from database
+     * Format product variant for API response
+     * @param {Object} productVariant - Sequelize ProductVariant instance
+     * @returns {Object} Formatted product for response
      */
-    async getMobileMartProducts(vasType, amount = null, provider = null) {
-        const whereClause = {
-            isActive: true,
-            vasType: this.mapVasType(vasType, 'mobilemart')
+    formatProductForResponse(productVariant) {
+        const pv = productVariant.toJSON ? productVariant.toJSON() : productVariant;
+        
+        return {
+            id: pv.id,
+            productId: pv.productId,
+            productName: pv.product ? pv.product.name : 'Unknown Product',
+            supplierProductId: pv.supplierProductId,
+            supplier: pv.supplier ? pv.supplier.name : 'Unknown Supplier',
+            supplierCode: pv.supplier ? pv.supplier.code : null,
+            vasType: pv.vasType,
+            transactionType: pv.transactionType,
+            provider: pv.provider,
+            minAmount: pv.minAmount,
+            maxAmount: pv.maxAmount,
+            predefinedAmounts: pv.predefinedAmounts,
+            commission: pv.commission,
+            fixedFee: pv.fixedFee,
+            isPromotional: pv.isPromotional,
+            promotionalDiscount: pv.promotionalDiscount,
+            priority: pv.priority,
+            status: pv.status,
+            metadata: pv.metadata
         };
-
-        if (provider) {
-            whereClause.provider = provider;
-        }
-
-        if (amount) {
-            whereClause.minAmount = { [require('sequelize').Op.lte]: amount };
-            whereClause.maxAmount = { [require('sequelize').Op.gte]: amount };
-        }
-
-        return await MobileMartProduct.findAll({
-            where: whereClause,
-            order: [['commission', 'ASC'], ['isPromotional', 'DESC']]
-        });
     }
 
     /**
@@ -172,8 +197,8 @@ class SupplierComparisonService {
      */
     findBestDeals(flashProducts, mobilemartProducts, amount) {
         const allProducts = [
-            ...flashProducts.map(p => ({ ...p.toJSON(), supplier: 'Flash', supplierPriority: 1 })),
-            ...mobilemartProducts.map(p => ({ ...p.toJSON(), supplier: 'MobileMart', supplierPriority: 2 }))
+            ...flashProducts.map(p => this.formatProductForResponse(p)),
+            ...mobilemartProducts.map(p => this.formatProductForResponse(p))
         ];
 
         // Sort by commission (lower is better) and promotional status
@@ -182,11 +207,11 @@ class SupplierComparisonService {
             if (a.isPromotional && !b.isPromotional) return -1;
             if (!a.isPromotional && b.isPromotional) return 1;
             
-            // Then by commission
-            if (a.commission !== b.commission) return a.commission - b.commission;
+            // Then by commission (lower is better for MyMoolah)
+            if (a.commission !== b.commission) return (a.commission || 0) - (b.commission || 0);
             
-            // Then by supplier priority (Flash first)
-            return a.supplierPriority - b.supplierPriority;
+            // Then by priority (lower number = higher priority)
+            return (a.priority || 999) - (b.priority || 999);
         });
 
         return allProducts.slice(0, 5); // Top 5 deals
@@ -196,10 +221,12 @@ class SupplierComparisonService {
      * Find promotional offers across suppliers
      */
     findPromotionalOffers(flashProducts, mobilemartProducts) {
-        const promotionalProducts = [
-            ...flashProducts.filter(p => p.isPromotional).map(p => ({ ...p.toJSON(), supplier: 'Flash' })),
-            ...mobilemartProducts.filter(p => p.isPromotional).map(p => ({ ...p.toJSON(), supplier: 'MobileMart' }))
+        const allProducts = [
+            ...flashProducts.map(p => this.formatProductForResponse(p)),
+            ...mobilemartProducts.map(p => this.formatProductForResponse(p))
         ];
+
+        const promotionalProducts = allProducts.filter(p => p.isPromotional);
 
         // Sort by promotional discount (higher is better)
         promotionalProducts.sort((a, b) => (b.promotionalDiscount || 0) - (a.promotionalDiscount || 0));
@@ -220,9 +247,11 @@ class SupplierComparisonService {
                 type: 'best_value',
                 title: 'Best Value Deal',
                 description: `${bestDeal.productName} from ${bestDeal.supplier}`,
-                reason: `Lowest commission rate (${bestDeal.commission}%)`,
+                reason: `Lowest commission rate (${bestDeal.commission || 0}%)`,
                 supplier: bestDeal.supplier,
-                productId: bestDeal.merchantProductId || bestDeal.productCode
+                supplierCode: bestDeal.supplierCode,
+                productId: bestDeal.id,
+                variantId: bestDeal.id
             });
         }
 
@@ -233,9 +262,11 @@ class SupplierComparisonService {
                 type: 'promotional',
                 title: 'Limited Time Offer',
                 description: `${bestPromo.productName} from ${bestPromo.supplier}`,
-                reason: `${bestPromo.promotionalDiscount}% discount available`,
+                reason: `${bestPromo.promotionalDiscount || 0}% discount available`,
                 supplier: bestPromo.supplier,
-                productId: bestPromo.merchantProductId || bestPromo.productCode
+                supplierCode: bestPromo.supplierCode,
+                productId: bestPromo.id,
+                variantId: bestPromo.id
             });
         }
 
@@ -249,7 +280,17 @@ class SupplierComparisonService {
                 title: 'Wide Selection',
                 description: 'Flash offers more options',
                 reason: `${flashCount} products vs ${mobilemartCount} from MobileMart`,
-                supplier: 'Flash'
+                supplier: 'Flash',
+                supplierCode: 'FLASH'
+            });
+        } else if (mobilemartCount > flashCount) {
+            recommendations.push({
+                type: 'availability',
+                title: 'Wide Selection',
+                description: 'MobileMart offers more options',
+                reason: `${mobilemartCount} products vs ${flashCount} from Flash`,
+                supplier: 'MobileMart',
+                supplierCode: 'MOBILEMART'
             });
         }
 
@@ -261,26 +302,37 @@ class SupplierComparisonService {
      */
     async getTrendingProducts(vasType = null) {
         try {
-            const whereClause = { isActive: true };
+            const whereClause = { status: 'active' };
             if (vasType) {
                 whereClause.vasType = vasType;
             }
 
-            const flashTrending = await FlashProduct.findAll({
+            // Get trending products from all suppliers
+            const allTrendingProducts = await ProductVariant.findAll({
                 where: whereClause,
-                order: [['commission', 'ASC']], // FlashProduct doesn't have isPromotional column
-                limit: 5
+                include: [
+                    {
+                        model: Product,
+                        as: 'product',
+                        attributes: ['id', 'name', 'type', 'status']
+                    },
+                    {
+                        model: Supplier,
+                        as: 'supplier',
+                        attributes: ['id', 'name', 'code', 'isActive']
+                    }
+                ],
+                order: [['isPromotional', 'DESC'], ['commission', 'ASC'], ['priority', 'ASC']],
+                limit: 10
             });
 
-            const mobilemartTrending = await MobileMartProduct.findAll({
-                where: whereClause,
-                order: [['isPromotional', 'DESC'], ['commission', 'ASC']],
-                limit: 5
-            });
+            // Group by supplier
+            const flashTrending = allTrendingProducts.filter(p => p.supplier && p.supplier.code === 'FLASH').slice(0, 5);
+            const mobilemartTrending = allTrendingProducts.filter(p => p.supplier && p.supplier.code === 'MOBILEMART').slice(0, 5);
 
             return {
-                flash: flashTrending.map(p => ({ ...p.toJSON(), supplier: 'Flash' })),
-                mobilemart: mobilemartTrending.map(p => ({ ...p.toJSON(), supplier: 'MobileMart' })),
+                flash: flashTrending.map(p => this.formatProductForResponse(p)),
+                mobilemart: mobilemartTrending.map(p => this.formatProductForResponse(p)),
                 timestamp: new Date().toISOString()
             };
 
@@ -295,19 +347,42 @@ class SupplierComparisonService {
      */
     async healthCheck() {
         try {
-            const flashCount = await FlashProduct.count({ where: { isActive: true } });
-            const mobilemartCount = await MobileMartProduct.count({ where: { isActive: true } });
+            // Get Flash supplier
+            const flashSupplier = await Supplier.findOne({ where: { code: 'FLASH' } });
+            const flashSupplierId = flashSupplier ? flashSupplier.id : null;
+
+            // Get MobileMart supplier
+            const mobilemartSupplier = await Supplier.findOne({ where: { code: 'MOBILEMART' } });
+            const mobilemartSupplierId = mobilemartSupplier ? mobilemartSupplier.id : null;
+
+            // Count active products for each supplier
+            const flashCount = flashSupplierId ? await ProductVariant.count({
+                where: {
+                    supplierId: flashSupplierId,
+                    status: 'active'
+                }
+            }) : 0;
+
+            const mobilemartCount = mobilemartSupplierId ? await ProductVariant.count({
+                where: {
+                    supplierId: mobilemartSupplierId,
+                    status: 'active'
+                }
+            }) : 0;
 
             return {
                 status: 'healthy',
+                schema: 'normalized', // Indicate we're using normalized schema
                 suppliers: {
                     flash: {
                         name: 'Flash',
+                        supplierId: flashSupplierId,
                         productCount: flashCount,
                         status: flashCount > 0 ? 'active' : 'no_products'
                     },
                     mobilemart: {
                         name: 'MobileMart',
+                        supplierId: mobilemartSupplierId,
                         productCount: mobilemartCount,
                         status: mobilemartCount > 0 ? 'active' : 'no_products'
                     }
