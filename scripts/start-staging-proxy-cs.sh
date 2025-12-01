@@ -29,8 +29,7 @@ if [ -n "$STAGING_RUNNING" ]; then
 fi
 
 echo "🔵 Starting proxy..."
-cd /workspaces/mymoolah-platform
-nohup ./cloud-sql-proxy \
+nohup /workspaces/mymoolah-platform/cloud-sql-proxy \
     "${PROJECT_ID}:${REGION}:${INSTANCE_NAME}" \
     --auto-iam-authn \
     --port 6544 \
