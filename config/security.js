@@ -316,8 +316,19 @@ class SecurityConfig {
       );
     }
 
+    // Always add staging and production domains (both use NODE_ENV=production)
+    // Staging environment is identified by STAGING=true env var
     if (process.env.NODE_ENV === 'production') {
       origins.push(
+        // Staging domains
+        'https://staging.mymoolah.africa',
+        'https://stagingwallet.mymoolah.africa',
+        // Production domains
+        'https://api.mymoolah.africa',
+        'https://wallet.mymoolah.africa',
+        'https://mymoolah.africa',
+        'https://www.mymoolah.africa',
+        // Legacy domains (if any)
         'https://mymoolah.com',
         'https://www.mymoolah.com',
         'https://app.mymoolah.com'
