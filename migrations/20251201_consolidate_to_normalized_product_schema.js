@@ -46,98 +46,116 @@ module.exports = {
       console.log('📊 Step 1: Enhancing product_variants schema...');
 
       // Add vasType (from MobileMart/VAS tables)
+      // First, create the ENUM type if it doesn't exist
+      await queryInterface.sequelize.query(`
+        DO $$ BEGIN
+          CREATE TYPE enum_product_variants_vasType AS ENUM (
+            'airtime', 'data', 'electricity', 'voucher', 'bill_payment', 'gaming', 'streaming', 'cash_out'
+          );
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `, { transaction });
+      
       await queryInterface.addColumn('product_variants', 'vasType', {
-        type: Sequelize.ENUM('airtime', 'data', 'electricity', 'voucher', 'bill_payment', 'gaming', 'streaming', 'cash_out'),
-        allowNull: true,
-        comment: 'Type of VAS service (airtime, data, electricity, etc.)'
+        type: 'enum_product_variants_vasType',
+        allowNull: true
       }, { transaction });
 
       // Add transactionType (from VAS table)
+      await queryInterface.sequelize.query(`
+        DO $$ BEGIN
+          CREATE TYPE enum_product_variants_transactionType AS ENUM (
+            'voucher', 'topup', 'direct', 'instant'
+          );
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `, { transaction });
+      
       await queryInterface.addColumn('product_variants', 'transactionType', {
-        type: Sequelize.ENUM('voucher', 'topup', 'direct', 'instant'),
-        allowNull: true,
-        comment: 'Transaction delivery method'
+        type: 'enum_product_variants_transactionType',
+        allowNull: true
       }, { transaction });
 
       // Add networkType (from VAS table)
+      await queryInterface.sequelize.query(`
+        DO $$ BEGIN
+          CREATE TYPE enum_product_variants_networkType AS ENUM (
+            'local', 'international'
+          );
+        EXCEPTION
+          WHEN duplicate_object THEN null;
+        END $$;
+      `, { transaction });
+      
       await queryInterface.addColumn('product_variants', 'networkType', {
-        type: Sequelize.ENUM('local', 'international'),
+        type: 'enum_product_variants_networkType',
         allowNull: false,
-        defaultValue: 'local',
-        comment: 'Network type (local or international)'
+        defaultValue: 'local'
       }, { transaction });
 
       // Add provider (service provider like MTN, Vodacom, Eskom)
       await queryInterface.addColumn('product_variants', 'provider', {
         type: Sequelize.STRING(100),
-        allowNull: true,
-        comment: 'Service provider (MTN, Vodacom, Eskom, etc.)'
+        allowNull: true
       }, { transaction });
 
       // Add minAmount (minimum denomination)
       await queryInterface.addColumn('product_variants', 'minAmount', {
         type: Sequelize.INTEGER,
-        allowNull: true,
-        comment: 'Minimum amount in cents'
+        allowNull: true
       }, { transaction });
 
       // Add maxAmount (maximum denomination)
       await queryInterface.addColumn('product_variants', 'maxAmount', {
         type: Sequelize.INTEGER,
-        allowNull: true,
-        comment: 'Maximum amount in cents'
+        allowNull: true
       }, { transaction });
 
       // Add predefinedAmounts (from VAS table)
       await queryInterface.addColumn('product_variants', 'predefinedAmounts', {
         type: Sequelize.JSONB,
-        allowNull: true,
-        comment: 'Array of predefined amounts in cents [100, 500, 1000, 2000, 5000]'
+        allowNull: true
       }, { transaction });
 
       // Add commission (percentage)
       await queryInterface.addColumn('product_variants', 'commission', {
         type: Sequelize.DECIMAL(5, 2),
-        allowNull: true,
-        comment: 'Commission percentage (MyMoolah earns from supplier)'
+        allowNull: true
       }, { transaction });
 
       // Add fixedFee (from VAS table)
       await queryInterface.addColumn('product_variants', 'fixedFee', {
         type: Sequelize.INTEGER,
         allowNull: false,
-        defaultValue: 0,
-        comment: 'Fixed fee in cents'
+        defaultValue: 0
       }, { transaction });
 
       // Add isPromotional (from MobileMart/VAS tables)
       await queryInterface.addColumn('product_variants', 'isPromotional', {
         type: Sequelize.BOOLEAN,
         allowNull: false,
-        defaultValue: false,
-        comment: 'Whether this is a promotional product'
+        defaultValue: false
       }, { transaction });
 
       // Add promotionalDiscount (from MobileMart/VAS tables)
       await queryInterface.addColumn('product_variants', 'promotionalDiscount', {
         type: Sequelize.DECIMAL(5, 2),
-        allowNull: true,
-        comment: 'Promotional discount percentage'
+        allowNull: true
       }, { transaction });
 
       // Add priority (from VAS table)
       await queryInterface.addColumn('product_variants', 'priority', {
         type: Sequelize.INTEGER,
         allowNull: false,
-        defaultValue: 1,
-        comment: 'Display priority (lower numbers = higher priority)'
+        defaultValue: 1
       }, { transaction });
 
       // Add lastSyncedAt (track when product was last synced from supplier API)
       await queryInterface.addColumn('product_variants', 'lastSyncedAt', {
         type: Sequelize.DATE,
-        allowNull: true,
-        comment: 'Last time product was synced from supplier API'
+        allowNull: true
       }, { transaction });
 
       console.log('✅ Step 1 complete: product_variants schema enhanced');
