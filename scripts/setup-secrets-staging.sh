@@ -87,6 +87,19 @@ store_zapper_credentials() {
   success "Zapper production credentials stored"
 }
 
+# Store MobileMart production credentials
+store_mobilemart_credentials() {
+  log "Storing MobileMart production credentials..."
+  
+  # MobileMart Production Credentials (Fulcrum API)
+  create_or_update_secret "mobilemart-prod-client-id" "mymoolah" "MobileMart Production Client ID"
+  create_or_update_secret "mobilemart-prod-client-secret" "c799bf37-934d-4dcf-bfec-42fb421a6407" "MobileMart Production Client Secret"
+  create_or_update_secret "mobilemart-prod-api-url" "https://fulcrumswitch.com" "MobileMart Production API URL"
+  create_or_update_secret "mobilemart-prod-token-url" "https://fulcrumswitch.com/connect/token" "MobileMart Production Token URL"
+  
+  success "MobileMart production credentials stored"
+}
+
 # Store application secrets
 store_application_secrets() {
   log "Storing application secrets..."
@@ -139,6 +152,9 @@ main() {
   # Store Zapper credentials
   store_zapper_credentials
   
+  # Store MobileMart credentials
+  store_mobilemart_credentials
+  
   # Store application secrets
   store_application_secrets
   
@@ -155,6 +171,10 @@ main() {
   echo "  - zapper-prod-api-token"
   echo "  - zapper-prod-x-api-key"
   echo "  - zapper-prod-api-url"
+  echo "  - mobilemart-prod-client-id"
+  echo "  - mobilemart-prod-client-secret"
+  echo "  - mobilemart-prod-api-url"
+  echo "  - mobilemart-prod-token-url"
   echo "  - jwt-secret-staging"
   echo "  - session-secret-staging"
   echo "  - database-url-template-staging"
