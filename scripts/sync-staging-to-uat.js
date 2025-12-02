@@ -55,9 +55,10 @@ function getUATPassword() {
         // Decode URL encoding (%40 -> @, etc.)
         // Handle both B0t3s@Mymoolah (13 chars) and B0t3s%40Mymoolah (18 chars) formats
         if (password.includes('%')) {
-          // Only decode if it contains URL encoding
+          // Decode if it contains URL encoding
           try {
-            password = decodeURIComponent(password);
+            const decoded = decodeURIComponent(password);
+            password = decoded;
           } catch (e) {
             // If decode fails, use as-is
           }
