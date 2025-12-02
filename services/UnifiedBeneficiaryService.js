@@ -5,6 +5,7 @@ const {
   sequelize
 } = require('../models');
 const { Op } = require('sequelize');
+const { normalizeToE164, toLocal, isValidE164, maskMsisdn } = require('../utils/msisdn');
 
 class UnifiedBeneficiaryService {
   /**
@@ -95,55 +96,15 @@ class UnifiedBeneficiaryService {
   }
 
   /**
-   * Validate MSISDN format (South African mobile numbers)
-   * Matches the same validation used in registration/login process
-   * Also handles non-MSI identifiers (for electricity, biller accounts, etc.)
+   * Validate and normalize to E.164 (+27XXXXXXXXX).
+   * NON_MSI_* identifiers are returned as-is.
    */
   validateMsisdn(msisdn) {
     if (!msisdn || typeof msisdn !== 'string') {
       throw new Error('Identifier is required');
     }
-
-    // Handle non-MSI identifiers (for electricity, biller, etc.)
-    if (msisdn.startsWith('NON_MSI_')) {
-      // Return as-is for non-MSI identifiers
-      return msisdn;
-    }
-
-    // Remove all non-digit characters
-    const cleanNumber = msisdn.replace(/\D/g, '');
-    
-    // Check if it's a valid SA mobile number
-    // Accepts 0XXXXXXXXX, 27XXXXXXXXX, or XXXXXXXX (we'll normalize to 0XXXXXXXXX)
-    const saMobileRegex = /^(?:27|0)?[6-8]\d{8}$/;
-    
-    if (!saMobileRegex.test(cleanNumber)) {
-      throw new Error('Invalid South African mobile number format');
-    }
-
-    // Format to standard SA format (0821234567)
-    let formattedNumber;
-    if (cleanNumber.startsWith('27')) {
-      formattedNumber = '0' + cleanNumber.substring(2);
-    } else {
-      formattedNumber = cleanNumber;
-    }
-
-    // Additional validation checks
-    if (formattedNumber.length !== 10) {
-      throw new Error('Mobile number must be 10 digits (including leading 0)');
-    }
-
-    if (!formattedNumber.startsWith('0')) {
-      throw new Error('Mobile number must start with 0');
-    }
-
-    const prefix = formattedNumber.substring(1, 2);
-    if (!['6', '7', '8'].includes(prefix)) {
-      throw new Error('Mobile number must start with 06, 07, or 08');
-    }
-
-    return formattedNumber; // Return formatted number for consistency
+    if (msisdn.startsWith('NON_MSI_')) return msisdn;
+    return normalizeToE164(msisdn);
   }
 
   // Note: Removed checkMsisdnExists function as it's no longer needed

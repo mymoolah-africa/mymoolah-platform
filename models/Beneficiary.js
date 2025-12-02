@@ -18,12 +18,14 @@ module.exports = (sequelize, DataTypes) => {
     msisdn: {
       type: DataTypes.STRING(15),
       allowNull: true, // Optional for non-mobile beneficiaries (electricity, biller, bank)
-      comment: 'Mobile number (MSISDN). Required for mymoolah/airtime/data; optional otherwise',
+      comment: 'Mobile number (MSISDN) in E.164 (+27XXXXXXXXX). Required for mymoolah/airtime/data; optional otherwise',
       validate: {
         isValidMsisdn(value) {
           if (value == null || value === '') return; // allow null/empty
-          if (!/^0[6-8][0-9]{8}$/.test(value)) {
-            throw new Error('Invalid South African mobile number');
+          // Allow NON_MSI_* placeholders for non-mobile services
+          if (typeof value === 'string' && value.startsWith('NON_MSI_')) return;
+          if (!/^\+27[6-8][0-9]{8}$/.test(value)) {
+            throw new Error('Invalid South African mobile number (E.164 +27XXXXXXXXX required)');
           }
         }
       }

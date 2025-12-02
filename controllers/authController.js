@@ -6,33 +6,8 @@ const { Op } = Sequelize;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Normalize South African mobile numbers
-function normalizeSAMobileNumber(phoneNumber) {
-  // Remove all non-digit characters
-  let cleaned = phoneNumber.replace(/\D/g, '');
-  
-  // If it already starts with 2727, fix it to just 27
-  if (cleaned.startsWith('2727')) {
-    cleaned = '27' + cleaned.substring(4);
-  }
-  
-  // If it starts with 0, replace with +27
-  if (cleaned.startsWith('0')) {
-    cleaned = '+27' + cleaned.substring(1);
-  }
-  
-  // If it starts with 27 and has 11 digits, convert to +27 format
-  if (cleaned.startsWith('27') && cleaned.length === 11) {
-    cleaned = '+27' + cleaned.substring(2);
-  }
-  
-  // If it still doesn't start with +, add +27
-  if (!cleaned.startsWith('+')) {
-    cleaned = '+27' + cleaned;
-  }
-  
-  return cleaned;
-}
+// Use canonical MSISDN utilities
+const { normalizeToE164, maskMsisdn } = require('../utils/msisdn');
 
 class AuthController {
   constructor() {}
@@ -49,7 +24,8 @@ class AuthController {
           message: 'Name, email, mobile number, password, ID number and ID type are required.' 
         });
       }
-      phoneNumber = normalizeSAMobileNumber(phoneNumber);
+      // Normalize to canonical E.164
+      phoneNumber = normalizeToE164(phoneNumber);
 
       // Split name into firstName and lastName
       const [firstName, ...rest] = name.trim().split(' ');
@@ -76,8 +52,8 @@ class AuthController {
       // Hash password
       const passwordHash = await bcrypt.hash(password, 12);
       
-      // Account number policy: mirror the canonical MSISDN
-      const accountNumber = phoneNumber; // Single source of truth
+      // Account number policy: mirror the canonical MSISDN (E.164)
+      const accountNumber = phoneNumber; // Single internal source of truth
       
       // Create user
       const user = await User.create({ 
@@ -98,7 +74,8 @@ class AuthController {
       // Create wallet for user
       const wallet = await Wallet.create({
         userId: user.id,
-        walletId: `WAL-${accountNumber}`,
+        // De-PII walletId (do not expose phone numbers)
+        walletId: `WAL-${user.id}`,
         balance: 0.00,
         currency: 'ZAR',
         status: 'active',

@@ -1,17 +1,12 @@
 // Validation utilities for MyMoolah Treasury Platform
 
 export const validatePhoneNumber = (phone: string): boolean => {
-  const cleanPhone = phone.replace(/\D/g, '');
-  
-  // South African phone number validation
-  if (cleanPhone.startsWith('27') && cleanPhone.length === 11) {
-    return true;
-  }
-  
-  if (cleanPhone.startsWith('0') && cleanPhone.length === 10) {
-    return true;
-  }
-  
+  if (!phone) return false;
+  const text = String(phone);
+  if (text.startsWith('+') && /^\+27[6-8]\d{8}$/.test(text)) return true;
+  const clean = text.replace(/\D/g, '');
+  if (/^27[6-8]\d{8}$/.test(clean)) return true;
+  if (/^0[6-8]\d{8}$/.test(clean)) return true;
   return false;
 };
 
@@ -23,55 +18,25 @@ export const validatePhoneNumber = (phone: string): boolean => {
  */
 export const validateMsisdn = (msisdn: string): { isValid: boolean; errors: string[]; formatted?: string } => {
   const errors: string[] = [];
-  
   if (!msisdn || typeof msisdn !== 'string') {
     errors.push('Mobile number is required');
     return { isValid: false, errors };
   }
-
-  // Remove all non-digit characters
-  const cleanNumber = msisdn.replace(/\D/g, '');
-  
-  // Check if it's a valid SA mobile number
-  // SA mobile numbers start with 27 (country code) + 7 or 8 (mobile prefix) + 8 digits
-  // Or just 7 or 8 + 8 digits (without country code)
-  const saMobileRegex = /^(27)?[78]\d{8}$/;
-  
-  if (!saMobileRegex.test(cleanNumber)) {
-    errors.push('Invalid South African mobile number format');
+  const raw = String(msisdn).trim();
+  const digits = raw.replace(/\D/g, '');
+  let e164: string | undefined;
+  if (/^0[6-8]\d{8}$/.test(digits)) {
+    e164 = `+27${digits.slice(1)}`;
+  } else if (/^27[6-8]\d{8}$/.test(digits)) {
+    e164 = `+${digits}`;
+  } else if (raw.startsWith('+') && /^\+27[6-8]\d{8}$/.test(raw)) {
+    e164 = raw;
+  }
+  if (!e164) {
+    errors.push('Invalid South African mobile number');
     return { isValid: false, errors };
   }
-
-  // Format to standard SA format (0821234567)
-  let formattedNumber: string;
-  if (cleanNumber.startsWith('27')) {
-    formattedNumber = '0' + cleanNumber.substring(2);
-  } else {
-    formattedNumber = cleanNumber;
-  }
-
-  // Additional validation checks
-  if (formattedNumber.length !== 10) {
-    errors.push('Mobile number must be 10 digits (including leading 0)');
-    return { isValid: false, errors };
-  }
-
-  if (!formattedNumber.startsWith('0')) {
-    errors.push('Mobile number must start with 0');
-    return { isValid: false, errors };
-  }
-
-  const prefix = formattedNumber.substring(1, 2);
-  if (!['6', '7', '8'].includes(prefix)) {
-    errors.push('Mobile number must start with 06, 07, or 08');
-    return { isValid: false, errors };
-  }
-
-  return {
-    isValid: true,
-    errors: [],
-    formatted: formattedNumber
-  };
+  return { isValid: true, errors: [], formatted: e164 };
 };
 
 /**
@@ -80,13 +45,14 @@ export const validateMsisdn = (msisdn: string): { isValid: boolean; errors: stri
  * @returns Formatted mobile number (078 123 4567)
  */
 export const formatMsisdn = (msisdn: string): string => {
-  const validation = validateMsisdn(msisdn);
-  if (!validation.isValid || !validation.formatted) {
-    return msisdn; // Return original if invalid
+  if (!msisdn) return '';
+  const s = String(msisdn);
+  const e164 = s.startsWith('+') ? s : (s.replace(/\D/g, '').startsWith('27') ? `+${s.replace(/\D/g, '')}` : s);
+  if (/^\+27[6-8]\d{8}$/.test(e164)) {
+    const local = `0${e164.slice(3)}`;
+    return `${local.substring(0, 3)} ${local.substring(3, 6)} ${local.substring(6)}`;
   }
-
-  const formatted = validation.formatted;
-  return `${formatted.substring(0, 3)} ${formatted.substring(3, 6)} ${formatted.substring(6, 8)} ${formatted.substring(8)}`;
+  return msisdn;
 };
 
 export const validateEmail = (email: string): boolean => {

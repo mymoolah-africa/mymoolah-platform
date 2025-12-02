@@ -44,7 +44,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
       validate: {
-        is: /^(\+27|0)[6-8][0-9]{8}$/, // South African mobile format
+        // Enforce canonical E.164 format for ZA mobile numbers
+        is: /^\+27[6-8][0-9]{8}$/,
       },
     },
     accountNumber: {

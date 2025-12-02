@@ -580,12 +580,12 @@ class BeneficiaryService {
 
   private normalizeMsisdn(value: string): string {
     if (!value) return '';
-    const digits = String(value).replace(/\D/g, '');
-    if (!digits) return '';
-    if (digits.startsWith('27')) return '0' + digits.slice(-9);
-    if (digits.startsWith('0')) return digits;
-    if (digits.length === 9) return '0' + digits;
-    return digits;
+    const raw = String(value).trim();
+    const digits = raw.replace(/\D/g, '');
+    if (/^0[6-8]\d{8}$/.test(digits)) return `+27${digits.slice(1)}`;
+    if (/^27[6-8]\d{8}$/.test(digits)) return `+${digits}`;
+    if (raw.startsWith('+') && /^\+27[6-8]\d{8}$/.test(raw)) return raw;
+    return raw; // return as-is; backend will validate and respond with error if invalid
   }
 }
 
