@@ -130,10 +130,10 @@ export function BeneficiaryList({
   // Filter beneficiaries based on search and type
   const filteredBeneficiaries = beneficiaries.filter(beneficiary => {
     const matchesSearch = 
-      beneficiary.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      beneficiary.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (isUnifiedBeneficiary(beneficiary) 
-        ? beneficiary.accounts.some(a => a.identifier.toLowerCase().includes(searchQuery.toLowerCase()))
-        : beneficiary.identifier.toLowerCase().includes(searchQuery.toLowerCase()));
+        ? beneficiary.accounts.some(a => a.identifier?.toLowerCase().includes(searchQuery.toLowerCase()))
+        : beneficiary.identifier?.toLowerCase().includes(searchQuery.toLowerCase()));
     
     // For unified format, check if any account matches the filter type
     const matchesType = filterType === 'all' || 

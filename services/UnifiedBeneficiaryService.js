@@ -909,7 +909,13 @@ class UnifiedBeneficiaryService {
       case 'airtime':
       case 'data':
         const services = currentServices[serviceType] || [];
-        return { ...currentServices, [serviceType]: [...services, newServiceData] };
+        // Ensure frontend-compatible field names (mobileNumber alias for msisdn)
+        const normalizedService = {
+          ...newServiceData,
+          mobileNumber: newServiceData.msisdn || newServiceData.mobileNumber,
+          msisdn: newServiceData.msisdn || newServiceData.mobileNumber
+        };
+        return { ...currentServices, [serviceType]: [...services, normalizedService] };
       case 'electricity':
       case 'water':
         const utilityServices = currentServices[serviceType] || [];
