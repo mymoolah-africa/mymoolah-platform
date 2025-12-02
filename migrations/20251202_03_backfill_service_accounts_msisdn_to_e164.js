@@ -14,40 +14,78 @@ module.exports = {
     const sequelize = queryInterface.sequelize;
 
     // 1) beneficiary_service_accounts
-    const serviceAccounts = await sequelize.query(
-      `SELECT id, serviceType, serviceData FROM beneficiary_service_accounts WHERE serviceData IS NOT NULL`,
-      { type: Sequelize.QueryTypes.SELECT }
-    );
-
-    for (const row of serviceAccounts) {
-      try {
-        const data = row.servicedata || row.serviceData || {};
-        if (data && typeof data === 'object') {
-          // Normalize msisdn if present
-          if (data.msisdn && typeof data.msisdn === 'string') {
-            const e164 = normalizeToE164(String(data.msisdn));
-            const local = toLocal(e164);
-            data.msisdn = e164;
-            // Keep alias for UI compatibility if applicable
-            if (!data.mobileNumber) data.mobileNumber = local;
-          }
-          // Normalize walletMsisdn for mymoolah method if present
-          if (data.walletMsisdn && typeof data.walletMsisdn === 'string') {
-            const e164 = normalizeToE164(String(data.walletMsisdn));
-            const local = toLocal(e164);
-            data.walletMsisdn = e164;
-            if (!data.mobileNumber) data.mobileNumber = local;
-          }
-
-          await sequelize.query(
-            `UPDATE beneficiary_service_accounts SET serviceData = :json WHERE id = :id`,
-            { replacements: { json: JSON.stringify(data), id: row.id } }
-          );
+    // Check if table exists first
+    const tableExists = await sequelize.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'beneficiary_service_accounts'
+      ) as exists;
+    `, { type: Sequelize.QueryTypes.SELECT });
+    
+    if (!tableExists[0].exists) {
+      console.log('   ⚠️  beneficiary_service_accounts table does not exist, skipping...');
+    } else {
+      // Check actual column names (may be camelCase or snake_case depending on Sequelize settings)
+      const columns = await sequelize.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'beneficiary_service_accounts' 
+          AND column_name IN ('serviceType', 'servicetype', 'service_type', 'serviceData', 'servicedata', 'service_data')
+      `, { type: Sequelize.QueryTypes.SELECT });
+      
+      const columnMap = {};
+      columns.forEach(col => {
+        const lower = col.column_name.toLowerCase();
+        if (lower.includes('servicetype') || lower.includes('service_type')) {
+          columnMap.serviceType = col.column_name;
         }
-      } catch (e) {
-        // Continue; do not block migration on malformed rows
-        // eslint-disable-next-line no-console
-        console.warn('Service account MSISDN normalize skipped id=', row.id, 'error=', e.message);
+        if (lower.includes('servicedata') || lower.includes('service_data')) {
+          columnMap.serviceData = col.column_name;
+        }
+      });
+      
+      const serviceTypeColumn = columnMap.serviceType || 'serviceType';
+      const serviceDataColumn = columnMap.serviceData || 'serviceData';
+      
+      // Query using actual column names (quote them to handle case sensitivity)
+      const serviceAccounts = await sequelize.query(
+        `SELECT id, "${serviceTypeColumn}" as "serviceType", "${serviceDataColumn}" as "serviceData" 
+         FROM beneficiary_service_accounts 
+         WHERE "${serviceDataColumn}" IS NOT NULL`,
+        { type: Sequelize.QueryTypes.SELECT }
+      );
+
+      for (const row of serviceAccounts) {
+        try {
+          const data = row.servicedata || row.serviceData || {};
+          if (data && typeof data === 'object') {
+            // Normalize msisdn if present
+            if (data.msisdn && typeof data.msisdn === 'string') {
+              const e164 = normalizeToE164(String(data.msisdn));
+              const local = toLocal(e164);
+              data.msisdn = e164;
+              // Keep alias for UI compatibility if applicable
+              if (!data.mobileNumber) data.mobileNumber = local;
+            }
+            // Normalize walletMsisdn for mymoolah method if present
+            if (data.walletMsisdn && typeof data.walletMsisdn === 'string') {
+              const e164 = normalizeToE164(String(data.walletMsisdn));
+              const local = toLocal(e164);
+              data.walletMsisdn = e164;
+              if (!data.mobileNumber) data.mobileNumber = local;
+            }
+
+            await sequelize.query(
+              `UPDATE beneficiary_service_accounts SET "${serviceDataColumn}" = :json WHERE id = :id`,
+              { replacements: { json: JSON.stringify(data), id: row.id } }
+            );
+          }
+        } catch (e) {
+          // Continue; do not block migration on malformed rows
+          // eslint-disable-next-line no-console
+          console.warn('Service account MSISDN normalize skipped id=', row.id, 'error=', e.message);
+        }
       }
     }
 
@@ -163,4 +201,3 @@ module.exports = {
     }
   }
 };
-
