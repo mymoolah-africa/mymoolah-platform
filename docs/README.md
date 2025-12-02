@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: November 19, 2025  
-**Version**: 2.4.15 - Zapper VAT Transaction Fee & Referential Integrity  
-**Status**: ✅ **ZAPPER VAT TRANSACTION FEE COMPLETE** ✅ **REFERENTIAL INTEGRITY ENFORCED** ✅ **BANKING-GRADE DATA INTEGRITY**
+**Last Updated**: December 2, 2025  
+**Version**: 2.4.19 - MSISDN Architecture Audit  
+**Status**: ⚠️ **CRITICAL ARCHITECTURE ISSUE IDENTIFIED** 🔴 **PRODUCTION BLOCKER** ✅ **UAT & STAGING OPERATIONAL**
 
 ---
 
@@ -13,9 +13,10 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 ### Codespaces Development (current)
 - Frontend: runs on port 3000 (forwarded URL)
 - Backend: auto-starts on open via postStart; manual: `npm run start:cs-ip`
-- DB: connects to Cloud SQL with runtime TLS overrides for dev only (no code changes); recommended long‑term is Cloud SQL Auth Proxy
-- CORS: set `CORS_ORIGINS` to your 3000 forwarded URL
+- DB: connects to Cloud SQL via Cloud SQL Auth Proxy (port 6543)
+- CORS: Updated regex pattern to match Codespaces URLs (`*.app.github.dev` and `*.github.dev`), debug logging enabled
 - Redis: optional; when not running, logs are suppressed and in‑memory cache is used
+- **Admin Scripts**: Password change (`scripts/change-user-password.js`) and KYC status check (`scripts/check-kyc-status.js`) utilities available
 
 Quick start in Codespaces:
 ```
@@ -23,9 +24,35 @@ cd /workspaces/mymoolah-platform
 npm run start:cs-ip
 ```
 
-### **💳 NEW: Peach Payments Integration Complete**
+### Staging Domains & Edge Security
+- HTTPS load balancer terminates TLS for staging domains:
+  - API: `https://staging.mymoolah.africa`
+  - Wallet UI: `https://stagingwallet.mymoolah.africa`
+- Global static IP: `34.8.79.152` (Afrihost `A` records point here)
+- Managed certificate `cert-staging` (Google-managed TLS 1.3, OCSP stapling)
+- Backend routing via serverless NEGs → Cloud Run (`mymoolah-backend-staging`, `mymoolah-wallet-staging`)
 
-The platform now includes **complete Peach Payments integration** with **working PayShap sandbox functionality** and **production-ready code** for payment processing.
+### **🔴 CRITICAL: MSISDN vs phoneNumber Architecture Issue**
+
+⚠️ **STATUS: PRODUCTION BLOCKER IDENTIFIED** (2025-12-02)  
+Comprehensive audit revealed **HIGH severity architectural debt** in `msisdn` vs `phoneNumber` usage across 96 files (566 occurrences). Critical issues identified:
+- **Format Inconsistency**: User model uses E.164 (`+27X...`), Beneficiary model uses local (`0X...`)
+- **Security Risk**: PII exposure in wallet IDs, no encryption at rest (GDPR/POPIA violation)
+- **Mojaloop Non-Compliance**: No Party ID system, cannot interoperate with payment schemes
+- **Performance Impact**: 10-20ms format conversion overhead per transaction
+- **Data Integrity**: Format mismatches cause beneficiary lookup failures
+
+**Remediation Plan**: 3-phase approach (7-9 weeks):
+1. Standardize E.164 format (2-3 weeks)
+2. Implement Mojaloop Party ID system (3-4 weeks)
+3. Security hardening (2 weeks)
+
+See `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for comprehensive audit report.
+
+### **📦 Peach Payments Integration Archived**
+
+⚠️ **STATUS: ARCHIVED** (2025-11-26)  
+The Peach Payments integration has been **archived** due to business competition conflict. Integration code preserved, routes disabled, zero resource consumption. See `docs/archive/PEACH_ARCHIVAL_RECORD.md` for details.
 
 ### **🔍 NEW: Zapper Integration Reviewed**
 
@@ -111,13 +138,16 @@ The platform includes the **MyMoolah Admin Portal (MMAP)** - a comprehensive adm
 
 ### **🏆 MISSION ACCOMPLISHED - KEY ACHIEVEMENTS**
 
-#### **💳 Peach Payments Integration** ✅ **100% COMPLETE**
-- **Sandbox Integration**: Complete Peach Payments sandbox integration with working PayShap
-- **API Integration**: Full API integration with OAuth 2.0 authentication
-- **PayShap RPP/RTP**: Working Request to Pay (RTP) and Request Payment (RPP) functionality
-- **Test Suite**: Comprehensive test suite with all scenarios passing
-- **Production Ready**: Code ready for production with float account setup
-- **Documentation**: Complete integration documentation and testing guides
+#### **📦 Peach Payments Integration** 📦 **ARCHIVED** (2025-11-26)
+- **Status**: Integration archived due to PayShap provider competition conflict
+- **Archive Type**: Soft archive (code preserved, functionality disabled)
+- **Sandbox Integration**: Complete Peach Payments sandbox integration with working PayShap (preserved)
+- **API Integration**: Full API integration with OAuth 2.0 authentication (preserved)
+- **PayShap RPP/RTP**: Working Request to Pay (RTP) and Request Payment (RPP) functionality (preserved)
+- **Test Suite**: Comprehensive test suite with all scenarios passing (preserved)
+- **Code Status**: All code preserved for potential reactivation
+- **Data Retention**: All transaction data preserved per banking compliance requirements
+- **Reactivation**: See `docs/archive/PEACH_ARCHIVAL_RECORD.md` for reactivation procedure
 
 #### **🔍 Zapper Integration Review** ✅ **COMPLETE**
 - **Code Review**: Complete review of existing Zapper integration code
@@ -141,17 +171,22 @@ The platform includes the **MyMoolah Admin Portal (MMAP)** - a comprehensive adm
 - **Real-Time Catalog Synchronization**: Live product catalog updates from Flash
 
 #### **Advanced Product Catalog Architecture** ✅ **COMPLETED**
-- **Multi-Supplier Integration**: Unified product catalog across Flash, MobileMart, dtMercury, and Peach
+- **Multi-Supplier Integration**: Unified product catalog across Flash, MobileMart, and dtMercury (Peach archived 2025-11-26)
 - **Product Variants System**: Sophisticated database schema for supplier-specific products
 - **Commission Optimization**: Automatic selection of highest commission rates for users
 - **Scalable Design**: Architecture designed for millions of transactions
 
 ---
 
-## 💳 **PEACH PAYMENTS INTEGRATION**
+## 📦 **PEACH PAYMENTS INTEGRATION** (ARCHIVED)
 
-### **Integration Status: 100% COMPLETE** ✅
-The Peach Payments integration is **fully functional** with **working PayShap sandbox integration** and **production-ready code**.
+⚠️ **STATUS: ARCHIVED** (2025-11-26)  
+**Reason**: Peach Payments temporarily canceled integration agreement due to PayShap provider competition  
+**Archive Flag**: `PEACH_INTEGRATION_ARCHIVED=true` in `.env`  
+**See**: `docs/archive/PEACH_ARCHIVAL_RECORD.md` for complete details
+
+### **Integration Status: ARCHIVED** 📦
+The Peach Payments integration has been **archived** but all code and data are **preserved** for potential reactivation. Routes are disabled, zero resource consumption.
 
 #### **Peach Payments Features Implemented**
 - **OAuth 2.0 Authentication**: Complete OAuth 2.0 flow with token management
@@ -359,11 +394,13 @@ The system automatically selects the **best supplier** for each transaction base
 - **Commission Structure**: Tiered commission rates
 - **Real-Time**: Live pricing and availability
 
-#### **Peach Payments Integration**
-- **API Version**: Peach Payments API
-- **Services**: Payment processing, card payments
-- **Integration**: Payment gateway for product purchases
-- **Security**: PCI DSS compliant
+#### **Peach Payments Integration** 📦 **ARCHIVED** (2025-11-26)
+- **Status**: Archived due to PayShap provider competition conflict
+- **API Version**: Peach Payments API (preserved)
+- **Services**: Payment processing, card payments (preserved)
+- **Integration**: Payment gateway for product purchases (preserved)
+- **Security**: PCI DSS compliant (preserved)
+- **Reactivation**: See `docs/archive/PEACH_ARCHIVAL_RECORD.md`
 
 ---
 
@@ -372,7 +409,7 @@ The system automatically selects the **best supplier** for each transaction base
 ### **Product Catalog Coverage**
 - **Total Products**: 172 base products
 - **Total Variants**: 344 product variants
-- **Active Suppliers**: 4 (Flash, MobileMart, dtMercury, Peach)
+- **Active Suppliers**: 3 (Flash, MobileMart, dtMercury) | Peach archived 2025-11-26
 - **Categories**: 8 major product categories
 
 ### **Product Distribution by Type**

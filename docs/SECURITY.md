@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: November 11, 2025  
-**Version**: 2.4.8 - Staging & Production Database Setup with Secret Manager
-**Status**: ✅ **DUPLICATE PREVENTION COMPLETE** ✅ **BANKING-GRADE CONCURRENCY** ✅ **SECRET MANAGER INTEGRATED** ✅ **STAGING/PRODUCTION DATABASES SECURED**
+**Last Updated**: December 2, 2025  
+**Version**: 2.4.19 - MSISDN Architecture Security Audit
+**Status**: ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED**
 
 ---
 
@@ -14,14 +14,60 @@ Notes for Codespaces development:
 - TLS is disabled for the dev HTTP server; DB connections use runtime TLS overrides only for development convenience
 - Recommended for teams: Cloud SQL Auth Proxy for verified TLS. See `docs/CODESPACES_DB_CONNECTION.md`
 
+### **🔴 CRITICAL SECURITY ISSUES - PRODUCTION BLOCKERS**
+
+⚠️ **MSISDN PII EXPOSURE (Identified 2025-12-02)**
+
+**Severity**: 🔴 **HIGH** - GDPR/POPIA Violation  
+**Status**: **PRODUCTION BLOCKER** - Must be fixed before production launch
+
+**Issue Summary**:
+Phone numbers (MSISDN/PII) are exposed in wallet IDs and stored in plaintext across multiple database tables without encryption at rest. This violates GDPR Article 32 (Security of Processing) and POPIA Section 19 (Security Safeguards).
+
+**Specific Violations**:
+1. **Wallet ID PII Exposure**: Wallet IDs use format `WAL-+27825571055` (phone number in plaintext)
+   - Anyone with access to wallet ID knows user's phone number
+   - Wallet IDs are used in URLs, logs, and transaction metadata
+   - Violates GDPR principle of data minimization
+
+2. **No Encryption at Rest**: Phone numbers stored in plaintext in:
+   - `users.phoneNumber` (E.164 format)
+   - `users.accountNumber` (E.164 format)
+   - `beneficiaries.msisdn` (local format)
+   - `beneficiary_service_accounts.serviceData.msisdn` (JSONB)
+   - `beneficiaries.vasServices` (JSONB with duplicate MSISDNs)
+
+3. **Data Duplication**: MSISDNs duplicated across multiple tables and JSONB fields
+   - Increases exposure surface area
+   - Harder to implement encryption consistently
+   - Compliance audit risk
+
+**Regulatory Impact**:
+- **GDPR Fines**: Up to €20M or 4% of annual turnover for violations
+- **POPIA Fines**: Up to R10M for non-compliance
+- **SARB Requirements**: Banking identifiers must be secured
+
+**Required Remediation**:
+1. **Change Wallet ID Format**: `WAL-{userId}` instead of `WAL-{phoneNumber}`
+2. **Implement Encryption at Rest**: AES-256-GCM for all phone number fields
+3. **PII Redaction**: Redact MSISDNs in logs, error messages, and audit trails
+4. **Access Auditing**: Log all MSISDN field access with retention policy
+
+**Timeline**: Phase 3 of MSISDN remediation plan (2 weeks)
+
+See: `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for full audit report.
+
+---
+
 ### **🏆 Security Achievements**
 - ✅ **TLS 1.3 Implementation**: Complete TLS 1.3 with banking-grade cipher suites
-- ✅ **Mojaloop Compliance**: FSPIOP standards implementation
-- ✅ **ISO 27001 Ready**: Information security management compliance
+- ❌ **Mojaloop Compliance**: FSPIOP Party ID system NOT implemented (non-compliant)
+- ✅ **ISO 27001 Ready**: Information security management compliance (pending PII encryption)
 - ✅ **Banking-Grade Headers**: Comprehensive security headers implementation
 - ✅ **Rate Limiting**: Advanced rate limiting for financial transactions
 - ✅ **Input Validation**: Comprehensive data validation and sanitization
 - ✅ **Audit Logging**: Complete transaction and security event logging
+- ❌ **PII Protection**: Phone numbers NOT encrypted at rest (GDPR/POPIA violation)
 
 ---
 
