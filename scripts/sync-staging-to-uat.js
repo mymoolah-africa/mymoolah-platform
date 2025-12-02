@@ -51,13 +51,15 @@ function getUATPassword() {
       if (hostIndex > 0) {
         const userPassStart = urlString.indexOf('://') + 3;
         const passwordStart = urlString.indexOf(':', userPassStart) + 1;
-        const password = urlString.substring(passwordStart, hostIndex);
-        // Decode URL encoding (e.g., %40 -> @)
+        let password = urlString.substring(passwordStart, hostIndex);
+        // Decode URL encoding (%40 -> @, etc.) - always decode, even if it looks decoded
+        // This handles both B0t3s@Mymoolah and B0t3s%40Mymoolah formats
         try {
-          return decodeURIComponent(password);
-        } catch {
-          return password;
+          password = decodeURIComponent(password);
+        } catch (e) {
+          // If decode fails (e.g., already decoded), use as-is
         }
+        return password;
       }
     } catch (e) {
       // Ignore parsing errors, try next method
