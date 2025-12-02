@@ -174,7 +174,25 @@ export function RequestMoneyPage() {
   }, []);
 
   const handleInputChange = (field: keyof RequestFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    // For amount field, preserve exact value as string to prevent browser auto-correction
+    if (field === 'amount') {
+      // Allow empty string, numbers, and single decimal point
+      const cleanValue = value.replace(/[^0-9.]/g, '');
+      // Ensure only one decimal point
+      const parts = cleanValue.split('.');
+      const sanitized = parts.length > 2 
+        ? parts[0] + '.' + parts.slice(1).join('')
+        : cleanValue;
+      // Limit to 2 decimal places
+      if (parts.length === 2 && parts[1].length > 2) {
+        const limited = parts[0] + '.' + parts[1].substring(0, 2);
+        setFormData(prev => ({ ...prev, [field]: limited }));
+      } else {
+        setFormData(prev => ({ ...prev, [field]: sanitized }));
+      }
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: undefined }));
@@ -1211,6 +1229,9 @@ export function RequestMoneyPage() {
                 placeholder="0.00"
                 value={formData.amount}
                 onChange={(e) => handleInputChange('amount', e.target.value)}
+                min="5"
+                max="50000"
+                step="0.01"
                 style={{
                   height: '44px',
                   fontFamily: 'Montserrat, sans-serif',
