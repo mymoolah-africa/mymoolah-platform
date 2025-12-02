@@ -114,9 +114,15 @@ function getDatabaseNameFromUrl(urlString) {
 }
 
 // Get UAT database name from DATABASE_URL or default
-const uatDatabaseName = process.env.DATABASE_URL 
-  ? getDatabaseNameFromUrl(process.env.DATABASE_URL) || 'mymoolah'
-  : 'mymoolah';
+// UAT always uses 'mymoolah', not 'mymoolah_staging'
+let uatDatabaseName = 'mymoolah';
+if (process.env.DATABASE_URL) {
+  const parsed = getDatabaseNameFromUrl(process.env.DATABASE_URL);
+  // Only use parsed name if it's not staging
+  if (parsed && parsed !== 'mymoolah_staging') {
+    uatDatabaseName = parsed;
+  }
+}
 
 // Database connection configurations
 const uatConfig = {
