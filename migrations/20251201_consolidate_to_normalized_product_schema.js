@@ -292,39 +292,60 @@ module.exports = {
 
       console.log('✅ Step 2 complete: Indexes added');
 
+      // Helper function to check if table exists
+      const tableExists = async (tableName) => {
+        const result = await queryInterface.sequelize.query(`
+          SELECT EXISTS (
+            SELECT 1 FROM information_schema.tables 
+            WHERE table_schema = 'public' 
+            AND table_name = $1
+          ) as exists;
+        `, { 
+          transaction, 
+          type: Sequelize.QueryTypes.SELECT,
+          bind: [tableName]
+        });
+        return result[0].exists;
+      };
+
       // ===========================================
       // STEP 3: Migrate data from flash_products
       // ===========================================
       console.log('📊 Step 3: Migrating data from flash_products...');
 
-      // Check if flash_products table exists and has data
-      const flashProductsCount = await queryInterface.sequelize.query(
-        `SELECT COUNT(*) FROM flash_products`,
-        { type: Sequelize.QueryTypes.SELECT, transaction }
-      );
-
-      if (flashProductsCount[0].count > 0) {
-        console.log(`   Found ${flashProductsCount[0].count} Flash products to migrate`);
-
-        // Get or create Flash supplier
-        const [flashSupplier] = await queryInterface.sequelize.query(
-          `INSERT INTO suppliers (name, code, "isActive", "createdAt", "updatedAt")
-           VALUES ('Flash', 'FLASH', true, NOW(), NOW())
-           ON CONFLICT (code) DO UPDATE SET "updatedAt" = NOW()
-           RETURNING id`,
-          { type: Sequelize.QueryTypes.INSERT, transaction }
+      // Check if flash_products table exists
+      if (await tableExists('flash_products')) {
+        // Check if flash_products table has data
+        const flashProductsCount = await queryInterface.sequelize.query(
+          `SELECT COUNT(*) FROM flash_products`,
+          { type: Sequelize.QueryTypes.SELECT, transaction }
         );
 
-        const flashSupplierId = flashSupplier[0].id;
+        if (flashProductsCount[0].count > 0) {
+          console.log(`   Found ${flashProductsCount[0].count} Flash products to migrate`);
 
-        // Note: Since we don't have a direct mapping to products table,
-        // we'll create a generic Flash product for now
-        // In production, you'd want to properly map flash_products to products first
-        
-        console.log(`   ⚠️  Flash products migration requires manual product mapping`);
-        console.log(`   ⚠️  Skipping automatic migration - data preserved in flash_products for now`);
+          // Get or create Flash supplier
+          const [flashSupplier] = await queryInterface.sequelize.query(
+            `INSERT INTO suppliers (name, code, "isActive", "createdAt", "updatedAt")
+             VALUES ('Flash', 'FLASH', true, NOW(), NOW())
+             ON CONFLICT (code) DO UPDATE SET "updatedAt" = NOW()
+             RETURNING id`,
+            { type: Sequelize.QueryTypes.INSERT, transaction }
+          );
+
+          const flashSupplierId = flashSupplier[0].id;
+
+          // Note: Since we don't have a direct mapping to products table,
+          // we'll create a generic Flash product for now
+          // In production, you'd want to properly map flash_products to products first
+          
+          console.log(`   ⚠️  Flash products migration requires manual product mapping`);
+          console.log(`   ⚠️  Skipping automatic migration - data preserved in flash_products for now`);
+        } else {
+          console.log('   No Flash products to migrate');
+        }
       } else {
-        console.log('   No Flash products to migrate');
+        console.log('   flash_products table does not exist, skipping...');
       }
 
       console.log('✅ Step 3 complete');
@@ -334,17 +355,21 @@ module.exports = {
       // ===========================================
       console.log('📊 Step 4: Migrating data from mobilemart_products...');
 
-      const mobilemartProductsCount = await queryInterface.sequelize.query(
-        `SELECT COUNT(*) FROM mobilemart_products`,
-        { type: Sequelize.QueryTypes.SELECT, transaction }
-      );
+      if (await tableExists('mobilemart_products')) {
+        const mobilemartProductsCount = await queryInterface.sequelize.query(
+          `SELECT COUNT(*) FROM mobilemart_products`,
+          { type: Sequelize.QueryTypes.SELECT, transaction }
+        );
 
-      if (mobilemartProductsCount[0].count > 0) {
-        console.log(`   Found ${mobilemartProductsCount[0].count} MobileMart products to migrate`);
-        console.log(`   ⚠️  MobileMart products migration requires manual product mapping`);
-        console.log(`   ⚠️  Skipping automatic migration - data preserved in mobilemart_products for now`);
+        if (mobilemartProductsCount[0].count > 0) {
+          console.log(`   Found ${mobilemartProductsCount[0].count} MobileMart products to migrate`);
+          console.log(`   ⚠️  MobileMart products migration requires manual product mapping`);
+          console.log(`   ⚠️  Skipping automatic migration - data preserved in mobilemart_products for now`);
+        } else {
+          console.log('   No MobileMart products to migrate');
+        }
       } else {
-        console.log('   No MobileMart products to migrate');
+        console.log('   mobilemart_products table does not exist, skipping...');
       }
 
       console.log('✅ Step 4 complete');
@@ -354,17 +379,21 @@ module.exports = {
       // ===========================================
       console.log('📊 Step 5: Migrating data from vas_products...');
 
-      const vasProductsCount = await queryInterface.sequelize.query(
-        `SELECT COUNT(*) FROM vas_products`,
-        { type: Sequelize.QueryTypes.SELECT, transaction }
-      );
+      if (await tableExists('vas_products')) {
+        const vasProductsCount = await queryInterface.sequelize.query(
+          `SELECT COUNT(*) FROM vas_products`,
+          { type: Sequelize.QueryTypes.SELECT, transaction }
+        );
 
-      if (vasProductsCount[0].count > 0) {
-        console.log(`   Found ${vasProductsCount[0].count} VAS products to migrate`);
-        console.log(`   ⚠️  VAS products migration requires manual product mapping`);
-        console.log(`   ⚠️  Skipping automatic migration - data preserved in vas_products for now`);
+        if (vasProductsCount[0].count > 0) {
+          console.log(`   Found ${vasProductsCount[0].count} VAS products to migrate`);
+          console.log(`   ⚠️  VAS products migration requires manual product mapping`);
+          console.log(`   ⚠️  Skipping automatic migration - data preserved in vas_products for now`);
+        } else {
+          console.log('   No VAS products to migrate');
+        }
       } else {
-        console.log('   No VAS products to migrate');
+        console.log('   vas_products table does not exist, skipping...');
       }
 
       console.log('✅ Step 5 complete');
