@@ -353,11 +353,28 @@ async function main() {
   try {
     // Connect to both databases
     console.log('\n📡 Connecting to databases...');
-    await uatClient.connect();
-    console.log('✅ Connected to UAT (port 5433)');
     
-    await stagingClient.connect();
-    console.log('✅ Connected to Staging (port 5434)\n');
+    // Connect to UAT first
+    try {
+      await uatClient.connect();
+      console.log('✅ Connected to UAT (port 5433)');
+    } catch (uatError) {
+      console.error(`❌ Failed to connect to UAT: ${uatError.message}`);
+      console.error(`   Host: ${uatConfig.host}, Port: ${uatConfig.port}, Database: ${uatConfig.database}, User: ${uatConfig.user}`);
+      console.error(`   Password length: ${uatConfig.password ? uatConfig.password.length : 0}`);
+      throw uatError;
+    }
+    
+    // Connect to Staging
+    try {
+      await stagingClient.connect();
+      console.log('✅ Connected to Staging (port 5434)\n');
+    } catch (stagingError) {
+      console.error(`❌ Failed to connect to Staging: ${stagingError.message}`);
+      console.error(`   Host: ${stagingConfig.host}, Port: ${stagingConfig.port}, Database: ${stagingConfig.database}, User: ${stagingConfig.user}`);
+      console.error(`   Password length: ${stagingConfig.password ? stagingConfig.password.length : 0}`);
+      throw stagingError;
+    }
 
     // Step 1: Check migration status
     console.log('📋 Step 1: Checking Migration Status...\n');
