@@ -188,14 +188,23 @@ function getAllMigrationFiles() {
 function compareMigrations(uatMigrations, stagingMigrations, allMigrations) {
   const missingInStaging = uatMigrations.filter(m => !stagingMigrations.includes(m));
   const extraInStaging = stagingMigrations.filter(m => !uatMigrations.includes(m));
+  
+  // Pending: migrations that ran in UAT but not in Staging
   const pendingMigrations = allMigrations.filter(m => 
     uatMigrations.includes(m) && !stagingMigrations.includes(m)
+  );
+  
+  // New migrations: exist in filesystem but haven't run in either environment
+  // These should run in UAT first, then Staging
+  const newMigrations = allMigrations.filter(m => 
+    !uatMigrations.includes(m) && !stagingMigrations.includes(m)
   );
 
   return {
     missingInStaging,
     extraInStaging,
     pendingMigrations,
+    newMigrations,
     uatCount: uatMigrations.length,
     stagingCount: stagingMigrations.length,
     allCount: allMigrations.length
@@ -365,6 +374,16 @@ async function main() {
 
     const migrationDiff = compareMigrations(uatMigrations, stagingMigrations, allMigrations);
 
+    // Check for new migrations that haven't run in either environment
+    if (migrationDiff.newMigrations.length > 0) {
+      console.log(`⚠️  Found ${migrationDiff.newMigrations.length} new migration(s) that haven't run in either environment:\n`);
+      migrationDiff.newMigrations.forEach(m => {
+        console.log(`   - ${m}`);
+      });
+      console.log('\n💡 These migrations need to run in UAT first, then will sync to Staging.');
+      console.log('   Run: npx sequelize-cli db:migrate (in UAT environment)\n');
+    }
+
     if (migrationDiff.pendingMigrations.length > 0) {
       console.log(`⚠️  Found ${migrationDiff.pendingMigrations.length} migrations in UAT that are missing in Staging:\n`);
       migrationDiff.pendingMigrations.forEach(m => {
@@ -385,7 +404,7 @@ async function main() {
       } else {
         console.log(`\n✅ All migrations now executed in Staging`);
       }
-    } else {
+    } else if (migrationDiff.newMigrations.length === 0) {
       console.log('✅ All UAT migrations are already executed in Staging\n');
     }
 
