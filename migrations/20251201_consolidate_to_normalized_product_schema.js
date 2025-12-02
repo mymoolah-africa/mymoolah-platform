@@ -57,10 +57,23 @@ module.exports = {
         END $$;
       `, { transaction });
       
-      await queryInterface.addColumn('product_variants', 'vasType', {
-        type: 'enum_product_variants_vasType',
-        allowNull: true
-      }, { transaction });
+      // Check if column exists before adding
+      const vasTypeExists = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'product_variants' 
+          AND column_name = 'vasType'
+        ) as exists;
+      `, { transaction, type: Sequelize.QueryTypes.SELECT });
+      
+      if (!vasTypeExists[0].exists) {
+        await queryInterface.addColumn('product_variants', 'vasType', {
+          type: 'enum_product_variants_vasType',
+          allowNull: true
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column vasType already exists, skipping...');
+      }
 
       // Add transactionType (from VAS table)
       await queryInterface.sequelize.query(`
@@ -73,10 +86,23 @@ module.exports = {
         END $$;
       `, { transaction });
       
-      await queryInterface.addColumn('product_variants', 'transactionType', {
-        type: 'enum_product_variants_transactionType',
-        allowNull: true
-      }, { transaction });
+      // Check if column exists before adding
+      const transactionTypeExists = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'product_variants' 
+          AND column_name = 'transactionType'
+        ) as exists;
+      `, { transaction, type: Sequelize.QueryTypes.SELECT });
+      
+      if (!transactionTypeExists[0].exists) {
+        await queryInterface.addColumn('product_variants', 'transactionType', {
+          type: 'enum_product_variants_transactionType',
+          allowNull: true
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column transactionType already exists, skipping...');
+      }
 
       // Add networkType (from VAS table)
       await queryInterface.sequelize.query(`
@@ -89,11 +115,24 @@ module.exports = {
         END $$;
       `, { transaction });
       
-      await queryInterface.addColumn('product_variants', 'networkType', {
-        type: 'enum_product_variants_networkType',
-        allowNull: false,
-        defaultValue: 'local'
-      }, { transaction });
+      // Check if column exists before adding
+      const networkTypeExists = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'product_variants' 
+          AND column_name = 'networkType'
+        ) as exists;
+      `, { transaction, type: Sequelize.QueryTypes.SELECT });
+      
+      if (!networkTypeExists[0].exists) {
+        await queryInterface.addColumn('product_variants', 'networkType', {
+          type: 'enum_product_variants_networkType',
+          allowNull: false,
+          defaultValue: 'local'
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column networkType already exists, skipping...');
+      }
 
       // Add provider (service provider like MTN, Vodacom, Eskom)
       await queryInterface.addColumn('product_variants', 'provider', {
