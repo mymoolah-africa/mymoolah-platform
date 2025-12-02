@@ -9,7 +9,10 @@
  * Requirements:
  * - Cloud SQL Auth Proxy running on port 5433 (UAT)
  * - Cloud SQL Auth Proxy running on port 5434 (Staging)
- * - DATABASE_URL or DB_PASSWORD environment variable
+ * - Authenticated with gcloud (gcloud auth login)
+ * - Access to Secret Manager secrets:
+ *   - db-mmtp-pg-password (UAT database password)
+ *   - db-mmtp-pg-staging-password (Staging database password)
  * 
  * What this script does:
  * 1. Checks which migrations have run in UAT vs Staging
@@ -23,13 +26,48 @@ const { Client } = require('pg');
 const { execSync } = require('child_process');
 const path = require('path');
 
+// Get password from Google Cloud Secret Manager
+function getPasswordFromSecretManager(secretName) {
+  try {
+    const password = execSync(
+      `gcloud secrets versions access latest --secret="${secretName}" --project=mymoolah-db`,
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+    ).trim();
+    
+    if (!password) {
+      throw new Error(`Empty password retrieved from secret: ${secretName}`);
+    }
+    
+    return password;
+  } catch (error) {
+    console.error(`❌ Failed to get password from Secret Manager: ${secretName}`);
+    console.error(`   Error: ${error.message}`);
+    throw error;
+  }
+}
+
+// Get passwords from Secret Manager
+let uatPassword, stagingPassword;
+
+try {
+  console.log('🔐 Retrieving passwords from Secret Manager...');
+  uatPassword = getPasswordFromSecretManager('db-mmtp-pg-password');
+  stagingPassword = getPasswordFromSecretManager('db-mmtp-pg-staging-password');
+  console.log('✅ Passwords retrieved successfully\n');
+} catch (error) {
+  console.error('\n❌ Failed to retrieve passwords from Secret Manager');
+  console.error('💡 Make sure you are authenticated: gcloud auth login');
+  console.error('💡 Verify secrets exist: gcloud secrets list --project=mymoolah-db');
+  process.exit(1);
+}
+
 // Database connection configurations
 const uatConfig = {
   host: '127.0.0.1',
   port: 5433,
   database: 'mymoolah',
   user: 'mymoolah_app',
-  password: process.env.DB_PASSWORD || 'B0t3s@Mymoolah'
+  password: uatPassword
 };
 
 const stagingConfig = {
@@ -37,7 +75,7 @@ const stagingConfig = {
   port: 5434,
   database: 'mymoolah',
   user: 'mymoolah_app',
-  password: process.env.DB_PASSWORD || 'B0t3s@Mymoolah'
+  password: stagingPassword
 };
 
 const dryRun = process.argv.includes('--dry-run');
