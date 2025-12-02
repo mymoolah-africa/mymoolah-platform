@@ -9,10 +9,9 @@
  * Requirements:
  * - Cloud SQL Auth Proxy running on port 5433 (UAT)
  * - Cloud SQL Auth Proxy running on port 5434 (Staging)
- * - Authenticated with gcloud (gcloud auth login)
- * - Access to Secret Manager secrets:
- *   - db-mmtp-pg-password (UAT database password)
- *   - db-mmtp-pg-staging-password (Staging database password)
+ * - UAT password: From DATABASE_URL or DB_PASSWORD environment variable (or Secret Manager)
+ * - Staging password: From Secret Manager (db-mmtp-pg-staging-password)
+ * - Authenticated with gcloud for Secret Manager access (gcloud auth login)
  * 
  * What this script does:
  * 1. Checks which migrations have run in UAT vs Staging
@@ -46,18 +45,62 @@ function getPasswordFromSecretManager(secretName) {
   }
 }
 
-// Get passwords from Secret Manager
+// Get UAT password from environment variables or Secret Manager
+function getUATPassword() {
+  // Try DATABASE_URL from .env first
+  if (process.env.DATABASE_URL) {
+    try {
+      const urlString = process.env.DATABASE_URL;
+      const hostPattern = '@127.0.0.1:';
+      const hostIndex = urlString.indexOf(hostPattern);
+      if (hostIndex > 0) {
+        const userPassStart = urlString.indexOf('://') + 3;
+        const passwordStart = urlString.indexOf(':', userPassStart) + 1;
+        const password = urlString.substring(passwordStart, hostIndex);
+        try {
+          return decodeURIComponent(password);
+        } catch {
+          return password;
+        }
+      }
+    } catch (e) {
+      // Ignore parsing errors, try next method
+    }
+  }
+  
+  // Try DB_PASSWORD environment variable
+  if (process.env.DB_PASSWORD) {
+    return process.env.DB_PASSWORD;
+  }
+  
+  // Try DATABASE_PASSWORD environment variable
+  if (process.env.DATABASE_PASSWORD) {
+    return process.env.DATABASE_PASSWORD;
+  }
+  
+  // Last resort: try Secret Manager (may not exist for UAT)
+  try {
+    return getPasswordFromSecretManager('db-mmtp-pg-password');
+  } catch (error) {
+    console.error('❌ UAT password not found in environment variables or Secret Manager');
+    console.error('💡 Set DATABASE_URL or DB_PASSWORD environment variable');
+    console.error('💡 Or ensure db-mmtp-pg-password secret exists in Secret Manager');
+    throw error;
+  }
+}
+
+// Get passwords
 let uatPassword, stagingPassword;
 
 try {
-  console.log('🔐 Retrieving passwords from Secret Manager...');
-  uatPassword = getPasswordFromSecretManager('db-mmtp-pg-password');
+  console.log('🔐 Retrieving passwords...');
+  console.log('   UAT: Trying environment variables first, then Secret Manager');
+  uatPassword = getUATPassword();
+  console.log('   Staging: Getting from Secret Manager');
   stagingPassword = getPasswordFromSecretManager('db-mmtp-pg-staging-password');
   console.log('✅ Passwords retrieved successfully\n');
 } catch (error) {
-  console.error('\n❌ Failed to retrieve passwords from Secret Manager');
-  console.error('💡 Make sure you are authenticated: gcloud auth login');
-  console.error('💡 Verify secrets exist: gcloud secrets list --project=mymoolah-db');
+  console.error('\n❌ Failed to retrieve passwords');
   process.exit(1);
 }
 
