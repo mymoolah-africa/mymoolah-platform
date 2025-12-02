@@ -431,14 +431,10 @@ class WalletController {
         });
       }
 
-      // Build where clause for keyset pagination - use walletId instead of userId
-      // Query transactions where walletId matches (or senderWalletId/receiverWalletId for transfers)
+      // Build where clause for keyset pagination
+      // Query transactions by userId - each transaction is already assigned to the correct user
       const whereClause = {
-        [Op.or]: [
-          { walletId: wallet.walletId },
-          { senderWalletId: wallet.walletId },
-          { receiverWalletId: wallet.walletId }
-        ]
+        userId: userId
       };
       if (cursor) {
         // Parse cursor (ISO timestamp string)
