@@ -177,51 +177,24 @@ class AuthController {
       }
       
       const originalIdentifier = identifier;
-      identifier = normalizeSAMobileNumber(identifier);
+      
+      // Normalize to E.164 format
+      try {
+        identifier = normalizeToE164(identifier);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid mobile number format. Use 082XXXXXXXX or +27XXXXXXXXX'
+        });
+      }
       
       // DEBUG: Log normalized phone number for troubleshooting
-      console.log(`🔍 [LOGIN] Original: ${originalIdentifier}, Normalized: ${identifier}`);
+      console.log(`🔍 [LOGIN] Original: ${maskMsisdn(originalIdentifier)}, Normalized: ${maskMsisdn(identifier)}`);
       
-      // Build all possible phone number formats to search
-      const phoneFormats = [];
-      
-      // Add normalized format (+27XXXXXXXXX)
-      phoneFormats.push(identifier);
-      
-      // Add without + (27XXXXXXXXX)
-      if (identifier.startsWith('+27')) {
-        phoneFormats.push(identifier.substring(1));
-      }
-      
-      // Add with 0 prefix (082XXXXXXXX)
-      if (identifier.startsWith('+27')) {
-        phoneFormats.push('0' + identifier.substring(3));
-      }
-      
-      // Also try original format (in case it wasn't normalized correctly)
-      const originalCleaned = originalIdentifier.replace(/\D/g, '');
-      if (originalCleaned && !phoneFormats.includes(originalCleaned)) {
-        phoneFormats.push(originalCleaned);
-      }
-      
-      // Try with +27 prefix on original cleaned
-      if (originalCleaned.startsWith('0')) {
-        const withPlus27 = '+27' + originalCleaned.substring(1);
-        if (!phoneFormats.includes(withPlus27)) {
-          phoneFormats.push(withPlus27);
-        }
-      }
-      
-      // Remove duplicates
-      const uniqueFormats = [...new Set(phoneFormats)];
-      console.log(`🔍 [LOGIN] Searching for user with phone formats: ${uniqueFormats.join(', ')}`);
-      
-      // Use Sequelize Op.in to search all formats at once (more efficient)
+      // Search by E.164 phoneNumber (all users now have E.164 format after migration)
       const user = await User.findOne({ 
         where: { 
-          phoneNumber: {
-            [Op.in]: uniqueFormats
-          }
+          phoneNumber: identifier
         },
         include: [{
           model: Wallet,
