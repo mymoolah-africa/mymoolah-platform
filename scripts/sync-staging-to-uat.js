@@ -104,11 +104,33 @@ try {
   process.exit(1);
 }
 
+// Parse database name from DATABASE_URL if available
+function getDatabaseNameFromUrl(urlString) {
+  try {
+    // Try to parse as URL
+    const url = new URL(urlString);
+    const dbName = url.pathname.replace('/', '');
+    if (dbName) return dbName;
+  } catch (e) {
+    // If URL parsing fails, try manual parsing
+    const match = urlString.match(/\/\/([^:]+):([^@]+)@[^\/]+\/([^?]+)/);
+    if (match && match[3]) {
+      return match[3];
+    }
+  }
+  return null;
+}
+
+// Get UAT database name from DATABASE_URL or default
+const uatDatabaseName = process.env.DATABASE_URL 
+  ? getDatabaseNameFromUrl(process.env.DATABASE_URL) || 'mymoolah'
+  : 'mymoolah';
+
 // Database connection configurations
 const uatConfig = {
   host: '127.0.0.1',
   port: 5433,
-  database: 'mymoolah',
+  database: uatDatabaseName,
   user: 'mymoolah_app',
   password: uatPassword
 };
@@ -116,7 +138,7 @@ const uatConfig = {
 const stagingConfig = {
   host: '127.0.0.1',
   port: 5434,
-  database: 'mymoolah',
+  database: 'mymoolah_staging',  // Staging always uses mymoolah_staging
   user: 'mymoolah_app',
   password: stagingPassword
 };
