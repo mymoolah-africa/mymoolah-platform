@@ -359,16 +359,8 @@ async function main() {
     await uatClient.connect();
     console.log('✅ Connected to UAT (port 5433)');
     
-    // Test staging connection with better error handling
-    try {
-      await stagingClient.connect();
-      console.log('✅ Connected to Staging (port 5434)\n');
-    } catch (stagingError) {
-      console.error(`❌ Failed to connect to Staging: ${stagingError.message}`);
-      console.error(`   Host: ${stagingConfig.host}, Port: ${stagingConfig.port}, Database: ${stagingConfig.database}, User: ${stagingConfig.user}`);
-      console.error(`   Password length: ${stagingConfig.password ? stagingConfig.password.length : 0}`);
-      throw stagingError;
-    }
+    await stagingClient.connect();
+    console.log('✅ Connected to Staging (port 5434)\n');
 
     // Step 1: Check migration status
     console.log('📋 Step 1: Checking Migration Status...\n');
@@ -499,7 +491,16 @@ async function main() {
     console.log('='.repeat(80) + '\n');
 
   } catch (error) {
-    console.error('\n❌ ERROR:', error.message);
+    // If it's a connection error, show detailed info
+    if (error.message && error.message.includes('password authentication')) {
+      console.error('\n❌ CONNECTION ERROR:', error.message);
+      console.error('\n📋 Connection Details:');
+      console.error(`   UAT: ${uatConfig.host}:${uatConfig.port}/${uatConfig.database} (user: ${uatConfig.user})`);
+      console.error(`   Staging: ${stagingConfig.host}:${stagingConfig.port}/${stagingConfig.database} (user: ${stagingConfig.user})`);
+      console.error(`   Staging password length: ${stagingConfig.password ? stagingConfig.password.length : 0}`);
+    } else {
+      console.error('\n❌ ERROR:', error.message);
+    }
     console.error('\n💡 TROUBLESHOOTING:');
     console.error('   1. Ensure Cloud SQL Auth Proxy is running:');
     console.error('      UAT: port 5433');
