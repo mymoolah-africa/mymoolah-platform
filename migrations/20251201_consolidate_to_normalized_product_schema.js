@@ -134,68 +134,124 @@ module.exports = {
         console.log('   ⚠️  Column networkType already exists, skipping...');
       }
 
+      // Helper function to check if column exists
+      const columnExists = async (tableName, columnName) => {
+        const result = await queryInterface.sequelize.query(`
+          SELECT EXISTS (
+            SELECT 1 FROM information_schema.columns 
+            WHERE table_name = $1 
+            AND column_name = $2
+          ) as exists;
+        `, { 
+          transaction, 
+          type: Sequelize.QueryTypes.SELECT,
+          bind: [tableName, columnName]
+        });
+        return result[0].exists;
+      };
+
       // Add provider (service provider like MTN, Vodacom, Eskom)
-      await queryInterface.addColumn('product_variants', 'provider', {
-        type: Sequelize.STRING(100),
-        allowNull: true
-      }, { transaction });
+      if (!(await columnExists('product_variants', 'provider'))) {
+        await queryInterface.addColumn('product_variants', 'provider', {
+          type: Sequelize.STRING(100),
+          allowNull: true
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column provider already exists, skipping...');
+      }
 
       // Add minAmount (minimum denomination)
-      await queryInterface.addColumn('product_variants', 'minAmount', {
-        type: Sequelize.INTEGER,
-        allowNull: true
-      }, { transaction });
+      if (!(await columnExists('product_variants', 'minAmount'))) {
+        await queryInterface.addColumn('product_variants', 'minAmount', {
+          type: Sequelize.INTEGER,
+          allowNull: true
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column minAmount already exists, skipping...');
+      }
 
       // Add maxAmount (maximum denomination)
-      await queryInterface.addColumn('product_variants', 'maxAmount', {
-        type: Sequelize.INTEGER,
-        allowNull: true
-      }, { transaction });
+      if (!(await columnExists('product_variants', 'maxAmount'))) {
+        await queryInterface.addColumn('product_variants', 'maxAmount', {
+          type: Sequelize.INTEGER,
+          allowNull: true
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column maxAmount already exists, skipping...');
+      }
 
       // Add predefinedAmounts (from VAS table)
-      await queryInterface.addColumn('product_variants', 'predefinedAmounts', {
-        type: Sequelize.JSONB,
-        allowNull: true
-      }, { transaction });
+      if (!(await columnExists('product_variants', 'predefinedAmounts'))) {
+        await queryInterface.addColumn('product_variants', 'predefinedAmounts', {
+          type: Sequelize.JSONB,
+          allowNull: true
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column predefinedAmounts already exists, skipping...');
+      }
 
       // Add commission (percentage)
-      await queryInterface.addColumn('product_variants', 'commission', {
-        type: Sequelize.DECIMAL(5, 2),
-        allowNull: true
-      }, { transaction });
+      if (!(await columnExists('product_variants', 'commission'))) {
+        await queryInterface.addColumn('product_variants', 'commission', {
+          type: Sequelize.DECIMAL(5, 2),
+          allowNull: true
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column commission already exists, skipping...');
+      }
 
       // Add fixedFee (from VAS table)
-      await queryInterface.addColumn('product_variants', 'fixedFee', {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        defaultValue: 0
-      }, { transaction });
+      if (!(await columnExists('product_variants', 'fixedFee'))) {
+        await queryInterface.addColumn('product_variants', 'fixedFee', {
+          type: Sequelize.INTEGER,
+          allowNull: false,
+          defaultValue: 0
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column fixedFee already exists, skipping...');
+      }
 
       // Add isPromotional (from MobileMart/VAS tables)
-      await queryInterface.addColumn('product_variants', 'isPromotional', {
-        type: Sequelize.BOOLEAN,
-        allowNull: false,
-        defaultValue: false
-      }, { transaction });
+      if (!(await columnExists('product_variants', 'isPromotional'))) {
+        await queryInterface.addColumn('product_variants', 'isPromotional', {
+          type: Sequelize.BOOLEAN,
+          allowNull: false,
+          defaultValue: false
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column isPromotional already exists, skipping...');
+      }
 
       // Add promotionalDiscount (from MobileMart/VAS tables)
-      await queryInterface.addColumn('product_variants', 'promotionalDiscount', {
-        type: Sequelize.DECIMAL(5, 2),
-        allowNull: true
-      }, { transaction });
+      if (!(await columnExists('product_variants', 'promotionalDiscount'))) {
+        await queryInterface.addColumn('product_variants', 'promotionalDiscount', {
+          type: Sequelize.DECIMAL(5, 2),
+          allowNull: true
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column promotionalDiscount already exists, skipping...');
+      }
 
       // Add priority (from VAS table)
-      await queryInterface.addColumn('product_variants', 'priority', {
-        type: Sequelize.INTEGER,
-        allowNull: false,
-        defaultValue: 1
-      }, { transaction });
+      if (!(await columnExists('product_variants', 'priority'))) {
+        await queryInterface.addColumn('product_variants', 'priority', {
+          type: Sequelize.INTEGER,
+          allowNull: false,
+          defaultValue: 1
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column priority already exists, skipping...');
+      }
 
       // Add lastSyncedAt (track when product was last synced from supplier API)
-      await queryInterface.addColumn('product_variants', 'lastSyncedAt', {
-        type: Sequelize.DATE,
-        allowNull: true
-      }, { transaction });
+      if (!(await columnExists('product_variants', 'lastSyncedAt'))) {
+        await queryInterface.addColumn('product_variants', 'lastSyncedAt', {
+          type: Sequelize.DATE,
+          allowNull: true
+        }, { transaction });
+      } else {
+        console.log('   ⚠️  Column lastSyncedAt already exists, skipping...');
+      }
 
       console.log('✅ Step 1 complete: product_variants schema enhanced');
 
