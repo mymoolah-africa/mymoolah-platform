@@ -154,7 +154,7 @@ module.exports = {
             data.walletMsisdn = toLocal(data.walletMsisdn);
           }
           await sequelize.query(
-            `UPDATE beneficiary_service_accounts SET serviceData = :json WHERE id = :id`,
+            `UPDATE beneficiary_service_accounts SET "${serviceDataColumn}" = :json WHERE id = :id`,
             { replacements: { json: JSON.stringify(data), id: row.id } }
           );
         }
