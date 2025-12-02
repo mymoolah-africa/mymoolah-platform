@@ -37,7 +37,8 @@ function getPasswordFromSecretManager(secretName) {
       throw new Error(`Empty password retrieved from secret: ${secretName}`);
     }
     
-    return password;
+    // Remove any trailing newlines or whitespace that might cause issues
+    return password.replace(/\r?\n$/, '').trim();
   } catch (error) {
     console.error(`❌ Failed to get password from Secret Manager: ${secretName}`);
     console.error(`   Error: ${error.message}`);
@@ -223,7 +224,7 @@ async function runMigrationsInStaging(migrationFiles) {
 
   console.log('\n📦 Running migrations in Staging...\n');
   
-  // Set DATABASE_URL for staging
+  // Set DATABASE_URL for staging (URL-encode password to handle special chars like @)
   const stagingUrl = `postgres://${stagingConfig.user}:${encodeURIComponent(stagingConfig.password)}@${stagingConfig.host}:${stagingConfig.port}/${stagingConfig.database}?sslmode=disable`;
   
   try {
@@ -358,8 +359,16 @@ async function main() {
     await uatClient.connect();
     console.log('✅ Connected to UAT (port 5433)');
     
-    await stagingClient.connect();
-    console.log('✅ Connected to Staging (port 5434)\n');
+    // Test staging connection with better error handling
+    try {
+      await stagingClient.connect();
+      console.log('✅ Connected to Staging (port 5434)\n');
+    } catch (stagingError) {
+      console.error(`❌ Failed to connect to Staging: ${stagingError.message}`);
+      console.error(`   Host: ${stagingConfig.host}, Port: ${stagingConfig.port}, Database: ${stagingConfig.database}, User: ${stagingConfig.user}`);
+      console.error(`   Password length: ${stagingConfig.password ? stagingConfig.password.length : 0}`);
+      throw stagingError;
+    }
 
     // Step 1: Check migration status
     console.log('📋 Step 1: Checking Migration Status...\n');
