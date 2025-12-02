@@ -262,47 +262,66 @@ async function checkCriticalTables(uatClient, stagingClient) {
   for (const table of criticalTables) {
     try {
       // Check if table exists in both
-      const [uatExists] = await uatClient.query(`
+      const uatResult = await uatClient.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_schema = 'public' AND table_name = $1
         ) as exists
       `, [table]);
 
-      const [stagingExists] = await stagingClient.query(`
+      const stagingResult = await stagingClient.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
           WHERE table_schema = 'public' AND table_name = $1
         ) as exists
       `, [table]);
 
-      if (uatExists.rows[0].exists && !stagingExists.rows[0].exists) {
+      if (!uatResult || !uatResult.rows || !uatResult.rows[0]) {
+        differences.push({ table, issue: 'Error: Invalid UAT query result' });
+        continue;
+      }
+
+      if (!stagingResult || !stagingResult.rows || !stagingResult.rows[0]) {
+        differences.push({ table, issue: 'Error: Invalid Staging query result' });
+        continue;
+      }
+
+      const uatExists = uatResult.rows[0].exists;
+      const stagingExists = stagingResult.rows[0].exists;
+
+      if (uatExists && !stagingExists) {
         differences.push({ table, issue: 'Missing in Staging' });
-      } else if (!uatExists.rows[0].exists && stagingExists.rows[0].exists) {
+      } else if (!uatExists && stagingExists) {
         differences.push({ table, issue: 'Extra in Staging' });
-      } else if (uatExists.rows[0].exists && stagingExists.rows[0].exists) {
+      } else if (uatExists && stagingExists) {
         // Check column count
-        const [uatCols] = await uatClient.query(`
-          SELECT COUNT(*) as count 
+        const uatColsResult = await uatClient.query(`
+          SELECT COUNT(*)::int as count 
           FROM information_schema.columns 
           WHERE table_schema = 'public' AND table_name = $1
         `, [table]);
 
-        const [stagingCols] = await stagingClient.query(`
-          SELECT COUNT(*) as count 
+        const stagingColsResult = await stagingClient.query(`
+          SELECT COUNT(*)::int as count 
           FROM information_schema.columns 
           WHERE table_schema = 'public' AND table_name = $1
         `, [table]);
 
-        if (uatCols.rows[0].count !== stagingCols.rows[0].count) {
-          differences.push({ 
-            table, 
-            issue: `Column count mismatch: UAT=${uatCols.rows[0].count}, Staging=${stagingCols.rows[0].count}` 
-          });
+        if (uatColsResult?.rows?.[0]?.count !== undefined && 
+            stagingColsResult?.rows?.[0]?.count !== undefined) {
+          const uatCount = parseInt(uatColsResult.rows[0].count, 10);
+          const stagingCount = parseInt(stagingColsResult.rows[0].count, 10);
+          
+          if (uatCount !== stagingCount) {
+            differences.push({ 
+              table, 
+              issue: `Column count mismatch: UAT=${uatCount}, Staging=${stagingCount}` 
+            });
+          }
         }
       }
     } catch (error) {
-      differences.push({ table, issue: `Error checking: ${error.message}` });
+      differences.push({ table, issue: `Error checking: ${error.message || String(error)}` });
     }
   }
 
