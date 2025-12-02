@@ -99,20 +99,29 @@ const detectInputType = (input: string): 'phone' | 'account' | 'username' | 'unk
   return 'unknown';
 };
 
-// Normalize SA mobile number to consistent format
+// Normalize SA mobile number to E.164 format (+27XXXXXXXXX)
 const normalizeSAMobileNumber = (phoneNumber: string): string => {
-  const cleanNumber = phoneNumber.replace(/\s/g, '');
+  if (!phoneNumber) return '';
   
-  // Convert to 27XXXXXXXXX format
-  if (cleanNumber.startsWith('+27')) {
-    return cleanNumber.slice(1); // Remove +
-  } else if (cleanNumber.startsWith('0')) {
-    return '27' + cleanNumber.slice(1); // Replace 0 with 27
-  } else if (cleanNumber.startsWith('27')) {
-    return cleanNumber; // Already correct format
+  const digits = phoneNumber.replace(/\D/g, '');
+  
+  // 0XXXXXXXXX -> +27XXXXXXXXX
+  if (digits.startsWith('0') && digits.length === 10) {
+    return `+27${digits.slice(1)}`;
   }
   
-  return cleanNumber;
+  // 27XXXXXXXXX -> +27XXXXXXXXX
+  if (digits.startsWith('27') && digits.length === 11) {
+    return `+${digits}`;
+  }
+  
+  // Already +27XXXXXXXXX
+  if (phoneNumber.startsWith('+27') && digits.length === 11) {
+    return phoneNumber;
+  }
+  
+  // Fallback: try to make it valid
+  return digits.startsWith('27') ? `+${digits}` : `+27${digits}`;
 };
 
 // Helper function to safely parse JSON responses
