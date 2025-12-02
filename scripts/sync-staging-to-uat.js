@@ -25,24 +25,15 @@ const { Client } = require('pg');
 const { execSync } = require('child_process');
 const path = require('path');
 
-// Get password from Google Cloud Secret Manager
+// Get password from Google Cloud Secret Manager (same as check-wallets-columns.js)
 function getPasswordFromSecretManager(secretName) {
   try {
-    const password = execSync(
+    return execSync(
       `gcloud secrets versions access latest --secret="${secretName}" --project=mymoolah-db`,
       { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     ).trim();
-    
-    if (!password) {
-      throw new Error(`Empty password retrieved from secret: ${secretName}`);
-    }
-    
-    // Remove any trailing newlines or whitespace that might cause issues
-    return password.replace(/\r?\n$/, '').trim();
   } catch (error) {
-    console.error(`❌ Failed to get password from Secret Manager: ${secretName}`);
-    console.error(`   Error: ${error.message}`);
-    throw error;
+    throw new Error(`Failed to get password from Secret Manager: ${secretName}`);
   }
 }
 
