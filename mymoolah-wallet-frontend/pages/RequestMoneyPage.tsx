@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
 import { BeneficiaryList } from '../components/overlays/shared/BeneficiaryList';
+import { ConfirmationModal } from '../components/overlays/shared/ConfirmationModal';
 import { useEffect } from 'react';
 
 // Types for Request Money functionality
@@ -114,6 +115,8 @@ export function RequestMoneyPage() {
   const [createdRequest, setCreatedRequest] = useState<MoneyRequest | null>(null);
   const [recentPayers, setRecentPayers] = useState<any[]>([]);
   const [loadingPayers, setLoadingPayers] = useState<boolean>(false);
+  const [showRemovePayerModal, setShowRemovePayerModal] = useState(false);
+  const [payerToRemove, setPayerToRemove] = useState<{ id: string; name: string } | null>(null);
 
   // Payshap participating banks (alphabetically ordered)
   const payshapBanks = [
@@ -854,9 +857,9 @@ export function RequestMoneyPage() {
                   try { document.getElementById('payerMobileNumber')?.focus(); } catch (_) {}
                 }}
                 onRemove={(b) => {
-                  // Remove payer from recent payers list
-                  const payerUserId = parseInt(b.id);
-                  setRecentPayers(prev => prev.filter(p => p.payerUserId !== payerUserId));
+                  // Show confirmation modal before removing
+                  setPayerToRemove({ id: b.id, name: b.name });
+                  setShowRemovePayerModal(true);
                 }}
                 isLoading={loadingPayers}
                 searchPlaceholder="Search recent payers"
@@ -1701,6 +1704,30 @@ export function RequestMoneyPage() {
           </div>
         </>
       )}
+
+      {/* Remove Payer Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showRemovePayerModal}
+        onClose={() => {
+          setShowRemovePayerModal(false);
+          setPayerToRemove(null);
+        }}
+        onConfirm={() => {
+          if (payerToRemove) {
+            // Remove payer from recent payers list
+            const payerUserId = parseInt(payerToRemove.id);
+            setRecentPayers(prev => prev.filter(p => p.payerUserId !== payerUserId));
+            setShowRemovePayerModal(false);
+            setPayerToRemove(null);
+          }
+        }}
+        title="Remove Payer"
+        message="Are you sure you want to remove"
+        confirmText="Yes, remove"
+        cancelText="Cancel"
+        type="danger"
+        beneficiaryName={payerToRemove?.name}
+      />
     </div>
   );
 }
