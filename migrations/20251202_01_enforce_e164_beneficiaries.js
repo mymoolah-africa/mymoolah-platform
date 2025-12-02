@@ -7,32 +7,58 @@
  */
 module.exports = {
   async up(queryInterface, Sequelize) {
+    // Step 0: Drop ALL old MSISDN-related constraints before updating data
+    // PostgreSQL validates constraints during UPDATE, so we must drop them first
+    console.log('📋 Dropping old MSISDN constraints...');
+    
+    // Drop any constraint that matches the pattern (catch-all approach)
+    // This uses dynamic SQL to drop any constraint with 'msisdn' in the name
+    await queryInterface.sequelize.query(`
+      DO $$
+      DECLARE
+        constraint_record RECORD;
+      BEGIN
+        FOR constraint_record IN
+          SELECT conname
+          FROM pg_constraint
+          WHERE conrelid = 'beneficiaries'::regclass
+            AND contype = 'c'
+            AND (conname LIKE '%msisdn%' OR conname LIKE '%MSISDN%')
+        LOOP
+          EXECUTE 'ALTER TABLE beneficiaries DROP CONSTRAINT IF EXISTS ' || quote_ident(constraint_record.conname);
+          RAISE NOTICE 'Dropped constraint: %', constraint_record.conname;
+        END LOOP;
+      END$$;
+    `);
+    
+    console.log('   ✅ Old MSISDN constraints dropped');
+
     // Step 1: Backfill any existing data to E.164 format BEFORE adding constraint
     // This ensures the constraint won't fail when added
     console.log('📋 Backfilling existing beneficiary MSISDNs to E.164 format...');
     
     // Update 0XXXXXXXXX -> +27XXXXXXXXX
-    const localFormatCount = await queryInterface.sequelize.query(`
+    const localFormatResult = await queryInterface.sequelize.query(`
       UPDATE beneficiaries
       SET msisdn = '+27' || SUBSTRING(msisdn FROM 2)
       WHERE msisdn ~ '^0[6-8][0-9]{8}$'
       RETURNING id;
-    `, { type: Sequelize.QueryTypes.UPDATE });
+    `, { type: Sequelize.QueryTypes.SELECT });
     
-    if (localFormatCount[1] > 0) {
-      console.log(`   ✅ Converted ${localFormatCount[1]} beneficiaries from local format (0XXXXXXXXX)`);
+    if (localFormatResult && localFormatResult.length > 0) {
+      console.log(`   ✅ Converted ${localFormatResult.length} beneficiaries from local format (0XXXXXXXXX)`);
     }
 
     // Update 27XXXXXXXXX -> +27XXXXXXXXX (add plus)
-    const prefix27Count = await queryInterface.sequelize.query(`
+    const prefix27Result = await queryInterface.sequelize.query(`
       UPDATE beneficiaries
       SET msisdn = '+' || msisdn
       WHERE msisdn ~ '^27[6-8][0-9]{8}$'
       RETURNING id;
-    `, { type: Sequelize.QueryTypes.UPDATE });
+    `, { type: Sequelize.QueryTypes.SELECT });
     
-    if (prefix27Count[1] > 0) {
-      console.log(`   ✅ Converted ${prefix27Count[1]} beneficiaries from 27XXXXXXXXX format`);
+    if (prefix27Result && prefix27Result.length > 0) {
+      console.log(`   ✅ Converted ${prefix27Result.length} beneficiaries from 27XXXXXXXXX format`);
     }
 
     // Add index on beneficiaries.msisdn (if not exists)
