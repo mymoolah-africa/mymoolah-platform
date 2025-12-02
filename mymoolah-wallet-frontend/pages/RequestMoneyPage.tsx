@@ -853,6 +853,11 @@ export function RequestMoneyPage() {
                   handleInputChange('payerMobileNumber', b.identifier);
                   try { document.getElementById('payerMobileNumber')?.focus(); } catch (_) {}
                 }}
+                onRemove={(b) => {
+                  // Remove payer from recent payers list
+                  const payerUserId = parseInt(b.id);
+                  setRecentPayers(prev => prev.filter(p => p.payerUserId !== payerUserId));
+                }}
                 isLoading={loadingPayers}
                 searchPlaceholder="Search recent payers"
                 addNewButtonText="Add New Payer"
