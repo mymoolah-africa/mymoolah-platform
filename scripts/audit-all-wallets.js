@@ -106,7 +106,7 @@ async function auditAllWallets() {
       const allTransactions = await Transaction.findAll({
         where: { userId: userId },
         order: [['createdAt', 'DESC']],
-        attributes: ['id', 'transactionType', 'amount', 'type', 'status', 'senderWalletId', 'receiverWalletId', 'createdAt', 'description', 'fee']
+        attributes: ['id', 'amount', 'type', 'status', 'senderWalletId', 'receiverWalletId', 'createdAt', 'description', 'fee']
       });
 
       logInfo(`Total transactions: ${allTransactions.length}`);
@@ -219,7 +219,7 @@ async function auditAllWallets() {
       }
 
       // Test 8: Check transaction types are set
-      const transactionsWithoutType = allTransactions.filter(t => !t.type && !t.transactionType);
+      const transactionsWithoutType = allTransactions.filter(t => !t.type);
       if (transactionsWithoutType.length > 0) {
         logWarning(`Found ${transactionsWithoutType.length} transactions without type:`);
         transactionsWithoutType.slice(0, 5).forEach(t => {
