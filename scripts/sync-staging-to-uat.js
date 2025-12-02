@@ -43,12 +43,16 @@ function getUATPassword() {
   if (process.env.DATABASE_URL) {
     try {
       const urlString = process.env.DATABASE_URL;
+      // Find the last @ before the host (handles passwords with @ symbol)
+      // Pattern: postgres://user:password@host:port/db
+      // We need to find @127.0.0.1: or @host:port pattern
       const hostPattern = '@127.0.0.1:';
       const hostIndex = urlString.indexOf(hostPattern);
       if (hostIndex > 0) {
         const userPassStart = urlString.indexOf('://') + 3;
         const passwordStart = urlString.indexOf(':', userPassStart) + 1;
         const password = urlString.substring(passwordStart, hostIndex);
+        // Decode URL encoding (e.g., %40 -> @)
         try {
           return decodeURIComponent(password);
         } catch {
