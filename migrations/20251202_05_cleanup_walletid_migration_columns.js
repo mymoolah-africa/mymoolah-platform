@@ -45,8 +45,32 @@ module.exports = {
     }
 
     // Drop walletId_prev if it exists
+    // First, drop any foreign key constraints that reference it
     const hasPrev = await checkColumn('walletId_prev');
     if (hasPrev) {
+      console.log('   Checking for foreign key constraints on walletId_prev...');
+      
+      // Find and drop foreign key constraints that reference walletId_prev
+      const fkConstraints = await sequelize.query(`
+        SELECT 
+          tc.constraint_name,
+          tc.table_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu 
+          ON tc.constraint_name = kcu.constraint_name
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+          AND kcu.referenced_table_name = 'wallets'
+          AND kcu.referenced_column_name = 'walletId_prev'
+      `, { type: Sequelize.QueryTypes.SELECT });
+
+      for (const fk of fkConstraints) {
+        console.log(`   Dropping foreign key constraint: ${fk.constraint_name} on ${fk.table_name}...`);
+        await sequelize.query(`
+          ALTER TABLE "${fk.table_name}" 
+          DROP CONSTRAINT IF EXISTS "${fk.constraint_name}"
+        `);
+      }
+
       console.log('   Removing walletId_prev column...');
       await sequelize.query(`ALTER TABLE wallets DROP COLUMN IF EXISTS "walletId_prev";`);
     }
