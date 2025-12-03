@@ -74,9 +74,14 @@ echo ""
 
 # Load .env file (only valid KEY=VALUE lines, skip comments and empty lines)
 if [ -f .env ]; then
-  set -a
-  source <(grep -v '^#' .env | grep -v '^$' | grep -E '^[A-Z_][A-Z0-9_]*=' || true)
-  set +a
+  while IFS= read -r line || [ -n "$line" ]; do
+    # Skip empty lines and comments
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    # Only export lines that match KEY=VALUE pattern
+    if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+      export "$line" 2>/dev/null || true
+    fi
+  done < .env
 fi
 
 # Set proxy ports for Codespaces
