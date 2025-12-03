@@ -34,9 +34,14 @@ if ! command -v cloud-sql-proxy &> /dev/null; then
   exit 1
 fi
 
-# Start proxy in background
+# Start proxy in background (use full path like working proxy)
+PROXY_BINARY="/workspaces/mymoolah-platform/cloud-sql-proxy"
+if [ ! -f "$PROXY_BINARY" ]; then
+  PROXY_BINARY="cloud-sql-proxy"
+fi
+
 echo "Starting Staging proxy on port 6544..."
-nohup cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-staging --port 6544 > /tmp/staging-proxy-6544.log 2>&1 &
+nohup "$PROXY_BINARY" mymoolah-db:africa-south1:mmtp-pg-staging --auto-iam-authn --port 6544 --structured-logs > /tmp/staging-proxy-6544.log 2>&1 &
 
 PROXY_PID=$!
 
