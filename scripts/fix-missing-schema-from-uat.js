@@ -425,7 +425,8 @@ async function main() {
       }
       
       // Apply to Staging using a single client connection for transaction
-      const client = await stagingClient.connect();
+      // Get a new client from the pool for this transaction
+      const client = await stagingPool.connect();
       try {
         await client.query('BEGIN');
         
