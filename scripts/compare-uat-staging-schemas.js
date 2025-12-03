@@ -60,10 +60,15 @@ function getUATPassword() {
 // Get Staging password from Secret Manager using gcloud CLI only
 function getStagingPassword() {
   try {
-    return execSync(
+    const password = execSync(
       `gcloud secrets versions access latest --secret="db-mmtp-pg-staging-password" --project=mymoolah-db`,
       { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
-    ).trim();
+    );
+    
+    // Remove ALL trailing whitespace, newlines, and carriage returns
+    // This is critical - gcloud secrets access includes a trailing newline
+    // which causes password authentication to fail
+    return password.replace(/[\r\n\s]+$/g, '').trim();
   } catch (error) {
     throw new Error(`Failed to get Staging password from Secret Manager: ${error.message}`);
   }
