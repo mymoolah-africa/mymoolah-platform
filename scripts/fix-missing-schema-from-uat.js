@@ -387,14 +387,25 @@ async function main() {
         
         await stagingClient.query('COMMIT');
         
+        // Small delay to ensure transaction is fully committed
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Verify table actually exists after creation
         const existsAfter = await tableExists(stagingClient, tableName);
         if (existsAfter) {
           console.log(`   ✅ Applied: ${tableName}`);
           appliedCount++;
         } else {
-          console.log(`   ⚠️  Created but not found: ${tableName} (may need parent table or schema refresh)`);
-          appliedCount++; // Count as applied since CREATE succeeded
+          // Table creation succeeded but table doesn't exist - this indicates a problem
+          console.log(`   ❌ Failed: ${tableName} - CREATE succeeded but table not found`);
+          console.log(`      💡 This usually means:`);
+          if (partitionMatch) {
+            console.log(`         - Parent partitioned table might not exist or have wrong structure`);
+          } else {
+            console.log(`         - CREATE statement may have been invalid or rolled back`);
+            console.log(`         - Permission issues preventing table creation`);
+          }
+          failedCount++;
         }
       } catch (error) {
         await stagingClient.query('ROLLBACK');
