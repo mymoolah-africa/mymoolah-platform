@@ -658,7 +658,14 @@ async function main() {
           if (hasExecutedMigrations) {
             // Count how many migrations were executed (parse from output)
             const executedMatch = output.match(/(\d+)\s+migration/i);
-            migrationsActuallyExecuted = executedMatch ? parseInt(executedMatch[1]) : 1;
+            if (executedMatch) {
+              migrationsActuallyExecuted = parseInt(executedMatch[1]);
+            } else {
+              // If we can't parse the count but migrations executed, set to unknown
+              // Don't default to 1 - that masks errors
+              migrationsActuallyExecuted = -1; // -1 means "unknown but executed"
+              console.log('   ⚠️  Warning: Could not parse migration count from output');
+            }
           }
           
           // Still print the output
@@ -672,19 +679,20 @@ async function main() {
         // Handle missing migration files
         const missingFileMigrations = migrationDiff.missingInFiles.filter(m => missingInStaging.includes(m));
         
-        if (migrationsActuallyExecuted > 0) {
+        if (migrationsActuallyExecuted > 0 || migrationsActuallyExecuted === -1) {
           await auditLogger.logOperation({
             operationType: 'MIGRATION',
             status: 'SUCCESS',
             metadata: {
-              migrationsExecuted: migrationsActuallyExecuted,
+              migrationsExecuted: migrationsActuallyExecuted === -1 ? 'unknown' : migrationsActuallyExecuted,
               migrationNames: migrationDiff.pendingMigrations,
               stagingBefore: stagingMigrations.length,
               stagingAfter: stagingMigrationsAfter.length
             }
           });
           
-          console.log(`\n✅ ${migrationsActuallyExecuted} migration(s) executed successfully\n`);
+          const countMsg = migrationsActuallyExecuted === -1 ? 'migration(s) executed successfully (count unknown)' : `${migrationsActuallyExecuted} migration(s) executed successfully`;
+          console.log(`\n✅ ${countMsg}\n`);
         } else {
           console.log('\n⚠️  No migrations were executed - all migration files have already been run\n');
           

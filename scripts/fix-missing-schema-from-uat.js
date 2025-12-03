@@ -4,7 +4,9 @@
  * Fix Missing Schema: Extract and Apply Missing Tables from UAT to Staging
  * 
  * Purpose: When migration files are missing but tables exist in UAT,
- *          extract the schema using pg_dump and apply it to Staging
+ *          extract the SCHEMA (table structure) and apply it to Staging
+ * 
+ * IMPORTANT: This syncs SCHEMA ONLY (empty table structures), NOT DATA (rows)
  * 
  * Usage: node scripts/fix-missing-schema-from-uat.js
  */
@@ -127,9 +129,9 @@ async function main() {
       return;
     }
 
-    console.log(`📋 Missing tables to sync:\n`);
+    console.log(`📋 Missing tables to sync (SCHEMA ONLY - tables will be empty):\n`);
     missingTables.forEach(t => console.log(`   - ${t}`));
-    console.log('');
+    console.log('   ⚠️  Note: This creates empty table structures only - no data will be copied\n');
 
     // Get missing migrations
     const uatMigrations = await getExecutedMigrations(uatClient);
@@ -142,7 +144,73 @@ async function main() {
       console.log('');
     }
 
-    console.log('🔍 Extracting schema from UAT using pg_dump...\n');
+    console.log('🔍 Extracting enums and schema from UAT using pg_dump...\n');
+
+    // First, extract and create all enum types
+    console.log('📋 Step 1: Extracting enum types...\n');
+    const env = { ...process.env, PGPASSWORD: uatPassword };
+    
+    // Extract all enum types from UAT
+    const enumFile = path.join(__dirname, '..', '.temp-enums.sql');
+    try {
+      execSync(
+        `pg_dump -h ${uatConfig.host} -p ${uatConfig.port} -U ${uatConfig.user} -d ${uatConfig.database} --schema-only -t '*_enum*' 2>/dev/null | grep -E "(CREATE TYPE|ALTER TYPE)" > "${enumFile}" || pg_dump -h ${uatConfig.host} -p ${uatConfig.port} -U ${uatConfig.user} -d ${uatConfig.database} --schema-only 2>/dev/null | grep -E "CREATE TYPE.*AS ENUM" > "${enumFile}" || true`,
+        { env, stdio: 'pipe' }
+      );
+      
+      // Better approach: query for enum types directly
+      const enumResult = await uatClient.query(`
+        SELECT 
+          'CREATE TYPE ' || quote_ident(t.typname) || ' AS ENUM (' ||
+          string_agg(quote_literal(e.enumlabel), ', ' ORDER BY e.enumsortorder) ||
+          ');' as enum_definition
+        FROM pg_type t
+        JOIN pg_enum e ON t.oid = e.enumtypid
+        WHERE t.typnamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')
+        GROUP BY t.typname
+        ORDER BY t.typname
+      `);
+      
+      if (enumResult.rows.length > 0) {
+        console.log(`   Found ${enumResult.rows.length} enum type(s) in UAT\n`);
+        
+        // Create enums in Staging
+        for (const row of enumResult.rows) {
+          const enumDef = row.enum_definition;
+          const enumName = enumDef.match(/CREATE TYPE\s+([^\s]+)/i)?.[1];
+          
+          if (enumName) {
+            try {
+              // Check if enum already exists
+              const exists = await stagingClient.query(`
+                SELECT EXISTS(SELECT 1 FROM pg_type WHERE typname = $1) as exists
+              `, [enumName.replace(/"/g, '')]);
+              
+              if (!exists.rows[0].exists) {
+                // Wrap in DO block for safe creation
+                const safeEnumDef = `DO $$ BEGIN ${enumDef} EXCEPTION WHEN duplicate_object THEN null; END $$;`;
+                await stagingClient.query(safeEnumDef);
+                console.log(`   ✅ Created enum: ${enumName}`);
+              } else {
+                console.log(`   ⚠️  Enum already exists: ${enumName}`);
+              }
+            } catch (error) {
+              console.log(`   ⚠️  Could not create enum ${enumName}: ${error.message.split('\n')[0]}`);
+            }
+          }
+        }
+        console.log('');
+      }
+    } catch (error) {
+      console.log(`   ⚠️  Could not extract enums: ${error.message.split('\n')[0]}\n`);
+    }
+    
+    // Clean up enum file if it exists
+    try {
+      if (fs.existsSync(enumFile)) fs.unlinkSync(enumFile);
+    } catch {}
+
+    console.log('📋 Step 2: Extracting and applying table schemas...\n');
 
     // Create temp directory for schema files
     const tempDir = path.join(__dirname, '..', '.temp-schema');
@@ -159,7 +227,6 @@ async function main() {
       try {
         // Extract schema using pg_dump
         const schemaFile = path.join(tempDir, `${tableName}.sql`);
-        const env = { ...process.env, PGPASSWORD: uatPassword };
         
         execSync(
           `pg_dump -h ${uatConfig.host} -p ${uatConfig.port} -U ${uatConfig.user} -d ${uatConfig.database} --schema-only --table=${tableName} > "${schemaFile}" 2>/dev/null`,
