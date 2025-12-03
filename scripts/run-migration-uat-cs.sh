@@ -140,25 +140,32 @@ construct_database_url() {
   echo "postgres://${DB_USER}:${encoded_password}@${DB_HOST}:${PROXY_PORT}/${DB_NAME}?sslmode=disable"
 }
 
-# Test database connection
+# Test database connection (optional - Sequelize will test it anyway)
 test_connection() {
   log "Testing database connection..."
   
-  local password=$(get_uat_password)
-  local database_url=$(construct_database_url)
+  # Check if psql is available
+  if ! command -v psql &> /dev/null; then
+    warning "psql not found - skipping connection test"
+    warning "Sequelize CLI will test the connection when running migrations"
+    return 0
+  fi
   
-  # Test with psql
+  local password=$(get_uat_password)
+  
+  # Test with psql (if available)
   if PGPASSWORD="${password}" psql -h "${DB_HOST}" -p "${PROXY_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -c "SELECT current_database(), current_user;" >/dev/null 2>&1; then
     success "Database connection test successful"
     return 0
   else
-    error "Database connection test failed"
-    warning "Please verify:"
+    warning "Connection test with psql failed"
+    warning "This is okay - Sequelize CLI will test the connection when running migrations"
+    warning "If migrations fail, check:"
     warning "  1. Database '${DB_NAME}' exists"
     warning "  2. User '${DB_USER}' has correct permissions"
     warning "  3. Proxy is running and accessible on port ${PROXY_PORT}"
     warning "  4. Password is correct in .env file"
-    return 1
+    return 0  # Don't fail - let Sequelize handle it
   fi
 }
 
@@ -203,13 +210,10 @@ main() {
   # Check proxy
   check_proxy
   
-  # Test connection first
-  if ! test_connection; then
-    error "Connection test failed. Please fix the connection issue before running migrations."
-    exit 1
-  fi
+  # Test connection (optional - won't fail if it doesn't work)
+  test_connection
   
-  # Run migration
+  # Run migration (Sequelize will test connection anyway)
   run_migration
   
   success "Migration completed successfully!"
