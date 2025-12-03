@@ -37,25 +37,35 @@ load_env() {
   if [ -f "${env_path}" ]; then
     log "Loading environment variables from ${env_path}..."
     
-    # Read .env file line by line, skipping comments and invalid lines
+    # Read .env file line by line, safely exporting only valid KEY=VALUE pairs
     set -a
     while IFS= read -r line || [ -n "$line" ]; do
+      # Trim whitespace
+      line=$(echo "$line" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+      
       # Skip empty lines
       [ -z "$line" ] && continue
       
       # Skip lines starting with # (comments)
-      [[ "$line" =~ ^[[:space:]]*# ]] && continue
+      [[ "$line" =~ ^# ]] && continue
+      
+      # Skip lines starting with = (separators/invalid)
+      [[ "$line" =~ ^= ]] && continue
       
       # Skip lines that don't contain = (not valid env vars)
       [[ ! "$line" =~ = ]] && continue
       
-      # Skip lines starting with = (invalid format)
-      [[ "$line" =~ ^[[:space:]]*= ]] && continue
-      
-      # Export the variable (this will safely handle KEY=VALUE format)
-      # Only export if it looks like a valid env var assignment
-      if [[ "$line" =~ ^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*= ]]; then
-        eval "export $line" 2>/dev/null || true
+      # Only process lines that match KEY=VALUE format (KEY starts with letter/underscore)
+      if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]]; then
+        # Extract KEY and VALUE safely
+        key="${line%%=*}"
+        value="${line#*=}"
+        
+        # Remove quotes if present
+        value=$(echo "$value" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")
+        
+        # Export safely
+        export "${key}"="${value}" 2>/dev/null || true
       fi
     done < "${env_path}"
     set +a
