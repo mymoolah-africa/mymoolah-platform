@@ -1,49 +1,58 @@
 #!/bin/bash
 
 ##############################################################################
-# Start Staging Proxy in Codespaces (port 6544)
-#
-# Purpose: Start a second proxy to access the same database as "Staging"
-#          This simulates having two separate databases (UAT vs Staging)
-#
-# Note: For now, both proxies connect to the same database instance
-#       In a true UAT/Staging split, they would connect to different instances
+# Start Staging Cloud SQL Auth Proxy in Codespaces
+# 
+# Purpose: Start Staging proxy on port 6544 in background
+# Usage: ./scripts/start-staging-proxy-cs.sh
 ##############################################################################
 
 set -e
 
-PROJECT_ID="mymoolah-db"
-REGION="africa-south1"
-INSTANCE_NAME="mmtp-pg"  # Main instance in Codespaces
+# Colors for output
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m' # No Color
 
-echo "🚀 Starting Staging proxy on port 6544..."
+echo "🚀 Starting Staging Cloud SQL Auth Proxy..."
 echo ""
 
 # Check if already running
 STAGING_RUNNING=$(lsof -ti:6544 2>/dev/null || echo "")
 
 if [ -n "$STAGING_RUNNING" ]; then
-    echo "⚠️  Staging proxy already running on port 6544 (PID: $STAGING_RUNNING)"
-    echo "   Stop with: kill $STAGING_RUNNING"
-    exit 0
+  echo -e "${GREEN}✅ Staging proxy already running on port 6544 (PID: $STAGING_RUNNING)${NC}"
+  echo ""
+  exit 0
 fi
 
-echo "🔵 Starting proxy..."
-nohup /workspaces/mymoolah-platform/cloud-sql-proxy \
-    "${PROJECT_ID}:${REGION}:${INSTANCE_NAME}" \
-    --auto-iam-authn \
-    --port 6544 \
-    --structured-logs \
-    > /tmp/staging-proxy-6544.log 2>&1 &
+# Check if cloud-sql-proxy is available
+if ! command -v cloud-sql-proxy &> /dev/null; then
+  echo -e "${RED}❌ cloud-sql-proxy not found!${NC}"
+  echo "   Please install it or check PATH"
+  exit 1
+fi
+
+# Start proxy in background
+echo "Starting Staging proxy on port 6544..."
+nohup cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-staging --port 6544 > /tmp/staging-proxy-6544.log 2>&1 &
 
 PROXY_PID=$!
-echo "✅ Staging proxy started (PID: $PROXY_PID)"
-echo ""
-echo "📡 Staging Connection: 127.0.0.1:6544"
-echo "📡 UAT Connection:     127.0.0.1:6543 (already running)"
-echo ""
-echo "💡 To stop: kill $PROXY_PID"
-echo ""
-echo "🔍 Ready to run schema comparison:"
-echo "   node scripts/compare-uat-staging-schemas.js"
-echo ""
+
+# Wait a moment and check if it started
+sleep 2
+
+if lsof -ti:6544 >/dev/null 2>&1; then
+  echo -e "${GREEN}✅ Staging proxy started successfully (PID: $PROXY_PID)${NC}"
+  echo ""
+  echo "📡 Staging Connection: 127.0.0.1:6544"
+  echo "📋 Log file: /tmp/staging-proxy-6544.log"
+  echo ""
+  echo "💡 To stop: kill $PROXY_PID"
+  echo "💡 To view logs: tail -f /tmp/staging-proxy-6544.log"
+else
+  echo -e "${RED}❌ Proxy failed to start${NC}"
+  echo "   Check logs: cat /tmp/staging-proxy-6544.log"
+  exit 1
+fi
