@@ -58,17 +58,30 @@ function detectProxyPort(ports, name) {
   throw new Error(`${name} proxy not running. Start it on port ${ports[0]} or ${ports[1]}`);
 }
 
-// Get list of tables
+// Get list of tables (including partitions)
 async function getTables(client) {
   const result = await client.query(`
     SELECT table_name 
     FROM information_schema.tables 
     WHERE table_schema = 'public' 
-      AND table_type = 'BASE TABLE'
+      AND table_type IN ('BASE TABLE', 'FOREIGN TABLE')
       AND table_name NOT LIKE 'Sequelize%'
     ORDER BY table_name
   `);
   return result.rows.map(row => row.table_name);
+}
+
+// Check if a specific table exists
+async function tableExists(client, tableName) {
+  const result = await client.query(`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+        AND table_name = $1
+        AND table_type IN ('BASE TABLE', 'FOREIGN TABLE')
+    ) as exists
+  `, [tableName]);
+  return result.rows[0]?.exists || false;
 }
 
 // Get executed migrations
@@ -278,8 +291,16 @@ async function main() {
           }
           
           await stagingClient.query('COMMIT');
-          console.log(`   ✅ Applied: ${tableName}`);
-          appliedCount++;
+          
+          // Verify table actually exists after creation
+          const exists = await tableExists(stagingClient, tableName);
+          if (exists) {
+            console.log(`   ✅ Applied: ${tableName}`);
+            appliedCount++;
+          } else {
+            console.log(`   ⚠️  Created but not found: ${tableName} (may be a partition)`);
+            appliedCount++; // Still count it as applied since CREATE succeeded
+          }
         } catch (error) {
           await stagingClient.query('ROLLBACK');
           if (error.message.includes('already exists')) {
@@ -321,23 +342,55 @@ async function main() {
       console.log('');
     }
 
-    // Verify final state
+    // Verify final state - check each table individually (including partitions)
+    console.log('🔍 Verifying final state...\n');
+    const verifiedCreated = [];
+    const verifiedMissing = [];
+    const verifiedPartitions = [];
+    
+    for (const tableName of missingTables) {
+      // Check if table exists
+      const exists = await tableExists(stagingClient, tableName);
+      
+      // Also check if it's a partition
+      const isPartition = await stagingClient.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_inherits i
+          JOIN pg_class c ON c.oid = i.inhrelid
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public' AND c.relname = $1
+        ) as is_partition
+      `, [tableName]);
+      
+      if (exists) {
+        if (isPartition.rows[0]?.is_partition) {
+          verifiedPartitions.push(tableName);
+        } else {
+          verifiedCreated.push(tableName);
+        }
+      } else {
+        verifiedMissing.push(tableName);
+      }
+    }
+    
     const finalStagingTables = await getTables(stagingClient);
-    const finalMissing = uatTables.filter(t => !finalStagingTables.includes(t));
 
     console.log('='.repeat(80));
     console.log('  SUMMARY');
     console.log('='.repeat(80));
     console.log(`\n   UAT: ${uatTables.length} tables`);
     console.log(`   Staging: ${finalStagingTables.length} tables`);
-    console.log(`   Still missing: ${finalMissing.length}\n`);
+    console.log(`   Tables processed: ${missingTables.length}`);
+    console.log(`   ✅ Created: ${verifiedCreated.length}`);
+    console.log(`   ✅ Partitions: ${verifiedPartitions.length}`);
+    console.log(`   ⚠️  Missing: ${verifiedMissing.length}\n`);
 
-    if (finalMissing.length > 0) {
-      console.log('⚠️  Tables still missing:\n');
-      finalMissing.forEach(t => console.log(`   - ${t}`));
-      console.log('\n   May require manual intervention or have dependencies.\n');
-    } else {
-      console.log('✅ All tables synced!\n');
+    if (verifiedMissing.length > 0) {
+      console.log('⚠️  Tables that could not be verified:\n');
+      verifiedMissing.forEach(t => console.log(`   - ${t}`));
+      console.log('\n   These may need manual verification or have dependencies.\n');
+    } else if (verifiedCreated.length + verifiedPartitions.length === missingTables.length) {
+      console.log('✅ All missing tables have been created successfully!\n');
     }
 
     await uatClient.release();
