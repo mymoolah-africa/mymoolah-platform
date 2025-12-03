@@ -71,23 +71,21 @@ construct_database_url() {
   echo "postgres://${DB_USER}:${encoded_password}@${DB_HOST}:${PROXY_PORT}/${DB_NAME}?sslmode=disable"
 }
 
-# Test database connection
+# Test database connection (IAM auth - no password needed)
 test_connection() {
-  local password=$(get_password)
-  log "Testing database connection..."
+  log "Testing database connection with IAM authentication..."
   
-  export PGPASSWORD="${password}"
+  # With --auto-iam-authn, connect without password - proxy handles IAM auth
   if psql -h "${DB_HOST}" -p "${PROXY_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -c "SELECT current_database(), current_user;" >/dev/null 2>&1; then
     success "Database connection test successful"
-    unset PGPASSWORD
     return 0
   else
     error "Database connection test failed"
+    warning "Proxy is using IAM authentication (--auto-iam-authn)"
     warning "Please verify:"
-    warning "  1. Password in Secret Manager is correct"
-    warning "  2. Database '${DB_NAME}' exists"
-    warning "  3. User '${DB_USER}' has access"
-    unset PGPASSWORD
+    warning "  1. Database '${DB_NAME}' exists"
+    warning "  2. User '${DB_USER}' has IAM permissions"
+    warning "  3. Check proxy logs: tail -f /tmp/staging-proxy-6544.log"
     return 1
   fi
 }
