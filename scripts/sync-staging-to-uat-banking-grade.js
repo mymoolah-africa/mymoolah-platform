@@ -469,12 +469,12 @@ async function verifyLedgerIntegrity(client, auditLogger) {
     
     return { 
       isBalanced, 
-      totalDebits: total_debits || 0, 
-      totalCredits: total_credits || 0, 
-      imbalance: imbalance || 0,
-      totalTransactions: total_transactions || 0,
-      debitCount: debit_count || 0,
-      creditCount: credit_count || 0
+      totalDebits: parseFloat(total_debits || 0), 
+      totalCredits: parseFloat(total_credits || 0), 
+      imbalance: parseFloat(imbalance || 0),
+      totalTransactions: parseInt(total_transactions || 0),
+      debitCount: parseInt(debit_count || 0),
+      creditCount: parseInt(credit_count || 0)
     };
   } catch (error) {
     await auditLogger.logOperation({
@@ -643,10 +643,17 @@ async function main() {
     if (ledgerCheck.isBalanced) {
       console.log('✅ Ledger integrity verified (debits == credits)\n');
     } else {
-      console.log(`⚠️  Ledger imbalance detected: ${ledgerCheck.imbalance.toFixed(2)}`);
-      console.log(`   Debits: ${ledgerCheck.totalDebits.toFixed(2)} (${ledgerCheck.debitCount} transactions)`);
-      console.log(`   Credits: ${ledgerCheck.totalCredits.toFixed(2)} (${ledgerCheck.creditCount} transactions)`);
-      console.log(`   Total transactions: ${ledgerCheck.totalTransactions}\n`);
+      const imbalance = parseFloat(ledgerCheck.imbalance || 0);
+      const totalDebits = parseFloat(ledgerCheck.totalDebits || 0);
+      const totalCredits = parseFloat(ledgerCheck.totalCredits || 0);
+      const debitCount = parseInt(ledgerCheck.debitCount || 0);
+      const creditCount = parseInt(ledgerCheck.creditCount || 0);
+      const totalTransactions = parseInt(ledgerCheck.totalTransactions || 0);
+      
+      console.log(`⚠️  Ledger imbalance detected: ${imbalance.toFixed(2)}`);
+      console.log(`   Debits: ${totalDebits.toFixed(2)} (${debitCount} transactions)`);
+      console.log(`   Credits: ${totalCredits.toFixed(2)} (${creditCount} transactions)`);
+      console.log(`   Total transactions: ${totalTransactions}\n`);
       console.log('   Note: Imbalance may be expected in staging/test environments');
       console.log('         with incomplete transaction sets.\n');
     }
