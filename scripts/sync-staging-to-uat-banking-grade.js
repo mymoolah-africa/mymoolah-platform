@@ -739,20 +739,49 @@ async function main() {
                        uatSchema.column_count === stagingSchema.column_count;
     
     if (!schemaMatch) {
-      console.log('⚠️  Schema counts differ - run detailed comparison for details\n');
+      const missingTables = uatSchema.table_count - stagingSchema.table_count;
+      console.log(`⚠️  Schema counts differ - ${missingTables} table(s) missing in Staging\n`);
       
       // Check if this is due to missing migration files
       const missingFileMigrations = migrationDiff.missingInFiles.filter(m => missingInStaging.includes(m));
-      if (missingFileMigrations.length > 0) {
-        console.log(`\n🔍 CRITICAL: Schema mismatch detected with ${missingFileMigrations.length} missing migration file(s).\n`);
-        console.log('   Missing migration files prevent automatic schema sync.\n');
-        console.log('   To fix this, you need to either:\n');
-        console.log('   1. Restore the missing migration files, OR\n');
-        console.log('   2. Extract and apply the schema manually using pg_dump:\n');
-        console.log('      pg_dump -h 127.0.0.1 -p 6543 -U mymoolah_app -d mymoolah \\');
-        console.log('        --schema-only --table=<table_name> | psql -h 127.0.0.1 -p 6544 -U mymoolah_app -d mymoolah_staging\n');
-        console.log('   After applying schema, mark migrations as executed:\n');
-        console.log('   INSERT INTO "SequelizeMeta" (name) VALUES (\'migration_name\');\n');
+      
+      if (missingFileMigrations.length > 0 || missingTables > 0) {
+        console.log(`\n🔍 CRITICAL: Schema mismatch detected.\n`);
+        console.log(`   Missing: ${missingTables} table(s)`);
+        if (missingFileMigrations.length > 0) {
+          console.log(`   Missing migration files: ${missingFileMigrations.length}\n`);
+        }
+        
+        if (!dryRun && missingTables > 0) {
+          console.log('💡 Running schema fix script to extract and apply missing tables...\n');
+          try {
+            const { execSync } = require('child_process');
+            execSync('node scripts/fix-missing-schema-from-uat.js', {
+              stdio: 'inherit',
+              cwd: path.join(__dirname, '..'),
+              env: process.env
+            });
+            console.log('\n✅ Schema fix completed. Re-checking schema...\n');
+            
+            // Re-check schema after fix
+            const stagingSchemaAfter = await getSchemaSummary(stagingClient);
+            const newMatch = uatSchema.table_count === stagingSchemaAfter.table_count &&
+                           uatSchema.column_count === stagingSchemaAfter.column_count;
+            
+            if (newMatch) {
+              console.log('✅ Schema now matches after fix!\n');
+            } else {
+              const stillMissing = uatSchema.table_count - stagingSchemaAfter.table_count;
+              console.log(`⚠️  Still missing ${stillMissing} table(s). May need manual intervention.\n`);
+            }
+          } catch (error) {
+            console.log(`\n⚠️  Schema fix script failed: ${error.message}\n`);
+            console.log('   Run manually: node scripts/fix-missing-schema-from-uat.js\n');
+          }
+        } else {
+          console.log('   To fix this, run:\n');
+          console.log('   node scripts/fix-missing-schema-from-uat.js\n');
+        }
       }
     } else {
       console.log('✅ Schema counts match\n');
