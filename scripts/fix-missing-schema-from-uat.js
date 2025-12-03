@@ -217,7 +217,72 @@ async function main() {
 
     console.log('🔍 Extracting enums and schema from UAT using pg_dump...\n');
 
-    // First, extract and create all enum types
+    // Step 0: Extract and create all sequences (must come before tables)
+    console.log('📋 Step 0: Extracting sequences...\n');
+    try {
+      // Query sequences from UAT
+      const sequenceResult = await uatClient.query(`
+        SELECT 
+          sequence_schema,
+          sequence_name,
+          data_type,
+          start_value,
+          minimum_value,
+          maximum_value,
+          increment,
+          cycle_option
+        FROM information_schema.sequences
+        WHERE sequence_schema = 'public'
+        ORDER BY sequence_name
+      `);
+      
+      if (sequenceResult.rows.length > 0) {
+        console.log(`   Found ${sequenceResult.rows.length} sequence(s) in UAT\n`);
+        
+        let sequencesCreated = 0;
+        for (const seq of sequenceResult.rows) {
+          const seqSchema = seq.sequence_schema;
+          const seqName = seq.sequence_name;
+          const fullSeqName = `"${seqSchema}"."${seqName}"`;
+          
+          try {
+            // Check if sequence already exists in Staging
+            const exists = await stagingClient.query(`
+              SELECT EXISTS(
+                SELECT 1 FROM information_schema.sequences
+                WHERE sequence_schema = $1 AND sequence_name = $2
+              ) as exists
+            `, [seqSchema, seqName]);
+            
+            if (!exists.rows[0].exists) {
+              // Build CREATE SEQUENCE statement with all attributes
+              const createSeqSQL = `
+                CREATE SEQUENCE ${fullSeqName}
+                  AS ${seq.data_type}
+                  START WITH ${seq.start_value}
+                  INCREMENT BY ${seq.increment}
+                  MINVALUE ${seq.minimum_value}
+                  MAXVALUE ${seq.maximum_value}
+                  ${seq.cycle_option === 'YES' ? 'CYCLE' : 'NO CYCLE'}
+              `.trim();
+              
+              await stagingClient.query(createSeqSQL);
+              console.log(`   ✅ Created sequence: ${seqName}`);
+              sequencesCreated++;
+            } else {
+              console.log(`   ⚠️  Sequence already exists: ${seqName}`);
+            }
+          } catch (error) {
+            console.log(`   ⚠️  Could not create sequence ${seqName}: ${error.message.split('\n')[0]}`);
+          }
+        }
+        console.log(`\n   Summary: ${sequencesCreated} sequence(s) created\n`);
+      }
+    } catch (error) {
+      console.log(`   ⚠️  Could not extract sequences: ${error.message.split('\n')[0]}\n`);
+    }
+
+    // Step 1: Extract and create all enum types
     console.log('📋 Step 1: Extracting enum types...\n');
     const env = { ...process.env, PGPASSWORD: uatPassword };
     
@@ -458,8 +523,14 @@ async function main() {
             try {
               await client.query(stmt);
             } catch (e) {
-              // Ignore errors for indexes/constraints - table creation is what matters
-              console.log(`      ⚠️  Index/constraint skipped: ${e.message.split('\n')[0]}`);
+              const errorMsg = e.message.split('\n')[0];
+              // Check if transaction is aborted - if so, we need to rollback and stop
+              if (errorMsg.includes('current transaction is aborted') || errorMsg.includes('transaction is aborted')) {
+                console.log(`      ⚠️  Transaction aborted - rolling back and skipping remaining operations for this table`);
+                throw e; // Re-throw to trigger rollback in outer catch
+              }
+              // Ignore other errors for indexes/constraints - table creation is what matters
+              console.log(`      ⚠️  Index/constraint skipped: ${errorMsg}`);
             }
           }
         }
