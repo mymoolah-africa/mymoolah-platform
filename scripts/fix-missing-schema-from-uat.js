@@ -310,87 +310,74 @@ async function main() {
 
       let createTableSQL = createTableMatch[0];
       
+      // Check if this is a partition table - extract parent name
+      const partitionMatch = createTableSQL.match(/PARTITION OF\s+([^\s(]+)/i);
+      
       // If this is a partition, check parent exists
       if (tableDependencies[tableName]) {
         const parentTable = tableDependencies[tableName];
         const parentExists = await tableExists(stagingClient, parentTable);
         if (!parentExists) {
-          console.log(`   ⚠️  Parent table ${parentTable} missing - creating parent first...`);
-          // Parent should be in sortedTables before this partition, but double-check
+          // Parent should be in sortedTables before this partition
           if (sortedTables.indexOf(parentTable) > sortedTables.indexOf(tableName)) {
             console.log(`   ❌ Failed: ${tableName} - Parent ${parentTable} not yet created (dependency order issue)`);
             failedCount++;
             continue;
+          } else if (!missingTables.includes(parentTable)) {
+            console.log(`   ⚠️  Parent table ${parentTable} not in missing tables list - may already exist`);
           }
         }
       }
+      
+      // Apply to Staging using psql (IAM auth, no password needed)
+      await stagingClient.query('BEGIN');
+      try {
+        await stagingClient.query(createTableSQL);
         
-        // Check if this is a partition table - extract parent name
-        const partitionMatch = createTableSQL.match(/PARTITION OF\s+([^\s(]+)/i);
-        if (partitionMatch) {
-          const parentTableName = partitionMatch[1].replace(/["']/g, '');
-          
-          // Check if parent exists, if not, we'll create it first
-          const parentExists = await tableExists(stagingClient, parentTableName);
-          if (!parentExists && !missingTables.includes(parentTableName)) {
-            console.log(`   ⚠️  Parent table ${parentTableName} missing - will need to be created first`);
-          }
-        }
+        // Also apply any ALTER TABLE or CREATE INDEX statements for this table
+        const alterStatements = schema.match(/ALTER TABLE[^;]+;/g) || [];
+        const indexStatements = schema.match(/CREATE[^;]*INDEX[^;]+;/g) || [];
         
-        // Apply to Staging using psql (IAM auth, no password needed)
-        await stagingClient.query('BEGIN');
-        try {
-          const result = await stagingClient.query(createTableSQL);
-          
-          // Also apply any ALTER TABLE or CREATE INDEX statements for this table
-          const alterStatements = schema.match(/ALTER TABLE[^;]+;/g) || [];
-          const indexStatements = schema.match(/CREATE[^;]*INDEX[^;]+;/g) || [];
-          
-          for (const stmt of [...alterStatements, ...indexStatements]) {
-            if (stmt.includes(tableName)) {
-              try {
-                await stagingClient.query(stmt);
-              } catch (e) {
-                // Ignore errors for indexes/constraints - table creation is what matters
-              }
+        for (const stmt of [...alterStatements, ...indexStatements]) {
+          if (stmt.includes(tableName)) {
+            try {
+              await stagingClient.query(stmt);
+            } catch (e) {
+              // Ignore errors for indexes/constraints - table creation is what matters
             }
           }
-          
-          await stagingClient.query('COMMIT');
-          
-          // Verify table actually exists after creation
-          const existsAfter = await tableExists(stagingClient, tableName);
-          if (existsAfter) {
-            console.log(`   ✅ Applied: ${tableName}`);
-            appliedCount++;
-          } else {
-            console.log(`   ⚠️  Created but not found: ${tableName} (may need parent table or schema refresh)`);
-            appliedCount++; // Count as applied since CREATE succeeded
-          }
-        } catch (error) {
-          await stagingClient.query('ROLLBACK');
-          const errorMsg = error.message.split('\n')[0];
-          if (errorMsg.includes('already exists')) {
-            console.log(`   ⚠️  ${tableName} already exists (skipping)`);
-          } else if (errorMsg.includes('does not exist') && partitionMatch) {
-            console.log(`   ❌ Failed: ${tableName} - Parent table missing: ${errorMsg}`);
-            failedCount++;
-          } else {
-            console.log(`   ❌ Failed: ${tableName} - ${errorMsg}`);
-            failedCount++;
-          }
         }
-
-        // Clean up temp file (if it exists)
-        const schemaFile = path.join(tempDir, `${tableName}.sql`);
-        try {
-          if (fs.existsSync(schemaFile)) fs.unlinkSync(schemaFile);
-        } catch {}
-
+        
+        await stagingClient.query('COMMIT');
+        
+        // Verify table actually exists after creation
+        const existsAfter = await tableExists(stagingClient, tableName);
+        if (existsAfter) {
+          console.log(`   ✅ Applied: ${tableName}`);
+          appliedCount++;
+        } else {
+          console.log(`   ⚠️  Created but not found: ${tableName} (may need parent table or schema refresh)`);
+          appliedCount++; // Count as applied since CREATE succeeded
+        }
       } catch (error) {
-        console.log(`   ❌ Error: ${tableName} - ${error.message.split('\n')[0]}`);
-        failedCount++;
+        await stagingClient.query('ROLLBACK');
+        const errorMsg = error.message.split('\n')[0];
+        if (errorMsg.includes('already exists')) {
+          console.log(`   ⚠️  ${tableName} already exists (skipping)`);
+        } else if (errorMsg.includes('does not exist') && partitionMatch) {
+          console.log(`   ❌ Failed: ${tableName} - Parent table missing: ${errorMsg}`);
+          failedCount++;
+        } else {
+          console.log(`   ❌ Failed: ${tableName} - ${errorMsg}`);
+          failedCount++;
+        }
       }
+
+      // Clean up temp file (if it exists)
+      const schemaFile = path.join(tempDir, `${tableName}.sql`);
+      try {
+        if (fs.existsSync(schemaFile)) fs.unlinkSync(schemaFile);
+      } catch {}
     }
 
     // Clean up temp directory
