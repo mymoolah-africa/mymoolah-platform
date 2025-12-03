@@ -38,7 +38,8 @@ echo ""
 
 # Confirm before proceeding
 read -p "Do you want to proceed? (yes/no): " CONFIRM
-if [ "$CONFIRM" != "yes" ]; then
+CONFIRM_LOWER=$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]')
+if [ "$CONFIRM_LOWER" != "yes" ] && [ "$CONFIRM_LOWER" != "y" ]; then
   echo "Cancelled."
   exit 0
 fi
@@ -58,7 +59,8 @@ echo ""
 
 # Confirm password before proceeding
 read -p "Have you saved the password? Continue with update? (yes/no): " CONFIRM2
-if [ "$CONFIRM2" != "yes" ]; then
+CONFIRM2_LOWER=$(echo "$CONFIRM2" | tr '[:upper:]' '[:lower:]')
+if [ "$CONFIRM2_LOWER" != "yes" ] && [ "$CONFIRM2_LOWER" != "y" ]; then
   echo "Cancelled."
   exit 0
 fi
