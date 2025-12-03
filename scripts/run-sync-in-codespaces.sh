@@ -93,9 +93,11 @@ echo ""
 echo "Step 4: Loading environment variables and running sync script..."
 echo ""
 
-# Load .env file
+# Load .env file (only valid KEY=VALUE lines, skip comments and empty lines)
 if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
+  set -a
+  source <(grep -v '^#' .env | grep -v '^$' | grep -E '^[A-Z_][A-Z0-9_]*=' || true)
+  set +a
 fi
 
 # Set proxy ports for Codespaces
