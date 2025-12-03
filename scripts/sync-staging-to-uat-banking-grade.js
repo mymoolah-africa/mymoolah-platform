@@ -680,7 +680,8 @@ async function main() {
 
   // Create connection pools (high-performance)
   const uatPool = createConnectionPool(uatConfig, 'uat');
-  const stagingPool = createConnectionPool(stagingConfig, 'staging');
+  // For staging with IAM auth, use Pool directly (same as working fix-missing-schema-from-uat.js)
+  const stagingPool = new Pool(stagingConfig);
 
   // Create audit logger
   const stagingClient = await stagingPool.connect();
