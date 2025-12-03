@@ -668,18 +668,18 @@ async function main() {
     ssl: false
   };
 
-  const stagingConfig = {
-    host: '127.0.0.1',
-    port: stagingProxyPort,
-    database: 'mymoolah_staging',
-    user: 'mymoolah_app',
-    // Note: Staging uses IAM auth (--auto-iam-authn), so password not needed in connection string
-    ssl: false
-  };
+  // For IAM authentication, use connection string format (omits password)
+  // This explicitly tells pg not to use password authentication
+  const stagingConnectionString = `postgres://mymoolah_app@127.0.0.1:${stagingProxyPort}/mymoolah_staging?sslmode=disable`;
 
   // Create connection pools (high-performance)
   const uatPool = createConnectionPool(uatConfig, 'uat');
-  const stagingPool = createConnectionPool(stagingConfig, 'staging');
+  // For staging, use connection string for IAM auth (no password field)
+  const stagingPool = new Pool({
+    connectionString: stagingConnectionString,
+    ...CONFIG.POOL_CONFIG,
+    application_name: 'mymoolah-sync-staging'
+  });
 
   // Create audit logger
   const stagingClient = await stagingPool.connect();
