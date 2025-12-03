@@ -137,10 +137,11 @@ async function main() {
     console.log('   PARTITION OF public.transactions_partitioned');
     console.log('   FOR VALUES FROM (\'2025-01-01 00:00:00+00\') TO (\'2025-02-01 00:00:00+00\');\n');
     
+    const client = await stagingClient.connect();
     try {
-      await stagingClient.query('BEGIN');
-      await stagingClient.query(testPartitionSQL);
-      await stagingClient.query('COMMIT');
+      await client.query('BEGIN');
+      await client.query(testPartitionSQL);
+      await client.query('COMMIT');
       
       console.log('✅ SUCCESS! Partition created successfully.\n');
       
@@ -158,7 +159,11 @@ async function main() {
       console.log('✅ Cleanup complete\n');
       
     } catch (error) {
-      await stagingClient.query('ROLLBACK');
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackError) {
+        // Ignore rollback errors
+      }
       console.log('❌ FAILED! Here is the actual error from PostgreSQL:\n');
       console.log('='.repeat(80));
       console.log('ERROR MESSAGE:');
@@ -183,6 +188,8 @@ async function main() {
         console.log('   → Unknown error - see full error message above');
       }
       console.log('');
+    } finally {
+      client.release();
     }
 
     // Test 3: Try alternative parent name
@@ -199,10 +206,11 @@ async function main() {
     console.log('   PARTITION OF public.transactions');
     console.log('   FOR VALUES FROM (\'2025-01-01 00:00:00+00\') TO (\'2025-02-01 00:00:00+00\');\n');
     
+    const client2 = await stagingClient.connect();
     try {
-      await stagingClient.query('BEGIN');
-      await stagingClient.query(testPartitionSQL2);
-      await stagingClient.query('COMMIT');
+      await client2.query('BEGIN');
+      await client2.query(testPartitionSQL2);
+      await client2.query('COMMIT');
       
       console.log('✅ SUCCESS! Partition created with "transactions" as parent.\n');
       
@@ -210,9 +218,15 @@ async function main() {
       await stagingClient.query('DROP TABLE IF EXISTS public.transactions_2025_01 CASCADE');
       
     } catch (error) {
-      await stagingClient.query('ROLLBACK');
+      try {
+        await client2.query('ROLLBACK');
+      } catch (rollbackError) {
+        // Ignore rollback errors
+      }
       console.log('❌ FAILED with "transactions" as parent:');
       console.log(`   ${error.message.split('\n')[0]}\n`);
+    } finally {
+      client2.release();
     }
 
     await stagingClient.end();

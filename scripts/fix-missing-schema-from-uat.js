@@ -424,11 +424,13 @@ async function main() {
         }
       }
       
-      // Apply to Staging using psql (IAM auth, no password needed)
-      await stagingClient.query('BEGIN');
+      // Apply to Staging using a single client connection for transaction
+      const client = await stagingClient.connect();
       try {
+        await client.query('BEGIN');
+        
         // Execute CREATE TABLE and capture result
-        const createResult = await stagingClient.query(createTableSQL);
+        const createResult = await client.query(createTableSQL);
         console.log(`      📊 CREATE executed (command: ${createResult.command || 'UNKNOWN'}, rowCount: ${createResult.rowCount || 0})`);
         
         // Also apply any ALTER TABLE or CREATE INDEX statements for this table
@@ -438,7 +440,7 @@ async function main() {
         for (const stmt of [...alterStatements, ...indexStatements]) {
           if (stmt.includes(tableName)) {
             try {
-              await stagingClient.query(stmt);
+              await client.query(stmt);
             } catch (e) {
               // Ignore errors for indexes/constraints - table creation is what matters
               console.log(`      ⚠️  Index/constraint skipped: ${e.message.split('\n')[0]}`);
@@ -447,10 +449,10 @@ async function main() {
         }
         
         // Check transaction status before commit
-        const beforeCommitStatus = await stagingClient.query('SELECT txid_current(), pg_is_in_recovery()');
+        const beforeCommitStatus = await client.query('SELECT txid_current(), pg_is_in_recovery()');
         console.log(`      📊 Transaction ID before commit: ${beforeCommitStatus.rows[0]?.txid_current || 'UNKNOWN'}`);
         
-        await stagingClient.query('COMMIT');
+        await client.query('COMMIT');
         console.log(`      ✅ Transaction committed`);
         
         // Small delay to ensure transaction is fully committed
@@ -482,7 +484,11 @@ async function main() {
           failedCount++;
         }
       } catch (error) {
-        await stagingClient.query('ROLLBACK');
+        try {
+          await client.query('ROLLBACK');
+        } catch (rollbackError) {
+          // Ignore rollback errors
+        }
         
         // Capture full error details for better diagnosis
         const errorMsg = error.message;
@@ -509,6 +515,9 @@ async function main() {
         } else {
           failedCount++;
         }
+      } finally {
+        // Always release the client back to the pool
+        client.release();
       }
 
       // Clean up temp file (if it exists)
