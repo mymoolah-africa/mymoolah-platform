@@ -171,23 +171,17 @@ test_connection() {
 
 # Run migration
 run_migration() {
-  # Use existing DATABASE_URL if it exists and points to UAT, otherwise construct it
-  if [ -n "${DATABASE_URL:-}" ] && [[ "${DATABASE_URL}" =~ mymoolah[^_].*:6543 ]]; then
-    log "Using existing DATABASE_URL from .env file"
-    log "   Database URL: postgres://${DB_USER}@${DB_HOST}:${PROXY_PORT}/${DB_NAME}"
-  else
-    log "Constructing DATABASE_URL for UAT database..."
-    local password=$(get_uat_password)
-    local database_url=$(construct_database_url)
-    export DATABASE_URL="${database_url}"
-    log "   Database: ${DB_NAME}"
-    log "   Host: ${DB_HOST}:${PROXY_PORT}"
-    log "   User: ${DB_USER}"
+  # Just use DATABASE_URL from .env directly - it's already loaded by load_env()
+  if [ -z "${DATABASE_URL:-}" ]; then
+    error "DATABASE_URL not found in .env file"
+    error "Please ensure DATABASE_URL is set in your .env file"
+    exit 1
   fi
   
+  log "Using DATABASE_URL from .env file"
   export NODE_ENV="development"
   
-  log "Running migrations (Sequelize CLI will test connection)..."
+  log "Running migrations..."
   if [ -n "${MIGRATION_NAME}" ]; then
     log "Running specific migration: ${MIGRATION_NAME}"
     npx sequelize-cli db:migrate --name "${MIGRATION_NAME}" --migrations-path migrations
