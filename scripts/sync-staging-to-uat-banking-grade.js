@@ -631,8 +631,16 @@ async function main() {
 
   // Get passwords
   // UAT: from .env file
-  // Staging: IAM auth via proxy (--auto-iam-authn) - NO password needed (matches working fix-missing-schema-from-uat.js)
+  // Staging: from GCS Secret Manager (as confirmed by user - password managed by Secret Manager)
   const uatPassword = getUATPassword();
+  let stagingPassword;
+  
+  try {
+    stagingPassword = getPasswordFromSecretManager('db-mmtp-pg-staging-password');
+    console.log('✅ Staging password retrieved from Secret Manager\n');
+  } catch (error) {
+    throw new Error(`Failed to retrieve Staging password from Secret Manager: ${error.message}`);
+  }
 
   // Detect proxy ports (simple detection - proxies should already be running)
   console.log('🔍 Detecting Cloud SQL Auth Proxy ports...\n');
@@ -660,13 +668,14 @@ async function main() {
     ssl: false
   };
 
-  // Staging config - IAM authentication (NO password field - matches working fix-missing-schema-from-uat.js exactly)
+  // Staging config - use password from Secret Manager (like test-staging-transactions.js which works)
+  // Proxy uses IAM auth (--auto-iam-authn), but pg library still needs password string
   const stagingConfig = {
     host: '127.0.0.1',
     port: stagingProxyPort,
     database: 'mymoolah_staging',
     user: 'mymoolah_app',
-    // Staging uses IAM auth - no password needed
+    password: stagingPassword, // Password from Secret Manager (proxy handles IAM auth)
     ssl: false
   };
 
