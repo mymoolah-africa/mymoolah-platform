@@ -24,6 +24,9 @@
  * - gcloud authentication for Secret Manager
  */
 
+// Load .env file for UAT database credentials
+require('dotenv').config();
+
 const { Client, Pool } = require('pg');
 const { execSync } = require('child_process');
 const crypto = require('crypto');
