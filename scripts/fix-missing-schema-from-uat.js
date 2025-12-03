@@ -270,8 +270,50 @@ async function main() {
       }
     }
     
+    // Find parent partitioned tables that are missing
+    const missingParentTables = new Set();
+    for (const [partitionTable, parentTable] of Object.entries(tableDependencies)) {
+      const parentExists = await tableExists(stagingClient, parentTable);
+      if (!parentExists) {
+        missingParentTables.add(parentTable);
+      }
+    }
+    
+    // Extract parent table schemas if they're missing
+    if (missingParentTables.size > 0) {
+      console.log(`   🔍 Found ${missingParentTables.size} missing parent partitioned table(s) - will create first:\n`);
+      for (const parentTable of missingParentTables) {
+        console.log(`      - ${parentTable}`);
+        try {
+          const schemaFile = path.join(tempDir, `${parentTable}.sql`);
+          execSync(
+            `pg_dump -h ${uatConfig.host} -p ${uatConfig.port} -U ${uatConfig.user} -d ${uatConfig.database} --schema-only --table=${parentTable} > "${schemaFile}" 2>/dev/null`,
+            { env, stdio: 'pipe' }
+          );
+          
+          if (fs.existsSync(schemaFile) && fs.readFileSync(schemaFile, 'utf8').trim().length > 0) {
+            let schema = fs.readFileSync(schemaFile, 'utf8');
+            schema = schema.split('\n').filter(line => {
+              const trimmed = line.trim();
+              return trimmed && !trimmed.startsWith('--') && trimmed !== '';
+            }).join('\n');
+            
+            const createTableMatch = schema.match(/CREATE TABLE[^;]+;/s);
+            if (createTableMatch) {
+              tableSchemas[parentTable] = schema;
+            }
+          }
+        } catch (e) {
+          console.log(`      ⚠️  Could not extract schema for parent ${parentTable}`);
+        }
+      }
+      console.log('');
+    }
+    
     // Sort tables: parent partitioned tables first, then partitions
-    const sortedTables = [...missingTables].sort((a, b) => {
+    // Include missing parent tables in the list to create
+    const allTablesToCreate = [...new Set([...Array.from(missingParentTables), ...missingTables])];
+    const sortedTables = [...allTablesToCreate].sort((a, b) => {
       const aIsPartition = tableDependencies[a];
       const bIsPartition = tableDependencies[b];
       
@@ -313,19 +355,14 @@ async function main() {
       // Check if this is a partition table - extract parent name
       const partitionMatch = createTableSQL.match(/PARTITION OF\s+([^\s(]+)/i);
       
-      // If this is a partition, check parent exists
+      // If this is a partition, verify parent exists
       if (tableDependencies[tableName]) {
         const parentTable = tableDependencies[tableName];
         const parentExists = await tableExists(stagingClient, parentTable);
         if (!parentExists) {
-          // Parent should be in sortedTables before this partition
-          if (sortedTables.indexOf(parentTable) > sortedTables.indexOf(tableName)) {
-            console.log(`   ❌ Failed: ${tableName} - Parent ${parentTable} not yet created (dependency order issue)`);
-            failedCount++;
-            continue;
-          } else if (!missingTables.includes(parentTable)) {
-            console.log(`   ⚠️  Parent table ${parentTable} not in missing tables list - may already exist`);
-          }
+          console.log(`   ❌ Failed: ${tableName} - Parent partitioned table ${parentTable} does not exist`);
+          failedCount++;
+          continue;
         }
       }
       
