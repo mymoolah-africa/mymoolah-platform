@@ -17,6 +17,19 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
+// Get password from Secret Manager
+function getPasswordFromSecretManager(secretName) {
+  try {
+    const password = execSync(
+      `gcloud secrets versions access latest --secret="${secretName}" --project=mymoolah-db`,
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    return password.replace(/[\r\n\s]+$/g, '').trim();
+  } catch (error) {
+    throw new Error(`Failed to get password from Secret Manager: ${secretName} - ${error.message}`);
+  }
+}
+
 // Get UAT password from .env
 function getUATPassword() {
   if (process.env.DATABASE_URL) {
@@ -143,6 +156,8 @@ async function main() {
   console.log('='.repeat(80) + '\n');
 
   const uatPassword = getUATPassword();
+  const stagingPassword = getPasswordFromSecretManager('db-mmtp-pg-staging-password');
+  
   const uatProxyPort = detectProxyPort([6543, 5433], 'UAT');
   const stagingProxyPort = detectProxyPort([6544, 5434], 'Staging');
 
@@ -160,7 +175,7 @@ async function main() {
     port: stagingProxyPort,
     database: 'mymoolah_staging',
     user: 'mymoolah_app',
-    // Staging uses IAM auth - no password needed
+    password: stagingPassword, // Password from Secret Manager (proxy handles IAM auth)
     ssl: false
   };
 
