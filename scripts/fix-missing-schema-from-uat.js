@@ -393,6 +393,12 @@ async function main() {
 
       let createTableSQL = createTableMatch[0];
       
+      // Debug: Show what SQL we're about to execute (first 200 chars)
+      const sqlPreview = createTableSQL.length > 200 
+        ? createTableSQL.substring(0, 200) + '...' 
+        : createTableSQL;
+      console.log(`      🔍 SQL: ${sqlPreview.replace(/\n/g, ' ').trim()}`);
+      
       // Check if this is a partition table - extract parent name
       const partitionMatch = createTableSQL.match(/PARTITION OF\s+([^\s(]+)/i);
       
@@ -421,7 +427,9 @@ async function main() {
       // Apply to Staging using psql (IAM auth, no password needed)
       await stagingClient.query('BEGIN');
       try {
-        await stagingClient.query(createTableSQL);
+        // Execute CREATE TABLE and capture result
+        const createResult = await stagingClient.query(createTableSQL);
+        console.log(`      📊 CREATE executed (command: ${createResult.command || 'UNKNOWN'}, rowCount: ${createResult.rowCount || 0})`);
         
         // Also apply any ALTER TABLE or CREATE INDEX statements for this table
         const alterStatements = schema.match(/ALTER TABLE[^;]+;/g) || [];
@@ -433,14 +441,20 @@ async function main() {
               await stagingClient.query(stmt);
             } catch (e) {
               // Ignore errors for indexes/constraints - table creation is what matters
+              console.log(`      ⚠️  Index/constraint skipped: ${e.message.split('\n')[0]}`);
             }
           }
         }
         
+        // Check transaction status before commit
+        const beforeCommitStatus = await stagingClient.query('SELECT txid_current(), pg_is_in_recovery()');
+        console.log(`      📊 Transaction ID before commit: ${beforeCommitStatus.rows[0]?.txid_current || 'UNKNOWN'}`);
+        
         await stagingClient.query('COMMIT');
+        console.log(`      ✅ Transaction committed`);
         
         // Small delay to ensure transaction is fully committed
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 200));
         
         // Verify table actually exists after creation
         const existsAfter = await tableExists(stagingClient, tableName);
@@ -450,13 +464,21 @@ async function main() {
         } else {
           // Table creation succeeded but table doesn't exist - this indicates a problem
           console.log(`   ❌ Failed: ${tableName} - CREATE succeeded but table not found`);
-          console.log(`      💡 This usually means:`);
+          console.log(`      🔍 Diagnostic info:`);
+          console.log(`         - CREATE command executed: ${createResult.command || 'UNKNOWN'}`);
+          console.log(`         - Transaction committed successfully`);
+          console.log(`         - Table verification query returned: false`);
+          console.log(`      💡 Possible causes:`);
           if (partitionMatch) {
-            console.log(`         - Parent partitioned table might not exist or have wrong structure`);
+            console.log(`         - Parent table might not exist or be incorrectly structured`);
+            console.log(`         - Partition syntax might be invalid`);
           } else {
-            console.log(`         - CREATE statement may have been invalid or rolled back`);
+            console.log(`         - CREATE statement might be invalid SQL`);
+            console.log(`         - Transaction might have rolled back silently`);
             console.log(`         - Permission issues preventing table creation`);
+            console.log(`         - Table might be in a different schema`);
           }
+          console.log(`      💡 Run diagnostic: node scripts/test-partition-creation.js`);
           failedCount++;
         }
       } catch (error) {
