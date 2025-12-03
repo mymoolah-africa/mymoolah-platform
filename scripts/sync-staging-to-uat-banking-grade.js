@@ -367,15 +367,23 @@ function getAllMigrationFiles() {
  * Compare migrations
  */
 function compareMigrations(uatMigrations, stagingMigrations, allMigrations) {
+  // Find migrations that exist in UAT but not in Staging (these need to be run)
   const pendingMigrations = allMigrations.filter(m => 
     uatMigrations.includes(m) && !stagingMigrations.includes(m)
   );
+  
+  // Find migrations in UAT that don't exist in migration files (manual or deleted migrations)
+  const missingInFiles = uatMigrations.filter(m => !allMigrations.includes(m));
+  
+  // Find new migrations that haven't run in either environment
   const newMigrations = allMigrations.filter(m => 
     !uatMigrations.includes(m) && !stagingMigrations.includes(m)
   );
+  
+  // Find migrations in Staging that aren't in UAT (shouldn't happen)
   const extraInStaging = stagingMigrations.filter(m => !uatMigrations.includes(m));
 
-  return { pendingMigrations, newMigrations, extraInStaging };
+  return { pendingMigrations, newMigrations, extraInStaging, missingInFiles };
 }
 
 // ============================================================================
@@ -507,9 +515,10 @@ async function main() {
   }
 
   // Get passwords
-  const { uatPassword, stagingPassword } = {
-    uatPassword: getUATPassword(),
-    stagingPassword: getPasswordFromSecretManager('db-mmtp-pg-staging-password')
+  // Note: Staging uses IAM auth (--auto-iam-authn), so password not needed for connection string
+  const { uatPassword } = {
+    uatPassword: getUATPassword()
+    // Staging uses IAM - no password needed
   };
 
   // Detect ports
@@ -531,7 +540,7 @@ async function main() {
     port: stagingProxyPort,
     database: 'mymoolah_staging',
     user: 'mymoolah_app',
-    password: stagingPassword,
+    // Note: Staging uses IAM auth (--auto-iam-authn), so password not needed in connection string
     ssl: false
   };
 
@@ -571,21 +580,73 @@ async function main() {
     
     const migrationDiff = compareMigrations(uatMigrations, stagingMigrations, allMigrations);
     
-    if (migrationDiff.pendingMigrations.length > 0) {
-      console.log(`⚠️  Found ${migrationDiff.pendingMigrations.length} migrations to sync:\n`);
-      migrationDiff.pendingMigrations.forEach(m => console.log(`   - ${m}`));
+    // Show detailed migration comparison
+    const missingInStaging = uatMigrations.filter(m => !stagingMigrations.includes(m));
+    
+    if (missingInStaging.length > 0) {
+      console.log(`⚠️  Found ${missingInStaging.length} migration(s) in UAT that are missing in Staging:\n`);
+      missingInStaging.forEach(m => {
+        const existsInFiles = allMigrations.includes(m);
+        const marker = existsInFiles ? '✅' : '⚠️';
+        console.log(`   ${marker} ${m} ${existsInFiles ? '(file exists - will run)' : '(file missing - needs investigation)'}`);
+      });
       console.log('');
+    }
+    
+    // Check if we should run migrations
+    const hasPendingMigrations = migrationDiff.pendingMigrations.length > 0;
+    const hasNewMigrations = migrationDiff.newMigrations.length > 0;
+    const hasMigrationCountMismatch = uatMigrations.length !== stagingMigrations.length;
+    const stagingBehind = uatMigrations.length > stagingMigrations.length;
+    
+    // Run migrations if:
+    // 1. There are pending migrations in files (in UAT but not Staging), OR
+    // 2. There are new migrations that haven't run in either environment, OR
+    // 3. Staging is behind UAT (has fewer migrations)
+    // Let sequelize-cli handle which specific migrations to run
+    const shouldRunMigrations = hasPendingMigrations || hasNewMigrations || stagingBehind;
+    
+    if (shouldRunMigrations) {
+      let migrationsToRun;
+      if (hasPendingMigrations) {
+        migrationsToRun = `${migrationDiff.pendingMigrations.length} pending migration(s) found in files`;
+      } else if (hasNewMigrations) {
+        migrationsToRun = `${migrationDiff.newMigrations.length} new migration(s) found in files`;
+      } else if (stagingBehind) {
+        migrationsToRun = `all pending migration(s) (Staging: ${stagingMigrations.length}, UAT: ${uatMigrations.length})`;
+      } else {
+        migrationsToRun = 'all pending migration(s)';
+      }
+      
+      console.log(`📋 Running ${migrationsToRun} in Staging...\n`);
+      
+      if (hasPendingMigrations && migrationDiff.pendingMigrations.length > 0) {
+        console.log(`   Pending migrations to run:\n`);
+        migrationDiff.pendingMigrations.forEach(m => {
+          console.log(`   - ${m}`);
+        });
+        console.log('');
+      }
+      
+      if (hasNewMigrations && migrationDiff.newMigrations.length > 0) {
+        console.log(`   New migrations found (not yet run in either environment):\n`);
+        migrationDiff.newMigrations.forEach(m => {
+          console.log(`   - ${m}`);
+        });
+        console.log('');
+      }
       
       if (!dryRun) {
-        // Run migrations with ACID transaction
-        const stagingUrl = `postgres://${stagingConfig.user}:${encodeURIComponent(stagingConfig.password)}@${stagingConfig.host}:${stagingConfig.port}/${stagingConfig.database}?sslmode=disable`;
+        // Run migrations with ACID transaction - use IAM auth for Staging (no password)
+        const stagingUrl = `postgres://${stagingConfig.user}@${stagingConfig.host}:${stagingConfig.port}/${stagingConfig.database}?sslmode=disable`;
         
         await executeWithTransaction(stagingClient, async () => {
           process.env.DATABASE_URL = stagingUrl;
-          execSync('npx sequelize-cli db:migrate', {
+          process.env.NODE_ENV = 'staging';
+          execSync('npx sequelize-cli db:migrate --migrations-path migrations', {
             cwd: path.join(__dirname, '..'),
             stdio: 'inherit',
-            env: { ...process.env, DATABASE_URL: stagingUrl }
+            env: { ...process.env, DATABASE_URL: stagingUrl, NODE_ENV: 'staging' }
           });
         }, 'migrations');
         
@@ -593,15 +654,22 @@ async function main() {
           operationType: 'MIGRATION',
           status: 'SUCCESS',
           metadata: {
-            migrationsExecuted: migrationDiff.pendingMigrations.length,
-            migrationNames: migrationDiff.pendingMigrations
+            migrationsExecuted: migrationDiff.pendingMigrations.length || 'all pending',
+            migrationNames: migrationDiff.pendingMigrations,
+            stagingBefore: stagingMigrations.length,
+            stagingAfter: 'will be updated after migration'
           }
         });
         
         console.log('\n✅ Migrations completed successfully\n');
+      } else {
+        console.log('   (Skipped in dry-run mode - run without --dry-run to execute)\n');
       }
-    } else {
+    } else if (!hasMigrationCountMismatch && missingInStaging.length === 0 && !hasNewMigrations) {
       console.log('✅ All migrations are synchronized\n');
+    } else if (missingInStaging.length > 0 && !hasPendingMigrations && !stagingBehind && !hasNewMigrations) {
+      console.log('⚠️  Some migrations exist in UAT but not in migration files\n');
+      console.log('   These may need to be manually synced or the migration files may have been removed.\n');
     }
 
     // Phase 3: Schema Verification
