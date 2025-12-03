@@ -58,27 +58,29 @@ function detectProxyPort(ports, name) {
   throw new Error(`${name} proxy not running. Start it on port ${ports[0]} or ${ports[1]}`);
 }
 
-// Get list of tables (including partitions)
+// Get list of tables (including partitions) - use pg_class for better detection
 async function getTables(client) {
   const result = await client.query(`
-    SELECT table_name 
-    FROM information_schema.tables 
-    WHERE table_schema = 'public' 
-      AND table_type IN ('BASE TABLE', 'FOREIGN TABLE')
-      AND table_name NOT LIKE 'Sequelize%'
-    ORDER BY table_name
+    SELECT c.relname as table_name
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' 
+      AND c.relkind IN ('r', 'p')  -- 'r' = regular table, 'p' = partition table
+      AND c.relname NOT LIKE 'Sequelize%'
+    ORDER BY c.relname
   `);
   return result.rows.map(row => row.table_name);
 }
 
-// Check if a specific table exists
+// Check if a specific table exists (including partitions) - use pg_class for better detection
 async function tableExists(client, tableName) {
   const result = await client.query(`
     SELECT EXISTS (
-      SELECT FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-        AND table_name = $1
-        AND table_type IN ('BASE TABLE', 'FOREIGN TABLE')
+      SELECT 1 FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' 
+        AND c.relname = $1
+        AND c.relkind IN ('r', 'p')  -- 'r' = regular table, 'p' = partition table
     ) as exists
   `, [tableName]);
   return result.rows[0]?.exists || false;
@@ -291,16 +293,8 @@ async function main() {
           }
           
           await stagingClient.query('COMMIT');
-          
-          // Verify table actually exists after creation
-          const exists = await tableExists(stagingClient, tableName);
-          if (exists) {
-            console.log(`   ✅ Applied: ${tableName}`);
-            appliedCount++;
-          } else {
-            console.log(`   ⚠️  Created but not found: ${tableName} (may be a partition)`);
-            appliedCount++; // Still count it as applied since CREATE succeeded
-          }
+          console.log(`   ✅ Applied: ${tableName}`);
+          appliedCount++;
         } catch (error) {
           await stagingClient.query('ROLLBACK');
           if (error.message.includes('already exists')) {
@@ -342,28 +336,31 @@ async function main() {
       console.log('');
     }
 
-    // Verify final state - check each table individually (including partitions)
+    // Verify final state - batch check all tables at once (much faster)
     console.log('🔍 Verifying final state...\n');
+    
+    // Get all staging tables in one query (much faster than individual checks)
+    const finalStagingTables = await getTables(stagingClient);
+    const finalStagingTableSet = new Set(finalStagingTables);
+    
+    // Get partition info for all tables at once
+    const partitionResult = await stagingClient.query(`
+      SELECT c.relname as table_name
+      FROM pg_inherits i
+      JOIN pg_class c ON c.oid = i.inhrelid
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public'
+    `);
+    const partitionSet = new Set(partitionResult.rows.map(row => row.table_name));
+    
+    // Categorize missing tables
     const verifiedCreated = [];
     const verifiedMissing = [];
     const verifiedPartitions = [];
     
     for (const tableName of missingTables) {
-      // Check if table exists
-      const exists = await tableExists(stagingClient, tableName);
-      
-      // Also check if it's a partition
-      const isPartition = await stagingClient.query(`
-        SELECT EXISTS (
-          SELECT 1 FROM pg_inherits i
-          JOIN pg_class c ON c.oid = i.inhrelid
-          JOIN pg_namespace n ON n.oid = c.relnamespace
-          WHERE n.nspname = 'public' AND c.relname = $1
-        ) as is_partition
-      `, [tableName]);
-      
-      if (exists) {
-        if (isPartition.rows[0]?.is_partition) {
+      if (finalStagingTableSet.has(tableName)) {
+        if (partitionSet.has(tableName)) {
           verifiedPartitions.push(tableName);
         } else {
           verifiedCreated.push(tableName);
@@ -372,8 +369,6 @@ async function main() {
         verifiedMissing.push(tableName);
       }
     }
-    
-    const finalStagingTables = await getTables(stagingClient);
 
     console.log('='.repeat(80));
     console.log('  SUMMARY');
