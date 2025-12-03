@@ -514,58 +514,41 @@ async function main() {
         const createResult = await client.query(createTableSQL);
         console.log(`      📊 CREATE executed (command: ${createResult.command || 'UNKNOWN'}, rowCount: ${createResult.rowCount || 0})`);
         
-        // Also apply any ALTER TABLE or CREATE INDEX statements for this table
+        // Commit table creation first (before indexes/constraints)
+        // This ensures table exists even if indexes fail
+        await client.query('COMMIT');
+        console.log(`      ✅ Table created`);
+        
+        // Now apply indexes/constraints in separate transactions
+        // This way table creation succeeds even if indexes fail
         const alterStatements = schema.match(/ALTER TABLE[^;]+;/g) || [];
         const indexStatements = schema.match(/CREATE[^;]*INDEX[^;]+;/g) || [];
         
-        // Apply indexes/constraints - skip if they already exist or cause errors
-        // Table creation is what matters - indexes/constraints can be added later
         for (const stmt of [...alterStatements, ...indexStatements]) {
           if (stmt.includes(tableName)) {
             try {
+              // Each index/constraint in its own transaction
+              await client.query('BEGIN');
               await client.query(stmt);
+              await client.query('COMMIT');
             } catch (e) {
-              const errorMsg = e.message.split('\n')[0];
-              // Check if transaction is aborted - if so, rollback immediately
-              if (errorMsg.includes('current transaction is aborted') || errorMsg.includes('transaction is aborted')) {
-                console.log(`      ⚠️  Transaction aborted - rolling back immediately`);
-                try {
-                  await client.query('ROLLBACK');
-                } catch (rollbackErr) {
-                  // Ignore rollback errors
-                }
-                throw e; // Re-throw to trigger outer catch
+              // Rollback this index/constraint transaction
+              try {
+                await client.query('ROLLBACK');
+              } catch (rollbackErr) {
+                // Ignore rollback errors
               }
-              // Check if it's an "already exists" error - these are OK, don't abort
+              
+              const errorMsg = e.message.split('\n')[0];
               if (errorMsg.includes('already exists') || errorMsg.includes('duplicate')) {
                 console.log(`      ⚠️  Index/constraint already exists, skipping: ${errorMsg.split(':')[0]}`);
-                // Continue - don't abort transaction
               } else {
-                // Other errors - log but continue (table creation is what matters)
                 console.log(`      ⚠️  Index/constraint skipped: ${errorMsg.split(':')[0]}`);
               }
             }
           }
         }
         
-        // Check if transaction is still valid before commit
-        try {
-          await client.query('SELECT 1');
-        } catch (checkError) {
-          // Transaction is aborted - rollback and continue
-          console.log(`      ⚠️  Transaction aborted - rolling back`);
-          try {
-            await client.query('ROLLBACK');
-          } catch (rollbackErr) {
-            // Ignore rollback errors
-          }
-          console.log(`   ⚠️  Skipped: ${tableName} - transaction was aborted (likely due to index/constraint errors)`);
-          failedCount++;
-          continue; // Continue to next table
-        }
-        
-        // Commit transaction
-        await client.query('COMMIT');
         console.log(`      ✅ Transaction committed`);
         
         // Small delay to ensure transaction is fully committed
