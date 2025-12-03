@@ -12,23 +12,45 @@
  */
 
 const { Client } = require('pg');
+const { SecretManagerServiceClient } = require('@google-cloud/secret-manager').v1;
 
-// Database connection configurations
-const uatConfig = {
-  host: '127.0.0.1',
-  port: 5433,
-  database: 'mymoolah',
-  user: 'mymoolah_app',
-  password: process.env.DB_PASSWORD || 'B0t3s@Mymoolah'
-};
+// Get passwords from environment or Secret Manager (same logic as sync script)
+async function getPasswords() {
+  let uatPassword;
+  let stagingPassword;
 
-const stagingConfig = {
-  host: '127.0.0.1',
-  port: 5434,
-  database: 'mymoolah',
-  user: 'mymoolah_app',
-  password: process.env.DB_PASSWORD || 'B0t3s@Mymoolah'
-};
+  // UAT: Try DATABASE_URL or DB_PASSWORD first (for Codespaces/local dev)
+  if (process.env.DATABASE_URL) {
+    const url = new URL(process.env.DATABASE_URL);
+    uatPassword = decodeURIComponent(url.password);
+  } else if (process.env.DB_PASSWORD) {
+    uatPassword = process.env.DB_PASSWORD;
+  } else {
+    // Fallback to Secret Manager
+    const client = new SecretManagerServiceClient();
+    const [version] = await client.accessSecretVersion({
+      name: 'projects/mymoolah-db/secrets/db-mmtp-pg-password/versions/latest'
+    });
+    uatPassword = version.payload.data.toString();
+  }
+
+  // Staging: Get from Secret Manager
+  try {
+    const client = new SecretManagerServiceClient();
+    const [version] = await client.accessSecretVersion({
+      name: 'projects/mymoolah-db/secrets/db-mmtp-pg-staging-password/versions/latest'
+    });
+    stagingPassword = version.payload.data.toString();
+  } catch (error) {
+    console.error('❌ Failed to get Staging password from Secret Manager:', error.message);
+    process.exit(1);
+  }
+
+  return { uatPassword, stagingPassword };
+}
+
+// Database connection configurations (will be set after getting passwords)
+let uatConfig, stagingConfig;
 
 /**
  * Get all tables and their columns from a database

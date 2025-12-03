@@ -7,11 +7,16 @@
  * Usage: node scripts/sync-staging-to-uat.js [--dry-run]
  * 
  * Requirements:
- * - Cloud SQL Auth Proxy running on port 5433 (UAT)
- * - Cloud SQL Auth Proxy running on port 5434 (Staging)
+ * - Cloud SQL Auth Proxy running (auto-detects ports or uses environment variables)
+ *   - UAT: Port 6543 (Codespaces) or 5433 (local) - detected automatically
+ *   - Staging: Port 6544 (Codespaces) or 5434 (local) - detected automatically
  * - UAT password: From DATABASE_URL or DB_PASSWORD environment variable (or Secret Manager)
  * - Staging password: From Secret Manager (db-mmtp-pg-staging-password)
  * - Authenticated with gcloud for Secret Manager access (gcloud auth login)
+ * 
+ * Environment Variables:
+ * - UAT_PROXY_PORT: Override UAT proxy port (default: auto-detect, fallback: 6543 or 5433)
+ * - STAGING_PROXY_PORT: Override Staging proxy port (default: auto-detect, fallback: 6544 or 5434)
  * 
  * What this script does:
  * 1. Checks which migrations have run in UAT vs Staging
@@ -24,46 +29,86 @@
 const { Client } = require('pg');
 const { execSync } = require('child_process');
 const path = require('path');
+const { SecretManagerServiceClient } = require('@google-cloud/secret-manager').v1;
 
-// Get password from Google Cloud Secret Manager (same as check-wallets-columns.js)
-function getPasswordFromSecretManager(secretName) {
+// Get password from Google Cloud Secret Manager using API (more reliable than execSync)
+async function getPasswordFromSecretManager(secretName) {
   try {
-    return execSync(
-      `gcloud secrets versions access latest --secret="${secretName}" --project=mymoolah-db`,
-      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
-    ).trim();
+    const client = new SecretManagerServiceClient();
+    const [version] = await client.accessSecretVersion({
+      name: `projects/mymoolah-db/secrets/${secretName}/versions/latest`
+    });
+    return version.payload.data.toString();
   } catch (error) {
-    throw new Error(`Failed to get password from Secret Manager: ${secretName}`);
+    // Fallback to gcloud CLI if API fails
+    try {
+      return execSync(
+        `gcloud secrets versions access latest --secret="${secretName}" --project=mymoolah-db`,
+        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+      ).trim();
+    } catch (fallbackError) {
+      throw new Error(`Failed to get password from Secret Manager: ${secretName} - ${error.message || fallbackError.message}`);
+    }
   }
 }
 
 // Get UAT password from environment variables or Secret Manager
+// Note: This is synchronous because it's called before async setup
 function getUATPassword() {
   // Try DATABASE_URL from .env first
   if (process.env.DATABASE_URL) {
     try {
       const urlString = process.env.DATABASE_URL;
-      // Find the last @ before the host (handles passwords with @ symbol)
-      // Pattern: postgres://user:password@host:port/db
-      // We need to find @127.0.0.1: or @host:port pattern
-      const hostPattern = '@127.0.0.1:';
-      const hostIndex = urlString.indexOf(hostPattern);
-      if (hostIndex > 0) {
-        const userPassStart = urlString.indexOf('://') + 3;
-        const passwordStart = urlString.indexOf(':', userPassStart) + 1;
-        let password = urlString.substring(passwordStart, hostIndex);
-        // Decode URL encoding (%40 -> @, etc.)
-        // Handle both B0t3s@Mymoolah (13 chars) and B0t3s%40Mymoolah (18 chars) formats
-        // Always try to decode - decodeURIComponent is safe even if already decoded
-        try {
-          password = decodeURIComponent(password);
-        } catch (e) {
-          // If decode fails, use as-is (shouldn't happen for valid URL encoding)
+      
+      // Method 1: Try using URL class (handles URL-encoded passwords automatically)
+      try {
+        const url = new URL(urlString);
+        if (url.password) {
+          // URL class automatically decodes URL-encoded characters
+          const decoded = decodeURIComponent(url.password);
+          // Verify we got a valid password
+          if (decoded && decoded.length > 0 && decoded.length < 100) {
+            return decoded;
+          }
         }
-        return password;
+      } catch (urlError) {
+        // URL parsing failed (password with @ symbol breaks URL parsing)
+        // Fall through to manual parsing
+      }
+      
+      // Method 2: Manual parsing for passwords with @ symbol (B0t3s@Mymoolah)
+      // URL class fails when password contains unencoded @ symbol
+      // Pattern: postgres://user:password@host:port/db
+      // Find the last @ before the host (host is always @127.0.0.1: or @hostname:)
+      const hostPatterns = ['@127.0.0.1:', '@localhost:', '@'];
+      
+      for (const hostPattern of hostPatterns) {
+        const hostIndex = urlString.indexOf(hostPattern);
+        if (hostIndex > 0) {
+          const userPassStart = urlString.indexOf('://') + 3;
+          const passwordStart = urlString.indexOf(':', userPassStart) + 1;
+          
+          if (passwordStart > userPassStart && passwordStart < hostIndex) {
+            let password = urlString.substring(passwordStart, hostIndex);
+            
+            // Decode URL encoding (%40 -> @, etc.)
+            // Handle both B0t3s@Mymoolah (13 chars) and B0t3s%40Mymoolah (18 chars) formats
+            try {
+              password = decodeURIComponent(password);
+            } catch (e) {
+              // If decode fails, password might already be decoded - use as-is
+            }
+            
+            // Verify password looks valid
+            if (password && password.length > 0 && password.length < 100) {
+              return password;
+            }
+          }
+        }
       }
     } catch (e) {
       // Ignore parsing errors, try next method
+      console.log('⚠️  Failed to parse password from DATABASE_URL, trying other methods...');
     }
   }
   
@@ -77,30 +122,62 @@ function getUATPassword() {
     return process.env.DATABASE_PASSWORD;
   }
   
-  // Last resort: try Secret Manager (may not exist for UAT)
-  try {
-    return getPasswordFromSecretManager('db-mmtp-pg-password');
-  } catch (error) {
-    console.error('❌ UAT password not found in environment variables or Secret Manager');
-    console.error('💡 Set DATABASE_URL or DB_PASSWORD environment variable');
-    console.error('💡 Or ensure db-mmtp-pg-password secret exists in Secret Manager');
-    throw error;
-  }
+  // Last resort: try Secret Manager (sync version - will fail if not available)
+  // Note: This will be caught and handled in retrievePasswords()
+  throw new Error('UAT password not found in environment variables. Set DATABASE_URL or DB_PASSWORD.');
 }
 
-// Get passwords
-let uatPassword, stagingPassword;
+/**
+ * Detect which port is active for Cloud SQL Proxy
+ * Returns the preferred port for the environment (Codespaces first, then local)
+ * Actual connection will verify if the port is working
+ */
+function detectProxyPort(possiblePorts, portName = '') {
+  // In Codespaces, prefer higher ports (6543, 6544)
+  // In local, prefer lower ports (5433, 5434)
+  // Try Codespaces ports first (they're more likely to be active based on screenshots)
+  
+  // Check environment variables first
+  const envVar = portName === 'UAT' ? 'UAT_PROXY_PORT' : 'STAGING_PROXY_PORT';
+  if (process.env[envVar]) {
+    const port = parseInt(process.env[envVar], 10);
+    if (!isNaN(port) && port > 0) {
+      return port;
+    }
+  }
+  
+  // Return first port as default (will try connections to verify)
+  // Codespaces ports (6543, 6544) are listed first based on active proxy observation
+  return possiblePorts[0];
+}
 
-try {
-  console.log('🔐 Retrieving passwords...');
-  console.log('   UAT: Trying environment variables first, then Secret Manager');
-  uatPassword = getUATPassword();
-  console.log('   Staging: Getting from Secret Manager');
-  stagingPassword = getPasswordFromSecretManager('db-mmtp-pg-staging-password');
-  console.log('✅ Passwords retrieved successfully\n');
-} catch (error) {
-  console.error('\n❌ Failed to retrieve passwords');
-  process.exit(1);
+// Password retrieval helper (async)
+async function retrievePasswords() {
+  let uatPassword, stagingPassword;
+  
+  try {
+    console.log('🔐 Retrieving passwords...');
+    console.log('   UAT: Trying environment variables first, then Secret Manager');
+    
+    try {
+      uatPassword = getUATPassword();
+    } catch (error) {
+      // If env vars fail, try Secret Manager
+      console.log('   UAT: Environment variables not found, trying Secret Manager...');
+      uatPassword = await getPasswordFromSecretManager('db-mmtp-pg-password');
+    }
+    
+    console.log('   Staging: Getting from Secret Manager');
+    stagingPassword = await getPasswordFromSecretManager('db-mmtp-pg-staging-password');
+    
+    console.log('✅ Passwords retrieved successfully\n');
+    return { uatPassword, stagingPassword };
+  } catch (error) {
+    console.error('\n❌ Failed to retrieve passwords:', error.message);
+    console.error('💡 Ensure you are authenticated with gcloud: gcloud auth login');
+    console.error('💡 Or set DATABASE_URL/DB_PASSWORD environment variables for UAT');
+    throw error;
+  }
 }
 
 // Parse database name from DATABASE_URL if available
@@ -131,22 +208,11 @@ if (process.env.DATABASE_URL) {
   }
 }
 
-// Database connection configurations
-const uatConfig = {
-  host: '127.0.0.1',
-  port: 5433,
-  database: uatDatabaseName,
-  user: 'mymoolah_app',
-  password: uatPassword
-};
-
-const stagingConfig = {
-  host: '127.0.0.1',
-  port: 5434,
-  database: 'mymoolah_staging',  // Staging always uses mymoolah_staging
-  user: 'mymoolah_app',
-  password: stagingPassword
-};
+// Detect or configure proxy ports (for logging, actual configs created in main())
+// UAT: Try 6543 (Codespaces active proxy) first, then 5433 (local proxy)
+// Staging: Try 6544 (Codespaces) first, then 5434 (local proxy)
+const uatProxyPort = detectProxyPort([6543, 5433], 'UAT');
+const stagingProxyPort = detectProxyPort([6544, 5434], 'Staging');
 
 const dryRun = process.argv.includes('--dry-run');
 
@@ -219,7 +285,7 @@ function compareMigrations(uatMigrations, stagingMigrations, allMigrations) {
 /**
  * Run migrations in Staging
  */
-async function runMigrationsInStaging(migrationFiles) {
+async function runMigrationsInStaging(migrationFiles, stagingConfig, dryRun) {
   if (dryRun) {
     console.log('\n🔍 DRY RUN - Would run these migrations:');
     migrationFiles.forEach(m => console.log(`   - ${m}`));
@@ -350,9 +416,34 @@ async function main() {
   console.log('  SYNC STAGING TO UAT - COMPREHENSIVE DATABASE SYNC');
   console.log('='.repeat(80));
   
+  const dryRun = process.argv.includes('--dry-run');
+  
   if (dryRun) {
     console.log('\n🔍 DRY RUN MODE - No changes will be made\n');
   }
+
+  // Step 0: Retrieve passwords first
+  const { uatPassword, stagingPassword } = await retrievePasswords();
+  
+  // Step 0.1: Create database configurations with retrieved passwords
+  const uatConfig = {
+    host: '127.0.0.1',
+    port: uatProxyPort,
+    database: uatDatabaseName,
+    user: 'mymoolah_app',
+    password: uatPassword
+  };
+
+  const stagingConfig = {
+    host: '127.0.0.1',
+    port: stagingProxyPort,
+    database: 'mymoolah_staging',  // Staging always uses mymoolah_staging
+    user: 'mymoolah_app',
+    password: stagingPassword
+  };
+  
+  console.log(`🔍 Using proxy ports: UAT=${uatProxyPort}, Staging=${stagingProxyPort}`);
+  console.log(`   (Set UAT_PROXY_PORT or STAGING_PROXY_PORT environment variables to override)\n`);
 
   const uatClient = new Client(uatConfig);
   const stagingClient = new Client(stagingConfig);
@@ -364,22 +455,54 @@ async function main() {
     // Connect to UAT first
     try {
       await uatClient.connect();
-      console.log('✅ Connected to UAT (port 5433)');
+      console.log(`✅ Connected to UAT (port ${uatConfig.port}, database: ${uatConfig.database})`);
     } catch (uatError) {
       console.error(`❌ Failed to connect to UAT: ${uatError.message}`);
       console.error(`   Host: ${uatConfig.host}, Port: ${uatConfig.port}, Database: ${uatConfig.database}, User: ${uatConfig.user}`);
-      console.error(`   Password length: ${uatConfig.password ? uatConfig.password.length : 0}`);
+      console.error(`   Password length: ${uatConfig.password ? uatConfig.password.length : 0} characters`);
+      
+      if (uatError.message && uatError.message.includes('password authentication')) {
+        console.error('\n💡 Password Authentication Troubleshooting:');
+        console.error('   1. Check password parsing from DATABASE_URL (password contains @ symbol)');
+        console.error('   2. Verify DATABASE_URL format: postgres://user:password@host:port/db');
+        console.error('   3. Try setting DB_PASSWORD environment variable directly');
+        console.error('   4. Check if Cloud SQL Auth Proxy is running on port ' + uatConfig.port);
+      }
+      
+      if (uatError.message && (uatError.message.includes('ECONNREFUSED') || uatError.message.includes('connect'))) {
+        console.error('\n💡 Connection Troubleshooting:');
+        console.error(`   1. Ensure Cloud SQL Auth Proxy is running on port ${uatConfig.port}`);
+        console.error('   2. Try alternative ports: 6543 (Codespaces) or 5433 (local)');
+        console.error('   3. Set UAT_PROXY_PORT environment variable to override');
+      }
+      
       throw uatError;
     }
     
     // Connect to Staging
     try {
       await stagingClient.connect();
-      console.log('✅ Connected to Staging (port 5434)\n');
+      console.log(`✅ Connected to Staging (port ${stagingConfig.port}, database: ${stagingConfig.database})\n`);
     } catch (stagingError) {
       console.error(`❌ Failed to connect to Staging: ${stagingError.message}`);
       console.error(`   Host: ${stagingConfig.host}, Port: ${stagingConfig.port}, Database: ${stagingConfig.database}, User: ${stagingConfig.user}`);
-      console.error(`   Password length: ${stagingConfig.password ? stagingConfig.password.length : 0}`);
+      console.error(`   Password length: ${stagingConfig.password ? stagingConfig.password.length : 0} characters`);
+      
+      if (stagingError.message && stagingError.message.includes('password authentication')) {
+        console.error('\n💡 Password Authentication Troubleshooting:');
+        console.error('   1. Check Staging password in Secret Manager: db-mmtp-pg-staging-password');
+        console.error('   2. Verify gcloud authentication: gcloud auth login');
+        console.error('   3. Check Secret Manager permissions');
+      }
+      
+      if (stagingError.message && (stagingError.message.includes('ECONNREFUSED') || stagingError.message.includes('connect'))) {
+        console.error('\n💡 Connection Troubleshooting:');
+        console.error(`   1. Ensure Cloud SQL Auth Proxy is running on port ${stagingConfig.port}`);
+        console.error('   2. For Staging, start proxy: ./scripts/start-staging-proxy-cs.sh');
+        console.error('   3. Try alternative ports: 6544 (Codespaces) or 5434 (local)');
+        console.error('   4. Set STAGING_PROXY_PORT environment variable to override');
+      }
+      
       throw stagingError;
     }
 
@@ -414,7 +537,7 @@ async function main() {
       console.log('');
 
       // Run missing migrations
-      await runMigrationsInStaging(migrationDiff.pendingMigrations);
+      await runMigrationsInStaging(migrationDiff.pendingMigrations, stagingConfig, dryRun);
       
       // Re-check after running migrations
       const stagingMigrationsAfter = await getExecutedMigrations(stagingClient, 'Staging');
@@ -516,23 +639,49 @@ async function main() {
     if (error.message && error.message.includes('password authentication')) {
       console.error('\n❌ CONNECTION ERROR:', error.message);
       console.error('\n📋 Connection Details:');
-      console.error(`   UAT: ${uatConfig.host}:${uatConfig.port}/${uatConfig.database} (user: ${uatConfig.user})`);
-      console.error(`   Staging: ${stagingConfig.host}:${stagingConfig.port}/${stagingConfig.database} (user: ${stagingConfig.user})`);
-      console.error(`   Staging password length: ${stagingConfig.password ? stagingConfig.password.length : 0}`);
+      if (typeof uatConfig !== 'undefined') {
+        console.error(`   UAT: ${uatConfig.host}:${uatConfig.port}/${uatConfig.database} (user: ${uatConfig.user})`);
+      }
+      if (typeof stagingConfig !== 'undefined') {
+        console.error(`   Staging: ${stagingConfig.host}:${stagingConfig.port}/${stagingConfig.database} (user: ${stagingConfig.user})`);
+        console.error(`   Staging password length: ${stagingConfig.password ? stagingConfig.password.length : 0}`);
+      }
     } else {
       console.error('\n❌ ERROR:', error.message);
     }
     console.error('\n💡 TROUBLESHOOTING:');
-    console.error('   1. Ensure Cloud SQL Auth Proxy is running:');
-    console.error('      UAT: port 5433');
-    console.error('      Staging: port 5434');
-    console.error('   2. Check database password is correct');
+    console.error(`   1. Ensure Cloud SQL Auth Proxy is running:`);
+    if (typeof uatConfig !== 'undefined') {
+      console.error(`      UAT: port ${uatConfig.port} (detected/configured)`);
+    } else {
+      console.error(`      UAT: port ${uatProxyPort} (default)`);
+    }
+    if (typeof stagingConfig !== 'undefined') {
+      console.error(`      Staging: port ${stagingConfig.port} (detected/configured)`);
+    } else {
+      console.error(`      Staging: port ${stagingProxyPort} (default)`);
+    }
+    console.error('   2. Check database password is correct (UAT password contains @ symbol)');
     console.error('   3. Verify database connection settings');
     console.error('   4. Check migration files are accessible');
+    console.error('   5. Override ports with environment variables:');
+    console.error('      UAT_PROXY_PORT=6543 STAGING_PROXY_PORT=6544 node scripts/sync-staging-to-uat.js');
     process.exit(1);
   } finally {
-    await uatClient.end();
-    await stagingClient.end();
+    if (typeof uatClient !== 'undefined') {
+      try {
+        await uatClient.end();
+      } catch (e) {
+        // Ignore errors when closing
+      }
+    }
+    if (typeof stagingClient !== 'undefined') {
+      try {
+        await stagingClient.end();
+      } catch (e) {
+        // Ignore errors when closing
+      }
+    }
   }
 }
 

@@ -7,7 +7,19 @@
 
 ## 🎯 Overview
 
-This guide helps you sync the Staging database to match UAT exactly. After today's database schema work (Phase 1 E.164 standardization), Staging needs to be updated with all the same migrations and schema changes.
+This guide helps you sync the Staging database to match UAT exactly. 
+
+**CRITICAL POLICY**: UAT, Staging, and Production databases MUST always have identical database schemas. All schema changes are developed in UAT first, then synced to Staging, then to Production.
+
+**What This Means:**
+- ✅ Schema structure (tables, columns, constraints) must be identical
+- ✅ All migrations are developed and tested in UAT first
+- ✅ Staging schema is synced FROM UAT (never the reverse)
+- ✅ Production schema is synced FROM UAT (via Staging)
+
+**What Differs:**
+- 🔑 **Credentials**: UAT uses test credentials; Staging/Production use production credentials
+- 📊 **Data**: Different products, transactions, users (but same schema structure)
 
 ---
 

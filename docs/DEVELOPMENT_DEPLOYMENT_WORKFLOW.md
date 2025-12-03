@@ -40,6 +40,42 @@ This document outlines the development and deployment workflow for the MyMoolah 
 
 ---
 
+## 🗄️ **Database Schema Identity Policy (CRITICAL)**
+
+### **Policy: Identical Schemas Across All Environments**
+
+**UAT, Staging, and Production databases MUST always have identical database schemas** (tables, columns, constraints, indexes).
+
+**Key Principles:**
+- ✅ **Schema Structure**: All environments share the same schema structure
+- ✅ **Schema Changes**: All schema changes are developed and tested in UAT first
+- ✅ **Schema Sync**: Staging and Production schemas are synced FROM UAT
+- ✅ **No Schema Drift**: No environment-specific schema additions allowed
+
+**What Differs Between Environments:**
+- 🔑 **Credentials**: UAT uses test/UAT credentials; Staging/Production use production credentials
+- 📊 **Data**: Different data (products, transactions, users) but same schema structure
+- 🎯 **Purpose**: Same codebase, same schema, different endpoints and data
+
+**Workflow:**
+1. **Develop in UAT**: Create migrations and schema changes in UAT (development environment)
+2. **Test in UAT**: Validate schema changes with UAT credentials and test data
+3. **Sync to Staging**: Run migrations in Staging to match UAT schema exactly
+4. **Sync to Production**: Run migrations in Production to match UAT schema exactly
+
+**Rationale:**
+- Ensures code portability across environments
+- Prevents "works in staging but not production" schema issues
+- Simplifies deployment and rollback procedures
+- Maintains consistency and predictability
+
+**Enforcement:**
+- Schema comparison scripts verify identity
+- Sync scripts enforce UAT → Staging → Production direction
+- No migrations should exist only in Staging or Production
+
+---
+
 ## 🔄 **Development Workflow**
 
 ### **1. Development Phase (Codespaces/GitHub)**
