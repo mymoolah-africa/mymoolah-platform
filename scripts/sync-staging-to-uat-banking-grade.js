@@ -907,7 +907,13 @@ async function main() {
               console.log('✅ Schema now matches after fix!\n');
             } else {
               const stillMissing = uatSchema.table_count - stagingSchemaAfter.table_count;
-              console.log(`⚠️  Still missing ${stillMissing} table(s). May need manual intervention.\n`);
+              if (stillMissing > 0) {
+                console.log(`⚠️  Still missing ${stillMissing} table(s). May need manual intervention.\n`);
+              } else {
+                // Staging has more tables than UAT (which is fine - staging can have extra tables)
+                const extraTables = stagingSchemaAfter.table_count - uatSchema.table_count;
+                console.log(`✅ All UAT tables created! (Staging has ${extraTables} extra table(s), which is fine)\n`);
+              }
             }
           } catch (error) {
             console.log(`\n⚠️  Schema fix script failed: ${error.message}\n`);
