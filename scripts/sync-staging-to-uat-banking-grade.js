@@ -630,11 +630,9 @@ async function main() {
   }
 
   // Get passwords
-  // Note: Staging uses IAM auth (--auto-iam-authn), so password not needed for connection string
-  const { uatPassword } = {
-    uatPassword: getUATPassword()
-    // Staging uses IAM - no password needed
-  };
+  // UAT: from .env file
+  // Staging: IAM auth via proxy (--auto-iam-authn) - NO password needed (matches working fix-missing-schema-from-uat.js)
+  const uatPassword = getUATPassword();
 
   // Detect proxy ports (simple detection - proxies should already be running)
   console.log('🔍 Detecting Cloud SQL Auth Proxy ports...\n');
@@ -662,7 +660,7 @@ async function main() {
     ssl: false
   };
 
-  // Staging config - IAM authentication (NO password field - matches working script exactly)
+  // Staging config - IAM authentication (NO password field - matches working fix-missing-schema-from-uat.js exactly)
   const stagingConfig = {
     host: '127.0.0.1',
     port: stagingProxyPort,
