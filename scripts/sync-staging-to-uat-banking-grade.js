@@ -668,13 +668,14 @@ async function main() {
     ssl: false
   };
 
-  // Staging config - IAM authentication (NO password field)
+  // Staging config - IAM authentication 
+  // With --auto-iam-authn, proxy handles auth, but pg still needs password field set to empty string
   const stagingConfig = {
     host: '127.0.0.1',
     port: stagingProxyPort,
     database: 'mymoolah_staging',
     user: 'mymoolah_app',
-    // NOTE: No password field - Staging uses IAM auth via --auto-iam-authn
+    password: '', // Empty string for IAM auth (proxy handles authentication)
     ssl: false
   };
 
