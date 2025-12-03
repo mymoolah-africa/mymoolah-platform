@@ -52,9 +52,8 @@ echo "   Instance: mmtp-pg-staging"
 echo "   Port: 6544"
 echo ""
 
-# Start the correct proxy (use exact format from start-codespace-with-proxy.sh)
-# Change to workspace directory first
-cd /workspaces/mymoolah-platform || cd "$(dirname "$0")/.." || exit 1
+# Start the correct proxy (use EXACT format from working start-codespace-with-proxy.sh line 281)
+cd /workspaces/mymoolah-platform || exit 1
 
 nohup ./cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-staging \
   --auto-iam-authn \
