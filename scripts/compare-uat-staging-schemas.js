@@ -339,7 +339,9 @@ async function main() {
     port: uatPort,
     database: 'mymoolah',
     user: 'mymoolah_app',
-    password: uatPassword
+    password: uatPassword,
+    // SSL disabled for Cloud SQL Auth Proxy connections (proxy handles encryption)
+    ssl: false
   };
 
   const stagingConfig = {
@@ -347,7 +349,9 @@ async function main() {
     port: stagingPort,
     database: 'mymoolah_staging',
     user: 'mymoolah_app',
-    password: stagingPassword
+    password: stagingPassword,
+    // SSL disabled for Cloud SQL Auth Proxy connections (proxy handles encryption)
+    ssl: false
   };
   
   console.log(`🔍 Using proxy ports: UAT=${uatPort}, Staging=${stagingPort}`);
