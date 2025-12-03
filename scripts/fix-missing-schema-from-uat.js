@@ -86,6 +86,47 @@ async function tableExists(client, tableName) {
   return result.rows[0]?.exists || false;
 }
 
+// Check if a table is a partitioned table (parent, not a partition)
+async function isPartitionedTable(client, tableName) {
+  const result = await client.query(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' 
+        AND c.relname = $1
+        AND c.relkind = 'p'  -- 'p' = partitioned table (parent)
+        AND NOT EXISTS (
+          SELECT 1 FROM pg_inherits i 
+          WHERE i.inhrelid = c.oid
+        )  -- Not a partition itself (has no parent)
+    ) as is_partitioned
+  `, [tableName]);
+  return result.rows[0]?.is_partitioned || false;
+}
+
+// Get table type: 'partitioned' (parent), 'partition' (child), 'regular', or 'none'
+async function getTableType(client, tableName) {
+  const result = await client.query(`
+    SELECT 
+      c.relkind,
+      CASE 
+        WHEN EXISTS (
+          SELECT 1 FROM pg_inherits i WHERE i.inhrelid = c.oid
+        ) THEN 'partition'
+        WHEN c.relkind = 'p' THEN 'partitioned'
+        WHEN c.relkind = 'r' THEN 'regular'
+        ELSE 'unknown'
+      END as table_type
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' 
+      AND c.relname = $1
+  `, [tableName]);
+  
+  if (result.rows.length === 0) return 'none';
+  return result.rows[0].table_type || 'unknown';
+}
+
 // Get executed migrations
 async function getExecutedMigrations(client) {
   try {
@@ -355,12 +396,23 @@ async function main() {
       // Check if this is a partition table - extract parent name
       const partitionMatch = createTableSQL.match(/PARTITION OF\s+([^\s(]+)/i);
       
-      // If this is a partition, verify parent exists
+      // If this is a partition, verify parent exists AND is partitioned
       if (tableDependencies[tableName]) {
         const parentTable = tableDependencies[tableName];
         const parentExists = await tableExists(stagingClient, parentTable);
         if (!parentExists) {
           console.log(`   ❌ Failed: ${tableName} - Parent partitioned table ${parentTable} does not exist`);
+          failedCount++;
+          continue;
+        }
+        
+        // Critical check: Verify parent is actually a partitioned table
+        const parentTableType = await getTableType(stagingClient, parentTable);
+        if (parentTableType !== 'partitioned') {
+          console.log(`   ❌ Failed: ${tableName} - Parent table ${parentTable} exists but is NOT partitioned`);
+          console.log(`      ⚠️  Current type: ${parentTableType}`);
+          console.log(`      💡 Parent must be a partitioned table to create partitions`);
+          console.log(`      💡 This indicates a schema mismatch - parent table structure differs from UAT`);
           failedCount++;
           continue;
         }
@@ -409,14 +461,30 @@ async function main() {
         }
       } catch (error) {
         await stagingClient.query('ROLLBACK');
-        const errorMsg = error.message.split('\n')[0];
-        if (errorMsg.includes('already exists')) {
-          console.log(`   ⚠️  ${tableName} already exists (skipping)`);
-        } else if (errorMsg.includes('does not exist') && partitionMatch) {
-          console.log(`   ❌ Failed: ${tableName} - Parent table missing: ${errorMsg}`);
-          failedCount++;
+        
+        // Capture full error details for better diagnosis
+        const errorMsg = error.message;
+        const firstLine = errorMsg.split('\n')[0];
+        
+        console.log(`   ❌ Failed: ${tableName}`);
+        console.log(`      📋 Error: ${firstLine}`);
+        
+        // Show full error if it's a partitioning-related error
+        if (errorMsg.includes('partition') || errorMsg.includes('not partitioned') || partitionMatch) {
+          console.log(`      🔍 Full error details:`);
+          errorMsg.split('\n').slice(0, 5).forEach(line => {
+            if (line.trim()) console.log(`         ${line.trim()}`);
+          });
+          
+          if (errorMsg.includes('not partitioned')) {
+            console.log(`      💡 This means the parent table exists but is not set up as a partitioned table`);
+            console.log(`      💡 You may need to drop and recreate the parent table as partitioned`);
+          }
+        }
+        
+        if (firstLine.includes('already exists')) {
+          console.log(`      ⚠️  Table already exists (skipping)`);
         } else {
-          console.log(`   ❌ Failed: ${tableName} - ${errorMsg}`);
           failedCount++;
         }
       }
