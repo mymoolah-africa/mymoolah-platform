@@ -135,15 +135,123 @@ function getUATPassword() {
 }
 
 /**
- * Detect proxy port
+ * Check if a port is in use (proxy is running)
  */
-function detectProxyPort(possiblePorts, portName = '') {
-  const envVar = portName === 'UAT' ? 'UAT_PROXY_PORT' : 'STAGING_PROXY_PORT';
-  if (process.env[envVar]) {
-    const port = parseInt(process.env[envVar], 10);
-    if (!isNaN(port) && port > 0) return port;
+function isPortInUse(port) {
+  try {
+    execSync(`lsof -ti:${port}`, { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
   }
-  return possiblePorts[0];
+}
+
+/**
+ * Start Cloud SQL Auth Proxy if not running
+ */
+async function ensureProxyRunning(port, connectionString, name) {
+  if (isPortInUse(port)) {
+    const pid = execSync(`lsof -ti:${port}`, { encoding: 'utf8' }).trim();
+    console.log(`✅ ${name} proxy already running on port ${port} (PID: ${pid})`);
+    return true;
+  }
+
+  console.log(`🚀 Starting ${name} proxy on port ${port}...`);
+  
+  // Check if cloud-sql-proxy is available
+  try {
+    execSync('which cloud-sql-proxy', { stdio: 'ignore' });
+  } catch {
+    // Try common locations
+    const proxyPaths = [
+      './cloud-sql-proxy',
+      '/usr/local/bin/cloud-sql-proxy',
+      '/usr/bin/cloud-sql-proxy'
+    ];
+    let proxyPath = null;
+    for (const path of proxyPaths) {
+      try {
+        execSync(`test -x "${path}"`, { stdio: 'ignore' });
+        proxyPath = path;
+        break;
+      } catch {
+        continue;
+      }
+    }
+    if (!proxyPath) {
+      throw new Error(`cloud-sql-proxy not found. Install it or ensure it's in PATH.`);
+    }
+  }
+
+  // Start proxy in background
+  const logFile = `/tmp/${name.toLowerCase().replace(/\s+/g, '-')}-proxy-${port}.log`;
+  const proxyCmd = `cloud-sql-proxy ${connectionString} --auto-iam-authn --port ${port} --structured-logs > ${logFile} 2>&1 &`;
+  
+  try {
+    execSync(proxyCmd, { cwd: process.cwd() });
+    
+    // Wait for proxy to start (max 15 seconds)
+    let waited = 0;
+    while (!isPortInUse(port) && waited < 15) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      waited += 0.5;
+    }
+    
+    if (isPortInUse(port)) {
+      const pid = execSync(`lsof -ti:${port}`, { encoding: 'utf8' }).trim();
+      console.log(`✅ ${name} proxy started successfully on port ${port} (PID: ${pid})`);
+      console.log(`   📋 Log file: ${logFile}`);
+      return true;
+    } else {
+      console.log(`⚠️  ${name} proxy may not have started. Check log: ${logFile}`);
+      return false;
+    }
+  } catch (error) {
+    console.log(`❌ Failed to start ${name} proxy: ${error.message}`);
+    console.log(`   Check log: ${logFile}`);
+    return false;
+  }
+}
+
+/**
+ * Detect proxy port and ensure proxy is running
+ */
+async function detectProxyPort(possiblePorts, portName = '') {
+  const envVar = portName === 'UAT' ? 'UAT_PROXY_PORT' : 'STAGING_PROXY_PORT';
+  let port;
+  
+  if (process.env[envVar]) {
+    port = parseInt(process.env[envVar], 10);
+    if (!isNaN(port) && port > 0) {
+      // Check if proxy is running, if not try to start it
+      if (!isPortInUse(port)) {
+        if (portName === 'UAT') {
+          await ensureProxyRunning(port, 'mymoolah-db:africa-south1:mmtp-pg', 'UAT');
+        } else {
+          await ensureProxyRunning(port, 'mymoolah-db:africa-south1:mmtp-pg-staging', 'Staging');
+        }
+      }
+      return port;
+    }
+  }
+  
+  port = possiblePorts[0];
+  
+  // Try to detect which port is actually in use
+  for (const testPort of possiblePorts) {
+    if (isPortInUse(testPort)) {
+      return testPort;
+    }
+  }
+  
+  // None running, try to start on first port
+  if (portName === 'UAT') {
+    await ensureProxyRunning(port, 'mymoolah-db:africa-south1:mmtp-pg', 'UAT');
+  } else {
+    await ensureProxyRunning(port, 'mymoolah-db:africa-south1:mmtp-pg-staging', 'Staging');
+  }
+  
+  return port;
 }
 
 // ============================================================================
@@ -521,9 +629,11 @@ async function main() {
     // Staging uses IAM - no password needed
   };
 
-  // Detect ports
-  const uatProxyPort = detectProxyPort([6543, 5433], 'UAT');
-  const stagingProxyPort = detectProxyPort([6544, 5434], 'Staging');
+  // Detect ports and ensure proxies are running
+  console.log('🔍 Checking Cloud SQL Auth Proxies...\n');
+  const uatProxyPort = await detectProxyPort([6543, 5433], 'UAT');
+  const stagingProxyPort = await detectProxyPort([6544, 5434], 'Staging');
+  console.log('');
 
   // Create connection configs
   const uatConfig = {
