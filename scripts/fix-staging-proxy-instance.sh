@@ -52,26 +52,15 @@ echo "   Instance: mmtp-pg-staging"
 echo "   Port: 6544"
 echo ""
 
-# Start the correct proxy (use full path like the working proxy)
-PROXY_BINARY="/workspaces/mymoolah-platform/cloud-sql-proxy"
+# Start the correct proxy (use exact format from start-codespace-with-proxy.sh)
+# Change to workspace directory first
+cd /workspaces/mymoolah-platform || cd "$(dirname "$0")/.." || exit 1
 
-# Check if proxy binary exists
-if [ ! -f "$PROXY_BINARY" ]; then
-  echo -e "${RED}❌ Proxy binary not found at: $PROXY_BINARY${NC}"
-  echo "   Checking alternative locations..."
-  
-  # Try to find it
-  if command -v cloud-sql-proxy &> /dev/null; then
-    PROXY_BINARY=$(which cloud-sql-proxy)
-    echo "   Found in PATH: $PROXY_BINARY"
-  else
-    echo -e "${RED}❌ cloud-sql-proxy not found in PATH either${NC}"
-    exit 1
-  fi
-fi
-
-echo "Using proxy binary: $PROXY_BINARY"
-nohup "$PROXY_BINARY" mymoolah-db:africa-south1:mmtp-pg-staging --auto-iam-authn --port 6544 --structured-logs > /tmp/staging-proxy-6544.log 2>&1 &
+nohup ./cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-staging \
+  --auto-iam-authn \
+  --port 6544 \
+  --structured-logs \
+  > /tmp/staging-proxy-6544.log 2>&1 &
 
 PROXY_PID=$!
 sleep 3
