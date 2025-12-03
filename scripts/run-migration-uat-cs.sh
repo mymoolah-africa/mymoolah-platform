@@ -30,15 +30,26 @@ warning() {
 # Load .env file
 load_env() {
   local env_file="${1:-.env}"
-  if [ -f "${env_file}" ]; then
-    log "Loading environment variables from ${env_file}..."
+  local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  local project_root="$(cd "${script_dir}/.." && pwd)"
+  local env_path="${project_root}/${env_file}"
+  
+  if [ -f "${env_path}" ]; then
+    log "Loading environment variables from ${env_path}..."
     # Export variables from .env (handle comments and empty lines)
     set -a
-    source "${env_file}"
+    source "${env_path}"
     set +a
-    success "Environment variables loaded"
+    success "Environment variables loaded from ${env_path}"
+    
+    # Verify DATABASE_URL is set
+    if [ -z "${DATABASE_URL:-}" ] && [ -z "${DB_PASSWORD:-}" ]; then
+      error "Neither DATABASE_URL nor DB_PASSWORD found in ${env_path}"
+      exit 1
+    fi
   else
-    warning ".env file not found at ${env_file}"
+    warning ".env file not found at ${env_path}"
+    warning "Will try to use existing environment variables"
   fi
 }
 
