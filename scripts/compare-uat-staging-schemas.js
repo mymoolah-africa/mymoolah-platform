@@ -357,11 +357,11 @@ async function main() {
 
   try {
     // Connect to both databases
-    console.log('📡 Connecting to UAT database (port 5433)...');
+    console.log(`📡 Connecting to UAT database (port ${uatPort})...`);
     await uatClient.connect();
     console.log('✅ Connected to UAT\n');
 
-    console.log('📡 Connecting to Staging database (port 5434)...');
+    console.log(`📡 Connecting to Staging database (port ${stagingPort})...`);
     await stagingClient.connect();
     console.log('✅ Connected to Staging\n');
 
@@ -385,9 +385,9 @@ async function main() {
   } catch (error) {
     console.error('\n❌ ERROR:', error.message);
     console.error('\n💡 TROUBLESHOOTING:');
-    console.error('   1. Ensure Cloud SQL Auth Proxy is running:');
-    console.error('      UAT: port 5433');
-    console.error('      Staging: port 5434');
+    console.error(`   1. Ensure Cloud SQL Auth Proxy is running:`);
+    console.error(`      UAT: port ${uatPort || 6543} (or set UAT_PROXY_PORT env var)`);
+    console.error(`      Staging: port ${stagingPort || 6544} (or set STAGING_PROXY_PORT env var)`);
     console.error('   2. Check database password is correct');
     console.error('   3. Verify database connection settings');
     process.exit(1);
