@@ -237,28 +237,18 @@ async function ensureProxyRunning(port, connectionString, name) {
 }
 
 /**
- * Detect proxy port and ensure proxy is running
+ * Detect proxy port (simple detection - no auto-start to match working script)
  */
-async function detectProxyPort(possiblePorts, portName = '') {
+function detectProxyPort(possiblePorts, portName = '') {
   const envVar = portName === 'UAT' ? 'UAT_PROXY_PORT' : 'STAGING_PROXY_PORT';
-  let port;
   
+  // Check environment variable first
   if (process.env[envVar]) {
-    port = parseInt(process.env[envVar], 10);
+    const port = parseInt(process.env[envVar], 10);
     if (!isNaN(port) && port > 0) {
-      // Check if proxy is running, if not try to start it
-      if (!isPortInUse(port)) {
-        if (portName === 'UAT') {
-          await ensureProxyRunning(port, 'mymoolah-db:africa-south1:mmtp-pg', 'UAT');
-        } else {
-          await ensureProxyRunning(port, 'mymoolah-db:africa-south1:mmtp-pg-staging', 'Staging');
-        }
-      }
       return port;
     }
   }
-  
-  port = possiblePorts[0];
   
   // Try to detect which port is actually in use
   for (const testPort of possiblePorts) {
@@ -267,14 +257,8 @@ async function detectProxyPort(possiblePorts, portName = '') {
     }
   }
   
-  // None running, try to start on first port
-  if (portName === 'UAT') {
-    await ensureProxyRunning(port, 'mymoolah-db:africa-south1:mmtp-pg', 'UAT');
-  } else {
-    await ensureProxyRunning(port, 'mymoolah-db:africa-south1:mmtp-pg-staging', 'Staging');
-  }
-  
-  return port;
+  // Default to first port (will fail with clear error if proxy not running)
+  return possiblePorts[0];
 }
 
 // ============================================================================
@@ -652,11 +636,21 @@ async function main() {
     // Staging uses IAM - no password needed
   };
 
-  // Detect ports and ensure proxies are running
-  console.log('🔍 Checking Cloud SQL Auth Proxies...\n');
-  const uatProxyPort = await detectProxyPort([6543, 5433], 'UAT');
-  const stagingProxyPort = await detectProxyPort([6544, 5434], 'Staging');
-  console.log('');
+  // Detect proxy ports (simple detection - proxies should already be running)
+  console.log('🔍 Detecting Cloud SQL Auth Proxy ports...\n');
+  const uatProxyPort = detectProxyPort([6543, 5433], 'UAT');
+  const stagingProxyPort = detectProxyPort([6544, 5434], 'Staging');
+  
+  // Verify proxies are running
+  if (!isPortInUse(uatProxyPort)) {
+    throw new Error(`UAT proxy not running on port ${uatProxyPort}. Start it first.`);
+  }
+  if (!isPortInUse(stagingProxyPort)) {
+    throw new Error(`Staging proxy not running on port ${stagingProxyPort}. Start it first.`);
+  }
+  
+  console.log(`✅ UAT proxy running on port ${uatProxyPort}`);
+  console.log(`✅ Staging proxy running on port ${stagingProxyPort}\n`);
 
   // Create connection configs
   const uatConfig = {
