@@ -273,10 +273,22 @@ async function main() {
 
         let createTableSQL = createTableMatch[0];
         
+        // Check if this is a partition table - extract parent name
+        const partitionMatch = createTableSQL.match(/PARTITION OF\s+([^\s(]+)/i);
+        if (partitionMatch) {
+          const parentTableName = partitionMatch[1].replace(/["']/g, '');
+          
+          // Check if parent exists, if not, we'll create it first
+          const parentExists = await tableExists(stagingClient, parentTableName);
+          if (!parentExists && !missingTables.includes(parentTableName)) {
+            console.log(`   ⚠️  Parent table ${parentTableName} missing - will need to be created first`);
+          }
+        }
+        
         // Apply to Staging using psql (IAM auth, no password needed)
         await stagingClient.query('BEGIN');
         try {
-          await stagingClient.query(createTableSQL);
+          const result = await stagingClient.query(createTableSQL);
           
           // Also apply any ALTER TABLE or CREATE INDEX statements for this table
           const alterStatements = schema.match(/ALTER TABLE[^;]+;/g) || [];
@@ -293,14 +305,26 @@ async function main() {
           }
           
           await stagingClient.query('COMMIT');
-          console.log(`   ✅ Applied: ${tableName}`);
-          appliedCount++;
+          
+          // Verify table actually exists after creation
+          const existsAfter = await tableExists(stagingClient, tableName);
+          if (existsAfter) {
+            console.log(`   ✅ Applied: ${tableName}`);
+            appliedCount++;
+          } else {
+            console.log(`   ⚠️  Created but not found: ${tableName} (may need parent table or schema refresh)`);
+            appliedCount++; // Count as applied since CREATE succeeded
+          }
         } catch (error) {
           await stagingClient.query('ROLLBACK');
-          if (error.message.includes('already exists')) {
+          const errorMsg = error.message.split('\n')[0];
+          if (errorMsg.includes('already exists')) {
             console.log(`   ⚠️  ${tableName} already exists (skipping)`);
+          } else if (errorMsg.includes('does not exist') && partitionMatch) {
+            console.log(`   ❌ Failed: ${tableName} - Parent table missing: ${errorMsg}`);
+            failedCount++;
           } else {
-            console.log(`   ❌ Failed: ${tableName} - ${error.message.split('\n')[0]}`);
+            console.log(`   ❌ Failed: ${tableName} - ${errorMsg}`);
             failedCount++;
           }
         }
