@@ -52,8 +52,9 @@
   2. Read `docs/agent_role_template.md` (operating charter and constraints)
   3. Read `docs/changelog.md` (recent changes and version history)
   4. Read `docs/readme.md` (current system status and architecture)
-  5. **Read recent session logs** in `docs/session_logs/` - Read the 2-3 most recent session log files to understand chat history and context from previous agents
-  6. Review recent git commits: `git log --oneline -10` to understand recent work
+  5. Read `docs/DATABASE_CONNECTION_GUIDE.md` (standardized database connection procedures - **CRITICAL for any database/migration work**)
+  6. **Read recent session logs** in `docs/session_logs/` - Read the 2-3 most recent session log files to understand chat history and context from previous agents
+  7. Review recent git commits: `git log --oneline -10` to understand recent work
 - **Understand context before starting**: Current priorities, pending work, incomplete tasks, recent changes, and next steps from previous sessions.
 - **When to create session log (MANDATORY - AI AGENT MUST DO THIS)**: 
   - **After completing significant work** (don't wait for session end - user may close chat, lose connection, etc.)
@@ -88,6 +89,7 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 ## Rule 6: Documentation (MANDATORY)
 - Update ALL relevant docs in `/mymoolah/docs/` after each change: `agent_handover.md`, `changelog.md`, `readme.md`, `development_guide.md`, `security.md`, `performance.md`, `banking_grade_architecture.md`
 - Always check project documentation BEFORE creating or modifying anything.
+- **CRITICAL**: Before any database/migration work, read `docs/DATABASE_CONNECTION_GUIDE.md` - contains standardized connection procedures, password management, and master migration scripts. **NEVER write custom connection logic** - always use provided helpers and scripts.
 - Provide complete file contents when sharing code. Include code examples, API docs, migration procedures, testing instructions.
 
 ## Rule 7: Testing Requirements (REQUIRED)
@@ -128,6 +130,7 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 - Read `docs/changelog.md` (recent changes)
 - Read `docs/agent_role_template.md` (operating charter)
 - Read `docs/readme.md` (system overview)
+- Read `docs/DATABASE_CONNECTION_GUIDE.md` (**MANDATORY** if working with databases, migrations, or UAT/Staging environments - prevents connection/password issues)
 - **Check git status FIRST**: `git status` (ALWAYS check for uncommitted changes before pulling)
 - **Pull safely based on status**:
   - If uncommitted changes: Commit or stash first, then pull
