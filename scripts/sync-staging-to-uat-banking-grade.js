@@ -672,16 +672,10 @@ async function main() {
     ssl: false
   };
 
-  // Wait a moment for proxies to be fully ready
-  console.log('⏳ Waiting for proxies to be ready...');
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
   // Create connection pools - match EXACT working pattern from fix-missing-schema-from-uat.js
   const uatPool = new Pool(uatConfig);
   const stagingPool = new Pool(stagingConfig);
 
-  console.log('📡 Connecting to databases...\n');
-  
   // Create audit logger (connect to staging first)
   const stagingClient = await stagingPool.connect();
   const auditLogger = new SyncAuditLogger(stagingClient);
