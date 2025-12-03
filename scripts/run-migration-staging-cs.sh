@@ -71,21 +71,45 @@ construct_database_url() {
   echo "postgres://${DB_USER}:${encoded_password}@${DB_HOST}:${PROXY_PORT}/${DB_NAME}?sslmode=disable"
 }
 
+# Test database connection
+test_connection() {
+  local password=$(get_password)
+  log "Testing database connection..."
+  
+  export PGPASSWORD="${password}"
+  if psql -h "${DB_HOST}" -p "${PROXY_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -c "SELECT current_database(), current_user;" >/dev/null 2>&1; then
+    success "Database connection test successful"
+    unset PGPASSWORD
+    return 0
+  else
+    error "Database connection test failed"
+    warning "Please verify:"
+    warning "  1. Password in Secret Manager is correct"
+    warning "  2. Database '${DB_NAME}' exists"
+    warning "  3. User '${DB_USER}' has access"
+    unset PGPASSWORD
+    return 1
+  fi
+}
+
 # Run migration
 run_migration() {
-  local database_url=$(construct_database_url)
+  local password=$(get_password)
+  local encoded_password=$(url_encode "${password}")
+  local database_url="postgres://${DB_USER}:${encoded_password}@${DB_HOST}:${PROXY_PORT}/${DB_NAME}?sslmode=disable"
   
   log "Setting DATABASE_URL for Staging database..."
   export DATABASE_URL="${database_url}"
+  export NODE_ENV="staging"
   
   log "Running migration..."
   
   if [ -n "${MIGRATION_NAME}" ]; then
     log "Running specific migration: ${MIGRATION_NAME}"
-    npx sequelize-cli db:migrate --migrations-path migrations --name "${MIGRATION_NAME}"
+    npx sequelize-cli db:migrate --env staging --migrations-path migrations --name "${MIGRATION_NAME}"
   else
     log "Running all pending migrations..."
-    npx sequelize-cli db:migrate --migrations-path migrations
+    npx sequelize-cli db:migrate --env staging --migrations-path migrations
   fi
 }
 
@@ -109,6 +133,12 @@ main() {
   
   # Check proxy
   check_proxy
+  
+  # Test connection first
+  if ! test_connection; then
+    error "Connection test failed. Please fix the connection issue before running migrations."
+    exit 1
+  fi
   
   # Run migration
   run_migration
