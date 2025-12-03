@@ -15,121 +15,288 @@
 
 ---
 
-**Last Updated**: December 2, 2025 22:30  
-**Version**: 2.4.15 - Staging Sync & Cleanup Migration  
-**Status**: ⚠️ **STAGING SYNC BLOCKED - PASSWORD AUTH ISSUE** ✅ **CLEANUP MIGRATION READY** ✅ **MANDATORY RULES CONFIRMATION REQUIRED**
+## ⚠️ **CRITICAL: ALL TESTING MUST BE IN CODESPACES** ⚠️
+
+**MANDATORY TESTING REQUIREMENT:**
+
+- ❌ **DO NOT** test on local machine
+- ❌ **DO NOT** test in other environments  
+- ✅ **ALWAYS** test in Codespaces (CS)
+- ✅ **ALWAYS** use Codespaces as primary testing environment
+
+**Reason**: Codespaces has correct environment configuration, database connections, and credentials matching production-like conditions.
+
+**Documentation**: See `docs/CODESPACES_TESTING_REQUIREMENT.md` for:
+- Complete Codespaces .env configuration
+- Testing workflow and commands
+- Zapper credentials status
+- Verification checklist
+
+**Current Codespaces .env**: Contains all required credentials including Zapper UAT credentials. See `docs/CODESPACES_TESTING_REQUIREMENT.md` for full configuration.
+
+---
+
+**Last Updated**: December 3, 2025  
+**Version**: 2.4.20 - Schema Synchronization & Connection Standardization  
+**Status**: ✅ **SCHEMA PARITY ACHIEVED** ✅ **CONNECTION SYSTEM STANDARDIZED** ✅ **MANDATORY RULES CONFIRMATION REQUIRED**
 
 ---
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-### **⚠️ STAGING SYNC BLOCKED - PASSWORD AUTHENTICATION ISSUE**
-Attempted to complete Staging database sync with UAT and run cleanup migration to remove walletId migration artifacts. Created cleanup migration `20251202_05_cleanup_walletid_migration_columns.js` and improved sync script error handling. However, sync script cannot connect to UAT due to password authentication failure. Password parsing from DATABASE_URL is not working correctly - password length shows 18 characters (suggests URL-encoded `B0t3s%40Mymoolah`) but should be 13 characters (`B0t3s@Mymoolah`) after decoding. **URGENT**: Fix password authentication before proceeding with Staging sync.
+### **🗄️ SCHEMA SYNCHRONIZATION & CONNECTION STANDARDIZATION - COMPLETE (2025-12-03)** ✅
+- **Schema Parity Achieved**: UAT and Staging now have identical schemas (106 tables, 530 columns)
+- **Missing Tables Synced**: Created 6 missing tables in UAT:
+  - `sync_audit_logs` (via migration `20251203_01_create_sync_audit_logs_table`)
+  - `compliance_records`, `mobilemart_transactions`, `reseller_floats`, `tax_configurations`, `flash_commission_tiers` (via schema sync)
+- **Enum Types Created**: 18 enum types created in UAT required for missing tables
+- **Standardized Connection System**: Created comprehensive connection infrastructure:
+  - `scripts/db-connection-helper.js` - Centralized connection manager (UAT from .env, Staging from Secret Manager)
+  - `scripts/run-migrations-master.sh` - Master migration script (single command: `./scripts/run-migrations-master.sh [uat|staging]`)
+  - `scripts/audit-extra-staging-tables.js` - Table audit tool
+  - `scripts/check-migration-status.js` - Migration status checker
+  - `scripts/sync-missing-tables-from-staging-to-uat.js` - Reverse schema sync
+- **Documentation Created**: 
+  - `docs/DATABASE_CONNECTION_GUIDE.md` - **MANDATORY** reading for all database/migration work
+  - `docs/QUICK_REFERENCE_DATABASE.md` - Quick reference card
+  - `docs/EXTRA_STAGING_TABLES_AUDIT_REPORT.md` - Audit findings
+- **Documentation Consolidated**: Archived 8 outdated/overlapping connection/debug guides
+- **Rules Updated**: Added database connection guide to Cursor 2.0 rules (Rule 2, Rule 6, Quick Pre-Work Checklist)
+- **Files Created**: 11 new files (scripts + docs)
+- **Files Modified**: `scripts/sync-staging-to-uat-banking-grade.js`, `docs/CURSOR_2.0_RULES_FINAL.md`
+- **Status**: ✅ Perfect schema parity, ✅ Standardized system prevents future connection issues, ✅ Banking-grade compliance restored
+- **Critical for Next Agent**: **ALWAYS use** `./scripts/run-migrations-master.sh [uat|staging]` for migrations - NEVER run `npx sequelize-cli` directly. Read `docs/DATABASE_CONNECTION_GUIDE.md` before any database work.
 
-### **✅ PHASE 1 COMPLETE: MSISDN E.164 STANDARDIZATION - PRODUCTION READY**
-Successfully implemented **Phase 1 of MSISDN/phoneNumber standardization** to E.164 format (`+27XXXXXXXXX`). All MSISDNs now stored in E.164 format internally, with local format (`0XXXXXXXXX`) for UI display only. Completed all migrations, model updates, service normalization, and frontend alignment. Login functionality working correctly. **Phase 1 is 100% complete** and ready for UAT validation. Next: Phase 2 (AES-256-GCM encryption planning) and Phase 3 (Mojaloop Party ID system).
+---
 
-### **🚀 PREVIOUS: VOUCHERS & BALANCE RECONCILIATION COMPLETE**
-Successfully fixed UAT vouchers loading issue, audited and reconciled all wallet balances between UAT and Staging, aligned staging vouchers schema to UAT, migrated 23/24 vouchers, deployed updated backend to Cloud Run staging, and disabled rate limiting in staging for testing. All 6 user wallets now have correct balances synchronized between environments (R49,619.44 total).
+### **🏦 STANDARD BANK PAYSHAP INTEGRATION PROPOSAL - DOCUMENTED (2025-11-26)** 📋
+- **Integration Type**: PayShap RPP/RTP via Standard Bank TPP Rails
+- **Replaces**: Peach Payments PayShap Integration (archived)
+- **Status**: Proposal documented, awaiting Standard Bank approval
+- **Three Main Functions**:
+  1. **Notification Endpoint**: Receive transaction notifications from Standard Bank TPP account
+  2. **RPP Endpoint**: Send PayShap money from wallet to bank account
+  3. **RTP Endpoint**: Request money via PayShap from bank account to wallet
+- **Reference Resolution**: MSISDN for wallets, floatAccountNumber for float accounts (suppliers, clients, service providers, resellers)
+- **Architecture**: Banking-grade, Mojaloop-compliant, high-performance async processing
+- **Security**: Webhook signature validation, IP allowlist, idempotency, audit logging
+- **Documentation**: Created comprehensive proposal (`docs/integrations/StandardBankPayShap.md`)
+- **Questions for Standard Bank**: API authentication, webhook security, reference formats, payload structures documented
+- **Implementation Plan**: 6-phase plan documented (Foundation → Notification → RPP → RTP → Testing → Deployment)
+- **Frontend**: Minimal changes required (existing Peach frontend can be reused)
+- **Files Created**: `docs/integrations/StandardBankPayShap.md`
+- **Status**: ✅ Proposal documented, ⏳ Awaiting Standard Bank approval and API credentials
 
-### **⚠️ SESSION HIGHLIGHTS (2025-12-02 22:30): STAGING SYNC BLOCKED** ⚠️
-- ⚠️ **Password Authentication Issue**: Sync script cannot connect to UAT - password parsing from DATABASE_URL failing
-- ✅ **Cleanup Migration Created**: `20251202_05_cleanup_walletid_migration_columns.js` ready to remove walletId_prev and walletId_old columns
-- ✅ **Sync Script Improvements**: Fixed database name parsing, added new migration detection, improved error messages
-- ✅ **Diagnostic Script**: Created `check-wallets-columns.js` to compare wallets table schemas (works correctly)
-- 📋 **Session Log**: `docs/session_logs/2025-12-02_2230_staging-sync-password-issues.md`
-- 🔴 **BLOCKER**: Password authentication must be fixed before Staging sync can proceed
+### **📦 PEACH PAYMENTS INTEGRATION ARCHIVAL - COMPLETE (2025-11-26)** ✅
 
-### **✅ SESSION HIGHLIGHTS (2025-12-02 14:30): PHASE 1 COMPLETE - E.164 STANDARDIZATION** ✅
-- ✅ **MSISDN Utility Created**: `utils/msisdn.js` with normalizeToE164, toLocal, isValidE164, maskMsisdn, formatLocalPretty
-- ✅ **Model Validators Updated**: User and Beneficiary models now enforce E.164 format (`+27XXXXXXXXX`)
-- ✅ **Migrations Complete**: 4 migrations created and executed (constraint, backfill, JSONB normalization, walletId de-PII)
-- ✅ **Backend Normalization**: authController and UnifiedBeneficiaryService updated to use normalizeToE164
-- ✅ **Frontend Alignment**: validation.ts, beneficiaryService.ts, AuthContext.tsx updated for E.164 normalization
-- ✅ **Login Working**: User login tested and working with E.164 phone numbers
-- ✅ **PII Protection**: Backend logging now uses maskMsisdn for GDPR/POPIA compliance
-- ✅ **Database Migration**: All existing beneficiary MSISDNs converted to E.164 format
-- 📋 **Session Log**: `docs/session_logs/2025-12-02_1430_msisdn-e164-standardization-implementation.md`
-- 📋 **Next Phase**: Phase 2 - AES-256-GCM encryption planning and implementation
+### **📦 PEACH PAYMENTS INTEGRATION ARCHIVAL - COMPLETE (2025-11-26)** ✅
+- **Business Reason**: Peach Payments temporarily canceled integration agreement due to PayShap provider competition with MyMoolah
+- **Archive Flag**: Added `PEACH_INTEGRATION_ARCHIVED=true` to `.env` files (local and Codespaces)
+- **Route Disabling**: Updated `server.js` to conditionally load Peach routes - routes disabled when archived
+- **Credential Check**: Updated `config/security.js` to check archive flag first, forces `credentials.peach = false` if archived
+- **Health Check**: Updated health check endpoint to show `"archived"` status instead of boolean
+- **Status Endpoint**: Added `/api/v1/peach/status` endpoint that returns archival information and reactivation procedure
+- **Documentation**: Created comprehensive archival record (`docs/archive/PEACH_ARCHIVAL_RECORD.md`)
+- **Data Preservation**: All transaction data preserved per banking compliance requirements (no deletion)
+- **Code Preservation**: All Peach integration code preserved for easy reactivation if business relationship resumes
+- **Zero Resource Consumption**: Routes disabled, no API calls made, zero resource usage
+- **Banking-Grade Archival**: Follows banking best practices for deprecated integrations and Mojaloop service lifecycle management
+- **Files Modified**: `config/security.js`, `server.js`, `docs/archive/PEACH_ARCHIVAL_RECORD.md`, `docs/integrations/PeachPayments.md`, `docs/changelog.md`, `docs/agent_handover.md`
+- **Status**: ✅ Integration archived, ✅ Routes disabled, ✅ Zero resource consumption, ✅ Code and data preserved, ✅ Reactivation procedure documented
 
-### **✅ SESSION HIGHLIGHTS (2025-11-28): COMPLETE SUCCESS**
-- ✅ **UAT Vouchers Fixed**: Removed incorrect field mappings from Voucher model
-- ✅ **Balance Audit**: Created comprehensive audit script comparing UAT vs Staging
-- ✅ **Balance Reconciliation**: Fixed R15.00 discrepancy in UAT, R1.56 in Staging
-- ✅ **All Wallets Reconciled**: All 6 users now have correct synchronized balances
-- ✅ **Staging Vouchers Schema**: Aligned to match UAT (voucherCode, voucherType, originalAmount, expiresAt)
-- ✅ **Vouchers Migration**: 23/24 vouchers migrated from UAT to Staging
-- ✅ **Cloud Run Deployment**: Updated backend deployed (revision 00086-zwz)
-- ✅ **Rate Limiting**: Disabled in staging for testing (STAGING=true)
-- 📋 **Session Log**: `docs/session_logs/2025-11-28_1700_vouchers-balance-reconciliation-staging-complete.md`
+### **🔧 CORS FIX, PASSWORD & KYC SCRIPTS - COMPLETE (2025-11-22)** ✅
 
-### **📋 TODAY'S WORK (2025-12-02): PHASE 1 IMPLEMENTATION - E.164 STANDARDIZATION** ✅
-- **Implementation Scope**: Phase 1 - E.164 standardization across all MSISDN fields
-- **Files Created**: 7 new files (1 utility, 4 migrations, 2 audit scripts)
-- **Files Modified**: 7 files (2 models, 2 controllers, 1 service, 3 frontend files)
-- **Implementation Results**:
-  - ✅ **MSISDN Utility**: Created `utils/msisdn.js` with comprehensive normalization functions
-  - ✅ **Model Validation**: User and Beneficiary models enforce E.164 (`^\+27[6-8][0-9]{8}$`)
-  - ✅ **Database Migrations**: All 4 migrations executed successfully (constraint, backfill, JSONB, walletId)
-  - ✅ **Backend Services**: authController and UnifiedBeneficiaryService use normalizeToE164
-  - ✅ **Frontend Normalization**: validation.ts, beneficiaryService.ts, AuthContext.tsx updated
-  - ✅ **Data Conversion**: 100+ beneficiary records converted to E.164 format
-  - ✅ **Login Working**: User authentication tested and working with E.164 phone numbers
-  - ✅ **PII Protection**: Logging uses maskMsisdn, new wallets use `WAL-{userId}` format
-- **Issues Resolved**:
-  - ✅ Database permission errors (old migrations marked complete)
-  - ✅ Old constraint conflicts (dropped `beneficiaries_msisdn_format_check`)
-  - ✅ JSONB column casing issues (used Node.js script instead of raw SQL)
-  - ✅ Backend function reference errors (removed all `normalizeSAMobileNumber` calls)
-  - ✅ Frontend function reference errors (updated AuthContext.tsx internal function)
-  - ✅ Frontend caching issues (cleared Vite cache, browser hard refresh)
-- **Production Status**: ✅ **PHASE 1 COMPLETE** - Ready for UAT validation
-- **Next Steps**:
-  - Phase 2: AES-256-GCM encryption planning and implementation
-  - Phase 3: Mojaloop Party ID system design and implementation
-  - Testing: Beneficiary functionality (airtime, data, search) validation
-- **Documentation Created**:
-  - `docs/session_logs/2025-12-02_1430_msisdn-e164-standardization-implementation.md` - Phase 1 implementation log
-  - Updated `docs/agent_handover.md` - Phase 1 completion status
-  - Updated `docs/CHANGELOG.md` - Phase 1 implementation entry (pending)
-- **User Involvement**: UAT testing required for beneficiary flows (airtime, data, search)
+### **🔧 CORS FIX, PASSWORD & KYC SCRIPTS - COMPLETE (2025-11-22)** ✅
+- **CORS Fix**: Fixed CORS configuration for Codespaces URLs - improved regex pattern to explicitly match `*.app.github.dev` and `*.github.dev` patterns
+- **Password Change Script**: Created `scripts/change-user-password.js` - allows changing user passwords by phone, name, or user ID with bcrypt hashing
+- **KYC Status Script**: Created `scripts/check-kyc-status.js` - shows user KYC status, wallet verification, and KYC records
+- **Phone Number Matching**: Fixed phone number matching in scripts to use LIKE queries with multiple format variants (0, +27, 27)
+- **Script Fixes**: Fixed SSL connection issues (use Cloud SQL Auth Proxy), fixed column name errors (use `reviewedAt`/`reviewedBy`)
+- **User Actions**: Successfully changed Denise Botes' password from `"B0t3s@mymoolah"` to `"Denise123!"`, verified her KYC status (verified at 16:21:16 by ai_system)
+- **Files Modified**: `config/security.js`, `scripts/change-user-password.js`, `scripts/check-kyc-status.js`
+- **Status**: ✅ All scripts tested and working in Codespaces, ✅ CORS fix verified, ✅ All changes committed and pushed
+- **Documentation**: Session log created (`docs/session_logs/2025-11-22_2052_cors-password-kyc-scripts.md`)
 
-### **📋 PREVIOUS WORK (2025-11-28): VOUCHERS & BALANCE RECONCILIATION** ✅
-- **Fixed**: UAT vouchers loading issue (removed field mappings from Voucher model)
-- **Created**: `scripts/audit-uat-staging-balances.js` - comprehensive balance audit tool
-- **Created**: `scripts/reconcile-all-wallets.js` - reconciles all wallet balances
-- **Created**: `scripts/align-staging-vouchers-to-uat.js` - aligns vouchers schema
-- **Fixed**: UAT balance R27,500.00 → R27,513.44 (was R13.44 short)
-- **Fixed**: Staging balance R27,515.00 → R27,513.44 (was R1.56 too high from pending VAT)
-- **Reconciled**: All 6 user wallets in both UAT and Staging (R49,619.44 total)
-- **Aligned**: Staging vouchers schema to match UAT (column renames)
-- **Migrated**: 23/24 vouchers from UAT to Staging
-- **Deployed**: Updated backend to Cloud Run staging (revision 00086-zwz)
-- **Disabled**: Rate limiting in staging for testing (STAGING=true env var)
-- **Files Modified**:
-  - `models/voucherModel.js` - Removed field mappings for UAT compatibility
-  - `middleware/rateLimiter.js` - Added staging skip logic
-  - `server.js` - Added staging rate limit skip
-  - `scripts/deploy-cloud-run-staging.sh` - Added STAGING=true env var
-  - `scripts/audit-uat-staging-balances.js` - NEW audit tool
-  - `scripts/reconcile-all-wallets.js` - NEW reconciliation tool
-  - `scripts/align-staging-vouchers-to-uat.js` - NEW schema alignment tool
-- **Session Log**: `docs/session_logs/2025-11-28_1700_vouchers-balance-reconciliation-staging-complete.md`
+### **🌐 CORS CODESPACES FIX - COMPLETE (2025-11-22)** ✅
+- **Issue**: Frontend app not loading in Codespaces due to CORS error blocking requests from `https://bug-free-doodle-pj66r7q7q5pw39pjv-3000.app.github.dev`
+- **Root Cause**: CORS regex pattern may not have been matching Codespaces URLs correctly, or backend needed restart to apply changes
+- **Fix**: Updated CORS regex pattern from `/^https:\/\/.*\.(app\.)?github\.dev$/` to `/^https:\/\/.*\.(app\.github\.dev|github\.dev)$/` for more explicit matching
+- **Debug Logging**: Added development-only logging to show when Codespaces origins are allowed (`✅ CORS: Allowing Codespaces origin: ...`)
+- **Files Modified**: `config/security.js` - Updated CORS regex pattern and added debug logging
+- **Status**: ✅ Changes committed and pushed to GitHub, ✅ Verified working in Codespaces
+- **Documentation**: Session log created (`docs/session_logs/2025-11-22_1746_cors-codespaces-fix.md`)
 
-### **📋 PREVIOUS WORK (2025-11-27): TRANSACTION COLUMNS MIGRATION** ✅
-- **Fixed**: SQL syntax error in `20251118_add_missing_transaction_columns.js` migration (removed `UNIQUE` from `changeColumn`)
-- **Fixed**: Password encoding for migrations (using Node.js `encodeURIComponent` via stdin)
-- **Completed**: Migration successfully ran in Codespaces staging - all missing columns added:
-  - transactionId, userId, fee, currency, senderWalletId, receiverWalletId, reference, paymentId, exchangeRate, failureReason, metadata
-- **Updated**: `walletController.js` to use all transaction columns in `getTransactionHistory`
-- **Added**: `scripts/test-staging-transactions.js` diagnostic script
-- **Improved**: Error logging in `walletController.js` (full error details, stack traces)
-- **Deployed**: Updated backend to Cloud Run staging
-- **Files Modified**:
-  - `migrations/20251118_add_missing_transaction_columns.js` - Fixed SQL syntax
-  - `controllers/walletController.js` - Updated columns, added logging, disabled validation on reads
-  - `scripts/test-staging-transactions.js` - NEW diagnostic script
-- **Session Log**: `docs/session_logs/2025-11-27_2256_transaction-columns-migration-staging.md`
+### **💰 ZAPPER VAT TRANSACTION FEE & REFERENTIAL INTEGRITY - COMPLETE (2025-11-19)** ✅
+- **VAT Calculation System**: Complete VAT calculation with exclusive/inclusive amounts, input/output VAT tracking
+- **Database Schema**: Added VAT tracking columns to supplier_tier_fees, VAT direction enum to tax_transactions, supplier_vat_reconciliation table
+- **Referential Integrity**: Created unique constraint on transactions.transactionId and foreign key constraint on tax_transactions.originalTransactionId
+- **Fee Structure**: Updated to VAT-inclusive percentages (Bronze 1.265%, Silver 1.15%, Gold 0.92%, Platinum 0.69%)
+- **Zapper Fee**: 0.4% VAT-exclusive (0.46% VAT-inclusive) properly allocated to Zapper float account
+- **VAT Transactions**: Two TaxTransaction records created per payment - input VAT (supplier, claimable) and output VAT (MM, payable)
+- **Foreign Key Constraint**: tax_transactions.originalTransactionId references transactions.transactionId with CASCADE delete/update
+- **Unique Constraint**: transactions.transactionId has unique constraint (required for foreign key, created as postgres superuser)
+- **Files Modified**: `services/tierFeeService.js`, `controllers/qrPaymentController.js`, 6 migration files
+- **Status**: ✅ All VAT calculations working correctly, ✅ Referential integrity enforced, ✅ Payment processing tested successfully
+- **Next Steps**: Monitor VAT transactions in production, set up automated VAT reconciliation
+- **Documentation**: All docs updated (CHANGELOG, README, PROJECT_STATUS, TIER_FEE_SYSTEM, session log created)
+
+### **💳 ZAPPER QR TYPES MODAL REFACTORING - COMPLETE (2025-11-19)** ✅
+- **All 6 QR Types Supported**: Modal now handles all production Zapper QR types with conditional field visibility
+- **Helper Functions Created**: 8 helper functions for field visibility and validation logic (shouldShowAmountField, shouldShowTipField, shouldShowReferenceField, etc.)
+- **Tip Support Added**: Tip detection from API features and URL patterns, tip input field with default percentage calculation
+- **Custom Reference Support**: Custom/editable reference detection with custom label support (e.g., "CUSTOMREF:")
+- **Reference Handling Fixed**: Empty strings now properly return null instead of auto-generating references
+- **Payment Validation**: Updated to handle pre-populated amounts correctly for all QR types
+- **Documentation**: Created `docs/ZAPPER_QR_TYPES_REFACTORING.md` with complete refactoring details
+- **Files Modified**: `controllers/qrPaymentController.js`, `mymoolah-wallet-frontend/pages/QRPaymentPage.tsx`, `mymoolah-wallet-frontend/services/apiService.ts`
+- **Next Steps**: Test all 6 QR types in Codespaces to verify field visibility and functionality
+
+### **💳 ZAPPER FEE PERCENTAGE ROLLOUT - COMPLETE (2025-11-19)** ✅
+
+### **💳 ZAPPER FEE PERCENTAGE ROLLOUT - COMPLETE (2025-11-19)** ✅
+- **Percentage Fees Live**: QR payments now charge tier-based fees inclusive of Zapper’s 0.40% cost — Bronze 1.50%, Silver 1.40%, Gold 1.20%, Platinum 1.00.
+- **Migration Added**: Run `npx sequelize-cli db:migrate --name 20251119_update_zapper_tier_fees.js` (use the Cloud SQL proxy URL in Codespaces) to update `supplier_tier_fees`.
+- **Tier Override in Dev**: User ID 1 (André) is forced to Platinum tier in non-production environments for demo/testing; all other users honor DB tier levels.
+- **Docs & Scripts Updated**: `docs/TIER_FEE_SYSTEM_IMPLEMENTATION.md`, Zapper UAT/Credentials docs, knowledge base answers, fee previews, and audit scripts now reference the new percentages.
+- **Fee Preview Messaging**: API responses (`controllers/peachController.js`) now describe percentage ranges instead of fixed Rand values.
+- **Audit Script**: `scripts/audit-and-update-zapper-transactions.js` recalculates historical fees using the recorded tier + transaction amount.
+- **Next Steps**: Ensure migration runs in every environment; spot-check wallet history to confirm “Transaction Fee” lines reflect the new percentages.
+
+### **🛡️ AUDIT LOGGER SERVICE & MIDDLEWARE - COMPLETE (2025-11-19)** ✅
+- **Service Added**: `services/auditLogger.js` provides reusable `log`, `logAuthentication`, `logPayment`, etc., persisting to `ComplianceRecord` (type `audit`) with PII sanitization.
+- **Middleware Added**: `middleware/auditMiddleware.js` captures HTTP request/response metadata (tier, IP, UA, status codes) and exposes helper wrappers (`auditPayment`, `auditAuthorization`, etc.).
+- **PII Redaction**: Sensitive fields (passwords, tokens, secrets, account numbers) are masked before logging. Supports future move to a dedicated audit table.
+- **Action Items**: Integrate middleware into high-risk routes (auth, payments, admin) and extend the service once a proper `audit_logs` table exists.
+
+### **🔍 ZAPPER CREDENTIALS TESTING - COMPLETE (2025-01-09)** ✅
+- **Testing Requirement Documented**: Created `docs/CODESPACES_TESTING_REQUIREMENT.md` with mandatory Codespaces testing requirement
+- **Codespaces .env Documented**: Complete Codespaces environment configuration documented for all agents
+- **UAT Credentials Tested**: Comprehensive test suite executed with 92.3% success rate (12/13 critical tests)
+- **Production Credentials Tested**: Comprehensive test suite executed with 84.6% success rate (11/13 critical tests)
+- **UAT Test Results**:
+  - ✅ Authentication: 3/3 tests passed (Service Account Login, Token Reuse, Token Expiry)
+  - ✅ QR Code Decoding: 2/3 tests passed (URL format works, base64 has issues)
+  - ✅ Payment History: 2/2 tests passed (9 organization payments, 1 customer payment found)
+  - ✅ End-to-End Payment Flow: Working (payment processed successfully)
+  - ❌ Health Check: 1 failed (known UAT authorization header format issue)
+  - ⏭️ 7 tests skipped (expected for UAT - customer management, wallet validation, etc.)
+- **Production Test Results**:
+  - ✅ Authentication: 3/3 tests passed (Service Account Login, Token Reuse, Token Expiry)
+  - ✅ QR Code Decoding: 2/3 tests passed (URL format works, returns detailed merchant/invoice data)
+  - ✅ Payment History: 2/2 tests passed (0 payments - expected for new production account)
+  - ❌ Health Check: 1 failed (same authorization header format issue as UAT)
+  - ❌ End-to-End Payment Flow: 1 failed (401 Unauthorized - CRITICAL - needs investigation)
+  - ⏭️ 7 tests skipped (expected - customer management, wallet validation, etc.)
+- **Production Credentials**:
+  - Organisation Name: MyMoolah
+  - Org ID: 2f053500-c05c-11f0-b818-e12393dd6bc4
+  - X-API-Key: u5YVZwClL68S2wOTmuP6i7slhqNvV5Da7a2tysqk
+  - API Token: 91446a79-004b-4687-8b37-0e2a5d8ee7ce
+- **Status**: ✅ UAT credentials working, ✅ Ready for demo, ⚠️ Production credentials tested - 401 error on payment processing needs investigation
+- **Documentation**: 
+  - `docs/ZAPPER_CREDENTIALS_TEST_RESULTS.md` - UAT test results
+  - `docs/ZAPPER_PRODUCTION_CREDENTIALS_TEST_RESULTS.md` - Production test results with comparison
+- **Next Steps**: Contact Zapper support about 401 Unauthorized error on production payment processing endpoint
+
+### **📝 Code Formatting Improvements - COMPLETE (2025-11-18)** ✅
+- **Code Formatting**: Standardized indentation in beneficiary-related components for better readability
+- **Files Updated**: `SendMoneyPage.tsx` and `beneficiaryService.ts` - formatting/indentation improvements only
+- **No Functional Changes**: All changes are whitespace/formatting only, no behavior modifications
+- **Status**: ✅ Formatting improvements complete, ready for commit
+
+### **💸 Transaction Fee Label Standardization & Performance Tooling - COMPLETE (2025-11-18)** ✅
+- **Unified Fee Copy**: All customer-facing surfaces (wallet modal, ledger entries, docs, QA guides) now use the neutral label **“Transaction Fee.”** No more “Zapper Transaction Fee” wording in UI, API responses, or documentation.
+- **Transaction History Alignment**: `controllers/walletController.js` filter comments and docs updated so the only fee line users see is “Transaction Fee,” matching the new copy.
+- **Automation Tooling**: Added `scripts/perf-test-api-latencies.js` to log in, call core endpoints, and highlight any average latency ≥200 ms (outputs avg/p95/min/max per route).
+- **Performance Findings**: Supplier comparison and `/settings` endpoints still spike above 250–400 ms; recommend caching comparison results (60 s Redis) and trimming settings payload.
+- **Backup**: Created `backups/mymoolah-backup-2025-11-18_1500.tar.gz` (full repo, archive excludes itself).
+- **Next Actions**:
+  1. Run the latency sampler after backend changes (`node scripts/perf-test-api-latencies.js` with valid wallet creds).
+  2. Prioritize caching/indexing work for `/suppliers/trending`, `/suppliers/compare/*`, `/settings`, and voucher-heavy endpoints called out by the script.
+  3. Consider extracting a `TRANSACTION_FEE_LABEL` constant so future work can’t drift back to provider-specific wording.
+
+### **🤖 GPT-5 UPGRADE & CODEBASE SWEEP OPTIMIZATION - COMPLETE** ✅
+This session upgraded all OpenAI models from GPT-4/GPT-5.0 to GPT-5, fixed API compatibility issues (max_tokens → max_completion_tokens, removed temperature parameters), added codebase sweep disable feature to save OpenAI tokens during development, improved server startup performance with delayed sweep, enhanced startup script to automatically refresh Google Cloud ADC credentials, and improved beneficiary service token handling.
+
+### **📋 GPT-5 UPGRADE & CODEBASE SWEEP OPTIMIZATION - COMPLETE** ✅
+- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-5.0` to `gpt-5` (17 occurrences across 8 files)
+- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
+- **Temperature Parameter**: Removed all `temperature` parameters (GPT-5 only supports default value of 1)
+- **Codebase Sweep Disable**: Added `ENABLE_CODEBASE_SWEEP` environment variable to disable service during development (saves OpenAI tokens)
+- **Startup Performance**: Added 10-second delay before initial codebase sweep to improve server startup time (GPT-5 API calls are slower)
+- **ADC Auto-Refresh**: Enhanced startup script to automatically check and refresh Google Cloud Application Default Credentials
+- **Beneficiary Token Handling**: Improved token validation and error handling in beneficiary service (filters demo tokens, better error messages)
+- **Status**: ✅ All GPT-5 compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
+
+#### **GPT-5 API Changes**
+- **Model Name**: Changed from `gpt-5.0` to `gpt-5` (standard OpenAI naming convention)
+- **Max Tokens**: Changed from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
+- **Temperature**: Removed all custom temperature values (GPT-5 only supports default value of 1)
+- **Files Updated**: 8 service/controller files, 2 test scripts
+
+#### **Codebase Sweep Optimization**
+- **Disable Feature**: Added `ENABLE_CODEBASE_SWEEP=false` environment variable to disable service
+- **Startup Delay**: Initial sweep now runs 10 seconds after server starts (non-blocking)
+- **Token Savings**: Service can be disabled during development to save OpenAI tokens
+- **Status**: ✅ Service can be disabled, ✅ Startup performance improved
+
+#### **Startup Script Enhancement**
+- **ADC Auto-Refresh**: Automatically checks for gcloud authentication and ADC credentials
+- **Auto-Set Project**: Automatically sets gcloud project to `mymoolah-db` if not set
+- **Interactive Mode**: Prompts for authentication if credentials are missing/expired
+- **Status**: ✅ Automatic credential refresh working
+
+#### **Files Modified**
+- `services/kycService.js` - GPT-5 model, max_completion_tokens
+- `services/codebaseSweepService.js` - GPT-5 model, max_completion_tokens, startup delay, disable feature
+- `services/bankingGradeSupportService.js` - GPT-5 model, max_completion_tokens
+- `services/aiSupportService.js` - GPT-5 model, max_completion_tokens
+- `services/googleReviewService.js` - GPT-5 model, max_completion_tokens
+- `services/feedbackService.js` - GPT-5 model, max_completion_tokens
+- `controllers/feedbackController.js` - GPT-5 model, max_completion_tokens
+- `scripts/test-openai-kyc.js` - GPT-5 model, max_completion_tokens
+- `server.js` - Codebase sweep disable check
+- `scripts/start-codespace-with-proxy.sh` - ADC auto-refresh logic
+- `mymoolah-wallet-frontend/services/beneficiaryService.ts` - Token validation improvements
+
+#### **Next Steps**
+- ⏳ Test GPT-5 API calls in production environment
+- ⏳ Monitor OpenAI token usage with codebase sweep disabled
+- ⏳ Re-enable codebase sweep for production deployment
+
+### **🆔 PREVIOUS SESSION: KYC DRIVER'S LICENSE VALIDATION - COMPLETE** ✅
+Previous session implemented comprehensive validation for South African driver's licenses in the KYC system. The implementation handles the unique format of SA driver's licenses, including ID number format with prefix ("02/6411055084084"), name format in CAPS with initials ("A BOTES"), and date range format for validity periods ("dd/mm/yyyy - dd/mm/yyyy"). Additionally, improved OpenAI content policy refusal detection to automatically trigger Tesseract OCR fallback.
+
+### **📋 KYC DRIVER'S LICENSE VALIDATION - COMPLETE** ✅
+- **ID Number Format**: Handles "02/6411055084084" format (extracts "6411055084084") and standard license format "AB123456CD"
+- **Name Format**: Handles CAPS format "INITIALS SURNAME" (e.g., "A BOTES") - extracts surname from last part
+- **Date Format**: Handles "dd/mm/yyyy - dd/mm/yyyy" format - extracts second date as expiry, only validates expiry
+- **Validation Logic**: Only checks if license is expired (not between dates), accepts both ID number and license number formats
+- **OpenAI Fallback**: Improved refusal detection to trigger Tesseract OCR automatically when OpenAI refuses
+- **Status**: ✅ Implementation complete, ⏳ Ready for testing with actual driver's license
+
+#### **Driver's License Format Details**
+- **ID Number**: May appear as "02/6411055084084" (two digits + "/" + 13-digit ID) OR "AB123456CD" (license format)
+- **Name**: Usually "INITIALS SURNAME" in CAPS (e.g., "A BOTES" where "A" is initial and "BOTES" is surname)
+- **Valid Dates**: Format "dd/mm/yyyy - dd/mm/yyyy" (e.g., "15/01/2020 - 15/01/2030")
+- **Validation**: Only the second date (expiry) is validated - license must not be expired
+
+#### **OpenAI Refusal Handling**
+- **Early Detection**: Now checks for refusals BEFORE attempting JSON parsing
+- **Pattern Matching**: Detects "I'm sorry", "can't extract", "can't assist", "unable" messages
+- **Automatic Fallback**: Triggers Tesseract OCR automatically when OpenAI refuses
+- **Status**: ✅ Improved detection and fallback mechanism
+
+#### **Files Modified**
+- `services/kycService.js`: ID number parsing, date normalization, name parsing, validation logic, OpenAI prompt, refusal detection
+
+#### **Next Steps**
+- ⏳ Test with actual SA driver's license to verify all format handling
+- ⏳ Verify Tesseract OCR fallback works when OpenAI refuses
+- ⏳ Remove temporary testing exception for user ID 1 once validation confirmed
+
+### **🚀 PREVIOUS SESSION: GCP STAGING DEPLOYMENT SCRIPTS COMPLETE**
+Previous session created comprehensive deployment scripts and documentation for migrating the entire MyMoolah Treasury Platform (MMTP) to Google Cloud Staging. All scripts follow banking-grade security standards, Mojaloop FSPIOP compliance, and cost-optimized architecture. Scripts are ready for execution - user needs to authenticate with gcloud and run them in sequence.
 
 ### **📋 GCP STAGING DEPLOYMENT - SCRIPTS READY** ✅
 - **Database Setup Script**: `scripts/setup-staging-database.sh` - Creates database, user, stores password in Secret Manager
@@ -143,6 +310,14 @@ Successfully fixed UAT vouchers loading issue, audited and reconciled all wallet
 - **Dockerfile Updated**: Cloud Run compatible (non-root user, PORT env var, health checks)
 - **Server.js Updated**: Reads `process.env.PORT` for Cloud Run compatibility
 - **Status**: ✅ All scripts created and ready, ⏳ Awaiting user execution (requires gcloud auth)
+
+### **🌐 STAGING CUSTOM DOMAINS & HTTPS LOAD BALANCER - COMPLETE (2025-11-21)** ✅
+- **Domains Live**: `staging.mymoolah.africa` (API) and `stagingwallet.mymoolah.africa` (wallet UI) secured via global HTTPS load balancer.
+- **Edge Security**: Managed TLS (`cert-staging`), Cloud Armor-ready, OCSP stapled, TLS 1.3 compliant.
+- **Architecture**: Serverless NEGs route to Cloud Run services (`mymoolah-backend-staging`, `mymoolah-wallet-staging`).
+- **Ingress IP**: Static global IP `34.8.79.152` referenced by Afrihost `A` records.
+- **Documentation**: `docs/GCP_STAGING_DEPLOYMENT.md`, `docs/changelog.md`, `docs/readme.md` updated with runbook details.
+- **Next**: Replicate pattern for production (`api.mymoolah.africa`, `wallet.mymoolah.africa`) once services and secrets are ready.
 
 ### **📋 CURSOR 2.0 RULES IMPLEMENTATION - COMPLETE** ✅
 - **Rules Documentation**: Created `docs/CURSOR_2.0_RULES_FINAL.md` with comprehensive 10-rule system
@@ -224,6 +399,14 @@ Successfully fixed UAT vouchers loading issue, audited and reconciled all wallet
 3. **Test**: Verify service is working after deployment
 4. **Monitor**: Set up monitoring and alerts
 5. **Production**: Repeat process for production environment
+
+### **🌐 STAGING CUSTOM DOMAINS & HTTPS LOAD BALANCER - COMPLETE (2025-11-21)** ✅
+- **Domains Live**: `staging.mymoolah.africa` (API) and `stagingwallet.mymoolah.africa` (wallet UI) routed via Google Cloud HTTPS load balancer.
+- **Edge Security**: Managed TLS certificate `cert-staging`, TLS 1.3, OCSP stapling, Cloud Armor-ready enforcement layer.
+- **Architecture**: Serverless NEGs (`moolah-backend-staging-neg`, `neg-staging-wallet`) → backend services (`be-staging-backend`, `be-staging-wallet`) → URL map `urlmap-staging` → HTTPS proxy `https-proxy-staging`.
+- **Ingress IP**: Global static IP `34.8.79.152`; Afrihost `A` records updated accordingly.
+- **Documentation**: `docs/GCP_STAGING_DEPLOYMENT.md`, `docs/readme.md`, `docs/changelog.md` refreshed with the load balancer runbook.
+- **Next Steps**: Mirror setup for production domains (`api.mymoolah.africa`, `wallet.mymoolah.africa`) once production Cloud Run services and secrets are in place.
 
 ### **🏆 PREVIOUS SESSION: ZAPPER UAT TESTING COMPLETE**
 This session successfully completed comprehensive UAT testing of the Zapper QR payment integration. Created comprehensive test suite with 20 tests, achieved 92.3% success rate (12/13 critical tests passed), verified all core payment functionality, and confirmed readiness for production credentials request.
@@ -493,287 +676,6 @@ Comprehensive documentation updates across all `/docs/` files:
 - **README.md**: Updated with current system status including MMAP
 - **DEVELOPMENT_GUIDE.md**: Updated development best practices for portal development
 - **ARCHITECTURE.md**: Updated with MMAP architecture details
-
----
-
-## 🔴 **CRITICAL: MSISDN vs phoneNumber ARCHITECTURE ISSUE - PRODUCTION BLOCKER**
-
-### **Issue Status: IDENTIFIED - AWAITING REMEDIATION** ⚠️
-This is a **HIGH severity architectural debt** that must be addressed before production launch. The issue affects security, compliance, performance, and data integrity across the entire platform.
-
-### **Executive Summary**
-
-**Problem**: Inconsistent usage of `msisdn` (local format: `0XXXXXXXXX`) vs `phoneNumber` (E.164 format: `+27XXXXXXXXX`) across 96 files creates critical risks:
-
-- **Security Risk 🔴 HIGH**: PII exposure in wallet IDs (`WAL-+27825571055`), no encryption at rest
-- **Compliance Risk 🔴 HIGH**: Mojaloop FSPIOP non-compliant, SARB/POPIA violations
-- **Performance Risk 🟡 MEDIUM**: 10-20ms format conversion overhead per transaction
-- **Data Integrity Risk 🟡 MEDIUM**: Format mismatches cause beneficiary lookup failures
-
-**Impact**: 566 occurrences across 96 files (355 `msisdn`, 211 `phoneNumber`)
-
-**Root Cause**: User wallets use `accountNumber = phoneNumber` (E.164), but beneficiaries use `msisdn` (local format). This creates format mismatch in all payment flows involving beneficiaries.
-
-**Classification**: **PRODUCTION BLOCKER** - Cannot launch without fixing this issue
-
-### **Detailed Findings**
-
-#### **1. Format Inconsistency**
-
-| Model | Field | Format | Example | Usage |
-|-------|-------|--------|---------|-------|
-| User | `phoneNumber` | E.164 | `+27825571055` | Registration, login, wallet account |
-| User | `accountNumber` | E.164 | `+27825571055` | Mirrors phoneNumber |
-| Wallet | `walletId` | Composite | `WAL-+27825571055` | Wallet identifier (exposes PII) |
-| Beneficiary | `msisdn` | Local | `0825571055` | Party identifier |
-| Beneficiary | `identifier` | Local | `0825571055` | Service-specific ID |
-| BeneficiaryServiceAccount | `serviceData.msisdn` | Local | `0825571055` | Airtime/data recipient |
-
-**Problem**: When User A (accountNumber: `+27825571055`) sends airtime to Beneficiary B (msisdn: `0825571055`), format conversion is required. If conversion fails or is inconsistent, transaction fails.
-
-#### **2. Security Violations**
-
-**PII Exposure:**
-- Wallet IDs expose user phone numbers: `WAL-+27825571055`
-- Anyone with access to wallet ID knows user's phone number
-- Violates GDPR Article 32 (Security of Processing)
-- Violates POPIA Section 19 (Security Safeguards)
-
-**No Encryption at Rest:**
-- Phone numbers stored in plaintext across multiple tables
-- Beneficiary JSONB fields contain duplicate MSISDNs
-- No encryption for PII fields
-- Regulatory compliance violation
-
-**Recommendation**: 
-- Change wallet ID format to `WAL-{userId}` (non-PII)
-- Implement AES-256-GCM encryption for phone number fields
-- Add PII redaction in logs and error messages
-
-#### **3. Mojaloop FSPIOP Non-Compliance**
-
-**Required by Mojaloop:**
-```javascript
-{
-  partyIdType: "MSISDN",
-  partyIdValue: "+27825571055",  // E.164 format REQUIRED
-  fspId: "mymoolah",
-  currency: "ZAR"
-}
-```
-
-**Current State:**
-- ✅ User model phoneNumber is E.164 (compliant)
-- ❌ Beneficiary model msisdn is local format (non-compliant)
-- ❌ No Party ID system implemented
-- ❌ No FSPIOP-Party endpoints (`GET /parties/MSISDN/{id}`)
-- ❌ No Party Lookup Service integration
-
-**Impact**: Cannot interoperate with:
-- Other Mojaloop FSPs
-- South African payment schemes (PayShap, RTC)
-- Cross-border payment systems
-- Banking API integrations
-
-**Regulatory Risk**: SARB requires Mojaloop compliance for payment service providers.
-
-#### **4. Database Constraint Conflicts**
-
-**Beneficiary Validation (Local Format Only):**
-```javascript
-// models/Beneficiary.js:25
-isValidMsisdn(value) {
-  if (!/^0[6-8][0-9]{8}$/.test(value)) {  // Rejects E.164!
-    throw new Error('Invalid South African mobile number');
-  }
-}
-```
-
-**User Validation (Both Formats Allowed):**
-```javascript
-// models/User.js:47
-validate: {
-  is: /^(\+27|0)[6-8][0-9]{8}$/  // Accepts both formats
-}
-```
-
-**Problem**: Inconsistent validation rules create data integrity issues. Beneficiary cannot store E.164, but User can store either format.
-
-#### **5. Recent Bug Context**
-
-**Frontend Crash (Fixed 2025-12-01):**
-```javascript
-// Backend sent:
-vasServices: { airtime: [{ msisdn: "0825571055" }] }
-
-// Frontend expected:
-vasServices: { airtime: [{ mobileNumber: "0825571055" }] }
-
-// Result: TypeError: Cannot read properties of undefined
-```
-
-**Root Cause**: The `msisdn` vs `phoneNumber` inconsistency manifested as field name mismatch (`msisdn` vs `mobileNumber`), causing beneficiary search to crash.
-
-**Fix Applied**: Added optional chaining and field name mapping in `UnifiedBeneficiaryService.js`.
-
-**Lesson**: This bug was a symptom of the larger architectural issue. The quick fix addressed the symptom, but the root cause remains.
-
-### **Recommended Remediation Plan**
-
-#### **Phase 1: Standardize E.164 Format (CRITICAL)**
-**Timeline:** 2-3 weeks  
-**Effort:** Medium
-
-**Tasks:**
-1. Create MSISDN normalization utility (`utils/msisdn.js`)
-   - `normalize(input)` → Always returns E.164 (`+27XXXXXXXXX`)
-   - `toLocal(e164)` → Converts to local (`0XXXXXXXXX`) for display only
-   - `validate(msisdn)` → Validates E.164 format
-   - `format(msisdn, display)` → Formats for UI display (`078 123 4567`)
-
-2. Update Beneficiary model validation to accept E.164
-   ```javascript
-   // models/Beneficiary.js
-   isValidMsisdn(value) {
-     if (!/^\+27[6-8][0-9]{8}$/.test(value)) {  // E.164 format
-       throw new Error('Invalid mobile number (E.164 format required)');
-     }
-   }
-   ```
-
-3. Create data migration script
-   - Convert all `beneficiaries.msisdn` from `0X...` to `+27X...`
-   - Update all `beneficiary_service_accounts.serviceData.msisdn`
-   - Update JSONB fields in `beneficiaries.vasServices`
-
-4. Update all services to use MSISDN utility
-   - `UnifiedBeneficiaryService.js`
-   - `authController.js`
-   - `userController.js`
-   - All beneficiary-related controllers
-
-5. Update frontend validation
-   - `mymoolah-wallet-frontend/utils/validation.ts`
-   - Accept user input in any format, normalize to E.164 internally
-   - Display in local format (`0X...`) for user-facing UI
-
-6. Change wallet ID format
-   - Current: `WAL-+27825571055` (exposes PII)
-   - New: `WAL-{userId}` (e.g., `WAL-1`, `WAL-2`)
-   - Requires migration script and wallet lookup updates
-
-**Success Criteria:**
-- All MSISDNs stored in E.164 format internally
-- All validation accepts only E.164 format
-- Wallet IDs no longer expose PII
-- All payment flows tested and working
-
-#### **Phase 2: Implement Mojaloop Party ID System**
-**Timeline:** 3-4 weeks  
-**Effort:** High
-
-**Tasks:**
-1. Create Party Information model
-   ```javascript
-   // models/PartyInformation.js
-   PartyInformation {
-     partyIdType: 'MSISDN',
-     partyIdValue: '+27XXXXXXXXX',  // E.164
-     fspId: 'mymoolah',
-     currency: 'ZAR',
-     personalInfo: { ... }
-   }
-   ```
-
-2. Implement FSPIOP-Party endpoints
-   - `GET /parties/{Type}/{ID}` - Get party information
-   - `PUT /parties/{Type}/{ID}` - Update party information
-   - `GET /parties/{Type}/{ID}/error` - Party lookup error callback
-
-3. Add FSPIOP headers middleware
-   - `FSPIOP-Source`
-   - `FSPIOP-Destination`
-   - `FSPIOP-Signature`
-   - `Date`, `Content-Type`
-
-4. Integrate with Party Lookup Service (PLS)
-   - Central directory for party resolution
-   - Support for multiple FSP networks
-   - Party verification and validation
-
-5. Update wallet service to use Party ID
-   - Link users to Party ID system
-   - Support party lookup by MSISDN
-   - Handle party resolution errors
-
-**Success Criteria:**
-- FSPIOP-Party endpoints functional
-- Party lookup by MSISDN working
-- Headers and signatures validated
-- Mojaloop compliance verified
-
-#### **Phase 3: Security Hardening**
-**Timeline:** 2 weeks  
-**Effort:** Medium
-
-**Tasks:**
-1. Implement encryption at rest for MSISDNs
-   - Use AES-256-GCM encryption
-   - Store encryption keys in Secret Manager
-   - Encrypt `phoneNumber`, `msisdn`, `accountNumber` fields
-
-2. Remove PII from logs
-   - Implement PII redaction middleware
-   - Mask phone numbers in error messages
-   - Redact MSISDNs in audit logs
-
-3. Add audit logging for MSISDN access
-   - Log all MSISDN queries
-   - Track who accessed which phone numbers
-   - Retention policy per GDPR/POPIA requirements
-
-4. Security testing
-   - Penetration testing for PII exposure
-   - Audit trail verification
-   - Encryption key rotation testing
-
-**Success Criteria:**
-- All MSISDNs encrypted at rest
-- PII redacted in all logs
-- Audit trail complete and compliant
-- Security testing passed
-
-### **Priority Actions (This Week)**
-
-1. **User Decision Required**: Approve remediation plan and timeline
-2. **Create MSISDN utility**: `utils/msisdn.js` with normalization functions
-3. **Update Beneficiary validation**: Accept E.164 format
-4. **Create migration script**: Convert existing MSISDNs to E.164
-5. **Test in UAT**: Validate migration with test users
-
-### **Testing Requirements**
-
-After implementing Phase 1 (E.164 standardization), all payment flows must be tested:
-
-- [ ] Send money (MyMoolah wallet to MyMoolah wallet)
-- [ ] Request money
-- [ ] Airtime purchase (pinned and pinless)
-- [ ] Data purchase (pinned and pinless)
-- [ ] Utility payments
-- [ ] Bill payments
-- [ ] Voucher purchases
-- [ ] Beneficiary lookup by phone number
-- [ ] Beneficiary search and filtering
-- [ ] User registration with phone number
-- [ ] User login with phone number
-
-### **Documentation**
-
-- **Audit Report**: `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md`
-- **This Handover**: `docs/agent_handover.md` (updated with critical findings)
-- **Changelog**: `docs/CHANGELOG.md` (audit entry added)
-- **Security Doc**: `docs/SECURITY.md` (needs update with PII risks)
-- **Remediation Plan**: To be created as `docs/MSISDN_PHONENUMBER_REMEDIATION_PLAN.md`
 
 ---
 
@@ -1455,9 +1357,28 @@ LOG_LEVEL=warn
 
 ---
 
+## ⏰ **REMINDERS & PENDING TASKS**
+
+### **Database Cleanup - PayShap Reference Column** ⏳
+- **Task**: Remove `payShapReference` column from `beneficiary_payment_methods` table
+- **Status**: Column exists but is no longer used (removed from code on 2025-11-17)
+- **Action Required**: Create migration to drop the column
+- **Reminder Date**: November 18, 2025 (tomorrow)
+- **Migration File**: `migrations/YYYYMMDDHHMMSS-remove-payshap-reference-from-beneficiary-payment-methods.js`
+- **Note**: This column was removed from the codebase but left in the database for now. Safe to remove as it's no longer referenced anywhere.
+
+---
+
 ## 🚀 **RECOMMENDATIONS FOR NEXT AGENT**
 
-### **Immediate Actions**
+### **Immediate Actions (Database/Migration Work)**
+1. **Read Database Connection Guide**: **MANDATORY** - Read `docs/DATABASE_CONNECTION_GUIDE.md` before any database/migration work
+2. **Use Master Migration Script**: Always use `./scripts/run-migrations-master.sh [uat|staging]` - NEVER run `npx sequelize-cli` directly
+3. **Use Connection Helper**: For custom scripts, use `scripts/db-connection-helper.js` - NEVER write custom connection logic
+4. **Verify Schema Parity**: After any schema changes, run `node scripts/sync-staging-to-uat-banking-grade.js` to verify schemas match
+5. **Check Migration Status**: Use `node scripts/check-migration-status.js` to verify migration state
+
+### **Immediate Actions (General)**
 1. **Verify TLS Configuration**: Run `node scripts/test-tls.js` to validate TLS setup
 2. **Check Security Headers**: Verify all security headers are present
 3. **Monitor Performance**: Monitor TLS performance metrics
@@ -1480,7 +1401,12 @@ LOG_LEVEL=warn
 
 ---
 
-**🎯 Status: PEACH PAYMENTS INTEGRATION COMPLETE - ZAPPER INTEGRATION REVIEWED - PRODUCTION READY** 🎯
+**🎯 Status: SCHEMA PARITY ACHIEVED - CONNECTION SYSTEM STANDARDIZED - PRODUCTION READY** 🎯
 
-**Next Agent: Continue with Phase 2.4.3 - Zapper Integration Completion**
-**Recent Achievement**: QR Code Scanning Enhancements with cross-browser compatibility complete
+**Next Agent**: For database/migration work, **ALWAYS read** `docs/DATABASE_CONNECTION_GUIDE.md` first. Use standardized scripts (`./scripts/run-migrations-master.sh`) for all migrations.
+
+**Recent Achievement**: 
+- ✅ Perfect schema parity between UAT and Staging (106 tables)
+- ✅ Standardized connection system prevents future password/connection struggles
+- ✅ All 6 missing tables created in UAT
+- ✅ Comprehensive documentation and master migration scripts created

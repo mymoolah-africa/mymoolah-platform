@@ -180,24 +180,41 @@ This script:
 ✅ **Solution**: 
 - UAT: Check `.env` has correct `DATABASE_URL` or `DB_PASSWORD`
 - Staging: Verify Secret Manager access: `gcloud auth application-default login`
-- Ensure password is URL-encoded if using `DATABASE_URL`
+- Ensure password is URL-encoded if using `DATABASE_URL` (`@` → `%40`)
+- **Use master migration script** - it handles all password encoding automatically
 
 ### **Error: "proxy not running"**
 ✅ **Solution**: 
 ```bash
 ./scripts/ensure-proxies-running.sh
 ```
+- Script will automatically start both proxies if not running
+- Check logs: `/tmp/uat-proxy-6543.log` or `/tmp/staging-proxy-6544.log`
 
 ### **Error: "connect ETIMEDOUT"**
 ✅ **Solution**: 
-- Check proxy is running on correct port
-- Verify `DATABASE_URL` uses `127.0.0.1:6543` (not direct DB IP)
+- Check proxy is running on correct port (UAT: 6543, Staging: 6544)
+- Verify `DATABASE_URL` uses `127.0.0.1:6543/6544` (not direct DB IP like `34.35.84.201`)
 - Connection helper automatically rewrites URLs to use proxy
+- **Master migration script handles this automatically**
 
 ### **Error: "Error parsing url: undefined"**
 ✅ **Solution**: 
-- Use master migration script (handles this automatically)
-- Or ensure `DATABASE_URL` is set before running Sequelize CLI
+- **ALWAYS use master migration script** (handles this automatically)
+- Script ensures `DATABASE_URL` is properly set before running Sequelize CLI
+- Never run `npx sequelize-cli db:migrate` directly without setting `DATABASE_URL`
+
+### **Error: "type 'public.enum_xxx' does not exist"**
+✅ **Solution**: 
+- Enum types must be created before tables that use them
+- Schema sync scripts handle this automatically (extract enums first)
+- If manually creating tables, create enum types first
+
+### **Migrations marked executed but tables don't exist**
+✅ **Solution**: 
+- Run: `node scripts/sync-missing-tables-from-staging-to-uat.js`
+- Script will extract schema from Staging and create missing tables in UAT
+- Handles enum types automatically
 
 ---
 

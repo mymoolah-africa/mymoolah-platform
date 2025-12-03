@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: December 2, 2025  
-**Version**: 2.4.19 - MSISDN Architecture Audit  
-**Status**: ⚠️ **CRITICAL ARCHITECTURE ISSUE IDENTIFIED** 🔴 **PRODUCTION BLOCKER** ✅ **UAT & STAGING OPERATIONAL**
+**Last Updated**: December 3, 2025  
+**Version**: 2.4.20 - Schema Synchronization & Connection Standardization  
+**Status**: ✅ **SCHEMA PARITY ACHIEVED** ✅ **CONNECTION SYSTEM STANDARDIZED** ✅ **UAT & STAGING OPERATIONAL**
 
 ---
 
@@ -13,10 +13,12 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 ### Codespaces Development (current)
 - Frontend: runs on port 3000 (forwarded URL)
 - Backend: auto-starts on open via postStart; manual: `npm run start:cs-ip`
-- DB: connects to Cloud SQL via Cloud SQL Auth Proxy (port 6543)
+- DB: connects to Cloud SQL via Cloud SQL Auth Proxy (port 6543 for UAT, 6544 for Staging)
 - CORS: Updated regex pattern to match Codespaces URLs (`*.app.github.dev` and `*.github.dev`), debug logging enabled
 - Redis: optional; when not running, logs are suppressed and in‑memory cache is used
 - **Admin Scripts**: Password change (`scripts/change-user-password.js`) and KYC status check (`scripts/check-kyc-status.js`) utilities available
+- **Database Migrations**: Use standardized master script: `./scripts/run-migrations-master.sh [uat|staging]` - **NEVER run `npx sequelize-cli` directly**
+- **Database Connections**: **CRITICAL** - Read `docs/DATABASE_CONNECTION_GUIDE.md` before any database/migration work
 
 Quick start in Codespaces:
 ```
@@ -511,12 +513,15 @@ npm run dev
 ## 📚 **DOCUMENTATION**
 
 ### **Complete Documentation Coverage**
+- **Database Connection Guide**: **MANDATORY** reading for database/migration work (`docs/DATABASE_CONNECTION_GUIDE.md`)
+- **Quick Reference Database**: One-page cheat sheet for database operations (`docs/QUICK_REFERENCE_DATABASE.md`)
 - **API Documentation**: Comprehensive endpoint documentation
 - **Development Guide**: Complete development setup and guidelines
 - **Architecture Documentation**: System architecture and design
 - **Security Documentation**: Security features and compliance
 - **Performance Documentation**: Performance optimization and monitoring
 - **Testing Documentation**: Testing strategy and guidelines
+- **Schema Sync Guide**: Banking-grade schema synchronization procedures (`docs/BANKING_GRADE_STAGING_SYNC_ARCHITECTURE.md`)
 
 ### **Documentation Quality**
 - **Technical Documentation**: 100% coverage with detailed examples
