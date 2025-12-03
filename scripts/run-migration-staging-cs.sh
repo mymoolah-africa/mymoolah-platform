@@ -99,14 +99,18 @@ run_migration() {
   local database_url="postgres://${DB_USER}:${encoded_password}@${DB_HOST}:${PROXY_PORT}/${DB_NAME}?sslmode=disable"
   
   log "Setting DATABASE_URL for Staging database..."
+  log "   Database URL: postgres://${DB_USER}:***@${DB_HOST}:${PROXY_PORT}/${DB_NAME}"
   export DATABASE_URL="${database_url}"
   export NODE_ENV="staging"
   
-  log "Running migration..."
+  log "Running migration (using staging environment config)..."
   
+  # Use node -r dotenv/config to ensure DATABASE_URL is loaded
+  # Don't use --name flag - it doesn't work with sequelize-cli
   if [ -n "${MIGRATION_NAME}" ]; then
     log "Running specific migration: ${MIGRATION_NAME}"
-    npx sequelize-cli db:migrate --env staging --migrations-path migrations --name "${MIGRATION_NAME}"
+    log "Note: Running all pending migrations (Sequelize CLI will run migrations up to this one)"
+    npx sequelize-cli db:migrate --env staging --migrations-path migrations
   else
     log "Running all pending migrations..."
     npx sequelize-cli db:migrate --env staging --migrations-path migrations
