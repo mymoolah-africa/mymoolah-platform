@@ -27,7 +27,7 @@ warning() {
   echo "⚠️  WARNING: $*" >&2
 }
 
-# Load .env file
+# Load .env file (safely handle comments and invalid lines)
 load_env() {
   local env_file="${1:-.env}"
   local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -36,10 +36,30 @@ load_env() {
   
   if [ -f "${env_path}" ]; then
     log "Loading environment variables from ${env_path}..."
-    # Export variables from .env (handle comments and empty lines)
+    
+    # Read .env file line by line, skipping comments and invalid lines
     set -a
-    source "${env_path}"
+    while IFS= read -r line || [ -n "$line" ]; do
+      # Skip empty lines
+      [ -z "$line" ] && continue
+      
+      # Skip lines starting with # (comments)
+      [[ "$line" =~ ^[[:space:]]*# ]] && continue
+      
+      # Skip lines that don't contain = (not valid env vars)
+      [[ ! "$line" =~ = ]] && continue
+      
+      # Skip lines starting with = (invalid format)
+      [[ "$line" =~ ^[[:space:]]*= ]] && continue
+      
+      # Export the variable (this will safely handle KEY=VALUE format)
+      # Only export if it looks like a valid env var assignment
+      if [[ "$line" =~ ^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*= ]]; then
+        eval "export $line" 2>/dev/null || true
+      fi
+    done < "${env_path}"
     set +a
+    
     success "Environment variables loaded from ${env_path}"
     
     # Verify DATABASE_URL is set
