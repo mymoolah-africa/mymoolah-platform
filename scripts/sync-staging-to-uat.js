@@ -34,10 +34,13 @@ const path = require('path');
 // Note: UAT should NEVER use Secret Manager - only Staging/Production use it
 function getPasswordFromSecretManager(secretName) {
   try {
-    return execSync(
+    const password = execSync(
       `gcloud secrets versions access latest --secret="${secretName}" --project=mymoolah-db`,
       { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
     ).trim();
+    
+    // Remove any trailing whitespace/newlines that might cause auth issues
+    return password.replace(/\s+$/, '');
   } catch (error) {
     throw new Error(`Failed to get password from Secret Manager: ${secretName} - ${error.message}`);
   }

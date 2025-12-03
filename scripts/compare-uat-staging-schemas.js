@@ -325,9 +325,13 @@ async function main() {
   console.log('✅ Passwords retrieved\n');
 
   // Set up database configurations
+  // In Codespaces, use ports 6543/6544; in local, use 5433/5434
+  const uatPort = parseInt(process.env.UAT_PROXY_PORT || '6543', 10);
+  const stagingPort = parseInt(process.env.STAGING_PROXY_PORT || '6544', 10);
+  
   const uatConfig = {
     host: '127.0.0.1',
-    port: parseInt(process.env.UAT_PROXY_PORT || '5433', 10),
+    port: uatPort,
     database: 'mymoolah',
     user: 'mymoolah_app',
     password: uatPassword
@@ -335,11 +339,13 @@ async function main() {
 
   const stagingConfig = {
     host: '127.0.0.1',
-    port: parseInt(process.env.STAGING_PROXY_PORT || '5434', 10),
+    port: stagingPort,
     database: 'mymoolah_staging',
     user: 'mymoolah_app',
     password: stagingPassword
   };
+  
+  console.log(`🔍 Using proxy ports: UAT=${uatPort}, Staging=${stagingPort}`);
 
   const uatClient = new Client(uatConfig);
   const stagingClient = new Client(stagingConfig);
