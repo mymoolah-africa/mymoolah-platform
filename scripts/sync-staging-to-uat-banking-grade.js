@@ -771,7 +771,7 @@ async function main() {
       
       if (!dryRun) {
         // Run migrations with ACID transaction - use IAM auth for Staging (no password)
-        const stagingUrl = `postgres://${stagingConfig.user}@${stagingConfig.host}:${stagingConfig.port}/${stagingConfig.database}?sslmode=disable`;
+        const stagingUrl = stagingConnectionString;
         
         let migrationsActuallyExecuted = 0;
         await executeWithTransaction(stagingClient, async () => {
