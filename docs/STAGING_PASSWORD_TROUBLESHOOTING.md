@@ -43,14 +43,24 @@ The Cloud Console UI is more reliable than CLI for password updates. Follow thes
 After resetting in Cloud Console, update Secret Manager:
 
 ```bash
-# Generate a new secure password (if you didn't in Console)
-NEW_PASSWORD="your-new-password-here"
-
-# Update Secret Manager
+# Option 1: Set password as variable (RECOMMENDED - safer)
+NEW_PASSWORD="paste-your-password-here-from-cloud-console"
 echo -n "$NEW_PASSWORD" | gcloud secrets versions add db-mmtp-pg-staging-password \
   --project=mymoolah-db \
   --data-file=-
+
+# Option 2: Directly paste password (if no special characters)
+# Replace "your-actual-password" with the password from Cloud Console
+echo -n "your-actual-password" | gcloud secrets versions add db-mmtp-pg-staging-password \
+  --project=mymoolah-db \
+  --data-file=-
 ```
+
+**Important Notes:**
+- ✅ **Replace the placeholder** with your actual password from Cloud Console
+- ✅ **No quotes needed** around the actual password (the quotes in the example are just to show where it goes)
+- ✅ **Use Option 1** (variable) if your password has special characters like `$`, `` ` ``, `\`, etc.
+- ⚠️ **Be careful** - the password will be visible in your terminal history (that's why Option 1 with variable is safer)
 
 ### Step 4: Verify the Update
 
