@@ -79,8 +79,7 @@ async function getTables(client) {
         WHEN c.relkind = 'r' THEN 'regular'
         ELSE 'unknown'
       END as table_type,
-      pg_size_pretty(pg_total_relation_size(c.oid)) as size,
-      (SELECT COUNT(*) FROM pg_stat_user_tables WHERE relid = c.oid) as row_count_estimate
+      pg_size_pretty(pg_total_relation_size(c.oid)) as size
     FROM pg_class c
     JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public' 
