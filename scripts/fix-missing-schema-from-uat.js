@@ -233,45 +233,97 @@ async function main() {
       fs.mkdirSync(tempDir, { recursive: true });
     }
 
-    let appliedCount = 0;
-    let failedCount = 0;
-
+    // Pre-extract all schemas to detect dependencies and sort tables
+    console.log('   📋 Analyzing table dependencies...\n');
+    const tableSchemas = {};
+    const tableDependencies = {}; // tableName -> parentTableName (if partition)
+    
     for (const tableName of missingTables) {
-      console.log(`   Processing: ${tableName}...`);
-      
       try {
-        // Extract schema using pg_dump
         const schemaFile = path.join(tempDir, `${tableName}.sql`);
-        
         execSync(
           `pg_dump -h ${uatConfig.host} -p ${uatConfig.port} -U ${uatConfig.user} -d ${uatConfig.database} --schema-only --table=${tableName} > "${schemaFile}" 2>/dev/null`,
           { env, stdio: 'pipe' }
         );
-
-        if (!fs.existsSync(schemaFile) || fs.readFileSync(schemaFile, 'utf8').trim().length === 0) {
-          console.log(`   ⚠️  Could not extract schema for ${tableName}`);
-          failedCount++;
-          continue;
-        }
-
-        // Read and clean the schema file
-        let schema = fs.readFileSync(schemaFile, 'utf8');
         
-        // Remove comments and empty lines at start
-        schema = schema.split('\n').filter(line => {
-          const trimmed = line.trim();
-          return trimmed && !trimmed.startsWith('--') && trimmed !== '';
-        }).join('\n');
-
-        // Extract just the CREATE TABLE section
-        const createTableMatch = schema.match(/CREATE TABLE[^;]+;/s);
-        if (!createTableMatch) {
-          console.log(`   ⚠️  No CREATE TABLE found for ${tableName}`);
-          failedCount++;
-          continue;
+        if (fs.existsSync(schemaFile) && fs.readFileSync(schemaFile, 'utf8').trim().length > 0) {
+          let schema = fs.readFileSync(schemaFile, 'utf8');
+          schema = schema.split('\n').filter(line => {
+            const trimmed = line.trim();
+            return trimmed && !trimmed.startsWith('--') && trimmed !== '';
+          }).join('\n');
+          
+          const createTableMatch = schema.match(/CREATE TABLE[^;]+;/s);
+          if (createTableMatch) {
+            tableSchemas[tableName] = schema;
+            
+            // Check if this is a partition table
+            const partitionMatch = createTableMatch[0].match(/PARTITION OF\s+([^\s(]+)/i);
+            if (partitionMatch) {
+              const parentTable = partitionMatch[1].replace(/["']/g, '');
+              tableDependencies[tableName] = parentTable;
+            }
+          }
         }
+      } catch (e) {
+        // Will handle in main loop
+      }
+    }
+    
+    // Sort tables: parent partitioned tables first, then partitions
+    const sortedTables = [...missingTables].sort((a, b) => {
+      const aIsPartition = tableDependencies[a];
+      const bIsPartition = tableDependencies[b];
+      
+      // If 'a' is a partition of 'b', 'b' comes first
+      if (aIsPartition === b) return 1;
+      if (bIsPartition === a) return -1;
+      
+      // Partitions come after their parents
+      if (aIsPartition && !bIsPartition) return 1;
+      if (!aIsPartition && bIsPartition) return -1;
+      
+      return 0;
+    });
 
-        let createTableSQL = createTableMatch[0];
+    let appliedCount = 0;
+    let failedCount = 0;
+
+    for (const tableName of sortedTables) {
+      console.log(`   Processing: ${tableName}...`);
+      
+      // Check if we already extracted this schema
+      const schema = tableSchemas[tableName];
+      if (!schema) {
+        console.log(`   ⚠️  Could not extract schema for ${tableName}`);
+        failedCount++;
+        continue;
+      }
+
+      // Extract just the CREATE TABLE section
+      const createTableMatch = schema.match(/CREATE TABLE[^;]+;/s);
+      if (!createTableMatch) {
+        console.log(`   ⚠️  No CREATE TABLE found for ${tableName}`);
+        failedCount++;
+        continue;
+      }
+
+      let createTableSQL = createTableMatch[0];
+      
+      // If this is a partition, check parent exists
+      if (tableDependencies[tableName]) {
+        const parentTable = tableDependencies[tableName];
+        const parentExists = await tableExists(stagingClient, parentTable);
+        if (!parentExists) {
+          console.log(`   ⚠️  Parent table ${parentTable} missing - creating parent first...`);
+          // Parent should be in sortedTables before this partition, but double-check
+          if (sortedTables.indexOf(parentTable) > sortedTables.indexOf(tableName)) {
+            console.log(`   ❌ Failed: ${tableName} - Parent ${parentTable} not yet created (dependency order issue)`);
+            failedCount++;
+            continue;
+          }
+        }
+      }
         
         // Check if this is a partition table - extract parent name
         const partitionMatch = createTableSQL.match(/PARTITION OF\s+([^\s(]+)/i);
@@ -329,8 +381,11 @@ async function main() {
           }
         }
 
-        // Clean up temp file
-        fs.unlinkSync(schemaFile);
+        // Clean up temp file (if it exists)
+        const schemaFile = path.join(tempDir, `${tableName}.sql`);
+        try {
+          if (fs.existsSync(schemaFile)) fs.unlinkSync(schemaFile);
+        } catch {}
 
       } catch (error) {
         console.log(`   ❌ Error: ${tableName} - ${error.message.split('\n')[0]}`);
