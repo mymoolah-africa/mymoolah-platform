@@ -52,8 +52,14 @@ echo "   Instance: mmtp-pg-staging"
 echo "   Port: 6544"
 echo ""
 
-# Start the correct proxy
-nohup cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-staging --port 6544 --auto-iam-authn > /tmp/staging-proxy-6544.log 2>&1 &
+# Start the correct proxy (use full path like the working proxy)
+PROXY_BINARY="/workspaces/mymoolah-platform/cloud-sql-proxy"
+if [ ! -f "$PROXY_BINARY" ]; then
+  # Fallback to PATH
+  PROXY_BINARY="cloud-sql-proxy"
+fi
+
+nohup "$PROXY_BINARY" mymoolah-db:africa-south1:mmtp-pg-staging --auto-iam-authn --port 6544 --structured-logs > /tmp/staging-proxy-6544.log 2>&1 &
 
 PROXY_PID=$!
 sleep 3
