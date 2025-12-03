@@ -92,19 +92,16 @@ test_connection() {
 
 # Run migration
 run_migration() {
-  local password=$(get_password)
-  local encoded_password=$(url_encode "${password}")
-  local database_url="postgres://${DB_USER}:${encoded_password}@${DB_HOST}:${PROXY_PORT}/${DB_NAME}?sslmode=disable"
+  # With IAM authentication (--auto-iam-authn), no password needed in connection string
+  # Proxy handles authentication automatically
+  local database_url="postgres://${DB_USER}@${DB_HOST}:${PROXY_PORT}/${DB_NAME}?sslmode=disable"
   
-  log "Setting DATABASE_URL for Staging database..."
-  log "   Database URL: postgres://${DB_USER}:***@${DB_HOST}:${PROXY_PORT}/${DB_NAME}"
+  log "Setting DATABASE_URL for Staging database (IAM authentication)..."
+  log "   Database URL: postgres://${DB_USER}@${DB_HOST}:${PROXY_PORT}/${DB_NAME}"
+  log "   Note: Using IAM authentication (no password required)"
   export DATABASE_URL="${database_url}"
   export NODE_ENV="staging"
   
-  log "Running migration (using staging environment config)..."
-  
-  # Don't use --env flag - just use DATABASE_URL directly (works with any environment)
-  # Sequelize CLI will read DATABASE_URL from environment
   log "Running migrations (DATABASE_URL is set, will be used automatically)..."
   npx sequelize-cli db:migrate --migrations-path migrations
 }
