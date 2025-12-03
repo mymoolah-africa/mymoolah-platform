@@ -1,12 +1,16 @@
 # MyMoolah Agent Rules - Cursor 2.0
 
+**IMPORTANT**: This file must always be kept in sync with Cursor Settings rules. Any rules added to Cursor Settings must also be added to this .md file immediately.
+
+---
+
 ## Rule 1: Git Workflow (CRITICAL)
 - **OFFICIAL WORKFLOW (CONFIRMED)**:
   - **Local Development**: Work on local machine → Make changes → Test
   - **Commit Locally**: `git add . && git commit -m "[description]"` (AI agent does this automatically)
-  - **Push to GitHub**: `git push origin main` (User does this - AI agent does NOT push)
-  - **Pull in Codespaces**: `git pull origin main` (After pushing, pull in Codespaces/other environments)
-  - **GitHub is source of truth**: All environments sync from GitHub after local push
+  - **Push to GitHub**: `git push origin main` (AI agent pushes automatically after commits)
+  - **Pull in Codespaces**: `git pull origin main` (User pulls in Codespaces/other environments after agent pushes)
+  - **GitHub is source of truth**: All environments sync from GitHub after agent pushes
 
 - **Before work (SAFE PULL PROCEDURE - CHECK STATUS FIRST)**:
   1. **ALWAYS check git status first**: `git status` to see current state
@@ -59,8 +63,9 @@
   - **Proactively create it** when you sense the work is wrapping up
   1. **Create and fill session log**: Create a session log file in `docs/session_logs/` following the template at `docs/session_logs/TEMPLATE.md`. Fill it in completely with: session summary, tasks completed, key decisions, files modified, issues encountered, next steps, and important context for next agent. Use format: `YYYY-MM-DD_HHMM_[description].md` (e.g., `2025-11-15_0936_ocr-kyc-simplification.md`)
   2. **Update agent handover**: Update `docs/agent_handover.md` with: task summary, files changed, API/data model changes, security notes, tests added, restart requirements, next steps, and any important context for the next agent
-  3. **Stage and commit both files**: Run `git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/agent_handover.md` then `git commit -m "docs: session log and handover update - [brief description]"` (do NOT push - user will push)
-  4. **Inform user**: Tell user that session log and handover are created and committed, ready for them to push to git
+  3. **Stage and commit both files**: Run `git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/agent_handover.md` then `git commit -m "docs: session log and handover update - [brief description]"`
+  4. **Push to GitHub**: Push commits to GitHub (AI agent pushes automatically)
+  5. **Inform user**: Tell user that changes are pushed and ready to pull in Codespaces
 - **Session continuity**: Treat each new chat as a handover from a previous agent. Always check what was done before starting new work.
 - **Session logging**: Session logs provide detailed chat history and context. Agent handover provides official project status. Both are required for complete continuity.
 
@@ -105,6 +110,11 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 - Address user as "André" (first name only). Patient, step-by-step, non-technical explanations. Small, rollback-safe increments with explicit next steps.
 - User preferences: Real transactions only (no dummy data). Simple balance lookups use caching/direct queries, not AI. AI only for deeper research. Notify before backend changes. Don't change working functionality when fixing another issue.
 - Get explicit approval before destructive actions. User prefers to review and run changes themselves. Do not start/stop user servers (only indicate restart requirements).
+
+## Rule 11: Agent Selection (When in "Auto" Model)
+- **General Tasks**: Use Sonet 4.5 Thinking and Gemini 3 Pro for all general tasks
+- **Complex Tasks & Problem Solving**: Use Opus 4.5 Thinking and Grok 4 Thinking for more complex tasks and problem solving
+- **Plan Mode**: Use GPT-5 High in Plan mode
 
 ## Quick Pre-Work Checklist (NEW SESSION - DO FIRST)
 - **STEP 0 - MANDATORY RULES CONFIRMATION**: 
@@ -161,5 +171,5 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 - **User action**: User pulls in Codespaces: `git pull origin main` (in Codespaces terminal)
 
 ## CRITICAL REMINDERS
-GitHub is source of truth. Documentation is mandatory. Session logging is required for continuity and MUST be done automatically by AI agent when work is complete (create, fill in, commit, push) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. AI agent commits and pushes session log and handover automatically - user pulls in Codespaces when ready.
+GitHub is source of truth. Documentation is mandatory. Session logging is required for continuity and MUST be done automatically by AI agent when work is complete (create, fill in, commit, push) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. AI agent commits and pushes automatically - user pulls in Codespaces when ready. **IMPORTANT**: Any rules added to Cursor Settings must immediately be added to this .md file to keep them in sync.
 
