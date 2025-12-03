@@ -1941,8 +1941,50 @@ export function SendMoneyPage() {
                 <Input
                   placeholder="0.00"
                   value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  type="number"
+                  onChange={(e) => {
+                    // Banking-grade: Preserve exact user input - NO auto-formatting
+                    let inputValue = e.target.value;
+                    
+                    // Allow empty string, numbers, and single decimal point only
+                    // Remove any currency symbols or spaces that user might type
+                    inputValue = inputValue.replace(/[^\d.]/g, '');
+                    
+                    // Ensure only one decimal point
+                    const parts = inputValue.split('.');
+                    if (parts.length > 2) {
+                      inputValue = parts[0] + '.' + parts.slice(1).join('');
+                    }
+                    
+                    // Limit to 2 decimal places (preserve user intent)
+                    if (parts.length === 2 && parts[1].length > 2) {
+                      inputValue = parts[0] + '.' + parts[1].substring(0, 2);
+                    }
+                    
+                    // Set exact value - no automatic modification
+                    setPaymentAmount(inputValue);
+                  }}
+                  type="text"
+                  inputMode="decimal"
+                  onKeyDown={(e) => {
+                    // Prevent browser auto-formatting quirks
+                    if (['e', 'E', '+', '-'].includes(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
+                  onWheel={(e) => {
+                    // Prevent scroll-to-change number input values
+                    e.currentTarget.blur();
+                  }}
+                  onBlur={(e) => {
+                    // Optional: Format on blur only (not during typing)
+                    const value = e.target.value.trim();
+                    if (value) {
+                      const num = parseFloat(value);
+                      if (!isNaN(num) && num > 0 && value.includes('.')) {
+                        setPaymentAmount(num.toFixed(2));
+                      }
+                    }
+                  }}
                   style={{
                     fontFamily: 'Montserrat, sans-serif',
                     fontSize: 'var(--mobile-font-base)',
@@ -2217,8 +2259,50 @@ export function SendMoneyPage() {
               <Input
                 placeholder="0.00"
                 value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                type="number"
+                onChange={(e) => {
+                  // Banking-grade: Preserve exact user input - NO auto-formatting
+                  let inputValue = e.target.value;
+                  
+                  // Allow empty string, numbers, and single decimal point only
+                  // Remove any currency symbols or spaces that user might type
+                  inputValue = inputValue.replace(/[^\d.]/g, '');
+                  
+                  // Ensure only one decimal point
+                  const parts = inputValue.split('.');
+                  if (parts.length > 2) {
+                    inputValue = parts[0] + '.' + parts.slice(1).join('');
+                  }
+                  
+                  // Limit to 2 decimal places (preserve user intent)
+                  if (parts.length === 2 && parts[1].length > 2) {
+                    inputValue = parts[0] + '.' + parts[1].substring(0, 2);
+                  }
+                  
+                  // Set exact value - no automatic modification
+                  setPaymentAmount(inputValue);
+                }}
+                type="text"
+                inputMode="decimal"
+                onKeyDown={(e) => {
+                  // Prevent browser auto-formatting quirks
+                  if (['e', 'E', '+', '-'].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onWheel={(e) => {
+                  // Prevent scroll-to-change number input values
+                  e.currentTarget.blur();
+                }}
+                onBlur={(e) => {
+                  // Optional: Format on blur only (not during typing)
+                  const value = e.target.value.trim();
+                  if (value) {
+                    const num = parseFloat(value);
+                    if (!isNaN(num) && num > 0 && value.includes('.')) {
+                      setPaymentAmount(num.toFixed(2));
+                    }
+                  }
+                }}
                 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-base)', height: 'var(--mobile-touch-target)' }}
               />
             </div>

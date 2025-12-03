@@ -1769,7 +1769,7 @@ export function VouchersPage() {
                       Amount (ZAR)
                     </Label>
                     <Input
-                      type="number"
+                      type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
                       value={sellAmount}
@@ -1780,14 +1780,16 @@ export function VouchersPage() {
                         if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
                       }}
                       onChange={(e) => {
-                        // normalize to digits only; keep as string
+                        // Banking-grade: Preserve exact user input - normalize to digits only
                         const v = e.target.value.replace(/[^0-9]/g, "");
-                        setSellAmount(v);
+                        setSellAmount(v); // Store as string - no auto-modification
                       }}
                       onBlur={() => {
+                        // Banking-grade: Only validate on blur - show error instead of auto-correcting
+                        // Remove auto-modification - let validation handle errors
                         if (!sellAmount) return;
-                        const v = Math.min(4000, Math.max(5, Number(sellAmount)));
-                        setSellAmount(String(v));
+                        // Don't auto-modify - validation will show error if out of range
+                        // User should see their exact input and error message if invalid
                       }}
                       style={{
                         height: "44px",

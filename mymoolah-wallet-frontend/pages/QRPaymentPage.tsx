@@ -2030,36 +2030,63 @@ export function QRPaymentPage() {
                     Own Amount
                   </Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={tipAmount}
                     onChange={(e) => {
-                      const value = e.target.value;
-                      const baseAmount = getBaseAmount();
-                      const maxTip = baseAmount; // 100% of base amount
+                      // Banking-grade: Preserve exact user input - NO auto-formatting or rounding
+                      let inputValue = e.target.value;
                       
-                      if (value === '') {
-                        setTipAmount('');
-                        setSelectedTipPercent(null); // Clear percentage selection
-                      } else {
+                      // Allow empty string, numbers, and single decimal point only
+                      // Remove any currency symbols or spaces that user might type
+                      inputValue = inputValue.replace(/[^\d.]/g, '');
+                      
+                      // Ensure only one decimal point
+                      const parts = inputValue.split('.');
+                      if (parts.length > 2) {
+                        inputValue = parts[0] + '.' + parts.slice(1).join('');
+                      }
+                      
+                      // Limit to 2 decimal places (preserve user intent)
+                      if (parts.length === 2 && parts[1].length > 2) {
+                        inputValue = parts[0] + '.' + parts[1].substring(0, 2);
+                      }
+                      
+                      // Set exact value - no automatic modification
+                      setTipAmount(inputValue);
+                      setSelectedTipPercent(null); // Clear percentage selection when Own Amount is used
+                    }}
+                    onBlur={(e) => {
+                      // Only validate on blur, show error if exceeds max instead of auto-correcting
+                      const value = e.target.value.trim();
+                      if (value) {
                         const tipValue = parseFloat(value);
                         if (!isNaN(tipValue) && tipValue >= 0) {
-                          // Validate: limit to 100% of base amount
-                          if (tipValue > maxTip) {
-                            setTipAmount(maxTip.toFixed(2));
-                          } else {
-                            setTipAmount(value);
+                          const baseAmount = getBaseAmount();
+                          const maxTip = baseAmount;
+                          
+                          // Optional: Format to 2 decimals on blur for display consistency
+                          // But don't auto-correct if exceeds max - show error instead
+                          if (value.includes('.')) {
+                            setTipAmount(tipValue.toFixed(2));
                           }
-                          setSelectedTipPercent(null); // Clear percentage selection when Own Amount is used
                         }
                       }
                     }}
                     onFocus={() => {
                       setSelectedTipPercent(null); // Clear percentage selection when Own Amount is focused
                     }}
+                    onKeyDown={(e) => {
+                      // Prevent browser auto-formatting quirks
+                      if (['e', 'E', '+', '-'].includes(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                    onWheel={(e) => {
+                      // Prevent scroll-to-change number input values
+                      e.currentTarget.blur();
+                    }}
                     placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    max={getBaseAmount()}
                     style={{
                       width: '200px',
                       fontFamily: 'Montserrat, sans-serif',

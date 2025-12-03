@@ -645,9 +645,20 @@ export function FlashEeziCashOverlay() {
               <Input
                 id="amount"
                 type="text"
+                inputMode="decimal"
                 placeholder="50"
                 value={amount}
                 onChange={(e) => handleAmountChange(e.target.value)}
+                onKeyDown={(e) => {
+                  // Banking-grade: Prevent browser auto-formatting quirks
+                  if (['e', 'E', '+', '-'].includes(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onWheel={(e) => {
+                  // Banking-grade: Prevent scroll-to-change number input values
+                  e.currentTarget.blur();
+                }}
                 style={{
                   paddingLeft: '28px',
                   fontFamily: 'Montserrat, sans-serif',

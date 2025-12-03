@@ -194,6 +194,16 @@ export function AmountInput({
           onChange={handleInputChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          onKeyDown={(e) => {
+            // Banking-grade: Prevent browser auto-formatting quirks
+            if (['e', 'E', '+', '-'].includes(e.key)) {
+              e.preventDefault();
+            }
+          }}
+          onWheel={(e) => {
+            // Banking-grade: Prevent scroll-to-change number input values
+            e.currentTarget.blur();
+          }}
           disabled={disabled}
           style={{
             paddingLeft: '32px',
