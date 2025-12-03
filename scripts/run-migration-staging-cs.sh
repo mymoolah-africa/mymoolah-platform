@@ -105,16 +105,10 @@ run_migration() {
   
   log "Running migration (using staging environment config)..."
   
-  # Use node -r dotenv/config to ensure DATABASE_URL is loaded
-  # Don't use --name flag - it doesn't work with sequelize-cli
-  if [ -n "${MIGRATION_NAME}" ]; then
-    log "Running specific migration: ${MIGRATION_NAME}"
-    log "Note: Running all pending migrations (Sequelize CLI will run migrations up to this one)"
-    npx sequelize-cli db:migrate --env staging --migrations-path migrations
-  else
-    log "Running all pending migrations..."
-    npx sequelize-cli db:migrate --env staging --migrations-path migrations
-  fi
+  # Don't use --env flag - just use DATABASE_URL directly (works with any environment)
+  # Sequelize CLI will read DATABASE_URL from environment
+  log "Running migrations (DATABASE_URL is set, will be used automatically)..."
+  npx sequelize-cli db:migrate --migrations-path migrations
 }
 
 # Main execution
