@@ -90,7 +90,31 @@ main() {
   
   check_proxy
   
-  log "Using DATABASE_URL from .env file"
+  # Ensure DATABASE_URL uses proxy (127.0.0.1:6543) not direct connection
+  # Replace any host:port with 127.0.0.1:6543 to force proxy usage
+  if [[ ! "${DATABASE_URL}" =~ @127\.0\.0\.1:6543/ ]]; then
+    log "Rewriting DATABASE_URL to use proxy (127.0.0.1:6543) instead of direct connection"
+    # Extract user, password, database, and params from existing URL
+    # Format: postgres://user:password@host:port/database?params
+    if [[ "${DATABASE_URL}" =~ postgres://([^:]+):([^@]+)@([^/]+)/([^?]+)(\?.*)? ]]; then
+      local user="${BASH_REMATCH[1]}"
+      local password="${BASH_REMATCH[2]}"
+      local database="${BASH_REMATCH[4]}"
+      local params="${BASH_REMATCH[5]:-?sslmode=disable}"
+      
+      # Reconstruct URL with proxy host:port
+      export DATABASE_URL="postgres://${user}:${password}@127.0.0.1:6543/${database}${params}"
+      log "Updated DATABASE_URL to use proxy"
+    else
+      error "Could not parse DATABASE_URL format"
+      error "Expected format: postgres://user:password@host:port/database?params"
+      exit 1
+    fi
+  else
+    log "DATABASE_URL already points to proxy (127.0.0.1:6543)"
+  fi
+  
+  log "Using DATABASE_URL: postgres://${DATABASE_URL#postgres://}"
   export NODE_ENV="development"
   
   log "Running migrations..."
