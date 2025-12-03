@@ -668,18 +668,19 @@ async function main() {
     ssl: false
   };
 
-  // For IAM authentication, use connection string format (omits password)
-  // This explicitly tells pg not to use password authentication
-  const stagingConnectionString = `postgres://mymoolah_app@127.0.0.1:${stagingProxyPort}/mymoolah_staging?sslmode=disable`;
+  // Staging config - IAM authentication (NO password field)
+  const stagingConfig = {
+    host: '127.0.0.1',
+    port: stagingProxyPort,
+    database: 'mymoolah_staging',
+    user: 'mymoolah_app',
+    // NOTE: No password field - Staging uses IAM auth via --auto-iam-authn
+    ssl: false
+  };
 
   // Create connection pools (high-performance)
   const uatPool = createConnectionPool(uatConfig, 'uat');
-  // For staging, use connection string for IAM auth (no password field)
-  const stagingPool = new Pool({
-    connectionString: stagingConnectionString,
-    ...CONFIG.POOL_CONFIG,
-    application_name: 'mymoolah-sync-staging'
-  });
+  const stagingPool = createConnectionPool(stagingConfig, 'staging');
 
   // Create audit logger
   const stagingClient = await stagingPool.connect();
@@ -771,7 +772,7 @@ async function main() {
       
       if (!dryRun) {
         // Run migrations with ACID transaction - use IAM auth for Staging (no password)
-        const stagingUrl = stagingConnectionString;
+        const stagingUrl = `postgres://${stagingConfig.user}@${stagingConfig.host}:${stagingConfig.port}/${stagingConfig.database}?sslmode=disable`;
         
         let migrationsActuallyExecuted = 0;
         await executeWithTransaction(stagingClient, async () => {
