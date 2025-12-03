@@ -151,25 +151,36 @@ function isPortInUse(port) {
  */
 async function ensureProxyRunning(port, connectionString, name) {
   if (isPortInUse(port)) {
-    const pid = execSync(`lsof -ti:${port}`, { encoding: 'utf8' }).trim();
-    console.log(`✅ ${name} proxy already running on port ${port} (PID: ${pid})`);
-    return true;
+    try {
+      const pid = execSync(`lsof -ti:${port}`, { encoding: 'utf8' }).trim();
+      console.log(`✅ ${name} proxy already running on port ${port} (PID: ${pid})`);
+      return true;
+    } catch {
+      // Port might be in use by something else, continue to check
+    }
   }
 
   console.log(`🚀 Starting ${name} proxy on port ${port}...`);
   
-  // Check if cloud-sql-proxy is available
+  // Find cloud-sql-proxy executable
+  let proxyPath = null;
+  
+  // Try 'which' first
   try {
-    execSync('which cloud-sql-proxy', { stdio: 'ignore' });
+    const whichResult = execSync('which cloud-sql-proxy', { encoding: 'utf8' }).trim();
+    if (whichResult) {
+      proxyPath = whichResult;
+    }
   } catch {
-    // Try common locations
-    const proxyPaths = [
+    // Try common locations (Codespaces usually has it in workspace root)
+    const possiblePaths = [
       './cloud-sql-proxy',
+      '/workspaces/mymoolah-platform/cloud-sql-proxy',
       '/usr/local/bin/cloud-sql-proxy',
       '/usr/bin/cloud-sql-proxy'
     ];
-    let proxyPath = null;
-    for (const path of proxyPaths) {
+    
+    for (const path of possiblePaths) {
       try {
         execSync(`test -x "${path}"`, { stdio: 'ignore' });
         proxyPath = path;
@@ -178,17 +189,22 @@ async function ensureProxyRunning(port, connectionString, name) {
         continue;
       }
     }
-    if (!proxyPath) {
-      throw new Error(`cloud-sql-proxy not found. Install it or ensure it's in PATH.`);
-    }
+  }
+  
+  if (!proxyPath) {
+    console.log(`⚠️  cloud-sql-proxy not found. Please start ${name} proxy manually:`);
+    console.log(`   ${proxyPath || 'cloud-sql-proxy'} ${connectionString} --auto-iam-authn --port ${port}`);
+    return false;
   }
 
-  // Start proxy in background
+  // Start proxy in background using nohup (like the shell scripts)
   const logFile = `/tmp/${name.toLowerCase().replace(/\s+/g, '-')}-proxy-${port}.log`;
-  const proxyCmd = `cloud-sql-proxy ${connectionString} --auto-iam-authn --port ${port} --structured-logs > ${logFile} 2>&1 &`;
+  const proxyCmd = `nohup ${proxyPath} ${connectionString} --auto-iam-authn --port ${port} --structured-logs > ${logFile} 2>&1 &`;
   
   try {
-    execSync(proxyCmd, { cwd: process.cwd() });
+    // Change to workspace directory first (for Codespaces)
+    const workspaceDir = process.env.CODESPACES ? '/workspaces/mymoolah-platform' : process.cwd();
+    execSync(proxyCmd, { cwd: workspaceDir });
     
     // Wait for proxy to start (max 15 seconds)
     let waited = 0;
@@ -204,6 +220,13 @@ async function ensureProxyRunning(port, connectionString, name) {
       return true;
     } else {
       console.log(`⚠️  ${name} proxy may not have started. Check log: ${logFile}`);
+      if (require('fs').existsSync(logFile)) {
+        const logContent = require('fs').readFileSync(logFile, 'utf8');
+        const lastLines = logContent.split('\n').slice(-5).filter(l => l.trim()).join('\n');
+        if (lastLines) {
+          console.log(`   Last log lines:\n${lastLines.split('\n').map(l => `      ${l}`).join('\n')}`);
+        }
+      }
       return false;
     }
   } catch (error) {
