@@ -417,21 +417,39 @@ async function verifyLedgerIntegrity(client, auditLogger) {
   const startTime = Date.now();
   
   try {
+    // Banking-grade: Use actual transaction types from the system
+    // Credits (money coming in): deposit, receive, refund, credit, transfer
+    // Debits (money going out): send, payment, withdraw, withdrawal, fee, purchase
     const result = await client.query(`
       SELECT 
-        SUM(CASE WHEN type IN ('debit', 'sent', 'withdrawal') THEN amount ELSE 0 END) as total_debits,
-        SUM(CASE WHEN type IN ('credit', 'received', 'deposit') THEN amount ELSE 0 END) as total_credits,
+        SUM(CASE 
+          WHEN type IN ('send', 'payment', 'withdraw', 'withdrawal', 'fee', 'purchase') 
+          THEN amount 
+          ELSE 0 
+        END) as total_debits,
+        SUM(CASE 
+          WHEN type IN ('deposit', 'receive', 'refund', 'credit', 'transfer') 
+          THEN amount 
+          ELSE 0 
+        END) as total_credits,
         ABS(SUM(CASE 
-          WHEN type IN ('debit', 'sent', 'withdrawal') THEN -amount
-          WHEN type IN ('credit', 'received', 'deposit') THEN amount
+          WHEN type IN ('send', 'payment', 'withdraw', 'withdrawal', 'fee', 'purchase') THEN -amount
+          WHEN type IN ('deposit', 'receive', 'refund', 'credit', 'transfer') THEN amount
           ELSE 0
-        END)) as imbalance
+        END)) as imbalance,
+        COUNT(*) as total_transactions,
+        COUNT(CASE WHEN type IN ('send', 'payment', 'withdraw', 'withdrawal', 'fee', 'purchase') THEN 1 END) as debit_count,
+        COUNT(CASE WHEN type IN ('deposit', 'receive', 'refund', 'credit', 'transfer') THEN 1 END) as credit_count
       FROM transactions
+      WHERE status = 'completed'
     `);
     
-    const { total_debits, total_credits, imbalance } = result.rows[0];
+    const { total_debits, total_credits, imbalance, total_transactions, debit_count, credit_count } = result.rows[0];
     const durationMs = Date.now() - startTime;
     
+    // Banking-grade: For wallet system, check if transactions balance
+    // Note: This is not double-entry bookkeeping - we're checking transaction consistency
+    // An imbalance might be expected if there are pending transactions or data inconsistencies
     const isBalanced = parseFloat(imbalance) === 0;
     
     await auditLogger.logOperation({
@@ -441,12 +459,23 @@ async function verifyLedgerIntegrity(client, auditLogger) {
         totalDebits: parseFloat(total_debits || 0),
         totalCredits: parseFloat(total_credits || 0),
         imbalance: parseFloat(imbalance || 0),
+        totalTransactions: parseInt(total_transactions || 0),
+        debitCount: parseInt(debit_count || 0),
+        creditCount: parseInt(credit_count || 0),
         isBalanced: isBalanced
       },
       durationMs: durationMs
     });
     
-    return { isBalanced, totalDebits: total_debits, totalCredits: total_credits, imbalance };
+    return { 
+      isBalanced, 
+      totalDebits: total_debits || 0, 
+      totalCredits: total_credits || 0, 
+      imbalance: imbalance || 0,
+      totalTransactions: total_transactions || 0,
+      debitCount: debit_count || 0,
+      creditCount: credit_count || 0
+    };
   } catch (error) {
     await auditLogger.logOperation({
       operationType: 'LEDGER_INTEGRITY',
@@ -614,7 +643,12 @@ async function main() {
     if (ledgerCheck.isBalanced) {
       console.log('✅ Ledger integrity verified (debits == credits)\n');
     } else {
-      console.log(`⚠️  Ledger imbalance detected: ${ledgerCheck.imbalance}\n`);
+      console.log(`⚠️  Ledger imbalance detected: ${ledgerCheck.imbalance.toFixed(2)}`);
+      console.log(`   Debits: ${ledgerCheck.totalDebits.toFixed(2)} (${ledgerCheck.debitCount} transactions)`);
+      console.log(`   Credits: ${ledgerCheck.totalCredits.toFixed(2)} (${ledgerCheck.creditCount} transactions)`);
+      console.log(`   Total transactions: ${ledgerCheck.totalTransactions}\n`);
+      console.log('   Note: Imbalance may be expected in staging/test environments');
+      console.log('         with incomplete transaction sets.\n');
     }
 
     // Final Summary
