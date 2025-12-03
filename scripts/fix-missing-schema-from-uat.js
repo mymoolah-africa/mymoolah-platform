@@ -518,27 +518,53 @@ async function main() {
         const alterStatements = schema.match(/ALTER TABLE[^;]+;/g) || [];
         const indexStatements = schema.match(/CREATE[^;]*INDEX[^;]+;/g) || [];
         
+        // Apply indexes/constraints - skip if they already exist or cause errors
+        // Table creation is what matters - indexes/constraints can be added later
         for (const stmt of [...alterStatements, ...indexStatements]) {
           if (stmt.includes(tableName)) {
             try {
               await client.query(stmt);
             } catch (e) {
               const errorMsg = e.message.split('\n')[0];
-              // Check if transaction is aborted - if so, we need to rollback and stop
+              // Check if transaction is aborted - if so, rollback immediately
               if (errorMsg.includes('current transaction is aborted') || errorMsg.includes('transaction is aborted')) {
-                console.log(`      ⚠️  Transaction aborted - rolling back and skipping remaining operations for this table`);
-                throw e; // Re-throw to trigger rollback in outer catch
+                console.log(`      ⚠️  Transaction aborted - rolling back immediately`);
+                try {
+                  await client.query('ROLLBACK');
+                } catch (rollbackErr) {
+                  // Ignore rollback errors
+                }
+                throw e; // Re-throw to trigger outer catch
               }
-              // Ignore other errors for indexes/constraints - table creation is what matters
-              console.log(`      ⚠️  Index/constraint skipped: ${errorMsg}`);
+              // Check if it's an "already exists" error - these are OK, don't abort
+              if (errorMsg.includes('already exists') || errorMsg.includes('duplicate')) {
+                console.log(`      ⚠️  Index/constraint already exists, skipping: ${errorMsg.split(':')[0]}`);
+                // Continue - don't abort transaction
+              } else {
+                // Other errors - log but continue (table creation is what matters)
+                console.log(`      ⚠️  Index/constraint skipped: ${errorMsg.split(':')[0]}`);
+              }
             }
           }
         }
         
-        // Check transaction status before commit
-        const beforeCommitStatus = await client.query('SELECT txid_current(), pg_is_in_recovery()');
-        console.log(`      📊 Transaction ID before commit: ${beforeCommitStatus.rows[0]?.txid_current || 'UNKNOWN'}`);
+        // Check if transaction is still valid before commit
+        try {
+          await client.query('SELECT 1');
+        } catch (checkError) {
+          // Transaction is aborted - rollback and continue
+          console.log(`      ⚠️  Transaction aborted - rolling back`);
+          try {
+            await client.query('ROLLBACK');
+          } catch (rollbackErr) {
+            // Ignore rollback errors
+          }
+          console.log(`   ⚠️  Skipped: ${tableName} - transaction was aborted (likely due to index/constraint errors)`);
+          failedCount++;
+          continue; // Continue to next table
+        }
         
+        // Commit transaction
         await client.query('COMMIT');
         console.log(`      ✅ Transaction committed`);
         
