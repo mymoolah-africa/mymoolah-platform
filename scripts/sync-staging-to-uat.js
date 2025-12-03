@@ -37,10 +37,11 @@ function getPasswordFromSecretManager(secretName) {
     const password = execSync(
       `gcloud secrets versions access latest --secret="${secretName}" --project=mymoolah-db`,
       { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
-    ).trim();
+    );
     
-    // Remove any trailing whitespace/newlines that might cause auth issues
-    return password.replace(/\s+$/, '');
+    // Remove ALL trailing whitespace, newlines, and carriage returns
+    // This is critical - gcloud secrets often include a trailing newline
+    return password.replace(/[\r\n\s]+$/g, '').trim();
   } catch (error) {
     throw new Error(`Failed to get password from Secret Manager: ${secretName} - ${error.message}`);
   }
