@@ -640,28 +640,74 @@ async function main() {
         // Run migrations with ACID transaction - use IAM auth for Staging (no password)
         const stagingUrl = `postgres://${stagingConfig.user}@${stagingConfig.host}:${stagingConfig.port}/${stagingConfig.database}?sslmode=disable`;
         
+        let migrationsActuallyExecuted = 0;
         await executeWithTransaction(stagingClient, async () => {
           process.env.DATABASE_URL = stagingUrl;
           process.env.NODE_ENV = 'staging';
-          execSync('npx sequelize-cli db:migrate --migrations-path migrations', {
+          
+          // Capture output to check if migrations actually ran
+          const output = execSync('npx sequelize-cli db:migrate --migrations-path migrations', {
             cwd: path.join(__dirname, '..'),
-            stdio: 'inherit',
+            encoding: 'utf8',
+            stdio: 'pipe',
             env: { ...process.env, DATABASE_URL: stagingUrl, NODE_ENV: 'staging' }
           });
+          
+          // Check if migrations actually executed
+          const hasExecutedMigrations = !output.includes('No migrations were executed');
+          if (hasExecutedMigrations) {
+            // Count how many migrations were executed (parse from output)
+            const executedMatch = output.match(/(\d+)\s+migration/i);
+            migrationsActuallyExecuted = executedMatch ? parseInt(executedMatch[1]) : 1;
+          }
+          
+          // Still print the output
+          console.log(output);
         }, 'migrations');
         
-        await auditLogger.logOperation({
-          operationType: 'MIGRATION',
-          status: 'SUCCESS',
-          metadata: {
-            migrationsExecuted: migrationDiff.pendingMigrations.length || 'all pending',
-            migrationNames: migrationDiff.pendingMigrations,
-            stagingBefore: stagingMigrations.length,
-            stagingAfter: 'will be updated after migration'
-          }
-        });
+        // Re-check migration status after running migrations
+        const stagingMigrationsAfter = await getExecutedMigrations(stagingClient);
+        const stillMissing = missingInStaging.filter(m => !stagingMigrationsAfter.includes(m));
         
-        console.log('\n✅ Migrations completed successfully\n');
+        // Handle missing migration files
+        const missingFileMigrations = migrationDiff.missingInFiles.filter(m => missingInStaging.includes(m));
+        
+        if (migrationsActuallyExecuted > 0) {
+          await auditLogger.logOperation({
+            operationType: 'MIGRATION',
+            status: 'SUCCESS',
+            metadata: {
+              migrationsExecuted: migrationsActuallyExecuted,
+              migrationNames: migrationDiff.pendingMigrations,
+              stagingBefore: stagingMigrations.length,
+              stagingAfter: stagingMigrationsAfter.length
+            }
+          });
+          
+          console.log(`\n✅ ${migrationsActuallyExecuted} migration(s) executed successfully\n`);
+        } else {
+          console.log('\n⚠️  No migrations were executed - all migration files have already been run\n');
+          
+          if (missingFileMigrations.length > 0) {
+            console.log(`⚠️  ${missingFileMigrations.length} migration(s) exist in UAT but migration files are missing:\n`);
+            missingFileMigrations.forEach(m => console.log(`   - ${m}`));
+            console.log('\n💡 These migrations cannot be run without files. Schema differences will be checked in Phase 3.\n');
+            console.log('   If the schema matches but migrations aren\'t marked as executed, you can manually mark them:\n');
+            console.log('   INSERT INTO "SequelizeMeta" (name) VALUES (\'migration_name\');\n');
+          }
+          
+          await auditLogger.logOperation({
+            operationType: 'MIGRATION',
+            status: 'PARTIAL',
+            metadata: {
+              migrationsExecuted: 0,
+              stagingBefore: stagingMigrations.length,
+              stagingAfter: stagingMigrationsAfter.length,
+              missingFileMigrations: missingFileMigrations.length,
+              reason: 'No migrations executed - all files already run or files missing'
+            }
+          });
+        }
       } else {
         console.log('   (Skipped in dry-run mode - run without --dry-run to execute)\n');
       }
@@ -686,6 +732,20 @@ async function main() {
     
     if (!schemaMatch) {
       console.log('⚠️  Schema counts differ - run detailed comparison for details\n');
+      
+      // Check if this is due to missing migration files
+      const missingFileMigrations = migrationDiff.missingInFiles.filter(m => missingInStaging.includes(m));
+      if (missingFileMigrations.length > 0) {
+        console.log(`\n🔍 CRITICAL: Schema mismatch detected with ${missingFileMigrations.length} missing migration file(s).\n`);
+        console.log('   Missing migration files prevent automatic schema sync.\n');
+        console.log('   To fix this, you need to either:\n');
+        console.log('   1. Restore the missing migration files, OR\n');
+        console.log('   2. Extract and apply the schema manually using pg_dump:\n');
+        console.log('      pg_dump -h 127.0.0.1 -p 6543 -U mymoolah_app -d mymoolah \\');
+        console.log('        --schema-only --table=<table_name> | psql -h 127.0.0.1 -p 6544 -U mymoolah_app -d mymoolah_staging\n');
+        console.log('   After applying schema, mark migrations as executed:\n');
+        console.log('   INSERT INTO "SequelizeMeta" (name) VALUES (\'migration_name\');\n');
+      }
     } else {
       console.log('✅ Schema counts match\n');
     }
