@@ -682,9 +682,8 @@ async function main() {
   console.log('⏳ Waiting for proxies to be ready...');
   await new Promise(resolve => setTimeout(resolve, 2000));
   
-  // Create connection pools (high-performance)
-  const uatPool = createConnectionPool(uatConfig, 'uat');
-  // For staging with IAM auth, use Pool directly (same as working fix-missing-schema-from-uat.js)
+  // Create connection pools - match EXACT working pattern from fix-missing-schema-from-uat.js
+  const uatPool = new Pool(uatConfig);
   const stagingPool = new Pool(stagingConfig);
 
   console.log('📡 Connecting to databases...\n');
