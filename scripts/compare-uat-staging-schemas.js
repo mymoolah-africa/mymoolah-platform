@@ -12,45 +12,71 @@
  */
 
 const { Client } = require('pg');
-const { SecretManagerServiceClient } = require('@google-cloud/secret-manager').v1;
+const { execSync } = require('child_process');
 
-// Get passwords from environment or Secret Manager (same logic as sync script)
-async function getPasswords() {
-  let uatPassword;
-  let stagingPassword;
-
-  // UAT: Try DATABASE_URL or DB_PASSWORD first (for Codespaces/local dev)
+// Get UAT password from .env file ONLY (never from Secret Manager)
+function getUATPassword() {
+  // Try DATABASE_URL from .env first
   if (process.env.DATABASE_URL) {
-    const url = new URL(process.env.DATABASE_URL);
-    uatPassword = decodeURIComponent(url.password);
-  } else if (process.env.DB_PASSWORD) {
-    uatPassword = process.env.DB_PASSWORD;
-  } else {
-    // Fallback to Secret Manager
-    const client = new SecretManagerServiceClient();
-    const [version] = await client.accessSecretVersion({
-      name: 'projects/mymoolah-db/secrets/db-mmtp-pg-password/versions/latest'
-    });
-    uatPassword = version.payload.data.toString();
+    try {
+      const url = new URL(process.env.DATABASE_URL);
+      if (url.password) {
+        return decodeURIComponent(url.password);
+      }
+    } catch (e) {
+      // URL parsing failed, try manual parsing for passwords with @ symbol
+      const urlString = process.env.DATABASE_URL;
+      const hostPattern = '@127.0.0.1:';
+      const hostIndex = urlString.indexOf(hostPattern);
+      if (hostIndex > 0) {
+        const userPassStart = urlString.indexOf('://') + 3;
+        const passwordStart = urlString.indexOf(':', userPassStart) + 1;
+        if (passwordStart > userPassStart && passwordStart < hostIndex) {
+          const password = urlString.substring(passwordStart, hostIndex);
+          try {
+            return decodeURIComponent(password);
+          } catch {
+            return password;
+          }
+        }
+      }
+    }
   }
+  
+  // Try DB_PASSWORD environment variable
+  if (process.env.DB_PASSWORD) {
+    return process.env.DB_PASSWORD;
+  }
+  
+  // Try DATABASE_PASSWORD environment variable
+  if (process.env.DATABASE_PASSWORD) {
+    return process.env.DATABASE_PASSWORD;
+  }
+  
+  // UAT should NEVER use Secret Manager - it only uses .env file
+  throw new Error('UAT password not found in environment variables. Set DATABASE_URL or DB_PASSWORD in .env file.');
+}
 
-  // Staging: Get from Secret Manager
+// Get Staging password from Secret Manager using gcloud CLI only
+function getStagingPassword() {
   try {
-    const client = new SecretManagerServiceClient();
-    const [version] = await client.accessSecretVersion({
-      name: 'projects/mymoolah-db/secrets/db-mmtp-pg-staging-password/versions/latest'
-    });
-    stagingPassword = version.payload.data.toString();
+    return execSync(
+      `gcloud secrets versions access latest --secret="db-mmtp-pg-staging-password" --project=mymoolah-db`,
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+    ).trim();
   } catch (error) {
-    console.error('❌ Failed to get Staging password from Secret Manager:', error.message);
-    process.exit(1);
+    throw new Error(`Failed to get Staging password from Secret Manager: ${error.message}`);
   }
+}
 
+// Get passwords from environment (.env for UAT) or Secret Manager (gcloud CLI for Staging)
+function getPasswords() {
+  const uatPassword = getUATPassword();
+  const stagingPassword = getStagingPassword();
   return { uatPassword, stagingPassword };
 }
 
-// Database connection configurations (will be set after getting passwords)
-let uatConfig, stagingConfig;
+// Database connection configurations are set in main() function
 
 /**
  * Get all tables and their columns from a database
@@ -292,6 +318,28 @@ function printResults(differences) {
  */
 async function main() {
   console.log('\n🔍 Starting Database Schema Comparison...\n');
+
+  // Get passwords first
+  console.log('🔐 Retrieving passwords...');
+  const { uatPassword, stagingPassword } = getPasswords();
+  console.log('✅ Passwords retrieved\n');
+
+  // Set up database configurations
+  const uatConfig = {
+    host: '127.0.0.1',
+    port: parseInt(process.env.UAT_PROXY_PORT || '5433', 10),
+    database: 'mymoolah',
+    user: 'mymoolah_app',
+    password: uatPassword
+  };
+
+  const stagingConfig = {
+    host: '127.0.0.1',
+    port: parseInt(process.env.STAGING_PROXY_PORT || '5434', 10),
+    database: 'mymoolah_staging',
+    user: 'mymoolah_app',
+    password: stagingPassword
+  };
 
   const uatClient = new Client(uatConfig);
   const stagingClient = new Client(stagingConfig);

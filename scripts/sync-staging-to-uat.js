@@ -29,26 +29,17 @@
 const { Client } = require('pg');
 const { execSync } = require('child_process');
 const path = require('path');
-const { SecretManagerServiceClient } = require('@google-cloud/secret-manager').v1;
 
-// Get password from Google Cloud Secret Manager using API (more reliable than execSync)
-async function getPasswordFromSecretManager(secretName) {
+// Get password from Google Cloud Secret Manager using gcloud CLI only
+// Note: UAT should NEVER use Secret Manager - only Staging/Production use it
+function getPasswordFromSecretManager(secretName) {
   try {
-    const client = new SecretManagerServiceClient();
-    const [version] = await client.accessSecretVersion({
-      name: `projects/mymoolah-db/secrets/${secretName}/versions/latest`
-    });
-    return version.payload.data.toString();
+    return execSync(
+      `gcloud secrets versions access latest --secret="${secretName}" --project=mymoolah-db`,
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+    ).trim();
   } catch (error) {
-    // Fallback to gcloud CLI if API fails
-    try {
-      return execSync(
-        `gcloud secrets versions access latest --secret="${secretName}" --project=mymoolah-db`,
-        { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
-      ).trim();
-    } catch (fallbackError) {
-      throw new Error(`Failed to get password from Secret Manager: ${secretName} - ${error.message || fallbackError.message}`);
-    }
+    throw new Error(`Failed to get password from Secret Manager: ${secretName} - ${error.message}`);
   }
 }
 
@@ -122,9 +113,8 @@ function getUATPassword() {
     return process.env.DATABASE_PASSWORD;
   }
   
-  // Last resort: try Secret Manager (sync version - will fail if not available)
-  // Note: This will be caught and handled in retrievePasswords()
-  throw new Error('UAT password not found in environment variables. Set DATABASE_URL or DB_PASSWORD.');
+  // UAT should NEVER use Secret Manager - it only uses .env file
+  throw new Error('UAT password not found in environment variables. Set DATABASE_URL or DB_PASSWORD in .env file.');
 }
 
 /**
@@ -159,16 +149,12 @@ async function retrievePasswords() {
     console.log('🔐 Retrieving passwords...');
     console.log('   UAT: Trying environment variables first, then Secret Manager');
     
-    try {
-      uatPassword = getUATPassword();
-    } catch (error) {
-      // If env vars fail, try Secret Manager
-      console.log('   UAT: Environment variables not found, trying Secret Manager...');
-      uatPassword = await getPasswordFromSecretManager('db-mmtp-pg-password');
-    }
+    // UAT: ONLY from .env file - NEVER from Secret Manager
+    uatPassword = getUATPassword();
     
-    console.log('   Staging: Getting from Secret Manager');
-    stagingPassword = await getPasswordFromSecretManager('db-mmtp-pg-staging-password');
+    // Staging: ONLY from Secret Manager (via gcloud CLI)
+    console.log('   Staging: Getting from Secret Manager (gcloud CLI)');
+    stagingPassword = getPasswordFromSecretManager('db-mmtp-pg-staging-password');
     
     console.log('✅ Passwords retrieved successfully\n');
     return { uatPassword, stagingPassword };
