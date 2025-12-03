@@ -193,7 +193,59 @@ async function main() {
       });
       console.log();
 
-      // Sync each missing table
+      // Step 1: Extract and create all enum types from Staging
+      console.log('📋 Step 1: Extracting enum types from Staging...\n');
+      try {
+        const enumResult = await stagingClient.query(`
+          SELECT 
+            t.typname as enum_name,
+            string_agg(e.enumlabel, ',' ORDER BY e.enumsortorder) as enum_values
+          FROM pg_type t
+          JOIN pg_enum e ON t.oid = e.enumtypid
+          JOIN pg_namespace n ON n.oid = t.typnamespace
+          WHERE n.nspname = 'public'
+          GROUP BY t.typname
+          ORDER BY t.typname
+        `);
+        
+        if (enumResult.rows.length > 0) {
+          console.log(`   Found ${enumResult.rows.length} enum type(s) in Staging\n`);
+          
+          let enumsCreated = 0;
+          for (const enumRow of enumResult.rows) {
+            const enumName = enumRow.enum_name;
+            const enumValues = enumRow.enum_values.split(',');
+            
+            // Check if enum already exists in UAT
+            const exists = await uatClient.query(`
+              SELECT EXISTS(
+                SELECT 1 FROM pg_type t
+                JOIN pg_namespace n ON n.oid = t.typnamespace
+                WHERE n.nspname = 'public' AND t.typname = $1
+              ) as exists
+            `, [enumName]);
+            
+            if (!exists.rows[0].exists) {
+              // Create enum type
+              const valuesList = enumValues.map(v => `'${v.replace(/'/g, "''")}'`).join(', ');
+              const createEnumSQL = `CREATE TYPE "public"."${enumName}" AS ENUM (${valuesList})`;
+              
+              try {
+                await uatClient.query(createEnumSQL);
+                console.log(`   ✅ Created enum: ${enumName}`);
+                enumsCreated++;
+              } catch (error) {
+                console.log(`   ⚠️  Could not create enum ${enumName}: ${error.message.split('\n')[0]}`);
+              }
+            }
+          }
+          console.log(`\n   Summary: ${enumsCreated} enum(s) created\n`);
+        }
+      } catch (error) {
+        console.log(`   ⚠️  Could not extract enums: ${error.message.split('\n')[0]}\n`);
+      }
+
+      // Step 2: Sync each missing table
       let appliedCount = 0;
       let failedCount = 0;
 
