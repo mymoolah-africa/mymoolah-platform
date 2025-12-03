@@ -678,12 +678,18 @@ async function main() {
     ssl: false
   };
 
+  // Wait a moment for proxies to be fully ready
+  console.log('⏳ Waiting for proxies to be ready...');
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
   // Create connection pools (high-performance)
   const uatPool = createConnectionPool(uatConfig, 'uat');
   // For staging with IAM auth, use Pool directly (same as working fix-missing-schema-from-uat.js)
   const stagingPool = new Pool(stagingConfig);
 
-  // Create audit logger
+  console.log('📡 Connecting to databases...\n');
+  
+  // Create audit logger (connect to staging first)
   const stagingClient = await stagingPool.connect();
   const auditLogger = new SyncAuditLogger(stagingClient);
   const syncId = auditLogger.getSyncId();
