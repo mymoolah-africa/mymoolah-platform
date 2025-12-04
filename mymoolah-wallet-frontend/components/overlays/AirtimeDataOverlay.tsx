@@ -315,7 +315,7 @@ export function AirtimeDataOverlay() {
       id: 'instant-delivery',
       type: 'info' as const,
       title: 'Instant Delivery',
-      description: 'Your airtime/data will be delivered instantly via SMS'
+      description: 'Your airtime/data will be delivered instantly'
     });
     
     return notices;
