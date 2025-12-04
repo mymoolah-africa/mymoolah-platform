@@ -177,6 +177,40 @@ module.exports = {
 
       if (action === 'decline') {
         await t.commit();
+        
+        // Send notification to requester that their request was declined
+        // This happens AFTER commit to ensure the decline is persisted even if notification fails
+        try {
+          const payer = await User.findByPk(payerUserId);
+          const requester = await User.findByPk(pr.requesterUserId);
+          const requesterWallet = await Wallet.findOne({ where: { userId: pr.requesterUserId } });
+          
+          if (payer && requester) {
+            const amountNum = Number(pr.amount);
+            await notificationService.createNotification(
+              pr.requesterUserId,
+              'txn_wallet_credit',
+              'Payment Request Declined',
+              `${payer.firstName} ${payer.lastName} declined your request for R ${amountNum.toFixed(2)}`,
+              {
+                payload: {
+                  requestId: pr.id,
+                  amount: amountNum,
+                  currency: requesterWallet?.currency || 'ZAR',
+                  fromUserId: payerUserId,
+                },
+                severity: 'info',
+                category: 'transaction',
+              }
+            );
+            
+            console.log(`✅ [PAYMENT REQUEST DECLINED] Request ID: ${pr.id}, Amount: R${pr.amount}, Payer: ${payerUserId}, Requester: ${pr.requesterUserId}`);
+          }
+        } catch (notifError) {
+          // Best-effort notification - don't fail the decline if notification fails
+          console.error('⚠️ Failed to send decline notification:', notifError);
+        }
+        
         return res.json({ success: true, data: { status: 'declined' } });
       }
 
