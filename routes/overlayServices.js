@@ -651,100 +651,24 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       });
     }
     
+    // Transaction committed successfully - prepare response data
+    // Quick lookup of beneficiary user (non-blocking, wrapped in try-catch)
     const resultTransactionId = committedLedgerTransaction?.transactionId || committedVasTransaction?.id;
-    const beneficiaryUser = await User.findOne({
-      where: { phone: beneficiary.identifier }
-    });
-
-    if (beneficiaryUser && committedVasTransaction) {
-      try {
-        await committedVasTransaction.update({
-          metadata: {
-            ...(committedVasTransaction.metadata || {}),
-            beneficiaryUserId: beneficiaryUser.id
-          }
-        });
-      } catch (updateError) {
-        console.warn('⚠️ Failed to persist beneficiaryUserId on vasTransaction:', updateError.message);
-      }
-    }
-
-    // Allocate commission/VAT (non-critical - transaction already committed)
-    // Wrap in try-catch to prevent errors from causing 500 response
-    if (committedVasTransaction) {
-      try {
-        await allocateCommissionAndVat({
-          supplierCode: supplier,
-          serviceType: type,
-          amountInCents: amountInCentsValue,
-          vasTransaction: committedVasTransaction,
-          walletTransactionId: committedLedgerTransaction?.transactionId || null,
-          idempotencyKey,
-          purchaserUserId: req.user.id,
-        });
-      } catch (commissionError) {
-        // Log error but don't fail the response - transaction already succeeded
-        console.error('⚠️ Commission/VAT allocation failed (non-critical):', commissionError.message);
-      }
-    }
-
-    // Prepare receipt data
-    const receiptData = {
-      transactionId: resultTransactionId || `TXN_${Date.now()}`,
-      reference: idempotencyKey,
-      amount: normalizedAmount,
-      type: type,
-      productId: productId,
-      beneficiaryName: beneficiary.name,
-      beneficiaryPhone: beneficiary.identifier,
-      purchasedAt: new Date().toISOString(),
-      status: 'completed'
-    };
-
-    // Send notification to beneficiary if they are a MyMoolah user
-    if (beneficiaryUser) {
-      try {
-        const NotificationService = require('../services/notificationService');
-        const notificationService = new NotificationService();
-        
-        await notificationService.sendToUser(beneficiaryUser.id, {
-          type: 'airtime_data_received',
-          title: `${type === 'airtime' ? 'Airtime' : 'Data'} Received`,
-          body: `R${amount} ${type} has been added to your account`,
-          data: {
-            receipt: receiptData,
-            action: 'view_receipt'
-          },
-          priority: 'high'
-        });
-        
-        console.log(`✅ Notification sent to beneficiary user ${beneficiaryUser.id}`);
-      } catch (notifError) {
-        console.error('❌ Failed to send notification to beneficiary:', notifError.message);
-      }
-    }
-
-    // Always send notification to purchaser
+    let beneficiaryUser = null;
+    let beneficiaryIsMyMoolahUser = false;
+    
     try {
-      const NotificationService = require('../services/notificationService');
-      const notificationService = new NotificationService();
-      
-      await notificationService.sendToUser(req.user.id, {
-        type: 'airtime_data_purchase',
-        title: `${type === 'airtime' ? 'Airtime' : 'Data'} Purchase Successful`,
-        body: `Your ${type} purchase for ${beneficiary.name} was successful`,
-        data: {
-          receipt: receiptData,
-          action: 'view_receipt'
-        },
-        priority: 'high'
+      beneficiaryUser = await User.findOne({
+        where: { phone: beneficiary.identifier }
       });
-      
-      console.log(`✅ Notification sent to purchaser ${req.user.id}`);
-    } catch (notifError) {
-      console.error('❌ Failed to send notification to purchaser:', notifError.message);
+      beneficiaryIsMyMoolahUser = !!beneficiaryUser;
+    } catch (userLookupError) {
+      // If lookup fails, default to false - not critical for response
+      console.warn('⚠️ Failed to lookup beneficiary user for response:', userLookupError.message);
     }
-
+    
+    // Send success response immediately after transaction commit
+    // This ensures frontend receives success even if post-processing fails
     res.json({
       success: true,
       data: {
@@ -752,10 +676,106 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         walletTransactionId: resultTransactionId || null,
         status: 'completed',
         reference: idempotencyKey,
-        beneficiaryIsMyMoolahUser: !!beneficiaryUser,
+        beneficiaryIsMyMoolahUser: beneficiaryIsMyMoolahUser,
         walletBalance: updatedWalletBalance
       }
     });
+
+    // Post-processing after response sent (non-blocking)
+    // Wrap everything in try-catch to prevent errors from affecting the response
+    try {
+
+      // Update beneficiaryUserId in metadata if user exists
+      if (beneficiaryUser && committedVasTransaction) {
+        try {
+          await committedVasTransaction.update({
+            metadata: {
+              ...(committedVasTransaction.metadata || {}),
+              beneficiaryUserId: beneficiaryUser.id
+            }
+          });
+        } catch (updateError) {
+          console.warn('⚠️ Failed to persist beneficiaryUserId on vasTransaction:', updateError.message);
+        }
+      }
+
+      // Allocate commission/VAT (non-critical - transaction already committed)
+      if (committedVasTransaction) {
+        try {
+          await allocateCommissionAndVat({
+            supplierCode: supplier,
+            serviceType: type,
+            amountInCents: amountInCentsValue,
+            vasTransaction: committedVasTransaction,
+            walletTransactionId: committedLedgerTransaction?.transactionId || null,
+            idempotencyKey,
+            purchaserUserId: req.user.id,
+          });
+        } catch (commissionError) {
+          console.error('⚠️ Commission/VAT allocation failed (non-critical):', commissionError.message);
+        }
+      }
+
+      // Prepare receipt data for notifications
+      const receiptData = {
+        transactionId: resultTransactionId || `TXN_${Date.now()}`,
+        reference: idempotencyKey,
+        amount: normalizedAmount,
+        type: type,
+        productId: productId,
+        beneficiaryName: beneficiary.name,
+        beneficiaryPhone: beneficiary.identifier,
+        purchasedAt: new Date().toISOString(),
+        status: 'completed'
+      };
+
+      // Send notification to beneficiary if they are a MyMoolah user
+      if (beneficiaryUser) {
+        try {
+          const NotificationService = require('../services/notificationService');
+          const notificationService = new NotificationService();
+          
+          await notificationService.sendToUser(beneficiaryUser.id, {
+            type: 'airtime_data_received',
+            title: `${type === 'airtime' ? 'Airtime' : 'Data'} Received`,
+            body: `R${amount} ${type} has been added to your account`,
+            data: {
+              receipt: receiptData,
+              action: 'view_receipt'
+            },
+            priority: 'high'
+          });
+          
+          console.log(`✅ Notification sent to beneficiary user ${beneficiaryUser.id}`);
+        } catch (notifError) {
+          console.error('❌ Failed to send notification to beneficiary:', notifError.message);
+        }
+      }
+
+      // Always send notification to purchaser
+      try {
+        const NotificationService = require('../services/notificationService');
+        const notificationService = new NotificationService();
+        
+        await notificationService.sendToUser(req.user.id, {
+          type: 'airtime_data_purchase',
+          title: `${type === 'airtime' ? 'Airtime' : 'Data'} Purchase Successful`,
+          body: `Your ${type} purchase for ${beneficiary.name} was successful`,
+          data: {
+            receipt: receiptData,
+            action: 'view_receipt'
+          },
+          priority: 'high'
+        });
+        
+        console.log(`✅ Notification sent to purchaser ${req.user.id}`);
+      } catch (notifError) {
+        console.error('❌ Failed to send notification to purchaser:', notifError.message);
+      }
+    } catch (postProcessingError) {
+      // All post-processing errors are logged but don't affect the response
+      console.error('⚠️ Post-processing error (non-critical, transaction succeeded):', postProcessingError.message);
+    }
 
   } catch (error) {
     // Banking-grade error handling and logging
