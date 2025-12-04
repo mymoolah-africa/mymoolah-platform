@@ -48,7 +48,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '../components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -157,6 +157,7 @@ export function VouchersPage() {
 
   // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isRedeemSuccess, setIsRedeemSuccess] = useState(false); // Track if this is a redemption success
   const [successModalData, setSuccessModalData] = useState<{
     title: string;
     message: string;
@@ -661,6 +662,7 @@ export function VouchersPage() {
         walletBalance: `R ${result.data.wallet_balance}`,
         type: 'mm_voucher'
       });
+      setIsRedeemSuccess(true); // Mark as redemption success for auto-navigation
       setShowSuccessModal(true);
 
       // Clear form
@@ -677,6 +679,20 @@ export function VouchersPage() {
       setIsLoading(false);
     }
   };
+
+  // Auto-navigate to dashboard after redemption success
+  useEffect(() => {
+    if (showSuccessModal && isRedeemSuccess) {
+      // Auto-navigate after 3 seconds
+      const timer = setTimeout(() => {
+        setShowSuccessModal(false);
+        setIsRedeemSuccess(false);
+        navigate('/dashboard');
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessModal, isRedeemSuccess, navigate]);
 
   // Simulate EasyPay payment
   
@@ -3160,7 +3176,14 @@ export function VouchersPage() {
       </Dialog>
 
       {/* Success Modal */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+      <Dialog open={showSuccessModal} onOpenChange={(open) => {
+        setShowSuccessModal(open);
+        if (!open && isRedeemSuccess) {
+          // Navigate to dashboard when modal closes after redemption
+          setIsRedeemSuccess(false);
+          navigate('/dashboard');
+        }
+      }}>
         <DialogContent 
           style={{
             maxWidth: '400px',
@@ -3171,11 +3194,15 @@ export function VouchersPage() {
             border: 'none',
             boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
           }}
-          aria-describedby="voucher-success-description"
         >
-          <div id="voucher-success-description" className="sr-only">
-            Success notification for voucher purchase
-          </div>
+          <DialogHeader>
+            <DialogTitle style={{ display: 'none' }}>
+              {successModalData?.title || 'Success'}
+            </DialogTitle>
+            <DialogDescription style={{ display: 'none' }}>
+              {successModalData?.message || 'Operation completed successfully'}
+            </DialogDescription>
+          </DialogHeader>
           <div style={{ textAlign: 'center' }}>
             {/* Success Icon */}
             <div 
@@ -3316,7 +3343,14 @@ export function VouchersPage() {
 
             {/* Action Button */}
             <Button
-              onClick={() => setShowSuccessModal(false)}
+              onClick={() => {
+                setShowSuccessModal(false);
+                if (isRedeemSuccess) {
+                  // Navigate to dashboard after redemption success
+                  setIsRedeemSuccess(false);
+                  navigate('/dashboard');
+                }
+              }}
               style={{
                 width: '100%',
                 height: '44px',
