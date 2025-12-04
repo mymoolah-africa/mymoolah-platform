@@ -233,7 +233,13 @@ export const airtimeDataService = {
     idempotencyKey: string;
   }): Promise<PurchaseResult> {
     const response = await apiClient.post('/api/v1/overlay/airtime-data/purchase', data);
-    return response.data as PurchaseResult;
+    // Backend returns { success: true, data: {...} }
+    // apiClient returns the full response, so we need to extract the inner data
+    if (response.success && response.data) {
+      return response.data as PurchaseResult;
+    }
+    // Fallback: if structure is different, return the whole response
+    return response as any as PurchaseResult;
   }
 };
 

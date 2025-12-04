@@ -173,14 +173,34 @@ export function AirtimeDataOverlay() {
         idempotencyKey
       });
       
-      setTransactionRef(result.reference);
-      setBeneficiaryIsMyMoolahUser(result.beneficiaryIsMyMoolahUser || false);
+      // Extract reference from result (handle different response structures)
+      const reference = result?.reference || result?.data?.reference || idempotencyKey;
+      const beneficiaryIsMyMoolah = result?.beneficiaryIsMyMoolahUser || result?.data?.beneficiaryIsMyMoolahUser || false;
+      
+      setTransactionRef(reference);
+      setBeneficiaryIsMyMoolahUser(beneficiaryIsMyMoolah);
       setLoadingState('success');
       setShowSuccess(true);
     } catch (err: any) {
       console.error('Purchase failed:', err);
-      setError(err.response?.data?.message || 'Purchase failed');
-      setLoadingState('error');
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response,
+        status: err.response?.status
+      });
+      
+      // Check if error response contains transaction data (partial success)
+      const errorResponse = err.response?.data;
+      if (errorResponse?.data?.reference) {
+        // Transaction might have succeeded but error occurred after
+        setTransactionRef(errorResponse.data.reference);
+        setBeneficiaryIsMyMoolahUser(errorResponse.data.beneficiaryIsMyMoolahUser || false);
+        setLoadingState('success');
+        setShowSuccess(true);
+      } else {
+        setError(err.response?.data?.message || err.message || 'Purchase failed');
+        setLoadingState('error');
+      }
     }
   };
 
@@ -1099,7 +1119,8 @@ export function AirtimeDataOverlay() {
             maxHeight: '90vh',
             borderRadius: '12px',
             padding: 0,
-            overflow: 'hidden'
+            overflow: 'hidden',
+            zIndex: 9999
           }}
         >
           <div style={{

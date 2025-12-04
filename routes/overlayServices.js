@@ -669,16 +669,23 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       }
     }
 
+    // Allocate commission/VAT (non-critical - transaction already committed)
+    // Wrap in try-catch to prevent errors from causing 500 response
     if (committedVasTransaction) {
-      await allocateCommissionAndVat({
-        supplierCode: supplier,
-        serviceType: type,
-        amountInCents: amountInCentsValue,
-        vasTransaction: committedVasTransaction,
-        walletTransactionId: committedLedgerTransaction?.transactionId || null,
-        idempotencyKey,
-        purchaserUserId: req.user.id,
-      });
+      try {
+        await allocateCommissionAndVat({
+          supplierCode: supplier,
+          serviceType: type,
+          amountInCents: amountInCentsValue,
+          vasTransaction: committedVasTransaction,
+          walletTransactionId: committedLedgerTransaction?.transactionId || null,
+          idempotencyKey,
+          purchaserUserId: req.user.id,
+        });
+      } catch (commissionError) {
+        // Log error but don't fail the response - transaction already succeeded
+        console.error('⚠️ Commission/VAT allocation failed (non-critical):', commissionError.message);
+      }
     }
 
     // Prepare receipt data
