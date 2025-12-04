@@ -1132,15 +1132,15 @@ export function AirtimeDataOverlay() {
           <div style={{
             background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
             color: '#ffffff',
-            padding: '24px',
+            padding: '20px 24px',
             borderRadius: '16px 16px 0 0'
           }}>
             <DialogHeader>
-              <div className="flex items-center gap-3 mb-2">
-                <CheckCircle style={{ width: '32px', height: '32px' }} />
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle style={{ width: '24px', height: '24px' }} />
                 <DialogTitle style={{
                   fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '20px',
+                  fontSize: '18px',
                   fontWeight: '700',
                   color: '#ffffff',
                   margin: 0
@@ -1150,7 +1150,7 @@ export function AirtimeDataOverlay() {
               </div>
               <DialogDescription style={{
                 fontFamily: 'Montserrat, sans-serif',
-                fontSize: '14px',
+                fontSize: '12px',
                 color: '#ffffff',
                 opacity: 0.9,
                 margin: 0
@@ -1160,10 +1160,10 @@ export function AirtimeDataOverlay() {
               {beneficiaryIsMyMoolahUser && (
                 <p style={{
                   fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '12px',
+                  fontSize: '11px',
                   color: '#ffffff',
                   opacity: 0.8,
-                  marginTop: '8px',
+                  marginTop: '4px',
                   margin: 0
                 }}>
                   ✅ Recipient notified via MyMoolah
@@ -1172,85 +1172,88 @@ export function AirtimeDataOverlay() {
             </DialogHeader>
           </div>
 
-          <div style={{ padding: '24px' }}>
+          <div style={{ padding: '16px 20px' }}>
             {/* Transaction Details */}
-            <div className="space-y-4">
-              <div className="space-y-3">
-                <div className="flex justify-between">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div className="flex justify-between" style={{ alignItems: 'center' }}>
+                <span style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '13px',
+                  color: '#6b7280'
+                }}>
+                  Reference
+                </span>
+                <span style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: '#6b7280',
+                  maxWidth: '60%',
+                  textAlign: 'right',
+                  wordBreak: 'break-all'
+                }}>
+                  {transactionRef}
+                </span>
+              </div>
+              
+              {getSummaryRows().map((row, index) => (
+                <div key={index} className="flex justify-between" style={{ alignItems: 'center' }}>
                   <span style={{
                     fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
+                    fontSize: '13px',
                     color: '#6b7280'
                   }}>
-                    Reference
+                    {row.label}
                   </span>
                   <span style={{
                     fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '500',
+                    fontSize: '13px',
+                    fontWeight: row.highlight ? '700' : '600',
                     color: '#1f2937'
                   }}>
-                    {transactionRef}
+                    {row.value}
                   </span>
                 </div>
-                
-                {getSummaryRows().map((row, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      color: '#6b7280'
-                    }}>
-                      {row.label}
-                    </span>
-                    <span style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      fontWeight: row.highlight ? '700' : '500',
-                      color: '#1f2937'
-                    }}>
-                      {row.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              ))}
+            </div>
 
-              {/* Action Buttons */}
-              <div className="flex flex-col gap-3 mt-6">
-                <Button
-                  onClick={handleDoAnotherTransaction}
-                  style={{
-                    width: '100%',
-                    background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '12px',
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    minHeight: '44px'
-                  }}
-                >
-                  Do Another Transaction
-                </Button>
-                
-                <Button
-                  onClick={handleGoHome}
-                  variant="outline"
-                  style={{
-                    width: '100%',
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    minHeight: '44px',
-                    borderRadius: '12px',
-                    borderColor: '#e2e8f0'
-                  }}
-                >
-                  <Home style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                  Go to Home
-                </Button>
-              </div>
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2" style={{ marginTop: '16px' }}>
+              <Button
+                onClick={handleDoAnotherTransaction}
+                style={{
+                  width: '100%',
+                  background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  height: '40px',
+                  padding: '0'
+                }}
+              >
+                Do Another Transaction
+              </Button>
+              
+              <Button
+                onClick={handleGoHome}
+                variant="outline"
+                style={{
+                  width: '100%',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '13px',
+                  fontWeight: '500',
+                  height: '40px',
+                  borderRadius: '8px',
+                  borderColor: '#e2e8f0',
+                  padding: '0'
+                }}
+              >
+                <Home style={{ width: '14px', height: '14px', marginRight: '6px' }} />
+                Go to Home
+              </Button>
             </div>
           </div>
         </DialogContent>
