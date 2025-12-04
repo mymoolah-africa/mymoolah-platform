@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
@@ -76,6 +76,7 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [blockingNotification, setBlockingNotification] = useState<NotificationItem | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -84,18 +85,7 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  useEffect(() => {
-    if (!user) return;
-    // Initial notification load when user logs in
-    refreshNotifications();
-    
-    // REMOVED: Harmful polling interval
-    // Only refresh notifications on-demand or when events occur
-    // This follows Mojaloop and banking best practices for scalability
-    // 
-    // FUTURE: Will implement WebSocket/SSE for real-time updates
-    // FUTURE: Will add smart polling fallback with exponential backoff
-  }, [user]);
+  // Initial notification load happens in polling useEffect after refreshNotifications is defined
 
   const toggleBalanceVisibility = () => {
     setHideBalance(!hideBalance);
@@ -413,6 +403,76 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
   const refreshBalanceAfterTransaction = async () => {
     await refreshBalanceAfterAction('money_sent');
   };
+
+  // Option 2: Smart polling for notifications (only when user is active)
+  // Polls every 10 seconds when tab is visible, pauses when tab is hidden
+  useEffect(() => {
+    if (!user) {
+      // Clear polling if user logs out
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      return;
+    }
+
+    // Initial notification load when user logs in
+    refreshNotifications().catch(() => {});
+
+    let isTabVisible = !document.hidden;
+    
+    // Handle tab visibility changes
+    const handleVisibilityChange = () => {
+      const wasVisible = isTabVisible;
+      isTabVisible = !document.hidden;
+      
+      if (!isTabVisible && pollingIntervalRef.current) {
+        // Pause polling when tab is hidden
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      } else if (isTabVisible && !pollingIntervalRef.current && wasVisible !== isTabVisible) {
+        // Resume polling when tab becomes visible (and immediately refresh)
+        refreshNotifications().catch(() => {});
+        startPolling();
+      }
+    };
+    
+    const startPolling = () => {
+      // Clear any existing interval
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+      
+      // Poll every 10 seconds when tab is visible (smart polling)
+      // This ensures payment requests and other notifications are received promptly
+      // without excessive server load
+      pollingIntervalRef.current = setInterval(() => {
+        if (!document.hidden && user) {
+          refreshNotifications().catch(() => {
+            // Silently handle errors - don't spam console
+          });
+        }
+      }, 10000); // 10 seconds - balanced between responsiveness and server load
+    };
+    
+    // Start polling when user logs in (only if tab is visible)
+    if (isTabVisible) {
+      startPolling();
+    }
+    
+    // Listen for tab visibility changes
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    // Cleanup on unmount or user change
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // Only depend on user, refreshNotifications is stable
 
   return (
     <MoolahContext.Provider value={{

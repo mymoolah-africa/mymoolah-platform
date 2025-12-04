@@ -6,7 +6,7 @@ import logoSvg from '../assets/logo.svg';
 
 export function TopBanner() {
   const navigate = useNavigate();
-  const { unreadCount, notifications, markRead, blockingNotification, respondToPaymentRequest } = useMoolah();
+  const { unreadCount, notifications, markRead, blockingNotification, respondToPaymentRequest, refreshNotifications } = useMoolah();
   const [open, setOpen] = useState(false);
   const [logoFailed, setLogoFailed] = useState(false);
 
@@ -119,7 +119,11 @@ export function TopBanner() {
 
         {/* Right: Notifications Icon */}
         <button 
-          onClick={() => setOpen(true)}
+          onClick={async () => {
+            // Option 1: Auto-refresh notifications when bell is clicked
+            await refreshNotifications();
+            setOpen(true);
+          }}
           style={{
             width: '44px',
             height: '44px',
