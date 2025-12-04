@@ -339,11 +339,38 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
     try {
       const token = getToken();
       if (!token) return;
-      await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/requests/${requestId}/respond`, {
+      
+      const url = `${APP_CONFIG.API.baseUrl}/api/v1/requests/${requestId}/respond`;
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ action })
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ 
+          success: false,
+          message: `HTTP ${response.status}: Failed to ${action} request` 
+        }));
+        console.error('Payment request respond error:', {
+          status: response.status,
+          statusText: response.statusText,
+          url,
+          errorData
+        });
+        
+        // Don't throw for 404 - it might mean request was already processed
+        if (response.status === 404) {
+          // Refresh notifications to clear the blocking notification
+          await refreshNotifications();
+          return;
+        }
+        
+        throw new Error(errorData.message || `Failed to ${action} request`);
+      }
+      
+      const result = await response.json();
+      
       if (notificationId) {
         await markRead(notificationId);
       } else {
@@ -351,7 +378,10 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       }
       // Event-driven balance refresh after payment request response
       await refreshBalanceAfterAction(action === 'approve' ? 'payment_request_approved' : 'payment_request_declined');
-    } catch (_) {}
+    } catch (error) {
+      console.error('Error responding to payment request:', error);
+      // Re-throw to allow caller to handle, but don't break the UI
+    }
   };
 
   // Event-driven balance refresh system
