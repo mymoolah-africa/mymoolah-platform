@@ -237,7 +237,11 @@ export function AirtimeDataOverlay() {
     if (!beneficiaryToRemove) return;
     
     try {
-      await beneficiaryService.removeBeneficiary(beneficiaryToRemove.id);
+      // Banking-grade: Remove only airtime/data service accounts, not the entire beneficiary
+      // This allows the beneficiary to still exist for other services (e.g., if they have electricity)
+      // Never affects their user account if they're a registered MyMoolah user
+      await beneficiaryService.removeAllServicesOfType(beneficiaryToRemove.id, 'airtime-data');
+      
       // Refresh beneficiaries list
       loadBeneficiaries();
       // Clear selection if this was the selected beneficiary
@@ -246,8 +250,8 @@ export function AirtimeDataOverlay() {
       }
       setBeneficiaryToRemove(null);
     } catch (error) {
-      console.error('Failed to remove beneficiary:', error);
-      alert('Failed to remove beneficiary. Please try again.');
+      console.error('Failed to remove beneficiary services:', error);
+      alert('Failed to remove recipient. Please try again.');
     }
   };
 

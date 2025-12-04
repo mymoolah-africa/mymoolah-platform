@@ -396,20 +396,40 @@ class UnifiedBeneficiaryService {
   /**
    * Remove a service from a beneficiary
    */
+  /**
+   * Remove a specific service account from a beneficiary
+   * Works with normalized tables (source of truth) and updates legacy JSONB for backward compatibility
+   */
   async removeServiceFromBeneficiary(beneficiaryId, serviceType, serviceId) {
+    const tx = await sequelize.transaction();
     try {
-      const beneficiary = await Beneficiary.findByPk(beneficiaryId);
+      const beneficiary = await Beneficiary.findByPk(beneficiaryId, {
+        transaction: tx,
+        lock: tx.LOCK.UPDATE
+      });
       if (!beneficiary) {
         throw new Error('Beneficiary not found');
       }
 
+      // Step 1: Remove from normalized table (source of truth)
+      const deleted = await BeneficiaryServiceAccount.update(
+        { isActive: false },
+        {
+          where: {
+            id: serviceId,
+            beneficiaryId: beneficiaryId,
+            serviceType: serviceType,
+            isActive: true
+          },
+          transaction: tx
+        }
+      );
+
+      // Step 2: Update legacy JSONB fields for backward compatibility
       const serviceField = this.getServiceField(serviceType);
       const currentServices = beneficiary[serviceField] || {};
-      
-      // Remove the specific service
       const updatedServices = this.removeServiceData(currentServices, serviceType, serviceId);
       
-      // If no services left, remove the entire service field
       const updateData = {};
       if (Object.keys(updatedServices).length === 0) {
         updateData[serviceField] = null;
@@ -417,10 +437,129 @@ class UnifiedBeneficiaryService {
         updateData[serviceField] = updatedServices;
       }
 
-      await beneficiary.update(updateData);
+      await beneficiary.update(updateData, { transaction: tx });
+      await tx.commit();
+
       return beneficiary;
     } catch (error) {
+      await tx.rollback();
       console.error('Error removing service from beneficiary:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Remove all service accounts of specific types from a beneficiary
+   * Banking-grade: Only removes service accounts, never affects beneficiary record or user account
+   * Used when removing from service-specific pages (e.g., airtime/data page removes all airtime+data services)
+   */
+  async removeAllServicesOfTypes(beneficiaryId, userId, serviceTypes) {
+    const tx = await sequelize.transaction();
+    try {
+      // Verify ownership and beneficiary exists
+      const beneficiary = await Beneficiary.findOne({
+        where: { id: beneficiaryId, userId },
+        transaction: tx,
+        lock: tx.LOCK.UPDATE
+      });
+
+      if (!beneficiary) {
+        throw new Error('Beneficiary not found or access denied');
+      }
+
+      // Step 1: Mark all matching service accounts as inactive in normalized table
+      const serviceTypesArray = Array.isArray(serviceTypes) ? serviceTypes : [serviceTypes];
+      
+      await BeneficiaryServiceAccount.update(
+        { isActive: false },
+        {
+          where: {
+            beneficiaryId: beneficiaryId,
+            serviceType: { [Op.in]: serviceTypesArray },
+            isActive: true
+          },
+          transaction: tx
+        }
+      );
+
+      // Step 2: Update legacy JSONB fields for backward compatibility
+      const updateData = {};
+      
+      // Handle airtime/data together (both stored in vasServices JSONB)
+      if (serviceTypesArray.includes('airtime') || serviceTypesArray.includes('data')) {
+        const vasServices = beneficiary.vasServices || {};
+        const updatedVasServices = { ...vasServices };
+        
+        // Remove airtime and/or data arrays
+        if (serviceTypesArray.includes('airtime')) {
+          updatedVasServices.airtime = [];
+        }
+        if (serviceTypesArray.includes('data')) {
+          updatedVasServices.data = [];
+        }
+        
+        // If no VAS services left, remove the field
+        const hasOtherVasServices = Object.keys(updatedVasServices).some(
+          key => key !== 'airtime' && key !== 'data' && 
+          Array.isArray(updatedVasServices[key]) && updatedVasServices[key].length > 0
+        );
+        
+        if (!hasOtherVasServices && (!updatedVasServices.airtime || updatedVasServices.airtime.length === 0) &&
+            (!updatedVasServices.data || updatedVasServices.data.length === 0)) {
+          updateData.vasServices = null;
+        } else {
+          updateData.vasServices = updatedVasServices;
+        }
+      }
+
+      // Handle electricity (stored in utilityServices JSONB)
+      if (serviceTypesArray.includes('electricity')) {
+        const utilityServices = beneficiary.utilityServices || {};
+        const updatedUtilityServices = { ...utilityServices };
+        updatedUtilityServices.electricity = [];
+        
+        // If no utility services left, remove the field
+        const hasOtherUtilityServices = Object.keys(updatedUtilityServices).some(
+          key => key !== 'electricity' && 
+          Array.isArray(updatedUtilityServices[key]) && updatedUtilityServices[key].length > 0
+        );
+        
+        if (!hasOtherUtilityServices) {
+          updateData.utilityServices = null;
+        } else {
+          updateData.utilityServices = updatedUtilityServices;
+        }
+      }
+
+      // Handle biller (stored in billerServices JSONB)
+      if (serviceTypesArray.includes('biller')) {
+        const billerServices = beneficiary.billerServices || {};
+        const updatedBillerServices = { ...billerServices };
+        updatedBillerServices.accounts = [];
+        
+        // If no biller services left, remove the field
+        if (!updatedBillerServices.accounts || updatedBillerServices.accounts.length === 0) {
+          updateData.billerServices = null;
+        } else {
+          updateData.billerServices = updatedBillerServices;
+        }
+      }
+
+      // Update beneficiary if there are changes
+      if (Object.keys(updateData).length > 0) {
+        await beneficiary.update(updateData, { transaction: tx });
+      }
+
+      await tx.commit();
+
+      return {
+        beneficiaryId: beneficiary.id,
+        removedServiceTypes: serviceTypesArray,
+        message: `Successfully removed ${serviceTypesArray.join(', ')} service(s) from beneficiary`
+      };
+    } catch (error) {
+      await tx.rollback();
+      console.error('Error removing services from beneficiary:', error);
       throw error;
     }
   }
@@ -437,6 +576,7 @@ class UnifiedBeneficiaryService {
 
       return {
         id: beneficiary.id,
+        userId: beneficiary.userId, // Include userId for ownership verification
         name: beneficiary.name,
         paymentMethods: beneficiary.paymentMethods,
         vasServices: beneficiary.vasServices,

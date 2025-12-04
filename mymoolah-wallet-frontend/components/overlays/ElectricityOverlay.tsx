@@ -137,7 +137,11 @@ export function ElectricityOverlay() {
     if (!beneficiaryToRemove) return;
     
     try {
-      await beneficiaryService.removeBeneficiary(beneficiaryToRemove.id);
+      // Banking-grade: Remove only electricity service accounts, not the entire beneficiary
+      // This allows the beneficiary to still exist for other services (e.g., if they have airtime/data)
+      // Never affects their user account if they're a registered MyMoolah user
+      await beneficiaryService.removeAllServicesOfType(beneficiaryToRemove.id, 'electricity');
+      
       // Refresh beneficiaries list
       loadBeneficiaries();
       // Clear selection if this was the selected beneficiary
@@ -146,8 +150,8 @@ export function ElectricityOverlay() {
       }
       setBeneficiaryToRemove(null);
     } catch (error) {
-      console.error('Failed to remove beneficiary:', error);
-      alert('Failed to remove beneficiary. Please try again.');
+      console.error('Failed to remove beneficiary services:', error);
+      alert('Failed to remove recipient. Please try again.');
     }
   };
 

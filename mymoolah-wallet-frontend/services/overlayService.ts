@@ -206,8 +206,16 @@ export const beneficiaryService = {
   },
 
   // Remove beneficiary (alias for deleteBeneficiary)
-  async removeBeneficiary(id: string): Promise<void> {
-    return await centralizedBeneficiaryService.removeBeneficiary(id);
+  async removeBeneficiary(id: string, context?: 'airtime-data' | 'electricity' | 'biller' | 'payment'): Promise<void> {
+    return await centralizedBeneficiaryService.removeBeneficiary(id, context);
+  },
+
+  // Remove all services of specific type from beneficiary
+  async removeAllServicesOfType(
+    beneficiaryId: string | number,
+    serviceType: 'airtime-data' | 'electricity' | 'biller' | string
+  ): Promise<void> {
+    return await centralizedBeneficiaryService.removeAllServicesOfType(beneficiaryId, serviceType);
   }
 };
 

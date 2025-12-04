@@ -174,6 +174,48 @@ router.delete('/:beneficiaryId/services/:serviceType/:serviceId', authenticateTo
   }
 });
 
+// Remove all services of specific types from beneficiary (e.g., all airtime+data)
+// Banking-grade: Only removes service accounts, never affects beneficiary record or user account
+router.delete('/:beneficiaryId/services/:serviceType', authenticateToken, async (req, res) => {
+  try {
+    const { beneficiaryId, serviceType } = req.params;
+    const userId = req.user.id;
+
+    // Map service type to actual service types (e.g., 'airtime-data' -> ['airtime', 'data'])
+    let serviceTypesToRemove = [];
+    if (serviceType === 'airtime-data') {
+      serviceTypesToRemove = ['airtime', 'data'];
+    } else if (serviceType === 'electricity') {
+      serviceTypesToRemove = ['electricity'];
+    } else if (serviceType === 'biller') {
+      serviceTypesToRemove = ['biller'];
+    } else {
+      // Support single service type removal
+      serviceTypesToRemove = [serviceType];
+    }
+
+    const result = await unifiedBeneficiaryService.removeAllServicesOfTypes(
+      beneficiaryId,
+      userId,
+      serviceTypesToRemove
+    );
+
+    res.json({
+      success: true,
+      message: result.message || 'Services removed successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error removing services from beneficiary:', error);
+    const statusCode = error.message.includes('not found') || error.message.includes('access denied') ? 404 : 500;
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || 'Failed to remove services',
+      error: error.message
+    });
+  }
+});
+
 // Get all services for a specific beneficiary
 router.get('/:beneficiaryId/services', authenticateToken, async (req, res) => {
   try {

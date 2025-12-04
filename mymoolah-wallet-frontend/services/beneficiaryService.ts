@@ -210,12 +210,40 @@ class BeneficiaryService {
   }
 
   /**
-   * Remove beneficiary (legacy method for overlay service)
+   * Remove all services of specific types from a beneficiary
+   * Banking-grade: Only removes service accounts, never affects beneficiary record or user account
+   * Use this when removing from service-specific pages (e.g., airtime/data page removes all airtime+data)
+   */
+  async removeAllServicesOfType(
+    beneficiaryId: number | string,
+    serviceType: 'airtime-data' | 'electricity' | 'biller' | string
+  ): Promise<void> {
+    await this.request(
+      `/api/v1/unified-beneficiaries/${beneficiaryId}/services/${serviceType}`,
+      {
+        method: 'DELETE'
+      }
+    );
+  }
+
+  /**
+   * Remove beneficiary from a specific service context
+   * Banking-grade: Only removes service accounts, never deletes beneficiary record
    * Supports both number and string IDs for backward compatibility
    */
-  async removeBeneficiary(beneficiaryId: number | string): Promise<void> {
-    // This is a soft delete - we don't actually delete, just mark as inactive
-    // For now, we'll just return success
+  async removeBeneficiary(
+    beneficiaryId: number | string,
+    context?: 'airtime-data' | 'electricity' | 'biller' | 'payment'
+  ): Promise<void> {
+    // If context is provided, remove all services of that type
+    if (context) {
+      await this.removeAllServicesOfType(beneficiaryId, context);
+      return;
+    }
+
+    // Legacy behavior: Return success (placeholder for backward compatibility)
+    // New code should explicitly provide context
+    console.warn('removeBeneficiary called without context - this is deprecated. Use removeAllServicesOfType instead.');
     return Promise.resolve();
   }
 
