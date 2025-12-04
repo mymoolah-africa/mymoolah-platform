@@ -58,9 +58,15 @@ Input fields were automatically changing values (e.g., R5.00 → R4.97) without 
 - **Fields Fixed**: 
   - `paymentAmount` input (2 instances)
 
-### **5. RequestMoneyPage.tsx** ✅ ALREADY GOOD
-- **Status**: Already preserves exact user input
-- **No changes needed**
+### **5. RequestMoneyPage.tsx** ✅ FIXED
+- **Issue**: Amount was changing from R10 to R9.95 automatically (same issue as voucher redeem field)
+- **Fix Applied**:
+  - Changed `type="number"` to `type="text"` with `inputMode="decimal"`
+  - Added banking-grade input protections (onWheel, onKeyDown, onBlur)
+  - Preserves exact user input during typing
+  - Only formats on blur (not during typing)
+  - Prevents browser auto-formatting that was causing R10 → R9.95
+- **Field Fixed**: `amount` input field
 
 ### **6. AmountInput.tsx (Shared Component)** ✅ ENHANCED
 - **Issue**: Missing some protections
@@ -207,9 +213,10 @@ All fixes have been applied with the following protections:
 2. ✅ `mymoolah-wallet-frontend/pages/QRPaymentPage.tsx`
 3. ✅ `mymoolah-wallet-frontend/pages/VouchersPage.tsx`
 4. ✅ `mymoolah-wallet-frontend/pages/SendMoneyPage.tsx`
-5. ✅ `mymoolah-wallet-frontend/components/overlays/shared/AmountInput.tsx`
-6. ✅ `mymoolah-wallet-frontend/components/overlays/mmcash-retail/MMCashRetailOverlay.tsx`
-7. ✅ `mymoolah-wallet-frontend/components/overlays/flash-eezicash/FlashEeziCashOverlay.tsx`
+5. ✅ `mymoolah-wallet-frontend/pages/RequestMoneyPage.tsx` - Amount field fixed (2025-12-04)
+6. ✅ `mymoolah-wallet-frontend/components/overlays/shared/AmountInput.tsx`
+7. ✅ `mymoolah-wallet-frontend/components/overlays/mmcash-retail/MMCashRetailOverlay.tsx`
+8. ✅ `mymoolah-wallet-frontend/components/overlays/flash-eezicash/FlashEeziCashOverlay.tsx`
 
 ---
 
@@ -223,7 +230,7 @@ All input fields have been audited and fixed:
 - [x] ✅ QRPaymentPage.tsx - Tip amount field fixed
 - [x] ✅ VouchersPage.tsx - Sell amount field fixed
 - [x] ✅ SendMoneyPage.tsx - Payment amount fields (2 instances) fixed
-- [x] ✅ RequestMoneyPage.tsx - Already correct (no changes needed)
+- [x] ✅ RequestMoneyPage.tsx - Amount field fixed (R10 → R9.95 issue resolved)
 - [x] ✅ AmountInput.tsx - Enhanced with protections
 - [x] ✅ MMCashRetailOverlay.tsx - Enhanced with protections
 - [x] ✅ FlashEeziCashOverlay.tsx - Enhanced with protections
@@ -233,4 +240,4 @@ All input fields have been audited and fixed:
 
 **Status**: ✅ **ALL INPUT FIELD AUTO-UPDATE ISSUES FIXED**
 
-**Last Updated**: December 3, 2025
+**Last Updated**: December 4, 2025

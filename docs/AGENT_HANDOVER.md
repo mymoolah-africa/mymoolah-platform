@@ -36,13 +36,85 @@
 
 ---
 
-**Last Updated**: December 3, 2025  
-**Version**: 2.4.20 - Schema Synchronization & Connection Standardization  
-**Status**: ✅ **SCHEMA PARITY ACHIEVED** ✅ **CONNECTION SYSTEM STANDARDIZED** ✅ **MANDATORY RULES CONFIRMATION REQUIRED**
+**Last Updated**: December 4, 2025  
+**Version**: 2.4.21 - Real-Time Notifications & Input Stability Fixes  
+**Status**: ✅ **REAL-TIME NOTIFICATIONS ACTIVE** ✅ **INPUT STABILITY FIXED** ✅ **DECLINE NOTIFICATIONS COMPLETE**
 
 ---
 
 ## 🎯 **CURRENT SESSION SUMMARY**
+
+### **🔔 REAL-TIME NOTIFICATION UPDATES - COMPLETE (2025-12-04)** ✅
+- **Problem**: Users had to logout/login to see new notifications (poor UX)
+- **Solution Implemented**: Both Option 1 (auto-refresh on bell click) + Option 2 (smart polling)
+- **Option 1 - Auto-Refresh**: Notification bell click automatically refreshes notifications before showing panel
+- **Option 2 - Smart Polling**: Automatic polling every 10 seconds when tab is visible, pauses when hidden
+- **Polling Interval**: 10 seconds (balanced between responsiveness and server load)
+- **Resource Efficiency**: Automatically pauses when browser tab is hidden, resumes when visible
+- **Files Modified**:
+  - `mymoolah-wallet-frontend/components/TopBanner.tsx` - Added refreshNotifications() on bell click
+  - `mymoolah-wallet-frontend/contexts/MoolahContext.tsx` - Added smart polling with tab visibility awareness
+- **User Experience**: Users now receive notifications automatically within 10 seconds, no logout/login required
+- **Status**: ✅ Complete and tested - notifications work in real-time
+
+### **💻 INPUT FIELD STABILITY FIX - COMPLETE (2025-12-04)** ✅
+- **Issue**: Payment request amount field was auto-changing from R10 to R9.95
+- **Root Cause**: Input field used `type="number"` which causes browser auto-formatting
+- **Fix Applied**: Changed to `type="text"` with banking-grade input stability pattern (same as voucher redeem field)
+- **Files Modified**:
+  - `mymoolah-wallet-frontend/pages/RequestMoneyPage.tsx` - Applied banking-grade input protections
+- **Status**: ✅ Fixed - amount no longer auto-changes
+
+### **🔧 PAYMENT REQUEST ERROR HANDLING - COMPLETE (2025-12-04)** ✅
+- **Improvement**: Enhanced error handling for payment request respond endpoint
+- **Features**: Better error logging, graceful 404 handling, detailed error information
+- **Files Modified**:
+  - `mymoolah-wallet-frontend/contexts/MoolahContext.tsx` - Improved error handling
+- **Status**: ✅ Complete - better debugging and user experience
+
+### **📬 DECLINE NOTIFICATION IMPLEMENTATION - COMPLETE (2025-12-04)** ✅
+- **Issue**: When payment request was declined, requester did not receive notification
+- **Fix Applied**: Added notification creation when payment request is declined
+- **Implementation**: Notification sent to requester after transaction commit (non-blocking)
+- **Files Modified**:
+  - `controllers/requestController.js` - Added notification creation on decline
+- **Status**: ✅ Complete and tested - requester now receives decline notification
+
+### **🔔 REAL-TIME NOTIFICATION UPDATES - COMPLETE (2025-12-04)** ✅
+- **Problem**: Users had to logout/login to see new notifications (poor UX)
+- **Solution Implemented**: Both Option 1 (auto-refresh on bell click) + Option 2 (smart polling)
+- **Option 1 - Auto-Refresh**: Notification bell click automatically refreshes notifications before showing panel
+- **Option 2 - Smart Polling**: Automatic polling every 10 seconds when tab is visible, pauses when hidden
+- **Polling Interval**: 10 seconds (balanced between responsiveness and server load)
+- **Resource Efficiency**: Automatically pauses when browser tab is hidden, resumes when visible
+- **Files Modified**:
+  - `mymoolah-wallet-frontend/components/TopBanner.tsx` - Added refreshNotifications() on bell click
+  - `mymoolah-wallet-frontend/contexts/MoolahContext.tsx` - Added smart polling with tab visibility awareness
+- **User Experience**: Users now receive notifications automatically within 10 seconds, no logout/login required
+- **Status**: ✅ Complete and tested - notifications work in real-time
+
+### **💻 INPUT FIELD STABILITY FIX - COMPLETE (2025-12-04)** ✅
+- **Issue**: Payment request amount field was auto-changing from R10 to R9.95
+- **Root Cause**: Input field used `type="number"` which causes browser auto-formatting
+- **Fix Applied**: Changed to `type="text"` with banking-grade input stability pattern (same as voucher redeem field)
+- **Files Modified**:
+  - `mymoolah-wallet-frontend/pages/RequestMoneyPage.tsx` - Applied banking-grade input protections
+- **Status**: ✅ Fixed - amount no longer auto-changes
+
+### **🔧 PAYMENT REQUEST ERROR HANDLING - COMPLETE (2025-12-04)** ✅
+- **Improvement**: Enhanced error handling for payment request respond endpoint
+- **Features**: Better error logging, graceful 404 handling, detailed error information
+- **Files Modified**:
+  - `mymoolah-wallet-frontend/contexts/MoolahContext.tsx` - Improved error handling
+- **Status**: ✅ Complete - better debugging and user experience
+
+### **📬 DECLINE NOTIFICATION IMPLEMENTATION - COMPLETE (2025-12-04)** ✅
+- **Issue**: When payment request was declined, requester did not receive notification
+- **Fix Applied**: Added notification creation when payment request is declined
+- **Implementation**: Notification sent to requester after transaction commit (non-blocking)
+- **Files Modified**:
+  - `controllers/requestController.js` - Added notification creation on decline
+- **Status**: ✅ Complete and tested - requester now receives decline notification
 
 ### **🚀 LAUNCH STRATEGY: PINLESS PRODUCTS & STRICT BENEFICIARY FILTERING - COMPLETE (2025-12-04)** ✅
 - **Launch Strategy Implementation**: Implemented product filtering and beneficiary filtering for launch
@@ -1424,7 +1496,10 @@ LOG_LEVEL=warn
 
 **Next Agent**: For database/migration work, **ALWAYS read** `docs/DATABASE_CONNECTION_GUIDE.md` first. Use standardized scripts (`./scripts/run-migrations-master.sh`) for all migrations.
 
-**Recent Achievement**: 
+**Recent Achievements**: 
+- ✅ Real-time notification updates active (smart polling + auto-refresh)
+- ✅ Payment request input stability fixed (R10 → R9.95 issue resolved)
+- ✅ Decline notifications implemented (requester receives notification)
 - ✅ Perfect schema parity between UAT and Staging (106 tables)
 - ✅ Standardized connection system prevents future password/connection struggles
 - ✅ All 6 missing tables created in UAT

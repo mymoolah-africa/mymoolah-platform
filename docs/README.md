@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: December 3, 2025  
-**Version**: 2.4.20 - Schema Synchronization & Connection Standardization  
-**Status**: ✅ **SCHEMA PARITY ACHIEVED** ✅ **CONNECTION SYSTEM STANDARDIZED** ✅ **UAT & STAGING OPERATIONAL**
+**Last Updated**: December 4, 2025  
+**Version**: 2.4.21 - Real-Time Notifications & Input Stability Fixes  
+**Status**: ✅ **REAL-TIME NOTIFICATIONS ACTIVE** ✅ **INPUT STABILITY FIXED** ✅ **DECLINE NOTIFICATIONS COMPLETE**
 
 ---
 
@@ -55,6 +55,29 @@ See `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for comprehe
 
 ⚠️ **STATUS: ARCHIVED** (2025-11-26)  
 The Peach Payments integration has been **archived** due to business competition conflict. Integration code preserved, routes disabled, zero resource consumption. See `docs/archive/PEACH_ARCHIVAL_RECORD.md` for details.
+
+### **🔔 NEW: Real-Time Notification Updates**
+
+The platform now includes **real-time notification updates** with:
+- **Smart Polling**: Automatic polling every 10 seconds when tab is visible, pauses when hidden
+- **Auto-Refresh on Bell Click**: Notification bell automatically refreshes notifications before showing panel
+- **Resource Efficient**: Polling pauses when browser tab is hidden, resumes when visible
+- **User Experience**: Users receive notifications automatically within 10 seconds, no logout/login required
+- **Status**: ✅ Complete and tested - notifications work in real-time
+
+### **💻 NEW: Payment Request Input Stability Fix**
+
+The platform now includes **banking-grade input stability** for payment request amounts:
+- **Issue Fixed**: Amount field was auto-changing from R10 to R9.95
+- **Solution**: Changed to `type="text"` with banking-grade input stability pattern
+- **Status**: ✅ Fixed - amount no longer auto-changes
+
+### **📬 NEW: Decline Notification Implementation**
+
+The platform now sends **notifications when payment requests are declined**:
+- **Requester Notification**: Requester receives notification when their request is declined
+- **Non-Blocking**: Notification sent after transaction commit (doesn't block decline operation)
+- **Status**: ✅ Complete and tested
 
 ### **🔍 NEW: Zapper Integration Reviewed**
 

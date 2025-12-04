@@ -1,20 +1,50 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-12-04 - ✅ LAUNCH STRATEGY: PINLESS PRODUCTS & STRICT BENEFICIARY FILTERING
+## 2025-12-04 - ✅ REAL-TIME NOTIFICATIONS, INPUT STABILITY & DECLINE NOTIFICATIONS
 
+### **Real-Time Notification Updates**
+- **Problem**: Users had to logout/login to see new notifications (poor UX)
+- **Solution**: Implemented both Option 1 (auto-refresh on bell click) + Option 2 (smart polling)
+- **Auto-Refresh on Bell Click**: Notification bell automatically refreshes notifications before showing panel
+- **Smart Polling**: Automatic polling every 10 seconds when tab is visible, pauses when hidden
+- **Resource Efficiency**: Polling automatically pauses when browser tab is hidden, resumes when visible
+- **User Experience**: Users now receive notifications automatically within 10 seconds, no logout/login required
+- **Files Modified**:
+  - `mymoolah-wallet-frontend/components/TopBanner.tsx` - Added refreshNotifications() on bell click
+  - `mymoolah-wallet-frontend/contexts/MoolahContext.tsx` - Added smart polling with tab visibility awareness
+- **Status**: ✅ Complete and tested
+
+### **Payment Request Amount Input Stability Fix**
+- **Issue**: Amount field auto-changing from R10 to R9.95
+- **Root Cause**: Input field used `type="number"` causing browser auto-formatting
+- **Fix**: Changed to `type="text"` with banking-grade input stability pattern
+- **Files Modified**:
+  - `mymoolah-wallet-frontend/pages/RequestMoneyPage.tsx` - Applied banking-grade input protections
+- **Status**: ✅ Fixed
+
+### **Payment Request Error Handling Improvements**
+- **Enhancement**: Better error logging and graceful 404 handling
+- **Files Modified**:
+  - `mymoolah-wallet-frontend/contexts/MoolahContext.tsx` - Improved error handling
+- **Status**: ✅ Complete
+
+### **Decline Notification Implementation**
+- **Issue**: Requester did not receive notification when payment request was declined
+- **Fix**: Added notification creation when payment request is declined
+- **Implementation**: Notification sent to requester after transaction commit (non-blocking)
+- **Files Modified**:
+  - `controllers/requestController.js` - Added notification creation on decline
+- **Status**: ✅ Complete and tested
+
+### **Launch Strategy: Pinless Products & Strict Beneficiary Filtering**
 - **Launch Strategy Implementation**: Implemented product filtering and beneficiary filtering for launch
 - **Product Sync Filtering**: Updated MobileMart product sync to filter products based on launch requirements:
   - **Airtime/Data**: Only sync PINLESS products (`pinned === false`) for direct topup
   - **Electricity**: Only sync PINNED products (`pinned === true`) for voucher/PIN redemption
-- **Strict Beneficiary Filtering**: Removed MyMoolah wallet fallback from airtime/data beneficiary filtering:
-  - Only beneficiaries with explicit airtime/data service accounts are shown
-  - Prevents "Send Money" beneficiaries from appearing in airtime/data overlay
-  - Clear separation between payment beneficiaries and service beneficiaries
-- **Product Catalog Queries**: Already filtering by `transactionType: 'topup'` (pinless) - verified correct
+- **Strict Beneficiary Filtering**: Removed MyMoolah wallet fallback from airtime/data beneficiary filtering
 - **Files Modified**:
   - `scripts/sync-mobilemart-to-product-variants.js` - Added pinless/pinned filtering logic
   - `services/UnifiedBeneficiaryService.js` - Removed MyMoolah wallet fallback (strict filtering)
-- **Rationale**: Banking-grade best practice - explicit service accounts only, clear separation of concerns
 - **Status**: ✅ Ready for launch testing
 
 ---
