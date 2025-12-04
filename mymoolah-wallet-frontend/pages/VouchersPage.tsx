@@ -1993,10 +1993,60 @@ export function VouchersPage() {
                       Amount (Optional - for partial redemption)
                     </Label>
                     <Input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       placeholder="Leave empty to redeem full amount"
                       value={redeemAmount}
-                      onChange={(e) => setRedeemAmount(e.target.value)}
+                      onChange={(e) => {
+                        // Banking-grade: Preserve exact user input - NO auto-formatting or rounding
+                        let inputValue = e.target.value;
+                        
+                        // Allow empty string, numbers, and single decimal point only
+                        // Remove any currency symbols or spaces that user might type
+                        inputValue = inputValue.replace(/[^\d.]/g, '');
+                        
+                        // Ensure only one decimal point
+                        const parts = inputValue.split('.');
+                        if (parts.length > 2) {
+                          inputValue = parts[0] + '.' + parts.slice(1).join('');
+                        }
+                        
+                        // Limit to 2 decimal places (user can type more, but we'll show only 2)
+                        // However, we preserve the exact input to prevent auto-changes
+                        if (parts.length === 2 && parts[1].length > 2) {
+                          // Only trim if user is typing, but preserve their intent
+                          const decimalPart = parts[1].substring(0, 2);
+                          inputValue = parts[0] + '.' + decimalPart;
+                        }
+                        
+                        // Set exact value - no automatic modification
+                        setRedeemAmount(inputValue);
+                      }}
+                      onBlur={(e) => {
+                        // Only validate/format on blur, not during typing
+                        const value = e.target.value.trim();
+                        if (value) {
+                          const num = parseFloat(value);
+                          if (!isNaN(num) && num > 0) {
+                            // Optional: Format to 2 decimals on blur for display consistency
+                            // But only if user typed a valid number
+                            if (value !== num.toString() && value.includes('.')) {
+                              setRedeemAmount(num.toFixed(2));
+                            }
+                          }
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        // Prevent browser auto-formatting with number input
+                        // Block 'e', 'E', '+', '-' which are allowed in number inputs
+                        if (['e', 'E', '+', '-'].includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
+                      onWheel={(e) => {
+                        // Prevent scrolling from changing number input values
+                        e.currentTarget.blur();
+                      }}
                       style={{
                         height: '44px',
                         fontFamily: 'Montserrat, sans-serif',
