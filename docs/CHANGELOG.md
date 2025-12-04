@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2025-12-04 - ✅ LAUNCH STRATEGY: PINLESS PRODUCTS & STRICT BENEFICIARY FILTERING
+
+- **Launch Strategy Implementation**: Implemented product filtering and beneficiary filtering for launch
+- **Product Sync Filtering**: Updated MobileMart product sync to filter products based on launch requirements:
+  - **Airtime/Data**: Only sync PINLESS products (`pinned === false`) for direct topup
+  - **Electricity**: Only sync PINNED products (`pinned === true`) for voucher/PIN redemption
+- **Strict Beneficiary Filtering**: Removed MyMoolah wallet fallback from airtime/data beneficiary filtering:
+  - Only beneficiaries with explicit airtime/data service accounts are shown
+  - Prevents "Send Money" beneficiaries from appearing in airtime/data overlay
+  - Clear separation between payment beneficiaries and service beneficiaries
+- **Product Catalog Queries**: Already filtering by `transactionType: 'topup'` (pinless) - verified correct
+- **Files Modified**:
+  - `scripts/sync-mobilemart-to-product-variants.js` - Added pinless/pinned filtering logic
+  - `services/UnifiedBeneficiaryService.js` - Removed MyMoolah wallet fallback (strict filtering)
+- **Rationale**: Banking-grade best practice - explicit service accounts only, clear separation of concerns
+- **Status**: ✅ Ready for launch testing
+
+---
+
 ## 2025-12-03 22:30 - ✅ SCHEMA SYNC COMPLETE - CONNECTION SYSTEM STANDARDIZED
 
 - **Schema Synchronization**: Achieved perfect schema parity between UAT and Staging (106 tables, 530 columns in both)

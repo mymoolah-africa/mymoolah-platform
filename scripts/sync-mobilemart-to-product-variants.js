@@ -131,11 +131,24 @@ class MobileMartProductSync {
         `/${normalizedVasType}/products`
       );
       
-      const products = response.products || response || [];
-      console.log(`  Found ${products.length} ${vasType} products from MobileMart API`);
+      const allProducts = response.products || response || [];
+      console.log(`  Found ${allProducts.length} ${vasType} products from MobileMart API`);
+      
+      // LAUNCH STRATEGY: Filter products based on pinned/pinless requirement
+      // - Airtime/Data: Only sync PINLESS products (pinned === false)
+      // - Electricity: Only sync PINNED products (pinned === true)
+      let products = allProducts;
+      if (vasType === 'airtime' || vasType === 'data') {
+        products = allProducts.filter(p => p.pinned === false);
+        console.log(`  🎯 Filtered to ${products.length} PINLESS products (${allProducts.length - products.length} pinned products skipped)`);
+      } else if (vasType === 'utility' || vasType === 'electricity') {
+        products = allProducts.filter(p => p.pinned === true);
+        console.log(`  🎯 Filtered to ${products.length} PINNED products (${allProducts.length - products.length} pinless products skipped)`);
+      }
       
       this.stats.byVasType[vasType] = {
-        fetched: products.length,
+        fetched: allProducts.length,
+        filtered: products.length,
         created: 0,
         updated: 0,
         failed: 0
@@ -280,6 +293,9 @@ class MobileMartProductSync {
       for (const [vasType, stats] of Object.entries(this.stats.byVasType)) {
         console.log(`  ${vasType}:`);
         console.log(`    Fetched: ${stats.fetched}`);
+        if (stats.filtered !== undefined) {
+          console.log(`    Filtered: ${stats.filtered} (${stats.fetched - stats.filtered} skipped)`);
+        }
         console.log(`    Created: ${stats.created}`);
         console.log(`    Updated: ${stats.updated}`);
         if (stats.failed > 0) {

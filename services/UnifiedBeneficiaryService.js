@@ -1106,6 +1106,9 @@ class UnifiedBeneficiaryService {
           break;
           
         case 'airtime-data':
+          // STRICT FILTERING: Only show beneficiaries with explicit airtime/data services
+          // Banking-grade best practice: Clear separation between payment beneficiaries and service beneficiaries
+          
           // Check JSONB first
           shouldInclude = Boolean(
             (beneficiaryData.vasServices?.airtime || []).length ||
@@ -1121,26 +1124,9 @@ class UnifiedBeneficiaryService {
             shouldInclude = hasAirtimeData;
           }
           
-          // Fallback: If beneficiary has MyMoolah wallet (payment method), they can receive airtime/data
-          // Check normalized payment methods (from includes - no query needed)
-          if (!shouldInclude) {
-            const hasMyMoolahWallet = paymentMethods.some(pm => 
-              pm.isActive && pm.methodType === 'mymoolah'
-            );
-            shouldInclude = hasMyMoolahWallet;
-          }
-          
-          // Also check JSONB for MyMoolah payment method
-          if (!shouldInclude && beneficiaryData.paymentMethods?.mymoolah) {
-            shouldInclude = true;
-          }
-          
-          // Final fallback: If beneficiary has msisdn (MyMoolah wallet number) and accountType is mymoolah
-          if (!shouldInclude && beneficiaryData.msisdn && 
-              !beneficiaryData.msisdn.startsWith('NON_MSI_') &&
-              (beneficiaryData.accountType === 'mymoolah' || !beneficiaryData.accountType)) {
-            shouldInclude = true;
-          }
+          // REMOVED FALLBACKS: MyMoolah wallet beneficiaries are NOT included in airtime/data list
+          // Rationale: Launch strategy requires explicit airtime/data service accounts only
+          // This prevents "Send Money" beneficiaries from appearing in airtime/data overlay
           break;
           
         case 'electricity':
