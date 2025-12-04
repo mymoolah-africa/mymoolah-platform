@@ -2190,11 +2190,15 @@ export function QRPaymentPage() {
             zIndex: 9999,
             overflow: 'hidden'
           }}
-          aria-describedby="payment-success-description"
         >
-          <div id="payment-success-description" className="sr-only">
-            Payment successful notification
-          </div>
+          <DialogHeader>
+            <DialogTitle style={{ display: 'none' }}>
+              Payment Successful
+            </DialogTitle>
+            <DialogDescription style={{ display: 'none' }}>
+              Your Zapper payment has been processed successfully
+            </DialogDescription>
+          </DialogHeader>
           
           {/* Gradient Header */}
           <div 
