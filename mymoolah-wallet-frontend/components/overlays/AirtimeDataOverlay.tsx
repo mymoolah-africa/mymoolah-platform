@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Wifi, Smartphone, CheckCircle, Copy, Share, Download } from 'lucide-react';
+import { ArrowLeft, Wifi, Smartphone, CheckCircle, Copy, Share, Download, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { ConfirmationModal } from './shared/ConfirmationModal';
@@ -230,6 +231,22 @@ export function AirtimeDataOverlay() {
     }
   };
 
+  const handleGoHome = () => {
+    setShowSuccess(false);
+    navigate('/');
+  };
+
+  const handleDoAnotherTransaction = () => {
+    setShowSuccess(false);
+    setSelectedBeneficiary(null);
+    setSelectedProduct(null);
+    setCatalog(null);
+    setCurrentStep('beneficiary');
+    setTransactionRef('');
+    setOwnAirtimeAmount('');
+    setOwnDataAmount('');
+  };
+
   const getSummaryRows = () => {
     if (!selectedBeneficiary || !selectedProduct) return [];
     
@@ -283,180 +300,6 @@ export function AirtimeDataOverlay() {
     
     return notices;
   };
-
-  if (showSuccess) {
-    return (
-      <div style={{ padding: '1rem' }}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/transact')}
-            style={{
-              padding: '8px',
-              minWidth: '44px',
-              minHeight: '44px'
-            }}
-          >
-            <ArrowLeft style={{ width: '20px', height: '20px' }} />
-          </Button>
-          
-          <h1 style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '18px',
-            fontWeight: '700',
-            color: '#1f2937'
-          }}>
-            Purchase Complete
-          </h1>
-          
-          <div style={{ width: '44px' }}></div>
-        </div>
-
-        {/* Success Card */}
-        <Card style={{
-          backgroundColor: '#ffffff',
-          border: '1px solid #16a34a',
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(22, 163, 74, 0.1)'
-        }}>
-          <CardHeader style={{
-            backgroundColor: '#16a34a',
-            color: '#ffffff',
-            borderRadius: '12px 12px 0 0'
-          }}>
-            <div className="flex items-center gap-3">
-              <CheckCircle style={{ width: '24px', height: '24px' }} />
-              <div>
-                <CardTitle style={{
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '16px',
-                  fontWeight: '700',
-                  color: '#ffffff'
-                }}>
-                  Purchase Successful
-                </CardTitle>
-                              <p style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '12px',
-                color: '#ffffff',
-                opacity: 0.9
-              }}>
-                {new Date().toLocaleString()}
-              </p>
-              {beneficiaryIsMyMoolahUser && (
-                <p style={{
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '10px',
-                  color: '#ffffff',
-                  opacity: 0.8,
-                  marginTop: '4px'
-                }}>
-                  ✅ Recipient notified via MyMoolah
-                </p>
-              )}
-              </div>
-            </div>
-          </CardHeader>
-          
-          <CardContent style={{ padding: '1rem' }}>
-            <div className="space-y-4">
-              {/* Transaction Details */}
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    color: '#6b7280'
-                  }}>
-                    Reference
-                  </span>
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#1f2937'
-                  }}>
-                    {transactionRef}
-                  </span>
-                </div>
-                
-                {getSummaryRows().map((row, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      color: '#6b7280'
-                    }}>
-                      {row.label}
-                    </span>
-                    <span style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      fontWeight: row.highlight ? '700' : '500',
-                      color: '#1f2937'
-                    }}>
-                      {row.value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  style={{
-                    flex: '1',
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    minHeight: '44px',
-                    borderRadius: '12px'
-                  }}
-                >
-                  <Copy style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                  Copy
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  style={{
-                    flex: '1',
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    minHeight: '44px',
-                    borderRadius: '12px'
-                  }}
-                >
-                  <Share style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                  Share
-                </Button>
-              </div>
-              
-              <Button
-                onClick={() => navigate('/transact')}
-                style={{
-                  width: '100%',
-                  background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '12px',
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  minHeight: '44px'
-                }}
-              >
-                Done
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div style={{ padding: '1rem' }}>
@@ -1246,6 +1089,145 @@ export function AirtimeDataOverlay() {
         type="danger"
         beneficiaryName={beneficiaryToRemove?.name}
       />
+
+      {/* Success Modal */}
+      <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
+        <DialogContent 
+          style={{
+            maxWidth: '90%',
+            width: '100%',
+            maxHeight: '90vh',
+            borderRadius: '12px',
+            padding: 0,
+            overflow: 'hidden'
+          }}
+        >
+          <div style={{
+            backgroundColor: '#16a34a',
+            color: '#ffffff',
+            padding: '1.5rem',
+            borderRadius: '12px 12px 0 0'
+          }}>
+            <DialogHeader>
+              <div className="flex items-center gap-3 mb-2">
+                <CheckCircle style={{ width: '32px', height: '32px' }} />
+                <DialogTitle style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '20px',
+                  fontWeight: '700',
+                  color: '#ffffff',
+                  margin: 0
+                }}>
+                  Purchase Successful
+                </DialogTitle>
+              </div>
+              <DialogDescription style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                color: '#ffffff',
+                opacity: 0.9,
+                margin: 0
+              }}>
+                {new Date().toLocaleString()}
+              </DialogDescription>
+              {beneficiaryIsMyMoolahUser && (
+                <p style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '12px',
+                  color: '#ffffff',
+                  opacity: 0.8,
+                  marginTop: '8px',
+                  margin: 0
+                }}>
+                  ✅ Recipient notified via MyMoolah
+                </p>
+              )}
+            </DialogHeader>
+          </div>
+
+          <div style={{ padding: '1.5rem', maxHeight: '60vh', overflowY: 'auto' }}>
+            {/* Transaction Details */}
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    color: '#6b7280'
+                  }}>
+                    Reference
+                  </span>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#1f2937'
+                  }}>
+                    {transactionRef}
+                  </span>
+                </div>
+                
+                {getSummaryRows().map((row, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      color: '#6b7280'
+                    }}>
+                      {row.label}
+                    </span>
+                    <span style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: row.highlight ? '700' : '500',
+                      color: '#1f2937'
+                    }}>
+                      {row.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-3 mt-6">
+                <Button
+                  onClick={handleDoAnotherTransaction}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    minHeight: '44px'
+                  }}
+                >
+                  Do Another Transaction
+                </Button>
+                
+                <Button
+                  onClick={handleGoHome}
+                  variant="outline"
+                  style={{
+                    width: '100%',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    minHeight: '44px',
+                    borderRadius: '12px',
+                    borderColor: '#e2e8f0'
+                  }}
+                >
+                  <Home style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                  Go to Home
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
