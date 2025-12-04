@@ -1114,20 +1114,26 @@ export function AirtimeDataOverlay() {
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
         <DialogContent 
           style={{
-            maxWidth: '90%',
-            width: '100%',
-            maxHeight: '90vh',
-            borderRadius: '12px',
+            maxWidth: '400px',
+            width: '90vw',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
             padding: 0,
+            border: 'none',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
             overflow: 'hidden',
             zIndex: 9999
           }}
+          aria-describedby="airtime-data-success-description"
         >
+          <div id="airtime-data-success-description" className="sr-only">
+            Purchase successful notification
+          </div>
           <div style={{
-            backgroundColor: '#16a34a',
+            background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
             color: '#ffffff',
-            padding: '1.5rem',
-            borderRadius: '12px 12px 0 0'
+            padding: '24px',
+            borderRadius: '16px 16px 0 0'
           }}>
             <DialogHeader>
               <div className="flex items-center gap-3 mb-2">
@@ -1166,7 +1172,7 @@ export function AirtimeDataOverlay() {
             </DialogHeader>
           </div>
 
-          <div style={{ padding: '1.5rem', maxHeight: '60vh', overflowY: 'auto' }}>
+          <div style={{ padding: '24px' }}>
             {/* Transaction Details */}
             <div className="space-y-4">
               <div className="space-y-3">
