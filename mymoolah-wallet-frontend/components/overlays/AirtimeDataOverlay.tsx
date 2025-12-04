@@ -1192,7 +1192,7 @@ export function AirtimeDataOverlay() {
                   textAlign: 'right',
                   wordBreak: 'break-all'
                 }}>
-                  {transactionRef}
+                  {transactionRef?.replace(/^overlay_user_/, '') || transactionRef}
                 </span>
               </div>
               
