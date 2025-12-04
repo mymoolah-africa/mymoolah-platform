@@ -54,6 +54,7 @@ export function QRPaymentPage() {
   // Modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isPaymentSuccess, setIsPaymentSuccess] = useState(false); // Track if payment was successful for auto-navigation
   const [confirmAmount, setConfirmAmount] = useState<string>('');
   const [pendingPaymentData, setPendingPaymentData] = useState<{
     qrCode: string;
@@ -145,6 +146,22 @@ export function QRPaymentPage() {
     // Payment is valid if amount > 0
     return effectiveAmount > 0;
   };
+
+  // Auto-navigate to dashboard after payment success
+  useEffect(() => {
+    if (showSuccessModal && isPaymentSuccess) {
+      // Auto-navigate after 3 seconds
+      const timer = setTimeout(() => {
+        setShowSuccessModal(false);
+        setIsPaymentSuccess(false);
+        setCurrentPayment(null);
+        setPendingPaymentData(null);
+        navigate('/dashboard');
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessModal, isPaymentSuccess, navigate]);
 
   // Load featured merchants on component mount
   useEffect(() => {
@@ -790,6 +807,8 @@ export function QRPaymentPage() {
       // Refresh wallet balance after payment
       await fetchWalletBalance();
       
+      // Mark as payment success for auto-navigation
+      setIsPaymentSuccess(true);
       // Show success modal
       setShowSuccessModal(true);
       
@@ -2177,7 +2196,16 @@ export function QRPaymentPage() {
       </Dialog>
 
       {/* Payment Successful Modal */}
-      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+      <Dialog open={showSuccessModal} onOpenChange={(open) => {
+        setShowSuccessModal(open);
+        if (!open && isPaymentSuccess) {
+          // Navigate to dashboard when modal closes after payment success
+          setIsPaymentSuccess(false);
+          setCurrentPayment(null);
+          setPendingPaymentData(null);
+          navigate('/dashboard');
+        }
+      }}>
         <DialogContent 
           style={{
             maxWidth: '400px',
@@ -2394,8 +2422,13 @@ export function QRPaymentPage() {
             <Button
               onClick={() => {
                 setShowSuccessModal(false);
-                setCurrentPayment(null);
-                setPendingPaymentData(null);
+                if (isPaymentSuccess) {
+                  // Navigate to dashboard after payment success
+                  setIsPaymentSuccess(false);
+                  setCurrentPayment(null);
+                  setPendingPaymentData(null);
+                  navigate('/dashboard');
+                }
               }}
               style={{
                 width: '100%',
