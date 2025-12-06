@@ -892,7 +892,8 @@ class QRPaymentController {
           transactionId: transactionId,
           userId: userId,
           walletId: wallet.walletId,
-          amount: paymentAmount, // Invoice amount (base payment excluding tip) - only this and fee are visible in history
+          // Show total paid to merchant (base amount + tip) in history
+          amount: finalAmount,
           type: 'payment',
           status: 'completed',
           description: `QR Payment to ${merchantInfo.name}`,
@@ -905,9 +906,9 @@ class QRPaymentController {
             merchantName: merchantInfo.name,
             zapperDecoded: zapperDecoded,
             zapperData: decodedData.zapperData || null,
-            paymentAmount: paymentAmount, // Base payment amount (excluding tip) - shown in transaction history
-            tipAmount: tip, // Tip amount (if any) - stored in metadata but NOT displayed in transaction history
-            totalAmount: finalAmount, // Payment + tip - for internal accounting only
+            paymentAmount: paymentAmount, // Base payment amount (excluding tip)
+            tipAmount: tip, // Tip amount (if any)
+            totalAmount: finalAmount, // Payment + tip (amount displayed to user)
             tierFeeBreakdown: {
               tierLevel: fees.tierLevel,
               supplierCost: fees.display.supplierCost, // VAT-inclusive (what we pay)

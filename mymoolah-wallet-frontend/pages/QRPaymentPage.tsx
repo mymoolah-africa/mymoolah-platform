@@ -67,6 +67,7 @@ export function QRPaymentPage() {
     customReferenceLabel?: string | null;
   } | null>(null);
   const [tipAmount, setTipAmount] = useState<string>('');
+  const [tipError, setTipError] = useState<string>(''); // Validate custom tip
   const [selectedTipPercent, setSelectedTipPercent] = useState<number | null>(null); // 5, 10, 15, 20 or null
   const [customReference, setCustomReference] = useState<string>('');
 
@@ -119,6 +120,7 @@ export function QRPaymentPage() {
   };
 
   const getTipAmount = (): number => {
+    if (tipError) return 0;
     // If Own Amount is entered, use that
     if (tipAmount && tipAmount.trim() !== '') {
       return parseFloat(tipAmount) || 0;
@@ -772,6 +774,12 @@ export function QRPaymentPage() {
   // Handle confirm payment
   const handleConfirmPayment = async () => {
     if (!pendingPaymentData) return;
+    
+    // Block if tip validation failed
+    if (tipError) {
+      setError(tipError);
+      return;
+    }
     
     try {
       setIsProcessing(true);
@@ -2002,6 +2010,7 @@ export function QRPaymentPage() {
                       onClick={() => {
                         setSelectedTipPercent(percent);
                         setTipAmount(''); // Clear Own Amount when percentage is selected
+                        setTipError('');
                       }}
                       style={{
                         flex: '1',
@@ -2072,28 +2081,37 @@ export function QRPaymentPage() {
                       }
                       
                       // Set exact value - no automatic modification
-                      setTipAmount(inputValue);
+                      const baseAmount = getBaseAmount();
+                      const parsed = parseFloat(inputValue || '0');
+                      if (inputValue !== '' && !isNaN(parsed) && parsed > baseAmount) {
+                        setTipError(`Tip cannot exceed bill amount (max R${baseAmount.toFixed(2)})`);
+                        // Clamp to base amount
+                        setTipAmount(baseAmount.toFixed(2));
+                      } else {
+                        setTipError('');
+                        setTipAmount(inputValue);
+                      }
                       setSelectedTipPercent(null); // Clear percentage selection when Own Amount is used
                     }}
                     onBlur={(e) => {
-                      // Only validate on blur, show error if exceeds max instead of auto-correcting
+                      // Preserve user-entered value; no auto-formatting on blur
                       const value = e.target.value.trim();
-                      if (value) {
-                        const tipValue = parseFloat(value);
-                        if (!isNaN(tipValue) && tipValue >= 0) {
-                          const baseAmount = getBaseAmount();
-                          const maxTip = baseAmount;
-                          
-                          // Optional: Format to 2 decimals on blur for display consistency
-                          // But don't auto-correct if exceeds max - show error instead
-                          if (value.includes('.')) {
-                            setTipAmount(tipValue.toFixed(2));
-                          }
-                        }
+                      if (value === '') return;
+                      // Keep at most two decimals but do not change the numeric magnitude
+                      const parts = value.split('.');
+                      if (parts.length === 2 && parts[1].length > 2) {
+                        setTipAmount(parts[0] + '.' + parts[1].substring(0, 2));
+                      }
+                      const baseAmount = getBaseAmount();
+                      const parsed = parseFloat(value || '0');
+                      if (!isNaN(parsed) && parsed > baseAmount) {
+                        setTipError(`Tip cannot exceed bill amount (max R${baseAmount.toFixed(2)})`);
+                        setTipAmount(baseAmount.toFixed(2));
                       }
                     }}
                     onFocus={() => {
                       setSelectedTipPercent(null); // Clear percentage selection when Own Amount is focused
+                      setTipError('');
                     }}
                     onKeyDown={(e) => {
                       // Prevent browser auto-formatting quirks
@@ -2116,6 +2134,18 @@ export function QRPaymentPage() {
                     }}
                   />
                 </div>
+                {tipError && (
+                  <div
+                    style={{
+                      marginTop: '6px',
+                      color: '#dc2626',
+                      fontSize: '12px',
+                      fontFamily: 'Montserrat, sans-serif'
+                    }}
+                  >
+                    {tipError}
+                  </div>
+                )}
               </div>
             )}
             
