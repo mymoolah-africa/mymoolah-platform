@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: November 5, 2025  
-**Version**: 2.4.4 - MobileMart Fulcrum Integration Updates
-**Status**: ✅ **MOBILEMART INTEGRATION UPDATED** ⚠️ **AWAITING CREDENTIAL VERIFICATION**
+**Last Updated**: December 6, 2025  
+**Version**: 2.4.22 - Workflow Reinforcement & Staging Redeploy  
+**Status**: 🔄 **Staging redeployed (20251206-1816)** ⚠️ **Notifications pending fix** 🟡 **Tip validation UX pending retest**
 
 ---
 
@@ -18,6 +18,7 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Microservices Architecture**: Scalable, maintainable service-oriented design
 
 ### **Development & Deployment Workflow**
+- **MANDATORY SEQUENCE (2025-12-06 reinforcement)**: Local changes → `git commit` → `git push origin main` → Codespaces `git pull origin main` → run tests → build (no-cache) + deploy to staging.
 - **Development Environment**: GitHub Codespaces (UAT credentials, test accounts)
 - **Staging Environment**: Google Cloud Services Staging (Production credentials, test accounts) - **Recommended**
 - **Production Environment**: Google Cloud Services Production (Production credentials, real customers)

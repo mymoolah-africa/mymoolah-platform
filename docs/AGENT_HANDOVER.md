@@ -36,9 +36,17 @@
 
 ---
 
-**Last Updated**: December 4, 2025  
-**Version**: 2.4.21 - Real-Time Notifications & Input Stability Fixes  
-**Status**: ✅ **REAL-TIME NOTIFICATIONS ACTIVE** ✅ **INPUT STABILITY FIXED** ✅ **DECLINE NOTIFICATIONS COMPLETE**
+**Last Updated**: December 6, 2025  
+**Version**: 2.4.22 - Staging Deploy & Workflow Reinforcement  
+**Status**: 🔄 **Staging redeployed** ⚠️ **Notifications still failing on staging** 🟡 **Tip validation UX pending retest**
+
+---
+
+## 🆕 2025-12-06 Update
+- Enforced workflow: local commit → push → Codespaces pull → tests → staging deploy (image `gcr.io/mymoolah-db/mymoolah-backend:20251206-1816`, revision `mymoolah-backend-staging-00110-zpf`).
+- Notification feature still broken on staging (user-reported); to be addressed Monday.
+- Tip validation/tip error messaging pending verification after Codespaces pull/tests.
+- No application code changes in this session; latest commit added screenshots only. Documentation and staging deploy performed.
 
 ---
 

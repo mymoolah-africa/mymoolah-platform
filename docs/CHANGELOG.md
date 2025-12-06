@@ -1,5 +1,11 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2025-12-06 - 🔄 Staging Redeploy (Notifications Pending)
+- Enforced workflow: local commit → push → Codespaces pull → tests → staging deploy.
+- Deployed backend image `gcr.io/mymoolah-db/mymoolah-backend:20251206-1816` to Cloud Run staging (revision `mymoolah-backend-staging-00110-zpf`).
+- Known issue: Notifications still not working on staging (user-reported); fix deferred to Monday.
+- Tip validation UX pending verification after Codespaces pull/tests; no new application code changes in this session.
+
 ## 2025-12-04 - ✅ REAL-TIME NOTIFICATIONS, INPUT STABILITY & DECLINE NOTIFICATIONS
 
 ### **Real-Time Notification Updates**
