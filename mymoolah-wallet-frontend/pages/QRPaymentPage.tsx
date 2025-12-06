@@ -2086,12 +2086,11 @@ export function QRPaymentPage() {
                       if (inputValue !== '' && !isNaN(parsed) && parsed > baseAmount) {
                         const maxMessage = `Tip cannot exceed bill amount (max R${baseAmount.toFixed(2)})`;
                         setTipError(maxMessage);
-                        // Clamp to base amount so user sees the enforced limit
-                        setTipAmount(baseAmount.toFixed(2));
                       } else {
                         setTipError('');
-                        setTipAmount(inputValue);
                       }
+                      // Do not clamp here; allow user to see their entry and error. Enforcement happens on submit.
+                      setTipAmount(inputValue);
                       setSelectedTipPercent(null); // Clear percentage selection when Own Amount is used
                     }}
                     onBlur={(e) => {
@@ -2108,7 +2107,9 @@ export function QRPaymentPage() {
                       if (!isNaN(parsed) && parsed > baseAmount) {
                         const maxMessage = `Tip cannot exceed bill amount (max R${baseAmount.toFixed(2)})`;
                         setTipError(maxMessage);
-                        setTipAmount(baseAmount.toFixed(2));
+                        // Do not clamp on blur; show error and block submit
+                      } else {
+                        setTipError('');
                       }
                     }}
                     onFocus={() => {
