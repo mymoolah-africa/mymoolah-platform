@@ -2084,8 +2084,9 @@ export function QRPaymentPage() {
                       const baseAmount = getBaseAmount();
                       const parsed = parseFloat(inputValue || '0');
                       if (inputValue !== '' && !isNaN(parsed) && parsed > baseAmount) {
-                        setTipError(`Tip cannot exceed bill amount (max R${baseAmount.toFixed(2)})`);
-                        // Clamp to base amount
+                        const maxMessage = `Tip cannot exceed bill amount (max R${baseAmount.toFixed(2)})`;
+                        setTipError(maxMessage);
+                        // Clamp to base amount so user sees the enforced limit
                         setTipAmount(baseAmount.toFixed(2));
                       } else {
                         setTipError('');
@@ -2105,7 +2106,8 @@ export function QRPaymentPage() {
                       const baseAmount = getBaseAmount();
                       const parsed = parseFloat(value || '0');
                       if (!isNaN(parsed) && parsed > baseAmount) {
-                        setTipError(`Tip cannot exceed bill amount (max R${baseAmount.toFixed(2)})`);
+                        const maxMessage = `Tip cannot exceed bill amount (max R${baseAmount.toFixed(2)})`;
+                        setTipError(maxMessage);
                         setTipAmount(baseAmount.toFixed(2));
                       }
                     }}
