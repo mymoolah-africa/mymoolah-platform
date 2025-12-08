@@ -243,12 +243,13 @@ export function AirtimeDataOverlay() {
       await beneficiaryService.removeAllServicesOfType(beneficiaryToRemove.id, 'airtime-data');
       
       // Refresh beneficiaries list
-      loadBeneficiaries();
+      await loadBeneficiaries();
       // Clear selection if this was the selected beneficiary
       if (selectedBeneficiary?.id === beneficiaryToRemove.id) {
         setSelectedBeneficiary(null);
       }
       setBeneficiaryToRemove(null);
+      setShowConfirmationModal(false);
     } catch (error) {
       console.error('Failed to remove beneficiary services:', error);
       alert('Failed to remove recipient. Please try again.');
