@@ -594,7 +594,7 @@ class BeneficiaryService {
           '';
 
     return {
-      id: `b-${beneficiary.id ?? idx}`,
+      id: String(beneficiary.id ?? idx),
       name: beneficiary.name,
       msisdn: beneficiary.msisdn || primaryAccount?.identifier || (beneficiary as any)?.identifier,
       identifier,
