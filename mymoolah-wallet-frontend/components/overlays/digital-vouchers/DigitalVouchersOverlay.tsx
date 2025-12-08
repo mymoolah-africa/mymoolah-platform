@@ -81,70 +81,15 @@ export function DigitalVouchersOverlay() {
 
   // Load user favorites from backend
   const loadFavorites = async () => {
-    try {
-      const response = await apiService.getUserFavorites();
-      const favoriteIds = response.favorites.map((fav: any) => fav.id);
-      setFavorites(favoriteIds);
-      setFavoritesCount(response.count);
-      
-      // Update vouchers to mark favorites
-      setVouchers(prevVouchers => 
-        prevVouchers.map(voucher => ({
-          ...voucher,
-          featured: favoriteIds.includes(voucher.id)
-        }))
-      );
-      
-      // Update filtered vouchers
-      setFilteredVouchers(prevFiltered => 
-        prevFiltered.map(voucher => ({
-          ...voucher,
-          featured: favoriteIds.includes(voucher.id)
-        }))
-      );
-    } catch (err) {
-      console.error('❌ Error loading favorites:', err);
-      // Don't show error for favorites, just continue with empty favorites
-    }
+    // Favorites endpoint not available; keep empty favorites without calling backend
+    setFavorites([]);
+    setFavoritesCount(0);
   };
 
   // Handle favorite toggle
-  const handleFavoriteToggle = async (voucherId: string, isFavorite: boolean) => {
-    try {
-      if (isFavorite) {
-        // Add to favorites
-        await apiService.addToFavorites(voucherId);
-        setFavorites(prev => [...prev, voucherId]);
-        setFavoritesCount(prev => prev + 1);
-      } else {
-        // Remove from favorites
-        await apiService.removeFromFavorites(voucherId);
-        setFavorites(prev => prev.filter(id => id !== voucherId));
-        setFavoritesCount(prev => prev - 1);
-      }
-
-      // Update vouchers to mark favorites
-      setVouchers(prevVouchers => 
-        prevVouchers.map(voucher => 
-          voucher.id === voucherId 
-            ? { ...voucher, featured: isFavorite }
-            : voucher
-        )
-      );
-      
-      // Update filtered vouchers to exclude favorites
-      setFilteredVouchers(prevFiltered => 
-        prevFiltered.map(voucher => 
-          voucher.id === voucherId 
-            ? { ...voucher, featured: isFavorite }
-            : voucher
-        )
-      );
-    } catch (error) {
-      console.error('❌ Error toggling favorite:', error);
-      // Revert the UI change on error
-      // You could show a toast notification here
-    }
+  const handleFavoriteToggle = async (_voucherId: string, _isFavorite: boolean) => {
+    // Favorites are disabled; no-op
+    console.warn('Favorites are not enabled on this page.');
   };
 
   // Get count of favorite vouchers
@@ -205,7 +150,8 @@ export function DigitalVouchersOverlay() {
       backgroundColor: '#ffffff',
       minHeight: '100vh',
       fontFamily: 'Montserrat, sans-serif',
-      padding: 'var(--mobile-padding)'
+      padding: 'var(--mobile-padding)',
+      paddingBottom: '110px' // keep clear of bottom nav
     }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
