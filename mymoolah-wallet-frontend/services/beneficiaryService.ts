@@ -224,6 +224,7 @@ class BeneficiaryService {
         method: 'DELETE'
       }
     );
+    // Optionally return void; callers can refresh state afterward
   }
 
   /**
