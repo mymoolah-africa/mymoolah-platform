@@ -1244,8 +1244,7 @@ class UnifiedBeneficiaryService {
           // Check JSONB first
           shouldInclude = Boolean(
             beneficiaryData.paymentMethods?.mymoolah ||
-            (beneficiaryData.paymentMethods?.bankAccounts || []).length ||
-            hasLegacyType(['mymoolah', 'bank'])
+            (beneficiaryData.paymentMethods?.bankAccounts || []).length
           );
           
           // If not found in JSONB, check normalized tables (from includes - no query needed)
