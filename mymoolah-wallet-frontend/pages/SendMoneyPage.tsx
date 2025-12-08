@@ -782,8 +782,8 @@ export function SendMoneyPage() {
     if (!beneficiaryToRemove) return;
     
     try {
-      // Backend removal (payment context)
-      await beneficiaryService.removeBeneficiary(Number(beneficiaryToRemove.id), 'payment');
+      // Backend removal (payment context). Avoid Number() to prevent NaN when id is string.
+      await beneficiaryService.removeBeneficiary(beneficiaryToRemove.id as any, 'payment');
 
       // Remove from local state
       setBeneficiaries(prev => prev.filter(b => b.id !== beneficiaryToRemove.id));
