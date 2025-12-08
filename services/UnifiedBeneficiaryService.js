@@ -490,7 +490,6 @@ class UnifiedBeneficiaryService {
           {
             where: {
               beneficiaryId: beneficiaryId,
-              methodType: { [Op.in]: ['mymoolah', 'bank'] },
               isActive: true
             },
             transaction: tx
