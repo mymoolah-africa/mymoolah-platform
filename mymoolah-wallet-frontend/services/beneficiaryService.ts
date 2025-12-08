@@ -454,6 +454,7 @@ class BeneficiaryService {
     if (legacy.vasServices) {
       if (legacy.vasServices.airtime && Array.isArray(legacy.vasServices.airtime)) {
         legacy.vasServices.airtime.forEach((service: any, idx: number) => {
+          if (service.isActive === false) return;
           accounts.push({
             id: legacy.id * 1000 + 100 + idx,
             type: 'airtime',
@@ -470,6 +471,7 @@ class BeneficiaryService {
       
       if (legacy.vasServices.data && Array.isArray(legacy.vasServices.data)) {
         legacy.vasServices.data.forEach((service: any, idx: number) => {
+          if (service.isActive === false) return;
           accounts.push({
             id: legacy.id * 1000 + 200 + idx,
             type: 'data',
@@ -488,6 +490,7 @@ class BeneficiaryService {
     if (legacy.utilityServices) {
       if (legacy.utilityServices.electricity && Array.isArray(legacy.utilityServices.electricity)) {
         legacy.utilityServices.electricity.forEach((service: any, idx: number) => {
+          if (service.isActive === false) return;
           accounts.push({
             id: legacy.id * 1000 + 300 + idx,
             type: 'electricity',
