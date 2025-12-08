@@ -482,6 +482,22 @@ class UnifiedBeneficiaryService {
         }
       );
 
+      // Step 1b: For payment-related removals, also inactivate payment methods (mymoolah/bank)
+      const paymentRelated = serviceTypesArray.some(t => t === 'payment' || t === 'mymoolah' || t === 'bank');
+      if (paymentRelated) {
+        await BeneficiaryPaymentMethod.update(
+          { isActive: false },
+          {
+            where: {
+              beneficiaryId: beneficiaryId,
+              methodType: { [Op.in]: ['mymoolah', 'bank'] },
+              isActive: true
+            },
+            transaction: tx
+          }
+        );
+      }
+
       // Step 2: Update legacy JSONB fields for backward compatibility
       const updateData = {};
       
@@ -543,6 +559,11 @@ class UnifiedBeneficiaryService {
         } else {
           updateData.billerServices = updatedBillerServices;
         }
+      }
+
+      // Handle payment methods JSONB fallback
+      if (paymentRelated) {
+        updateData.paymentMethods = null;
       }
 
       // Update beneficiary if there are changes

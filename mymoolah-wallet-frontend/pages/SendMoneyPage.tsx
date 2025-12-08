@@ -782,6 +782,9 @@ export function SendMoneyPage() {
     if (!beneficiaryToRemove) return;
     
     try {
+      // Backend removal (payment context)
+      await beneficiaryService.removeBeneficiary(Number(beneficiaryToRemove.id), 'payment');
+
       // Remove from local state
       setBeneficiaries(prev => prev.filter(b => b.id !== beneficiaryToRemove.id));
       
