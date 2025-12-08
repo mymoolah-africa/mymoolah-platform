@@ -241,13 +241,16 @@ export function AirtimeDataOverlay() {
       // This allows the beneficiary to still exist for other services (e.g., if they have electricity)
       // Never affects their user account if they're a registered MyMoolah user
       await beneficiaryService.removeAllServicesOfType(beneficiaryToRemove.id, 'airtime-data');
-      
-      // Refresh beneficiaries list
-      await loadBeneficiaries();
-      // Clear selection if this was the selected beneficiary
+
+      // Optimistically update local state
+      setBeneficiaries((prev) => prev.filter((b) => b.id !== beneficiaryToRemove.id));
       if (selectedBeneficiary?.id === beneficiaryToRemove.id) {
         setSelectedBeneficiary(null);
       }
+
+      // Refresh from API to stay in sync
+      await loadBeneficiaries();
+
       setBeneficiaryToRemove(null);
       setShowConfirmationModal(false);
     } catch (error) {
