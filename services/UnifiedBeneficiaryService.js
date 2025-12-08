@@ -1255,15 +1255,6 @@ class UnifiedBeneficiaryService {
             );
             shouldInclude = hasPaymentMethod;
           }
-          
-          // Fallback: If beneficiary has msisdn (not NON_MSI_) and accountType is not electricity/biller, include as payment
-          if (!shouldInclude && beneficiaryData.msisdn && 
-              !beneficiaryData.msisdn.startsWith('NON_MSI_') &&
-              beneficiaryData.accountType !== 'electricity' && 
-              beneficiaryData.accountType !== 'biller' &&
-              beneficiaryData.accountType !== 'voucher') {
-            shouldInclude = true;
-          }
           break;
           
         case 'airtime-data':
