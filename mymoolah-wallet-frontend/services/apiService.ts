@@ -502,9 +502,11 @@ class ApiService {
       const response = await this.request<any>('/api/v1/products?type=voucher');
 
       // Transform the backend response to match frontend interface
-      const transformedVouchers = (response.data?.data?.products || []).map((product: any) => {
+      const transformedVouchers = (response.data?.data?.products || [])
+        .map((product: any) => {
         const minAmount = product.priceRange?.min || 0;
         const maxAmount = product.priceRange?.max || 0;
+        const supplierCode = product.supplier?.code ? String(product.supplier.code).toUpperCase() : '';
 
         const explicitDenominations =
           (Array.isArray(product.metadata?.denominations) ? product.metadata.denominations : null) ||
@@ -526,11 +528,13 @@ class ApiService {
           maxAmount,
           icon: this.getVoucherIcon(product.name),
           description: product.metadata?.description || product.name,
-          available: product.supplier !== null || product.name === 'MMVoucher',
+          supplierCode,
+          available: supplierCode === 'FLASH', // Only FLASH supported today in purchase flow
           featured: product.isFeatured || ['MMVoucher', 'Netflix', 'Google Play', 'DStv', 'Betway'].includes(product.name),
           denominations
         };
-      });
+      })
+        .filter((voucher: any) => voucher.available); // hide unsupported suppliers to avoid 500s
 
       return { vouchers: transformedVouchers };
     } catch (error) {
