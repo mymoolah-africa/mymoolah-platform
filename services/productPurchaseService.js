@@ -77,8 +77,14 @@ class ProductPurchaseService {
       }
 
       // Validate denomination
-      if (!product.isValidDenomination(denomination)) {
-        throw new Error('Invalid denomination for this product');
+      const hasDefinedDenoms = product.denominations && Array.isArray(product.denominations) && product.denominations.length > 0;
+      if (hasDefinedDenoms) {
+        if (!product.isValidDenomination(denomination)) {
+          throw new Error('Invalid denomination for this product');
+        }
+      } else {
+        // If no denominations are defined, allow the request to proceed (catalog gap)
+        console.warn(`Product ${product.id} has no denominations defined; allowing denomination ${denomination}`);
       }
 
       // Validate user
