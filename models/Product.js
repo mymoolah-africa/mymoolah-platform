@@ -5,6 +5,10 @@ module.exports = (sequelize, DataTypes) => {
   class Product extends Model {
     static associate(models) {
       // Define associations here
+      Product.belongsTo(models.Supplier, {
+        foreignKey: 'supplierId',
+        as: 'supplier'
+      });
       Product.belongsTo(models.ProductBrand, {
         foreignKey: 'brandId',
         as: 'brand'
@@ -72,6 +76,22 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       primaryKey: true,
       autoIncrement: true
+    },
+    supplierId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'suppliers',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'RESTRICT',
+      validate: {
+        notNull: {
+          msg: 'Supplier ID is required'
+        }
+      },
+      comment: 'Owning supplier for this product'
     },
     name: {
       type: DataTypes.STRING(255),
