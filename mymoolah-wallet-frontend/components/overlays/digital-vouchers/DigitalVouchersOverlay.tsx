@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
 import { ArrowLeft, X, Star } from 'lucide-react';
@@ -6,6 +6,7 @@ import { VoucherCard } from './VoucherCard';
 import { VoucherSearch } from './VoucherSearch';
 import { ProductDetailModal } from './ProductDetailModal';
 import { apiService } from '../../../services/apiService';
+import { useAuth } from '../../../contexts/AuthContext';
 
 interface Voucher {
   id: string;
@@ -23,24 +24,37 @@ interface Voucher {
 
 export function DigitalVouchersOverlay() {
   const navigate = useNavigate();
-                const [vouchers, setVouchers] = useState<Voucher[]>([]);
-              const [filteredVouchers, setFilteredVouchers] = useState<Voucher[]>([]);
-              const [searchQuery, setSearchQuery] = useState('');
-              const [isLoading, setIsLoading] = useState(true);
-              const [error, setError] = useState<string | null>(null);
-              const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
-              const [showModal, setShowModal] = useState(false);
-              const [favorites, setFavorites] = useState<string[]>([]);
-  const [favoritesCount, setFavoritesCount] = useState(0);
+  const { user } = useAuth();
+  const favoritesKey = useMemo(
+    () => (user?.id ? `voucher_favorites_${user.id}` : 'voucher_favorites_guest'),
+    [user?.id]
+  );
+
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [filteredVouchers, setFilteredVouchers] = useState<Voucher[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   // Load vouchers on component mount
   useEffect(() => {
-    loadVouchers();
-    loadFavorites();
-  }, []);
+    const init = async () => {
+      const favs = loadFavorites();
+      await loadVouchers(favs);
+    };
+    init();
+  }, [favoritesKey]);
+
+  const applyFavorites = (voucherList: Voucher[], favs: string[]) => {
+    const favSet = new Set(favs || []);
+    return voucherList.map(v => ({ ...v, featured: favSet.has(v.id) }));
+  };
 
   // Load vouchers from backend
-  const loadVouchers = async () => {
+  const loadVouchers = async (currentFavorites: string[] = favorites) => {
     try {
       console.log('🔍 Starting to load vouchers...');
       setIsLoading(true);
@@ -62,14 +76,15 @@ export function DigitalVouchersOverlay() {
         icon: voucher.icon || '🎁',
         description: voucher.description,
         available: true, // Make all vouchers available
-                            featured: false, // Will be set based on favorites
+        featured: false, // Will be set based on favorites
         denominations: voucher.denominations || []
       }));
       
       console.log('🔄 Transformed vouchers:', transformedVouchers.length);
       
-      setVouchers(transformedVouchers);
-      setFilteredVouchers(transformedVouchers);
+      const withFavorites = applyFavorites(transformedVouchers, currentFavorites);
+      setVouchers(withFavorites);
+      setFilteredVouchers(withFavorites);
       console.log('✅ Vouchers loaded successfully');
     } catch (err) {
       console.error('❌ Error loading vouchers:', err);
@@ -79,22 +94,51 @@ export function DigitalVouchersOverlay() {
     }
   };
 
-  // Load user favorites from backend
-  const loadFavorites = async () => {
-    // Favorites endpoint not available; keep empty favorites without calling backend
-    setFavorites([]);
-    setFavoritesCount(0);
+  // Load user favorites (local, per-user)
+  const loadFavorites = () => {
+    try {
+      const stored = typeof window !== 'undefined' ? localStorage.getItem(favoritesKey) : null;
+      const favs = stored ? JSON.parse(stored) : [];
+      setFavorites(Array.isArray(favs) ? favs : []);
+      return Array.isArray(favs) ? favs : [];
+    } catch (e) {
+      console.warn('Could not load favorites, resetting.');
+      setFavorites([]);
+      return [];
+    }
   };
 
   // Handle favorite toggle
-  const handleFavoriteToggle = async (_voucherId: string, _isFavorite: boolean) => {
-    // Favorites are disabled; no-op
-    console.warn('Favorites are not enabled on this page.');
+  const handleFavoriteToggle = async (voucherId: string, isFavorite: boolean) => {
+    const favSet = new Set(favorites);
+
+    if (isFavorite && !favSet.has(voucherId) && favSet.size >= 12) {
+      // Max 12 favorites for clean UX
+      setError('You can save up to 12 favorites');
+      setTimeout(() => setError(null), 2500);
+      return;
+    }
+
+    if (isFavorite) {
+      favSet.add(voucherId);
+    } else {
+      favSet.delete(voucherId);
+    }
+
+    const updated = Array.from(favSet);
+    setFavorites(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(favoritesKey, JSON.stringify(updated));
+    }
+
+    const updatedVouchers = applyFavorites(vouchers, updated);
+    setVouchers(updatedVouchers);
+    setFilteredVouchers(applyFavorites(filteredVouchers, updated));
   };
 
   // Get count of favorite vouchers
   const getFavoriteCount = (voucherList: Voucher[]) => {
-    return favoritesCount;
+    return favorites.length;
   };
 
   // Handle search
@@ -246,7 +290,7 @@ export function DigitalVouchersOverlay() {
       )}
 
       {/* Favorite Vouchers Section */}
-      {!isLoading && !error && favoritesCount > 0 && (
+      {!isLoading && !error && favorites.length > 0 && (
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center">
@@ -265,7 +309,7 @@ export function DigitalVouchersOverlay() {
               fontSize: '14px',
               color: '#6b7280'
             }}>
-              {favoritesCount}/12
+              {favorites.length}/12
             </span>
           </div>
           <div className="grid grid-cols-3 gap-4">

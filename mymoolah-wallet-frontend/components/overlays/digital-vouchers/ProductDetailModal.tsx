@@ -179,6 +179,28 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     }
   };
 
+  const normalizeToLocalMsisdn = (phone: string): string => {
+    const digits = phone.replace(/\D/g, '');
+    if (digits.startsWith('27') && digits.length >= 11) {
+      return `0${digits.slice(-9)}`;
+    }
+    if (digits.startsWith('0') && digits.length >= 10) {
+      return digits.slice(0, 10);
+    }
+    if (digits.length === 9) {
+      return `0${digits}`;
+    }
+    return digits;
+  };
+
+  const getDescriptionText = () => {
+    if (currentStep === 'selection') return 'Complete your voucher purchase';
+    if (currentStep === 'processing') return 'Processing your voucher purchase';
+    if (currentStep === 'success') return 'Your voucher has been issued';
+    if (currentStep === 'error') return 'We could not complete the purchase';
+    return '';
+  };
+
   // Validate form before purchase
   const validateForm = (): boolean => {
     const newErrors: { phone?: string } = {};
@@ -212,18 +234,28 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     setCurrentStep('processing');
 
     try {
-      // Call the real voucher purchase API
+      const recipientPhone = recipientInfo.sendToSelf
+        ? undefined
+        : normalizeToLocalMsisdn(recipientInfo.phone);
+
       const purchaseData = {
-        voucherId: voucher.id,
+        productId: Number(voucher.id),
         denomination: selectedDenomination!,
-        recipientPhone: recipientInfo.sendToSelf ? undefined : recipientInfo.phone,
-        recipientName: recipientInfo.recipientName
+        recipient: recipientInfo.sendToSelf
+          ? undefined
+          : {
+              phone: recipientPhone,
+              name: recipientInfo.recipientName
+            },
+        idempotencyKey: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `voucher-${Date.now()}-${Math.random().toString(36).slice(2)}`
       };
 
       const response = await apiService.purchaseVoucher(purchaseData);
       
-      setVoucherCode(response.voucherCode);
-      setTransactionRef(response.transactionRef);
+      setVoucherCode(response?.order?.metadata?.supplierResponse?.voucherCode || response?.voucherCode || '');
+      setTransactionRef(response?.order?.id || response?.order?.orderId || response?.transactionRef || '');
       setCurrentStep('success');
     } catch (error) {
       console.error('Error purchasing voucher:', error);
@@ -673,18 +705,16 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
              currentStep === 'processing' ? 'Processing...' :
              currentStep === 'success' ? 'Success!' : 'Error'}
           </DialogTitle>
-          {currentStep === 'selection' && (
-            <DialogDescription 
-              id="product-detail-description"
-              style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '14px',
-                color: '#6b7280'
-              }}
-            >
-              Complete your voucher purchase
-            </DialogDescription>
-          )}
+          <DialogDescription 
+            id="product-detail-description"
+            style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '14px',
+              color: '#6b7280'
+            }}
+          >
+            {getDescriptionText()}
+          </DialogDescription>
         </DialogHeader>
 
         {getStepContent()}

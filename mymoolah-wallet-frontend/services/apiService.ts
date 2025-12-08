@@ -498,40 +498,40 @@ class ApiService {
 
   // Voucher API Methods
   async getVouchers(): Promise<{ vouchers: any[] }> {
-    console.log('🔍 apiService.getVouchers() called');
-    
     try {
       const response = await this.request<any>('/api/v1/products?type=voucher');
-      
-      console.log('📡 Raw API response:', response);
-      console.log('📦 Response data:', response.data);
-      console.log('📦 Response data.products:', response.data?.data?.products);
-      
+
       // Transform the backend response to match frontend interface
       const transformedVouchers = (response.data?.data?.products || []).map((product: any) => {
-              console.log('🔄 Transforming product:', product);
-      const minAmount = product.priceRange?.min || 0;
-      const maxAmount = product.priceRange?.max || 0;
-      const denominations = this.generateVoucherDenominations(minAmount, maxAmount);
-      
-      console.log(`💰 Generated denominations for ${product.name}:`, denominations, `(min: ${minAmount}, max: ${maxAmount})`);
-      
-      return {
-        id: product.id.toString(),
-        name: product.name.replace(/\s+Voucher$/, '').replace('HollywoodBets', 'Hollywood\nBets'), // Remove "Voucher" suffix and split HollywoodBets
-        brand: product.brand?.name || product.name,
-        category: this.mapCategory(product.brand?.category || 'voucher'),
-        minAmount: minAmount,
-        maxAmount: maxAmount,
-        icon: this.getVoucherIcon(product.name),
-        description: product.metadata?.description || product.name,
-        available: product.supplier !== null || product.name === 'MMVoucher',
-        featured: ['MMVoucher', 'Netflix', 'Google Play', 'DStv', 'Betway'].includes(product.name),
-        denominations: denominations
-      };
+        const minAmount = product.priceRange?.min || 0;
+        const maxAmount = product.priceRange?.max || 0;
+
+        const explicitDenominations =
+          (Array.isArray(product.metadata?.denominations) ? product.metadata.denominations : null) ||
+          (Array.isArray(product.metadata?.denominationOptions) ? product.metadata.denominationOptions : null) ||
+          (Array.isArray(product.denominationOptions) ? product.denominationOptions : null) ||
+          (Array.isArray(product.denominations) ? product.denominations : null) ||
+          (Array.isArray(product.priceRange?.denominations) ? product.priceRange.denominations : null);
+
+        const denominations = Array.isArray(explicitDenominations) && explicitDenominations.length > 0
+          ? explicitDenominations
+          : this.generateVoucherDenominations(minAmount, maxAmount);
+
+        return {
+          id: product.id.toString(),
+          name: product.name.replace(/\s+Voucher$/, '').replace('HollywoodBets', 'Hollywood\nBets'), // Remove "Voucher" suffix and split HollywoodBets
+          brand: product.brand?.name || product.name,
+          category: this.mapCategory(product.brand?.category || 'voucher'),
+          minAmount,
+          maxAmount,
+          icon: this.getVoucherIcon(product.name),
+          description: product.metadata?.description || product.name,
+          available: product.supplier !== null || product.name === 'MMVoucher',
+          featured: product.isFeatured || ['MMVoucher', 'Netflix', 'Google Play', 'DStv', 'Betway'].includes(product.name),
+          denominations
+        };
       });
-      
-      console.log('✅ Final transformed vouchers:', transformedVouchers);
+
       return { vouchers: transformedVouchers };
     } catch (error) {
       console.error('❌ Error in getVouchers:', error);
@@ -540,17 +540,27 @@ class ApiService {
   }
 
   async purchaseVoucher(purchaseData: {
-    voucherId: string;
+    productId: number;
     denomination: number;
-    recipientPhone?: string;
-    recipientName?: string;
+    recipient?: {
+      phone?: string;
+      name?: string;
+      email?: string;
+    };
+    idempotencyKey: string;
   }): Promise<{
-    voucherCode: string;
-    transactionRef: string;
+    order?: any;
+    message?: string;
+    supplier?: any;
+    product?: any;
+    recipient?: any;
   }> {
     const response = await this.request<{
-      voucherCode: string;
-      transactionRef: string;
+      order?: any;
+      message?: string;
+      supplier?: any;
+      product?: any;
+      recipient?: any;
     }>('/api/v1/products/purchase', {
       method: 'POST',
       body: JSON.stringify(purchaseData),
