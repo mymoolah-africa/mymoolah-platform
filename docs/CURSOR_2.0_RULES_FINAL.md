@@ -11,6 +11,7 @@
   - **Push to GitHub**: `git push origin main` (AI agent pushes automatically after commits)
   - **Pull in Codespaces**: `git pull origin main` (User pulls in Codespaces/other environments after agent pushes)
   - **GitHub is source of truth**: All environments sync from GitHub after agent pushes
+  - **Enforce consistent flow**: Develop in `/mymoolah/` locally → commit local changes → push to Git → pull to Codespaces → test in Codespaces
 
 - **Before work (SAFE PULL PROCEDURE - CHECK STATUS FIRST)**:
   1. **ALWAYS check git status first**: `git status` to see current state
