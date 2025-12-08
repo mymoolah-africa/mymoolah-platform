@@ -359,6 +359,8 @@ class ProductPurchaseService {
     // This would integrate with the existing Flash controller
     // For now, simulate a successful response
     const flashReference = `FLASH_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Always generate a voucher code so UI can display it even in sandbox
+    const voucherCode = `VOUCHER_${flashReference}`;
     
     // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 100));
@@ -368,7 +370,7 @@ class ProductPurchaseService {
       data: {
         reference: flashReference,
         status: 'success',
-        voucherCode: recipient?.email ? `VOUCHER_${flashReference}` : null,
+        voucherCode,
         message: 'Voucher purchased successfully'
       }
     };
