@@ -18,6 +18,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'productId',
         as: 'product'
       });
+      Order.belongsTo(models.ProductVariant, {
+        foreignKey: 'variantId',
+        as: 'variant'
+      });
       Order.hasMany(models.SupplierTransaction, {
         foreignKey: 'orderId',
         as: 'supplierTransactions'
@@ -116,6 +120,17 @@ module.exports = (sequelize, DataTypes) => {
           msg: 'Product ID is required'
         }
       }
+    },
+    variantId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: 'product_variants',
+        key: 'id'
+      },
+      onUpdate: 'CASCADE',
+      onDelete: 'SET NULL',
+      comment: 'Optional product variant reference'
     },
     denomination: {
       type: DataTypes.INTEGER,
@@ -242,6 +257,10 @@ module.exports = (sequelize, DataTypes) => {
       {
         name: 'idx_orders_product',
         fields: ['productId']
+      },
+      {
+        name: 'idx_orders_variant',
+        fields: ['variantId']
       }
     ],
     hooks: {
