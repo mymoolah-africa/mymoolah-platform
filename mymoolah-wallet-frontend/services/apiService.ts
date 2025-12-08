@@ -559,17 +559,13 @@ class ApiService {
     product?: any;
     recipient?: any;
   }> {
-    const response = await this.request<{
-      order?: any;
-      message?: string;
-      supplier?: any;
-      product?: any;
-      recipient?: any;
-    }>('/api/v1/products/purchase', {
+    const response = await this.request<any>('/api/v1/products/purchase', {
       method: 'POST',
       body: JSON.stringify(purchaseData),
     });
-    return response.data!
+    // Some endpoints wrap payload under `data`; unwrap if present
+    const payload = (response as any)?.data?.data ?? (response as any)?.data ?? response;
+    return payload;
   }
 
   async verifyMMWalletHolder(phoneNumber: string): Promise<{
