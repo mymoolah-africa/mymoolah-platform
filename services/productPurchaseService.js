@@ -287,6 +287,9 @@ class ProductPurchaseService {
     // Calculate total amount (denomination + any additional fees)
     const totalAmount = denomination + (fees.total || 0);
 
+    // Volume placeholder (not yet tracked for vouchers)
+    const currentMonthVolume = null;
+
     return {
       denomination,
       supplierFees: fees,
