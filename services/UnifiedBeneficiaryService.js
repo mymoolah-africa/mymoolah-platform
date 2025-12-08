@@ -1264,6 +1264,16 @@ class UnifiedBeneficiaryService {
             shouldInclude = hasAirtimeData;
           }
           
+          // If inclusion is based ONLY on legacy accountType (airtime/data) but there are no active services in JSONB or normalized tables, skip it.
+          const hasExplicitAirtimeData =
+            (beneficiaryData.vasServices?.airtime || []).length > 0 ||
+            (beneficiaryData.vasServices?.data || []).length > 0 ||
+            serviceAccounts.some(sa => sa.isActive && (sa.serviceType === 'airtime' || sa.serviceType === 'data'));
+          const legacyOnly = hasLegacyType(['airtime', 'data']) && !hasExplicitAirtimeData;
+          if (shouldInclude && legacyOnly) {
+            shouldInclude = false;
+          }
+
           // REMOVED FALLBACKS: MyMoolah wallet beneficiaries are NOT included in airtime/data list
           // Rationale: Launch strategy requires explicit airtime/data service accounts only
           // This prevents "Send Money" beneficiaries from appearing in airtime/data overlay
