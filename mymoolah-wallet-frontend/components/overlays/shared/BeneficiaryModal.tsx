@@ -161,19 +161,14 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
       setIsLoading(true);
       setError('');
 
-      const metadata: any = {};
-      
-      // Add type-specific metadata
-      if (type === 'airtime' || type === 'data') {
-        metadata.network = formData.network;
-        metadata.isValid = true;
-      } else if (type === 'electricity') {
-        metadata.meterType = formData.meterType || 'Prepaid';
-        metadata.isValid = true;
-      } else if (type === 'biller') {
-        metadata.billerName = formData.billerName;
-        metadata.isValid = true;
-      }
+      // Build unified payload for airtime/data services
+      const serviceType = type === 'data' ? 'data' : 'airtime';
+      const serviceData: any = {
+        msisdn: formData.identifier,
+        mobileNumber: formData.identifier,
+        network: formData.network,
+        isDefault: true
+      };
 
       let beneficiary;
       
@@ -181,8 +176,8 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
         // Update existing beneficiary
         beneficiary = await beneficiaryService.updateBeneficiary(editBeneficiary.id, {
           name: formData.name,
-          identifier: formData.identifier,
-          metadata
+          serviceType,
+          serviceData
         });
       } else {
         // Create new beneficiary
@@ -190,7 +185,9 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
           name: formData.name,
           identifier: formData.identifier,
           accountType: type,
-          metadata
+          network: formData.network,
+          serviceType,
+          serviceData
         });
       }
 

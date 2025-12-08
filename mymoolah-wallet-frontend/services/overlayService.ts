@@ -158,8 +158,28 @@ export const beneficiaryService = {
     accountType: string;
     bankName?: string;
     metadata?: any;
+    network?: string;
   }): Promise<Beneficiary> {
-    const beneficiary = await centralizedBeneficiaryService.saveBeneficiary(data);
+    // Map overlay fields to unified beneficiary payload
+    const serviceType =
+      data.accountType === 'data'
+        ? 'data'
+        : data.accountType === 'airtime'
+        ? 'airtime'
+        : data.accountType;
+
+    const serviceData: any = {
+      msisdn: data.identifier,
+      mobileNumber: data.identifier,
+      network: data.network || data.metadata?.network,
+      isDefault: true
+    };
+
+    const beneficiary = await centralizedBeneficiaryService.createOrUpdateBeneficiary({
+      name: data.name,
+      serviceType,
+      serviceData
+    });
     
     // Convert centralized service type to overlay service type
     return {
@@ -206,7 +226,10 @@ export const beneficiaryService = {
   },
 
   // Remove beneficiary (alias for deleteBeneficiary)
-  async removeBeneficiary(id: string, context?: 'airtime-data' | 'electricity' | 'biller' | 'payment'): Promise<void> {
+  async removeBeneficiary(
+    id: string,
+    context: 'airtime-data' | 'electricity' | 'biller' | 'payment' = 'airtime-data'
+  ): Promise<void> {
     return await centralizedBeneficiaryService.removeBeneficiary(id, context);
   },
 
