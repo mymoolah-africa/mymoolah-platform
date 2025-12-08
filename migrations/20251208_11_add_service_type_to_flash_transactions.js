@@ -1,12 +1,12 @@
 'use strict';
 
 module.exports = {
-  up: async (queryInterface, Sequelize) => {
-    await queryInterface.addColumn('flash_transactions', 'serviceType', {
-      type: Sequelize.STRING(50),
-      allowNull: true,
-      comment: 'VAS service type (e.g., digital_voucher, airtime, data)'
-    });
+  up: async (queryInterface) => {
+    // Add column if missing (idempotent)
+    await queryInterface.sequelize.query(`
+      ALTER TABLE flash_transactions
+      ADD COLUMN IF NOT EXISTS "serviceType" VARCHAR(50);
+    `);
 
     // Backfill existing rows to digital_voucher to keep counts working
     await queryInterface.sequelize.query(`
@@ -15,14 +15,20 @@ module.exports = {
       WHERE "serviceType" IS NULL;
     `);
 
-    // Optional index to speed up monthly counts per service
-    await queryInterface.addIndex('flash_transactions', ['serviceType', 'operation', 'status'], {
-      name: 'idx_flash_tx_service_operation_status'
-    });
+    // Index for monthly counts (idempotent)
+    await queryInterface.sequelize.query(`
+      CREATE INDEX IF NOT EXISTS idx_flash_tx_service_operation_status
+      ON flash_transactions ("serviceType", operation, status);
+    `);
   },
 
   down: async (queryInterface) => {
-    await queryInterface.removeIndex('flash_transactions', 'idx_flash_tx_service_operation_status');
-    await queryInterface.removeColumn('flash_transactions', 'serviceType');
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS idx_flash_tx_service_operation_status;
+    `);
+    await queryInterface.sequelize.query(`
+      ALTER TABLE flash_transactions
+      DROP COLUMN IF EXISTS "serviceType";
+    `);
   }
 };
