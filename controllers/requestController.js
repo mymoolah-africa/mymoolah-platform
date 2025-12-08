@@ -436,7 +436,7 @@ module.exports = {
    */
   async listRecentPayers(req, res) {
     try {
-      const { PaymentRequest, User } = require('../models');
+      const { PaymentRequest, User, RecentPayerHide } = require('../models');
       const requesterUserId = req.user.id;
       const limit = Math.min(Number(req.query.limit) || 20, 50);
 
@@ -469,7 +469,15 @@ module.exports = {
       }
       const idToUser = new Map(users.map(u => [u.id, u]));
 
+      // Apply server-side hide list
+      const hides = await RecentPayerHide.findAll({
+        where: { requesterUserId, context: 'request-money' },
+        attributes: ['payerUserId']
+      });
+      const hiddenIds = new Set(hides.map(h => h.payerUserId));
+
       const aggregated = Array.from(byPayer.values())
+        .filter(p => !hiddenIds.has(p.payerUserId))
         .map(p => {
           const u = idToUser.get(p.payerUserId);
           return {
@@ -488,6 +496,59 @@ module.exports = {
     } catch (error) {
       console.error('listRecentPayers error:', error);
       return res.status(500).json({ success: false, message: 'Failed to list recent payers' });
+    }
+  },
+
+  /**
+   * Hide a recent payer (per requester, context=request-money)
+   */
+  async hideRecentPayer(req, res) {
+    try {
+      const { payerUserId } = req.body || {};
+      const requesterUserId = req.user.id;
+      if (!payerUserId || Number.isNaN(Number(payerUserId))) {
+        return res.status(400).json({ success: false, message: 'payerUserId is required' });
+      }
+      const { User, RecentPayerHide } = require('../models');
+      const payer = await User.findByPk(payerUserId, { attributes: ['id'] });
+      if (!payer) {
+        return res.status(404).json({ success: false, message: 'Payer not found' });
+      }
+      await RecentPayerHide.upsert({
+        requesterUserId,
+        payerUserId: Number(payerUserId),
+        context: 'request-money',
+        hiddenAt: new Date()
+      });
+      return res.json({ success: true, message: 'Payer hidden' });
+    } catch (error) {
+      console.error('hideRecentPayer error:', error);
+      return res.status(500).json({ success: false, message: 'Failed to hide payer' });
+    }
+  },
+
+  /**
+   * Unhide a recent payer (per requester, context=request-money)
+   */
+  async unhideRecentPayer(req, res) {
+    try {
+      const { payerUserId } = req.body || {};
+      const requesterUserId = req.user.id;
+      if (!payerUserId || Number.isNaN(Number(payerUserId))) {
+        return res.status(400).json({ success: false, message: 'payerUserId is required' });
+      }
+      const { RecentPayerHide } = require('../models');
+      await RecentPayerHide.destroy({
+        where: {
+          requesterUserId,
+          payerUserId: Number(payerUserId),
+          context: 'request-money'
+        }
+      });
+      return res.json({ success: true, message: 'Payer unhidden' });
+    } catch (error) {
+      console.error('unhideRecentPayer error:', error);
+      return res.status(500).json({ success: false, message: 'Failed to unhide payer' });
     }
   }
 };

@@ -35,6 +35,8 @@ router.post('/wallet/recurring/:id', [authMiddleware, body('action').isIn(['paus
 
 // Recent payers for Request Money UX
 router.get('/recent-payers', [authMiddleware], requestController.listRecentPayers);
+router.post('/recent-payers/hide', [authMiddleware], requestController.hideRecentPayer);
+router.post('/recent-payers/unhide', [authMiddleware], requestController.unhideRecentPayer);
 
 module.exports = router;
 
