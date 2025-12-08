@@ -531,7 +531,10 @@ class BeneficiaryService {
     }
     
     // If no accounts found, create a default one from legacy identifier
-    if (accounts.length === 0 && legacy.identifier) {
+    // Skip creating a default for airtime/data if there are no active services (prevents showing stale entries)
+    const legacyAccountType = (legacy.accountType as any) || undefined;
+    const isAirtimeOrData = legacyAccountType === 'airtime' || legacyAccountType === 'data';
+    if (accounts.length === 0 && legacy.identifier && !isAirtimeOrData) {
       accounts.push({
         id: legacy.id * 1000,
         type: (legacy.accountType as any) || 'mymoolah',
