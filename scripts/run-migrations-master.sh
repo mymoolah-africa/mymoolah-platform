@@ -113,9 +113,22 @@ run_migrations() {
   
   # Create temp script that uses our connection helper
   local temp_script=$(mktemp)
+  local root_dir
+  root_dir="$(cd "$(dirname "$0")/.." && pwd)"
   cat > "${temp_script}" << 'EOF'
-require('dotenv').config();
-const { getUATDatabaseURL, getStagingDatabaseURL, CONFIG } = require('./scripts/db-connection-helper');
+const path = require('path');
+
+const rootDir = process.env.MIGRATION_ROOT;
+if (!rootDir) {
+  console.error('❌ Missing MIGRATION_ROOT env var');
+  process.exit(1);
+}
+
+// Load .env from project root
+require('dotenv').config({ path: path.join(rootDir, '.env') });
+
+// Load connection helper from project root
+const { getUATDatabaseURL, getStagingDatabaseURL } = require(path.join(rootDir, 'scripts', 'db-connection-helper'));
 
 const environment = process.env.MIGRATION_ENV;
 const migrationName = process.env.MIGRATION_NAME;
@@ -149,8 +162,9 @@ EOF
 
   export MIGRATION_ENV="${ENVIRONMENT}"
   export MIGRATION_NAME="${MIGRATION_NAME}"
+  export MIGRATION_ROOT="${root_dir}"
   
-  node "${temp_script}"
+  NODE_PATH="${root_dir}/node_modules" node "${temp_script}"
   local exit_code=$?
   
   rm -f "${temp_script}"
