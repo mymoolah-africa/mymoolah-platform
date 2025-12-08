@@ -1,10 +1,34 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-12-06 - 🔄 Staging Redeploy (Notifications Pending)
-- Enforced workflow: local commit → push → Codespaces pull → tests → staging deploy.
-- Deployed backend image `gcr.io/mymoolah-db/mymoolah-backend:20251206-1816` to Cloud Run staging (revision `mymoolah-backend-staging-00110-zpf`).
-- Known issue: Notifications still not working on staging (user-reported); fix deferred to Monday.
-- Tip validation UX pending verification after Codespaces pull/tests; no new application code changes in this session.
+## 2025-12-08 - ✅ SFTP Gateway for MobileMart (GCS)
+- Created private inbound bucket `mymoolah-sftp-inbound` (africa-south1, uniform access, versioning on) for MobileMart daily recon files.
+- Deployed SFTP Gateway Standard VM `sftp-1-vm` (africa-south1-a) mapped to the bucket via instance service account (`sftp-gateway`); read/write verified.
+- Folder/prefix `mobilemart` prepared; SFTP user to be activated upon receiving MobileMart SSH public key.
+- Firewall tightened: SSH 22 and HTTPS 443 restricted to admin IP and tag `sftp-1-deployment`; plan to allowlist MobileMart IP/CIDR on receipt.
+- Next: add supplier public key, update firewall allowlist, and (optional) add GCS event trigger for automated recon processing.
+- Airtime/Data beneficiaries: frontend now skips creating fallback accounts for airtime/data when no active services exist, so removed beneficiaries no longer reappear as stale entries.
+- Backend cleanup: `getBeneficiariesByService` now suppresses legacy airtime/data rows that only have accountType with no active airtime/data services (JSONB or normalized), reducing payload noise.
+- Request Money: Recent payer removal now persists locally (per-user) via hidden list in `RequestMoneyPage`, preventing deleted payers from reappearing on reload/navigation.
+- Request Money: Added server-side hide/unhide for recent payers with `RecentPayerHides` table, hide/unhide endpoints, and frontend wired to backend (no localStorage). Migration required.
+- Send Money: Removing a beneficiary now calls backend remove (payment context) and backend now inactivates payment methods and clears JSONB fallbacks, preventing removed payment beneficiaries from reappearing.
+- Send Money: Fixed removal call to avoid sending `NaN` beneficiaryId when ids are strings (no Number() coercion).
+- Send Money: Guarded backend removal to skip non-numeric ids (local-only temp beneficiaries); still removes locally.
+- Send Money: Payment beneficiaries now require active payment methods; removed the legacy fallback that included payment beneficiaries based only on accountType/msisdn, so deleted payment beneficiaries stay hidden on reload.
+- Send Money: Further tightened payment filter—no accountType fallback; payment list shows only beneficiaries with active payment methods.
+- Send Money: Removal now deactivates all payment methods for the beneficiary (not limited to mymoolah/bank types), ensuring reload does not resurface removed payment beneficiaries.
+- Send Money: Payment beneficiary ids now match backend ids (no `b-` prefix), so backend removals proceed correctly.
+
+## 2025-12-08 - ✅ Voucher purchase fixes (FLASH sandbox)
+- Added missing DB columns required for voucher purchases: `supplierProductId`, `denominations`, `constraints` on `products`; `serviceType` and `operation` on `flash_transactions` (idempotent migrations).
+- Relaxed denomination validation to tolerate empty denomination arrays; flash mock now always returns voucherCode/reference.
+- API now returns `voucherCode` and `transactionRef`; frontend unwraps purchase response and displays cleanly (prefix stripped, wrapped text).
+- Status: Manual voucher purchase (Spotify) succeeds in Codespaces; code/ref shown. Wallet transaction history entry for vouchers is not yet implemented.
+
+## 2025-12-08 - ✅ Voucher purchase fixes (FLASH sandbox)
+- Added missing DB columns required for voucher purchases: `supplierProductId`, `denominations`, `constraints` on `products`; `serviceType` and `operation` on `flash_transactions` (idempotent migrations).
+- Relaxed denomination validation to tolerate empty denomination arrays; flash mock now always returns voucherCode/reference.
+- API now returns `voucherCode` and `transactionRef`; frontend unwraps purchase response and displays cleanly (prefix stripped, wrapped text).
+- Status: Manual voucher purchase (Spotify) succeeds in Codespaces; code/ref shown. Wallet transaction history entry for vouchers is not yet implemented.
 
 ## 2025-12-04 - ✅ REAL-TIME NOTIFICATIONS, INPUT STABILITY & DECLINE NOTIFICATIONS
 
