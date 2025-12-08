@@ -117,6 +117,7 @@ export function RequestMoneyPage() {
   const [loadingPayers, setLoadingPayers] = useState<boolean>(false);
   const [showRemovePayerModal, setShowRemovePayerModal] = useState(false);
   const [payerToRemove, setPayerToRemove] = useState<{ id: string; name: string } | null>(null);
+  const [hiddenPayerIds, setHiddenPayerIds] = useState<Set<number>>(new Set());
 
   // Payshap participating banks (alphabetically ordered)
   const payshapBanks = [
@@ -152,10 +153,33 @@ export function RequestMoneyPage() {
 
   const [errors, setErrors] = useState<Partial<RequestFormData>>({});
 
+  // Helpers to persist hidden payers per user (prevents removed entries from reappearing on reload)
+  const hiddenKey = user ? `recent_payers_hidden_${user.id}` : 'recent_payers_hidden_anon';
+  const loadHiddenPayers = (): Set<number> => {
+    try {
+      const raw = localStorage.getItem(hiddenKey);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) {
+        return new Set(arr.map((v) => Number(v)).filter((n) => !Number.isNaN(n)));
+      }
+    } catch (_) {}
+    return new Set();
+  };
+  const persistHiddenPayers = (setVal: Set<number>) => {
+    try {
+      localStorage.setItem(hiddenKey, JSON.stringify(Array.from(setVal)));
+    } catch (_) {}
+  };
+
   // Load recent payers for quick selection
   useEffect(() => {
     (async () => {
       try {
+        // Load hidden payers first so initial render respects removals
+        const initialHidden = loadHiddenPayers();
+        setHiddenPayerIds(initialHidden);
+
         setLoadingPayers(true);
         const token = getToken();
         const api = APP_CONFIG.API.baseUrl;
@@ -164,7 +188,8 @@ export function RequestMoneyPage() {
         });
         const j = await resp.json();
         if (resp.ok && j?.success && Array.isArray(j?.data?.recentPayers)) {
-          setRecentPayers(j.data.recentPayers);
+          const filtered = j.data.recentPayers.filter((p: any) => !initialHidden.has(Number(p.payerUserId)));
+          setRecentPayers(filtered);
         } else {
           setRecentPayers([]);
         }
@@ -833,7 +858,9 @@ export function RequestMoneyPage() {
               <BeneficiaryList
                 title="Select Payer"
                 type="all"
-                beneficiaries={recentPayers.map((p, idx) => ({
+                beneficiaries={recentPayers
+                  .filter((p) => !hiddenPayerIds.has(Number(p.payerUserId)))
+                  .map((p, idx) => ({
                   id: String(p.payerUserId || idx),
                   name: p.name || (p.phoneNumber || 'Unknown'),
                   identifier: p.phoneNumber || p.accountNumber || '',
@@ -1764,6 +1791,12 @@ export function RequestMoneyPage() {
             // Remove payer from recent payers list
             const payerUserId = parseInt(payerToRemove.id);
             setRecentPayers(prev => prev.filter(p => p.payerUserId !== payerUserId));
+            setHiddenPayerIds(prev => {
+              const next = new Set(prev);
+              next.add(payerUserId);
+              persistHiddenPayers(next);
+              return next;
+            });
             setShowRemovePayerModal(false);
             setPayerToRemove(null);
           }
