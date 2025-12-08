@@ -364,6 +364,8 @@ class ProductController {
           product: result.product,
           supplier: result.supplier,
           recipient: result.recipient,
+          voucherCode: result.voucherCode || null,
+          transactionRef: result.transactionRef || null,
           message: result.message
         },
         timestamp: new Date().toISOString()

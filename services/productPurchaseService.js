@@ -187,6 +187,10 @@ class ProductPurchaseService {
           code: product.supplier.code
         },
         recipient: order.recipient,
+        voucherCode: supplierResult.success ? supplierResult.data?.voucherCode || null : null,
+        transactionRef: supplierResult.success
+          ? supplierResult.data?.reference || order.orderId
+          : null,
         message: supplierResult.success ? 'Purchase successful' : supplierResult.error
       };
 
