@@ -782,8 +782,14 @@ export function SendMoneyPage() {
     if (!beneficiaryToRemove) return;
     
     try {
-      // Backend removal (payment context). Avoid Number() to prevent NaN when id is string.
-      await beneficiaryService.removeBeneficiary(beneficiaryToRemove.id as any, 'payment');
+      // Backend removal (payment context) only if id is numeric; skip backend for local-only temp ids
+      const numericId = Number(beneficiaryToRemove.id);
+      const isNumericId = Number.isInteger(numericId) && !Number.isNaN(numericId);
+      if (isNumericId) {
+        await beneficiaryService.removeBeneficiary(beneficiaryToRemove.id as any, 'payment');
+      } else {
+        console.warn('Skipping backend removal for non-numeric beneficiary id', beneficiaryToRemove.id);
+      }
 
       // Remove from local state
       setBeneficiaries(prev => prev.filter(b => b.id !== beneficiaryToRemove.id));
