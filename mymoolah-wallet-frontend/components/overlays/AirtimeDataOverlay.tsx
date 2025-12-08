@@ -248,7 +248,7 @@ export function AirtimeDataOverlay() {
         setSelectedBeneficiary(null);
       }
 
-      // Refresh from API to stay in sync
+      // Refresh from API to stay in sync and ensure backend removal is reflected
       await loadBeneficiaries();
 
       setBeneficiaryToRemove(null);

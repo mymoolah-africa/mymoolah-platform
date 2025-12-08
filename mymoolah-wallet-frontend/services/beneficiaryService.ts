@@ -178,7 +178,11 @@ class BeneficiaryService {
    * Get airtime/data beneficiaries
    */
   async getAirtimeDataBeneficiaries(search: string = ''): Promise<UnifiedBeneficiary[]> {
-    return await this.getBeneficiariesByService('airtime-data', search);
+    const list = await this.getBeneficiariesByService('airtime-data', search);
+    // Filter to beneficiaries that actually have airtime or data accounts (avoid stale legacy rows)
+    return list.filter((b) =>
+      (b.accounts || []).some((a) => a.type === 'airtime' || a.type === 'data')
+    );
   }
 
   /**
