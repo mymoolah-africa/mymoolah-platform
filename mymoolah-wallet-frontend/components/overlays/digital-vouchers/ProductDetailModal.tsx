@@ -281,6 +281,12 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     }).format(amount / 100);
   };
 
+  // Clean display values for codes/refs
+  const displayVoucherCode = voucherCode
+    ? voucherCode.replace(/^VOUCHER[_-]?/i, '')
+    : '';
+  const displayTransactionRef = transactionRef || '';
+
   // Get step content
   const getStepContent = () => {
     switch (currentStep) {
@@ -571,12 +577,14 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
                       Voucher Code:
                     </span>
                     <span style={{
-                      fontFamily: 'Montserrat, sans-serif',
+                      fontFamily: 'Inter, sans-serif',
                       fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#1f2937'
+                      fontWeight: 600,
+                      color: '#1f2937',
+                      wordBreak: 'break-word',
+                      textAlign: 'right'
                     }}>
-                      {voucherCode}
+                      {displayVoucherCode}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -588,12 +596,14 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
                       Transaction Ref:
                     </span>
                     <span style={{
-                      fontFamily: 'Montserrat, sans-serif',
+                      fontFamily: 'Inter, sans-serif',
                       fontSize: '14px',
-                      fontWeight: '600',
-                      color: '#1f2937'
+                      fontWeight: 600,
+                      color: '#1f2937',
+                      wordBreak: 'break-word',
+                      textAlign: 'right'
                     }}>
-                      {transactionRef}
+                      {displayTransactionRef}
                     </span>
                   </div>
                 </div>
