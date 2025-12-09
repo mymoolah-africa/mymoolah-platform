@@ -36,19 +36,76 @@
 
 ---
 
-**Last Updated**: December 6, 2025  
-**Version**: 2.4.22 - Staging Deploy & Workflow Reinforcement  
-**Status**: 🔄 **Staging redeployed** ⚠️ **Notifications still failing on staging** 🟡 **Tip validation UX pending retest**
+**Last Updated**: December 4, 2025  
+**Version**: 2.4.21 - Real-Time Notifications & Input Stability Fixes  
+**Status**: ✅ **REAL-TIME NOTIFICATIONS ACTIVE** ✅ **INPUT STABILITY FIXED** ✅ **DECLINE NOTIFICATIONS COMPLETE**
 
 ---
 
-## 🆕 2025-12-06 Update
-- Enforced workflow: local commit → push → Codespaces pull → tests → staging deploy (image `gcr.io/mymoolah-db/mymoolah-backend:20251206-1816`, revision `mymoolah-backend-staging-00110-zpf`).
-- Notification feature still broken on staging (user-reported); to be addressed Monday.
-- Tip validation/tip error messaging pending verification after Codespaces pull/tests.
-- No application code changes in this session; latest commit added screenshots only. Documentation and staging deploy performed.
+### NEW: SFTP Gateway for MobileMart (2025-12-08) ✅ infrastructure in place
+- Provisioned SFTP Gateway Standard VM `sftp-1-vm` (africa-south1-a) using instance service account `sftp-gateway` with full API access.
+- GCS bucket `mymoolah-sftp-inbound` (africa-south1, private, uniform, versioning on) connected via “Use instance’s service account”; read/write verified.
+- Folder/prefix created for `mobilemart` (home directory). User `mobilemart` to be finalized once their SSH public key is received.
+- Firewall: SSH 22 and HTTPS 443 restricted to admin IP and tag `sftp-1-deployment`; update allowlist with MobileMart IP/CIDR when provided.
+- Connection details (after key install): host 34.35.168.101, port 22, username `mobilemart`, key auth only. Self-signed cert expected on UI (https).
+- TODO: Add MobileMart public key, add their IP/CIDR to firewall, create/enable SFTP user, and (optional) add GCS event trigger for recon ingestion.
 
----
+### NEW: Airtime/Data Beneficiary Cleanup (2025-12-08) ✅ frontend filtering
+- Change: Frontend now skips creating fallback accounts for airtime/data when no active services exist, preventing removed beneficiaries from reappearing as stale entries.
+- File: `mymoolah-wallet-frontend/services/beneficiaryService.ts`
+- Tests: Manual UI in Codespaces (add → remove beneficiary; list clears).
+- Restart: Not required (frontend-only).
+
+### NEW: Airtime/Data Backend Payload Cleanup (2025-12-08) ✅ backend filtering
+- Change: Backend `getBeneficiariesByService` now suppresses legacy airtime/data rows that only have `accountType` with no active airtime/data services (JSONB or normalized tables), reducing payload noise.
+- File: `services/UnifiedBeneficiaryService.js`
+- Tests: Manual UI verification (add → remove; list clears; payload no longer includes legacy-only airtime/data rows).
+- Restart: Required for backend change (npm start / pm2 restart if running).
+
+### NEW: Request Money Recent Payer Hide (2025-12-08) ✅ frontend persistence
+- Change: Request Money “Recent payers” removal now persists across navigation/reload via per-user hidden list stored in localStorage.
+- File: `mymoolah-wallet-frontend/pages/RequestMoneyPage.tsx`
+- Tests: Manual UI in Codespaces (remove payer → leave page → return, payer remains hidden).
+- Restart: Not required (frontend-only).
+
+### NEW: Request Money Recent Payer Hide (Backend) (2025-12-08) ✅ server-side
+- Change: Added `RecentPayerHides` table and endpoints to hide/unhide recent payers; `listRecentPayers` now excludes hidden payers server-side. Frontend now calls hide endpoint (no localStorage).
+- Files: `migrations/20251208_06_create_recent_payer_hides.js`, `models/RecentPayerHide.js`, `controllers/requestController.js`, `routes/requests.js`, `mymoolah-wallet-frontend/pages/RequestMoneyPage.tsx`
+- Tests: Manual (remove payer, reload page, payer stays hidden). No automated tests added.
+- Restart: Backend restart required after running migration; frontend change requires rebuild/reload only.
+
+### NEW: Send Money Beneficiary Removal (2025-12-08) ✅ backend + frontend
+- Change: Send Money removal now calls backend removal in payment context; backend inactivates payment methods and clears JSONB fallbacks so removed payment beneficiaries do not reappear.
+- Files: `mymoolah-wallet-frontend/pages/SendMoneyPage.tsx`, `services/UnifiedBeneficiaryService.js`
+- Tests: Manual (remove payment beneficiary, navigate away/back, beneficiary stays removed).
+- Restart: Backend restart required after deploy.
+- Fix: Removal call no longer coerces beneficiary id to Number(), preventing `NaN` payloads when ids are strings.
+- Guard: Skip backend removal for non-numeric ids (local-only temp beneficiaries) while still removing locally.
+- Filter: Payment beneficiaries now require active payment methods; removed legacy fallback that included payment beneficiaries solely by accountType/msisdn, so deleted payment beneficiaries stay hidden on reload.
+- Filter tightened: No accountType fallback for payment; list only shows beneficiaries with active payment methods.
+- Deactivation: Removal now deactivates all payment methods for the beneficiary (not just mymoolah/bank), so reload will not resurface removed payment beneficiaries.
+- ID mapping: Payment beneficiary ids now use backend ids (no `b-` prefix) so backend removals proceed correctly.
+
+### NEW: Voucher Purchase Fixes (2025-12-08) ✅ backend + frontend
+- Fixed missing DB columns blocking voucher purchase (`supplierProductId`, `denominations`, `constraints`, `serviceType`, `operation`); migrations are idempotent and applied via master script.
+- Relaxed denomination validation to allow products with empty denominations; FLASH mock now always returns voucherCode/reference.
+- API response now surfaces `voucherCode` and `transactionRef`; frontend unwraps response, strips prefix, and wraps text for clean display.
+- Tests: Manual voucher purchase (Spotify) in Codespaces; success modal shows code/ref. Wallet transaction history not yet created for vouchers (pending).
+- Restart: Backend restart required after migrations (done).
+
+### NEW: Voucher ledger + history + secure PIN handling (2025-12-09) ✅
+- Voucher purchases now: debit wallet, create Transaction history entry (type `payment`) with masked voucher metadata, and attach walletTransactionId to order metadata.
+- Commission VAT recorded in `tax_transactions` and ledger posted (when env accounts set): debit MM commission clearing; credit VAT control; credit commission revenue.
+- Voucher codes no longer stored in cleartext: masked in metadata; encrypted envelope (AES-256-GCM, 24h TTL) stored when `VOUCHER_CODE_KEY`/`VOUCHER_PIN_KEY` configured; safe supplierResponse stored without raw code.
+- Frontend: success modal gets copy-to-clipboard button; transaction history page shows masked voucher code in list drilldown.
+- Tests: `node --test tests/productPurchaseService.voucher.dev.test.js` (uses stub DATABASE_URL).
+
+### NEW: Voucher ledger + history + secure PIN handling (2025-12-09) ✅
+- Voucher purchases now: debit wallet, create Transaction history entry (type `payment`) with masked voucher metadata, and attach walletTransactionId to order metadata.
+- Commission VAT recorded in `tax_transactions` and ledger posted (when env accounts set): debit MM commission clearing; credit VAT control; credit commission revenue.
+- Voucher codes no longer stored in cleartext: masked in metadata; encrypted envelope (AES-256-GCM, 24h TTL) stored when `VOUCHER_CODE_KEY`/`VOUCHER_PIN_KEY` configured; safe supplierResponse stored without raw code.
+- Frontend: success modal gets copy-to-clipboard button; transaction history page shows masked voucher code in list drilldown.
+- Tests: `node --test tests/productPurchaseService.voucher.dev.test.js` (uses stub DATABASE_URL).
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
@@ -166,7 +223,14 @@
 - **Status**: ✅ Perfect schema parity, ✅ Standardized system prevents future connection issues, ✅ Banking-grade compliance restored
 - **Critical for Next Agent**: **ALWAYS use** `./scripts/run-migrations-master.sh [uat|staging]` for migrations - NEVER run `npx sequelize-cli` directly. Read `docs/DATABASE_CONNECTION_GUIDE.md` before any database work.
 
----
+### **NEW: Voucher Purchase Fixes (2025-12-08) ✅ backend + frontend**
+- Fixed missing DB columns blocking voucher purchase (`supplierProductId`, `denominations`, `constraints`, `serviceType`, `operation`); migrations are idempotent and applied via master script.
+- Relaxed denomination validation to allow products with empty denominations; FLASH mock now always returns voucherCode/reference.
+- API response now surfaces `voucherCode` and `transactionRef`; frontend unwraps response, strips prefix, and wraps text for clean display.
+- Tests: Manual voucher purchase (Spotify) in Codespaces; success modal shows code/ref. Wallet transaction history not yet created for vouchers (pending).
+- Restart: Backend restart required after migrations (done).
+
+----
 
 ### **🏦 STANDARD BANK PAYSHAP INTEGRATION PROPOSAL - DOCUMENTED (2025-11-26)** 📋
 - **Integration Type**: PayShap RPP/RTP via Standard Bank TPP Rails
