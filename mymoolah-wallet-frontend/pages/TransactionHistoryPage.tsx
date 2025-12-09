@@ -721,6 +721,30 @@ export function TransactionHistoryPage() {
                                   {formatDate(transaction.timestamp)}
                                 </span>
                               </div>
+                              {transaction.metadata?.voucher?.maskedCode && (
+                                <div className="flex items-center gap-2">
+                                  <span
+                                    style={{
+                                      fontFamily: 'Montserrat, sans-serif',
+                                      fontSize: 'var(--mobile-font-small)',
+                                      color: '#6b7280'
+                                    }}
+                                  >
+                                    Voucher:
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontFamily: 'Montserrat, sans-serif',
+                                      fontSize: 'var(--mobile-font-small)',
+                                      fontWeight: 600,
+                                      color: '#1f2937',
+                                      wordBreak: 'break-word'
+                                    }}
+                                  >
+                                    {transaction.metadata.voucher.maskedCode}
+                                  </span>
+                                </div>
+                              )}
 
                             </div>
                             

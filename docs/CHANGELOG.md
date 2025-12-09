@@ -24,6 +24,18 @@
 - API now returns `voucherCode` and `transactionRef`; frontend unwraps purchase response and displays cleanly (prefix stripped, wrapped text).
 - Status: Manual voucher purchase (Spotify) succeeds in Codespaces; code/ref shown. Wallet transaction history entry for vouchers is not yet implemented.
 
+## 2025-12-09 - ✅ Voucher ledger + history + secure PIN handling
+- Voucher purchases now debit wallet balances, create wallet Transaction history entries, and attach masked voucher metadata for drill-down.
+- Commission VAT is recorded to `tax_transactions`; ledger posts commission/VAT to configured accounts (`LEDGER_ACCOUNT_MM_COMMISSION_CLEARING`, `LEDGER_ACCOUNT_COMMISSION_REVENUE`, `LEDGER_ACCOUNT_VAT_CONTROL`) when present.
+- Voucher codes are masked in metadata, encrypted with AES-256-GCM (24h TTL) when `VOUCHER_CODE_KEY`/`VOUCHER_PIN_KEY` is set; UI adds copy-to-clipboard in the success modal.
+- Transaction history UI surfaces masked voucher codes; unit tests added for voucher masking/envelope (`node --test tests/productPurchaseService.voucher.dev.test.js`).
+
+## 2025-12-09 - ✅ Voucher ledger + history + secure PIN handling
+- Voucher purchases now debit wallet balances, create wallet Transaction history entries, and attach masked voucher metadata for drill-down.
+- Commission VAT is recorded to `tax_transactions`; ledger posts commission/VAT to configured accounts (`LEDGER_ACCOUNT_MM_COMMISSION_CLEARING`, `LEDGER_ACCOUNT_COMMISSION_REVENUE`, `LEDGER_ACCOUNT_VAT_CONTROL`) when present.
+- Voucher codes are masked in metadata, encrypted with AES-256-GCM (24h TTL) when `VOUCHER_CODE_KEY`/`VOUCHER_PIN_KEY` is set; UI adds copy-to-clipboard in the success modal.
+- Transaction history UI surfaces masked voucher codes; unit tests added for voucher masking/envelope (`node --test tests/productPurchaseService.voucher.dev.test.js`).
+
 ## 2025-12-08 - ✅ Voucher purchase fixes (FLASH sandbox)
 - Added missing DB columns required for voucher purchases: `supplierProductId`, `denominations`, `constraints` on `products`; `serviceType` and `operation` on `flash_transactions` (idempotent migrations).
 - Relaxed denomination validation to tolerate empty denomination arrays; flash mock now always returns voucherCode/reference.

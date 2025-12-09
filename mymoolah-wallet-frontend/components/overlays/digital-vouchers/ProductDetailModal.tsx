@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Check, Phone, CreditCard, Info, AlertTriangle } from 'lucide-react';
+import { X, Check, Phone, CreditCard, Info, AlertTriangle, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../ui/dialog';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -53,6 +53,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
   const [isProcessing, setIsProcessing] = useState(false);
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [transactionRef, setTransactionRef] = useState<string>('');
+  const [hasCopied, setHasCopied] = useState<boolean>(false);
 
   // Reset modal state when opening
   React.useEffect(() => {
@@ -286,6 +287,17 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     ? voucherCode.replace(/^VOUCHER[_-]?/i, '')
     : '';
   const displayTransactionRef = transactionRef || '';
+
+  const handleCopyVoucher = async () => {
+    if (!displayVoucherCode) return;
+    try {
+      await navigator.clipboard.writeText(displayVoucherCode);
+      setHasCopied(true);
+      setTimeout(() => setHasCopied(false), 2000);
+    } catch (err) {
+      console.error('Unable to copy voucher code:', err);
+    }
+  };
 
   // Get step content
   const getStepContent = () => {
@@ -568,7 +580,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
             <Card style={{ marginBottom: '16px' }}>
               <CardContent className="p-4">
                 <div className="space-y-3">
-                  <div className="flex justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <span style={{
                       fontFamily: 'Montserrat, sans-serif',
                       fontSize: '14px',
@@ -576,16 +588,35 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
                     }}>
                       Voucher Code:
                     </span>
-                    <span style={{
-                      fontFamily: 'Inter, sans-serif',
-                      fontSize: '14px',
-                      fontWeight: 600,
-                      color: '#1f2937',
-                      wordBreak: 'break-word',
-                      textAlign: 'right'
-                    }}>
-                      {displayVoucherCode}
-                    </span>
+                    <div className="flex flex-col items-end gap-2 flex-1">
+                      <span style={{
+                        fontFamily: 'Inter, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: 600,
+                        color: '#1f2937',
+                        wordBreak: 'break-word',
+                        textAlign: 'right'
+                      }}>
+                        {displayVoucherCode}
+                      </span>
+                      {displayVoucherCode && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleCopyVoucher}
+                          className="flex items-center gap-2"
+                          style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '12px',
+                            borderRadius: '8px',
+                            padding: '6px 10px'
+                          }}
+                        >
+                          <Copy className="w-4 h-4" />
+                          {hasCopied ? 'Copied' : 'Copy to clipboard'}
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <div className="flex justify-between">
                     <span style={{

@@ -1,9 +1,25 @@
 'use strict';
 
-const { Order, Product, SupplierTransaction, User, sequelize } = require('../models');
+const {
+  Order,
+  Product,
+  SupplierTransaction,
+  User,
+  Wallet,
+  Transaction,
+  TaxTransaction,
+  sequelize
+} = require('../models');
 const { Op } = require('sequelize');
 const supplierPricingService = require('./supplierPricingService');
+const ledgerService = require('./ledgerService');
 const crypto = require('crypto');
+
+const VAT_RATE = Number(process.env.VAT_RATE || 0.15);
+const LEDGER_ACCOUNT_MM_COMMISSION_CLEARING = process.env.LEDGER_ACCOUNT_MM_COMMISSION_CLEARING || null;
+const LEDGER_ACCOUNT_COMMISSION_REVENUE = process.env.LEDGER_ACCOUNT_COMMISSION_REVENUE || null;
+const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL || null;
+const VOUCHER_CODE_KEY = process.env.VOUCHER_CODE_KEY || process.env.VOUCHER_PIN_KEY || null;
 
 class ProductPurchaseService {
   constructor() {
@@ -99,6 +115,17 @@ class ProductPurchaseService {
       // Calculate pricing and commission
       const pricing = await this.calculatePricing(product, denomination, userId, clientId);
 
+      // Locate and lock wallet
+      const wallet = await Wallet.findOne({
+        where: { userId },
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+
+      if (!wallet) {
+        throw new Error('Wallet not found for this user');
+      }
+
       // Create order
       const order = await Order.create({
         userId,
@@ -137,19 +164,83 @@ class ProductPurchaseService {
 
       // Update order status based on supplier result
       if (supplierResult.success) {
+        const rawVoucherCode = supplierResult.data?.voucherCode;
+        const maskedVoucher = this.maskVoucherCode(rawVoucherCode);
+        const voucherEnvelope = this.createVoucherEnvelope(
+          rawVoucherCode,
+          order.orderId
+        );
+
+        const safeSupplierData = {
+          ...(supplierResult.data || {}),
+          maskedVoucherCode: maskedVoucher,
+          voucherEnvelope
+        };
+        delete safeSupplierData.voucherCode;
+
         await order.update({
           status: 'completed',
           metadata: {
             ...order.metadata,
-            supplierResponse: supplierResult.data
+            supplierResponse: safeSupplierData
           }
         }, { transaction });
 
         await supplierTransaction.update({
           status: 'success',
           supplierReference: supplierResult.data.reference,
-          responseData: supplierResult.data
+          responseData: safeSupplierData
         }, { transaction });
+
+        // Debit wallet and create transaction history
+        const debitAmountRand = Number((pricing.totalAmount / 100).toFixed(2));
+
+        await wallet.debit(debitAmountRand, 'payment', { transaction });
+
+        const transactionId = `VOUCHER_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+
+        const walletTransaction = await Transaction.create({
+          transactionId,
+          userId,
+          walletId: wallet.walletId,
+          amount: debitAmountRand,
+          type: 'payment',
+          status: 'completed',
+          description: `Voucher purchase - ${product.name}`,
+          currency: wallet.currency,
+          metadata: {
+            orderId: order.orderId,
+            supplierCode: product.supplier.code,
+            productId: product.id,
+            productName: product.name,
+            productType: product.type,
+            commissionCents: pricing.commissionCents,
+            voucher: {
+              maskedCode: maskedVoucher,
+              transactionRef: supplierResult.data?.reference || order.orderId,
+              expiresAt: voucherEnvelope?.expiresAt || null
+            },
+            idempotencyKey
+          }
+        }, { transaction });
+
+        // Attach wallet transaction to order metadata for traceability
+        await order.update({
+          metadata: {
+            ...order.metadata,
+            walletTransactionId: walletTransaction.transactionId
+          }
+        }, { transaction });
+
+        // Post VAT (output) on commission and ledger entries
+        await this.allocateCommissionVatAndLedger({
+          commissionCents: pricing.commissionCents,
+          walletTransactionId: walletTransaction.transactionId,
+          idempotencyKey,
+          purchaserUserId: userId,
+          serviceType: this.mapProductTypeToServiceType(product.type),
+          supplierCode: product.supplier.code
+        });
       } else {
         await order.update({
           status: 'failed',
@@ -198,6 +289,157 @@ class ProductPurchaseService {
       await transaction.rollback();
       console.error('Purchase error:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Create a masked view of the voucher code (last 4 visible)
+   */
+  maskVoucherCode(code) {
+    if (!code) return null;
+    const cleaned = String(code).trim();
+    if (cleaned.length <= 4) {
+      return cleaned;
+    }
+    const last4 = cleaned.slice(-4);
+    return `•••• ${last4}`;
+  }
+
+  /**
+   * Envelope voucher code with AES-256-GCM for short-term support re-send.
+   * Falls back to masking only if key is not configured.
+   */
+  createVoucherEnvelope(code, reference) {
+    if (!code) return null;
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h TTL
+
+    const keySource = VOUCHER_CODE_KEY || process.env.VOUCHER_CODE_KEY || process.env.VOUCHER_PIN_KEY || null;
+
+    if (!keySource || keySource.length < 32) {
+      return {
+        maskedCode: this.maskVoucherCode(code),
+        expiresAt
+      };
+    }
+
+    try {
+      const key = Buffer.from(keySource.slice(0, 32));
+      const iv = crypto.randomBytes(12);
+      const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+      const ciphertext = Buffer.concat([cipher.update(String(code), 'utf8'), cipher.final()]);
+      const authTag = cipher.getAuthTag();
+
+      return {
+        algorithm: 'aes-256-gcm',
+        iv: iv.toString('base64'),
+        authTag: authTag.toString('base64'),
+        ciphertext: ciphertext.toString('base64'),
+        reference,
+        expiresAt
+      };
+    } catch (err) {
+      console.error('⚠️ Failed to encrypt voucher code, storing masked only:', err.message);
+      return {
+        maskedCode: this.maskVoucherCode(code),
+        expiresAt
+      };
+    }
+  }
+
+  /**
+   * Allocate VAT on commission and post ledger entry if accounts are configured.
+   */
+  async allocateCommissionVatAndLedger({
+    commissionCents,
+    walletTransactionId,
+    idempotencyKey,
+    purchaserUserId,
+    serviceType,
+    supplierCode
+  }) {
+    if (!commissionCents || commissionCents <= 0) {
+      return;
+    }
+
+    const vatCents = Math.round(commissionCents * VAT_RATE / (1 + VAT_RATE));
+    const netCommissionCents = commissionCents - vatCents;
+
+    // Persist tax transaction (output VAT on MM commission)
+    const now = new Date();
+    const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    try {
+      await TaxTransaction.create({
+        taxTransactionId: `TAX-VOUCHER-${crypto.randomUUID()}`,
+        originalTransactionId: walletTransactionId,
+        taxCode: 'VAT_15',
+        taxName: 'VAT 15%',
+        taxType: 'vat',
+        baseAmount: Number((netCommissionCents / 100).toFixed(2)),
+        taxAmount: Number((vatCents / 100).toFixed(2)),
+        totalAmount: Number((commissionCents / 100).toFixed(2)),
+        taxRate: VAT_RATE,
+        calculationMethod: 'inclusive',
+        businessContext: 'wallet_user',
+        transactionType: serviceType,
+        entityId: supplierCode,
+        entityType: 'supplier',
+        taxPeriod,
+        taxYear: now.getFullYear(),
+        status: 'calculated',
+        vat_direction: 'output',
+        metadata: {
+          idempotencyKey,
+          purchaserUserId,
+          vatRate: VAT_RATE,
+          commissionRatePct: null
+        }
+      });
+    } catch (taxErr) {
+      console.error('⚠️ Failed to persist tax transaction for voucher commission:', taxErr.message);
+    }
+
+    if (
+      LEDGER_ACCOUNT_MM_COMMISSION_CLEARING &&
+      LEDGER_ACCOUNT_COMMISSION_REVENUE &&
+      LEDGER_ACCOUNT_VAT_CONTROL
+    ) {
+      const commissionAmountRand = Number((commissionCents / 100).toFixed(2));
+      const vatAmountRand = Number((vatCents / 100).toFixed(2));
+      const netAmountRand = Number((netCommissionCents / 100).toFixed(2));
+
+      try {
+        await ledgerService.postJournalEntry({
+          reference: `VOUCHER-COMMISSION-${walletTransactionId}`,
+          description: `Voucher commission allocation (${serviceType.toUpperCase()} - ${supplierCode})`,
+          lines: [
+            {
+              accountCode: LEDGER_ACCOUNT_MM_COMMISSION_CLEARING,
+              dc: 'debit',
+              amount: commissionAmountRand,
+              memo: 'Commission clearing (voucher)'
+            },
+            {
+              accountCode: LEDGER_ACCOUNT_VAT_CONTROL,
+              dc: 'credit',
+              amount: vatAmountRand,
+              memo: 'VAT payable on voucher commission'
+            },
+            {
+              accountCode: LEDGER_ACCOUNT_COMMISSION_REVENUE,
+              dc: 'credit',
+              amount: netAmountRand,
+              memo: 'Voucher commission revenue (net of VAT)'
+            }
+          ]
+        });
+      } catch (ledgerErr) {
+        console.error('⚠️ Failed to post voucher commission journal:', ledgerErr.message);
+      }
+    } else {
+      console.warn(
+        '⚠️ Voucher commission ledger posting skipped: missing LEDGER_ACCOUNT_MM_COMMISSION_CLEARING, LEDGER_ACCOUNT_COMMISSION_REVENUE, or LEDGER_ACCOUNT_VAT_CONTROL env vars'
+      );
     }
   }
 
