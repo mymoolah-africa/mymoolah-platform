@@ -681,7 +681,6 @@ const initializeBackgroundServices = async () => {
       console.error('❌ Failed to start Catalog Synchronization Service:', catalogErr.message);
     }
     
-    console.log('🎉 All background services started successfully');
   } catch (error) {
     console.error('❌ Error starting background services:', error.message);
     console.error('❌ Full error details:', error);
@@ -699,6 +698,7 @@ const boot = async () => {
   }
 
   await initializeBackgroundServices();
+  console.log('🎉 All background services started successfully');
 };
 
 boot().catch((error) => {
