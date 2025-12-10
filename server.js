@@ -71,6 +71,48 @@ const config = securityConfig.getConfig();
 // Cloud Run sets PORT automatically, fallback to config.port or 8080 (Cloud Run default)
 const port = process.env.PORT || config.port || 8080;
 
+// Ledger account readiness check (warn in dev, fail in production)
+const REQUIRED_LEDGER_ENV_VARS = [
+  { key: 'LEDGER_ACCOUNT_MM_COMMISSION_CLEARING', purpose: 'Commission clearing' },
+  { key: 'LEDGER_ACCOUNT_COMMISSION_REVENUE', purpose: 'Commission revenue' },
+  { key: 'LEDGER_ACCOUNT_VAT_CONTROL', purpose: 'VAT control' }
+];
+
+async function verifyLedgerAccounts() {
+  const missingEnv = REQUIRED_LEDGER_ENV_VARS
+    .filter(item => !process.env[item.key])
+    .map(item => item.key);
+
+  if (missingEnv.length) {
+    const msg = `Missing ledger env vars: ${missingEnv.join(', ')}`;
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(msg);
+    } else {
+      console.warn(`⚠️ ${msg} (ledger posting will be skipped)`);
+      return;
+    }
+  }
+
+  const codes = REQUIRED_LEDGER_ENV_VARS.map(item => process.env[item.key]);
+  const [rows] = await sequelize.query(
+    `SELECT code FROM ledger_accounts WHERE code IN (:codes)`,
+    { replacements: { codes } }
+  );
+  const found = new Set(rows.map(r => r.code));
+  const missingDb = codes.filter(code => !found.has(code));
+
+  if (missingDb.length) {
+    const msg = `Ledger accounts not found in DB: ${missingDb.join(', ')}`;
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(msg);
+    } else {
+      console.warn(`⚠️ ${msg} (commission journals will fail until created)`);
+    }
+  } else {
+    console.log('✅ Ledger account check passed');
+  }
+}
+
 // Import core routes
 const authRoutes = require('./routes/auth.js');
 const walletRoutes = require('./routes/wallets.js');
@@ -107,6 +149,7 @@ const overlayRoutes = require('./routes/overlayServices.js');
 const productRoutes = require('./routes/products.js');
 const catalogSyncRoutes = require('./routes/catalogSync.js');
 const userFavoritesRoutes = require('./routes/userFavorites.js');
+const { LedgerAccount, sequelize } = require('./models');
 
 // Validate external service credentials
 const validCredentials = securityConfig.validateExternalCredentials();
@@ -556,25 +599,7 @@ const startServer = () => {
   }
 };
 
-// Start the server
-const server = startServer();
-
-// Ensure process doesn't exit if server fails to start
-if (!server) {
-  console.error('❌ Failed to start server - server object is null');
-  process.exit(1);
-}
-
-// Keep process alive
-process.on('uncaughtException', (error) => {
-  console.error('❌ Uncaught Exception:', error);
-  // Don't exit - log and continue
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  // Don't exit - log and continue
-});
+let server;
 
 // Start background services after server initialization
 const CodebaseSweepService = require('./services/codebaseSweepService');
@@ -664,10 +689,32 @@ const initializeBackgroundServices = async () => {
   }
 };
 
-// Start background services (non-blocking - don't fail server startup if services fail)
-initializeBackgroundServices().catch((error) => {
-  console.error('⚠️  Background services initialization failed (server will continue):', error.message);
-  // Don't exit - server should still run even if background services fail
+const boot = async () => {
+  await verifyLedgerAccounts();
+  server = startServer();
+
+  if (!server) {
+    console.error('❌ Failed to start server - server object is null');
+    process.exit(1);
+  }
+
+  await initializeBackgroundServices();
+};
+
+boot().catch((error) => {
+  console.error('❌ Startup failed:', error.message);
+  process.exit(1);
+});
+
+// Keep process alive
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  // Don't exit - log and continue
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit - log and continue
 });
 
 // Graceful shutdown
