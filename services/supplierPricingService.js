@@ -35,28 +35,41 @@ async function getFees(supplierCode, serviceType) {
 async function getCommissionRatePct(supplierCode, serviceType, period = 'month') {
   const supplierId = await getSupplierIdByCode(supplierCode);
   if (!supplierId) return 0;
-  const [countRows] = await sequelize.query(
-    `SELECT COUNT(*)::int AS cnt
-     FROM flash_transactions
-     WHERE "serviceType"=:serviceType AND operation='purchase' AND status='completed'
-       AND date_trunc(:period, "createdAt") = date_trunc(:period, now())`,
-    { replacements: { serviceType, period } }
-  );
-  const volume = countRows?.[0]?.cnt || 0;
-  const [tiers] = await sequelize.query(
-    `SELECT * FROM supplier_commission_tiers
-     WHERE "supplierId"=:supplierId AND "serviceType"=:serviceType AND "isActive"=true
-     ORDER BY "minVolume" ASC`,
-    { replacements: { supplierId, serviceType } }
-  );
-  let rate = 0;
-  for (const t of tiers) {
-    if (t.maxVolume === null) {
-      if (volume >= t.minVolume) rate = Number(t.ratePct);
-    } else if (volume >= t.minVolume && volume <= t.maxVolume) {
-      rate = Number(t.ratePct);
+  const resolveRate = async (svcType) => {
+    const [countRows] = await sequelize.query(
+      `SELECT COUNT(*)::int AS cnt
+       FROM flash_transactions
+       WHERE "serviceType"=:serviceType AND operation='purchase' AND status='completed'
+         AND date_trunc(:period, "createdAt") = date_trunc(:period, now())`,
+      { replacements: { serviceType: svcType, period } }
+    );
+    const volume = countRows?.[0]?.cnt || 0;
+    const [tiers] = await sequelize.query(
+      `SELECT * FROM supplier_commission_tiers
+       WHERE "supplierId"=:supplierId AND "serviceType"=:serviceType AND "isActive"=true
+       ORDER BY "minVolume" ASC`,
+      { replacements: { supplierId, serviceType: svcType } }
+    );
+    let computed = 0;
+    for (const t of tiers) {
+      if (t.maxVolume === null) {
+        if (volume >= t.minVolume) computed = Number(t.ratePct);
+      } else if (volume >= t.minVolume && volume <= t.maxVolume) {
+        computed = Number(t.ratePct);
+      }
     }
+    return computed;
+  };
+
+  let rate = await resolveRate(serviceType);
+
+  // Fallback between voucher/digital_voucher to avoid silent zero when tiers exist under either label.
+  if (!rate && serviceType === 'voucher') {
+    rate = await resolveRate('digital_voucher');
+  } else if (!rate && serviceType === 'digital_voucher') {
+    rate = await resolveRate('voucher');
   }
+
   return rate;
 }
 
