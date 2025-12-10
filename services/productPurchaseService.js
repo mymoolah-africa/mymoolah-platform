@@ -234,7 +234,8 @@ class ProductPurchaseService {
           idempotencyKey,
           purchaserUserId: userId,
           serviceType: this.mapProductTypeToServiceType(product.type),
-          supplierCode: product.supplier.code
+          supplierCode: product.supplier.code,
+          transaction
         });
       } else {
         await order.update({
@@ -350,7 +351,8 @@ class ProductPurchaseService {
     idempotencyKey,
     purchaserUserId,
     serviceType,
-    supplierCode
+    supplierCode,
+    transaction = null
   }) {
     await commissionVatService.postCommissionVatAndLedger({
       commissionCents,
@@ -360,6 +362,7 @@ class ProductPurchaseService {
       sourceTransactionId: walletTransactionId,
       idempotencyKey,
       purchaserUserId,
+    transaction
     });
   }
 

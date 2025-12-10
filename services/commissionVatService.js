@@ -47,7 +47,8 @@ async function postCommissionVatAndLedger({
   walletTransactionId,
   sourceTransactionId,
   idempotencyKey,
-  purchaserUserId
+  purchaserUserId,
+  transaction = null
 }) {
   if (!commissionCents || commissionCents <= 0) return null;
 
@@ -84,7 +85,7 @@ async function postCommissionVatAndLedger({
         purchaserUserId,
         vatRate: VAT_RATE
       }
-    });
+    }, transaction ? { transaction } : undefined);
   } catch (taxErr) {
     console.error('⚠️ Failed to persist tax transaction for commission:', taxErr.message);
   }
