@@ -12,13 +12,14 @@ const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL || nul
  * Calculate commission in cents for a supplier/serviceType given an amount.
  * Returns null if no rate or rate is zero/invalid.
  */
-async function calculateCommissionCents({ supplierCode, serviceType, amountInCents }) {
+async function calculateCommissionCents({ supplierCode, serviceType, amountInCents, productId = null }) {
   const normalizedSupplierCode = (supplierCode || '').toUpperCase();
   if (!normalizedSupplierCode || !amountInCents) return null;
 
   const commissionRatePct = await supplierPricingService.getCommissionRatePct(
     normalizedSupplierCode,
-    serviceType
+    serviceType,
+    productId
   );
 
   if (!commissionRatePct || Number(commissionRatePct) <= 0) {

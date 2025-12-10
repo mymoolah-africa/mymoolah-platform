@@ -32,10 +32,11 @@ async function getFees(supplierCode, serviceType) {
   return { fees, vatExclusive };
 }
 
-async function getCommissionRatePct(supplierCode, serviceType, period = 'month') {
+async function getCommissionRatePct(supplierCode, serviceType, productId = null, period = 'month') {
   const supplierId = await getSupplierIdByCode(supplierCode);
   if (!supplierId) return 0;
-  const resolveRate = async (svcType) => {
+
+  const resolveRate = async (svcType, productIdOverride = null) => {
     const [countRows] = await sequelize.query(
       `SELECT COUNT(*)::int AS cnt
        FROM flash_transactions
@@ -44,11 +45,18 @@ async function getCommissionRatePct(supplierCode, serviceType, period = 'month')
       { replacements: { serviceType: svcType, period } }
     );
     const volume = countRows?.[0]?.cnt || 0;
+    const replacements = { supplierId, serviceType: svcType, productId: productIdOverride };
     const [tiers] = await sequelize.query(
       `SELECT * FROM supplier_commission_tiers
-       WHERE "supplierId"=:supplierId AND "serviceType"=:serviceType AND "isActive"=true
+       WHERE "supplierId"=:supplierId
+         AND "serviceType"=:serviceType
+         AND "isActive"=true
+         AND (
+           (:productId IS NULL AND "productId" IS NULL)
+           OR (:productId IS NOT NULL AND "productId" = :productId)
+         )
        ORDER BY "minVolume" ASC`,
-      { replacements: { supplierId, serviceType: svcType } }
+      { replacements }
     );
     let computed = 0;
     for (const t of tiers) {
@@ -61,13 +69,18 @@ async function getCommissionRatePct(supplierCode, serviceType, period = 'month')
     return computed;
   };
 
-  let rate = await resolveRate(serviceType);
+  // Priority: product-specific -> service-specific -> service alias fallback
+  let rate = await resolveRate(serviceType, productId);
+
+  if (!rate) {
+    rate = await resolveRate(serviceType, null);
+  }
 
   // Fallback between voucher/digital_voucher to avoid silent zero when tiers exist under either label.
   if (!rate && serviceType === 'voucher') {
-    rate = await resolveRate('digital_voucher');
+    rate = await resolveRate('digital_voucher', productId) || await resolveRate('digital_voucher', null);
   } else if (!rate && serviceType === 'digital_voucher') {
-    rate = await resolveRate('voucher');
+    rate = await resolveRate('voucher', productId) || await resolveRate('voucher', null);
   }
 
   return rate;
