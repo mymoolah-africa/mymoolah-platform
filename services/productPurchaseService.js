@@ -7,18 +7,13 @@ const {
   User,
   Wallet,
   Transaction,
-  TaxTransaction,
   sequelize
 } = require('../models');
 const { Op } = require('sequelize');
 const supplierPricingService = require('./supplierPricingService');
-const ledgerService = require('./ledgerService');
+const commissionVatService = require('./commissionVatService');
 const crypto = require('crypto');
 
-const VAT_RATE = Number(process.env.VAT_RATE || 0.15);
-const LEDGER_ACCOUNT_MM_COMMISSION_CLEARING = process.env.LEDGER_ACCOUNT_MM_COMMISSION_CLEARING || null;
-const LEDGER_ACCOUNT_COMMISSION_REVENUE = process.env.LEDGER_ACCOUNT_COMMISSION_REVENUE || null;
-const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL || null;
 const VOUCHER_CODE_KEY = process.env.VOUCHER_CODE_KEY || process.env.VOUCHER_PIN_KEY || null;
 
 class ProductPurchaseService {
@@ -357,90 +352,15 @@ class ProductPurchaseService {
     serviceType,
     supplierCode
   }) {
-    if (!commissionCents || commissionCents <= 0) {
-      return;
-    }
-
-    const vatCents = Math.round(commissionCents * VAT_RATE / (1 + VAT_RATE));
-    const netCommissionCents = commissionCents - vatCents;
-
-    // Persist tax transaction (output VAT on MM commission)
-    const now = new Date();
-    const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-    try {
-      await TaxTransaction.create({
-        taxTransactionId: `TAX-VOUCHER-${crypto.randomUUID()}`,
-        originalTransactionId: walletTransactionId,
-        taxCode: 'VAT_15',
-        taxName: 'VAT 15%',
-        taxType: 'vat',
-        baseAmount: Number((netCommissionCents / 100).toFixed(2)),
-        taxAmount: Number((vatCents / 100).toFixed(2)),
-        totalAmount: Number((commissionCents / 100).toFixed(2)),
-        taxRate: VAT_RATE,
-        calculationMethod: 'inclusive',
-        businessContext: 'wallet_user',
-        transactionType: serviceType,
-        entityId: supplierCode,
-        entityType: 'supplier',
-        taxPeriod,
-        taxYear: now.getFullYear(),
-        status: 'calculated',
-        vat_direction: 'output',
-        metadata: {
-          idempotencyKey,
-          purchaserUserId,
-          vatRate: VAT_RATE,
-          commissionRatePct: null
-        }
-      });
-    } catch (taxErr) {
-      console.error('⚠️ Failed to persist tax transaction for voucher commission:', taxErr.message);
-    }
-
-    if (
-      LEDGER_ACCOUNT_MM_COMMISSION_CLEARING &&
-      LEDGER_ACCOUNT_COMMISSION_REVENUE &&
-      LEDGER_ACCOUNT_VAT_CONTROL
-    ) {
-      const commissionAmountRand = Number((commissionCents / 100).toFixed(2));
-      const vatAmountRand = Number((vatCents / 100).toFixed(2));
-      const netAmountRand = Number((netCommissionCents / 100).toFixed(2));
-
-      try {
-        await ledgerService.postJournalEntry({
-          reference: `VOUCHER-COMMISSION-${walletTransactionId}`,
-          description: `Voucher commission allocation (${serviceType.toUpperCase()} - ${supplierCode})`,
-          lines: [
-            {
-              accountCode: LEDGER_ACCOUNT_MM_COMMISSION_CLEARING,
-              dc: 'debit',
-              amount: commissionAmountRand,
-              memo: 'Commission clearing (voucher)'
-            },
-            {
-              accountCode: LEDGER_ACCOUNT_VAT_CONTROL,
-              dc: 'credit',
-              amount: vatAmountRand,
-              memo: 'VAT payable on voucher commission'
-            },
-            {
-              accountCode: LEDGER_ACCOUNT_COMMISSION_REVENUE,
-              dc: 'credit',
-              amount: netAmountRand,
-              memo: 'Voucher commission revenue (net of VAT)'
-            }
-          ]
-        });
-      } catch (ledgerErr) {
-        console.error('⚠️ Failed to post voucher commission journal:', ledgerErr.message);
-      }
-    } else {
-      console.warn(
-        '⚠️ Voucher commission ledger posting skipped: missing LEDGER_ACCOUNT_MM_COMMISSION_CLEARING, LEDGER_ACCOUNT_COMMISSION_REVENUE, or LEDGER_ACCOUNT_VAT_CONTROL env vars'
-      );
-    }
+    await commissionVatService.postCommissionVatAndLedger({
+      commissionCents,
+      supplierCode,
+      serviceType,
+      walletTransactionId,
+      sourceTransactionId: walletTransactionId,
+      idempotencyKey,
+      purchaserUserId,
+    });
   }
 
   /**
@@ -629,7 +549,8 @@ class ProductPurchaseService {
    */
   mapProductTypeToServiceType(productType) {
     const mapping = {
-      'voucher': 'digital_voucher',
+      // Align vouchers to the same serviceType used by commission tiers
+      'voucher': 'voucher',
       'airtime': 'airtime',
       'data': 'data',
       'electricity': 'electricity',

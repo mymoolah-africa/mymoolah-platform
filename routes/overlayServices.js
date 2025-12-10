@@ -11,15 +11,11 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { v4: uuidv4 } = require('uuid');
-const supplierPricingService = require('../services/supplierPricingService');
-const ledgerService = require('../services/ledgerService');
-const { TaxTransaction } = require('../models');
-
+const {
+  calculateCommissionCents,
+  postCommissionVatAndLedger,
+} = require('../services/commissionVatService');
 const VAT_RATE = Number(process.env.VAT_RATE || 0.15);
-const LEDGER_ACCOUNT_MM_COMMISSION_CLEARING = process.env.LEDGER_ACCOUNT_MM_COMMISSION_CLEARING || null;
-const LEDGER_ACCOUNT_COMMISSION_REVENUE = process.env.LEDGER_ACCOUNT_COMMISSION_REVENUE || null;
-const LEDGER_ACCOUNT_VAT_CONTROL = process.env.LEDGER_ACCOUNT_VAT_CONTROL || null;
 
 async function allocateCommissionAndVat({
   supplierCode,
@@ -36,22 +32,28 @@ async function allocateCommissionAndVat({
       return;
     }
 
-    const commissionRatePct = await supplierPricingService.getCommissionRatePct(
-      normalizedSupplierCode,
-      serviceType
-    );
+    const commissionResult = await calculateCommissionCents({
+      supplierCode: normalizedSupplierCode,
+      serviceType,
+      amountInCents
+    });
 
-    if (!commissionRatePct || Number(commissionRatePct) <= 0) {
+    if (!commissionResult || !commissionResult.commissionCents) {
       return;
     }
 
-    const commissionCents = supplierPricingService.computeCommission(amountInCents, commissionRatePct);
-    if (!commissionCents) {
-      return;
-    }
+    const postResult = await postCommissionVatAndLedger({
+      commissionCents: commissionResult.commissionCents,
+      supplierCode: normalizedSupplierCode,
+      serviceType,
+      walletTransactionId: walletTransactionId || null,
+      sourceTransactionId: vasTransaction.transactionId,
+      idempotencyKey,
+      purchaserUserId,
+    });
 
-    const vatCents = Math.round(commissionCents * VAT_RATE / (1 + VAT_RATE));
-    const netCommissionCents = commissionCents - vatCents;
+    const vatCents = postResult?.vatCents ?? null;
+    const netCommissionCents = postResult?.netCommissionCents ?? null;
 
     const existingMetadata = vasTransaction.metadata || {};
     await vasTransaction.update({
@@ -60,93 +62,14 @@ async function allocateCommissionAndVat({
         commission: {
           supplierCode: normalizedSupplierCode,
           serviceType,
-          ratePct: Number(commissionRatePct),
-          amountCents: commissionCents,
-          vatCents,
-          netAmountCents: netCommissionCents,
-          vatRate: VAT_RATE,
+          ratePct: commissionResult.commissionRatePct,
+          amountCents: commissionResult.commissionCents,
+          vatCents: vatCents ?? undefined,
+          netAmountCents: netCommissionCents ?? undefined,
+          vatRate: postResult?.vatRate ?? VAT_RATE,
         },
       },
     });
-
-    const taxTransactionId = `TAX-${uuidv4()}`;
-    const now = new Date();
-    const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-    const taxPayload = {
-      taxTransactionId,
-      originalTransactionId: walletTransactionId || vasTransaction.transactionId,
-      taxCode: 'VAT_15',
-      taxName: 'VAT 15%',
-      taxType: 'vat',
-      baseAmount: Number((netCommissionCents / 100).toFixed(2)),
-      taxAmount: Number((vatCents / 100).toFixed(2)),
-      totalAmount: Number((commissionCents / 100).toFixed(2)),
-      taxRate: VAT_RATE,
-      calculationMethod: 'inclusive',
-      businessContext: 'wallet_user',
-      transactionType: serviceType,
-      entityId: normalizedSupplierCode,
-      entityType: 'supplier',
-      taxPeriod,
-      taxYear: now.getFullYear(),
-      status: 'calculated',
-      metadata: {
-        idempotencyKey,
-        purchaserUserId,
-        vatRate: VAT_RATE,
-        commissionRatePct: Number(commissionRatePct),
-      },
-    };
-
-    try {
-      await TaxTransaction.create(taxPayload);
-    } catch (taxErr) {
-      console.error('⚠️ Failed to persist tax transaction for VAS commission:', taxErr.message);
-    }
-
-    if (
-      LEDGER_ACCOUNT_MM_COMMISSION_CLEARING &&
-      LEDGER_ACCOUNT_COMMISSION_REVENUE &&
-      LEDGER_ACCOUNT_VAT_CONTROL
-    ) {
-      const commissionAmountRand = Number((commissionCents / 100).toFixed(2));
-      const vatAmountRand = Number((vatCents / 100).toFixed(2));
-      const netAmountRand = Number((netCommissionCents / 100).toFixed(2));
-
-      try {
-        await ledgerService.postJournalEntry({
-          reference: `VAS-COMMISSION-${walletTransactionId || vasTransaction.transactionId}`,
-          description: `VAS commission allocation (${serviceType.toUpperCase()} - ${normalizedSupplierCode})`,
-          lines: [
-            {
-              accountCode: LEDGER_ACCOUNT_MM_COMMISSION_CLEARING,
-              dc: 'debit',
-              amount: commissionAmountRand,
-              memo: 'Commission clearing (VAS)',
-            },
-            {
-              accountCode: LEDGER_ACCOUNT_VAT_CONTROL,
-              dc: 'credit',
-              amount: vatAmountRand,
-              memo: 'VAT payable on VAS commission (15%)',
-            },
-            {
-              accountCode: LEDGER_ACCOUNT_COMMISSION_REVENUE,
-              dc: 'credit',
-              amount: netAmountRand,
-              memo: 'VAS commission revenue (net of VAT)',
-            },
-          ],
-        });
-      } catch (ledgerErr) {
-        console.error('⚠️ Failed to post VAS commission journal:', ledgerErr.message);
-      }
-    } else {
-      console.warn(
-        '⚠️ VAS commission ledger posting skipped: missing LEDGER_ACCOUNT_MM_COMMISSION_CLEARING, LEDGER_ACCOUNT_COMMISSION_REVENUE, or LEDGER_ACCOUNT_VAT_CONTROL env vars'
-      );
-    }
   } catch (err) {
     console.error('⚠️ VAS commission/VAT allocation failed:', err.message);
   }
