@@ -554,7 +554,7 @@ app.use('*', (req, res) => {
 });
 
 // Start server with TLS configuration
-const startServer = () => {
+const startServer = async () => {
   try {
     if (process.env.TLS_ENABLED === 'true') {
       // Start HTTPS server with TLS 1.3
@@ -565,33 +565,35 @@ const startServer = () => {
       
       // Cloud Run requires listening on 0.0.0.0 (all interfaces)
       const host = process.env.HOST || '0.0.0.0';
-      httpsServer.listen(port, host, () => {
-        console.log(`🚀 MyMoolah Treasury Platform HTTPS Server running on ${host}:${port}`);
-        console.log(`🔒 TLS 1.3 Enabled: ${tlsConfig.getConfigSummary().version.min}`);
-        console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-        console.log(`📊 Security Headers: ${tlsConfig.getConfigSummary().securityHeaders.length} configured`);
-        
-        // Log TLS configuration summary
-        const tlsSummary = tlsConfig.getConfigSummary();
-        console.log(`🔐 TLS Configuration:`);
-        console.log(`   - Version: ${tlsSummary.version.min} - ${tlsSummary.version.max}`);
-        console.log(`   - Ciphers: ${tlsSummary.ciphers.length} configured`);
-        console.log(`   - Security Headers: ${tlsSummary.securityHeaders.length} active`);
+      return await new Promise((resolve) => {
+        const instance = httpsServer.listen(port, host, () => {
+          console.log(`🚀 MyMoolah Treasury Platform HTTPS Server running on ${host}:${port}`);
+          console.log(`🔒 TLS 1.3 Enabled: ${tlsConfig.getConfigSummary().version.min}`);
+          console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+          console.log(`📊 Security Headers: ${tlsConfig.getConfigSummary().securityHeaders.length} configured`);
+          
+          // Log TLS configuration summary
+          const tlsSummary = tlsConfig.getConfigSummary();
+          console.log(`🔐 TLS Configuration:`);
+          console.log(`   - Version: ${tlsSummary.version.min} - ${tlsSummary.version.max}`);
+          console.log(`   - Ciphers: ${tlsSummary.ciphers.length} configured`);
+          console.log(`   - Security Headers: ${tlsSummary.securityHeaders.length} active`);
+          resolve(instance);
+        });
       });
-      
-      return httpsServer;
     } else {
       // Start HTTP server (development only)
       // Cloud Run requires listening on 0.0.0.0 (all interfaces)
       const host = process.env.HOST || '0.0.0.0';
-      const httpServer = app.listen(port, host, () => {
-        console.log(`🚀 MyMoolah Treasury Platform HTTP Server running on ${host}:${port}`);
-        console.log(`⚠️  TLS Disabled - Not recommended for production`);
-        console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
-        console.log(`📊 Security Headers: ${Object.keys(config.securityHeaders).length} configured`);
+      return await new Promise((resolve) => {
+        const instance = app.listen(port, host, () => {
+          console.log(`🚀 MyMoolah Treasury Platform HTTP Server running on ${host}:${port}`);
+          console.log(`⚠️  TLS Disabled - Not recommended for production`);
+          console.log(`🌍 Environment: ${process.env.NODE_ENV}`);
+          console.log(`📊 Security Headers: ${Object.keys(config.securityHeaders).length} configured`);
+          resolve(instance);
+        });
       });
-      
-      return httpServer;
     }
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
@@ -690,14 +692,14 @@ const initializeBackgroundServices = async () => {
 
 const boot = async () => {
   await verifyLedgerAccounts();
-  server = startServer();
+  await initializeBackgroundServices();
+  server = await startServer();
 
   if (!server) {
     console.error('❌ Failed to start server - server object is null');
     process.exit(1);
   }
 
-  await initializeBackgroundServices();
   console.log('🎉 All background services started successfully');
 };
 
