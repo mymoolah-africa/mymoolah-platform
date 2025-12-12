@@ -1,7 +1,7 @@
 # Standard Bank PayShap Integration - Architecture Proposal
 
-**Date**: November 26, 2025  
-**Status**: 📋 **PROPOSAL - AWAITING STANDARD BANK APPROVAL**  
+**Date**: November 26, 2025 (updated December 11, 2025)  
+**Status**: 📋 **PROPOSAL - PASA SUBMISSION ACKNOWLEDGED; AWAITING SBSA API DETAILS**  
 **Integration Type**: PayShap RPP/RTP via Standard Bank TPP Rails  
 **Replaces**: Peach Payments PayShap Integration (archived 2025-11-26)
 
@@ -11,10 +11,11 @@
 
 MyMoolah Treasury Platform (MMTP) will integrate with Standard Bank's PayShap rails to replace the archived Peach Payments integration. Standard Bank is MMTP's TPP (Third Party Provider) sponsor bank, providing API credentials and endpoints for PayShap payment processing.
 
-### **Integration Scope**
-1. **Notification Endpoint**: Receive transaction notifications from Standard Bank TPP account
-2. **RPP Endpoint**: Send PayShap money from wallet to bank account
-3. **RTP Endpoint**: Request money via PayShap from bank account to wallet
+### **Integration Scope (Phase 1 – pending SBSA API package)**
+1. **Deposit Notification (Credit) Endpoint**: SBSA notifies when a deposit hits the MMTP T-PPP bank account; resolve reference → wallet/float; credit if valid, error if not found.
+2. **PayShap Outbound & Request Money**: Turn on PayShap API to:
+   - Initiate payments from wallet/float → third-party bank accounts.
+   - Handle Request Money from third-party banks into wallet/float.
 
 ### **Key Benefits**
 - Direct integration with sponsor bank (Standard Bank)
@@ -72,7 +73,7 @@ MyMoolah Treasury Platform (MMTP) will integrate with Standard Bank's PayShap ra
 
 ---
 
-## 🔔 **1. NOTIFICATION ENDPOINT (Webhook)**
+## 🔔 **1. NOTIFICATION ENDPOINT (Webhook) — Deposit Credits**
 
 ### **Purpose**
 Receive real-time transaction notifications from Standard Bank when transactions occur on the MMTP TPP bank account (MyMoolah Treasury).
@@ -182,7 +183,7 @@ function resolveReference(referenceNumber) {
 
 ---
 
-## 💸 **2. RPP ENDPOINT (Send Money from Wallet to Bank Account)**
+## 💸 **2. RPP ENDPOINT (Send Money from Wallet to Bank Account) — PayShap Outbound**
 
 ### **Purpose**
 Initiate PayShap RPP (Rapid Payments Programme) payment from a user's wallet to a standard bank account.
@@ -246,7 +247,7 @@ Content-Type: application/json
 
 ---
 
-## 💰 **3. RTP ENDPOINT (Request Money from Bank Account to Wallet)**
+## 💰 **3. RTP ENDPOINT (Request Money from Bank Account to Wallet) — PayShap Request Money**
 
 ### **Purpose**
 Initiate PayShap RTP (Request to Pay) to request money from a bank account to a user's wallet.

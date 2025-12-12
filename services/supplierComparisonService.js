@@ -16,14 +16,13 @@ class SupplierComparisonService {
         this.suppliers = {
             flash: {
                 name: 'Flash',
-                priority: 1, // Primary supplier
-                baseUrl: process.env.FLASH_API_URL || 'https://api.flashswitch.flash-group.com'
+                priority: 1 // Preferred supplier on ties
             },
             mobilemart: {
                 name: 'MobileMart',
-                priority: 2, // Secondary supplier
-                baseUrl: process.env.MOBILEMART_API_URL || 'https://api.mobilemart.co.za'
+                priority: 2
             }
+            // New suppliers can be added here with a priority to break ties.
         };
         
     
@@ -52,29 +51,32 @@ class SupplierComparisonService {
             // Get products from all suppliers using normalized schema
             const allProducts = await this.getProductVariants(vasType, amount, provider);
 
-            // Group by supplier
-            const flashProducts = allProducts.filter(p => p.supplier && p.supplier.code === 'FLASH');
-            const mobilemartProducts = allProducts.filter(p => p.supplier && p.supplier.code === 'MOBILEMART');
+            // Group by supplier dynamically (supports new suppliers without code changes)
+            const groupedBySupplier = {};
+            for (const p of allProducts) {
+                const code = p.supplier?.code || 'UNKNOWN';
+                if (!groupedBySupplier[code]) {
+                    groupedBySupplier[code] = [];
+                }
+                groupedBySupplier[code].push(p);
+            }
 
-            comparison.suppliers.flash = {
-                name: 'Flash',
-                priority: 1,
-                productCount: flashProducts.length,
-                products: flashProducts.map(p => this.formatProductForResponse(p))
-            };
+            // Build supplier summaries
+            for (const [code, products] of Object.entries(groupedBySupplier)) {
+                const supMeta = this.suppliers[code.toLowerCase()] || {};
+                comparison.suppliers[code.toLowerCase()] = {
+                    name: supMeta.name || code,
+                    priority: supMeta.priority ?? 999,
+                    productCount: products.length,
+                    products: products.map(p => this.formatProductForResponse(p))
+                };
+            }
 
-            comparison.suppliers.mobilemart = {
-                name: 'MobileMart',
-                priority: 2,
-                productCount: mobilemartProducts.length,
-                products: mobilemartProducts.map(p => this.formatProductForResponse(p))
-            };
-
-            // Find best deals
-            comparison.bestDeals = this.findBestDeals(flashProducts, mobilemartProducts, amount);
+            // Find best deals across all suppliers
+            comparison.bestDeals = this.findBestDeals(Object.values(groupedBySupplier), amount);
             
-            // Find promotional offers
-            comparison.promotionalOffers = this.findPromotionalOffers(flashProducts, mobilemartProducts);
+            // Find promotional offers across all suppliers
+            comparison.promotionalOffers = this.findPromotionalOffers(Object.values(groupedBySupplier));
             
             // Generate AI recommendations
             comparison.recommendations = this.generateRecommendations(comparison);
@@ -123,7 +125,7 @@ class SupplierComparisonService {
                     attributes: ['id', 'name', 'code', 'isActive']
                 }
             ],
-            order: [['commission', 'ASC'], ['isPromotional', 'DESC'], ['priority', 'ASC']]
+            order: [['commission', 'DESC'], ['isPromotional', 'DESC'], ['priority', 'ASC']]
         });
     }
 
@@ -179,6 +181,10 @@ class SupplierComparisonService {
                 flash: 'bill_payment',
                 mobilemart: 'bill_payment'
             },
+            'voucher': {
+                flash: 'voucher',
+                mobilemart: 'voucher'
+            },
             'gaming': {
                 flash: 'gaming',
                 mobilemart: 'gaming'
@@ -195,23 +201,37 @@ class SupplierComparisonService {
     /**
      * Find best deals across suppliers
      */
-    findBestDeals(flashProducts, mobilemartProducts, amount) {
-        const allProducts = [
-            ...flashProducts.map(p => this.formatProductForResponse(p)),
-            ...mobilemartProducts.map(p => this.formatProductForResponse(p))
-        ];
+    findBestDeals(groupedProducts, amount) {
+        const allProducts = [];
+        for (const group of groupedProducts) {
+            allProducts.push(...group.map(p => this.formatProductForResponse(p)));
+        }
 
-        // Sort by commission (lower is better) and promotional status
+        const getUserPrice = (p) => {
+            if (Array.isArray(p.predefinedAmounts) && p.predefinedAmounts.length > 0) {
+                return Math.min(...p.predefinedAmounts);
+            }
+            return p.minAmount ?? Number.POSITIVE_INFINITY;
+        };
+
+        // Sort by: 1) highest commission, 2) lowest user price, 3) preferred supplier priority
         allProducts.sort((a, b) => {
-            // Prioritize promotional products
-            if (a.isPromotional && !b.isPromotional) return -1;
-            if (!a.isPromotional && b.isPromotional) return 1;
-            
-            // Then by commission (lower is better for MyMoolah)
-            if (a.commission !== b.commission) return (a.commission || 0) - (b.commission || 0);
-            
-            // Then by priority (lower number = higher priority)
-            return (a.priority || 999) - (b.priority || 999);
+            // Commission desc
+            if ((b.commission || 0) !== (a.commission || 0)) {
+                return (b.commission || 0) - (a.commission || 0);
+            }
+
+            // User price asc
+            const priceA = getUserPrice(a);
+            const priceB = getUserPrice(b);
+            if (priceA !== priceB) {
+                return priceA - priceB;
+            }
+
+            // Preferred supplier priority (lower number is higher preference)
+            const prioA = this.suppliers[a.supplierCode?.toLowerCase()]?.priority ?? 999;
+            const prioB = this.suppliers[b.supplierCode?.toLowerCase()]?.priority ?? 999;
+            return prioA - prioB;
         });
 
         return allProducts.slice(0, 5); // Top 5 deals
@@ -220,11 +240,11 @@ class SupplierComparisonService {
     /**
      * Find promotional offers across suppliers
      */
-    findPromotionalOffers(flashProducts, mobilemartProducts) {
-        const allProducts = [
-            ...flashProducts.map(p => this.formatProductForResponse(p)),
-            ...mobilemartProducts.map(p => this.formatProductForResponse(p))
-        ];
+    findPromotionalOffers(groupedProducts) {
+        const allProducts = [];
+        for (const group of groupedProducts) {
+            allProducts.push(...group.map(p => this.formatProductForResponse(p)));
+        }
 
         const promotionalProducts = allProducts.filter(p => p.isPromotional);
 

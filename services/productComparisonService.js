@@ -68,14 +68,19 @@ class ProductComparisonService {
         };
       });
 
-      // Sort by commission rate (highest first), then by Flash preference if same commission
+      // Sort by: 1) highest commission rate, 2) lowest user price, 3) preferred supplier (Flash)
       variantsWithCommission.sort((a, b) => {
-        // First priority: highest commission rate
+        // 1) Commission rate desc
         if (b.commissionRate !== a.commissionRate) {
           return b.commissionRate - a.commissionRate;
         }
+
+        // 2) Lowest user price (denomination) asc
+        if (a.denomination !== b.denomination) {
+          return a.denomination - b.denomination;
+        }
         
-        // Second priority: if same commission, prefer Flash
+        // 3) Preferred supplier (Flash) on tie
         if (a.supplier.code === 'FLASH' && b.supplier.code !== 'FLASH') {
           return -1; // Flash first
         }
@@ -83,7 +88,6 @@ class ProductComparisonService {
           return 1; // Flash first
         }
         
-        // If both are Flash or both are not Flash, maintain current order
         return 0;
       });
 
