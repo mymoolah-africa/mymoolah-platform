@@ -113,12 +113,8 @@ class SupplierComparisonService {
             status: 'active'
         };
 
-        // Voucher variants are stored as 'voucher' in the enum; do not include 'digital_voucher' (enum-invalid)
-        if (vasType === 'voucher') {
-            whereClause.vasType = 'voucher';
-        } else {
-            whereClause.vasType = vasType;
-        }
+        // Filter by product type (source of truth) instead of variant vasType enum
+        const productWhere = vasType ? { type: vasType } : {};
 
         if (provider) {
             whereClause.provider = provider;
@@ -135,7 +131,8 @@ class SupplierComparisonService {
                 {
                     model: Product,
                     as: 'product',
-                    attributes: ['id', 'name', 'type', 'status']
+                    attributes: ['id', 'name', 'type', 'status'],
+                    where: productWhere
                 },
                 {
                     model: Supplier,
