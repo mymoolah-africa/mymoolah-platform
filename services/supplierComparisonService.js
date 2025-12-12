@@ -299,7 +299,7 @@ class SupplierComparisonService {
                 reason: `Lowest commission rate (${bestDeal.commission || 0}%)`,
                 supplier: bestDeal.supplier,
                 supplierCode: bestDeal.supplierCode,
-                productId: bestDeal.id,
+                productId: bestDeal.productId,
                 variantId: bestDeal.id
             });
         }
@@ -314,7 +314,7 @@ class SupplierComparisonService {
                 reason: `${bestPromo.promotionalDiscount || 0}% discount available`,
                 supplier: bestPromo.supplier,
                 supplierCode: bestPromo.supplierCode,
-                productId: bestPromo.id,
+                productId: bestPromo.productId,
                 variantId: bestPromo.id
             });
         }

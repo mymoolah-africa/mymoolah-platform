@@ -240,7 +240,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
         : normalizeToLocalMsisdn(recipientInfo.phone);
 
       const purchaseData = {
-        productId: Number(voucher.id),
+        productId: Number(voucher.productId || voucher.id),
         denomination: selectedDenomination!,
         recipient: recipientInfo.sendToSelf
           ? undefined

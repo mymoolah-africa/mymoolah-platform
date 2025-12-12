@@ -529,7 +529,9 @@ class ApiService {
           : this.generateVoucherDenominations(minAmount, maxAmount);
 
         return {
-          id: (product.id || product.productId || product.supplierProductId || rawName).toString(),
+          id: (product.variantId || product.id || product.supplierProductId || rawName).toString(),
+          productId: product.productId, // Actual product ID for purchase
+          variantId: product.variantId || product.id, // Variant ID for reference
           name: displayName,
           brand: product.brand?.name || product.provider || displayName,
           category: this.mapCategory(product.category || product.vasType || 'voucher'),
