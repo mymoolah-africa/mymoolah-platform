@@ -123,13 +123,28 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       
       const date = new Date(tx.createdAt || tx.date);
       
+      // Derive a safer, user-facing description
+      const metaProductName =
+        tx.metadata?.productName ||
+        tx.metadata?.voucher?.productName;
+      const isVoucherTx =
+        tx.metadata?.productType === 'voucher' ||
+        tx.metadata?.voucher ||
+        (tx.description || '').toLowerCase().includes('voucher');
+      let displayDescription = tx.description || 'Transaction';
+      if (metaProductName) {
+        displayDescription = isVoucherTx
+          ? `Voucher purchase - ${metaProductName}`
+          : metaProductName;
+      }
+
       return {
         id: tx.id || `tx_${tx.transactionId}`,
         transactionId: tx.transactionId, // Add for deduplication
         type,
         amount,
         currency: tx.currency || 'ZAR',
-        description: tx.description || 'Transaction',
+        description: displayDescription,
         date: date.toLocaleDateString('en-ZA', {
           year: 'numeric',
           month: 'short',
