@@ -189,9 +189,11 @@ class MobileMartProductMapper {
             );
 
             if (!supplier || !supplier.id) {
+                console.error('❌ MobileMart sync: missing supplier.id', supplier);
                 throw new Error('Supplier ID is required (MobileMart)');
             }
             if (!brand || !brand.id) {
+                console.error('❌ MobileMart sync: missing brand.id', brand);
                 throw new Error('Brand ID is required (MobileMart)');
             }
 
@@ -200,6 +202,15 @@ class MobileMartProductMapper {
                 mobilemartProduct.predefinedAmounts ||
                 (mobilemartProduct.fixedAmount && mobilemartProduct.amount ? [mobilemartProduct.amount] : null) ||
                 [mobilemartProduct.minAmount || 500];
+
+            // Debug trace for current item
+            console.log('↪️  MobileMart sync item', {
+                supplierId: supplier.id,
+                brandId: brand.id,
+                normalizedType,
+                productName: mobilemartProduct.productName,
+                merchantProductId: mobilemartProduct.merchantProductId
+            });
 
             // Get or create product (base product)
             const [product] = await Product.findOrCreate({
