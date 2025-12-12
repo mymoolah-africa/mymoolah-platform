@@ -229,27 +229,37 @@ class SupplierComparisonService {
             return p.minAmount ?? Number.POSITIVE_INFINITY;
         };
 
-        // Sort by: 1) highest commission, 2) lowest user price, 3) preferred supplier priority
-        allProducts.sort((a, b) => {
-            // Commission desc
-            if ((b.commission || 0) !== (a.commission || 0)) {
-                return (b.commission || 0) - (a.commission || 0);
-            }
+        // Group by logical product (prefer productId, fallback to productName/name/id)
+        const byProduct = new Map();
+        for (const p of allProducts) {
+            const key = p.productId ?? p.productName ?? p.name ?? p.id;
+            if (!byProduct.has(key)) byProduct.set(key, []);
+            byProduct.get(key).push(p);
+        }
 
-            // User price asc
-            const priceA = getUserPrice(a);
-            const priceB = getUserPrice(b);
-            if (priceA !== priceB) {
-                return priceA - priceB;
-            }
+        const bestPerProduct = [];
+        for (const variants of byProduct.values()) {
+            variants.sort((a, b) => {
+                // 1) Commission desc
+                if ((b.commission || 0) !== (a.commission || 0)) {
+                    return (b.commission || 0) - (a.commission || 0);
+                }
+                // 2) User price asc
+                const priceA = getUserPrice(a);
+                const priceB = getUserPrice(b);
+                if (priceA !== priceB) {
+                    return priceA - priceB;
+                }
+                // 3) Preferred supplier priority (lower number = higher preference)
+                const prioA = this.suppliers[a.supplierCode?.toLowerCase()]?.priority ?? 999;
+                const prioB = this.suppliers[b.supplierCode?.toLowerCase()]?.priority ?? 999;
+                return prioA - prioB;
+            });
+            bestPerProduct.push(variants[0]);
+        }
 
-            // Preferred supplier priority (lower number is higher preference)
-            const prioA = this.suppliers[a.supplierCode?.toLowerCase()]?.priority ?? 999;
-            const prioB = this.suppliers[b.supplierCode?.toLowerCase()]?.priority ?? 999;
-            return prioA - prioB;
-        });
-
-        return allProducts.slice(0, 5); // Top 5 deals
+        // Return all best picks (no slicing)
+        return bestPerProduct;
     }
 
     /**
