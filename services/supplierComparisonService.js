@@ -110,9 +110,15 @@ class SupplierComparisonService {
      */
     async getProductVariants(vasType, amount = null, provider = null) {
         const whereClause = {
-            status: 'active',
-            vasType: vasType
+            status: 'active'
         };
+
+        // Support voucher/digital_voucher aliases when vasType is 'voucher'
+        if (vasType === 'voucher') {
+            whereClause.vasType = { [Op.in]: ['voucher', 'digital_voucher'] };
+        } else {
+            whereClause.vasType = vasType;
+        }
 
         if (provider) {
             whereClause.provider = provider;
