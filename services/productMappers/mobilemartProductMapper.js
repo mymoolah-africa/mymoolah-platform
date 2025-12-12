@@ -9,12 +9,41 @@
  * @date 2025-12-01
  */
 
-const { Product, ProductVariant, Supplier } = require('../../models');
+const { Product, ProductVariant, Supplier, ProductBrand } = require('../../models');
 
 class MobileMartProductMapper {
     constructor() {
         this.supplierCode = 'MOBILEMART';
         this.supplierName = 'MobileMart';
+    }
+
+    normalizeProductType(vasType) {
+        const t = (vasType || '').toLowerCase();
+        if (t === 'bill-payment' || t === 'billpayment') return 'bill_payment';
+        if (t === 'prepaidutility' || t === 'utility' || t === 'prepaid-utility') return 'electricity';
+        return t; // airtime, data, voucher, etc.
+    }
+
+    getBrandCategory(vasType) {
+        const t = (vasType || '').toLowerCase();
+        if (t === 'voucher') return 'entertainment';
+        if (t === 'airtime' || t === 'data' || t === 'electricity' || t === 'bill_payment') return 'utilities';
+        return 'other';
+    }
+
+    async ensureBrand(brandName, vasType) {
+        const name = (brandName || 'MobileMart').trim();
+        const category = this.getBrandCategory(vasType);
+        const [brand] = await ProductBrand.findOrCreate({
+            where: { name },
+            defaults: {
+                name,
+                category,
+                isActive: true,
+                metadata: { source: 'mobilemart' }
+            }
+        });
+        return brand;
     }
 
     /**
@@ -150,19 +179,42 @@ class MobileMartProductMapper {
                 }
             });
 
+            // Normalize product type to match our enum
+            const normalizedType = this.normalizeProductType(mobilemartProduct.vasType);
+
+            // Ensure brand (use contentCreator if provided, else productName)
+            const brand = await this.ensureBrand(
+                mobilemartProduct.contentCreator || mobilemartProduct.productName || this.supplierName,
+                normalizedType
+            );
+
+            if (!supplier || !supplier.id) {
+                throw new Error('Supplier ID is required (MobileMart)');
+            }
+            if (!brand || !brand.id) {
+                throw new Error('Brand ID is required (MobileMart)');
+            }
+
+            // Build denominations fallback for safety
+            const denominations =
+                mobilemartProduct.predefinedAmounts ||
+                (mobilemartProduct.fixedAmount && mobilemartProduct.amount ? [mobilemartProduct.amount] : null) ||
+                [mobilemartProduct.minAmount || 500];
+
             // Get or create product (base product)
-            // In production, you'd have proper product management
-            // For now, we'll use a simple name-based lookup
             const [product] = await Product.findOrCreate({
                 where: {
+                    supplierId: supplier.id,
                     name: mobilemartProduct.productName,
-                    type: mobilemartProduct.vasType
+                    type: normalizedType
                 },
                 defaults: {
+                    supplierId: supplier.id,
+                    brandId: brand.id,
                     name: mobilemartProduct.productName,
-                    type: mobilemartProduct.vasType,
+                    type: normalizedType,
                     supplierProductId: mobilemartProduct.merchantProductId.toString(),
-                    denominations: mobilemartProduct.predefinedAmounts || [],
+                    denominations,
                     status: 'active',
                     isFeatured: mobilemartProduct.isPromotional || false,
                     sortOrder: 0,
@@ -173,8 +225,25 @@ class MobileMartProductMapper {
                 }
             });
 
+            // Ensure product has required foreign keys if it pre-existed
+            const updateFields = {};
+            if (!product.brandId) updateFields.brandId = brand.id;
+            if (!product.supplierId) updateFields.supplierId = supplier.id;
+            if (!product.supplierProductId) updateFields.supplierProductId = mobilemartProduct.merchantProductId.toString();
+            if (product.type !== normalizedType) updateFields.type = normalizedType;
+            if (!product.denominations || !Array.isArray(product.denominations) || product.denominations.length === 0) {
+                updateFields.denominations = denominations;
+            }
+            if (Object.keys(updateFields).length > 0) {
+                await product.update(updateFields);
+            }
+
             // Map to ProductVariant
-            const variantData = this.mapToProductVariant(mobilemartProduct, supplier.id, product.id);
+            const variantData = this.mapToProductVariant(
+                { ...mobilemartProduct, vasType: normalizedType },
+                supplier.id,
+                product.id
+            );
 
             // Create or update ProductVariant
             const [productVariant, created] = await ProductVariant.findOrCreate({
