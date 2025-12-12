@@ -96,6 +96,17 @@ export function TransactionHistoryPage() {
             const isCredit = ['deposit', 'received', 'refund'].includes(tx.type);
             const isDebit = ['sent', 'payment', 'withdrawal', 'fee'].includes(tx.type);
             
+            const metaProductName =
+              tx.metadata?.productName ||
+              tx.metadata?.voucher?.productName;
+            const isVoucherTx =
+              tx.metadata?.productType === 'voucher' ||
+              tx.metadata?.voucher ||
+              (tx.description || '').toLowerCase().includes('voucher');
+            const displayDescription = metaProductName
+              ? (isVoucherTx ? `Voucher purchase - ${metaProductName}` : metaProductName)
+              : tx.description;
+            
                          return {
                id: tx.id,
                transactionId: tx.transactionId, // Add for deduplication
@@ -104,7 +115,7 @@ export function TransactionHistoryPage() {
                currency: 'ZAR' as const,
                recipient: tx.metadata?.counterpartyIdentifier,
                sender: tx.metadata?.counterpartyIdentifier,
-               description: tx.description,
+              description: displayDescription,
                status: tx.status,
                timestamp: new Date(tx.createdAt || tx.date).toISOString(),
                reference: tx.id,
