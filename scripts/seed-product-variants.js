@@ -200,13 +200,14 @@ async function seedProducts() {
     console.log(`📦 MobileMart Supplier ID: ${mobilemartSupplier.id}\n`);
 
     // Create or get default brands
+    // Valid categories: gaming, entertainment, transport, shopping, utilities, other
     const brandDefaults = [
-      { name: 'MTN', category: 'telecom' },
-      { name: 'Vodacom', category: 'telecom' },
-      { name: 'Cell C', category: 'telecom' },
-      { name: 'Telkom', category: 'telecom' },
+      { name: 'MTN', category: 'utilities' },
+      { name: 'Vodacom', category: 'utilities' },
+      { name: 'Cell C', category: 'utilities' },
+      { name: 'Telkom', category: 'utilities' },
       { name: 'Eskom', category: 'utilities' },
-      { name: 'Takealot', category: 'retail' },
+      { name: 'Takealot', category: 'shopping' },
       { name: 'Hollywood Bets', category: 'entertainment' }
     ];
 
