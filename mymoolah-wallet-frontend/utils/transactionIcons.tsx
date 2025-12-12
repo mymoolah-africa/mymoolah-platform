@@ -30,7 +30,11 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
   const iconColor = isCredit ? '#16a34a' : '#dc2626'; // Green for credit, red for debit
   
   // 1. VOUCHER TRANSACTIONS (Ticket icons)
-  if (description.includes('voucher')) {
+  const isVoucher =
+    description.includes('voucher') ||
+    transaction.metadata?.productType === 'voucher' ||
+    transaction.metadata?.voucher;
+  if (isVoucher) {
     return <Ticket style={{ ...iconStyle, color: iconColor }} />;
   }
   

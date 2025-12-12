@@ -180,6 +180,23 @@ export function TransactionHistoryPage() {
 
   // Helper to display primary line - clean up description format
   const getPrimaryText = (t: Transaction) => {
+    // Prefer product name from metadata (ensures accurate voucher labels)
+    const metaProductName =
+      t.metadata?.productName ||
+      t.metadata?.voucher?.productName;
+
+    // If voucher metadata exists, show a clear voucher label
+    if (metaProductName) {
+      const isVoucher =
+        t.metadata?.productType === 'voucher' ||
+        t.metadata?.voucher ||
+        (t.description || '').toLowerCase().includes('voucher');
+      if (isVoucher) {
+        return `Voucher purchase - ${metaProductName}`;
+      }
+      return metaProductName;
+    }
+
     let description = t.description || '';
     
     // Remove "Ref:" prefix and extract the actual description
