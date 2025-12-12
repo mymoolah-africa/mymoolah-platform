@@ -113,9 +113,9 @@ class SupplierComparisonService {
             status: 'active'
         };
 
-        // Support voucher/digital_voucher aliases when vasType is 'voucher'
+        // Voucher variants are stored as 'voucher' in the enum; do not include 'digital_voucher' (enum-invalid)
         if (vasType === 'voucher') {
-            whereClause.vasType = { [Op.in]: ['voucher', 'digital_voucher'] };
+            whereClause.vasType = 'voucher';
         } else {
             whereClause.vasType = vasType;
         }
