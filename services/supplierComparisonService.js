@@ -229,13 +229,14 @@ class SupplierComparisonService {
             return p.minAmount ?? Number.POSITIVE_INFINITY;
         };
 
-        // Group by logical product (prefer productId, but for vouchers normalize by name to avoid dup suppliers)
+        // Group by logical product. For vouchers (or likely vouchers), normalize by name to avoid dup suppliers.
         const byProduct = new Map();
         for (const p of allProducts) {
-            const pType = (p.productType || p.type || p.serviceType || '').toLowerCase();
+            const pType = (p.productType || p.type || p.serviceType || p.vasType || '').toLowerCase();
             const nameKey = (p.productName || p.name || '').trim().toLowerCase();
             const baseKey = p.productId ?? p.productName ?? p.name ?? p.id;
-            const key = pType === 'voucher' && nameKey ? `voucher:${nameKey}` : baseKey;
+            const likelyVoucher = pType === 'voucher' || nameKey.includes('gift card') || nameKey.includes('voucher');
+            const key = likelyVoucher && nameKey ? `voucher:${nameKey}` : baseKey;
             if (!byProduct.has(key)) byProduct.set(key, []);
             byProduct.get(key).push(p);
         }

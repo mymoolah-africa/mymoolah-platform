@@ -8,11 +8,11 @@
  * Usage:
  *   node scripts/seed-product-variants.js
  * 
- * @date 2025-12-01
+ * @date 2025-12-12
  */
 
 const db = require('../models');
-const { Product, ProductVariant, Supplier } = db;
+const { Product, ProductVariant, ProductBrand, Supplier } = db;
 
 // Sample products data
 const sampleProducts = {
@@ -22,8 +22,9 @@ const sampleProducts = {
       productName: 'MTN Airtime',
       category: 'airtime',
       provider: 'MTN',
-      minAmount: 500,      // R5
-      maxAmount: 100000,   // R1000
+      minAmount: 500,
+      maxAmount: 100000,
+      denominations: [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000],
       commission: 2.5,
       isActive: true,
       isPromotional: false
@@ -35,6 +36,7 @@ const sampleProducts = {
       provider: 'Vodacom',
       minAmount: 500,
       maxAmount: 100000,
+      denominations: [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000],
       commission: 2.5,
       isActive: true,
       isPromotional: false
@@ -46,21 +48,11 @@ const sampleProducts = {
       provider: 'Cell C',
       minAmount: 500,
       maxAmount: 100000,
+      denominations: [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000],
       commission: 2.0,
       isActive: true,
       isPromotional: true,
       promotionalDiscount: 3.0
-    },
-    {
-      productCode: 'FL-AIR-TEL-001',
-      productName: 'Telkom Airtime',
-      category: 'airtime',
-      provider: 'Telkom',
-      minAmount: 500,
-      maxAmount: 50000,
-      commission: 2.0,
-      isActive: true,
-      isPromotional: false
     },
     {
       productCode: 'FL-DATA-MTN-001',
@@ -69,21 +61,10 @@ const sampleProducts = {
       provider: 'MTN',
       minAmount: 1000,
       maxAmount: 200000,
+      denominations: [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000],
       commission: 3.0,
       isActive: true,
       isPromotional: false
-    },
-    {
-      productCode: 'FL-DATA-VOD-001',
-      productName: 'Vodacom Data Bundle',
-      category: 'data',
-      provider: 'Vodacom',
-      minAmount: 1000,
-      maxAmount: 200000,
-      commission: 3.0,
-      isActive: true,
-      isPromotional: true,
-      promotionalDiscount: 5.0
     },
     {
       productCode: 'FL-ELEC-001',
@@ -92,6 +73,7 @@ const sampleProducts = {
       provider: 'Eskom',
       minAmount: 1000,
       maxAmount: 500000,
+      denominations: [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000],
       commission: 1.5,
       isActive: true,
       isPromotional: false
@@ -105,6 +87,7 @@ const sampleProducts = {
       provider: 'MTN',
       minAmount: 500,
       maxAmount: 100000,
+      denominations: [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000],
       commission: 2.0,
       isActive: true,
       isPromotional: false
@@ -116,6 +99,7 @@ const sampleProducts = {
       provider: 'Vodacom',
       minAmount: 500,
       maxAmount: 100000,
+      denominations: [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000],
       commission: 2.0,
       isActive: true,
       isPromotional: true,
@@ -128,6 +112,7 @@ const sampleProducts = {
       provider: 'Cell C',
       minAmount: 500,
       maxAmount: 100000,
+      denominations: [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000],
       commission: 1.8,
       isActive: true,
       isPromotional: false
@@ -139,17 +124,7 @@ const sampleProducts = {
       provider: 'MTN',
       minAmount: 1000,
       maxAmount: 200000,
-      commission: 2.5,
-      isActive: true,
-      isPromotional: false
-    },
-    {
-      merchantProductId: 'MM-DATA-VOD-001',
-      productName: 'Vodacom Data Bundle',
-      vasType: 'data',
-      provider: 'Vodacom',
-      minAmount: 1000,
-      maxAmount: 200000,
+      denominations: [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000],
       commission: 2.5,
       isActive: true,
       isPromotional: false
@@ -161,6 +136,7 @@ const sampleProducts = {
       provider: 'Eskom',
       minAmount: 1000,
       maxAmount: 500000,
+      denominations: [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000],
       commission: 1.2,
       isActive: true,
       isPromotional: false
@@ -172,10 +148,23 @@ const sampleProducts = {
       provider: 'Takealot',
       minAmount: 5000,
       maxAmount: 100000,
+      denominations: [5000, 10000, 20000, 50000, 100000],
       commission: 4.0,
       isActive: true,
       isPromotional: true,
       promotionalDiscount: 2.0
+    },
+    {
+      merchantProductId: 'MM-VOUCH-HB-001',
+      productName: 'Hollywood Bets Voucher',
+      vasType: 'voucher',
+      provider: 'Hollywood Bets',
+      minAmount: 500,
+      maxAmount: 100000,
+      denominations: [500, 1000, 2000, 5000, 10000, 20000, 50000, 100000],
+      commission: 3.5,
+      isActive: true,
+      isPromotional: false
     }
   ]
 };
@@ -194,9 +183,7 @@ async function seedProducts() {
       defaults: {
         name: 'Flash',
         code: 'FLASH',
-        isActive: true,
-        apiEndpoint: 'https://api.flash.co.za',
-        config: { type: 'flash' }
+        isActive: true
       }
     });
     console.log(`📦 Flash Supplier ID: ${flashSupplier.id}`);
@@ -207,12 +194,37 @@ async function seedProducts() {
       defaults: {
         name: 'MobileMart',
         code: 'MOBILEMART',
-        isActive: true,
-        apiEndpoint: 'https://api.mobilemart.co.za',
-        config: { type: 'mobilemart' }
+        isActive: true
       }
     });
     console.log(`📦 MobileMart Supplier ID: ${mobilemartSupplier.id}\n`);
+
+    // Create or get default brands
+    const brandDefaults = [
+      { name: 'MTN', category: 'telecom' },
+      { name: 'Vodacom', category: 'telecom' },
+      { name: 'Cell C', category: 'telecom' },
+      { name: 'Telkom', category: 'telecom' },
+      { name: 'Eskom', category: 'utilities' },
+      { name: 'Takealot', category: 'retail' },
+      { name: 'Hollywood Bets', category: 'entertainment' }
+    ];
+
+    const brandMap = {};
+    console.log('🏷️  Creating brands...');
+    for (const brandDef of brandDefaults) {
+      const [brand] = await ProductBrand.findOrCreate({
+        where: { name: brandDef.name },
+        defaults: {
+          name: brandDef.name,
+          category: brandDef.category,
+          isActive: true
+        }
+      });
+      brandMap[brandDef.name] = brand.id;
+      console.log(`  ✅ Brand: ${brandDef.name} (ID: ${brand.id})`);
+    }
+    console.log('');
 
     let flashCreated = 0;
     let mobilemartCreated = 0;
@@ -221,41 +233,57 @@ async function seedProducts() {
     console.log('📱 Seeding Flash products...');
     for (const flashProduct of sampleProducts.flash) {
       const vasType = mapCategoryToVasType(flashProduct.category);
+      const brandId = brandMap[flashProduct.provider] || brandMap['MTN'];
       
-      // Create or get base product
-      const [product] = await Product.findOrCreate({
+      // Check if product already exists
+      const existingProduct = await Product.findOne({
         where: { 
           name: flashProduct.productName,
-          type: vasType
-        },
-        defaults: {
-          name: flashProduct.productName,
-          type: vasType,
-          supplierProductId: flashProduct.productCode,
-          status: 'active',
-          denominations: [],
-          isFeatured: flashProduct.isPromotional || false,
-          sortOrder: 0,
-          metadata: { source: 'flash', seeded: true }
+          supplierId: flashSupplier.id
         }
       });
 
-      // Create or update ProductVariant
-      const [variant, created] = await ProductVariant.findOrCreate({
+      let product;
+      if (existingProduct) {
+        product = existingProduct;
+        console.log(`  ℹ️  Product exists: ${flashProduct.productName}`);
+      } else {
+        // Create base product
+        product = await Product.create({
+          name: flashProduct.productName,
+          type: vasType,
+          supplierId: flashSupplier.id,
+          brandId: brandId,
+          supplierProductId: flashProduct.productCode,
+          denominations: flashProduct.denominations,
+          status: 'active',
+          isFeatured: flashProduct.isPromotional || false,
+          sortOrder: 0,
+          metadata: { source: 'flash', seeded: true }
+        });
+        console.log(`  ✅ Created product: ${flashProduct.productName}`);
+      }
+
+      // Check if variant exists
+      const existingVariant = await ProductVariant.findOne({
         where: {
           productId: product.id,
           supplierId: flashSupplier.id
-        },
-        defaults: {
+        }
+      });
+
+      if (!existingVariant) {
+        await ProductVariant.create({
           productId: product.id,
           supplierId: flashSupplier.id,
           supplierProductId: flashProduct.productCode,
           vasType: vasType,
           transactionType: getTransactionType(vasType),
-          networkType: 'local',
           provider: flashProduct.provider,
           minAmount: flashProduct.minAmount,
           maxAmount: flashProduct.maxAmount,
+          predefinedAmounts: flashProduct.denominations,
+          denominations: flashProduct.denominations,
           commission: flashProduct.commission,
           fixedFee: 0,
           isPromotional: flashProduct.isPromotional || false,
@@ -265,17 +293,13 @@ async function seedProducts() {
           lastSyncedAt: new Date(),
           metadata: {
             flash_product_code: flashProduct.productCode,
-            seeded: true,
-            seeded_at: new Date().toISOString()
+            seeded: true
           }
-        }
-      });
-
-      if (created) {
+        });
         flashCreated++;
-        console.log(`  ✅ Created: ${flashProduct.productName} (${flashProduct.provider})`);
+        console.log(`  ✅ Created variant: ${flashProduct.productName} (${flashProduct.provider})`);
       } else {
-        console.log(`  ℹ️  Exists: ${flashProduct.productName} (${flashProduct.provider})`);
+        console.log(`  ℹ️  Variant exists: ${flashProduct.productName} (${flashProduct.provider})`);
       }
     }
 
@@ -283,41 +307,57 @@ async function seedProducts() {
     console.log('\n📱 Seeding MobileMart products...');
     for (const mmProduct of sampleProducts.mobilemart) {
       const vasType = mmProduct.vasType;
+      const brandId = brandMap[mmProduct.provider] || brandMap['MTN'];
       
-      // Create or get base product
-      const [product] = await Product.findOrCreate({
+      // Check if product already exists for this supplier
+      const existingProduct = await Product.findOne({
         where: { 
           name: mmProduct.productName,
-          type: vasType
-        },
-        defaults: {
-          name: mmProduct.productName,
-          type: vasType,
-          supplierProductId: mmProduct.merchantProductId,
-          status: 'active',
-          denominations: [],
-          isFeatured: mmProduct.isPromotional || false,
-          sortOrder: 0,
-          metadata: { source: 'mobilemart', seeded: true }
+          supplierId: mobilemartSupplier.id
         }
       });
 
-      // Create or update ProductVariant
-      const [variant, created] = await ProductVariant.findOrCreate({
+      let product;
+      if (existingProduct) {
+        product = existingProduct;
+        console.log(`  ℹ️  Product exists: ${mmProduct.productName}`);
+      } else {
+        // Create base product
+        product = await Product.create({
+          name: mmProduct.productName,
+          type: vasType,
+          supplierId: mobilemartSupplier.id,
+          brandId: brandId,
+          supplierProductId: mmProduct.merchantProductId,
+          denominations: mmProduct.denominations,
+          status: 'active',
+          isFeatured: mmProduct.isPromotional || false,
+          sortOrder: 0,
+          metadata: { source: 'mobilemart', seeded: true }
+        });
+        console.log(`  ✅ Created product: ${mmProduct.productName}`);
+      }
+
+      // Check if variant exists
+      const existingVariant = await ProductVariant.findOne({
         where: {
           productId: product.id,
           supplierId: mobilemartSupplier.id
-        },
-        defaults: {
+        }
+      });
+
+      if (!existingVariant) {
+        await ProductVariant.create({
           productId: product.id,
           supplierId: mobilemartSupplier.id,
           supplierProductId: mmProduct.merchantProductId,
           vasType: vasType,
           transactionType: getTransactionType(vasType),
-          networkType: 'local',
           provider: mmProduct.provider,
           minAmount: mmProduct.minAmount,
           maxAmount: mmProduct.maxAmount,
+          predefinedAmounts: mmProduct.denominations,
+          denominations: mmProduct.denominations,
           commission: mmProduct.commission,
           fixedFee: 0,
           isPromotional: mmProduct.isPromotional || false,
@@ -327,17 +367,13 @@ async function seedProducts() {
           lastSyncedAt: new Date(),
           metadata: {
             mobilemart_product_id: mmProduct.merchantProductId,
-            seeded: true,
-            seeded_at: new Date().toISOString()
+            seeded: true
           }
-        }
-      });
-
-      if (created) {
+        });
         mobilemartCreated++;
-        console.log(`  ✅ Created: ${mmProduct.productName} (${mmProduct.provider})`);
+        console.log(`  ✅ Created variant: ${mmProduct.productName} (${mmProduct.provider})`);
       } else {
-        console.log(`  ℹ️  Exists: ${mmProduct.productName} (${mmProduct.provider})`);
+        console.log(`  ℹ️  Variant exists: ${mmProduct.productName} (${mmProduct.provider})`);
       }
     }
 
@@ -345,9 +381,9 @@ async function seedProducts() {
     console.log('\n' + '='.repeat(50));
     console.log('📊 SEEDING SUMMARY');
     console.log('='.repeat(50));
-    console.log(`Flash products created:      ${flashCreated}`);
-    console.log(`MobileMart products created: ${mobilemartCreated}`);
-    console.log(`Total new products:          ${flashCreated + mobilemartCreated}`);
+    console.log(`Flash variants created:      ${flashCreated}`);
+    console.log(`MobileMart variants created: ${mobilemartCreated}`);
+    console.log(`Total new variants:          ${flashCreated + mobilemartCreated}`);
     console.log('='.repeat(50));
 
     // Verify counts
@@ -363,7 +399,6 @@ async function seedProducts() {
     console.log('='.repeat(50));
 
     console.log('\n✅ Product seeding completed successfully!');
-    console.log('\n💡 Test with: curl https://staging.mymoolah.africa/api/v1/suppliers/compare/airtime');
 
   } catch (error) {
     console.error('\n❌ Seeding failed:', error.message);
@@ -382,9 +417,7 @@ function mapCategoryToVasType(category) {
     'data': 'data',
     'electricity': 'electricity',
     'voucher': 'voucher',
-    'bill_payment': 'bill_payment',
-    'gaming': 'gaming',
-    'streaming': 'streaming'
+    'bill_payment': 'bill_payment'
   };
   return mapping[category.toLowerCase()] || 'voucher';
 }
