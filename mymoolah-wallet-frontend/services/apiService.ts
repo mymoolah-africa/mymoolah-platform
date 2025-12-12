@@ -295,7 +295,9 @@ class ApiService {
     if (provider) params.append('provider', provider);
     
     const response = await this.request<SupplierComparison>(`/api/v1/suppliers/compare/${vasType}?${params}`);
-    return response.data!
+    // Backend returns { success, data: { ...comparison... } }; unwrap if nested
+    const payload: any = response.data;
+    return (payload && payload.data) ? payload.data : payload!;
   }
 
   async getTrendingProducts(vasType?: string): Promise<VASProduct[]> {
