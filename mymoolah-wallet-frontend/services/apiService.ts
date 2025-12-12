@@ -496,21 +496,28 @@ class ApiService {
     return response.data!
   }
 
-  // Voucher API Methods
+  // Voucher API Methods (uses supplier comparison best-deals for deduped variants)
   async getVouchers(): Promise<{ vouchers: any[] }> {
     try {
-      const response = await this.request<any>('/api/v1/products?type=voucher');
+      // Use comparison engine to dedupe and pick best supplier per product
+      const comparison = await this.compareSuppliers('voucher');
+      const sourceList =
+        (comparison?.bestDeals && comparison.bestDeals.length > 0)
+          ? comparison.bestDeals
+          : (comparison?.products || []);
 
-      // Transform the backend response to match frontend interface
-      const transformedVouchers = (response.data?.data?.products || [])
-        .map((product: any) => {
-        const minAmount = product.priceRange?.min || 0;
-        const maxAmount = product.priceRange?.max || 0;
-        const supplierCode = product.supplier?.code ? String(product.supplier.code).toUpperCase() : '';
+      const transformedVouchers = sourceList.map((product: any) => {
+        const rawName = (product.productName || product.name || '').trim();
+        const displayName = rawName
+          .replace(/\s+Voucher$/, '')
+          .replace('HollywoodBets', 'Hollywood\nBets');
+
+        const minAmount = product.minAmount ?? product.price ?? product.min ?? 0;
+        const maxAmount = product.maxAmount ?? product.price ?? product.max ?? minAmount;
+        const supplierCode = (product.supplierCode || product.supplier?.code || '').toString().toUpperCase();
 
         const explicitDenominations =
-          (Array.isArray(product.metadata?.denominations) ? product.metadata.denominations : null) ||
-          (Array.isArray(product.metadata?.denominationOptions) ? product.metadata.denominationOptions : null) ||
+          (Array.isArray(product.predefinedAmounts) ? product.predefinedAmounts : null) ||
           (Array.isArray(product.denominationOptions) ? product.denominationOptions : null) ||
           (Array.isArray(product.denominations) ? product.denominations : null) ||
           (Array.isArray(product.priceRange?.denominations) ? product.priceRange.denominations : null);
@@ -520,21 +527,20 @@ class ApiService {
           : this.generateVoucherDenominations(minAmount, maxAmount);
 
         return {
-          id: product.id.toString(),
-          name: product.name.replace(/\s+Voucher$/, '').replace('HollywoodBets', 'Hollywood\nBets'), // Remove "Voucher" suffix and split HollywoodBets
-          brand: product.brand?.name || product.name,
-          category: this.mapCategory(product.brand?.category || 'voucher'),
+          id: (product.id || product.productId || product.supplierProductId || rawName).toString(),
+          name: displayName,
+          brand: product.brand?.name || product.provider || displayName,
+          category: this.mapCategory(product.category || product.vasType || 'voucher'),
           minAmount,
           maxAmount,
-          icon: this.getVoucherIcon(product.name),
-          description: product.metadata?.description || product.name,
+          icon: this.getVoucherIcon(rawName || displayName),
+          description: product.description || rawName || displayName,
           supplierCode,
-          available: supplierCode === 'FLASH', // Only FLASH supported today in purchase flow
-          featured: product.isFeatured || ['MMVoucher', 'Netflix', 'Google Play', 'DStv', 'Betway'].includes(product.name),
+          available: true, // Show best pick irrespective of supplier; purchase flow can branch as needed
+          featured: product.isPromotional || product.featured || ['MMVoucher', 'Netflix', 'Google Play', 'DStv', 'Betway'].includes(displayName),
           denominations
         };
-      })
-        .filter((voucher: any) => voucher.available); // hide unsupported suppliers to avoid 500s
+      });
 
       return { vouchers: transformedVouchers };
     } catch (error) {
