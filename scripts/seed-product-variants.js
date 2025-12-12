@@ -278,21 +278,23 @@ async function seedProducts() {
           productId: product.id,
           supplierId: flashSupplier.id,
           supplierProductId: flashProduct.productCode,
-          vasType: vasType,
-          transactionType: getTransactionType(vasType),
-          provider: flashProduct.provider,
-          minAmount: flashProduct.minAmount,
-          maxAmount: flashProduct.maxAmount,
-          predefinedAmounts: flashProduct.denominations,
           denominations: flashProduct.denominations,
-          commission: flashProduct.commission,
-          fixedFee: 0,
-          isPromotional: flashProduct.isPromotional || false,
-          promotionalDiscount: flashProduct.promotionalDiscount || null,
-          priority: 1,
+          pricing: {
+            defaultCommissionRate: flashProduct.commission,
+            commissionTiers: [],
+            fees: {}
+          },
+          constraints: {
+            minAmount: flashProduct.minAmount,
+            maxAmount: flashProduct.maxAmount
+          },
           status: 'active',
-          lastSyncedAt: new Date(),
+          isPreferred: false,
+          sortOrder: 0,
           metadata: {
+            provider: flashProduct.provider,
+            vasType: vasType,
+            transactionType: getTransactionType(vasType),
             flash_product_code: flashProduct.productCode,
             seeded: true
           }
@@ -352,21 +354,23 @@ async function seedProducts() {
           productId: product.id,
           supplierId: mobilemartSupplier.id,
           supplierProductId: mmProduct.merchantProductId,
-          vasType: vasType,
-          transactionType: getTransactionType(vasType),
-          provider: mmProduct.provider,
-          minAmount: mmProduct.minAmount,
-          maxAmount: mmProduct.maxAmount,
-          predefinedAmounts: mmProduct.denominations,
           denominations: mmProduct.denominations,
-          commission: mmProduct.commission,
-          fixedFee: 0,
-          isPromotional: mmProduct.isPromotional || false,
-          promotionalDiscount: mmProduct.promotionalDiscount || null,
-          priority: 2,
+          pricing: {
+            defaultCommissionRate: mmProduct.commission,
+            commissionTiers: [],
+            fees: {}
+          },
+          constraints: {
+            minAmount: mmProduct.minAmount,
+            maxAmount: mmProduct.maxAmount
+          },
           status: 'active',
-          lastSyncedAt: new Date(),
+          isPreferred: false,
+          sortOrder: 0,
           metadata: {
+            provider: mmProduct.provider,
+            vasType: mmProduct.vasType,
+            transactionType: getTransactionType(mmProduct.vasType),
             mobilemart_product_id: mmProduct.merchantProductId,
             seeded: true
           }
