@@ -54,19 +54,31 @@ class SupplierComparisonService {
             // Group by supplier dynamically (supports new suppliers without code changes)
             const groupedBySupplier = {};
             for (const p of allProducts) {
-                const code = p.supplier?.code || 'UNKNOWN';
+                const codeRaw = p.supplier?.code || 'UNKNOWN';
+                const code = codeRaw.toLowerCase();
                 if (!groupedBySupplier[code]) {
                     groupedBySupplier[code] = [];
                 }
                 groupedBySupplier[code].push(p);
             }
 
-            // Build supplier summaries
-            for (const [code, products] of Object.entries(groupedBySupplier)) {
-                const supMeta = this.suppliers[code.toLowerCase()] || {};
-                comparison.suppliers[code.toLowerCase()] = {
-                    name: supMeta.name || code,
+            // Build supplier summaries for known suppliers (ensure keys always exist)
+            for (const [knownCode, supMeta] of Object.entries(this.suppliers)) {
+                const products = groupedBySupplier[knownCode] || [];
+                comparison.suppliers[knownCode] = {
+                    name: supMeta.name || knownCode,
                     priority: supMeta.priority ?? 999,
+                    productCount: products.length,
+                    products: products.map(p => this.formatProductForResponse(p))
+                };
+            }
+
+            // Include any additional suppliers not in the known list
+            for (const [code, products] of Object.entries(groupedBySupplier)) {
+                if (comparison.suppliers[code]) continue;
+                comparison.suppliers[code] = {
+                    name: code,
+                    priority: 999,
                     productCount: products.length,
                     products: products.map(p => this.formatProductForResponse(p))
                 };
