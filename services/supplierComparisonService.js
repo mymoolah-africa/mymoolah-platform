@@ -165,6 +165,7 @@ class SupplierComparisonService {
             minAmount: pv.minAmount,
             maxAmount: pv.maxAmount,
             predefinedAmounts: pv.predefinedAmounts,
+            denominations: pv.denominations, // Add denominations from variant
             commission: pv.commission,
             fixedFee: pv.fixedFee,
             isPromotional: pv.isPromotional,
