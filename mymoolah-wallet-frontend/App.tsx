@@ -25,7 +25,7 @@ import FeedbackPage from './pages/FeedbackPage';
 
 // Overlay Components
 import { AirtimeDataOverlay } from './components/overlays/AirtimeDataOverlay';
-import { AirtimeDataOverlayModern } from './components/overlays/airtime-data/AirtimeDataOverlayModern';
+// import { AirtimeDataOverlayModern } from './components/overlays/airtime-data/AirtimeDataOverlayModern'; // Temporarily disabled for testing
 import { AirtimeDataTest } from './components/overlays/airtime-data/AirtimeDataTest';
 import { ElectricityOverlay } from './components/overlays/ElectricityOverlay';
 import { BillPaymentOverlay } from './components/overlays/BillPaymentOverlay';
