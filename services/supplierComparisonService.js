@@ -233,7 +233,18 @@ class SupplierComparisonService {
         const byProduct = new Map();
         for (const p of allProducts) {
             const pType = (p.productType || p.type || p.serviceType || p.vasType || '').toLowerCase();
-            const nameKey = (p.productName || p.name || '').trim().toLowerCase();
+            let nameKey = (p.productName || p.name || '').trim().toLowerCase();
+            
+            // Strip denomination suffixes and "voucher" for better deduplication
+            // e.g., "Hollywood Bets R10" -> "hollywood bets", "Hollywood Bets Voucher" -> "hollywood bets"
+            nameKey = nameKey
+                .replace(/\s+r\d+$/i, '')           // Remove trailing " R10", " R100", etc.
+                .replace(/\s+r\d+k$/i, '')          // Remove " R10K" style
+                .replace(/\s+\d+\s*rands?$/i, '')   // Remove " 100 rand"
+                .replace(/\s+voucher$/i, '')        // Remove trailing " Voucher"
+                .replace(/\s+gift\s+card$/i, '')    // Remove trailing " Gift Card"
+                .trim();
+            
             const baseKey = p.productId ?? p.productName ?? p.name ?? p.id;
             const likelyVoucher = pType === 'voucher' || nameKey.includes('gift card') || nameKey.includes('voucher');
             const key = likelyVoucher && nameKey ? `voucher:${nameKey}` : baseKey;
