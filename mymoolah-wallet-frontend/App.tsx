@@ -25,8 +25,8 @@ import FeedbackPage from './pages/FeedbackPage';
 
 // Overlay Components
 import { AirtimeDataOverlay } from './components/overlays/AirtimeDataOverlay';
-// import { AirtimeDataOverlayModern } from './components/overlays/airtime-data/AirtimeDataOverlayModern'; // Temporarily disabled for testing
-import { AirtimeDataTest } from './components/overlays/airtime-data/AirtimeDataTest';
+import { AirtimeDataOverlayModern } from './components/overlays/airtime-data/AirtimeDataOverlayModern';
+// import { AirtimeDataTest } from './components/overlays/airtime-data/AirtimeDataTest';
 import { ElectricityOverlay } from './components/overlays/ElectricityOverlay';
 import { BillPaymentOverlay } from './components/overlays/BillPaymentOverlay';
 import { FlashEeziCashOverlay } from './components/overlays/flash-eezicash/FlashEeziCashOverlay';
@@ -49,7 +49,7 @@ function AppContent() {
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
-  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/airtime-data-overlay', '/airtime-data-v2', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/vouchers-overlay'];
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/vouchers-overlay'];
   const showTopBanner = pagesWithTopBanner.includes(location.pathname);
 
   return (
@@ -112,8 +112,7 @@ function AppContent() {
             <Route path="/bill-payments" element={<ProtectedRoute><div>Bill Payments Page - Coming Soon</div></ProtectedRoute>} />
             
             {/* Overlay Routes */}
-            <Route path="/airtime-data-overlay" element={<ProtectedRoute><AirtimeDataOverlay /></ProtectedRoute>} />
-            <Route path="/airtime-data-v2" element={<ProtectedRoute><AirtimeDataTest /></ProtectedRoute>} />
+            <Route path="/airtime-data-overlay" element={<ProtectedRoute><AirtimeDataOverlayModern /></ProtectedRoute>} />
             <Route path="/electricity-overlay" element={<ProtectedRoute><ElectricityOverlay /></ProtectedRoute>} />
             <Route path="/bill-payment-overlay" element={<ProtectedRoute><BillPaymentOverlay /></ProtectedRoute>} />
             <Route path="/flash-eezicash-overlay" element={<ProtectedRoute><FlashEeziCashOverlay /></ProtectedRoute>} />
