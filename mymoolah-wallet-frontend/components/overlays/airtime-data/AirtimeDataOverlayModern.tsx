@@ -132,6 +132,8 @@ export function AirtimeDataOverlayModern() {
           apiService.compareSuppliers('airtime'),
           apiService.compareSuppliers('data')
         ]);
+        console.log('🔍 Airtime Comparison API Response:', airtimeComparison);
+        console.log('🔍 Data Comparison API Response:', dataComparison);
       } catch (err) {
         console.error('Failed to load product comparisons:', err);
         // Continue with empty products
