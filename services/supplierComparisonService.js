@@ -251,11 +251,13 @@ class SupplierComparisonService {
             }
             
             const baseKey = p.productId ?? p.productName ?? p.name ?? p.id;
-            const likelyVoucher = pType === 'voucher' || originalName.includes('gift card') || originalName.includes('voucher');
+            // Use serviceType parameter (from API call) OR product-level type for voucher detection
+            const isVoucherService = serviceType === 'voucher';
+            const likelyVoucher = isVoucherService || pType === 'voucher' || originalName.includes('gift card') || originalName.includes('voucher');
             const key = likelyVoucher && nameKey ? `voucher:${nameKey}` : baseKey;
             
             if (originalName.includes('hollywood')) {
-                console.log(`🔑 [Dedup] Hollywood Bets key: "${key}", likelyVoucher: ${likelyVoucher}, nameKey: "${nameKey}"`);
+                console.log(`🔑 [Dedup] Hollywood key="${key}", isVoucherService=${isVoucherService}, pType="${pType}"`);
             }
             
             if (!byProduct.has(key)) byProduct.set(key, []);
