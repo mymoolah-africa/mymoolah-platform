@@ -94,9 +94,21 @@ class ProductPurchaseService {
       }
 
       // Validate denomination
+      console.log('🔍 [Purchase] Product:', {
+        id: product.id,
+        name: product.name,
+        denominations: product.denominations,
+        hasVariants: !!product.variants,
+        variantsCount: product.variants?.length || 0,
+        firstVariantDenoms: product.variants?.[0]?.denominations
+      });
+      console.log('🔍 [Purchase] Requested denomination:', denomination);
+
       const hasDefinedDenoms = product.denominations && Array.isArray(product.denominations) && product.denominations.length > 0;
       if (hasDefinedDenoms) {
-        if (!product.isValidDenomination(denomination)) {
+        const isValid = product.isValidDenomination(denomination);
+        console.log('🔍 [Purchase] Denomination validation result:', isValid);
+        if (!isValid) {
           throw new Error('Invalid denomination for this product');
         }
       } else {
