@@ -515,6 +515,9 @@ class ProductPurchaseService {
         case 'FLASH':
           return await this.processWithFlash(product, denomination, recipient, supplierTransaction, transaction);
         
+        case 'MOBILEMART':
+          return await this.processWithMobileMart(product, denomination, recipient, supplierTransaction, transaction);
+        
         // Add other suppliers here
         default:
           throw new Error(`Unsupported supplier: ${supplierCode}`);
@@ -560,6 +563,28 @@ class ProductPurchaseService {
       success: true,
       data: {
         reference: flashReference,
+        status: 'success',
+        voucherCode,
+        message: 'Voucher purchased successfully'
+      }
+    };
+  }
+
+  /**
+   * Process voucher purchase with MobileMart
+   */
+  async processWithMobileMart(product, denomination, recipient, supplierTransaction, transaction) {
+    // Simulate MobileMart processing (same as Flash for UAT)
+    const mobilemartReference = `MOBILEMART_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const voucherCode = `VOUCHER_${mobilemartReference}`;
+    
+    // Simulate processing delay
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    return {
+      success: true,
+      data: {
+        reference: mobilemartReference,
         status: 'success',
         voucherCode,
         message: 'Voucher purchased successfully'
