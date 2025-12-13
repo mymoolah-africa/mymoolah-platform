@@ -140,12 +140,33 @@ export function AirtimeDataOverlayModern() {
         return;
       }
 
-      const airtimeProds = (airtimeComparison.bestDeals || airtimeComparison.products || []).map((p: any) => ({
-        id: p.id || p.productId,
-        name: p.productName || p.name,
-        size: p.size || `R${(p.price / 100).toFixed(0)}`,
-        price: p.price || p.minAmount,
-        provider: p.provider || p.supplierCode,
+      // Extract all products from all suppliers
+      const extractProducts = (comparison: any) => {
+        const allProds: any[] = [];
+        
+        // First try bestDeals (pre-filtered best options)
+        if (comparison.bestDeals && comparison.bestDeals.length > 0) {
+          allProds.push(...comparison.bestDeals);
+        }
+        
+        // Also include all products from each supplier
+        if (comparison.suppliers) {
+          Object.values(comparison.suppliers).forEach((supplier: any) => {
+            if (supplier.products && supplier.products.length > 0) {
+              allProds.push(...supplier.products);
+            }
+          });
+        }
+        
+        return allProds;
+      };
+
+      const airtimeProds = extractProducts(airtimeComparison).map((p: any) => ({
+        id: p.id || p.productId || p.variantId,
+        name: p.productName || p.name || 'Unknown Product',
+        size: p.size || (p.denominations && p.denominations.length > 0 ? `R${p.denominations[0]}` : `R${((p.price || p.minAmount || 0) / 100).toFixed(0)}`),
+        price: p.price || p.minAmount || 0,
+        provider: p.provider || p.supplierCode || p.network || 'Unknown',
         type: 'airtime' as const,
         validity: p.validity || 'Immediate',
         isBestDeal: p.isBestDeal || false,
@@ -155,12 +176,12 @@ export function AirtimeDataOverlayModern() {
         commission: p.commission || 0
       }));
 
-      const dataProds = (dataComparison.bestDeals || dataComparison.products || []).map((p: any) => ({
-        id: p.id || p.productId,
-        name: p.productName || p.name,
-        size: p.size || `${(p.minAmount / 100).toFixed(0)}MB`,
-        price: p.price || p.minAmount,
-        provider: p.provider || p.supplierCode,
+      const dataProds = extractProducts(dataComparison).map((p: any) => ({
+        id: p.id || p.productId || p.variantId,
+        name: p.productName || p.name || 'Unknown Product',
+        size: p.size || (p.dataAmount ? `${p.dataAmount}` : `${((p.minAmount || 0) / 100).toFixed(0)}MB`),
+        price: p.price || p.minAmount || 0,
+        provider: p.provider || p.supplierCode || p.network || 'Unknown',
         type: 'data' as const,
         validity: p.validity || '30 days',
         isBestDeal: p.isBestDeal || false,
