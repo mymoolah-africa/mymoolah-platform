@@ -279,6 +279,8 @@ class SupplierComparisonService {
         }
 
         // Return all best picks (no slicing)
+        console.log(`📊 [Dedup] Total products before dedup: ${allProducts.length}, After dedup: ${bestPerProduct.length}`);
+        console.log(`📊 [Dedup] Hollywood Bets count:`, bestPerProduct.filter(p => (p.productName || p.name || '').toLowerCase().includes('hollywood')).length);
         return bestPerProduct;
     }
 
