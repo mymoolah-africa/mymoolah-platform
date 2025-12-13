@@ -251,8 +251,13 @@ class SupplierComparisonService {
             }
             
             const baseKey = p.productId ?? p.productName ?? p.name ?? p.id;
-            const likelyVoucher = pType === 'voucher' || nameKey.includes('gift card') || nameKey.includes('voucher');
+            const likelyVoucher = pType === 'voucher' || originalName.includes('gift card') || originalName.includes('voucher');
             const key = likelyVoucher && nameKey ? `voucher:${nameKey}` : baseKey;
+            
+            if (originalName.includes('hollywood')) {
+                console.log(`🔑 [Dedup] Hollywood Bets key: "${key}", likelyVoucher: ${likelyVoucher}, nameKey: "${nameKey}"`);
+            }
+            
             if (!byProduct.has(key)) byProduct.set(key, []);
             byProduct.get(key).push(p);
         }
