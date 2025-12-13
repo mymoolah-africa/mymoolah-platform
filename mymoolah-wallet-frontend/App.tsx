@@ -25,8 +25,8 @@ import FeedbackPage from './pages/FeedbackPage';
 
 // Overlay Components
 import { AirtimeDataOverlay } from './components/overlays/AirtimeDataOverlay';
-import { AirtimeDataOverlayModern } from './components/overlays/airtime-data/AirtimeDataOverlayModern';
-// import { AirtimeDataTest } from './components/overlays/airtime-data/AirtimeDataTest';
+// AirtimeDataOverlayModern temporarily disabled - rebuilding with correct beneficiary-first UX
+// import { AirtimeDataOverlayModern } from './components/overlays/airtime-data/AirtimeDataOverlayModern';
 import { ElectricityOverlay } from './components/overlays/ElectricityOverlay';
 import { BillPaymentOverlay } from './components/overlays/BillPaymentOverlay';
 import { FlashEeziCashOverlay } from './components/overlays/flash-eezicash/FlashEeziCashOverlay';
@@ -112,7 +112,7 @@ function AppContent() {
             <Route path="/bill-payments" element={<ProtectedRoute><div>Bill Payments Page - Coming Soon</div></ProtectedRoute>} />
             
             {/* Overlay Routes */}
-            <Route path="/airtime-data-overlay" element={<ProtectedRoute><AirtimeDataOverlayModern /></ProtectedRoute>} />
+            <Route path="/airtime-data-overlay" element={<ProtectedRoute><AirtimeDataOverlay /></ProtectedRoute>} />
             <Route path="/electricity-overlay" element={<ProtectedRoute><ElectricityOverlay /></ProtectedRoute>} />
             <Route path="/bill-payment-overlay" element={<ProtectedRoute><BillPaymentOverlay /></ProtectedRoute>} />
             <Route path="/flash-eezicash-overlay" element={<ProtectedRoute><FlashEeziCashOverlay /></ProtectedRoute>} />
