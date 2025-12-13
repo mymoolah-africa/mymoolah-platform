@@ -246,19 +246,11 @@ class SupplierComparisonService {
                 .replace(/\s+gift\s+card$/i, '')    // Remove trailing " Gift Card"
                 .trim();
             
-            if (originalName !== nameKey && originalName.includes('hollywood')) {
-                console.log(`🔍 [Dedup] Normalized "${originalName}" -> "${nameKey}"`);
-            }
-            
             const baseKey = p.productId ?? p.productName ?? p.name ?? p.id;
             // Use serviceType parameter (from API call) OR product-level type for voucher detection
             const isVoucherService = serviceType === 'voucher';
             const likelyVoucher = isVoucherService || pType === 'voucher' || originalName.includes('gift card') || originalName.includes('voucher');
             const key = likelyVoucher && nameKey ? `voucher:${nameKey}` : baseKey;
-            
-            if (originalName.includes('hollywood')) {
-                console.log(`🔑 [Dedup] Hollywood key="${key}", isVoucherService=${isVoucherService}, pType="${pType}"`);
-            }
             
             if (!byProduct.has(key)) byProduct.set(key, []);
             byProduct.get(key).push(p);
@@ -286,8 +278,6 @@ class SupplierComparisonService {
         }
 
         // Return all best picks (no slicing)
-        console.log(`📊 [Dedup] Total products before dedup: ${allProducts.length}, After dedup: ${bestPerProduct.length}`);
-        console.log(`📊 [Dedup] Hollywood Bets count:`, bestPerProduct.filter(p => (p.productName || p.name || '').toLowerCase().includes('hollywood')).length);
         return bestPerProduct;
     }
 
