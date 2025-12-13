@@ -47,6 +47,47 @@ Successfully implemented and debugged **universal voucher deduplication** for th
 - **Format**: "Voucher purchase - [Product Name]" with masked voucher code
 - **Example**: "Voucher purchase - Takealot Voucher" with "Voucher: •••• zt5j"
 
+### 4. ✅ Missing Flash ProductVariants Created
+- **Problem**: 12 Flash voucher products existed in `products` table but had zero `ProductVariant` records
+- **Impact**: Products were invisible in comparison API and voucher overlay
+- **Solution**: Created script `scripts/create-missing-flash-product-variants.js` to generate ProductVariant records
+- **Products Fixed**:
+  - Tenacity Voucher, Google Play Voucher, Intercape Voucher, 1Voucher
+  - HollywoodBets Voucher, Netflix Voucher, YesPlay Voucher, Betway Voucher
+  - MMVoucher, OTT Voucher, Fifa Mobile Voucher, DStv Voucher
+- **Configuration**: Appropriate denominations, commission rates, and vasType per product category
+- **Result**: 12 Flash vouchers now visible in overlay (28 Flash vouchers total)
+
+### 5. ✅ Brand Name Normalization Enhanced
+- **Problem**: "HollywoodBets Voucher" (Flash, no space) showing as separate card from "Hollywood Bets" (MobileMart, with space)
+- **Root Cause**: Space difference prevented deduplication: `"hollywoodbets"` vs `"hollywood bets"`
+- **Solution**: Added brand name variation normalization to convert common variations to standard format
+- **Normalizations Added**:
+  - `"hollywoodbets"` → `"hollywood bets"`
+  - `"googleplay"` → `"google play"`
+- **Result**: Flash and MobileMart Hollywood Bets now deduplicate correctly to 1 card
+
+### 6. ✅ Modal Scroll Fix for Multiple Denominations
+- **Problem**: Vouchers with 8+ denominations (3+ rows) had submit button cut off at bottom
+- **Solution**: Added scrolling to ProductDetailModal with proper padding
+- **Changes**:
+  - `maxHeight: '85vh'` - Limits modal height to 85% of viewport
+  - `overflowY: 'auto'` - Enables vertical scrolling when content overflows
+  - `paddingBottom: '32px'` - Extra bottom padding for button visibility
+- **Result**: Users can scroll to see all denominations and submit button is fully visible
+
+### 7. ✅ MobileMart UAT Product Catalog Audit
+- **Findings**: MobileMart UAT API only provides 8 voucher products (Hollywood Bets denominations)
+- **Missing Products**: 40+ products from original list (Betway Bucks, Blu Voucher, LottoStar, Netflix, Spotify, Steam, Uber, etc.) not available in UAT
+- **Explanation**: Extensive product catalog only available in MobileMart Production API
+- **Plan**: Will sync full catalog when moving to staging/production environment next week
+- **Current UAT Catalog**:
+  - Airtime: 7 products (6 pinless synced)
+  - Data: 45 products (37 pinless synced)
+  - Voucher: 8 products (Hollywood Bets only)
+  - Utility: 1 product (pinned, not synced)
+  - Bill Payment: 4 products (failed - missing denominations)
+
 ---
 
 ## Key Decisions
@@ -64,6 +105,7 @@ Successfully implemented and debugged **universal voucher deduplication** for th
 1. **`services/supplierComparisonService.js`**
    - Added `serviceType` parameter to `findBestDeals()` method
    - Added name normalization regex to strip denomination suffixes
+   - Added brand name variation normalization (HollywoodBets → Hollywood Bets)
    - Updated grouping key logic to use `voucher:${normalizedName}` for voucher products
    - Added `denominations` field to `formatProductForResponse()` method
    - Removed debug logging after fixes confirmed
@@ -71,11 +113,27 @@ Successfully implemented and debugged **universal voucher deduplication** for th
 2. **`services/productPurchaseService.js`**
    - Added and removed debug logging for denomination validation (troubleshooting)
 
+### Frontend
+3. **`mymoolah-wallet-frontend/components/overlays/digital-vouchers/ProductDetailModal.tsx`**
+   - Added modal scrolling: `maxHeight: '85vh'`, `overflowY: 'auto'`
+   - Added extra bottom padding: `paddingBottom: '32px'`
+   - Fixed submit button visibility for modals with 3+ denomination rows
+
+### Scripts
+4. **`scripts/create-missing-flash-product-variants.js`** (NEW)
+   - Creates ProductVariant records for Flash products without variants
+   - Intelligent denomination generation by product category (gaming, betting, transport, etc.)
+   - Commission rate assignment based on product type
+   - Successfully created 12 missing Flash ProductVariants
+
 ### Documentation
-3. **`docs/agent_handover.md`**
+5. **`docs/agent_handover.md`**
    - Updated to version 2.4.22
    - Added voucher deduplication completion update
    - Documented normalization approach and grouping strategy
+
+6. **`docs/session_logs/2025-12-13_1030_voucher-deduplication-complete.md`**
+   - Complete session documentation with all tasks, decisions, and findings
 
 ---
 
@@ -128,11 +186,11 @@ Successfully implemented and debugged **universal voucher deduplication** for th
 
 ## Next Steps for Future Work
 
-1. **Remove Debug Logging**: Consider removing remaining deduplication debug logs in production
-2. **Test Other Multi-Denomination Vouchers**: Verify deduplication works for other brands (Google Play, Netflix, etc.)
-3. **Commission Verification**: Verify MobileMart commission rates are correctly applied per product
-4. **Ledger Verification**: Confirm commission and VAT are posted to ledger for MobileMart vouchers
-5. **Add MobileMart Vouchers**: Current catalog only has Hollywood Bets from MobileMart - consider adding more voucher brands
+1. **MobileMart Production Sync (Next Week)**: When moving to staging/production, sync full MobileMart product catalog (40+ additional voucher products: Betway, Blu Voucher, LottoStar, Netflix, Spotify, Steam, Uber, etc.)
+2. **Commission Tiers for New Products**: Create commission tier entries for new MobileMart Production vouchers
+3. **Brand Normalization**: Add more brand name variations as needed (e.g., "GooglePlay" → "Google Play")
+4. **Test Multi-Denomination Deduplication**: Verify deduplication works correctly for all multi-denomination products in Production
+5. **Ledger Verification**: Confirm commission and VAT posting works for all new MobileMart voucher products
 
 ---
 
@@ -173,6 +231,11 @@ Successfully implemented and debugged **universal voucher deduplication** for th
 07ecfe5d - debug: add denomination validation logging
 1e49942d - fix: include denominations in comparison API response
 879ac086 - cleanup: remove debug logging, update handover
+39a35b64 - docs: session log - voucher deduplication complete
+45f97099 - feat: script to create missing Flash ProductVariants
+63cef728 - fix: normalize brand name variations (HollywoodBets -> Hollywood Bets)
+6aa0aa95 - fix: make voucher modal scrollable for multiple denomination rows
+f102f06b - fix: increase bottom padding and reduce modal height for better button visibility
 ```
 
 **All commits pushed to GitHub** - Ready for pull in other environments
