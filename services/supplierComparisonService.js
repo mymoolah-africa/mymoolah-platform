@@ -237,6 +237,7 @@ class SupplierComparisonService {
             
             // Strip denomination suffixes and "voucher" for better deduplication
             // e.g., "Hollywood Bets R10" -> "hollywood bets", "Hollywood Bets Voucher" -> "hollywood bets"
+            const originalName = nameKey;
             nameKey = nameKey
                 .replace(/\s+r\d+$/i, '')           // Remove trailing " R10", " R100", etc.
                 .replace(/\s+r\d+k$/i, '')          // Remove " R10K" style
@@ -244,6 +245,10 @@ class SupplierComparisonService {
                 .replace(/\s+voucher$/i, '')        // Remove trailing " Voucher"
                 .replace(/\s+gift\s+card$/i, '')    // Remove trailing " Gift Card"
                 .trim();
+            
+            if (originalName !== nameKey && originalName.includes('hollywood')) {
+                console.log(`🔍 [Dedup] Normalized "${originalName}" -> "${nameKey}"`);
+            }
             
             const baseKey = p.productId ?? p.productName ?? p.name ?? p.id;
             const likelyVoucher = pType === 'voucher' || nameKey.includes('gift card') || nameKey.includes('voucher');
