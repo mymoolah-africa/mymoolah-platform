@@ -112,7 +112,7 @@ function AppContent() {
             <Route path="/bill-payments" element={<ProtectedRoute><div>Bill Payments Page - Coming Soon</div></ProtectedRoute>} />
             
             {/* Overlay Routes */}
-            <Route path="/airtime-data-overlay" element={<ProtectedRoute><AirtimeDataOverlay /></ProtectedRoute>} />
+            <Route path="/airtime-data-overlay" element={<ProtectedRoute><AirtimeDataTest /></ProtectedRoute>} />
             <Route path="/test-modern" element={<ProtectedRoute><AirtimeDataTest /></ProtectedRoute>} />
             <Route path="/electricity-overlay" element={<ProtectedRoute><ElectricityOverlay /></ProtectedRoute>} />
             <Route path="/bill-payment-overlay" element={<ProtectedRoute><BillPaymentOverlay /></ProtectedRoute>} />
