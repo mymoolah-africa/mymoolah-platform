@@ -66,16 +66,30 @@ export function AirtimeDataOverlayModern() {
     try {
       setIsLoading(true);
       
-      // Load beneficiaries (airtime + data)
-      const [airtimeBenefs, dataBenefs, recentTx] = await Promise.all([
-        apiService.getBeneficiaries().then(all => all.filter((b: any) => 
-          b.vasServices?.airtime?.length > 0
-        )),
-        apiService.getBeneficiaries().then(all => all.filter((b: any) => 
-          b.vasServices?.data?.length > 0
-        )),
-        apiService.getRecentTransactions(50)
-      ]);
+      // Load beneficiaries (airtime + data) - with fallback for errors
+      let airtimeBenefs: any[] = [];
+      let dataBenefs: any[] = [];
+      let recentTx: any[] = [];
+      
+      try {
+        const allBenefs = await apiService.getBeneficiaries();
+        airtimeBenefs = allBenefs.filter((b: any) => 
+          b.vasServices?.airtime?.length > 0 || b.accountType === 'airtime'
+        );
+        dataBenefs = allBenefs.filter((b: any) => 
+          b.vasServices?.data?.length > 0 || b.accountType === 'data'
+        );
+      } catch (err) {
+        console.error('Failed to load beneficiaries:', err);
+        // Continue with empty beneficiaries
+      }
+      
+      try {
+        recentTx = await apiService.getRecentTransactions(50);
+      } catch (err) {
+        console.error('Failed to load transactions:', err);
+        // Continue with empty transactions
+      }
 
       // Merge and deduplicate beneficiaries
       const allBenefs = [...airtimeBenefs, ...dataBenefs];
@@ -109,11 +123,20 @@ export function AirtimeDataOverlayModern() {
 
   const loadProducts = async () => {
     try {
-      // Use supplier comparison API for airtime and data
-      const [airtimeComparison, dataComparison] = await Promise.all([
-        apiService.compareSuppliers('airtime'),
-        apiService.compareSuppliers('data')
-      ]);
+      // Use supplier comparison API for airtime and data - with error handling
+      let airtimeComparison: any = { bestDeals: [], products: [] };
+      let dataComparison: any = { bestDeals: [], products: [] };
+      
+      try {
+        [airtimeComparison, dataComparison] = await Promise.all([
+          apiService.compareSuppliers('airtime'),
+          apiService.compareSuppliers('data')
+        ]);
+      } catch (err) {
+        console.error('Failed to load product comparisons:', err);
+        // Continue with empty products
+        return;
+      }
 
       const airtimeProds = (airtimeComparison.bestDeals || airtimeComparison.products || []).map((p: any) => ({
         id: p.id || p.productId,
