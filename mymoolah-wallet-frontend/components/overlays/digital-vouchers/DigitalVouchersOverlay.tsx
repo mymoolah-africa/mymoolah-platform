@@ -10,6 +10,8 @@ import { useAuth } from '../../../contexts/AuthContext';
 
 interface Voucher {
   id: string;
+  productId?: number; // Actual product ID for purchase
+  variantId?: number; // Variant ID for reference
   name: string;
   brand: string;
   category: 'Gaming' | 'Entertainment' | 'Transport' | 'Shopping' | 'MyMoolah';
@@ -17,6 +19,7 @@ interface Voucher {
   maxAmount: number;
   icon: string;
   description: string;
+  supplierCode?: string; // Supplier code
   available: boolean;
   featured: boolean;
   denominations: number[];
@@ -68,6 +71,8 @@ export function DigitalVouchersOverlay() {
       // Transform backend vouchers
       const transformedVouchers: Voucher[] = response.vouchers.map((voucher: any) => ({
         id: voucher.id.toString(),
+        productId: voucher.productId, // Actual product ID for purchase
+        variantId: voucher.variantId, // Variant ID for reference
         name: voucher.name,
         brand: voucher.brand,
         category: voucher.category,
@@ -75,6 +80,7 @@ export function DigitalVouchersOverlay() {
         maxAmount: voucher.maxAmount,
         icon: voucher.icon || '🎁',
         description: voucher.description,
+        supplierCode: voucher.supplierCode, // Supplier code
         available: true, // Make all vouchers available
         featured: false, // Will be set based on favorites
         denominations: voucher.denominations || []
