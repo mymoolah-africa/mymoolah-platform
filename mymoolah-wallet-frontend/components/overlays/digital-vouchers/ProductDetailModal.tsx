@@ -729,10 +729,11 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
           fontFamily: 'Montserrat, sans-serif',
           maxWidth: '400px',
           width: '90vw',
-          maxHeight: '90vh',
+          maxHeight: '85vh',
           overflowY: 'auto',
           borderRadius: '16px',
-          padding: '24px'
+          padding: '24px',
+          paddingBottom: '32px'
         }}
         aria-describedby="product-detail-description"
       >
