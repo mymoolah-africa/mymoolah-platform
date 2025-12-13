@@ -85,7 +85,7 @@ class SupplierComparisonService {
             }
 
             // Find best deals across all suppliers
-            comparison.bestDeals = this.findBestDeals(Object.values(groupedBySupplier), amount);
+            comparison.bestDeals = this.findBestDeals(Object.values(groupedBySupplier), amount, vasType);
             
             // Find promotional offers across all suppliers
             comparison.promotionalOffers = this.findPromotionalOffers(Object.values(groupedBySupplier));
@@ -216,7 +216,7 @@ class SupplierComparisonService {
     /**
      * Find best deals across suppliers
      */
-    findBestDeals(groupedProducts, amount) {
+    findBestDeals(groupedProducts, amount, serviceType = null) {
         const allProducts = [];
         for (const group of groupedProducts) {
             allProducts.push(...group.map(p => this.formatProductForResponse(p)));
