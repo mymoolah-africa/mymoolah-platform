@@ -729,6 +729,8 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
           fontFamily: 'Montserrat, sans-serif',
           maxWidth: '400px',
           width: '90vw',
+          maxHeight: '90vh',
+          overflowY: 'auto',
           borderRadius: '16px',
           padding: '24px'
         }}
