@@ -26,6 +26,7 @@ import FeedbackPage from './pages/FeedbackPage';
 // Overlay Components
 import { AirtimeDataOverlay } from './components/overlays/AirtimeDataOverlay';
 import { AirtimeDataOverlayModern } from './components/overlays/airtime-data/AirtimeDataOverlayModern';
+import { AirtimeDataTest } from './components/overlays/airtime-data/AirtimeDataTest';
 import { ElectricityOverlay } from './components/overlays/ElectricityOverlay';
 import { BillPaymentOverlay } from './components/overlays/BillPaymentOverlay';
 import { FlashEeziCashOverlay } from './components/overlays/flash-eezicash/FlashEeziCashOverlay';
@@ -112,7 +113,7 @@ function AppContent() {
             
             {/* Overlay Routes */}
             <Route path="/airtime-data-overlay" element={<ProtectedRoute><AirtimeDataOverlay /></ProtectedRoute>} />
-            <Route path="/airtime-data-modern" element={<ProtectedRoute><AirtimeDataOverlayModern /></ProtectedRoute>} />
+            <Route path="/airtime-data-modern" element={<ProtectedRoute><AirtimeDataTest /></ProtectedRoute>} />
             <Route path="/electricity-overlay" element={<ProtectedRoute><ElectricityOverlay /></ProtectedRoute>} />
             <Route path="/bill-payment-overlay" element={<ProtectedRoute><BillPaymentOverlay /></ProtectedRoute>} />
             <Route path="/flash-eezicash-overlay" element={<ProtectedRoute><FlashEeziCashOverlay /></ProtectedRoute>} />
