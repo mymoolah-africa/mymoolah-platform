@@ -16,11 +16,27 @@
  */
 
 const db = require('../models');
-const { Product, ProductVariant, Supplier } = db;
+const { Product, ProductVariant, Supplier, ProductBrand } = db;
 const MobileMartAuthService = require('../services/mobilemartAuthService');
 
 // VAS types to sync
 const VAS_TYPES = ['airtime', 'data', 'utility', 'voucher', 'bill-payment'];
+
+// Normalize product type to match PostgreSQL enum
+function normalizeProductType(vasType) {
+  const t = (vasType || '').toLowerCase();
+  if (t === 'bill-payment' || t === 'billpayment') return 'bill_payment';
+  if (t === 'prepaidutility' || t === 'utility' || t === 'prepaid-utility') return 'electricity';
+  return t; // airtime, data, voucher, etc.
+}
+
+// Get brand category based on VAS type
+function getBrandCategory(vasType) {
+  const t = (vasType || '').toLowerCase();
+  if (t === 'voucher') return 'entertainment';
+  if (['airtime', 'data', 'electricity', 'bill_payment', 'utility'].includes(t)) return 'utilities';
+  return 'other';
+}
 
 class MobileMartProductSync {
   constructor() {
@@ -111,8 +127,10 @@ class MobileMartProductSync {
       'airtime': product.pinned ? 'voucher' : 'topup',
       'data': product.pinned ? 'voucher' : 'topup',
       'utility': 'direct',
+      'electricity': 'direct',
       'voucher': 'voucher',
-      'bill-payment': 'direct'
+      'bill-payment': 'direct',
+      'bill_payment': 'direct'
     };
     return mapping[vasType] || 'topup';
   }
@@ -157,15 +175,34 @@ class MobileMartProductSync {
       // Sync each product
       for (const mmProduct of products) {
         try {
-          // Create or get base product
+          // Normalize the product type for DB enum
+          const normalizedType = normalizeProductType(vasType);
+          
+          // Create or find brand
+          const brandName = mmProduct.contentCreator || mmProduct.productName || 'MobileMart';
+          const brandCategory = getBrandCategory(normalizedType);
+          const [brand] = await ProductBrand.findOrCreate({
+            where: { name: brandName },
+            defaults: {
+              name: brandName,
+              category: brandCategory,
+              isActive: true,
+              metadata: { source: 'mobilemart' }
+            }
+          });
+          
+          // Create or get base product WITH supplierId and brandId
           const [product] = await Product.findOrCreate({
             where: {
+              supplierId: supplier.id,
               name: mmProduct.productName,
-              type: vasType
+              type: normalizedType
             },
             defaults: {
+              supplierId: supplier.id,
+              brandId: brand.id,
               name: mmProduct.productName,
-              type: vasType,
+              type: normalizedType,
               supplierProductId: mmProduct.merchantProductId,
               status: 'active',
               denominations: mmProduct.fixedAmount ? [mmProduct.amount * 100] : [],
@@ -178,8 +215,16 @@ class MobileMartProductSync {
             }
           });
           
-          // Map to ProductVariant
-          const variantData = this.mapToProductVariant(mmProduct, vasType, supplier.id, product.id);
+          // Ensure existing products have required fields
+          const updateFields = {};
+          if (!product.supplierId) updateFields.supplierId = supplier.id;
+          if (!product.brandId) updateFields.brandId = brand.id;
+          if (Object.keys(updateFields).length > 0) {
+            await product.update(updateFields);
+          }
+          
+          // Map to ProductVariant (use normalizedType for vasType)
+          const variantData = this.mapToProductVariant(mmProduct, normalizedType, supplier.id, product.id);
           
           // Create or update ProductVariant
           const [productVariant, created] = await ProductVariant.findOrCreate({
