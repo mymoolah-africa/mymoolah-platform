@@ -60,9 +60,6 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     if (isOpen) {
       console.log('🎯 Modal opened with voucher:', voucher);
       console.log('💰 Voucher denominations:', voucher.denominations);
-      console.log('🔑 Voucher ID:', voucher.id);
-      console.log('🔑 Voucher productId:', voucher.productId);
-      console.log('🔑 Full voucher object:', JSON.stringify(voucher, null, 2));
       setSelectedDenomination(null);
       setRecipientInfo({ phone: '', sendToSelf: true, isVerified: false, verificationStatus: 'idle' });
       setCurrentStep('selection');

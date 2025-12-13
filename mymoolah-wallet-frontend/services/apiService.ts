@@ -509,13 +509,6 @@ class ApiService {
           : (comparison?.products || []);
 
       const transformedVouchers = sourceList.map((product: any) => {
-        console.log('🔍 [apiService] Mapping product:', {
-          id: product.id,
-          productId: product.productId,
-          variantId: product.variantId,
-          productName: product.productName
-        });
-
         const rawName = (product.productName || product.name || '').trim();
         const displayName = rawName
           .replace(/\s+Voucher$/, '')
@@ -551,12 +544,6 @@ class ApiService {
           featured: product.isPromotional || product.featured || ['MMVoucher', 'Netflix', 'Google Play', 'DStv', 'Betway'].includes(displayName),
           denominations
         };
-
-        console.log('✅ [apiService] Created voucher:', {
-          id: voucherObj.id,
-          productId: voucherObj.productId,
-          name: voucherObj.name
-        });
 
         return voucherObj;
       });
