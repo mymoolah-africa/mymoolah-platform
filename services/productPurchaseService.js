@@ -94,6 +94,14 @@ class ProductPurchaseService {
       }
 
       // Validate denomination
+      console.log(`📊 [Purchase] Product ${product.id} (${product.name})`);
+      console.log(`📊 [Purchase] product.denominations:`, product.denominations);
+      console.log(`📊 [Purchase] product.variants:`, product.variants?.length || 0, 'variants');
+      console.log(`📊 [Purchase] Requested denomination:`, denomination);
+      if (product.variants && product.variants.length > 0) {
+        console.log(`📊 [Purchase] variant[0].denominations:`, product.variants[0].denominations);
+      }
+      
       const hasDefinedDenoms = product.denominations && Array.isArray(product.denominations) && product.denominations.length > 0;
       if (hasDefinedDenoms) {
         if (!product.isValidDenomination(denomination)) {
