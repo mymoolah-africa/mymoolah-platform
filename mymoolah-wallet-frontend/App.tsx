@@ -49,7 +49,7 @@ function AppContent() {
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
-  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/airtime-data-overlay', '/airtime-data-modern', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/vouchers-overlay'];
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/airtime-data-overlay', '/airtime-data-v2', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/vouchers-overlay'];
   const showTopBanner = pagesWithTopBanner.includes(location.pathname);
 
   return (
@@ -113,7 +113,7 @@ function AppContent() {
             
             {/* Overlay Routes */}
             <Route path="/airtime-data-overlay" element={<ProtectedRoute><AirtimeDataOverlay /></ProtectedRoute>} />
-            <Route path="/airtime-data-modern" element={<ProtectedRoute><AirtimeDataTest /></ProtectedRoute>} />
+            <Route path="/airtime-data-v2" element={<ProtectedRoute><AirtimeDataTest /></ProtectedRoute>} />
             <Route path="/electricity-overlay" element={<ProtectedRoute><ElectricityOverlay /></ProtectedRoute>} />
             <Route path="/bill-payment-overlay" element={<ProtectedRoute><BillPaymentOverlay /></ProtectedRoute>} />
             <Route path="/flash-eezicash-overlay" element={<ProtectedRoute><FlashEeziCashOverlay /></ProtectedRoute>} />
