@@ -247,6 +247,13 @@ class SupplierComparisonService {
                 .replace(/\s+gift\s+card$/i, '')    // Remove trailing " Gift Card"
                 .trim();
             
+            // Normalize common brand name variations (e.g., "hollywoodbets" vs "hollywood bets")
+            nameKey = nameKey
+                .replace(/^hollywoodbets$/i, 'hollywood bets')  // Normalize HollywoodBets to Hollywood Bets
+                .replace(/^googleplay$/i, 'google play')        // GooglePlay -> Google Play
+                .replace(/^playstation$/i, 'playstation')       // Keep consistent
+                .trim();
+            
             const baseKey = p.productId ?? p.productName ?? p.name ?? p.id;
             // Use serviceType parameter (from API call) OR product-level type for voucher detection
             const isVoucherService = serviceType === 'voucher';
