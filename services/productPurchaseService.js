@@ -78,6 +78,12 @@ class ProductPurchaseService {
             as: 'supplier',
             where: { isActive: true },
             required: true
+          },
+          {
+            model: require('../models').ProductVariant,
+            as: 'variants',
+            where: { status: 'active' },
+            required: false
           }
         ],
         transaction
