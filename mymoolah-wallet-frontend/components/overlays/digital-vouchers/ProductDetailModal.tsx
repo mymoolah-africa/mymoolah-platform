@@ -42,6 +42,7 @@ type PurchaseStep = 'selection' | 'processing' | 'success' | 'error';
 
 export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailModalProps) {
   const [selectedDenomination, setSelectedDenomination] = useState<number | null>(null);
+  const [amountInput, setAmountInput] = useState<string>('');
   const [recipientInfo, setRecipientInfo] = useState<RecipientInfo>({
     phone: '',
     sendToSelf: true,
@@ -49,7 +50,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     verificationStatus: 'idle'
   });
   const [currentStep, setCurrentStep] = useState<PurchaseStep>('selection');
-  const [errors, setErrors] = useState<{ phone?: string }>({});
+  const [errors, setErrors] = useState<{ phone?: string; amount?: string }>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [voucherCode, setVoucherCode] = useState<string>('');
   const [transactionRef, setTransactionRef] = useState<string>('');
@@ -61,6 +62,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
       console.log('🎯 Modal opened with voucher:', voucher);
       console.log('💰 Voucher denominations:', voucher.denominations);
       setSelectedDenomination(null);
+      setAmountInput('');
       setRecipientInfo({ phone: '', sendToSelf: true, isVerified: false, verificationStatus: 'idle' });
       setCurrentStep('selection');
       setErrors({});
@@ -83,10 +85,26 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     return phonePattern.test(cleanPhone);
   };
 
-  // Handle denomination selection
-  const handleDenominationSelect = (amount: number) => {
-    setSelectedDenomination(amount);
-    setErrors({});
+  // Handle amount input (Rands) and keep cents in selectedDenomination
+  const handleAmountChange = (value: string) => {
+    setAmountInput(value);
+
+    // Clear previous amount error when user is typing
+    if (errors.amount) {
+      setErrors(prev => ({ ...prev, amount: undefined }));
+    }
+
+    const cleaned = value.replace(/[^\d.,]/g, '').replace(',', '.');
+    const numeric = parseFloat(cleaned);
+
+    if (!cleaned || Number.isNaN(numeric)) {
+      setSelectedDenomination(null);
+      return;
+    }
+
+    // Work in cents, rounded to avoid floating issues
+    const cents = Math.round(numeric * 100);
+    setSelectedDenomination(cents);
   };
 
   // MMWallet verification function - using real API
@@ -204,10 +222,18 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
 
   // Validate form before purchase
   const validateForm = (): boolean => {
-    const newErrors: { phone?: string } = {};
+    const newErrors: { phone?: string; amount?: string } = {};
 
     if (!selectedDenomination) {
-      return false;
+      newErrors.amount = 'Please enter an amount for this voucher';
+    } else {
+      // Min/max validation in cents (backend also validates, but we keep UX safe)
+      if (voucher.minAmount && selectedDenomination < voucher.minAmount) {
+        newErrors.amount = `Minimum amount is ${formatCurrency(voucher.minAmount)}`;
+      }
+      if (voucher.maxAmount && selectedDenomination > voucher.maxAmount) {
+        newErrors.amount = `Maximum amount is ${formatCurrency(voucher.maxAmount)}`;
+      }
     }
 
     if (!recipientInfo.sendToSelf) {
@@ -355,7 +381,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
 
             <Separator />
 
-            {/* Denomination Selection */}
+            {/* Amount Selection */}
             <div>
               <Label style={{
                 fontFamily: 'Montserrat, sans-serif',
@@ -367,31 +393,37 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
               }}>
                 Select Amount
               </Label>
-              <div className="grid grid-cols-3 gap-3">
-                {voucher.denominations && voucher.denominations.length > 0 ? (
-                  voucher.denominations.map((amount) => (
-                    <Button
-                      key={amount}
-                      variant={selectedDenomination === amount ? "default" : "outline"}
-                      onClick={() => handleDenominationSelect(amount)}
-                      style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        borderRadius: '12px',
-                        minHeight: '48px',
-                        backgroundColor: selectedDenomination === amount ? '#86BE41' : 'transparent',
-                        borderColor: selectedDenomination === amount ? '#86BE41' : '#d1d5db',
-                        color: selectedDenomination === amount ? '#ffffff' : '#374151'
-                      }}
-                    >
-                      {formatCurrency(amount)}
-                    </Button>
-                  ))
-                ) : (
-                  <div className="col-span-3 text-center py-4 text-gray-500">
-                    No denominations available for this voucher
-                  </div>
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  placeholder={
+                    voucher.minAmount || voucher.maxAmount
+                      ? `Enter amount (min ${voucher.minAmount ? formatCurrency(voucher.minAmount) : ''}${
+                          voucher.maxAmount ? `, max ${formatCurrency(voucher.maxAmount)}` : ''
+                        })`
+                      : 'Enter amount (R)'
+                  }
+                  value={amountInput}
+                  onChange={(e) => handleAmountChange(e.target.value)}
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    borderRadius: '12px',
+                    minHeight: '48px',
+                    borderColor: errors.amount ? '#ef4444' : '#d1d5db'
+                  }}
+                />
+                {errors.amount && (
+                  <p
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '12px',
+                      color: '#ef4444'
+                    }}
+                  >
+                    {errors.amount}
+                  </p>
                 )}
               </div>
             </div>

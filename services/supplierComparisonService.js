@@ -285,6 +285,7 @@ class SupplierComparisonService {
 
         const bestPerProduct = [];
         for (const variants of byProduct.values()) {
+            // Sort variants to pick the commercial "best" first
             variants.sort((a, b) => {
                 // 1) Commission desc
                 if ((b.commission || 0) !== (a.commission || 0)) {
@@ -301,10 +302,64 @@ class SupplierComparisonService {
                 const prioB = this.suppliers[b.supplierCode?.toLowerCase()]?.priority ?? 999;
                 return prioA - prioB;
             });
-            bestPerProduct.push(variants[0]);
+
+            // Take the top commercial pick as the base object
+            const best = variants[0];
+
+            // 🔢 Aggregate all available denominations across variants that belong to the same logical product
+            // This fixes cases like LottoStar / Showmax where each denomination is a separate variant.
+            const allDenominations = [];
+
+            for (const v of variants) {
+                if (Array.isArray(v.predefinedAmounts)) {
+                    allDenominations.push(...v.predefinedAmounts);
+                }
+                if (Array.isArray(v.denominationOptions)) {
+                    allDenominations.push(...v.denominationOptions);
+                }
+                if (Array.isArray(v.denominations)) {
+                    allDenominations.push(...v.denominations);
+                }
+
+                // If a variant only encodes a single fixed amount via min/max, treat it as a denomination
+                if (
+                    !Array.isArray(v.predefinedAmounts) &&
+                    !Array.isArray(v.denominations) &&
+                    typeof v.minAmount === 'number' &&
+                    typeof v.maxAmount === 'number' &&
+                    v.minAmount === v.maxAmount
+                ) {
+                    allDenominations.push(v.minAmount);
+                }
+            }
+
+            const uniqueDenoms = Array.from(
+                new Set(
+                    allDenominations.filter(n => typeof n === 'number' && !Number.isNaN(n))
+                )
+            ).sort((a, b) => a - b);
+
+            if (uniqueDenoms.length > 0) {
+                // Attach aggregated denominations to the best pick so downstream clients (wallet UI)
+                // can render a full grid of options like Google Play, LottoStar, Showmax, etc.
+                best.denominations = uniqueDenoms;
+                best.predefinedAmounts = uniqueDenoms;
+
+                // Ensure min/max are consistent with the aggregated denominations
+                const minD = uniqueDenoms[0];
+                const maxD = uniqueDenoms[uniqueDenoms.length - 1];
+                best.minAmount = typeof best.minAmount === 'number'
+                    ? Math.min(best.minAmount, minD)
+                    : minD;
+                best.maxAmount = typeof best.maxAmount === 'number'
+                    ? Math.max(best.maxAmount, maxD)
+                    : maxD;
+            }
+
+            bestPerProduct.push(best);
         }
 
-        // Return all best picks (no slicing)
+        // Return all best picks (no slicing) with aggregated denominations
         return bestPerProduct;
     }
 
