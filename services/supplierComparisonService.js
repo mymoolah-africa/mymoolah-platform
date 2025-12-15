@@ -237,14 +237,33 @@ class SupplierComparisonService {
             let nameKey = (p.productName || p.name || '').trim().toLowerCase();
             
             // Strip denomination suffixes and "voucher" for better deduplication
-            // e.g., "Hollywood Bets R10" -> "hollywood bets", "Hollywood Bets Voucher" -> "hollywood bets"
+            // e.g., "Hollywood Bets R10" -> "hollywood bets", "R10 LottoStar" -> "lottostar"
             const originalName = nameKey;
             nameKey = nameKey
+                // Leading denominations (e.g., "R10 LottoStar" -> "LottoStar")
+                .replace(/^r\d+\s+/i, '')           // Remove leading "R10 ", "R100 ", etc.
+                .replace(/^r\d+k\s+/i, '')          // Remove leading "R10K "
+                
+                // Trailing denominations
                 .replace(/\s+r\d+$/i, '')           // Remove trailing " R10", " R100", etc.
                 .replace(/\s+r\d+k$/i, '')          // Remove " R10K" style
                 .replace(/\s+\d+\s*rands?$/i, '')   // Remove " 100 rand"
+                
+                // Duration patterns (e.g., "1 Month", "3 Months", "6 Months")
+                .replace(/\s+\d+\s+months?(\s+r\d+)?$/i, '')  // Remove " 1 Month R120", " 3 Months", etc.
+                
+                // Embedded price patterns (e.g., "Plan R120")
+                .replace(/\s+r\d+/gi, '')           // Remove ALL " R10", " R100" patterns throughout
+                
+                // Plan/subscription details for streaming services
+                .replace(/\s+(entertainment|premier\s+league|mobile|general|only|\+|plus)/gi, ' ')
+                
+                // Voucher/card suffixes
                 .replace(/\s+voucher$/i, '')        // Remove trailing " Voucher"
                 .replace(/\s+gift\s+card$/i, '')    // Remove trailing " Gift Card"
+                
+                // Clean up multiple spaces
+                .replace(/\s+/g, ' ')
                 .trim();
             
             // Normalize common brand name variations (e.g., "hollywoodbets" vs "hollywood bets")
