@@ -144,6 +144,7 @@ export const beneficiaryService = {
     const beneficiaries = await centralizedBeneficiaryService.searchBeneficiaries(query, type);
     
     // Convert centralized service types to overlay service types
+    // CRITICAL: Preserve accounts array and all other fields for network extraction
     return beneficiaries.map((b: any) => ({
       id: b.id,
       name: b.name,
@@ -154,7 +155,13 @@ export const beneficiaryService = {
       lastPaidAt: b.lastPaidAt,
       timesPaid: (b as any).timesPaid || 0,
       createdAt: b.createdAt,
-      updatedAt: b.updatedAt
+      updatedAt: b.updatedAt,
+      // Preserve accounts array for network extraction (PINless filtering)
+      accounts: (b as any).accounts || [],
+      // Preserve vasServices for legacy format support
+      vasServices: (b as any).vasServices,
+      // Preserve serviceAccountRecords for new unified format
+      serviceAccountRecords: (b as any).serviceAccountRecords
     }));
   },
 
