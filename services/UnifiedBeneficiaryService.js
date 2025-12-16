@@ -611,23 +611,62 @@ class UnifiedBeneficiaryService {
    */
   async getBeneficiaryServices(beneficiaryId) {
     try {
-      const beneficiary = await Beneficiary.findByPk(beneficiaryId);
+      const beneficiary = await Beneficiary.findByPk(beneficiaryId, {
+        include: [
+          {
+            model: BeneficiaryPaymentMethod,
+            as: 'paymentMethodRecords',
+            required: false,
+            where: { isActive: true },
+            attributes: ['id', 'methodType', 'walletMsisdn', 'bankName', 'accountNumber', 'accountType', 'branchCode', 'provider', 'mobileMoneyId', 'isDefault', 'isActive']
+          },
+          {
+            model: BeneficiaryServiceAccount,
+            as: 'serviceAccountRecords',
+            required: false,
+            where: { isActive: true },
+            attributes: ['id', 'serviceType', 'serviceData', 'isDefault', 'isActive']
+          }
+        ]
+      });
+      
       if (!beneficiary) {
         throw new Error('Beneficiary not found');
+      }
+
+      const beneficiaryData = beneficiary.toJSON ? beneficiary.toJSON() : beneficiary;
+      
+      // Enrich with normalized data (same as getBeneficiariesByService)
+      if (beneficiaryData.serviceAccountRecords && beneficiaryData.serviceAccountRecords.length > 0) {
+        const { vasServices, utilityServices } = this.normalizedToLegacyServiceAccounts(beneficiaryData.serviceAccountRecords);
+        if (!beneficiaryData.vasServices) beneficiaryData.vasServices = vasServices;
+        if (!beneficiaryData.utilityServices) beneficiaryData.utilityServices = utilityServices;
       }
 
       return {
         id: beneficiary.id,
         userId: beneficiary.userId, // Include userId for ownership verification
         name: beneficiary.name,
-        paymentMethods: beneficiary.paymentMethods,
-        vasServices: beneficiary.vasServices,
-        utilityServices: beneficiary.utilityServices,
+        identifier: beneficiary.identifier,
+        msisdn: beneficiary.msisdn,
+        accountType: beneficiary.accountType,
+        bankName: beneficiary.bankName,
+        paymentMethods: beneficiaryData.paymentMethods || beneficiary.paymentMethods,
+        vasServices: beneficiaryData.vasServices || beneficiary.vasServices,
+        utilityServices: beneficiaryData.utilityServices || beneficiary.utilityServices,
         billerServices: beneficiary.billerServices,
         voucherServices: beneficiary.voucherServices,
         preferredPaymentMethod: beneficiary.preferredPaymentMethod,
         isFavorite: beneficiary.isFavorite,
-        notes: beneficiary.notes
+        notes: beneficiary.notes,
+        // Include service account records for network extraction
+        serviceAccountRecords: beneficiaryData.serviceAccountRecords,
+        // Include accounts array (transformed from serviceAccountRecords)
+        accounts: this.transformServiceAccountsToAccountsArray(beneficiary),
+        lastPaidAt: beneficiary.lastPaidAt,
+        timesPaid: beneficiary.timesPaid,
+        createdAt: beneficiary.createdAt,
+        updatedAt: beneficiary.updatedAt
       };
     } catch (error) {
       console.error('Error getting beneficiary services:', error);
