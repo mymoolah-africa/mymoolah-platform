@@ -471,17 +471,31 @@ export function AirtimeDataOverlay() {
       
       const idempotencyKey = generateIdempotencyKey();
       
-      // Ensure productId is in correct format for purchase endpoint
-      let productIdForPurchase = selectedProduct.id;
-      if ((selectedProduct as any).variantId && (selectedProduct as any).supplierCode && (selectedProduct as any).supplierProductId) {
-        // Construct in expected format: type_supplier_productCode_amount
+      // Determine productId format for purchase endpoint
+      // Backend supports two formats:
+      // 1. Numeric variantId (from ProductVariant table - preferred for bestDeals)
+      // 2. Old string format: type_supplier_productCode_amount (for legacy VasProduct)
+      let productIdForPurchase: string | number;
+      
+      // CRITICAL: If variantId exists (from bestDeals/ProductVariant), use it directly
+      // The backend will look up ProductVariant by ID and find the corresponding VasProduct
+      if ((selectedProduct as any).variantId) {
+        productIdForPurchase = (selectedProduct as any).variantId;
+        console.log('✅ Using variantId for purchase:', productIdForPurchase);
+      } else if ((selectedProduct as any).supplierCode && (selectedProduct as any).supplierProductId) {
+        // Fallback: Construct old format string (for legacy products)
         const amountInCents = Math.round(selectedProduct.price * 100);
         productIdForPurchase = `${(selectedProduct as any).vasType || selectedProduct.type}_${(selectedProduct as any).supplierCode}_${(selectedProduct as any).supplierProductId}_${amountInCents}`;
+        console.log('⚠️ Using legacy string format for purchase:', productIdForPurchase);
+      } else {
+        // Last resort: use the product.id
+        productIdForPurchase = selectedProduct.id;
+        console.warn('⚠️ Using product.id as fallback:', productIdForPurchase);
       }
       
       const result = await airtimeDataService.purchase({
         beneficiaryId: selectedBeneficiary.id,
-        productId: productIdForPurchase,
+        productId: productIdForPurchase.toString(), // Ensure it's a string for the API
         amount: selectedProduct.price,
         idempotencyKey
       });
