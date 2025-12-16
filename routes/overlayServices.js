@@ -792,7 +792,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           type,
           userId: req.user.id,
           simulated: true,
-          originalAmount: productAmountInCents ? parseInt(productAmountInCents, 10) / 100 : normalizedAmount,
+          originalAmount: productAmountInCents ? parseInt(productAmountInCents, 10) / 100 : (normalizedAmount || amountInCentsValue / 100),
           amountCents: amountInCentsValue,
           feeCents: feeInCents,
           totalAmountCents: totalAmountInCents,
