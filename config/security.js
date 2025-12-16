@@ -199,7 +199,7 @@ class SecurityConfig {
         return callback(new Error(`CORS: Origin "${origin}" not allowed by CORS policy`), false);
       },
       credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       allowedHeaders: [
         'Content-Type', 
         'Authorization', 

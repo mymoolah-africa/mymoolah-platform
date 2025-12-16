@@ -202,6 +202,8 @@ export const beneficiaryService = {
     identifier?: string;
     bankName?: string;
     metadata?: any;
+    serviceType?: string;
+    serviceData?: any;
   }): Promise<Beneficiary> {
     const beneficiary = await centralizedBeneficiaryService.updateBeneficiary(id, data);
     

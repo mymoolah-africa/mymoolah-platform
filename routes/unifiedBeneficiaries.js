@@ -244,12 +244,12 @@ router.get('/:beneficiaryId/services', authenticateToken, async (req, res) => {
   }
 });
 
-// Update beneficiary metadata (favorite, notes, preferred method)
+// Update beneficiary metadata (favorite, notes, preferred method) or service accounts
 router.patch('/:beneficiaryId', authenticateToken, async (req, res) => {
   try {
     const { beneficiaryId } = req.params;
     const userId = req.user.id;
-    const { isFavorite, notes, preferredPaymentMethod } = req.body;
+    const { isFavorite, notes, preferredPaymentMethod, name, serviceType, serviceData } = req.body;
 
     // Get beneficiary and verify ownership
     const beneficiary = await unifiedBeneficiaryService.getBeneficiaryServices(beneficiaryId);
@@ -260,28 +260,37 @@ router.patch('/:beneficiaryId', authenticateToken, async (req, res) => {
       });
     }
 
-    // Update only allowed fields
+    // Update beneficiary metadata fields
     const updateData = {};
     if (typeof isFavorite === 'boolean') updateData.isFavorite = isFavorite;
     if (notes !== undefined) updateData.notes = notes;
     if (preferredPaymentMethod) updateData.preferredPaymentMethod = preferredPaymentMethod;
+    if (name) updateData.name = name;
 
-    if (Object.keys(updateData).length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No valid fields to update'
+    // Update beneficiary name if provided
+    if (Object.keys(updateData).length > 0) {
+      const { Beneficiary } = require('../models');
+      await Beneficiary.update(updateData, {
+        where: { id: beneficiaryId, userId }
       });
     }
 
-    // Update the beneficiary
-    const { Beneficiary } = require('../models');
-    await Beneficiary.update(updateData, {
-      where: { id: beneficiaryId, userId }
-    });
+    // Update service account if serviceType and serviceData provided
+    if (serviceType && serviceData) {
+      await unifiedBeneficiaryService.addOrUpdateServiceAccount(userId, {
+        beneficiaryId: parseInt(beneficiaryId, 10),
+        serviceType,
+        serviceData
+      });
+    }
+
+    // Return updated beneficiary
+    const updatedBeneficiary = await unifiedBeneficiaryService.getBeneficiaryServices(beneficiaryId);
 
     res.json({
       success: true,
-      message: 'Beneficiary updated successfully'
+      message: 'Beneficiary updated successfully',
+      data: updatedBeneficiary
     });
   } catch (error) {
     console.error('Error updating beneficiary:', error);

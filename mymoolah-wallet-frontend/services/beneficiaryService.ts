@@ -369,7 +369,7 @@ class BeneficiaryService {
   }
 
   /**
-   * Update beneficiary metadata (favorite, notes, preferred method)
+   * Update beneficiary metadata (favorite, notes, preferred method) or service accounts
    * Supports both number and string IDs for backward compatibility
    */
   async updateBeneficiary(
@@ -378,10 +378,12 @@ class BeneficiaryService {
       isFavorite?: boolean;
       notes?: string;
       preferredPaymentMethod?: string;
-    name?: string;
-    identifier?: string;
-    bankName?: string;
-    metadata?: any;
+      name?: string;
+      identifier?: string;
+      bankName?: string;
+      metadata?: any;
+      serviceType?: string;
+      serviceData?: any;
     }
   ): Promise<UnifiedBeneficiary> {
     const id = typeof beneficiaryId === 'string' ? parseInt(beneficiaryId, 10) : beneficiaryId;
