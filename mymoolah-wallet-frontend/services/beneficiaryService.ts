@@ -81,7 +81,6 @@ export interface CreateBeneficiaryRequest {
     network?: string;
     meterNumber?: string;
     meterType?: string;
-    accountNumber?: string;
     billerName?: string;
     label?: string;
     isDefault?: boolean;

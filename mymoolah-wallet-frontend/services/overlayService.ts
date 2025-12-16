@@ -175,12 +175,20 @@ export const beneficiaryService = {
     network?: string;
   }): Promise<Beneficiary> {
     // Map overlay fields to unified beneficiary payload
-    const serviceType =
+    const serviceType: 'mymoolah' | 'bank' | 'mobile_money' | 'airtime' | 'data' | 'electricity' | 'biller' | 'voucher' =
       data.accountType === 'data'
         ? 'data'
         : data.accountType === 'airtime'
         ? 'airtime'
-        : data.accountType;
+        : data.accountType === 'electricity'
+        ? 'electricity'
+        : data.accountType === 'biller'
+        ? 'biller'
+        : data.accountType === 'mymoolah'
+        ? 'mymoolah'
+        : data.accountType === 'bank'
+        ? 'bank'
+        : 'airtime'; // Default fallback
 
     const serviceData: any = {
       msisdn: data.identifier,
@@ -197,10 +205,10 @@ export const beneficiaryService = {
     
     // Convert centralized service type to overlay service type
     return {
-      id: beneficiary.id,
+      id: beneficiary.id.toString(),
       name: beneficiary.name,
-      identifier: beneficiary.identifier,
-      accountType: beneficiary.accountType,
+      identifier: beneficiary.identifier || '',
+      accountType: (beneficiary.accountType || 'airtime') as 'mymoolah' | 'bank' | 'airtime' | 'data' | 'electricity' | 'biller',
       bankName: (beneficiary as any).bankName || undefined,
       metadata: (beneficiary as any).metadata || {},
       lastPaidAt: beneficiary.lastPaidAt,
@@ -223,10 +231,10 @@ export const beneficiaryService = {
     
     // Convert centralized service type to overlay service type
     return {
-      id: beneficiary.id,
+      id: beneficiary.id.toString(),
       name: beneficiary.name,
-      identifier: beneficiary.identifier,
-      accountType: beneficiary.accountType,
+      identifier: beneficiary.identifier || '',
+      accountType: (beneficiary.accountType || 'airtime') as 'mymoolah' | 'bank' | 'airtime' | 'data' | 'electricity' | 'biller',
       bankName: (beneficiary as any).bankName || undefined,
       metadata: (beneficiary as any).metadata || {},
       lastPaidAt: beneficiary.lastPaidAt,

@@ -185,9 +185,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
           name: formData.name,
           identifier: formData.identifier,
           accountType: type,
-          network: formData.network,
-          serviceType,
-          serviceData
+          network: formData.network
         });
       }
 

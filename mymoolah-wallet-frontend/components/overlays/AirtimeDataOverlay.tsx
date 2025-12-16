@@ -20,6 +20,7 @@ import {
   type PurchaseResult
 } from '../../services/overlayService';
 import { apiService } from '../../services/apiService';
+import { beneficiaryService as centralizedBeneficiaryService } from '../../services/beneficiaryService';
 
 interface AirtimeDataBeneficiary extends Beneficiary {
   // Uses accountType from base Beneficiary interface
@@ -31,21 +32,21 @@ type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 export function AirtimeDataOverlay() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<Step>('beneficiary');
-  const [selectedBeneficiary, setSelectedBeneficiary] = useState<AirtimeDataBeneficiary | null>(null);
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<AirtimeDataProduct | null>(null);
   const [catalog, setCatalog] = useState<AirtimeDataCatalog | null>(null);
-  const [beneficiaries, setBeneficiaries] = useState<AirtimeDataBeneficiary[]>([]);
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   const [showSuccess, setShowSuccess] = useState(false);
   const [transactionRef, setTransactionRef] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [showBeneficiaryModal, setShowBeneficiaryModal] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
-  const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<AirtimeDataBeneficiary | null>(null);
+  const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<Beneficiary | null>(null);
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
   const [ownAirtimeAmount, setOwnAirtimeAmount] = useState<string>('');
   const [ownDataAmount, setOwnDataAmount] = useState<string>('');
-  const [editingBeneficiary, setEditingBeneficiary] = useState<AirtimeDataBeneficiary | null>(null);
+  const [editingBeneficiary, setEditingBeneficiary] = useState<Beneficiary | null>(null);
   const [showSendToNewRecipient, setShowSendToNewRecipient] = useState(false);
   const [newRecipientPhone, setNewRecipientPhone] = useState<string>('');
   const [newRecipientName, setNewRecipientName] = useState<string>('');
@@ -96,7 +97,7 @@ export function AirtimeDataOverlay() {
     }
   };
 
-  const handleBeneficiarySelect = async (beneficiary: AirtimeDataBeneficiary) => {
+  const handleBeneficiarySelect = async (beneficiary: Beneficiary, accountId?: number) => {
     try {
       setLoadingState('loading');
       setSelectedBeneficiary(beneficiary);
@@ -347,7 +348,12 @@ export function AirtimeDataOverlay() {
       
       // Create catalog in expected format
       const catalogData: AirtimeDataCatalog = {
-        beneficiaryId: beneficiary.id,
+        beneficiary: {
+          id: beneficiary.id.toString(),
+          label: beneficiary.name,
+          identifier: beneficiary.identifier || '',
+          network: beneficiaryNetwork
+        },
         products: [...airtimeProds, ...dataProds],
         providers: ['MTN', 'Vodacom', 'CellC', 'Telkom', 'eeziAirtime', 'Global']
       };
@@ -432,7 +438,7 @@ export function AirtimeDataOverlay() {
       
       // Create beneficiary first
       const network = selectedProduct.provider || 'Vodacom';
-      const newBeneficiary = await beneficiaryService.createOrUpdateBeneficiary({
+      const newBeneficiary = await centralizedBeneficiaryService.createOrUpdateBeneficiary({
         name: newRecipientName,
         serviceType: selectedProduct.type === 'airtime' ? 'airtime' : 'data',
         serviceData: {
@@ -504,9 +510,9 @@ export function AirtimeDataOverlay() {
       
       const result = await airtimeDataService.purchase(purchaseData);
       
-      // Extract reference from result (handle different response structures)
-      const reference = result?.reference || result?.data?.reference || idempotencyKey;
-      const beneficiaryIsMyMoolah = result?.beneficiaryIsMyMoolahUser || result?.data?.beneficiaryIsMyMoolahUser || false;
+      // Extract reference from result
+      const reference = result?.reference || idempotencyKey;
+      const beneficiaryIsMyMoolah = result?.beneficiaryIsMyMoolahUser || false;
       
       setTransactionRef(reference);
       setBeneficiaryIsMyMoolahUser(beneficiaryIsMyMoolah);
@@ -552,22 +558,22 @@ export function AirtimeDataOverlay() {
     if (editingBeneficiary) {
       // Update existing beneficiary in the list
       setBeneficiaries(prev => prev.map(b => 
-        b.id === editingBeneficiary.id ? newBeneficiary as AirtimeDataBeneficiary : b
+        b.id === editingBeneficiary.id ? newBeneficiary : b
       ));
     } else {
       // Add the new beneficiary to the list
-      setBeneficiaries(prev => [...prev, newBeneficiary as AirtimeDataBeneficiary]);
+      setBeneficiaries(prev => [...prev, newBeneficiary]);
     }
     setShowBeneficiaryModal(false);
     setEditingBeneficiary(null);
   };
 
-  const handleEditBeneficiary = (beneficiary: AirtimeDataBeneficiary) => {
+  const handleEditBeneficiary = (beneficiary: Beneficiary) => {
     setEditingBeneficiary(beneficiary);
     setShowBeneficiaryModal(true);
   };
 
-  const handleRemoveBeneficiary = (beneficiary: AirtimeDataBeneficiary) => {
+  const handleRemoveBeneficiary = (beneficiary: Beneficiary) => {
     setBeneficiaryToRemove(beneficiary);
     setShowConfirmationModal(true);
   };
@@ -679,7 +685,11 @@ export function AirtimeDataOverlay() {
       });
       
       const catalogData: AirtimeDataCatalog = {
-        beneficiaryId: '', // No beneficiary selected
+        beneficiary: {
+          id: '',
+          label: '',
+          identifier: ''
+        },
         products: [...airtimeProds, ...dataProds],
         providers: ['MTN', 'Vodacom', 'CellC', 'Telkom', 'eeziAirtime', 'Global']
       };
@@ -1263,7 +1273,7 @@ export function AirtimeDataOverlay() {
                       onClick={() => {
                         const value = parseFloat(ownDataAmount);
                         if (!isNaN(value) && value > 0 && value <= 1000) {
-                          handleOwnDataAmountSelect(value);
+                          handleOwnDataAmount();
                         }
                       }}
                       disabled={!ownDataAmount || parseFloat(ownDataAmount) <= 0 || parseFloat(ownDataAmount) > 1000}
