@@ -1119,6 +1119,77 @@ class UnifiedBeneficiaryService {
     return fallback || null;
   }
 
+  /**
+   * Transform serviceAccountRecords to accounts array format (for frontend compatibility)
+   */
+  transformServiceAccountsToAccountsArray(beneficiary) {
+    const accounts = [];
+    const beneficiaryData = beneficiary.toJSON ? beneficiary.toJSON() : beneficiary;
+    
+    // Transform serviceAccountRecords to accounts array
+    if (beneficiaryData.serviceAccountRecords && Array.isArray(beneficiaryData.serviceAccountRecords)) {
+      beneficiaryData.serviceAccountRecords.forEach((account, idx) => {
+        if (account.serviceType === 'airtime' || account.serviceType === 'data') {
+          const serviceData = account.serviceData || {};
+          accounts.push({
+            id: account.id || (beneficiary.id * 1000 + (account.serviceType === 'airtime' ? 100 : 200) + idx),
+            type: account.serviceType,
+            identifier: serviceData.msisdn || serviceData.mobileNumber || beneficiary.identifier,
+            label: account.serviceType === 'airtime' 
+              ? `Airtime - ${serviceData.network || ''}` 
+              : `Data - ${serviceData.network || ''}`,
+            isDefault: account.isDefault || false,
+            metadata: {
+              network: serviceData.network,
+              ...serviceData
+            }
+          });
+        }
+      });
+    }
+    
+    // Also include legacy vasServices if they exist
+    if (beneficiaryData.vasServices) {
+      if (beneficiaryData.vasServices.airtime && Array.isArray(beneficiaryData.vasServices.airtime)) {
+        beneficiaryData.vasServices.airtime.forEach((service, idx) => {
+          if (service.isActive !== false) {
+            accounts.push({
+              id: beneficiary.id * 1000 + 100 + idx,
+              type: 'airtime',
+              identifier: service.mobileNumber || service.msisdn || beneficiary.identifier,
+              label: service.label || `Airtime - ${service.network || ''}`,
+              isDefault: false,
+              metadata: {
+                network: service.network,
+                ...service
+              }
+            });
+          }
+        });
+      }
+      
+      if (beneficiaryData.vasServices.data && Array.isArray(beneficiaryData.vasServices.data)) {
+        beneficiaryData.vasServices.data.forEach((service, idx) => {
+          if (service.isActive !== false) {
+            accounts.push({
+              id: beneficiary.id * 1000 + 200 + idx,
+              type: 'data',
+              identifier: service.mobileNumber || service.msisdn || beneficiary.identifier,
+              label: service.label || `Data - ${service.network || ''}`,
+              isDefault: false,
+              metadata: {
+                network: service.network,
+                ...service
+              }
+            });
+          }
+        });
+      }
+    }
+    
+    return accounts;
+  }
+
   getVasAccountType(vasServices, fallback) {
     if (vasServices?.airtime?.length > 0) return 'airtime';
     if (vasServices?.data?.length > 0) return 'data';
