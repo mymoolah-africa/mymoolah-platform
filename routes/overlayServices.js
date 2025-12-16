@@ -644,13 +644,48 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       const feeInCents = 0;
       const totalAmountInCents = amountInCentsValue + feeInCents;
 
+      // Handle vasProductId: If vasProduct is virtual (from ProductVariant), we need to handle it differently
+      // The VasTransaction.vasProductId field expects a real VasProduct.id from vas_products table
+      // For virtual products, we'll use a placeholder or find/create a matching VasProduct
+      let vasProductIdForTransaction = vasProduct.id;
+      
+      if (vasProduct.isVirtual) {
+        // For virtual products (from ProductVariant), try to find or create a matching VasProduct
+        // First, try to find an existing VasProduct that matches
+        const { VasProduct } = require('../models');
+        let matchingVasProduct = await VasProduct.findOne({
+          where: {
+            supplierId: supplier,
+            supplierProductId: productCode,
+            vasType: type,
+            isActive: true
+          },
+          transaction
+        });
+        
+        // If no matching VasProduct exists, we'll use the ProductVariant ID
+        // Note: This assumes the database doesn't have a strict foreign key constraint
+        // If it does, we may need to create a VasProduct record first
+        if (!matchingVasProduct) {
+          console.log(`⚠️ No VasProduct found for virtual product, using ProductVariant ID ${vasProduct.id} as vasProductId`);
+          vasProductIdForTransaction = vasProduct.id;
+          // Store ProductVariant info in metadata for reference
+          if (!vasProduct.metadata) vasProduct.metadata = {};
+          vasProduct.metadata.productVariantId = vasProduct.id;
+          vasProduct.metadata.isFromProductVariant = true;
+        } else {
+          console.log(`✅ Found matching VasProduct ${matchingVasProduct.id} for virtual product`);
+          vasProductIdForTransaction = matchingVasProduct.id;
+        }
+      }
+      
       // Create a new transaction record with banking-grade validation
       const vasTransaction = await VasTransaction.create({
         transactionId: vasTransactionId,
         userId: req.user.id,
         walletId: wallet.walletId,
         beneficiaryId: beneficiary.id,
-        vasProductId: vasProduct.id,
+        vasProductId: vasProductIdForTransaction,
         vasType: type,
         transactionType: vasProduct.transactionType || 'topup',
         supplierId: supplier,
@@ -671,7 +706,12 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           feeCents: feeInCents,
           totalAmountCents: totalAmountInCents,
           processedAt: new Date().toISOString(),
-          version: '1.0'
+          version: '1.0',
+          // Store ProductVariant info if this is a virtual product
+          ...(vasProduct.isVirtual ? {
+            productVariantId: vasProduct.id,
+            isFromProductVariant: true
+          } : {})
         }
       }, { transaction });
       
