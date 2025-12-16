@@ -803,14 +803,18 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     // Banking-grade error handling and logging
     const errorId = `TXN_ERR_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
-    console.error(`❌ [${errorId}] Airtime/Data Purchase Error:`, {
-      error: error.message,
-      stack: error.stack,
-      userId: req.user?.id,
-      beneficiaryId: context.beneficiaryId,
-      productId: context.productId,
-      amount: context.amount,
-      idempotencyKey: context.idempotencyKey,
+    // Log a concise one-line message first so Cloud Run logs always include the core error text
+    console.error(`❌ [${errorId}] Airtime/Data Purchase Error: ${error?.message || String(error)}`);
+
+    // Log full structured context for deeper debugging (may appear as a separate log entry)
+    console.error(`❌ [${errorId}] Airtime/Data Purchase Error (details):`, {
+      error: error?.message || null,
+      stack: error?.stack,
+      userId: req?.user?.id,
+      beneficiaryId: context?.beneficiaryId,
+      productId: context?.productId,
+      amount: context?.amount,
+      idempotencyKey: context?.idempotencyKey,
       timestamp: new Date().toISOString()
     });
 
