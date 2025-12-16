@@ -697,7 +697,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       
       if (vasProduct.isVirtual) {
         // For virtual products (from ProductVariant), try to find or create a matching VasProduct
-        // First, try to find an existing VasProduct that matches
+        // CRITICAL: vasProductId must reference a real record in vas_products table
         const { VasProduct } = require('../models');
         let matchingVasProduct = await VasProduct.findOne({
           where: {
@@ -709,20 +709,36 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           transaction
         });
         
-        // If no matching VasProduct exists, we'll use the ProductVariant ID
-        // Note: This assumes the database doesn't have a strict foreign key constraint
-        // If it does, we may need to create a VasProduct record first
+        // If no matching VasProduct exists, CREATE one on-the-fly
+        // This ensures vasProductId always references a valid vas_products record
         if (!matchingVasProduct) {
-          console.log(`⚠️ No VasProduct found for virtual product, using ProductVariant ID ${vasProduct.id} as vasProductId`);
-          vasProductIdForTransaction = vasProduct.id;
-          // Store ProductVariant info in metadata for reference
-          if (!vasProduct.metadata) vasProduct.metadata = {};
-          vasProduct.metadata.productVariantId = vasProduct.id;
-          vasProduct.metadata.isFromProductVariant = true;
+          console.log(`⚠️ No VasProduct found for virtual product, creating new VasProduct record...`);
+          matchingVasProduct = await VasProduct.create({
+            supplierId: supplier,
+            supplierProductId: productCode,
+            productName: vasProduct.productName || `Product from ${supplier}`,
+            vasType: type,
+            transactionType: vasProduct.transactionType || 'topup',
+            provider: vasProduct.provider || '',
+            networkType: 'local',
+            predefinedAmounts: vasProduct.predefinedAmounts || null,
+            minAmount: vasProduct.minAmount || 0,
+            maxAmount: vasProduct.maxAmount || 0,
+            commission: vasProduct.commission || 0,
+            fixedFee: vasProduct.fixedFee || 0,
+            isPromotional: false,
+            isActive: true,
+            metadata: {
+              productVariantId: vasProduct.id,
+              isFromProductVariant: true,
+              autoCreated: true
+            }
+          }, { transaction });
+          console.log(`✅ Created new VasProduct ${matchingVasProduct.id} for virtual product`);
         } else {
           console.log(`✅ Found matching VasProduct ${matchingVasProduct.id} for virtual product`);
-          vasProductIdForTransaction = matchingVasProduct.id;
         }
+        vasProductIdForTransaction = matchingVasProduct.id;
       }
       
       // Create a new transaction record with banking-grade validation
