@@ -264,7 +264,7 @@ export function DigitalVouchersOverlay() {
             {error}
           </p>
           <Button
-            onClick={loadVouchers}
+            onClick={() => loadVouchers()}
             style={{
               fontFamily: 'Montserrat, sans-serif',
               fontSize: '14px',

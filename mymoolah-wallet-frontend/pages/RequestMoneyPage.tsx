@@ -846,7 +846,7 @@ export function RequestMoneyPage() {
                 selectedBeneficiary={null}
                 onSelect={(b) => {
                   handleInputChange('payerName', b.name);
-                  handleInputChange('payerMobileNumber', b.identifier);
+                  handleInputChange('payerMobileNumber', (b as any).identifier || (b as any).msisdn || '');
                 }}
                 onAddNew={() => {
                   const el = document.getElementById('payerName');
@@ -854,7 +854,7 @@ export function RequestMoneyPage() {
                 }}
                 onEdit={(b) => {
                   handleInputChange('payerName', b.name);
-                  handleInputChange('payerMobileNumber', b.identifier);
+                  handleInputChange('payerMobileNumber', (b as any).identifier || (b as any).msisdn || '');
                   try { document.getElementById('payerMobileNumber')?.focus(); } catch (_) {}
                 }}
                 onRemove={(b) => {

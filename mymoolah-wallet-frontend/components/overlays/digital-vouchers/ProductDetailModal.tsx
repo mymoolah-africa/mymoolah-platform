@@ -266,7 +266,7 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
         : normalizeToLocalMsisdn(recipientInfo.phone);
 
       const purchaseData = {
-        productId: Number(voucher.productId || voucher.id),
+        productId: Number(voucher.id),
         denomination: selectedDenomination!,
         recipient: recipientInfo.sendToSelf
           ? undefined
@@ -281,8 +281,10 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
 
       const response = await apiService.purchaseVoucher(purchaseData);
       
-      setVoucherCode(response?.order?.metadata?.supplierResponse?.voucherCode || response?.voucherCode || '');
-      setTransactionRef(response?.order?.id || response?.order?.orderId || response?.transactionRef || '');
+      const voucherCodeValue = (response as any)?.order?.metadata?.supplierResponse?.voucherCode || (response as any)?.voucherCode || '';
+      const transactionRefValue = (response as any)?.order?.id || (response as any)?.order?.orderId || (response as any)?.transactionRef || '';
+      setVoucherCode(voucherCodeValue);
+      setTransactionRef(transactionRefValue);
       setCurrentStep('success');
     } catch (error) {
       console.error('Error purchasing voucher:', error);

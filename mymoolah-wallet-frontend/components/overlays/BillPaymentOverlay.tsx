@@ -123,7 +123,7 @@ export function BillPaymentOverlay() {
     setCurrentStep('beneficiary');
   };
 
-  const handleBeneficiarySelect = (beneficiary: BillBeneficiary) => {
+  const handleBeneficiarySelect = (beneficiary: Beneficiary, accountId?: number) => {
     setBeneficiary(beneficiary);
     setCurrentStep('confirm');
   };
@@ -164,7 +164,7 @@ export function BillPaymentOverlay() {
     setShowBeneficiaryModal(false);
   };
 
-  const handleEditBeneficiary = (beneficiary: BillBeneficiary) => {
+  const handleEditBeneficiary = (beneficiary: Beneficiary) => {
     console.log('Edit bill account:', beneficiary);
   };
 

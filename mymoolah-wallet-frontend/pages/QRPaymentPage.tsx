@@ -806,7 +806,7 @@ export function QRPaymentPage() {
         pendingPaymentData.qrCode,
         paymentAmount,
         user?.walletId || 'default',
-        finalReference,
+        finalReference || null,
         tip > 0 ? tip : undefined
       );
       

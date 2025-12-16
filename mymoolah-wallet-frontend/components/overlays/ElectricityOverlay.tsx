@@ -62,7 +62,7 @@ export function ElectricityOverlay() {
     }
   };
 
-  const handleBeneficiarySelect = async (beneficiary: ElectricityBeneficiary) => {
+  const handleBeneficiarySelect = async (beneficiary: Beneficiary, accountId?: number) => {
     try {
       setLoadingState('loading');
       setSelectedBeneficiary(beneficiary);
@@ -123,12 +123,12 @@ export function ElectricityOverlay() {
     setShowBeneficiaryModal(false);
   };
 
-  const handleEditBeneficiary = (beneficiary: ElectricityBeneficiary) => {
+  const handleEditBeneficiary = (beneficiary: Beneficiary) => {
     setEditingBeneficiary(beneficiary);
     setShowBeneficiaryModal(true);
   };
 
-  const handleRemoveBeneficiary = (beneficiary: ElectricityBeneficiary) => {
+  const handleRemoveBeneficiary = (beneficiary: Beneficiary) => {
     setBeneficiaryToRemove(beneficiary);
     setShowConfirmationModal(true);
   };

@@ -929,8 +929,8 @@ export function SendMoneyPage() {
             ? {
                 ...b,
                 lastPaid: new Date(),
-                totalPaid: b.totalPaid + parseFloat(paymentAmount),
-                paymentCount: b.paymentCount + 1
+                totalPaid: ((b as any).totalPaid || 0) + parseFloat(paymentAmount),
+                paymentCount: ((b as any).paymentCount || 0) + 1
               }
             : b
         ));
@@ -1040,8 +1040,8 @@ export function SendMoneyPage() {
           ? {
               ...b,
               lastPaid: new Date(),
-              totalPaid: b.totalPaid + parseFloat(paymentAmount),
-              paymentCount: b.paymentCount + 1
+              totalPaid: ((b as any).totalPaid || 0) + parseFloat(paymentAmount),
+              paymentCount: ((b as any).paymentCount || 0) + 1
             }
           : b
       ));
@@ -1671,7 +1671,7 @@ export function SendMoneyPage() {
                                 padding: '2px 6px'
                               }}
                             >
-                              {beneficiary.accounts.length} accounts
+                              {(beneficiary as any).accounts?.length || 0} accounts
                             </Badge>
                           )}
                     </div>
@@ -1783,7 +1783,7 @@ export function SendMoneyPage() {
                     </div>
                     
                     {/* Payment Count */}
-                    {beneficiary.paymentCount > 0 && (
+                    {((beneficiary as any).paymentCount || 0) > 0 && (
                       <span style={{
                         fontFamily: 'Montserrat, sans-serif',
                         fontSize: '10px',
@@ -2573,7 +2573,7 @@ export function SendMoneyPage() {
                       // Update beneficiary via backend API
                       const updated = await beneficiaryService.createPaymentBeneficiary({
                         name: editingBeneficiary.name.trim(),
-                        msisdn: editingBeneficiary.accountType === 'bank' ? undefined : editingBeneficiary.msisdn.trim(),
+                        msisdn: editingBeneficiary.accountType === 'bank' ? undefined : (editingBeneficiary.msisdn || '').trim(),
                         accountType: editingBeneficiary.accountType,
                         bankName: editingBeneficiary.accountType === 'bank' ? editingBeneficiary.bankName?.trim() : undefined,
                         accountNumber: editingBeneficiary.accountType === 'bank' ? editingBeneficiary.identifier.trim() : undefined

@@ -101,6 +101,10 @@ export interface QRValidationResult {
     amount: number;
     currency: string;
     reference: string;
+    tipEnabled?: boolean;
+    defaultTipPercent?: number | null;
+    referenceEditable?: boolean;
+    customReferenceLabel?: string | null;
   };
   isValid: boolean;
   error?: string;
