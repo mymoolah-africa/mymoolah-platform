@@ -236,22 +236,25 @@ export function AirtimeDataOverlay() {
         return allProds;
       };
       
-      // Helper to extract network from product name or provider
+      // Helper to extract network from product name (NOT provider - provider is supplier like MOBILEMART/FLASH)
       const extractProductNetwork = (product: any): string => {
-        // Try provider first
-        if (product.provider) {
-          const providerNorm = normalizeNetwork(product.provider);
-          if (providerNorm) return providerNorm;
-        }
-        
-        // Try product name (e.g., "MTN Airtime", "Vodacom Airtime")
+        // CRITICAL: Check product name FIRST - it contains the network (e.g., "Vodacom Airtime", "MTN Airtime")
         if (product.productName || product.name) {
           const name = (product.productName || product.name).toLowerCase();
           if (name.includes('vodacom')) return 'vodacom';
           if (name.includes('mtn')) return 'mtn';
           if (name.includes('cellc') || name.includes('cell c')) return 'cellc';
           if (name.includes('telkom')) return 'telkom';
+          if (name.includes('eeziairtime') || name.includes('eezi airtime')) return 'eeziairtime';
         }
+        
+        // Fallback: Check if there's a network field directly (some products might have this)
+        if (product.network) {
+          return normalizeNetwork(product.network);
+        }
+        
+        // DO NOT use provider - it's the supplier (MOBILEMART, FLASH), not the network
+        // Provider is only useful for supplier identification, not network filtering
         
         return '';
       };
