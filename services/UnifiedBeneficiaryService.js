@@ -163,17 +163,33 @@ class UnifiedBeneficiaryService {
           
         case 'airtime-data':
           // Transform serviceAccountRecords to accounts array format for frontend
+          // Get beneficiary data (might be Sequelize model instance or plain object)
+          const beneficiaryData = beneficiary.toJSON ? beneficiary.toJSON() : beneficiary;
           const accounts = this.transformServiceAccountsToAccountsArray(beneficiary);
+          
+          // Debug logging
+          console.log('🔍 formatBeneficiariesForService - airtime-data:', {
+            beneficiaryId: beneficiary.id,
+            beneficiaryName: beneficiary.name,
+            hasVasServices: !!beneficiaryData.vasServices,
+            vasServicesAirtime: beneficiaryData.vasServices?.airtime?.length || 0,
+            vasServicesData: beneficiaryData.vasServices?.data?.length || 0,
+            hasServiceAccountRecords: !!beneficiaryData.serviceAccountRecords,
+            serviceAccountRecordsLength: beneficiaryData.serviceAccountRecords?.length || 0,
+            accountsLength: accounts.length,
+            accounts: accounts.map(acc => ({ type: acc.type, network: acc.metadata?.network }))
+          });
+          
           return {
             ...base,
-            vasServices: beneficiary.vasServices,
+            vasServices: beneficiaryData.vasServices || beneficiary.vasServices,
             // Include normalized service account records for network extraction
-            serviceAccountRecords: beneficiary.serviceAccountRecords,
+            serviceAccountRecords: beneficiaryData.serviceAccountRecords || beneficiary.serviceAccountRecords,
             // Include accounts array (transformed from serviceAccountRecords) for frontend
             accounts: accounts,
             // Legacy compatibility
-            accountType: this.getVasAccountType(beneficiary.vasServices, beneficiary.accountType),
-            identifier: this.getVasIdentifier(beneficiary.vasServices, base.identifier)
+            accountType: this.getVasAccountType(beneficiaryData.vasServices || beneficiary.vasServices, beneficiary.accountType),
+            identifier: this.getVasIdentifier(beneficiaryData.vasServices || beneficiary.vasServices, base.identifier)
           };
           
         case 'electricity':
