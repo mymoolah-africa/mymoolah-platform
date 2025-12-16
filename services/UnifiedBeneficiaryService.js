@@ -928,6 +928,11 @@ class UnifiedBeneficiaryService {
         );
       }
 
+      // Update JSONB vasServices for backward compatibility (airtime/data only)
+      if (normalizedType === 'airtime' || normalizedType === 'data') {
+        await this.addServiceToBeneficiary(beneficiary, normalizedType, normalizedData);
+      }
+
       await tx.commit();
     } catch (err) {
       await tx.rollback();
