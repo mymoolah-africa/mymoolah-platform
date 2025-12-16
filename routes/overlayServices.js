@@ -620,6 +620,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     let committedVasTransaction;
     let committedLedgerTransaction;
     let updatedWalletBalance = null;
+    // Declare vasProductIdForTransaction outside try block so it's available in catch block
+    let vasProductIdForTransaction = vasProduct?.id || null;
 
     try {
       const wallet = await Wallet.findOne({
@@ -693,7 +695,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       // Handle vasProductId: If vasProduct is virtual (from ProductVariant), we need to handle it differently
       // The VasTransaction.vasProductId field expects a real VasProduct.id from vas_products table
       // For virtual products, we'll use a placeholder or find/create a matching VasProduct
-      let vasProductIdForTransaction = vasProduct.id;
+      // Initialize with vasProduct.id (will be updated if virtual)
+      vasProductIdForTransaction = vasProduct.id;
       
       if (vasProduct.isVirtual) {
         // For virtual products (from ProductVariant), try to find or create a matching VasProduct
