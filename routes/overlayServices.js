@@ -326,32 +326,66 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     }).catch(() => {});
     // #endregion agent log
 
-    // Banking-grade input validation
+    // Banking-grade input validation with detailed error messages
+    console.log('🔍 Purchase request validation:', {
+      beneficiaryId: typeof beneficiaryId === 'string' ? beneficiaryId : String(beneficiaryId),
+      productId: typeof productId === 'string' ? productId : String(productId),
+      amount: typeof amount === 'string' ? amount : String(amount),
+      idempotencyKey: typeof idempotencyKey === 'string' ? idempotencyKey : String(idempotencyKey),
+      userId: req.user?.id
+    });
+    
     const requiredFields = { beneficiaryId, productId, amount, idempotencyKey };
     const missingFields = Object.entries(requiredFields)
-      .filter(([key, value]) => !value || (typeof value === 'string' && value.trim() === ''))
+      .filter(([key, value]) => {
+        // Check for null, undefined, empty string, or (for numbers) NaN
+        if (value === null || value === undefined) return true;
+        if (typeof value === 'string' && value.trim() === '') return true;
+        if (typeof value === 'number' && (isNaN(value) || !isFinite(value))) return true;
+        return false;
+      })
       .map(([key]) => key);
     
     if (missingFields.length > 0) {
+      console.error('❌ Missing required fields:', missingFields);
       return res.status(400).json({
         success: false,
-        error: `Missing required fields: ${missingFields.join(', ')}`
+        error: `Missing required fields: ${missingFields.join(', ')}`,
+        details: {
+          received: {
+            beneficiaryId: beneficiaryId ? String(beneficiaryId) : null,
+            productId: productId ? String(productId) : null,
+            amount: amount !== undefined ? String(amount) : null,
+            idempotencyKey: idempotencyKey ? String(idempotencyKey) : null
+          }
+        }
       });
     }
     
     // Validate idempotency key format
-    if (!/^[a-zA-Z0-9_-]{10,100}$/.test(idempotencyKey)) {
+    if (!/^[a-zA-Z0-9_-]{10,100}$/.test(String(idempotencyKey))) {
+      console.error('❌ Invalid idempotency key format:', idempotencyKey);
       return res.status(400).json({
         success: false,
-        error: 'Invalid idempotency key format'
+        error: `Invalid idempotency key format. Must be 10-100 alphanumeric characters, hyphens, or underscores. Received: ${String(idempotencyKey).substring(0, 20)}...`
       });
     }
     
     // Validate beneficiaryId format (should be numeric)
-    if (!/^\d+$/.test(beneficiaryId.toString())) {
+    if (!/^\d+$/.test(String(beneficiaryId))) {
+      console.error('❌ Invalid beneficiary ID format:', beneficiaryId);
       return res.status(400).json({
         success: false,
-        error: 'Invalid beneficiary ID format'
+        error: `Invalid beneficiary ID format. Must be numeric. Received: ${typeof beneficiaryId} "${beneficiaryId}"`
+      });
+    }
+    
+    // Validate productId format (can be numeric variantId or string format)
+    if (!productId || (typeof productId !== 'string' && typeof productId !== 'number')) {
+      console.error('❌ Invalid productId type:', typeof productId, productId);
+      return res.status(400).json({
+        success: false,
+        error: `Invalid productId format. Must be string or number. Received: ${typeof productId} "${productId}"`
       });
     }
 

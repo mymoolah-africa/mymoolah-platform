@@ -45,7 +45,12 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || `HTTP ${response.status}`);
+        // Extract detailed error message from backend response
+        const errorMessage = data.error || data.message || `HTTP ${response.status}`;
+        const error = new Error(errorMessage);
+        (error as any).status = response.status;
+        (error as any).response = data;
+        throw error;
       }
 
       return data;
