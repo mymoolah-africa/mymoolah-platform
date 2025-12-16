@@ -304,7 +304,28 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
   const idempotencyKey = context.idempotencyKey;
 
   try {
-    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d46f726-574e-40d9-82c4-c177abd63d66', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H1',
+        location: 'routes/overlayServices.js:airtime-data-purchase:entry',
+        message: 'Airtime/Data purchase request received',
+        data: {
+          beneficiaryId,
+          productId,
+          amountType: typeof amount,
+          amountValue: amount,
+          userId: req.user?.id
+        },
+        timestamp: Date.now()
+      })
+    }).catch(() => {});
+    // #endregion agent log
+
     // Banking-grade input validation
     const requiredFields = { beneficiaryId, productId, amount, idempotencyKey };
     const missingFields = Object.entries(requiredFields)
@@ -366,6 +387,26 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     });
     
     if (!vasProduct) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d46f726-574e-40d9-82c4-c177abd63d66', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'pre-fix',
+          hypothesisId: 'H2',
+          location: 'routes/overlayServices.js:airtime-data-purchase:vasProduct',
+          message: 'VasProduct not found for airtime/data purchase',
+          data: {
+            supplier,
+            productCode,
+            vasType: type
+          },
+          timestamp: Date.now()
+        })
+      }).catch(() => {});
+      // #endregion agent log
+
       return res.status(404).json({
         success: false,
         error: 'Product not found in catalog'
@@ -451,6 +492,24 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       });
 
       if (!wallet) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d46f726-574e-40d9-82c4-c177abd63d66', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'H3',
+            location: 'routes/overlayServices.js:airtime-data-purchase:wallet-missing',
+            message: 'Wallet not found during airtime/data purchase',
+            data: {
+              userId: req.user?.id
+            },
+            timestamp: Date.now()
+          })
+        }).catch(() => {});
+        // #endregion agent log
+
         await transaction.rollback();
         return res.status(404).json({
           success: false,
@@ -460,6 +519,26 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
 
       const debitCheck = wallet.canDebit(normalizedAmount);
       if (!debitCheck.allowed) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/0d46f726-574e-40d9-82c4-c177abd63d66', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: 'debug-session',
+            runId: 'pre-fix',
+            hypothesisId: 'H4',
+            location: 'routes/overlayServices.js:airtime-data-purchase:insufficient-funds',
+            message: 'Wallet cannot be debited for airtime/data purchase',
+            data: {
+              userId: req.user?.id,
+              normalizedAmount,
+              debitReason: debitCheck.reason
+            },
+            timestamp: Date.now()
+          })
+        }).catch(() => {});
+        // #endregion agent log
+
         await transaction.rollback();
         return res.status(400).json({
           success: false,
@@ -566,6 +645,26 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         idempotencyKey: context.idempotencyKey,
         timestamp: new Date().toISOString()
       });
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/0d46f726-574e-40d9-82c4-c177abd63d66', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'pre-fix',
+          hypothesisId: 'H5',
+          location: 'routes/overlayServices.js:airtime-data-purchase:db-error',
+          message: 'Database transaction failed during airtime/data purchase',
+          data: {
+            errorMessage: dbError.message,
+            errorName: dbError.name,
+            errorCode: dbError.code || null
+          },
+          timestamp: Date.now()
+        })
+      }).catch(() => {});
+      // #endregion agent log
       
       return res.status(500).json({
         success: false,
@@ -714,6 +813,25 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       idempotencyKey: context.idempotencyKey,
       timestamp: new Date().toISOString()
     });
+
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/0d46f726-574e-40d9-82c4-c177abd63d66', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sessionId: 'debug-session',
+        runId: 'pre-fix',
+        hypothesisId: 'H6',
+        location: 'routes/overlayServices.js:airtime-data-purchase:outer-catch',
+        message: 'Unhandled error in airtime/data purchase route',
+        data: {
+          errorId,
+          errorMessage: error.message
+        },
+        timestamp: Date.now()
+      })
+    }).catch(() => {});
+    // #endregion agent log
     
     // Don't expose internal error details to client
     res.status(500).json({
