@@ -101,6 +101,21 @@ export function AirtimeDataOverlay() {
       setLoadingState('loading');
       setSelectedBeneficiary(beneficiary);
       
+      // Get beneficiary network from metadata or service accounts
+      // Check if beneficiary has only one network (from metadata or accounts)
+      let beneficiaryNetwork: string | null = null;
+      if (beneficiary.metadata?.network) {
+        beneficiaryNetwork = beneficiary.metadata.network;
+      } else if ((beneficiary as any).accounts && Array.isArray((beneficiary as any).accounts)) {
+        // Check service accounts for network
+        const airtimeAccounts = (beneficiary as any).accounts.filter((acc: any) => 
+          acc.type === 'airtime' || acc.type === 'data'
+        );
+        if (airtimeAccounts.length === 1) {
+          beneficiaryNetwork = airtimeAccounts[0].metadata?.network || null;
+        }
+      }
+      
       // Load products using compareSuppliers API (best-deal selection)
       const [airtimeComparison, dataComparison] = await Promise.all([
         apiService.compareSuppliers('airtime'),
@@ -123,61 +138,88 @@ export function AirtimeDataOverlay() {
         return allProds;
       };
       
-      // Transform to AirtimeDataCatalog format
-      const airtimeProds = extractProducts(airtimeComparison).map((p: any) => {
-        const denominationAmount = (p.denominations && p.denominations.length > 0) 
-          ? p.denominations[0] 
-          : (p.minAmount && p.minAmount === p.maxAmount ? p.minAmount : p.minAmount || 0);
-        
-        return {
-          id: `${p.vasType || 'airtime'}_${p.supplierCode}_${p.supplierProductId}_${denominationAmount}`,
-          name: p.productName || p.name || 'Unknown Product',
-          size: `R${(denominationAmount / 100).toFixed(0)}`,
-          price: denominationAmount / 100, // Convert cents to rands
-          provider: p.provider || p.supplierCode || 'Unknown',
-          type: 'airtime' as const,
-          validity: 'Immediate',
-          isBestDeal: p.isBestDeal || false,
-          supplier: p.supplierCode?.toLowerCase() || 'flash',
-          description: p.description || '',
-          commission: p.commission || 0,
-          fixedFee: p.fixedFee || 0,
-          // Store full data for purchase
-          variantId: p.id,
-          supplierCode: p.supplierCode,
-          supplierProductId: p.supplierProductId,
-          vasType: p.vasType || 'airtime',
-          denominations: p.denominations || p.predefinedAmounts || [],
-          minAmount: p.minAmount,
-          maxAmount: p.maxAmount
+      // Helper to normalize network names for comparison
+      const normalizeNetwork = (network: string): string => {
+        const normalized = network?.toLowerCase().trim();
+        const networkMap: { [key: string]: string } = {
+          'vodacom': 'vodacom',
+          'mtn': 'mtn',
+          'cellc': 'cellc',
+          'cell c': 'cellc',
+          'telkom': 'telkom',
+          'eeziairtime': 'eeziairtime',
+          'global': 'global'
         };
-      });
+        return networkMap[normalized] || normalized;
+      };
       
-      const dataProds = extractProducts(dataComparison).map((p: any) => {
-        const dataPrice = p.minAmount || 0;
-        return {
-          id: `${p.vasType || 'data'}_${p.supplierCode}_${p.supplierProductId}_${dataPrice}`,
-          name: p.productName || p.name || 'Unknown Product',
-          size: `${(dataPrice / 100).toFixed(0)}MB`,
-          price: dataPrice / 100, // Convert cents to rands
-          provider: p.provider || p.supplierCode || 'Unknown',
-          type: 'data' as const,
-          validity: '30 days',
-          isBestDeal: p.isBestDeal || false,
-          supplier: p.supplierCode?.toLowerCase() || 'flash',
-          description: p.description || '',
-          commission: p.commission || 0,
-          fixedFee: p.fixedFee || 0,
-          // Store full data for purchase
-          variantId: p.id,
-          supplierCode: p.supplierCode,
-          supplierProductId: p.supplierProductId,
-          vasType: p.vasType || 'data',
-          denominations: p.denominations || p.predefinedAmounts || [],
-          minAmount: p.minAmount,
-          maxAmount: p.maxAmount
-        };
-      });
+      // Transform to AirtimeDataCatalog format
+      const airtimeProds = extractProducts(airtimeComparison)
+        .map((p: any, index: number) => {
+          const denominationAmount = (p.denominations && p.denominations.length > 0) 
+            ? p.denominations[0] 
+            : (p.minAmount && p.minAmount === p.maxAmount ? p.minAmount : p.minAmount || 0);
+          
+          return {
+            id: `${p.vasType || 'airtime'}_${p.supplierCode}_${p.supplierProductId}_${denominationAmount}_${index}_${Date.now()}`,
+            name: p.productName || p.name || 'Unknown Product',
+            size: `R${(denominationAmount / 100).toFixed(0)}`,
+            price: denominationAmount / 100, // Convert cents to rands
+            provider: p.provider || p.supplierCode || 'Unknown',
+            type: 'airtime' as const,
+            validity: 'Immediate',
+            isBestDeal: p.isBestDeal || false,
+            supplier: p.supplierCode?.toLowerCase() || 'flash',
+            description: p.description || '',
+            commission: p.commission || 0,
+            fixedFee: p.fixedFee || 0,
+            // Store full data for purchase
+            variantId: p.id,
+            supplierCode: p.supplierCode,
+            supplierProductId: p.supplierProductId,
+            vasType: p.vasType || 'airtime',
+            denominations: p.denominations || p.predefinedAmounts || [],
+            minAmount: p.minAmount,
+            maxAmount: p.maxAmount
+          };
+        })
+        // Filter by network if beneficiary has only one network
+        .filter((p: any) => {
+          if (!beneficiaryNetwork) return true; // Show all if no network specified
+          return normalizeNetwork(p.provider) === normalizeNetwork(beneficiaryNetwork);
+        });
+      
+      const dataProds = extractProducts(dataComparison)
+        .map((p: any, index: number) => {
+          const dataPrice = p.minAmount || 0;
+          return {
+            id: `${p.vasType || 'data'}_${p.supplierCode}_${p.supplierProductId}_${dataPrice}_${index}_${Date.now()}`,
+            name: p.productName || p.name || 'Unknown Product',
+            size: `${(dataPrice / 100).toFixed(0)}MB`,
+            price: dataPrice / 100, // Convert cents to rands
+            provider: p.provider || p.supplierCode || 'Unknown',
+            type: 'data' as const,
+            validity: '30 days',
+            isBestDeal: p.isBestDeal || false,
+            supplier: p.supplierCode?.toLowerCase() || 'flash',
+            description: p.description || '',
+            commission: p.commission || 0,
+            fixedFee: p.fixedFee || 0,
+            // Store full data for purchase
+            variantId: p.id,
+            supplierCode: p.supplierCode,
+            supplierProductId: p.supplierProductId,
+            vasType: p.vasType || 'data',
+            denominations: p.denominations || p.predefinedAmounts || [],
+            minAmount: p.minAmount,
+            maxAmount: p.maxAmount
+          };
+        })
+        // Filter by network if beneficiary has only one network
+        .filter((p: any) => {
+          if (!beneficiaryNetwork) return true; // Show all if no network specified
+          return normalizeNetwork(p.provider) === normalizeNetwork(beneficiaryNetwork);
+        });
       
       // Create catalog in expected format
       const catalogData: AirtimeDataCatalog = {
@@ -750,30 +792,15 @@ export function AirtimeDataOverlay() {
             
             <CardContent>
               <div className="space-y-3">
-                {catalog.products.filter(product => product.type === 'airtime').map((product) => (
-                  <div
-                    key={product.id}
-                    onClick={() => handleProductSelect(product)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = '#86BE41';
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = '#e2e8f0';
-                      e.currentTarget.style.backgroundColor = '#ffffff';
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
+                {/* Own Airtime Amount - Show at top */}
+                {selectedBeneficiary && (
+                  <div style={{
+                    padding: '12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    backgroundColor: '#f8fafc'
+                  }}>
+                    <div className="flex items-center gap-3 mb-3">
                       <div style={{
                         width: '40px',
                         height: '40px',
@@ -785,7 +812,6 @@ export function AirtimeDataOverlay() {
                       }}>
                         <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
                       </div>
-                      
                       <div>
                         <p style={{
                           fontFamily: 'Montserrat, sans-serif',
@@ -793,68 +819,7 @@ export function AirtimeDataOverlay() {
                           fontWeight: '500',
                           color: '#1f2937'
                         }}>
-                          {product.name}
-                        </p>
-                        <p style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '12px',
-                          color: '#6b7280'
-                        }}>
-                          {product.size} • {product.provider}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '16px',
-                        fontWeight: '700',
-                        color: '#1f2937'
-                      }}>
-                        {formatCurrency(product.price)}
-                      </p>
-                      {product.isBestDeal && (
-                        <span style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '10px',
-                          color: '#16a34a',
-                          fontWeight: '500'
-                        }}>
-                          Best Deal
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Own Airtime Amount */}
-                <div style={{
-                  padding: '12px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  backgroundColor: '#f8fafc'
-                }}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      backgroundColor: '#86BE41',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
-                    </div>
-                    <div>
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: '#1f2937'
-                      }}>
-                        Own Amount
+                          Own Amount
                       </p>
                       <p style={{
                         fontFamily: 'Montserrat, sans-serif',
@@ -951,6 +916,86 @@ export function AirtimeDataOverlay() {
                     </Button>
                   </div>
                 </div>
+                )}
+
+                {/* Airtime Product List */}
+                {catalog.products.filter(product => product.type === 'airtime').map((product, index) => (
+                  <div
+                    key={`${product.id}_${index}`}
+                    onClick={() => handleProductSelect(product)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.borderColor = '#86BE41';
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        backgroundColor: '#86BE41',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                      </div>
+                      
+                      <div>
+                        <p style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          color: '#1f2937'
+                        }}>
+                          {product.name}
+                        </p>
+                        <p style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '12px',
+                          color: '#6b7280'
+                        }}>
+                          {product.size} • {product.provider}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <p style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        color: '#1f2937'
+                      }}>
+                        {formatCurrency(product.price)}
+                      </p>
+                      {product.isBestDeal && (
+                        <span style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '10px',
+                          color: '#16a34a',
+                          fontWeight: '500'
+                        }}>
+                          Best Deal
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -974,9 +1019,9 @@ export function AirtimeDataOverlay() {
             
             <CardContent>
               <div className="space-y-3">
-                {catalog.products.filter(product => product.type === 'data').map((product) => (
+                {catalog.products.filter(product => product.type === 'data').map((product, index) => (
                   <div
-                    key={product.id}
+                    key={`${product.id}_${index}`}
                     onClick={() => handleProductSelect(product)}
                     style={{
                       display: 'flex',
