@@ -493,12 +493,16 @@ export function AirtimeDataOverlay() {
         console.warn('⚠️ Using product.id as fallback:', productIdForPurchase);
       }
       
-      const result = await airtimeDataService.purchase({
-        beneficiaryId: selectedBeneficiary.id,
-        productId: productIdForPurchase.toString(), // Ensure it's a string for the API
+      // Log purchase request data for debugging
+      const purchaseData = {
+        beneficiaryId: String(selectedBeneficiary.id),
+        productId: String(productIdForPurchase),
         amount: selectedProduct.price,
-        idempotencyKey
-      });
+        idempotencyKey: String(idempotencyKey)
+      };
+      console.log('📤 Sending purchase request:', purchaseData);
+      
+      const result = await airtimeDataService.purchase(purchaseData);
       
       // Extract reference from result (handle different response structures)
       const reference = result?.reference || result?.data?.reference || idempotencyKey;
