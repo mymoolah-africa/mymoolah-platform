@@ -101,6 +101,23 @@ export function AirtimeDataOverlay() {
       setLoadingState('loading');
       setSelectedBeneficiary(beneficiary);
       
+      // Helper to normalize network names for comparison (must be defined first)
+      const normalizeNetwork = (network: string | null | undefined): string => {
+        if (!network) return '';
+        const normalized = String(network).toLowerCase().trim();
+        const networkMap: { [key: string]: string } = {
+          'vodacom': 'vodacom',
+          'mtn': 'mtn',
+          'cellc': 'cellc',
+          'cell c': 'cellc',
+          'telkom': 'telkom',
+          'eeziairtime': 'eeziairtime',
+          'eezi airtime': 'eeziairtime',
+          'global': 'global'
+        };
+        return networkMap[normalized] || normalized;
+      };
+      
       // Get beneficiary network from metadata or service accounts
       // STRICT: For PINless top-up, we MUST filter by network - only show products for the beneficiary's network
       let beneficiaryNetwork: string | null = null;
