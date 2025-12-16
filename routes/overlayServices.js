@@ -726,6 +726,17 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       }
       
       // Create a new transaction record with banking-grade validation
+      console.log('📝 Creating VasTransaction with:', {
+        vasProductId: vasProductIdForTransaction,
+        vasProductIsVirtual: vasProduct?.isVirtual,
+        type,
+        supplier,
+        productCode,
+        amountInCents: amountInCentsValue,
+        beneficiaryId: beneficiary.id,
+        walletId: wallet.walletId
+      });
+      
       const vasTransaction = await VasTransaction.create({
         transactionId: vasTransactionId,
         userId: req.user.id,
@@ -760,6 +771,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           } : {})
         }
       }, { transaction });
+      
+      console.log('✅ VasTransaction created successfully:', vasTransaction.id);
       
       // Update beneficiary lastPaidAt within the same transaction
       await beneficiary.update({
