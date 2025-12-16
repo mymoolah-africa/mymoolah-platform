@@ -427,7 +427,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           {
             model: require('../models').Product,
             as: 'product',
-            attributes: ['id', 'name']
+            attributes: ['id', 'name', 'type'] // Include 'type' field - this is where vasType is stored
           }
         ]
       });
