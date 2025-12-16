@@ -21,7 +21,8 @@ import { NetworkFilter, type NetworkType } from './NetworkFilter';
 import { SmartProductGrid, type Product } from './SmartProductGrid';
 import { SmartSuggestions, generateSuggestions, type Suggestion } from './SmartSuggestions';
 import { apiService } from '../../../services/apiService';
-import { airtimeDataService } from '../../../services/overlayService';
+import { airtimeDataService, beneficiaryService, type Beneficiary as OverlayBeneficiary } from '../../../services/overlayService';
+import { BeneficiaryModal } from '../shared/BeneficiaryModal';
 
 type ViewMode = 'home' | 'products' | 'confirm' | 'success';
 
@@ -57,6 +58,8 @@ export function AirtimeDataOverlayModern() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showBeneficiaryModal, setShowBeneficiaryModal] = useState(false);
+  const [editingBeneficiary, setEditingBeneficiary] = useState<OverlayBeneficiary | null>(null);
 
   // Load initial data
   useEffect(() => {
@@ -290,6 +293,14 @@ export function AirtimeDataOverlayModern() {
     }
   };
 
+  // Handle beneficiary creation
+  const handleBeneficiaryCreated = (newBeneficiary: OverlayBeneficiary) => {
+    // Reload beneficiaries to get the updated list
+    loadInitialData();
+    setShowBeneficiaryModal(false);
+    setEditingBeneficiary(null);
+  };
+
   // Handle purchase confirmation
   const handleConfirmPurchase = async () => {
     if (!selectedProduct || !selectedBeneficiary) return;
@@ -385,7 +396,10 @@ export function AirtimeDataOverlayModern() {
         </button>
 
         <button
-          onClick={() => {/* TODO: Open add beneficiary modal */}}
+          onClick={() => {
+            setEditingBeneficiary(null);
+            setShowBeneficiaryModal(true);
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -899,6 +913,18 @@ export function AirtimeDataOverlayModern() {
           </button>
         </div>
       )}
+
+      {/* Beneficiary Modal */}
+      <BeneficiaryModal
+        isOpen={showBeneficiaryModal}
+        onClose={() => {
+          setShowBeneficiaryModal(false);
+          setEditingBeneficiary(null);
+        }}
+        type="airtime"
+        onSuccess={handleBeneficiaryCreated}
+        editBeneficiary={editingBeneficiary}
+      />
     </div>
   );
 }
