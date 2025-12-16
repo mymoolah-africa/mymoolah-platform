@@ -859,7 +859,7 @@ export function RequestMoneyPage() {
                 }}
                 onRemove={(b) => {
                   // Show confirmation modal before removing
-                  setPayerToRemove({ id: b.id, name: b.name });
+                  setPayerToRemove({ id: typeof b.id === 'string' ? b.id : b.id.toString(), name: b.name });
                   setShowRemovePayerModal(true);
                 }}
                 isLoading={loadingPayers}
