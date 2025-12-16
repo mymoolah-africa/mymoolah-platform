@@ -408,6 +408,30 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             isActive: true
           }
         });
+        
+        // If VasProduct doesn't exist, create a compatible structure from ProductVariant
+        // This allows purchases from ProductVariant (bestDeals) even if VasProduct doesn't exist
+        if (!vasProduct && productVariant) {
+          console.log(`⚠️ VasProduct not found for ProductVariant ${variantId}, creating compatible structure from ProductVariant data`);
+          vasProduct = {
+            id: productVariant.id, // Use variant ID as vasProductId
+            supplierId: supplier,
+            supplierProductId: productCode,
+            vasType: type,
+            transactionType: productVariant.transactionType || 'topup',
+            provider: productVariant.provider,
+            minAmount: productVariant.minAmount,
+            maxAmount: productVariant.maxAmount,
+            predefinedAmounts: productVariant.predefinedAmounts,
+            commission: productVariant.commission,
+            fixedFee: productVariant.fixedFee,
+            isActive: productVariant.status === 'active',
+            metadata: productVariant.metadata,
+            productName: productVariant.product?.name,
+            // Mark as virtual (not a real DB record) so we know to handle it differently
+            isVirtual: true
+          };
+        }
       }
     } else {
       // Old format: Parse productId string
