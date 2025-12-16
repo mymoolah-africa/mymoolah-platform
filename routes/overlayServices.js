@@ -894,14 +894,17 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       }).catch(() => {});
       // #endregion agent log
       
-      // Include actual error message in response for debugging (in development/staging)
+      // Include actual error message in response for debugging (always in development/staging)
       const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
+      // Always include error message in error field for frontend to display
       return res.status(500).json({
         success: false,
-        error: 'Transaction processing failed',
+        error: isDevelopment ? dbError.message : 'Transaction processing failed',
         message: isDevelopment ? dbError.message : 'Please try again',
         errorCode: dbError.code || null,
-        errorId: `DB_TXN_ERR_${Date.now()}`
+        errorId: `DB_TXN_ERR_${Date.now()}`,
+        // Include stack trace in development for debugging
+        ...(isDevelopment && { stack: dbError.stack })
       });
     }
     
