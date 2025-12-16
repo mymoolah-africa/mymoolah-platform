@@ -70,19 +70,17 @@ export function AirtimeDataOverlayModern() {
     try {
       setIsLoading(true);
       
-      // Load beneficiaries (airtime + data) - with fallback for errors
+      // Load beneficiaries (airtime + data) using unified beneficiary service
       let airtimeBenefs: any[] = [];
       let dataBenefs: any[] = [];
       let recentTx: any[] = [];
       
       try {
-        const allBenefs = await apiService.getBeneficiaries();
-        airtimeBenefs = allBenefs.filter((b: any) => 
-          b.vasServices?.airtime?.length > 0 || b.accountType === 'airtime'
-        );
-        dataBenefs = allBenefs.filter((b: any) => 
-          b.vasServices?.data?.length > 0 || b.accountType === 'data'
-        );
+        // Use unified beneficiary service (same as old overlay)
+        [airtimeBenefs, dataBenefs] = await Promise.all([
+          beneficiaryService.getBeneficiaries('airtime'),
+          beneficiaryService.getBeneficiaries('data')
+        ]);
       } catch (err) {
         console.error('Failed to load beneficiaries:', err);
         // Continue with empty beneficiaries
@@ -95,11 +93,70 @@ export function AirtimeDataOverlayModern() {
         // Continue with empty transactions
       }
 
-      // Merge and deduplicate beneficiaries
-      const allBenefs = [...airtimeBenefs, ...dataBenefs];
-      const uniqueBenefs = Array.from(
-        new Map(allBenefs.map(b => [b.id, b])).values()
-      ) as Beneficiary[];
+      // Merge and deduplicate beneficiaries by identifier (MSISDN) - same as old overlay
+      const mapByMsisdn = new Map<string, Beneficiary>();
+      [...airtimeBenefs, ...dataBenefs].forEach((b: any) => {
+        const key = String(b.identifier || b.msisdn || b.id).trim();
+        const existing = mapByMsisdn.get(key);
+        if (!existing) {
+          mapByMsisdn.set(key, {
+            id: b.id,
+            name: b.name,
+            msisdn: b.msisdn || b.identifier,
+            network: b.metadata?.network || b.vasServices?.airtime?.[0]?.network || b.vasServices?.data?.[0]?.network,
+            isFavorite: b.isFavorite || false,
+            lastPurchase: b.lastPaidAt ? {
+              amount: 0, // Will be populated from transactions if available
+              type: 'airtime' as const,
+              date: b.lastPaidAt
+            } : undefined,
+            vasServices: b.vasServices || {
+              airtime: b.accountType === 'airtime' ? [{
+                mobileNumber: b.identifier || b.msisdn,
+                network: b.metadata?.network || 'Vodacom',
+                isActive: true
+              }] : undefined,
+              data: b.accountType === 'data' ? [{
+                mobileNumber: b.identifier || b.msisdn,
+                network: b.metadata?.network || 'Vodacom',
+                isActive: true
+              }] : undefined
+            }
+          } as Beneficiary);
+        } else {
+          // Prefer the most recently updated entry
+          const existingUpdated = existing.lastPurchase?.date ? new Date(existing.lastPurchase.date).getTime() : 0;
+          const currentUpdated = b.lastPaidAt ? new Date(b.lastPaidAt).getTime() : 0;
+          if (currentUpdated >= existingUpdated) {
+            mapByMsisdn.set(key, {
+              id: b.id,
+              name: b.name,
+              msisdn: b.msisdn || b.identifier,
+              network: b.metadata?.network || b.vasServices?.airtime?.[0]?.network || b.vasServices?.data?.[0]?.network,
+              isFavorite: b.isFavorite || false,
+              lastPurchase: b.lastPaidAt ? {
+                amount: 0,
+                type: 'airtime' as const,
+                date: b.lastPaidAt
+              } : undefined,
+              vasServices: b.vasServices || {
+                airtime: b.accountType === 'airtime' ? [{
+                  mobileNumber: b.identifier || b.msisdn,
+                  network: b.metadata?.network || 'Vodacom',
+                  isActive: true
+                }] : undefined,
+                data: b.accountType === 'data' ? [{
+                  mobileNumber: b.identifier || b.msisdn,
+                  network: b.metadata?.network || 'Vodacom',
+                  isActive: true
+                }] : undefined
+              }
+            } as Beneficiary);
+          }
+        }
+      });
+      
+      const uniqueBenefs = Array.from(mapByMsisdn.values());
 
       // Sort by favorite, then last purchase
       const sortedBenefs = uniqueBenefs.sort((a, b) => {
@@ -165,11 +222,18 @@ export function AirtimeDataOverlayModern() {
         return allProds;
       };
 
-      const airtimeProds = extractProducts(airtimeComparison).map((p: any) => ({
+      const airtimeProds = extractProducts(airtimeComparison).map((p: any) => {
+        // Price should be the denomination amount (in cents), not the commission/fee
+        // If denominations array exists, use the first one; otherwise use minAmount
+        const denominationAmount = (p.denominations && p.denominations.length > 0) 
+          ? p.denominations[0] 
+          : (p.minAmount && p.minAmount === p.maxAmount ? p.minAmount : p.minAmount || 0);
+        
+        return {
         id: p.id || p.productId || p.variantId,
         name: p.productName || p.name || 'Unknown Product',
-        size: p.size || (p.denominations && p.denominations.length > 0 ? `R${p.denominations[0]}` : `R${((p.price || p.minAmount || 0) / 100).toFixed(0)}`),
-        price: p.price || p.minAmount || 0,
+        size: p.size || `R${(denominationAmount / 100).toFixed(0)}`,
+        price: denominationAmount, // Store in cents for consistency
         provider: p.provider || p.supplierCode || p.network || 'Unknown',
         type: 'airtime' as const,
         validity: p.validity || 'Immediate',
@@ -186,13 +250,18 @@ export function AirtimeDataOverlayModern() {
         denominations: p.denominations || p.predefinedAmounts || [],
         minAmount: p.minAmount,
         maxAmount: p.maxAmount
-      }));
+      };
+      });
 
-      const dataProds = extractProducts(dataComparison).map((p: any) => ({
+      const dataProds = extractProducts(dataComparison).map((p: any) => {
+        // For data, price is the minAmount (in cents)
+        const dataPrice = p.minAmount || 0;
+        
+        return {
         id: p.id || p.productId || p.variantId,
         name: p.productName || p.name || 'Unknown Product',
-        size: p.size || (p.dataAmount ? `${p.dataAmount}` : `${((p.minAmount || 0) / 100).toFixed(0)}MB`),
-        price: p.price || p.minAmount || 0,
+        size: p.size || (p.dataAmount ? `${p.dataAmount}` : `${(dataPrice / 100).toFixed(0)}MB`),
+        price: dataPrice, // Store in cents for consistency
         provider: p.provider || p.supplierCode || p.network || 'Unknown',
         type: 'data' as const,
         validity: p.validity || '30 days',
@@ -209,7 +278,8 @@ export function AirtimeDataOverlayModern() {
         denominations: p.denominations || p.predefinedAmounts || [],
         minAmount: p.minAmount,
         maxAmount: p.maxAmount
-      }));
+      };
+      });
 
       const allProducts = [...airtimeProds, ...dataProds];
       setProducts(allProducts);
