@@ -284,8 +284,19 @@ router.patch('/:beneficiaryId', authenticateToken, async (req, res) => {
       });
     }
 
-    // Return updated beneficiary
-    const updatedBeneficiary = await unifiedBeneficiaryService.getBeneficiaryServices(beneficiaryId);
+    // Return updated beneficiary with all service accounts
+    // Use getBeneficiariesByService to get properly formatted response with accounts array
+    const updatedBeneficiaries = await unifiedBeneficiaryService.getBeneficiariesByService(
+      userId,
+      'airtime-data', // Try airtime-data first
+      ''
+    );
+    let updatedBeneficiary = updatedBeneficiaries.find(b => b.id === parseInt(beneficiaryId, 10));
+    
+    // If not found in airtime-data, try other service types or use getBeneficiaryServices
+    if (!updatedBeneficiary) {
+      updatedBeneficiary = await unifiedBeneficiaryService.getBeneficiaryServices(beneficiaryId);
+    }
 
     res.json({
       success: true,
