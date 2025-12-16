@@ -208,22 +208,6 @@ export function AirtimeDataOverlay() {
         return allProds;
       };
       
-      // Helper to normalize network names for comparison
-      const normalizeNetwork = (network: string): string => {
-        if (!network) return '';
-        const normalized = network.toLowerCase().trim();
-        const networkMap: { [key: string]: string } = {
-          'vodacom': 'vodacom',
-          'mtn': 'mtn',
-          'cellc': 'cellc',
-          'cell c': 'cellc',
-          'telkom': 'telkom',
-          'eeziairtime': 'eeziairtime',
-          'global': 'global'
-        };
-        return networkMap[normalized] || normalized;
-      };
-      
       // Helper to extract network from product name or provider
       const extractProductNetwork = (product: any): string => {
         // Try provider first
