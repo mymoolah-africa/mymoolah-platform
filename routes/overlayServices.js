@@ -1072,12 +1072,14 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     }).catch(() => {});
     // #endregion agent log
     
-    // Don't expose internal error details to client
+    // Include actual error message for debugging (in development/staging)
+    const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
     res.status(500).json({
       success: false,
-      error: 'Transaction processing failed',
+      error: isDevelopment ? (error?.message || 'Transaction processing failed') : 'Transaction processing failed',
       errorId, // For support reference
-      message: 'Please try again or contact support if the issue persists'
+      message: isDevelopment ? (error?.message || 'Please try again') : 'Please try again or contact support if the issue persists',
+      ...(isDevelopment && { stack: error?.stack })
     });
   }
 });
