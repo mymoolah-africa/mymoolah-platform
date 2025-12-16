@@ -104,17 +104,78 @@ export function AirtimeDataOverlay() {
       // Get beneficiary network from metadata or service accounts
       // Check if beneficiary has only one network (from metadata or accounts)
       let beneficiaryNetwork: string | null = null;
+      
+      // Try multiple sources for network information
+      const beneficiaryAny = beneficiary as any;
+      
+      // 1. Check metadata.network
       if (beneficiary.metadata?.network) {
         beneficiaryNetwork = beneficiary.metadata.network;
-      } else if ((beneficiary as any).accounts && Array.isArray((beneficiary as any).accounts)) {
-        // Check service accounts for network
-        const airtimeAccounts = (beneficiary as any).accounts.filter((acc: any) => 
+      }
+      // 2. Check vasServices (legacy format)
+      else if (beneficiaryAny.vasServices) {
+        const airtimeServices = beneficiaryAny.vasServices.airtime || [];
+        const dataServices = beneficiaryAny.vasServices.data || [];
+        const allServices = [...airtimeServices, ...dataServices];
+        
+        if (allServices.length === 1) {
+          beneficiaryNetwork = allServices[0].network || null;
+        } else if (allServices.length > 1) {
+          // Check if all services have the same network
+          const networks = allServices.map((s: any) => s.network).filter(Boolean);
+          const uniqueNetworks = [...new Set(networks)];
+          if (uniqueNetworks.length === 1) {
+            beneficiaryNetwork = uniqueNetworks[0];
+          }
+        }
+      }
+      // 3. Check serviceAccountRecords (new unified format)
+      else if (beneficiaryAny.serviceAccountRecords && Array.isArray(beneficiaryAny.serviceAccountRecords)) {
+        const airtimeDataAccounts = beneficiaryAny.serviceAccountRecords.filter((acc: any) => 
+          acc.serviceType === 'airtime' || acc.serviceType === 'data'
+        );
+        
+        if (airtimeDataAccounts.length === 1) {
+          beneficiaryNetwork = airtimeDataAccounts[0].serviceData?.network || null;
+        } else if (airtimeDataAccounts.length > 1) {
+          // Check if all accounts have the same network
+          const networks = airtimeDataAccounts
+            .map((acc: any) => acc.serviceData?.network)
+            .filter(Boolean);
+          const uniqueNetworks = [...new Set(networks)];
+          if (uniqueNetworks.length === 1) {
+            beneficiaryNetwork = uniqueNetworks[0];
+          }
+        }
+      }
+      // 4. Check accounts (alternative format)
+      else if (beneficiaryAny.accounts && Array.isArray(beneficiaryAny.accounts)) {
+        const airtimeAccounts = beneficiaryAny.accounts.filter((acc: any) => 
           acc.type === 'airtime' || acc.type === 'data'
         );
         if (airtimeAccounts.length === 1) {
-          beneficiaryNetwork = airtimeAccounts[0].metadata?.network || null;
+          beneficiaryNetwork = airtimeAccounts[0].metadata?.network || airtimeAccounts[0].network || null;
+        } else if (airtimeAccounts.length > 1) {
+          const networks = airtimeAccounts
+            .map((acc: any) => acc.metadata?.network || acc.network)
+            .filter(Boolean);
+          const uniqueNetworks = [...new Set(networks)];
+          if (uniqueNetworks.length === 1) {
+            beneficiaryNetwork = uniqueNetworks[0];
+          }
         }
       }
+      
+      // Debug logging
+      console.log('🔍 Beneficiary network extraction:', {
+        beneficiaryId: beneficiary.id,
+        beneficiaryName: beneficiary.name,
+        metadata: beneficiary.metadata,
+        vasServices: beneficiaryAny.vasServices,
+        serviceAccountRecords: beneficiaryAny.serviceAccountRecords,
+        accounts: beneficiaryAny.accounts,
+        extractedNetwork: beneficiaryNetwork
+      });
       
       // Load products using compareSuppliers API (best-deal selection)
       const [airtimeComparison, dataComparison] = await Promise.all([
@@ -140,7 +201,8 @@ export function AirtimeDataOverlay() {
       
       // Helper to normalize network names for comparison
       const normalizeNetwork = (network: string): string => {
-        const normalized = network?.toLowerCase().trim();
+        if (!network) return '';
+        const normalized = network.toLowerCase().trim();
         const networkMap: { [key: string]: string } = {
           'vodacom': 'vodacom',
           'mtn': 'mtn',
@@ -151,6 +213,26 @@ export function AirtimeDataOverlay() {
           'global': 'global'
         };
         return networkMap[normalized] || normalized;
+      };
+      
+      // Helper to extract network from product name or provider
+      const extractProductNetwork = (product: any): string => {
+        // Try provider first
+        if (product.provider) {
+          const providerNorm = normalizeNetwork(product.provider);
+          if (providerNorm) return providerNorm;
+        }
+        
+        // Try product name (e.g., "MTN Airtime", "Vodacom Airtime")
+        if (product.productName || product.name) {
+          const name = (product.productName || product.name).toLowerCase();
+          if (name.includes('vodacom')) return 'vodacom';
+          if (name.includes('mtn')) return 'mtn';
+          if (name.includes('cellc') || name.includes('cell c')) return 'cellc';
+          if (name.includes('telkom')) return 'telkom';
+        }
+        
+        return '';
       };
       
       // Transform to AirtimeDataCatalog format
@@ -185,8 +267,15 @@ export function AirtimeDataOverlay() {
         })
         // Filter by network if beneficiary has only one network
         .filter((p: any) => {
-          if (!beneficiaryNetwork) return true; // Show all if no network specified
-          return normalizeNetwork(p.provider) === normalizeNetwork(beneficiaryNetwork);
+          if (!beneficiaryNetwork) {
+            console.log('🌐 No network filter - showing all airtime products');
+            return true; // Show all if no network specified
+          }
+          const productNetwork = extractProductNetwork(p);
+          const beneficiaryNetworkNorm = normalizeNetwork(beneficiaryNetwork);
+          const matches = productNetwork === beneficiaryNetworkNorm;
+          console.log(`🔍 Airtime product filter: "${p.name}" (provider: ${p.provider}, extracted: ${productNetwork}) vs beneficiary (${beneficiaryNetworkNorm}) = ${matches}`);
+          return matches;
         });
       
       const dataProds = extractProducts(dataComparison)
@@ -217,8 +306,15 @@ export function AirtimeDataOverlay() {
         })
         // Filter by network if beneficiary has only one network
         .filter((p: any) => {
-          if (!beneficiaryNetwork) return true; // Show all if no network specified
-          return normalizeNetwork(p.provider) === normalizeNetwork(beneficiaryNetwork);
+          if (!beneficiaryNetwork) {
+            console.log('🌐 No network filter - showing all data products');
+            return true; // Show all if no network specified
+          }
+          const productNetwork = extractProductNetwork(p);
+          const beneficiaryNetworkNorm = normalizeNetwork(beneficiaryNetwork);
+          const matches = productNetwork === beneficiaryNetworkNorm;
+          console.log(`🔍 Data product filter: "${p.name}" (provider: ${p.provider}, extracted: ${productNetwork}) vs beneficiary (${beneficiaryNetworkNorm}) = ${matches}`);
+          return matches;
         });
       
       // Create catalog in expected format
