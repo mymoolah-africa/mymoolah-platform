@@ -389,49 +389,73 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             model: require('../models').Supplier,
             as: 'supplier',
             attributes: ['id', 'code', 'name']
+          },
+          {
+            model: require('../models').Product,
+            as: 'product',
+            attributes: ['id', 'name']
           }
         ]
       });
       
-      if (productVariant) {
-        type = productVariant.vasType;
-        supplier = productVariant.supplier?.code || null;
-        productCode = productVariant.supplierProductId;
-        
-        // Find corresponding VasProduct for compatibility
-        const { VasProduct } = require('../models');
-        vasProduct = await VasProduct.findOne({
-          where: {
-            supplierId: supplier,
-            supplierProductId: productCode,
-            vasType: type,
-            isActive: true
-          }
+      if (!productVariant) {
+        return res.status(404).json({
+          success: false,
+          error: `ProductVariant ${variantId} not found or inactive`
         });
-        
-        // If VasProduct doesn't exist, create a compatible structure from ProductVariant
-        // This allows purchases from ProductVariant (bestDeals) even if VasProduct doesn't exist
-        if (!vasProduct && productVariant) {
-          console.log(`⚠️ VasProduct not found for ProductVariant ${variantId}, creating compatible structure from ProductVariant data`);
-          vasProduct = {
-            id: productVariant.id, // Use variant ID as vasProductId
-            supplierId: supplier,
-            supplierProductId: productCode,
-            vasType: type,
-            transactionType: productVariant.transactionType || 'topup',
-            provider: productVariant.provider,
-            minAmount: productVariant.minAmount,
-            maxAmount: productVariant.maxAmount,
-            predefinedAmounts: productVariant.predefinedAmounts,
-            commission: productVariant.commission,
-            fixedFee: productVariant.fixedFee,
-            isActive: productVariant.status === 'active',
-            metadata: productVariant.metadata,
-            productName: productVariant.product?.name,
-            // Mark as virtual (not a real DB record) so we know to handle it differently
-            isVirtual: true
-          };
+      }
+      
+      type = productVariant.vasType;
+      supplier = productVariant.supplier?.code || null;
+      productCode = productVariant.supplierProductId;
+      
+      if (!supplier || !productCode || !type) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid ProductVariant data: missing supplier (${supplier}), productCode (${productCode}), or type (${type})`
+        });
+      }
+      
+      // Find corresponding VasProduct for compatibility
+      const { VasProduct } = require('../models');
+      vasProduct = await VasProduct.findOne({
+        where: {
+          supplierId: supplier,
+          supplierProductId: productCode,
+          vasType: type,
+          isActive: true
         }
+      });
+      
+      // If VasProduct doesn't exist, create a compatible structure from ProductVariant
+      // This allows purchases from ProductVariant (bestDeals) even if VasProduct doesn't exist
+      if (!vasProduct && productVariant) {
+        console.log(`⚠️ VasProduct not found for ProductVariant ${variantId}, creating compatible structure from ProductVariant data`, {
+          supplier,
+          productCode,
+          type,
+          variantId
+        });
+        vasProduct = {
+          id: productVariant.id, // Use variant ID as vasProductId
+          supplierId: supplier,
+          supplierProductId: productCode,
+          vasType: type,
+          transactionType: productVariant.transactionType || 'topup',
+          provider: productVariant.provider,
+          minAmount: productVariant.minAmount,
+          maxAmount: productVariant.maxAmount,
+          predefinedAmounts: productVariant.predefinedAmounts,
+          commission: productVariant.commission,
+          fixedFee: productVariant.fixedFee,
+          isActive: productVariant.status === 'active',
+          metadata: productVariant.metadata,
+          productName: productVariant.product?.name,
+          // Mark as virtual (not a real DB record) so we know to handle it differently
+          isVirtual: true
+        };
+      } else if (vasProduct) {
+        console.log(`✅ Found VasProduct ${vasProduct.id} for ProductVariant ${variantId}`);
       }
     } else {
       // Old format: Parse productId string
