@@ -19,6 +19,7 @@ import {
   type AirtimeDataProduct,
   type PurchaseResult
 } from '../../services/overlayService';
+import { apiService } from '../../services/apiService';
 
 interface AirtimeDataBeneficiary extends Beneficiary {
   // Uses accountType from base Beneficiary interface
@@ -45,6 +46,11 @@ export function AirtimeDataOverlay() {
   const [ownAirtimeAmount, setOwnAirtimeAmount] = useState<string>('');
   const [ownDataAmount, setOwnDataAmount] = useState<string>('');
   const [editingBeneficiary, setEditingBeneficiary] = useState<AirtimeDataBeneficiary | null>(null);
+  const [showSendToNewRecipient, setShowSendToNewRecipient] = useState(false);
+  const [newRecipientPhone, setNewRecipientPhone] = useState<string>('');
+  const [newRecipientName, setNewRecipientName] = useState<string>('');
+  const [showSaveRecipientPrompt, setShowSaveRecipientPrompt] = useState(false);
+  const [lastTransactionBeneficiary, setLastTransactionBeneficiary] = useState<{ name: string; phone: string; network?: string } | null>(null);
 
   // Load beneficiaries on mount
   useEffect(() => {
@@ -95,10 +101,92 @@ export function AirtimeDataOverlay() {
       setLoadingState('loading');
       setSelectedBeneficiary(beneficiary);
       
-      // Load catalog for selected beneficiary
-      const catalogData = await airtimeDataService.getCatalog(beneficiary.id);
-      setCatalog(catalogData);
+      // Load products using compareSuppliers API (best-deal selection)
+      const [airtimeComparison, dataComparison] = await Promise.all([
+        apiService.compareSuppliers('airtime'),
+        apiService.compareSuppliers('data')
+      ]);
       
+      // Extract products from bestDeals and suppliers
+      const extractProducts = (comparison: any) => {
+        const allProds: any[] = [];
+        if (comparison.bestDeals && comparison.bestDeals.length > 0) {
+          allProds.push(...comparison.bestDeals);
+        }
+        if (comparison.suppliers) {
+          Object.values(comparison.suppliers).forEach((supplier: any) => {
+            if (supplier.products && supplier.products.length > 0) {
+              allProds.push(...supplier.products);
+            }
+          });
+        }
+        return allProds;
+      };
+      
+      // Transform to AirtimeDataCatalog format
+      const airtimeProds = extractProducts(airtimeComparison).map((p: any) => {
+        const denominationAmount = (p.denominations && p.denominations.length > 0) 
+          ? p.denominations[0] 
+          : (p.minAmount && p.minAmount === p.maxAmount ? p.minAmount : p.minAmount || 0);
+        
+        return {
+          id: `${p.vasType || 'airtime'}_${p.supplierCode}_${p.supplierProductId}_${denominationAmount}`,
+          name: p.productName || p.name || 'Unknown Product',
+          size: `R${(denominationAmount / 100).toFixed(0)}`,
+          price: denominationAmount / 100, // Convert cents to rands
+          provider: p.provider || p.supplierCode || 'Unknown',
+          type: 'airtime' as const,
+          validity: 'Immediate',
+          isBestDeal: p.isBestDeal || false,
+          supplier: p.supplierCode?.toLowerCase() || 'flash',
+          description: p.description || '',
+          commission: p.commission || 0,
+          fixedFee: p.fixedFee || 0,
+          // Store full data for purchase
+          variantId: p.id,
+          supplierCode: p.supplierCode,
+          supplierProductId: p.supplierProductId,
+          vasType: p.vasType || 'airtime',
+          denominations: p.denominations || p.predefinedAmounts || [],
+          minAmount: p.minAmount,
+          maxAmount: p.maxAmount
+        };
+      });
+      
+      const dataProds = extractProducts(dataComparison).map((p: any) => {
+        const dataPrice = p.minAmount || 0;
+        return {
+          id: `${p.vasType || 'data'}_${p.supplierCode}_${p.supplierProductId}_${dataPrice}`,
+          name: p.productName || p.name || 'Unknown Product',
+          size: `${(dataPrice / 100).toFixed(0)}MB`,
+          price: dataPrice / 100, // Convert cents to rands
+          provider: p.provider || p.supplierCode || 'Unknown',
+          type: 'data' as const,
+          validity: '30 days',
+          isBestDeal: p.isBestDeal || false,
+          supplier: p.supplierCode?.toLowerCase() || 'flash',
+          description: p.description || '',
+          commission: p.commission || 0,
+          fixedFee: p.fixedFee || 0,
+          // Store full data for purchase
+          variantId: p.id,
+          supplierCode: p.supplierCode,
+          supplierProductId: p.supplierProductId,
+          vasType: p.vasType || 'data',
+          denominations: p.denominations || p.predefinedAmounts || [],
+          minAmount: p.minAmount,
+          maxAmount: p.maxAmount
+        };
+      });
+      
+      // Create catalog in expected format
+      const catalogData: AirtimeDataCatalog = {
+        beneficiaryId: beneficiary.id,
+        products: [...airtimeProds, ...dataProds],
+        providers: ['MTN', 'Vodacom', 'CellC', 'Telkom', 'eeziAirtime', 'Global']
+      };
+      
+      setCatalog(catalogData);
       setCurrentStep('catalog');
       setLoadingState('idle');
     } catch (err) {
@@ -110,7 +198,12 @@ export function AirtimeDataOverlay() {
 
   const handleProductSelect = (product: AirtimeDataProduct) => {
     setSelectedProduct(product);
-    setCurrentStep('confirm');
+    // If no beneficiary selected, show option to send to new recipient
+    if (!selectedBeneficiary) {
+      setShowSendToNewRecipient(true);
+    } else {
+      setCurrentStep('confirm');
+    }
   };
 
   const handleOwnAirtimeAmount = () => {
@@ -157,6 +250,52 @@ export function AirtimeDataOverlay() {
     }
   };
 
+  const handleSendToNewRecipient = async () => {
+    if (!newRecipientPhone || !newRecipientName || !selectedProduct) return;
+    
+    try {
+      setLoadingState('loading');
+      setError('');
+      
+      // Validate phone number
+      if (!validateMobileNumber(newRecipientPhone)) {
+        setError('Please enter a valid South African mobile number');
+        setLoadingState('error');
+        return;
+      }
+      
+      // Create beneficiary first
+      const network = selectedProduct.provider || 'Vodacom';
+      const newBeneficiary = await beneficiaryService.createOrUpdateBeneficiary({
+        name: newRecipientName,
+        serviceType: selectedProduct.type === 'airtime' ? 'airtime' : 'data',
+        serviceData: {
+          mobileNumber: newRecipientPhone,
+          network: network
+        }
+      });
+      
+      // Store for save prompt after purchase
+      setLastTransactionBeneficiary({
+        name: newRecipientName,
+        phone: newRecipientPhone,
+        network: network
+      });
+      
+      // Set as selected beneficiary and proceed with purchase
+      setSelectedBeneficiary(newBeneficiary as AirtimeDataBeneficiary);
+      setShowSendToNewRecipient(false);
+      
+      // Proceed with purchase
+      await handleConfirmTransaction();
+      
+    } catch (err: any) {
+      console.error('Failed to create beneficiary or purchase:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to send. Please try again.');
+      setLoadingState('error');
+    }
+  };
+
   const handleConfirmTransaction = async () => {
     if (!selectedBeneficiary || !selectedProduct) return;
     
@@ -166,9 +305,17 @@ export function AirtimeDataOverlay() {
       
       const idempotencyKey = generateIdempotencyKey();
       
+      // Ensure productId is in correct format for purchase endpoint
+      let productIdForPurchase = selectedProduct.id;
+      if ((selectedProduct as any).variantId && (selectedProduct as any).supplierCode && (selectedProduct as any).supplierProductId) {
+        // Construct in expected format: type_supplier_productCode_amount
+        const amountInCents = Math.round(selectedProduct.price * 100);
+        productIdForPurchase = `${(selectedProduct as any).vasType || selectedProduct.type}_${(selectedProduct as any).supplierCode}_${(selectedProduct as any).supplierProductId}_${amountInCents}`;
+      }
+      
       const result = await airtimeDataService.purchase({
         beneficiaryId: selectedBeneficiary.id,
-        productId: selectedProduct.id,
+        productId: productIdForPurchase,
         amount: selectedProduct.price,
         idempotencyKey
       });
@@ -181,6 +328,14 @@ export function AirtimeDataOverlay() {
       setBeneficiaryIsMyMoolahUser(beneficiaryIsMyMoolah);
       setLoadingState('success');
       setShowSuccess(true);
+      
+      // If this was a new recipient, show save prompt (beneficiary already saved, just confirm)
+      if (lastTransactionBeneficiary) {
+        setShowSaveRecipientPrompt(true);
+      }
+      
+      // Reload beneficiaries to update the list
+      await loadBeneficiaries();
     } catch (err: any) {
       console.error('Purchase failed:', err);
       console.error('Error details:', {
@@ -259,6 +414,100 @@ export function AirtimeDataOverlay() {
     }
   };
 
+  const handleBrowseProducts = async () => {
+    try {
+      setLoadingState('loading');
+      // Load products without requiring a beneficiary
+      const [airtimeComparison, dataComparison] = await Promise.all([
+        apiService.compareSuppliers('airtime'),
+        apiService.compareSuppliers('data')
+      ]);
+      
+      // Extract and transform products (same logic as handleBeneficiarySelect)
+      const extractProducts = (comparison: any) => {
+        const allProds: any[] = [];
+        if (comparison.bestDeals && comparison.bestDeals.length > 0) {
+          allProds.push(...comparison.bestDeals);
+        }
+        if (comparison.suppliers) {
+          Object.values(comparison.suppliers).forEach((supplier: any) => {
+            if (supplier.products && supplier.products.length > 0) {
+              allProds.push(...supplier.products);
+            }
+          });
+        }
+        return allProds;
+      };
+      
+      const airtimeProds = extractProducts(airtimeComparison).map((p: any) => {
+        const denominationAmount = (p.denominations && p.denominations.length > 0) 
+          ? p.denominations[0] 
+          : (p.minAmount && p.minAmount === p.maxAmount ? p.minAmount : p.minAmount || 0);
+        
+        return {
+          id: `${p.vasType || 'airtime'}_${p.supplierCode}_${p.supplierProductId}_${denominationAmount}`,
+          name: p.productName || p.name || 'Unknown Product',
+          size: `R${(denominationAmount / 100).toFixed(0)}`,
+          price: denominationAmount / 100,
+          provider: p.provider || p.supplierCode || 'Unknown',
+          type: 'airtime' as const,
+          validity: 'Immediate',
+          isBestDeal: p.isBestDeal || false,
+          supplier: p.supplierCode?.toLowerCase() || 'flash',
+          description: p.description || '',
+          commission: p.commission || 0,
+          fixedFee: p.fixedFee || 0,
+          variantId: p.id,
+          supplierCode: p.supplierCode,
+          supplierProductId: p.supplierProductId,
+          vasType: p.vasType || 'airtime',
+          denominations: p.denominations || p.predefinedAmounts || [],
+          minAmount: p.minAmount,
+          maxAmount: p.maxAmount
+        };
+      });
+      
+      const dataProds = extractProducts(dataComparison).map((p: any) => {
+        const dataPrice = p.minAmount || 0;
+        return {
+          id: `${p.vasType || 'data'}_${p.supplierCode}_${p.supplierProductId}_${dataPrice}`,
+          name: p.productName || p.name || 'Unknown Product',
+          size: `${(dataPrice / 100).toFixed(0)}MB`,
+          price: dataPrice / 100,
+          provider: p.provider || p.supplierCode || 'Unknown',
+          type: 'data' as const,
+          validity: '30 days',
+          isBestDeal: p.isBestDeal || false,
+          supplier: p.supplierCode?.toLowerCase() || 'flash',
+          description: p.description || '',
+          commission: p.commission || 0,
+          fixedFee: p.fixedFee || 0,
+          variantId: p.id,
+          supplierCode: p.supplierCode,
+          supplierProductId: p.supplierProductId,
+          vasType: p.vasType || 'data',
+          denominations: p.denominations || p.predefinedAmounts || [],
+          minAmount: p.minAmount,
+          maxAmount: p.maxAmount
+        };
+      });
+      
+      const catalogData: AirtimeDataCatalog = {
+        beneficiaryId: '', // No beneficiary selected
+        products: [...airtimeProds, ...dataProds],
+        providers: ['MTN', 'Vodacom', 'CellC', 'Telkom', 'eeziAirtime', 'Global']
+      };
+      
+      setCatalog(catalogData);
+      setCurrentStep('catalog');
+      setLoadingState('idle');
+    } catch (err) {
+      console.error('Failed to load products:', err);
+      setError('Failed to load products');
+      setLoadingState('error');
+    }
+  };
+
   const handleGoHome = () => {
     setShowSuccess(false);
     navigate('/');
@@ -273,6 +522,11 @@ export function AirtimeDataOverlay() {
     setTransactionRef('');
     setOwnAirtimeAmount('');
     setOwnDataAmount('');
+    setShowSendToNewRecipient(false);
+    setNewRecipientPhone('');
+    setNewRecipientName('');
+    setShowSaveRecipientPrompt(false);
+    setLastTransactionBeneficiary(null);
   };
 
   const getSummaryRows = () => {
@@ -412,48 +666,70 @@ export function AirtimeDataOverlay() {
         </div>
       )}
 
-      {/* Step 2: Product Catalog */}
-      {currentStep === 'catalog' && selectedBeneficiary && catalog && (
+      {/* Step 2: Product Catalog - Allow browsing without beneficiary */}
+      {currentStep === 'catalog' && catalog && (
         <div className="space-y-4">
-          {/* Selected Recipient Summary */}
-          <Card style={{
-            backgroundColor: '#f8fafe',
-            border: '1px solid #86BE41',
-            borderRadius: '12px'
-          }}>
-            <CardContent style={{ padding: '1rem' }}>
-              <div className="flex items-center gap-3">
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  backgroundColor: '#86BE41',
-                  borderRadius: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
+          {/* Selected Recipient Summary - Only show if beneficiary is selected */}
+          {selectedBeneficiary && (
+            <Card style={{
+              backgroundColor: '#f8fafe',
+              border: '1px solid #86BE41',
+              borderRadius: '12px'
+            }}>
+              <CardContent style={{ padding: '1rem' }}>
+                <div className="flex items-center gap-3">
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    backgroundColor: '#86BE41',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                  </div>
+                  <div>
+                    <p style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      color: '#1f2937'
+                    }}>
+                      {selectedBeneficiary.name}
+                    </p>
+                    <p style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '12px',
+                      color: '#6b7280'
+                    }}>
+                      {selectedBeneficiary.identifier}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          {/* Show message if no beneficiary selected */}
+          {!selectedBeneficiary && (
+            <Card style={{
+              backgroundColor: '#fef3c7',
+              border: '1px solid #fbbf24',
+              borderRadius: '12px'
+            }}>
+              <CardContent style={{ padding: '1rem' }}>
+                <p style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  color: '#92400e',
+                  margin: 0
                 }}>
-                  <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
-                </div>
-                <div>
-                  <p style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#1f2937'
-                  }}>
-                    {selectedBeneficiary.name}
-                  </p>
-                  <p style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '12px',
-                    color: '#6b7280'
-                  }}>
-                    {selectedBeneficiary.identifier}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+                  💡 Select a product below to send to a new recipient
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Airtime Products */}
           <Card style={{
@@ -1075,6 +1351,118 @@ export function AirtimeDataOverlay() {
         </div>
       )}
 
+      {/* Send to New Recipient Form */}
+      {showSendToNewRecipient && selectedProduct && (
+        <Card style={{
+          backgroundColor: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '12px',
+          padding: '1.5rem'
+        }}>
+          <CardHeader>
+            <CardTitle style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '18px',
+              fontWeight: '700',
+              color: '#1f2937'
+            }}>
+              Send to New Recipient
+            </CardTitle>
+          </CardHeader>
+          <CardContent style={{ paddingTop: '1rem' }}>
+            <div className="space-y-4">
+              <div>
+                <label style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#1f2937',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  Recipient Name
+                </label>
+                <input
+                  type="text"
+                  value={newRecipientName}
+                  onChange={(e) => setNewRecipientName(e.target.value)}
+                  placeholder="Enter recipient name"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              <div>
+                <label style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#1f2937',
+                  display: 'block',
+                  marginBottom: '8px'
+                }}>
+                  Mobile Number
+                </label>
+                <input
+                  type="tel"
+                  value={newRecipientPhone}
+                  onChange={(e) => setNewRecipientPhone(e.target.value)}
+                  placeholder="0821234567"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px'
+                  }}
+                />
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowSendToNewRecipient(false);
+                    setSelectedProduct(null);
+                  }}
+                  style={{
+                    flex: '1',
+                    minHeight: '44px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    borderRadius: '12px'
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSendToNewRecipient}
+                  disabled={!newRecipientName || !newRecipientPhone || loadingState === 'loading'}
+                  style={{
+                    flex: '1',
+                    minHeight: '44px',
+                    backgroundColor: '#86BE41',
+                    color: '#ffffff',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    borderRadius: '12px'
+                  }}
+                >
+                  {loadingState === 'loading' ? 'Processing...' : 'Send'}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Step 3: Confirm Sheet */}
       {currentStep === 'confirm' && selectedBeneficiary && selectedProduct && (
         <ConfirmSheet
@@ -1117,6 +1505,35 @@ export function AirtimeDataOverlay() {
         type="danger"
         beneficiaryName={beneficiaryToRemove?.name}
       />
+
+      {/* Save Recipient Prompt - Show after successful purchase to new recipient */}
+      {showSaveRecipientPrompt && lastTransactionBeneficiary && (
+        <Dialog open={showSaveRecipientPrompt} onOpenChange={setShowSaveRecipientPrompt}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Recipient Saved</DialogTitle>
+              <DialogDescription>
+                {lastTransactionBeneficiary.name} ({lastTransactionBeneficiary.phone}) has been saved as a recipient. You can send to them again from your recipient list.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex gap-3 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowSaveRecipientPrompt(false);
+                  setLastTransactionBeneficiary(null);
+                }}
+                style={{
+                  flex: '1',
+                  minHeight: '44px'
+                }}
+              >
+                OK
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Success Modal */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
