@@ -817,8 +817,14 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       
       console.error(`❌ [DB_TXN_ERR] Database transaction failed:`, {
         error: dbError.message,
+        errorName: dbError.name,
+        errorCode: dbError.code,
+        errorStack: dbError.stack,
         userId: req.user?.id,
         beneficiaryId: context.beneficiaryId,
+        productId: context.productId,
+        vasProductId: vasProductIdForTransaction,
+        vasProductIsVirtual: vasProduct?.isVirtual,
         idempotencyKey: context.idempotencyKey,
         timestamp: new Date().toISOString()
       });
@@ -836,17 +842,22 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           data: {
             errorMessage: dbError.message,
             errorName: dbError.name,
-            errorCode: dbError.code || null
+            errorCode: dbError.code || null,
+            errorStack: dbError.stack
           },
           timestamp: Date.now()
         })
       }).catch(() => {});
       // #endregion agent log
       
+      // Include actual error message in response for debugging (in development/staging)
+      const isDevelopment = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
       return res.status(500).json({
         success: false,
         error: 'Transaction processing failed',
-        message: 'Please try again'
+        message: isDevelopment ? dbError.message : 'Please try again',
+        errorCode: dbError.code || null,
+        errorId: `DB_TXN_ERR_${Date.now()}`
       });
     }
     
