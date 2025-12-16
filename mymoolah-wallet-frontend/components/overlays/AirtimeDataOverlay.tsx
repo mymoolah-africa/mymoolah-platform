@@ -220,19 +220,48 @@ export function AirtimeDataOverlay() {
         apiService.compareSuppliers('data')
       ]);
       
-      // Extract products from bestDeals and suppliers
+      // Extract products from bestDeals and suppliers, with deduplication
       const extractProducts = (comparison: any) => {
         const allProds: any[] = [];
+        const seenProducts = new Set<string>();
+        
+        // Helper to create unique key for a product
+        const getProductKey = (p: any): string => {
+          // Use variantId if available (most reliable)
+          if (p.id) return `id_${p.id}`;
+          // Fallback to combination of supplier + productId + denomination
+          const denomination = (p.denominations && p.denominations.length > 0) 
+            ? p.denominations[0] 
+            : (p.minAmount && p.minAmount === p.maxAmount ? p.minAmount : p.minAmount || 0);
+          return `${p.supplierCode || 'unknown'}_${p.supplierProductId || 'unknown'}_${denomination}`;
+        };
+        
+        // Add best deals first (these are the recommended products)
         if (comparison.bestDeals && comparison.bestDeals.length > 0) {
-          allProds.push(...comparison.bestDeals);
-        }
-        if (comparison.suppliers) {
-          Object.values(comparison.suppliers).forEach((supplier: any) => {
-            if (supplier.products && supplier.products.length > 0) {
-              allProds.push(...supplier.products);
+          comparison.bestDeals.forEach((p: any) => {
+            const key = getProductKey(p);
+            if (!seenProducts.has(key)) {
+              seenProducts.add(key);
+              allProds.push(p);
             }
           });
         }
+        
+        // Add supplier products (skip if already in bestDeals)
+        if (comparison.suppliers) {
+          Object.values(comparison.suppliers).forEach((supplier: any) => {
+            if (supplier.products && supplier.products.length > 0) {
+              supplier.products.forEach((p: any) => {
+                const key = getProductKey(p);
+                if (!seenProducts.has(key)) {
+                  seenProducts.add(key);
+                  allProds.push(p);
+                }
+              });
+            }
+          });
+        }
+        
         return allProds;
       };
       
@@ -1141,85 +1170,7 @@ export function AirtimeDataOverlay() {
             
             <CardContent>
               <div className="space-y-3">
-                {catalog.products.filter(product => product.type === 'data').map((product, index) => (
-                  <div
-                    key={`${product.id}_${index}`}
-                    onClick={() => handleProductSelect(product)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px',
-                      border: '1px solid #e2e8f0',
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = '#2D8CCA';
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = '#e2e8f0';
-                      e.currentTarget.style.backgroundColor = '#ffffff';
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        backgroundColor: '#2D8CCA',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Wifi style={{ width: '20px', height: '20px', color: '#ffffff' }} />
-                      </div>
-                      
-                      <div>
-                        <p style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          color: '#1f2937'
-                        }}>
-                          {product.name}
-                        </p>
-                        <p style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '12px',
-                          color: '#6b7280'
-                        }}>
-                          {product.size} • {product.provider}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="text-right">
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '16px',
-                        fontWeight: '700',
-                        color: '#1f2937'
-                      }}>
-                        {formatCurrency(product.price)}
-                      </p>
-                      {product.isBestDeal && (
-                        <span style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '10px',
-                          color: '#16a34a',
-                          fontWeight: '500'
-                        }}>
-                          Best Deal
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                {/* Own Data Amount */}
+                {/* Own Data Amount - moved to top */}
                 <div style={{
                   padding: '12px',
                   border: '1px solid #e2e8f0',
@@ -1299,49 +1250,125 @@ export function AirtimeDataOverlay() {
                             if (value !== num.toString() && value.includes('.')) {
                               setOwnDataAmount(num.toFixed(2));
                             }
+                          } else {
+                            // Invalid amount - clear or show error
+                            setOwnDataAmount('');
                           }
                         }
                       }}
-                      onKeyDown={(e) => {
-                        // Prevent browser auto-formatting with number input
-                        // Block 'e', 'E', '+', '-' which are allowed in number inputs
-                        if (['e', 'E', '+', '-'].includes(e.key)) {
-                          e.preventDefault();
-                        }
-                      }}
-                      onWheel={(e) => {
-                        // Prevent scrolling from changing number input values
-                        e.currentTarget.blur();
-                      }}
                       style={{
-                        flex: '1',
+                        flex: 1,
                         padding: '8px 12px',
-                        border: '1px solid #e2e8f0',
+                        border: '1px solid #d1d5db',
                         borderRadius: '8px',
                         fontFamily: 'Montserrat, sans-serif',
                         fontSize: '14px',
-                        outline: 'none'
+                        color: '#1f2937'
                       }}
                     />
-                    <Button
-                      onClick={handleOwnDataAmount}
+                    <button
+                      onClick={() => {
+                        const value = parseFloat(ownDataAmount);
+                        if (!isNaN(value) && value > 0 && value <= 1000) {
+                          handleOwnDataAmountSelect(value);
+                        }
+                      }}
                       disabled={!ownDataAmount || parseFloat(ownDataAmount) <= 0 || parseFloat(ownDataAmount) > 1000}
                       style={{
                         padding: '8px 16px',
-                        backgroundColor: '#2D8CCA',
+                        backgroundColor: ownDataAmount && parseFloat(ownDataAmount) > 0 && parseFloat(ownDataAmount) <= 1000 ? '#2D8CCA' : '#9ca3af',
                         color: '#ffffff',
                         border: 'none',
                         borderRadius: '8px',
                         fontFamily: 'Montserrat, sans-serif',
                         fontSize: '14px',
                         fontWeight: '500',
-                        cursor: 'pointer'
+                        cursor: ownDataAmount && parseFloat(ownDataAmount) > 0 && parseFloat(ownDataAmount) <= 1000 ? 'pointer' : 'not-allowed',
+                        transition: 'background-color 0.2s ease'
                       }}
                     >
                       Select
-                    </Button>
+                    </button>
                   </div>
                 </div>
+
+                {catalog.products.filter(product => product.type === 'data').map((product, index) => (
+                  <div
+                    key={`${product.id}_${index}`}
+                    onClick={() => handleProductSelect(product)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.borderColor = '#2D8CCA';
+                      e.currentTarget.style.backgroundColor = '#f9fafb';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        backgroundColor: '#2D8CCA',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <Wifi style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                      </div>
+                      
+                      <div>
+                        <p style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          color: '#1f2937'
+                        }}>
+                          {product.name}
+                        </p>
+                        <p style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '12px',
+                          color: '#6b7280'
+                        }}>
+                          {product.size} • {product.provider}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="text-right">
+                      <p style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        color: '#1f2937'
+                      }}>
+                        {formatCurrency(product.price)}
+                      </p>
+                      {product.isBestDeal && (
+                        <span style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '10px',
+                          color: '#16a34a',
+                          fontWeight: '500'
+                        }}>
+                          Best Deal
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>
