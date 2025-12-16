@@ -172,19 +172,47 @@ export function AirtimeDataOverlay() {
         beneficiaryNetwork = null; // Show all if multiple networks
       }
       
-      // Debug logging
+      // Debug logging - log the FULL beneficiary object to see structure
+      console.log('🔍 FULL Beneficiary object:', JSON.stringify(beneficiaryAny, null, 2));
       console.log('🔍 Beneficiary network extraction:', {
         beneficiaryId: beneficiary.id,
         beneficiaryName: beneficiary.name,
         metadata: beneficiary.metadata,
+        metadataNetwork: beneficiary.metadata?.network,
         vasServices: beneficiaryAny.vasServices,
+        vasServicesAirtime: beneficiaryAny.vasServices?.airtime,
+        vasServicesData: beneficiaryAny.vasServices?.data,
         serviceAccountRecords: beneficiaryAny.serviceAccountRecords,
+        serviceAccountRecordsLength: beneficiaryAny.serviceAccountRecords?.length,
         accounts: beneficiaryAny.accounts,
+        accountsLength: beneficiaryAny.accounts?.length,
+        accountsAirtimeData: beneficiaryAny.accounts?.filter((acc: any) => acc.type === 'airtime' || acc.type === 'data'),
         allNetworksFound: allNetworks,
         uniqueNetworks: uniqueNetworks,
         extractedNetwork: beneficiaryNetwork,
         willFilter: !!beneficiaryNetwork
       });
+      
+      // If no network found, log a detailed breakdown
+      if (!beneficiaryNetwork && allNetworks.length === 0) {
+        console.error('❌ NO NETWORK FOUND - Detailed breakdown:');
+        console.error('  - metadata?.network:', beneficiary.metadata?.network);
+        console.error('  - vasServices?.airtime:', beneficiaryAny.vasServices?.airtime);
+        console.error('  - vasServices?.data:', beneficiaryAny.vasServices?.data);
+        console.error('  - serviceAccountRecords:', beneficiaryAny.serviceAccountRecords);
+        console.error('  - accounts:', beneficiaryAny.accounts);
+        if (beneficiaryAny.accounts && Array.isArray(beneficiaryAny.accounts)) {
+          beneficiaryAny.accounts.forEach((acc: any, idx: number) => {
+            console.error(`  - accounts[${idx}]:`, {
+              type: acc.type,
+              identifier: acc.identifier,
+              metadata: acc.metadata,
+              network: acc.network,
+              metadataNetwork: acc.metadata?.network
+            });
+          });
+        }
+      }
       
       // Load products using compareSuppliers API (best-deal selection)
       const [airtimeComparison, dataComparison] = await Promise.all([
