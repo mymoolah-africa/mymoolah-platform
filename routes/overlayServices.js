@@ -439,14 +439,26 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         });
       }
       
-      type = productVariant.vasType;
+      // CRITICAL: vasType is stored in Product.type, not ProductVariant.vasType
+      // ProductVariant references Product, and Product has the 'type' field (airtime, data, etc.)
+      type = productVariant.product?.type || productVariant.metadata?.vasType || null;
       supplier = productVariant.supplier?.code || null;
       productCode = productVariant.supplierProductId;
+      
+      console.log('🔍 ProductVariant lookup result:', {
+        variantId,
+        productId: productVariant.productId,
+        productType: productVariant.product?.type,
+        productName: productVariant.product?.name,
+        supplierCode: supplier,
+        supplierProductId: productCode,
+        extractedType: type
+      });
       
       if (!supplier || !productCode || !type) {
         return res.status(400).json({
           success: false,
-          error: `Invalid ProductVariant data: missing supplier (${supplier}), productCode (${productCode}), or type (${type})`
+          error: `Invalid ProductVariant data: missing supplier (${supplier}), productCode (${productCode}), or type (${type}). ProductVariant ID: ${variantId}, Product ID: ${productVariant.productId}, Product type: ${productVariant.product?.type || 'undefined'}`
         });
       }
       
