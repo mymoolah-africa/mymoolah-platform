@@ -220,49 +220,22 @@ export function AirtimeDataOverlay() {
         apiService.compareSuppliers('data')
       ]);
       
-      // Extract products from bestDeals and suppliers, with deduplication
+      // Extract products from bestDeals ONLY
+      // The comparison service (findBestDeals) already selects the best product based on:
+      // 1. Highest commission first
+      // 2. Cheapest price if commission is the same
+      // 3. Preferred supplier (Flash) if commission and price are the same
+      // We should ONLY show bestDeals, not all products from all suppliers
       const extractProducts = (comparison: any) => {
-        const allProds: any[] = [];
-        const seenProducts = new Set<string>();
-        
-        // Helper to create unique key for a product
-        const getProductKey = (p: any): string => {
-          // Use variantId if available (most reliable)
-          if (p.id) return `id_${p.id}`;
-          // Fallback to combination of supplier + productId + denomination
-          const denomination = (p.denominations && p.denominations.length > 0) 
-            ? p.denominations[0] 
-            : (p.minAmount && p.minAmount === p.maxAmount ? p.minAmount : p.minAmount || 0);
-          return `${p.supplierCode || 'unknown'}_${p.supplierProductId || 'unknown'}_${denomination}`;
-        };
-        
-        // Add best deals first (these are the recommended products)
+        // CRITICAL: Only use bestDeals - these are already selected by the comparison service
+        // Do NOT include suppliers.products as that shows ALL products from ALL suppliers
         if (comparison.bestDeals && comparison.bestDeals.length > 0) {
-          comparison.bestDeals.forEach((p: any) => {
-            const key = getProductKey(p);
-            if (!seenProducts.has(key)) {
-              seenProducts.add(key);
-              allProds.push(p);
-            }
-          });
+          return comparison.bestDeals;
         }
         
-        // Add supplier products (skip if already in bestDeals)
-        if (comparison.suppliers) {
-          Object.values(comparison.suppliers).forEach((supplier: any) => {
-            if (supplier.products && supplier.products.length > 0) {
-              supplier.products.forEach((p: any) => {
-                const key = getProductKey(p);
-                if (!seenProducts.has(key)) {
-                  seenProducts.add(key);
-                  allProds.push(p);
-                }
-              });
-            }
-          });
-        }
-        
-        return allProds;
+        // Fallback: If no bestDeals, return empty array (should not happen)
+        console.warn('⚠️ No bestDeals found in comparison result - this should not happen');
+        return [];
       };
       
       // Helper to extract network from product name (NOT provider - provider is supplier like MOBILEMART/FLASH)
@@ -617,19 +590,21 @@ export function AirtimeDataOverlay() {
       ]);
       
       // Extract and transform products (same logic as handleBeneficiarySelect)
+      // Extract products from bestDeals ONLY
+      // The comparison service already selects the best product based on:
+      // 1. Highest commission first
+      // 2. Cheapest price if commission is the same
+      // 3. Preferred supplier (Flash) if commission and price are the same
       const extractProducts = (comparison: any) => {
-        const allProds: any[] = [];
+        // CRITICAL: Only use bestDeals - these are already selected by the comparison service
+        // Do NOT include suppliers.products as that shows ALL products from ALL suppliers
         if (comparison.bestDeals && comparison.bestDeals.length > 0) {
-          allProds.push(...comparison.bestDeals);
+          return comparison.bestDeals;
         }
-        if (comparison.suppliers) {
-          Object.values(comparison.suppliers).forEach((supplier: any) => {
-            if (supplier.products && supplier.products.length > 0) {
-              allProds.push(...supplier.products);
-            }
-          });
-        }
-        return allProds;
+        
+        // Fallback: If no bestDeals, return empty array (should not happen)
+        console.warn('⚠️ No bestDeals found in comparison result - this should not happen');
+        return [];
       };
       
       const airtimeProds = extractProducts(airtimeComparison).map((p: any) => {
