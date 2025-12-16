@@ -1287,14 +1287,14 @@ export function SendMoneyPage() {
                 Add
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-sm mx-auto" aria-describedby="add-beneficiary-description">
+            <DialogContent className="max-w-sm mx-auto">
               <DialogHeader>
                 <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
                   Add New Beneficiary
                 </DialogTitle>
-                <div id="add-beneficiary-description" className="sr-only">
+                <DialogDescription>
                   Add a new beneficiary for future payments
-                </div>
+                </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 {/* Account Type Selection */}
@@ -1913,14 +1913,14 @@ export function SendMoneyPage() {
 
       {/* Payment Modal */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-sm mx-auto" aria-describedby="payment-modal-description">
+        <DialogContent className="max-w-sm mx-auto">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Pay {selectedBeneficiary?.name}
             </DialogTitle>
-            <div id="payment-modal-description" className="sr-only">
+            <DialogDescription>
               Make a payment to {selectedBeneficiary?.name}
-            </div>
+            </DialogDescription>
           </DialogHeader>
           
           {selectedBeneficiary && (
@@ -2111,12 +2111,12 @@ export function SendMoneyPage() {
 
       {/* One-time Pay Now Modal (reuses add-beneficiary fields) */}
       <Dialog open={showPayNow} onOpenChange={(v) => { setShowPayNow(v); if (!v) setIsOneTimeMode(false); }}>
-        <DialogContent className="max-w-sm mx-auto" aria-describedby="pay-now-modal-description">
+        <DialogContent className="max-w-sm mx-auto">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Pay Now
             </DialogTitle>
-            <DialogDescription id="pay-now-modal-description" className="sr-only">
+            <DialogDescription>
               Make a one-time payment to a new recipient
             </DialogDescription>
           </DialogHeader>
@@ -2348,14 +2348,14 @@ export function SendMoneyPage() {
 
       {/* Post-payment: Add to contacts prompt */}
       <Dialog open={showAddContactPrompt} onOpenChange={setShowAddContactPrompt}>
-        <DialogContent className="max-w-sm mx-auto" aria-describedby="add-contacts-prompt-description">
+        <DialogContent className="max-w-sm mx-auto">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Add to Contacts?
             </DialogTitle>
-            <div id="add-contacts-prompt-description" className="sr-only">
+            <DialogDescription>
               Save recipient for future quick access
-            </div>
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <p style={{ fontFamily: 'Montserrat, sans-serif' }}>
@@ -2404,14 +2404,14 @@ export function SendMoneyPage() {
 
       {/* Edit Beneficiary Modal */}
       <Dialog open={showEditBeneficiaryModal} onOpenChange={setShowEditBeneficiaryModal}>
-        <DialogContent className="max-w-sm mx-auto" aria-describedby="edit-beneficiary-description">
+        <DialogContent className="max-w-sm mx-auto">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Edit Beneficiary
             </DialogTitle>
-            <div id="edit-beneficiary-description" className="sr-only">
+            <DialogDescription>
               Edit beneficiary information
-            </div>
+            </DialogDescription>
           </DialogHeader>
           
           {editingBeneficiary && (
