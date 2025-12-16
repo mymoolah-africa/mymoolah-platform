@@ -162,9 +162,15 @@ class UnifiedBeneficiaryService {
           };
           
         case 'airtime-data':
+          // Transform serviceAccountRecords to accounts array format for frontend
+          const accounts = this.transformServiceAccountsToAccountsArray(beneficiary);
           return {
             ...base,
             vasServices: beneficiary.vasServices,
+            // Include normalized service account records for network extraction
+            serviceAccountRecords: beneficiary.serviceAccountRecords,
+            // Include accounts array (transformed from serviceAccountRecords) for frontend
+            accounts: accounts,
             // Legacy compatibility
             accountType: this.getVasAccountType(beneficiary.vasServices, beneficiary.accountType),
             identifier: this.getVasIdentifier(beneficiary.vasServices, base.identifier)
