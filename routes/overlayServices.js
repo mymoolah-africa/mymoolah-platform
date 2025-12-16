@@ -409,6 +409,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     let type = null;
     let supplier = null;
     let productCode = null;
+    let productAmountInCents = null; // Declare outside if/else so it's available later
     
     // Check if productId is a numeric variantId (from compareSuppliers)
     const variantId = /^\d+$/.test(productId.toString()) ? parseInt(productId, 10) : null;
@@ -509,7 +510,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       type = parts[0];
       supplier = parts[1];
       productCode = parts.slice(2, -1).join('_'); // Everything between supplier and amount
-      const productAmountInCents = parts[parts.length - 1];
+      productAmountInCents = parts[parts.length - 1]; // Assign to existing variable
       
       // Find the VasProduct record
       const { VasProduct } = require('../models');
