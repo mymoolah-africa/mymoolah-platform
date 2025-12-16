@@ -713,28 +713,43 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         // This ensures vasProductId always references a valid vas_products record
         if (!matchingVasProduct) {
           console.log(`⚠️ No VasProduct found for virtual product, creating new VasProduct record...`);
-          matchingVasProduct = await VasProduct.create({
-            supplierId: supplier,
-            supplierProductId: productCode,
-            productName: vasProduct.productName || `Product from ${supplier}`,
-            vasType: type,
-            transactionType: vasProduct.transactionType || 'topup',
-            provider: vasProduct.provider || '',
-            networkType: 'local',
-            predefinedAmounts: vasProduct.predefinedAmounts || null,
-            minAmount: vasProduct.minAmount || 0,
-            maxAmount: vasProduct.maxAmount || 0,
-            commission: vasProduct.commission || 0,
-            fixedFee: vasProduct.fixedFee || 0,
-            isPromotional: false,
-            isActive: true,
-            metadata: {
-              productVariantId: vasProduct.id,
-              isFromProductVariant: true,
-              autoCreated: true
-            }
-          }, { transaction });
-          console.log(`✅ Created new VasProduct ${matchingVasProduct.id} for virtual product`);
+          try {
+            const vasProductData = {
+              supplierId: supplier,
+              supplierProductId: productCode,
+              productName: vasProduct.productName || `Product from ${supplier}`,
+              vasType: type,
+              transactionType: vasProduct.transactionType || 'topup',
+              provider: vasProduct.provider || '',
+              networkType: 'local',
+              predefinedAmounts: vasProduct.predefinedAmounts || null,
+              minAmount: vasProduct.minAmount || 0,
+              maxAmount: vasProduct.maxAmount || 0,
+              commission: vasProduct.commission || 0,
+              fixedFee: vasProduct.fixedFee || 0,
+              isPromotional: false,
+              isActive: true,
+              metadata: {
+                productVariantId: vasProduct.id,
+                isFromProductVariant: true,
+                autoCreated: true
+              }
+            };
+            console.log(`📝 Creating VasProduct with data:`, vasProductData);
+            matchingVasProduct = await VasProduct.create(vasProductData, { transaction });
+            console.log(`✅ Created new VasProduct ${matchingVasProduct.id} for virtual product`);
+          } catch (createError) {
+            console.error(`❌ Failed to create VasProduct:`, {
+              error: createError.message,
+              errorName: createError.name,
+              errorCode: createError.code,
+              errorStack: createError.stack,
+              supplierId: supplier,
+              supplierProductId: productCode,
+              vasType: type
+            });
+            throw createError; // Re-throw to be caught by outer catch
+          }
         } else {
           console.log(`✅ Found matching VasProduct ${matchingVasProduct.id} for virtual product`);
         }
