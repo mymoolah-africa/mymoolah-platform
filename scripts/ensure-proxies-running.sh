@@ -17,12 +17,19 @@ NC='\033[0m'
 echo "🔍 Checking Cloud SQL Auth Proxies..."
 echo ""
 
+# Determine repository root (Codespaces vs local Mac)
+if [ -d "/workspaces/mymoolah-platform" ]; then
+  REPO_ROOT="/workspaces/mymoolah-platform"
+else
+  REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+fi
+
 # Check UAT proxy (6543)
 UAT_RUNNING=$(lsof -ti:6543 2>/dev/null || echo "")
 if [ -z "$UAT_RUNNING" ]; then
   echo -e "${YELLOW}⚠️  UAT proxy NOT running on port 6543${NC}"
   echo "   Starting UAT proxy..."
-  cd /workspaces/mymoolah-platform || exit 1
+  cd "$REPO_ROOT" || exit 1
   nohup ./cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg \
     --auto-iam-authn \
     --port 6543 \
@@ -44,7 +51,7 @@ STAGING_RUNNING=$(lsof -ti:6544 2>/dev/null || echo "")
 if [ -z "$STAGING_RUNNING" ]; then
   echo -e "${YELLOW}⚠️  Staging proxy NOT running on port 6544${NC}"
   echo "   Starting Staging proxy..."
-  cd /workspaces/mymoolah-platform || exit 1
+  cd "$REPO_ROOT" || exit 1
   nohup ./cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-staging \
     --auto-iam-authn \
     --port 6544 \

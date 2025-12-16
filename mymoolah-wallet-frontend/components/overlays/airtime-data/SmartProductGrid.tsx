@@ -14,6 +14,14 @@ export interface Product {
   discount?: number;
   description?: string;
   commission?: number;
+  // Additional fields for purchase
+  variantId?: number;
+  supplierCode?: string;
+  supplierProductId?: string;
+  vasType?: string;
+  denominations?: number[];
+  minAmount?: number;
+  maxAmount?: number;
 }
 
 interface SmartProductGridProps {

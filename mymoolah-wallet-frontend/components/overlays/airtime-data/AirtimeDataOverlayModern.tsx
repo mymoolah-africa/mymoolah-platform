@@ -21,6 +21,7 @@ import { NetworkFilter, type NetworkType } from './NetworkFilter';
 import { SmartProductGrid, type Product } from './SmartProductGrid';
 import { SmartSuggestions, generateSuggestions, type Suggestion } from './SmartSuggestions';
 import { apiService } from '../../../services/apiService';
+import { airtimeDataService } from '../../../services/overlayService';
 
 type ViewMode = 'home' | 'products' | 'confirm' | 'success';
 
@@ -173,7 +174,15 @@ export function AirtimeDataOverlayModern() {
         isPopular: p.isPopular || false,
         discount: p.discount || 0,
         description: p.description,
-        commission: p.commission || 0
+        commission: p.commission || 0,
+        // Store full product data for purchase
+        variantId: p.id,
+        supplierCode: p.supplierCode,
+        supplierProductId: p.supplierProductId,
+        vasType: p.vasType || 'airtime',
+        denominations: p.denominations || p.predefinedAmounts || [],
+        minAmount: p.minAmount,
+        maxAmount: p.maxAmount
       }));
 
       const dataProds = extractProducts(dataComparison).map((p: any) => ({
@@ -188,7 +197,15 @@ export function AirtimeDataOverlayModern() {
         isPopular: p.isPopular || false,
         discount: p.discount || 0,
         description: p.description,
-        commission: p.commission || 0
+        commission: p.commission || 0,
+        // Store full product data for purchase
+        variantId: p.id,
+        supplierCode: p.supplierCode,
+        supplierProductId: p.supplierProductId,
+        vasType: p.vasType || 'data',
+        denominations: p.denominations || p.predefinedAmounts || [],
+        minAmount: p.minAmount,
+        maxAmount: p.maxAmount
       }));
 
       const allProducts = [...airtimeProds, ...dataProds];
@@ -280,27 +297,51 @@ export function AirtimeDataOverlayModern() {
     try {
       setIsLoading(true);
       
-      // TODO: Implement actual purchase API call
-      // const result = await apiService.purchaseAirtimeOrData({
-      //   productId: selectedProduct.id,
-      //   beneficiaryId: selectedBeneficiary.id,
-      //   amount: selectedProduct.price
-      // });
-
-      // Simulate success for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Generate idempotency key
+      const idempotencyKey = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}-${selectedBeneficiary.id}`;
       
-      setViewMode('success');
-      setIsLoading(false);
+      // Calculate amount in cents (price is already in cents from compareSuppliers)
+      const amountInCents = selectedProduct.price;
+      const amountInRand = amountInCents / 100;
       
-      // Reload beneficiaries to update last purchase
-      setTimeout(() => {
-        loadInitialData();
-      }, 2000);
+      // Construct productId in format expected by purchase endpoint
+      // Format: type_supplier_productCode_amount
+      // The purchase endpoint expects: type_supplier_supplierProductId_amount
+      let productId: string;
+      if (selectedProduct.supplierCode && selectedProduct.supplierProductId) {
+        // Construct in expected format: type_supplier_productCode_amount
+        const vasType = selectedProduct.vasType || selectedProduct.type;
+        const supplierCode = selectedProduct.supplierCode.toUpperCase();
+        const supplierProductId = selectedProduct.supplierProductId;
+        productId = `${vasType}_${supplierCode}_${supplierProductId}_${amountInCents}`;
+      } else {
+        // Fallback: try to use variantId as numeric (purchase endpoint now supports this)
+        productId = selectedProduct.variantId?.toString() || selectedProduct.id;
+      }
+      
+      // Call purchase API
+      const result = await airtimeDataService.purchase({
+        beneficiaryId: selectedBeneficiary.id.toString(),
+        productId: productId,
+        amount: amountInRand,
+        idempotencyKey: idempotencyKey
+      });
+      
+      if (result && result.transactionId) {
+        setViewMode('success');
+        setIsLoading(false);
+        
+        // Reload beneficiaries to update last purchase
+        setTimeout(() => {
+          loadInitialData();
+        }, 2000);
+      } else {
+        throw new Error('Purchase failed: No transaction ID returned');
+      }
 
-    } catch (err) {
+    } catch (err: any) {
       console.error('Purchase failed:', err);
-      setError('Purchase failed. Please try again.');
+      setError(err?.message || 'Purchase failed. Please try again.');
       setIsLoading(false);
     }
   };

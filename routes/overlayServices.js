@@ -368,23 +368,66 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       });
     }
 
-    // Parse product details (new format includes index: type_supplier_productCode_amount_index)
-    const parts = productId.split('_');
-    const type = parts[0];
-    const supplier = parts[1];
-    const productCode = parts.slice(2, -1).join('_'); // Everything between supplier and amount
-    const productAmountInCents = parts[parts.length - 1];
+    // Support two formats:
+    // 1. Old format: type_supplier_productCode_amount (from VasProduct table)
+    // 2. New format: productVariantId (from compareSuppliers/ProductVariant table)
+    let vasProduct = null;
+    let type = null;
+    let supplier = null;
+    let productCode = null;
     
-    // Find the VasProduct record to get vasProductId
-    const { VasProduct } = require('../models');
-    const vasProduct = await VasProduct.findOne({
-      where: {
-        supplierId: supplier,
-        supplierProductId: productCode,
-        vasType: type,
-        isActive: true
+    // Check if productId is a numeric variantId (from compareSuppliers)
+    const variantId = /^\d+$/.test(productId.toString()) ? parseInt(productId, 10) : null;
+    
+    if (variantId) {
+      // New format: Look up ProductVariant
+      const { ProductVariant } = require('../models');
+      const productVariant = await ProductVariant.findOne({
+        where: { id: variantId, status: 'active' },
+        include: [
+          {
+            model: require('../models').Supplier,
+            as: 'supplier',
+            attributes: ['id', 'code', 'name']
+          }
+        ]
+      });
+      
+      if (productVariant) {
+        type = productVariant.vasType;
+        supplier = productVariant.supplier?.code || null;
+        productCode = productVariant.supplierProductId;
+        
+        // Find corresponding VasProduct for compatibility
+        const { VasProduct } = require('../models');
+        vasProduct = await VasProduct.findOne({
+          where: {
+            supplierId: supplier,
+            supplierProductId: productCode,
+            vasType: type,
+            isActive: true
+          }
+        });
       }
-    });
+    } else {
+      // Old format: Parse productId string
+      const parts = productId.split('_');
+      type = parts[0];
+      supplier = parts[1];
+      productCode = parts.slice(2, -1).join('_'); // Everything between supplier and amount
+      const productAmountInCents = parts[parts.length - 1];
+      
+      // Find the VasProduct record
+      const { VasProduct } = require('../models');
+      vasProduct = await VasProduct.findOne({
+        where: {
+          supplierId: supplier,
+          supplierProductId: productCode,
+          vasType: type,
+          isActive: true
+        }
+      });
+    }
     
     if (!vasProduct) {
       // #region agent log
