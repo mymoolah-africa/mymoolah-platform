@@ -102,68 +102,57 @@ export function AirtimeDataOverlay() {
       setSelectedBeneficiary(beneficiary);
       
       // Get beneficiary network from metadata or service accounts
-      // Check if beneficiary has only one network (from metadata or accounts)
+      // STRICT: For PINless top-up, we MUST filter by network - only show products for the beneficiary's network
       let beneficiaryNetwork: string | null = null;
+      const allNetworks: string[] = [];
       
       // Try multiple sources for network information
       const beneficiaryAny = beneficiary as any;
       
       // 1. Check metadata.network
       if (beneficiary.metadata?.network) {
-        beneficiaryNetwork = beneficiary.metadata.network;
+        allNetworks.push(beneficiary.metadata.network);
       }
+      
       // 2. Check vasServices (legacy format)
-      else if (beneficiaryAny.vasServices) {
+      if (beneficiaryAny.vasServices) {
         const airtimeServices = beneficiaryAny.vasServices.airtime || [];
         const dataServices = beneficiaryAny.vasServices.data || [];
-        const allServices = [...airtimeServices, ...dataServices];
-        
-        if (allServices.length === 1) {
-          beneficiaryNetwork = allServices[0].network || null;
-        } else if (allServices.length > 1) {
-          // Check if all services have the same network
-          const networks = allServices.map((s: any) => s.network).filter(Boolean);
-          const uniqueNetworks = [...new Set(networks)];
-          if (uniqueNetworks.length === 1) {
-            beneficiaryNetwork = uniqueNetworks[0];
-          }
-        }
+        [...airtimeServices, ...dataServices].forEach((s: any) => {
+          if (s.network) allNetworks.push(s.network);
+        });
       }
+      
       // 3. Check serviceAccountRecords (new unified format)
-      else if (beneficiaryAny.serviceAccountRecords && Array.isArray(beneficiaryAny.serviceAccountRecords)) {
-        const airtimeDataAccounts = beneficiaryAny.serviceAccountRecords.filter((acc: any) => 
-          acc.serviceType === 'airtime' || acc.serviceType === 'data'
-        );
-        
-        if (airtimeDataAccounts.length === 1) {
-          beneficiaryNetwork = airtimeDataAccounts[0].serviceData?.network || null;
-        } else if (airtimeDataAccounts.length > 1) {
-          // Check if all accounts have the same network
-          const networks = airtimeDataAccounts
-            .map((acc: any) => acc.serviceData?.network)
-            .filter(Boolean);
-          const uniqueNetworks = [...new Set(networks)];
-          if (uniqueNetworks.length === 1) {
-            beneficiaryNetwork = uniqueNetworks[0];
-          }
-        }
+      if (beneficiaryAny.serviceAccountRecords && Array.isArray(beneficiaryAny.serviceAccountRecords)) {
+        beneficiaryAny.serviceAccountRecords
+          .filter((acc: any) => acc.serviceType === 'airtime' || acc.serviceType === 'data')
+          .forEach((acc: any) => {
+            if (acc.serviceData?.network) allNetworks.push(acc.serviceData.network);
+          });
       }
-      // 4. Check accounts (alternative format)
-      else if (beneficiaryAny.accounts && Array.isArray(beneficiaryAny.accounts)) {
-        const airtimeAccounts = beneficiaryAny.accounts.filter((acc: any) => 
-          acc.type === 'airtime' || acc.type === 'data'
-        );
-        if (airtimeAccounts.length === 1) {
-          beneficiaryNetwork = airtimeAccounts[0].metadata?.network || airtimeAccounts[0].network || null;
-        } else if (airtimeAccounts.length > 1) {
-          const networks = airtimeAccounts
-            .map((acc: any) => acc.metadata?.network || acc.network)
-            .filter(Boolean);
-          const uniqueNetworks = [...new Set(networks)];
-          if (uniqueNetworks.length === 1) {
-            beneficiaryNetwork = uniqueNetworks[0];
-          }
-        }
+      
+      // 4. Check accounts (alternative format - most likely for unified beneficiaries)
+      if (beneficiaryAny.accounts && Array.isArray(beneficiaryAny.accounts)) {
+        beneficiaryAny.accounts
+          .filter((acc: any) => acc.type === 'airtime' || acc.type === 'data')
+          .forEach((acc: any) => {
+            if (acc.metadata?.network) allNetworks.push(acc.metadata.network);
+            if (acc.network) allNetworks.push(acc.network);
+          });
+      }
+      
+      // Get unique networks
+      const uniqueNetworks = [...new Set(allNetworks.map(n => normalizeNetwork(n)).filter(Boolean))];
+      
+      // If beneficiary has exactly one network, use it for filtering
+      // If multiple networks, we could show all, but for PINless we should probably only show if single network
+      if (uniqueNetworks.length === 1) {
+        beneficiaryNetwork = uniqueNetworks[0];
+      } else if (uniqueNetworks.length > 1) {
+        // Multiple networks - for PINless, we might want to show all, but let's be strict and require single network
+        console.warn('⚠️ Beneficiary has multiple networks:', uniqueNetworks, '- Will show all products');
+        beneficiaryNetwork = null; // Show all if multiple networks
       }
       
       // Debug logging
@@ -174,7 +163,10 @@ export function AirtimeDataOverlay() {
         vasServices: beneficiaryAny.vasServices,
         serviceAccountRecords: beneficiaryAny.serviceAccountRecords,
         accounts: beneficiaryAny.accounts,
-        extractedNetwork: beneficiaryNetwork
+        allNetworksFound: allNetworks,
+        uniqueNetworks: uniqueNetworks,
+        extractedNetwork: beneficiaryNetwork,
+        willFilter: !!beneficiaryNetwork
       });
       
       // Load products using compareSuppliers API (best-deal selection)
@@ -304,16 +296,18 @@ export function AirtimeDataOverlay() {
             maxAmount: p.maxAmount
           };
         })
-        // Filter by network if beneficiary has only one network
+        // STRICT FILTERING: For PINless top-up, only show products matching beneficiary's network
         .filter((p: any) => {
           if (!beneficiaryNetwork) {
-            console.log('🌐 No network filter - showing all data products');
-            return true; // Show all if no network specified
+            console.warn('⚠️ No network found for beneficiary - showing ALL data products (this should not happen for PINless)');
+            return true; // Show all if no network specified (shouldn't happen for PINless)
           }
           const productNetwork = extractProductNetwork(p);
           const beneficiaryNetworkNorm = normalizeNetwork(beneficiaryNetwork);
           const matches = productNetwork === beneficiaryNetworkNorm;
-          console.log(`🔍 Data product filter: "${p.name}" (provider: ${p.provider}, extracted: ${productNetwork}) vs beneficiary (${beneficiaryNetworkNorm}) = ${matches}`);
+          if (!matches) {
+            console.log(`❌ Filtered out: "${p.name}" (${productNetwork}) - beneficiary is ${beneficiaryNetworkNorm}`);
+          }
           return matches;
         });
       
