@@ -62,22 +62,28 @@ export function ElectricityOverlay() {
     }
   };
 
-  const handleBeneficiarySelect = async (beneficiary: Beneficiary, accountId?: number) => {
-    try {
-      setLoadingState('loading');
-      setSelectedBeneficiary(beneficiary);
-      
-      // Load catalog for selected beneficiary
-      const catalogData = await electricityService.getCatalog(beneficiary.id);
-      setCatalog(catalogData);
-      
-      setCurrentStep('amount');
-      setLoadingState('idle');
-    } catch (err) {
-      console.error('Failed to load catalog:', err);
-      setError('Failed to load electricity catalog');
-      setLoadingState('error');
-    }
+  const handleBeneficiarySelect = (beneficiary: any, accountId?: number): void => {
+    void (async () => {
+      try {
+        setLoadingState('loading');
+        const normalized = {
+          ...(beneficiary as any),
+          id: beneficiary.id != null ? String(beneficiary.id) : ''
+        } as Beneficiary;
+        setSelectedBeneficiary(normalized);
+        
+        // Load catalog for selected beneficiary
+        const catalogData = await electricityService.getCatalog(normalized.id);
+        setCatalog(catalogData);
+        
+        setCurrentStep('amount');
+        setLoadingState('idle');
+      } catch (err) {
+        console.error('Failed to load catalog:', err);
+        setError('Failed to load electricity catalog');
+        setLoadingState('error');
+      }
+    })();
   };
 
   const handleAmountNext = () => {

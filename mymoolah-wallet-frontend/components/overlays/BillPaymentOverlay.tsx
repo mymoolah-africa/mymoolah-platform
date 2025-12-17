@@ -123,8 +123,12 @@ export function BillPaymentOverlay() {
     setCurrentStep('beneficiary');
   };
 
-  const handleBeneficiarySelect = (beneficiary: Beneficiary, accountId?: number) => {
-    setBeneficiary(beneficiary);
+  const handleBeneficiarySelect = (beneficiary: any, accountId?: number): void => {
+    const normalized = {
+      ...(beneficiary as any),
+      id: beneficiary.id != null ? String(beneficiary.id) : ''
+    } as Beneficiary;
+    setBeneficiary(normalized);
     setCurrentStep('confirm');
   };
 

@@ -97,10 +97,15 @@ export function AirtimeDataOverlay() {
     }
   };
 
-  const handleBeneficiarySelect = async (beneficiary: Beneficiary, accountId?: number) => {
-    try {
-      setLoadingState('loading');
-      setSelectedBeneficiary(beneficiary);
+  const handleBeneficiarySelect = (beneficiary: any, accountId?: number): void => {
+    void (async () => {
+      try {
+        setLoadingState('loading');
+        const normalized = {
+          ...(beneficiary as any),
+          id: beneficiary.id != null ? String(beneficiary.id) : ''
+        } as Beneficiary;
+        setSelectedBeneficiary(normalized);
       
       // Helper to normalize network names for comparison (must be defined first)
       const normalizeNetwork = (network: string | null | undefined): string => {
@@ -125,7 +130,7 @@ export function AirtimeDataOverlay() {
       const allNetworks: string[] = [];
       
       // Try multiple sources for network information
-      const beneficiaryAny = beneficiary as any;
+      const beneficiaryAny = normalized as any;
       
       // 1. Check metadata.network
       if (beneficiary.metadata?.network) {
@@ -176,10 +181,10 @@ export function AirtimeDataOverlay() {
       // Debug logging - log the FULL beneficiary object to see structure
       console.log('🔍 FULL Beneficiary object:', JSON.stringify(beneficiaryAny, null, 2));
       console.log('🔍 Beneficiary network extraction:', {
-        beneficiaryId: beneficiary.id,
-        beneficiaryName: beneficiary.name,
-        metadata: beneficiary.metadata,
-        metadataNetwork: beneficiary.metadata?.network,
+        beneficiaryId: normalized.id,
+        beneficiaryName: normalized.name,
+        metadata: normalized.metadata,
+        metadataNetwork: normalized.metadata?.network,
         vasServices: beneficiaryAny.vasServices,
         vasServicesAirtime: beneficiaryAny.vasServices?.airtime,
         vasServicesData: beneficiaryAny.vasServices?.data,
@@ -197,7 +202,7 @@ export function AirtimeDataOverlay() {
       // If no network found, log a detailed breakdown
       if (!beneficiaryNetwork && allNetworks.length === 0) {
         console.error('❌ NO NETWORK FOUND - Detailed breakdown:');
-        console.error('  - metadata?.network:', beneficiary.metadata?.network);
+        console.error('  - metadata?.network:', normalized.metadata?.network);
         console.error('  - vasServices?.airtime:', beneficiaryAny.vasServices?.airtime);
         console.error('  - vasServices?.data:', beneficiaryAny.vasServices?.data);
         console.error('  - serviceAccountRecords:', beneficiaryAny.serviceAccountRecords);
@@ -362,11 +367,12 @@ export function AirtimeDataOverlay() {
       setCatalog(catalogData);
       setCurrentStep('catalog');
       setLoadingState('idle');
-    } catch (err) {
-      console.error('Failed to load catalog:', err);
-      setError('Failed to load product catalog');
-      setLoadingState('error');
-    }
+      } catch (err) {
+        console.error('Failed to load catalog:', err);
+        setError('Failed to load product catalog');
+        setLoadingState('error');
+      }
+    })();
   };
 
   const handleProductSelect = (product: AirtimeDataProduct) => {
@@ -456,8 +462,12 @@ export function AirtimeDataOverlay() {
       });
       
       // Set as selected beneficiary and proceed with purchase
-      // newBeneficiary is already a Beneficiary from overlayService; keep as-is
-      setSelectedBeneficiary(newBeneficiary);
+      // Normalize id to string to satisfy overlay Beneficiary type
+      const normalizedNew = {
+        ...(newBeneficiary as any),
+        id: newBeneficiary.id != null ? String(newBeneficiary.id) : ''
+      } as Beneficiary;
+      setSelectedBeneficiary(normalizedNew);
       setShowSendToNewRecipient(false);
       
       // Proceed with purchase
@@ -570,13 +580,21 @@ export function AirtimeDataOverlay() {
     setEditingBeneficiary(null);
   };
 
-  const handleEditBeneficiary = (beneficiary: Beneficiary) => {
-    setEditingBeneficiary(beneficiary);
+  const handleEditBeneficiary = (beneficiary: any): void => {
+    const normalized = {
+      ...(beneficiary as any),
+      id: beneficiary.id != null ? String(beneficiary.id) : ''
+    } as Beneficiary;
+    setEditingBeneficiary(normalized);
     setShowBeneficiaryModal(true);
   };
 
-  const handleRemoveBeneficiary = (beneficiary: Beneficiary) => {
-    setBeneficiaryToRemove(beneficiary);
+  const handleRemoveBeneficiary = (beneficiary: any): void => {
+    const normalized = {
+      ...(beneficiary as any),
+      id: beneficiary.id != null ? String(beneficiary.id) : ''
+    } as Beneficiary;
+    setBeneficiaryToRemove(normalized);
     setShowConfirmationModal(true);
   };
 
