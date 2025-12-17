@@ -58,7 +58,7 @@ export function AirtimeDataOverlay() {
     loadBeneficiaries();
   }, []);
 
-  const loadBeneficiaries = async () => {
+  const loadBeneficiaries = async (): Promise<Beneficiary[]> => {
     try {
       setLoadingState('loading');
       const airtimeBeneficiaries = await beneficiaryService.getBeneficiaries('airtime');
@@ -90,10 +90,12 @@ export function AirtimeDataOverlay() {
       const combined = Array.from(mapByMsisdn.values());
       setBeneficiaries(combined);
       setLoadingState('idle');
+      return combined;
     } catch (err) {
       console.error('Failed to load beneficiaries:', err);
       setError('Failed to load beneficiaries');
       setLoadingState('error');
+      return [];
     }
   };
 
@@ -566,7 +568,7 @@ export function AirtimeDataOverlay() {
     setShowBeneficiaryModal(true);
   };
 
-  const handleBeneficiaryCreated = (newBeneficiary: Beneficiary) => {
+  const handleBeneficiaryCreated = async (newBeneficiary: Beneficiary) => {
     if (editingBeneficiary) {
       // Update existing beneficiary in the list
       setBeneficiaries(prev => prev.map(b => 
@@ -578,6 +580,16 @@ export function AirtimeDataOverlay() {
     }
     setShowBeneficiaryModal(false);
     setEditingBeneficiary(null);
+
+    // Reload beneficiaries from backend so we get full accounts[] + metadata.network
+    // for the new unified airtime/data service account. Then select the freshly
+    // created beneficiary so network-based filtering works immediately.
+    const refreshed = await loadBeneficiaries();
+    const newId = String(newBeneficiary.id);
+    const hydrated = refreshed.find((b) => String(b.id) === newId);
+    if (hydrated) {
+      setSelectedBeneficiary(hydrated);
+    }
   };
 
   const handleEditBeneficiary = (beneficiary: any): void => {
