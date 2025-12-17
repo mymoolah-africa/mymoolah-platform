@@ -705,18 +705,18 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             : `/${type}/pinless`;
           
           // Normalize mobile number for MobileMart API
-          // Based on testing: UAT uses local format (0720213994), Production may also use local format
-          // Try local format first (as per UAT documentation), fallback to international if needed
+          // Production API may require international format (27XXXXXXXXX) - try this first
+          // UAT uses local format, but Production might be different
           const { normalizeToE164 } = require('../utils/msisdn');
           let normalizedMobileNumber;
           try {
             // Extract digits only
             const digits = beneficiary.identifier.replace(/\D/g, '');
             
-            // Check if already in local format (0XXXXXXXXX)
+            // For Production API, try international format first (27XXXXXXXXX)
             if (digits.startsWith('0') && digits.length === 10) {
-              // Use local format (as per UAT documentation - works for UAT, try for Production too)
-              normalizedMobileNumber = digits;
+              // Convert local format to international format for Production API
+              normalizedMobileNumber = `27${digits.slice(1)}`;
             } else if (digits.startsWith('27') && digits.length === 11) {
               // Already in international format without +, use as-is
               normalizedMobileNumber = digits;
@@ -731,8 +731,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             // Fallback: try to convert manually
             const digits = beneficiary.identifier.replace(/\D/g, '');
             if (digits.startsWith('0') && digits.length === 10) {
-              // Prefer local format (as per UAT documentation)
-              normalizedMobileNumber = digits;
+              // Convert to international format for Production API
+              normalizedMobileNumber = `27${digits.slice(1)}`;
             } else if (digits.startsWith('27') && digits.length === 11) {
               normalizedMobileNumber = digits;
             } else {
