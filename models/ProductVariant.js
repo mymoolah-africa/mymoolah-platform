@@ -154,6 +154,57 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
+    // Transaction type describes how the VAS is fulfilled (e.g. voucher, topup, direct, instant)
+    transactionType: {
+      type: DataTypes.ENUM('voucher', 'topup', 'direct', 'instant'),
+      allow: true
+    },
+    // Network type indicates local vs international routing
+    networkType: {
+      type: DataTypes.ENUM('local', 'international'),
+      allowNull: false,
+      defaultValue: 'local'
+    },
+    // Human-readable provider/network name (e.g., Vodacom, MTN, Eskom)
+    provider: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    // Minimum and maximum allowed amount in cents for own-amount products
+    minAmount: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+    maxAmount: {
+      type: DataTypes.INTEGER,
+      allowNull: true
+    },
+    // Optional list of explicitly supported denominations in cents
+    predefinedAmounts: {
+      type: DataTypes.JSONB,
+      allowNull: true
+    },
+    // Default commission percentage for this variant (e.g., 2.50)
+    commission: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true
+    },
+    // Fixed fee in cents charged in addition to percentage commission
+    fixedFee: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
+    // Promotional flags
+    isPromotional: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    promotionalDiscount: {
+      type: DataTypes.DECIMAL(5, 2),
+      allowNull: true
+    },
     denominations: {
       type: DataTypes.JSONB,
       allowNull: false,
@@ -245,6 +296,12 @@ module.exports = (sequelize, DataTypes) => {
         }
       }
     },
+    // Priority used when choosing best supplier (higher = preferred)
+    priority: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 1
+    },
     isPreferred: {
       type: DataTypes.BOOLEAN,
       allowNull: false,
@@ -260,6 +317,11 @@ module.exports = (sequelize, DataTypes) => {
           msg: 'Sort order must be non-negative'
         }
       }
+    },
+    // Timestamp of last successful sync from external supplier
+    lastSyncedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
     },
     metadata: {
       type: DataTypes.JSONB,
