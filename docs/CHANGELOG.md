@@ -1,5 +1,87 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2025-12-13 - ✅ Voucher Deduplication Complete & Flash ProductVariants Fixed
+
+### **Voucher Deduplication System**
+- **Problem**: Hollywood Bets showing 9 separate cards (one per denomination)
+- **Solution**: Implemented universal deduplication system that normalizes product names and groups by logical product
+- **Normalization**: Strips denomination suffixes (" R10", " R100", " Voucher", " Gift Card") from product names
+- **Brand Variations**: Normalizes brand name variations (e.g., "HollywoodBets" → "Hollywood Bets")
+- **Grouping**: All variants of same product group under `voucher:${normalizedName}` key
+- **Selection**: Best deal chosen by: (1) Highest commission, (2) Lowest price, (3) Preferred supplier (Flash)
+- **Result**: Hollywood Bets 9 denominations → 1 card with all denominations in modal
+- **Impact**: Works for any multi-denomination voucher from any supplier
+
+### **Flash ProductVariant Creation**
+- **Problem**: 12 Flash voucher products had zero ProductVariant records, making them invisible in overlay
+- **Products Fixed**: Tenacity, Google Play, Intercape, 1Voucher, HollywoodBets, Netflix, YesPlay, Betway, MMVoucher, OTT, Fifa Mobile, DStv
+- **Solution**: Created `scripts/create-missing-flash-product-variants.js` to generate ProductVariant records
+- **Configuration**: Intelligent denomination generation by category (gaming, betting, transport), commission rates per product
+- **Result**: 28 Flash vouchers now visible (was 16)
+
+### **Denomination API Response Fix**
+- **Problem**: Takealot purchase failing - "Invalid denomination for this product"
+- **Root Cause**: Comparison API not returning `denominations` field, causing frontend to generate incorrect fallback defaults
+- **Solution**: Added `denominations` field to `formatProductForResponse()` method in comparison service
+- **Result**: All voucher purchases now work with correct denomination validation
+
+### **Modal UX Improvements**
+- **Problem**: Vouchers with 8+ denominations (3+ rows) had submit button partially cut off
+- **Solution**: Added modal scrolling with `maxHeight: '85vh'`, `overflowY: 'auto'`, and extra bottom padding
+- **Result**: Users can scroll to see all denominations and submit button is fully visible
+
+### **MobileMart UAT Catalog Audit**
+- **Findings**: MobileMart UAT API provides limited test catalog (8 voucher products: Hollywood Bets denominations only)
+- **Full Catalog**: 40+ additional voucher products (Betway, Blu Voucher, LottoStar, Netflix, Spotify, Steam, Uber, etc.) only available in Production API
+- **Plan**: Will sync full catalog when deploying to staging/production environment
+
+### **Files Modified**
+- `services/supplierComparisonService.js` - Deduplication logic, brand normalization, denomination response
+- `services/productPurchaseService.js` - Denomination validation debugging
+- `mymoolah-wallet-frontend/components/overlays/digital-vouchers/ProductDetailModal.tsx` - Modal scrolling and padding
+- `scripts/create-missing-flash-product-variants.js` (NEW) - Script to create missing Flash ProductVariants
+- `docs/agent_handover.md` - Updated to v2.4.22
+- `docs/session_logs/2025-12-13_1030_voucher-deduplication-complete.md` (NEW) - Session documentation
+
+### **Session Extension: Beneficiary System Audit + Airtime/Data UX Design**
+- **Beneficiary Audit**: Comprehensive review of unified beneficiary model - confirmed working correctly
+- **Structure**: One beneficiary can have multiple service accounts (airtime/data numbers, bank accounts, electricity meters)
+- **API Endpoints**: Verified `/by-service/airtime-data`, `POST /`, `POST /:id/services` endpoints functional
+- **UX Design**: Created comprehensive beneficiary-first UX specification in `docs/AIRTIME_DATA_UX_UPGRADE.md` (212 lines)
+- **Components**: Built modern React components (`RecentRecipients`, `NetworkFilter`, `SmartProductGrid`, `SmartSuggestions`, `AirtimeDataOverlayModern`)
+- **Status**: Components NOT integrated - incorrect product-first flow discovered, original overlay restored
+- **Documentation**: Complete screen-by-screen UX specification with beneficiary-first flow ready for implementation
+- **Files Created**:
+  - `docs/AIRTIME_DATA_UX_UPGRADE.md` (NEW) - Complete UX specification
+  - `mymoolah-wallet-frontend/components/overlays/airtime-data/RecentRecipients.tsx` (NEW) - Not integrated
+  - `mymoolah-wallet-frontend/components/overlays/airtime-data/NetworkFilter.tsx` (NEW) - Not integrated
+  - `mymoolah-wallet-frontend/components/overlays/airtime-data/SmartProductGrid.tsx` (NEW) - Not integrated
+  - `mymoolah-wallet-frontend/components/overlays/airtime-data/SmartSuggestions.tsx` (NEW) - Not integrated
+  - `mymoolah-wallet-frontend/components/overlays/airtime-data/AirtimeDataOverlayModern.tsx` (NEW) - Not integrated
+
+### **Status**
+- ✅ Deduplication working for all multi-denomination vouchers
+- ✅ 28 Flash vouchers visible and purchasable
+- ✅ MobileMart vouchers (Hollywood Bets, Takealot) working correctly
+- ✅ Transaction history showing correct product names
+- ✅ Modal UX improved for multiple denominations
+- ✅ Beneficiary system audited and documented
+- ✅ Airtime/Data UX design complete (ready for implementation)
+- 🚧 Airtime/Data modern components exist but not integrated (awaiting beneficiary-first rebuild)
+- ⏳ Full MobileMart catalog sync planned for production deployment
+
+## 2025-12-11 - ♻️ Supplier comparison universalized for vouchers
+- Extended supplier comparison to include voucher vasType and dynamic supplier grouping (Flash, MobileMart, future partners).
+- Selection rule now aligns with business priority: highest MMTP commission → lowest user price → preferred supplier (Flash) on ties.
+- Product-level comparison updated with the same tie-breaker sequence for consistency.
+
+## 2025-12-11 - 📝 SBSA T-PPP submission & phase-1 scope documented
+- Standard Bank (SBSA) submitted our T-PPP registration to PASA; integration meeting scheduled next Wednesday to receive API details.
+- Phase 1 (documented only, no code changes): 
+  1) Deposit notification API → validate reference to wallet/float; credit on success, return error on invalid reference.
+  2) Enable PayShap API service for outbound payments (wallet/float → external bank) and Request Money from external banks.
+- Fees/VAT: SBSA PayShap fees plus MyMoolah markup; VAT to be handled by the unified VAT/commission service already used for Zapper, vouchers (Flash/MobileMart), and VAS.
+
 ## 2025-12-08 - ✅ SFTP Gateway for MobileMart (GCS)
 - Created private inbound bucket `mymoolah-sftp-inbound` (africa-south1, uniform access, versioning on) for MobileMart daily recon files.
 - Deployed SFTP Gateway Standard VM `sftp-1-vm` (africa-south1-a) mapped to the bucket via instance service account (`sftp-gateway`); read/write verified.

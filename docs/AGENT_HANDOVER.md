@@ -36,11 +36,66 @@
 
 ---
 
-**Last Updated**: December 4, 2025  
-**Version**: 2.4.21 - Real-Time Notifications & Input Stability Fixes  
-**Status**: ✅ **REAL-TIME NOTIFICATIONS ACTIVE** ✅ **INPUT STABILITY FIXED** ✅ **DECLINE NOTIFICATIONS COMPLETE**
+**Last Updated**: December 16, 2025  
+**Version**: 2.4.23 - Airtime/Data Purchase ENUM Fixes Complete  
+**Status**: ✅ **AIRTIME/DATA PURCHASE WORKING** ✅ **ENUM CONSTRAINTS FIXED** ✅ **VARIABLE SCOPE ISSUES RESOLVED**
 
 ---
+
+## Update 2025-12-16 - Critical Fixes: Airtime/Data Purchase ENUM Constraints & Variable Scope
+- **ENUM Constraints Fixed**: Converted `vas_products.supplierId` and `vas_transactions.supplierId` from ENUM to VARCHAR(50) to allow "FLASH" and other supplier codes
+- **Variable Scope Issues Fixed**: Fixed `vasProductIdForTransaction` and `productAmountInCents` scope errors by declaring variables outside try/catch and if/else blocks
+- **ProductVariant Type Extraction**: Fixed to get type from `Product.type` instead of non-existent `ProductVariant.vasType`
+- **VasProduct Creation**: Implemented on-the-fly VasProduct creation when ProductVariant doesn't have matching VasProduct
+- **Error Handling Improved**: Error responses now show actual error messages in development/staging mode for better debugging
+- **Purchase Flow Working**: R10 Vodacom airtime purchase tested successfully - transaction recorded correctly
+- **Bill Payments & Electricity**: Both use `vas_transactions` table, so they're already covered by the ENUM fix
+- **Migrations**: `20250116_fix_vas_products_supplier_id_enum.js` and `20250116_fix_vas_transactions_supplier_id_enum.js` created
+- **Manual SQL**: Manual SQL script created and executed for `vas_transactions.supplierId` (migration not detected by Sequelize)
+- **Status**: ✅ Airtime/data purchase flow working, ✅ All ENUM constraints fixed, ✅ Ready for bill payment and electricity testing
+
+## Update 2025-12-13 - Extended Session (Beneficiary system audit + Airtime/Data UX design)
+- **Beneficiary System Audit**: Comprehensive review completed - unified model confirmed working correctly
+- **Beneficiary Structure**: One person can have multiple service accounts (airtime/data numbers, bank accounts, electricity meters)
+- **Service Filtering**: Works correctly with `vasServices.airtime[]`, `vasServices.data[]`, `paymentMethods.bankAccounts[]`, `utilityServices.electricity[]`
+- **API Endpoints Ready**: `/by-service/airtime-data`, `POST /`, `POST /:id/services` all functional
+- **Airtime/Data UX Design**: Complete beneficiary-first UX specification created in `docs/AIRTIME_DATA_UX_UPGRADE.md` (212 lines)
+- **Design Principles**: Beneficiary selection → Account selection → Product selection → Confirmation (user-centric flow)
+- **Components Created**: Modern React components built (`RecentRecipients`, `NetworkFilter`, `SmartProductGrid`, `SmartSuggestions`) but NOT integrated
+- **Status**: Original `AirtimeDataOverlay` restored, modern components exist as reference in `mymoolah-wallet-frontend/components/overlays/airtime-data/`
+- **Next Steps**: Rebuild airtime/data overlay using beneficiary-first flow per `docs/AIRTIME_DATA_UX_UPGRADE.md` specification
+
+---
+
+## Update 2025-12-13 (Voucher deduplication complete - Hollywood Bets 9→1 card)
+- Voucher deduplication now working correctly: Hollywood Bets (9 denominations) consolidated to 1 best deal card.
+- Normalization: Strip denomination suffixes (" R10", " R100", " Voucher", " Gift Card") from product names before grouping.
+- Service type detection: Use `vasType` parameter from API call (`/api/v1/suppliers/compare/voucher`) to identify voucher comparisons.
+- Grouping key: All variants (e.g., "Hollywood Bets R10", "Hollywood Bets R100") group under `voucher:hollywood bets`.
+- Best deal selection: (1) highest commission → (2) lowest user price → (3) preferred supplier (Flash) on ties.
+- File: `services/supplierComparisonService.js` - Added normalization regex, `serviceType` parameter routing.
+- Impact: Voucher overlay now shows 1 card per logical product instead of multiple cards for every denomination.
+- Status: ✅ Deduplication working, ✅ Tested with Hollywood Bets, ✅ Ready for all multi-denomination vouchers.
+
+## Update 2025-12-11 (SBSA T-PPP submission & phase-1 integration scope)
+- Standard Bank (SBSA) submitted our T-PPP registration to PASA; sponsor bank confirmed receipt.
+- Integration meeting with SBSA scheduled next Wednesday to receive API details.
+- Phase 1 scope (no code changes yet; documentation only):
+  1) Incoming deposit notification API from SBSA → validate reference as wallet/float; if valid, credit wallet/float with correct transaction description; if invalid, return error description.
+  2) Enable PayShap API service for outbound payments (wallet/float → external bank) and Request Money (inbound from external bank).
+- Fees & VAT: SBSA PayShap fees plus MyMoolah markup; VAT handled via the existing unified VAT/commission service already used for Zapper, vouchers (Flash/MobileMart), and VAS.
+
+## Update 2025-12-11 (Supplier comparison includes vouchers)
+- Supplier comparison now includes voucher vasType and dynamically groups all suppliers (Flash, MobileMart, future) via the normalized ProductVariant schema.
+- Selection priority is unified: highest MMTP commission → lowest user price → preferred supplier (Flash) on ties.
+- Product-level comparison (best-variant) uses the same tie-breakers for consistency.
+
+## Update 2025-12-10 (voucher commissions, ledger, startup)
+- Product-level commission support added for vouchers: commission lookup now prioritizes productId (fallback to serviceType with voucher/digital_voucher alias). Migration `20251210_add_product_id_to_supplier_commission_tiers.js` adds productId to the tiers table.
+- Flash voucher product commission rates (VAT-inclusive) seeded and cleaned; current rates per productId: 10:5.000, 11:2.500, 12:3.100, 27:3.500, 28:3.500, 29:3.500, 30:3.000, 31:6.000, 32:4.500, 33:3.100, 34:4.500, 35:2.800, 36:2.800, 39:6.000, 40:7.000, 41:3.500, 42:3.500, 43:4.800, 44:4.500.
+- VAT + commission ledger confirmed for vouchers (Flash) in UAT (e.g., VOUCHER_1765401166585_0x2sgm posts VAT and journal). Ledger accounts created in DB for env codes.
+- Startup log ordering fixed: “🎉 All background services started successfully” now prints after services start/server listen. Ledger readiness check remains (warn in dev, fail in prod if missing).
+- Outstanding: adjust specific product rates if business requests; seed non-Flash suppliers similarly if needed.
 
 ### NEW: SFTP Gateway for MobileMart (2025-12-08) ✅ infrastructure in place
 - Provisioned SFTP Gateway Standard VM `sftp-1-vm` (africa-south1-a) using instance service account `sftp-gateway` with full API access.
