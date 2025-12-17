@@ -129,13 +129,14 @@ export function ElectricityOverlay() {
     setShowBeneficiaryModal(false);
   };
 
-  const handleEditBeneficiary = (beneficiary: Beneficiary): void => {
-    setEditingBeneficiary(beneficiary);
+  // Handlers accept any beneficiary from BeneficiaryList; cast when storing locally
+  const handleEditBeneficiary = (beneficiary: any): void => {
+    setEditingBeneficiary(beneficiary as Beneficiary);
     setShowBeneficiaryModal(true);
   };
 
-  const handleRemoveBeneficiary = (beneficiary: Beneficiary): void => {
-    setBeneficiaryToRemove(beneficiary);
+  const handleRemoveBeneficiary = (beneficiary: any): void => {
+    setBeneficiaryToRemove(beneficiary as Beneficiary);
     setShowConfirmationModal(true);
   };
 
