@@ -239,15 +239,22 @@ class MobileMartAuthService {
             return response.data;
 
         } catch (error) {
-            // Log error with status code in first line for visibility (even if truncated)
+            // Log error with status code and MobileMart error message in first line for visibility (even if truncated)
             if (error.response) {
                 const status = error.response.status;
                 const statusText = error.response.statusText;
-                console.error(`❌ MobileMart Auth Service: Error ${status} ${statusText} on ${endpoint}: ${error.message}`);
+                const errorData = error.response.data || {};
+                const mobilemartError = errorData.title || errorData.detail || errorData.message || error.message;
+                const errorCode = errorData.fulcrumErrorCode || errorData.errorCode || '';
+                
+                // Include MobileMart error message in first line for visibility
+                console.error(`❌ MobileMart Auth Service: Error ${status} ${statusText} on ${endpoint}${errorCode ? ` (Code: ${errorCode})` : ''}: ${mobilemartError}`);
                 console.error(`❌ MobileMart Error Details:`, {
                     status: status,
                     statusText: statusText,
-                    data: error.response.data,
+                    errorCode: errorCode,
+                    mobilemartError: mobilemartError,
+                    data: errorData,
                     message: error.message,
                     endpoint: endpoint,
                     fullUrl: url
