@@ -441,113 +441,133 @@ class BeneficiaryService {
   private transformLegacyBeneficiary(legacy: any): UnifiedBeneficiary {
     const accounts: BeneficiaryAccount[] = [];
     
-    // Extract payment methods
-    if (legacy.paymentMethods) {
-      // MyMoolah wallet
-      if (legacy.paymentMethods.mymoolah) {
+    // New unified path: if backend already sent a normalized accounts[]
+    // array (including airtime/data service accounts from BeneficiaryServiceAccount),
+    // use it directly as the source of truth. This preserves metadata.network
+    // for PINless filtering and avoids double-transforming.
+    if (Array.isArray(legacy.accounts) && legacy.accounts.length > 0) {
+      legacy.accounts.forEach((acc: any) => {
         accounts.push({
-          id: legacy.id * 1000 + 1, // Generate stable ID
-          type: 'mymoolah',
-          identifier: legacy.paymentMethods.mymoolah.walletId || legacy.paymentMethods.mymoolah.walletMsisdn || legacy.identifier,
-          label: 'MyMoolah Wallet',
-          isDefault: legacy.preferredPaymentMethod === 'mymoolah',
-          metadata: legacy.paymentMethods.mymoolah
+          id: acc.id,
+          type: acc.type,
+          identifier: acc.identifier,
+          label: acc.label,
+          isDefault: !!acc.isDefault,
+          metadata: acc.metadata || {}
         });
-  }
-      
-      // Bank accounts
-      if (legacy.paymentMethods.bankAccounts && Array.isArray(legacy.paymentMethods.bankAccounts)) {
-        legacy.paymentMethods.bankAccounts.forEach((bank: any, idx: number) => {
+      });
+    } else {
+      // Legacy JSONB path: reconstruct accounts from paymentMethods + vasServices
+      if (legacy.paymentMethods) {
+        // MyMoolah wallet
+        if (legacy.paymentMethods.mymoolah) {
           accounts.push({
-            id: legacy.id * 1000 + 10 + idx,
-            type: 'bank',
-            identifier: bank.accountNumber,
-            label: bank.label || `${bank.bankName} ${bank.accountType}`,
-            isDefault: legacy.preferredPaymentMethod === 'bank' && idx === 0,
-            metadata: {
-              bankName: bank.bankName,
-              accountType: bank.accountType,
-              branchCode: bank.branchCode,
-              ...bank
-            }
+            id: legacy.id * 1000 + 1, // Generate stable ID
+            type: 'mymoolah',
+            identifier:
+              legacy.paymentMethods.mymoolah.walletId ||
+              legacy.paymentMethods.mymoolah.walletMsisdn ||
+              legacy.identifier,
+            label: 'MyMoolah Wallet',
+            isDefault: legacy.preferredPaymentMethod === 'mymoolah',
+            metadata: legacy.paymentMethods.mymoolah
           });
-        });
-      }
-    }
-    
-    // Extract service accounts (airtime, data, electricity, etc.)
-    if (legacy.vasServices) {
-      if (legacy.vasServices.airtime && Array.isArray(legacy.vasServices.airtime)) {
-        legacy.vasServices.airtime.forEach((service: any, idx: number) => {
-          if (service.isActive === false) return;
-          accounts.push({
-            id: legacy.id * 1000 + 100 + idx,
-            type: 'airtime',
-            identifier: service.mobileNumber || service.msisdn,
-            label: service.label || `Airtime - ${service.network || ''}`,
-            isDefault: false,
-            metadata: {
-              network: service.network,
-              ...service
-            }
+        }
+        
+        // Bank accounts
+        if (legacy.paymentMethods.bankAccounts && Array.isArray(legacy.paymentMethods.bankAccounts)) {
+          legacy.paymentMethods.bankAccounts.forEach((bank: any, idx: number) => {
+            accounts.push({
+              id: legacy.id * 1000 + 10 + idx,
+              type: 'bank',
+              identifier: bank.accountNumber,
+              label: bank.label || `${bank.bankName} ${bank.accountType}`,
+              isDefault: legacy.preferredPaymentMethod === 'bank' && idx === 0,
+              metadata: {
+                bankName: bank.bankName,
+                accountType: bank.accountType,
+                branchCode: bank.branchCode,
+                ...bank
+              }
+            });
           });
-        });
+        }
       }
       
-      if (legacy.vasServices.data && Array.isArray(legacy.vasServices.data)) {
-        legacy.vasServices.data.forEach((service: any, idx: number) => {
-          if (service.isActive === false) return;
-          accounts.push({
-            id: legacy.id * 1000 + 200 + idx,
-            type: 'data',
-            identifier: service.mobileNumber || service.msisdn,
-            label: service.label || `Data - ${service.network || ''}`,
-            isDefault: false,
-            metadata: {
-              network: service.network,
-              ...service
-            }
+      // Extract service accounts (airtime, data, electricity, etc.)
+      if (legacy.vasServices) {
+        if (legacy.vasServices.airtime && Array.isArray(legacy.vasServices.airtime)) {
+          legacy.vasServices.airtime.forEach((service: any, idx: number) => {
+            if (service.isActive === false) return;
+            accounts.push({
+              id: legacy.id * 1000 + 100 + idx,
+              type: 'airtime',
+              identifier: service.mobileNumber || service.msisdn,
+              label: service.label || `Airtime - ${service.network || ''}`,
+              isDefault: false,
+              metadata: {
+                network: service.network,
+                ...service
+              }
+            });
           });
-        });
+        }
+        
+        if (legacy.vasServices.data && Array.isArray(legacy.vasServices.data)) {
+          legacy.vasServices.data.forEach((service: any, idx: number) => {
+            if (service.isActive === false) return;
+            accounts.push({
+              id: legacy.id * 1000 + 200 + idx,
+              type: 'data',
+              identifier: service.mobileNumber || service.msisdn,
+              label: service.label || `Data - ${service.network || ''}`,
+              isDefault: false,
+              metadata: {
+                network: service.network,
+                ...service
+              }
+            });
+          });
+        }
       }
-    }
-    
-    if (legacy.utilityServices) {
-      if (legacy.utilityServices.electricity && Array.isArray(legacy.utilityServices.electricity)) {
-        legacy.utilityServices.electricity.forEach((service: any, idx: number) => {
-          if (service.isActive === false) return;
-          accounts.push({
-            id: legacy.id * 1000 + 300 + idx,
-            type: 'electricity',
-            identifier: service.meterNumber,
-            label: service.label || `Electricity - ${service.provider || ''}`,
-            isDefault: false,
-            metadata: {
-              meterType: service.meterType,
-              provider: service.provider,
-              ...service
-            }
+      
+      if (legacy.utilityServices) {
+        if (legacy.utilityServices.electricity && Array.isArray(legacy.utilityServices.electricity)) {
+          legacy.utilityServices.electricity.forEach((service: any, idx: number) => {
+            if (service.isActive === false) return;
+            accounts.push({
+              id: legacy.id * 1000 + 300 + idx,
+              type: 'electricity',
+              identifier: service.meterNumber,
+              label: service.label || `Electricity - ${service.provider || ''}`,
+              isDefault: false,
+              metadata: {
+                meterType: service.meterType,
+                provider: service.provider,
+                ...service
+              }
+            });
           });
-        });
+        }
       }
-    }
-    
-    if (legacy.billerServices) {
-      if (legacy.billerServices.accounts && Array.isArray(legacy.billerServices.accounts)) {
-        legacy.billerServices.accounts.forEach((account: any, idx: number) => {
-          accounts.push({
-            id: legacy.id * 1000 + 400 + idx,
-            type: 'biller',
-            identifier: account.accountNumber,
-            label: account.label || `${account.billerName} - ${account.accountNumber}`,
-            isDefault: false,
-            metadata: {
-              billerName: account.billerName,
-              category: account.category,
-              ...account
-            }
+      
+      if (legacy.billerServices) {
+        if (legacy.billerServices.accounts && Array.isArray(legacy.billerServices.accounts)) {
+          legacy.billerServices.accounts.forEach((account: any, idx: number) => {
+            accounts.push({
+              id: legacy.id * 1000 + 400 + idx,
+              type: 'biller',
+              identifier: account.accountNumber,
+              label: account.label || `${account.billerName} - ${account.accountNumber}`,
+              isDefault: false,
+              metadata: {
+                billerName: account.billerName,
+                category: account.category,
+                ...account
+              }
+            });
           });
-        });
+        }
       }
     }
     
