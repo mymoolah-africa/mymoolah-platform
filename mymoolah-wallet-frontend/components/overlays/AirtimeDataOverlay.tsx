@@ -352,7 +352,8 @@ export function AirtimeDataOverlay() {
           id: beneficiary.id.toString(),
           label: beneficiary.name,
           identifier: beneficiary.identifier || '',
-          network: beneficiaryNetwork
+          // network is optional on AirtimeDataCatalog; avoid passing null
+          network: beneficiaryNetwork || undefined
         },
         products: [...airtimeProds, ...dataProds],
         providers: ['MTN', 'Vodacom', 'CellC', 'Telkom', 'eeziAirtime', 'Global']
@@ -455,7 +456,8 @@ export function AirtimeDataOverlay() {
       });
       
       // Set as selected beneficiary and proceed with purchase
-      setSelectedBeneficiary(newBeneficiary as AirtimeDataBeneficiary);
+      // newBeneficiary is already a Beneficiary from overlayService; keep as-is
+      setSelectedBeneficiary(newBeneficiary);
       setShowSendToNewRecipient(false);
       
       // Proceed with purchase

@@ -806,7 +806,8 @@ export function QRPaymentPage() {
         pendingPaymentData.qrCode,
         paymentAmount,
         user?.walletId || 'default',
-        finalReference || null,
+        // API signature expects string | undefined, not null
+        finalReference || undefined,
         tip > 0 ? tip : undefined
       );
       
@@ -2169,7 +2170,7 @@ export function QRPaymentPage() {
                   type="text"
                   value={customReference}
                   onChange={(e) => setCustomReference(e.target.value)}
-                  placeholder={pendingPaymentData.reference || ''}
+                  placeholder={pendingPaymentData?.reference || ''}
                   style={{
                     width: '200px',
                     fontFamily: 'Montserrat, sans-serif',
