@@ -1202,17 +1202,29 @@ class UnifiedBeneficiaryService {
     const beneficiaryData = beneficiary.toJSON ? beneficiary.toJSON() : beneficiary;
     
     // Transform serviceAccountRecords to accounts array
-    if (beneficiaryData.serviceAccountRecords && Array.isArray(beneficiaryData.serviceAccountRecords)) {
-      beneficiaryData.serviceAccountRecords.forEach((account, idx) => {
+    const serviceAccountRecords =
+      beneficiaryData.serviceAccountRecords && Array.isArray(beneficiaryData.serviceAccountRecords)
+        ? beneficiaryData.serviceAccountRecords
+        : [];
+    
+    if (serviceAccountRecords.length > 0) {
+      // New unified path: build accounts only from BeneficiaryServiceAccount records
+      serviceAccountRecords.forEach((account, idx) => {
         if (account.serviceType === 'airtime' || account.serviceType === 'data') {
           const serviceData = account.serviceData || {};
           accounts.push({
-            id: account.id || (beneficiary.id * 1000 + (account.serviceType === 'airtime' ? 100 : 200) + idx),
+            id:
+              account.id ||
+              (beneficiary.id * 1000 +
+                (account.serviceType === 'airtime' ? 100 : 200) +
+                idx),
             type: account.serviceType,
-            identifier: serviceData.msisdn || serviceData.mobileNumber || beneficiary.identifier,
-            label: account.serviceType === 'airtime' 
-              ? `Airtime - ${serviceData.network || ''}` 
-              : `Data - ${serviceData.network || ''}`,
+            identifier:
+              serviceData.msisdn || serviceData.mobileNumber || beneficiary.identifier,
+            label:
+              account.serviceType === 'airtime'
+                ? `Airtime - ${serviceData.network || ''}`
+                : `Data - ${serviceData.network || ''}`,
             isDefault: account.isDefault || false,
             metadata: {
               network: serviceData.network,
@@ -1221,10 +1233,8 @@ class UnifiedBeneficiaryService {
           });
         }
       });
-    }
-    
-    // Also include legacy vasServices if they exist
-    if (beneficiaryData.vasServices) {
+    } else if (beneficiaryData.vasServices) {
+      // Legacy path: no unified service accounts yet, fall back to vasServices JSONB
       if (beneficiaryData.vasServices.airtime && Array.isArray(beneficiaryData.vasServices.airtime)) {
         beneficiaryData.vasServices.airtime.forEach((service, idx) => {
           if (service.isActive !== false) {

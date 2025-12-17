@@ -437,12 +437,26 @@ export function BeneficiaryList({
                         
                         {displayAccount ? (
                           <>
-                            <p style={{
-                              fontFamily: 'Montserrat, sans-serif',
-                              fontSize: '12px',
-                              color: '#6b7280'
-                            }}>
-                              {displayAccount.label || displayAccount.identifier}
+                            <p
+                              style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontSize: '12px',
+                                color: '#6b7280'
+                              }}
+                            >
+                              {
+                                // Prefer explicit label, but for airtime/data ensure
+                                // we always include the network name when available,
+                                // so we show "Airtime - Vodacom" / "Data - MTN"
+                                displayAccount.label ||
+                                (displayAccount.type === 'airtime' &&
+                                  displayAccount.metadata?.network
+                                  ? `Airtime - ${displayAccount.metadata.network}`
+                                  : displayAccount.type === 'data' &&
+                                    displayAccount.metadata?.network
+                                  ? `Data - ${displayAccount.metadata.network}`
+                                  : displayAccount.identifier)
+                              }
                             </p>
                             {displayAccount.metadata?.network && (
                               <Badge 
