@@ -141,6 +141,21 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         isValidDenominations(value) {
+          const productType = this.type;
+
+          // Bill payment products are always own-amount (no fixed denominations).
+          // For these, we allow an empty array (or even null) and rely on `constraints.minAmount`/`maxAmount`.
+          if (productType === 'bill_payment') {
+            // Normalise null/undefined to an empty array for downstream code that expects an array.
+            if (value == null) {
+              this.setDataValue('denominations', []);
+              return;
+            }
+            if (Array.isArray(value) && value.length === 0) {
+              return;
+            }
+          }
+
           if (!Array.isArray(value)) {
             throw new Error('Denominations must be an array');
           }

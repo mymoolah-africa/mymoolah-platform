@@ -109,6 +109,12 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
+    // High-level VAS type for the variant (mirrors products.type for convenience)
+    vasType: {
+      type: DataTypes.ENUM('airtime', 'data', 'electricity', 'voucher', 'bill_payment', 'gaming', 'streaming', 'cash_out'),
+      allowNull: true,
+      comment: 'Logical VAS type for this variant (e.g., airtime, data, bill_payment)'
+    },
     productId: {
       type: DataTypes.INTEGER,
       allowNull: false,
@@ -153,6 +159,19 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         isValidDenominations(value) {
+          // Bill payment variants are own-amount only – they are constrained by min/max,
+          // not by a fixed denomination list. Allow empty/null here.
+          const vasType = this.vasType || (this.get ? this.get('vasType') : undefined);
+          if (vasType === 'bill_payment') {
+            if (value == null) {
+              this.setDataValue('denominations', []);
+              return;
+            }
+            if (Array.isArray(value) && value.length === 0) {
+              return;
+            }
+          }
+
           if (!Array.isArray(value)) {
             throw new Error('Denominations must be an array');
           }

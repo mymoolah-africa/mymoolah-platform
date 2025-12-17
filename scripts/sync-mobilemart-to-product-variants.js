@@ -56,7 +56,30 @@ class MobileMartProductSync {
   mapToProductVariant(mmProduct, vasType, supplierId, productId) {
     // Determine transaction type
     const transactionType = this.getTransactionType(vasType, mmProduct);
-    
+
+    const isBillPayment = vasType === 'bill_payment';
+
+    // For own-amount products (e.g. bill payments), we do NOT use fixed denominations.
+    // Instead we rely on minAmount/maxAmount in `constraints` and leave `denominations`
+    // as an empty array so that validation passes without advertising fixed amounts.
+    const hasFixedAmount = !!mmProduct.fixedAmount && !isBillPayment;
+    const baseAmountCents = typeof mmProduct.amount === 'number' ? Math.round(mmProduct.amount * 100) : null;
+
+    const computedMinCents = mmProduct.minimumAmount ? Math.round(mmProduct.minimumAmount * 100) : null;
+    const computedMaxCents = mmProduct.maximumAmount ? Math.round(mmProduct.maximumAmount * 100) : null;
+
+    const minAmount = hasFixedAmount && typeof baseAmountCents === 'number'
+      ? baseAmountCents
+      : (computedMinCents != null ? computedMinCents : 0);
+
+    const maxAmount = hasFixedAmount && typeof baseAmountCents === 'number'
+      ? baseAmountCents
+      : (computedMaxCents != null ? computedMaxCents : 0);
+
+    const denominations = hasFixedAmount && typeof baseAmountCents === 'number'
+      ? [baseAmountCents]
+      : [];
+
     return {
       productId: productId,
       supplierId: supplierId,
@@ -69,9 +92,9 @@ class MobileMartProductSync {
       provider: mmProduct.contentCreator || mmProduct.provider || 'Unknown',
       
       // Amount constraints
-      minAmount: mmProduct.fixedAmount ? mmProduct.amount * 100 : (mmProduct.minimumAmount || 200) * 100,
-      maxAmount: mmProduct.fixedAmount ? mmProduct.amount * 100 : (mmProduct.maximumAmount || 100000) * 100,
-      predefinedAmounts: mmProduct.fixedAmount ? [mmProduct.amount * 100] : null,
+      minAmount: minAmount,
+      maxAmount: maxAmount,
+      predefinedAmounts: hasFixedAmount && typeof baseAmountCents === 'number' ? [baseAmountCents] : null,
       
       // Commission and fees (MobileMart typically 2-3%)
       commission: 2.5, // Default commission, update from contract
@@ -85,8 +108,8 @@ class MobileMartProductSync {
       priority: 2, // MobileMart is secondary supplier
       status: 'active',
       
-      // Denominations
-      denominations: mmProduct.fixedAmount ? [mmProduct.amount * 100] : null,
+      // Denominations (empty for own-amount products such as bill payments)
+      denominations: denominations,
       
       // Pricing structure
       pricing: {
