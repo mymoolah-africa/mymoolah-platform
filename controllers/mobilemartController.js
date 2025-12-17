@@ -221,19 +221,20 @@ class MobileMartController {
             }
             
             // Determine endpoint based on VAS type and pinned/pinless
+            // Note: apiUrl already includes /v1, so endpoints should NOT include /v1 prefix
             let endpoint;
             if (normalizedVasType === 'bill-payment') {
-                endpoint = '/v2/bill-payment/pay';  // Note: v2 for bill payment
+                endpoint = '/v2/bill-payment/pay';  // Note: v2 for bill payment (special case)
             } else if (normalizedVasType === 'utility') {
-                endpoint = '/v1/utility/purchase';
+                endpoint = '/utility/purchase';
             } else if (normalizedVasType === 'airtime' || normalizedVasType === 'data') {
                 const isPinned = pinned !== undefined ? pinned : false;
                 endpoint = isPinned 
-                    ? `/v1/${normalizedVasType}/pinned`
-                    : `/v1/${normalizedVasType}/pinless`;
+                    ? `/${normalizedVasType}/pinned`
+                    : `/${normalizedVasType}/pinless`;
             } else {
                 // Voucher
-                endpoint = `/v1/${normalizedVasType}/purchase`;
+                endpoint = `/${normalizedVasType}/purchase`;
             }
             
             const response = await this.authService.makeAuthenticatedRequest(
