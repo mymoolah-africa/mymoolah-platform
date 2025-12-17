@@ -129,12 +129,12 @@ export function ElectricityOverlay() {
     setShowBeneficiaryModal(false);
   };
 
-  const handleEditBeneficiary = (beneficiary: Beneficiary) => {
+  const handleEditBeneficiary = (beneficiary: Beneficiary): void => {
     setEditingBeneficiary(beneficiary);
     setShowBeneficiaryModal(true);
   };
 
-  const handleRemoveBeneficiary = (beneficiary: Beneficiary) => {
+  const handleRemoveBeneficiary = (beneficiary: Beneficiary): void => {
     setBeneficiaryToRemove(beneficiary);
     setShowConfirmationModal(true);
   };

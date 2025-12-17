@@ -168,7 +168,7 @@ export function BillPaymentOverlay() {
     setShowBeneficiaryModal(false);
   };
 
-  const handleEditBeneficiary = (beneficiary: Beneficiary) => {
+  const handleEditBeneficiary = (beneficiary: Beneficiary): void => {
     console.log('Edit bill account:', beneficiary);
   };
 
