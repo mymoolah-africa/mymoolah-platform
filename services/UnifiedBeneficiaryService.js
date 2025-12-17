@@ -300,7 +300,18 @@ class UnifiedBeneficiaryService {
 
       // 3) Backwards‑compatibility: mirror into legacy JSONB fields so existing
       //    code that reads Beneficiary.paymentMethods / vasServices still works.
-      await this.addServiceToBeneficiary(beneficiary, serviceType, serviceData);
+      //
+      // NOTE (perf): For airtime/data we now rely primarily on the normalized
+      // BeneficiaryServiceAccount + accounts[] mapping for overlays. The legacy
+      // vasServices JSONB field can become large and expensive to update and has
+      // been observed to cause long-running UPDATE locks in staging.
+      // To avoid 5-minute timeouts when creating airtime/data beneficiaries in
+      // staging, we skip the JSONB mirror for these types and keep it only for
+      // bank/payment/electricity/biller/voucher where legacy readers still rely
+      // on it.
+      if (serviceType !== 'airtime' && serviceType !== 'data') {
+        await this.addServiceToBeneficiary(beneficiary, serviceType, serviceData);
+      }
 
       return beneficiary;
     } catch (error) {
