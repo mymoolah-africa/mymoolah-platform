@@ -725,13 +725,21 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           console.log('✅ MobileMart API confirmed delivery:', JSON.stringify(supplierFulfillmentResult, null, 2));
           
         } catch (mobilemartError) {
-          console.error('❌ MobileMart API fulfillment failed:', {
+          // Log error details in a way that's visible in Cloud Logging
+          const errorEndpoint = isPinned ? `/${type}/pinned` : `/${type}/pinless`;
+          console.error(`❌ MobileMart API fulfillment failed: ${mobilemartError.message}`);
+          console.error(`❌ MobileMart Error Details:`, {
             error: mobilemartError.message,
             stack: mobilemartError.stack,
             beneficiaryId: beneficiary.id,
             productCode,
             type,
-            endpoint: `/v1/${type}/pinless`
+            endpoint: errorEndpoint,
+            ...(mobilemartError.response ? {
+              httpStatus: mobilemartError.response.status,
+              httpStatusText: mobilemartError.response.statusText,
+              responseData: mobilemartError.response.data
+            } : {})
           });
           
           // Rollback transaction if MobileMart API call fails
