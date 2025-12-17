@@ -698,10 +698,11 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           const mobilemartAuth = new MobileMartAuthService();
           
           // Determine if pinned or pinless (default to pinless for airtime/data)
+          // Note: apiUrl already includes /api/v1, so endpoint should be /{type}/pinless not /v1/{type}/pinless
           const isPinned = false; // Airtime/data overlay uses pinless by default
           const endpoint = isPinned 
-            ? `/v1/${type}/pinned`
-            : `/v1/${type}/pinless`;
+            ? `/${type}/pinned`
+            : `/${type}/pinless`;
           
           // Build MobileMart request payload
           const mobilemartRequest = {
