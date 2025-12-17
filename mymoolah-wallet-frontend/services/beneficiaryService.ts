@@ -121,7 +121,27 @@ class BeneficiaryService {
       };
 
       const response = await fetch(url, config);
-      const data = await response.json();
+
+      // Some upstream errors (e.g. Cloud Run 502/504) return HTML or plain text,
+      // not JSON. If we always call response.json() we get a SyntaxError like:
+      // "Unexpected token 'u', \"upstream r\"... is not valid JSON".
+      // Detect content type first and fall back to text so we can surface a
+      // useful error message instead of a parse failure.
+      const contentType = response.headers.get('content-type') || '';
+      let data: any = {};
+
+      if (contentType.includes('application/json')) {
+        try {
+          data = await response.json();
+        } catch {
+          // If JSON parsing fails, keep data as empty object and handle below
+          data = {};
+        }
+      } else {
+        // Non-JSON response (likely an HTML or plain text error page)
+        const text = await response.text().catch(() => '');
+        data = text ? { message: text } : {};
+      }
 
       if (!response.ok) {
         // Handle 401 Unauthorized - token might be expired or missing
