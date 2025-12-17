@@ -25,8 +25,8 @@ class MobileMartAuthService {
         // This endpoint accepts POST requests with client_credentials grant type
         this.tokenUrl = process.env.MOBILEMART_TOKEN_URL || `${this.baseUrl}/connect/token`;
         this.apiVersion = 'v1';
-        // CORRECTED: API path is /v1 not /api/v1 (based on Swagger documentation)
-        this.apiUrl = `${this.baseUrl}/${this.apiVersion}`;
+        // MobileMart Fulcrum API requires /api/v1 prefix (per documentation: /api/v1/{vasType}/...)
+        this.apiUrl = `${this.baseUrl}/api/${this.apiVersion}`;
         
         // Token management
         this.accessToken = null;
