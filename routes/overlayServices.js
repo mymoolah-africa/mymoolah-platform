@@ -704,20 +704,35 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             ? `/${type}/pinned`
             : `/${type}/pinless`;
           
-          // Normalize mobile number to international format for MobileMart API
-          // MobileMart expects international format without + (e.g., 27720213994)
+          // Normalize mobile number for MobileMart API
+          // Based on testing: UAT uses local format (0720213994), Production may also use local format
+          // Try local format first (as per UAT documentation), fallback to international if needed
           const { normalizeToE164 } = require('../utils/msisdn');
           let normalizedMobileNumber;
           try {
-            const e164Number = normalizeToE164(beneficiary.identifier);
-            // Remove + sign for MobileMart API (they expect 27XXXXXXXXX, not +27XXXXXXXXX)
-            normalizedMobileNumber = e164Number.startsWith('+') ? e164Number.slice(1) : e164Number;
+            // Extract digits only
+            const digits = beneficiary.identifier.replace(/\D/g, '');
+            
+            // Check if already in local format (0XXXXXXXXX)
+            if (digits.startsWith('0') && digits.length === 10) {
+              // Use local format (as per UAT documentation - works for UAT, try for Production too)
+              normalizedMobileNumber = digits;
+            } else if (digits.startsWith('27') && digits.length === 11) {
+              // Already in international format without +, use as-is
+              normalizedMobileNumber = digits;
+            } else {
+              // Try to normalize to E.164 and convert to international format
+              const e164Number = normalizeToE164(beneficiary.identifier);
+              // Remove + sign for MobileMart API (they expect 27XXXXXXXXX, not +27XXXXXXXXX)
+              normalizedMobileNumber = e164Number.startsWith('+') ? e164Number.slice(1) : e164Number;
+            }
           } catch (msisdnError) {
             console.error('❌ Failed to normalize mobile number:', msisdnError.message);
             // Fallback: try to convert manually
             const digits = beneficiary.identifier.replace(/\D/g, '');
             if (digits.startsWith('0') && digits.length === 10) {
-              normalizedMobileNumber = `27${digits.slice(1)}`;
+              // Prefer local format (as per UAT documentation)
+              normalizedMobileNumber = digits;
             } else if (digits.startsWith('27') && digits.length === 11) {
               normalizedMobileNumber = digits;
             } else {
