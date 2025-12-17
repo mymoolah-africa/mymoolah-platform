@@ -698,7 +698,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           const mobilemartAuth = new MobileMartAuthService();
           
           // Determine if pinned or pinless (default to pinless for airtime/data)
-          // Note: apiUrl already includes /api/v1, so endpoint should be /{type}/pinless not /v1/{type}/pinless
+          // Note: apiUrl is ${baseUrl}/v1, so endpoint should be /{type}/pinless (final URL: ${baseUrl}/v1/{type}/pinless)
           const isPinned = false; // Airtime/data overlay uses pinless by default
           const endpoint = isPinned 
             ? `/${type}/pinned`
@@ -726,7 +726,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           
         } catch (mobilemartError) {
           // Log error details in a way that's visible in Cloud Logging
-          const errorEndpoint = isPinned ? `/${type}/pinned` : `/${type}/pinless`;
+          // Note: isPinned is defined in the try block, so we reconstruct the endpoint here
+          const errorEndpoint = `/${type}/pinless`; // Default to pinless for airtime/data overlay
           console.error(`❌ MobileMart API fulfillment failed: ${mobilemartError.message}`);
           console.error(`❌ MobileMart Error Details:`, {
             error: mobilemartError.message,
