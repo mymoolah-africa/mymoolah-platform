@@ -939,10 +939,14 @@ class UnifiedBeneficiaryService {
         );
       }
 
-      // Update JSONB vasServices for backward compatibility (airtime/data only)
-      if (normalizedType === 'airtime' || normalizedType === 'data') {
-        await this.addServiceToBeneficiary(beneficiary, normalizedType, normalizedData);
-      }
+      // Previously we also mirrored airtime/data service accounts into the legacy
+      // vasServices JSONB here. In staging this UPDATE has proven to be slow and
+      // to hold row locks, causing long-running transactions when creating
+      // airtime/data beneficiaries. The overlays now rely on the normalized
+      // BeneficiaryServiceAccount + accounts[] mapping instead, so we skip this
+      // JSONB update for airtime/data to avoid 5-minute timeouts.
+      // (Bank/electricity/biller/voucher legacy JSONB mirroring is handled
+      //  elsewhere where it's still needed.)
 
       await tx.commit();
     } catch (err) {
