@@ -809,13 +809,94 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       
       console.log('✅ VasTransaction created successfully:', vasTransaction.id);
       
+      // FULFILL WITH SUPPLIER API (MobileMart/Flash) BEFORE DEBITING WALLET
+      // This ensures the purchase is actually delivered, and we can rollback if it fails
+      let supplierFulfillmentResult = null;
+      
+      if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION === 'true') {
+        try {
+          console.log('📞 Calling MobileMart API to fulfill purchase...');
+          const MobileMartAuthService = require('../services/mobilemartAuthService');
+          const mobilemartAuth = new MobileMartAuthService();
+          
+          // Determine if pinned or pinless (default to pinless for airtime/data)
+          const isPinned = false; // Airtime/data overlay uses pinless by default
+          const endpoint = isPinned 
+            ? `/v1/${type}/pinned`
+            : `/v1/${type}/pinless`;
+          
+          // Build MobileMart request payload
+          const mobilemartRequest = {
+            requestId: idempotencyKey,
+            merchantProductId: productCode,
+            tenderType: 'CreditCard',
+            mobileNumber: beneficiary.identifier,
+            ...(amountInCentsValue && { amount: amountInCentsValue / 100 }) // Convert cents to Rands
+          };
+          
+          console.log('📤 MobileMart request:', { endpoint, payload: mobilemartRequest });
+          
+          // Call MobileMart API - if this fails, we'll rollback the transaction
+          supplierFulfillmentResult = await mobilemartAuth.makeAuthenticatedRequest(
+            'POST',
+            endpoint,
+            mobilemartRequest
+          );
+          
+          console.log('✅ MobileMart API response:', JSON.stringify(supplierFulfillmentResult, null, 2));
+          
+          // Store MobileMart response in transaction metadata
+          await vasTransaction.update({
+            metadata: {
+              ...(vasTransaction.metadata || {}),
+              mobilemartResponse: supplierFulfillmentResult,
+              mobilemartFulfilled: true,
+              mobilemartFulfilledAt: new Date().toISOString()
+            }
+          }, { transaction });
+          
+        } catch (mobilemartError) {
+          console.error('❌ MobileMart API fulfillment failed:', {
+            error: mobilemartError.message,
+            stack: mobilemartError.stack,
+            beneficiaryId: beneficiary.id,
+            productCode,
+            type,
+            endpoint: `/v1/${type}/pinless`
+          });
+          
+          // Rollback transaction if MobileMart API call fails
+          // This prevents debiting the wallet for a purchase that wasn't fulfilled
+          await transaction.rollback();
+          
+          return res.status(500).json({
+            success: false,
+            error: 'MobileMart purchase fulfillment failed',
+            message: mobilemartError.message || 'Failed to fulfill purchase with MobileMart',
+            errorCode: 'MOBILEMART_FULFILLMENT_FAILED',
+            errorId: `MM_ERR_${Date.now()}`
+          });
+        }
+      } else if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION !== 'true') {
+        console.warn('⚠️ MOBILEMART_LIVE_INTEGRATION is not enabled - purchase will be recorded but not fulfilled with MobileMart API');
+        // Store a flag that fulfillment was skipped
+        await vasTransaction.update({
+          metadata: {
+            ...(vasTransaction.metadata || {}),
+            mobilemartFulfilled: false,
+            mobilemartFulfillmentSkipped: true,
+            mobilemartFulfillmentSkippedReason: 'MOBILEMART_LIVE_INTEGRATION not enabled'
+          }
+        }, { transaction });
+      }
+      
       // Update beneficiary lastPaidAt within the same transaction
       await beneficiary.update({
         lastPaidAt: new Date(),
         timesPaid: beneficiary.timesPaid + 1
       }, { transaction });
       
-      // Debit purchaser wallet
+      // Debit purchaser wallet (only after successful MobileMart fulfillment)
       await wallet.debit(normalizedAmount, 'payment', { transaction });
 
       // Create wallet ledger transaction
