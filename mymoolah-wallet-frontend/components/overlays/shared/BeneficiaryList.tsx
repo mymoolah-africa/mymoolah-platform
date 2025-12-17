@@ -458,19 +458,6 @@ export function BeneficiaryList({
                                   : displayAccount.identifier)
                               }
                             </p>
-                            {displayAccount.metadata?.network && (
-                              <Badge 
-                                variant="secondary"
-                                style={{
-                                  fontSize: '10px',
-                                  backgroundColor: '#e2e8f0',
-                                  color: '#6b7280',
-                                  marginTop: '4px'
-                                }}
-                              >
-                                {displayAccount.metadata.network}
-                              </Badge>
-                            )}
                           </>
                         ) : (
                           <p style={{
