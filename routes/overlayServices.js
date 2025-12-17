@@ -687,6 +687,69 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         });
       }
 
+      // CRITICAL: Call supplier API FIRST to confirm delivery BEFORE creating any transaction records
+      // This ensures we only record successful transactions where the product was actually delivered
+      let supplierFulfillmentResult = null;
+      
+      if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION === 'true') {
+        try {
+          console.log('📞 Calling MobileMart API to fulfill purchase (BEFORE creating transaction)...');
+          const MobileMartAuthService = require('../services/mobilemartAuthService');
+          const mobilemartAuth = new MobileMartAuthService();
+          
+          // Determine if pinned or pinless (default to pinless for airtime/data)
+          const isPinned = false; // Airtime/data overlay uses pinless by default
+          const endpoint = isPinned 
+            ? `/v1/${type}/pinned`
+            : `/v1/${type}/pinless`;
+          
+          // Build MobileMart request payload
+          const mobilemartRequest = {
+            requestId: idempotencyKey,
+            merchantProductId: productCode,
+            tenderType: 'CreditCard',
+            mobileNumber: beneficiary.identifier,
+            ...(amountInCentsValue && { amount: amountInCentsValue / 100 }) // Convert cents to Rands
+          };
+          
+          console.log('📤 MobileMart request:', { endpoint, payload: mobilemartRequest });
+          
+          // Call MobileMart API FIRST - if this fails, we don't create any transaction records
+          supplierFulfillmentResult = await mobilemartAuth.makeAuthenticatedRequest(
+            'POST',
+            endpoint,
+            mobilemartRequest
+          );
+          
+          console.log('✅ MobileMart API confirmed delivery:', JSON.stringify(supplierFulfillmentResult, null, 2));
+          
+        } catch (mobilemartError) {
+          console.error('❌ MobileMart API fulfillment failed:', {
+            error: mobilemartError.message,
+            stack: mobilemartError.stack,
+            beneficiaryId: beneficiary.id,
+            productCode,
+            type,
+            endpoint: `/v1/${type}/pinless`
+          });
+          
+          // Rollback transaction if MobileMart API call fails
+          // No transaction records created, wallet not debited
+          await transaction.rollback();
+          
+          return res.status(500).json({
+            success: false,
+            error: 'MobileMart purchase fulfillment failed',
+            message: mobilemartError.message || 'Failed to fulfill purchase with MobileMart',
+            errorCode: 'MOBILEMART_FULFILLMENT_FAILED',
+            errorId: `MM_ERR_${Date.now()}`
+          });
+        }
+      } else if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION !== 'true') {
+        console.warn('⚠️ MOBILEMART_LIVE_INTEGRATION is not enabled - purchase will be recorded but NOT fulfilled with MobileMart API');
+        // Note: We still create the transaction, but mark it as not fulfilled
+      }
+
       // Generate transactionId for VasTransaction
       const vasTransactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
       
@@ -772,6 +835,14 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         walletId: wallet.walletId
       });
       
+      // Create transaction record ONLY AFTER supplier confirmed delivery (or if integration is disabled)
+      // Status is 'completed' only if MobileMart confirmed delivery, otherwise 'pending' if integration disabled
+      const transactionStatus = (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION === 'true' && supplierFulfillmentResult) 
+        ? 'completed' 
+        : (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION !== 'true')
+        ? 'pending' // Integration disabled - marked as pending since not actually fulfilled
+        : 'completed'; // Other suppliers (Flash, etc.)
+      
       const vasTransaction = await VasTransaction.create({
         transactionId: vasTransactionId,
         userId: req.user.id,
@@ -786,13 +857,13 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         fee: feeInCents,
         totalAmount: totalAmountInCents,
         mobileNumber: beneficiary.identifier,
-        status: 'completed',
+        status: transactionStatus,
         reference: idempotencyKey,
         metadata: {
           beneficiaryId,
           type,
           userId: req.user.id,
-          simulated: true,
+          simulated: supplier !== 'MOBILEMART' || process.env.MOBILEMART_LIVE_INTEGRATION !== 'true',
           originalAmount: productAmountInCents ? parseInt(productAmountInCents, 10) / 100 : (normalizedAmount || amountInCentsValue / 100),
           amountCents: amountInCentsValue,
           feeCents: feeInCents,
@@ -803,91 +874,27 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           ...(vasProduct.isVirtual ? {
             productVariantId: vasProduct.id,
             isFromProductVariant: true
+          } : {}),
+          // Store MobileMart response if fulfillment succeeded
+          ...(supplier === 'MOBILEMART' && supplierFulfillmentResult ? {
+            mobilemartResponse: supplierFulfillmentResult,
+            mobilemartFulfilled: true,
+            mobilemartFulfilledAt: new Date().toISOString()
+          } : supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION !== 'true' ? {
+            mobilemartFulfilled: false,
+            mobilemartFulfillmentSkipped: true,
+            mobilemartFulfillmentSkippedReason: 'MOBILEMART_LIVE_INTEGRATION not enabled'
           } : {})
         }
       }, { transaction });
       
-      console.log('✅ VasTransaction created successfully:', vasTransaction.id);
-      
-      // FULFILL WITH SUPPLIER API (MobileMart/Flash) BEFORE DEBITING WALLET
-      // This ensures the purchase is actually delivered, and we can rollback if it fails
-      let supplierFulfillmentResult = null;
-      
-      if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION === 'true') {
-        try {
-          console.log('📞 Calling MobileMart API to fulfill purchase...');
-          const MobileMartAuthService = require('../services/mobilemartAuthService');
-          const mobilemartAuth = new MobileMartAuthService();
-          
-          // Determine if pinned or pinless (default to pinless for airtime/data)
-          const isPinned = false; // Airtime/data overlay uses pinless by default
-          const endpoint = isPinned 
-            ? `/v1/${type}/pinned`
-            : `/v1/${type}/pinless`;
-          
-          // Build MobileMart request payload
-          const mobilemartRequest = {
-            requestId: idempotencyKey,
-            merchantProductId: productCode,
-            tenderType: 'CreditCard',
-            mobileNumber: beneficiary.identifier,
-            ...(amountInCentsValue && { amount: amountInCentsValue / 100 }) // Convert cents to Rands
-          };
-          
-          console.log('📤 MobileMart request:', { endpoint, payload: mobilemartRequest });
-          
-          // Call MobileMart API - if this fails, we'll rollback the transaction
-          supplierFulfillmentResult = await mobilemartAuth.makeAuthenticatedRequest(
-            'POST',
-            endpoint,
-            mobilemartRequest
-          );
-          
-          console.log('✅ MobileMart API response:', JSON.stringify(supplierFulfillmentResult, null, 2));
-          
-          // Store MobileMart response in transaction metadata
-          await vasTransaction.update({
-            metadata: {
-              ...(vasTransaction.metadata || {}),
-              mobilemartResponse: supplierFulfillmentResult,
-              mobilemartFulfilled: true,
-              mobilemartFulfilledAt: new Date().toISOString()
-            }
-          }, { transaction });
-          
-        } catch (mobilemartError) {
-          console.error('❌ MobileMart API fulfillment failed:', {
-            error: mobilemartError.message,
-            stack: mobilemartError.stack,
-            beneficiaryId: beneficiary.id,
-            productCode,
-            type,
-            endpoint: `/v1/${type}/pinless`
-          });
-          
-          // Rollback transaction if MobileMart API call fails
-          // This prevents debiting the wallet for a purchase that wasn't fulfilled
-          await transaction.rollback();
-          
-          return res.status(500).json({
-            success: false,
-            error: 'MobileMart purchase fulfillment failed',
-            message: mobilemartError.message || 'Failed to fulfill purchase with MobileMart',
-            errorCode: 'MOBILEMART_FULFILLMENT_FAILED',
-            errorId: `MM_ERR_${Date.now()}`
-          });
-        }
+      // Only log success if MobileMart confirmed delivery (or integration disabled)
+      if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION === 'true' && supplierFulfillmentResult) {
+        console.log('✅ VasTransaction created successfully - MobileMart confirmed delivery:', vasTransaction.id);
       } else if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION !== 'true') {
-        console.warn('⚠️ MOBILEMART_LIVE_INTEGRATION is not enabled - purchase will be recorded but not fulfilled with MobileMart API');
-        // Store a flag that fulfillment was skipped
-        await vasTransaction.update({
-          metadata: {
-            ...(vasTransaction.metadata || {}),
-            mobilemartFulfilled: false,
-            mobilemartFulfillmentSkipped: true,
-            mobilemartFulfillmentSkippedReason: 'MOBILEMART_LIVE_INTEGRATION not enabled'
-          }
-        }, { transaction });
+        console.log('⚠️ VasTransaction created but NOT fulfilled (MOBILEMART_LIVE_INTEGRATION disabled):', vasTransaction.id);
+      } else {
+        console.log('✅ VasTransaction created successfully:', vasTransaction.id);
       }
       
       // Update beneficiary lastPaidAt within the same transaction
