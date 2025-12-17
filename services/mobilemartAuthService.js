@@ -202,9 +202,11 @@ class MobileMartAuthService {
      * @returns {Promise<Object>} MobileMart API response
      */
     async makeAuthenticatedRequest(method, endpoint, data = null) {
+        // Construct URL outside try block so it's available in catch block for error logging
+        const url = `${this.apiUrl}${endpoint}`;
+        
         try {
             const headers = await this.generateRequestHeaders();
-            const url = `${this.apiUrl}${endpoint}`;
             
             // Debug: Log the exact URL being called
             if (process.env.DEBUG_MOBILEMART === 'true') {
@@ -252,6 +254,12 @@ class MobileMartAuthService {
                 });
             } else {
                 console.error(`❌ MobileMart Auth Service: Error making request to ${endpoint}: ${error.message}`);
+                console.error(`❌ MobileMart Error Details (no response):`, {
+                    message: error.message,
+                    endpoint: endpoint,
+                    fullUrl: url,
+                    stack: error.stack
+                });
             }
             
             // If it's an authentication error, try to refresh token and retry once
