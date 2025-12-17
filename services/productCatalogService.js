@@ -7,48 +7,41 @@ const crypto = require('crypto');
 
 class ProductCatalogService {
   constructor() {
-    // Make Redis optional - gracefully degrade if Redis is unavailable
     this.redis = null;
     this.cacheTTL = 300; // 5 minutes
-    this.searchCacheTTL = 60; // 1 minute for search results
-    
-    // Only initialize Redis if REDIS_URL is explicitly set AND not empty
-    // In Cloud Run, Redis is not available by default, so we skip it
+    this.searchCacheTTL = 60; // 1 minute
+
     const hasRedisUrl = process.env.REDIS_URL && process.env.REDIS_URL.trim() !== '';
     const redisEnabled = process.env.REDIS_ENABLED !== 'false';
-    
+
     if (hasRedisUrl && redisEnabled) {
       try {
         this.redis = new Redis(process.env.REDIS_URL, {
           retryStrategy: (times) => {
-            // Stop retrying after 3 attempts
             if (times > 3) {
               console.warn('⚠️ Redis connection failed after 3 attempts, disabling Redis cache');
               this.redis = null;
-              return null; // Stop retrying
+              return null;
             }
             return Math.min(times * 200, 2000);
           },
           maxRetriesPerRequest: 1,
-          lazyConnect: true, // Don't connect immediately
-          enableOfflineQueue: false, // Don't queue commands when offline
+          lazyConnect: true,
+          enableOfflineQueue: false,
           connectTimeout: 5000,
           commandTimeout: 5000
         });
-        
-        // Handle Redis errors gracefully
+
+        // Handle Redis errors gracefully with logging
         this.redis.on('error', (err) => {
           console.warn('⚠️ Redis error:', err.message);
-          // Don't crash - just disable Redis
           this.redis = null;
         });
-        
+
         this.redis.on('connect', () => {
           console.log('✅ Redis connected for ProductCatalogService');
         });
-        
-        // DON'T call connect() here - let it connect lazily when first used
-        // This prevents connection attempts in Cloud Run where Redis is not available
+
         console.log('✅ Redis client initialized for ProductCatalogService (lazy connect enabled)');
       } catch (error) {
         console.warn('⚠️ Failed to initialize Redis, continuing without cache:', error.message);
@@ -67,117 +60,21 @@ class ProductCatalogService {
    */
   async getFeaturedProducts(limit = 12, type = null) {
     const cacheKey = `featured_products:${limit}:${type || 'all'}`;
-    
-    try {
-      // Try cache first (if Redis is available)
-      if (this.redis) {
-        try {
-          const cached = await this.redis.get(cacheKey);
-          if (cached) {
-            return JSON.parse(cached);
-          }
-        } catch (redisError) {
-          // Redis error - continue without cache
-          console.warn('⚠️ Redis cache read error, continuing without cache:', redisError.message);
-        }
-      }
 
-      // Build query
-      const where = {
-        isFeatured: true,
-        status: 'active'
-      };
-
-      if (type) {
-        where.type = type;
-      }
+    return this._getOrSetCache(cacheKey, this.cacheTTL, async () => {
+      const where = { isFeatured: true, status: 'active' };
+      if (type) where.type = type;
 
       const products = await Product.findAll({
         where,
-        include: [
-          {
-            model: ProductBrand,
-            as: 'brand',
-            where: { isActive: true },
-            required: true
-          },
-          {
-            model: ProductVariant,
-            as: 'variants',
-            where: { status: 'active' },
-            required: true,
-            include: [
-              {
-                model: Supplier,
-                as: 'supplier',
-                where: { isActive: true },
-                required: true,
-                attributes: ['id', 'name', 'code']
-              }
-            ],
-            order: [['isPreferred', 'DESC'], ['sortOrder', 'ASC']],
-            limit: 1 // Get the best variant for each product
-          }
-        ],
-        order: [
-          ['sortOrder', 'ASC'],
-          ['name', 'ASC']
-        ],
+        include: this._getCommonIncludes(),
+        order: [['sortOrder', 'ASC'], ['name', 'ASC']],
         limit,
-        attributes: [
-          'id', 'name', 'type', 'isFeatured', 'sortOrder', 'metadata',
-          'description', 'category', 'tags'
-        ]
+        attributes: this._getProductAttributes()
       });
 
-      // Transform for frontend
-      const transformed = products.map(product => {
-        const bestVariant = product.variants[0]; // Get the best variant
-        const denominations = bestVariant ? bestVariant.denominations : [];
-        
-        return {
-          id: product.id,
-          name: product.name,
-          type: product.type,
-          brand: {
-            id: product.brand.id,
-            name: product.brand.name,
-            logoUrl: product.brand.logoUrl,
-            category: product.brand.category
-          },
-          supplier: bestVariant ? {
-            id: bestVariant.supplier.id,
-            name: bestVariant.supplier.name,
-            code: bestVariant.supplier.code
-          } : null,
-          denominations: denominations,
-          constraints: bestVariant ? bestVariant.constraints : {},
-          metadata: product.metadata,
-          description: product.description,
-          category: product.category,
-          tags: product.tags,
-          priceRange: denominations.length > 0 ? {
-            min: Math.min(...denominations),
-            max: Math.max(...denominations)
-          } : { min: 0, max: 0 }
-        };
-      });
-
-      // Cache result (if Redis is available)
-      if (this.redis) {
-        try {
-          await this.redis.setex(cacheKey, this.cacheTTL, JSON.stringify(transformed));
-        } catch (redisError) {
-          // Redis error - continue without caching
-          console.warn('⚠️ Redis cache write error:', redisError.message);
-        }
-      }
-
-      return transformed;
-    } catch (error) {
-      console.error('Error fetching featured products:', error);
-      throw new Error('Failed to fetch featured products');
-    }
+      return products.map(p => this._transformProduct(p));
+    });
   }
 
   /**
@@ -186,160 +83,43 @@ class ProductCatalogService {
    * @returns {Promise<Object>} Search results with pagination
    */
   async searchProducts(params = {}) {
-    const {
-      query = '',
-      type = null,
-      category = null,
-      supplier = null,
-      minPrice = null,
-      maxPrice = null,
-      page = 1,
-      limit = 20
-    } = params;
+    const { query = '', type = null, category = null, page = 1, limit = 20 } = params;
+    const cacheKey = this._generateSearchCacheKey(params);
+    const ttl = query.trim() ? this.searchCacheTTL : this.cacheTTL;
 
-    const cacheKey = this.generateSearchCacheKey(params);
-    
-    try {
-      // Try cache first for non-empty queries (if Redis is available)
-      if (query.trim() && this.redis) {
-        try {
-          const cached = await this.redis.get(cacheKey);
-          if (cached) {
-            return JSON.parse(cached);
-          }
-        } catch (redisError) {
-          // Redis error - continue without cache
-          console.warn('⚠️ Redis cache read error, continuing without cache:', redisError.message);
-        }
-      }
+    // Only cache if query is provided (consistent with original logic)
+    const shouldUseCache = !!query.trim();
 
-      // Build where clause
-      const where = {
-        status: 'active'
-      };
+    const fetchLogic = async () => {
+      const where = { status: 'active' };
+      if (type) where.type = type;
 
-      if (type) {
-        where.type = type;
-      }
+      const include = this._getCommonIncludes();
+      if (category) include[0].where.category = category;
 
-      // Note: Supplier filtering is now handled through ProductVariant include
-      // The supplier filter will be applied in the include clause if needed
-
-      // Note: Price range filtering is now handled through ProductVariant
-      // The price filter will be applied in the include clause if needed
-
-      // Build include clause
-      const include = [
-        {
-          model: ProductBrand,
-          as: 'brand',
-          where: { isActive: true },
-          required: true
-        },
-        {
-          model: ProductVariant,
-          as: 'variants',
-          where: { status: 'active' },
-          required: true,
-          include: [
-            {
-              model: Supplier,
-              as: 'supplier',
-              where: { isActive: true },
-              required: true,
-              attributes: ['id', 'name', 'code']
-            }
-          ],
-          order: [['isPreferred', 'DESC'], ['sortOrder', 'ASC']],
-          limit: 1 // Get the best variant for each product
-        }
-      ];
-
-      // Add category filter to brand include
-      if (category) {
-        include[0].where.category = category;
-      }
-
-      // Full-text search
-      let searchWhere = null;
+      let searchWhere = {};
       if (query.trim()) {
         searchWhere = {
           [Op.or]: [
-            {
-              name: {
-                [Op.iLike]: `%${query}%`
-              }
-            },
-            {
-              '$brand.name$': {
-                [Op.iLike]: `%${query}%`
-              }
-            },
-            {
-              '$brand.tags$': {
-                [Op.overlap]: [query]
-              }
-            }
+            { name: { [Op.iLike]: `%${query}%` } },
+            { '$brand.name$': { [Op.iLike]: `%${query}%` } },
+            { '$brand.tags$': { [Op.overlap]: [query] } }
           ]
         };
       }
 
-      // Execute query with pagination
       const offset = (page - 1) * limit;
       const { count, rows } = await Product.findAndCountAll({
-        where: {
-          ...where,
-          ...searchWhere
-        },
+        where: { ...where, ...searchWhere },
         include,
-        order: [
-          ['isFeatured', 'DESC'],
-          ['sortOrder', 'ASC'],
-          ['name', 'ASC']
-        ],
+        order: [['isFeatured', 'DESC'], ['sortOrder', 'ASC'], ['name', 'ASC']],
         limit,
         offset,
-        attributes: [
-          'id', 'name', 'type', 'isFeatured', 'sortOrder', 'metadata',
-          'description', 'category', 'tags'
-        ]
+        attributes: this._getProductAttributes()
       });
 
-      // Transform results
-      const products = rows.map(product => {
-        const bestVariant = product.variants[0]; // Get the best variant
-        const denominations = bestVariant ? bestVariant.denominations : [];
-        
-        return {
-          id: product.id,
-          name: product.name,
-          type: product.type,
-          brand: {
-            id: product.brand.id,
-            name: product.brand.name,
-            logoUrl: product.brand.logoUrl,
-            category: product.brand.category
-          },
-          supplier: bestVariant ? {
-            id: bestVariant.supplier.id,
-            name: bestVariant.supplier.name,
-            code: bestVariant.supplier.code
-          } : null,
-          denominations: denominations,
-          constraints: bestVariant ? bestVariant.constraints : {},
-          metadata: product.metadata,
-          description: product.description,
-          category: product.category,
-          tags: product.tags,
-          priceRange: denominations.length > 0 ? {
-            min: Math.min(...denominations),
-            max: Math.max(...denominations)
-          } : { min: 0, max: 0 }
-        };
-      });
-
-      const result = {
-        products,
+      return {
+        products: rows.map(p => this._transformProduct(p)),
         pagination: {
           page,
           limit,
@@ -349,22 +129,11 @@ class ProductCatalogService {
           hasPrev: page > 1
         }
       };
+    };
 
-      // Cache result for non-empty queries (if Redis is available)
-      if (query.trim() && this.redis) {
-        try {
-          await this.redis.setex(cacheKey, this.searchCacheTTL, JSON.stringify(result));
-        } catch (redisError) {
-          // Redis error - continue without caching
-          console.warn('⚠️ Redis cache write error:', redisError.message);
-        }
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Error searching products:', error);
-      throw new Error('Failed to search products');
-    }
+    return shouldUseCache 
+      ? this._getOrSetCache(cacheKey, ttl, fetchLogic) 
+      : fetchLogic();
   }
 
   /**
@@ -374,109 +143,18 @@ class ProductCatalogService {
    */
   async getProductById(productId) {
     const cacheKey = `product:${productId}`;
-    
-    try {
-      // Try cache first (if Redis is available)
-      if (this.redis) {
-        try {
-          const cached = await this.redis.get(cacheKey);
-          if (cached) {
-            return JSON.parse(cached);
-          }
-        } catch (redisError) {
-          // Redis error - continue without cache
-          console.warn('⚠️ Redis cache read error, continuing without cache:', redisError.message);
-        }
-      }
 
+    return this._getOrSetCache(cacheKey, this.cacheTTL, async () => {
       const product = await Product.findOne({
-        where: {
-          id: productId,
-          status: 'active'
-        },
-        include: [
-          {
-            model: ProductBrand,
-            as: 'brand',
-            where: { isActive: true },
-            required: true
-          },
-          {
-            model: ProductVariant,
-            as: 'variants',
-            where: { status: 'active' },
-            required: true,
-            include: [
-              {
-                model: Supplier,
-                as: 'supplier',
-                where: { isActive: true },
-                required: true,
-                attributes: ['id', 'name', 'code']
-              }
-            ],
-            order: [['isPreferred', 'DESC'], ['sortOrder', 'ASC']],
-            limit: 1 // Get the best variant for each product
-          }
-        ],
-        attributes: [
-          'id', 'name', 'type', 'isFeatured', 'sortOrder', 'metadata',
-          'description', 'category', 'tags'
-        ]
+        where: { id: productId, status: 'active' },
+        include: this._getCommonIncludes(),
+        attributes: this._getProductAttributes()
       });
 
-      if (!product) {
-        throw new Error('Product not found');
-      }
+      if (!product) throw new Error('Product not found');
 
-      const bestVariant = product.variants[0]; // Get the best variant
-      const denominations = bestVariant ? bestVariant.denominations : [];
-      
-      const result = {
-        id: product.id,
-        name: product.name,
-        type: product.type,
-        brand: {
-          id: product.brand.id,
-          name: product.brand.name,
-          logoUrl: product.brand.logoUrl,
-          category: product.brand.category,
-          tags: product.brand.tags
-        },
-        supplier: bestVariant ? {
-          id: bestVariant.supplier.id,
-          name: bestVariant.supplier.name,
-          code: bestVariant.supplier.code
-        } : null,
-        denominations: denominations,
-        constraints: bestVariant ? bestVariant.constraints : {},
-        metadata: product.metadata,
-        description: product.description,
-        category: product.category,
-        tags: product.tags,
-        priceRange: denominations.length > 0 ? {
-          min: Math.min(...denominations),
-          max: Math.max(...denominations)
-        } : { min: 0, max: 0 },
-        createdAt: product.createdAt,
-        updatedAt: product.updatedAt
-      };
-
-      // Cache result (if Redis is available)
-      if (this.redis) {
-        try {
-          await this.redis.setex(cacheKey, this.cacheTTL, JSON.stringify(result));
-        } catch (redisError) {
-          // Redis error - continue without caching
-          console.warn('⚠️ Redis cache write error:', redisError.message);
-        }
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Error fetching product:', error);
-      throw error;
-    }
+      return this._transformProduct(product, true);
+    });
   }
 
   /**
@@ -484,47 +162,14 @@ class ProductCatalogService {
    * @returns {Promise<Array>} Available categories
    */
   async getCategories() {
-    const cacheKey = 'product_categories';
-    
-    try {
-      // Try cache first (if Redis is available)
-      if (this.redis) {
-        try {
-          const cached = await this.redis.get(cacheKey);
-          if (cached) {
-            return JSON.parse(cached);
-          }
-        } catch (redisError) {
-          // Redis error - continue without cache
-          console.warn('⚠️ Redis cache read error, continuing without cache:', redisError.message);
-        }
-      }
-
+    return this._getOrSetCache('product_categories', this.cacheTTL * 2, async () => {
       const categories = await ProductBrand.findAll({
         where: { isActive: true },
-        attributes: [
-          [sequelize.fn('DISTINCT', sequelize.col('category')), 'category']
-        ],
+        attributes: [[sequelize.fn('DISTINCT', sequelize.col('category')), 'category']],
         raw: true
       });
-
-      const result = categories.map(cat => cat.category).sort();
-
-      // Cache result (if Redis is available)
-      if (this.redis) {
-        try {
-          await this.redis.setex(cacheKey, this.cacheTTL * 2, JSON.stringify(result));
-        } catch (redisError) {
-          // Redis error - continue without caching
-          console.warn('⚠️ Redis cache write error:', redisError.message);
-        }
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      throw new Error('Failed to fetch categories');
-    }
+      return categories.map(cat => cat.category).sort();
+    });
   }
 
   /**
@@ -532,47 +177,14 @@ class ProductCatalogService {
    * @returns {Promise<Array>} Available product types
    */
   async getProductTypes() {
-    const cacheKey = 'product_types';
-    
-    try {
-      // Try cache first (if Redis is available)
-      if (this.redis) {
-        try {
-          const cached = await this.redis.get(cacheKey);
-          if (cached) {
-            return JSON.parse(cached);
-          }
-        } catch (redisError) {
-          // Redis error - continue without cache
-          console.warn('⚠️ Redis cache read error, continuing without cache:', redisError.message);
-        }
-      }
-
+    return this._getOrSetCache('product_types', this.cacheTTL * 2, async () => {
       const types = await Product.findAll({
         where: { status: 'active' },
-        attributes: [
-          [sequelize.fn('DISTINCT', sequelize.col('type')), 'type']
-        ],
+        attributes: [[sequelize.fn('DISTINCT', sequelize.col('type')), 'type']],
         raw: true
       });
-
-      const result = types.map(t => t.type).sort();
-
-      // Cache result (if Redis is available)
-      if (this.redis) {
-        try {
-          await this.redis.setex(cacheKey, this.cacheTTL * 2, JSON.stringify(result));
-        } catch (redisError) {
-          // Redis error - continue without caching
-          console.warn('⚠️ Redis cache write error:', redisError.message);
-        }
-      }
-
-      return result;
-    } catch (error) {
-      console.error('Error fetching product types:', error);
-      throw new Error('Failed to fetch product types');
-    }
+      return types.map(t => t.type).sort();
+    });
   }
 
   /**
@@ -580,32 +192,16 @@ class ProductCatalogService {
    * @param {number} productId - Product ID
    */
   async invalidateProductCache(productId) {
-    if (!this.redis) {
-      return; // Redis not available, nothing to invalidate
-    }
-    
+    if (!this.redis) return;
     try {
-      await this.redis.del(`product:${productId}`);
-      // Note: Redis DEL doesn't support wildcards, so we skip the wildcard deletion
-      // In production, you'd use SCAN + DEL for pattern matching
-      await this.redis.del('product_categories');
-      await this.redis.del('product_types');
+      await Promise.all([
+        this.redis.del(`product:${productId}`),
+        this.redis.del('product_categories'),
+        this.redis.del('product_types')
+      ]);
     } catch (error) {
-      // Redis error - not critical, just log
       console.warn('⚠️ Error invalidating product cache:', error.message);
     }
-  }
-
-  /**
-   * Generate cache key for search results
-   * @param {Object} params - Search parameters
-   * @returns {string} Cache key
-   */
-  generateSearchCacheKey(params) {
-    const hash = crypto.createHash('md5')
-      .update(JSON.stringify(params))
-      .digest('hex');
-    return `search:${hash}`;
   }
 
   /**
@@ -614,20 +210,18 @@ class ProductCatalogService {
    */
   async healthCheck() {
     try {
-      // Test database connection
       await Product.count();
-      
-      // Test Redis connection (if available)
       let cacheStatus = 'not configured';
+      
       if (this.redis) {
         try {
           await this.redis.ping();
           cacheStatus = 'connected';
-        } catch (redisError) {
+        } catch (e) {
           cacheStatus = 'error';
         }
       }
-      
+
       return {
         status: 'healthy',
         database: 'connected',
@@ -641,6 +235,139 @@ class ProductCatalogService {
         timestamp: new Date().toISOString()
       };
     }
+  }
+
+  // ==========================================
+  // Private Helper Methods
+  // ==========================================
+
+  /**
+   * Generic cache wrapper to reduce duplication
+   * @private
+   */
+  async _getOrSetCache(key, ttl, fetchFunction) {
+    if (this.redis) {
+      try {
+        const cached = await this.redis.get(key);
+        if (cached) return JSON.parse(cached);
+      } catch (e) {
+        // Cache read failure - not critical, continue without cache
+        console.warn('⚠️ Redis cache read error:', e.message);
+      }
+    }
+
+    try {
+      const result = await fetchFunction();
+      
+      if (this.redis && result) {
+        try {
+          await this.redis.setex(key, ttl, JSON.stringify(result));
+        } catch (e) {
+          // Cache write failure - not critical, continue
+          console.warn('⚠️ Redis cache write error:', e.message);
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      // Only log critical application errors
+      console.error(`Error in ProductCatalogService [${key}]:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate cache key for search results
+   * @private
+   */
+  _generateSearchCacheKey(params) {
+    const hash = crypto.createHash('md5').update(JSON.stringify(params)).digest('hex');
+    return `search:${hash}`;
+  }
+
+  /**
+   * Get common includes for product queries
+   * @private
+   */
+  _getCommonIncludes() {
+    return [
+      {
+        model: ProductBrand,
+        as: 'brand',
+        where: { isActive: true },
+        required: true
+      },
+      {
+        model: ProductVariant,
+        as: 'variants',
+        where: { status: 'active' },
+        required: true,
+        include: [{
+          model: Supplier,
+          as: 'supplier',
+          where: { isActive: true },
+          required: true,
+          attributes: ['id', 'name', 'code']
+        }],
+        order: [['isPreferred', 'DESC'], ['sortOrder', 'ASC']],
+        limit: 1
+      }
+    ];
+  }
+
+  /**
+   * Get product attributes for queries
+   * @private
+   */
+  _getProductAttributes() {
+    return [
+      'id', 'name', 'type', 'isFeatured', 'sortOrder', 'metadata',
+      'description', 'category', 'tags', 'createdAt', 'updatedAt'
+    ];
+  }
+
+  /**
+   * Transform product for frontend consumption
+   * @private
+   */
+  _transformProduct(product, includeTimestamps = false) {
+    const bestVariant = product.variants?.[0];
+    const denominations = bestVariant?.denominations || [];
+
+    const result = {
+      id: product.id,
+      name: product.name,
+      type: product.type,
+      brand: {
+        id: product.brand.id,
+        name: product.brand.name,
+        logoUrl: product.brand.logoUrl,
+        category: product.brand.category,
+        tags: product.brand.tags
+      },
+      supplier: bestVariant ? {
+        id: bestVariant.supplier.id,
+        name: bestVariant.supplier.name,
+        code: bestVariant.supplier.code
+      } : null,
+      denominations: denominations,
+      constraints: bestVariant?.constraints || {},
+      metadata: product.metadata,
+      description: product.description,
+      category: product.category,
+      tags: product.tags,
+      priceRange: denominations.length > 0 ? {
+        min: Math.min(...denominations),
+        max: Math.max(...denominations)
+      } : { min: 0, max: 0 }
+    };
+
+    if (includeTimestamps) {
+      result.createdAt = product.createdAt;
+      result.updatedAt = product.updatedAt;
+    }
+
+    return result;
   }
 }
 
