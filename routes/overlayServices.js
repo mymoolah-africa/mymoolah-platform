@@ -704,14 +704,41 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             ? `/${type}/pinned`
             : `/${type}/pinless`;
           
+          // Normalize mobile number to international format for MobileMart API
+          // MobileMart expects international format without + (e.g., 27720213994)
+          const { normalizeToE164 } = require('../utils/msisdn');
+          let normalizedMobileNumber;
+          try {
+            const e164Number = normalizeToE164(beneficiary.identifier);
+            // Remove + sign for MobileMart API (they expect 27XXXXXXXXX, not +27XXXXXXXXX)
+            normalizedMobileNumber = e164Number.startsWith('+') ? e164Number.slice(1) : e164Number;
+          } catch (msisdnError) {
+            console.error('❌ Failed to normalize mobile number:', msisdnError.message);
+            // Fallback: try to convert manually
+            const digits = beneficiary.identifier.replace(/\D/g, '');
+            if (digits.startsWith('0') && digits.length === 10) {
+              normalizedMobileNumber = `27${digits.slice(1)}`;
+            } else if (digits.startsWith('27') && digits.length === 11) {
+              normalizedMobileNumber = digits;
+            } else {
+              // Use as-is if we can't normalize
+              normalizedMobileNumber = beneficiary.identifier;
+            }
+          }
+          
           // Build MobileMart request payload
           const mobilemartRequest = {
             requestId: idempotencyKey,
             merchantProductId: productCode,
             tenderType: 'CreditCard',
-            mobileNumber: beneficiary.identifier,
+            mobileNumber: normalizedMobileNumber,
             ...(amountInCentsValue && { amount: amountInCentsValue / 100 }) // Convert cents to Rands
           };
+          
+          console.log('📱 Mobile number normalization:', {
+            original: beneficiary.identifier,
+            normalized: normalizedMobileNumber
+          });
           
           console.log('📤 MobileMart request:', { endpoint, payload: mobilemartRequest });
           
