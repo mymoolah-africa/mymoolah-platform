@@ -504,7 +504,19 @@ VOUCHER TYPES:
 TRANSACTION DATA:
 - When showing transactions, use the exact data provided
 - Format: Transaction ID, Type, Amount, Description, Status, Date
-- If user asks for "last 2", show exactly 2 from the data provided`
+- If user asks for "last 2", show exactly 2 from the data provided
+- If user asks about fees for specific transactions, calculate and explain fees based on:
+  * Transaction type (payment, send, etc.)
+  * User's tier (Bronze, Silver, Gold, Platinum)
+  * Transaction amount
+- Show actual fee amounts from transaction data if available
+
+VOUCHER STATUS:
+- "expired" = voucher passed expiration date
+- "cancelled" = voucher was cancelled (different from expired)
+- "active" = voucher is usable
+- "redeemed" = voucher was used
+- If user says "expired" but data shows "cancelled", explain the difference clearly`
           },
           {
             role: "user",
@@ -883,17 +895,17 @@ CRITICAL: You classify ALL queries - platform-related OR unrelated.
 
 UNDERSTAND CONTEXT (not keywords):
 - "voucher balance" / "my vouchers" / "how many vouchers" = VOUCHER_BALANCE (requiresDirectDB: true, requiresAI: false)
-- "when does voucher expire" = VOUCHER_BALANCE (requiresDirectDB: true, requiresAI: true)
+- "when does voucher expire" / "voucher expired" / "voucher refund" = VOUCHER_BALANCE (requiresDirectDB: true, requiresAI: true)
 - "wallet balance" / "my balance" = WALLET_BALANCE (requiresDirectDB: true, requiresAI: false)
-- "show transactions" = TRANSACTION_HISTORY (requiresDirectDB: true, requiresAI: false)
+- "show transactions" / "my transactions" / "payments I made" / "fees for my transactions" / "break down fees" = TRANSACTION_HISTORY (requiresDirectDB: true, requiresAI: true for formatting/explanation)
 - "how do I pay" / "how to buy" = TECHNICAL_SUPPORT (requiresAI: true)
 - "where is my payment" = PAYMENT_STATUS (requiresDirectDB: true, requiresAI: true)
 - Unrelated questions (weather, general knowledge, etc.) = GENERAL (requiresAI: true)
 
 Categories:
 - WALLET_BALANCE: Money balance queries (requiresDirectDB: true, requiresAI: false)
-- VOUCHER_BALANCE: Voucher queries (requiresDirectDB: true, requiresAI: true if specific details needed)
-- TRANSACTION_HISTORY: Transaction list queries (requiresDirectDB: true, requiresAI: false)
+- VOUCHER_BALANCE: Voucher queries (requiresDirectDB: true, requiresAI: true if specific details/status needed)
+- TRANSACTION_HISTORY: Transaction queries - list OR fee breakdown (requiresDirectDB: true, requiresAI: true if asking for fee breakdown/explanation)
 - KYC_STATUS: Verification status (requiresDirectDB: true, requiresAI: false)
 - PAYMENT_STATUS: Payment tracking (requiresDirectDB: true, requiresAI: true)
 - TECHNICAL_SUPPORT: How-to questions, instructions (requiresAI: true)
@@ -911,9 +923,12 @@ Return JSON:
 
 Rules:
 - Platform data queries → requiresDirectDB: true
+- Queries asking about "my transactions" / "payments I made" / "fees" → TRANSACTION_HISTORY, requiresDirectDB: true, requiresAI: true (to format/explain)
 - Platform how-to questions → requiresAI: true
 - Unrelated questions → GENERAL, requiresAI: true
-- Always set requiresKnowledgeBase: true (check KB first)`
+- Always set requiresKnowledgeBase: true (check KB first)
+
+CRITICAL: If query mentions "I made payments" / "my transactions" / "fees I paid" → MUST classify as TRANSACTION_HISTORY with requiresDirectDB: true`
           },
           {
             role: "user",
