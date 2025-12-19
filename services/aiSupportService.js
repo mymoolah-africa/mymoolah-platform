@@ -23,7 +23,7 @@ class BankingGradeAISupportService {
     this.model =
       process.env.SUPPORT_AI_MODEL && process.env.SUPPORT_AI_MODEL.trim().length > 0
         ? process.env.SUPPORT_AI_MODEL.trim()
-        : 'gpt-5';
+        : 'gpt-4o';
 
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,

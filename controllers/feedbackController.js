@@ -66,7 +66,7 @@ class FeedbackController {
           businessImpact: aiAnalysis.businessImpact
         },
         confidence: aiAnalysis.sentimentConfidence,
-        model: 'gpt-5'
+        model: 'gpt-4o'
       });
 
       // Update feedback with AI analysis

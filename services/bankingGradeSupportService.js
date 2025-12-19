@@ -82,7 +82,7 @@ class BankingGradeSupportService {
     // Normalize model name to lowercase (OpenAI expects lowercase)
     const rawModel = process.env.SUPPORT_AI_MODEL && process.env.SUPPORT_AI_MODEL.trim().length > 0
       ? process.env.SUPPORT_AI_MODEL.trim()
-      : 'gpt-5';
+      : 'gpt-4o';
     this.model = rawModel.toLowerCase();
 
     // 🚀 Initialize Core Services (sync for now)

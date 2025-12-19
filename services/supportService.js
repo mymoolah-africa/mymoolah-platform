@@ -17,11 +17,11 @@ class SupportService {
     this.bankingService = new BankingGradeSupportService();
     this.aiService = new BankingGradeAISupportService();
 
-    // Allow model override, default to gpt-5 as per platform standard
+    // Allow model override, default to gpt-4o as per platform standard
     this.model =
       process.env.SUPPORT_AI_MODEL && process.env.SUPPORT_AI_MODEL.trim().length > 0
         ? process.env.SUPPORT_AI_MODEL.trim()
-        : 'gpt-5';
+        : 'gpt-4o';
   }
 
   /**
@@ -29,7 +29,7 @@ class SupportService {
    *
    * - Enforces banking-grade rate limiting
    * - Hits knowledge base first (zero AI cost)
-   * - Falls back to AI support service (pattern matching → GPT-5)
+   * - Falls back to AI support service (pattern matching → GPT-4o)
    * - Wraps response in banking-grade ISO20022 / Mojaloop-compatible envelope
    */
   async processSupportQuery(message, userId, language = 'en', context = {}) {
@@ -54,7 +54,7 @@ class SupportService {
         }
       }
 
-      // 🤖 2) AI support service (pattern matching + GPT-5)
+      // 🤖 2) AI support service (pattern matching + GPT-4o)
       // Pass userId into context so aiSupportService simple handlers can hit DB correctly
       const enrichedContext = {
         ...(context || {}),

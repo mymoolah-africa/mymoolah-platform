@@ -16,7 +16,7 @@ class FeedbackService {
   async analyzeFeedback(feedback) {
     try {
       const analysis = await this.openai.chat.completions.create({
-        model: 'gpt-5',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -80,7 +80,7 @@ class FeedbackService {
       const contentPrompt = this.getContentPrompt(contentType, feedback, analysis);
       
       const generation = await this.openai.chat.completions.create({
-        model: 'gpt-5',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -142,7 +142,7 @@ class FeedbackService {
       }`;
 
       const generation = await this.openai.chat.completions.create({
-        model: 'gpt-5',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
@@ -185,7 +185,7 @@ class FeedbackService {
       Make it engaging and include relevant hashtags for the South African fintech market.`;
 
       const generation = await this.openai.chat.completions.create({
-        model: 'gpt-5',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
