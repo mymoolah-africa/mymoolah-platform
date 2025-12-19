@@ -498,12 +498,13 @@ class BankingGradeSupportService {
     const lowerMessage = message.toLowerCase().trim();
     
     // 🎫 Voucher Balance - Check FIRST (before wallet balance to avoid conflicts)
-    // Handle both "voucher" and "vouchers" (plural)
-    if (
-      lowerMessage.includes('voucher') && lowerMessage.includes('balance') ||
-      (lowerMessage.includes('what') && lowerMessage.includes('voucher') && lowerMessage.includes('balance')) ||
-      (lowerMessage.includes('my voucher') && lowerMessage.includes('balance'))
-    ) {
+    // Award-winning: Very permissive patterns to catch all variations
+    // Handle: "voucher balance", "vouchers balance", "my voucher balance", etc.
+    const hasVoucher = lowerMessage.includes('voucher');
+    const hasBalance = lowerMessage.includes('balance');
+    const hasHow = lowerMessage.includes('how');
+    
+    if (hasVoucher && hasBalance && !hasHow) {
       return { 
         category: 'VOUCHER_BALANCE', 
         confidence: 0.98, 
@@ -514,33 +515,19 @@ class BankingGradeSupportService {
       };
     }
     
-    // 💰 Wallet Balance - Truly obvious queries only
-    // Must check AFTER voucher to avoid conflicts
-    if (
-      lowerMessage === 'balance' ||
-      lowerMessage === 'my balance' ||
-      lowerMessage === 'wallet balance' ||
-      lowerMessage.includes('wallet balance') ||
-      (lowerMessage.includes('what') && lowerMessage.includes('balance') && !lowerMessage.includes('how')) ||
-      (lowerMessage.includes('my balance') && !lowerMessage.includes('voucher'))
-    ) {
-      return { 
-        category: 'WALLET_BALANCE', 
-        confidence: 0.98, 
-        requiresDirectDB: true,
-        requiresKnowledgeBase: false,
-        requiresAI: false,
-        reasoning: 'Obvious wallet balance query'
-      };
-    }
+    // 📜 Transaction History - Check BEFORE wallet balance (common query)
+    // Award-winning: Very permissive patterns to catch all variations
+    // Handle: "transactions", "transaction history", "show transactions", "my transactions", etc.
+    const hasTransaction = lowerMessage.includes('transaction');
+    const hasHistory = lowerMessage.includes('history');
+    const hasRecent = lowerMessage.includes('recent');
+    const hasShow = lowerMessage.includes('show');
     
-    // 📜 Transaction History - Truly obvious queries only
     if (
+      (hasTransaction && (hasHistory || hasRecent || hasShow)) ||
+      (hasTransaction && !hasHow && !lowerMessage.includes('how to')) ||
       lowerMessage === 'transactions' ||
-      lowerMessage === 'transaction history' ||
-      lowerMessage.includes('transaction history') ||
-      (lowerMessage.includes('show') && lowerMessage.includes('transaction') && !lowerMessage.includes('how')) ||
-      (lowerMessage.includes('my transaction') && !lowerMessage.includes('how'))
+      lowerMessage.startsWith('show') && hasTransaction
     ) {
       return { 
         category: 'TRANSACTION_HISTORY', 
@@ -549,6 +536,26 @@ class BankingGradeSupportService {
         requiresKnowledgeBase: false,
         requiresAI: false,
         reasoning: 'Obvious transaction history query'
+      };
+    }
+    
+    // 💰 Wallet Balance - Check AFTER voucher and transactions to avoid conflicts
+    // Award-winning: Very permissive patterns to catch all variations
+    // Handle: "balance", "wallet balance", "my balance", "what is my balance", etc.
+    if (
+      (hasBalance && !hasVoucher && !hasHow) ||
+      lowerMessage === 'balance' ||
+      lowerMessage === 'my balance' ||
+      lowerMessage === 'wallet balance' ||
+      lowerMessage.includes('wallet balance')
+    ) {
+      return { 
+        category: 'WALLET_BALANCE', 
+        confidence: 0.98, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Obvious wallet balance query'
       };
     }
     
