@@ -376,7 +376,12 @@ class BankingGradeSupportService {
       
       // 🤖 STEP 6: AI-Generated Response (with full context)
       // AI generates response with codebase sweep context for accuracy
-      const response = await this.executeQuery(intent, message, userId, language, context);
+      let response = await this.executeQuery(intent, message, userId, language, context);
+      
+      // 🎯 Award-Winning: If response needs AI formatting (e.g., specific voucher details), format it dynamically
+      if (response._aiFormat && intent.requiresAI) {
+        response = await this.formatResponseWithAI(response, message, language, userId);
+      }
       
       // 🎓 Auto-Learning: Store AI answers in knowledge base
       // Only store if this was an AI-generated answer (not from direct DB or KB)
@@ -497,13 +502,16 @@ class BankingGradeSupportService {
   detectObviousQuery(message) {
     const lowerMessage = message.toLowerCase().trim();
     
-    // 🎫 Voucher Balance - Check FIRST (before wallet balance to avoid conflicts)
+    // 🎫 Voucher Queries - Check FIRST (before wallet balance to avoid conflicts)
     // Award-winning: Very permissive patterns to catch all variations
-    // Handle: "voucher balance", "vouchers balance", "my voucher balance", etc.
+    // Handle: "voucher balance", "how many vouchers", "my vouchers", etc.
     const hasVoucher = lowerMessage.includes('voucher');
     const hasBalance = lowerMessage.includes('balance');
     const hasHow = lowerMessage.includes('how');
+    const hasMany = lowerMessage.includes('many');
+    const hasOpen = lowerMessage.includes('open');
     
+    // Voucher balance queries (summary)
     if (hasVoucher && hasBalance && !hasHow) {
       return { 
         category: 'VOUCHER_BALANCE', 
@@ -512,6 +520,18 @@ class BankingGradeSupportService {
         requiresKnowledgeBase: false,
         requiresAI: false,
         reasoning: 'Obvious voucher balance query'
+      };
+    }
+    
+    // "How many vouchers" / "open vouchers" queries (summary)
+    if (hasVoucher && (hasMany || hasOpen) && !lowerMessage.includes('expire')) {
+      return { 
+        category: 'VOUCHER_BALANCE', 
+        confidence: 0.98, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Obvious voucher count query'
       };
     }
     
@@ -757,23 +777,27 @@ class BankingGradeSupportService {
 Your job: Understand what the user is asking for through context, not pattern matching.
 
 CRITICAL DISTINCTIONS (understand context, not keywords):
-- "voucher balance" = VOUCHER_BALANCE (MyMoolah vouchers they own)
-- "wallet balance" = WALLET_BALANCE (money in their wallet)
+- "voucher balance" / "my vouchers" / "how many vouchers" = VOUCHER_BALANCE (summary - requiresDirectDB: true)
+- "when does voucher expire" / "voucher expiration" = VOUCHER_BALANCE (specific voucher info - requiresDirectDB: true, requiresAI: true for formatting)
+- "wallet balance" = WALLET_BALANCE (money in wallet - requiresDirectDB: true)
 - "my balance" = WALLET_BALANCE (unless context says "voucher")
-- "buy voucher" = TECHNICAL_SUPPORT (needs step-by-step instructions)
-- "my vouchers" = VOUCHER_BALANCE (list/summary of owned vouchers)
-- "how do I pay" = TECHNICAL_SUPPORT (needs instructions)
-- "where is my payment" = PAYMENT_STATUS (tracking a payment)
-- "show transactions" = TRANSACTION_HISTORY (list of transactions)
-- "recent transactions" = TRANSACTION_HISTORY (transaction list)
+- "buy voucher" / "how to buy" = TECHNICAL_SUPPORT (needs instructions - requiresAI: true)
+- "how do I pay" = TECHNICAL_SUPPORT (needs instructions - requiresAI: true)
+- "where is my payment" = PAYMENT_STATUS (tracking - requiresDirectDB: true)
+- "show transactions" / "recent transactions" = TRANSACTION_HISTORY (list - requiresDirectDB: true)
 
 Categories:
-- WALLET_BALANCE: Money balance in wallet (requiresDirectDB: true)
-- VOUCHER_BALANCE: MyMoolah voucher balance/summary (requiresDirectDB: true)
-- TRANSACTION_HISTORY: List of transactions (requiresDirectDB: true)
-- KYC_STATUS: Verification status (requiresDirectDB: true)
-- PAYMENT_STATUS: Payment tracking (may require DB + AI)
+- WALLET_BALANCE: Money balance in wallet (requiresDirectDB: true, requiresAI: false)
+- VOUCHER_BALANCE: Voucher queries - summary OR specific voucher info (requiresDirectDB: true, requiresAI: true if asking for specific voucher details like expiration)
+- TRANSACTION_HISTORY: List of transactions (requiresDirectDB: true, requiresAI: false)
+- KYC_STATUS: Verification status (requiresDirectDB: true, requiresAI: false)
+- PAYMENT_STATUS: Payment tracking (requiresDirectDB: true, may requireAI: true)
 - TECHNICAL_SUPPORT: How-to questions, instructions, explanations (requiresAI: true)
+
+IMPORTANT: For voucher queries asking for SPECIFIC information (expiration date, specific voucher details):
+- Set requiresDirectDB: true (to get voucher data)
+- Set requiresAI: true (AI will format the response with specific info requested)
+- This allows AI to query DB and generate appropriate response dynamically
 
 Mojaloop & ISO20022 Standards:
 - Interoperable payment queries
@@ -792,7 +816,8 @@ Return JSON:
 }
 
 Rules:
-- If query asks for data (balance, transactions, KYC) → requiresDirectDB: true
+- If query asks for data summary (balance, count, list) → requiresDirectDB: true, requiresAI: false
+- If query asks for SPECIFIC data (expiration, details of specific voucher) → requiresDirectDB: true, requiresAI: true (AI formats response)
 - If query asks "how to" or needs instructions → requiresAI: true
 - If query is ambiguous → requiresKnowledgeBase: true first, then AI`
           },
@@ -923,10 +948,10 @@ Rules:
         return await this.getKYCStatus(userId, language);
         
       case 'VOUCHER_BALANCE':
-        return await this.getVoucherSummary(userId, language);
+        return await this.getVoucherSummary(userId, language, message, queryType);
         
       case 'VOUCHER_MANAGEMENT':
-        return await this.getVoucherSummary(userId, language);
+        return await this.getVoucherSummary(userId, language, message, queryType);
       
       case 'PASSWORD_SUPPORT':
         return await this.getPasswordSupport(language);
@@ -1751,8 +1776,70 @@ Rules:
   /**
    * 🎫 Get Voucher Summary (Banking-Grade)
    * Multi-Type Voucher Support
+   * Award-Winning: Returns detailed voucher data when AI needs to format specific responses
    */
-  async getVoucherSummary(userId, language) {
+  async getVoucherSummary(userId, language, message = '', queryType = null) {
+    const lowerMessage = (message || '').toLowerCase();
+    const needsDetailedData = queryType?.requiresAI || 
+                              lowerMessage.includes('expire') || 
+                              lowerMessage.includes('expiration') ||
+                              lowerMessage.includes('when') ||
+                              lowerMessage.includes('which voucher');
+    
+    // If AI needs to format response, return detailed voucher data
+    if (needsDetailedData) {
+      const vouchers = await this.sequelize.query(`
+        SELECT 
+          id,
+          "voucherCode",
+          "voucherType",
+          status,
+          balance,
+          "originalAmount",
+          "expiresAt",
+          "createdAt"
+        FROM vouchers 
+        WHERE "userId" = :userId
+        ORDER BY "createdAt" DESC
+      `, {
+        replacements: { userId },
+        type: Sequelize.QueryTypes.SELECT,
+        raw: true
+      });
+      
+      return {
+        type: 'VOUCHER_MANAGEMENT',
+        data: {
+          vouchers: vouchers.map(v => ({
+            id: v.id,
+            code: v.voucherCode,
+            type: v.voucherType,
+            status: v.status,
+            balance: parseFloat(v.balance || 0),
+            originalAmount: parseFloat(v.originalAmount || 0),
+            expiresAt: v.expiresAt,
+            createdAt: v.createdAt
+          })),
+          // Include summary for AI context
+          summary: {
+            total: vouchers.length,
+            active: vouchers.filter(v => v.status === 'active').length,
+            pending: vouchers.filter(v => v.status === 'pending').length
+          }
+        },
+        // AI will format the message based on query
+        message: '', // AI will generate this
+        timestamp: new Date().toISOString(),
+        compliance: {
+          iso20022: true,
+          mojaloop: true,
+          auditTrail: true
+        },
+        _aiFormat: true // Flag for AI to format response
+      };
+    }
+    
+    // Standard summary for simple queries
     const cacheKey = `voucher_summary:${userId}`;
     
     // 💾 Check Cache
@@ -2095,6 +2182,63 @@ Rules:
     await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response));
     
     return response;
+  }
+
+  /**
+   * 🎯 Format Response with AI (Award-Winning Dynamic Formatting)
+   * AI formats responses dynamically based on query intent - no hardcoded handlers
+   */
+  async formatResponseWithAI(dataResponse, message, language, userId) {
+    try {
+      if (!this.openai || !process.env.OPENAI_API_KEY) {
+        throw new Error('OpenAI not available');
+      }
+      
+      await this.registerAiCall(userId);
+      
+      // Build context from data response
+      const dataContext = JSON.stringify(dataResponse.data, null, 2);
+      
+      const completion = await this.openai.chat.completions.create({
+        model: this.model,
+        messages: [
+          {
+            role: "system",
+            content: `You are a banking-grade support assistant for MyMoolah Treasury Platform.
+
+Your job: Format the response based on the user's query using the provided data.
+
+User Query: "${message}"
+Available Data: ${dataContext}
+
+IMPORTANT RULES:
+- Answer the SPECIFIC question asked (e.g., "when does voucher expire" → give expiration date)
+- Use ONLY the data provided - don't make up information
+- If data shows no matching vouchers, say so clearly
+- Be concise and accurate
+- Format dates/times clearly
+- If asking about "Easypay voucher" but data shows no Easypay vouchers, clearly state that
+
+Return a clear, helpful response that directly answers the user's question.`
+          },
+          {
+            role: "user",
+            content: `Based on this data, answer the user's question: "${message}"`
+          }
+        ],
+        max_completion_tokens: 200,
+        temperature: 0.3
+      });
+      
+      return {
+        ...dataResponse,
+        message: completion.choices[0].message.content,
+        _aiFormat: false // Remove flag after formatting
+      };
+    } catch (error) {
+      console.error('⚠️ AI formatting failed, using default:', error.message);
+      return dataResponse; // Return original if AI fails
+    }
   }
 
   /**
