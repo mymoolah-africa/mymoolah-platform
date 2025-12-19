@@ -985,6 +985,13 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         xh: `Inkokhelo ${params.status}. Inani: ${params.amount}. Umamukeli: ${params.recipient}`,
         st: `Ho lefa ${params.status}. Chelete: ${params.amount}. Mooa: ${params.recipient}`
       },
+      payments_help: {
+        en: "To pay your accounts, go to the Pay or Pay Accounts section, choose who you want to pay, enter the amount, review the fees and details, and then confirm. We will always show you a full summary before you approve.",
+        af: "Om jou rekeninge te betaal: gaan na die 'Pay' of 'Pay Accounts' afdeling, kies wie jy wil betaal, voer die bedrag in, kyk na die fooie en besonderhede, en bevestig dan. Ons wys altyd vir jou ’n volledige opsomming voordat jy goedkeur.",
+        zu: "Ukuze ukhokhele ama-akhawunti akho: iya ku-'Pay' noma 'Pay Accounts', ukhethe lowo ofuna ukumkhokhela, faka inani, uhlole izimali nezincazelo, bese uqinisekisa. Sizokukhombisa isifinyezo esigcwele ngaphambi kokuba uqinisekise.",
+        xh: "Ukuhlawula ii-akhawunti zakho: yiya kwi 'Pay' okanye 'Pay Accounts', khetha lowo ufuna ukumhlawula, ngenisa isixa, ujonge iindleko neenkcukacha, uze uqinisekise. Sisoloko sikubonisa isishwankathelo esipheleleyo phambi kokuqinisekisa.",
+        st: "Ho lefa diak'haonte tsa hao: ea karolong ya 'Pay' kapa 'Pay Accounts', khetha motho kapa mokgatlo oo o batlang ho o lefa, kenya chelete, hlahloba ditefello le dintlha, ebe o tiisa. Re tla o bontsha kakaretso e felletseng pele o tiisa."
+      },
       account_details: {
         en: `Account holder: ${params.accountHolder}. Email: ${params.email}. KYC: ${params.kycStatus}. Account age: ${params.accountAge} days`,
         af: `Rekeninghouer: ${params.accountHolder}. E-pos: ${params.email}. KYC: ${params.kycStatus}. Rekening ouderdom: ${params.accountAge} dae`,
