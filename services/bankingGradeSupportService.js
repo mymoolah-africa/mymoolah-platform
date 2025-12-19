@@ -31,7 +31,7 @@ class BankingGradeSupportService {
       cacheTTL: 300, // 5 minutes
       rateLimitWindow: 3600, // 1 hour
       rateLimitMax: 100, // 100 queries per hour per user
-      aiDailyLimit: 5,
+      aiDailyLimit: 1000, // Increased for production (was 5 - too restrictive)
       aiLimitWindow: 86400, // 24 hours
       
       // Security & Compliance
@@ -329,7 +329,31 @@ class BankingGradeSupportService {
         return this.formatResponse(cachedResponse, queryId, responseTime);
       }
       
-      // 🤖 STEP 4: AI-Generated Response (Award-Winning: AI handles everything dynamically)
+      // 🚀 STEP 4A: Direct Database Query (if AI determined it doesn't need AI formatting)
+      // Award-winning: Fast path for simple data queries
+      if (intent.requiresDirectDB && !intent.requiresAI) {
+        console.log(`⚡ Direct DB Query: ${intent.category} (no AI formatting needed)`);
+        
+        const enrichedContext = { ...context, message };
+        const dbStartTime = Date.now();
+        const dbResponse = await this.executeQuery(intent, message, userId, language, enrichedContext);
+        const dbTime = Date.now() - dbStartTime;
+        const responseTime = Date.now() - startTime;
+        
+        console.log(`⚡ DB Query took ${dbTime}ms, Total response time: ${responseTime}ms`);
+        
+        this.updatePerformanceMetrics(responseTime, true);
+        this.auditLog('DIRECT_DB_QUERY_EXECUTED', { 
+          queryId, 
+          userId, 
+          category: intent.category, 
+          timestamp: new Date() 
+        });
+        
+        return this.formatResponse(dbResponse, queryId, responseTime);
+      }
+      
+      // 🤖 STEP 4B: AI-Generated Response (Award-Winning: AI handles everything dynamically)
       // AI decides what data sources to use (DB, knowledge base, external) and generates response
       // No handlers - AI understands and responds to ANY query (related or unrelated)
       const response = await this.generateAIResponse(message, userId, language, intent, context, knowledgeContext);
@@ -1511,6 +1535,13 @@ Rules:
         zu: "Ukushintsha inombolo yakho ebhalisiwe: 1) Vula Iprofayela → Ezokuphepha & Izilungiselelo, 2) Khetha 'Buyekeza Inombolo Yoselula', 3) Qinisekisa idivayisi yamanje nge-OTP, 4) Faka inombolo entsha, 5) Qinisekisa nge-OTP kanye ne-biometric/KYC uma kucelwa. Lethela i-SA ID/iphasiphothi uma ungasekho nenombolo endala.",
         xh: "Ukutshintsha inombolo yakho ebhalisiweyo: 1) Vula iProfayile → uKhuseleko & Iisetingi, 2) Khetha 'Hlaziya iNombolo Yefowuni', 3) Qinisekisa isixhobo sakho sangoku nge-OTP, 4) Ngenisa inombolo entsha, 5) Qinisekisa nge-OTP kunye ne-biometric/KYC ukuba kuceliwe. Zisa i-SA ID okanye ipasipoti ukuba awusenayo inombolo endala.",
         st: "Ho fetola nomoro ea mohala e ngolisitsoeng: 1) Bula Profilo → Tšireletso & Di-setting, 2) Khetha 'Ntlafatsa Nomoro ea Mohala', 3) Netefatsa sesebediswa sa hona joale ka OTP, 4) Kenya nomoro e ncha, 5) Netefatsa ka OTP le biometric/KYC haeba ho kōptjoa. Tlisa SA ID kapa pasepoto haeba o lahlehetsoe ke nomoro ea khale."
+      },
+      error_occurred: {
+        en: "I apologize, but I encountered an issue processing your request. Please try again or contact our support team for assistance.",
+        af: "Ek vra om verskoning, maar ek het 'n probleem ondervind met die verwerking van jou versoek. Probeer asseblief weer of kontak ons ondersteuningspan vir hulp.",
+        zu: "Ngiyaxolisa, kodwa ngibe nenkinga ekucubunguleni isicelo sakho. Sicela uzame futhi noma uxhumane nethimba lethu lokusekela ukuze nisizwe.",
+        xh: "Ndixolisa, kodwa ndibhekene nengxaki ekucubunguleni isicelo sakho. Nceda uzame kwakhona okanye uxhumane nethimba lethu lokusekela ukuze nisizwe.",
+        st: "Ke kopa ts'oarelo, empa ke tobane le bothata ha ke sebetsa kopo ea hao. Ke kopa u leke hape kapa u ikopanye le thimba ra rona ra tšehetso bakeng sa thuso."
       }
     };
     
