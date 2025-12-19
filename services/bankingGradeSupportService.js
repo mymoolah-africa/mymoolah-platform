@@ -56,10 +56,11 @@ class BankingGradeSupportService {
     this.inMemoryAiUsage = new Map();
 
     // 🧠 AI Model configuration (support service specific)
-    this.model =
-      process.env.SUPPORT_AI_MODEL && process.env.SUPPORT_AI_MODEL.trim().length > 0
-        ? process.env.SUPPORT_AI_MODEL.trim()
-        : 'gpt-5';
+    // Normalize model name to lowercase (OpenAI expects lowercase)
+    const rawModel = process.env.SUPPORT_AI_MODEL && process.env.SUPPORT_AI_MODEL.trim().length > 0
+      ? process.env.SUPPORT_AI_MODEL.trim()
+      : 'gpt-5';
+    this.model = rawModel.toLowerCase();
 
     // 🚀 Initialize Core Services (sync for now)
     this.initialized = true;
@@ -1545,6 +1546,17 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
    */
   async getTechnicalSupport(message, language, userId) {
     try {
+      // Validate OpenAI is initialized
+      if (!this.openai) {
+        throw new Error('OpenAI client not initialized');
+      }
+      
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY not configured');
+      }
+      
+      console.log(`🤖 Calling OpenAI with model: ${this.model} for query: "${message.substring(0, 50)}..."`);
+      
       await this.registerAiCall(userId);
       const completion = await this.openai.chat.completions.create({
         model: this.model,
@@ -1619,6 +1631,20 @@ When answering fee questions, be specific about the tier system and always menti
       
     } catch (error) {
       console.error('❌ Technical support AI error:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        model: this.model,
+        userId,
+        hasOpenAI: !!this.openai,
+        hasApiKey: !!process.env.OPENAI_API_KEY
+      });
+      
+      // If it's an AI limit error, return specific message
+      if (error?.code === 'AI_LIMIT_EXCEEDED') {
+        return this.buildAiLimitResponse(language);
+      }
       
       return {
         type: 'TECHNICAL_SUPPORT',
