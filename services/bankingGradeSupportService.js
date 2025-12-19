@@ -265,7 +265,9 @@ class BankingGradeSupportService {
       const simpleQuery = this.detectSimpleQuery(message);
       if (simpleQuery && !simpleQuery.requiresAI) {
         // Execute database query immediately (balance, transactions, KYC, etc.)
-        const response = await this.executeQuery(simpleQuery, message, userId, language, context);
+        // Pass message in context for payment status queries
+        const enrichedContext = { ...context, message };
+        const response = await this.executeQuery(simpleQuery, message, userId, language, enrichedContext);
         const responseTime = Date.now() - startTime;
         this.updatePerformanceMetrics(responseTime, true);
         this.auditLog('SIMPLE_QUERY_EXECUTED', { 
@@ -433,23 +435,54 @@ class BankingGradeSupportService {
       return { category: 'KYC_STATUS', confidence: 0.95, requiresAI: false };
     }
     
-    // Transaction History (improved patterns)
+    // Transaction History (improved patterns - exclude "limits" queries)
     if (
-      lowerMessage.includes('transaction') || 
-      lowerMessage.includes('history') || 
-      lowerMessage.includes('recent') ||
-      lowerMessage.includes('spending activity') ||
-      lowerMessage.includes('payment history') ||
-      lowerMessage.includes('transaction list') ||
-      lowerMessage.includes('show my transactions') ||
-      lowerMessage.includes('my transactions')
+      (lowerMessage.includes('transaction') || 
+       lowerMessage.includes('history') || 
+       lowerMessage.includes('recent') ||
+       lowerMessage.includes('spending activity') ||
+       lowerMessage.includes('payment history') ||
+       lowerMessage.includes('transaction list') ||
+       lowerMessage.includes('show my transactions') ||
+       lowerMessage.includes('my transactions')) &&
+      !lowerMessage.includes('limit') && // Exclude "transaction limits" queries
+      !lowerMessage.includes('increase') &&
+      !lowerMessage.includes('upgrade')
     ) {
       return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
     }
     
-    // Voucher Queries
-    if (lowerMessage.includes('voucher') || lowerMessage.includes('vouchers')) {
+    // MyMoolah Voucher Management (specific patterns - balance, summary, my vouchers)
+    if (
+      (lowerMessage.includes('my voucher') ||
+       lowerMessage.includes('my vouchers') ||
+       lowerMessage.includes('voucher balance') ||
+       lowerMessage.includes('voucher summary') ||
+       lowerMessage.includes('voucher status') ||
+       lowerMessage.includes('how many vouchers') ||
+       lowerMessage.includes('voucher list')) &&
+      !lowerMessage.includes('buy') &&
+      !lowerMessage.includes('purchase') &&
+      !lowerMessage.includes('how to') &&
+      !lowerMessage.includes('how can i')
+    ) {
       return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
+    }
+
+    // 3rd Party Voucher Purchase / VAS Purchase (AI-powered instructions)
+    if (
+      lowerMessage.includes('buy') && lowerMessage.includes('voucher') ||
+      lowerMessage.includes('purchase') && lowerMessage.includes('voucher') ||
+      lowerMessage.includes('how can i buy') ||
+      lowerMessage.includes('how to buy') ||
+      lowerMessage.includes('how do i buy') ||
+      (lowerMessage.includes('voucher') && (lowerMessage.includes('for my friend') || lowerMessage.includes('for friend'))) ||
+      lowerMessage.includes('top up') ||
+      lowerMessage.includes('topup') ||
+      (lowerMessage.includes('airtime') && (lowerMessage.includes('using') || lowerMessage.includes('with'))) ||
+      (lowerMessage.includes('data') && (lowerMessage.includes('using') || lowerMessage.includes('with')))
+    ) {
+      return { category: 'TECHNICAL_SUPPORT', confidence: 0.95, requiresAI: true };
     }
 
     // Password / login help
@@ -468,7 +501,7 @@ class BankingGradeSupportService {
       return { category: 'PROFILE_UPDATE', confidence: 0.9, requiresAI: false };
     }
 
-    // Tier-related questions (how to change tier, upgrade tier, etc.)
+    // Tier-related questions (how to change tier, upgrade tier, increase limits, etc.)
     if (
       lowerMessage.includes('change my tier') ||
       lowerMessage.includes('change tier') ||
@@ -476,7 +509,14 @@ class BankingGradeSupportService {
       lowerMessage.includes('how do i change tier') ||
       lowerMessage.includes('how to change tier') ||
       lowerMessage.includes('tier upgrade') ||
-      lowerMessage.includes('tier change')
+      lowerMessage.includes('tier change') ||
+      lowerMessage.includes('increase my limit') ||
+      lowerMessage.includes('increase limit') ||
+      lowerMessage.includes('increase transaction limit') ||
+      lowerMessage.includes('increase limits') ||
+      lowerMessage.includes('higher limit') ||
+      lowerMessage.includes('raise limit') ||
+      (lowerMessage.includes('limit') && (lowerMessage.includes('increase') || lowerMessage.includes('upgrade') || lowerMessage.includes('higher')))
     ) {
       return { category: 'TECHNICAL_SUPPORT', confidence: 0.95, requiresAI: true };
     }
@@ -1560,6 +1600,76 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
    * 💳 Payment / Pay Accounts Guidance (No Dummy Payment Data)
    */
   async getPaymentStatus(userId, language, context) {
+    // Check if this is a "where is my money" query - check recent transactions
+    const message = context?.message || '';
+    const isStatusQuery = message && (
+      message.toLowerCase().includes('sent money') ||
+      message.toLowerCase().includes('money not arrived') ||
+      message.toLowerCase().includes('where is it') ||
+      message.toLowerCase().includes('payment not received') ||
+      message.toLowerCase().includes('transfer not received') ||
+      message.toLowerCase().includes('hasn\'t arrived')
+    );
+
+    if (isStatusQuery) {
+      // Check for recent pending or failed transactions
+      const recentTransactions = await this.sequelize.query(`
+        SELECT 
+          t."transactionId",
+          t.type,
+          t.amount,
+          t.description,
+          t.status,
+          t."createdAt"
+        FROM transactions t
+        WHERE t."userId" = :userId
+          AND t."createdAt" > NOW() - INTERVAL '24 hours'
+          AND t.status IN ('pending', 'failed', 'processing')
+        ORDER BY t."createdAt" DESC
+        LIMIT 5
+      `, {
+        replacements: { userId },
+        type: Sequelize.QueryTypes.SELECT,
+        raw: true
+      });
+
+      if (recentTransactions.length > 0) {
+        const pending = recentTransactions.filter(t => t.status === 'pending' || t.status === 'processing');
+        const failed = recentTransactions.filter(t => t.status === 'failed');
+        
+        let statusMessage = '';
+        if (pending.length > 0) {
+          statusMessage = `You have ${pending.length} pending transaction(s) that are still processing. These typically complete within a few minutes. Check your transaction history for details.`;
+        } else if (failed.length > 0) {
+          statusMessage = `You have ${failed.length} failed transaction(s) in the last 24 hours. Funds were not deducted. Please try again or contact support if the issue persists.`;
+        }
+
+        return {
+          type: 'PAYMENT_STATUS',
+          data: {
+            pendingTransactions: pending.length,
+            failedTransactions: failed.length,
+            recentTransactions: recentTransactions.map(t => ({
+              transactionId: t.transactionId,
+              type: t.type,
+              amount: parseFloat(t.amount).toLocaleString(),
+              description: t.description,
+              status: t.status,
+              date: new Date(t.createdAt).toLocaleString()
+            }))
+          },
+          message: statusMessage || 'All recent transactions have completed successfully. If you\'re expecting a payment, check your transaction history for details.',
+          timestamp: new Date().toISOString(),
+          compliance: {
+            iso20022: true,
+            mojaloop: true,
+            auditTrail: true
+          }
+        };
+      }
+    }
+
+    // Default: Payment instructions (for "how do I pay" queries)
     const response = {
       type: 'PAYMENT_STATUS',
       data: {
