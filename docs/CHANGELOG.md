@@ -1,5 +1,12 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2025-12-19 - 🏦 Unified Support Service & GPT-5 Model Configuration
+- Introduced `services/supportService.js` as the unified support orchestrator, composing `bankingGradeSupportService` (rate limiting, Redis, health, metrics, knowledge base) with `aiSupportService` (pattern matching, simple handlers, GPT-backed complex answers).
+- Updated `controllers/supportController.js` to use the new `SupportService` while keeping the `/api/v1/support/chat` API contract unchanged for the wallet frontend.
+- Centralized support AI model selection via `SUPPORT_AI_MODEL` env var (default `gpt-5`) and wired all support-related OpenAI calls to use it, allowing upgrades to `gpt-5.1`/`gpt-5.2` via configuration instead of code changes.
+- Archived legacy `aiSupportService.js` and `bankingGradeSupportService.js` under `services/archived/` for reference, without changing their internal DB/query logic.
+- Documentation updated: `docs/BANKING_GRADE_SUPPORT_SYSTEM.md` and `docs/AI_SUPPORT_SYSTEM.md` now describe the unified architecture and model configuration; session log added at `docs/session_logs/2025-12-19_2300_support-service-consolidation.md`.
+
 ## 2025-12-13 - ✅ Voucher Deduplication Complete & Flash ProductVariants Fixed
 
 ### **Voucher Deduplication System**

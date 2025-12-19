@@ -1,4 +1,4 @@
-# MyMoolah AI Support System
+Command PaletteCommand Palette# MyMoolah AI Support System
 
 ## 🚀 Overview
 
@@ -52,9 +52,11 @@ mymoolah-wallet-frontend/
 ### **Backend Services**
 ```
 services/
-├── aiSupportService.js             # AI processing engine
+├── supportService.js               # Unified orchestrator (entrypoint)
+├── bankingGradeSupportService.js   # Banking-grade layer (rate limiting, KB, metrics)
+├── aiSupportService.js             # AI + pattern engine (pattern + GPT‑5)
 ├── controllers/
-│   └── supportController.js        # API endpoints
+│   └── supportController.js        # API endpoints (uses SupportService)
 ├── routes/
 │   └── support.js                  # Route definitions
 └── models/
@@ -369,8 +371,10 @@ The system automatically determines the top 6 most used support categories:
 # Required
 OPENAI_API_KEY=sk-...
 
-# Optional
-OPENAI_MODEL=gpt-4
+# Support AI model (unified support stack)
+SUPPORT_AI_MODEL=gpt-5
+
+# Optional tuning
 SUPPORT_CONFIDENCE_THRESHOLD=0.7
 SUPPORT_MAX_TOKENS=500
 SUPPORT_TEMPERATURE=0.7

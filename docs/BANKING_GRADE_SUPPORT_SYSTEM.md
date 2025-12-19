@@ -38,7 +38,30 @@ The MyMoolah Banking-Grade Support System is a **production-ready, enterprise-le
 
 ### **Core Services**
 
-#### **1. BankingGradeSupportService**
+#### **1. Unified SupportService (Orchestrator)**
+The unified `SupportService` is the **single entrypoint** for all support traffic. It composes:
+- `bankingGradeSupportService.js` → banking-grade rate limiting, caching, health, metrics, ISO20022/Mojaloop envelope, knowledge base.
+- `aiSupportService.js` → rich direct pattern matching, simple query handlers, and GPT‑5 for complex queries.
+
+```javascript
+// services/supportService.js (high level)
+class SupportService {
+  constructor() {
+    this.bankingService = new BankingGradeSupportService();
+    this.aiService = new BankingGradeAISupportService();
+    this.model = process.env.SUPPORT_AI_MODEL?.trim() || 'gpt-5';
+  }
+
+  async processSupportQuery(message, userId, language = 'en', context = {}) {
+    // 1) Rate limit (bankingService)
+    // 2) Knowledge base lookup (AiKnowledgeBase)
+    // 3) Pattern + GPT‑5 via aiService
+    // 4) Wrap result in ISO20022 / Mojaloop compliant envelope
+  }
+}
+```
+
+#### **2. BankingGradeSupportService (Banking Layer)**
 ```javascript
 // Main service class with banking-grade features
 class BankingGradeSupportService {
@@ -55,11 +78,11 @@ class BankingGradeSupportService {
 }
 ```
 
-#### **2. Query Classification System**
-- **AI-Powered Classification** (GPT-4)
-- **Caching Layer** (Redis)
-- **Fallback Pattern Matching**
-- **Banking-Specific Categories**
+#### **3. Query Classification System**
+- **Pattern-First Classification** (no OpenAI cost for obvious queries)
+- **AI-Powered Classification** (GPT‑5 via `SUPPORT_AI_MODEL`)
+- **Caching Layer** (Redis + in-memory)
+- **Banking-Specific Categories** (wallet, KYC, vouchers, settlement, float, compliance)
 
 #### **3. Response Processing**
 - **Database-First Approach**
@@ -347,6 +370,21 @@ const config = {
   metricsCollection: true
 };
 ```
+
+### **AI Model Configuration**
+
+```bash
+# Support AI model (used by SupportService, BankingGradeSupportService, aiSupportService)
+SUPPORT_AI_MODEL=gpt-5
+OPENAI_API_KEY=your_openai_api_key
+```
+
+```javascript
+// Shared model selection
+this.model = process.env.SUPPORT_AI_MODEL?.trim() || 'gpt-5';
+```
+
+All support-related OpenAI calls now use `SUPPORT_AI_MODEL`, defaulting to `gpt-5`, and can be switched centrally (for example to `gpt-5.1`) without code changes.
 
 ## 🎯 Query Examples
 

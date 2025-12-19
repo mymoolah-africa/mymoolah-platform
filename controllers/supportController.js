@@ -1,4 +1,4 @@
-const BankingGradeSupportService = require('../services/bankingGradeSupportService');
+const SupportService = require('../services/supportService');
 
 class SupportController {
   constructor() {
@@ -11,9 +11,9 @@ class SupportController {
   get supportService() {
     if (!this._supportService) {
       try {
-        this._supportService = new BankingGradeSupportService();
+        this._supportService = new SupportService();
       } catch (error) {
-        console.error('❌ Failed to initialize BankingGradeSupportService:', error);
+        console.error('❌ Failed to initialize SupportService:', error);
         throw error;
       }
     }

@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: November 26, 2025  
-**Version**: 2.4.18 - Peach Payments Integration Archival  
-**Status**: ✅ **PEACH INTEGRATION ARCHIVED** ✅ **ZAPPER VAT TRANSACTION FEE COMPLETE** ✅ **REFERENTIAL INTEGRITY ENFORCED** ✅ **BANKING-GRADE DATA INTEGRITY**
+**Last Updated**: December 19, 2025  
+**Version**: 2.4.24 - Unified Support Service & GPT-5 Model Configuration  
+**Status**: ✅ **SUPPORT SERVICE UNIFIED** ✅ **PEACH INTEGRATION ARCHIVED** ✅ **ZAPPER VAT TRANSACTION FEE COMPLETE** ✅ **REFERENTIAL INTEGRITY ENFORCED** ✅ **BANKING-GRADE DATA INTEGRITY**
 
 ---
 
@@ -20,7 +20,7 @@ The MyMoolah Treasury Platform has successfully upgraded all OpenAI models to GP
 ### **🏆 MISSION ACCOMPLISHED - KEY ACHIEVEMENTS**
 
 #### **🤖 GPT-5 Upgrade & Codebase Sweep Optimization** ✅ **COMPLETE**
-- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-5.0` to `gpt-5` (17 occurrences across 8 files)
+- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-5.0` to `gpt-5` (17 occurrences across 8 files), and support stack now uses centralized `SUPPORT_AI_MODEL` configuration (default `gpt-5`) for all support-related OpenAI calls.
 - **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
 - **Temperature Parameter**: Removed all `temperature` parameters (GPT-5 only supports default value of 1)
 - **Codebase Sweep Disable**: Added `ENABLE_CODEBASE_SWEEP` environment variable to disable service during development (saves OpenAI tokens)

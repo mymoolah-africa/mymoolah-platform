@@ -36,11 +36,20 @@
 
 ---
 
-**Last Updated**: December 16, 2025  
-**Version**: 2.4.23 - Airtime/Data Purchase ENUM Fixes Complete  
-**Status**: ✅ **AIRTIME/DATA PURCHASE WORKING** ✅ **ENUM CONSTRAINTS FIXED** ✅ **VARIABLE SCOPE ISSUES RESOLVED**
+**Last Updated**: December 19, 2025  
+**Version**: 2.4.24 - Unified Support Service & GPT-5 Model Configuration  
+**Status**: ✅ **SUPPORT SERVICE UNIFIED** ✅ **GPT-5 MODEL CONFIG CENTRALIZED** ✅ **DOCS UPDATED**
 
 ---
+
+## Update 2025-12-19 - Unified Support Service & GPT-5 Model Configuration
+- **Unified Support Entry Point**: All support traffic (`/api/v1/support/chat`, `/support/health`, `/support/metrics`) now flows through `services/supportService.js`, which orchestrates:
+  - `services/bankingGradeSupportService.js` → banking-grade layer (rate limiting, Redis caching, health, metrics, knowledge base `AiKnowledgeBase`, ISO20022/Mojaloop envelope).
+  - `services/aiSupportService.js` → AI/pattern engine (direct pattern matching, simple query handlers, GPT-backed complex answers, codebase sweep integration).
+- **Architecture**: `SupportService` enforces rate limiting via banking layer, checks the knowledge base first, then delegates to AI/pattern engine when no KB hit exists, and wraps all responses in a canonical banking-grade envelope consumed by the wallet UI.
+- **Model Configuration**: Introduced `SUPPORT_AI_MODEL` env var used by the unified stack; all support-related OpenAI calls now default to `gpt-5` but can be switched centrally (e.g. to `gpt-5.1`/`gpt-5.2`) without code changes.
+- **Docs Updated**: `docs/BANKING_GRADE_SUPPORT_SYSTEM.md` and `docs/AI_SUPPORT_SYSTEM.md` now describe the unified architecture and env-based model selection. Session log created: `docs/session_logs/2025-12-19_2300_support-service-consolidation.md`.
+- **Status**: ✅ Support stack unified and documented, ✅ Model selection centralized, ✅ No breaking changes to existing `/api/v1/support/chat` consumers.
 
 ## Update 2025-12-16 - Critical Fixes: Airtime/Data Purchase ENUM Constraints & Variable Scope
 - **ENUM Constraints Fixed**: Converted `vas_products.supplierId` and `vas_transactions.supplierId` from ENUM to VARCHAR(50) to allow "FLASH" and other supplier codes

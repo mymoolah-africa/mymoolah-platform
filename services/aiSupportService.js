@@ -19,6 +19,12 @@ const CodebaseSweepService = require('./codebaseSweepService');
 
 class BankingGradeAISupportService {
   constructor() {
+    // AI model configuration (shared with unified SupportService)
+    this.model =
+      process.env.SUPPORT_AI_MODEL && process.env.SUPPORT_AI_MODEL.trim().length > 0
+        ? process.env.SUPPORT_AI_MODEL.trim()
+        : 'gpt-5';
+
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
@@ -1171,7 +1177,7 @@ class BankingGradeAISupportService {
   async classifyQueryWithAI(message) {
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-5",
+        model: this.model,
         messages: [
           {
             role: "system",
@@ -1542,7 +1548,7 @@ Return JSON: {"isSimpleQuery": true/false, "queryType": "exact_type_with_undersc
   async handleComplexQuery(message, language, context) {
     try {
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-5",
+        model: this.model,
         messages: [
           {
             role: "system",

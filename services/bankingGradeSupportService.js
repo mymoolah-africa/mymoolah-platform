@@ -55,6 +55,12 @@ class BankingGradeSupportService {
     this.knowledgeCacheTTL = 5 * 60 * 1000; // 5 minutes
     this.inMemoryAiUsage = new Map();
 
+    // 🧠 AI Model configuration (support service specific)
+    this.model =
+      process.env.SUPPORT_AI_MODEL && process.env.SUPPORT_AI_MODEL.trim().length > 0
+        ? process.env.SUPPORT_AI_MODEL.trim()
+        : 'gpt-5';
+
     // 🚀 Initialize Core Services (sync for now)
     this.initialized = true;
     this.initializeServices().catch(error => {
@@ -407,7 +413,7 @@ class BankingGradeSupportService {
     try {
       await this.registerAiCall(userId);
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-5",
+        model: this.model,
         messages: [
           {
             role: "system",
@@ -1455,7 +1461,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     try {
       await this.registerAiCall(userId);
       const completion = await this.openai.chat.completions.create({
-        model: "gpt-5",
+        model: this.model,
         messages: [
           {
             role: "system",
