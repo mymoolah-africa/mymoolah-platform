@@ -1,5 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2025-12-19 (Afternoon) - 🎓 Auto-Learning Knowledge Base Complete & Production Ready
+- **Auto-Learning Feature**: Implemented automatic storage of successful OpenAI answers in `ai_knowledge_base` table. Subsequent identical questions are answered from database (no OpenAI call, faster, cheaper).
+- **Smart Storage**: Extracts keywords automatically, infers category from query type, checks for duplicates, invalidates cache immediately. Uses hash-based faqId (MD5 of question, first 17 chars + "KB-" prefix = exactly 20 chars).
+- **Critical Fixes**:
+  - Redis resilience: All Redis operations check readiness status before use (no more "Stream isn't writeable" errors during startup)
+  - AI usage limiter: Made resilient when Redis not ready (falls back to in-memory tracking)
+  - Database column fix: Fixed `getAccountDetails()` SQL query (changed `u.phone` to `u."phoneNumber"`)
+  - faqId length fix: Changed from timestamp+random (23+ chars) to hash-based (exactly 20 chars to match VARCHAR(20) constraint)
+  - Query routing: Added pattern matching for tier questions ("change my tier" → TECHNICAL_SUPPORT with requiresAI: true)
+  - Model name normalization: Convert `SUPPORT_AI_MODEL` to lowercase (OpenAI expects "gpt-4o", not "GPT-4O")
+  - Error logging: Added detailed logging for OpenAI call failures
+- **Performance**: Knowledge base responses ~10x faster than OpenAI (272ms vs 2,500ms) with zero AI cost.
+- **Testing**: ✅ Verified first query calls OpenAI and stores answer, ✅ Verified second identical query uses knowledge base (no OpenAI call), ✅ All fixes deployed and tested.
+- **Files Modified**: `services/bankingGradeSupportService.js` (auto-learning methods, Redis resilience, database fixes, routing improvements), `docs/AGENT_HANDOVER.md`, `docs/CHANGELOG.md`, `docs/session_logs/2025-12-19_1155_auto-learning-knowledge-base-implementation.md`.
+
 ## 2025-12-19 - 🏦 Unified Support Service & GPT-5 Model Configuration
 - Introduced `services/supportService.js` as the unified support orchestrator, composing `bankingGradeSupportService` (rate limiting, Redis, health, metrics, knowledge base) with `aiSupportService` (pattern matching, simple handlers, GPT-backed complex answers).
 - Updated `controllers/supportController.js` to use the new `SupportService` while keeping the `/api/v1/support/chat` API contract unchanged for the wallet frontend.

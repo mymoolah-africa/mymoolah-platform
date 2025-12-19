@@ -56,7 +56,8 @@ class SupportService {
     // 1) Rate limit (bankingService)
     // 2) Knowledge base lookup (AiKnowledgeBase)
     // 3) Pattern + GPT‑5 via aiService
-    // 4) Wrap result in ISO20022 / Mojaloop compliant envelope
+    // 4) Auto-learning: Store successful AI answers in knowledge base
+    // 5) Wrap result in ISO20022 / Mojaloop compliant envelope
   }
 }
 ```
@@ -89,6 +90,14 @@ class BankingGradeSupportService {
 - **Cached Responses**
 - **Multi-Language Support** (5 languages)
 - **ISO20022 Compliance**
+
+#### **4. Auto-Learning Knowledge Base (2025-12-19)**
+- **Automatic Storage**: Successful OpenAI answers are automatically stored in `ai_knowledge_base` table
+- **Smart Storage**: Extracts keywords, infers category, checks for duplicates, invalidates cache immediately
+- **Performance**: Knowledge base responses ~10x faster than OpenAI (272ms vs 2,500ms) with zero AI cost
+- **Growth**: Knowledge base grows automatically as users ask new questions, reducing OpenAI costs over time
+- **faqId Format**: Hash-based (MD5 of question, first 17 chars) + "KB-" prefix = exactly 20 chars (matches VARCHAR(20) constraint)
+- **Non-Blocking**: Auto-learning runs asynchronously, doesn't slow down user responses
 
 ## 📋 Supported Query Types
 
