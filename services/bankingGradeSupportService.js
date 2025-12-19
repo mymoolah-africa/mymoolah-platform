@@ -421,6 +421,19 @@ class BankingGradeSupportService {
       return { category: 'PROFILE_UPDATE', confidence: 0.9, requiresAI: false };
     }
 
+    // Tier-related questions (how to change tier, upgrade tier, etc.)
+    if (
+      lowerMessage.includes('change my tier') ||
+      lowerMessage.includes('change tier') ||
+      lowerMessage.includes('upgrade tier') ||
+      lowerMessage.includes('how do i change tier') ||
+      lowerMessage.includes('how to change tier') ||
+      lowerMessage.includes('tier upgrade') ||
+      lowerMessage.includes('tier change')
+    ) {
+      return { category: 'TECHNICAL_SUPPORT', confidence: 0.95, requiresAI: true };
+    }
+
     // Deposit / payment reflection
     if (
       lowerMessage.includes('deposit') ||
