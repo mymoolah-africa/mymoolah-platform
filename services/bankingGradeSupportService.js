@@ -68,15 +68,13 @@ class BankingGradeSupportService {
     this.embeddingService = new SemanticEmbeddingService();
     this.semanticThreshold = 0.75; // Minimum semantic similarity (75% = high confidence)
 
-    // 🚀 Codebase Sweep Integration (Hybrid: DB Persistence + In-Memory Cache)
-    // Banking-Grade: Fast recovery from DB, high performance from memory
+    // 🚀 Codebase Sweep Integration (RAG Pattern - Award-Winning Architecture)
+    // Banking-Grade: Provides platform context to AI for accurate responses
+    // Based on CIBC, JPMorgan, BBVA best practices - RAG (Retrieval Augmented Generation)
     this.codebaseSweep = null;
-    this.sweepPatterns = new Map(); // In-memory pattern cache (fast lookup)
-    this.sweepKeywords = new Set(); // In-memory keyword cache (fast lookup)
-    this.sweepContext = null; // In-memory context cache
+    this.sweepContext = null; // RAG context cache (capabilities summary for AI)
     this.sweepCacheTTL = 60 * 60 * 1000; // 1 hour cache TTL
     this.sweepCacheLoadedAt = 0;
-    this.lastLoadedSweepVersion = null; // Track loaded version for regeneration check
 
     // 🧠 AI Model configuration (support service specific)
     // Normalize model name to lowercase (OpenAI expects lowercase)
@@ -164,28 +162,22 @@ class BankingGradeSupportService {
         dialectOptions
       });
 
-      // 🚀 Banking-Grade: Load patterns from DB FIRST (always, even if sweep disabled)
-      // This ensures fast recovery from persisted patterns
-      try {
-        await this.loadSweepPatternsFromDB();
-      } catch (error) {
-        console.warn('⚠️ Failed to load sweep patterns from DB (non-critical):', error.message);
-      }
-
-      // 🚀 Initialize Codebase Sweep Service (Hybrid: DB First, Then Background Check)
+      // 🚀 Initialize Codebase Sweep Service (RAG Context Generation)
+      // Award-Winning Architecture: Provides platform capabilities context to AI
+      // This is RAG (Retrieval Augmented Generation) - not pattern matching
       if (CodebaseSweepService && process.env.ENABLE_CODEBASE_SWEEP !== 'false') {
         try {
           this.codebaseSweep = new CodebaseSweepService();
           
-          // Then check if regeneration needed (background, non-blocking)
-          setImmediate(() => this.checkAndRegenerateSweepPatterns().catch(err => {
-            console.warn('⚠️ Failed to check/regenerate sweep patterns (non-critical):', err.message);
+          // Load RAG context in background (non-blocking)
+          setImmediate(() => this.loadRAGContext().catch(err => {
+            console.warn('⚠️ Failed to load RAG context (non-critical):', err.message);
           }));
         } catch (error) {
           console.warn('⚠️ Codebase sweep service unavailable (non-critical):', error.message);
         }
       } else {
-        console.log('ℹ️  Codebase Sweep Service disabled - using persisted patterns from database only');
+        console.log('ℹ️  Codebase Sweep Service disabled - AI will work without platform context');
       }
 
       // Redis Cache for High Performance (with fallback)
@@ -541,32 +533,8 @@ class BankingGradeSupportService {
       return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
     }
     
-    // 🚀 Check sweep-discovered patterns (lightweight, zero cost)
-    // Banking-Grade: <1ms overhead, in-memory only
-    // BUT: Only use if it's a simple query, not a complex how-to
-    if (this.sweepPatterns && this.sweepPatterns.size > 0) {
-      const sweepMatch = this.getSweepPatterns(message);
-      if (sweepMatch) {
-        // Map sweep category to our category system
-        const categoryMap = {
-          'userManagement': 'ACCOUNT_MANAGEMENT',
-          'financialServices': 'WALLET_BALANCE',
-          'integrations': 'TECHNICAL_SUPPORT',
-          'troubleshooting': 'TECHNICAL_SUPPORT',
-          'general': 'TECHNICAL_SUPPORT'
-        };
-        const mappedCategory = categoryMap[sweepMatch.category] || 'TECHNICAL_SUPPORT';
-        // Only use sweep patterns for simple queries, not complex how-to queries
-        const isHowToQuery = lowerMessage.includes('how do i') || lowerMessage.includes('how can i') || lowerMessage.includes('how to');
-        if (mappedCategory !== 'TECHNICAL_SUPPORT' && !isHowToQuery) {
-          return { 
-            category: mappedCategory, 
-            confidence: sweepMatch.confidence, 
-            requiresAI: false 
-          };
-        }
-      }
-    }
+    // NOTE: Pattern matching removed - AI classification handles all routing
+    // Codebase sweep is now used ONLY for RAG context (platform capabilities)
     
     // 💰 Wallet Balance - Common patterns for balance queries (AFTER voucher check)
     // CRITICAL: Must check for "voucher" first, otherwise "voucher balance" matches here
@@ -1468,215 +1436,17 @@ Rules:
   }
 
   /**
-   * 🚀 Load Sweep Patterns from Database (Fast Recovery)
-   * Banking-Grade: <5ms load time, instant startup recovery
+   * 🚀 Load RAG Context (Retrieval Augmented Generation)
+   * Award-Winning Architecture: Provides platform capabilities context to AI
+   * Based on CIBC, JPMorgan, BBVA best practices
+   * Banking-Grade: Lightweight summary, minimal token overhead
    */
-  async loadSweepPatternsFromDB() {
-    if (!this.sequelize) {
-      console.warn('⚠️ Database not initialized, skipping sweep patterns load');
-      return;
-    }
-
-    try {
-      // Load patterns from database (fast, <5ms)
-      const patterns = await this.sequelize.query(`
-        SELECT "patternValue", category 
-        FROM sweep_patterns_cache 
-        WHERE "patternType" = 'pattern'
-      `, {
-        type: Sequelize.QueryTypes.SELECT,
-        raw: true
-      });
-
-      // Load keywords from database
-      const keywords = await this.sequelize.query(`
-        SELECT "patternValue" 
-        FROM sweep_patterns_cache 
-        WHERE "patternType" = 'keyword'
-      `, {
-        type: Sequelize.QueryTypes.SELECT,
-        raw: true
-      });
-
-      // Populate in-memory cache
-      this.sweepPatterns.clear();
-      this.sweepKeywords.clear();
-
-      patterns.forEach(p => {
-        this.sweepPatterns.set(p.patternValue, p.category);
-      });
-
-      keywords.forEach(k => {
-        this.sweepKeywords.add(k.patternValue);
-      });
-
-      // Get latest sweep version from database
-      const versionResult = await this.sequelize.query(`
-        SELECT "sweepVersion" 
-        FROM sweep_patterns_cache 
-        WHERE "sweepVersion" IS NOT NULL 
-        ORDER BY "updatedAt" DESC 
-        LIMIT 1
-      `, {
-        type: Sequelize.QueryTypes.SELECT,
-        raw: true
-      });
-
-      this.lastLoadedSweepVersion = versionResult[0]?.sweepVersion || null;
-      this.sweepCacheLoadedAt = Date.now();
-
-      console.log(`✅ Sweep patterns loaded from DB: ${this.sweepPatterns.size} patterns, ${this.sweepKeywords.size} keywords`);
-    } catch (error) {
-      // Table might not exist yet (first run), this is OK
-      if (error.message.includes('does not exist') || error.message.includes('relation')) {
-        console.log('ℹ️ Sweep patterns cache table not found (will be created on first sweep)');
-      } else {
-        console.warn('⚠️ Failed to load sweep patterns from DB (non-critical):', error.message);
-      }
-    }
-  }
-
-  /**
-   * 💾 Save Sweep Patterns to Database (Persistence)
-   * Banking-Grade: Batch insert for efficiency
-   */
-  async saveSweepPatternsToDB(patterns, keywords, sweepVersion) {
-    if (!this.sequelize) {
-      console.warn('⚠️ Database not initialized, skipping sweep patterns save');
-      return;
-    }
-
-    try {
-      // Use Sequelize model if available, otherwise raw query
-      const SweepPatternsCache = this.sequelize.models?.SweepPatternsCache;
-      
-      if (SweepPatternsCache) {
-        // Use Sequelize bulkCreate (cleaner, handles escaping)
-        const patternInserts = Array.from(patterns.entries()).map(([value, category]) => ({
-          patternType: 'pattern',
-          patternValue: value,
-          category: category || null,
-          sweepVersion: sweepVersion || null
-        }));
-
-        const keywordInserts = Array.from(keywords).map(value => ({
-          patternType: 'keyword',
-          patternValue: value,
-          category: null,
-          sweepVersion: sweepVersion || null
-        }));
-
-        // Batch insert with conflict handling
-        if (patternInserts.length > 0) {
-          await SweepPatternsCache.bulkCreate(patternInserts, {
-            updateOnDuplicate: ['category', 'sweepVersion', 'updatedAt'],
-            returning: false
-          });
-        }
-
-        if (keywordInserts.length > 0) {
-          await SweepPatternsCache.bulkCreate(keywordInserts, {
-            updateOnDuplicate: ['sweepVersion', 'updatedAt'],
-            returning: false
-          });
-        }
-
-        this.lastLoadedSweepVersion = sweepVersion;
-        console.log(`💾 Sweep patterns saved to DB: ${patternInserts.length} patterns, ${keywordInserts.length} keywords`);
-      } else {
-        // Fallback: Use raw query with proper escaping (banking-grade: safe)
-        const patternInserts = Array.from(patterns.entries());
-        const keywordInserts = Array.from(keywords);
-
-        // Process in batches of 100 for efficiency
-        const batchSize = 100;
-        
-        for (let i = 0; i < patternInserts.length; i += batchSize) {
-          const batch = patternInserts.slice(i, i + batchSize);
-          const values = batch.map(([value, category]) => 
-            `('pattern', ${this.sequelize.escape(value)}, ${category ? this.sequelize.escape(category) : 'NULL'}, ${sweepVersion ? this.sequelize.escape(sweepVersion) : 'NULL'}, NOW(), NOW())`
-          ).join(', ');
-
-          await this.sequelize.query(`
-            INSERT INTO sweep_patterns_cache ("patternType", "patternValue", category, "sweepVersion", "createdAt", "updatedAt")
-            VALUES ${values}
-            ON CONFLICT ("patternType", "patternValue") 
-            DO UPDATE SET 
-              category = EXCLUDED.category,
-              "sweepVersion" = EXCLUDED."sweepVersion",
-              "updatedAt" = NOW()
-          `, { type: Sequelize.QueryTypes.INSERT });
-        }
-
-        for (let i = 0; i < keywordInserts.length; i += batchSize) {
-          const batch = keywordInserts.slice(i, i + batchSize);
-          const values = batch.map(value => 
-            `('keyword', ${this.sequelize.escape(value)}, NULL, ${sweepVersion ? this.sequelize.escape(sweepVersion) : 'NULL'}, NOW(), NOW())`
-          ).join(', ');
-
-          await this.sequelize.query(`
-            INSERT INTO sweep_patterns_cache ("patternType", "patternValue", category, "sweepVersion", "createdAt", "updatedAt")
-            VALUES ${values}
-            ON CONFLICT ("patternType", "patternValue") 
-            DO UPDATE SET 
-              "sweepVersion" = EXCLUDED."sweepVersion",
-              "updatedAt" = NOW()
-          `, { type: Sequelize.QueryTypes.INSERT });
-        }
-
-        this.lastLoadedSweepVersion = sweepVersion;
-        console.log(`💾 Sweep patterns saved to DB: ${patternInserts.length} patterns, ${keywordInserts.length} keywords`);
-      }
-    } catch (error) {
-      // Table might not exist yet (first run), this is OK
-      if (error.message.includes('does not exist') || error.message.includes('relation')) {
-        console.log('ℹ️ Sweep patterns cache table not found (will be created on first migration)');
-      } else {
-        console.warn('⚠️ Failed to save sweep patterns to DB (non-critical):', error.message);
-      }
-    }
-  }
-
-  /**
-   * 🔄 Check and Regenerate Sweep Patterns (Background)
-   * Banking-Grade: Non-blocking, version-aware regeneration
-   */
-  async checkAndRegenerateSweepPatterns() {
-    if (!this.codebaseSweep) return;
-
-    try {
-      const currentSweepVersion = this.codebaseSweep.getSweepVersion();
-      
-      // If versions match, no regeneration needed
-      if (currentSweepVersion && currentSweepVersion === this.lastLoadedSweepVersion) {
-        return; // Already up to date
-      }
-
-      // Check if cache is stale (> 1 hour old)
-      const now = Date.now();
-      if (now - this.sweepCacheLoadedAt < this.sweepCacheTTL && this.sweepPatterns.size > 0) {
-        return; // Cache is fresh, no need to regenerate
-      }
-
-      // Regenerate patterns from codebase sweep (background, non-blocking)
-      console.log('🔄 Regenerating sweep patterns (background)...');
-      await this.loadSweepPatterns();
-    } catch (error) {
-      console.warn('⚠️ Failed to check/regenerate sweep patterns (non-critical):', error.message);
-    }
-  }
-
-  /**
-   * 🚀 Load Sweep Patterns (Lightweight, In-Memory + DB Persistence)
-   * Extracts patterns from codebase sweep results and saves to database
-   * Banking-Grade: <5ms overhead, zero resource bloat, persistent
-   */
-  async loadSweepPatterns() {
+  async loadRAGContext() {
     if (!this.codebaseSweep) return;
     
     const now = Date.now();
-    // Use cached patterns if fresh (< 1 hour old)
-    if (now - this.sweepCacheLoadedAt < this.sweepCacheTTL && this.sweepPatterns.size > 0) {
+    // Use cached context if fresh (< 1 hour old)
+    if (now - this.sweepCacheLoadedAt < this.sweepCacheTTL && this.sweepContext) {
       return;
     }
 
@@ -1685,119 +1455,55 @@ Rules:
       if (!capabilities || !capabilities.capabilities) return;
 
       const sweepData = capabilities.capabilities;
-      const sweepVersion = capabilities.sweepVersion || `sweep-${Date.now()}`;
       
-      // Extract patterns from categories (lightweight, in-memory only)
-      this.sweepPatterns.clear();
-      this.sweepKeywords.clear();
-      
-      // Process categories to extract patterns
-      if (sweepData.categories) {
-        Object.entries(sweepData.categories).forEach(([category, questions]) => {
-          if (!Array.isArray(questions)) return;
-          
-          questions.forEach(question => {
-            const q = typeof question === 'string' ? question : (question.question || question.text || '');
-            if (!q) return;
-            
-            const lowerQ = q.toLowerCase();
-            
-            // Extract key phrases as patterns (banking-grade: simple, fast)
-            const phrases = lowerQ.match(/\b(how|what|where|when|why|can|do|i|my|the|a|an)\s+[\w\s]{3,30}/g);
-            if (phrases) {
-              phrases.forEach(phrase => {
-                const trimmed = phrase.trim();
-                if (trimmed.length > 5 && trimmed.length < 50) {
-                  this.sweepPatterns.set(trimmed, category);
-                }
-              });
-            }
-            
-            // Extract keywords (for semantic matching enhancement)
-            const words = lowerQ.match(/\b\w{4,}\b/g); // Words 4+ chars
-            if (words) {
-              words.forEach(word => {
-                if (word.length >= 4 && word.length <= 20) {
-                  this.sweepKeywords.add(word);
-                }
-              });
-            }
-          });
-        });
-      }
-      
-      // Build lightweight context for OpenAI (summary only, not full data)
+      // Build lightweight RAG context for AI (summary only, not full data)
+      // This provides platform capabilities context to GPT-4o for accurate responses
       this.sweepContext = {
         totalQuestions: sweepData.totalSupportQuestions || 0,
         categories: Object.keys(sweepData.categories || {}),
-        lastUpdated: capabilities.lastSweepTime || new Date().toISOString()
+        lastUpdated: capabilities.lastSweepTime || new Date().toISOString(),
+        // Add key capabilities summary (for AI context)
+        keyFeatures: this.extractKeyFeatures(sweepData)
       };
       
       this.sweepCacheLoadedAt = now;
       
-      // 💾 Save to database for persistence (banking-grade: fast recovery)
-      await this.saveSweepPatternsToDB(this.sweepPatterns, this.sweepKeywords, sweepVersion);
-      
-      console.log(`✅ Sweep patterns loaded: ${this.sweepPatterns.size} patterns, ${this.sweepKeywords.size} keywords`);
+      console.log(`✅ RAG context loaded: ${this.sweepContext.categories.length} categories, ${this.sweepContext.totalQuestions} support topics`);
     } catch (error) {
-      console.warn('⚠️ Failed to load sweep patterns (non-critical):', error.message);
+      console.warn('⚠️ Failed to load RAG context (non-critical):', error.message);
     }
   }
 
   /**
-   * 🔍 Get Sweep Patterns for Pattern Matching (In-Memory, Zero Cost)
-   * Returns patterns that match the query message
-   * Auto-loads patterns if not yet loaded (non-blocking)
+   * 🔍 Extract Key Features from Sweep Data (for RAG Context)
+   * Banking-Grade: Lightweight summary for AI context
    */
-  getSweepPatterns(message) {
-    // Auto-load if not loaded yet (non-blocking, won't delay query)
-    if ((!this.sweepPatterns || this.sweepPatterns.size === 0) && this.codebaseSweep) {
-      // Trigger async load (non-blocking)
-      this.loadSweepPatterns().catch(() => {}); // Silent fail
-      return null; // Return null for this query, will work on next query
+  extractKeyFeatures(sweepData) {
+    const features = [];
+    
+    // Extract key API capabilities
+    if (sweepData.apiCapabilities) {
+      Object.keys(sweepData.apiCapabilities).forEach(category => {
+        const count = sweepData.apiCapabilities[category]?.length || 0;
+        if (count > 0) {
+          features.push(`${category} (${count} endpoints)`);
+        }
+      });
     }
     
-    if (!this.sweepPatterns || this.sweepPatterns.size === 0) return null;
-    
-    const lowerMessage = message.toLowerCase();
-    const matches = [];
-    
-    // Fast pattern matching (banking-grade: O(n) where n = pattern count)
-    for (const [pattern, category] of this.sweepPatterns.entries()) {
-      if (lowerMessage.includes(pattern)) {
-        matches.push({ pattern, category, confidence: 0.85 });
-      }
-    }
-    
-    return matches.length > 0 ? matches[0] : null; // Return best match
+    return features.slice(0, 10); // Limit to top 10 for token efficiency
   }
 
   /**
-   * 🔑 Get Sweep Keywords for Semantic Matching Enhancement (In-Memory, Zero Cost)
-   * Returns relevant keywords that boost semantic matching accuracy
-   */
-  getSweepKeywords(message) {
-    if (!this.sweepKeywords || this.sweepKeywords.size === 0) return [];
-    
-    const lowerMessage = message.toLowerCase();
-    const words = lowerMessage.match(/\b\w{4,}\b/g) || [];
-    const relevantKeywords = [];
-    
-    // Fast keyword matching (banking-grade: O(n*m) where n = message words, m = keyword set)
-    words.forEach(word => {
-      if (this.sweepKeywords.has(word)) {
-        relevantKeywords.push(word);
-      }
-    });
-    
-    return relevantKeywords;
-  }
-
-  /**
-   * 📚 Get Sweep Context for OpenAI Enhancement (Lightweight Summary Only)
-   * Returns minimal context to improve AI responses without bloat
+   * 📚 Get RAG Context (Retrieval Augmented Generation)
+   * Award-Winning Architecture: Provides platform capabilities to AI
+   * Returns lightweight summary of platform capabilities for AI context
    */
   getSweepContext() {
+    // Auto-load if not loaded yet (non-blocking)
+    if (!this.sweepContext && this.codebaseSweep) {
+      this.loadRAGContext().catch(() => {}); // Silent fail, will work on next call
+    }
     return this.sweepContext || null;
   }
 
@@ -2447,19 +2153,8 @@ When answering fee questions, be specific about the tier system and always menti
       return 15; // Highest score for exact match
     }
     
-    // 🚀 1.5. Sweep keyword boost (lightweight, in-memory, zero cost)
-    // Banking-Grade: <0.5ms overhead, improves accuracy without bloat
-    if (this.sweepKeywords && this.sweepKeywords.size > 0) {
-      const sweepKeywords = this.getSweepKeywords(normalizedMessage);
-      if (sweepKeywords.length > 0) {
-        // Check if question contains sweep keywords (boost score)
-        const questionWords = normalizedQuestion.match(/\b\w{4,}\b/g) || [];
-        const matchingKeywords = sweepKeywords.filter(kw => questionWords.includes(kw));
-        if (matchingKeywords.length > 0) {
-          score += matchingKeywords.length * 0.5; // Small boost per matching keyword
-        }
-      }
-    }
+    // NOTE: Pattern/keyword matching removed - using semantic matching only
+    // Award-winning architecture: Semantic matching is sufficient for knowledge base
     
     // 2. Semantic similarity using embeddings (STATE-OF-THE-ART)
     // 🎯 STRICT THRESHOLDS: Only accept high-quality semantic matches
