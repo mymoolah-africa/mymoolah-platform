@@ -300,6 +300,8 @@ class BankingGradeSupportService {
       // Complex queries (how-to, explanations, etc.) should go to GPT-4o
       const simpleQuery = this.detectSimpleQuery(message);
       if (simpleQuery && !simpleQuery.requiresAI) {
+        console.log(`✅ SIMPLE QUERY DETECTED: ${simpleQuery.category} for "${message.substring(0, 50)}"`);
+        
         // 🚀 Banking-Grade Optimization: Lightweight rate limiting for simple queries
         // Use in-memory only (skip Redis) for maximum speed (<1ms overhead)
         this.enforceLightweightRateLimit(userId);
@@ -312,8 +314,12 @@ class BankingGradeSupportService {
         // Execute database query immediately (balance, transactions, KYC, etc.)
         // Pass message in context for payment status queries
         const enrichedContext = { ...context, message };
+        const dbStartTime = Date.now();
         const response = await this.executeQuery(simpleQuery, message, userId, language, enrichedContext);
+        const dbTime = Date.now() - dbStartTime;
         const responseTime = Date.now() - startTime;
+        
+        console.log(`⚡ DB Query took ${dbTime}ms, Total response time: ${responseTime}ms`);
         
         // Update metrics and audit log async (non-blocking)
         this.updatePerformanceMetrics(responseTime, true);
@@ -328,6 +334,8 @@ class BankingGradeSupportService {
         
         return this.formatResponse(response, queryId, responseTime);
       }
+      
+      console.log(`🤖 COMPLEX QUERY - Routing to GPT-4o for "${message.substring(0, 50)}"`);
       
       // 🔒 Security & Rate Limiting (for complex queries that go to GPT-4o)
       await this.enforceRateLimit(userId);
@@ -526,17 +534,24 @@ class BankingGradeSupportService {
       }
     }
     
-    // 💰 Wallet Balance - ONLY very specific, unambiguous queries
+    // 💰 Wallet Balance - Common patterns for balance queries
     if (
-      (lowerMessage === 'balance' || lowerMessage === 'my balance' || lowerMessage === 'wallet balance') ||
+      lowerMessage === 'balance' || 
+      lowerMessage === 'my balance' || 
+      lowerMessage === 'wallet balance' ||
+      lowerMessage.includes('wallet balance') ||
+      lowerMessage.includes('my balance') ||
       (lowerMessage.includes('what') && lowerMessage.includes('balance') && !lowerMessage.includes('how')) ||
+      (lowerMessage.includes('what\'s') && lowerMessage.includes('balance')) ||
+      (lowerMessage.includes('whats') && lowerMessage.includes('balance')) ||
       (lowerMessage.includes('show') && lowerMessage.includes('balance')) ||
-      (lowerMessage.includes('check') && lowerMessage.includes('balance'))
+      (lowerMessage.includes('check') && lowerMessage.includes('balance')) ||
+      (lowerMessage.includes('current balance'))
     ) {
       return { category: 'WALLET_BALANCE', confidence: 0.95, requiresAI: false };
     }
     
-    // ✅ KYC Status - ONLY very specific queries
+    // ✅ KYC Status - Common patterns for KYC queries
     if (
       lowerMessage.includes('kyc status') ||
       lowerMessage.includes('verification status') ||
@@ -546,14 +561,17 @@ class BankingGradeSupportService {
       return { category: 'KYC_STATUS', confidence: 0.95, requiresAI: false };
     }
     
-    // 📜 Transaction History - ONLY very specific queries, exclude "limits" and "how-to"
+    // 📜 Transaction History - Common patterns for transaction queries
     if (
-      (lowerMessage.includes('transaction history') || lowerMessage.includes('transaction list')) &&
-      !lowerMessage.includes('limit') &&
-      !lowerMessage.includes('how') &&
-      !lowerMessage.includes('increase')
+      (lowerMessage.includes('transaction') && (lowerMessage.includes('history') || lowerMessage.includes('list') || lowerMessage.includes('recent'))) ||
+      (lowerMessage.includes('recent transaction')) ||
+      (lowerMessage.includes('show') && lowerMessage.includes('transaction')) ||
+      (lowerMessage.includes('my transaction'))
     ) {
-      return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
+      // Exclude queries about limits or how-to
+      if (!lowerMessage.includes('limit') && !lowerMessage.includes('how') && !lowerMessage.includes('increase')) {
+        return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
+      }
     }
     
     // 🎫 MyMoolah Voucher Management - ONLY balance/summary queries, NOT purchase queries
