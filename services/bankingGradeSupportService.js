@@ -829,17 +829,46 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
 
   /**
    * 🔒 Rate Limiting (Banking-Grade)
+   * Uses Redis when available and ready; falls back to in-memory limits when Redis is offline/not yet connected.
    */
   async enforceRateLimit(userId) {
     const key = `rate_limit:${userId}`;
-    const current = await this.redis?.incr(key); // Use optional chaining
-    
-    if (current === 1) {
-      await this.redis?.expire(key, this.config.rateLimitWindow); // Use optional chaining
+
+    // Prefer Redis-based rate limiting when the client is connected
+    if (this.redis && this.redis.status === 'ready') {
+      const current = await this.redis.incr(key);
+
+      if (current === 1) {
+        await this.redis.expire(key, this.config.rateLimitWindow);
+      }
+
+      if (current > this.config.rateLimitMax) {
+        const error = new Error('Rate limit exceeded. Please try again later.');
+        error.code = 'RATE_LIMIT_EXCEEDED';
+        throw error;
+      }
+      return;
     }
-    
-    if (current > this.config.rateLimitMax) {
-      throw new Error('Rate limit exceeded. Please try again later.');
+
+    // Fallback: in-memory rate limiting when Redis is not ready (e.g. during startup)
+    if (!this.inMemoryRateLimit) {
+      this.inMemoryRateLimit = new Map();
+    }
+
+    const now = Date.now();
+    const windowMs = (this.config.rateLimitWindow || 3600) * 1000;
+    let entry = this.inMemoryRateLimit.get(userId) || { count: 0, resetAt: now + windowMs };
+    if (now > entry.resetAt) {
+      entry = { count: 0, resetAt: now + windowMs };
+    }
+
+    entry.count += 1;
+    this.inMemoryRateLimit.set(userId, entry);
+
+    if (entry.count > this.config.rateLimitMax) {
+      const error = new Error('Rate limit exceeded. Please try again later.');
+      error.code = 'RATE_LIMIT_EXCEEDED';
+      throw error;
     }
   }
 
@@ -847,13 +876,19 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
    * 💾 Caching Layer (High Performance)
    */
   async getCachedResponse(queryId, userId, queryType) {
+    if (!this.redis || this.redis.status !== 'ready') {
+      return null;
+    }
     const key = `support_cache:${userId}:${queryType.category}`;
-    return await this.redis?.get(key); // Use optional chaining
+    return await this.redis.get(key);
   }
 
   async cacheResponse(queryId, userId, queryType, response) {
+    if (!this.redis || this.redis.status !== 'ready') {
+      return;
+    }
     const key = `support_cache:${userId}:${queryType.category}`;
-    await this.redis?.setex(key, this.config.cacheTTL, JSON.stringify(response)); // Use optional chaining
+    await this.redis.setex(key, this.config.cacheTTL, JSON.stringify(response));
   }
 
   /**
