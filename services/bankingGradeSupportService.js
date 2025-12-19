@@ -300,13 +300,14 @@ class BankingGradeSupportService {
       // Complex queries (how-to, explanations, etc.) should go to GPT-4o
       const simpleQuery = this.detectSimpleQuery(message);
       if (simpleQuery && !simpleQuery.requiresAI) {
-        // 🚀 Banking-Grade Optimization: Rate limiting and audit logging async for simple queries
-        // This ensures direct DB queries are as fast as possible (<50ms)
-        // Rate limiting and audit logging happen in background (non-blocking)
-        this.enforceRateLimit(userId).catch(() => {
-          // Ignore rate limit errors for simple queries (non-critical)
+        // 🚀 Banking-Grade Optimization: Lightweight rate limiting for simple queries
+        // Use in-memory only (skip Redis) for maximum speed (<1ms overhead)
+        this.enforceLightweightRateLimit(userId);
+        
+        // Audit logging async (non-blocking)
+        setImmediate(() => {
+          this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
         });
-        this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
         
         // Execute database query immediately (balance, transactions, KYC, etc.)
         // Pass message in context for payment status queries
@@ -1002,6 +1003,34 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     });
     
     return response;
+  }
+
+  /**
+   * 🚀 Lightweight Rate Limiting (Banking-Grade, In-Memory Only)
+   * For simple queries (balance, transactions) - maximum speed (<1ms overhead)
+   * Uses in-memory only, skips Redis for performance
+   */
+  enforceLightweightRateLimit(userId) {
+    if (!this.inMemoryRateLimit) {
+      this.inMemoryRateLimit = new Map();
+    }
+
+    const now = Date.now();
+    const windowMs = (this.config.rateLimitWindow || 3600) * 1000;
+    let entry = this.inMemoryRateLimit.get(userId) || { count: 0, resetAt: now + windowMs };
+    
+    if (now > entry.resetAt) {
+      entry = { count: 0, resetAt: now + windowMs };
+    }
+    
+    entry.count++;
+    this.inMemoryRateLimit.set(userId, entry);
+
+    if (entry.count > this.config.rateLimitMax) {
+      const error = new Error('Rate limit exceeded. Please try again later.');
+      error.code = 'RATE_LIMIT_EXCEEDED';
+      throw error;
+    }
   }
 
   /**
