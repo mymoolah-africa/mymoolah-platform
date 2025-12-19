@@ -508,6 +508,30 @@ class BankingGradeSupportService {
       return { category: 'TECHNICAL_SUPPORT', confidence: 0.95, requiresAI: true };
     }
     
+    // 📜 Transaction History - Check FIRST (before other patterns that might interfere)
+    // This must come before wallet balance and other patterns
+    if (
+      lowerMessage.includes('transaction') ||
+      lowerMessage.includes('recent') ||
+      lowerMessage.includes('history')
+    ) {
+      // Exclude queries about limits, how-to, or upgrades
+      if (!lowerMessage.includes('limit') && !lowerMessage.includes('how') && !lowerMessage.includes('increase') && !lowerMessage.includes('upgrade')) {
+        // Match transaction query patterns - be very explicit
+        if (
+          lowerMessage.includes('transaction') ||
+          (lowerMessage.includes('recent') && (lowerMessage.includes('transaction') || lowerMessage.includes('payment') || lowerMessage.includes('activity'))) ||
+          lowerMessage.includes('transaction history') ||
+          lowerMessage.includes('transaction list') ||
+          (lowerMessage.includes('show') && (lowerMessage.includes('transaction') || lowerMessage.includes('recent'))) ||
+          (lowerMessage.includes('show me') && (lowerMessage.includes('transaction') || lowerMessage.includes('recent'))) ||
+          (lowerMessage.includes('my') && (lowerMessage.includes('transaction') || lowerMessage.includes('recent')))
+        ) {
+          return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
+        }
+      }
+    }
+    
     // 🚀 Check sweep-discovered patterns (lightweight, zero cost)
     // Banking-Grade: <1ms overhead, in-memory only
     // BUT: Only use if it's a simple query, not a complex how-to
@@ -559,29 +583,6 @@ class BankingGradeSupportService {
       (lowerMessage === 'kyc' || lowerMessage === 'verification')
     ) {
       return { category: 'KYC_STATUS', confidence: 0.95, requiresAI: false };
-    }
-    
-    // 📜 Transaction History - Common patterns for transaction queries
-    // Check for transaction-related queries FIRST (before other patterns)
-    const hasTransaction = lowerMessage.includes('transaction');
-    const hasRecent = lowerMessage.includes('recent');
-    const hasHistory = lowerMessage.includes('history');
-    const hasShow = lowerMessage.includes('show');
-    const hasMy = lowerMessage.includes('my');
-    
-    // Exclude queries about limits, how-to, or upgrades
-    const isExcluded = lowerMessage.includes('limit') || lowerMessage.includes('how') || lowerMessage.includes('increase') || lowerMessage.includes('upgrade');
-    
-    if ((hasTransaction || hasRecent || hasHistory) && !isExcluded) {
-      // Match common transaction query patterns
-      if (
-        (hasTransaction && (hasHistory || hasRecent || lowerMessage.includes('list'))) ||
-        (hasRecent && (hasTransaction || hasMy)) ||
-        (hasShow && (hasTransaction || hasRecent)) ||
-        (hasMy && (hasTransaction || hasRecent))
-      ) {
-        return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
-      }
     }
     
     // 🎫 MyMoolah Voucher Management - ONLY balance/summary queries, NOT purchase queries
