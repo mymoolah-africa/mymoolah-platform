@@ -497,30 +497,12 @@ class BankingGradeSupportService {
   detectObviousQuery(message) {
     const lowerMessage = message.toLowerCase().trim();
     
-    // 💰 Wallet Balance - Truly obvious queries only
+    // 🎫 Voucher Balance - Check FIRST (before wallet balance to avoid conflicts)
+    // Handle both "voucher" and "vouchers" (plural)
     if (
-      lowerMessage === 'balance' ||
-      lowerMessage === 'my balance' ||
-      lowerMessage === 'wallet balance' ||
-      (lowerMessage.includes('wallet balance') && !lowerMessage.includes('voucher')) ||
-      (lowerMessage.includes('what') && lowerMessage.includes('balance') && !lowerMessage.includes('voucher') && !lowerMessage.includes('how'))
-    ) {
-      return { 
-        category: 'WALLET_BALANCE', 
-        confidence: 0.98, 
-        requiresDirectDB: true,
-        requiresKnowledgeBase: false,
-        requiresAI: false,
-        reasoning: 'Obvious wallet balance query'
-      };
-    }
-    
-    // 🎫 Voucher Balance - Truly obvious queries only
-    if (
-      lowerMessage.includes('voucher balance') ||
-      (lowerMessage.includes('voucher') && lowerMessage.includes('balance')) ||
-      (lowerMessage.includes('my voucher') && lowerMessage.includes('balance')) ||
-      (lowerMessage.includes('what') && lowerMessage.includes('voucher') && lowerMessage.includes('balance'))
+      lowerMessage.includes('voucher') && lowerMessage.includes('balance') ||
+      (lowerMessage.includes('what') && lowerMessage.includes('voucher') && lowerMessage.includes('balance')) ||
+      (lowerMessage.includes('my voucher') && lowerMessage.includes('balance'))
     ) {
       return { 
         category: 'VOUCHER_BALANCE', 
@@ -532,12 +514,33 @@ class BankingGradeSupportService {
       };
     }
     
+    // 💰 Wallet Balance - Truly obvious queries only
+    // Must check AFTER voucher to avoid conflicts
+    if (
+      lowerMessage === 'balance' ||
+      lowerMessage === 'my balance' ||
+      lowerMessage === 'wallet balance' ||
+      lowerMessage.includes('wallet balance') ||
+      (lowerMessage.includes('what') && lowerMessage.includes('balance') && !lowerMessage.includes('how')) ||
+      (lowerMessage.includes('my balance') && !lowerMessage.includes('voucher'))
+    ) {
+      return { 
+        category: 'WALLET_BALANCE', 
+        confidence: 0.98, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Obvious wallet balance query'
+      };
+    }
+    
     // 📜 Transaction History - Truly obvious queries only
     if (
       lowerMessage === 'transactions' ||
       lowerMessage === 'transaction history' ||
-      (lowerMessage.includes('transaction') && lowerMessage.includes('history')) ||
-      (lowerMessage.includes('show') && lowerMessage.includes('transaction') && !lowerMessage.includes('how'))
+      lowerMessage.includes('transaction history') ||
+      (lowerMessage.includes('show') && lowerMessage.includes('transaction') && !lowerMessage.includes('how')) ||
+      (lowerMessage.includes('my transaction') && !lowerMessage.includes('how'))
     ) {
       return { 
         category: 'TRANSACTION_HISTORY', 
