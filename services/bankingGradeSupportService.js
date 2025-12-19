@@ -401,6 +401,19 @@ class BankingGradeSupportService {
     ) {
       return { category: 'PAYMENT_STATUS', confidence: 0.9, requiresAI: false };
     }
+
+    // Generic \"how do I pay / make payments\" queries
+    if (
+      lowerMessage.includes('pay my account') ||
+      lowerMessage.includes('pay my accounts') ||
+      lowerMessage.includes('pay account') ||
+      lowerMessage.includes('pay accounts') ||
+      lowerMessage.includes('make a payment') ||
+      lowerMessage.includes('make payment') ||
+      lowerMessage.includes('make payments')
+    ) {
+      return { category: 'PAYMENT_STATUS', confidence: 0.95, requiresAI: false };
+    }
     
     return null; // No simple pattern match found
   }
