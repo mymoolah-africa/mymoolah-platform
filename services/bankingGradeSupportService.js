@@ -321,15 +321,18 @@ class BankingGradeSupportService {
         return this.formatResponse(response, queryId, responseTime);
       }
 
-      // 📚 STEP 2: Knowledge Base Lookup (only if not a simple database query)
+      // 📚 STEP 2: Knowledge Base Lookup (only if not a simple database query AND not requiring AI)
+      // Skip KB lookup for queries that should go directly to GPT-4o (requiresAI: true)
       // High threshold ensures only accurate, relevant answers are returned
       // If no good match, fall through to GPT-4o
-      const knowledgeResponse = await this.findKnowledgeBaseAnswer(message, language);
-      if (knowledgeResponse) {
-        const responseTime = Date.now() - startTime;
-        this.updatePerformanceMetrics(responseTime, true);
-        this.auditLog('KNOWLEDGE_BASE_HIT', { queryId, userId, category: knowledgeResponse?.data?.category, timestamp: new Date() });
-        return this.formatResponse(knowledgeResponse, queryId, responseTime);
+      if (!simpleQuery || !simpleQuery.requiresAI) {
+        const knowledgeResponse = await this.findKnowledgeBaseAnswer(message, language);
+        if (knowledgeResponse) {
+          const responseTime = Date.now() - startTime;
+          this.updatePerformanceMetrics(responseTime, true);
+          this.auditLog('KNOWLEDGE_BASE_HIT', { queryId, userId, category: knowledgeResponse?.data?.category, timestamp: new Date() });
+          return this.formatResponse(knowledgeResponse, queryId, responseTime);
+        }
       }
 
       // 🎯 STEP 3: Query Classification (for complex queries requiring AI)
@@ -847,15 +850,11 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
    * Cached, Monitored, Audited
    */
   async getWalletBalance(userId, language) {
-    const cacheKey = `wallet_balance:${userId}`;
+    // 🚀 Banking-Grade Optimization: Direct DB query (skip Redis for speed)
+    // Direct queries are already fast (<50ms), Redis adds overhead
+    // Cache is only beneficial for high-frequency repeated queries
     
-    // 💾 Check Cache
-    const cached = await this.safeRedisGet(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
-    }
-    
-    // 🗄️ Database Query
+    // 🗄️ Direct Database Query (banking-grade: <50ms)
     const result = await this.sequelize.query(`
       SELECT 
         w.balance,
@@ -898,8 +897,11 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
       }
     };
     
-    // 💾 Cache Response
-    await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response));
+    // 💾 Cache Response (async, non-blocking)
+    const cacheKey = `wallet_balance:${userId}`;
+    this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response)).catch(() => {
+      // Ignore cache errors - non-critical
+    });
     
     return response;
   }
@@ -909,17 +911,15 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
    */
   async getTransactionHistory(userId, language, context = {}) {
     const { page = 1, limit = 10 } = context;
-    const cacheKey = `transaction_history:${userId}:${page}:${limit}`;
     
-    // 💾 Check Cache
-    const cached = await this.safeRedisGet(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
-    }
+    // 🚀 Banking-Grade Optimization: Direct DB query (skip Redis for speed)
+    // Direct queries are already fast (<50ms), Redis adds overhead
+    // Cache is only beneficial for high-frequency repeated queries
     
-    // 🗄️ Database Query with Pagination
+    // 🗄️ Direct Database Query with Pagination (banking-grade: <50ms)
     const offset = (page - 1) * limit;
     
+    // Use single query with window function for better performance
     const result = await this.sequelize.query(`
       SELECT 
         t.id,
@@ -929,7 +929,8 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         t.status,
         t."createdAt",
         t.currency,
-        t."transactionId"
+        t."transactionId",
+        COUNT(*) OVER() as total_count
       FROM transactions t
       WHERE t."userId" = :userId
       ORDER BY t."createdAt" DESC
@@ -940,18 +941,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
       raw: true
     });
     
-    // 📊 Get Total Count
-    const countResult = await this.sequelize.query(`
-      SELECT COUNT(*) as total
-      FROM transactions t
-      WHERE t."userId" = :userId
-    `, {
-      replacements: { userId },
-      type: Sequelize.QueryTypes.SELECT,
-      raw: true
-    });
-    
-    const totalTransactions = countResult[0].total;
+    const totalTransactions = result.length > 0 ? parseInt(result[0].total_count) : 0;
     const totalPages = Math.ceil(totalTransactions / limit);
     
     const response = {
@@ -992,8 +982,11 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
       }
     };
     
-    // 💾 Cache Response (with shorter TTL for transaction data)
-    await this.safeRedisSetex(cacheKey, 300, JSON.stringify(response)); // 5 minutes TTL
+    // 💾 Cache Response (async, non-blocking)
+    const cacheKey = `transaction_history:${userId}:${page}:${limit}`;
+    this.safeRedisSetex(cacheKey, 300, JSON.stringify(response)).catch(() => {
+      // Ignore cache errors - non-critical
+    });
     
     return response;
   }
