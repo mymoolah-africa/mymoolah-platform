@@ -1909,7 +1909,8 @@ When answering fee questions, be specific about the tier system and always menti
     const windowSeconds = this.config.aiLimitWindow || 86400;
     const redisKey = `support_ai_calls:${userId}`;
 
-    if (this.redis) {
+    // Prefer Redis-based tracking when the client is fully connected
+    if (this.redis && this.redis.status === 'ready') {
       const newCount = await this.redis.incr(redisKey);
       if (newCount === 1) {
         await this.redis.expire(redisKey, windowSeconds);
@@ -1923,6 +1924,7 @@ When answering fee questions, be specific about the tier system and always menti
       return;
     }
 
+    // Fallback: in-memory tracking when Redis is not ready (e.g. during startup)
     const now = Date.now();
     const existing = this.inMemoryAiUsage.get(userId) || { count: 0, expiresAt: now + windowSeconds * 1000 };
     if (now > existing.expiresAt) {
