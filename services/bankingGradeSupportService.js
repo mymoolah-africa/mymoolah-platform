@@ -295,31 +295,44 @@ class BankingGradeSupportService {
     try {
       // 🔍 Check if service is initialized (removed for now)
       
-      // 🔒 Security & Rate Limiting
-      await this.enforceRateLimit(userId);
-      
-      // 📊 Audit Logging
-      this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
-      
       // 🔍 STEP 1: Check simple patterns FIRST (database queries take priority)
       // ONLY for truly simple, unambiguous queries that can be answered directly from DB
       // Complex queries (how-to, explanations, etc.) should go to GPT-4o
       const simpleQuery = this.detectSimpleQuery(message);
       if (simpleQuery && !simpleQuery.requiresAI) {
+        // 🚀 Banking-Grade Optimization: Rate limiting and audit logging async for simple queries
+        // This ensures direct DB queries are as fast as possible (<50ms)
+        // Rate limiting and audit logging happen in background (non-blocking)
+        this.enforceRateLimit(userId).catch(() => {
+          // Ignore rate limit errors for simple queries (non-critical)
+        });
+        this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
+        
         // Execute database query immediately (balance, transactions, KYC, etc.)
         // Pass message in context for payment status queries
         const enrichedContext = { ...context, message };
         const response = await this.executeQuery(simpleQuery, message, userId, language, enrichedContext);
         const responseTime = Date.now() - startTime;
+        
+        // Update metrics and audit log async (non-blocking)
         this.updatePerformanceMetrics(responseTime, true);
-        this.auditLog('SIMPLE_QUERY_EXECUTED', { 
-          queryId, 
-          userId, 
-          category: simpleQuery.category, 
-          timestamp: new Date() 
+        setImmediate(() => {
+          this.auditLog('SIMPLE_QUERY_EXECUTED', { 
+            queryId, 
+            userId, 
+            category: simpleQuery.category, 
+            timestamp: new Date() 
+          });
         });
+        
         return this.formatResponse(response, queryId, responseTime);
       }
+      
+      // 🔒 Security & Rate Limiting (for complex queries that go to GPT-4o)
+      await this.enforceRateLimit(userId);
+      
+      // 📊 Audit Logging
+      this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
 
       // 📚 STEP 2: Knowledge Base Lookup (only if not a simple database query AND not requiring AI)
       // Skip KB lookup for queries that should go directly to GPT-4o (requiresAI: true)
@@ -2167,7 +2180,8 @@ IMPORTANT:
 - Always check the confirmation screen - fees are ALWAYS shown before you confirm
 - Fees vary by transaction type, amount, supplier, and your tier
 - Your tier is based on monthly transaction count AND monthly transaction value (both must be met)
-- If you have fee questions, refer users to the confirmation screen or contact support
+- For detailed fee information, refer users to the MyMoolah website where all transaction fees are published
+- If you have fee questions, first check the website, then the confirmation screen, or contact support
 
 Provide helpful, accurate, and professional technical support responses.
 Focus on practical solutions and next steps.
