@@ -562,16 +562,24 @@ class BankingGradeSupportService {
     }
     
     // 📜 Transaction History - Common patterns for transaction queries
-    if (
-      (lowerMessage.includes('transaction') && (lowerMessage.includes('history') || lowerMessage.includes('list') || lowerMessage.includes('recent'))) ||
-      (lowerMessage.includes('recent transaction')) ||
-      (lowerMessage.includes('show') && (lowerMessage.includes('transaction') || lowerMessage.includes('recent'))) ||
-      (lowerMessage.includes('show me') && (lowerMessage.includes('transaction') || lowerMessage.includes('recent'))) ||
-      (lowerMessage.includes('my transaction')) ||
-      (lowerMessage.includes('my recent'))
-    ) {
-      // Exclude queries about limits or how-to
-      if (!lowerMessage.includes('limit') && !lowerMessage.includes('how') && !lowerMessage.includes('increase')) {
+    // Check for transaction-related queries FIRST (before other patterns)
+    const hasTransaction = lowerMessage.includes('transaction');
+    const hasRecent = lowerMessage.includes('recent');
+    const hasHistory = lowerMessage.includes('history');
+    const hasShow = lowerMessage.includes('show');
+    const hasMy = lowerMessage.includes('my');
+    
+    // Exclude queries about limits, how-to, or upgrades
+    const isExcluded = lowerMessage.includes('limit') || lowerMessage.includes('how') || lowerMessage.includes('increase') || lowerMessage.includes('upgrade');
+    
+    if ((hasTransaction || hasRecent || hasHistory) && !isExcluded) {
+      // Match common transaction query patterns
+      if (
+        (hasTransaction && (hasHistory || hasRecent || lowerMessage.includes('list'))) ||
+        (hasRecent && (hasTransaction || hasMy)) ||
+        (hasShow && (hasTransaction || hasRecent)) ||
+        (hasMy && (hasTransaction || hasRecent))
+      ) {
         return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
       }
     }
@@ -884,9 +892,9 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
    * Uses same fast method as walletController.getBalance (134ms vs 2143ms)
    */
   async getWalletBalance(userId, language) {
-    // 🚀 Banking-Grade Optimization: Use Sequelize ORM (same as fast endpoint)
-    // Raw SQL with JOIN was slow (2143ms), ORM is fast (134ms)
-    const { Wallet, User } = this.sequelize.models;
+    // 🚀 Banking-Grade Optimization: Use models directly (same as walletController)
+    // Use models from require('../models') - same as walletController.getBalance
+    const { Wallet, User } = models;
     
     if (!Wallet) {
       throw new Error('Wallet model not initialized');
