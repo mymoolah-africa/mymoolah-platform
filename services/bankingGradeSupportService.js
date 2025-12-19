@@ -292,14 +292,40 @@ class BankingGradeSupportService {
       // 📊 Audit Logging
       this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
 
-      // 🎯 STEP 1: AI Intent Classification FIRST (Award-Winning Architecture)
-      // AI understands intent for ALL queries - no hardcoded patterns
-      // This is what CIBC, JPMorgan, BBVA do - AI-first, not pattern-first
+      // 🚀 STEP 1: Lightweight Pre-Filter for Obvious Queries (Award-Winning Fast Path)
+      // Award-winning systems use fast pre-filter for truly obvious queries (<1ms)
+      // Then AI handles ambiguous/complex queries
+      const obviousIntent = this.detectObviousQuery(message);
+      if (obviousIntent) {
+        console.log(`⚡ Obvious Query Detected: ${obviousIntent.category} (fast path, skipping AI classification)`);
+        
+        const enrichedContext = { ...context, message };
+        const dbStartTime = Date.now();
+        const response = await this.executeQuery(obviousIntent, message, userId, language, enrichedContext);
+        const dbTime = Date.now() - dbStartTime;
+        const responseTime = Date.now() - startTime;
+        
+        console.log(`⚡ DB Query took ${dbTime}ms, Total response time: ${responseTime}ms`);
+        
+        this.updatePerformanceMetrics(responseTime, true);
+        this.auditLog('OBVIOUS_QUERY_EXECUTED', { 
+          queryId, 
+          userId, 
+          category: obviousIntent.category, 
+          timestamp: new Date() 
+        });
+        
+        return this.formatResponse(response, queryId, responseTime);
+      }
+
+      // 🎯 STEP 2: AI Intent Classification (for ambiguous/complex queries)
+      // AI understands intent for queries that aren't obvious
+      // This is what CIBC, JPMorgan, BBVA do - AI for understanding, not obvious queries
       const intent = await this.classifyQuery(message, userId);
       
       console.log(`🤖 AI Intent Classification: ${intent.category} (confidence: ${intent.confidence}, directDB: ${intent.requiresDirectDB})`);
       
-      // 🚀 STEP 2: Direct Database Query (if AI determined it's unambiguous)
+      // 🚀 STEP 3: Direct Database Query (if AI determined it's unambiguous)
       // AI classification determines if query can be answered directly from DB
       if (intent.requiresDirectDB && !intent.requiresAI) {
         console.log(`⚡ Direct DB Query: ${intent.category}`);
@@ -323,7 +349,7 @@ class BankingGradeSupportService {
         return this.formatResponse(response, queryId, responseTime);
       }
 
-      // 📚 STEP 3: Knowledge Base Lookup (RAG Pattern)
+      // 📚 STEP 4: Knowledge Base Lookup (RAG Pattern)
       // Check knowledge base before generating AI response
       if (intent.requiresKnowledgeBase !== false) {
         const knowledgeResponse = await this.findKnowledgeBaseAnswer(message, language);
@@ -340,7 +366,7 @@ class BankingGradeSupportService {
         }
       }
       
-      // 💾 STEP 4: Cache Check (for AI-generated responses)
+      // 💾 STEP 5: Cache Check (for AI-generated responses)
       const cachedResponse = await this.getCachedResponse(queryId, userId, intent);
       if (cachedResponse) {
         this.performanceMetrics.cacheHits++;
@@ -348,7 +374,7 @@ class BankingGradeSupportService {
         return this.formatResponse(cachedResponse, queryId, responseTime);
       }
       
-      // 🤖 STEP 5: AI-Generated Response (with full context)
+      // 🤖 STEP 6: AI-Generated Response (with full context)
       // AI generates response with codebase sweep context for accuracy
       const response = await this.executeQuery(intent, message, userId, language, context);
       
@@ -458,6 +484,89 @@ class BankingGradeSupportService {
     }
     
     return classification;
+  }
+
+  /**
+   * ⚡ Detect Obvious Queries (Award-Winning Fast Path)
+   * Banking-Grade: <1ms pre-filter for truly obvious queries
+   * Based on CIBC, JPMorgan, BBVA best practices
+   * 
+   * Award-winning systems use fast pre-filter for obvious queries, then AI for ambiguous ones
+   * This prevents unnecessary AI calls for queries like "balance", "voucher balance", etc.
+   */
+  detectObviousQuery(message) {
+    const lowerMessage = message.toLowerCase().trim();
+    
+    // 💰 Wallet Balance - Truly obvious queries only
+    if (
+      lowerMessage === 'balance' ||
+      lowerMessage === 'my balance' ||
+      lowerMessage === 'wallet balance' ||
+      (lowerMessage.includes('wallet balance') && !lowerMessage.includes('voucher')) ||
+      (lowerMessage.includes('what') && lowerMessage.includes('balance') && !lowerMessage.includes('voucher') && !lowerMessage.includes('how'))
+    ) {
+      return { 
+        category: 'WALLET_BALANCE', 
+        confidence: 0.98, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Obvious wallet balance query'
+      };
+    }
+    
+    // 🎫 Voucher Balance - Truly obvious queries only
+    if (
+      lowerMessage.includes('voucher balance') ||
+      (lowerMessage.includes('voucher') && lowerMessage.includes('balance')) ||
+      (lowerMessage.includes('my voucher') && lowerMessage.includes('balance')) ||
+      (lowerMessage.includes('what') && lowerMessage.includes('voucher') && lowerMessage.includes('balance'))
+    ) {
+      return { 
+        category: 'VOUCHER_BALANCE', 
+        confidence: 0.98, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Obvious voucher balance query'
+      };
+    }
+    
+    // 📜 Transaction History - Truly obvious queries only
+    if (
+      lowerMessage === 'transactions' ||
+      lowerMessage === 'transaction history' ||
+      (lowerMessage.includes('transaction') && lowerMessage.includes('history')) ||
+      (lowerMessage.includes('show') && lowerMessage.includes('transaction') && !lowerMessage.includes('how'))
+    ) {
+      return { 
+        category: 'TRANSACTION_HISTORY', 
+        confidence: 0.98, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Obvious transaction history query'
+      };
+    }
+    
+    // ✅ KYC Status - Truly obvious queries only
+    if (
+      lowerMessage === 'kyc' ||
+      lowerMessage === 'kyc status' ||
+      lowerMessage.includes('verification status')
+    ) {
+      return { 
+        category: 'KYC_STATUS', 
+        confidence: 0.98, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Obvious KYC status query'
+      };
+    }
+    
+    // Not obvious - let AI handle it
+    return null;
   }
 
   /**
