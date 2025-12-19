@@ -302,8 +302,8 @@ class BankingGradeSupportService {
       this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
       
       // 🔍 STEP 1: Check simple patterns FIRST (database queries take priority)
-      // This ensures balance, transaction history, KYC status queries hit the database
-      // instead of being matched to wrong knowledge base entries
+      // ONLY for truly simple, unambiguous queries that can be answered directly from DB
+      // Complex queries (how-to, explanations, etc.) should go to GPT-4o
       const simpleQuery = this.detectSimpleQuery(message);
       if (simpleQuery && !simpleQuery.requiresAI) {
         // Execute database query immediately (balance, transactions, KYC, etc.)
@@ -318,16 +318,18 @@ class BankingGradeSupportService {
           category: simpleQuery.category, 
           timestamp: new Date() 
         });
-        return this.formatResponse(response, queryId);
+        return this.formatResponse(response, queryId, responseTime);
       }
 
       // 📚 STEP 2: Knowledge Base Lookup (only if not a simple database query)
+      // High threshold ensures only accurate, relevant answers are returned
+      // If no good match, fall through to GPT-4o
       const knowledgeResponse = await this.findKnowledgeBaseAnswer(message, language);
       if (knowledgeResponse) {
         const responseTime = Date.now() - startTime;
         this.updatePerformanceMetrics(responseTime, true);
         this.auditLog('KNOWLEDGE_BASE_HIT', { queryId, userId, category: knowledgeResponse?.data?.category, timestamp: new Date() });
-        return this.formatResponse(knowledgeResponse, queryId);
+        return this.formatResponse(knowledgeResponse, queryId, responseTime);
       }
 
       // 🎯 STEP 3: Query Classification (for complex queries requiring AI)
@@ -337,10 +339,11 @@ class BankingGradeSupportService {
       const cachedResponse = await this.getCachedResponse(queryId, userId, queryType);
       if (cachedResponse) {
         this.performanceMetrics.cacheHits++;
-        return this.formatResponse(cachedResponse, queryId);
+        const responseTime = Date.now() - startTime;
+        return this.formatResponse(cachedResponse, queryId, responseTime);
       }
       
-      // 🏦 Process Query
+      // 🏦 Process Query (GPT-4o for complex queries)
       const response = await this.executeQuery(queryType, message, userId, language, context);
       
       // 🎓 Auto-Learning: Store AI answers in knowledge base
@@ -383,7 +386,7 @@ class BankingGradeSupportService {
         timestamp: new Date() 
       });
       
-      return this.formatResponse(response, queryId);
+      return this.formatResponse(response, queryId, responseTime);
       
     } catch (error) {
       console.error('❌ Error in processSupportQuery:', error);
@@ -393,7 +396,7 @@ class BankingGradeSupportService {
         const responseTime = Date.now() - startTime;
         this.updatePerformanceMetrics(responseTime, false);
         this.auditLog('AI_LIMIT_REACHED', { queryId, userId, timestamp: new Date() });
-        return this.formatResponse(limitResponse, queryId);
+        return this.formatResponse(limitResponse, queryId, responseTime);
       }
       
       // 📊 Error Handling & Metrics
@@ -447,14 +450,42 @@ class BankingGradeSupportService {
 
   /**
    * 🔍 Simple Pattern Matching
-   * Zero OpenAI Cost for Common Queries
-   * Enhanced with codebase sweep patterns (lightweight, in-memory)
+   * ONLY for truly simple, unambiguous queries that can be answered directly from DB
+   * Complex queries (how-to, explanations, etc.) should go to GPT-4o
+   * Banking-Grade: Zero OpenAI cost for simple queries, maximum accuracy
    */
   detectSimpleQuery(message) {
-    const lowerMessage = message.toLowerCase();
+    const lowerMessage = message.toLowerCase().trim();
     
-    // 🚀 FIRST: Check sweep-discovered patterns (lightweight, zero cost)
+    // 🚨 FIRST: Explicit patterns for complex queries that MUST go to GPT-4o
+    // These require understanding context and providing instructions
+    if (
+      // Send money / transfer queries (require AI for instructions)
+      (lowerMessage.includes('send money') && (lowerMessage.includes('friend') || lowerMessage.includes('someone') || lowerMessage.includes('person'))) ||
+      (lowerMessage.includes('transfer money') && (lowerMessage.includes('friend') || lowerMessage.includes('someone') || lowerMessage.includes('person'))) ||
+      (lowerMessage.includes('send') && lowerMessage.includes('friend') && !lowerMessage.includes('voucher')) ||
+      // Fee calculation queries (require AI for detailed breakdown)
+      (lowerMessage.includes('why') && lowerMessage.includes('charged') && lowerMessage.includes('fee')) ||
+      (lowerMessage.includes('fee') && (lowerMessage.includes('why') || lowerMessage.includes('how much') || lowerMessage.includes('calculate'))) ||
+      // How-to queries (require AI for step-by-step instructions)
+      (lowerMessage.includes('how do i') && (lowerMessage.includes('send') || lowerMessage.includes('transfer') || lowerMessage.includes('buy'))) ||
+      (lowerMessage.includes('how can i') && (lowerMessage.includes('send') || lowerMessage.includes('transfer') || lowerMessage.includes('buy'))) ||
+      // Voucher purchase queries (require AI for instructions)
+      (lowerMessage.includes('buy') && lowerMessage.includes('voucher')) ||
+      (lowerMessage.includes('purchase') && lowerMessage.includes('voucher')) ||
+      (lowerMessage.includes('how') && lowerMessage.includes('buy') && lowerMessage.includes('voucher')) ||
+      (lowerMessage.includes('voucher') && (lowerMessage.includes('for my friend') || lowerMessage.includes('for friend'))) ||
+      // Airtime/data top-up queries (require AI for instructions)
+      (lowerMessage.includes('top up') || lowerMessage.includes('topup')) ||
+      (lowerMessage.includes('airtime') && (lowerMessage.includes('using') || lowerMessage.includes('with'))) ||
+      (lowerMessage.includes('data') && (lowerMessage.includes('using') || lowerMessage.includes('with')))
+    ) {
+      return { category: 'TECHNICAL_SUPPORT', confidence: 0.95, requiresAI: true };
+    }
+    
+    // 🚀 Check sweep-discovered patterns (lightweight, zero cost)
     // Banking-Grade: <1ms overhead, in-memory only
+    // BUT: Only use if it's a simple query, not a complex how-to
     if (this.sweepPatterns && this.sweepPatterns.size > 0) {
       const sweepMatch = this.getSweepPatterns(message);
       if (sweepMatch) {
@@ -467,180 +498,95 @@ class BankingGradeSupportService {
           'general': 'TECHNICAL_SUPPORT'
         };
         const mappedCategory = categoryMap[sweepMatch.category] || 'TECHNICAL_SUPPORT';
-        return { 
-          category: mappedCategory, 
-          confidence: sweepMatch.confidence, 
-          requiresAI: mappedCategory === 'TECHNICAL_SUPPORT' 
-        };
+        // Only use sweep patterns for simple queries, not complex how-to queries
+        if (mappedCategory !== 'TECHNICAL_SUPPORT' && !lowerMessage.includes('how')) {
+          return { 
+            category: mappedCategory, 
+            confidence: sweepMatch.confidence, 
+            requiresAI: false 
+          };
+        }
       }
     }
     
-    // Wallet Balance (improved patterns)
+    // 💰 Wallet Balance - ONLY very specific, unambiguous queries
     if (
-      lowerMessage.includes('wallet balance') || 
-      lowerMessage.includes('current balance') ||
-      lowerMessage.includes('my balance') ||
-      lowerMessage.includes('what\'s my balance') ||
-      lowerMessage.includes('how much money') ||
-      lowerMessage.includes('how much do i have') ||
-      (lowerMessage.includes('balance') && (lowerMessage.includes('what') || lowerMessage.includes('show') || lowerMessage.includes('check')))
+      (lowerMessage === 'balance' || lowerMessage === 'my balance' || lowerMessage === 'wallet balance') ||
+      (lowerMessage.includes('what') && lowerMessage.includes('balance') && !lowerMessage.includes('how')) ||
+      (lowerMessage.includes('show') && lowerMessage.includes('balance')) ||
+      (lowerMessage.includes('check') && lowerMessage.includes('balance'))
     ) {
       return { category: 'WALLET_BALANCE', confidence: 0.95, requiresAI: false };
     }
     
-    // KYC Status (improved patterns)
+    // ✅ KYC Status - ONLY very specific queries
     if (
-      lowerMessage.includes('kyc') || 
-      lowerMessage.includes('verification') || 
-      lowerMessage.includes('verified') ||
-      lowerMessage.includes('am i verified') ||
+      lowerMessage.includes('kyc status') ||
       lowerMessage.includes('verification status') ||
-      (lowerMessage.includes('status') && (lowerMessage.includes('kyc') || lowerMessage.includes('verification')))
+      (lowerMessage.includes('am i') && lowerMessage.includes('verified')) ||
+      (lowerMessage === 'kyc' || lowerMessage === 'verification')
     ) {
       return { category: 'KYC_STATUS', confidence: 0.95, requiresAI: false };
     }
     
-    // Transaction History (improved patterns - exclude "limits" queries)
+    // 📜 Transaction History - ONLY very specific queries, exclude "limits" and "how-to"
     if (
-      (lowerMessage.includes('transaction') || 
-       lowerMessage.includes('history') || 
-       lowerMessage.includes('recent') ||
-       lowerMessage.includes('spending activity') ||
-       lowerMessage.includes('payment history') ||
-       lowerMessage.includes('transaction list') ||
-       lowerMessage.includes('show my transactions') ||
-       lowerMessage.includes('my transactions')) &&
-      !lowerMessage.includes('limit') && // Exclude "transaction limits" queries
-      !lowerMessage.includes('increase') &&
-      !lowerMessage.includes('upgrade')
+      (lowerMessage.includes('transaction history') || lowerMessage.includes('transaction list')) &&
+      !lowerMessage.includes('limit') &&
+      !lowerMessage.includes('how') &&
+      !lowerMessage.includes('increase')
     ) {
       return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
     }
     
-    // MyMoolah Voucher Management (specific patterns - balance, summary, my vouchers)
+    // 🎫 MyMoolah Voucher Management - ONLY balance/summary queries, NOT purchase queries
     if (
-      (lowerMessage.includes('my voucher') ||
-       lowerMessage.includes('my vouchers') ||
-       lowerMessage.includes('voucher balance') ||
-       lowerMessage.includes('voucher summary') ||
-       lowerMessage.includes('voucher status') ||
-       lowerMessage.includes('how many vouchers') ||
-       lowerMessage.includes('voucher list')) &&
+      (lowerMessage.includes('my vouchers') || lowerMessage.includes('voucher balance') || lowerMessage.includes('voucher summary')) &&
       !lowerMessage.includes('buy') &&
       !lowerMessage.includes('purchase') &&
-      !lowerMessage.includes('how to') &&
-      !lowerMessage.includes('how can i')
+      !lowerMessage.includes('how')
     ) {
       return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
     }
 
-    // 3rd Party Voucher Purchase / VAS Purchase (AI-powered instructions)
+    // 🔐 Password / login help - ONLY reset queries, not how-to
     if (
-      lowerMessage.includes('buy') && lowerMessage.includes('voucher') ||
-      lowerMessage.includes('purchase') && lowerMessage.includes('voucher') ||
-      lowerMessage.includes('how can i buy') ||
-      lowerMessage.includes('how to buy') ||
-      lowerMessage.includes('how do i buy') ||
-      (lowerMessage.includes('voucher') && (lowerMessage.includes('for my friend') || lowerMessage.includes('for friend'))) ||
-      lowerMessage.includes('top up') ||
-      lowerMessage.includes('topup') ||
-      (lowerMessage.includes('airtime') && (lowerMessage.includes('using') || lowerMessage.includes('with'))) ||
-      (lowerMessage.includes('data') && (lowerMessage.includes('using') || lowerMessage.includes('with')))
+      (lowerMessage.includes('forgot password') || lowerMessage.includes('reset password')) &&
+      !lowerMessage.includes('how')
     ) {
-      return { category: 'TECHNICAL_SUPPORT', confidence: 0.95, requiresAI: true };
-    }
-
-    // Password / login help
-    if (lowerMessage.includes('password') || lowerMessage.includes('forgot pin') || lowerMessage.includes('reset pin')) {
       return { category: 'PASSWORD_SUPPORT', confidence: 0.95, requiresAI: false };
     }
 
-    // Phone / contact info changes
+    // 📱 Phone / contact info changes - ONLY status queries, not how-to
     if (
-      lowerMessage.includes('phone number') ||
-      lowerMessage.includes('mobile number') ||
-      lowerMessage.includes('msisdn') ||
-      lowerMessage.includes('change my number') ||
-      lowerMessage.includes('update my number')
+      (lowerMessage.includes('phone number') || lowerMessage.includes('mobile number')) &&
+      !lowerMessage.includes('how') &&
+      !lowerMessage.includes('change') &&
+      !lowerMessage.includes('update')
     ) {
       return { category: 'PROFILE_UPDATE', confidence: 0.9, requiresAI: false };
     }
 
-    // Tier-related questions (how to change tier, upgrade tier, increase limits, etc.)
+    // 💳 Payment Status - ONLY status queries, not how-to
     if (
-      lowerMessage.includes('change my tier') ||
-      lowerMessage.includes('change tier') ||
-      lowerMessage.includes('upgrade tier') ||
-      lowerMessage.includes('how do i change tier') ||
-      lowerMessage.includes('how to change tier') ||
-      lowerMessage.includes('tier upgrade') ||
-      lowerMessage.includes('tier change') ||
-      lowerMessage.includes('increase my limit') ||
-      lowerMessage.includes('increase limit') ||
-      lowerMessage.includes('increase transaction limit') ||
-      lowerMessage.includes('increase limits') ||
-      lowerMessage.includes('higher limit') ||
-      lowerMessage.includes('raise limit') ||
-      (lowerMessage.includes('limit') && (lowerMessage.includes('increase') || lowerMessage.includes('upgrade') || lowerMessage.includes('higher')))
-    ) {
-      return { category: 'TECHNICAL_SUPPORT', confidence: 0.95, requiresAI: true };
-    }
-
-    // Deposit / payment reflection
-    if (
-      lowerMessage.includes('deposit') ||
-      lowerMessage.includes('not reflecting') ||
-      lowerMessage.includes('funds missing') ||
-      lowerMessage.includes('payment pending')
-    ) {
-      return { category: 'PAYMENT_STATUS', confidence: 0.9, requiresAI: false };
-    }
-
-    // Generic "how do I pay / make payments / pay my bills" queries (improved patterns)
-    if (
-      lowerMessage.includes('pay my account') ||
-      lowerMessage.includes('pay my accounts') ||
-      lowerMessage.includes('pay my bills') ||
-      lowerMessage.includes('pay bills') ||
-      lowerMessage.includes('pay my bill') ||
-      lowerMessage.includes('pay account') ||
-      lowerMessage.includes('pay accounts') ||
-      lowerMessage.includes('make a payment') ||
-      lowerMessage.includes('make payment') ||
-      lowerMessage.includes('make payments') ||
-      lowerMessage.includes('settle my bills') ||
-      lowerMessage.includes('settle bills') ||
-      lowerMessage.includes('settle utility') ||
-      lowerMessage.includes('how do i pay') ||
-      lowerMessage.includes('how to pay')
+      (lowerMessage.includes('payment status') || lowerMessage.includes('where is my money') || lowerMessage.includes('money not arrived')) &&
+      !lowerMessage.includes('how')
     ) {
       return { category: 'PAYMENT_STATUS', confidence: 0.95, requiresAI: false };
     }
 
-    // Account Details / Account Information
+    // 👤 Account Details - ONLY very specific queries, exclude "send money" context
     if (
-      lowerMessage.includes('account details') ||
-      lowerMessage.includes('account information') ||
-      lowerMessage.includes('my account info') ||
-      lowerMessage.includes('what information') && lowerMessage.includes('account') ||
-      lowerMessage.includes('account holder') ||
-      lowerMessage.includes('account settings')
+      (lowerMessage.includes('account details') || lowerMessage.includes('account information')) &&
+      !lowerMessage.includes('send') &&
+      !lowerMessage.includes('transfer') &&
+      !lowerMessage.includes('friend')
     ) {
       return { category: 'ACCOUNT_MANAGEMENT', confidence: 0.95, requiresAI: false };
     }
-
-    // Payment Status / Money not arrived
-    if (
-      lowerMessage.includes('sent money') ||
-      lowerMessage.includes('money not arrived') ||
-      lowerMessage.includes('where is it') ||
-      lowerMessage.includes('payment not received') ||
-      lowerMessage.includes('transfer not received')
-    ) {
-      return { category: 'PAYMENT_STATUS', confidence: 0.95, requiresAI: false };
-    }
     
-    return null; // No simple pattern match found
+    // No simple pattern match found - let GPT-4o handle it
+    return null;
   }
 
   /**
@@ -1309,7 +1255,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
   /**
    * 📊 Format Response (ISO20022 Compliant)
    */
-  formatResponse(response, queryId) {
+  formatResponse(response, queryId, responseTime = null) {
     return {
       success: true,
       queryId,
@@ -1318,7 +1264,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
       timestamp: response.timestamp,
       compliance: response.compliance,
       performance: {
-        responseTime: Date.now(),
+        responseTime: responseTime || Date.now(),
         cacheHit: false,
         rateLimitRemaining: 0
       }
@@ -2363,6 +2309,8 @@ When answering fee questions, be specific about the tier system and always menti
     }
     
     // 2. Semantic similarity using embeddings (STATE-OF-THE-ART)
+    // 🎯 STRICT THRESHOLDS: Only accept high-quality semantic matches
+    // Banking-Grade: Prefer GPT-4o over weak KB matches
     try {
       const questionEmbedding = await this.embeddingService.generateEmbedding(normalizedQuestion);
       const messageEmbedding = await this.embeddingService.generateEmbedding(normalizedMessage);
@@ -2370,17 +2318,17 @@ When answering fee questions, be specific about the tier system and always menti
       if (questionEmbedding && messageEmbedding) {
         const semanticScore = this.embeddingService.cosineSimilarity(questionEmbedding, messageEmbedding);
         
-        if (semanticScore >= 0.85) {
-          // Very high semantic similarity (85%+) - almost identical meaning
+        if (semanticScore >= 0.90) {
+          // Very high semantic similarity (90%+) - almost identical meaning
+          score += 15;
+        } else if (semanticScore >= 0.85) {
+          // High semantic similarity (85-89%) - same intent, different wording
           score += 12;
-        } else if (semanticScore >= 0.75) {
-          // High semantic similarity (75-84%) - same intent, different wording
-          score += 10;
-        } else if (semanticScore >= 0.65) {
-          // Medium semantic similarity (65-74%) - related but not identical
-          score += 6;
+        } else if (semanticScore >= 0.80) {
+          // Medium-high semantic similarity (80-84%) - related but requires careful validation
+          score += 8;
         }
-        // Below 65% is ignored to maintain quality (increased from 55% to reduce false matches)
+        // Below 80% is ignored to maintain quality - prefer GPT-4o for lower similarity
       }
     } catch (error) {
       console.warn('⚠️ Semantic similarity calculation failed, falling back to keyword matching:', error.message);
@@ -2469,8 +2417,9 @@ When answering fee questions, be specific about the tier system and always menti
 
       const filteredCandidates = scoredCandidates
         .filter(item => {
-          // Minimum quality threshold (increased from 5 to 7 to match 70% semantic threshold)
-          if (item.score < 7) return false;
+          // 🎯 HIGH QUALITY THRESHOLD: Only return highly accurate matches (85%+ similarity)
+          // This ensures we only use KB when we're VERY confident, otherwise use GPT-4o
+          if (item.score < 9) return false; // Increased from 7 to 9 (90% threshold)
           
           // Category validation: reject if KB entry category doesn't match query intent
           if (expectedCategory && item.entry.category) {
@@ -2504,8 +2453,9 @@ When answering fee questions, be specific about the tier system and always menti
 
       if (filteredCandidates.length) {
         const top = filteredCandidates[0];
-        // Only return if score meets quality threshold (increased from 6 to 8)
-        if (top.score >= 8) {
+        // 🎯 STRICT QUALITY THRESHOLD: Only return if score meets 90%+ threshold
+        // This ensures only highly accurate KB answers are used, everything else goes to GPT-4o
+        if (top.score >= 9) {
           await top.entry.increment('usageCount');
           return this.buildKnowledgeResponse(top.entry);
         }
