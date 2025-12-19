@@ -516,18 +516,25 @@ class BankingGradeSupportService {
     }
     
     // 📜 Transaction History - Check BEFORE wallet balance (common query)
-    // Award-winning: Very permissive patterns to catch all variations
-    // Handle: "transactions", "transaction history", "show transactions", "my transactions", etc.
-    const hasTransaction = lowerMessage.includes('transaction');
+    // Award-winning: Very permissive patterns to catch all variations + typos
+    // Handle: "transactions", "transaction history", "show transactions", "tranbsactions" (typo), etc.
+    // Use fuzzy matching: check for "tran" prefix to catch typos like "tranbsactions"
+    const hasTransaction = lowerMessage.includes('transaction') || lowerMessage.includes('tranbsaction') || 
+                           lowerMessage.match(/\btran\w*action/i); // Fuzzy match for typos
     const hasHistory = lowerMessage.includes('history');
     const hasRecent = lowerMessage.includes('recent');
     const hasShow = lowerMessage.includes('show');
+    const hasList = lowerMessage.includes('list');
+    const hasLast = lowerMessage.includes('last');
     
     if (
-      (hasTransaction && (hasHistory || hasRecent || hasShow)) ||
-      (hasTransaction && !hasHow && !lowerMessage.includes('how to')) ||
+      hasTransaction ||
+      (hasHistory && !hasHow) ||
+      (hasRecent && (hasTransaction || hasHistory)) ||
+      (hasShow && (hasTransaction || hasHistory || hasLast)) ||
+      (hasList && (hasTransaction || hasLast)) ||
       lowerMessage === 'transactions' ||
-      lowerMessage.startsWith('show') && hasTransaction
+      lowerMessage.includes('tranbsactions') // Explicit typo handling
     ) {
       return { 
         category: 'TRANSACTION_HISTORY', 
