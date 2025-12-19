@@ -334,17 +334,21 @@ class BankingGradeSupportService {
     
     const cacheKey = `query_classification:${userId}:${this.hashMessage(message)}`;
     
-    // 💾 Check Cache First
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
-    if (cached) {
-      return JSON.parse(cached);
+    // 💾 Check Cache First (only if Redis is ready)
+    if (this.redis && this.redis.status === 'ready') {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
     }
     
     // 🤖 AI Classification
     const classification = await this.performAIClassification(message, userId);
     
-    // 💾 Cache Classification
-    await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(classification)); // Use optional chaining
+    // 💾 Cache Classification (only if Redis is ready)
+    if (this.redis && this.redis.status === 'ready') {
+      await this.redis.setex(cacheKey, this.config.cacheTTL, JSON.stringify(classification));
+    }
     
     return classification;
   }
@@ -402,10 +406,13 @@ class BankingGradeSupportService {
       return { category: 'PAYMENT_STATUS', confidence: 0.9, requiresAI: false };
     }
 
-    // Generic \"how do I pay / make payments\" queries
+    // Generic "how do I pay / make payments / pay my bills" queries
     if (
       lowerMessage.includes('pay my account') ||
       lowerMessage.includes('pay my accounts') ||
+      lowerMessage.includes('pay my bills') ||
+      lowerMessage.includes('pay bills') ||
+      lowerMessage.includes('pay my bill') ||
       lowerMessage.includes('pay account') ||
       lowerMessage.includes('pay accounts') ||
       lowerMessage.includes('make a payment') ||
