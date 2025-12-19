@@ -1907,8 +1907,11 @@ When answering fee questions, be specific about the tier system and always menti
         inferredCategory = 'general';
       }
 
-      // Generate FAQ ID (simple hash-based)
-      const faqId = `KB-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+      // Generate FAQ ID (hash-based, max 20 chars to match VARCHAR(20) constraint)
+      // Use hash of question for deterministic IDs (same question = same ID)
+      const crypto = require('crypto');
+      const questionHash = crypto.createHash('md5').update(question.trim().toLowerCase()).digest('hex').substring(0, 17);
+      const faqId = `KB-${questionHash}`; // "KB-" (3) + hash (17) = 20 chars
 
       // Create new knowledge base entry
       const newEntry = await this.knowledgeModel.create({
