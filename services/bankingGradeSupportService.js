@@ -11,6 +11,7 @@
 const { OpenAI } = require('openai');
 const Redis = require('ioredis');
 const { Sequelize } = require('sequelize');
+const SemanticEmbeddingService = require('./semanticEmbeddingService');
 const models = require('../models');
 
 class BankingGradeSupportService {
@@ -54,6 +55,10 @@ class BankingGradeSupportService {
     this.knowledgeCache = { entries: [], loadedAt: 0 };
     this.knowledgeCacheTTL = 5 * 60 * 1000; // 5 minutes
     this.inMemoryAiUsage = new Map();
+
+    // 🧠 Semantic Embedding Service for state-of-the-art semantic matching
+    this.embeddingService = new SemanticEmbeddingService();
+    this.semanticThreshold = 0.75; // Minimum semantic similarity (75% = high confidence)
 
     // 🧠 AI Model configuration (support service specific)
     // Normalize model name to lowercase (OpenAI expects lowercase)
@@ -1739,25 +1744,84 @@ When answering fee questions, be specific about the tier system and always menti
     return entries;
   }
 
-  scoreKnowledgeMatch(entry, normalizedMessage) {
+  /**
+   * 🧠 Score knowledge base match using state-of-the-art semantic similarity
+   * Combines semantic embeddings with keyword matching for maximum accuracy
+   * @param {Object} entry - Knowledge base entry
+   * @param {string} normalizedMessage - Normalized user message
+   * @returns {Promise<number>} - Match score (higher = better match)
+   */
+  async scoreKnowledgeMatch(entry, normalizedMessage) {
     if (!normalizedMessage) return 0;
     let score = 0;
     const normalizedQuestion = entry.question?.trim().toLowerCase() || '';
-    if (normalizedQuestion === normalizedMessage) score += 5;
-    if (normalizedQuestion && normalizedMessage.includes(normalizedQuestion)) score += 3;
-    if (normalizedQuestion && normalizedQuestion.includes(normalizedMessage)) score += 2;
+    
+    // 1. Exact match (highest priority - instant return)
+    if (normalizedQuestion === normalizedMessage) {
+      return 15; // Highest score for exact match
+    }
+    
+    // 2. Semantic similarity using embeddings (STATE-OF-THE-ART)
+    try {
+      const questionEmbedding = await this.embeddingService.generateEmbedding(normalizedQuestion);
+      const messageEmbedding = await this.embeddingService.generateEmbedding(normalizedMessage);
+      
+      if (questionEmbedding && messageEmbedding) {
+        const semanticScore = this.embeddingService.cosineSimilarity(questionEmbedding, messageEmbedding);
+        
+        if (semanticScore >= 0.85) {
+          // Very high semantic similarity (85%+) - almost identical meaning
+          score += 12;
+        } else if (semanticScore >= 0.75) {
+          // High semantic similarity (75-84%) - same intent, different wording
+          score += 10;
+        } else if (semanticScore >= 0.65) {
+          // Medium semantic similarity (65-74%) - related but not identical
+          score += 6;
+        } else if (semanticScore >= 0.55) {
+          // Low semantic similarity (55-64%) - somewhat related
+          score += 3;
+        }
+        // Below 55% is ignored to maintain quality
+      }
+    } catch (error) {
+      console.warn('⚠️ Semantic similarity calculation failed, falling back to keyword matching:', error.message);
+    }
+    
+    // 3. Substring matching (fallback for exact phrases)
+    if (normalizedQuestion && normalizedMessage.includes(normalizedQuestion)) {
+      score += 4;
+    }
+    if (normalizedQuestion && normalizedQuestion.includes(normalizedMessage)) {
+      score += 3;
+    }
+    
+    // 4. Enhanced keyword matching
     const entryKeywords = (entry.keywords || '')
       .split(',')
       .map(k => k.trim().toLowerCase())
       .filter(Boolean);
+    
+    let keywordMatches = 0;
     entryKeywords.forEach(keyword => {
       if (normalizedMessage.includes(keyword)) {
+        keywordMatches++;
         score += 2;
       }
     });
-    if (normalizedMessage.includes(entry.category)) {
+    
+    // Bonus for multiple keyword matches (indicates strong relevance)
+    if (keywordMatches >= 3) {
+      score += 3;
+    } else if (keywordMatches >= 2) {
       score += 1;
     }
+    
+    // 5. Category matching
+    if (normalizedMessage.includes(entry.category?.toLowerCase())) {
+      score += 1;
+    }
+    
     return score;
   }
 
@@ -1772,21 +1836,38 @@ When answering fee questions, be specific about the tier system and always menti
       const entries = await this.loadKnowledgeEntries();
       const candidates = entries.filter(entry => languagesToCheck.includes(entry.language));
 
+      // 1. Exact match (fastest path)
       const exactMatch = candidates.find(entry => (entry.question || '').trim().toLowerCase() === normalizedMessage);
       if (exactMatch) {
         await exactMatch.increment('usageCount');
         return this.buildKnowledgeResponse(exactMatch);
       }
 
-      const scoredCandidates = candidates
-        .map(entry => ({ entry, score: this.scoreKnowledgeMatch(entry, normalizedMessage) }))
-        .filter(item => item.score > 0)
-        .sort((a, b) => b.score - a.score || (Number(b.entry.confidenceScore || 0) - Number(a.entry.confidenceScore || 0)));
+      // 2. Semantic + hybrid scoring (state-of-the-art matching)
+      // Use Promise.all for parallel processing (banking-grade performance)
+      const scoredCandidates = await Promise.all(
+        candidates.map(async (entry) => {
+          const score = await this.scoreKnowledgeMatch(entry, normalizedMessage);
+          return { entry, score };
+        })
+      );
 
-      if (scoredCandidates.length) {
-        const top = scoredCandidates[0].entry;
-        await top.increment('usageCount');
-        return this.buildKnowledgeResponse(top);
+      const filteredCandidates = scoredCandidates
+        .filter(item => item.score >= 5) // Minimum quality threshold
+        .sort((a, b) => {
+          // Primary sort: score (descending)
+          if (b.score !== a.score) return b.score - a.score;
+          // Secondary sort: confidence score (descending)
+          return (Number(b.entry.confidenceScore || 0) - Number(a.entry.confidenceScore || 0));
+        });
+
+      if (filteredCandidates.length) {
+        const top = filteredCandidates[0];
+        // Only return if score meets quality threshold
+        if (top.score >= 6) {
+          await top.entry.increment('usageCount');
+          return this.buildKnowledgeResponse(top.entry);
+        }
       }
 
       return null;
