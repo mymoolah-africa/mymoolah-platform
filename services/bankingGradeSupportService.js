@@ -275,6 +275,30 @@ class BankingGradeSupportService {
       // 🏦 Process Query
       const response = await this.executeQuery(queryType, message, userId, language, context);
       
+      // 🎓 Auto-Learning: Store AI answers in knowledge base
+      // Only store if this was an AI-generated answer (not from simple patterns or KB)
+      // Check that response has valid content and came from AI (requiresAI flag)
+      if (
+        queryType.requiresAI && 
+        response.message && 
+        response.type !== 'KNOWLEDGE_BASE' &&
+        response.type !== 'GENERIC_RESPONSE' && // Don't store generic fallbacks
+        response.message.length > 20 && // Minimum answer length to be useful
+        !response.message.toLowerCase().includes('technical difficulties') && // Don't store error messages
+        !response.message.toLowerCase().includes('error occurred')
+      ) {
+        // Store asynchronously (don't block response)
+        this.storeAiAnswerInKnowledgeBase(
+          message,
+          response.message,
+          language,
+          queryType.category || 'general',
+          queryType
+        ).catch(err => {
+          console.error('⚠️ Auto-learning failed (non-blocking):', err);
+        });
+      }
+      
       // 💾 Cache Response
       await this.cacheResponse(queryId, userId, queryType, response);
       
@@ -1724,6 +1748,133 @@ When answering fee questions, be specific about the tier system and always menti
         auditTrail: true
       }
     };
+  }
+
+  /**
+   * 🧠 Extract Keywords from Question (Auto-Learning)
+   * Extracts meaningful keywords for knowledge base indexing
+   */
+  extractKeywords(question, category = 'general') {
+    if (!question) return '';
+    
+    const normalized = question.toLowerCase().trim();
+    const stopWords = new Set([
+      'how', 'do', 'i', 'my', 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with',
+      'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'does', 'did', 'will', 'would',
+      'can', 'could', 'should', 'may', 'might', 'must', 'shall', 'what', 'when', 'where', 'why', 'which', 'who'
+    ]);
+    
+    const words = normalized
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 2 && !stopWords.has(word));
+    
+    // Add category as keyword if it's meaningful
+    const keywords = [...new Set(words)];
+    if (category && category !== 'general' && category !== 'GENERIC_RESPONSE') {
+      keywords.push(category.toLowerCase());
+    }
+    
+    return keywords.slice(0, 10).join(', '); // Limit to 10 keywords
+  }
+
+  /**
+   * 🎓 Store AI Answer in Knowledge Base (Auto-Learning)
+   * Automatically learns from successful OpenAI answers
+   */
+  async storeAiAnswerInKnowledgeBase(question, answer, language = 'en', category = 'general', queryType = null) {
+    try {
+      if (!this.knowledgeModel) {
+        console.warn('⚠️ Knowledge model not available, skipping auto-learning');
+        return false;
+      }
+
+      if (!question || !answer || !question.trim() || !answer.trim()) {
+        console.warn('⚠️ Invalid question or answer for knowledge base storage');
+        return false;
+      }
+
+      // Normalize question for duplicate checking
+      const normalizedQuestion = question.trim().toLowerCase();
+      
+      // Check if this question already exists (exact match or very similar)
+      const existing = await this.knowledgeModel.findOne({
+        where: {
+          question: this.sequelize.where(
+            this.sequelize.fn('LOWER', this.sequelize.col('question')),
+            normalizedQuestion
+          ),
+          language,
+          isActive: true
+        }
+      });
+
+      if (existing) {
+        // Update usage count and potentially improve answer if new one is longer/more detailed
+        if (answer.length > existing.answer.length) {
+          await existing.update({
+            answer,
+            confidenceScore: Math.min(0.95, (existing.confidenceScore || 0.8) + 0.05),
+            updatedAt: new Date()
+          });
+          console.log(`📚 Updated existing knowledge base entry for: "${question.substring(0, 50)}..."`);
+        } else {
+          await existing.increment('usageCount');
+        }
+        // Invalidate cache to pick up updates
+        this.knowledgeCache = { entries: [], loadedAt: 0 };
+        return true;
+      }
+
+      // Extract keywords from question
+      const keywords = this.extractKeywords(question, category);
+      
+      // Infer category from queryType if provided
+      let inferredCategory = category;
+      if (queryType && queryType.category) {
+        inferredCategory = queryType.category.toLowerCase().replace(/_/g, '_');
+      } else if (category && category !== 'general') {
+        inferredCategory = category.toLowerCase();
+      } else {
+        inferredCategory = 'general';
+      }
+
+      // Generate FAQ ID (simple hash-based)
+      const faqId = `KB-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+
+      // Create new knowledge base entry
+      const newEntry = await this.knowledgeModel.create({
+        faqId,
+        audience: 'end-user',
+        category: inferredCategory,
+        question: question.trim(),
+        answer: answer.trim(),
+        keywords,
+        confidenceScore: 0.75, // Start with moderate confidence (will improve with usage)
+        usageCount: 1,
+        successRate: 0.8,
+        language,
+        isActive: true
+      });
+
+      // Invalidate cache to pick up new entry immediately
+      this.knowledgeCache = { entries: [], loadedAt: 0 };
+      
+      console.log(`🎓 Auto-learned new knowledge base entry: "${question.substring(0, 50)}..." (${inferredCategory})`);
+      this.auditLog('KNOWLEDGE_BASE_LEARNED', {
+        faqId: newEntry.faqId,
+        category: inferredCategory,
+        language,
+        questionLength: question.length,
+        answerLength: answer.length
+      });
+
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to store AI answer in knowledge base:', error);
+      // Don't throw - auto-learning is best-effort, shouldn't break the response
+      return false;
+    }
   }
 
   async registerAiCall(userId) {

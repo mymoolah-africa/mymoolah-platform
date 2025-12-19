@@ -37,10 +37,23 @@
 ---
 
 **Last Updated**: December 19, 2025  
-**Version**: 2.4.24 - Unified Support Service & GPT-5 Model Configuration  
-**Status**: ✅ **SUPPORT SERVICE UNIFIED** ✅ **GPT-5 MODEL CONFIG CENTRALIZED** ✅ **DOCS UPDATED**
+**Version**: 2.4.25 - Auto-Learning Knowledge Base & Support Service Improvements  
+**Status**: ✅ **AUTO-LEARNING IMPLEMENTED** ✅ **SUPPORT SERVICE OPTIMIZED** ✅ **GPT-5 MODEL CONFIG CENTRALIZED**
 
 ---
+
+## Update 2025-12-19 (Evening) - Auto-Learning Knowledge Base Implementation
+- **Auto-Learning Feature**: Implemented automatic storage of successful OpenAI answers into `AiKnowledgeBase` database table
+- **Flow**: When a question isn't found in KB/patterns → OpenAI generates answer → If answer is valid (not error/fallback) → Automatically stored in `ai_knowledge_base` table
+- **Benefits**: Subsequent identical questions are answered from database (no OpenAI call, faster, cheaper, consistent)
+- **Smart Storage**: 
+  - Extracts keywords from questions automatically
+  - Infers category from query type
+  - Checks for duplicates (updates existing entries if answer is improved)
+  - Invalidates cache immediately so new entries are found on next query
+- **Implementation**: Added `storeAiAnswerInKnowledgeBase()` and `extractKeywords()` methods to `bankingGradeSupportService.js`
+- **Wired Into**: Auto-learning triggers after successful AI answers in `getTechnicalSupport` (and any other `requiresAI: true` queries)
+- **Status**: ✅ Auto-learning implemented and wired, ✅ Knowledge base grows automatically, ✅ Ready for testing
 
 ## Update 2025-12-19 - Unified Support Service & GPT-5 Model Configuration
 - **Unified Support Entry Point**: All support traffic (`/api/v1/support/chat`, `/support/health`, `/support/metrics`) now flows through `services/supportService.js`, which orchestrates:
