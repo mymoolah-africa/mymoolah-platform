@@ -902,15 +902,20 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
       throw new Error('Wallet not found');
     }
     
-    // Get user name separately (only if needed, async/non-blocking)
+    // Get user name separately (non-blocking - fetch in parallel or skip if slow)
+    // For maximum speed, we can skip this and use a generic message
     let accountHolder = 'Account Holder';
     if (User) {
+      // Fetch user name but don't block - use Promise.race with timeout
       try {
-        const user = await User.findOne({
+        const userPromise = User.findOne({
           where: { id: userId },
           attributes: ['firstName', 'lastName']
         });
-        if (user) {
+        const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 50)); // 50ms timeout
+        
+        const user = await Promise.race([userPromise, timeoutPromise]);
+        if (user && user.firstName) {
           accountHolder = `${user.firstName} ${user.lastName}`;
         }
       } catch (err) {
