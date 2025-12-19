@@ -447,29 +447,40 @@ class BankingGradeSupportService {
             content: `You are a banking-grade AI support assistant for MyMoolah Treasury Platform, a South African digital wallet and payment platform.${sweepContextText}
 
 YOUR JOB: Answer ANY question the user asks - related or unrelated to the platform.
-- If question is about MyMoolah platform → Use provided data and platform knowledge
-- If question is unrelated → Use your general knowledge to help
-- If question needs specific data → Use the database data provided
-- If question is ambiguous → Ask clarifying questions
+
+FOR MYMOOLAH PLATFORM QUESTIONS:
+- Use the database data provided - it's accurate and real-time
+- Be SPECIFIC and ACCURATE - use actual data from the database
+- If database shows specific transactions, list them clearly
+- If database shows no vouchers, say so clearly
+- If asking about "last 2 transactions", show exactly 2 transactions from the data
+- Format numbers, dates, and amounts clearly
+
+FOR UNRELATED QUESTIONS:
+- Use your general knowledge to help
+- Be helpful and informative
+- If you don't know something, say so honestly
+- Don't make up information about MyMoolah if question is unrelated
 
 CRITICAL RULES:
 - Answer directly and accurately
-- Use database data when provided
-- For platform questions, be specific and accurate
-- For unrelated questions, be helpful and informative
+- Use database data when provided - it's REAL data
+- For platform questions, be SPECIFIC - use actual data
+- For unrelated questions, be helpful but don't reference MyMoolah unless relevant
 - If you don't have the data needed, say so clearly
-- Keep responses concise (under 150 words)
+- Keep responses concise but complete (100-200 words)
 - Be friendly but professional
+- Format lists clearly with proper numbering/bullets
 
 VOUCHER TYPES:
 - MMVouchers: MyMoolah vouchers (internal vouchers)
 - EasyPay Vouchers: Third-party vouchers (external)
-- When user asks about "voucher" without specifying, check both types
+- When user asks about "voucher" without specifying, check both types in the data
 
-TRANSACTION FEES:
-- MyMoolah uses tier-based fees (Bronze, Silver, Gold, Platinum)
-- All fees shown before confirmation
-- Fees vary by transaction type and tier`
+TRANSACTION DATA:
+- When showing transactions, use the exact data provided
+- Format: Transaction ID, Type, Amount, Description, Status, Date
+- If user asks for "last 2", show exactly 2 from the data provided`
           },
           {
             role: "user",
@@ -484,29 +495,37 @@ Answer the user's question using the available data. If the question is unrelate
       
       const aiMessage = completion.choices[0].message.content;
       
+      // Ensure we always have a valid message
+      if (!aiMessage || aiMessage.trim().length === 0) {
+        throw new Error('AI returned empty response');
+      }
+      
       return {
         type: intent.category || 'GENERAL',
         data: dbData || {},
-        message: aiMessage,
+        message: aiMessage.trim(),
         timestamp: new Date().toISOString(),
         compliance: {
           iso20022: true,
           mojaloop: true,
           auditTrail: true
-        }
+        },
+        confidence: intent.confidence || 0.95
       };
     } catch (error) {
       console.error('❌ AI response generation failed:', error);
+      // Return a helpful error message - don't use getLocalizedMessage which might fail
       return {
         type: 'ERROR',
         data: {},
-        message: this.getLocalizedMessage('error_occurred', language),
+        message: 'I apologize, but I encountered an issue processing your request. Please try again or contact our support team for assistance.',
         timestamp: new Date().toISOString(),
         compliance: {
           iso20022: true,
           mojaloop: true,
           auditTrail: true
-        }
+        },
+        confidence: 0.5
       };
     }
   }
@@ -1522,18 +1541,33 @@ Rules:
    * 📊 Format Response (ISO20022 Compliant)
    */
   formatResponse(response, queryId, responseTime = null) {
+    // Ensure message exists - AI responses should always have a message
+    const message = response.message || 
+                   (response.data && typeof response.data === 'string' ? response.data : null) ||
+                   'I apologize, but I encountered an issue processing your request. Please try again or contact support.';
+    
     return {
       success: true,
       queryId,
-      data: response.data,
-      message: response.message,
-      timestamp: response.timestamp,
-      compliance: response.compliance,
+      data: response.data || {},
+      message: message,
+      timestamp: response.timestamp || new Date().toISOString(),
+      compliance: response.compliance || {
+        iso20022: true,
+        mojaloop: true,
+        auditTrail: true
+      },
       performance: {
         responseTime: responseTime || Date.now(),
         cacheHit: false,
         rateLimitRemaining: 0
-      }
+      },
+      suggestions: response.suggestions || [
+        "View wallet balance",
+        "Check transaction history",
+        "Contact support"
+      ],
+      confidence: response.confidence || 0.95
     };
   }
 
