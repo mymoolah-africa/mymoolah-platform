@@ -18,6 +18,7 @@ class CodebaseSweepService {
     this.discoveredCapabilities = new Map();
     this.lastSweepTime = null;
     this.sweepInterval = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    this.sweepVersion = null; // Version identifier for tracking sweep changes
     
     // File patterns to scan
     this.scanPatterns = {
@@ -42,6 +43,8 @@ class CodebaseSweepService {
     setTimeout(() => {
       this.performSweep().catch(error => {
         console.error('⚠️  Initial codebase sweep failed:', error.message);
+        // Log success message even if sweep fails (services are still running)
+        console.log('🎉 All background services started successfully');
       });
     }, 10000); // 10 second delay
     
@@ -98,6 +101,9 @@ class CodebaseSweepService {
       this.discoveredCapabilities = aiAnalysis;
       this.lastSweepTime = new Date();
       
+      // 8.5. Generate sweep version identifier (timestamp-based for uniqueness)
+      this.sweepVersion = `sweep-${Date.now()}`;
+      
       // 9. Save to file for persistence
       await this.saveSweepResults(aiAnalysis);
       
@@ -113,6 +119,9 @@ class CodebaseSweepService {
       } else {
         console.log('📊 Support questions analysis completed (no questions generated)');
       }
+      
+      // Log success message after sweep completes (moved from server startup)
+      console.log('🎉 All background services started successfully');
       
       return aiAnalysis;
       
@@ -576,8 +585,16 @@ Generate a comprehensive list of support questions organized by category.`
     return {
       capabilities: this.discoveredCapabilities,
       lastSweepTime: this.lastSweepTime,
+      sweepVersion: this.sweepVersion,
       isStale: this.lastSweepTime ? (Date.now() - this.lastSweepTime) > this.sweepInterval : true
     };
+  }
+
+  /**
+   * 🔖 Get current sweep version
+   */
+  getSweepVersion() {
+    return this.sweepVersion;
   }
 
   /**

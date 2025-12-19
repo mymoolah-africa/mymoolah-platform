@@ -700,7 +700,11 @@ const boot = async () => {
     process.exit(1);
   }
 
-  console.log('🎉 All background services started successfully');
+  // Success message will be logged after codebase sweep completes (if enabled)
+  // or after all services start (if sweep is disabled)
+  if (!process.env.OPENAI_API_KEY || process.env.ENABLE_CODEBASE_SWEEP === 'false') {
+    console.log('🎉 All background services started successfully');
+  }
 };
 
 boot().catch((error) => {
