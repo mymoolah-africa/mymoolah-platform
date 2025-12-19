@@ -292,65 +292,18 @@ class BankingGradeSupportService {
       // 📊 Audit Logging
       this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
 
-      // 🚀 STEP 1: Lightweight Pre-Filter for Obvious Queries (Award-Winning Fast Path)
-      // Award-winning systems use fast pre-filter for truly obvious queries (<1ms)
-      // Then AI handles ambiguous/complex queries
-      const obviousIntent = this.detectObviousQuery(message);
-      if (obviousIntent) {
-        console.log(`⚡ Obvious Query Detected: ${obviousIntent.category} (fast path, skipping AI classification)`);
-        
-        const enrichedContext = { ...context, message };
-        const dbStartTime = Date.now();
-        const response = await this.executeQuery(obviousIntent, message, userId, language, enrichedContext);
-        const dbTime = Date.now() - dbStartTime;
-        const responseTime = Date.now() - startTime;
-        
-        console.log(`⚡ DB Query took ${dbTime}ms, Total response time: ${responseTime}ms`);
-        
-        this.updatePerformanceMetrics(responseTime, true);
-        this.auditLog('OBVIOUS_QUERY_EXECUTED', { 
-          queryId, 
-          userId, 
-          category: obviousIntent.category, 
-          timestamp: new Date() 
-        });
-        
-        return this.formatResponse(response, queryId, responseTime);
-      }
-
-      // 🎯 STEP 2: AI Intent Classification (for ambiguous/complex queries)
-      // AI understands intent for queries that aren't obvious
-      // This is what CIBC, JPMorgan, BBVA do - AI for understanding, not obvious queries
+      // 🎯 STEP 1: AI Intent Classification FIRST (Award-Winning Architecture)
+      // Award-winning systems: AI handles ALL queries - no pre-filters, no handlers
+      // AI understands intent and decides what to do dynamically
+      // This is what CIBC CAI, JPMorgan LLM Suite, BBVA Blue do - AI-first for everything
       const intent = await this.classifyQuery(message, userId);
       
-      console.log(`🤖 AI Intent Classification: ${intent.category} (confidence: ${intent.confidence}, directDB: ${intent.requiresDirectDB})`);
+      console.log(`🤖 AI Intent Classification: ${intent.category} (confidence: ${intent.confidence}, directDB: ${intent.requiresDirectDB}, requiresAI: ${intent.requiresAI})`);
       
-      // 🚀 STEP 3: Direct Database Query (if AI determined it's unambiguous)
-      // AI classification determines if query can be answered directly from DB
-      if (intent.requiresDirectDB && !intent.requiresAI) {
-        console.log(`⚡ Direct DB Query: ${intent.category}`);
-        
-        const enrichedContext = { ...context, message };
-        const dbStartTime = Date.now();
-        const response = await this.executeQuery(intent, message, userId, language, enrichedContext);
-        const dbTime = Date.now() - dbStartTime;
-        const responseTime = Date.now() - startTime;
-        
-        console.log(`⚡ DB Query took ${dbTime}ms, Total response time: ${responseTime}ms`);
-        
-        this.updatePerformanceMetrics(responseTime, true);
-        this.auditLog('DIRECT_DB_QUERY_EXECUTED', { 
-          queryId, 
-          userId, 
-          category: intent.category, 
-          timestamp: new Date() 
-        });
-        
-        return this.formatResponse(response, queryId, responseTime);
-      }
-
-      // 📚 STEP 4: Knowledge Base Lookup (RAG Pattern)
-      // Check knowledge base before generating AI response
+      // 📚 STEP 2: Knowledge Base Lookup (RAG Pattern)
+      // Award-winning: Check knowledge base first (fastest, zero AI cost)
+      // AI can use this as context even if not exact match
+      let knowledgeContext = null;
       if (intent.requiresKnowledgeBase !== false) {
         const knowledgeResponse = await this.findKnowledgeBaseAnswer(message, language);
         if (knowledgeResponse && knowledgeResponse.confidence > 0.8) {
@@ -364,9 +317,11 @@ class BankingGradeSupportService {
           });
           return this.formatResponse(knowledgeResponse, queryId, responseTime);
         }
+        // Store as context for AI even if not exact match
+        knowledgeContext = knowledgeResponse;
       }
       
-      // 💾 STEP 5: Cache Check (for AI-generated responses)
+      // 💾 STEP 3: Cache Check (for AI-generated responses)
       const cachedResponse = await this.getCachedResponse(queryId, userId, intent);
       if (cachedResponse) {
         this.performanceMetrics.cacheHits++;
@@ -374,23 +329,18 @@ class BankingGradeSupportService {
         return this.formatResponse(cachedResponse, queryId, responseTime);
       }
       
-      // 🤖 STEP 6: AI-Generated Response (with full context)
-      // AI generates response with codebase sweep context for accuracy
-      let response = await this.executeQuery(intent, message, userId, language, context);
-      
-      // 🎯 Award-Winning: If response needs AI formatting (e.g., specific voucher details), format it dynamically
-      if (response._aiFormat && intent.requiresAI) {
-        response = await this.formatResponseWithAI(response, message, language, userId);
-      }
+      // 🤖 STEP 4: AI-Generated Response (Award-Winning: AI handles everything dynamically)
+      // AI decides what data sources to use (DB, knowledge base, external) and generates response
+      // No handlers - AI understands and responds to ANY query (related or unrelated)
+      const response = await this.generateAIResponse(message, userId, language, intent, context, knowledgeContext);
       
       // 🎓 Auto-Learning: Store AI answers in knowledge base
-      // Only store if this was an AI-generated answer (not from direct DB or KB)
       // Award-winning systems continuously learn from successful AI responses
+      // Store ALL successful AI responses (platform-related or not)
       if (
-        intent.requiresAI && 
         response.message && 
         response.type !== 'KNOWLEDGE_BASE' &&
-        response.type !== 'GENERIC_RESPONSE' && // Don't store generic fallbacks
+        response.type !== 'ERROR' &&
         response.message.length > 20 && // Minimum answer length to be useful
         !response.message.toLowerCase().includes('technical difficulties') && // Don't store error messages
         !response.message.toLowerCase().includes('error occurred')
@@ -450,6 +400,114 @@ class BankingGradeSupportService {
       });
       
       return this.handleError(error, queryId);
+    }
+  }
+
+  /**
+   * 🤖 Generate AI Response (Award-Winning Architecture)
+   * AI handles ALL queries dynamically - no handlers, no pre-filters
+   * AI decides what data sources to use (DB, knowledge base, external) and generates response
+   * This is how CIBC CAI, JPMorgan LLM Suite, BBVA Blue work - AI-first for everything
+   */
+  async generateAIResponse(message, userId, language, intent, context, knowledgeContext) {
+    try {
+      if (!this.openai || !process.env.OPENAI_API_KEY) {
+        throw new Error('OpenAI not available');
+      }
+      
+      await this.registerAiCall(userId);
+      
+      // 🗄️ Query Database if AI determined it needs data
+      let dbData = null;
+      if (intent.requiresDirectDB) {
+        try {
+          const dbResponse = await this.executeQuery(intent, message, userId, language, context);
+          dbData = dbResponse.data || dbResponse;
+        } catch (err) {
+          console.warn('⚠️ DB query failed (AI will handle):', err.message);
+          // AI will handle gracefully
+        }
+      }
+      
+      // 📚 Get RAG context (platform capabilities)
+      const sweepContext = this.getSweepContext();
+      const sweepContextText = sweepContext ? 
+        `\n\nPLATFORM CAPABILITIES:\n- ${sweepContext.categories.join(', ')}\n- Total support topics: ${sweepContext.totalQuestions}` : 
+        '';
+      
+      // 🧠 Build AI context with all available data
+      const dataContext = dbData ? `\n\nUSER DATA FROM DATABASE:\n${JSON.stringify(dbData, null, 2)}` : '';
+      const kbContext = knowledgeContext ? `\n\nRELATED KNOWLEDGE BASE ENTRY:\n${knowledgeContext.message}` : '';
+      
+      const completion = await this.openai.chat.completions.create({
+        model: this.model,
+        messages: [
+          {
+            role: "system",
+            content: `You are a banking-grade AI support assistant for MyMoolah Treasury Platform, a South African digital wallet and payment platform.${sweepContextText}
+
+YOUR JOB: Answer ANY question the user asks - related or unrelated to the platform.
+- If question is about MyMoolah platform → Use provided data and platform knowledge
+- If question is unrelated → Use your general knowledge to help
+- If question needs specific data → Use the database data provided
+- If question is ambiguous → Ask clarifying questions
+
+CRITICAL RULES:
+- Answer directly and accurately
+- Use database data when provided
+- For platform questions, be specific and accurate
+- For unrelated questions, be helpful and informative
+- If you don't have the data needed, say so clearly
+- Keep responses concise (under 150 words)
+- Be friendly but professional
+
+VOUCHER TYPES:
+- MMVouchers: MyMoolah vouchers (internal vouchers)
+- EasyPay Vouchers: Third-party vouchers (external)
+- When user asks about "voucher" without specifying, check both types
+
+TRANSACTION FEES:
+- MyMoolah uses tier-based fees (Bronze, Silver, Gold, Platinum)
+- All fees shown before confirmation
+- Fees vary by transaction type and tier`
+          },
+          {
+            role: "user",
+            content: `User Question: "${message}"${dataContext}${kbContext}
+
+Answer the user's question using the available data. If the question is unrelated to MyMoolah, use your general knowledge to help.`
+          }
+        ],
+        max_completion_tokens: 300,
+        temperature: 0.7
+      });
+      
+      const aiMessage = completion.choices[0].message.content;
+      
+      return {
+        type: intent.category || 'GENERAL',
+        data: dbData || {},
+        message: aiMessage,
+        timestamp: new Date().toISOString(),
+        compliance: {
+          iso20022: true,
+          mojaloop: true,
+          auditTrail: true
+        }
+      };
+    } catch (error) {
+      console.error('❌ AI response generation failed:', error);
+      return {
+        type: 'ERROR',
+        data: {},
+        message: this.getLocalizedMessage('error_occurred', language),
+        timestamp: new Date().toISOString(),
+        compliance: {
+          iso20022: true,
+          mojaloop: true,
+          auditTrail: true
+        }
+      };
     }
   }
 
@@ -774,36 +832,29 @@ class BankingGradeSupportService {
           {
             role: "system",
             content: `You are a banking-grade intent classifier for MyMoolah Treasury Platform.
-Your job: Understand what the user is asking for through context, not pattern matching.
+Your job: Understand what the user is asking for through context - ANY question, related or unrelated.
 
-CRITICAL DISTINCTIONS (understand context, not keywords):
-- "voucher balance" / "my vouchers" / "how many vouchers" = VOUCHER_BALANCE (summary - requiresDirectDB: true)
-- "when does voucher expire" / "voucher expiration" = VOUCHER_BALANCE (specific voucher info - requiresDirectDB: true, requiresAI: true for formatting)
-- "wallet balance" = WALLET_BALANCE (money in wallet - requiresDirectDB: true)
-- "my balance" = WALLET_BALANCE (unless context says "voucher")
-- "buy voucher" / "how to buy" = TECHNICAL_SUPPORT (needs instructions - requiresAI: true)
-- "how do I pay" = TECHNICAL_SUPPORT (needs instructions - requiresAI: true)
-- "where is my payment" = PAYMENT_STATUS (tracking - requiresDirectDB: true)
-- "show transactions" / "recent transactions" = TRANSACTION_HISTORY (list - requiresDirectDB: true)
+CRITICAL: You classify ALL queries - platform-related OR unrelated.
+- Platform questions: Use categories below
+- Unrelated questions: Use GENERAL category, requiresAI: true
+
+UNDERSTAND CONTEXT (not keywords):
+- "voucher balance" / "my vouchers" / "how many vouchers" = VOUCHER_BALANCE (requiresDirectDB: true, requiresAI: false)
+- "when does voucher expire" = VOUCHER_BALANCE (requiresDirectDB: true, requiresAI: true)
+- "wallet balance" / "my balance" = WALLET_BALANCE (requiresDirectDB: true, requiresAI: false)
+- "show transactions" = TRANSACTION_HISTORY (requiresDirectDB: true, requiresAI: false)
+- "how do I pay" / "how to buy" = TECHNICAL_SUPPORT (requiresAI: true)
+- "where is my payment" = PAYMENT_STATUS (requiresDirectDB: true, requiresAI: true)
+- Unrelated questions (weather, general knowledge, etc.) = GENERAL (requiresAI: true)
 
 Categories:
-- WALLET_BALANCE: Money balance in wallet (requiresDirectDB: true, requiresAI: false)
-- VOUCHER_BALANCE: Voucher queries - summary OR specific voucher info (requiresDirectDB: true, requiresAI: true if asking for specific voucher details like expiration)
-- TRANSACTION_HISTORY: List of transactions (requiresDirectDB: true, requiresAI: false)
+- WALLET_BALANCE: Money balance queries (requiresDirectDB: true, requiresAI: false)
+- VOUCHER_BALANCE: Voucher queries (requiresDirectDB: true, requiresAI: true if specific details needed)
+- TRANSACTION_HISTORY: Transaction list queries (requiresDirectDB: true, requiresAI: false)
 - KYC_STATUS: Verification status (requiresDirectDB: true, requiresAI: false)
-- PAYMENT_STATUS: Payment tracking (requiresDirectDB: true, may requireAI: true)
-- TECHNICAL_SUPPORT: How-to questions, instructions, explanations (requiresAI: true)
-
-IMPORTANT: For voucher queries asking for SPECIFIC information (expiration date, specific voucher details):
-- Set requiresDirectDB: true (to get voucher data)
-- Set requiresAI: true (AI will format the response with specific info requested)
-- This allows AI to query DB and generate appropriate response dynamically
-
-Mojaloop & ISO20022 Standards:
-- Interoperable payment queries
-- Settlement and float management
-- Regulatory compliance queries
-- Cross-border transaction support
+- PAYMENT_STATUS: Payment tracking (requiresDirectDB: true, requiresAI: true)
+- TECHNICAL_SUPPORT: How-to questions, instructions (requiresAI: true)
+- GENERAL: Unrelated questions, general knowledge (requiresAI: true)
 
 Return JSON:
 {
@@ -812,14 +863,14 @@ Return JSON:
   "requiresDirectDB": true/false,
   "requiresKnowledgeBase": true/false,
   "requiresAI": true/false,
-  "reasoning": "brief explanation of classification"
+  "reasoning": "brief explanation"
 }
 
 Rules:
-- If query asks for data summary (balance, count, list) → requiresDirectDB: true, requiresAI: false
-- If query asks for SPECIFIC data (expiration, details of specific voucher) → requiresDirectDB: true, requiresAI: true (AI formats response)
-- If query asks "how to" or needs instructions → requiresAI: true
-- If query is ambiguous → requiresKnowledgeBase: true first, then AI`
+- Platform data queries → requiresDirectDB: true
+- Platform how-to questions → requiresAI: true
+- Unrelated questions → GENERAL, requiresAI: true
+- Always set requiresKnowledgeBase: true (check KB first)`
           },
           {
             role: "user",
@@ -933,10 +984,12 @@ Rules:
   }
 
   /**
-   * 🏦 Execute Banking-Grade Query
-   * Database-First with Caching
+   * 🗄️ Fetch Database Data (Award-Winning: Data Fetcher Only)
+   * No handlers - just fetches data when AI needs it
+   * AI decides what data to fetch and formats the response
    */
   async executeQuery(queryType, message, userId, language, context) {
+    // Award-winning: Just fetch data based on category - AI will format response
     switch (queryType.category) {
       case 'WALLET_BALANCE':
         return await this.getWalletBalance(userId, language);
@@ -948,25 +1001,8 @@ Rules:
         return await this.getKYCStatus(userId, language);
         
       case 'VOUCHER_BALANCE':
-        return await this.getVoucherSummary(userId, language, message, queryType);
-        
       case 'VOUCHER_MANAGEMENT':
         return await this.getVoucherSummary(userId, language, message, queryType);
-      
-      case 'PASSWORD_SUPPORT':
-        return await this.getPasswordSupport(language);
-
-      case 'PROFILE_UPDATE':
-        return await this.getProfileUpdateGuidance(userId, language);
-        
-      case 'SETTLEMENT_QUERIES':
-        return await this.getSettlementStatus(userId, language);
-        
-      case 'FLOAT_MANAGEMENT':
-        return await this.getFloatAccountStatus(userId, language);
-        
-      case 'COMPLIANCE_REPORTS':
-        return await this.getComplianceReport(userId, language);
         
       case 'PAYMENT_STATUS':
         return await this.getPaymentStatus(userId, language, context);
@@ -974,11 +1010,14 @@ Rules:
       case 'ACCOUNT_MANAGEMENT':
         return await this.getAccountDetails(userId, language);
         
-      case 'TECHNICAL_SUPPORT':
-        return await this.getTechnicalSupport(message, language, userId);
-        
       default:
-        return await this.getGenericResponse(message, language);
+        // For other categories, return empty data - AI will generate response
+        return {
+          type: queryType.category || 'GENERAL',
+          data: {},
+          message: '',
+          timestamp: new Date().toISOString()
+        };
     }
   }
 
