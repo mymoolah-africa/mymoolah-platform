@@ -711,7 +711,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     const cacheKey = `wallet_balance:${userId}`;
     
     // 💾 Check Cache
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -760,7 +760,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     };
     
     // 💾 Cache Response
-    await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(response)); // Use optional chaining
+    await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response));
     
     return response;
   }
@@ -773,7 +773,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     const cacheKey = `transaction_history:${userId}:${page}:${limit}`;
     
     // 💾 Check Cache
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -854,7 +854,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     };
     
     // 💾 Cache Response (with shorter TTL for transaction data)
-    await this.redis?.setex(cacheKey, 300, JSON.stringify(response)); // 5 minutes TTL
+    await this.safeRedisSetex(cacheKey, 300, JSON.stringify(response)); // 5 minutes TTL
     
     return response;
   }
@@ -920,7 +920,36 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
       return;
     }
     const key = `support_cache:${userId}:${queryType.category}`;
-    await this.redis.setex(key, this.config.cacheTTL, JSON.stringify(response));
+    try {
+      await this.redis.setex(key, this.config.cacheTTL, JSON.stringify(response));
+    } catch (error) {
+      console.warn('⚠️ Redis cache set failed (non-blocking):', error.message);
+    }
+  }
+
+  /**
+   * 🔒 Safe Redis Get (with readiness check)
+   */
+  async safeRedisGet(key) {
+    if (!this.redis || this.redis.status !== 'ready') return null;
+    try {
+      return await this.redis.get(key);
+    } catch (error) {
+      console.warn(`⚠️ Redis get failed for key "${key}" (non-blocking):`, error.message);
+      return null;
+    }
+  }
+
+  /**
+   * 🔒 Safe Redis Setex (with readiness check)
+   */
+  async safeRedisSetex(key, ttl, value) {
+    if (!this.redis || this.redis.status !== 'ready') return;
+    try {
+      await this.redis.setex(key, ttl, value);
+    } catch (error) {
+      console.warn(`⚠️ Redis setex failed for key "${key}" (non-blocking):`, error.message);
+    }
   }
 
   /**
@@ -1202,7 +1231,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     const cacheKey = `kyc_status:${userId}`;
     
     // 💾 Check Cache
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -1257,7 +1286,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     };
     
     // 💾 Cache Response
-    await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(response)); // Use optional chaining
+    await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response));
     
     return response;
   }
@@ -1270,7 +1299,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     const cacheKey = `voucher_summary:${userId}`;
     
     // 💾 Check Cache
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -1339,7 +1368,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     };
     
     // 💾 Cache Response
-    await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(response)); // Use optional chaining
+    await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response));
     
     return response;
   }
@@ -1475,7 +1504,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     const cacheKey = `account_details:${userId}`;
     
     // 💾 Check Cache
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -1536,7 +1565,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     };
     
     // 💾 Cache Response
-    await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(response)); // Use optional chaining
+    await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response));
     
     return response;
   }
