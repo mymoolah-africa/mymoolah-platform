@@ -511,6 +511,7 @@ class BankingGradeSupportService {
     // 📜 Transaction History - Check FIRST (before other patterns that might interfere)
     // This must come before wallet balance and other patterns
     // Banking-Grade: Simple, explicit patterns for maximum speed
+    // CRITICAL: Match ANY transaction-related query unless it's explicitly excluded
     const hasTransaction = lowerMessage.includes('transaction');
     const hasRecent = lowerMessage.includes('recent');
     const hasHistory = lowerMessage.includes('history');
@@ -520,17 +521,12 @@ class BankingGradeSupportService {
     // Exclude queries about limits, how-to, or upgrades
     const isExcluded = lowerMessage.includes('limit') || lowerMessage.includes('how') || lowerMessage.includes('increase') || lowerMessage.includes('upgrade');
     
-    // Match transaction query patterns - simplified logic
+    // Match transaction query patterns - be VERY permissive
+    // If it mentions transaction/history/recent AND is not excluded, it's a transaction query
     if ((hasTransaction || hasRecent || hasHistory) && !isExcluded) {
-      // Very explicit patterns for transaction queries
-      if (
-        hasTransaction ||
-        (hasRecent && (hasTransaction || hasMy || lowerMessage.includes('payment') || lowerMessage.includes('activity'))) ||
-        (hasShow && (hasTransaction || hasRecent)) ||
-        (hasMy && (hasTransaction || hasRecent))
-      ) {
-        return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
-      }
+      // Match ANY combination of transaction-related keywords
+      // This catches: "show my transaction history", "show me recent transactions", "my transactions", etc.
+      return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
     }
     
     // 🚀 Check sweep-discovered patterns (lightweight, zero cost)
