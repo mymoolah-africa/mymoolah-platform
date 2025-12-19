@@ -259,7 +259,25 @@ class BankingGradeSupportService {
       // 📊 Audit Logging
       this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
       
-      // 📚 Knowledge Base Lookup
+      // 🔍 STEP 1: Check simple patterns FIRST (database queries take priority)
+      // This ensures balance, transaction history, KYC status queries hit the database
+      // instead of being matched to wrong knowledge base entries
+      const simpleQuery = this.detectSimpleQuery(message);
+      if (simpleQuery && !simpleQuery.requiresAI) {
+        // Execute database query immediately (balance, transactions, KYC, etc.)
+        const response = await this.executeQuery(simpleQuery, message, userId, language, context);
+        const responseTime = Date.now() - startTime;
+        this.updatePerformanceMetrics(responseTime, true);
+        this.auditLog('SIMPLE_QUERY_EXECUTED', { 
+          queryId, 
+          userId, 
+          category: simpleQuery.category, 
+          timestamp: new Date() 
+        });
+        return this.formatResponse(response, queryId);
+      }
+
+      // 📚 STEP 2: Knowledge Base Lookup (only if not a simple database query)
       const knowledgeResponse = await this.findKnowledgeBaseAnswer(message, language);
       if (knowledgeResponse) {
         const responseTime = Date.now() - startTime;
@@ -268,7 +286,7 @@ class BankingGradeSupportService {
         return this.formatResponse(knowledgeResponse, queryId);
       }
 
-      // 🎯 Query Classification
+      // 🎯 STEP 3: Query Classification (for complex queries requiring AI)
       const queryType = await this.classifyQuery(message, userId);
       
       // 💾 Cache Check
@@ -390,18 +408,42 @@ class BankingGradeSupportService {
   detectSimpleQuery(message) {
     const lowerMessage = message.toLowerCase();
     
-    // Wallet Balance
-    if (lowerMessage.includes('wallet balance') || lowerMessage.includes('balance') || lowerMessage.includes('how much')) {
+    // Wallet Balance (improved patterns)
+    if (
+      lowerMessage.includes('wallet balance') || 
+      lowerMessage.includes('current balance') ||
+      lowerMessage.includes('my balance') ||
+      lowerMessage.includes('what\'s my balance') ||
+      lowerMessage.includes('how much money') ||
+      lowerMessage.includes('how much do i have') ||
+      (lowerMessage.includes('balance') && (lowerMessage.includes('what') || lowerMessage.includes('show') || lowerMessage.includes('check')))
+    ) {
       return { category: 'WALLET_BALANCE', confidence: 0.95, requiresAI: false };
     }
     
-    // KYC Status
-    if (lowerMessage.includes('kyc') || lowerMessage.includes('verification') || lowerMessage.includes('status')) {
+    // KYC Status (improved patterns)
+    if (
+      lowerMessage.includes('kyc') || 
+      lowerMessage.includes('verification') || 
+      lowerMessage.includes('verified') ||
+      lowerMessage.includes('am i verified') ||
+      lowerMessage.includes('verification status') ||
+      (lowerMessage.includes('status') && (lowerMessage.includes('kyc') || lowerMessage.includes('verification')))
+    ) {
       return { category: 'KYC_STATUS', confidence: 0.95, requiresAI: false };
     }
     
-    // Transaction History
-    if (lowerMessage.includes('transaction') || lowerMessage.includes('history') || lowerMessage.includes('recent')) {
+    // Transaction History (improved patterns)
+    if (
+      lowerMessage.includes('transaction') || 
+      lowerMessage.includes('history') || 
+      lowerMessage.includes('recent') ||
+      lowerMessage.includes('spending activity') ||
+      lowerMessage.includes('payment history') ||
+      lowerMessage.includes('transaction list') ||
+      lowerMessage.includes('show my transactions') ||
+      lowerMessage.includes('my transactions')
+    ) {
       return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
     }
     
@@ -449,7 +491,7 @@ class BankingGradeSupportService {
       return { category: 'PAYMENT_STATUS', confidence: 0.9, requiresAI: false };
     }
 
-    // Generic "how do I pay / make payments / pay my bills" queries
+    // Generic "how do I pay / make payments / pay my bills" queries (improved patterns)
     if (
       lowerMessage.includes('pay my account') ||
       lowerMessage.includes('pay my accounts') ||
@@ -460,7 +502,35 @@ class BankingGradeSupportService {
       lowerMessage.includes('pay accounts') ||
       lowerMessage.includes('make a payment') ||
       lowerMessage.includes('make payment') ||
-      lowerMessage.includes('make payments')
+      lowerMessage.includes('make payments') ||
+      lowerMessage.includes('settle my bills') ||
+      lowerMessage.includes('settle bills') ||
+      lowerMessage.includes('settle utility') ||
+      lowerMessage.includes('how do i pay') ||
+      lowerMessage.includes('how to pay')
+    ) {
+      return { category: 'PAYMENT_STATUS', confidence: 0.95, requiresAI: false };
+    }
+
+    // Account Details / Account Information
+    if (
+      lowerMessage.includes('account details') ||
+      lowerMessage.includes('account information') ||
+      lowerMessage.includes('my account info') ||
+      lowerMessage.includes('what information') && lowerMessage.includes('account') ||
+      lowerMessage.includes('account holder') ||
+      lowerMessage.includes('account settings')
+    ) {
+      return { category: 'ACCOUNT_MANAGEMENT', confidence: 0.95, requiresAI: false };
+    }
+
+    // Payment Status / Money not arrived
+    if (
+      lowerMessage.includes('sent money') ||
+      lowerMessage.includes('money not arrived') ||
+      lowerMessage.includes('where is it') ||
+      lowerMessage.includes('payment not received') ||
+      lowerMessage.includes('transfer not received')
     ) {
       return { category: 'PAYMENT_STATUS', confidence: 0.95, requiresAI: false };
     }
@@ -1778,11 +1848,8 @@ When answering fee questions, be specific about the tier system and always menti
         } else if (semanticScore >= 0.65) {
           // Medium semantic similarity (65-74%) - related but not identical
           score += 6;
-        } else if (semanticScore >= 0.55) {
-          // Low semantic similarity (55-64%) - somewhat related
-          score += 3;
         }
-        // Below 55% is ignored to maintain quality
+        // Below 65% is ignored to maintain quality (increased from 55% to reduce false matches)
       }
     } catch (error) {
       console.warn('⚠️ Semantic similarity calculation failed, falling back to keyword matching:', error.message);
@@ -1852,8 +1919,51 @@ When answering fee questions, be specific about the tier system and always menti
         })
       );
 
+      // Map KB categories to query categories for validation
+      const categoryMap = {
+        'balance_hold': 'WALLET_BALANCE',
+        'payment_status': 'PAYMENT_STATUS',
+        'kyc_help': 'KYC_STATUS',
+        'transaction_history': 'TRANSACTION_HISTORY',
+        'vouchers': 'VOUCHER_MANAGEMENT',
+        'profile_update': 'ACCOUNT_MANAGEMENT',
+        'load_funds': 'WALLET_BALANCE',
+        'fees': 'PAYMENT_STATUS',
+        'platform_overview': 'TECHNICAL_SUPPORT'
+      };
+
+      // Try to detect query intent for category validation (use original message, not normalized)
+      const queryIntent = this.detectSimpleQuery(message);
+      const expectedCategory = queryIntent ? queryIntent.category : null;
+
       const filteredCandidates = scoredCandidates
-        .filter(item => item.score >= 5) // Minimum quality threshold
+        .filter(item => {
+          // Minimum quality threshold (increased from 5 to 7 to match 70% semantic threshold)
+          if (item.score < 7) return false;
+          
+          // Category validation: reject if KB entry category doesn't match query intent
+          if (expectedCategory && item.entry.category) {
+            const kbCategory = item.entry.category.toLowerCase();
+            const mappedCategory = categoryMap[kbCategory];
+            
+            // If we have a clear query intent and KB category doesn't match, reject
+            if (mappedCategory && mappedCategory !== expectedCategory) {
+              // Allow some flexibility for related categories
+              const relatedCategories = {
+                'WALLET_BALANCE': ['PAYMENT_STATUS'],
+                'PAYMENT_STATUS': ['WALLET_BALANCE'],
+                'ACCOUNT_MANAGEMENT': ['PROFILE_UPDATE', 'KYC_STATUS']
+              };
+              
+              const related = relatedCategories[expectedCategory] || [];
+              if (!related.includes(mappedCategory)) {
+                return false; // Reject mismatched category
+              }
+            }
+          }
+          
+          return true;
+        })
         .sort((a, b) => {
           // Primary sort: score (descending)
           if (b.score !== a.score) return b.score - a.score;
@@ -1863,8 +1973,8 @@ When answering fee questions, be specific about the tier system and always menti
 
       if (filteredCandidates.length) {
         const top = filteredCandidates[0];
-        // Only return if score meets quality threshold
-        if (top.score >= 6) {
+        // Only return if score meets quality threshold (increased from 6 to 8)
+        if (top.score >= 8) {
           await top.entry.increment('usageCount');
           return this.buildKnowledgeResponse(top.entry);
         }
