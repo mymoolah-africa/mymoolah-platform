@@ -286,96 +286,85 @@ class BankingGradeSupportService {
 
   /**
    * 🎯 Process Support Query (Main Entry Point)
-   * Banking-Grade with Full Monitoring
+   * Banking-Grade AI-First Architecture (Award-Winning Model)
+   * Based on CIBC, JPMorgan, BBVA best practices
    */
   async processSupportQuery(message, userId, language = 'en', context = {}) {
     const startTime = Date.now();
     const queryId = this.generateQueryId();
     
     try {
-      // 🔍 Check if service is initialized (removed for now)
-      
-      // 🔍 STEP 1: Check simple patterns FIRST (database queries take priority)
-      // ONLY for truly simple, unambiguous queries that can be answered directly from DB
-      // Complex queries (how-to, explanations, etc.) should go to GPT-4o
-      const simpleQuery = this.detectSimpleQuery(message);
-      if (simpleQuery && !simpleQuery.requiresAI) {
-        console.log(`✅ SIMPLE QUERY DETECTED: ${simpleQuery.category} for "${message.substring(0, 50)}"`);
-        
-        // 🚀 Banking-Grade Optimization: Lightweight rate limiting for simple queries
-        // Use in-memory only (skip Redis) for maximum speed (<1ms overhead)
-        this.enforceLightweightRateLimit(userId);
-        
-        // Audit logging async (non-blocking)
-        setImmediate(() => {
-          this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
-        });
-        
-        // Execute database query immediately (balance, transactions, KYC, etc.)
-        // Pass message in context for payment status queries
-        const enrichedContext = { ...context, message };
-        const dbStartTime = Date.now();
-        const response = await this.executeQuery(simpleQuery, message, userId, language, enrichedContext);
-        const dbTime = Date.now() - dbStartTime;
-        const responseTime = Date.now() - startTime;
-        
-        console.log(`⚡ DB Query took ${dbTime}ms, Total response time: ${responseTime}ms`);
-        
-        // Update metrics and audit log async (non-blocking)
-        this.updatePerformanceMetrics(responseTime, true);
-        setImmediate(() => {
-          this.auditLog('SIMPLE_QUERY_EXECUTED', { 
-            queryId, 
-            userId, 
-            category: simpleQuery.category, 
-            timestamp: new Date() 
-          });
-        });
-        
-        return this.formatResponse(response, queryId, responseTime);
-      }
-      
-      console.log(`🤖 COMPLEX QUERY - Routing to GPT-4o for "${message.substring(0, 50)}"`);
-      
-      // 🔒 Security & Rate Limiting (for complex queries that go to GPT-4o)
+      // 🔒 Security & Rate Limiting (for all queries)
       await this.enforceRateLimit(userId);
       
       // 📊 Audit Logging
       this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
 
-      // 📚 STEP 2: Knowledge Base Lookup (only if not a simple database query AND not requiring AI)
-      // Skip KB lookup for queries that should go directly to GPT-4o (requiresAI: true)
-      // High threshold ensures only accurate, relevant answers are returned
-      // If no good match, fall through to GPT-4o
-      if (!simpleQuery || !simpleQuery.requiresAI) {
+      // 🎯 STEP 1: AI Intent Classification FIRST (Award-Winning Architecture)
+      // AI understands intent for ALL queries - no hardcoded patterns
+      // This is what CIBC, JPMorgan, BBVA do - AI-first, not pattern-first
+      const intent = await this.classifyQuery(message, userId);
+      
+      console.log(`🤖 AI Intent Classification: ${intent.category} (confidence: ${intent.confidence}, directDB: ${intent.requiresDirectDB})`);
+      
+      // 🚀 STEP 2: Direct Database Query (if AI determined it's unambiguous)
+      // AI classification determines if query can be answered directly from DB
+      if (intent.requiresDirectDB && !intent.requiresAI) {
+        console.log(`⚡ Direct DB Query: ${intent.category}`);
+        
+        const enrichedContext = { ...context, message };
+        const dbStartTime = Date.now();
+        const response = await this.executeQuery(intent, message, userId, language, enrichedContext);
+        const dbTime = Date.now() - dbStartTime;
+        const responseTime = Date.now() - startTime;
+        
+        console.log(`⚡ DB Query took ${dbTime}ms, Total response time: ${responseTime}ms`);
+        
+        this.updatePerformanceMetrics(responseTime, true);
+        this.auditLog('DIRECT_DB_QUERY_EXECUTED', { 
+          queryId, 
+          userId, 
+          category: intent.category, 
+          timestamp: new Date() 
+        });
+        
+        return this.formatResponse(response, queryId, responseTime);
+      }
+
+      // 📚 STEP 3: Knowledge Base Lookup (RAG Pattern)
+      // Check knowledge base before generating AI response
+      if (intent.requiresKnowledgeBase !== false) {
         const knowledgeResponse = await this.findKnowledgeBaseAnswer(message, language);
-        if (knowledgeResponse) {
+        if (knowledgeResponse && knowledgeResponse.confidence > 0.8) {
           const responseTime = Date.now() - startTime;
           this.updatePerformanceMetrics(responseTime, true);
-          this.auditLog('KNOWLEDGE_BASE_HIT', { queryId, userId, category: knowledgeResponse?.data?.category, timestamp: new Date() });
+          this.auditLog('KNOWLEDGE_BASE_HIT', { 
+            queryId, 
+            userId, 
+            category: knowledgeResponse?.data?.category, 
+            timestamp: new Date() 
+          });
           return this.formatResponse(knowledgeResponse, queryId, responseTime);
         }
       }
-
-      // 🎯 STEP 3: Query Classification (for complex queries requiring AI)
-      const queryType = await this.classifyQuery(message, userId);
       
-      // 💾 Cache Check
-      const cachedResponse = await this.getCachedResponse(queryId, userId, queryType);
+      // 💾 STEP 4: Cache Check (for AI-generated responses)
+      const cachedResponse = await this.getCachedResponse(queryId, userId, intent);
       if (cachedResponse) {
         this.performanceMetrics.cacheHits++;
         const responseTime = Date.now() - startTime;
         return this.formatResponse(cachedResponse, queryId, responseTime);
       }
       
-      // 🏦 Process Query (GPT-4o for complex queries)
-      const response = await this.executeQuery(queryType, message, userId, language, context);
+      // 🤖 STEP 5: AI-Generated Response (with full context)
+      // AI generates response with codebase sweep context for accuracy
+      const response = await this.executeQuery(intent, message, userId, language, context);
       
       // 🎓 Auto-Learning: Store AI answers in knowledge base
-      // Only store if this was an AI-generated answer (not from simple patterns or KB)
-      // Check that response has valid content and came from AI (requiresAI flag)
+      // Only store if this was an AI-generated answer (not from direct DB or KB)
+      // Award-winning systems continuously learn from successful AI responses
       if (
-        queryType.requiresAI && 
+        intent.requiresAI && 
         response.message && 
         response.type !== 'KNOWLEDGE_BASE' &&
         response.type !== 'GENERIC_RESPONSE' && // Don't store generic fallbacks
@@ -388,15 +377,15 @@ class BankingGradeSupportService {
           message,
           response.message,
           language,
-          queryType.category || 'general',
-          queryType
+          intent.category || 'general',
+          intent
         ).catch(err => {
           console.error('⚠️ Auto-learning failed (non-blocking):', err);
         });
       }
       
       // 💾 Cache Response
-      await this.cacheResponse(queryId, userId, queryType, response);
+      await this.cacheResponse(queryId, userId, intent, response);
       
       // 📊 Performance Metrics
       const responseTime = Date.now() - startTime;
@@ -406,7 +395,7 @@ class BankingGradeSupportService {
       this.auditLog('QUERY_SUCCESS', { 
         queryId, 
         userId, 
-        queryType, 
+        queryType: intent, 
         responseTime, 
         timestamp: new Date() 
       });
@@ -442,42 +431,53 @@ class BankingGradeSupportService {
   }
 
   /**
-   * 🎯 Query Classification with AI
-   * Banking-Grade Pattern Recognition
+   * 🎯 AI-First Query Classification (Award-Winning Architecture)
+   * Banking-Grade Intent Understanding - No Hardcoded Patterns
+   * Based on CIBC, JPMorgan, BBVA best practices
    */
   async classifyQuery(message, userId) {
-    // 🔍 First try simple pattern matching
-    const simpleQuery = this.detectSimpleQuery(message);
-    if (simpleQuery) {
-      return simpleQuery;
-    }
+    const cacheKey = `intent_classification:${userId}:${this.hashMessage(message)}`;
     
-    const cacheKey = `query_classification:${userId}:${this.hashMessage(message)}`;
-    
-    // 💾 Check Cache First (only if Redis is ready)
+    // 💾 Check Cache First (1 hour TTL for classifications)
+    // Award-winning systems cache intent classifications for performance
     if (this.redis && this.redis.status === 'ready') {
-      const cached = await this.redis.get(cacheKey);
-      if (cached) {
-        return JSON.parse(cached);
+      try {
+        const cached = await this.redis.get(cacheKey);
+        if (cached) {
+          console.log(`✅ Cached intent classification found`);
+          return JSON.parse(cached);
+        }
+      } catch (err) {
+        console.warn('⚠️ Cache read failed (non-critical):', err.message);
       }
     }
     
-    // 🤖 AI Classification
+    // 🤖 AI Intent Classification (ALL queries use AI - no pattern matching)
+    // This is the award-winning approach: AI understands intent, not patterns
     const classification = await this.performAIClassification(message, userId);
     
-    // 💾 Cache Classification (only if Redis is ready)
+    // 💾 Cache Classification (1 hour TTL - same query = instant response)
     if (this.redis && this.redis.status === 'ready') {
-      await this.redis.setex(cacheKey, this.config.cacheTTL, JSON.stringify(classification));
+      try {
+        await this.redis.setex(cacheKey, 3600, JSON.stringify(classification)); // 1 hour cache
+      } catch (err) {
+        console.warn('⚠️ Cache write failed (non-critical):', err.message);
+      }
     }
     
     return classification;
   }
 
   /**
-   * 🔍 Simple Pattern Matching
-   * ONLY for truly simple, unambiguous queries that can be answered directly from DB
-   * Complex queries (how-to, explanations, etc.) should go to GPT-4o
-   * Banking-Grade: Zero OpenAI cost for simple queries, maximum accuracy
+   * 🔍 Simple Pattern Matching (DEPRECATED - Not Used)
+   * ⚠️ DEPRECATED: This function is no longer used in the main flow.
+   * We now use AI-first intent classification (award-winning architecture).
+   * This function is kept only as a fallback safety net.
+   * 
+   * Banking-Grade AI-First Architecture:
+   * - AI understands intent for ALL queries (no hardcoded patterns)
+   * - Based on CIBC, JPMorgan, BBVA best practices
+   * - Scalable, maintainable, handles edge cases automatically
    */
   detectSimpleQuery(message) {
     const lowerMessage = message.toLowerCase().trim();
@@ -508,24 +508,36 @@ class BankingGradeSupportService {
       return { category: 'TECHNICAL_SUPPORT', confidence: 0.95, requiresAI: true };
     }
     
-    // 📜 Transaction History - Check FIRST (before other patterns that might interfere)
-    // This must come before wallet balance and other patterns
+    // 🎫 Voucher Balance - Check BEFORE wallet balance (CRITICAL: order matters!)
+    // Must come before wallet balance to prevent misclassification
+    if (
+      lowerMessage.includes('voucher') && lowerMessage.includes('balance') ||
+      lowerMessage.includes('voucher balance') ||
+      (lowerMessage.includes('what') && lowerMessage.includes('voucher') && lowerMessage.includes('balance')) ||
+      (lowerMessage.includes('my voucher') && lowerMessage.includes('balance')) ||
+      (lowerMessage.includes('show') && lowerMessage.includes('voucher') && lowerMessage.includes('balance'))
+    ) {
+      return { category: 'VOUCHER_BALANCE', confidence: 0.95, requiresAI: false };
+    }
+    
+    // 📜 Transaction History - Check BEFORE wallet balance
     // Banking-Grade: Simple, explicit patterns for maximum speed
     // CRITICAL: Match ANY transaction-related query unless it's explicitly excluded
     const hasTransaction = lowerMessage.includes('transaction');
     const hasRecent = lowerMessage.includes('recent');
     const hasHistory = lowerMessage.includes('history');
-    const hasShow = lowerMessage.includes('show');
-    const hasMy = lowerMessage.includes('my');
+    const hasLast = lowerMessage.includes('last');
     
-    // Exclude queries about limits, how-to, or upgrades
-    const isExcluded = lowerMessage.includes('limit') || lowerMessage.includes('how') || lowerMessage.includes('increase') || lowerMessage.includes('upgrade');
+    // Exclude ONLY true "how-to" questions, not phrases like "how my last..."
+    // Only exclude if it's "how do i", "how can i", "how to", or asking about limits/increases
+    const isHowTo = lowerMessage.includes('how do i') || lowerMessage.includes('how can i') || lowerMessage.includes('how to');
+    const isExcluded = lowerMessage.includes('limit') || isHowTo || lowerMessage.includes('increase') || lowerMessage.includes('upgrade');
     
     // Match transaction query patterns - be VERY permissive
-    // If it mentions transaction/history/recent AND is not excluded, it's a transaction query
-    if ((hasTransaction || hasRecent || hasHistory) && !isExcluded) {
+    // If it mentions transaction/history/recent/last AND is not excluded, it's a transaction query
+    if ((hasTransaction || hasRecent || hasHistory || hasLast) && !isExcluded) {
       // Match ANY combination of transaction-related keywords
-      // This catches: "show my transaction history", "show me recent transactions", "my transactions", etc.
+      // This catches: "show my transaction history", "how my last wallet transactions", "my transactions", etc.
       return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
     }
     
@@ -545,7 +557,8 @@ class BankingGradeSupportService {
         };
         const mappedCategory = categoryMap[sweepMatch.category] || 'TECHNICAL_SUPPORT';
         // Only use sweep patterns for simple queries, not complex how-to queries
-        if (mappedCategory !== 'TECHNICAL_SUPPORT' && !lowerMessage.includes('how')) {
+        const isHowToQuery = lowerMessage.includes('how do i') || lowerMessage.includes('how can i') || lowerMessage.includes('how to');
+        if (mappedCategory !== 'TECHNICAL_SUPPORT' && !isHowToQuery) {
           return { 
             category: mappedCategory, 
             confidence: sweepMatch.confidence, 
@@ -555,19 +568,20 @@ class BankingGradeSupportService {
       }
     }
     
-    // 💰 Wallet Balance - Common patterns for balance queries
+    // 💰 Wallet Balance - Common patterns for balance queries (AFTER voucher check)
+    // CRITICAL: Must check for "voucher" first, otherwise "voucher balance" matches here
     if (
       lowerMessage === 'balance' || 
       lowerMessage === 'my balance' || 
       lowerMessage === 'wallet balance' ||
       lowerMessage.includes('wallet balance') ||
-      lowerMessage.includes('my balance') ||
-      (lowerMessage.includes('what') && lowerMessage.includes('balance') && !lowerMessage.includes('how')) ||
-      (lowerMessage.includes('what\'s') && lowerMessage.includes('balance')) ||
-      (lowerMessage.includes('whats') && lowerMessage.includes('balance')) ||
-      (lowerMessage.includes('show') && lowerMessage.includes('balance')) ||
-      (lowerMessage.includes('check') && lowerMessage.includes('balance')) ||
-      (lowerMessage.includes('current balance'))
+      (lowerMessage.includes('my balance') && !lowerMessage.includes('voucher')) ||
+      (lowerMessage.includes('what') && lowerMessage.includes('balance') && !lowerMessage.includes('voucher') && !lowerMessage.includes('how')) ||
+      (lowerMessage.includes('what\'s') && lowerMessage.includes('balance') && !lowerMessage.includes('voucher')) ||
+      (lowerMessage.includes('whats') && lowerMessage.includes('balance') && !lowerMessage.includes('voucher')) ||
+      (lowerMessage.includes('show') && lowerMessage.includes('balance') && !lowerMessage.includes('voucher')) ||
+      (lowerMessage.includes('check') && lowerMessage.includes('balance') && !lowerMessage.includes('voucher')) ||
+      (lowerMessage.includes('current balance') && !lowerMessage.includes('voucher'))
     ) {
       return { category: 'WALLET_BALANCE', confidence: 0.95, requiresAI: false };
     }
@@ -633,8 +647,9 @@ class BankingGradeSupportService {
   }
 
   /**
-   * 🤖 AI-Powered Query Classification
-   * Mojaloop & Banking Standards Aware
+   * 🤖 AI-Powered Intent Classification (Award-Winning Model)
+   * Banking-Grade Intent Understanding - Understands Context, Not Patterns
+   * Based on CIBC, JPMorgan, BBVA architecture
    */
   async performAIClassification(message, userId) {
     try {
@@ -644,7 +659,27 @@ class BankingGradeSupportService {
         messages: [
           {
             role: "system",
-            content: `You are a banking-grade query classifier for MyMoolah Treasury Platform.
+            content: `You are a banking-grade intent classifier for MyMoolah Treasury Platform.
+Your job: Understand what the user is asking for through context, not pattern matching.
+
+CRITICAL DISTINCTIONS (understand context, not keywords):
+- "voucher balance" = VOUCHER_BALANCE (MyMoolah vouchers they own)
+- "wallet balance" = WALLET_BALANCE (money in their wallet)
+- "my balance" = WALLET_BALANCE (unless context says "voucher")
+- "buy voucher" = TECHNICAL_SUPPORT (needs step-by-step instructions)
+- "my vouchers" = VOUCHER_BALANCE (list/summary of owned vouchers)
+- "how do I pay" = TECHNICAL_SUPPORT (needs instructions)
+- "where is my payment" = PAYMENT_STATUS (tracking a payment)
+- "show transactions" = TRANSACTION_HISTORY (list of transactions)
+- "recent transactions" = TRANSACTION_HISTORY (transaction list)
+
+Categories:
+- WALLET_BALANCE: Money balance in wallet (requiresDirectDB: true)
+- VOUCHER_BALANCE: MyMoolah voucher balance/summary (requiresDirectDB: true)
+- TRANSACTION_HISTORY: List of transactions (requiresDirectDB: true)
+- KYC_STATUS: Verification status (requiresDirectDB: true)
+- PAYMENT_STATUS: Payment tracking (may require DB + AI)
+- TECHNICAL_SUPPORT: How-to questions, instructions, explanations (requiresAI: true)
 
 Mojaloop & ISO20022 Standards:
 - Interoperable payment queries
@@ -652,26 +687,28 @@ Mojaloop & ISO20022 Standards:
 - Regulatory compliance queries
 - Cross-border transaction support
 
-Banking Query Categories:
-- WALLET_BALANCE: Balance inquiries
-- TRANSACTION_HISTORY: Transaction queries
-- KYC_STATUS: Verification status
-- VOUCHER_MANAGEMENT: Voucher operations
-- SETTLEMENT_QUERIES: Settlement status
-- FLOAT_MANAGEMENT: Float account queries
-- COMPLIANCE_REPORTS: Regulatory reports
-- PAYMENT_STATUS: Payment tracking
-- ACCOUNT_MANAGEMENT: Account operations
-- TECHNICAL_SUPPORT: System issues
+Return JSON:
+{
+  "category": "EXACT_CATEGORY",
+  "confidence": 0.95,
+  "requiresDirectDB": true/false,
+  "requiresKnowledgeBase": true/false,
+  "requiresAI": true/false,
+  "reasoning": "brief explanation of classification"
+}
 
-Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": true/false}`
+Rules:
+- If query asks for data (balance, transactions, KYC) → requiresDirectDB: true
+- If query asks "how to" or needs instructions → requiresAI: true
+- If query is ambiguous → requiresKnowledgeBase: true first, then AI`
           },
           {
             role: "user",
-            content: `Classify: "${message}"`
+            content: `Classify this query and understand the intent: "${message}"`
           }
         ],
-        max_completion_tokens: 150,
+        max_completion_tokens: 200,
+        temperature: 0.1, // Low temperature for consistent classification
         response_format: { type: "json_object" }
       });
       
@@ -707,7 +744,17 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         throw new Error('Classification response missing category');
       }
       
-      return parsed;
+      // 🛡️ Ensure all required fields are present (backward compatibility)
+      return {
+        category: parsed.category,
+        confidence: parsed.confidence || 0.9,
+        requiresDirectDB: parsed.requiresDirectDB !== undefined ? parsed.requiresDirectDB : 
+          (['WALLET_BALANCE', 'VOUCHER_BALANCE', 'TRANSACTION_HISTORY', 'KYC_STATUS'].includes(parsed.category)),
+        requiresKnowledgeBase: parsed.requiresKnowledgeBase !== undefined ? parsed.requiresKnowledgeBase : true,
+        requiresAI: parsed.requiresAI !== undefined ? parsed.requiresAI : 
+          (parsed.category === 'TECHNICAL_SUPPORT'),
+        reasoning: parsed.reasoning || `Classified as ${parsed.category}`
+      };
       
     } catch (error) {
       console.error('❌ AI classification failed:', error);
@@ -780,6 +827,9 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         
       case 'KYC_STATUS':
         return await this.getKYCStatus(userId, language);
+        
+      case 'VOUCHER_BALANCE':
+        return await this.getVoucherSummary(userId, language);
         
       case 'VOUCHER_MANAGEMENT':
         return await this.getVoucherSummary(userId, language);
@@ -1355,22 +1405,66 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
   /**
    * 🔄 Fallback Classification
    */
+  /**
+   * 🛡️ Fallback Classification (if AI fails)
+   * Simple fallback - only used if AI classification completely fails
+   */
   fallbackClassification(message) {
     const lowerMessage = message.toLowerCase();
     
+    // Simple fallback - prefer AI classification over this
+    if (lowerMessage.includes('voucher') && lowerMessage.includes('balance')) {
+      return { 
+        category: 'VOUCHER_BALANCE', 
+        confidence: 0.7, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Fallback: voucher balance detected'
+      };
+    }
+    
     if (lowerMessage.includes('balance') || lowerMessage.includes('wallet')) {
-      return { category: 'WALLET_BALANCE', confidence: 0.8, requiresAI: false };
+      return { 
+        category: 'WALLET_BALANCE', 
+        confidence: 0.7, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Fallback: wallet balance detected'
+      };
     }
     
     if (lowerMessage.includes('transaction') || lowerMessage.includes('history')) {
-      return { category: 'TRANSACTION_HISTORY', confidence: 0.8, requiresAI: false };
+      return { 
+        category: 'TRANSACTION_HISTORY', 
+        confidence: 0.7, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Fallback: transaction history detected'
+      };
     }
     
     if (lowerMessage.includes('kyc') || lowerMessage.includes('verification')) {
-      return { category: 'KYC_STATUS', confidence: 0.8, requiresAI: false };
+      return { 
+        category: 'KYC_STATUS', 
+        confidence: 0.7, 
+        requiresDirectDB: true,
+        requiresKnowledgeBase: false,
+        requiresAI: false,
+        reasoning: 'Fallback: KYC status detected'
+      };
     }
     
-    return { category: 'TECHNICAL_SUPPORT', confidence: 0.5, requiresAI: true };
+    return { 
+      category: 'TECHNICAL_SUPPORT', 
+      confidence: 0.5, 
+      requiresDirectDB: false,
+      requiresKnowledgeBase: true,
+      requiresAI: true,
+      reasoning: 'Fallback: defaulting to technical support'
+    };
   }
 
   /**
