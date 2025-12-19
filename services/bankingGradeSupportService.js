@@ -1401,23 +1401,23 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
   }
 
   /**
-   * 💳 Get Payment Status (Mojaloop Compliant)
+   * 💳 Payment / Pay Accounts Guidance (No Dummy Payment Data)
    */
   async getPaymentStatus(userId, language, context) {
     const response = {
       type: 'PAYMENT_STATUS',
       data: {
-        paymentId: context.paymentId || 'PAY-123456',
-        status: 'completed',
-        amount: 'R1,000.00',
-        recipient: 'John Doe',
-        timestamp: '2025-08-25T10:30:00Z'
+        steps: [
+          'From the home screen, tap the "Pay" or "Pay Accounts" option.',
+          'Choose who you want to pay: an existing beneficiary, a saved account, or add a new account.',
+          'Enter the amount you want to pay and select the correct wallet or funding source if applicable.',
+          'Review all details, including the recipient name, reference, and any fees.',
+          'Confirm the payment. We will only process it once you have approved the final summary.'
+        ],
+        note: 'You can always view your payments and debit orders under Transaction History for full audit details.'
       },
-      message: this.getLocalizedMessage('payment_status', language, {
-        status: 'completed',
-        amount: 'R1,000.00',
-        recipient: 'John Doe'
-      }),
+      // Re‑use the same human‑readable guidance used by the AI support layer
+      message: this.getLocalizedMessage('payments_help', language, {}),
       timestamp: new Date().toISOString(),
       compliance: {
         iso20022: true,
