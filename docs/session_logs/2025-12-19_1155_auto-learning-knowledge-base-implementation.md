@@ -86,7 +86,7 @@ Implemented auto-learning feature for the support service that automatically sto
 - **Issue 3**: "How do I change my tier?" routing to account management instead of technical support - Fixed by adding tier question pattern matching
 - **Issue 4**: Database error "column u.phone does not exist" - Fixed by using correct column name `phoneNumber`
 - **Issue 5**: Auto-learning failing with "value too long for type character varying(20)" - Fixed by using hash-based faqId (exactly 20 chars)
-- **Issue 6**: Model name "GPT-5.1" not working - Fixed by normalizing to lowercase (OpenAI expects "gpt-4o", not "GPT-4O")
+- **Issue 6**: Model name "gpt-4o" not working - Fixed by normalizing to lowercase (OpenAI expects "gpt-4o", not "GPT-4O")
 - **Issue 7**: Second identical question still calling OpenAI - Fixed by ensuring auto-learning succeeds (faqId length fix)
 
 ---
@@ -122,7 +122,7 @@ Implemented auto-learning feature for the support service that automatically sto
 - **Auto-learning is LIVE**: The support service now automatically stores successful OpenAI answers in `ai_knowledge_base`. Subsequent identical questions are answered from the database (no OpenAI call, faster, cheaper).
 - **Current Service**: Using `bankingGradeSupportService` directly (not `supportService.js` unified orchestrator) for stability. All fixes applied to banking-grade service.
 - **Redis Resilience**: All Redis operations gracefully degrade when Redis isn't ready. No more "Stream isn't writeable" errors during startup.
-- **Model Configuration**: `SUPPORT_AI_MODEL` env var (default `gpt-5`, normalized to lowercase). Currently set to `gpt-4o` in Codespaces.
+- **Model Configuration**: `SUPPORT_AI_MODEL` env var (default `gpt-4o`, normalized to lowercase). Currently set to `gpt-4o` in Codespaces.
 - **faqId Format**: Uses MD5 hash of question (first 17 chars) + "KB-" prefix = exactly 20 characters (matches VARCHAR(20) constraint).
 - **Knowledge Base Growth**: The knowledge base will grow automatically as users ask new questions. Monitor `ai_knowledge_base` table for growth.
 - **Performance**: Knowledge base responses are ~10x faster than OpenAI (272ms vs 2,500ms) and have zero AI cost.

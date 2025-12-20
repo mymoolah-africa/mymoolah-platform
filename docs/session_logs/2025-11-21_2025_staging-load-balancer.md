@@ -1,7 +1,7 @@
 # Session Log - 2025-11-21 - Staging Custom Domains & HTTPS LB
 
 **Session Date**: 2025-11-21 20:25 SAST  
-**Agent**: GPT-5 Codex (Cursor)  
+**Agent**: gpt-4o Codex (Cursor)  
 **User**: André  
 **Duration**: ~2h
 

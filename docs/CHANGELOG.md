@@ -37,10 +37,10 @@
 - **Testing**: ✅ Verified first query calls OpenAI and stores answer, ✅ Verified second identical query uses knowledge base (no OpenAI call), ✅ All fixes deployed and tested.
 - **Files Modified**: `services/bankingGradeSupportService.js` (auto-learning methods, Redis resilience, database fixes, routing improvements), `docs/AGENT_HANDOVER.md`, `docs/CHANGELOG.md`, `docs/session_logs/2025-12-19_1155_auto-learning-knowledge-base-implementation.md`.
 
-## 2025-12-19 - 🏦 Unified Support Service & GPT-5 Model Configuration
+## 2025-12-19 - 🏦 Unified Support Service & gpt-4o Model Configuration
 - Introduced `services/supportService.js` as the unified support orchestrator, composing `bankingGradeSupportService` (rate limiting, Redis, health, metrics, knowledge base) with `aiSupportService` (pattern matching, simple handlers, GPT-backed complex answers).
 - Updated `controllers/supportController.js` to use the new `SupportService` while keeping the `/api/v1/support/chat` API contract unchanged for the wallet frontend.
-- Centralized support AI model selection via `SUPPORT_AI_MODEL` env var (default `gpt-5`) and wired all support-related OpenAI calls to use it, allowing upgrades to `gpt-5.1`/`gpt-5.2` via configuration instead of code changes.
+- Centralized support AI model selection via `SUPPORT_AI_MODEL` env var (default `gpt-4o`) and wired all support-related OpenAI calls to use it, allowing upgrades to `gpt-4o`/`gpt-4o` via configuration instead of code changes.
 - Archived legacy `aiSupportService.js` and `bankingGradeSupportService.js` under `services/archived/` for reference, without changing their internal DB/query logic.
 - Documentation updated: `docs/BANKING_GRADE_SUPPORT_SYSTEM.md` and `docs/AI_SUPPORT_SYSTEM.md` now describe the unified architecture and model configuration; session log added at `docs/session_logs/2025-12-19_2300_support-service-consolidation.md`.
 
@@ -407,27 +407,27 @@
 - `routes/qrpayments.js` - Added tipAmount validation
 
 ## 2025-11-18
-- **GPT-5 Upgrade & Codebase Sweep Optimization**: Upgraded all OpenAI models from GPT-4/GPT-5.0 to GPT-5, fixed API compatibility issues, added codebase sweep disable feature, and improved startup performance.
+- **gpt-4o Upgrade & Codebase Sweep Optimization**: Upgraded all OpenAI models from GPT-4/gpt-4o to gpt-4o, fixed API compatibility issues, added codebase sweep disable feature, and improved startup performance.
 
-**GPT-5 Upgrade & Codebase Sweep Optimization**:
-- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-5.0` to `gpt-5` (17 occurrences across 8 files)
-- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
-- **Temperature Parameter**: Removed all `temperature` parameters (GPT-5 only supports default value of 1)
+**gpt-4o Upgrade & Codebase Sweep Optimization**:
+- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-4o` to `gpt-4o` (17 occurrences across 8 files)
+- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (gpt-4o requirement)
+- **Temperature Parameter**: Removed all `temperature` parameters (gpt-4o only supports default value of 1)
 - **Codebase Sweep Disable**: Added `ENABLE_CODEBASE_SWEEP` environment variable to disable service during development (saves OpenAI tokens)
 - **Startup Performance**: Added 10-second delay before initial codebase sweep to improve server startup time
 - **ADC Auto-Refresh**: Enhanced startup script to automatically check and refresh Google Cloud Application Default Credentials
 - **Beneficiary Token Handling**: Improved token validation and error handling in beneficiary service
-- **Status**: ✅ All GPT-5 compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
+- **Status**: ✅ All gpt-4o compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
 
 **Files Updated**:
-- `services/kycService.js` - GPT-5 model, max_completion_tokens
-- `services/codebaseSweepService.js` - GPT-5 model, max_completion_tokens, startup delay, disable feature
-- `services/bankingGradeSupportService.js` - GPT-5 model, max_completion_tokens
-- `services/aiSupportService.js` - GPT-5 model, max_completion_tokens
-- `services/googleReviewService.js` - GPT-5 model, max_completion_tokens
-- `services/feedbackService.js` - GPT-5 model, max_completion_tokens
-- `controllers/feedbackController.js` - GPT-5 model, max_completion_tokens
-- `scripts/test-openai-kyc.js` - GPT-5 model, max_completion_tokens
+- `services/kycService.js` - gpt-4o model, max_completion_tokens
+- `services/codebaseSweepService.js` - gpt-4o model, max_completion_tokens, startup delay, disable feature
+- `services/bankingGradeSupportService.js` - gpt-4o model, max_completion_tokens
+- `services/aiSupportService.js` - gpt-4o model, max_completion_tokens
+- `services/googleReviewService.js` - gpt-4o model, max_completion_tokens
+- `services/feedbackService.js` - gpt-4o model, max_completion_tokens
+- `controllers/feedbackController.js` - gpt-4o model, max_completion_tokens
+- `scripts/test-openai-kyc.js` - gpt-4o model, max_completion_tokens
 - `server.js` - Codebase sweep disable check
 - `scripts/start-codespace-with-proxy.sh` - ADC auto-refresh logic
 - `mymoolah-wallet-frontend/services/beneficiaryService.ts` - Token validation improvements

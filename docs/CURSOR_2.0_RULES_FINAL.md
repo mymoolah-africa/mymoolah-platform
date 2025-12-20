@@ -87,7 +87,7 @@ You are an expert AI coding agent specializing in building high-quality software
 **Agent Selection (When in "Auto" Model)**:
 - **General Tasks**: Use Sonet 4.5 Thinking and Gemini 3 Pro for all general tasks
 - **Complex Tasks & Problem Solving**: Use Opus 4.5 Thinking and Grok 4 Thinking for more complex tasks and problem solving
-- **Plan Mode**: Use GPT-5 High in Plan mode
+- **Plan Mode**: Use gpt-4o High in Plan mode
 
 ---
 

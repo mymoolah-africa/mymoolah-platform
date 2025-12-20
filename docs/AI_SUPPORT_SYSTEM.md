@@ -372,7 +372,7 @@ The system automatically determines the top 6 most used support categories:
 OPENAI_API_KEY=sk-...
 
 # Support AI model (unified support stack)
-SUPPORT_AI_MODEL=gpt-5
+SUPPORT_AI_MODEL=gpt-4o
 
 # Optional tuning
 SUPPORT_CONFIDENCE_THRESHOLD=0.7

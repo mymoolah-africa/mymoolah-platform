@@ -49,7 +49,7 @@ class SupportService {
   constructor() {
     this.bankingService = new BankingGradeSupportService();
     this.aiService = new BankingGradeAISupportService();
-    this.model = process.env.SUPPORT_AI_MODEL?.trim() || 'gpt-5';
+    this.model = process.env.SUPPORT_AI_MODEL?.trim() || 'gpt-4o';
   }
 
   async processSupportQuery(message, userId, language = 'en', context = {}) {
@@ -400,16 +400,16 @@ const config = {
 
 ```bash
 # Support AI model (used by SupportService, BankingGradeSupportService, aiSupportService)
-SUPPORT_AI_MODEL=gpt-5
+SUPPORT_AI_MODEL=gpt-4o
 OPENAI_API_KEY=your_openai_api_key
 ```
 
 ```javascript
 // Shared model selection
-this.model = process.env.SUPPORT_AI_MODEL?.trim() || 'gpt-5';
+this.model = process.env.SUPPORT_AI_MODEL?.trim() || 'gpt-4o';
 ```
 
-All support-related OpenAI calls now use `SUPPORT_AI_MODEL`, defaulting to `gpt-5`, and can be switched centrally (for example to `gpt-5.1`) without code changes.
+All support-related OpenAI calls now use `SUPPORT_AI_MODEL`, defaulting to `gpt-4o`, and can be switched centrally (for example to `gpt-4o`) without code changes.
 
 ## 🎯 Query Examples
 

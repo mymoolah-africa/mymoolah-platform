@@ -1,7 +1,7 @@
 # Session Log - 2025-11-19 - Zapper Fee Update & Audit Logger
 
 **Session Date**: 2025-11-19 11:05 SAST  
-**Agent**: Cursor AI Agent (GPT-5.1 Codex)  
+**Agent**: Cursor AI Agent (gpt-4o Codex)  
 **User**: André  
 **Session Duration**: ~2h
 

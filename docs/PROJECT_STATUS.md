@@ -1,14 +1,14 @@
 # MyMoolah Treasury Platform - Project Status
 
 **Last Updated**: December 19, 2025  
-**Version**: 2.4.24 - Unified Support Service & GPT-5 Model Configuration  
+**Version**: 2.4.24 - Unified Support Service & gpt-4o Model Configuration  
 **Status**: ✅ **SUPPORT SERVICE UNIFIED** ✅ **PEACH INTEGRATION ARCHIVED** ✅ **ZAPPER VAT TRANSACTION FEE COMPLETE** ✅ **REFERENTIAL INTEGRITY ENFORCED** ✅ **BANKING-GRADE DATA INTEGRITY**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has successfully upgraded all OpenAI models to GPT-5, optimized the codebase sweep service for better performance and token management, and enhanced the startup script with automatic credential refresh. The platform also has improved KYC OCR fallback mechanism, comprehensive transaction filtering, and MobileMart Fulcrum integration.
+The MyMoolah Treasury Platform has successfully upgraded all OpenAI models to gpt-4o, optimized the codebase sweep service for better performance and token management, and enhanced the startup script with automatic credential refresh. The platform also has improved KYC OCR fallback mechanism, comprehensive transaction filtering, and MobileMart Fulcrum integration.
 
 ### Codespaces Development Status (current)
 - Backend auto-starts on container open; manual fallback `npm run start:cs-ip`
@@ -19,16 +19,16 @@ The MyMoolah Treasury Platform has successfully upgraded all OpenAI models to GP
 
 ### **🏆 MISSION ACCOMPLISHED - KEY ACHIEVEMENTS**
 
-#### **🤖 GPT-5 Upgrade & Codebase Sweep Optimization** ✅ **COMPLETE**
-- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-5.0` to `gpt-5` (17 occurrences across 8 files), and support stack now uses centralized `SUPPORT_AI_MODEL` configuration (default `gpt-5`) for all support-related OpenAI calls.
-- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
-- **Temperature Parameter**: Removed all `temperature` parameters (GPT-5 only supports default value of 1)
+#### **🤖 gpt-4o Upgrade & Codebase Sweep Optimization** ✅ **COMPLETE**
+- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-4o` to `gpt-4o` (17 occurrences across 8 files), and support stack now uses centralized `SUPPORT_AI_MODEL` configuration (default `gpt-4o`) for all support-related OpenAI calls.
+- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (gpt-4o requirement)
+- **Temperature Parameter**: Removed all `temperature` parameters (gpt-4o only supports default value of 1)
 - **Codebase Sweep Disable**: Added `ENABLE_CODEBASE_SWEEP` environment variable to disable service during development (saves OpenAI tokens)
-- **Startup Performance**: Added 10-second delay before initial codebase sweep to improve server startup time (GPT-5 API calls are slower)
+- **Startup Performance**: Added 10-second delay before initial codebase sweep to improve server startup time (gpt-4o API calls are slower)
 - **ADC Auto-Refresh**: Enhanced startup script to automatically check and refresh Google Cloud Application Default Credentials
 - **Beneficiary Token Handling**: Improved token validation and error handling in beneficiary service (filters demo tokens, better error messages)
-- **Status**: ✅ All GPT-5 compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
-- **Impact**: Platform now uses latest GPT-5 models, reduced OpenAI token consumption during development, faster server startup
+- **Status**: ✅ All gpt-4o compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
+- **Impact**: Platform now uses latest gpt-4o models, reduced OpenAI token consumption during development, faster server startup
 
 #### **🗄️ Staging & Production Database Setup** ✅ **COMPLETE**
 - **Staging Instance**: `mmtp-pg-staging` (PostgreSQL 16, ENTERPRISE edition)

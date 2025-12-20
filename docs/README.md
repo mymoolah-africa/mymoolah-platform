@@ -110,22 +110,22 @@ The platform now includes **comprehensive validation for South African driver's 
 - **OpenAI Refusal Detection**: Enhanced early detection of content policy refusals before JSON parsing, automatic Tesseract OCR fallback
 - **Status**: ✅ Implementation complete, ✅ Tested and verified working
 
-### **🤖 NEW: GPT-5 Upgrade & Codebase Sweep Optimization**
+### **🤖 NEW: gpt-4o Upgrade & Codebase Sweep Optimization**
 
-The platform has been upgraded to use **OpenAI GPT-5** across all AI services:
-- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-5.0` to `gpt-5` (17 occurrences across 8 files)
-- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
-- **Temperature Parameter**: Removed all `temperature` parameters (GPT-5 only supports default value of 1)
+The platform has been upgraded to use **OpenAI gpt-4o** across all AI services:
+- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-4o` to `gpt-4o` (17 occurrences across 8 files)
+- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (gpt-4o requirement)
+- **Temperature Parameter**: Removed all `temperature` parameters (gpt-4o only supports default value of 1)
 - **Codebase Sweep Disable**: Added `ENABLE_CODEBASE_SWEEP` environment variable to disable service during development (saves OpenAI tokens)
 - **Startup Performance**: Added 10-second delay before initial codebase sweep to improve server startup time
 - **ADC Auto-Refresh**: Enhanced startup script to automatically check and refresh Google Cloud Application Default Credentials
-- **Status**: ✅ All GPT-5 compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
+- **Status**: ✅ All gpt-4o compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
 
 ### **📚 NEW: FAQ Library & Support Safeguards**
 
 - **Comprehensive FAQ**: `docs/FAQ_MASTER.md` now centralises customer, supplier, and API FAQs used by the support assistant.
 - **Knowledge Base Seeding**: Run `node scripts/seed-support-knowledge-base.js` after editing the FAQ to refresh `ai_knowledge_base`.
-- **AI Usage Limit**: Support calls to GPT-5 are limited to 5 per user per 24 hours; FAQ answers are unlimited and served locally first.
+- **AI Usage Limit**: Support calls to gpt-4o are limited to 5 per user per 24 hours; FAQ answers are unlimited and served locally first.
 
 ### **🎓 NEW: Auto-Learning Knowledge Base (2025-12-19)**
 

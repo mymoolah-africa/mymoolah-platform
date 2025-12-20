@@ -104,12 +104,12 @@
   - Verified Redis resilience: No errors during startup
 - **Status**: ✅ Auto-learning LIVE and working, ✅ OpenAI calls working (gpt-4o), ✅ Knowledge base growing automatically, ✅ All fixes deployed and tested
 
-## Update 2025-12-19 - Unified Support Service & GPT-5 Model Configuration
+## Update 2025-12-19 - Unified Support Service & gpt-4o Model Configuration
 - **Unified Support Entry Point**: All support traffic (`/api/v1/support/chat`, `/support/health`, `/support/metrics`) now flows through `services/supportService.js`, which orchestrates:
   - `services/bankingGradeSupportService.js` → banking-grade layer (rate limiting, Redis caching, health, metrics, knowledge base `AiKnowledgeBase`, ISO20022/Mojaloop envelope).
   - `services/aiSupportService.js` → AI/pattern engine (direct pattern matching, simple query handlers, GPT-backed complex answers, codebase sweep integration).
 - **Architecture**: `SupportService` enforces rate limiting via banking layer, checks the knowledge base first, then delegates to AI/pattern engine when no KB hit exists, and wraps all responses in a canonical banking-grade envelope consumed by the wallet UI.
-- **Model Configuration**: Introduced `SUPPORT_AI_MODEL` env var used by the unified stack; all support-related OpenAI calls now default to `gpt-5` but can be switched centrally (e.g. to `gpt-5.1`/`gpt-5.2`) without code changes.
+- **Model Configuration**: Introduced `SUPPORT_AI_MODEL` env var used by the unified stack; all support-related OpenAI calls now default to `gpt-4o` but can be switched centrally (e.g. to `gpt-4o`/`gpt-4o`) without code changes.
 - **Docs Updated**: `docs/BANKING_GRADE_SUPPORT_SYSTEM.md` and `docs/AI_SUPPORT_SYSTEM.md` now describe the unified architecture and env-based model selection. Session log created: `docs/session_logs/2025-12-19_2300_support-service-consolidation.md`.
 - **Status**: ✅ Support stack unified and documented, ✅ Model selection centralized, ✅ No breaking changes to existing `/api/v1/support/chat` consumers.
 
@@ -504,23 +504,23 @@
   2. Prioritize caching/indexing work for `/suppliers/trending`, `/suppliers/compare/*`, `/settings`, and voucher-heavy endpoints called out by the script.
   3. Consider extracting a `TRANSACTION_FEE_LABEL` constant so future work can’t drift back to provider-specific wording.
 
-### **🤖 GPT-5 UPGRADE & CODEBASE SWEEP OPTIMIZATION - COMPLETE** ✅
-This session upgraded all OpenAI models from GPT-4/GPT-5.0 to GPT-5, fixed API compatibility issues (max_tokens → max_completion_tokens, removed temperature parameters), added codebase sweep disable feature to save OpenAI tokens during development, improved server startup performance with delayed sweep, enhanced startup script to automatically refresh Google Cloud ADC credentials, and improved beneficiary service token handling.
+### **🤖 gpt-4o UPGRADE & CODEBASE SWEEP OPTIMIZATION - COMPLETE** ✅
+This session upgraded all OpenAI models from GPT-4/gpt-4o to gpt-4o, fixed API compatibility issues (max_tokens → max_completion_tokens, removed temperature parameters), added codebase sweep disable feature to save OpenAI tokens during development, improved server startup performance with delayed sweep, enhanced startup script to automatically refresh Google Cloud ADC credentials, and improved beneficiary service token handling.
 
-### **📋 GPT-5 UPGRADE & CODEBASE SWEEP OPTIMIZATION - COMPLETE** ✅
-- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-5.0` to `gpt-5` (17 occurrences across 8 files)
-- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
-- **Temperature Parameter**: Removed all `temperature` parameters (GPT-5 only supports default value of 1)
+### **📋 gpt-4o UPGRADE & CODEBASE SWEEP OPTIMIZATION - COMPLETE** ✅
+- **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-4o` to `gpt-4o` (17 occurrences across 8 files)
+- **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (gpt-4o requirement)
+- **Temperature Parameter**: Removed all `temperature` parameters (gpt-4o only supports default value of 1)
 - **Codebase Sweep Disable**: Added `ENABLE_CODEBASE_SWEEP` environment variable to disable service during development (saves OpenAI tokens)
-- **Startup Performance**: Added 10-second delay before initial codebase sweep to improve server startup time (GPT-5 API calls are slower)
+- **Startup Performance**: Added 10-second delay before initial codebase sweep to improve server startup time (gpt-4o API calls are slower)
 - **ADC Auto-Refresh**: Enhanced startup script to automatically check and refresh Google Cloud Application Default Credentials
 - **Beneficiary Token Handling**: Improved token validation and error handling in beneficiary service (filters demo tokens, better error messages)
-- **Status**: ✅ All GPT-5 compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
+- **Status**: ✅ All gpt-4o compatibility issues resolved, ✅ Codebase sweep can be disabled, ✅ Startup performance improved
 
-#### **GPT-5 API Changes**
-- **Model Name**: Changed from `gpt-5.0` to `gpt-5` (standard OpenAI naming convention)
-- **Max Tokens**: Changed from `max_tokens` to `max_completion_tokens` (GPT-5 requirement)
-- **Temperature**: Removed all custom temperature values (GPT-5 only supports default value of 1)
+#### **gpt-4o API Changes**
+- **Model Name**: Changed from `gpt-4o` to `gpt-4o` (standard OpenAI naming convention)
+- **Max Tokens**: Changed from `max_tokens` to `max_completion_tokens` (gpt-4o requirement)
+- **Temperature**: Removed all custom temperature values (gpt-4o only supports default value of 1)
 - **Files Updated**: 8 service/controller files, 2 test scripts
 
 #### **Codebase Sweep Optimization**
@@ -536,20 +536,20 @@ This session upgraded all OpenAI models from GPT-4/GPT-5.0 to GPT-5, fixed API c
 - **Status**: ✅ Automatic credential refresh working
 
 #### **Files Modified**
-- `services/kycService.js` - GPT-5 model, max_completion_tokens
-- `services/codebaseSweepService.js` - GPT-5 model, max_completion_tokens, startup delay, disable feature
-- `services/bankingGradeSupportService.js` - GPT-5 model, max_completion_tokens
-- `services/aiSupportService.js` - GPT-5 model, max_completion_tokens
-- `services/googleReviewService.js` - GPT-5 model, max_completion_tokens
-- `services/feedbackService.js` - GPT-5 model, max_completion_tokens
-- `controllers/feedbackController.js` - GPT-5 model, max_completion_tokens
-- `scripts/test-openai-kyc.js` - GPT-5 model, max_completion_tokens
+- `services/kycService.js` - gpt-4o model, max_completion_tokens
+- `services/codebaseSweepService.js` - gpt-4o model, max_completion_tokens, startup delay, disable feature
+- `services/bankingGradeSupportService.js` - gpt-4o model, max_completion_tokens
+- `services/aiSupportService.js` - gpt-4o model, max_completion_tokens
+- `services/googleReviewService.js` - gpt-4o model, max_completion_tokens
+- `services/feedbackService.js` - gpt-4o model, max_completion_tokens
+- `controllers/feedbackController.js` - gpt-4o model, max_completion_tokens
+- `scripts/test-openai-kyc.js` - gpt-4o model, max_completion_tokens
 - `server.js` - Codebase sweep disable check
 - `scripts/start-codespace-with-proxy.sh` - ADC auto-refresh logic
 - `mymoolah-wallet-frontend/services/beneficiaryService.ts` - Token validation improvements
 
 #### **Next Steps**
-- ⏳ Test GPT-5 API calls in production environment
+- ⏳ Test gpt-4o API calls in production environment
 - ⏳ Monitor OpenAI token usage with codebase sweep disabled
 - ⏳ Re-enable codebase sweep for production deployment
 
