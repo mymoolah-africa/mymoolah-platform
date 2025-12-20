@@ -123,17 +123,39 @@ stop_existing_proxy() {
 }
 
 ensure_gcloud_loaded() {
-  if [ -f "$HOME/google-cloud-sdk/path.bash.inc" ]; then
-    source "$HOME/google-cloud-sdk/path.bash.inc"
-  elif [ -f "$HOME/google-cloud-sdk/path.zsh.inc" ]; then
-    source "$HOME/google-cloud-sdk/path.zsh.inc"
-  else
-    error "gcloud SDK not found. Please install it first."
-    exit 1
+  # First check if gcloud is already in PATH (e.g., pre-installed in Codespaces or system)
+  if command -v gcloud >/dev/null 2>&1; then
+    log "✅ gcloud found in PATH"
+    # Set project
+    gcloud config set project mymoolah-db >/dev/null 2>&1 || true
+    return 0
   fi
 
-  # Set project
-  gcloud config set project mymoolah-db >/dev/null 2>&1 || true
+  # If not in PATH, try to source SDK initialization scripts
+  if [ -f "$HOME/google-cloud-sdk/path.bash.inc" ]; then
+    source "$HOME/google-cloud-sdk/path.bash.inc"
+    log "✅ Sourced gcloud from ~/google-cloud-sdk/path.bash.inc"
+  elif [ -f "$HOME/google-cloud-sdk/path.zsh.inc" ]; then
+    source "$HOME/google-cloud-sdk/path.zsh.inc"
+    log "✅ Sourced gcloud from ~/google-cloud-sdk/path.zsh.inc"
+  fi
+
+  # Verify gcloud is now available
+  if command -v gcloud >/dev/null 2>&1; then
+    log "✅ gcloud loaded successfully"
+    # Set project
+    gcloud config set project mymoolah-db >/dev/null 2>&1 || true
+    return 0
+  fi
+
+  # If still not found, provide helpful error
+  error "gcloud SDK not found. Please install it first."
+  error ""
+  error "Installation options:"
+  error "  1. Codespaces: curl https://sdk.cloud.google.com | bash"
+  error "  2. Homebrew (macOS): brew install --cask google-cloud-sdk"
+  error "  3. Official installer: https://cloud.google.com/sdk/docs/install"
+  exit 1
 }
 
 ensure_proxy_binary() {
