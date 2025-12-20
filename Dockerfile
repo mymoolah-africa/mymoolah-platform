@@ -13,7 +13,6 @@ COPY package*.json ./
 # Install production dependencies only
 RUN npm ci --only=production && \
     npm install --os=linux --cpu=x64 sharp && 
-
     npm cache clean --force
 
 # Stage 2: Final image
