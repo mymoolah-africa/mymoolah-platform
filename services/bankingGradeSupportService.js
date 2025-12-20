@@ -11,6 +11,7 @@
 const { OpenAI } = require('openai');
 const Redis = require('ioredis');
 const { Sequelize } = require('sequelize');
+const SemanticEmbeddingService = require('./semanticEmbeddingService');
 const models = require('../models');
 
 class BankingGradeSupportService {
@@ -67,6 +68,11 @@ class BankingGradeSupportService {
     this.knowledgeCache = { entries: [], loadedAt: 0 };
     this.knowledgeCacheTTL = 5 * 60 * 1000; // 5 minutes
     this.inMemoryAiUsage = new Map();
+
+    // 🧠 Semantic Embedding Service for RAG (AI-first architecture)
+    this.embeddingService = new SemanticEmbeddingService();
+    this.embeddingInitialized = false;
+    this.semanticSearchThreshold = 0.75; // Minimum cosine similarity for KB match
 
     // 🚀 Initialize Core Services (sync for now)
     this.initialized = true;
@@ -360,89 +366,35 @@ class BankingGradeSupportService {
    * 🔍 Simple Pattern Matching
    * Zero OpenAI Cost for Common Queries
    */
+  /**
+   * 🔍 Simple Pattern Matching (English only - message pre-translated by RAG)
+   * Simplified: Multi-language handled by detectAndTranslate() first
+   */
   detectSimpleQuery(message) {
     const lowerMessage = message.toLowerCase();
     
-    // Wallet Balance - All 11 South African languages
-    // English: balance, wallet, how much, money
-    // Afrikaans: balans, beursie, hoeveel, geld
-    // isiZulu: ibhalansi, imali, malini
-    // isiXhosa: ibhalansi, imali, malini
-    // Sesotho/Setswana/Sepedi: belansi, chelete, bokae
-    // siSwati: libhalansi, imali
-    // Tshivenda: balansi, tshelede
-    // Xitsonga: balansi, mali
-    const balancePatterns = [
-      'wallet balance', 'balance', 'how much', 'my money',  // English
-      'balans', 'beursie', 'hoeveel', 'my geld',  // Afrikaans
-      'ibhalansi', 'imali', 'malini', 'ngimalini',  // isiZulu
-      'imali yam', 'yimalini',  // isiXhosa
-      'belansi', 'chelete', 'bokae', 'tjhelete',  // Sesotho/Setswana/Sepedi
-      'libhalansi',  // siSwati
-      'tshelede',  // Tshivenda
-      'mali yanga'  // Xitsonga
-    ];
-    if (balancePatterns.some(p => lowerMessage.includes(p))) {
+    // Wallet Balance (English - pre-translated)
+    if (lowerMessage.includes('balance') || lowerMessage.includes('wallet') || lowerMessage.includes('how much') || lowerMessage.includes('money')) {
       return { category: 'WALLET_BALANCE', confidence: 0.95, requiresAI: false };
     }
     
-    // KYC Status - All languages
-    const kycPatterns = [
-      'kyc', 'verification', 'verify', 'verified', 'status',  // English
-      'verifikasie', 'geverifieer',  // Afrikaans
-      'ukuqinisekisa', 'qinisekiswa',  // isiZulu
-      'ukuqinisekiswa',  // isiXhosa
-      'netefatso',  // Sesotho/Setswana
-      'tirhisano'  // Xitsonga
-    ];
-    if (kycPatterns.some(p => lowerMessage.includes(p))) {
+    // KYC Status (English - pre-translated)
+    if (lowerMessage.includes('kyc') || lowerMessage.includes('verification') || lowerMessage.includes('verify')) {
       return { category: 'KYC_STATUS', confidence: 0.95, requiresAI: false };
     }
     
-    // Transaction History - All languages
-    const transactionPatterns = [
-      'transaction', 'transactions', 'history', 'recent',  // English
-      'transaksie', 'geskiedenis', 'onlangse',  // Afrikaans
-      'umlando', 'ukuthumela', 'okwenzekile',  // isiZulu
-      'imbali', 'kutshanje',  // isiXhosa
-      'nalane', 'histori'  // Sesotho/Setswana
-    ];
-    if (transactionPatterns.some(p => lowerMessage.includes(p))) {
+    // Transaction History (English - pre-translated)
+    if (lowerMessage.includes('transaction') || lowerMessage.includes('history') || lowerMessage.includes('recent')) {
       return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
     }
     
-    // Voucher Queries - All languages
-    const voucherPatterns = [
-      'voucher', 'vouchers', 'airtime', 'data', 'electricity',  // English
-      'koepon', 'lugtyd', 'elektrisiteit',  // Afrikaans
-      'ivawusha', 'i-airtime', 'ugesi',  // isiZulu
-      'ivawutsha', 'umbane',  // isiXhosa
-      'voucher ya', 'motlakase'  // Sesotho/Setswana
-    ];
-    if (voucherPatterns.some(p => lowerMessage.includes(p))) {
+    // Voucher Queries (English - pre-translated)
+    if (lowerMessage.includes('voucher') || lowerMessage.includes('airtime') || lowerMessage.includes('data') || lowerMessage.includes('electricity')) {
       return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
     }
 
-    // Password / login help - All 11 South African languages
-    // English: password, forgot, reset
-    // Afrikaans: wagwoord, vergeet, herstel
-    // isiZulu: iphasiwedi, ngikhohlwe
-    // isiXhosa: iphaswedi, ndilibalile
-    // Sesotho/Setswana/Sepedi: phasewete, ke lebetse
-    // siSwati/isiNdebele: liphasiwedi/iphasiwedi, ngikhohliwe/ngikhohlwe
-    // Tshivenda: ndo hangwa
-    // Xitsonga: ndzi rivele
-    const passwordPatterns = [
-      'password', 'forgot pin', 'reset pin', 'forgot password', 'reset password',  // English
-      'wagwoord', 'vergeet',  // Afrikaans
-      'iphasiwedi', 'ngikhohlwe', 'khohlwe',  // isiZulu
-      'iphaswedi', 'ndilibalile', 'libalile',  // isiXhosa
-      'phasewete', 'ke lebetse', 'lebetse',  // Sesotho/Setswana/Sepedi
-      'liphasiwedi', 'ngikhohliwe', 'khohliwe',  // siSwati
-      'ndo hangwa', 'hangwa',  // Tshivenda
-      'ndzi rivele', 'rivele'  // Xitsonga
-    ];
-    if (passwordPatterns.some(p => lowerMessage.includes(p))) {
+    // Password / login help (English - pre-translated)
+    if (lowerMessage.includes('password') || lowerMessage.includes('forgot') || lowerMessage.includes('reset')) {
       return { category: 'PASSWORD_SUPPORT', confidence: 0.95, requiresAI: false };
     }
 
@@ -1672,34 +1624,100 @@ When answering fee questions, be specific about the tier system and always menti
     return score;
   }
 
+  /**
+   * 🧠 AI-First Language Detection
+   * Detects language and translates to English using GPT-4o-mini (cheap: ~$0.0001/query)
+   */
+  async detectAndTranslate(message) {
+    try {
+      if (!this.openai) {
+        return { language: 'en', englishText: message, originalText: message };
+      }
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a language detection and translation assistant. Analyze the input and return JSON:
+{
+  "language": "ISO 639-1 code (en, af, zu, xh, st, tn, nso, ve, ts, ss, nr)",
+  "englishText": "English translation of the message",
+  "confidence": 0.95
+}
+If already in English, return the same text. Be accurate with South African languages.`
+          },
+          { role: 'user', content: message }
+        ],
+        max_tokens: 200,
+        temperature: 0.1
+      });
+
+      const content = completion.choices[0]?.message?.content || '';
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const result = JSON.parse(jsonMatch[0]);
+        console.log(`🌍 Language detected: ${result.language}, translated to English`);
+        return {
+          language: result.language || 'en',
+          englishText: result.englishText || message,
+          originalText: message,
+          confidence: result.confidence || 0.8
+        };
+      }
+    } catch (error) {
+      console.warn('⚠️ Language detection failed, assuming English:', error.message);
+    }
+    return { language: 'en', englishText: message, originalText: message };
+  }
+
+  /**
+   * 🧠 RAG-Based Knowledge Base Search (AI-First)
+   * Uses semantic embeddings for language-agnostic matching
+   */
   async findKnowledgeBaseAnswer(message = '', language = 'en') {
     try {
       if (!this.knowledgeModel) return null;
-      const normalizedLanguage = this.supportLanguages.includes(language) ? language : 'en';
-      const languagesToCheck = normalizedLanguage === 'en' ? ['en'] : [normalizedLanguage, 'en'];
-      const normalizedMessage = (message || '').trim().toLowerCase();
+      const normalizedMessage = (message || '').trim();
       if (!normalizedMessage) return null;
 
+      // Step 1: Detect language and translate to English for semantic search
+      const { language: detectedLang, englishText } = await this.detectAndTranslate(normalizedMessage);
+      console.log(`🔍 RAG Search: Original="${normalizedMessage}", English="${englishText}"`);
+
+      // Step 2: Load KB entries
       const entries = await this.loadKnowledgeEntries();
-      const candidates = entries.filter(entry => languagesToCheck.includes(entry.language));
+      if (!entries.length) return null;
 
-      const exactMatch = candidates.find(entry => (entry.question || '').trim().toLowerCase() === normalizedMessage);
+      // Step 3: Try semantic search with embeddings
+      const semanticMatch = await this.semanticKnowledgeSearch(englishText, entries);
+      if (semanticMatch) {
+        console.log(`✅ Semantic match found: similarity=${semanticMatch.similarity.toFixed(3)}`);
+        await semanticMatch.entry.increment('usageCount');
+        return this.buildKnowledgeResponse(semanticMatch.entry, detectedLang);
+      }
+
+      // Step 4: Fallback to exact match (case-insensitive)
+      const lowerMessage = normalizedMessage.toLowerCase();
+      const exactMatch = entries.find(entry => 
+        (entry.question || '').trim().toLowerCase() === lowerMessage ||
+        (entry.questionEnglish || '').trim().toLowerCase() === englishText.toLowerCase()
+      );
       if (exactMatch) {
+        console.log(`✅ Exact match found`);
         await exactMatch.increment('usageCount');
-        return this.buildKnowledgeResponse(exactMatch);
+        return this.buildKnowledgeResponse(exactMatch, detectedLang);
       }
 
-      const scoredCandidates = candidates
-        .map(entry => ({ entry, score: this.scoreKnowledgeMatch(entry, normalizedMessage) }))
-        .filter(item => item.score > 0)
-        .sort((a, b) => b.score - a.score || (Number(b.entry.confidenceScore || 0) - Number(a.entry.confidenceScore || 0)));
-
-      if (scoredCandidates.length) {
-        const top = scoredCandidates[0].entry;
-        await top.increment('usageCount');
-        return this.buildKnowledgeResponse(top);
+      // Step 5: Fallback to keyword matching (legacy)
+      const keywordMatch = await this.keywordKnowledgeSearch(lowerMessage, entries);
+      if (keywordMatch) {
+        console.log(`✅ Keyword match found`);
+        await keywordMatch.increment('usageCount');
+        return this.buildKnowledgeResponse(keywordMatch, detectedLang);
       }
 
+      console.log(`❌ No KB match found for: "${normalizedMessage}"`);
       return null;
     } catch (error) {
       console.error('⚠️ Knowledge base lookup failed:', error);
@@ -1707,7 +1725,65 @@ When answering fee questions, be specific about the tier system and always menti
     }
   }
 
-  buildKnowledgeResponse(entry) {
+  /**
+   * 🧠 Semantic Knowledge Search using Embeddings
+   * Returns best match if similarity > threshold
+   */
+  async semanticKnowledgeSearch(englishText, entries) {
+    try {
+      // Initialize embedding service if needed
+      if (!this.embeddingInitialized) {
+        await this.embeddingService.initialize();
+        this.embeddingInitialized = true;
+      }
+
+      // Generate embedding for query
+      const queryEmbedding = await this.embeddingService.generateEmbedding(englishText);
+      if (!queryEmbedding) return null;
+
+      // Find entries with embeddings and calculate similarity
+      const scored = [];
+      for (const entry of entries) {
+        if (entry.embedding) {
+          const similarity = this.embeddingService.cosineSimilarity(queryEmbedding, entry.embedding);
+          if (similarity >= this.semanticSearchThreshold) {
+            scored.push({ entry, similarity });
+          }
+        }
+      }
+
+      // Sort by similarity and return best match
+      scored.sort((a, b) => b.similarity - a.similarity);
+      return scored[0] || null;
+    } catch (error) {
+      console.warn('⚠️ Semantic search failed, using fallback:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * 🔍 Legacy Keyword-Based Search (Fallback)
+   */
+  async keywordKnowledgeSearch(lowerMessage, entries) {
+    const scored = entries
+      .map(entry => ({ entry, score: this.scoreKnowledgeMatch(entry, lowerMessage) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score);
+    
+    return scored[0]?.entry || null;
+  }
+
+  /**
+   * 🏦 Build Knowledge Response with Language Translation
+   */
+  async buildKnowledgeResponse(entry, userLanguage = 'en') {
+    let responseMessage = entry.answer;
+
+    // If user's language differs from KB entry language, translate
+    if (userLanguage !== 'en' && entry.language === 'en') {
+      responseMessage = await this.translateToLanguage(entry.answer, userLanguage);
+    }
+
     return {
       type: 'KNOWLEDGE_BASE',
       data: {
@@ -1715,11 +1791,13 @@ When answering fee questions, be specific about the tier system and always menti
         faqId: entry.faqId || null,
         audience: entry.audience || 'end-user',
         category: entry.category,
-        language: entry.language,
+        language: userLanguage,
+        originalLanguage: entry.language,
         keywords: entry.keywords || '',
-        confidence: Number(entry.confidenceScore || 0.8)
+        confidence: Number(entry.confidenceScore || 0.8),
+        semanticMatch: true
       },
-      message: entry.answer,
+      message: responseMessage,
       timestamp: new Date().toISOString(),
       compliance: {
         iso20022: true,
@@ -1727,6 +1805,40 @@ When answering fee questions, be specific about the tier system and always menti
         auditTrail: true
       }
     };
+  }
+
+  /**
+   * 🌍 Translate Response to User's Language
+   */
+  async translateToLanguage(text, targetLanguage) {
+    if (!this.openai || targetLanguage === 'en') return text;
+
+    try {
+      const languageNames = {
+        'af': 'Afrikaans', 'zu': 'isiZulu', 'xh': 'isiXhosa', 
+        'st': 'Sesotho', 'tn': 'Setswana', 'nso': 'Sepedi',
+        've': 'Tshivenda', 'ts': 'Xitsonga', 'ss': 'siSwati', 'nr': 'isiNdebele'
+      };
+
+      const completion = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `Translate the following text to ${languageNames[targetLanguage] || targetLanguage}. 
+Keep the same tone and meaning. Return only the translated text, no explanations.`
+          },
+          { role: 'user', content: text }
+        ],
+        max_tokens: 500,
+        temperature: 0.3
+      });
+
+      return completion.choices[0]?.message?.content || text;
+    } catch (error) {
+      console.warn('⚠️ Translation failed, returning English:', error.message);
+      return text;
+    }
   }
 
   async registerAiCall(userId) {
@@ -1781,6 +1893,156 @@ When answering fee questions, be specific about the tier system and always menti
         auditTrail: true
       }
     };
+  }
+
+  /**
+   * 🧠 Auto-Learning: Store AI Answer in Knowledge Base with Embedding
+   * Called after successful AI-generated answers to grow the KB
+   */
+  async storeAiAnswerInKnowledgeBase(question, answer, category = 'GENERAL', language = 'en') {
+    try {
+      if (!this.knowledgeModel) {
+        console.warn('⚠️ Knowledge model not available for auto-learning');
+        return null;
+      }
+
+      // Skip storing error/fallback responses
+      if (answer.includes('technical difficulties') || 
+          answer.includes('error') || 
+          answer.length < 50) {
+        return null;
+      }
+
+      // Generate English translation if not English
+      let questionEnglish = question;
+      if (language !== 'en') {
+        const translated = await this.detectAndTranslate(question);
+        questionEnglish = translated.englishText;
+      }
+
+      // Generate embedding for semantic search
+      let embedding = null;
+      try {
+        if (!this.embeddingInitialized) {
+          await this.embeddingService.initialize();
+          this.embeddingInitialized = true;
+        }
+        embedding = await this.embeddingService.generateEmbedding(questionEnglish);
+      } catch (embError) {
+        console.warn('⚠️ Embedding generation failed:', embError.message);
+      }
+
+      // Generate faqId from question hash
+      const crypto = require('crypto');
+      const hash = crypto.createHash('md5').update(questionEnglish.toLowerCase()).digest('hex');
+      const faqId = `KB-${hash.substring(0, 17)}`;
+
+      // Extract keywords
+      const keywords = this.extractKeywords(questionEnglish);
+
+      // Check for existing entry (upsert)
+      const existing = await this.knowledgeModel.findOne({ where: { faqId } });
+      
+      if (existing) {
+        // Update if new answer is better (longer or different)
+        if (answer.length > (existing.answer?.length || 0)) {
+          await existing.update({
+            answer,
+            embedding,
+            questionEnglish,
+            updatedAt: new Date()
+          });
+          console.log(`🔄 Updated KB entry: ${faqId}`);
+        }
+        return existing;
+      }
+
+      // Create new entry
+      const newEntry = await this.knowledgeModel.create({
+        faqId,
+        audience: 'end-user',
+        category: category || 'GENERAL',
+        question,
+        questionEnglish,
+        answer,
+        keywords,
+        embedding,
+        language,
+        confidenceScore: 0.85,
+        isActive: true
+      });
+
+      // Invalidate cache so new entry is found immediately
+      this.knowledgeCache = { entries: [], loadedAt: 0 };
+
+      console.log(`✅ Auto-learned new KB entry: ${faqId}`);
+      return newEntry;
+    } catch (error) {
+      console.error('⚠️ Auto-learning failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * 🔑 Extract Keywords from Question
+   */
+  extractKeywords(text) {
+    const stopWords = new Set([
+      'what', 'is', 'my', 'the', 'a', 'an', 'how', 'do', 'i', 'can', 'to',
+      'in', 'on', 'at', 'for', 'of', 'and', 'or', 'but', 'with', 'this',
+      'that', 'it', 'you', 'your', 'me', 'we', 'our', 'their', 'please'
+    ]);
+
+    const words = text.toLowerCase()
+      .replace(/[^a-z0-9\s]/g, '')
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !stopWords.has(w));
+
+    return [...new Set(words)].slice(0, 10).join(',');
+  }
+
+  /**
+   * 🔄 Generate Embeddings for Existing KB Entries (Batch)
+   * Run this once to backfill embeddings for existing entries
+   */
+  async generateEmbeddingsForExistingEntries() {
+    try {
+      if (!this.knowledgeModel) return { updated: 0, errors: 0 };
+
+      const entries = await this.knowledgeModel.findAll({
+        where: { embedding: null, isActive: true }
+      });
+
+      console.log(`🔄 Generating embeddings for ${entries.length} existing KB entries...`);
+
+      if (!this.embeddingInitialized) {
+        await this.embeddingService.initialize();
+        this.embeddingInitialized = true;
+      }
+
+      let updated = 0;
+      let errors = 0;
+
+      for (const entry of entries) {
+        try {
+          const textToEmbed = entry.questionEnglish || entry.question;
+          const embedding = await this.embeddingService.generateEmbedding(textToEmbed);
+          
+          if (embedding) {
+            await entry.update({ embedding });
+            updated++;
+          }
+        } catch (err) {
+          errors++;
+        }
+      }
+
+      console.log(`✅ Embeddings generated: ${updated} updated, ${errors} errors`);
+      return { updated, errors };
+    } catch (error) {
+      console.error('❌ Batch embedding generation failed:', error);
+      return { updated: 0, errors: 1 };
+    }
   }
 }
 

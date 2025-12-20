@@ -658,102 +658,85 @@ class BankingGradeAISupportService {
   }
 
   /**
-   * 🎯 DIRECT PATTERN MATCHING - NO AI, NO CACHE, JUST WORK
+   * 🎯 DIRECT PATTERN MATCHING - English Only (message pre-translated by RAG layer)
+   * Simplified: No multi-language patterns needed, RAG translates first
    */
   directPatternMatch(message) {
     const lowerMessage = message.toLowerCase();
-    console.log('🎯 Direct pattern matching for:', lowerMessage);
+    console.log('🎯 Direct pattern matching (English):', lowerMessage);
     
-    // Debug: Log each pattern check
-    console.log('🔍 Checking patterns...');
+    // ===== WALLET PATTERNS (English only - pre-translated) =====
+    const hasWallet = lowerMessage.includes('wallet');
+    const hasBalance = lowerMessage.includes('balance');
+    const hasMoney = lowerMessage.includes('money');
+    const hasHowMuch = lowerMessage.includes('how much');
     
-    // ===== WALLET PATTERNS - All 11 South African Languages =====
-    // Wallet/Balance patterns in all languages
-    const walletWords = ['wallet', 'beursie', 'isikhwama', 'isipaji'];  // wallet
-    const balanceWords = ['balance', 'balans', 'ibhalansi', 'belansi', 'libhalansi', 'balansi'];  // balance
-    const moneyWords = ['money', 'geld', 'imali', 'chelete', 'tjhelete', 'tshelede', 'mali'];  // money
-    const howMuchWords = ['how much', 'hoeveel', 'malini', 'ngimalini', 'bokae'];  // how much
-    
-    const hasWalletWord = walletWords.some(w => lowerMessage.includes(w));
-    const hasBalanceWord = balanceWords.some(w => lowerMessage.includes(w));
-    const hasMoneyWord = moneyWords.some(w => lowerMessage.includes(w));
-    const hasHowMuchWord = howMuchWords.some(w => lowerMessage.includes(w));
-    
-    // Wallet balance queries (multi-language)
-    if ((hasWalletWord && hasBalanceWord) || (hasWalletWord && hasMoneyWord) || hasHowMuchWord) {
-      console.log('✅ Matched: wallet_balance (multi-language)');
+    // Wallet balance queries
+    if ((hasWallet && hasBalance) || (hasWallet && hasMoney) || hasHowMuch) {
+      console.log('✅ Matched: wallet_balance');
       return 'wallet_balance';
     }
 
     // Wallet status queries
-    if (hasWalletWord && (lowerMessage.includes('status') || lowerMessage.includes('active') || lowerMessage.includes('suspended'))) {
+    if (hasWallet && (lowerMessage.includes('status') || lowerMessage.includes('active') || lowerMessage.includes('suspended'))) {
       console.log('✅ Matched: wallet_status');
       return 'wallet_status';
     }
 
     // Wallet limits queries
-    if (hasWalletWord && (lowerMessage.includes('limit') || lowerMessage.includes('daily') || lowerMessage.includes('monthly'))) {
+    if (hasWallet && (lowerMessage.includes('limit') || lowerMessage.includes('daily') || lowerMessage.includes('monthly'))) {
       console.log('✅ Matched: wallet_limits');
       return 'wallet_limits';
     }
 
-    // ===== VOUCHER PATTERNS - All 11 South African Languages =====
-    const voucherWords = ['voucher', 'vouchers', 'koepon', 'ivawusha', 'ivawutsha'];  // voucher
-    const hasVoucherWord = voucherWords.some(w => lowerMessage.includes(w));
+    // ===== VOUCHER PATTERNS (English only - pre-translated) =====
+    const hasVoucher = lowerMessage.includes('voucher');
     
-    // Voucher balance queries (active + pending only)
-    if (hasVoucherWord && hasBalanceWord) {
-      console.log('✅ Matched: voucher_balance (multi-language)');
-      return 'voucher_balance';
-    }
-    
-    // Also match "voucher wallet" as voucher balance
-    if (hasVoucherWord && hasWalletWord) {
-      console.log('✅ Matched: voucher_balance (voucher wallet)');
+    // Voucher balance queries
+    if (hasVoucher && (hasBalance || hasWallet)) {
+      console.log('✅ Matched: voucher_balance');
       return 'voucher_balance';
     }
 
-    // Voucher expired queries (multi-language)
-    const expiredWords = ['expired', 'verval', 'phelelwe', 'fetileng'];  // expired in various languages
-    if (hasVoucherWord && expiredWords.some(w => lowerMessage.includes(w))) {
-      console.log('✅ Matched: voucher_expired (multi-language)');
+    // Voucher expired queries
+    if (hasVoucher && lowerMessage.includes('expired')) {
+      console.log('✅ Matched: voucher_expired');
       return 'voucher_expired';
     }
 
-    // Voucher cancelled queries (multi-language)
-    const cancelledWords = ['cancelled', 'canceled', 'gekanselleer', 'khansela', 'hlakotswe'];
-    if (hasVoucherWord && cancelledWords.some(w => lowerMessage.includes(w))) {
-      console.log('✅ Matched: voucher_cancelled (multi-language)');
+    // Voucher cancelled queries
+    if (hasVoucher && (lowerMessage.includes('cancelled') || lowerMessage.includes('canceled'))) {
+      console.log('✅ Matched: voucher_cancelled');
       return 'voucher_cancelled';
     }
 
     // EasyPay voucher queries
-    if (lowerMessage.includes('easypay') && hasVoucherWord) {
+    if (lowerMessage.includes('easypay') && hasVoucher) {
       console.log('✅ Matched: easypay_vouchers');
       return 'easypay_vouchers';
     }
 
     // MM voucher queries
-    if (lowerMessage.includes('mm') && hasVoucherWord) {
+    if (lowerMessage.includes('mymoolah') && hasVoucher) {
       console.log('✅ Matched: mm_vouchers');
       return 'mm_vouchers';
     }
 
     // Voucher redeemed queries
-    if (hasVoucherWord && lowerMessage.includes('redeemed')) {
+    if (hasVoucher && lowerMessage.includes('redeemed')) {
       console.log('✅ Matched: voucher_redeemed');
       return 'voucher_redeemed';
     }
 
     // Voucher pending queries
-    if (hasVoucherWord && lowerMessage.includes('pending')) {
+    if (hasVoucher && lowerMessage.includes('pending')) {
       console.log('✅ Matched: voucher_pending');
       return 'voucher_pending';
     }
 
-    // General voucher queries (multi-language)
-    if (hasVoucherWord && !hasBalanceWord && !expiredWords.some(w => lowerMessage.includes(w)) && !cancelledWords.some(w => lowerMessage.includes(w)) && !lowerMessage.includes('redeemed') && !lowerMessage.includes('pending')) {
-      console.log('✅ Matched: voucher_summary (multi-language)');
+    // General voucher queries
+    if (hasVoucher && !hasBalance && !lowerMessage.includes('expired') && !lowerMessage.includes('cancelled') && !lowerMessage.includes('redeemed') && !lowerMessage.includes('pending')) {
+      console.log('✅ Matched: voucher_summary');
       return 'voucher_summary';
     }
 
@@ -939,15 +922,9 @@ class BankingGradeAISupportService {
       return 'security';
     }
 
-    // Password queries (English + Afrikaans)
-    // Afrikaans: wagwoord = password, vergeet = forgot
-    if (
-      lowerMessage.includes('password') || 
-      lowerMessage.includes('passwords') ||
-      lowerMessage.includes('wagwoord') ||  // Afrikaans: password
-      (lowerMessage.includes('vergeet') && (lowerMessage.includes('wagwoord') || lowerMessage.includes('pin')))
-    ) {
-      console.log('✅ Matched: password (including Afrikaans wagwoord)');
+    // Password queries (English only - pre-translated by RAG)
+    if (lowerMessage.includes('password') || lowerMessage.includes('forgot') && lowerMessage.includes('pin')) {
+      console.log('✅ Matched: password');
       return 'password';
     }
 

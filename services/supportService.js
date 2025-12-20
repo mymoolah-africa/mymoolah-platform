@@ -44,9 +44,22 @@ class SupportService {
         await this.bankingService.enforceRateLimit(userId);
       }
 
-      // 🧠 1) Knowledge base lookup (ai_knowledge_base) – no OpenAI, no human input
+      // 🌍 AI-First: Detect language and translate to English ONCE
+      // This translation is reused by both KB search and pattern matching
+      let detectedLanguage = language;
+      let englishMessage = message;
+      
+      if (this.bankingService.detectAndTranslate) {
+        const translation = await this.bankingService.detectAndTranslate(message);
+        detectedLanguage = translation.language || language;
+        englishMessage = translation.englishText || message;
+        console.log(`🌍 Language: ${detectedLanguage}, English: "${englishMessage}"`);
+      }
+
+      // 🧠 1) Knowledge base lookup with RAG (semantic search)
       if (this.bankingService.findKnowledgeBaseAnswer) {
-        const kbHit = await this.bankingService.findKnowledgeBaseAnswer(message, language);
+        // Pass both original and English for better matching
+        const kbHit = await this.bankingService.findKnowledgeBaseAnswer(englishMessage, detectedLanguage);
         if (kbHit) {
           const responseTime = Date.now() - startTime;
           this._updatePerformance(responseTime, true);
@@ -54,21 +67,31 @@ class SupportService {
         }
       }
 
-      // 🤖 2) AI support service (pattern matching + GPT-4o)
-      // Pass userId into context so aiSupportService simple handlers can hit DB correctly
+      // 🤖 2) AI support service (pattern matching on English + GPT-4o)
+      // Pass userId and English translation into context
       const enrichedContext = {
         ...(context || {}),
         userId,
+        originalMessage: message,
+        detectedLanguage,
       };
 
+      // Use English message for pattern matching (simplified, no multi-language patterns needed)
       const aiResult = await this.aiService.processChatMessage(
-        message,
-        language,
+        englishMessage,  // Use English for pattern matching
+        detectedLanguage,  // But respond in user's language
         enrichedContext
       );
 
       const responseTime = Date.now() - startTime;
       this._updatePerformance(responseTime, true);
+
+      // 🧠 Auto-Learning: Store successful AI answers in KB with embeddings
+      if (aiResult?.text && !aiResult?.context?.error) {
+        this._autoLearnFromAI(message, aiResult.text, language).catch(err => {
+          console.warn('⚠️ Auto-learning failed (non-blocking):', err.message);
+        });
+      }
 
       return this._wrapAiResult(aiResult, queryId, responseTime);
     } catch (error) {
@@ -213,6 +236,26 @@ class SupportService {
         rateLimitRemaining: 0,
       },
     };
+  }
+
+  /**
+   * 🧠 Auto-Learning: Store successful AI answers in knowledge base
+   * Runs asynchronously (non-blocking) to not slow down responses
+   */
+  async _autoLearnFromAI(question, answer, language = 'en') {
+    try {
+      if (this.bankingService.storeAiAnswerInKnowledgeBase) {
+        await this.bankingService.storeAiAnswerInKnowledgeBase(
+          question,
+          answer,
+          'AI_GENERATED',
+          language
+        );
+      }
+    } catch (error) {
+      // Non-blocking - just log the error
+      console.warn('⚠️ Auto-learning error:', error.message);
+    }
   }
 }
 

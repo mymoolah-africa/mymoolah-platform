@@ -79,6 +79,17 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: true,
       comment: 'Whether this knowledge entry is active'
+    },
+    // RAG (Retrieval-Augmented Generation) columns
+    embedding: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      comment: 'Semantic embedding vector for RAG search (384 dimensions from all-MiniLM-L6-v2)'
+    },
+    questionEnglish: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      comment: 'English translation of the question for cross-language semantic search'
     }
   }, {
     sequelize,
