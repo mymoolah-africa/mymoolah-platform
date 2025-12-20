@@ -38,6 +38,19 @@ check_prerequisites() {
     exit 1
   fi
   
+  # Try to set project, but check if it exists first
+  if ! gcloud projects describe "${PROJECT_ID}" > /dev/null 2>&1; then
+    error "Project ${PROJECT_ID} not found or you don't have access."
+    error "Current project: $(gcloud config get-value project 2>/dev/null || echo 'not set')"
+    error "Available projects:"
+    gcloud projects list --format="table(projectId,name)" 2>/dev/null || true
+    error ""
+    error "Please:"
+    error "  1. Verify you have access to project ${PROJECT_ID}"
+    error "  2. Or set a different project: export PROJECT_ID='your-project-id'"
+    exit 1
+  fi
+  
   gcloud config set project "${PROJECT_ID}" > /dev/null 2>&1 || {
     error "Failed to set project ${PROJECT_ID}. Please verify project ID."
     exit 1
