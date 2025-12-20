@@ -8,7 +8,8 @@
  * @license Banking-Grade
  */
 
-const { pipeline } = require('@xenova/transformers');
+// Dynamic import for ESM-only @xenova/transformers module
+let transformersModule = null;
 
 class SemanticEmbeddingService {
   constructor() {
@@ -34,6 +35,12 @@ class SemanticEmbeddingService {
     this.initializationPromise = (async () => {
       try {
         console.log('🧠 Initializing semantic embedding model...');
+        // Dynamic import for ESM module
+        if (!transformersModule) {
+          transformersModule = await import('@xenova/transformers');
+        }
+        const { pipeline } = transformersModule;
+
         this.embedder = await pipeline(
           'feature-extraction',
           this.modelName,
