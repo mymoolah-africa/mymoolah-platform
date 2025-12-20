@@ -49,7 +49,20 @@ class BankingGradeSupportService {
       errorRate: 0
     };
     
-    this.supportLanguages = ['en', 'af', 'zu', 'xh', 'st'];
+    // All 11 official South African languages
+    this.supportLanguages = [
+      'en',   // English
+      'af',   // Afrikaans
+      'zu',   // isiZulu
+      'xh',   // isiXhosa
+      'st',   // Sesotho (Southern Sotho)
+      'tn',   // Setswana
+      'nso',  // Sepedi (Northern Sotho)
+      've',   // Tshivenda
+      'ts',   // Xitsonga
+      'ss',   // siSwati
+      'nr'    // isiNdebele
+    ];
     this.knowledgeModel = models?.AiKnowledgeBase || null;
     this.knowledgeCache = { entries: [], loadedAt: 0 };
     this.knowledgeCacheTTL = 5 * 60 * 1000; // 5 minutes
@@ -350,37 +363,86 @@ class BankingGradeSupportService {
   detectSimpleQuery(message) {
     const lowerMessage = message.toLowerCase();
     
-    // Wallet Balance
-    if (lowerMessage.includes('wallet balance') || lowerMessage.includes('balance') || lowerMessage.includes('how much')) {
+    // Wallet Balance - All 11 South African languages
+    // English: balance, wallet, how much, money
+    // Afrikaans: balans, beursie, hoeveel, geld
+    // isiZulu: ibhalansi, imali, malini
+    // isiXhosa: ibhalansi, imali, malini
+    // Sesotho/Setswana/Sepedi: belansi, chelete, bokae
+    // siSwati: libhalansi, imali
+    // Tshivenda: balansi, tshelede
+    // Xitsonga: balansi, mali
+    const balancePatterns = [
+      'wallet balance', 'balance', 'how much', 'my money',  // English
+      'balans', 'beursie', 'hoeveel', 'my geld',  // Afrikaans
+      'ibhalansi', 'imali', 'malini', 'ngimalini',  // isiZulu
+      'imali yam', 'yimalini',  // isiXhosa
+      'belansi', 'chelete', 'bokae', 'tjhelete',  // Sesotho/Setswana/Sepedi
+      'libhalansi',  // siSwati
+      'tshelede',  // Tshivenda
+      'mali yanga'  // Xitsonga
+    ];
+    if (balancePatterns.some(p => lowerMessage.includes(p))) {
       return { category: 'WALLET_BALANCE', confidence: 0.95, requiresAI: false };
     }
     
-    // KYC Status
-    if (lowerMessage.includes('kyc') || lowerMessage.includes('verification') || lowerMessage.includes('status')) {
+    // KYC Status - All languages
+    const kycPatterns = [
+      'kyc', 'verification', 'verify', 'verified', 'status',  // English
+      'verifikasie', 'geverifieer',  // Afrikaans
+      'ukuqinisekisa', 'qinisekiswa',  // isiZulu
+      'ukuqinisekiswa',  // isiXhosa
+      'netefatso',  // Sesotho/Setswana
+      'tirhisano'  // Xitsonga
+    ];
+    if (kycPatterns.some(p => lowerMessage.includes(p))) {
       return { category: 'KYC_STATUS', confidence: 0.95, requiresAI: false };
     }
     
-    // Transaction History
-    if (lowerMessage.includes('transaction') || lowerMessage.includes('history') || lowerMessage.includes('recent')) {
+    // Transaction History - All languages
+    const transactionPatterns = [
+      'transaction', 'transactions', 'history', 'recent',  // English
+      'transaksie', 'geskiedenis', 'onlangse',  // Afrikaans
+      'umlando', 'ukuthumela', 'okwenzekile',  // isiZulu
+      'imbali', 'kutshanje',  // isiXhosa
+      'nalane', 'histori'  // Sesotho/Setswana
+    ];
+    if (transactionPatterns.some(p => lowerMessage.includes(p))) {
       return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
     }
     
-    // Voucher Queries
-    if (lowerMessage.includes('voucher') || lowerMessage.includes('vouchers')) {
+    // Voucher Queries - All languages
+    const voucherPatterns = [
+      'voucher', 'vouchers', 'airtime', 'data', 'electricity',  // English
+      'koepon', 'lugtyd', 'elektrisiteit',  // Afrikaans
+      'ivawusha', 'i-airtime', 'ugesi',  // isiZulu
+      'ivawutsha', 'umbane',  // isiXhosa
+      'voucher ya', 'motlakase'  // Sesotho/Setswana
+    ];
+    if (voucherPatterns.some(p => lowerMessage.includes(p))) {
       return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
     }
 
-    // Password / login help (English + Afrikaans)
-    // Afrikaans: wagwoord = password, vergeet = forgot, herstel = reset
-    if (
-      lowerMessage.includes('password') || 
-      lowerMessage.includes('forgot pin') || 
-      lowerMessage.includes('reset pin') ||
-      lowerMessage.includes('wagwoord') ||  // Afrikaans: password
-      lowerMessage.includes('wagwoord vergeet') ||  // Afrikaans: forgot password
-      lowerMessage.includes('pin vergeet') ||  // Afrikaans: forgot pin
-      (lowerMessage.includes('vergeet') && (lowerMessage.includes('wagwoord') || lowerMessage.includes('pin')))
-    ) {
+    // Password / login help - All 11 South African languages
+    // English: password, forgot, reset
+    // Afrikaans: wagwoord, vergeet, herstel
+    // isiZulu: iphasiwedi, ngikhohlwe
+    // isiXhosa: iphaswedi, ndilibalile
+    // Sesotho/Setswana/Sepedi: phasewete, ke lebetse
+    // siSwati/isiNdebele: liphasiwedi/iphasiwedi, ngikhohliwe/ngikhohlwe
+    // Tshivenda: ndo hangwa
+    // Xitsonga: ndzi rivele
+    const passwordPatterns = [
+      'password', 'forgot pin', 'reset pin', 'forgot password', 'reset password',  // English
+      'wagwoord', 'vergeet',  // Afrikaans
+      'iphasiwedi', 'ngikhohlwe', 'khohlwe',  // isiZulu
+      'iphaswedi', 'ndilibalile', 'libalile',  // isiXhosa
+      'phasewete', 'ke lebetse', 'lebetse',  // Sesotho/Setswana/Sepedi
+      'liphasiwedi', 'ngikhohliwe', 'khohliwe',  // siSwati
+      'ndo hangwa', 'hangwa',  // Tshivenda
+      'ndzi rivele', 'rivele'  // Xitsonga
+    ];
+    if (passwordPatterns.some(p => lowerMessage.includes(p))) {
       return { category: 'PASSWORD_SUPPORT', confidence: 0.95, requiresAI: false };
     }
 

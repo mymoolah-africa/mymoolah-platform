@@ -667,71 +667,93 @@ class BankingGradeAISupportService {
     // Debug: Log each pattern check
     console.log('🔍 Checking patterns...');
     
-    // ===== WALLET PATTERNS =====
-    // Wallet balance queries
-    if (lowerMessage.includes('wallet') && lowerMessage.includes('balance')) {
-      console.log('✅ Matched: wallet_balance');
+    // ===== WALLET PATTERNS - All 11 South African Languages =====
+    // Wallet/Balance patterns in all languages
+    const walletWords = ['wallet', 'beursie', 'isikhwama', 'isipaji'];  // wallet
+    const balanceWords = ['balance', 'balans', 'ibhalansi', 'belansi', 'libhalansi', 'balansi'];  // balance
+    const moneyWords = ['money', 'geld', 'imali', 'chelete', 'tjhelete', 'tshelede', 'mali'];  // money
+    const howMuchWords = ['how much', 'hoeveel', 'malini', 'ngimalini', 'bokae'];  // how much
+    
+    const hasWalletWord = walletWords.some(w => lowerMessage.includes(w));
+    const hasBalanceWord = balanceWords.some(w => lowerMessage.includes(w));
+    const hasMoneyWord = moneyWords.some(w => lowerMessage.includes(w));
+    const hasHowMuchWord = howMuchWords.some(w => lowerMessage.includes(w));
+    
+    // Wallet balance queries (multi-language)
+    if ((hasWalletWord && hasBalanceWord) || (hasWalletWord && hasMoneyWord) || hasHowMuchWord) {
+      console.log('✅ Matched: wallet_balance (multi-language)');
       return 'wallet_balance';
     }
 
     // Wallet status queries
-    if (lowerMessage.includes('wallet') && (lowerMessage.includes('status') || lowerMessage.includes('active') || lowerMessage.includes('suspended'))) {
+    if (hasWalletWord && (lowerMessage.includes('status') || lowerMessage.includes('active') || lowerMessage.includes('suspended'))) {
       console.log('✅ Matched: wallet_status');
       return 'wallet_status';
     }
 
     // Wallet limits queries
-    if (lowerMessage.includes('wallet') && (lowerMessage.includes('limit') || lowerMessage.includes('daily') || lowerMessage.includes('monthly'))) {
+    if (hasWalletWord && (lowerMessage.includes('limit') || lowerMessage.includes('daily') || lowerMessage.includes('monthly'))) {
       console.log('✅ Matched: wallet_limits');
       return 'wallet_limits';
     }
 
-    // ===== VOUCHER PATTERNS =====
+    // ===== VOUCHER PATTERNS - All 11 South African Languages =====
+    const voucherWords = ['voucher', 'vouchers', 'koepon', 'ivawusha', 'ivawutsha'];  // voucher
+    const hasVoucherWord = voucherWords.some(w => lowerMessage.includes(w));
+    
     // Voucher balance queries (active + pending only)
-    if (lowerMessage.includes('voucher') && lowerMessage.includes('balance')) {
-      console.log('✅ Matched: voucher_balance');
+    if (hasVoucherWord && hasBalanceWord) {
+      console.log('✅ Matched: voucher_balance (multi-language)');
+      return 'voucher_balance';
+    }
+    
+    // Also match "voucher wallet" as voucher balance
+    if (hasVoucherWord && hasWalletWord) {
+      console.log('✅ Matched: voucher_balance (voucher wallet)');
       return 'voucher_balance';
     }
 
-    // Voucher expired queries
-    if (lowerMessage.includes('voucher') && (lowerMessage.includes('expired') || lowerMessage.includes('expired'))) {
-      console.log('✅ Matched: voucher_expired');
+    // Voucher expired queries (multi-language)
+    const expiredWords = ['expired', 'verval', 'phelelwe', 'fetileng'];  // expired in various languages
+    if (hasVoucherWord && expiredWords.some(w => lowerMessage.includes(w))) {
+      console.log('✅ Matched: voucher_expired (multi-language)');
       return 'voucher_expired';
     }
 
-    // Voucher cancelled queries
-    if (lowerMessage.includes('voucher') && (lowerMessage.includes('cancelled') || lowerMessage.includes('canceled'))) {
-      console.log('✅ Matched: voucher_cancelled');
+    // Voucher cancelled queries (multi-language)
+    const cancelledWords = ['cancelled', 'canceled', 'gekanselleer', 'khansela', 'hlakotswe'];
+    if (hasVoucherWord && cancelledWords.some(w => lowerMessage.includes(w))) {
+      console.log('✅ Matched: voucher_cancelled (multi-language)');
       return 'voucher_cancelled';
     }
 
     // EasyPay voucher queries
-    if (lowerMessage.includes('easypay') && lowerMessage.includes('voucher')) {
+    if (lowerMessage.includes('easypay') && hasVoucherWord) {
       console.log('✅ Matched: easypay_vouchers');
       return 'easypay_vouchers';
     }
 
     // MM voucher queries
-    if (lowerMessage.includes('mm') && lowerMessage.includes('voucher')) {
+    if (lowerMessage.includes('mm') && hasVoucherWord) {
       console.log('✅ Matched: mm_vouchers');
       return 'mm_vouchers';
     }
 
     // Voucher redeemed queries
-    if (lowerMessage.includes('voucher') && lowerMessage.includes('redeemed')) {
+    if (hasVoucherWord && lowerMessage.includes('redeemed')) {
       console.log('✅ Matched: voucher_redeemed');
       return 'voucher_redeemed';
     }
 
     // Voucher pending queries
-    if (lowerMessage.includes('voucher') && lowerMessage.includes('pending')) {
+    if (hasVoucherWord && lowerMessage.includes('pending')) {
       console.log('✅ Matched: voucher_pending');
       return 'voucher_pending';
     }
 
-    // General voucher queries
-    if (lowerMessage.includes('voucher') && !lowerMessage.includes('balance') && !lowerMessage.includes('expired') && !lowerMessage.includes('cancelled') && !lowerMessage.includes('redeemed') && !lowerMessage.includes('pending')) {
-      console.log('✅ Matched: voucher_summary');
+    // General voucher queries (multi-language)
+    if (hasVoucherWord && !hasBalanceWord && !expiredWords.some(w => lowerMessage.includes(w)) && !cancelledWords.some(w => lowerMessage.includes(w)) && !lowerMessage.includes('redeemed') && !lowerMessage.includes('pending')) {
+      console.log('✅ Matched: voucher_summary (multi-language)');
       return 'voucher_summary';
     }
 
