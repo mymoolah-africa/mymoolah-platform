@@ -620,12 +620,13 @@ Answer the user's question using the available data. If the question is unrelate
     // Handle: "voucher balance", "how many vouchers", "my vouchers", etc.
     const hasVoucher = lowerMessage.includes('voucher');
     const hasBalance = lowerMessage.includes('balance');
+    const hasWallet = lowerMessage.includes('wallet');
     const hasHow = lowerMessage.includes('how');
     const hasMany = lowerMessage.includes('many');
     const hasOpen = lowerMessage.includes('open');
     
     // Voucher balance queries (summary)
-    if (hasVoucher && hasBalance && !hasHow) {
+    if (hasVoucher && (hasBalance || hasWallet) && !hasHow) {
       return { 
         category: 'VOUCHER_BALANCE', 
         confidence: 0.98, 
