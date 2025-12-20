@@ -19,12 +19,6 @@ const CodebaseSweepService = require('./codebaseSweepService');
 
 class BankingGradeAISupportService {
   constructor() {
-    // AI model configuration (shared with unified SupportService)
-    this.model =
-      process.env.SUPPORT_AI_MODEL && process.env.SUPPORT_AI_MODEL.trim().length > 0
-        ? process.env.SUPPORT_AI_MODEL.trim()
-        : 'gpt-4o';
-
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
@@ -923,9 +917,15 @@ class BankingGradeAISupportService {
       return 'security';
     }
 
-    // Password queries
-    if (lowerMessage.includes('password') || lowerMessage.includes('passwords')) {
-      console.log('✅ Matched: password');
+    // Password queries (English + Afrikaans)
+    // Afrikaans: wagwoord = password, vergeet = forgot
+    if (
+      lowerMessage.includes('password') || 
+      lowerMessage.includes('passwords') ||
+      lowerMessage.includes('wagwoord') ||  // Afrikaans: password
+      (lowerMessage.includes('vergeet') && (lowerMessage.includes('wagwoord') || lowerMessage.includes('pin')))
+    ) {
+      console.log('✅ Matched: password (including Afrikaans wagwoord)');
       return 'password';
     }
 
@@ -1177,7 +1177,7 @@ class BankingGradeAISupportService {
   async classifyQueryWithAI(message) {
     try {
       const completion = await this.openai.chat.completions.create({
-        model: this.model,
+        model: "gpt-5",
         messages: [
           {
             role: "system",
@@ -1548,7 +1548,7 @@ Return JSON: {"isSimpleQuery": true/false, "queryType": "exact_type_with_undersc
   async handleComplexQuery(message, language, context) {
     try {
       const completion = await this.openai.chat.completions.create({
-        model: this.model,
+        model: "gpt-5",
         messages: [
           {
             role: "system",
@@ -1777,13 +1777,6 @@ Remember: You're helping real people with their money, so be encouraging and sup
         zu: "Angizwanga uhlobo lwosuku. Zama: 'ama-transaksi ngo-23 Aug 2025'",
         xh: "Andiqondanga uhlobo lwosuku. Zama: 'ama-transaksi ngo-23 Aug 2025'",
         st: "Ha ke utloisise sebopeho sa letsatsi. Leka: 'li-transaksi ka 23 Aug 2025'"
-      },
-      payments_help: {
-        en: "To make a payment, go to the Pay or Pay Accounts section, choose who you want to pay, enter the amount, review the fee and details, then confirm. We always show you all costs before you approve.",
-        af: "Om ’n betaling te maak: gaan na die 'Pay' of 'Pay Accounts' afdeling, kies wie jy wil betaal, voer die bedrag in, kyk na die fooi en besonderhede, en bevestig dan. Ons wys altyd die koste voordat jy goedkeur.",
-        zu: "Ukuze wenze inkokhelo: iya ku-Pay noma 'Pay Accounts', ukhethe umuntu ofuna ukumkhokhela, faka inani, uhlole imali yezinsizakalo nemininingwane, bese uqinisekisa. Sizokubonisa zonke izindleko ngaphambi kokuba uqinisekise.",
-        xh: "Ukuhlawula: yiya kwi 'Pay' okanye 'Pay Accounts', khetha lowo ufuna ukumhlawula, ngenisa isixa, ujonge iindleko neenkcukacha, uze uqinisekise. Sisoloko sibonisa zonke iindleko phambi kokuba uqinisekise.",
-        st: "Ho etsa tefo: ea karolong ea 'Pay' kapa 'Pay Accounts', khetha motho kapa mokhatlo oo u batlang ho o lefa, kenya chelete, hlahloba tefiso le lintlha, ebe o tiisa. Re bontša litšenyehelo tsohle pele o tiisa."
       }
     };
 
@@ -2094,27 +2087,6 @@ Remember: You're helping real people with their money, so be encouraging and sup
       console.error('Error getting MM vouchers:', error);
       return null;
     }
-  }
-
-  /**
-   * 🏦 BANKING-GRADE: Generic Payments Guidance (No AI, No DB)
-   * Handles simple questions like:
-   * - "how do I pay my accounts"
-   * - "how do I make payments"
-   */
-  async getPaymentsResponse(userId, language) {
-    return {
-      text: this.getLocalizedResponse('payments_help', language, {}),
-      context: {
-        userId,
-        queryType: 'payments_help'
-      },
-      suggestions: [
-        'View transaction history',
-        'Check wallet balance',
-        'Make a payment'
-      ]
-    };
   }
 }
 
