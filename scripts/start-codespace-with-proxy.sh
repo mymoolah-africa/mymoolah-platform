@@ -338,19 +338,37 @@ start_proxy() {
 }
 
 build_local_db_url() {
-  if [ ! -f "${ENV_FILE}" ]; then
-    error "Environment file '${ENV_FILE}' not found"
+  local db_url=""
+  
+  # Method 1: Check if DATABASE_URL is already set as environment variable
+  if [ -n "${DATABASE_URL:-}" ]; then
+    db_url="${DATABASE_URL}"
+    log "Using DATABASE_URL from environment variable"
+  # Method 2: Try to load from .env file if it exists
+  elif [ -f "${ENV_FILE}" ]; then
+    log "Loading DATABASE_URL from ${ENV_FILE}..."
+    db_url=$(node -e "require('dotenv').config(); console.log(process.env.DATABASE_URL)")
+    if [ -z "${db_url}" ] || [ "${db_url}" = "undefined" ]; then
+      error "DATABASE_URL not found in ${ENV_FILE}"
+      exit 1
+    fi
+  else
+    error "DATABASE_URL not found. Please either:"
+    error "  1. Export DATABASE_URL environment variable"
+    error "  2. Create ${ENV_FILE} file with DATABASE_URL"
     exit 1
   fi
 
-  # Load env file and build local proxy URL
-  export NODE_ENV_FILE="${ENV_FILE}"
-  export DATABASE_URL=$(
-    node - <<'NODE'
-const path = process.env.NODE_ENV_FILE || '.env';
-require('dotenv').config({ path });
-if (!process.env.DATABASE_URL) {
-  throw new Error(`DATABASE_URL not set in ${path}`);
+  # Modify the URL to use the proxy
+  export DATABASE_URL=$(node -e "
+    const u = new URL('${db_url}');
+    u.hostname = '127.0.0.1';
+    u.port = '${PROXY_PORT}';
+    u.searchParams.set('sslmode', 'disable');
+    console.log(u.toString());
+  ")
+
+  log "✅ DATABASE_URL configured via proxy: postgres://...@127.0.0.1:${PROXY_PORT}/..."
 }
 const u = new URL(process.env.DATABASE_URL);
 u.hostname = '127.0.0.1';
