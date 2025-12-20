@@ -148,14 +148,10 @@ ensure_gcloud_loaded() {
     return 0
   fi
 
-  # If still not found, provide helpful error
-  error "gcloud SDK not found. Please install it first."
-  error ""
-  error "Installation options:"
-  error "  1. Codespaces: curl https://sdk.cloud.google.com | bash"
-  error "  2. Homebrew (macOS): brew install --cask google-cloud-sdk"
-  error "  3. Official installer: https://cloud.google.com/sdk/docs/install"
-  exit 1
+  # gcloud not found, but that's OK if ADC are available via other means
+  # (e.g., Codespaces service account, environment variables)
+  log "⚠️  gcloud CLI not found, but continuing (ADC may be available via other means)"
+  return 0
 }
 
 ensure_proxy_binary() {
@@ -207,6 +203,20 @@ ensure_proxy_binary() {
 
 ensure_adc_valid() {
   log "Checking Application Default Credentials (ADC)..."
+  
+  # If gcloud is not available, check if ADC exist via other means
+  if ! command -v gcloud >/dev/null 2>&1; then
+    # Check for ADC file or environment variable
+    local adc_file="${HOME}/.config/gcloud/application_default_credentials.json"
+    if [ -f "$adc_file" ] || [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
+      log "✅ ADC available via file or environment variable (gcloud CLI not required)"
+      return 0
+    else
+      warn "⚠️  gcloud CLI not found and no ADC detected"
+      warn "The proxy may still work if Codespaces provides ADC automatically"
+      return 0  # Don't fail, let the proxy try
+    fi
+  fi
   
   # Ensure gcloud is authenticated first
   if ! gcloud auth list --filter=status:ACTIVE --format="value(account)" | grep -q .; then
