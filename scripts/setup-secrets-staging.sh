@@ -124,6 +124,25 @@ store_application_secrets() {
   success "Application secrets stored"
 }
 
+# Store OpenAI API key
+store_openai_api_key() {
+  log "Storing OpenAI API key..."
+  
+  if [ -z "${OPENAI_API_KEY:-}" ]; then
+    warning "OPENAI_API_KEY not provided via environment variable"
+    warning "You can set it manually: export OPENAI_API_KEY='sk-...'"
+    warning "Or create the secret manually in Secret Manager:"
+    warning "  gcloud secrets create openai-api-key-staging --data-file=-"
+    warning ""
+    warning "Skipping OpenAI API key setup. Support engine will not work without it."
+    return 0
+  fi
+  
+  create_or_update_secret "openai-api-key-staging" "${OPENAI_API_KEY}" "OpenAI API Key for Staging (Support Engine)"
+  
+  success "OpenAI API key stored"
+}
+
 # Store database URL (constructed from password secret)
 # Note: This will need to be constructed at runtime in Cloud Run
 # For now, we'll create a template secret
@@ -158,6 +177,9 @@ main() {
   # Store application secrets
   store_application_secrets
   
+  # Store OpenAI API key
+  store_openai_api_key
+  
   # Store database URL template
   store_database_url_template
   
@@ -177,6 +199,7 @@ main() {
   echo "  - mobilemart-prod-token-url"
   echo "  - jwt-secret-staging"
   echo "  - session-secret-staging"
+  echo "  - openai-api-key-staging (if provided)"
   echo "  - database-url-template-staging"
   echo "  - db-mmtp-pg-staging-password (from database setup)"
   echo ""

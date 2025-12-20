@@ -27,8 +27,8 @@ gcloud run deploy mymoolah-backend-staging \
   --project mymoolah-db \
   --service-account mymoolah-staging-sa@mymoolah-db.iam.gserviceaccount.com \
   --add-cloudsql-instances mymoolah-db:africa-south1:mmtp-pg-staging \
-  --set-env-vars "NODE_ENV=production,CLOUD_SQL_INSTANCE=mymoolah-db:africa-south1:mmtp-pg-staging,CORS_ORIGINS=https://stagingwallet.mymoolah.africa,DB_SSL=false,DB_HOST=/cloudsql/mymoolah-db:africa-south1:mmtp-pg-staging,DB_NAME=mymoolah_staging,DB_USER=mymoolah_app" \
-  --set-secrets "ZAPPER_API_URL=zapper-prod-api-url:latest,ZAPPER_ORG_ID=zapper-prod-org-id:latest,ZAPPER_API_TOKEN=zapper-prod-api-token:latest,ZAPPER_X_API_KEY=zapper-prod-x-api-key:latest,JWT_SECRET=jwt-secret-staging:latest,SESSION_SECRET=session-secret-staging:latest,DB_PASSWORD=db-mmtp-pg-staging-password:latest" \
+  --set-env-vars "NODE_ENV=production,STAGING=true,CLOUD_SQL_INSTANCE=mymoolah-db:africa-south1:mmtp-pg-staging,CORS_ORIGINS=https://stagingwallet.mymoolah.africa,DB_SSL=false,DB_HOST=/cloudsql/mymoolah-db:africa-south1:mmtp-pg-staging,DB_NAME=mymoolah_staging,DB_USER=mymoolah_app,MOBILEMART_LIVE_INTEGRATION=true,MOBILEMART_SCOPE=api,TLS_ENABLED=false" \
+  --set-secrets "ZAPPER_API_URL=zapper-prod-api-url:latest,ZAPPER_ORG_ID=zapper-prod-org-id:latest,ZAPPER_API_TOKEN=zapper-prod-api-token:latest,ZAPPER_X_API_KEY=zapper-prod-x-api-key:latest,JWT_SECRET=jwt-secret-staging:latest,SESSION_SECRET=session-secret-staging:latest,DB_PASSWORD=db-mmtp-pg-staging-password:latest,MOBILEMART_CLIENT_ID=mobilemart-prod-client-id:latest,MOBILEMART_CLIENT_SECRET=mobilemart-prod-client-secret:latest,MOBILEMART_API_URL=mobilemart-prod-api-url:latest,MOBILEMART_TOKEN_URL=mobilemart-prod-token-url:latest,OPENAI_API_KEY=openai-api-key-staging:latest" \
   --memory 1Gi \
   --cpu 1 \
   --min-instances 0 \
