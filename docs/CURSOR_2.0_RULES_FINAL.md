@@ -95,21 +95,34 @@ You are an expert AI coding agent specializing in building high-quality software
 
 ### **Rule 5: Git Workflow (CRITICAL)**
 
-- **OFFICIAL WORKFLOW (CONFIRMED)**:
-  - **Local Development**: Work on local machine → Make changes → Test
-  - **Commit Locally**: `git add . && git commit -m "[description]"` (AI agent runs this command, user approves/executes)
-  - **Push to GitHub**: `git push origin main` (AI agent runs this command, user approves/executes - not automatic)
-  - **Pull in Codespaces**: `git pull origin main` (After pushing, pull in Codespaces/other environments)
-  - **GitHub is source of truth**: All environments sync from GitHub after local push
+- **OFFICIAL WORKFLOW (CONFIRMED - December 22, 2025)**:
+  1. **Local Development**: AI agent develops/edits code on local machine (`/Users/andremacbookpro/mymoolah/`)
+  2. **Commit Locally**: AI agent runs `git add . && git commit -m "[description]"` (user approves/executes in terminal)
+  3. **User Pushes to GitHub**: User manually runs `git push origin main` to push changes to GitHub
+  4. **Pull in Codespaces**: User manually runs `git pull origin main` in Codespaces to sync changes
+  5. **Test in Codespaces**: User tests the changes in Codespaces environment (production-like)
+  6. **GitHub is source of truth**: All environments sync from GitHub (Local → GitHub → Codespaces)
 
-- **During work**: Make changes, test, update documentation
+- **Important Notes**:
+  - **AI agent NEVER pushes to GitHub** - user always pushes manually
+  - **Always develop locally first** - never develop directly in Codespaces
+  - **Always test in Codespaces** - never test on local machine
+  - **Local = Development**, **Codespaces = Testing/Staging**, **GitHub = Source of Truth**
 
-- **After work (AI AGENT RUNS COMMANDS - USER APPROVES/EXECUTES)**:
-  1. Stage and commit session log and handover: AI agent runs `git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/agent_handover.md && git commit -m "docs: session log and handover update - [description]"` (user approves/executes)
-  2. Stage and commit all other changes: AI agent runs `git add . && git commit -m "[descriptive message for code changes]"` (user approves/executes)
-  3. Push to GitHub: AI agent runs `git push origin main` (user approves/executes - not automatic)
+- **During work**: Make changes locally, update documentation
 
-- **User action (REQUIRED)**: User approves/executes the git commands that AI agent runs. Commands are not automatic - user must approve/execute each command.
+- **After work (AI AGENT COMMITS LOCALLY - USER PUSHES)**:
+  1. AI agent runs `git add . && git commit -m "[descriptive message for all changes]"` (user approves/executes)
+  2. AI agent informs user: "✅ Changes committed locally. Please run: `git push origin main` to push to GitHub, then `git pull origin main` in Codespaces to test."
+  3. User pushes to GitHub: `git push origin main`
+  4. User pulls in Codespaces: `git pull origin main`
+  5. User tests in Codespaces
+
+- **User actions (REQUIRED)**: 
+  - Approve/execute git commit commands
+  - Manually push to GitHub
+  - Manually pull in Codespaces
+  - Test changes in Codespaces
 
 ---
 
@@ -192,32 +205,36 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
   - **Proactively create it** - don't wait for explicit "session end" signal
   - **AI agent MUST create and fill in** session log file completely with: session summary, tasks completed, key decisions, files modified, issues encountered, next steps, and important context for next agent
   - **AI agent MUST update** `docs/agent_handover.md` with official handover
-  - **AI agent MUST run git commands** to commit both files (separate commit for session log/handover, then commit for code changes) - user approves/executes
-  - **AI agent MUST run git push command** to push to GitHub - user approves/executes (not automatic)
-  - **AI agent MUST inform user** that commands are ready for approval/execution
+  - **AI agent MUST commit locally**: Run `git add . && git commit -m "[description]"` - user approves/executes
+  - **AI agent MUST inform user**: "✅ Changes committed locally. Please push to GitHub (`git push origin main`), then pull in Codespaces (`git pull origin main`) to test."
 - **Integration**: Session logs (detailed chat history) + Agent handover (official status) = Complete continuity
-- **User action**: User approves/executes the git commands that AI agent runs (commit and push commands)
+- **User actions**: 
+  - Approve/execute git commit command
+  - Push to GitHub manually
+  - Pull in Codespaces manually
+  - Test changes in Codespaces
 
 ### **Quick Post-Work Checklist (AI AGENT MUST COMPLETE - DO THIS WHEN WORK IS DONE, NOT WAITING FOR SESSION END)**
 
 - **Create and fill session log**: Create `docs/session_logs/YYYY-MM-DD_HHMM_[description].md` and fill in ALL sections completely (summary, tasks, decisions, files, issues, next steps, context for next agent). **Do this proactively when work is complete, not waiting for user to end session.**
 - Update all relevant documentation
 - Update `docs/agent_handover.md` with official handover
-- Run tests, verify zero linter errors
-- **Stage session log and handover**: AI agent runs `git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/agent_handover.md` (user approves/executes)
-- **Commit session log and handover**: AI agent runs `git commit -m "docs: session log and handover update - [brief description]"` (user approves/executes)
-- **Stage and commit all other changes**: AI agent runs `git add . && git commit -m "[descriptive commit message for code changes]"` (user approves/executes)
-- **Push to GitHub**: AI agent runs `git push origin main` (user approves/executes - not automatic)
-- **Inform user**: Tell user all changes are committed and pushed (commands run by agent, user approves/executes)
+- Verify zero linter errors
+- **Commit all changes locally**: AI agent runs `git add . && git commit -m "[descriptive commit message for all changes including docs]"` (user approves/executes)
+- **Inform user of next steps**: Tell user: "✅ Changes committed locally. Please run these commands:
+  1. `git push origin main` (push to GitHub)
+  2. `git pull origin main` (in Codespaces to sync changes)
+  3. Test the changes in Codespaces"
 - **Important**: Create session log when work is done, not waiting for session end (user may close chat, lose connection, etc.)
+- **Workflow Reminder**: Local → Commit → Push to GitHub (user) → Pull in Codespaces (user) → Test in Codespaces (user)
 
 ---
 
 ## ⚠️ **CRITICAL REMINDERS**
 
-GitHub is source of truth. Documentation is mandatory. Session logging is required for continuity and MUST be done by AI agent when work is complete (create, fill in, run git commands) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. AI agent runs git commit and git push commands in local directory - user approves/executes the commands (not automatic). **IMPORTANT**: Any rules added to Cursor Settings must immediately be added to this .md file to keep them in sync.
+GitHub is source of truth. Documentation is mandatory. Session logging is required for continuity and MUST be done by AI agent when work is complete (create, fill in, commit locally) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. **WORKFLOW**: AI agent develops locally → commits locally → user pushes to GitHub → user pulls in Codespaces → user tests in Codespaces. **IMPORTANT**: Any rules added to Cursor Settings must immediately be added to this .md file to keep them in sync.
 
-**Current date**: December 19, 2025. Proceed with the user's coding request.
+**Current date**: December 22, 2025. Proceed with the user's coding request.
 
 ---
 

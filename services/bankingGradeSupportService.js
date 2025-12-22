@@ -250,6 +250,36 @@ class BankingGradeSupportService {
   }
 
   /**
+   * 🔒 Safe Redis Helpers (Resilience)
+   * Handle Redis readiness checks and graceful degradation
+   */
+  async safeRedisGet(key) {
+    if (!this.redis || this.redis.status !== 'ready') {
+      return null;
+    }
+    
+    try {
+      return await this.redis.get(key);
+    } catch (error) {
+      console.warn('⚠️ Redis error in safeRedisGet:', error.message);
+      return null;
+    }
+  }
+
+  async safeRedisSetex(key, ttl, value) {
+    if (!this.redis || this.redis.status !== 'ready') {
+      return; // Skip caching if Redis not ready
+    }
+    
+    try {
+      await this.redis.setex(key, ttl, value);
+    } catch (error) {
+      console.warn('⚠️ Redis error in safeRedisSetex:', error.message);
+      // Don't throw - caching failure is non-fatal
+    }
+  }
+
+  /**
    * 🎯 Process Support Query (Main Entry Point)
    * Banking-Grade with Full Monitoring
    */
@@ -348,7 +378,7 @@ class BankingGradeSupportService {
     const cacheKey = `query_classification:${userId}:${this.hashMessage(message)}`;
     
     // 💾 Check Cache First
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -357,7 +387,7 @@ class BankingGradeSupportService {
     const classification = await this.performAIClassification(message, userId);
     
     // 💾 Cache Classification
-    await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(classification)); // Use optional chaining
+    await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(classification));
     
     return classification;
   }
@@ -683,7 +713,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     const cacheKey = `wallet_balance:${userId}`;
     
     // 💾 Check Cache
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -732,7 +762,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     };
     
     // 💾 Cache Response
-    await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(response)); // Use optional chaining
+    await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response));
     
     return response;
   }
@@ -745,7 +775,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     const cacheKey = `transaction_history:${userId}:${page}:${limit}`;
     
     // 💾 Check Cache
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -826,7 +856,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     };
     
     // 💾 Cache Response (with shorter TTL for transaction data)
-    await this.redis?.setex(cacheKey, 300, JSON.stringify(response)); // 5 minutes TTL
+    await this.safeRedisSetex(cacheKey, 300, JSON.stringify(response)); // 5 minutes TTL
     
     return response;
   }
@@ -835,15 +865,51 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
    * 🔒 Rate Limiting (Banking-Grade)
    */
   async enforceRateLimit(userId) {
-    const key = `rate_limit:${userId}`;
-    const current = await this.redis?.incr(key); // Use optional chaining
-    
-    if (current === 1) {
-      await this.redis?.expire(key, this.config.rateLimitWindow); // Use optional chaining
+    // Check if Redis is ready before using it
+    if (!this.redis || this.redis.status !== 'ready') {
+      // Fall back to in-memory tracking if Redis not ready
+      if (!this.inMemoryRateLimits) {
+        this.inMemoryRateLimits = new Map();
+      }
+      
+      const key = `rate_limit:${userId}`;
+      const now = Date.now();
+      const windowStart = now - (this.config.rateLimitWindow * 1000);
+      
+      // Get or initialize user's rate limit data
+      let userData = this.inMemoryRateLimits.get(key) || { count: 0, firstRequest: now };
+      
+      // Reset if window has expired
+      if (userData.firstRequest < windowStart) {
+        userData = { count: 1, firstRequest: now };
+      } else {
+        userData.count++;
+      }
+      
+      this.inMemoryRateLimits.set(key, userData);
+      
+      if (userData.count > this.config.rateLimitMax) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+      
+      return;
     }
     
-    if (current > this.config.rateLimitMax) {
-      throw new Error('Rate limit exceeded. Please try again later.');
+    // Redis is ready - use it
+    try {
+      const key = `rate_limit:${userId}`;
+      const current = await this.redis.incr(key);
+      
+      if (current === 1) {
+        await this.redis.expire(key, this.config.rateLimitWindow);
+      }
+      
+      if (current > this.config.rateLimitMax) {
+        throw new Error('Rate limit exceeded. Please try again later.');
+      }
+    } catch (redisError) {
+      console.warn('⚠️ Redis error in enforceRateLimit, skipping rate limit check:', redisError.message);
+      // Don't throw - just skip rate limiting if Redis fails
     }
   }
 
@@ -851,13 +917,31 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
    * 💾 Caching Layer (High Performance)
    */
   async getCachedResponse(queryId, userId, queryType) {
-    const key = `support_cache:${userId}:${queryType.category}`;
-    return await this.redis?.get(key); // Use optional chaining
+    if (!this.redis || this.redis.status !== 'ready') {
+      return null; // No cache available
+    }
+    
+    try {
+      const key = `support_cache:${userId}:${queryType.category}`;
+      return await this.redis.get(key);
+    } catch (error) {
+      console.warn('⚠️ Redis error in getCachedResponse:', error.message);
+      return null;
+    }
   }
 
   async cacheResponse(queryId, userId, queryType, response) {
-    const key = `support_cache:${userId}:${queryType.category}`;
-    await this.redis?.setex(key, this.config.cacheTTL, JSON.stringify(response)); // Use optional chaining
+    if (!this.redis || this.redis.status !== 'ready') {
+      return; // Skip caching if Redis not ready
+    }
+    
+    try {
+      const key = `support_cache:${userId}:${queryType.category}`;
+      await this.redis.setex(key, this.config.cacheTTL, JSON.stringify(response));
+    } catch (error) {
+      console.warn('⚠️ Redis error in cacheResponse:', error.message);
+      // Don't throw - caching failure is non-fatal
+    }
   }
 
   /**
@@ -1095,9 +1179,17 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
    */
   async healthCheck() {
     try {
-      // Check Redis
-      if (this.redis) {
-        await this.redis.ping();
+      // Check Redis (only if ready)
+      let redisStatus = 'not available';
+      if (this.redis && this.redis.status === 'ready') {
+        try {
+          await this.redis.ping();
+          redisStatus = 'connected';
+        } catch (redisError) {
+          redisStatus = 'error';
+        }
+      } else if (this.redis) {
+        redisStatus = `not ready (${this.redis.status || 'unknown'})`;
       }
       
       // Check Database
@@ -1109,7 +1201,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
       return {
         status: 'healthy',
         services: {
-          redis: this.redis ? 'connected' : 'not available',
+          redis: redisStatus,
           database: 'connected',
           openai: 'connected'
         },
@@ -1132,7 +1224,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     const cacheKey = `kyc_status:${userId}`;
     
     // 💾 Check Cache
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -1187,7 +1279,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     };
     
     // 💾 Cache Response
-    await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(response)); // Use optional chaining
+    await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response));
     
     return response;
   }
@@ -1200,7 +1292,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     const cacheKey = `voucher_summary:${userId}`;
     
     // 💾 Check Cache
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -1269,7 +1361,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     };
     
     // 💾 Cache Response
-    await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(response)); // Use optional chaining
+    await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response));
     
     return response;
   }
@@ -1405,7 +1497,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     const cacheKey = `account_details:${userId}`;
     
     // 💾 Check Cache
-    const cached = await this.redis?.get(cacheKey); // Use optional chaining
+    const cached = await this.safeRedisGet(cacheKey);
     if (cached) {
       return JSON.parse(cached);
     }
@@ -1466,7 +1558,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
     };
     
     // 💾 Cache Response
-    await this.redis?.setex(cacheKey, this.config.cacheTTL, JSON.stringify(response)); // Use optional chaining
+    await this.safeRedisSetex(cacheKey, this.config.cacheTTL, JSON.stringify(response));
     
     return response;
   }
@@ -1847,20 +1939,27 @@ Keep the same tone and meaning. Return only the translated text, no explanations
     const windowSeconds = this.config.aiLimitWindow || 86400;
     const redisKey = `support_ai_calls:${userId}`;
 
-    if (this.redis) {
-      const newCount = await this.redis.incr(redisKey);
-      if (newCount === 1) {
-        await this.redis.expire(redisKey, windowSeconds);
+    // Check if Redis is ready before using it
+    if (this.redis && this.redis.status === 'ready') {
+      try {
+        const newCount = await this.redis.incr(redisKey);
+        if (newCount === 1) {
+          await this.redis.expire(redisKey, windowSeconds);
+        }
+        if (newCount > limit) {
+          await this.redis.decr(redisKey);
+          const error = new Error('AI usage limit reached for today');
+          error.code = 'AI_LIMIT_EXCEEDED';
+          throw error;
+        }
+        return;
+      } catch (redisError) {
+        console.warn('⚠️ Redis error in registerAiCall, falling back to in-memory:', redisError.message);
+        // Fall through to in-memory tracking
       }
-      if (newCount > limit) {
-        await this.redis.decr(redisKey);
-        const error = new Error('AI usage limit reached for today');
-        error.code = 'AI_LIMIT_EXCEEDED';
-        throw error;
-      }
-      return;
     }
 
+    // Fall back to in-memory tracking
     const now = Date.now();
     const existing = this.inMemoryAiUsage.get(userId) || { count: 0, expiresAt: now + windowSeconds * 1000 };
     if (now > existing.expiresAt) {
