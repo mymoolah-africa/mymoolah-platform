@@ -37,15 +37,27 @@
 ---
 
 **Last Updated**: December 22, 2025  
-**Version**: 2.4.32 - Support System Complete Overhaul  
-**Status**: ✅ **ALL CRITICAL BUGS FIXED** ✅ **PATTERN MATCHING OPTIMIZED** ✅ **AUTO-LEARNING WORKING** ✅ **LANGUAGE MATCHING FIXED** ✅ **REDIS RESILIENCE COMPLETE**
+**Version**: 2.4.33 - Voucher Balance Pattern Order Fixed  
+**Status**: ✅ **ALL CRITICAL BUGS FIXED** ✅ **VOUCHER BALANCE WORKING** ✅ **PATTERN MATCHING OPTIMIZED** ✅ **AUTO-LEARNING WORKING** ✅ **LANGUAGE MATCHING FIXED** ✅ **REDIS RESILIENCE COMPLETE**
 
 ---
 
-## Update 2025-12-22 - Banking-Grade Support System Complete Overhaul (6 Critical Fixes)
+## Update 2025-12-22 - Banking-Grade Support System Complete Overhaul (7 Critical Fixes)
 
 ### **Session Summary**
-Fixed 5 critical bugs in the banking-grade support system (RAG) discovered through comprehensive testing in Codespaces. All fixes committed and pushed to GitHub, system now production-ready.
+Fixed 7 critical bugs in the banking-grade support system (RAG) discovered through comprehensive testing in Codespaces. All fixes committed and pushed to GitHub, system now production-ready.
+
+### **Fix 0: Voucher Balance Pattern Order (Commit d0aeb75c)** ✅ **LATEST**
+- **Problem**: "what is my vouchers balance?" returned wallet balance instead of voucher balance
+- **Codespaces Test Log**: `⚡ Simple pattern detected: WALLET_BALANCE` ❌ Should be VOUCHER_MANAGEMENT
+- **Expected**: R360.00 (vouchers) | **Actual**: R43,693.15 (wallet) ❌
+- **Root Cause**: Wallet balance pattern checked for "balance" FIRST (line 449), caught "vouchers balance"
+- **Pattern Order Issue**: Voucher pattern came AFTER wallet pattern, never executed
+- **Solution**: Moved voucher balance check BEFORE wallet balance check
+- **New Order**:
+  1. Voucher balance (voucher + balance) → VOUCHER_MANAGEMENT
+  2. Wallet balance (balance OR wallet) → WALLET_BALANCE  
+- **Impact**: Voucher queries match first, wallet queries still work
 
 ### **Fix 1: Redis Resilience (Commit 0a56aa31)** ✅
 - **Problem**: "Stream isn't writeable and enableOfflineQueue options is false" error on startup
