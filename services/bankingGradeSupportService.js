@@ -445,7 +445,19 @@ class BankingGradeSupportService {
   detectSimpleQuery(message) {
     const lowerMessage = message.toLowerCase();
     
+    // IMPORTANT: Check VOUCHER balance FIRST (before general balance check)
+    // Voucher Balance Queries (English - pre-translated)
+    if (lowerMessage.includes('voucher') && (lowerMessage.includes('balance') || lowerMessage.includes('how much') || lowerMessage.includes('summary'))) {
+      return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
+    }
+    
+    // Airtime/Data/Electricity Queries (always route to VOUCHER_MANAGEMENT for summary)
+    if (lowerMessage.includes('airtime') || lowerMessage.includes('data') || lowerMessage.includes('electricity')) {
+      return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
+    }
+    
     // Wallet Balance (English - pre-translated)
+    // Check this AFTER voucher balance to avoid catching "vouchers balance"
     if (lowerMessage.includes('balance') || lowerMessage.includes('wallet') || lowerMessage.includes('how much') || lowerMessage.includes('money')) {
       return { category: 'WALLET_BALANCE', confidence: 0.95, requiresAI: false };
     }
@@ -458,17 +470,6 @@ class BankingGradeSupportService {
     // Transaction History (English - pre-translated)
     if (lowerMessage.includes('transaction') || lowerMessage.includes('history') || lowerMessage.includes('recent')) {
       return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
-    }
-    
-    // Voucher Balance Queries (English - pre-translated)
-    // IMPORTANT: Only match BALANCE queries, not general voucher questions (let KB handle definitions)
-    if (lowerMessage.includes('voucher') && (lowerMessage.includes('balance') || lowerMessage.includes('how much') || lowerMessage.includes('summary'))) {
-      return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
-    }
-    
-    // Airtime/Data/Electricity Queries (always route to VOUCHER_MANAGEMENT for summary)
-    if (lowerMessage.includes('airtime') || lowerMessage.includes('data') || lowerMessage.includes('electricity')) {
-      return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
     }
 
     // Password / login help (English - pre-translated)
