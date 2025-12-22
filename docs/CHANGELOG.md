@@ -1,11 +1,19 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-12-22 - 🏦 Banking-Grade Support System - Complete Overhaul (7 Critical Fixes)
+## 2025-12-22 - 🏦 Banking-Grade Support System - Complete Overhaul (8 Critical Fixes)
 
 ### **Session Overview**
-Complete overhaul of banking-grade support system (RAG) with 7 critical fixes addressing Redis errors, language matching, auto-learning, and query routing. All fixes tested and verified in Codespaces.
+Complete overhaul of banking-grade support system (RAG) with 8 critical fixes addressing Redis errors, language matching, auto-learning, and query routing. All fixes tested and verified in Codespaces.
 
-### **Fix 7: Voucher Balance Pattern Order (Commit d0aeb75c)** ✅ **LATEST FIX**
+### **Fix 8: Voucher Balance Shows Active Only (Commit d321dad9)** ✅ **LATEST**
+- **Problem**: Answer showed total balance (R1,660) but dashboard shows active balance (R360)
+- **Dashboard UX**: Shows "Active Vouchers: 1, R 360,00" (what users can actually use)
+- **Old Message**: "Your vouchers balance is R1,660..." (includes expired/cancelled/redeemed)
+- **New Message**: "Your vouchers balance is R360. You have 1 active voucher." (matches dashboard)
+- **Rationale**: Users care about active (usable) vouchers, not total (includes unusable)
+- **Impact**: Message now matches dashboard UX exactly
+
+### **Fix 7: Voucher Balance Pattern Order (Commit d0aeb75c)** ✅
 - **Problem**: "what is my vouchers balance?" returned wallet balance (R43,693) instead of voucher balance (R360)
 - **Test Log**: `⚡ Simple pattern detected: WALLET_BALANCE` ❌ Should detect VOUCHER_MANAGEMENT
 - **Root Cause**: Wallet balance pattern (line 449) checked for ANY "balance" keyword FIRST

@@ -37,17 +37,26 @@
 ---
 
 **Last Updated**: December 22, 2025  
-**Version**: 2.4.33 - Voucher Balance Pattern Order Fixed  
-**Status**: ✅ **ALL CRITICAL BUGS FIXED** ✅ **VOUCHER BALANCE WORKING** ✅ **PATTERN MATCHING OPTIMIZED** ✅ **AUTO-LEARNING WORKING** ✅ **LANGUAGE MATCHING FIXED** ✅ **REDIS RESILIENCE COMPLETE**
+**Version**: 2.4.34 - Voucher Balance Shows Active Only  
+**Status**: ✅ **ALL FIXES COMPLETE** ✅ **VOUCHER BALANCE SHOWS ACTIVE** ✅ **MATCHES DASHBOARD UX** ✅ **PATTERN MATCHING OPTIMIZED** ✅ **AUTO-LEARNING WORKING** ✅ **LANGUAGE MATCHING FIXED** ✅ **REDIS RESILIENCE COMPLETE**
 
 ---
 
-## Update 2025-12-22 - Banking-Grade Support System Complete Overhaul (7 Critical Fixes)
+## Update 2025-12-22 - Banking-Grade Support System Complete Overhaul (8 Critical Fixes)
 
 ### **Session Summary**
-Fixed 7 critical bugs in the banking-grade support system (RAG) discovered through comprehensive testing in Codespaces. All fixes committed and pushed to GitHub, system now production-ready.
+Fixed 8 critical bugs in the banking-grade support system (RAG) discovered through comprehensive testing in Codespaces. All fixes committed and pushed to GitHub, system now production-ready.
 
-### **Fix 0: Voucher Balance Pattern Order (Commit d0aeb75c)** ✅ **LATEST**
+### **Fix 8: Voucher Balance Message - Show Active Only (Commit d321dad9)** ✅ **LATEST**
+- **Problem**: Answer showed total balance (R1,660) but dashboard shows active balance (R360)
+- **User Feedback**: Response included expired/cancelled/redeemed vouchers in total
+- **Dashboard Shows**: "Active Vouchers: 1, R 360,00" ← What users care about
+- **Old Message**: "Your vouchers balance is R1,660. You have 4 vouchers: 1 active (R360)..."
+- **New Message**: "Your vouchers balance is R360. You have 1 active voucher." ← Matches dashboard!
+- **Rationale**: Active vouchers = can be used (R360), Total = includes unusable (R1,660)
+- **Impact**: Message now matches dashboard UX exactly
+
+### **Fix 7: Voucher Balance Pattern Order (Commit d0aeb75c)** ✅
 - **Problem**: "what is my vouchers balance?" returned wallet balance instead of voucher balance
 - **Codespaces Test Log**: `⚡ Simple pattern detected: WALLET_BALANCE` ❌ Should be VOUCHER_MANAGEMENT
 - **Expected**: R360.00 (vouchers) | **Actual**: R43,693.15 (wallet) ❌
