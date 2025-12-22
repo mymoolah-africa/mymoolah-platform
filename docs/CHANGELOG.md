@@ -31,7 +31,7 @@
   - Database column fix: Fixed `getAccountDetails()` SQL query (changed `u.phone` to `u."phoneNumber"`)
   - faqId length fix: Changed from timestamp+random (23+ chars) to hash-based (exactly 20 chars to match VARCHAR(20) constraint)
   - Query routing: Added pattern matching for tier questions ("change my tier" → TECHNICAL_SUPPORT with requiresAI: true)
-  - Model name normalization: Convert `SUPPORT_AI_MODEL` to lowercase (OpenAI expects "gpt-4o", not "GPT-4O")
+  - Model name normalization: Convert `SUPPORT_AI_MODEL` to lowercase (OpenAI expects "gpt-4o", not "GPT-4oO")
   - Error logging: Added detailed logging for OpenAI call failures
 - **Performance**: Knowledge base responses ~10x faster than OpenAI (272ms vs 2,500ms) with zero AI cost.
 - **Testing**: ✅ Verified first query calls OpenAI and stores answer, ✅ Verified second identical query uses knowledge base (no OpenAI call), ✅ All fixes deployed and tested.
@@ -407,7 +407,7 @@
 - `routes/qrpayments.js` - Added tipAmount validation
 
 ## 2025-11-18
-- **gpt-4o Upgrade & Codebase Sweep Optimization**: Upgraded all OpenAI models from GPT-4/gpt-4o to gpt-4o, fixed API compatibility issues, added codebase sweep disable feature, and improved startup performance.
+- **gpt-4o Upgrade & Codebase Sweep Optimization**: Upgraded all OpenAI models from GPT-4o/gpt-4o to gpt-4o, fixed API compatibility issues, added codebase sweep disable feature, and improved startup performance.
 
 **gpt-4o Upgrade & Codebase Sweep Optimization**:
 - **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-4o` to `gpt-4o` (17 occurrences across 8 files)

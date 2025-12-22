@@ -2,14 +2,14 @@ Command PaletteCommand Palette# MyMoolah AI Support System
 
 ## 🚀 Overview
 
-The MyMoolah AI Support System is a **world-class, award-winning** multi-language support platform that provides instant, intelligent assistance to B2C users. Built with OpenAI GPT-4 integration, it offers context-aware responses, continuous learning, and a seamless user experience through an in-app chat interface.
+The MyMoolah AI Support System is a **world-class, award-winning** multi-language support platform that provides instant, intelligent assistance to B2C users. Built with OpenAI GPT-4o integration, it offers context-aware responses, continuous learning, and a seamless user experience through an in-app chat interface.
 
 ## 🏆 Current Status: **COMPLETED & LIVE**
 
 ### **✅ Implemented Features**
 - **In-App Support Page**: Dedicated `/support` route with full chat interface
 - **Multi-Language Support**: English, Afrikaans, isiZulu, isiXhosa, Sesotho
-- **AI-Powered Chat**: OpenAI GPT-4 integration with context awareness
+- **AI-Powered Chat**: OpenAI GPT-4o integration with context awareness
 - **Dynamic Quick Actions**: AI-determined top 6 most used support categories
 - **Voice Input Ready**: Microphone button for future voice integration
 - **Responsive Design**: Mobile-first, award-winning UI/UX

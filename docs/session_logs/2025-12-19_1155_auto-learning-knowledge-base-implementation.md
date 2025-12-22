@@ -86,7 +86,7 @@ Implemented auto-learning feature for the support service that automatically sto
 - **Issue 3**: "How do I change my tier?" routing to account management instead of technical support - Fixed by adding tier question pattern matching
 - **Issue 4**: Database error "column u.phone does not exist" - Fixed by using correct column name `phoneNumber`
 - **Issue 5**: Auto-learning failing with "value too long for type character varying(20)" - Fixed by using hash-based faqId (exactly 20 chars)
-- **Issue 6**: Model name "gpt-4o" not working - Fixed by normalizing to lowercase (OpenAI expects "gpt-4o", not "GPT-4O")
+- **Issue 6**: Model name "gpt-4o" not working - Fixed by normalizing to lowercase (OpenAI expects "gpt-4o", not "GPT-4oO")
 - **Issue 7**: Second identical question still calling OpenAI - Fixed by ensuring auto-learning succeeds (faqId length fix)
 
 ---

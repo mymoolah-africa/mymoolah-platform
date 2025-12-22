@@ -29,7 +29,7 @@ class SupportService {
    *
    * - Enforces banking-grade rate limiting
    * - Hits knowledge base first (zero AI cost)
-   * - Falls back to AI support service (pattern matching → GPT-4o)
+   * - Falls back to AI support service (pattern matching → GPT-4oo)
    * - Wraps response in banking-grade ISO20022 / Mojaloop-compatible envelope
    */
   async processSupportQuery(message, userId, language = 'en', context = {}) {
@@ -67,7 +67,7 @@ class SupportService {
         }
       }
 
-      // 🤖 2) AI support service (pattern matching on English + GPT-4o)
+      // 🤖 2) AI support service (pattern matching on English + GPT-4oo)
       // Pass userId and English translation into context
       const enrichedContext = {
         ...(context || {}),

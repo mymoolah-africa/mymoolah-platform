@@ -14,7 +14,7 @@ The **MyMoolah Codebase Sweep System** is an intelligent, automated service that
 - 🔄 **Runs daily** to stay current with code changes
 
 ### **Intelligent Analysis**
-- 🤖 **Uses OpenAI gpt-4o** to understand code context (upgraded from GPT-4)
+- 🤖 **Uses OpenAI gpt-4o** to understand code context (upgraded from GPT-4o)
 - 📊 **Generates support questions** based on discovered capabilities
 - 🎯 **Categorizes questions** by feature area
 - 💡 **Identifies common user scenarios** and problems
@@ -192,7 +192,7 @@ The service includes a **10-second delay** before the initial sweep runs:
 - Server is immediately available for requests
 - Initial sweep runs in background after delay
 
-This optimization is especially important with gpt-4o, which has slower API response times than GPT-4.
+This optimization is especially important with gpt-4o, which has slower API response times than GPT-4o.
 
 ## **📈 Performance & Scalability**
 
@@ -210,7 +210,7 @@ This optimization is especially important with gpt-4o, which has slower API resp
 | **Large** | 500-1000 | ~7 minutes | $0.15 |
 | **Enterprise** | 1000+ | ~15 minutes | $0.30 |
 
-**Note**: gpt-4o processing times are slightly longer than GPT-4, but provide better analysis quality.
+**Note**: gpt-4o processing times are slightly longer than GPT-4o, but provide better analysis quality.
 
 ## **🧪 Testing & Development**
 

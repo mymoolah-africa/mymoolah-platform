@@ -1626,7 +1626,7 @@ When answering fee questions, be specific about the tier system and always menti
 
   /**
    * 🧠 AI-First Language Detection
-   * Detects language and translates to English using GPT-4o-mini (cheap: ~$0.0001/query)
+   * Detects language and translates to English using GPT-4oo-mini (cheap: ~$0.0001/query)
    */
   async detectAndTranslate(message) {
     try {

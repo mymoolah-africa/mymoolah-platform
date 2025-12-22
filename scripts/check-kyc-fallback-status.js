@@ -128,7 +128,7 @@ async function checkKYCFallbackStatus() {
   
   if (apiKeyValid) {
     console.log('✅ Status: OpenAI API key is valid');
-    console.log('   Primary OCR: OpenAI GPT-4 Vision');
+    console.log('   Primary OCR: OpenAI GPT-4oo');
     console.log('   Fallback: Tesseract OCR (if OpenAI fails)');
   } else {
     console.log('⚠️  Status: OpenAI API key is invalid or not set');

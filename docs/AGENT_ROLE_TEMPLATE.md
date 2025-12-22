@@ -140,7 +140,7 @@ Production-ready multi-language voice recognition system with 11 South African l
 Award-winning AI-powered Google Reviews generation system that transforms user feedback into powerful online reputation management, SEO optimization, and marketing content.
 
 ## **Key Achievements**
-- **AI-Powered Generation**: OpenAI GPT-4 converts feedback into compelling reviews
+- **AI-Powered Generation**: OpenAI GPT-4o converts feedback into compelling reviews
 - **SEO Excellence**: Strategic keywords for fintech, banking, and South African markets
 - **Google API Integration**: Full Google My Business API integration with OAuth2
 - **Comprehensive Analytics**: Review performance tracking and SEO impact measurement

@@ -60,7 +60,7 @@ node scripts/test-openai-kyc.js
 
 You should see:
 - ✅ OpenAI API connection successful
-- ✅ GPT-4o model is available
+- ✅ GPT-4oo model is available
 - ✅ All tests passing
 
 ---
@@ -76,7 +76,7 @@ This script tests:
 1. Environment variable configuration
 2. OpenAI client initialization
 3. API connectivity
-4. Model availability (GPT-4o)
+4. Model availability (GPT-4oo)
 5. Vision API functionality
 6. KYC Service integration
 
@@ -92,7 +92,7 @@ node scripts/test-openai-kyc.js
 ✅ OPENAI_API_KEY is set
 ✅ OpenAI client initialized successfully
 ✅ OpenAI API connection successful
-✅ GPT-4o model is available
+✅ GPT-4oo model is available
 ✅ KYC Service OpenAI initialized successfully
 ✅ All OpenAI Tests Completed!
 ```
@@ -129,9 +129,9 @@ node scripts/test-openai-kyc.js
 ### **Error: "Model not available"**
 
 **Solution**:
-- Verify your OpenAI account has access to GPT-4o
+- Verify your OpenAI account has access to GPT-4oo
 - Check if you need to enable the model in your account settings
-- Some accounts may need to request access to GPT-4o
+- Some accounts may need to request access to GPT-4oo
 
 ---
 
@@ -143,7 +143,7 @@ node scripts/test-openai-kyc.js
    - Keep your API key secret
 
 2. **API Costs**:
-   - OpenAI Vision API (GPT-4o) has usage costs
+   - OpenAI Vision API (GPT-4oo) has usage costs
    - Monitor your usage at [OpenAI Usage Dashboard](https://platform.openai.com/usage)
    - Set up billing alerts if needed
 

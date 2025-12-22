@@ -7,7 +7,7 @@ The MyMoolah KYC (Know Your Customer) automation system provides automated docum
 ## Features
 
 ### ✅ **Automated Document Processing**
-- **AI OCR Processing**: Uses OpenAI GPT-4 Vision for document text extraction (primary)
+- **AI OCR Processing**: Uses OpenAI GPT-4oo for document text extraction (primary)
 - **Tesseract OCR Fallback**: Automatic fallback to Tesseract OCR when OpenAI is unavailable
 - **Document Validation**: Validates South African ID documents and proof of address
 - **Automatic Approval**: Instantly approves verified documents
@@ -132,7 +132,7 @@ const checkKYCForDebit = async (req, res, next) => {
 
 The KYC system uses a **two-tier OCR processing architecture** with automatic fallback:
 
-1. **Primary OCR (OpenAI GPT-4 Vision)**: High-accuracy AI-powered document extraction
+1. **Primary OCR (OpenAI GPT-4oo)**: High-accuracy AI-powered document extraction
 2. **Fallback OCR (Tesseract)**: Automatic fallback when OpenAI is unavailable
 
 ### Fallback Mechanism
@@ -160,7 +160,7 @@ The system automatically falls back to Tesseract OCR in the following scenarios:
 ### OpenAI Integration
 ```javascript
 const response = await openai.chat.completions.create({
-  model: "gpt-4-vision-preview",
+  model: "gpt-4o",
   messages: [{
     role: "user",
     content: [

@@ -159,7 +159,7 @@ When ready to test:
 
 ```
 ✅ OpenAI OCR processing successful
-✅ Document processed using GPT-4 Vision
+✅ Document processed using GPT-4oo
 ```
 
 ### **Scenario 2: OpenAI API Key Invalid**

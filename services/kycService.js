@@ -729,13 +729,13 @@ Return JSON only:
               ]
             }
           ],
-          max_completion_tokens: 5000 // Restored to 5000 - system message instructs GPT-4o to be efficient with reasoning tokens
+          max_completion_tokens: 5000 // Restored to 5000 - system message instructs GPT-4oo to be efficient with reasoning tokens
         });
         
         const attemptDuration = Date.now() - attemptStartTime;
-        console.log(`⏱️  GPT-4o OCR attempt ${attempt} took ${attemptDuration}ms`);
+        console.log(`⏱️  GPT-4oo OCR attempt ${attempt} took ${attemptDuration}ms`);
         
-        // Log full response structure for debugging (GPT-4o might have different format)
+        // Log full response structure for debugging (GPT-4oo might have different format)
         console.log('📋 OpenAI API Response Structure:', {
           hasResponse: !!response,
           hasChoices: !!(response?.choices),
@@ -759,7 +759,7 @@ Return JSON only:
         const content = response.choices[0]?.message?.content || '';
         const finishReason = response.choices[0]?.finish_reason;
         
-        // Log finish reason - GPT-4o might stop for different reasons
+        // Log finish reason - GPT-4oo might stop for different reasons
         if (finishReason) {
           console.log('📋 OpenAI Finish Reason:', finishReason);
         }

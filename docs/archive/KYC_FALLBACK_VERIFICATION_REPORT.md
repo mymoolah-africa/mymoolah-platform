@@ -87,7 +87,7 @@ The fallback mechanism is **fully implemented** and ready to work:
 
 ### **KYC Processing**
 - **Status**: ✅ **FULLY FUNCTIONAL**
-- **Primary OCR**: OpenAI GPT-4 Vision (when API key is valid)
+- **Primary OCR**: OpenAI GPT-4oo (when API key is valid)
 - **Fallback OCR**: Tesseract (automatic when OpenAI fails)
 
 ---
@@ -109,7 +109,7 @@ The fallback mechanism is **fully implemented** and ready to work:
    ```bash
    # Use valid API key (current state)
    # Upload a KYC document
-   # Should use OpenAI GPT-4 Vision (primary)
+   # Should use OpenAI GPT-4oo (primary)
    # If OpenAI fails, should automatically fallback to Tesseract
    ```
 

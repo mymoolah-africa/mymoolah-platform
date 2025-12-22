@@ -66,7 +66,7 @@
 
 **August 24, 2025**: AI Support System
 - **Multi-Language Support**: English, Afrikaans, isiZulu, isiXhosa, Sesotho
-- **AI-Powered Chat**: OpenAI GPT-4 integration with context awareness
+- **AI-Powered Chat**: OpenAI GPT-4o integration with context awareness
 - **Dynamic Quick Actions**: AI-determined top 6 most used support categories
 - **Voice Input System**: Production-ready speech-to-text with 11 languages
 
@@ -143,7 +143,7 @@ return base;
 4. Build AI service layer for intelligent review generation and validation
 
 #### **Features Implemented**
-- **AI-Powered Generation**: OpenAI GPT-4 converts feedback into compelling reviews
+- **AI-Powered Generation**: OpenAI GPT-4o converts feedback into compelling reviews
 - **SEO Excellence**: Strategic keywords for fintech, banking, and South African markets
 - **Google API Integration**: Full Google My Business API integration with OAuth2
 - **Comprehensive Analytics**: Review performance tracking and SEO impact measurement

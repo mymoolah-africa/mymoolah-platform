@@ -65,11 +65,11 @@ async function testOpenAIConfiguration() {
     console.log(`   Available models: ${testResponse.data.length} models found`);
     
     // Check if gpt-4o is available
-    const gpt5Available = testResponse.data.some(model => 
-      model.id.includes('gpt-4o') || model.id.includes('gpt5')
+    const gpt-4oAvailable = testResponse.data.some(model => 
+      model.id.includes('gpt-4o') || model.id.includes('gpt-4o')
     );
     
-    if (gpt5Available) {
+    if (gpt-4oAvailable) {
       console.log('✅ gpt-4o model is available');
     } else {
       console.log('⚠️  gpt-4o model not found in available models');

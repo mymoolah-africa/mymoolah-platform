@@ -95,7 +95,7 @@
   - **Database Column Fix**: Fixed `getAccountDetails()` SQL query (changed `u.phone` to `u."phoneNumber"`)
   - **faqId Length Fix**: Changed from timestamp+random (23+ chars) to hash-based (exactly 20 chars)
   - **Query Routing**: Added pattern matching for tier questions ("change my tier" → TECHNICAL_SUPPORT with requiresAI: true)
-  - **Model Name Normalization**: Convert `SUPPORT_AI_MODEL` to lowercase (OpenAI expects "gpt-4o", not "GPT-4O")
+  - **Model Name Normalization**: Convert `SUPPORT_AI_MODEL` to lowercase (OpenAI expects "gpt-4o", not "GPT-4oO")
   - **Error Logging**: Added detailed logging for OpenAI call failures (model, userId, OpenAI status, API key presence)
 - **Testing Results**: ✅ All tests passing
   - First query: OpenAI called, answer stored successfully
@@ -505,7 +505,7 @@
   3. Consider extracting a `TRANSACTION_FEE_LABEL` constant so future work can’t drift back to provider-specific wording.
 
 ### **🤖 gpt-4o UPGRADE & CODEBASE SWEEP OPTIMIZATION - COMPLETE** ✅
-This session upgraded all OpenAI models from GPT-4/gpt-4o to gpt-4o, fixed API compatibility issues (max_tokens → max_completion_tokens, removed temperature parameters), added codebase sweep disable feature to save OpenAI tokens during development, improved server startup performance with delayed sweep, enhanced startup script to automatically refresh Google Cloud ADC credentials, and improved beneficiary service token handling.
+This session upgraded all OpenAI models from GPT-4o/gpt-4o to gpt-4o, fixed API compatibility issues (max_tokens → max_completion_tokens, removed temperature parameters), added codebase sweep disable feature to save OpenAI tokens during development, improved server startup performance with delayed sweep, enhanced startup script to automatically refresh Google Cloud ADC credentials, and improved beneficiary service token handling.
 
 ### **📋 gpt-4o UPGRADE & CODEBASE SWEEP OPTIMIZATION - COMPLETE** ✅
 - **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-4o` to `gpt-4o` (17 occurrences across 8 files)

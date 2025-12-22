@@ -39,7 +39,7 @@ MyMoolah Treasury Platform is a full-featured financial platform that provides:
 ### **🏆 Major Achievement: AI Support System COMPLETED**
 - ✅ **AI Support System**: Complete multi-language support platform
 - ✅ **Multi-Language Support**: English, Afrikaans, isiZulu, isiXhosa, Sesotho
-- ✅ **AI-Powered Chat**: OpenAI GPT-4 integration with context awareness
+- ✅ **AI-Powered Chat**: OpenAI GPT-4o integration with context awareness
 - ✅ **Dynamic Quick Actions**: AI-determined top 6 most used support categories
 - ✅ **Dedicated Support Page**: Award-winning UI/UX at `/support` route
 - ✅ **Voice Input Ready**: Microphone button for future speech-to-text integration
