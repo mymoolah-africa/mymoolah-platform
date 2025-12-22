@@ -476,6 +476,13 @@ class BankingGradeSupportService {
     if (lowerMessage.includes('password') || lowerMessage.includes('forgot') || lowerMessage.includes('reset')) {
       return { category: 'PASSWORD_SUPPORT', confidence: 0.95, requiresAI: false };
     }
+    
+    // Tier upgrade/change questions (English - pre-translated)
+    // Route to TECHNICAL_SUPPORT (requiresAI: true) for proper tier explanation
+    if ((lowerMessage.includes('tier') || lowerMessage.includes('bronze') || lowerMessage.includes('silver') || lowerMessage.includes('gold') || lowerMessage.includes('platinum')) && 
+        (lowerMessage.includes('upgrade') || lowerMessage.includes('change') || lowerMessage.includes('move to') || lowerMessage.includes('get to'))) {
+      return { category: 'TECHNICAL_SUPPORT', confidence: 0.95, requiresAI: true };
+    }
 
     // Phone / contact info changes
     if (
