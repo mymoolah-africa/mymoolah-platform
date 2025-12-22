@@ -1781,30 +1781,53 @@ If already in English, return the same text. Be accurate with South African lang
       const entries = await this.loadKnowledgeEntries();
       if (!entries.length) return null;
 
-      // Step 3: Try semantic search with embeddings
-      const semanticMatch = await this.semanticKnowledgeSearch(englishText, entries);
+      // Step 3: Try semantic search with embeddings (with language prioritization)
+      const semanticMatch = await this.semanticKnowledgeSearch(englishText, entries, detectedLang);
       if (semanticMatch) {
-        console.log(`✅ Semantic match found: similarity=${semanticMatch.similarity.toFixed(3)}`);
+        console.log(`✅ Semantic match found: similarity=${semanticMatch.similarity.toFixed(3)}, lang=${semanticMatch.entry.language}`);
         await semanticMatch.entry.increment('usageCount');
         return this.buildKnowledgeResponse(semanticMatch.entry, detectedLang);
       }
 
-      // Step 4: Fallback to exact match (case-insensitive)
+      // Step 4: Fallback to exact match (case-insensitive, prioritize user's language)
       const lowerMessage = normalizedMessage.toLowerCase();
-      const exactMatch = entries.find(entry => 
-        (entry.question || '').trim().toLowerCase() === lowerMessage ||
-        (entry.questionEnglish || '').trim().toLowerCase() === englishText.toLowerCase()
+      
+      // First, try to find exact match in user's language
+      let exactMatch = entries.find(entry => 
+        entry.language === detectedLang && (
+          (entry.question || '').trim().toLowerCase() === lowerMessage ||
+          (entry.questionEnglish || '').trim().toLowerCase() === englishText.toLowerCase()
+        )
       );
+      
+      // If not found, try English entries
+      if (!exactMatch) {
+        exactMatch = entries.find(entry => 
+          entry.language === 'en' && (
+            (entry.question || '').trim().toLowerCase() === lowerMessage ||
+            (entry.questionEnglish || '').trim().toLowerCase() === englishText.toLowerCase()
+          )
+        );
+      }
+      
+      // If still not found, try any language
+      if (!exactMatch) {
+        exactMatch = entries.find(entry => 
+          (entry.question || '').trim().toLowerCase() === lowerMessage ||
+          (entry.questionEnglish || '').trim().toLowerCase() === englishText.toLowerCase()
+        );
+      }
+      
       if (exactMatch) {
-        console.log(`✅ Exact match found`);
+        console.log(`✅ Exact match found: lang=${exactMatch.language}`);
         await exactMatch.increment('usageCount');
         return this.buildKnowledgeResponse(exactMatch, detectedLang);
       }
 
-      // Step 5: Fallback to keyword matching (legacy)
-      const keywordMatch = await this.keywordKnowledgeSearch(lowerMessage, entries);
+      // Step 5: Fallback to keyword matching (legacy, with language prioritization)
+      const keywordMatch = await this.keywordKnowledgeSearch(lowerMessage, entries, detectedLang);
       if (keywordMatch) {
-        console.log(`✅ Keyword match found`);
+        console.log(`✅ Keyword match found: lang=${keywordMatch.language}`);
         await keywordMatch.increment('usageCount');
         return this.buildKnowledgeResponse(keywordMatch, detectedLang);
       }
@@ -1820,8 +1843,9 @@ If already in English, return the same text. Be accurate with South African lang
   /**
    * 🧠 Semantic Knowledge Search using Embeddings
    * Returns best match if similarity > threshold
+   * Prioritizes entries in English (most content) and user's language
    */
-  async semanticKnowledgeSearch(englishText, entries) {
+  async semanticKnowledgeSearch(englishText, entries, userLanguage = 'en') {
     try {
       // Initialize embedding service if needed
       if (!this.embeddingInitialized) {
@@ -1837,14 +1861,21 @@ If already in English, return the same text. Be accurate with South African lang
       const scored = [];
       for (const entry of entries) {
         if (entry.embedding) {
-          const similarity = this.embeddingService.cosineSimilarity(queryEmbedding, entry.embedding);
+          let similarity = this.embeddingService.cosineSimilarity(queryEmbedding, entry.embedding);
           if (similarity >= this.semanticSearchThreshold) {
+            // Boost similarity for entries matching user's language
+            // Prioritize English entries (most complete) and exact language matches
+            if (entry.language === userLanguage) {
+              similarity += 0.10; // +10% boost for exact language match
+            } else if (entry.language === 'en') {
+              similarity += 0.05; // +5% boost for English (most complete answers)
+            }
             scored.push({ entry, similarity });
           }
         }
       }
 
-      // Sort by similarity and return best match
+      // Sort by boosted similarity and return best match
       scored.sort((a, b) => b.similarity - a.similarity);
       return scored[0] || null;
     } catch (error) {
@@ -1855,10 +1886,24 @@ If already in English, return the same text. Be accurate with South African lang
 
   /**
    * 🔍 Legacy Keyword-Based Search (Fallback)
+   * Prioritizes entries in user's language
    */
-  async keywordKnowledgeSearch(lowerMessage, entries) {
+  async keywordKnowledgeSearch(lowerMessage, entries, userLanguage = 'en') {
     const scored = entries
-      .map(entry => ({ entry, score: this.scoreKnowledgeMatch(entry, lowerMessage) }))
+      .map(entry => {
+        let score = this.scoreKnowledgeMatch(entry, lowerMessage);
+        
+        // Boost score for entries matching user's language
+        if (score > 0) {
+          if (entry.language === userLanguage) {
+            score += 10; // +10 points for exact language match
+          } else if (entry.language === 'en') {
+            score += 5; // +5 points for English (most complete answers)
+          }
+        }
+        
+        return { entry, score };
+      })
       .filter(item => item.score > 0)
       .sort((a, b) => b.score - a.score);
     
@@ -1872,8 +1917,14 @@ If already in English, return the same text. Be accurate with South African lang
     let responseMessage = entry.answer;
 
     // If user's language differs from KB entry language, translate
-    if (userLanguage !== 'en' && entry.language === 'en') {
+    // This handles BOTH directions: en→other AND other→en
+    if (userLanguage && entry.language && userLanguage !== entry.language) {
+      console.log(`🌍 Translating from ${entry.language} to ${userLanguage}`);
       responseMessage = await this.translateToLanguage(entry.answer, userLanguage);
+      if (!responseMessage || responseMessage === entry.answer) {
+        console.warn(`⚠️ Translation failed, using original answer`);
+        responseMessage = entry.answer;
+      }
     }
 
     return {
