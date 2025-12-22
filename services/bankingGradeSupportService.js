@@ -1557,7 +1557,7 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         u."firstName",
         u."lastName",
         u.email,
-        u.phone,
+        u."phoneNumber" as phone,
         u."kycStatus",
         u."idVerified",
         u."createdAt",
