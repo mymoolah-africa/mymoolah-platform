@@ -441,8 +441,14 @@ class BankingGradeSupportService {
       return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
     }
     
-    // Voucher Queries (English - pre-translated)
-    if (lowerMessage.includes('voucher') || lowerMessage.includes('airtime') || lowerMessage.includes('data') || lowerMessage.includes('electricity')) {
+    // Voucher Balance Queries (English - pre-translated)
+    // IMPORTANT: Only match BALANCE queries, not general voucher questions (let KB handle definitions)
+    if (lowerMessage.includes('voucher') && (lowerMessage.includes('balance') || lowerMessage.includes('how much') || lowerMessage.includes('summary'))) {
+      return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
+    }
+    
+    // Airtime/Data/Electricity Queries (always route to VOUCHER_MANAGEMENT for summary)
+    if (lowerMessage.includes('airtime') || lowerMessage.includes('data') || lowerMessage.includes('electricity')) {
       return { category: 'VOUCHER_MANAGEMENT', confidence: 0.95, requiresAI: false };
     }
 
@@ -1027,11 +1033,11 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         st: `Boemo ba hao ba KYC ke ${params.status} (Tier ${params.tier}).`
       },
       voucher_summary: {
-        en: `You have ${params.total} vouchers total: ${params.active} active (R${params.activeBalance}), ${params.pending} pending (R${params.pendingBalance}). Total value: R${params.totalValue}`,
-        af: `Jy het ${params.total} vouchers totaal: ${params.active} aktief (R${params.activeBalance}), ${params.pending} hangende (R${params.pendingBalance}). Totale waarde: R${params.totalValue}`,
-        zu: `Une-${params.total} ama-voucher esamba: ${params.active} asebenzayo (R${params.activeBalance}), ${params.pending} alindileyo (R${params.pendingBalance}). Inani lesamba: R${params.totalValue}`,
-        xh: `Une-${params.total} ama-voucher esamba: ${params.active} asebenzayo (R${params.activeBalance}), ${params.pending} alindileyo (R${params.pendingBalance}). Inani lesamba: R${params.totalValue}`,
-        st: `O na le ${params.total} li-voucher tsa kakaretso: ${params.active} tse sebetsang (R${params.activeBalance}), ${params.pending} tse lindileng (R${params.pendingBalance}). Boleng ba kakaretso: R${params.totalValue}`
+        en: `Your vouchers balance is R${params.totalValue}. You have ${params.total} vouchers: ${params.active} active (R${params.activeBalance}), ${params.pending} pending (R${params.pendingBalance}).`,
+        af: `Jou vouchers balans is R${params.totalValue}. Jy het ${params.total} vouchers: ${params.active} aktief (R${params.activeBalance}), ${params.pending} hangende (R${params.pendingBalance}).`,
+        zu: `Ibhalansi yakho yama-voucher yi-R${params.totalValue}. Une-${params.total} ama-voucher: ${params.active} asebenzayo (R${params.activeBalance}), ${params.pending} alindileyo (R${params.pendingBalance}).`,
+        xh: `Ibhalansi yakho yama-voucher yi-R${params.totalValue}. Une-${params.total} ama-voucher: ${params.active} asebenzayo (R${params.activeBalance}), ${params.pending} alindileyo (R${params.pendingBalance}).`,
+        st: `Balans ya hao ya li-voucher ke R${params.totalValue}. O na le ${params.total} li-voucher: ${params.active} tse sebetsang (R${params.activeBalance}), ${params.pending} tse lindileng (R${params.pendingBalance}).`
       },
       settlement_status: {
         en: `Your last settlement was ${params.status} on ${params.date}. Amount: ${params.amount}`,
