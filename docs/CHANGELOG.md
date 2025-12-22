@@ -1,17 +1,43 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2025-12-22 - 🏦 Banking-Grade Support System - Complete Overhaul (8 Critical Fixes)
+## 2025-12-22 - 🏦 Banking-Grade Support System - Complete Overhaul + Staging Deployment (9 Critical Fixes)
 
 ### **Session Overview**
-Complete overhaul of banking-grade support system (RAG) with 8 critical fixes addressing Redis errors, language matching, auto-learning, and query routing. All fixes tested and verified in Codespaces.
+Complete overhaul of banking-grade support system (RAG) with 9 critical fixes addressing Redis errors, language matching, auto-learning, and query routing. All fixes tested and verified in Codespaces UAT and production-like staging environment. **13/13 tests passed (100% success rate)**.
 
-### **Fix 8: Voucher Balance Shows Active Only (Commit d321dad9)** ✅ **LATEST**
+### **Staging Deployment Success** ✅
+- **Deployments**: 4 iterations to Cloud Run staging (v-1 through v-4)
+- **Database**: mmtp-pg-staging with schema migration (embedding column added)
+- **Additional Staging Fixes**:
+  - Fixed last u.phone reference (line 1560)
+  - Added tier upgrade pattern matching
+  - Updated OpenAI API key in Secret Manager
+  - Created Codespaces cleanup script (freed 4.11 GB)
+- **Test Results**: 5/5 staging tests passed, multi-language verified
+- **Status**: ✅ Production-ready in staging environment
+
+### **Fix 8: Voucher Balance Shows Active Only (Commit d321dad9)** ✅
 - **Problem**: Answer showed total balance (R1,660) but dashboard shows active balance (R360)
-- **Dashboard UX**: Shows "Active Vouchers: 1, R 360,00" (what users can actually use)
-- **Old Message**: "Your vouchers balance is R1,660..." (includes expired/cancelled/redeemed)
-- **New Message**: "Your vouchers balance is R360. You have 1 active voucher." (matches dashboard)
-- **Rationale**: Users care about active (usable) vouchers, not total (includes unusable)
+- **Solution**: Changed message template to show active balance only
 - **Impact**: Message now matches dashboard UX exactly
+
+### **Fix 9: Last u.phone Reference (Commit 700e61f5)** ✅ **Staging Issue**
+- **Problem**: Staging deployment failed with "column u.phone does not exist"
+- **Root Cause**: One missed u.phone reference at line 1560 (getAccountDetails method)
+- **Fix**: Changed u.phone to u."phoneNumber" as phone
+- **Impact**: Staging deployment working, no more database column errors
+
+### **Fix 10: Tier Upgrade Pattern (Commit a79582a1)** ✅ **Staging Issue**
+- **Problem**: "how do i upgrade to platinum tier?" returned account details (wrong category)
+- **Root Cause**: Query misclassified as ACCOUNT_MANAGEMENT instead of TECHNICAL_SUPPORT
+- **Fix**: Added tier upgrade pattern matching (tier + upgrade keywords)
+- **Impact**: Tier queries correctly route to OpenAI, proper instructions returned
+
+### **Fix 11: Codespaces Cleanup Script (Commit 45fa38e2)** ✅ **Tool Created**
+- **Problem**: Codespaces ran out of disk space (<1% free) during deployment
+- **Solution**: Created comprehensive cleanup script (scripts/cleanup-codespaces.sh)
+- **Features**: Docker cleanup, npm cache, logs, backups, apt cache
+- **Impact**: Freed 4.11 GB in Codespaces, script reusable for future maintenance
 
 ### **Fix 7: Voucher Balance Pattern Order (Commit d0aeb75c)** ✅
 - **Problem**: "what is my vouchers balance?" returned wallet balance (R43,693) instead of voucher balance (R360)

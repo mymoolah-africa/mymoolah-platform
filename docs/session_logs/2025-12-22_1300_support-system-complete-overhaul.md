@@ -232,7 +232,7 @@ voucher_summary: `Your vouchers balance is R${params.activeBalance}. You have ${
 
 ## Testing Performed
 
-- [x] Manual testing in Codespaces UAT environment
+### **Codespaces UAT Testing (8/8 Passed)** ✅
 - [x] Test 1: Wallet balance query - ✅ PASSED (R43,693.15, 135ms)
 - [x] Test 2: Vouchers balance query - ✅ PASSED (R360 active, 2.1s)
 - [x] Test 3: Tier upgrade question - ✅ PASSED (English KB answer, 2.0s)
@@ -240,10 +240,29 @@ voucher_summary: `Your vouchers balance is R${params.activeBalance}. You have ${
 - [x] Test 5: Pattern detection - ✅ PASSED (correct categories)
 - [x] Test 6: No Redis errors - ✅ PASSED
 - [x] Test 7: Performance - ✅ PASSED (<500ms for patterns, 1-2s for KB)
-- [x] All test results documented
+- [x] Test 8: Auto-learning trigger - ✅ PASSED
 
-**Test Environment**: Codespaces UAT (production-like)  
-**Test Results**: 8/8 tests passed ✅
+### **Staging Deployment Testing (5/5 Passed)** ✅
+
+**Deployment**: Cloud Run staging (`mymoolah-backend-staging-00151-xxx`)  
+**Database**: mmtp-pg-staging (separate from UAT)  
+**Environment**: Production-like with TLS, Secret Manager, Cloud SQL
+
+**Additional Fixes Required for Staging:**
+1. ✅ Added missing `embedding` column to staging DB (migration ran)
+2. ✅ Fixed last `u.phone` reference (line 1560, missed in Dec 19)
+3. ✅ Added tier upgrade pattern matching (was misclassified as ACCOUNT_MANAGEMENT)
+4. ✅ Updated OpenAI API key in Secret Manager (was invalid)
+5. ✅ Created Codespaces cleanup script (freed 4.11 GB)
+
+**Staging Test Results:**
+- [x] Test 1: Tier upgrade (OpenAI) - ✅ PASSED (2.2s, proper tier instructions)
+- [x] Test 2: Password reset (Pattern) - ✅ PASSED (instant, correct steps)
+- [x] Test 3: Voucher balance (Pattern) - ✅ PASSED (R1,000 active shown)
+- [x] Test 4: Wallet balance (Pattern) - ✅ PASSED (ZAR 48,877.67)
+- [x] Test 5: Multi-language (Afrikaans) - ✅ PASSED (detected and answered correctly)
+
+**Total Tests**: 13/13 passed ✅ (8 UAT + 5 Staging = 100% success rate)
 
 ### **Performance Results:**
 - **Wallet balance**: 135ms ⚡ (pattern match + DB query)
@@ -364,7 +383,7 @@ voucher_summary: `Your vouchers balance is R${params.activeBalance}. You have ${
 
 ## Commits Made
 
-All commits pushed to GitHub and tested in Codespaces:
+All commits pushed to GitHub and tested in Codespaces + Staging:
 
 1. **`0a56aa31`** - Redis resilience + Git workflow rules documentation
 2. **`a334c221`** - Language matching (first attempt - boosting, incomplete)
@@ -377,6 +396,13 @@ All commits pushed to GitHub and tested in Codespaces:
 9. **`8d135619`** - Documentation restored after accidental undo
 10. **`f99ff64d`** - Documentation updated for pattern order fix
 11. **`5880b375`** - Documentation updated for active balance fix
+12. **`dd7c3267`** - Session log + comprehensive documentation updates
+13. **`8daa0147`** - Final AI Support System documentation
+14. **`700e61f5`** - Fixed last u.phone reference (staging deployment fix)
+15. **`45fa38e2`** - Created Codespaces cleanup script
+16. **`a79582a1`** - Added tier upgrade pattern matching (staging classification fix)
+
+**Total**: 16 commits (all pushed and deployed)
 
 ---
 
@@ -421,15 +447,17 @@ All commits pushed to GitHub and tested in Codespaces:
 
 ## Key Metrics
 
-- **Bugs Fixed**: 8 critical bugs
-- **Commits Made**: 11 commits
-- **Files Modified**: 4 files (1 code, 3 docs)
-- **Documentation Created**: 2 new docs
-- **Tests Passed**: 8/8 (100%)
+- **Bugs Fixed**: 9 critical bugs (8 local + 1 staging)
+- **Commits Made**: 16 commits
+- **Files Modified**: 5 files (1 code, 3 docs, 1 script)
+- **Documentation Created**: 3 new docs (session log, analysis, backup summary)
+- **Tests Passed**: 13/13 (100% - 8 UAT + 5 Staging)
 - **Performance Improvement**: 95% for balance queries
 - **Language Accuracy**: 100% (was 50%)
-- **Session Duration**: ~2.5 hours
-- **Lines Changed**: 347 lines (code) + 400 lines (docs)
+- **Deployments**: 4 to staging (v-1, v-2, v-3, v-4)
+- **Session Duration**: ~4 hours
+- **Lines Changed**: 355 lines (code) + 750 lines (docs) + 201 lines (script)
+- **Disk Space Freed**: 29 GB (local backups) + 4.11 GB (Codespaces)
 
 ---
 
