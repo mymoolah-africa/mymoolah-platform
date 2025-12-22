@@ -318,6 +318,29 @@ class BankingGradeSupportService {
       // 🏦 Process Query
       const response = await this.executeQuery(queryType, message, userId, language, context);
       
+      // 🧠 Auto-Learning: Store AI-generated answers in knowledge base (non-blocking)
+      // Only store answers that required AI (TECHNICAL_SUPPORT, etc.)
+      if (queryType.requiresAI && response?.message) {
+        // Validate response is not an error/fallback
+        const isValidAnswer = response.message.length > 50 && 
+                              !response.message.includes('technical difficulties') &&
+                              !response.message.includes('experiencing difficulties');
+        
+        if (isValidAnswer) {
+          // Run async (don't await) to not slow down user response
+          this.storeAiAnswerInKnowledgeBase(
+            message, 
+            response.message, 
+            queryType.category, 
+            language
+          ).catch(err => {
+            console.warn('⚠️ Auto-learning failed (non-blocking):', err.message);
+          });
+          
+          console.log(`🧠 Auto-learning triggered for category: ${queryType.category}`);
+        }
+      }
+      
       // 💾 Cache Response
       await this.cacheResponse(queryId, userId, queryType, response);
       
