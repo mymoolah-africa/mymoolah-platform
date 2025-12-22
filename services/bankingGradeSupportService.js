@@ -296,14 +296,39 @@ class BankingGradeSupportService {
       // 📊 Audit Logging
       this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
       
+      // 🌍 SMART MULTI-LANGUAGE: Detect user's language for response localization
+      // This enables award-winning 11-language support with minimal OpenAI cost:
+      // - Simple patterns (80%): Use FREE templates in user's language
+      // - KB entries: Translate only if language mismatch
+      // - AI answers: Translate to user's language (selective)
+      let detectedLanguage = language; // Default to passed language
+      let englishMessage = message; // For processing
+      
+      // Only detect/translate if message appears to be non-English
+      // This saves OpenAI calls for English queries (majority of traffic)
+      const hasNonAscii = /[^\x00-\x7F]/.test(message);
+      const hasAfrikaansWords = /\b(wat|is|my|jou|die|en|van|vir|met)\b/i.test(message);
+      const appearsNonEnglish = hasNonAscii || hasAfrikaansWords;
+      
+      if (appearsNonEnglish) {
+        try {
+          const translation = await this.detectAndTranslate(message);
+          detectedLanguage = translation.language || language;
+          englishMessage = translation.englishText || message;
+          console.log(`🌍 Detected: ${detectedLanguage}, processing in English`);
+        } catch (error) {
+          console.warn('⚠️ Language detection failed, defaulting to English:', error.message);
+        }
+      }
+      
       // 🎯 CRITICAL: Check simple patterns FIRST (before expensive KB/semantic search)
       // This prevents KB FAQs from intercepting balance queries
-      const simplePattern = this.detectSimpleQuery(message);
+      const simplePattern = this.detectSimpleQuery(englishMessage);
       if (simplePattern) {
         console.log(`⚡ Simple pattern detected: ${simplePattern.category}, skipping KB search`);
         
-        // Execute query directly (faster, more accurate for balance queries)
-        const response = await this.executeQuery(simplePattern, message, userId, language, context);
+        // Execute query with DETECTED LANGUAGE for localized response (FREE templates!)
+        const response = await this.executeQuery(simplePattern, englishMessage, userId, detectedLanguage, context);
         
         // Cache the response
         await this.cacheResponse(queryId, userId, simplePattern, response);
@@ -316,7 +341,8 @@ class BankingGradeSupportService {
       }
       
       // 📚 Knowledge Base Lookup (only for non-simple queries)
-      const knowledgeResponse = await this.findKnowledgeBaseAnswer(message, language);
+      // Uses detected language for proper response translation
+      const knowledgeResponse = await this.findKnowledgeBaseAnswer(englishMessage, detectedLanguage);
       if (knowledgeResponse) {
         const responseTime = Date.now() - startTime;
         this.updatePerformanceMetrics(responseTime, true);
@@ -325,7 +351,8 @@ class BankingGradeSupportService {
       }
 
       // 🎯 Query Classification (for complex queries)
-      const queryType = await this.classifyQuery(message, userId);
+      // Use English message for classification
+      const queryType = await this.classifyQuery(englishMessage, userId);
       
       // 💾 Cache Check
       const cachedResponse = await this.getCachedResponse(queryId, userId, queryType);
@@ -335,10 +362,21 @@ class BankingGradeSupportService {
       }
       
       // 🏦 Process Query
-      const response = await this.executeQuery(queryType, message, userId, language, context);
+      // Pass detected language for localized responses
+      const response = await this.executeQuery(queryType, englishMessage, userId, detectedLanguage, context);
+      
+      // 🌍 For AI-generated answers, translate to user's language if needed
+      if (queryType.requiresAI && response?.message && detectedLanguage !== 'en') {
+        console.log(`🌍 Translating AI response from English to ${detectedLanguage}`);
+        const translated = await this.translateToLanguage(response.message, detectedLanguage);
+        if (translated) {
+          response.message = translated;
+          console.log(`✅ AI response translated to ${detectedLanguage}`);
+        }
+      }
       
       // 🧠 Auto-Learning: Store AI-generated answers in knowledge base (non-blocking)
-      // Only store answers that required AI (TECHNICAL_SUPPORT, etc.)
+      // Store in English (source language) for cross-language semantic search
       if (queryType.requiresAI && response?.message) {
         // Validate response is not an error/fallback
         const isValidAnswer = response.message.length > 50 && 
@@ -347,16 +385,17 @@ class BankingGradeSupportService {
         
         if (isValidAnswer) {
           // Run async (don't await) to not slow down user response
+          // Store original English message and English response for KB
           this.storeAiAnswerInKnowledgeBase(
-            message, 
-            response.message, 
+            englishMessage,  // Store English question
+            response.message,  // Store response (already in user's language after translation)
             queryType.category, 
-            language
+            detectedLanguage  // Store user's language for proper retrieval
           ).catch(err => {
             console.warn('⚠️ Auto-learning failed (non-blocking):', err.message);
           });
           
-          console.log(`🧠 Auto-learning triggered for category: ${queryType.category}`);
+          console.log(`🧠 Auto-learning triggered for category: ${queryType.category}, lang: ${detectedLanguage}`);
         }
       }
       
