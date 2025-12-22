@@ -511,8 +511,17 @@ class BankingGradeSupportService {
       return { category: 'TRANSACTION_HISTORY', confidence: 0.95, requiresAI: false };
     }
 
-    // Password / login help (English - pre-translated)
-    if (lowerMessage.includes('password') || lowerMessage.includes('forgot') || lowerMessage.includes('reset')) {
+    // Password / login help (English + native keywords - pre-translated)
+    // Expanded to catch translation variations and native language keywords
+    if (lowerMessage.includes('password') || 
+        lowerMessage.includes('forgot') || 
+        lowerMessage.includes('reset') ||
+        lowerMessage.includes('lost') && (lowerMessage.includes('password') || lowerMessage.includes('credentials') || lowerMessage.includes('login') || lowerMessage.includes('access')) ||
+        lowerMessage.includes('iphasiwedi') ||  // isiZulu/isiXhosa: password
+        lowerMessage.includes('wagwoord') ||    // Afrikaans: password
+        lowerMessage.includes('phasewete') ||   // Sesotho: password
+        lowerMessage.includes('phasiwete')      // Setswana: password
+    ) {
       return { category: 'PASSWORD_SUPPORT', confidence: 0.95, requiresAI: false };
     }
     
@@ -1826,12 +1835,22 @@ When answering fee questions, be specific about the tier system and always menti
         messages: [
           {
             role: 'system',
-            content: `You are a language detection and translation assistant. Analyze the input and return JSON:
+            content: `You are a language detection and translation assistant for a banking platform. Analyze the input and return JSON:
 {
   "language": "ISO 639-1 code (en, af, zu, xh, st, tn, nso, ve, ts, ss, nr)",
   "englishText": "English translation of the message",
   "confidence": 0.95
 }
+
+CRITICAL: When translating to English, preserve these exact keywords (don't use synonyms):
+- password (NOT credentials, passphrase, or login)
+- wallet (NOT account or purse)
+- balance (NOT amount or total)
+- transaction (NOT payment or transfer)
+- voucher (NOT coupon or ticket)
+- forgot (NOT lost unless the user said lost)
+- reset (NOT change unless the user said change)
+
 If already in English, return the same text. Be accurate with South African languages.`
           },
           { role: 'user', content: message }
