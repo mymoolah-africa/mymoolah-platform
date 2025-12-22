@@ -296,36 +296,33 @@ class BankingGradeSupportService {
       // 📊 Audit Logging
       this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
       
-      // 🌍 SMART MULTI-LANGUAGE: Detect user's language for response localization
-      // This enables award-winning 11-language support with minimal OpenAI cost:
-      // - Simple patterns (80%): Use FREE templates in user's language
-      // - KB entries: Translate only if language mismatch
-      // - AI answers: Translate to user's language (selective)
+      // 🌍 BANKING-GRADE: ALWAYS Detect Language First (Industry Best Practice)
+      // For Mojaloop/ISO20022 compliance and award-winning multi-language support
+      // Ensures consistent flow, proper audit trail, and accurate localization
       let detectedLanguage = language; // Default to passed language
       let englishMessage = message; // For processing
       
-      // Only detect/translate if message appears to be non-English
-      // This saves OpenAI calls for English queries (majority of traffic)
-      const hasNonAscii = /[^\x00-\x7F]/.test(message);
-      const hasAfrikaansWords = /\b(wat|is|my|jou|die|en|van|vir|met)\b/i.test(message);
-      const appearsNonEnglish = hasNonAscii || hasAfrikaansWords;
-      
-      if (appearsNonEnglish) {
-        try {
-          const translation = await this.detectAndTranslate(message);
-          detectedLanguage = translation.language || language;
-          englishMessage = translation.englishText || message;
-          console.log(`🌍 Detected: ${detectedLanguage}, processing in English`);
-        } catch (error) {
-          console.warn('⚠️ Language detection failed, defaulting to English:', error.message);
-        }
+      try {
+        // Always detect language for non-trivial queries (banking-grade standard)
+        // Cost: ~$0.0003 per query (negligible for enterprise platform)
+        // Benefit: Perfect language detection, clean audit trail, Mojaloop compliance
+        const translation = await this.detectAndTranslate(message);
+        detectedLanguage = translation.language || language;
+        englishMessage = translation.englishText || message;
+        console.log(`🌍 Banking-Grade Language Detection: ${detectedLanguage} → English for processing`);
+        console.log(`🔍 Translated: "${englishMessage}"`);
+      } catch (error) {
+        console.warn('⚠️ Language detection failed, defaulting to English:', error.message);
+        // Fallback: Use original message as English
+        englishMessage = message;
       }
       
       // 🎯 CRITICAL: Check simple patterns FIRST (before expensive KB/semantic search)
       // This prevents KB FAQs from intercepting balance queries
+      // Uses English translation for accurate pattern matching
       const simplePattern = this.detectSimpleQuery(englishMessage);
       if (simplePattern) {
-        console.log(`⚡ Simple pattern detected: ${simplePattern.category}, skipping KB search`);
+        console.log(`⚡ Pattern matched: ${simplePattern.category}, language: ${detectedLanguage}`);
         
         // Execute query with DETECTED LANGUAGE for localized response (FREE templates!)
         const response = await this.executeQuery(simplePattern, englishMessage, userId, detectedLanguage, context);
@@ -335,7 +332,14 @@ class BankingGradeSupportService {
         
         const responseTime = Date.now() - startTime;
         this.updatePerformanceMetrics(responseTime, true);
-        this.auditLog('QUERY_SUCCESS', { queryId, userId, queryType: simplePattern, responseTime, timestamp: new Date() });
+        this.auditLog('QUERY_SUCCESS', { 
+          queryId, 
+          userId, 
+          queryType: simplePattern, 
+          detectedLanguage,  // Audit trail for compliance
+          responseTime, 
+          timestamp: new Date() 
+        });
         
         return this.formatResponse(response, queryId);
       }
@@ -517,7 +521,9 @@ class BankingGradeSupportService {
         lowerMessage.includes('forgot') || 
         lowerMessage.includes('reset') ||
         lowerMessage.includes('lost') && (lowerMessage.includes('password') || lowerMessage.includes('credentials') || lowerMessage.includes('login') || lowerMessage.includes('access')) ||
-        lowerMessage.includes('iphasiwedi') ||  // isiZulu/isiXhosa: password
+        lowerMessage.includes('iphasiwedi') ||  // isiZulu: password
+        lowerMessage.includes('iphaswedi') ||   // isiXhosa: password (variant spelling)
+        lowerMessage.includes('igama') && lowerMessage.includes('eliyimfihlo') ||  // isiXhosa: secret word/password
         lowerMessage.includes('wagwoord') ||    // Afrikaans: password
         lowerMessage.includes('phasewete') ||   // Sesotho: password
         lowerMessage.includes('phasiwete')      // Setswana: password
