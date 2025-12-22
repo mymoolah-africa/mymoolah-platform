@@ -1053,11 +1053,11 @@ Return JSON: {"category": "EXACT_CATEGORY", "confidence": 0.95, "requiresAI": tr
         st: `Boemo ba hao ba KYC ke ${params.status} (Tier ${params.tier}).`
       },
       voucher_summary: {
-        en: `Your vouchers balance is R${params.totalValue}. You have ${params.total} vouchers: ${params.active} active (R${params.activeBalance}), ${params.pending} pending (R${params.pendingBalance}).`,
-        af: `Jou vouchers balans is R${params.totalValue}. Jy het ${params.total} vouchers: ${params.active} aktief (R${params.activeBalance}), ${params.pending} hangende (R${params.pendingBalance}).`,
-        zu: `Ibhalansi yakho yama-voucher yi-R${params.totalValue}. Une-${params.total} ama-voucher: ${params.active} asebenzayo (R${params.activeBalance}), ${params.pending} alindileyo (R${params.pendingBalance}).`,
-        xh: `Ibhalansi yakho yama-voucher yi-R${params.totalValue}. Une-${params.total} ama-voucher: ${params.active} asebenzayo (R${params.activeBalance}), ${params.pending} alindileyo (R${params.pendingBalance}).`,
-        st: `Balans ya hao ya li-voucher ke R${params.totalValue}. O na le ${params.total} li-voucher: ${params.active} tse sebetsang (R${params.activeBalance}), ${params.pending} tse lindileng (R${params.pendingBalance}).`
+        en: `Your vouchers balance is R${params.activeBalance}. You have ${params.active} active voucher${params.active !== 1 ? 's' : ''}.`,
+        af: `Jou vouchers balans is R${params.activeBalance}. Jy het ${params.active} aktiewe voucher${params.active !== 1 ? 's' : ''}.`,
+        zu: `Ibhalansi yakho yama-voucher yi-R${params.activeBalance}. Une-${params.active} ama-voucher asebenzayo.`,
+        xh: `Ibhalansi yakho yama-voucher yi-R${params.activeBalance}. Une-${params.active} ama-voucher asebenzayo.`,
+        st: `Balans ya hao ya li-voucher ke R${params.activeBalance}. O na le ${params.active} li-voucher tse sebetsang.`
       },
       settlement_status: {
         en: `Your last settlement was ${params.status} on ${params.date}. Amount: ${params.amount}`,
