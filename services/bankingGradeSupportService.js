@@ -296,7 +296,26 @@ class BankingGradeSupportService {
       // 📊 Audit Logging
       this.auditLog('QUERY_START', { queryId, userId, message, timestamp: new Date() });
       
-      // 📚 Knowledge Base Lookup
+      // 🎯 CRITICAL: Check simple patterns FIRST (before expensive KB/semantic search)
+      // This prevents KB FAQs from intercepting balance queries
+      const simplePattern = this.detectSimpleQuery(message);
+      if (simplePattern) {
+        console.log(`⚡ Simple pattern detected: ${simplePattern.category}, skipping KB search`);
+        
+        // Execute query directly (faster, more accurate for balance queries)
+        const response = await this.executeQuery(simplePattern, message, userId, language, context);
+        
+        // Cache the response
+        await this.cacheResponse(queryId, userId, simplePattern, response);
+        
+        const responseTime = Date.now() - startTime;
+        this.updatePerformanceMetrics(responseTime, true);
+        this.auditLog('QUERY_SUCCESS', { queryId, userId, queryType: simplePattern, responseTime, timestamp: new Date() });
+        
+        return this.formatResponse(response, queryId);
+      }
+      
+      // 📚 Knowledge Base Lookup (only for non-simple queries)
       const knowledgeResponse = await this.findKnowledgeBaseAnswer(message, language);
       if (knowledgeResponse) {
         const responseTime = Date.now() - startTime;
@@ -305,7 +324,7 @@ class BankingGradeSupportService {
         return this.formatResponse(knowledgeResponse, queryId);
       }
 
-      // 🎯 Query Classification
+      // 🎯 Query Classification (for complex queries)
       const queryType = await this.classifyQuery(message, userId);
       
       // 💾 Cache Check
