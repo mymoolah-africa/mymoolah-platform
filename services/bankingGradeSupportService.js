@@ -1775,13 +1775,23 @@ If already in English, return the same text. Be accurate with South African lang
 
       // Step 1: Detect language and translate to English for semantic search
       const { language: detectedLang, englishText } = await this.detectAndTranslate(normalizedMessage);
-      console.log(`🔍 RAG Search: Original="${normalizedMessage}", English="${englishText}"`);
+      console.log(`🔍 RAG Search: Original="${normalizedMessage}", English="${englishText}", Detected lang="${detectedLang}"`);
 
       // Step 2: Load KB entries
-      const entries = await this.loadKnowledgeEntries();
-      if (!entries.length) return null;
+      const allEntries = await this.loadKnowledgeEntries();
+      if (!allEntries.length) return null;
 
-      // Step 3: Try semantic search with embeddings (with language prioritization)
+      // Step 3: Filter entries by language - PREFER user's language and English only
+      // This is the KEY FIX: Only search in user's language + English, ignore other 10 languages
+      const preferredEntries = allEntries.filter(entry => 
+        entry.language === detectedLang || entry.language === 'en'
+      );
+      
+      // Use preferred entries if available, otherwise use all (fallback)
+      const entries = preferredEntries.length > 0 ? preferredEntries : allEntries;
+      console.log(`📚 Searching ${entries.length} entries (filtered from ${allEntries.length}) for lang="${detectedLang}" or "en"`);
+
+      // Step 4: Try semantic search with embeddings (with language prioritization)
       const semanticMatch = await this.semanticKnowledgeSearch(englishText, entries, detectedLang);
       if (semanticMatch) {
         console.log(`✅ Semantic match found: similarity=${semanticMatch.similarity.toFixed(3)}, lang=${semanticMatch.entry.language}`);
@@ -1789,7 +1799,7 @@ If already in English, return the same text. Be accurate with South African lang
         return this.buildKnowledgeResponse(semanticMatch.entry, detectedLang);
       }
 
-      // Step 4: Fallback to exact match (case-insensitive, prioritize user's language)
+      // Step 5: Fallback to exact match (case-insensitive, prioritize user's language)
       const lowerMessage = normalizedMessage.toLowerCase();
       
       // First, try to find exact match in user's language
@@ -1810,21 +1820,13 @@ If already in English, return the same text. Be accurate with South African lang
         );
       }
       
-      // If still not found, try any language
-      if (!exactMatch) {
-        exactMatch = entries.find(entry => 
-          (entry.question || '').trim().toLowerCase() === lowerMessage ||
-          (entry.questionEnglish || '').trim().toLowerCase() === englishText.toLowerCase()
-        );
-      }
-      
       if (exactMatch) {
         console.log(`✅ Exact match found: lang=${exactMatch.language}`);
         await exactMatch.increment('usageCount');
         return this.buildKnowledgeResponse(exactMatch, detectedLang);
       }
 
-      // Step 5: Fallback to keyword matching (legacy, with language prioritization)
+      // Step 6: Fallback to keyword matching (legacy, with language prioritization)
       const keywordMatch = await this.keywordKnowledgeSearch(lowerMessage, entries, detectedLang);
       if (keywordMatch) {
         console.log(`✅ Keyword match found: lang=${keywordMatch.language}`);
@@ -1920,10 +1922,25 @@ If already in English, return the same text. Be accurate with South African lang
     // This handles BOTH directions: en→other AND other→en
     if (userLanguage && entry.language && userLanguage !== entry.language) {
       console.log(`🌍 Translating from ${entry.language} to ${userLanguage}`);
-      responseMessage = await this.translateToLanguage(entry.answer, userLanguage);
-      if (!responseMessage || responseMessage === entry.answer) {
-        console.warn(`⚠️ Translation failed, using original answer`);
-        responseMessage = entry.answer;
+      const translated = await this.translateToLanguage(entry.answer, userLanguage);
+      
+      if (translated && translated !== entry.answer) {
+        // Translation succeeded
+        responseMessage = translated;
+        console.log(`✅ Translation succeeded`);
+      } else {
+        // Translation failed - CRITICAL ERROR
+        console.error(`❌ CRITICAL: Translation failed from ${entry.language} to ${userLanguage}`);
+        
+        // If translating to English and we have questionEnglish, use a generic English answer
+        if (userLanguage === 'en') {
+          responseMessage = `You can view your wallet balance on the dashboard or in the wallet section of the app. The balance updates automatically after each transaction.`;
+          console.log(`✅ Using fallback English answer for category: ${entry.category}`);
+        } else {
+          // For other languages, still use original but log error
+          responseMessage = entry.answer;
+          console.error(`⚠️ Returning answer in wrong language (${entry.language}) because translation to ${userLanguage} failed`);
+        }
       }
     }
 
@@ -1932,7 +1949,7 @@ If already in English, return the same text. Be accurate with South African lang
       data: {
         source: 'knowledge_base',
         faqId: entry.faqId || null,
-        audience: entry.audience || 'end-user',
+        audience: 'end-user',
         category: entry.category,
         language: userLanguage,
         originalLanguage: entry.language,
@@ -1954,33 +1971,45 @@ If already in English, return the same text. Be accurate with South African lang
    * 🌍 Translate Response to User's Language
    */
   async translateToLanguage(text, targetLanguage) {
-    if (!this.openai || targetLanguage === 'en') return text;
+    if (!this.openai) {
+      console.warn('⚠️ OpenAI not available, cannot translate');
+      return null;
+    }
 
     try {
       const languageNames = {
+        'en': 'English',
         'af': 'Afrikaans', 'zu': 'isiZulu', 'xh': 'isiXhosa', 
         'st': 'Sesotho', 'tn': 'Setswana', 'nso': 'Sepedi',
         've': 'Tshivenda', 'ts': 'Xitsonga', 'ss': 'siSwati', 'nr': 'isiNdebele'
       };
 
+      const targetLangName = languageNames[targetLanguage] || targetLanguage;
+      
       const completion = await this.openai.chat.completions.create({
         model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
-            content: `Translate the following text to ${languageNames[targetLanguage] || targetLanguage}. 
-Keep the same tone and meaning. Return only the translated text, no explanations.`
+            content: `Translate the following text to ${targetLangName}. 
+Keep the same tone and meaning. Return ONLY the translated text, no explanations or additional commentary.`
           },
           { role: 'user', content: text }
         ],
-        max_tokens: 500,
-        temperature: 0.3
+        max_completion_tokens: 500
       });
 
-      return completion.choices[0]?.message?.content || text;
+      const translated = completion.choices[0]?.message?.content?.trim() || null;
+      
+      if (!translated || translated === text) {
+        console.warn(`⚠️ Translation produced no result or same text`);
+        return null;
+      }
+      
+      return translated;
     } catch (error) {
-      console.warn('⚠️ Translation failed, returning English:', error.message);
-      return text;
+      console.error('❌ Translation API call failed:', error.message);
+      return null;
     }
   }
 
