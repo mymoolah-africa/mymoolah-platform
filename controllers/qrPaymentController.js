@@ -1002,6 +1002,39 @@ class QRPaymentController {
         });
       });
 
+      // Phase 2: Referral system integration (non-blocking)
+      setImmediate(async () => {
+        try {
+          const referralService = require('../services/referralService');
+          const referralEarningsService = require('../services/referralEarningsService');
+          
+          // Check if first transaction and activate referral
+          const isFirst = await referralService.isFirstTransaction(userId);
+          if (isFirst) {
+            await referralService.activateReferral(userId);
+            console.log(`✅ First transaction - referral activated for user ${userId}`);
+          }
+          
+          // Calculate referral earnings (only on successful payments with MM fee)
+          // Use net revenue (after VAT) - mmFeeExclVat is in Rand, convert to cents
+          if (result.mmFeeExclVat && result.mmFeeExclVat > 0) {
+            const earnings = await referralEarningsService.calculateEarnings({
+              userId,
+              id: result.transaction.id, // Use integer ID, not string transactionId
+              netRevenueCents: Math.round(result.mmFeeExclVat * 100), // Convert Rand to cents
+              type: 'qr_payment'
+            });
+            
+            if (earnings.length > 0) {
+              console.log(`💰 QR payment generated ${earnings.length} referral earnings`);
+            }
+          }
+        } catch (error) {
+          console.error('⚠️ Referral earnings failed (non-blocking):', error.message);
+          // Don't fail transaction if referral calculation fails
+        }
+      });
+
       // Process Zapper API call in background (truly non-blocking)
       // This allows us to return the response immediately without waiting for Zapper
       if (zapperDecoded && merchantInfo.isRealZapper) {

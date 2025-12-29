@@ -260,6 +260,40 @@ class ProductPurchaseService {
 
       await transaction.commit();
 
+      // Phase 2: Referral system integration (non-blocking)
+      if (supplierResult.success) {
+        setImmediate(async () => {
+          try {
+            const referralService = require('./referralService');
+            const referralEarningsService = require('./referralEarningsService');
+            
+            // Check if first transaction and activate referral
+            const isFirst = await referralService.isFirstTransaction(userId);
+            if (isFirst) {
+              await referralService.activateReferral(userId);
+              console.log(`✅ First transaction - referral activated for user ${userId}`);
+            }
+            
+            // Calculate referral earnings (only on successful purchases with commission)
+            if (pricing.commissionCents > 0) {
+              const earnings = await referralEarningsService.calculateEarnings({
+                userId,
+                id: walletTransaction.id, // Use integer ID, not string transactionId
+                netRevenueCents: pricing.commissionCents, // MM's commission from supplier
+                type: 'vas_purchase'
+              });
+              
+              if (earnings.length > 0) {
+                console.log(`💰 Created ${earnings.length} referral earnings from voucher purchase`);
+              }
+            }
+          } catch (error) {
+            console.error('⚠️ Referral earnings failed (non-blocking):', error.message);
+            // Don't fail transaction if referral calculation fails
+          }
+        });
+      }
+
       return {
         success: supplierResult.success,
         order: {

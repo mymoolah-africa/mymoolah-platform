@@ -115,12 +115,28 @@ class ReferralService {
       signupBonusAmount: 50.00 // R50 signup bonus
     });
     
-    // 5. Send SMS (will be implemented in Phase 3)
-    // const smsService = require('./smsService');
-    // await smsService.sendReferralInvite(userId, phoneNumber, code, language);
-    
-    // Update sent timestamp (will be done by SMS service)
-    // await referral.update({ smsSentAt: new Date() });
+    // 5. Send SMS via MyMobileAPI
+    try {
+      const smsService = require('./smsService');
+      if (smsService.isConfigured()) {
+        // Get referrer's name for personalization
+        const referrer = await User.findByPk(userId, {
+          attributes: ['firstName', 'lastName']
+        });
+        const referrerName = referrer 
+          ? `${referrer.firstName} ${referrer.lastName}`.trim() 
+          : 'A friend';
+        
+        await smsService.sendReferralInvite(referrerName, phoneNumber, code, language);
+        await referral.update({ smsSentAt: new Date() });
+        console.log(`✅ Referral SMS sent to ${phoneNumber}`);
+      } else {
+        console.warn('⚠️ SMS service not configured - referral invitation not sent');
+      }
+    } catch (smsError) {
+      console.error('⚠️ Failed to send referral SMS:', smsError.message);
+      // Don't fail referral creation if SMS fails
+    }
     
     // 6. Update user stats
     await this.incrementReferralCount(userId);
@@ -173,6 +189,27 @@ class ReferralService {
       referral: referral,
       bonusAmount: referral.signupBonusAmount
     };
+  }
+
+  /**
+   * Check if this is user's first transaction
+   * @param {number} userId - User ID
+   * @returns {Promise<boolean>} True if first transaction
+   */
+  async isFirstTransaction(userId) {
+    const { Transaction } = require('../models');
+    
+    const count = await Transaction.count({
+      where: {
+        userId,
+        status: 'completed',
+        type: {
+          [Op.in]: ['payment', 'qr_payment', 'voucher_purchase', 'purchase', 'send']
+        }
+      }
+    });
+    
+    return count === 0;
   }
 
   /**

@@ -1116,6 +1116,42 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         }
       }
 
+      // Phase 2: Referral system integration (non-blocking)
+      if (committedVasTransaction && committedLedgerTransaction) {
+        setImmediate(async () => {
+          try {
+            const referralService = require('../services/referralService');
+            const referralEarningsService = require('../services/referralEarningsService');
+            
+            // Check if first transaction and activate referral
+            const isFirst = await referralService.isFirstTransaction(req.user.id);
+            if (isFirst) {
+              await referralService.activateReferral(req.user.id);
+              console.log(`✅ First transaction - referral activated for user ${req.user.id}`);
+            }
+            
+            // Calculate referral earnings (only on successful purchases with commission)
+            // Get net commission from metadata (after VAT)
+            const netCommissionCents = committedVasTransaction.metadata?.commission?.netAmountCents;
+            if (netCommissionCents && netCommissionCents > 0) {
+              const earnings = await referralEarningsService.calculateEarnings({
+                userId: req.user.id,
+                id: committedLedgerTransaction.id, // Use integer ID, not string transactionId
+                netRevenueCents: netCommissionCents, // MM's net commission (after VAT)
+                type: 'vas_purchase'
+              });
+              
+              if (earnings.length > 0) {
+                console.log(`💰 Created ${earnings.length} referral earnings from VAS purchase`);
+              }
+            }
+          } catch (error) {
+            console.error('⚠️ Referral earnings failed (non-blocking):', error.message);
+            // Don't fail transaction if referral calculation fails
+          }
+        });
+      }
+
       // Prepare receipt data for notifications
       const receiptData = {
         transactionId: resultTransactionId || `TXN_${Date.now()}`,

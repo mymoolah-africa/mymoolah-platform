@@ -86,6 +86,21 @@ class AuthController {
         monthlySpent: 0.00
       });
       
+      // Phase 5: Process referral code if provided (non-blocking)
+      const { referralCode } = req.body;
+      if (referralCode) {
+        setImmediate(async () => {
+          try {
+            const referralService = require('../services/referralService');
+            await referralService.processSignup(referralCode, user.id);
+            console.log(`✅ Referral signup processed: ${referralCode} → User ${user.id}`);
+          } catch (refError) {
+            console.error('⚠️ Referral signup processing failed:', refError.message);
+            // Don't fail registration if referral processing fails
+          }
+        });
+      }
+      
       const token = jwt.sign(
         { id: user.id, email: user.email },
         process.env.JWT_SECRET,
