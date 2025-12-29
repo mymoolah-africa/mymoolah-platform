@@ -1,11 +1,18 @@
-**Last Updated**: November 5, 2025  
-**Version**: 2.4.4 - MobileMart Fulcrum Integration Updates
-**Status**: ✅ **MOBILEMART INTEGRATION UPDATED** ⚠️ **AWAITING CREDENTIAL VERIFICATION**
+**Last Updated**: December 29, 2025  
+**Version**: 2.4.37 - Multi-Level Referral System Complete
+**Status**: ✅ **REFERRAL SYSTEM LIVE** ✅ **MOBILEMART INTEGRATION UPDATED** ⚠️ **AWAITING CREDENTIAL VERIFICATION**
 
 ---
 
-## Recent Updates (2025-11-05)
+## Recent Updates
 
+### 2025-12-29 - Multi-Level Referral System
+- **Referral API Endpoints**: 6 new endpoints for referral program management
+- **SMS Integration**: MyMobileAPI integration for 11-language referral invitations
+- **Transaction Hooks**: Automatic referral earnings calculation on all transactions
+- **Daily Payouts**: Batch processing engine for referral earnings
+
+### 2025-11-05 - MobileMart Fulcrum Integration
 - **MobileMart Fulcrum Integration**: Updated with correct API endpoints and structure
 - **OAuth Endpoint**: Discovered correct endpoint `/connect/token`
 - **API Structure**: Updated to match MobileMart Fulcrum documentation
@@ -806,6 +813,164 @@ GET /api/v1/admin/analytics/suppliers
 - **Error Rate**: < 0.1% target error rate
 - **Throughput**: Designed for millions of transactions
 - **Scalability**: Horizontal scaling ready
+
+---
+
+## 💰 **REFERRAL SYSTEM API**
+
+### **Referral Program Endpoints**
+
+The referral system provides a complete API for managing multi-level referral programs with 4-level commission structure and monthly earning caps.
+
+#### **1. Get My Referral Code**
+```http
+GET /api/v1/referrals/my-code
+```
+
+**Description**: Retrieves the authenticated user's unique referral code.
+
+**Authentication**: Required (JWT token)
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "referralCode": "ABC123"
+}
+```
+
+#### **2. Send Referral Invite**
+```http
+POST /api/v1/referrals/send-invite
+```
+
+**Description**: Sends a referral invitation via SMS in the specified language.
+
+**Authentication**: Required (JWT token)
+
+**Request Body**:
+```json
+{
+  "phoneNumber": "+27123456789",
+  "language": "en"
+}
+```
+
+**Supported Languages**: `en`, `af`, `zu`, `xh`, `st`, `tn`, `nso`, `ve`, `ts`, `ss`, `nr`
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "message": "Referral invitation sent successfully"
+}
+```
+
+#### **3. Get Referral Stats**
+```http
+GET /api/v1/referrals/stats
+```
+
+**Description**: Retrieves the authenticated user's referral statistics.
+
+**Authentication**: Required (JWT token)
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "stats": {
+    "totalEarnedCents": 50000,
+    "totalPaidCents": 30000,
+    "pendingCents": 20000,
+    "monthEarnedCents": 15000,
+    "monthPaidCents": 10000,
+    "directReferrals": 5,
+    "totalNetwork": 25
+  }
+}
+```
+
+#### **4. Get My Earnings**
+```http
+GET /api/v1/referrals/earnings
+```
+
+**Description**: Retrieves the authenticated user's referral earnings for the current month.
+
+**Authentication**: Required (JWT token)
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "earnings": [
+    {
+      "id": 1,
+      "transactionId": 123,
+      "earnerUserId": 5,
+      "level": 1,
+      "earnedAmountCents": 400,
+      "status": "pending",
+      "createdAt": "2025-12-29T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### **5. Get My Network**
+```http
+GET /api/v1/referrals/network
+```
+
+**Description**: Retrieves the authenticated user's direct referral network.
+
+**Authentication**: Required (JWT token)
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "network": [
+    {
+      "userId": 10,
+      "referralCode": "XYZ789",
+      "activatedAt": "2025-12-28T15:30:00Z",
+      "totalTransactions": 5,
+      "totalEarnedCents": 2000
+    }
+  ]
+}
+```
+
+#### **6. Get Pending Earnings**
+```http
+GET /api/v1/referrals/pending
+```
+
+**Description**: Retrieves pending referral earnings that will be paid in the next payout batch.
+
+**Authentication**: Required (JWT token)
+
+**Response Example**:
+```json
+{
+  "success": true,
+  "pendingEarnings": {
+    "totalCents": 20000,
+    "count": 15,
+    "nextPayoutDate": "2025-12-30T02:00:00Z"
+  }
+}
+```
+
+### **Referral System Features**
+- **4-Level Commission**: 4% (1st), 3% (2nd), 2% (3rd), 1% (4th)
+- **Monthly Caps**: R10K (1st), R5K (2nd), R2.5K (3rd), R1K (4th)
+- **Activation**: After first transaction
+- **Payouts**: Daily batch processing at 2:00 AM SAST
+- **SMS Integration**: 11-language support via MyMobileAPI
+- **Fraud Prevention**: KYC verification, velocity limits, phone verification
 
 ---
 

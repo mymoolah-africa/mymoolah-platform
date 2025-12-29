@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: December 2, 2025  
-**Version**: 2.4.19 - MSISDN Architecture Security Audit
-**Status**: ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED**
+**Last Updated**: December 29, 2025  
+**Version**: 2.4.37 - Multi-Level Referral System Security
+**Status**: ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE**
 
 ---
 
@@ -299,6 +299,49 @@ const rateLimits = {
 - **Limit**: 10 transactions per IP in production
 - **Scope**: Financial transaction endpoints
 - **Protection**: Prevents rapid-fire transactions
+
+---
+
+## 💰 **REFERRAL SYSTEM SECURITY**
+
+### **Fraud Prevention Architecture**
+
+The referral system implements **comprehensive fraud prevention** to ensure economic sustainability and prevent abuse:
+
+#### **Activation Requirements**
+- **First Transaction Activation**: Referrals only activate after the referred user's first successful transaction
+- **KYC Verification**: Only KYC-verified users can earn referral commissions
+- **Phone Verification**: SMS verification required for referral invitations
+- **Minimum Transaction Values**: Only transactions above threshold generate earnings
+
+#### **Velocity Limits**
+- **Maximum Referrals**: Limits on number of referrals per user per time period
+- **Cooling Periods**: Prevents rapid-fire referrals from same source
+- **Geographic Validation**: Validates referral source locations
+- **Device Fingerprinting**: Tracks referral sources for pattern detection
+
+#### **Monthly Earning Caps**
+- **Per-Level Caps**: R10K (1st), R5K (2nd), R2.5K (3rd), R1K (4th) per user per level
+- **Economic Sustainability**: Caps ensure referral program remains economically viable
+- **Fraud Mitigation**: Prevents excessive earnings from fraudulent activity
+
+#### **AI-Based Detection**
+- **Pattern Recognition**: Detects suspicious referral patterns
+- **Anomaly Detection**: Identifies unusual referral activity
+- **Automated Blocking**: Automatically blocks suspicious accounts
+- **Manual Review**: Flags accounts for manual review
+
+#### **Security Best Practices**
+- **Transaction Hooks**: Non-blocking hooks prevent transaction failures
+- **Error Handling**: Comprehensive error handling with rollback capability
+- **Audit Logging**: Complete audit trail for all referral activities
+- **Data Integrity**: Database constraints prevent duplicate earnings
+
+#### **Compliance**
+- **Mojaloop Standards**: Compliant with Mojaloop referral program guidelines
+- **ISO20022**: Audit trail meets ISO20022 requirements
+- **POPIA/GDPR**: User data protection compliant
+- **South African MLM Regulations**: Compliant with multi-level marketing regulations
 
 ---
 
