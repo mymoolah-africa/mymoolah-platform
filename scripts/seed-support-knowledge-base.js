@@ -509,7 +509,7 @@ const initialKnowledgeBase = [
     audience: 'end-user',
     category: 'account_balance',
     question: 'Ke ka e bona jwang bhalanse ya wallet ya ka?',
-    answer: 'O ka e bona bhalanse ya wallet ya hao ho dashboard kapa karolo ya wallet ya app. Bhalanse e ntjhafatswa hang ka mor'a transaction e nngwe le e nngwe.',
+    answer: "O ka e bona bhalanse ya wallet ya hao ho dashboard kapa karolo ya wallet ya app. Bhalanse e ntjhafatswa hang ka mor'a transaction e nngwe le e nngwe.",
     keywords: 'bhalanse, sesotho, wallet',
     confidenceScore: 0.92,
     language: 'st',
