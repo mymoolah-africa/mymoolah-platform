@@ -10,6 +10,7 @@
 const referralService = require('../services/referralService');
 const referralEarningsService = require('../services/referralEarningsService');
 const referralPayoutService = require('../services/referralPayoutService');
+const { User } = require('../models');
 
 class ReferralController {
   /**
@@ -98,6 +99,10 @@ class ReferralController {
    * Send referral invitation via SMS
    * POST /api/v1/referrals/send-invite
    * POST /api/v1/referrals/invite
+   * 
+   * Validations:
+   * - Cannot refer yourself
+   * - Cannot refer existing MyMoolah users
    */
   async sendInvite(req, res) {
     try {
@@ -118,6 +123,49 @@ class ReferralController {
         return res.status(400).json({
           success: false,
           error: 'Invalid phone number format. Use format: 0821234567 or +27821234567'
+        });
+      }
+      
+      // Get current user to check self-referral
+      const currentUser = await User.findByPk(userId);
+      if (!currentUser) {
+        return res.status(401).json({
+          success: false,
+          error: 'User not found'
+        });
+      }
+      
+      // Check if trying to refer yourself
+      const currentUserPhone = this.normalizePhoneNumber(currentUser.phoneNumber);
+      if (currentUserPhone === phoneNumber) {
+        return res.status(400).json({
+          success: false,
+          errorCode: 'SELF_REFERRAL',
+          error: 'You cannot send a referral invite to yourself',
+          title: 'Self-Referral Not Allowed',
+          message: 'You cannot refer yourself. Please enter a different phone number to invite a friend or family member.'
+        });
+      }
+      
+      // Check if phone number belongs to existing user
+      const existingUser = await User.findOne({
+        where: { phoneNumber: phoneNumber }
+      });
+      
+      // Also check without + prefix in case stored differently
+      const phoneWithout27 = phoneNumber.replace('+27', '0');
+      const existingUserAlt = !existingUser ? await User.findOne({
+        where: { phoneNumber: phoneWithout27 }
+      }) : null;
+      
+      if (existingUser || existingUserAlt) {
+        const foundUser = existingUser || existingUserAlt;
+        return res.status(400).json({
+          success: false,
+          errorCode: 'USER_EXISTS',
+          error: 'This phone number is already registered with MyMoolah',
+          title: 'User Already Registered',
+          message: `This number is already an active MyMoolah user. They can start using the app right away! If they haven't signed up yet, ask them to check their messages.`
         });
       }
       

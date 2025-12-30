@@ -9,9 +9,20 @@ import {
   ChevronRight,
   Check,
   MessageCircle,
-  RefreshCw
+  RefreshCw,
+  AlertCircle,
+  UserCheck,
+  X
 } from 'lucide-react';
 import { apiService, ReferralDashboard } from '../services/apiService';
+
+// Modal for displaying referral errors
+interface ErrorModal {
+  show: boolean;
+  title: string;
+  message: string;
+  type: 'self_referral' | 'user_exists' | 'error';
+}
 
 // Format currency
 function formatCurrency(amount: number): string {
@@ -36,6 +47,7 @@ export function ReferralPage() {
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [errorModal, setErrorModal] = useState<ErrorModal>({ show: false, title: '', message: '', type: 'error' });
 
   // Fetch referral dashboard
   const fetchDashboard = async () => {
@@ -102,10 +114,35 @@ export function ReferralPage() {
       setInvitePhone('');
       setTimeout(() => setInviteSuccess(null), 3000);
     } catch (err: any) {
-      setInviteError(err.message || 'Failed to send invite');
+      // Check for specific error codes and show modal
+      const errorData = err.data || err;
+      
+      if (errorData.errorCode === 'SELF_REFERRAL') {
+        setErrorModal({
+          show: true,
+          title: errorData.title || 'Self-Referral Not Allowed',
+          message: errorData.message || 'You cannot send a referral invite to yourself.',
+          type: 'self_referral'
+        });
+        setInvitePhone('');
+      } else if (errorData.errorCode === 'USER_EXISTS') {
+        setErrorModal({
+          show: true,
+          title: errorData.title || 'User Already Registered',
+          message: errorData.message || 'This phone number is already registered with MyMoolah.',
+          type: 'user_exists'
+        });
+        setInvitePhone('');
+      } else {
+        setInviteError(err.message || 'Failed to send invite');
+      }
     } finally {
       setInviteLoading(false);
     }
+  };
+
+  const closeErrorModal = () => {
+    setErrorModal({ show: false, title: '', message: '', type: 'error' });
   };
 
   if (isLoading) {
@@ -452,6 +489,89 @@ export function ReferralPage() {
           </p>
         </div>
       </div>
+
+      {/* Error Modal */}
+      {errorModal.show && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#fff',
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '340px',
+            width: '100%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            textAlign: 'center'
+          }}>
+            {/* Icon based on error type */}
+            <div style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              backgroundColor: errorModal.type === 'user_exists' ? '#fef3c7' : '#fee2e2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px'
+            }}>
+              {errorModal.type === 'user_exists' ? (
+                <UserCheck style={{ width: '32px', height: '32px', color: '#d97706' }} />
+              ) : (
+                <AlertCircle style={{ width: '32px', height: '32px', color: '#dc2626' }} />
+              )}
+            </div>
+
+            {/* Title */}
+            <h3 style={{
+              fontSize: '18px',
+              fontWeight: '700',
+              color: '#1f2937',
+              marginBottom: '12px'
+            }}>
+              {errorModal.title}
+            </h3>
+
+            {/* Message */}
+            <p style={{
+              fontSize: '14px',
+              color: '#6b7280',
+              lineHeight: '1.5',
+              marginBottom: '24px'
+            }}>
+              {errorModal.message}
+            </p>
+
+            {/* Close button */}
+            <button
+              onClick={closeErrorModal}
+              style={{
+                backgroundColor: '#2D8CCA',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                padding: '12px 32px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                width: '100%'
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
