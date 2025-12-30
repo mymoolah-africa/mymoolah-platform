@@ -2,9 +2,36 @@
 
 ## **🧪 Testing Strategy Overview**
 
-**Last Updated**: December 30, 2025  
-**Testing Phase**: Production Ready - OTP System Deployed + All Integrations Complete  
+**Last Updated**: December 30, 2025 (11:15 SAST)  
+**Testing Phase**: Production Ready - SMS Integration Fixed + Referral System Tested  
 **Next Phase**: OTP User Acceptance Testing + Production Monitoring
+
+---
+
+## **📱 SMS & Referral Testing (December 30, 2025)** ✅ **WORKING**
+
+### **Referral SMS Testing Results**
+| Time | From | To | Status | Event ID |
+|------|------|-----|--------|----------|
+| 09:06:20 | Andre | HD (+27798569159) | ✅ Delivered | 16033562153 |
+| 09:09:11 | Andre | Leonie (+27784560585) | ✅ Delivered | 16033565075 |
+
+### **SMS Testing Command**
+```bash
+# Test SMS sending via curl
+curl -u "CLIENT_ID:API_SECRET" \
+  -X POST "https://rest.mymobileapi.com/bulkmessages" \
+  -H "Content-Type: application/json" \
+  -d '{"messages":[{"content":"Test message","destination":"27821234567"}]}'
+```
+
+### **Environment Config for UAT**
+```bash
+MYMOBILEAPI_URL=https://rest.mymobileapi.com
+MYMOBILEAPI_PATH=/bulkmessages
+REFERRAL_SKIP_VALIDATION=true  # UAT only
+REFERRAL_SIGNUP_URL=https://bit.ly/3YhGGlq
+```
 
 ---
 

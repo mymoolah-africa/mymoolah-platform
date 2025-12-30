@@ -1,14 +1,22 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: December 30, 2025  
-**Version**: 2.4.38 - OTP Password Reset & Phone Change  
-**Status**: ✅ **OTP SYSTEM COMPLETE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11-LANGUAGE SUPPORT** ✅ **BANKING-GRADE SECURITY**
+**Last Updated**: December 30, 2025 (11:15 SAST)  
+**Version**: 2.4.39 - SMS Integration Fixed & Referral System Tested  
+**Status**: ✅ **SMS WORKING** ✅ **REFERRAL SMS SENDING** ✅ **OTP SYSTEM COMPLETE** ✅ **11-LANGUAGE SUPPORT** ✅ **BANKING-GRADE SECURITY**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has completed OTP-based password reset and phone number change functionality, multi-level referral system, and 11-language support. The platform features banking-grade security with TLS 1.3, comprehensive input validation, rate limiting, and audit logging.
+The MyMoolah Treasury Platform has SMS integration fully working, referral system tested end-to-end, OTP-based password reset and phone number change functionality, and 11-language support. The platform features banking-grade security with TLS 1.3, comprehensive input validation, rate limiting, and audit logging.
+
+### **📱 SMS Integration & Referral Testing (December 30, 2025)** ✅ **WORKING**
+- **SMS Endpoint Fixed**: Corrected from `/bulksms` to `/bulkmessages`
+- **Referral SMS Tested**: Successfully sent invites (Andre → HD, Andre → Leonie)
+- **SMS Credits**: 17 remaining after testing
+- **Multi-User Validation**: Andre, Leonie, HD all tested successfully
+- **UAT Config**: `REFERRAL_SKIP_VALIDATION=true` for testing
+- **Status**: ✅ SMS working, ✅ Referral invites sending, ✅ Dashboard working
 
 ### **🔐 OTP System (December 30, 2025)** ✅ **DEPLOYED TO UAT**
 - **Password Reset**: Forgot password flow with 6-digit OTP via SMS

@@ -1,12 +1,17 @@
 # MyMoolah AI Support System
 
-**Last Updated**: December 30, 2025  
-**Version**: 2.4.38 - OTP & Referral Knowledge Base Update  
-**Status**: ✅ **PRODUCTION READY** ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT**
+**Last Updated**: December 30, 2025 (11:15 SAST)  
+**Version**: 2.4.39 - SMS Integration Fixed & Referral Tested  
+**Status**: ✅ **PRODUCTION READY** ✅ **SMS WORKING** ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT**
 
 ## 🚀 Overview
 
 The MyMoolah AI Support System is a **world-class, award-winning** multi-language support platform that provides instant, intelligent assistance to B2C users. Built with OpenAI GPT-4o integration, it offers context-aware responses, continuous learning, and a seamless user experience through an in-app chat interface.
+
+### **December 30, 2025 (11:15) - SMS Integration Fixed**
+- ✅ SMS endpoint corrected to `/bulkmessages`
+- ✅ Referral SMS sending verified working
+- ✅ Multi-user testing complete
 
 ### **December 30, 2025 - Knowledge Base Update**
 Updated with OTP and Referral system entries:

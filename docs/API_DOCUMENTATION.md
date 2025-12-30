@@ -1,10 +1,16 @@
-**Last Updated**: December 30, 2025  
-**Version**: 2.4.38 - OTP Password Reset & Phone Change Complete
-**Status**: ✅ **OTP SYSTEM LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **MOBILEMART INTEGRATION UPDATED**
+**Last Updated**: December 30, 2025 (11:15 SAST)  
+**Version**: 2.4.39 - SMS Integration Fixed & Referral Tested
+**Status**: ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SMS SENDING** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATION UPDATED**
 
 ---
 
 ## Recent Updates
+
+### 2025-12-30 (11:15) - SMS Integration Fix & Referral Testing
+- **SMS Endpoint Fixed**: Corrected from `/bulksms` to `/bulkmessages`
+- **Referral SMS Tested**: Successfully sent to HD and Leonie via MyMobileAPI
+- **Multi-User Validation**: Andre, Leonie, HD login and referral flows tested
+- **Environment**: UAT using `REFERRAL_SKIP_VALIDATION=true` for testing
 
 ### 2025-12-30 - OTP-Based Password Reset & Phone Change
 - **Password Reset Flow**: OTP-based secure password reset without authentication

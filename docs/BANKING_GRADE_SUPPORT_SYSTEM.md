@@ -1,12 +1,18 @@
 # 🏦 Banking-Grade Support System
 
-**Last Updated**: December 30, 2025  
-**Version**: 2.4.38 - OTP & Referral Knowledge Base Update  
-**Status**: ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: December 30, 2025 (11:15 SAST)  
+**Version**: 2.4.39 - SMS Integration Fixed & Referral Tested  
+**Status**: ✅ **SMS WORKING** ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT** ✅ **MOJALOOP COMPLIANT**
 
 ## Overview
 
 The MyMoolah Banking-Grade Support System is a **production-ready, enterprise-level AI support platform** designed for **millions of users** with **Mojaloop & ISO20022 compliance**. This system replaces the previous demo implementation with a **banking-grade architecture** that meets global financial standards.
+
+### **December 30, 2025 (11:15) - SMS Integration Fixed**
+SMS integration with MyMobileAPI/SMS South Africa now fully operational:
+- ✅ SMS endpoint fixed from `/bulksms` to `/bulkmessages`
+- ✅ Referral SMS tested and working (2 successful deliveries)
+- ✅ Multi-user testing validated (Andre, Leonie, HD)
 
 ### **December 30, 2025 - Knowledge Base Update**
 Updated with OTP and Referral system support entries:
