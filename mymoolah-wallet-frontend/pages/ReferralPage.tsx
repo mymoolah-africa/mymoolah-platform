@@ -18,12 +18,12 @@ function formatCurrency(amount: number): string {
   return `R ${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// Commission rates by level
+// Commission rates by level (caps disabled for now)
 const COMMISSION_RATES = [
-  { level: 1, rate: '4%', cap: 'R10,000/month' },
-  { level: 2, rate: '3%', cap: 'R5,000/month' },
-  { level: 3, rate: '2%', cap: 'R2,500/month' },
-  { level: 4, rate: '1%', cap: 'R1,000/month' },
+  { level: 1, rate: '4%' },
+  { level: 2, rate: '3%' },
+  { level: 3, rate: '2%' },
+  { level: 4, rate: '1%' },
 ];
 
 export function ReferralPage() {
@@ -330,7 +330,7 @@ export function ReferralPage() {
         <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '16px' }}>
           Your Network
         </h3>
-        {COMMISSION_RATES.map(({ level, rate, cap }) => (
+        {COMMISSION_RATES.map(({ level, rate }) => (
           <div 
             key={level}
             style={{
@@ -361,7 +361,7 @@ export function ReferralPage() {
                   Level {level}
                 </p>
                 <p style={{ fontSize: '12px', color: '#6b7280' }}>
-                  {rate} commission • {cap}
+                  {rate} commission on their transactions
                 </p>
               </div>
             </div>

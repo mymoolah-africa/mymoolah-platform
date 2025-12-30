@@ -19,13 +19,15 @@
 const { ReferralChain, ReferralEarning, UserReferralStats } = require('../models');
 const { Op } = require('sequelize');
 
-// Monthly caps per level (in cents)
-const MONTHLY_CAPS = {
-  1: 1000000, // R10,000
-  2: 500000,  // R5,000
-  3: 250000,  // R2,500
-  4: 100000   // R1,000
-};
+// Monthly caps per level (in cents) - DISABLED FOR NOW
+// May be re-enabled in future for sustainability
+// const MONTHLY_CAPS = {
+//   1: 1000000, // R10,000
+//   2: 500000,  // R5,000
+//   3: 250000,  // R2,500
+//   4: 100000   // R1,000
+// };
+const MONTHLY_CAPS_ENABLED = false; // Toggle to re-enable caps
 
 // Commission percentages per level
 const COMMISSION_RATES = {
@@ -85,31 +87,33 @@ class ReferralEarningsService {
       const levelField = `level${level}MonthCents`;
       const currentMonthCents = stats[levelField] || 0;
       
-      // Apply monthly cap
-      const cap = MONTHLY_CAPS[level];
-      const remainingCapCents = cap - currentMonthCents;
-      
       let finalEarningCents = baseEarningCents;
       let capped = false;
       let originalAmountCents = null;
       
-      if (remainingCapCents <= 0) {
-        // Already hit cap this month
-        finalEarningCents = 0;
-        capped = true;
-        originalAmountCents = baseEarningCents;
-      } else if (baseEarningCents > remainingCapCents) {
-        // Would exceed cap, apply limit
-        finalEarningCents = remainingCapCents;
-        capped = true;
-        originalAmountCents = baseEarningCents;
-      }
-      
-      // Skip if no earning (already capped)
-      if (finalEarningCents <= 0) {
-        console.log(`⚠️ User ${earnerUserId} Level ${level} already capped this month`);
-        continue;
-      }
+      // Monthly caps are DISABLED for now - may re-enable later
+      // if (MONTHLY_CAPS_ENABLED) {
+      //   const cap = MONTHLY_CAPS[level];
+      //   const remainingCapCents = cap - currentMonthCents;
+      //   
+      //   if (remainingCapCents <= 0) {
+      //     // Already hit cap this month
+      //     finalEarningCents = 0;
+      //     capped = true;
+      //     originalAmountCents = baseEarningCents;
+      //   } else if (baseEarningCents > remainingCapCents) {
+      //     // Would exceed cap, apply limit
+      //     finalEarningCents = remainingCapCents;
+      //     capped = true;
+      //     originalAmountCents = baseEarningCents;
+      //   }
+      //   
+      //   // Skip if no earning (already capped)
+      //   if (finalEarningCents <= 0) {
+      //     console.log(`⚠️ User ${earnerUserId} Level ${level} already capped this month`);
+      //     continue;
+      //   }
+      // }
       
       // Calculate cumulative for this earning
       const newCumulativeCents = currentMonthCents + finalEarningCents;
@@ -131,12 +135,11 @@ class ReferralEarningsService {
         transactionType,
         metadata: {
           chainDepth: chain.chainDepth,
-          capInfo: {
-            cap,
+          capsEnabled: MONTHLY_CAPS_ENABLED,
+          monthStats: {
             currentMonth: currentMonthCents,
             thisEarning: finalEarningCents,
-            newTotal: newCumulativeCents,
-            remaining: cap - newCumulativeCents
+            newTotal: newCumulativeCents
           }
         }
       });
