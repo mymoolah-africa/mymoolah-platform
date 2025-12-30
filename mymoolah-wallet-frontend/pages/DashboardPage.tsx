@@ -9,7 +9,9 @@ import { getTransactionIcon } from '../utils/transactionIcons.tsx';
 
 // Import icons directly from lucide-react (for other UI elements)
 import { 
-  ChevronRight
+  ChevronRight,
+  Users,
+  Gift
 } from 'lucide-react';
 
 // Format currency function
@@ -582,6 +584,91 @@ export function DashboardPage() {
               {formatCurrency(openVouchersValue)}
             </span>
           </div>
+        </button>
+
+        {/* Referral Card - NEW */}
+        <button
+          onClick={() => navigate('/referrals')}
+          style={{
+            width: '100%',
+            backgroundColor: '#f0f9ff',
+            border: '2px solid #2D8CCA',
+            borderRadius: 'var(--mobile-border-radius)',
+            padding: '16px 20px',
+            marginBottom: '16px',
+            boxShadow: 'var(--mobile-shadow)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            textAlign: 'left'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.backgroundColor = '#e0f2fe';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(45, 140, 202, 0.2)';
+            e.currentTarget.style.transform = 'translateY(-1px)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.backgroundColor = '#f0f9ff';
+            e.currentTarget.style.boxShadow = 'var(--mobile-shadow)';
+            e.currentTarget.style.transform = 'translateY(0)';
+          }}
+          aria-label="View referral program"
+        >
+          {/* Left side: Icon */}
+          <div 
+            style={{
+              width: '44px',
+              height: '44px',
+              backgroundColor: '#2D8CCA',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginRight: '12px',
+              flexShrink: 0
+            }}
+          >
+            <Gift style={{ width: '24px', height: '24px', color: '#ffffff' }} />
+          </div>
+
+          {/* Center: Info */}
+          <div style={{ flex: 1 }}>
+            <h3 
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: 'clamp(1rem, 2.5vw, 1.125rem)',
+                fontWeight: 'var(--font-weight-bold)',
+                color: '#1f2937',
+                marginBottom: '2px',
+                margin: '0 0 2px 0'
+              }}
+            >
+              Earn with Referrals
+            </h3>
+            <p 
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: 'var(--mobile-font-small)',
+                fontWeight: 'var(--font-weight-normal)',
+                color: '#6b7280',
+                margin: '0'
+              }}
+            >
+              Invite friends • Earn up to 4% commission
+            </p>
+          </div>
+
+          {/* Right side: Arrow */}
+          <ChevronRight 
+            style={{ 
+              width: '20px', 
+              height: '20px', 
+              color: '#2D8CCA',
+              flexShrink: 0
+            }} 
+          />
         </button>
 
         {/* Recent Transactions Card - AWARD-WINNING DESIGN WITH ICONS */}

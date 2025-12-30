@@ -819,6 +819,162 @@ class ApiService {
     });
     return response.data!;
   }
+
+  // ============================================
+  // Referral System API Methods
+  // ============================================
+
+  /**
+   * Get user's referral dashboard data
+   */
+  async getReferralDashboard(): Promise<ReferralDashboard> {
+    const response = await this.request<ReferralDashboard>('/api/v1/referrals/dashboard');
+    return response.data!;
+  }
+
+  /**
+   * Get user's referral code
+   */
+  async getReferralCode(): Promise<{ referralCode: string; shareUrl: string }> {
+    const response = await this.request<{
+      referralCode: string;
+      shareUrl: string;
+    }>('/api/v1/referrals/code');
+    return response.data!;
+  }
+
+  /**
+   * Get user's referral network (referrals by level)
+   */
+  async getReferralNetwork(): Promise<ReferralNetwork> {
+    const response = await this.request<ReferralNetwork>('/api/v1/referrals/network');
+    return response.data!;
+  }
+
+  /**
+   * Get user's referral earnings history
+   */
+  async getReferralEarnings(params?: { page?: number; limit?: number }): Promise<ReferralEarningsResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    const queryString = queryParams.toString();
+    const url = `/api/v1/referrals/earnings${queryString ? `?${queryString}` : ''}`;
+    const response = await this.request<ReferralEarningsResponse>(url);
+    return response.data!;
+  }
+
+  /**
+   * Get user's payout history
+   */
+  async getReferralPayouts(params?: { page?: number; limit?: number }): Promise<ReferralPayoutsResponse> {
+    const queryParams = new URLSearchParams();
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+    const queryString = queryParams.toString();
+    const url = `/api/v1/referrals/payouts${queryString ? `?${queryString}` : ''}`;
+    const response = await this.request<ReferralPayoutsResponse>(url);
+    return response.data!;
+  }
+
+  /**
+   * Send referral invite via SMS
+   */
+  async sendReferralInvite(phoneNumber: string, language?: string): Promise<{ message: string; success: boolean }> {
+    const response = await this.request<{
+      message: string;
+      success: boolean;
+    }>('/api/v1/referrals/invite', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber, language: language || 'en' }),
+    });
+    return response.data!;
+  }
+}
+
+// Referral Types
+export interface ReferralDashboard {
+  referralCode: string;
+  shareUrl: string;
+  stats: {
+    totalReferrals: number;
+    activeReferrals: number;
+    pendingReferrals: number;
+    totalEarnings: number;
+    monthlyEarnings: number;
+    pendingEarnings: number;
+    referralsByLevel: {
+      level1: number;
+      level2: number;
+      level3: number;
+      level4: number;
+    };
+  };
+  recentEarnings: Array<{
+    id: number;
+    amount: number;
+    level: number;
+    status: string;
+    createdAt: string;
+    referralName?: string;
+  }>;
+}
+
+export interface ReferralNetwork {
+  levels: {
+    level1: ReferralInfo[];
+    level2: ReferralInfo[];
+    level3: ReferralInfo[];
+    level4: ReferralInfo[];
+  };
+  totals: {
+    level1: number;
+    level2: number;
+    level3: number;
+    level4: number;
+  };
+}
+
+export interface ReferralInfo {
+  id: number;
+  name: string;
+  joinedAt: string;
+  isActive: boolean;
+  totalTransactions: number;
+  totalEarnings: number;
+}
+
+export interface ReferralEarningsResponse {
+  earnings: Array<{
+    id: number;
+    amount: number;
+    level: number;
+    status: string;
+    transactionId: number;
+    createdAt: string;
+  }>;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface ReferralPayoutsResponse {
+  payouts: Array<{
+    id: number;
+    amount: number;
+    status: string;
+    processedAt: string;
+    transactionId?: number;
+  }>;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
 }
 
 // Export singleton instance

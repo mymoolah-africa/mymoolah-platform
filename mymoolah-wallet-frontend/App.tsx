@@ -23,6 +23,7 @@ import { RequestMoneyPage } from './pages/RequestMoneyPage';
 import { ServicesPage } from './pages/ServicesPage';
 import { SupportPage } from './pages/SupportPage';
 import FeedbackPage from './pages/FeedbackPage';
+import { ReferralPage } from './pages/ReferralPage';
 
 // Overlay Components
 import { AirtimeDataOverlay } from './components/overlays/AirtimeDataOverlay';
@@ -50,7 +51,7 @@ function AppContent() {
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
-  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/vouchers-overlay'];
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/referrals', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/vouchers-overlay'];
   const showTopBanner = pagesWithTopBanner.includes(location.pathname);
 
   return (
@@ -110,6 +111,7 @@ function AppContent() {
             <Route path="/services" element={<ProtectedRoute><ServicesPage /></ProtectedRoute>} />
             <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
             <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
+            <Route path="/referrals" element={<ProtectedRoute><ReferralPage /></ProtectedRoute>} />
             <Route path="/electricity" element={<ProtectedRoute><div>Electricity Page - Coming Soon</div></ProtectedRoute>} />
             <Route path="/bill-payments" element={<ProtectedRoute><div>Bill Payments Page - Coming Soon</div></ProtectedRoute>} />
             
