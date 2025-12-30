@@ -16,6 +16,13 @@ const auth = require('../middleware/auth');
 router.use(auth);
 
 /**
+ * @route   GET /api/v1/referrals/dashboard
+ * @desc    Get combined referral dashboard data (code, stats, recent earnings)
+ * @access  Private
+ */
+router.get('/dashboard', referralController.getDashboard.bind(referralController));
+
+/**
  * @route   GET /api/v1/referrals/my-code
  * @desc    Get user's referral code
  * @access  Private

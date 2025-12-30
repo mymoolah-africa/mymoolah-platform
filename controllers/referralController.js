@@ -13,6 +13,64 @@ const referralPayoutService = require('../services/referralPayoutService');
 
 class ReferralController {
   /**
+   * Get combined referral dashboard data
+   * GET /api/v1/referrals/dashboard
+   */
+  async getDashboard(req, res) {
+    try {
+      const userId = req.user.id;
+      
+      // Get referral code
+      const code = await referralService.generateReferralCode(userId);
+      
+      // Get stats
+      const stats = await referralService.getUserStats(userId);
+      
+      // Get pending earnings
+      const pending = await referralPayoutService.getPendingEarnings(userId);
+      
+      // Get recent earnings (last 10)
+      const earnings = await referralEarningsService.getMonthEarnings(userId);
+      const recentEarnings = earnings.earnings.slice(0, 10).map(e => ({
+        id: e.id,
+        amount: e.earnedAmountCents / 100,
+        level: e.level,
+        transactionType: e.transactionType,
+        createdAt: e.createdAt,
+        status: e.status
+      }));
+      
+      res.json({
+        success: true,
+        referralCode: code,
+        shareUrl: `https://app.mymoolah.africa/signup?ref=${code}`,
+        stats: {
+          totalReferrals: stats.totalReferrals || 0,
+          activeReferrals: stats.activeReferrals || 0,
+          pendingReferrals: (stats.totalReferrals || 0) - (stats.activeReferrals || 0),
+          totalEarnings: (stats.totalEarnedCents || 0) / 100,
+          monthlyEarnings: (stats.monthEarnedCents || 0) / 100,
+          pendingEarnings: pending.totalRand,
+          referralsByLevel: {
+            level1: stats.level1Count || 0,
+            level2: stats.level2Count || 0,
+            level3: stats.level3Count || 0,
+            level4: stats.level4Count || 0
+          }
+        },
+        recentEarnings
+      });
+    } catch (error) {
+      console.error('Error getting referral dashboard:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to get referral dashboard',
+        message: error.message
+      });
+    }
+  }
+
+  /**
    * Get user's referral code
    * GET /api/v1/referrals/my-code
    */
