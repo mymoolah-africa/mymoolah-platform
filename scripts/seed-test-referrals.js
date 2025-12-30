@@ -27,36 +27,63 @@ async function seedTestReferrals() {
   try {
     console.log('\n🌱 Seeding Test Referral Data...\n');
 
-    // Find users by name (partial match)
-    const findUser = async (namePart) => {
-      const user = await User.findOne({
-        where: sequelize.where(
-          sequelize.fn('LOWER', sequelize.col('name')),
+    // Find users by first name and last name (partial match)
+    const findUser = async (firstName, lastName) => {
+      const whereClause = {};
+      if (firstName) {
+        whereClause.firstName = sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('firstName')),
           'LIKE',
-          `%${namePart.toLowerCase()}%`
-        ),
+          `%${firstName.toLowerCase()}%`
+        );
+      }
+      if (lastName) {
+        whereClause.lastName = sequelize.where(
+          sequelize.fn('LOWER', sequelize.col('lastName')),
+          'LIKE',
+          `%${lastName.toLowerCase()}%`
+        );
+      }
+      const user = await User.findOne({
+        where: whereClause,
         transaction
       });
       return user;
     };
 
-    // Find all users
-    console.log('📋 Finding users...');
+    // First, list all users to see what's available
+    console.log('📋 Listing all users in database...\n');
+    const allUsers = await User.findAll({
+      attributes: ['id', 'firstName', 'lastName', 'phoneNumber'],
+      order: [['firstName', 'ASC']],
+      transaction
+    });
     
-    const andre = await findUser('Andre Botes');
-    const leonie = await findUser('Leonie');
-    const andreJr = await findUser('Andre Jr');
-    const hd = await findUser('Hendrik') || await findUser('HD');
-    const neil = await findUser('Neil');
-    const denise = await findUser('Denise');
+    allUsers.forEach(u => {
+      console.log(`  ID ${u.id}: ${u.firstName} ${u.lastName} (${u.phoneNumber})`);
+    });
+    console.log('');
+
+    // Find users
+    console.log('📋 Finding specific users...');
+    
+    const andre = await findUser('Andre', 'Botes');
+    const leonie = await findUser('Leonie', 'Botes');
+    const andreJr = await findUser('Andre Jr', 'Botes') || await findUser('Andre', 'Jr');
+    const hd = await findUser('Hendrik', 'Botes') || await findUser('HD', 'Botes');
+    const neil = await findUser('Neil', 'Botes');
+    const denise = await findUser('Denise', 'Botes');
+
+    // Helper to get full name
+    const getFullName = (user) => user ? `${user.firstName} ${user.lastName}` : null;
 
     // Log found users
-    console.log('  Andre Botes:', andre ? `ID ${andre.id}` : '❌ NOT FOUND');
-    console.log('  Leonie Botes:', leonie ? `ID ${leonie.id}` : '❌ NOT FOUND');
-    console.log('  Andre Jr Botes:', andreJr ? `ID ${andreJr.id}` : '❌ NOT FOUND');
-    console.log('  HD Botes:', hd ? `ID ${hd.id}` : '❌ NOT FOUND');
-    console.log('  Neil Botes:', neil ? `ID ${neil.id}` : '❌ NOT FOUND');
-    console.log('  Denise Botes:', denise ? `ID ${denise.id}` : '❌ NOT FOUND');
+    console.log('  Andre Botes:', andre ? `ID ${andre.id} (${getFullName(andre)})` : '❌ NOT FOUND');
+    console.log('  Leonie Botes:', leonie ? `ID ${leonie.id} (${getFullName(leonie)})` : '❌ NOT FOUND');
+    console.log('  Andre Jr Botes:', andreJr ? `ID ${andreJr.id} (${getFullName(andreJr)})` : '❌ NOT FOUND');
+    console.log('  HD Botes:', hd ? `ID ${hd.id} (${getFullName(hd)})` : '❌ NOT FOUND');
+    console.log('  Neil Botes:', neil ? `ID ${neil.id} (${getFullName(neil)})` : '❌ NOT FOUND');
+    console.log('  Denise Botes:', denise ? `ID ${denise.id} (${getFullName(denise)})` : '❌ NOT FOUND');
 
     // Check if all users exist
     const users = { andre, leonie, andreJr, hd, neil, denise };
@@ -65,18 +92,8 @@ async function seedTestReferrals() {
       .map(([name]) => name);
 
     if (missingUsers.length > 0) {
-      console.log('\n⚠️  Some users not found. Let me list all users in the database:\n');
-      
-      const allUsers = await User.findAll({
-        attributes: ['id', 'name', 'phoneNumber'],
-        order: [['name', 'ASC']],
-        transaction
-      });
-      
-      console.log('📋 All users in database:');
-      allUsers.forEach(u => {
-        console.log(`  ID ${u.id}: ${u.name} (${u.phoneNumber})`);
-      });
+      console.log('\n⚠️  Some users not found: ' + missingUsers.join(', '));
+      console.log('Please create these users first or adjust the search criteria.');
       
       await transaction.rollback();
       console.log('\n❌ Please check user names and try again.');
@@ -127,7 +144,7 @@ async function seedTestReferrals() {
     // Update users with referral codes
     for (const [key, user] of Object.entries(users)) {
       await user.update({ referralCode: referralCodes[key] }, { transaction });
-      console.log(`  ${user.name}: ${referralCodes[key]}`);
+      console.log(`  ${user.firstName} ${user.lastName}: ${referralCodes[key]}`);
     }
 
     console.log('\n📝 Creating referral relationships...\n');
