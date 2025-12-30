@@ -13,6 +13,7 @@ require('dotenv').config();
 
 const { User, Referral, ReferralChain, UserReferralStats, sequelize } = require('../models');
 const crypto = require('crypto');
+const { Op } = require('sequelize');
 
 // Generate a unique referral code
 function generateReferralCode(name) {
@@ -27,22 +28,18 @@ async function seedTestReferrals() {
   try {
     console.log('\n🌱 Seeding Test Referral Data...\n');
 
-    // Find users by first name and last name (partial match)
+    // Find users by first name and last name
     const findUser = async (firstName, lastName) => {
       const whereClause = {};
       if (firstName) {
-        whereClause.firstName = sequelize.where(
-          sequelize.fn('LOWER', sequelize.col('firstName')),
-          'LIKE',
-          `%${firstName.toLowerCase()}%`
-        );
+        whereClause.firstName = {
+          [Op.iLike]: `%${firstName}%`
+        };
       }
       if (lastName) {
-        whereClause.lastName = sequelize.where(
-          sequelize.fn('LOWER', sequelize.col('lastName')),
-          'LIKE',
-          `%${lastName.toLowerCase()}%`
-        );
+        whereClause.lastName = {
+          [Op.iLike]: `%${lastName}%`
+        };
       }
       const user = await User.findOne({
         where: whereClause,
@@ -64,15 +61,16 @@ async function seedTestReferrals() {
     });
     console.log('');
 
-    // Find users
+    // Find users - adjust search terms based on actual names
     console.log('📋 Finding specific users...');
     
-    const andre = await findUser('Andre', 'Botes');
-    const leonie = await findUser('Leonie', 'Botes');
-    const andreJr = await findUser('Andre Jr', 'Botes') || await findUser('Andre', 'Jr');
-    const hd = await findUser('Hendrik', 'Botes') || await findUser('HD', 'Botes');
-    const neil = await findUser('Neil', 'Botes');
-    const denise = await findUser('Denise', 'Botes');
+    // More flexible search
+    const andre = await User.findOne({ where: { id: 1 }, transaction }); // Andre Botes
+    const leonie = await User.findOne({ where: { id: 2 }, transaction }); // Leonie Botes
+    const andreJr = await User.findOne({ where: { id: 4 }, transaction }); // Andre Jr Botes
+    const hd = await User.findOne({ where: { id: 6 }, transaction }); // Hendrik Daniel Botes
+    const neil = await User.findOne({ where: { id: 7 }, transaction }); // Neil Botes
+    const denise = await User.findOne({ where: { id: 8 }, transaction }); // Denise Botes
 
     // Helper to get full name
     const getFullName = (user) => user ? `${user.firstName} ${user.lastName}` : null;
@@ -93,10 +91,10 @@ async function seedTestReferrals() {
 
     if (missingUsers.length > 0) {
       console.log('\n⚠️  Some users not found: ' + missingUsers.join(', '));
-      console.log('Please create these users first or adjust the search criteria.');
+      console.log('Please adjust the user IDs in the script to match your database.');
       
       await transaction.rollback();
-      console.log('\n❌ Please check user names and try again.');
+      console.log('\n❌ Please check user IDs and try again.');
       process.exit(1);
     }
 
@@ -108,22 +106,22 @@ async function seedTestReferrals() {
     const userIds = Object.values(users).map(u => u.id);
     
     await ReferralChain.destroy({
-      where: { userId: userIds },
+      where: { userId: { [Op.in]: userIds } },
       transaction
     });
     
     await Referral.destroy({
       where: {
-        [sequelize.Sequelize.Op.or]: [
-          { referrerId: userIds },
-          { referredId: userIds }
+        [Op.or]: [
+          { referrerUserId: { [Op.in]: userIds } },
+          { refereeUserId: { [Op.in]: userIds } }
         ]
       },
       transaction
     });
 
     await UserReferralStats.destroy({
-      where: { userId: userIds },
+      where: { userId: { [Op.in]: userIds } },
       transaction
     });
 
@@ -149,123 +147,151 @@ async function seedTestReferrals() {
 
     console.log('\n📝 Creating referral relationships...\n');
 
-    // Create referrals
+    // Create referrals using correct field names
     // 1. Andre → Leonie
     await Referral.create({
-      referrerId: andre.id,
-      referredId: leonie.id,
+      referrerUserId: andre.id,
+      refereeUserId: leonie.id,
       referralCode: referralCodes.andre,
-      status: 'active',
-      activatedAt: new Date()
+      refereePhoneNumber: leonie.phoneNumber,
+      status: 'activated',
+      invitedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+      signedUpAt: new Date(Date.now() - 29 * 24 * 60 * 60 * 1000),
+      activatedAt: new Date(Date.now() - 28 * 24 * 60 * 60 * 1000),
+      invitationChannel: 'sms'
     }, { transaction });
     console.log('  ✅ Andre Botes → Leonie Botes');
 
     // 2. Leonie → Andre Jr
     await Referral.create({
-      referrerId: leonie.id,
-      referredId: andreJr.id,
+      referrerUserId: leonie.id,
+      refereeUserId: andreJr.id,
       referralCode: referralCodes.leonie,
-      status: 'active',
-      activatedAt: new Date()
+      refereePhoneNumber: andreJr.phoneNumber,
+      status: 'activated',
+      invitedAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000),
+      signedUpAt: new Date(Date.now() - 24 * 24 * 60 * 60 * 1000),
+      activatedAt: new Date(Date.now() - 23 * 24 * 60 * 60 * 1000),
+      invitationChannel: 'sms'
     }, { transaction });
     console.log('  ✅ Leonie Botes → Andre Jr Botes');
 
     // 3. Andre Jr → HD
     await Referral.create({
-      referrerId: andreJr.id,
-      referredId: hd.id,
+      referrerUserId: andreJr.id,
+      refereeUserId: hd.id,
       referralCode: referralCodes.andreJr,
-      status: 'active',
-      activatedAt: new Date()
+      refereePhoneNumber: hd.phoneNumber,
+      status: 'activated',
+      invitedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
+      signedUpAt: new Date(Date.now() - 19 * 24 * 60 * 60 * 1000),
+      activatedAt: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000),
+      invitationChannel: 'sms'
     }, { transaction });
     console.log('  ✅ Andre Jr Botes → HD Botes');
 
     // 4. HD → Neil
     await Referral.create({
-      referrerId: hd.id,
-      referredId: neil.id,
+      referrerUserId: hd.id,
+      refereeUserId: neil.id,
       referralCode: referralCodes.hd,
-      status: 'active',
-      activatedAt: new Date()
+      refereePhoneNumber: neil.phoneNumber,
+      status: 'activated',
+      invitedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+      signedUpAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
+      activatedAt: new Date(Date.now() - 13 * 24 * 60 * 60 * 1000),
+      invitationChannel: 'sms'
     }, { transaction });
     console.log('  ✅ HD Botes → Neil Botes');
 
     // 5. Neil → Denise
     await Referral.create({
-      referrerId: neil.id,
-      referredId: denise.id,
+      referrerUserId: neil.id,
+      refereeUserId: denise.id,
       referralCode: referralCodes.neil,
-      status: 'active',
-      activatedAt: new Date()
+      refereePhoneNumber: denise.phoneNumber,
+      status: 'activated',
+      invitedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+      signedUpAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000),
+      activatedAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+      invitationChannel: 'sms'
     }, { transaction });
     console.log('  ✅ Neil Botes → Denise Botes');
 
     console.log('\n🔗 Creating referral chains...\n');
 
-    // Create referral chains for each user
+    // Create referral chains for each user using correct field names
     // Andre has no chain (top of the pyramid)
     await ReferralChain.create({
       userId: andre.id,
-      level1ReferrerId: null,
-      level2ReferrerId: null,
-      level3ReferrerId: null,
-      level4ReferrerId: null
+      level1UserId: null,
+      level2UserId: null,
+      level3UserId: null,
+      level4UserId: null,
+      chainDepth: 0
     }, { transaction });
     console.log('  ✅ Andre (top level - no referrer)');
 
     // Leonie: L1=Andre
     await ReferralChain.create({
       userId: leonie.id,
-      level1ReferrerId: andre.id,
-      level2ReferrerId: null,
-      level3ReferrerId: null,
-      level4ReferrerId: null
+      level1UserId: andre.id,
+      level2UserId: null,
+      level3UserId: null,
+      level4UserId: null,
+      chainDepth: 1
     }, { transaction });
     console.log('  ✅ Leonie: L1=Andre');
 
     // Andre Jr: L1=Leonie, L2=Andre
     await ReferralChain.create({
       userId: andreJr.id,
-      level1ReferrerId: leonie.id,
-      level2ReferrerId: andre.id,
-      level3ReferrerId: null,
-      level4ReferrerId: null
+      level1UserId: leonie.id,
+      level2UserId: andre.id,
+      level3UserId: null,
+      level4UserId: null,
+      chainDepth: 2
     }, { transaction });
     console.log('  ✅ Andre Jr: L1=Leonie, L2=Andre');
 
     // HD: L1=Andre Jr, L2=Leonie, L3=Andre
     await ReferralChain.create({
       userId: hd.id,
-      level1ReferrerId: andreJr.id,
-      level2ReferrerId: leonie.id,
-      level3ReferrerId: andre.id,
-      level4ReferrerId: null
+      level1UserId: andreJr.id,
+      level2UserId: leonie.id,
+      level3UserId: andre.id,
+      level4UserId: null,
+      chainDepth: 3
     }, { transaction });
     console.log('  ✅ HD: L1=Andre Jr, L2=Leonie, L3=Andre');
 
     // Neil: L1=HD, L2=Andre Jr, L3=Leonie, L4=Andre
     await ReferralChain.create({
       userId: neil.id,
-      level1ReferrerId: hd.id,
-      level2ReferrerId: andreJr.id,
-      level3ReferrerId: leonie.id,
-      level4ReferrerId: andre.id
+      level1UserId: hd.id,
+      level2UserId: andreJr.id,
+      level3UserId: leonie.id,
+      level4UserId: andre.id,
+      chainDepth: 4
     }, { transaction });
     console.log('  ✅ Neil: L1=HD, L2=Andre Jr, L3=Leonie, L4=Andre');
 
     // Denise: L1=Neil, L2=HD, L3=Andre Jr, L4=Leonie (Andre drops off - beyond 4 levels)
     await ReferralChain.create({
       userId: denise.id,
-      level1ReferrerId: neil.id,
-      level2ReferrerId: hd.id,
-      level3ReferrerId: andreJr.id,
-      level4ReferrerId: leonie.id
+      level1UserId: neil.id,
+      level2UserId: hd.id,
+      level3UserId: andreJr.id,
+      level4UserId: leonie.id,
+      chainDepth: 4
     }, { transaction });
     console.log('  ✅ Denise: L1=Neil, L2=HD, L3=Andre Jr, L4=Leonie');
 
     console.log('\n📊 Creating user referral stats...\n');
 
-    // Create stats for each user
+    const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+
+    // Create stats for each user using correct field names
     // Andre: 1 direct (Leonie), gets earnings from 4 levels
     await UserReferralStats.create({
       userId: andre.id,
@@ -275,9 +301,20 @@ async function seedTestReferrals() {
       level2Count: 1,
       level3Count: 2,
       level4Count: 1,
-      totalEarnings: 0,
-      monthlyEarnings: 0,
-      pendingEarnings: 0
+      totalEarnedCents: 0,
+      totalPaidCents: 0,
+      pendingCents: 0,
+      monthYear: currentMonth,
+      monthEarnedCents: 0,
+      monthPaidCents: 0,
+      level1MonthCents: 0,
+      level1Capped: false,
+      level2MonthCents: 0,
+      level2Capped: false,
+      level3MonthCents: 0,
+      level3Capped: false,
+      level4MonthCents: 0,
+      level4Capped: false
     }, { transaction });
 
     // Leonie: 1 direct (Andre Jr)
@@ -289,9 +326,20 @@ async function seedTestReferrals() {
       level2Count: 1,
       level3Count: 1,
       level4Count: 1,
-      totalEarnings: 0,
-      monthlyEarnings: 0,
-      pendingEarnings: 0
+      totalEarnedCents: 0,
+      totalPaidCents: 0,
+      pendingCents: 0,
+      monthYear: currentMonth,
+      monthEarnedCents: 0,
+      monthPaidCents: 0,
+      level1MonthCents: 0,
+      level1Capped: false,
+      level2MonthCents: 0,
+      level2Capped: false,
+      level3MonthCents: 0,
+      level3Capped: false,
+      level4MonthCents: 0,
+      level4Capped: false
     }, { transaction });
 
     // Andre Jr: 1 direct (HD)
@@ -303,9 +351,20 @@ async function seedTestReferrals() {
       level2Count: 1,
       level3Count: 1,
       level4Count: 0,
-      totalEarnings: 0,
-      monthlyEarnings: 0,
-      pendingEarnings: 0
+      totalEarnedCents: 0,
+      totalPaidCents: 0,
+      pendingCents: 0,
+      monthYear: currentMonth,
+      monthEarnedCents: 0,
+      monthPaidCents: 0,
+      level1MonthCents: 0,
+      level1Capped: false,
+      level2MonthCents: 0,
+      level2Capped: false,
+      level3MonthCents: 0,
+      level3Capped: false,
+      level4MonthCents: 0,
+      level4Capped: false
     }, { transaction });
 
     // HD: 1 direct (Neil)
@@ -317,9 +376,20 @@ async function seedTestReferrals() {
       level2Count: 1,
       level3Count: 0,
       level4Count: 0,
-      totalEarnings: 0,
-      monthlyEarnings: 0,
-      pendingEarnings: 0
+      totalEarnedCents: 0,
+      totalPaidCents: 0,
+      pendingCents: 0,
+      monthYear: currentMonth,
+      monthEarnedCents: 0,
+      monthPaidCents: 0,
+      level1MonthCents: 0,
+      level1Capped: false,
+      level2MonthCents: 0,
+      level2Capped: false,
+      level3MonthCents: 0,
+      level3Capped: false,
+      level4MonthCents: 0,
+      level4Capped: false
     }, { transaction });
 
     // Neil: 1 direct (Denise)
@@ -331,9 +401,20 @@ async function seedTestReferrals() {
       level2Count: 0,
       level3Count: 0,
       level4Count: 0,
-      totalEarnings: 0,
-      monthlyEarnings: 0,
-      pendingEarnings: 0
+      totalEarnedCents: 0,
+      totalPaidCents: 0,
+      pendingCents: 0,
+      monthYear: currentMonth,
+      monthEarnedCents: 0,
+      monthPaidCents: 0,
+      level1MonthCents: 0,
+      level1Capped: false,
+      level2MonthCents: 0,
+      level2Capped: false,
+      level3MonthCents: 0,
+      level3Capped: false,
+      level4MonthCents: 0,
+      level4Capped: false
     }, { transaction });
 
     // Denise: 0 referrals (end of chain)
@@ -345,9 +426,20 @@ async function seedTestReferrals() {
       level2Count: 0,
       level3Count: 0,
       level4Count: 0,
-      totalEarnings: 0,
-      monthlyEarnings: 0,
-      pendingEarnings: 0
+      totalEarnedCents: 0,
+      totalPaidCents: 0,
+      pendingCents: 0,
+      monthYear: currentMonth,
+      monthEarnedCents: 0,
+      monthPaidCents: 0,
+      level1MonthCents: 0,
+      level1Capped: false,
+      level2MonthCents: 0,
+      level2Capped: false,
+      level3MonthCents: 0,
+      level3Capped: false,
+      level4MonthCents: 0,
+      level4Capped: false
     }, { transaction });
 
     console.log('✅ Stats created for all users');
@@ -379,4 +471,3 @@ async function seedTestReferrals() {
 }
 
 seedTestReferrals();
-
