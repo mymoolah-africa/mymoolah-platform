@@ -1,12 +1,21 @@
 # 🏦 Banking-Grade Support System
 
-**Last Updated**: December 22, 2025  
-**Version**: 2.4.36 - Award-Winning 11-Language Banking Platform  
-**Status**: ✅ **WORLD-CLASS** ✅ **11 LANGUAGES** ✅ **17/17 TESTS PASSED** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: December 30, 2025  
+**Version**: 2.4.38 - OTP & Referral Knowledge Base Update  
+**Status**: ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT** ✅ **MOJALOOP COMPLIANT**
 
 ## Overview
 
 The MyMoolah Banking-Grade Support System is a **production-ready, enterprise-level AI support platform** designed for **millions of users** with **Mojaloop & ISO20022 compliance**. This system replaces the previous demo implementation with a **banking-grade architecture** that meets global financial standards.
+
+### **December 30, 2025 - Knowledge Base Update**
+Updated with OTP and Referral system support entries:
+- ✅ Password reset OTP flow documentation
+- ✅ Phone number change OTP flow documentation
+- ✅ OTP troubleshooting FAQs (rate limits, expiry, attempts)
+- ✅ Referral program FAQs (5 new entries covering all common questions)
+- ✅ Multi-language OTP support (Afrikaans, isiZulu)
+- ✅ Security section updated with OTP verification details
 
 ### **December 22, 2025 - Complete System Overhaul + Award-Winning Multi-Language**
 Fixed 9 critical bugs and implemented world-class 11-language support following banking industry best practices:

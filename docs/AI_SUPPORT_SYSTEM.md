@@ -1,12 +1,21 @@
 # MyMoolah AI Support System
 
-**Last Updated**: December 22, 2025  
-**Version**: 2.4.34 - Complete Overhaul  
-**Status**: ✅ **PRODUCTION READY** ✅ **ALL BUGS FIXED** ✅ **100% TESTED**
+**Last Updated**: December 30, 2025  
+**Version**: 2.4.38 - OTP & Referral Knowledge Base Update  
+**Status**: ✅ **PRODUCTION READY** ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT**
 
 ## 🚀 Overview
 
 The MyMoolah AI Support System is a **world-class, award-winning** multi-language support platform that provides instant, intelligent assistance to B2C users. Built with OpenAI GPT-4o integration, it offers context-aware responses, continuous learning, and a seamless user experience through an in-app chat interface.
+
+### **December 30, 2025 - Knowledge Base Update**
+Updated with OTP and Referral system entries:
+- ✅ Password reset OTP flow (Q2.7)
+- ✅ Phone number change OTP flow (Q2.6 updated)
+- ✅ OTP troubleshooting (Q2.8, Q2.9, Q-OTP-EN-2)
+- ✅ Referral program FAQs (Q9.5.1-Q9.5.5, Q-REF-EN-1)
+- ✅ Multi-language OTP support (Afrikaans, isiZulu)
+- ✅ Security section updated with OTP verification
 
 ### **December 22, 2025 - System Overhaul**
 Complete overhaul fixing 8 critical bugs:

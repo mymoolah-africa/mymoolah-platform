@@ -88,12 +88,48 @@ const initialKnowledgeBase = [
     audience: 'end-user',
     category: 'profile_update',
     question: 'How do I change my registered phone number?',
-    answer: 'Go to Profile → Security & Settings → “Update Mobile Number.” Verify your current device with an OTP, enter the new number, confirm via the second OTP, and complete any biometric/KYC prompts. If you lost access to the old number, contact support with proof of ID.',
-    keywords: 'change phone number, update msisdn, profile settings',
-    confidenceScore: 0.95,
+    answer: 'Go to Profile → Edit Profile → tap "Change" next to your phone number. Enter the new SA mobile number and a 6-digit OTP will be sent to the NEW number via SMS. Enter the OTP within 10 minutes to confirm. You have 3 attempts. The new number cannot already be registered to another account. If you lost access to the old number, contact support with proof of ID.',
+    keywords: 'change phone number, update msisdn, profile settings, otp verification',
+    confidenceScore: 0.96,
     language: 'en',
     isActive: true,
-    relatedIds: 'Q2.1,Q2.2'
+    relatedIds: 'Q2.1,Q2.2,Q2.7'
+  },
+  {
+    faqId: 'Q2.7',
+    audience: 'end-user',
+    category: 'password_reset',
+    question: 'How do I reset my password?',
+    answer: 'On the login screen tap "Forgot Password?", enter your registered mobile number, and a 6-digit OTP will be sent via SMS. Enter the OTP and your new password (minimum 8 characters with letter, number, and special character). OTPs expire after 10 minutes and you have 3 attempts. You can request up to 3 OTPs per hour. If SMS is not received, ensure your phone number is correct and wait for rate limit reset.',
+    keywords: 'reset password, forgot password, otp, password recovery',
+    confidenceScore: 0.97,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.6,Q10.1'
+  },
+  {
+    faqId: 'Q2.8',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'I did not receive my OTP. What should I do?',
+    answer: 'Check that you entered the correct phone number (SA format: 0XX XXX XXXX). Ensure your phone has signal and can receive SMS. Wait at least 1 minute before requesting a new OTP. If still not received, you may have hit the rate limit (max 3 OTPs per hour) - wait and try again later. Check if the SMS is in a spam folder. If problems persist, contact support.',
+    keywords: 'otp not received, sms not received, verification code',
+    confidenceScore: 0.94,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.6,Q2.7'
+  },
+  {
+    faqId: 'Q2.9',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'My OTP says it is invalid or expired. Why?',
+    answer: 'OTPs expire after 10 minutes from when they were sent. You have a maximum of 3 attempts per OTP - after 3 wrong entries, the OTP is invalidated. Each OTP can only be used once. Request a new OTP if yours has expired or been invalidated. Ensure you are entering the most recent OTP if you requested multiple.',
+    keywords: 'otp expired, otp invalid, verification failed',
+    confidenceScore: 0.93,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.7,Q2.8'
   },
 
   // Section 3 – Wallet & Limits
@@ -220,14 +256,71 @@ const initialKnowledgeBase = [
     isActive: true
   },
 
+  // Section 9.5 – Referral Program
+  {
+    faqId: 'Q9.5.1',
+    audience: 'end-user',
+    category: 'referral_program',
+    question: 'What is the MyMoolah referral program?',
+    answer: 'The MyMoolah referral program lets you earn commission when people you refer make transactions. You earn 4% on direct referrals (Level 1), 3% on their referrals (Level 2), 2% on Level 3, and 1% on Level 4. Your referral must complete their first transaction for you to start earning. Monthly caps apply: R10,000 for Level 1, R5,000 for Level 2, R2,500 for Level 3, and R1,000 for Level 4.',
+    keywords: 'referral program, earn commission, invite friends, mlm',
+    confidenceScore: 0.95,
+    language: 'en',
+    isActive: true
+  },
+  {
+    faqId: 'Q9.5.2',
+    audience: 'end-user',
+    category: 'referral_program',
+    question: 'How do I get my referral code?',
+    answer: 'Your unique referral code is shown in the Referral section of the app. You can share it via SMS, WhatsApp, email, or any messaging platform. When someone registers using your code, they become your direct referral (Level 1).',
+    keywords: 'referral code, invite link, share code',
+    confidenceScore: 0.94,
+    language: 'en',
+    isActive: true
+  },
+  {
+    faqId: 'Q9.5.3',
+    audience: 'end-user',
+    category: 'referral_program',
+    question: 'When do I start earning from referrals?',
+    answer: 'You start earning when your referral completes their first transaction (airtime, data, voucher purchase, or QR payment). Registration alone does not activate earnings. This prevents fraud and ensures real users.',
+    keywords: 'referral activation, first transaction, start earning',
+    confidenceScore: 0.93,
+    language: 'en',
+    isActive: true
+  },
+  {
+    faqId: 'Q9.5.4',
+    audience: 'end-user',
+    category: 'referral_program',
+    question: 'How much can I earn from the referral program?',
+    answer: 'Earnings depend on transaction volume. For example, if your 10 direct referrals each spend R1,000/month, you earn R400 (4% of R10,000). With monthly caps of R10K/R5K/R2.5K/R1K across 4 levels, the maximum theoretical monthly earnings are R18,500. Realistically, most active referrers earn R200-R2,000/month.',
+    keywords: 'referral earnings, how much earn, commission amount',
+    confidenceScore: 0.92,
+    language: 'en',
+    isActive: true
+  },
+  {
+    faqId: 'Q9.5.5',
+    audience: 'end-user',
+    category: 'referral_program',
+    question: 'When do I receive my referral payouts?',
+    answer: 'Referral earnings are calculated in real-time and paid out daily. You will see earnings accumulate in your Referral Earnings section, and they are deposited to your MyMoolah wallet each day at midnight.',
+    keywords: 'referral payout, when paid, daily payout',
+    confidenceScore: 0.93,
+    language: 'en',
+    isActive: true
+  },
+
   // Section 10 – Security
   {
     faqId: 'Q10.1',
     audience: 'all',
     category: 'security',
     question: 'How does MyMoolah protect my money and data?',
-    answer: 'Layers include PIN/device binding, optional biometrics, encrypted data, fraud monitoring, segregated client funds, and POPIA-compliant data governance.',
-    keywords: 'security, popia, protection',
+    answer: 'Layers include PIN/device binding, optional biometrics, encrypted data (TLS 1.3), fraud monitoring, segregated client funds, OTP verification for sensitive actions, and POPIA-compliant data governance.',
+    keywords: 'security, popia, protection, tls',
     confidenceScore: 0.94,
     language: 'en',
     isActive: true
@@ -416,10 +509,56 @@ const initialKnowledgeBase = [
     audience: 'end-user',
     category: 'account_balance',
     question: 'Ke ka e bona jwang bhalanse ya wallet ya ka?',
-    answer: 'O ka e bona bhalanse ya wallet ya hao ho dashboard kapa karolo ya wallet ya app. Bhalanse e ntjhafatswa hang ka mor’a transaction e nngwe le e nngwe.',
+    answer: 'O ka e bona bhalanse ya wallet ya hao ho dashboard kapa karolo ya wallet ya app. Bhalanse e ntjhafatswa hang ka mor'a transaction e nngwe le e nngwe.',
     keywords: 'bhalanse, sesotho, wallet',
     confidenceScore: 0.92,
     language: 'st',
+    isActive: true
+  },
+
+  // OTP entries in other languages
+  {
+    faqId: 'Q-OTP-AF-1',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'Hoe herstel ek my wagwoord?',
+    answer: 'Op die aanmeldbladsy, tik "Wagwoord vergeet?", voer jou geregistreerde selfoonnommer in, en \'n 6-syfer OTP sal via SMS gestuur word. Voer die OTP en jou nuwe wagwoord in (minimum 8 karakters met letter, syfer, en spesiale karakter). OTPs verval na 10 minute en jy het 3 pogings.',
+    keywords: 'wagwoord herstel, otp, afrikaans',
+    confidenceScore: 0.93,
+    language: 'af',
+    isActive: true
+  },
+  {
+    faqId: 'Q-OTP-ZU-1',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'Ngisethula kanjani iphasiwedi yami?',
+    answer: 'Esikrinini sokungena, thepha "Ukhohliwe Iphasiwedi?", ufake inombolo yakho yeselula ebhalisiwe, bese i-OTP enezinombolo ezingu-6 ithunyelwa nge-SMS. Faka i-OTP nephasiwedi yakho entsha (okungenani abalingiswa abangu-8 nehlamvu, inombolo, nesimilo esikhethekile). Ama-OTP aphelelwa isikhathi ngemuva kwemizuzu eyi-10 futhi unokuphuma okuthathu.',
+    keywords: 'iphasiwedi, otp, zulu',
+    confidenceScore: 0.92,
+    language: 'zu',
+    isActive: true
+  },
+  {
+    faqId: 'Q-REF-EN-1',
+    audience: 'end-user',
+    category: 'referral_program',
+    question: 'How do referral levels work?',
+    answer: 'Level 1 are people you directly invite. Level 2 are people invited by your Level 1 referrals. Level 3 are invited by Level 2, and Level 4 by Level 3. You earn decreasing commission rates at each level: 4%, 3%, 2%, 1%. This creates a network where you benefit from your referrals building their own networks.',
+    keywords: 'referral levels, multi-level, network',
+    confidenceScore: 0.94,
+    language: 'en',
+    isActive: true
+  },
+  {
+    faqId: 'Q-OTP-EN-2',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'How long is an OTP valid?',
+    answer: 'OTPs are valid for 10 minutes from when they were sent. After 10 minutes, the OTP expires and you must request a new one. You can request up to 3 OTPs per hour for the same phone number and action type.',
+    keywords: 'otp validity, otp expiry, how long otp',
+    confidenceScore: 0.95,
+    language: 'en',
     isActive: true
   }
 ];
