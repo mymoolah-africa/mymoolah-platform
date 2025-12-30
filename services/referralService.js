@@ -314,6 +314,14 @@ class ReferralService {
       throw new Error('User not found');
     }
     
+    // Skip strict validation in UAT/Codespaces for testing
+    const skipValidation = process.env.REFERRAL_SKIP_VALIDATION === 'true';
+    
+    if (skipValidation) {
+      console.log('⚠️ Referral validation SKIPPED (REFERRAL_SKIP_VALIDATION=true)');
+      return true;
+    }
+    
     // Must be KYC verified
     if (user.kycStatus !== 'verified') {
       throw new Error('You must complete KYC verification before referring friends');
