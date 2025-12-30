@@ -38,6 +38,14 @@ router.get('/my-code', referralController.getMyReferralCode.bind(referralControl
 router.post('/send-invite', referralController.sendInvite.bind(referralController));
 
 /**
+ * @route   POST /api/v1/referrals/invite
+ * @desc    Send referral invitation via SMS (alias for frontend)
+ * @access  Private
+ * @body    { phoneNumber: string (E.164), language?: string }
+ */
+router.post('/invite', referralController.sendInvite.bind(referralController));
+
+/**
  * @route   GET /api/v1/referrals/stats
  * @desc    Get user's referral statistics
  * @access  Private

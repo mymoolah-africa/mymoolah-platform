@@ -97,10 +97,11 @@ class ReferralController {
   /**
    * Send referral invitation via SMS
    * POST /api/v1/referrals/send-invite
+   * POST /api/v1/referrals/invite
    */
   async sendInvite(req, res) {
     try {
-      const { phoneNumber, language = 'en' } = req.body;
+      let { phoneNumber, language = 'en' } = req.body;
       const userId = req.user.id;
       
       if (!phoneNumber) {
@@ -110,11 +111,13 @@ class ReferralController {
         });
       }
       
-      // Validate phone number format (E.164)
-      if (!phoneNumber.startsWith('+')) {
+      // Normalize phone number to E.164 format
+      phoneNumber = this.normalizePhoneNumber(phoneNumber);
+      
+      if (!phoneNumber) {
         return res.status(400).json({
           success: false,
-          error: 'Phone number must be in E.164 format (e.g., +27123456789)'
+          error: 'Invalid phone number format. Use format: 0821234567 or +27821234567'
         });
       }
       
@@ -122,6 +125,7 @@ class ReferralController {
       
       res.json({
         success: true,
+        message: 'Referral invitation sent successfully',
         ...result
       });
     } catch (error) {
@@ -131,6 +135,37 @@ class ReferralController {
         error: error.message || 'Failed to send referral invite'
       });
     }
+  }
+
+  /**
+   * Normalize phone number to E.164 format (+27...)
+   * Handles: 0821234567, 27821234567, +27821234567
+   * @param {string} phone - Input phone number
+   * @returns {string|null} Normalized phone number or null if invalid
+   */
+  normalizePhoneNumber(phone) {
+    if (!phone) return null;
+    
+    // Remove all non-digit characters except leading +
+    let cleaned = phone.replace(/[^\d+]/g, '');
+    
+    // Handle different formats
+    if (cleaned.startsWith('+27')) {
+      // Already E.164
+      return cleaned;
+    } else if (cleaned.startsWith('27') && cleaned.length >= 11) {
+      // Missing + prefix
+      return '+' + cleaned;
+    } else if (cleaned.startsWith('0') && cleaned.length === 10) {
+      // South African local format (0821234567)
+      return '+27' + cleaned.substring(1);
+    } else if (cleaned.length === 9 && !cleaned.startsWith('0')) {
+      // Just the number without leading 0 (821234567)
+      return '+27' + cleaned;
+    }
+    
+    // Invalid format
+    return null;
   }
 
   /**

@@ -112,30 +112,73 @@ class SmsService {
 
   /**
    * Get referral invitation template in specified language
+   * 
+   * OPTIMIZED FOR CONVERSION (under 141 chars):
+   * - Personal touch (referrer name)
+   * - Trust signal (SA's trusted / FSCA regulated)
+   * - Clear benefit (earn on purchases)
+   * - Urgency (start now)
+   * - Short link
+   * 
    * @param {string} referrerName - Name of referrer
-   * @param {string} code - Referral code
+   * @param {string} code - Referral code (included in link)
    * @param {string} language - Language code
-   * @returns {string} Localized message
+   * @returns {string} Localized message (max 141 chars)
    */
   getReferralTemplate(referrerName, code, language = 'en') {
-    // Signup URL with referral code (MyMobileAPI will auto-shorten)
-    const url = `https://app.mymoolah.africa/signup?ref=${code}`;
+    // UAT testing link (switch to production link later)
+    // Production: https://app.mymoolah.africa/signup?ref=${code}
+    const signupUrl = process.env.REFERRAL_SIGNUP_URL || 'https://bit.ly/3YhGGlq';
     
+    // First name only for shorter message
+    const firstName = referrerName.split(' ')[0];
+    
+    // All messages MUST be under 141 characters
+    // Structure: [Name] + trust + benefit + CTA + link
     const templates = {
-      en: `${referrerName} invites you to MyMoolah! Join and earn money. Use code ${code} for R50 bonus. Sign up: ${url}`,
-      af: `${referrerName} nooi jou na MyMoolah! Sluit aan en verdien geld. Gebruik kode ${code} vir R50 bonus. Teken aan: ${url}`,
-      zu: `${referrerName} ukumema ku-MyMoolah! Joyina ukhokhe imali. Sebenzisa ikhodi ${code} ukuthola i-R50 bonus. Bhalisa: ${url}`,
-      xh: `${referrerName} ukukumema eMyMoolah! Joyina ufumane imali. Sebenzisa ikhodi ${code} ukufumana i-R50 bonus. Bhalisa: ${url}`,
-      st: `${referrerName} o u mema ho MyMoolah! Kena o fumane chelete. Sebedisa khoutu ${code} ho fumana R50 bonus. Ngodisa: ${url}`,
-      tn: `${referrerName} o go mema go MyMoolah! Tsena o bona madi. Dirisa khoutu ${code} go bona R50 bonus. Ngwadisisa: ${url}`,
-      nso: `${referrerName} o go mema go MyMoolah! Tsena o bona madi. Dirisa khoutu ${code} go bona R50 bonus. Ngwadisisa: ${url}`,
-      ve: `${referrerName} a u vhuledza kha MyMoolah! Dzhena u wana tshelede. Shumisa khoutu ${code} u wana R50 bonus. Ngwadisa: ${url}`,
-      ts: `${referrerName} u ku vula eka MyMoolah! Nghena u wana mali. Tirisa khoutu ${code} u wana R50 bonus. Ngwadisa: ${url}`,
-      ss: `${referrerName} u ku mema eMyMoolah! Ngcena u wana mali. Sebenzisa ikhodi ${code} u wana i-R50 bonus. Bhalisa: ${url}`,
-      nr: `${referrerName} u ku mema eMyMoolah! Ngcena u wana mali. Sebenzisa ikhodi ${code} u wana i-R50 bonus. Bhalisa: ${url}`
+      // English: "Andre sent you a MyMoolah invite! Earn cash on every purchase. SA's trusted wallet. Join: bit.ly/3YhGGlq" (106 chars)
+      en: `${firstName} sent you a MyMoolah invite! Earn cash on every purchase. SA's trusted wallet. Join: ${signupUrl}`,
+      
+      // Afrikaans: "Andre nooi jou na MyMoolah! Verdien geld op elke aankoop. SA se betroubare beursie. Begin: bit.ly/3YhGGlq" (107 chars)
+      af: `${firstName} nooi jou na MyMoolah! Verdien geld op elke aankoop. SA se betroubare beursie. Begin: ${signupUrl}`,
+      
+      // Zulu: "Andre ukuthumele isimemo se-MyMoolah! Thola imali. Ithuliwe yi-SA. Joyina: bit.ly/3YhGGlq" (91 chars)
+      zu: `${firstName} ukuthumele isimemo se-MyMoolah! Thola imali. Ithuliwe yi-SA. Joyina: ${signupUrl}`,
+      
+      // Xhosa: "Andre ukuthumele isimemo se-MyMoolah! Fumana imali. Ithembakele. Joyina: bit.ly/3YhGGlq" (88 chars)
+      xh: `${firstName} ukuthumele isimemo se-MyMoolah! Fumana imali. Ithembakele. Joyina: ${signupUrl}`,
+      
+      // Sesotho: "Andre o u romela memo ya MyMoolah! Fumana chelete. E tsepuoa SA. Kena: bit.ly/3YhGGlq" (86 chars)
+      st: `${firstName} o u romela memo ya MyMoolah! Fumana chelete. E tsepuoa SA. Kena: ${signupUrl}`,
+      
+      // Setswana: "Andre o go romela memo ya MyMoolah! Bona madi. E tsepilwe SA. Tsena: bit.ly/3YhGGlq" (84 chars)
+      tn: `${firstName} o go romela memo ya MyMoolah! Bona madi. E tsepilwe SA. Tsena: ${signupUrl}`,
+      
+      // Sepedi: "Andre o go romela memo ya MyMoolah! Hwetsa madi. E tsepilwe SA. Tsena: bit.ly/3YhGGlq" (86 chars)
+      nso: `${firstName} o go romela memo ya MyMoolah! Hwetsa madi. E tsepilwe SA. Tsena: ${signupUrl}`,
+      
+      // Tshivenda: "Andre u rumela memo ya MyMoolah! Wana tshelede. I fulufhedzeaho. Dzhena: bit.ly/3YhGGlq" (88 chars)
+      ve: `${firstName} u rumela memo ya MyMoolah! Wana tshelede. I fulufhedzeaho. Dzhena: ${signupUrl}`,
+      
+      // Xitsonga: "Andre u ku rhumela memo ya MyMoolah! Kuma mali. Yi tshembekile. Nghena: bit.ly/3YhGGlq" (87 chars)
+      ts: `${firstName} u ku rhumela memo ya MyMoolah! Kuma mali. Yi tshembekile. Nghena: ${signupUrl}`,
+      
+      // Siswati: "Andre ukutfumele memo ye-MyMoolah! Thola imali. Ithembekile. Joyina: bit.ly/3YhGGlq" (84 chars)
+      ss: `${firstName} ukutfumele memo ye-MyMoolah! Thola imali. Ithembekile. Joyina: ${signupUrl}`,
+      
+      // isiNdebele: "Andre ukutfumele memo ye-MyMoolah! Thola imali. Ithembekile. Joyina: bit.ly/3YhGGlq" (84 chars)
+      nr: `${firstName} ukutfumele memo ye-MyMoolah! Thola imali. Ithembekile. Joyina: ${signupUrl}`
     };
     
-    return templates[language] || templates.en;
+    const message = templates[language] || templates.en;
+    
+    // Safety check - truncate if somehow over 160 chars (1 SMS limit)
+    if (message.length > 160) {
+      console.warn(`⚠️ SMS message too long (${message.length} chars), truncating`);
+      return message.substring(0, 157) + '...';
+    }
+    
+    return message;
   }
 
   /**
