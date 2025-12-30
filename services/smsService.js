@@ -25,9 +25,9 @@ const SUPPORTED_LANGUAGES = ['en', 'af', 'zu', 'xh', 'st', 'tn', 'nso', 've', 't
 class SmsService {
   constructor() {
     // SMS South Africa / MyMobileAPI REST endpoint
-    // Try: https://rest.mymobileapi.com/bulksms (no /api/v1 prefix)
+    // Correct endpoint: https://rest.mymobileapi.com/bulkmessages
     this.apiUrl = process.env.MYMOBILEAPI_URL || 'https://rest.mymobileapi.com';
-    this.apiPath = process.env.MYMOBILEAPI_PATH || '/bulksms';
+    this.apiPath = process.env.MYMOBILEAPI_PATH || '/bulkmessages';
     this.username = process.env.MYMOBILEAPI_USERNAME;
     this.password = process.env.MYMOBILEAPI_PASSWORD;
     this.senderId = process.env.MYMOBILEAPI_SENDER_ID || 'MyMoolah';
