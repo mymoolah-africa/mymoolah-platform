@@ -36,13 +36,45 @@
 
 ---
 
-**Last Updated**: December 30, 2025  
-**Version**: 2.4.38 - OTP-Based Password Reset & Phone Change Complete  
-**Status**: ✅ **OTP SYSTEM COMPLETE** ✅ **PASSWORD RESET WORKING** ✅ **PHONE CHANGE WORKING** ✅ **11-LANGUAGE SUPPORT** ✅ **REFERRAL SYSTEM LIVE** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: December 30, 2025 (11:15 SAST)  
+**Version**: 2.4.39 - SMS Integration Fixed & Referral System Tested  
+**Status**: ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SMS SENDING** ✅ **OTP SYSTEM COMPLETE** ✅ **11-LANGUAGE SUPPORT** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
-## Update 2025-12-30 - OTP-Based Password Reset & Phone Number Change Complete ✅
+## Update 2025-12-30 (11:15) - SMS Integration Fix & Referral System Testing ✅
+
+### **Session Summary**
+Fixed SMS API endpoint issue and completed successful end-to-end testing of the referral system in UAT. SMS integration with MyMobileAPI/SMS South Africa is now fully operational.
+
+### **SMS Endpoint Fix** ✅
+- **Problem**: SMS sending failed with HTTP 404 - wrong endpoint `/bulksms`
+- **Fix**: Changed to correct endpoint `/bulkmessages` in `services/smsService.js`
+- **Commit**: `d3033cf0f` - "fix: correct SMS endpoint to /bulkmessages"
+
+### **Referral SMS Testing Success** ✅
+- Andre → HD (+27798569159): ✅ Delivered (eventId: 16033562153)
+- Andre → Leonie (+27784560585): ✅ Delivered (eventId: 16033565075)
+- SMS Cost: 1 credit per message
+- Remaining Balance: 17 credits
+
+### **Environment Variables** (UAT/Codespaces)
+```bash
+MYMOBILEAPI_URL=https://rest.mymobileapi.com
+MYMOBILEAPI_PATH=/bulkmessages
+REFERRAL_SKIP_VALIDATION=true  # UAT only
+REFERRAL_SIGNUP_URL=https://bit.ly/3YhGGlq
+```
+
+### **Known Issue**
+- Andre's number (+27825571055) appears blacklisted at carrier level
+- SMS credits deducted but messages not arriving
+- Not an API issue - API returns success
+- Other numbers (HD, Leonie) work fine
+
+---
+
+## Update 2025-12-30 (06:00) - OTP-Based Password Reset & Phone Number Change Complete ✅
 
 ### **Session Summary**
 Complete implementation of OTP-based password reset and phone number change functionality. Secure 6-digit OTP system with bcrypt hashing, rate limiting, multi-language SMS support, and full frontend/backend integration.
