@@ -89,16 +89,20 @@ class ReferralService {
     // 1. Validate user can send referrals
     await this.validateReferrer(userId);
     
-    // 2. Check if phone already referred
-    const existingReferral = await Referral.findOne({
-      where: {
-        referrerUserId: userId,
-        refereePhoneNumber: phoneNumber
-      }
-    });
+    // 2. Check if phone already referred (skip in UAT for testing)
+    const skipValidation = process.env.REFERRAL_SKIP_VALIDATION === 'true';
     
-    if (existingReferral) {
-      throw new Error('You have already referred this phone number');
+    if (!skipValidation) {
+      const existingReferral = await Referral.findOne({
+        where: {
+          referrerUserId: userId,
+          refereePhoneNumber: phoneNumber
+        }
+      });
+      
+      if (existingReferral) {
+        throw new Error('You have already referred this phone number');
+      }
     }
     
     // 3. Generate referral code
