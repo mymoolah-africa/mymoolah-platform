@@ -516,7 +516,8 @@ const initialKnowledgeBase = [
     isActive: true
   },
 
-  // OTP entries in other languages
+  // OTP entries in all 11 South African languages
+  // Afrikaans (af)
   {
     faqId: 'Q-OTP-AF-1',
     audience: 'end-user',
@@ -528,6 +529,7 @@ const initialKnowledgeBase = [
     language: 'af',
     isActive: true
   },
+  // isiZulu (zu)
   {
     faqId: 'Q-OTP-ZU-1',
     audience: 'end-user',
@@ -539,6 +541,103 @@ const initialKnowledgeBase = [
     language: 'zu',
     isActive: true
   },
+  // isiXhosa (xh)
+  {
+    faqId: 'Q-OTP-XH-1',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'Ndiyiseta njani iphasiwedi yam entsha?',
+    answer: 'Kwiscreen yokungena, cofa "Ulibele Iphasiwedi?", ufake inombolo yakho yomnxeba ebhalisiweyo, kwaye i-OTP enamanani ama-6 iya kuthunyelwa nge-SMS. Faka i-OTP kunye nephasiwedi yakho entsha (ubuncinane izimvo ezisi-8 kunye noonobumba, inombolo, kunye nophawu olukhethekileyo). Ama-OTP aphelelwa lixesha emva kwemizuzu eli-10 kwaye unokuzama ka-3.',
+    keywords: 'iphasiwedi, otp, xhosa',
+    confidenceScore: 0.92,
+    language: 'xh',
+    isActive: true
+  },
+  // Sesotho (st)
+  {
+    faqId: 'Q-OTP-ST-1',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'Ke lokisa joang password ya ka?',
+    answer: "Skrineng sa ho kena, tobetsa 'Lebetse Password?', kenya nomoro ya hao ya mohala e ngodisitsoeng, mme OTP e nang le dinomoro tse 6 e tla romelloa ka SMS. Kenya OTP le password ya hao e ncha (bonyane litlhaku tse 8 tse nang le tlhaku, nomoro, le letshwao le ikgethang). Li-OTP li fela ka mor'a metsotso e 10 mme o na le menyetla e 3.",
+    keywords: 'password, otp, sesotho',
+    confidenceScore: 0.92,
+    language: 'st',
+    isActive: true
+  },
+  // Setswana (tn)
+  {
+    faqId: 'Q-OTP-TN-1',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'Ke baakanya jang password ya me?',
+    answer: "Mo sekerining sa go tsena, tobetsa 'O lebetse Password?', tsenya nomoro ya gago ya mogala e kwadisitsweng, mme OTP e nang le dinomoro di le 6 e tla romelwa ka SMS. Tsenya OTP le password ya gago e ntšha (bonnye ditlhaka di le 8 tse nang le tlhaka, nomoro, le letshwao le le kgethegileng). Di-OTP di fela morago ga metsotso e le 10 mme o na le diteko di le 3.",
+    keywords: 'password, otp, setswana',
+    confidenceScore: 0.92,
+    language: 'tn',
+    isActive: true
+  },
+  // Sepedi (nso)
+  {
+    faqId: 'Q-OTP-NSO-1',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'Ke lokiša bjang password ya ka?',
+    answer: "Go sekirini sa go tsena, kgotla 'O lebetše Password?', tsenya nomoro ya gago ya mogala yeo e ngwadišitšwego, gomme OTP yeo e nago le dinomoro tše 6 e tla romelwa ka SMS. Tsenya OTP le password ya gago ye mpsha (bonnyane ditlhaka tše 8 tšeo di nago le tlhaka, nomoro, le leswao le le kgethegilego). Di-OTP di fela ka morago ga metsotso ye 10 gomme o na le maiteko a 3.",
+    keywords: 'password, otp, sepedi',
+    confidenceScore: 0.92,
+    language: 'nso',
+    isActive: true
+  },
+  // Tshivenda (ve)
+  {
+    faqId: 'Q-OTP-VE-1',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'Ndi lugiselela hani password yanga?',
+    answer: "Kha sikirini ya u dzhena, putshedza 'Wo hangwa Password?', dzhenisa nomboro yau ya luṱingo yo ṅwaliswaho, nahone OTP i re na nomboro dza 6 i ḓo rumelwa nga SMS. Dzhenisa OTP na password yau ntswa (tshiṱuku tsha maipfi a 8 a re na maipfi, nomboro, na tshiga tsho khetheaho). Dzi-OTP dzi fhela nga murahu ha minetse ya 10 nahone u na milingo ya 3.",
+    keywords: 'password, otp, tshivenda',
+    confidenceScore: 0.92,
+    language: 've',
+    isActive: true
+  },
+  // Xitsonga (ts)
+  {
+    faqId: 'Q-OTP-TS-1',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'Ndzi lulamisa njhani password ya mina?',
+    answer: "Eka xikirini xa ku nghena, cinela 'U rivele Password?', nghenisa nomboro ya wena ya riqingho leyi tsariweke, naswona OTP leyi nga na tinomboro ta 6 yi ta rhumeriwa hi SMS. Nghenisa OTP na password ya wena leyintshwa (ku antswa marito ya 8 lama nga na xiletere, nomboro, na xikombiso xo hlawuleka). Ti-OTP ti hela endzhaku ka timinete ta 10 naswona u na mikatseko ya 3.",
+    keywords: 'password, otp, xitsonga',
+    confidenceScore: 0.92,
+    language: 'ts',
+    isActive: true
+  },
+  // siSwati (ss)
+  {
+    faqId: 'Q-OTP-SS-1',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'Ngiyilungisa kanjani i-password yami?',
+    answer: "Kusikrini sekungena, cindzetela 'Ukhohliwe i-Password?', faka inombolo yakho yelucingo lebhalisile, bese i-OTP lenetinombolo letisitfupha itfunyelwa nge-SMS. Faka i-OTP ne-password yakho lensha (lokungenani tinhlamvu letisiphohlongo letineluhlamvu, inombolo, nesitfombe lesikhetsekile). Ema-OTP aphelelwa sikhashana ngemuva kwemaminithi lali-10 futsi unematsemba lamatsatfu.",
+    keywords: 'password, otp, siswati',
+    confidenceScore: 0.92,
+    language: 'ss',
+    isActive: true
+  },
+  // isiNdebele (nr)
+  {
+    faqId: 'Q-OTP-NR-1',
+    audience: 'end-user',
+    category: 'otp_help',
+    question: 'Ngiyilungisa njani i-password yami?',
+    answer: "Ku-screen yokungena, cabanga 'Ukhohliwe i-Password?', faka inomboro yakho yefounu ebhalisiwe, bese i-OTP enetinomboro ezisithupha ithunyelwa nge-SMS. Faka i-OTP ne-password yakho entsha (okungenani izinhlamvu ezisi-8 ezinenamba, inomboro, nesimpawu esikhethekile). Ama-OTP aphelelwa isikhathi ngemva kwemizuzu eli-10 futhi unokuzama oku-3.",
+    keywords: 'password, otp, isindebele',
+    confidenceScore: 0.92,
+    language: 'nr',
+    isActive: true
+  },
+  // English referral and OTP entries
   {
     faqId: 'Q-REF-EN-1',
     audience: 'end-user',
