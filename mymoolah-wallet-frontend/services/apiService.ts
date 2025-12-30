@@ -753,7 +753,76 @@ class ApiService {
     }>('/api/v1/favorites/count');
     return response.data!
   }
+
+  // ============================================
+  // Password Reset & Phone Change API Methods
+  // ============================================
+
+  /**
+   * Request password reset OTP
+   * @param phoneNumber - User's phone number
+   */
+  async requestPasswordReset(phoneNumber: string): Promise<{ message: string; expiresInMinutes?: number }> {
+    const response = await this.request<{
+      message: string;
+      expiresInMinutes?: number;
+    }>('/api/v1/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber }),
+    });
+    return response.data!;
+  }
+
+  /**
+   * Reset password with OTP
+   * @param phoneNumber - User's phone number
+   * @param otp - 6-digit OTP
+   * @param newPassword - New password
+   */
+  async resetPassword(phoneNumber: string, otp: string, newPassword: string): Promise<{ message: string }> {
+    const response = await this.request<{
+      message: string;
+    }>('/api/v1/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber, otp, newPassword }),
+    });
+    return response.data!;
+  }
+
+  /**
+   * Request phone number change OTP (authenticated)
+   * @param newPhoneNumber - New phone number to verify
+   */
+  async requestPhoneChange(newPhoneNumber: string): Promise<{ message: string; expiresInMinutes?: number }> {
+    const response = await this.request<{
+      message: string;
+      expiresInMinutes?: number;
+    }>('/api/v1/auth/request-phone-change', {
+      method: 'POST',
+      body: JSON.stringify({ newPhoneNumber }),
+    });
+    return response.data!;
+  }
+
+  /**
+   * Verify phone number change with OTP (authenticated)
+   * @param newPhoneNumber - New phone number
+   * @param otp - 6-digit OTP
+   */
+  async verifyPhoneChange(newPhoneNumber: string, otp: string): Promise<{ message: string; newPhoneNumber: string }> {
+    const response = await this.request<{
+      message: string;
+      newPhoneNumber: string;
+    }>('/api/v1/auth/verify-phone-change', {
+      method: 'POST',
+      body: JSON.stringify({ newPhoneNumber, otp }),
+    });
+    return response.data!;
+  }
 }
 
 // Export singleton instance
 export const apiService = new ApiService();
+
+// Also export as default for convenience
+export default apiService;

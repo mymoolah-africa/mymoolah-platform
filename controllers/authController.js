@@ -379,6 +379,343 @@ class AuthController {
       return res.status(500).json({ success: false, message: error.message });
     }
   }
+
+  /**
+   * Request password reset OTP
+   * POST /api/v1/auth/forgot-password
+   * @param {string} phoneNumber - User's phone number
+   */
+  async forgotPassword(req, res) {
+    try {
+      let { phoneNumber } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({
+          success: false,
+          message: 'Phone number is required'
+        });
+      }
+      
+      // Normalize to E.164 format
+      try {
+        phoneNumber = normalizeToE164(phoneNumber);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid mobile number format'
+        });
+      }
+      
+      // Get IP and user agent for audit
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const userAgent = req.headers['user-agent'];
+      
+      // Use OTP service to create password reset OTP
+      const otpService = require('../services/otpService');
+      const result = await otpService.createPasswordResetOtp(phoneNumber, ipAddress, userAgent);
+      
+      if (!result.success) {
+        // Rate limit or other error
+        return res.status(429).json({
+          success: false,
+          message: result.error || 'Unable to process request. Please try again later.'
+        });
+      }
+      
+      // If OTP was created (user exists), send SMS
+      if (result.otp) {
+        const smsService = require('../services/smsService');
+        if (smsService.isConfigured()) {
+          try {
+            await smsService.sendPasswordResetOtp(phoneNumber, result.otp);
+            console.log(`📱 Password reset OTP sent to ${maskMsisdn(phoneNumber)}`);
+          } catch (smsError) {
+            console.error('⚠️ SMS send failed:', smsError.message);
+            // Don't fail the request - OTP was still created
+          }
+        } else {
+          console.log(`⚠️ SMS not configured - OTP: ${result.otp} for ${maskMsisdn(phoneNumber)}`);
+        }
+      }
+      
+      // Always return success (don't reveal if user exists)
+      return res.json({
+        success: true,
+        message: 'If an account exists with this phone number, an OTP will be sent.',
+        expiresInMinutes: result.expiresInMinutes || 10
+      });
+    } catch (error) {
+      console.error('❌ Forgot password error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * Reset password with OTP verification
+   * POST /api/v1/auth/reset-password
+   * @param {string} phoneNumber - User's phone number
+   * @param {string} otp - 6-digit OTP
+   * @param {string} newPassword - New password
+   */
+  async resetPassword(req, res) {
+    try {
+      let { phoneNumber, otp, newPassword, confirmNewPassword } = req.body;
+      
+      if (!phoneNumber || !otp || !newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Phone number, OTP, and new password are required'
+        });
+      }
+      
+      // Validate password confirmation if provided
+      if (confirmNewPassword && newPassword !== confirmNewPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password and confirmation do not match'
+        });
+      }
+      
+      // Validate password strength
+      const strength = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+      if (!strength.test(newPassword)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Password must be at least 8 characters and contain a letter, a number, and a special character'
+        });
+      }
+      
+      // Normalize phone number
+      try {
+        phoneNumber = normalizeToE164(phoneNumber);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid mobile number format'
+        });
+      }
+      
+      // Verify OTP
+      const otpService = require('../services/otpService');
+      const verifyResult = await otpService.verifyPasswordResetOtp(phoneNumber, otp);
+      
+      if (!verifyResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: verifyResult.error || 'Invalid or expired OTP'
+        });
+      }
+      
+      // Find user and update password
+      const user = await User.findOne({ where: { phoneNumber } });
+      
+      if (!user) {
+        // This shouldn't happen if OTP was valid, but handle it
+        return res.status(404).json({
+          success: false,
+          message: 'User not found'
+        });
+      }
+      
+      // Check if new password is same as old
+      const sameAsOld = await bcrypt.compare(newPassword, user.password_hash);
+      if (sameAsOld) {
+        return res.status(400).json({
+          success: false,
+          message: 'New password must be different from current password'
+        });
+      }
+      
+      // Hash and update password
+      const newHash = await bcrypt.hash(newPassword, 12);
+      await user.update({ password_hash: newHash });
+      
+      console.log(`✅ Password reset successful for user ${user.id} (${maskMsisdn(phoneNumber)})`);
+      
+      return res.json({
+        success: true,
+        message: 'Password reset successful. You can now login with your new password.'
+      });
+    } catch (error) {
+      console.error('❌ Reset password error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * Request phone number change OTP (authenticated)
+   * POST /api/v1/auth/request-phone-change
+   * @param {string} newPhoneNumber - New phone number to verify
+   */
+  async requestPhoneChange(req, res) {
+    try {
+      const userId = req.user && req.user.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      let { newPhoneNumber } = req.body;
+      
+      if (!newPhoneNumber) {
+        return res.status(400).json({
+          success: false,
+          message: 'New phone number is required'
+        });
+      }
+      
+      // Normalize to E.164 format
+      try {
+        newPhoneNumber = normalizeToE164(newPhoneNumber);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid mobile number format'
+        });
+      }
+      
+      // Check if user exists
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      
+      // Check if new number is same as current
+      if (user.phoneNumber === newPhoneNumber) {
+        return res.status(400).json({
+          success: false,
+          message: 'New phone number must be different from current phone number'
+        });
+      }
+      
+      // Get IP and user agent for audit
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const userAgent = req.headers['user-agent'];
+      
+      // Use OTP service to create phone change OTP
+      const otpService = require('../services/otpService');
+      const result = await otpService.createPhoneChangeOtp(userId, newPhoneNumber, ipAddress, userAgent);
+      
+      if (!result.success) {
+        return res.status(result.error?.includes('already registered') ? 409 : 429).json({
+          success: false,
+          message: result.error || 'Unable to process request. Please try again later.'
+        });
+      }
+      
+      // Send SMS to NEW phone number
+      const smsService = require('../services/smsService');
+      if (smsService.isConfigured()) {
+        try {
+          await smsService.sendPhoneChangeOtp(newPhoneNumber, result.otp);
+          console.log(`📱 Phone change OTP sent to ${maskMsisdn(newPhoneNumber)}`);
+        } catch (smsError) {
+          console.error('⚠️ SMS send failed:', smsError.message);
+          // Don't fail the request - OTP was still created
+        }
+      } else {
+        console.log(`⚠️ SMS not configured - OTP: ${result.otp} for ${maskMsisdn(newPhoneNumber)}`);
+      }
+      
+      return res.json({
+        success: true,
+        message: 'OTP sent to new phone number. Please verify to complete the change.',
+        expiresInMinutes: result.expiresInMinutes || 10
+      });
+    } catch (error) {
+      console.error('❌ Request phone change error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
+
+  /**
+   * Verify phone number change with OTP (authenticated)
+   * POST /api/v1/auth/verify-phone-change
+   * @param {string} newPhoneNumber - New phone number
+   * @param {string} otp - 6-digit OTP
+   */
+  async verifyPhoneChange(req, res) {
+    try {
+      const userId = req.user && req.user.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, message: 'Unauthorized' });
+      }
+
+      let { newPhoneNumber, otp } = req.body;
+      
+      if (!newPhoneNumber || !otp) {
+        return res.status(400).json({
+          success: false,
+          message: 'New phone number and OTP are required'
+        });
+      }
+      
+      // Normalize phone number
+      try {
+        newPhoneNumber = normalizeToE164(newPhoneNumber);
+      } catch (err) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid mobile number format'
+        });
+      }
+      
+      // Verify OTP
+      const otpService = require('../services/otpService');
+      const verifyResult = await otpService.verifyPhoneChangeOtp(newPhoneNumber, otp);
+      
+      if (!verifyResult.success) {
+        return res.status(400).json({
+          success: false,
+          message: verifyResult.error || 'Invalid or expired OTP'
+        });
+      }
+      
+      // Verify the OTP was for this user
+      if (verifyResult.userId !== userId) {
+        return res.status(403).json({
+          success: false,
+          message: 'OTP was not issued for this account'
+        });
+      }
+      
+      // Find user and update phone number
+      const user = await User.findByPk(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+      
+      const oldPhoneNumber = user.phoneNumber;
+      
+      // Update phone number and account number (they should match)
+      await user.update({
+        phoneNumber: newPhoneNumber,
+        accountNumber: newPhoneNumber // Keep in sync
+      });
+      
+      console.log(`✅ Phone number changed for user ${userId}: ${maskMsisdn(oldPhoneNumber)} → ${maskMsisdn(newPhoneNumber)}`);
+      
+      return res.json({
+        success: true,
+        message: 'Phone number changed successfully.',
+        newPhoneNumber: newPhoneNumber
+      });
+    } catch (error) {
+      console.error('❌ Verify phone change error:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Internal server error'
+      });
+    }
+  }
 }
 
 // Create instance and export methods
@@ -390,5 +727,11 @@ module.exports = {
   getProfile: authController.getProfile.bind(authController),
   verify: authController.verify.bind(authController),
   refreshToken: authController.refreshToken.bind(authController),
-  changePassword: authController.changePassword.bind(authController)
+  changePassword: authController.changePassword.bind(authController),
+  // OTP-based password reset
+  forgotPassword: authController.forgotPassword.bind(authController),
+  resetPassword: authController.resetPassword.bind(authController),
+  // OTP-based phone number change
+  requestPhoneChange: authController.requestPhoneChange.bind(authController),
+  verifyPhoneChange: authController.verifyPhoneChange.bind(authController)
 };

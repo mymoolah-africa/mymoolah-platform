@@ -10,6 +10,7 @@ import { TopBanner } from './components/TopBanner';
 // Pages
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { SendMoneyPage } from './pages/SendMoneyPage';
 import { TransactPage } from './pages/TransactPage';
@@ -45,7 +46,7 @@ function AppContent() {
   const location = useLocation();
   
   // Pages that should NOT show bottom navigation
-  const pagesWithoutNavigation = ['/login', '/register', '/kyc', '/kyc/documents', '/kyc/status'];
+  const pagesWithoutNavigation = ['/login', '/register', '/forgot-password', '/kyc', '/kyc/documents', '/kyc/status'];
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
@@ -88,6 +89,7 @@ function AppContent() {
             {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             
             {/* KYC Routes */}
             <Route path="/kyc" element={<ProtectedRoute><KYCDocumentsPage /></ProtectedRoute>} />

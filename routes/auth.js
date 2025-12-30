@@ -116,4 +116,53 @@ router.post('/change-password', [
   validateRequest
 ], authController.changePassword);
 
+// POST /api/v1/auth/forgot-password - Request password reset OTP
+router.post('/forgot-password', [
+  body('phoneNumber')
+    .matches(phoneRegex)
+    .withMessage('Invalid South African mobile number'),
+  validateRequest
+], authController.forgotPassword);
+
+// POST /api/v1/auth/reset-password - Reset password with OTP
+router.post('/reset-password', [
+  body('phoneNumber')
+    .matches(phoneRegex)
+    .withMessage('Invalid South African mobile number'),
+  body('otp')
+    .isLength({ min: 6, max: 6 })
+    .isNumeric()
+    .withMessage('OTP must be a 6-digit code'),
+  body('newPassword').custom(value => {
+    const regex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!regex.test(value)) {
+      throw new Error('Password must be at least 8 characters and contain a letter, a number, and a special character');
+    }
+    return true;
+  }),
+  validateRequest
+], authController.resetPassword);
+
+// POST /api/v1/auth/request-phone-change - Request phone number change (authenticated)
+router.post('/request-phone-change', [
+  authMiddleware,
+  body('newPhoneNumber')
+    .matches(phoneRegex)
+    .withMessage('Invalid South African mobile number'),
+  validateRequest
+], authController.requestPhoneChange);
+
+// POST /api/v1/auth/verify-phone-change - Verify phone number change with OTP (authenticated)
+router.post('/verify-phone-change', [
+  authMiddleware,
+  body('newPhoneNumber')
+    .matches(phoneRegex)
+    .withMessage('Invalid South African mobile number'),
+  body('otp')
+    .isLength({ min: 6, max: 6 })
+    .isNumeric()
+    .withMessage('OTP must be a 6-digit code'),
+  validateRequest
+], authController.verifyPhoneChange);
+
 module.exports = router;

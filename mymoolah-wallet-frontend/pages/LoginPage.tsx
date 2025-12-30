@@ -434,19 +434,33 @@ export function LoginPage() {
                   </div>
                 </div>
 
-                {/* Demo Fill Button */}
-                <button
-                  type="button"
-                  onClick={handleDemoFill}
-                  className="text-xs text-[#2D8CCA] hover:text-[#2680B8] underline"
-                  style={{
-                    fontFamily: "Montserrat, sans-serif",
-                    fontSize: "var(--mobile-font-small)",
-                    fontWeight: "var(--font-weight-normal)",
-                  }}
-                >
-                  Fill demo credentials
-                </button>
+                {/* Forgot Password and Demo Fill Links */}
+                <div className="flex justify-between items-center">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/forgot-password")}
+                    className="text-xs text-[#2D8CCA] hover:text-[#2680B8] underline"
+                    style={{
+                      fontFamily: "Montserrat, sans-serif",
+                      fontSize: "var(--mobile-font-small)",
+                      fontWeight: "var(--font-weight-normal)",
+                    }}
+                  >
+                    Forgot Password?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDemoFill}
+                    className="text-xs text-gray-500 hover:text-gray-700 underline"
+                    style={{
+                      fontFamily: "Montserrat, sans-serif",
+                      fontSize: "var(--mobile-font-small)",
+                      fontWeight: "var(--font-weight-normal)",
+                    }}
+                  >
+                    Fill demo credentials
+                  </button>
+                </div>
 
                 {/* Submit Button */}
                 <Button
@@ -673,8 +687,8 @@ export function LoginPage() {
                       </strong>
                     </p>
                     <p>
-                      A: Contact support for password reset
-                      assistance.
+                      A: Tap "Forgot Password?" on the login page
+                      and follow the OTP verification process.
                     </p>
                     <br />
                     <p>

@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { apiService } from '../services/apiService';
 
 // Import icons directly from lucide-react
 import { 
@@ -26,7 +27,9 @@ import {
   MessageCircle,
   ArrowLeft,
   Wallet,
-  History
+  History,
+  Phone,
+  Loader2
 } from 'lucide-react';
 
 // Import UI components
@@ -48,6 +51,11 @@ import {
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Badge } from '../components/ui/badge';
 import { Separator } from '../components/ui/separator';
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from '../components/ui/input-otp';
 
 interface ProfileSection {
   id: string;
@@ -84,11 +92,15 @@ export function ProfilePage() {
   // State management
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isChangingPhone, setIsChangingPhone] = useState(false);
+  const [phoneChangeStep, setPhoneChangeStep] = useState<'input' | 'otp' | 'success'>('input');
   const [showPassword, setShowPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isLoadingPhoneChange, setIsLoadingPhoneChange] = useState(false);
+  const [phoneChangeError, setPhoneChangeError] = useState('');
   
   // Form state
   const [profileForm, setProfileForm] = useState({
@@ -101,6 +113,10 @@ export function ProfilePage() {
     newPassword: '',
     confirmPassword: ''
   });
+
+  // Phone change form state
+  const [newPhoneNumber, setNewPhoneNumber] = useState('');
+  const [phoneOtp, setPhoneOtp] = useState('');
 
   // Refresh user status when ProfilePage mounts to ensure latest KYC status
   React.useEffect(() => {
@@ -233,6 +249,101 @@ export function ProfilePage() {
     } catch (error) {
       alert('Failed to update profile. Please try again.');
     }
+  };
+
+  // SA Mobile Number validation
+  const validateSAMobileNumber = (phoneNumber: string): { isValid: boolean; message?: string } => {
+    if (!phoneNumber.trim()) {
+      return { isValid: false, message: "Phone number is required" };
+    }
+    const cleanNumber = phoneNumber.replace(/\s/g, "");
+    const saPhonePattern = /^(\+27|27|0)[6-8][0-9]{8}$/;
+    if (!saPhonePattern.test(cleanNumber)) {
+      return { isValid: false, message: "Please enter a valid South African mobile number" };
+    }
+    return { isValid: true };
+  };
+
+  // Format phone number for display
+  const formatPhoneNumber = (value: string): string => {
+    const cleaned = value.replace(/[^\d+]/g, '');
+    if (cleaned.startsWith('+27')) {
+      const digits = cleaned.slice(3);
+      if (digits.length <= 9) {
+        if (digits.length >= 3) {
+          return `+27 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`.trim();
+        }
+        return `+27 ${digits}`;
+      }
+    } else if (cleaned.startsWith('27')) {
+      const digits = cleaned.slice(2);
+      if (digits.length <= 9) {
+        if (digits.length >= 3) {
+          return `27 ${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`.trim();
+        }
+        return `27 ${digits}`;
+      }
+    } else if (cleaned.startsWith('0')) {
+      const digits = cleaned.slice(1);
+      if (digits.length <= 9) {
+        if (digits.length >= 3) {
+          return `0${digits.slice(0, 2)} ${digits.slice(2, 5)} ${digits.slice(5)}`.trim();
+        }
+        return `0${digits}`;
+      }
+    }
+    return cleaned.slice(0, 13);
+  };
+
+  const newPhoneValidation = validateSAMobileNumber(newPhoneNumber);
+
+  // Handle request phone change OTP
+  const handleRequestPhoneChange = async () => {
+    if (!newPhoneValidation.isValid) return;
+    
+    setPhoneChangeError('');
+    setIsLoadingPhoneChange(true);
+    
+    try {
+      const cleanPhone = newPhoneNumber.replace(/\s/g, "");
+      await apiService.requestPhoneChange(cleanPhone);
+      setPhoneChangeStep('otp');
+    } catch (err) {
+      setPhoneChangeError(err instanceof Error ? err.message : "Failed to send OTP. Please try again.");
+    } finally {
+      setIsLoadingPhoneChange(false);
+    }
+  };
+
+  // Handle verify phone change
+  const handleVerifyPhoneChange = async () => {
+    if (phoneOtp.length !== 6) return;
+    
+    setPhoneChangeError('');
+    setIsLoadingPhoneChange(true);
+    
+    try {
+      const cleanPhone = newPhoneNumber.replace(/\s/g, "");
+      await apiService.verifyPhoneChange(cleanPhone, phoneOtp);
+      setPhoneChangeStep('success');
+      // Refresh user data
+      if (refreshUserStatus) {
+        await refreshUserStatus();
+      }
+    } catch (err) {
+      setPhoneChangeError(err instanceof Error ? err.message : "Invalid or expired OTP. Please try again.");
+    } finally {
+      setIsLoadingPhoneChange(false);
+    }
+  };
+
+  // Reset phone change dialog
+  const resetPhoneChangeDialog = () => {
+    setIsChangingPhone(false);
+    setPhoneChangeStep('input');
+    setNewPhoneNumber('');
+    setPhoneOtp('');
+    setPhoneChangeError('');
   };
 
   // Handle password change
@@ -728,20 +839,44 @@ export function ProfilePage() {
                 >
                   Phone Number
                 </Label>
-                <Input
-                  id="edit-phone"
-                  type="tel"
-                  value={profileForm.phone}
-                  onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
-                  style={{
-                    height: '44px',
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    borderRadius: '8px',
-                    marginTop: '4px'
-                  }}
-                  disabled
-                />
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <Input
+                    id="edit-phone"
+                    type="tel"
+                    value={profileForm.phone}
+                    style={{
+                      height: '44px',
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      borderRadius: '8px',
+                      marginTop: '4px',
+                      flex: 1,
+                      backgroundColor: '#f3f4f6'
+                    }}
+                    disabled
+                  />
+                  <Button
+                    onClick={() => {
+                      setIsEditingProfile(false);
+                      setIsChangingPhone(true);
+                    }}
+                    style={{
+                      height: '44px',
+                      marginTop: '4px',
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      backgroundColor: '#2D8CCA',
+                      color: '#ffffff',
+                      borderRadius: '8px',
+                      border: 'none',
+                      padding: '0 12px',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    Change
+                  </Button>
+                </div>
                 <p 
                   style={{
                     fontFamily: 'Montserrat, sans-serif',
@@ -750,7 +885,7 @@ export function ProfilePage() {
                     margin: '4px 0 0 0'
                   }}
                 >
-                  Phone number cannot be changed for security reasons
+                  Phone number change requires OTP verification
                 </p>
               </div>
             </div>
@@ -1006,6 +1141,242 @@ export function ProfilePage() {
                 Change Password
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Phone Number Dialog */}
+      <Dialog open={isChangingPhone} onOpenChange={(open) => !open && resetPhoneChangeDialog()}>
+        <DialogContent 
+          style={{
+            fontFamily: 'Montserrat, sans-serif',
+            maxWidth: '340px',
+            backgroundColor: '#ffffff',
+            borderRadius: '16px'
+          }}
+          aria-describedby="change-phone-description"
+        >
+          <DialogHeader>
+            <DialogTitle 
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '20px',
+                fontWeight: '700',
+                color: '#1f2937'
+              }}
+            >
+              {phoneChangeStep === 'success' ? 'Phone Number Updated' : 'Change Phone Number'}
+            </DialogTitle>
+            <div id="change-phone-description" className="sr-only">
+              Change your phone number with OTP verification
+            </div>
+          </DialogHeader>
+          <div style={{ padding: '16px 0' }}>
+            {phoneChangeError && (
+              <Alert style={{ marginBottom: '16px', backgroundColor: '#fef2f2', borderColor: '#fecaca' }}>
+                <AlertTriangle style={{ width: '16px', height: '16px', color: '#dc2626' }} />
+                <AlertDescription style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#dc2626' }}>
+                  {phoneChangeError}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {phoneChangeStep === 'input' && (
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div>
+                  <Label 
+                    htmlFor="new-phone"
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#374151'
+                    }}
+                  >
+                    New Phone Number
+                  </Label>
+                  <div style={{ position: 'relative' }}>
+                    <Input
+                      id="new-phone"
+                      type="tel"
+                      placeholder="0XX XXX XXXX"
+                      value={newPhoneNumber}
+                      onChange={(e) => setNewPhoneNumber(formatPhoneNumber(e.target.value))}
+                      style={{
+                        height: '44px',
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '14px',
+                        borderRadius: '8px',
+                        marginTop: '4px',
+                        paddingLeft: '44px'
+                      }}
+                    />
+                    <Phone style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: '#6b7280' }} />
+                  </div>
+                  {newPhoneNumber && !newPhoneValidation.isValid && (
+                    <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#dc2626', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <X style={{ width: '12px', height: '12px' }} />
+                      {newPhoneValidation.message}
+                    </p>
+                  )}
+                  {newPhoneNumber && newPhoneValidation.isValid && (
+                    <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#059669', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Check style={{ width: '12px', height: '12px' }} />
+                      Valid phone number
+                    </p>
+                  )}
+                </div>
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
+                  An OTP will be sent to the new number for verification
+                </p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Button
+                    onClick={resetPhoneChangeDialog}
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#f3f4f6',
+                      color: '#6b7280',
+                      border: 'none',
+                      borderRadius: '8px',
+                      height: '44px',
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleRequestPhoneChange}
+                    disabled={!newPhoneValidation.isValid || isLoadingPhoneChange}
+                    style={{
+                      flex: 1,
+                      background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      height: '44px',
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      opacity: newPhoneValidation.isValid && !isLoadingPhoneChange ? 1 : 0.6,
+                      cursor: newPhoneValidation.isValid && !isLoadingPhoneChange ? 'pointer' : 'not-allowed'
+                    }}
+                  >
+                    {isLoadingPhoneChange ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
+                        Sending...
+                      </span>
+                    ) : 'Send OTP'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {phoneChangeStep === 'otp' && (
+              <div style={{ display: 'grid', gap: '16px' }}>
+                <div>
+                  <Label 
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      color: '#374151'
+                    }}
+                  >
+                    Enter OTP
+                  </Label>
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '8px' }}>
+                    <InputOTP maxLength={6} value={phoneOtp} onChange={setPhoneOtp}>
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', textAlign: 'center', marginTop: '8px' }}>
+                    Enter the 6-digit code sent to {newPhoneNumber}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Button
+                    onClick={() => { setPhoneChangeStep('input'); setPhoneOtp(''); setPhoneChangeError(''); }}
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#f3f4f6',
+                      color: '#6b7280',
+                      border: 'none',
+                      borderRadius: '8px',
+                      height: '44px',
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Back
+                  </Button>
+                  <Button
+                    onClick={handleVerifyPhoneChange}
+                    disabled={phoneOtp.length !== 6 || isLoadingPhoneChange}
+                    style={{
+                      flex: 1,
+                      background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      height: '44px',
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      opacity: phoneOtp.length === 6 && !isLoadingPhoneChange ? 1 : 0.6,
+                      cursor: phoneOtp.length === 6 && !isLoadingPhoneChange ? 'pointer' : 'not-allowed'
+                    }}
+                  >
+                    {isLoadingPhoneChange ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Loader2 style={{ width: '16px', height: '16px', animation: 'spin 1s linear infinite' }} />
+                        Verifying...
+                      </span>
+                    ) : 'Verify'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {phoneChangeStep === 'success' && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ width: '64px', height: '64px', backgroundColor: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+                  <CheckCircle style={{ width: '32px', height: '32px', color: '#059669' }} />
+                </div>
+                <h3 style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '18px', fontWeight: '600', color: '#1f2937', marginBottom: '8px' }}>
+                  Phone Number Updated!
+                </h3>
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280', marginBottom: '24px' }}>
+                  Your phone number has been successfully changed to {newPhoneNumber}.
+                </p>
+                <Button
+                  onClick={resetPhoneChangeDialog}
+                  style={{
+                    width: '100%',
+                    background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    height: '44px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600'
+                  }}
+                >
+                  Done
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
