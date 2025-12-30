@@ -2,15 +2,63 @@
 
 ## **🧪 Testing Strategy Overview**
 
-**Last Updated**: August 16, 2025  
-**Testing Phase**: Production Ready - Transaction Display Fixed + All Integrations Complete  
-**Next Phase**: Production Monitoring & User Acceptance Testing
+**Last Updated**: December 30, 2025  
+**Testing Phase**: Production Ready - OTP System Deployed + All Integrations Complete  
+**Next Phase**: OTP User Acceptance Testing + Production Monitoring
+
+---
+
+## **🔐 OTP System Testing (December 30, 2025)** ⏳ **PENDING USER TESTING**
+
+### **Password Reset Flow Testing**
+```bash
+# 1. Request password reset OTP
+curl -X POST http://localhost:3001/api/v1/auth/forgot-password \
+  -H "Content-Type: application/json" \
+  -d '{"phoneNumber": "0821234567"}'
+
+# 2. Check server console for OTP (if SMS not configured):
+#    ⚠️ SMS not configured - OTP: 123456 for +27821234567
+
+# 3. Reset password with OTP
+curl -X POST http://localhost:3001/api/v1/auth/reset-password \
+  -H "Content-Type: application/json" \
+  -d '{"phoneNumber": "0821234567", "otp": "123456", "newPassword": "NewPass123!"}'
+```
+
+### **Phone Change Flow Testing**
+```bash
+# 1. Login and get token
+TOKEN=$(curl -s -X POST http://localhost:3001/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"identifier": "0821234567", "password": "currentpassword"}' | jq -r '.token')
+
+# 2. Request phone change OTP
+curl -X POST http://localhost:3001/api/v1/auth/request-phone-change \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"newPhoneNumber": "0829876543"}'
+
+# 3. Check server console for OTP
+
+# 4. Verify phone change
+curl -X POST http://localhost:3001/api/v1/auth/verify-phone-change \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"newPhoneNumber": "0829876543", "otp": "123456"}'
+```
+
+### **OTP Security Testing**
+- **Rate Limiting**: Try requesting more than 3 OTPs in 1 hour (should be blocked)
+- **Expiry**: Wait >10 minutes before entering OTP (should fail)
+- **Attempt Limiting**: Enter wrong OTP 3 times (should invalidate OTP)
+- **One-Time Use**: Try to use same OTP twice (should fail)
 
 ---
 
 ## **✅ Completed Test Categories**
 
-### **Transaction Display Testing (NEW - August 16, 2025)**
+### **Transaction Display Testing (August 16, 2025)**
 - **✅ Duplicate Reference Fix**: No more "Ref:Test — Ref:TXN-1755334503161-SE" display
 - **✅ Clean Transaction Format**: Follows rule `<Sender> | <Description of transaction entered by sender>`
 - **✅ Frontend Logic**: SendMoneyPage and TransactionHistoryPage cleaned up

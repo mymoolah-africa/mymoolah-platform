@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform – Comprehensive FAQ Library
 
-_Last updated: 18 November 2025_
+_Last updated: 30 December 2025_
 
 This FAQ consolidates answers from every functional area of MMTP (wallet, KYC, suppliers, APIs, and support) so that customer agents, suppliers, and integration partners share the same source of truth. Use this document before escalating to engineering. Sections are ordered by the scenarios we support most frequently.
 
@@ -18,7 +18,10 @@ A: Tokens are stored in `sessionStorage` only. When the browser suspends the tab
 A: 15 minutes. Any inactive session beyond 15 minutes is revoked automatically to align with banking security practice.
 
 **Q: How do I reset my password?**  
-A: On the login screen tap **“Forgot Password”**, enter your registered mobile number, confirm the OTP, then set a new password that meets the strength rules. If you no longer control that number, support must re-bind the account after KYC verification.
+A: On the login screen tap **"Forgot Password?"**, enter your registered mobile number, and a 6-digit OTP will be sent via SMS. Enter the OTP and your new password (min 8 chars with letter + number + special). OTPs expire after 10 minutes and you have 3 attempts. If SMS is not received, wait 1 hour for rate limit reset. If you no longer control that number, support must re-bind the account after KYC verification.
+
+**Q: How do I change my phone number?**  
+A: Go to Profile → Edit Profile → tap "Change" next to phone number. Enter your new SA mobile number and an OTP will be sent to the NEW number. Enter the OTP to confirm ownership. The new number cannot already be registered to another account. OTPs expire after 10 minutes.
 
 **Q: Why do demo tokens fail against the backend?**  
 A: Demo tokens (prefixed `demo-token-`) are filtered out before every request. Obtain a real JWT by logging in via `/api/v1/auth/login`.

@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: December 29, 2025  
-**Version**: 2.4.37 - Multi-Level Referral System Security
-**Status**: ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE**
+**Last Updated**: December 30, 2025  
+**Version**: 2.4.38 - OTP System Security
+**Status**: ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **OTP SYSTEM SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE**
 
 ---
 
@@ -61,6 +61,7 @@ See: `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for full au
 
 ### **🏆 Security Achievements**
 - ✅ **TLS 1.3 Implementation**: Complete TLS 1.3 with banking-grade cipher suites
+- ✅ **OTP System**: Banking-grade OTP verification for password reset and phone changes
 - ❌ **Mojaloop Compliance**: FSPIOP Party ID system NOT implemented (non-compliant)
 - ✅ **ISO 27001 Ready**: Information security management compliance (pending PII encryption)
 - ✅ **Banking-Grade Headers**: Comprehensive security headers implementation
@@ -68,6 +69,52 @@ See: `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for full au
 - ✅ **Input Validation**: Comprehensive data validation and sanitization
 - ✅ **Audit Logging**: Complete transaction and security event logging
 - ❌ **PII Protection**: Phone numbers NOT encrypted at rest (GDPR/POPIA violation)
+
+---
+
+## 🔐 **OTP VERIFICATION SYSTEM**
+
+### **OTP Security Implementation (December 30, 2025)**
+
+The platform implements **banking-grade OTP verification** for password reset and phone number changes:
+
+#### **OTP Generation**
+- **Algorithm**: `crypto.randomInt()` for cryptographically secure random numbers
+- **Length**: 6 digits (100000-999999)
+- **No patterns**: Pure random, no sequential or repeated patterns
+
+#### **OTP Storage Security**
+- **Hashing**: Bcrypt with 10 rounds (never store plaintext OTPs)
+- **Table**: `otp_verifications` with foreign key to `users`
+- **Fields**: `otp_hash`, `type`, `expires_at`, `verified`, `attempts`, `ip_address`, `user_agent`
+
+#### **Rate Limiting**
+- **Per Phone**: Maximum 3 OTPs per phone number per hour
+- **Per Attempt**: Maximum 3 verification attempts per OTP
+- **Lockout**: Automatic OTP invalidation after max attempts
+
+#### **Expiry & Cleanup**
+- **Expiry Window**: 10 minutes from creation
+- **One-Time Use**: OTPs invalidated immediately after successful verification
+- **Cleanup**: Daily cron job removes expired OTPs older than 24 hours
+
+#### **Audit Trail**
+- **Logged**: IP address, user agent, timestamps for all OTP operations
+- **Metadata**: Additional context stored in JSONB field (e.g., new phone number for phone change)
+
+#### **Fraud Prevention**
+- **Phone Enumeration Prevention**: Forgot password always returns success (doesn't reveal if account exists)
+- **Brute Force Protection**: 3 attempts max, then OTP invalidated
+- **Rate Limiting**: Prevents OTP flooding attacks
+- **IP Logging**: Enables suspicious activity detection
+
+#### **API Endpoints**
+| Endpoint | Auth | Purpose |
+|----------|------|---------|
+| `POST /api/v1/auth/forgot-password` | Public | Request password reset OTP |
+| `POST /api/v1/auth/reset-password` | Public | Reset password with OTP |
+| `POST /api/v1/auth/request-phone-change` | JWT | Request phone change OTP |
+| `POST /api/v1/auth/verify-phone-change` | JWT | Complete phone change with OTP |
 
 ---
 

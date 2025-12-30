@@ -1,14 +1,22 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: December 19, 2025  
-**Version**: 2.4.24 - Unified Support Service & gpt-4o Model Configuration  
-**Status**: ✅ **SUPPORT SERVICE UNIFIED** ✅ **PEACH INTEGRATION ARCHIVED** ✅ **ZAPPER VAT TRANSACTION FEE COMPLETE** ✅ **REFERENTIAL INTEGRITY ENFORCED** ✅ **BANKING-GRADE DATA INTEGRITY**
+**Last Updated**: December 30, 2025  
+**Version**: 2.4.38 - OTP Password Reset & Phone Change  
+**Status**: ✅ **OTP SYSTEM COMPLETE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11-LANGUAGE SUPPORT** ✅ **BANKING-GRADE SECURITY**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has successfully upgraded all OpenAI models to gpt-4o, optimized the codebase sweep service for better performance and token management, and enhanced the startup script with automatic credential refresh. The platform also has improved KYC OCR fallback mechanism, comprehensive transaction filtering, and MobileMart Fulcrum integration.
+The MyMoolah Treasury Platform has completed OTP-based password reset and phone number change functionality, multi-level referral system, and 11-language support. The platform features banking-grade security with TLS 1.3, comprehensive input validation, rate limiting, and audit logging.
+
+### **🔐 OTP System (December 30, 2025)** ✅ **DEPLOYED TO UAT**
+- **Password Reset**: Forgot password flow with 6-digit OTP via SMS
+- **Phone Change**: Authenticated users can change phone with OTP verification
+- **Security**: Bcrypt hashing, rate limiting (3/hour), 10-min expiry, max 3 attempts
+- **Multi-Language SMS**: OTP messages in 11 South African languages
+- **Database**: `otp_verifications` table with audit trail
+- **Status**: ✅ Deployed to UAT, ✅ Backend running, ⏳ User testing pending
 
 ### Codespaces Development Status (current)
 - Backend auto-starts on container open; manual fallback `npm run start:cs-ip`

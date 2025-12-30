@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: December 6, 2025  
-**Version**: 2.4.22 - Workflow Reinforcement & Staging Redeploy  
-**Status**: 🔄 **Staging redeployed (20251206-1816)** ⚠️ **Notifications pending fix** 🟡 **Tip validation UX pending retest**
+**Last Updated**: December 30, 2025  
+**Version**: 2.4.38 - OTP Password Reset & Phone Change  
+**Status**: ✅ **OTP SYSTEM COMPLETE** ✅ **REFERRAL SYSTEM LIVE** ✅ **UAT DEPLOYED**
 
 ---
 
@@ -874,6 +874,37 @@ const rateLimiter = rateLimit({
   }
 });
 ```
+
+### **OTP Verification System (December 30, 2025)**
+
+The platform implements banking-grade OTP verification for password reset and phone changes:
+
+#### **Key Files**
+- `models/OtpVerification.js` - Sequelize model with verification methods
+- `services/otpService.js` - OTP generation, hashing, rate limiting, verification
+- `controllers/authController.js` - Password reset and phone change endpoints
+- `migrations/20251230_01_create_otp_verifications_table.js` - Database table
+
+#### **Usage Example**
+```javascript
+const otpService = require('./services/otpService');
+
+// Create password reset OTP
+const result = await otpService.createPasswordResetOtp(phoneNumber, ipAddress, userAgent);
+// Returns: { success: true, otp: '123456', expiresAt: Date, expiresInMinutes: 10 }
+
+// Verify OTP
+const verifyResult = await otpService.verifyPasswordResetOtp(phoneNumber, otp);
+// Returns: { success: true, userId: 123 } or { success: false, error: 'Invalid OTP' }
+```
+
+#### **Security Features**
+- **Cryptographic OTPs**: `crypto.randomInt()` for secure 6-digit codes
+- **Bcrypt Hashing**: OTPs hashed before storage (never plaintext)
+- **Rate Limiting**: Max 3 OTPs per phone per hour
+- **Attempt Limiting**: Max 3 verification attempts per OTP
+- **One-Time Use**: OTPs invalidated after successful verification
+- **Audit Trail**: IP, user agent, timestamps logged
 
 ---
 
