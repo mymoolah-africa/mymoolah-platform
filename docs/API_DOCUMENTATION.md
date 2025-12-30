@@ -1,10 +1,17 @@
-**Last Updated**: December 29, 2025  
-**Version**: 2.4.37 - Multi-Level Referral System Complete
-**Status**: ✅ **REFERRAL SYSTEM LIVE** ✅ **MOBILEMART INTEGRATION UPDATED** ⚠️ **AWAITING CREDENTIAL VERIFICATION**
+**Last Updated**: December 30, 2025  
+**Version**: 2.4.38 - OTP Password Reset & Phone Change Complete
+**Status**: ✅ **OTP SYSTEM LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **MOBILEMART INTEGRATION UPDATED**
 
 ---
 
 ## Recent Updates
+
+### 2025-12-30 - OTP-Based Password Reset & Phone Change
+- **Password Reset Flow**: OTP-based secure password reset without authentication
+- **Phone Number Change**: OTP verification to change mobile number (authenticated)
+- **OTP Infrastructure**: Secure 6-digit OTPs with bcrypt hashing, 10-min expiry
+- **Rate Limiting**: Max 3 OTPs per phone per hour
+- **Multi-Language SMS**: 11 South African language templates
 
 ### 2025-12-29 - Multi-Level Referral System
 - **Referral API Endpoints**: 6 new endpoints for referral program management
@@ -724,6 +731,104 @@ POST /api/v1/auth/refresh
 ```
 
 **Description**: Refreshes expired JWT token.
+
+#### **4. Forgot Password (Request OTP)**
+```http
+POST /api/v1/auth/forgot-password
+```
+
+**Description**: Requests OTP for password reset. OTP sent via SMS to registered phone.
+
+**Request Body**:
+```json
+{
+  "phoneNumber": "0821234567"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "If an account exists with this phone number, an OTP will be sent.",
+  "expiresInMinutes": 10
+}
+```
+
+#### **5. Reset Password (Verify OTP)**
+```http
+POST /api/v1/auth/reset-password
+```
+
+**Description**: Resets password after OTP verification.
+
+**Request Body**:
+```json
+{
+  "phoneNumber": "0821234567",
+  "otp": "123456",
+  "newPassword": "NewSecurePass123!"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Password reset successful. You can now login with your new password."
+}
+```
+
+#### **6. Request Phone Change (Authenticated)**
+```http
+POST /api/v1/auth/request-phone-change
+```
+
+**Description**: Requests OTP to change phone number. OTP sent to new phone.
+
+**Authentication**: Required (JWT token)
+
+**Request Body**:
+```json
+{
+  "newPhoneNumber": "0829876543"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "OTP sent to new phone number. Please verify to complete the change.",
+  "expiresInMinutes": 10
+}
+```
+
+#### **7. Verify Phone Change (Authenticated)**
+```http
+POST /api/v1/auth/verify-phone-change
+```
+
+**Description**: Completes phone number change after OTP verification.
+
+**Authentication**: Required (JWT token)
+
+**Request Body**:
+```json
+{
+  "newPhoneNumber": "0829876543",
+  "otp": "123456"
+}
+```
+
+**Response**:
+```json
+{
+  "success": true,
+  "message": "Phone number changed successfully.",
+  "newPhoneNumber": "+27829876543"
+}
+```
 
 ### **User Profile**
 
