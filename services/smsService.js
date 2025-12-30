@@ -24,7 +24,8 @@ const SUPPORTED_LANGUAGES = ['en', 'af', 'zu', 'xh', 'st', 'tn', 'nso', 've', 't
 
 class SmsService {
   constructor() {
-    this.apiUrl = process.env.MYMOBILEAPI_URL || 'https://api.mymobileapi.com';
+    this.apiUrl = process.env.MYMOBILEAPI_URL || 'https://rest.mymobileapi.com';
+    this.apiPath = process.env.MYMOBILEAPI_PATH || '/bulkmessages'; // Default for MyMobileAPI/SMS South Africa
     this.username = process.env.MYMOBILEAPI_USERNAME;
     this.password = process.env.MYMOBILEAPI_PASSWORD;
     this.senderId = process.env.MYMOBILEAPI_SENDER_ID || 'MyMoolah';
@@ -32,6 +33,8 @@ class SmsService {
     // Validate credentials (warn if missing, but don't fail)
     if (!this.username || !this.password) {
       console.warn('⚠️ MyMobileAPI credentials not configured. SMS features will be disabled.');
+    } else {
+      console.log(`📱 SMS Service configured: ${this.apiUrl}${this.apiPath}`);
     }
   }
 
@@ -53,44 +56,51 @@ class SmsService {
     }
 
     try {
-      // MyMobileAPI authentication (basic auth)
+      // MyMobileAPI / SMS South Africa authentication (basic auth)
       const auth = Buffer.from(`${this.username}:${this.password}`).toString('base64');
       
-      // Prepare request payload
+      // Prepare request payload (MyMobileAPI / SMS South Africa format)
+      // Format: { messages: [{ content: "...", destination: "27821234567" }] }
       const payload = {
-        to: phoneNumber,
-        message: message,
-        from: this.senderId,
-        ...(options.reference && { reference: options.reference }),
-        ...(options.type && { type: options.type })
+        messages: [{
+          content: message,
+          destination: phoneNumber.replace('+', ''), // Remove + for API
+          ...(this.senderId && { customerId: this.senderId })
+        }]
       };
+
+      const endpoint = `${this.apiUrl}${this.apiPath}`;
+      console.log(`📱 Sending SMS to ${phoneNumber} via ${endpoint}`);
 
       // Send SMS
       const response = await axios.post(
-        `${this.apiUrl}/sms/send`,
+        endpoint,
         payload,
         {
           headers: {
             'Authorization': `Basic ${auth}`,
             'Content-Type': 'application/json'
           },
-          timeout: 10000 // 10 second timeout
+          timeout: 15000 // 15 second timeout
         }
       );
 
-      console.log(`✅ SMS sent to ${phoneNumber}: ${response.data.messageId || 'success'}`);
+      console.log(`✅ SMS sent to ${phoneNumber}:`, JSON.stringify(response.data).substring(0, 200));
+      
+      // Parse response (MyMobileAPI returns array of results)
+      const result = response.data?.messages?.[0] || response.data;
       
       return {
         success: true,
-        messageId: response.data.messageId || response.data.id,
-        status: response.data.status || 'sent',
+        messageId: result?.id || result?.messageId || response.data?.id,
+        status: result?.status || 'sent',
         phoneNumber,
         timestamp: new Date().toISOString()
       };
 
     } catch (error) {
-      console.error('❌ SMS sending failed:', error.response?.data || error.message);
-      throw new Error(`Failed to send SMS: ${error.response?.data?.message || error.message}`);
+      console.error('❌ SMS sending failed:', error.response?.status, error.response?.data || error.message);
+      throw new Error(`Failed to send SMS: ${error.response?.data?.message || error.response?.data?.error || error.message}`);
     }
   }
 
