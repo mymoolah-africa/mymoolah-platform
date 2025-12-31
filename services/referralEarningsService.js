@@ -35,8 +35,8 @@ const COMMISSION_RATES = {
   4: 1.00
 };
 
-// Minimum transaction for referral earnings
-const MIN_TRANSACTION_CENTS = 1000; // R10
+// Minimum transaction for referral earnings (based on net revenue/commission, not purchase amount)
+const MIN_TRANSACTION_CENTS = 1; // R0.01 - Allow even tiny commissions to generate earnings
 
 class ReferralEarningsService {
   /**
