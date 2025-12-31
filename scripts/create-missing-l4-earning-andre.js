@@ -53,12 +53,12 @@ async function createMissingEarning() {
 
     // Get Andre's current stats for this month/level
     const statsResult = await client.query(`
-      SELECT level4_month_cents
+      SELECT level_4_month_cents
       FROM user_referral_stats 
       WHERE user_id = $1
     `, [andreId]);
 
-    const currentMonthCents = statsResult.rows[0]?.level4_month_cents || 0;
+    const currentMonthCents = statsResult.rows[0]?.level_4_month_cents || 0;
     const newCumulativeCents = currentMonthCents + baseEarningCents;
 
     console.log(`📊 Stats:`);
@@ -112,7 +112,7 @@ async function createMissingEarning() {
     await client.query(`
       UPDATE user_referral_stats 
       SET 
-        level4_month_cents = $1,
+        level_4_month_cents = $1,
         total_earned_cents = COALESCE(total_earned_cents, 0) + $2,
         updated_at = NOW()
       WHERE user_id = $3
