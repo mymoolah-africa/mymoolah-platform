@@ -63,16 +63,16 @@ async function checkReferralStatus() {
       }
     }
 
-    // 3. Check Neil's recent transactions
+    // 3. Check Neil's recent transactions (check for R10 airtime - could be -10.00 or -1000 cents)
     const transactionsResult = await client.query(`
       SELECT id, amount, type, status, description, currency, "createdAt"
       FROM transactions 
       WHERE "userId" = $1 
-        AND type = 'payment'
-        AND description LIKE '%airtime%'
-        AND amount = -10.00
+        AND type IN ('payment', 'debit')
+        AND description ILIKE '%airtime%'
+        AND (amount = -10.00 OR amount = -1000)
       ORDER BY "createdAt" DESC
-      LIMIT 5
+      LIMIT 10
     `, [neil.id]);
     
     console.log(`\n💳 NEIL'S RECENT AIRTIME TRANSACTIONS (R10):`);
@@ -87,11 +87,11 @@ async function checkReferralStatus() {
 
     // 4. Check VAS transactions for Neil
     const vasResult = await client.query(`
-      SELECT id, amount, type, supplier, status, metadata, "createdAt"
+      SELECT id, amount, "vasType", supplier, status, metadata, "createdAt"
       FROM vas_transactions 
       WHERE "userId" = $1 
         AND amount = 1000
-        AND type = 'airtime'
+        AND "vasType" = 'airtime'
       ORDER BY "createdAt" DESC
       LIMIT 5
     `, [neil.id]);
