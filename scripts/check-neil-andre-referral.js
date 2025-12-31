@@ -87,7 +87,7 @@ async function checkReferralStatus() {
 
     // 4. Check VAS transactions for Neil
     const vasResult = await client.query(`
-      SELECT id, amount, "vasType", supplier, status, metadata, "createdAt"
+      SELECT id, amount, "vasType", "supplierId", status, metadata, "createdAt"
       FROM vas_transactions 
       WHERE "userId" = $1 
         AND amount = 1000
