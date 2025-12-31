@@ -171,10 +171,12 @@ class MobileMartCompareAndSync {
     
     try {
       // Test database connection
+      console.log('🔌 Connecting to database...');
       await db.sequelize.authenticate();
       console.log('✅ Database connection established\n');
       
       // Get MobileMart supplier
+      console.log('🔍 Looking up MobileMart supplier...');
       const supplier = await Supplier.findOne({ where: { code: 'MOBILEMART' } });
       if (!supplier) {
         throw new Error('MobileMart supplier not found in database');
@@ -183,8 +185,18 @@ class MobileMartCompareAndSync {
       
       // Test MobileMart authentication
       console.log('🔐 Authenticating with MobileMart UAT API...');
+      console.log(`   API URL: ${this.authService.baseUrl || 'not set'}`);
+      console.log(`   Client ID: ${this.authService.clientId ? this.authService.clientId.substring(0, 10) + '...' : 'NOT SET'}`);
+      console.log(`   Client Secret: ${this.authService.clientSecret ? 'SET' : 'NOT SET'}`);
+      
       try {
-        const health = await this.authService.healthCheck();
+        const health = await Promise.race([
+          this.authService.healthCheck(),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Authentication timeout after 30 seconds')), 30000)
+          )
+        ]);
+        
         if (health.status !== 'healthy') {
           throw new Error(`MobileMart API unhealthy: ${health.error}`);
         }
@@ -192,6 +204,9 @@ class MobileMartCompareAndSync {
       } catch (authError) {
         console.error('❌ MobileMart authentication failed:', authError.message);
         console.error('   Check MOBILEMART_CLIENT_ID and MOBILEMART_CLIENT_SECRET in .env');
+        if (authError.message.includes('timeout')) {
+          console.error('   The API request timed out. Check network connectivity to UAT API.');
+        }
         throw authError;
       }
       
