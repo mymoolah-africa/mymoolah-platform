@@ -113,10 +113,10 @@ async function checkReferralStatus() {
 
     // 5. Check referral earnings for Andre from Neil's transactions
     const earningsResult = await client.query(`
-      SELECT re.id, re."earnerUserId", re."transactionUserId", re."transactionId", re.level, 
+      SELECT re.id, re."earnerUserId", re."transactionUserId", re."transaction_id", re.level, 
              re."earnedAmountCents", re.status, re."createdAt"
       FROM referral_earnings re
-      JOIN transactions t ON t.id = re."transactionId"
+      JOIN transactions t ON t.id = re."transaction_id"
       WHERE re."earnerUserId" = $1
         AND re."transactionUserId" = $2
         AND t.description LIKE '%airtime%'
@@ -130,17 +130,17 @@ async function checkReferralStatus() {
     } else {
       earningsResult.rows.forEach(earning => {
         console.log(`   Level ${earning.level}: R${earning.earnedAmountCents/100} (${earning.status})`);
-        console.log(`      Transaction ID: ${earning.transactionId}, Created: ${earning.createdAt.toISOString().split('T')[0]}`);
+        console.log(`      Transaction ID: ${earning.transaction_id}, Created: ${earning.createdAt.toISOString().split('T')[0]}`);
       });
     }
 
     // 6. Check all referral earnings for Andre (any level)
     const allEarningsResult = await client.query(`
-      SELECT re.id, re."earnerUserId", re."transactionUserId", re."transactionId", re.level, 
+      SELECT re.id, re."earnerUserId", re."transactionUserId", re."transaction_id", re.level, 
              re."earnedAmountCents", re.status, re."createdAt",
              u."firstName" || ' ' || u."lastName" as transaction_user_name
       FROM referral_earnings re
-      JOIN transactions t ON t.id = re."transactionId"
+      JOIN transactions t ON t.id = re."transaction_id"
       JOIN users u ON u.id = re."transactionUserId"
       WHERE re."earnerUserId" = $1
       ORDER BY re."createdAt" DESC
