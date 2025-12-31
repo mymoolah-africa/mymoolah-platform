@@ -71,7 +71,7 @@ async function manualPayout() {
       transactionId,
       andreId,
       wallet.walletId,
-      totalCents, // Store in cents
+      totalRand, // Store in Rand (decimal), not cents
       'credit',
       'completed',
       `Referral earnings payout (${earningsResult.rows.length} earnings)`,
