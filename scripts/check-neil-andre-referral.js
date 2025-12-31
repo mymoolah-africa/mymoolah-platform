@@ -44,11 +44,12 @@ async function checkReferralStatus() {
       WHERE user_id = $1
     `, [neil.id]);
     
+    let chain = null;
     console.log('⛓️  REFERRAL CHAIN (Neil):');
     if (chainResult.rows.length === 0) {
       console.log('   ❌ NO CHAIN FOUND');
     } else {
-      const chain = chainResult.rows[0];
+      chain = chainResult.rows[0];
       console.log(`   Chain Depth: ${chain.chain_depth}`);
       console.log(`   L1: ${chain.level_1_user_id || 'none'}`);
       console.log(`   L2: ${chain.level_2_user_id || 'none'}`);
@@ -213,11 +214,13 @@ async function checkReferralStatus() {
             if (!andreEarning) {
               console.log(`\n   ❌ PROBLEM: Andre (ID: ${andre.id}, L4) did NOT get an earning!`);
               console.log(`   💡 Expected: Level 4 earning for Andre (1% of 26 cents = 0.26 cents)`);
-              const chain = chainResult.rows[0];
-              console.log(`   💡 Chain shows: L1=${chain.level_1_user_id}, L2=${chain.level_2_user_id}, L3=${chain.level_3_user_id}, L4=${chain.level_4_user_id}`);
-              console.log(`   💡 Only ${earningsForTxn.rows.length} earnings created, but chain has depth ${chain.chain_depth}`);
-              console.log(`   💡 ROOT CAUSE: 0.26 cents < 1 cent minimum - earning rounded down to 0`);
-              console.log(`   💡 SOLUTION: Either lower minimum or ensure L4 gets at least 1 cent`);
+              if (chain) {
+                console.log(`   💡 Chain shows: L1=${chain.level_1_user_id}, L2=${chain.level_2_user_id}, L3=${chain.level_3_user_id}, L4=${chain.level_4_user_id}`);
+                console.log(`   💡 Only ${earningsForTxn.rows.length} earnings created, but chain has depth ${chain.chain_depth}`);
+              }
+              console.log(`   💡 ROOT CAUSE: Math.round(0.26) = 0 cents - earning rounded down to 0`);
+              console.log(`   💡 SOLUTION: Fixed in code - now uses Math.ceil() for amounts < 1 cent`);
+              console.log(`   💡 Next: Create retroactive earning for Andre (1 cent)`);
             } else {
               console.log(`\n   ✅ Andre DID get an earning: R${andreEarning.earned_amount_cents/100}`);
             }
