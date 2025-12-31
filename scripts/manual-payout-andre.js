@@ -102,8 +102,8 @@ async function manualPayout() {
     const statsResult = await client.query(`
       UPDATE user_referral_stats 
       SET 
-        lifetime_earnings_cents = lifetime_earnings_cents + $1,
-        total_paid_out_cents = total_paid_out_cents + $1,
+        total_earned_cents = total_earned_cents + $1,
+        total_paid_cents = total_paid_cents + $1,
         updated_at = NOW()
       WHERE user_id = $2
       RETURNING *
@@ -111,8 +111,8 @@ async function manualPayout() {
     
     if (statsResult.rows[0]) {
       console.log('✅ Stats updated');
-      console.log(`   Lifetime Earnings: R${statsResult.rows[0].lifetime_earnings_cents/100}`);
-      console.log(`   Total Paid Out: R${statsResult.rows[0].total_paid_out_cents/100}`);
+      console.log(`   Lifetime Earnings: R${statsResult.rows[0].total_earned_cents/100}`);
+      console.log(`   Total Paid Out: R${statsResult.rows[0].total_paid_cents/100}`);
     }
     console.log('');
     
