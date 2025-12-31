@@ -178,7 +178,13 @@ class MobileMartCompareAndSync {
       console.log(`   Database: ${dbConfig.database || 'unknown'}`);
       console.log(`   SSL: ${dbConfig.dialectOptions?.ssl ? 'enabled' : 'disabled'}`);
       
-      await db.sequelize.authenticate();
+      // Set a reasonable timeout for the connection (60 seconds)
+      const connectionPromise = db.sequelize.authenticate();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout after 60 seconds')), 60000)
+      );
+      
+      await Promise.race([connectionPromise, timeoutPromise]);
       console.log('✅ Database connection established\n');
       
       // Get MobileMart supplier
