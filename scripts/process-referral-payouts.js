@@ -24,7 +24,15 @@ async function main() {
     console.log('💰 Starting daily referral payout processing...');
     console.log(`⏰ Time: ${new Date().toISOString()}`);
     
-    const result = await referralPayoutService.processDailyPayouts();
+    // Add timeout to prevent hanging forever
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Payout processing timed out after 30 seconds')), 30000);
+    });
+    
+    const result = await Promise.race([
+      referralPayoutService.processDailyPayouts(),
+      timeoutPromise
+    ]);
     
     console.log('✅ Payout processing complete:');
     console.log(`   Batch ID: ${result.batchId}`);

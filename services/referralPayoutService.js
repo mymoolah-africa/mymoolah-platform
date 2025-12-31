@@ -33,6 +33,7 @@ class ReferralPayoutService {
     
     try {
       // 2. Get all pending earnings
+      console.log('🔍 Querying pending earnings...');
       const pendingEarnings = await ReferralEarning.findAll({
         where: { status: 'pending' },
         include: [
@@ -44,6 +45,7 @@ class ReferralPayoutService {
         ],
         order: [['earnerUserId', 'ASC'], ['created_at', 'ASC']]
       });
+      console.log(`✅ Found ${pendingEarnings.length} pending earnings`);
       
       if (pendingEarnings.length === 0) {
         await batch.update({
