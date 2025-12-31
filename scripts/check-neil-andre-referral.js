@@ -166,15 +166,17 @@ async function checkReferralStatus() {
       console.log(`   Status: ${vasTxn.status}`);
       console.log(`   Metadata: ${JSON.stringify(vasTxn.metadata, null, 2)}`);
       
-      // Find the ledger transaction
-      if (vasTxn.transactionId) {
+      // Find the ledger transaction by walletTransactionId from metadata
+      const walletTxnId = vasTxn.metadata?.walletTransactionId;
+      if (walletTxnId) {
+        console.log(`\n   🔍 Looking for ledger transaction with walletTransactionId: ${walletTxnId}`);
         const ledgerResult = await client.query(`
           SELECT id, "transactionId", "userId", amount, type, status, description, metadata, "createdAt"
           FROM transactions 
-          WHERE "transactionId" = $1 OR id = $2
+          WHERE "transactionId" = $1
           ORDER BY "createdAt" DESC
           LIMIT 1
-        `, [vasTxn.transactionId, vasTxn.transactionId]);
+        `, [walletTxnId]);
         
         if (ledgerResult.rows.length > 0) {
           const txn = ledgerResult.rows[0];
@@ -202,10 +204,36 @@ async function checkReferralStatus() {
             console.log(`   💡 Check if commission metadata exists and if calculateEarnings was called.`);
           }
         } else {
-          console.log(`\n   ⚠️  No ledger transaction found for VAS transaction ${vasTxn.transactionId}`);
+          console.log(`\n   ⚠️  No ledger transaction found with walletTransactionId: ${walletTxnId}`);
+          console.log(`   💡 This is why referral earnings weren't created - no ledger transaction to link to`);
         }
       } else {
-        console.log(`\n   ⚠️  VAS transaction has no transactionId linked`);
+        console.log(`\n   ⚠️  VAS transaction has no walletTransactionId in metadata`);
+        console.log(`   💡 This is why referral earnings weren't created - can't find linked transaction`);
+      }
+      
+      // Also check if there's a transaction around the same time
+      const timeWindow = new Date(vasTxn.createdAt);
+      timeWindow.setMinutes(timeWindow.getMinutes() - 2);
+      const timeWindowEnd = new Date(vasTxn.createdAt);
+      timeWindowEnd.setMinutes(timeWindowEnd.getMinutes() + 2);
+      
+      const nearbyTxns = await client.query(`
+        SELECT id, "transactionId", "userId", amount, type, status, description, "createdAt"
+        FROM transactions 
+        WHERE "userId" = $1
+          AND "createdAt" BETWEEN $2 AND $3
+          AND type IN ('payment', 'debit')
+          AND description ILIKE '%airtime%'
+        ORDER BY "createdAt" DESC
+        LIMIT 5
+      `, [neil.id, timeWindow, timeWindowEnd]);
+      
+      if (nearbyTxns.rows.length > 0) {
+        console.log(`\n   🔍 Found ${nearbyTxns.rows.length} nearby transactions (within 2 minutes):`);
+        nearbyTxns.rows.forEach(txn => {
+          console.log(`      ID: ${txn.id}, Transaction ID: ${txn.transactionId}, Amount: R${Math.abs(txn.amount)}, Created: ${txn.createdAt.toISOString()}`);
+        });
       }
     }
 
