@@ -275,6 +275,8 @@ class ProductPurchaseService {
             }
             
             // Calculate referral earnings (only on successful purchases with commission)
+            console.log(`🔍 Voucher referral check: commissionCents=${pricing.commissionCents}, userId=${userId}, txnId=${walletTransaction.id}`);
+            
             if (pricing.commissionCents > 0) {
               const earnings = await referralEarningsService.calculateEarnings({
                 userId,
@@ -284,8 +286,13 @@ class ProductPurchaseService {
               });
               
               if (earnings.length > 0) {
-                console.log(`💰 Created ${earnings.length} referral earnings from voucher purchase`);
+                const totalEarned = earnings.reduce((sum, e) => sum + e.earnedAmountCents, 0);
+                console.log(`💰 Created ${earnings.length} referral earnings from voucher purchase (total: R${totalEarned/100})`);
+              } else {
+                console.log(`ℹ️ No referral earnings created (no referral chain or below minimum)`);
               }
+            } else {
+              console.log(`⚠️ No commission for voucher purchase - skipping referral earnings`);
             }
           } catch (error) {
             console.error('⚠️ Referral earnings failed (non-blocking):', error.message);

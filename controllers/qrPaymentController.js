@@ -1017,17 +1017,25 @@ class QRPaymentController {
           
           // Calculate referral earnings (only on successful payments with MM fee)
           // Use net revenue (after VAT) - mmFeeExclVat is in Rand, convert to cents
-          if (result.mmFeeExclVat && result.mmFeeExclVat > 0) {
+          const netRevenueCents = result.mmFeeExclVat ? Math.round(result.mmFeeExclVat * 100) : 0;
+          console.log(`🔍 QR referral check: mmFeeExclVat=${result.mmFeeExclVat}, netRevenueCents=${netRevenueCents}, userId=${userId}, txnId=${result.transaction.id}`);
+          
+          if (netRevenueCents > 0) {
             const earnings = await referralEarningsService.calculateEarnings({
               userId,
               id: result.transaction.id, // Use integer ID, not string transactionId
-              netRevenueCents: Math.round(result.mmFeeExclVat * 100), // Convert Rand to cents
+              netRevenueCents, // Convert Rand to cents
               type: 'qr_payment'
             });
             
             if (earnings.length > 0) {
-              console.log(`💰 QR payment generated ${earnings.length} referral earnings`);
+              const totalEarned = earnings.reduce((sum, e) => sum + e.earnedAmountCents, 0);
+              console.log(`💰 QR payment generated ${earnings.length} referral earnings (total: R${totalEarned/100})`);
+            } else {
+              console.log(`ℹ️ No referral earnings created (no referral chain or below minimum)`);
             }
+          } else {
+            console.log(`⚠️ No MM fee for QR payment - skipping referral earnings`);
           }
         } catch (error) {
           console.error('⚠️ Referral earnings failed (non-blocking):', error.message);

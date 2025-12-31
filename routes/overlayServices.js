@@ -1099,27 +1099,25 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         }
       }
 
-      // Allocate commission/VAT (non-critical - transaction already committed)
-      if (committedVasTransaction) {
-        try {
-          await allocateCommissionAndVat({
-            supplierCode: supplier,
-            serviceType: type,
-            amountInCents: amountInCentsValue,
-            vasTransaction: committedVasTransaction,
-            walletTransactionId: committedLedgerTransaction?.transactionId || null,
-            idempotencyKey,
-            purchaserUserId: req.user.id,
-          });
-        } catch (commissionError) {
-          console.error('⚠️ Commission/VAT allocation failed (non-critical):', commissionError.message);
-        }
-      }
-
-      // Phase 2: Referral system integration (non-blocking)
+      // Phase 1 & 2: Allocate commission/VAT, then calculate referral earnings (sequential, non-blocking)
       if (committedVasTransaction && committedLedgerTransaction) {
         setImmediate(async () => {
           try {
+            // STEP 1: Allocate commission and VAT FIRST
+            await allocateCommissionAndVat({
+              supplierCode: supplier,
+              serviceType: type,
+              amountInCents: amountInCentsValue,
+              vasTransaction: committedVasTransaction,
+              walletTransactionId: committedLedgerTransaction?.transactionId || null,
+              idempotencyKey,
+              purchaserUserId: req.user.id,
+            });
+            
+            // STEP 2: Reload vas_transaction to get updated commission metadata
+            await committedVasTransaction.reload();
+            
+            // STEP 3: Calculate referral earnings (now commission metadata exists)
             const referralService = require('../services/referralService');
             const referralEarningsService = require('../services/referralEarningsService');
             
@@ -1133,6 +1131,9 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             // Calculate referral earnings (only on successful purchases with commission)
             // Get net commission from metadata (after VAT)
             const netCommissionCents = committedVasTransaction.metadata?.commission?.netAmountCents;
+            
+            console.log(`🔍 Referral earnings check: netCommissionCents=${netCommissionCents}, userId=${req.user.id}, txnId=${committedLedgerTransaction.id}`);
+            
             if (netCommissionCents && netCommissionCents > 0) {
               const earnings = await referralEarningsService.calculateEarnings({
                 userId: req.user.id,
@@ -1142,12 +1143,18 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
               });
               
               if (earnings.length > 0) {
-                console.log(`💰 Created ${earnings.length} referral earnings from VAS purchase`);
+                const totalEarned = earnings.reduce((sum, e) => sum + e.earnedAmountCents, 0);
+                console.log(`💰 Created ${earnings.length} referral earnings from VAS purchase (total: R${totalEarned/100})`);
+              } else {
+                console.log(`ℹ️ No referral earnings created (no referral chain or below minimum)`);
               }
+            } else {
+              console.log(`⚠️ No commission found in metadata for referral earnings calculation`);
             }
           } catch (error) {
-            console.error('⚠️ Referral earnings failed (non-blocking):', error.message);
-            // Don't fail transaction if referral calculation fails
+            console.error('⚠️ Commission/VAT or referral earnings failed (non-blocking):', error.message);
+            console.error(error.stack);
+            // Don't fail transaction if commission/referral calculation fails
           }
         });
       }
