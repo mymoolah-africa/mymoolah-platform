@@ -170,7 +170,7 @@ class MobileMartCompareAndSync {
     console.log('='.repeat(80));
     
     try {
-      // Test database connection with timeout
+      // Test database connection
       console.log('🔌 Connecting to database...');
       const dbConfig = db.sequelize.config || {};
       console.log(`   Host: ${dbConfig.host || 'unknown'}`);
@@ -178,24 +178,8 @@ class MobileMartCompareAndSync {
       console.log(`   Database: ${dbConfig.database || 'unknown'}`);
       console.log(`   SSL: ${dbConfig.dialectOptions?.ssl ? 'enabled' : 'disabled'}`);
       
-      try {
-        const dbConnection = Promise.race([
-          db.sequelize.authenticate(),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Database connection timeout after 15 seconds. Check if database is accessible and Cloud SQL proxy is running if needed.')), 15000)
-          )
-        ]);
-        
-        await dbConnection;
-        console.log('✅ Database connection established\n');
-      } catch (dbError) {
-        console.error('❌ Database connection failed:', dbError.message);
-        if (dbError.message.includes('timeout')) {
-          console.error('   💡 Tip: If using Cloud SQL, ensure the proxy is running on port 6543');
-          console.error('   💡 Tip: Check DATABASE_URL in .env file');
-        }
-        throw dbError;
-      }
+      await db.sequelize.authenticate();
+      console.log('✅ Database connection established\n');
       
       // Get MobileMart supplier
       console.log('🔍 Looking up MobileMart supplier...');
