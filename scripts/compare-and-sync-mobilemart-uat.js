@@ -178,14 +178,39 @@ class MobileMartCompareAndSync {
       console.log(`   Database: ${dbConfig.database || 'unknown'}`);
       console.log(`   SSL: ${dbConfig.dialectOptions?.ssl ? 'enabled' : 'disabled'}`);
       
-      // Set a reasonable timeout for the connection (60 seconds)
-      const connectionPromise = db.sequelize.authenticate();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection timeout after 60 seconds')), 60000)
-      );
-      
-      await Promise.race([connectionPromise, timeoutPromise]);
-      console.log('✅ Database connection established\n');
+      try {
+        // Set a reasonable timeout for the connection (30 seconds)
+        const connectionPromise = db.sequelize.authenticate();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Connection timeout after 30 seconds')), 30000)
+        );
+        
+        await Promise.race([connectionPromise, timeoutPromise]);
+        console.log('✅ Database connection established\n');
+      } catch (dbError) {
+        // If direct connection fails and we're in Codespaces, try proxy
+        if (dbError.message.includes('timeout') && process.env.CODESPACES === 'true') {
+          console.log('   ⚠️  Direct connection timed out, trying Cloud SQL proxy (127.0.0.1:6543)...');
+          const proxyUrl = process.env.DATABASE_URL?.replace(/@[\d.]+:\d+/, '@127.0.0.1:6543').replace('sslmode=require', 'sslmode=disable');
+          if (proxyUrl && proxyUrl !== process.env.DATABASE_URL) {
+            // Create a new Sequelize instance with proxy URL
+            const Sequelize = require('sequelize');
+            const proxySequelize = new Sequelize(proxyUrl, {
+              dialect: 'postgres',
+              logging: false,
+              dialectOptions: { ssl: false }
+            });
+            await proxySequelize.authenticate();
+            console.log('✅ Database connection established via proxy\n');
+            // Use proxy connection for rest of script
+            db.sequelize = proxySequelize;
+          } else {
+            throw dbError;
+          }
+        } else {
+          throw dbError;
+        }
+      }
       
       // Get MobileMart supplier
       console.log('🔍 Looking up MobileMart supplier...');
