@@ -182,11 +182,18 @@ class MobileMartCompareAndSync {
       console.log(`✅ MobileMart Supplier ID: ${supplier.id}\n`);
       
       // Test MobileMart authentication
-      const health = await this.authService.healthCheck();
-      if (health.status !== 'healthy') {
-        throw new Error(`MobileMart API unhealthy: ${health.error}`);
+      console.log('🔐 Authenticating with MobileMart UAT API...');
+      try {
+        const health = await this.authService.healthCheck();
+        if (health.status !== 'healthy') {
+          throw new Error(`MobileMart API unhealthy: ${health.error}`);
+        }
+        console.log('✅ MobileMart UAT API authentication successful\n');
+      } catch (authError) {
+        console.error('❌ MobileMart authentication failed:', authError.message);
+        console.error('   Check MOBILEMART_CLIENT_ID and MOBILEMART_CLIENT_SECRET in .env');
+        throw authError;
       }
-      console.log('✅ MobileMart UAT API authentication successful\n');
       
       // Compare and sync each VAS type
       for (const vasType of VAS_TYPES) {
