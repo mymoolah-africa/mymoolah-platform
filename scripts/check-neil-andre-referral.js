@@ -4,18 +4,14 @@
  * and investigate why Andre didn't earn commission on Neil's R10 purchase
  */
 
-require('dotenv').config();
-const { Client } = require('pg');
+const { getUATClient, closeAll } = require('./db-connection-helper');
 
 async function checkReferralStatus() {
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('sslmode=require') ? { rejectUnauthorized: false } : false
-  });
-
+  let client;
+  
   try {
-    await client.connect();
-    console.log('✅ Connected to database\n');
+    client = await getUATClient();
+    console.log('✅ Connected to UAT database\n');
 
     // 1. Find users
     const usersResult = await client.query(`
@@ -208,7 +204,7 @@ async function checkReferralStatus() {
     console.error('❌ Error:', error.message);
     console.error(error.stack);
   } finally {
-    await client.end();
+    await closeAll();
   }
 }
 
