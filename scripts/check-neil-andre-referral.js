@@ -156,24 +156,56 @@ async function checkReferralStatus() {
       });
     }
 
-    // 7. Check if there's a ledger transaction for Neil's purchase
-    if (transactionsResult.rows.length > 0) {
-      const latestTxn = transactionsResult.rows[0];
-      const ledgerResult = await client.query(`
-        SELECT id, transaction_id, user_id, amount, type, status, description, metadata
-        FROM transactions 
-        WHERE id = $1
-      `, [latestTxn.id]);
+    // 7. Check the ledger transaction linked to Neil's VAS transaction
+    if (vasResult.rows.length > 0) {
+      const vasTxn = vasResult.rows[0];
+      console.log(`\n📋 VAS TRANSACTION DETAILS:`);
+      console.log(`   VAS ID: ${vasTxn.id}`);
+      console.log(`   Transaction ID: ${vasTxn.transactionId || 'NOT SET'}`);
+      console.log(`   Amount: R${vasTxn.amount/100}`);
+      console.log(`   Status: ${vasTxn.status}`);
+      console.log(`   Metadata: ${JSON.stringify(vasTxn.metadata, null, 2)}`);
       
-      console.log(`\n📋 LATEST TRANSACTION DETAILS:`);
-      if (ledgerResult.rows.length > 0) {
-        const txn = ledgerResult.rows[0];
-        console.log(`   ID: ${txn.id}`);
-        console.log(`   Transaction ID: ${txn.transaction_id}`);
-        console.log(`   Amount: R${txn.amount}`);
-        console.log(`   Type: ${txn.type}`);
-        console.log(`   Status: ${txn.status}`);
-        console.log(`   Metadata: ${JSON.stringify(txn.metadata, null, 2)}`);
+      // Find the ledger transaction
+      if (vasTxn.transactionId) {
+        const ledgerResult = await client.query(`
+          SELECT id, "transactionId", "userId", amount, type, status, description, metadata, "createdAt"
+          FROM transactions 
+          WHERE "transactionId" = $1 OR id = $2
+          ORDER BY "createdAt" DESC
+          LIMIT 1
+        `, [vasTxn.transactionId, vasTxn.transactionId]);
+        
+        if (ledgerResult.rows.length > 0) {
+          const txn = ledgerResult.rows[0];
+          console.log(`\n📋 LINKED LEDGER TRANSACTION:`);
+          console.log(`   ID: ${txn.id}`);
+          console.log(`   Transaction ID: ${txn.transactionId}`);
+          console.log(`   Amount: R${txn.amount}`);
+          console.log(`   Type: ${txn.type}`);
+          console.log(`   Status: ${txn.status}`);
+          console.log(`   Description: ${txn.description}`);
+          console.log(`   Created: ${txn.createdAt.toISOString()}`);
+          
+          // Check if referral earnings should have been created for this transaction
+          const shouldHaveEarnings = await client.query(`
+            SELECT COUNT(*) as count
+            FROM referral_earnings 
+            WHERE transaction_id = $1
+          `, [txn.id]);
+          
+          console.log(`\n🔍 REFERRAL EARNINGS CHECK:`);
+          console.log(`   Expected earnings for transaction ${txn.id}: ${shouldHaveEarnings.rows[0].count}`);
+          if (shouldHaveEarnings.rows[0].count === '0') {
+            console.log(`   ❌ NO EARNINGS CREATED - This is the issue!`);
+            console.log(`   💡 The referral earnings calculation did not run for this transaction.`);
+            console.log(`   💡 Check if commission metadata exists and if calculateEarnings was called.`);
+          }
+        } else {
+          console.log(`\n   ⚠️  No ledger transaction found for VAS transaction ${vasTxn.transactionId}`);
+        }
+      } else {
+        console.log(`\n   ⚠️  VAS transaction has no transactionId linked`);
       }
     }
 
