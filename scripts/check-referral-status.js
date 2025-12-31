@@ -42,7 +42,7 @@ async function checkReferralStatus() {
 
     // 2. Check referral relationship
     const referralResult = await client.query(`
-      SELECT id, referral_code, status, activated_at, first_transaction_at, created_at
+      SELECT id, referral_code, status, activated_at, signed_up_at, created_at
       FROM referrals 
       WHERE referrer_user_id = $1 AND referee_user_id = $2
     `, [andreId, leonieId]);
@@ -53,8 +53,9 @@ async function checkReferralStatus() {
       console.log(`   - ID: ${referralResult.rows[0].id}`);
       console.log(`   - Code: ${referralResult.rows[0].referral_code}`);
       console.log(`   - Status: ${referralResult.rows[0].status}`);
+      console.log(`   - Signed Up: ${referralResult.rows[0].signed_up_at || 'NOT SIGNED UP'}`);
       console.log(`   - Activated: ${referralResult.rows[0].activated_at || 'NOT ACTIVATED'}`);
-      console.log(`   - First Transaction: ${referralResult.rows[0].first_transaction_at || 'NO TRANSACTION'}`);
+      console.log(`   - Created: ${referralResult.rows[0].created_at}`);
     } else {
       console.log('❌ NO REFERRAL RELATIONSHIP FOUND');
     }
@@ -192,7 +193,8 @@ async function checkReferralStatus() {
       console.log('   → This prevents ANY referral earnings from being calculated');
       console.log('');
       console.log('🔧 SOLUTION: Build referral chain for Leonie');
-      console.log('   → Call: referralService.buildReferralChain(leonieId)');
+      console.log('   → The signup process should have built it automatically');
+      console.log('   → Need to manually build chain now');
     } else if (allEarningsResult.rows.length === 0) {
       console.log('🔴 PROBLEM: Zero earnings in entire system');
       console.log('   → Code fix is applied but needs testing with new purchase');
