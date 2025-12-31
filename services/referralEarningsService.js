@@ -84,7 +84,11 @@ class ReferralEarningsService {
       const { userId: earnerUserId, level, percentage } = earner;
       
       // Calculate base earning
-      const baseEarningCents = Math.round((netRevenueCents * percentage) / 100);
+      // Use Math.ceil for very small amounts to ensure at least 1 cent for tiny commissions
+      // This ensures L4 (1%) still earns even on small transactions
+      const baseEarningCents = netRevenueCents * percentage / 100 < 1 
+        ? Math.ceil((netRevenueCents * percentage) / 100) 
+        : Math.round((netRevenueCents * percentage) / 100);
       
       // Get current month stats for this user/level
       const stats = await this.getUserStats(earnerUserId, monthYear);
