@@ -189,16 +189,36 @@ async function checkReferralStatus() {
           console.log(`   Description: ${txn.description}`);
           console.log(`   Created: ${txn.createdAt.toISOString()}`);
           
-          // Check if referral earnings should have been created for this transaction
-          const shouldHaveEarnings = await client.query(`
-            SELECT COUNT(*) as count
-            FROM referral_earnings 
-            WHERE transaction_id = $1
+          // Check who got earnings from this transaction
+          const earningsForTxn = await client.query(`
+            SELECT re.id, re.earner_user_id, re.transaction_user_id, re.level, 
+                   re.earned_amount_cents, re.status,
+                   u."firstName" || ' ' || u."lastName" as earner_name
+            FROM referral_earnings re
+            JOIN users u ON u.id = re.earner_user_id
+            WHERE re.transaction_id = $1
+            ORDER BY re.level ASC
           `, [txn.id]);
           
-          console.log(`\n🔍 REFERRAL EARNINGS CHECK:`);
-          console.log(`   Expected earnings for transaction ${txn.id}: ${shouldHaveEarnings.rows[0].count}`);
-          if (shouldHaveEarnings.rows[0].count === '0') {
+          console.log(`\n🔍 REFERRAL EARNINGS FOR TRANSACTION ${txn.id}:`);
+          console.log(`   Total earnings created: ${earningsForTxn.rows.length}`);
+          
+          if (earningsForTxn.rows.length > 0) {
+            earningsForTxn.rows.forEach(earning => {
+              const isAndre = earning.earner_user_id === andre.id;
+              console.log(`   ${isAndre ? '✅' : '  '} Level ${earning.level}: ${earning.earner_name} (ID: ${earning.earner_user_id}) earned R${earning.earned_amount_cents/100} (${earning.status})`);
+            });
+            
+            const andreEarning = earningsForTxn.rows.find(e => e.earner_user_id === andre.id);
+            if (!andreEarning) {
+              console.log(`\n   ❌ PROBLEM: Andre (ID: ${andre.id}, L4) did NOT get an earning!`);
+              console.log(`   💡 Expected: Level 4 earning for Andre (1% of 26 cents = 0.26 cents)`);
+              console.log(`   💡 Chain shows: L1=${chain.level_1_user_id}, L2=${chain.level_2_user_id}, L3=${chain.level_3_user_id}, L4=${chain.level_4_user_id}`);
+              console.log(`   💡 Only ${earningsForTxn.rows.length} earnings created, but chain has depth ${chain.chain_depth}`);
+            } else {
+              console.log(`\n   ✅ Andre DID get an earning: R${andreEarning.earned_amount_cents/100}`);
+            }
+          } else {
             console.log(`   ❌ NO EARNINGS CREATED - This is the issue!`);
             console.log(`   💡 The referral earnings calculation did not run for this transaction.`);
             console.log(`   💡 Check if commission metadata exists and if calculateEarnings was called.`);
