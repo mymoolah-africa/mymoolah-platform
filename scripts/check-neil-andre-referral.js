@@ -65,13 +65,13 @@ async function checkReferralStatus() {
 
     // 3. Check Neil's recent transactions
     const transactionsResult = await client.query(`
-      SELECT id, amount, type, status, description, currency, created_at
+      SELECT id, amount, type, status, description, currency, "createdAt"
       FROM transactions 
-      WHERE user_id = $1 
+      WHERE "userId" = $1 
         AND type = 'payment'
         AND description LIKE '%airtime%'
         AND amount = -10.00
-      ORDER BY created_at DESC
+      ORDER BY "createdAt" DESC
       LIMIT 5
     `, [neil.id]);
     
@@ -80,19 +80,19 @@ async function checkReferralStatus() {
       console.log('   ❌ NO R10 AIRTIME TRANSACTIONS FOUND');
     } else {
       transactionsResult.rows.forEach(txn => {
-        console.log(`   ID: ${txn.id}, Amount: R${Math.abs(txn.amount)}, Date: ${txn.created_at.toISOString().split('T')[0]}`);
+        console.log(`   ID: ${txn.id}, Amount: R${Math.abs(txn.amount)}, Date: ${txn.createdAt.toISOString().split('T')[0]}`);
         console.log(`      Desc: ${txn.description}`);
       });
     }
 
     // 4. Check VAS transactions for Neil
     const vasResult = await client.query(`
-      SELECT id, amount, type, supplier, status, metadata, created_at
+      SELECT id, amount, type, supplier, status, metadata, "createdAt"
       FROM vas_transactions 
-      WHERE user_id = $1 
+      WHERE "userId" = $1 
         AND amount = 1000
         AND type = 'airtime'
-      ORDER BY created_at DESC
+      ORDER BY "createdAt" DESC
       LIMIT 5
     `, [neil.id]);
     
@@ -102,7 +102,7 @@ async function checkReferralStatus() {
     } else {
       vasResult.rows.forEach(vas => {
         const commission = vas.metadata?.commission;
-        console.log(`   ID: ${vas.id}, Amount: R${vas.amount/100}, Date: ${vas.created_at.toISOString().split('T')[0]}`);
+        console.log(`   ID: ${vas.id}, Amount: R${vas.amount/100}, Date: ${vas.createdAt.toISOString().split('T')[0]}`);
         if (commission) {
           console.log(`      Commission: ${commission.grossAmountCents} cents, Net: ${commission.netAmountCents} cents`);
         } else {
@@ -113,14 +113,14 @@ async function checkReferralStatus() {
 
     // 5. Check referral earnings for Andre from Neil's transactions
     const earningsResult = await client.query(`
-      SELECT re.id, re.earner_user_id, re.transaction_user_id, re.transaction_id, re.level, 
-             re.earned_amount_cents, re.status, re.created_at
+      SELECT re.id, re."earnerUserId", re."transactionUserId", re."transactionId", re.level, 
+             re."earnedAmountCents", re.status, re."createdAt"
       FROM referral_earnings re
-      JOIN transactions t ON t.id = re.transaction_id
-      WHERE re.earner_user_id = $1
-        AND re.transaction_user_id = $2
+      JOIN transactions t ON t.id = re."transactionId"
+      WHERE re."earnerUserId" = $1
+        AND re."transactionUserId" = $2
         AND t.description LIKE '%airtime%'
-      ORDER BY re.created_at DESC
+      ORDER BY re."createdAt" DESC
       LIMIT 10
     `, [andre.id, neil.id]);
     
@@ -129,21 +129,21 @@ async function checkReferralStatus() {
       console.log('   ❌ NO EARNINGS FOUND');
     } else {
       earningsResult.rows.forEach(earning => {
-        console.log(`   Level ${earning.level}: R${earning.earned_amount_cents/100} (${earning.status})`);
-        console.log(`      Transaction ID: ${earning.transaction_id}, Created: ${earning.created_at.toISOString().split('T')[0]}`);
+        console.log(`   Level ${earning.level}: R${earning.earnedAmountCents/100} (${earning.status})`);
+        console.log(`      Transaction ID: ${earning.transactionId}, Created: ${earning.createdAt.toISOString().split('T')[0]}`);
       });
     }
 
     // 6. Check all referral earnings for Andre (any level)
     const allEarningsResult = await client.query(`
-      SELECT re.id, re.earner_user_id, re.transaction_user_id, re.transaction_id, re.level, 
-             re.earned_amount_cents, re.status, re.created_at,
-             u.first_name || ' ' || u.last_name as transaction_user_name
+      SELECT re.id, re."earnerUserId", re."transactionUserId", re."transactionId", re.level, 
+             re."earnedAmountCents", re.status, re."createdAt",
+             u."firstName" || ' ' || u."lastName" as transaction_user_name
       FROM referral_earnings re
-      JOIN transactions t ON t.id = re.transaction_id
-      JOIN users u ON u.id = re.transaction_user_id
-      WHERE re.earner_user_id = $1
-      ORDER BY re.created_at DESC
+      JOIN transactions t ON t.id = re."transactionId"
+      JOIN users u ON u.id = re."transactionUserId"
+      WHERE re."earnerUserId" = $1
+      ORDER BY re."createdAt" DESC
       LIMIT 10
     `, [andre.id]);
     
@@ -152,7 +152,7 @@ async function checkReferralStatus() {
       console.log('   ❌ NO EARNINGS FOUND');
     } else {
       allEarningsResult.rows.forEach(earning => {
-        console.log(`   Level ${earning.level} from ${earning.transaction_user_name}: R${earning.earned_amount_cents/100} (${earning.status})`);
+        console.log(`   Level ${earning.level} from ${earning.transaction_user_name}: R${earning.earnedAmountCents/100} (${earning.status})`);
       });
     }
 
