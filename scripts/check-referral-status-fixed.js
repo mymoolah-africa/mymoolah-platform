@@ -192,7 +192,8 @@ async function checkReferralStatus() {
       console.log('   → This prevents ANY referral earnings from being calculated');
       console.log('');
       console.log('🔧 SOLUTION: Build referral chain for Leonie');
-      console.log('   Run: node scripts/build-missing-referral-chains.js');
+      console.log('   → Use referralService.buildReferralChain(leonieId)');
+      console.log('   → Or run migration to build chains for all users');
     } else if (allEarningsResult.rows.length === 0) {
       console.log('🔴 PROBLEM: Zero earnings in entire system');
       console.log('   → Code fix (reload) is applied but needs testing');
@@ -217,3 +218,5 @@ async function checkReferralStatus() {
 }
 
 checkReferralStatus().catch(console.error);
+
+
