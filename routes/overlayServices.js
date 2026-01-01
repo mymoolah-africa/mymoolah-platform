@@ -1358,16 +1358,15 @@ router.get('/electricity/catalog', auth, async (req, res) => {
     const comparisonService = new SupplierComparisonService();
     const electricityVariants = allVariants.map(v => comparisonService.formatProductForResponse(v));
     
-    
-    // Extract predefined amounts from products
-    const suggestedAmounts = [];
-    let globalMinAmount = 20; // Default minimum for electricity
-    
     // Extract unique supplier codes for providers list
     const uniqueSuppliers = [...new Set(electricityVariants.map(v => {
       // supplierCode is the code (e.g., 'FLASH', 'MOBILEMART'), supplier is the name
       return v.supplierCode || (typeof v.supplier === 'string' ? v.supplier : null);
     }).filter(Boolean))];
+    
+    // Extract predefined amounts from products
+    const suggestedAmounts = [];
+    let globalMinAmount = 20; // Default minimum for electricity
     
     electricityVariants.forEach(variant => {
       // Update global minimum amount based on products (amounts are in cents)
@@ -1427,7 +1426,8 @@ router.get('/electricity/catalog', auth, async (req, res) => {
           supplier: variant.supplier || variant.supplierCode || 'Unknown',
           supplierCode: variant.supplierCode || null,
           description: variant.metadata?.description || ''
-        }))      }
+        }))
+      }
     });
 
   } catch (error) {
@@ -1689,33 +1689,83 @@ router.get('/bills/search', auth, async (req, res) => {
   try {
     const { q, category } = req.query;
     
-    // Mock biller data (in production, this would come from Flash/MobileMart APIs)
-    const billers = [
-      { id: 'discovery', name: 'Discovery Health', category: 'insurance' },
-      { id: 'dstv', name: 'DStv', category: 'entertainment' },
-      { id: 'unisa', name: 'University of South Africa', category: 'education' },
-      { id: 'city-power', name: 'City Power', category: 'municipal' },
-      { id: 'vodacom-contract', name: 'Vodacom Contract', category: 'telecoms' },
-      { id: 'edgars', name: 'Edgars Account', category: 'retail' }
-    ];
-
-    let results = billers;
+    // Get bill payment products from ProductVariant (normalized schema)
+    const { ProductVariant, Product, Supplier } = require('../models');
     
+    // Query ProductVariant for bill_payment products
+    const billPaymentVariants = await ProductVariant.findAll({
+      where: {
+        status: 'active'
+      },
+      include: [
+        {
+          model: Product,
+          as: 'product',
+          where: { type: 'bill_payment', status: 'active' },
+          attributes: ['id', 'name', 'type', 'status']
+        },
+        {
+          model: Supplier,
+          as: 'supplier',
+          where: { isActive: true },
+          attributes: ['id', 'name', 'code', 'isActive']
+        }
+      ],
+      order: [['priority', 'ASC']]
+    });
+    
+    // Extract unique billers from products
+    // Use provider field (biller name) or product name as biller name
+    // Extract category from metadata.category or metadata.billerCategory
+    const billerMap = new Map();
+    
+    billPaymentVariants.forEach(variant => {
+      const billerName = variant.provider || variant.product?.name || 'Unknown Biller';
+      const billerCategory = variant.metadata?.category || 
+                             variant.metadata?.billerCategory || 
+                             'other';
+      
+      // Create a unique key from biller name (normalized)
+      const billerKey = billerName.toLowerCase().trim();
+      
+      if (!billerMap.has(billerKey)) {
+        // Create a slug-like ID from the biller name
+        const billerId = billerName.toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+        
+        billerMap.set(billerKey, {
+          id: billerId,
+          name: billerName,
+          category: billerCategory
+        });
+      }
+    });
+    
+    // Convert map to array
+    let billers = Array.from(billerMap.values());
+    
+    // Apply search filter
     if (q) {
-      results = billers.filter(biller =>
-        biller.name.toLowerCase().includes(q.toLowerCase()) ||
-        biller.category.toLowerCase().includes(q.toLowerCase())
+      const searchLower = q.toLowerCase();
+      billers = billers.filter(biller =>
+        biller.name.toLowerCase().includes(searchLower) ||
+        biller.category.toLowerCase().includes(searchLower)
       );
     }
     
+    // Apply category filter
     if (category) {
-      results = results.filter(biller => biller.category === category);
+      billers = billers.filter(biller => biller.category === category);
     }
+    
+    // Sort by name
+    billers.sort((a, b) => a.name.localeCompare(b.name));
 
     res.json({
       success: true,
       data: {
-        billers: results
+        billers: billers
       }
     });
 
@@ -1736,14 +1786,68 @@ router.get('/bills/search', auth, async (req, res) => {
  */
 router.get('/bills/categories', auth, async (req, res) => {
   try {
-    const categories = [
-      { id: 'insurance', name: 'Insurance' },
-      { id: 'entertainment', name: 'Entertainment' },
-      { id: 'education', name: 'Education' },
-      { id: 'municipal', name: 'Municipal' },
-      { id: 'telecoms', name: 'Telecoms' },
-      { id: 'retail', name: 'Retail Credit' }
-    ];
+    // Get bill payment products from ProductVariant to extract unique categories
+    const { ProductVariant, Product, Supplier } = require('../models');
+    
+    // Query ProductVariant for bill_payment products
+    const billPaymentVariants = await ProductVariant.findAll({
+      where: {
+        status: 'active'
+      },
+      include: [
+        {
+          model: Product,
+          as: 'product',
+          where: { type: 'bill_payment', status: 'active' },
+          attributes: ['id', 'name', 'type', 'status']
+        },
+        {
+          model: Supplier,
+          as: 'supplier',
+          where: { isActive: true },
+          attributes: ['id', 'name', 'code', 'isActive']
+        }
+      ]
+    });
+    
+    // Extract unique categories from metadata
+    const categoryMap = new Map();
+    
+    billPaymentVariants.forEach(variant => {
+      const categoryId = variant.metadata?.category || 
+                         variant.metadata?.billerCategory || 
+                         'other';
+      
+      if (categoryId && !categoryMap.has(categoryId)) {
+        // Create a display name from category ID (capitalize first letter of each word)
+        const categoryName = categoryId
+          .split(/[-_]/)
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+        
+        categoryMap.set(categoryId, {
+          id: categoryId,
+          name: categoryName
+        });
+      }
+    });
+    
+    // Convert map to array and sort by name
+    let categories = Array.from(categoryMap.values());
+    categories.sort((a, b) => a.name.localeCompare(b.name));
+    
+    // If no categories found, provide default categories as fallback
+    if (categories.length === 0) {
+      categories = [
+        { id: 'insurance', name: 'Insurance' },
+        { id: 'entertainment', name: 'Entertainment' },
+        { id: 'education', name: 'Education' },
+        { id: 'municipal', name: 'Municipal' },
+        { id: 'telecoms', name: 'Telecoms' },
+        { id: 'retail', name: 'Retail Credit' },
+        { id: 'other', name: 'Other' }
+      ];
+    }
 
     res.json({
       success: true,
@@ -1792,7 +1896,62 @@ router.post('/bills/pay', auth, async (req, res) => {
       });
     }
 
-    // Simulate bill payment using database
+    // Get biller name from beneficiary metadata
+    const billerName = beneficiary.metadata?.billerName || beneficiary.name || 'Unknown Biller';
+    
+    // Find the best ProductVariant for this biller using supplier comparison
+    const { ProductVariant, Product, Supplier } = require('../models');
+    const SupplierComparisonService = require('../services/supplierComparisonService');
+    const comparisonService = new SupplierComparisonService();
+    
+    // Query ProductVariant for this specific biller (provider = billerName)
+    const billerVariants = await ProductVariant.findAll({
+      where: {
+        status: 'active',
+        provider: billerName
+      },
+      include: [
+        {
+          model: Product,
+          as: 'product',
+          where: { type: 'bill_payment', status: 'active' },
+          attributes: ['id', 'name', 'type', 'status']
+        },
+        {
+          model: Supplier,
+          as: 'supplier',
+          where: { isActive: true },
+          attributes: ['id', 'name', 'code', 'isActive']
+        }
+      ],
+      order: [['commission', 'DESC'], ['priority', 'ASC']]
+    });
+    
+    // Select the best variant (highest commission, then priority)
+    // If no specific biller variant found, use comparison service to get best deal
+    let selectedVariant = billerVariants.length > 0 ? billerVariants[0] : null;
+    let supplierCode = 'flash'; // Default fallback
+    let supplierProductId = 'FLASH_BILL_PAYMENT'; // Default fallback
+    
+    if (!selectedVariant) {
+      // Fallback: Use comparison service to get best bill_payment variant
+      try {
+        const comparison = await comparisonService.compareProducts('bill_payment', Math.round(Number(amount) * 100));
+        if (comparison.bestDeals && comparison.bestDeals.length > 0) {
+          const bestDeal = comparison.bestDeals[0];
+          supplierCode = bestDeal.supplierCode || 'flash';
+          supplierProductId = bestDeal.supplierProductId || 'FLASH_BILL_PAYMENT';
+        }
+      } catch (error) {
+        console.error('❌ Failed to get best deal from comparison service, using default Flash:', error.message);
+        // Continue with default Flash
+      }
+    } else {
+      supplierCode = selectedVariant.supplier?.code || 'flash';
+      supplierProductId = selectedVariant.supplierProductId || 'FLASH_BILL_PAYMENT';
+    }
+    
+    // Create bill payment transaction using database
     const { VasTransaction } = require('../models');
     const amountInCentsValue = Math.round(Number(amount) * 100);
     
@@ -1801,8 +1960,8 @@ router.post('/bills/pay', auth, async (req, res) => {
       userId: req.user.id,
       beneficiaryId: beneficiary.id,
       vasType: 'bill_payment',
-      supplierId: 'flash',
-      supplierProductId: 'FLASH_BILL_PAYMENT',
+      supplierId: supplierCode,
+      supplierProductId: supplierProductId,
       amount: amountInCentsValue, // Convert to cents
       mobileNumber: beneficiary.identifier, // Using identifier as account number
       status: 'completed',
@@ -1812,9 +1971,10 @@ router.post('/bills/pay', auth, async (req, res) => {
         type: 'bill_payment',
         userId: req.user.id,
         simulated: true,
-        billerName: beneficiary.metadata?.billerName || 'Unknown Biller',
+        billerName: billerName,
         accountNumber: beneficiary.identifier,
         amountCents: amountInCentsValue,
+        productVariantId: selectedVariant?.id || null,
         processedAt: new Date().toISOString()
       }
     });
