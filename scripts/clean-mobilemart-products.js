@@ -12,9 +12,9 @@
 
 require('dotenv').config({ path: '.env' });
 
-// Initialize database connection helper
-const dbConnectionHelper = require('./db-connection-helper');
-dbConnectionHelper.initializeDatabaseConnection();
+// Set DATABASE_URL from db-connection-helper before loading models
+const { getUATDatabaseURL, closeAll } = require('./db-connection-helper');
+process.env.DATABASE_URL = getUATDatabaseURL();
 
 const db = require('../models');
 const { ProductVariant, Product, Supplier, sequelize } = db;
@@ -130,6 +130,7 @@ async function cleanMobileMartProducts() {
     process.exit(1);
   } finally {
     await sequelize.close();
+    await closeAll();
   }
 }
 
