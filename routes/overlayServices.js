@@ -1319,33 +1319,77 @@ router.get('/electricity/catalog', auth, async (req, res) => {
       meterType = 'Eskom'; // Default to Eskom for now
     }
 
-    // Get electricity products from database
-    const { VasProduct } = require('../models');
+    // Get electricity products from ProductVariant (normalized schema) - supports multiple suppliers
+    const { ProductVariant, Product, Supplier } = require('../models');
+    const { Op } = require('sequelize');
     
-    // Fetch electricity products for the specific provider
-    const electricityProducts = await VasProduct.findAll({
-      where: {
-        vasType: 'electricity',
-        supplierId: 'flash',
-        provider: meterType === 'Global' ? 'Global' : meterType,
-        isActive: true
-      },
-      order: [['priority', 'ASC'], ['minAmount', 'ASC']]
+    // Query ProductVariant directly for electricity products
+    // Filter by provider (meterType) and ensure active products from active suppliers
+    const whereClause = {
+      status: 'active'
+    };
+    
+    // Filter by provider if not Global
+    if (meterType && meterType !== 'Global') {
+      whereClause.provider = meterType;
+    }
+    
+    const allVariants = await ProductVariant.findAll({
+      where: whereClause,
+      include: [
+        {
+          model: Product,
+          as: 'product',
+          where: { type: 'electricity', status: 'active' },
+          attributes: ['id', 'name', 'type', 'status']
+        },
+        {
+          model: Supplier,
+          as: 'supplier',
+          where: { isActive: true },
+          attributes: ['id', 'name', 'code', 'isActive']
+        }
+      ],
+      order: [['commission', 'DESC'], ['priority', 'ASC'], ['minAmount', 'ASC']]
+    });
+    
+    // Format variants for response
+    const SupplierComparisonService = require('../services/supplierComparisonService');
+    const comparisonService = new SupplierComparisonService();
+    const electricityVariants = allVariants.map(v => comparisonService.formatProductForResponse(v));
+    
     });
     
     // Extract predefined amounts from products
     const suggestedAmounts = [];
     let globalMinAmount = 20; // Default minimum for electricity
     
-    electricityProducts.forEach(product => {
-      // Update global minimum amount based on products
-      if (product.minAmount) {
-        const productMinRand = product.minAmount / 100;
+    // Extract unique supplier codes for providers list
+    const uniqueSuppliers = [...new Set(electricityVariants.map(v => {
+      // supplierCode is the code (e.g., 'FLASH', 'MOBILEMART'), supplier is the name
+      return v.supplierCode || (typeof v.supplier === 'string' ? v.supplier : null);
+    }).filter(Boolean))];
+    
+    electricityVariants.forEach(variant => {
+      // Update global minimum amount based on products (amounts are in cents)
+      if (variant.minAmount) {
+        const productMinRand = variant.minAmount / 100;
         globalMinAmount = Math.max(globalMinAmount, productMinRand);
       }
       
-      if (product.predefinedAmounts) {
-        product.predefinedAmounts.forEach(amount => {
+      // Check predefinedAmounts (if available)
+      if (variant.predefinedAmounts && Array.isArray(variant.predefinedAmounts)) {
+        variant.predefinedAmounts.forEach(amount => {
+          const amountInRand = amount / 100; // Convert cents to rand
+          if (amountInRand <= 2000 && amountInRand >= globalMinAmount && !suggestedAmounts.includes(amountInRand)) {
+            suggestedAmounts.push(amountInRand);
+          }
+        });
+      }
+      
+      // Also check denominations if predefinedAmounts not available
+      if ((!variant.predefinedAmounts || variant.predefinedAmounts.length === 0) && variant.denominations && Array.isArray(variant.denominations)) {
+        variant.denominations.forEach(amount => {
           const amountInRand = amount / 100; // Convert cents to rand
           if (amountInRand <= 2000 && amountInRand >= globalMinAmount && !suggestedAmounts.includes(amountInRand)) {
             suggestedAmounts.push(amountInRand);
@@ -1371,19 +1415,20 @@ router.get('/electricity/catalog', auth, async (req, res) => {
           meterType: meterType
         },
         meterValid: isValid,
-        providers: ['Flash'], // Only Flash for now
+        providers: uniqueSuppliers.length > 0 ? uniqueSuppliers : ['Flash', 'MobileMart'], // Dynamic supplier list
         minAmount: globalMinAmount, // Minimum allowed amount for electricity
         suggestedAmounts: cappedAmounts.length > 0 ? cappedAmounts : [globalMinAmount, 50, 100, 200, 500, 1000, 2000].filter(amount => amount >= globalMinAmount),
         maxAmount: 2000, // Maximum allowed amount for electricity
-        products: electricityProducts.map(product => ({
-          id: product.supplierProductId,
-          name: product.productName,
-          minAmount: product.minAmount / 100,
-          maxAmount: product.maxAmount / 100,
-          commission: product.commission,
-          description: product.metadata?.description || ''
-        }))
-      }
+        products: electricityVariants.map(variant => ({
+          id: variant.supplierProductId || variant.id?.toString(),
+          name: variant.productName || 'Electricity',
+          minAmount: (variant.minAmount || 2000) / 100, // Convert cents to rand, default R20
+          maxAmount: (variant.maxAmount || 200000) / 100, // Convert cents to rand, default R2000
+          commission: variant.commission || 0,
+          supplier: variant.supplier || variant.supplierCode || 'Unknown',
+          supplierCode: variant.supplierCode || null,
+          description: variant.metadata?.description || ''
+        }))      }
     });
 
   } catch (error) {
