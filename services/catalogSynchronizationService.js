@@ -495,7 +495,8 @@ class CatalogSynchronizationService {
         try {
           await this.syncMobileMartProduct(mmProduct, vasType, supplier);
         } catch (error) {
-          console.error(`    ❌ Failed to sync ${mmProduct.productName}:`, error.message);
+          const productName = mmProduct.productName || mmProduct.name || mmProduct.contentCreator || mmProduct.merchantProductId || 'Unknown';
+          console.error(`    ❌ Failed to sync ${productName}:`, error.message);
           this.syncStats.errors++;
         }
       }
