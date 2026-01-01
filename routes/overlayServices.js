@@ -1358,7 +1358,6 @@ router.get('/electricity/catalog', auth, async (req, res) => {
     const comparisonService = new SupplierComparisonService();
     const electricityVariants = allVariants.map(v => comparisonService.formatProductForResponse(v));
     
-    });
     
     // Extract predefined amounts from products
     const suggestedAmounts = [];
