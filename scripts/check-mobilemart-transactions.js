@@ -37,7 +37,6 @@ async function checkTransactions() {
       where: {
         [Op.or]: [
           { supplierId: 'MOBILEMART' },
-          { supplierId: 'MOBILEMART' },
           { metadata: { supplier: 'MOBILEMART' } }
         ]
       },
