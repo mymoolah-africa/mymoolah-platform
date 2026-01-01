@@ -741,13 +741,19 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           }
           
           // Build MobileMart request payload
+          // CRITICAL: DataPinlessRequest should NOT include 'amount' field (amount is determined by product)
+          // AirtimePinlessRequest can include 'amount' field (optional, for variable amount products)
           const mobilemartRequest = {
             requestId: idempotencyKey,
             merchantProductId: productCode,
             tenderType: 'CreditCard',
-            mobileNumber: normalizedMobileNumber,
-            ...(amountInCentsValue && { amount: amountInCentsValue / 100 }) // Convert cents to Rands
+            mobileNumber: normalizedMobileNumber
           };
+          
+          // Only include amount for airtime products (data products don't accept amount field)
+          if (type === 'airtime' && amountInCentsValue) {
+            mobilemartRequest.amount = amountInCentsValue / 100; // Convert cents to Rands
+          }
           
           console.log('📱 Mobile number normalization:', {
             original: beneficiary.identifier,
