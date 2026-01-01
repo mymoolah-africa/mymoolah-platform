@@ -448,7 +448,7 @@ class CatalogSynchronizationService {
       // Metadata
       metadata: {
         mobilemart_merchant_product_id: mmProduct.merchantProductId,
-        mobilemart_product_name: mmProduct.productName,
+        mobilemart_product_name: mmProduct.productName || mmProduct.name || 'Unknown',
         mobilemart_content_creator: mmProduct.contentCreator,
         mobilemart_pinned: mmProduct.pinned,
         mobilemart_fixed_amount: mmProduct.fixedAmount,
@@ -518,8 +518,11 @@ class CatalogSynchronizationService {
       // Normalize the product type for DB enum
       const normalizedType = this.normalizeProductType(vasType);
       
+      // Get product name with fallbacks (handle missing productName)
+      const productName = mmProduct.productName || mmProduct.name || mmProduct.contentCreator || `MobileMart ${vasType} Product`;
+      
       // Create or find brand
-      const brandName = mmProduct.contentCreator || mmProduct.productName || 'MobileMart';
+      const brandName = mmProduct.contentCreator || productName || 'MobileMart';
       const brandCategory = this.getBrandCategory(normalizedType);
       const [brand] = await ProductBrand.findOrCreate({
         where: { name: brandName },
@@ -536,13 +539,13 @@ class CatalogSynchronizationService {
       const [product, productCreated] = await Product.findOrCreate({
         where: {
           supplierId: supplier.id,
-          name: mmProduct.productName,
+          name: productName,
           type: normalizedType
         },
         defaults: {
           supplierId: supplier.id,
           brandId: brand.id,
-          name: mmProduct.productName,
+          name: productName,
           type: normalizedType,
           supplierProductId: mmProduct.merchantProductId,
           status: 'active',
