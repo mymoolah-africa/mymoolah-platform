@@ -9,6 +9,11 @@
  */
 
 require('dotenv').config();
+const { getUATDatabaseURL, closeAll } = require('./db-connection-helper');
+
+// Set DATABASE_URL from db-connection-helper before loading models
+process.env.DATABASE_URL = getUATDatabaseURL();
+
 const db = require('../models');
 const { Supplier } = db;
 const CatalogSynchronizationService = require('../services/catalogSynchronizationService');
@@ -20,8 +25,8 @@ async function testMobileMartCatalogSync() {
   let syncService;
   
   try {
-    // Test database connection
-    console.log('🔌 Testing database connection...');
+    // Test database connection (using db-connection-helper config)
+    console.log('🔌 Testing database connection via db-connection-helper...');
     await db.sequelize.authenticate();
     console.log('✅ Database connection established\n');
     
@@ -66,6 +71,7 @@ async function testMobileMartCatalogSync() {
     process.exit(1);
   } finally {
     await db.sequelize.close();
+    await closeAll();
     process.exit(0);
   }
 }
