@@ -424,7 +424,10 @@ The system automatically selects the **best supplier** for each transaction base
 #### **MobileMart Integration**
 - **API Version**: MobileMart Fulcrum API v1
 - **UAT Status**: ✅ Product listing working, ✅ 4/7 purchase types working
-- **Products**: 65 products available in UAT (7 airtime, 45 data, 8 voucher, 4 bill payment, 1 utility)
+- **Products**: 
+  - **UAT**: 6,832 products (7 airtime, 45 data, 8 voucher, 3,386 utility, 3,386 bill payment)
+  - **Production**: 7,654 products (177 airtime, 597 data, 108 voucher, 3,386 utility, 3,386 bill payment)
+  - **Comparison**: Production has 822 more products; Utility and Bill Payment are complete in UAT (100% coverage)
 - **Categories**: Airtime, Data, Voucher, Bill Payment, Utility
 - **Purchase Types**: Airtime Pinned ✅, Data Pinned ✅, Voucher ✅, Utility ✅, Airtime Pinless ⚠️, Data Pinless ⚠️, Bill Payment ⚠️
 - **Commission Structure**: Fixed commission rates
