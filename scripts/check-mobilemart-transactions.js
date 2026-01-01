@@ -36,7 +36,7 @@ async function checkTransactions() {
     const transactions = await VasTransaction.findAll({
       where: {
         [Op.or]: [
-          { supplierId: mobilemartSupplier.id },
+          { supplierId: 'MOBILEMART' },
           { supplierId: 'MOBILEMART' },
           { metadata: { supplier: 'MOBILEMART' } }
         ]
