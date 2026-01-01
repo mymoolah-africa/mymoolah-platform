@@ -705,38 +705,38 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             : `/${type}/pinless`;
           
           // Normalize mobile number for MobileMart API
-          // Try E.164 format with + prefix first (+27720213994)
-          // If that fails, fallback to international without + (27720213994)
-          const { normalizeToE164 } = require('../utils/msisdn');
+          // CRITICAL: MobileMart UAT API does NOT accept + prefix
+          // Use international format WITHOUT + (e.g., 27798569159, NOT +27798569159)
+          // According to documentation, UAT accepts local format (0798569159) or international without + (27798569159)
           let normalizedMobileNumber;
           try {
             // Extract digits only
             const digits = beneficiary.identifier.replace(/\D/g, '');
             
-            // Try E.164 format with + prefix for Production API (+27720213994)
+            // Convert to international format WITHOUT + prefix for MobileMart API
             if (digits.startsWith('0') && digits.length === 10) {
-              // Convert local format to E.164 with + prefix
-              normalizedMobileNumber = `+27${digits.slice(1)}`;
+              // Convert local format to international format (without +)
+              normalizedMobileNumber = `27${digits.slice(1)}`;
             } else if (digits.startsWith('27') && digits.length === 11) {
-              // Already in international format, add + prefix
-              normalizedMobileNumber = `+${digits}`;
+              // Already in international format, use as-is (no + prefix)
+              normalizedMobileNumber = digits;
+            } else if (digits.length === 9) {
+              // Missing leading 0 or 27, assume local format and add 27
+              normalizedMobileNumber = `27${digits}`;
             } else {
-              // Try to normalize to E.164 (which includes + prefix)
-              normalizedMobileNumber = normalizeToE164(beneficiary.identifier);
+              // Use as-is if format is unclear
+              normalizedMobileNumber = digits;
             }
           } catch (msisdnError) {
             console.error('❌ Failed to normalize mobile number:', msisdnError.message);
-            // Fallback: try to convert manually
+            // Fallback: extract digits and convert
             const digits = beneficiary.identifier.replace(/\D/g, '');
             if (digits.startsWith('0') && digits.length === 10) {
-              // Convert to E.164 format with + prefix
-              normalizedMobileNumber = `+27${digits.slice(1)}`;
+              normalizedMobileNumber = `27${digits.slice(1)}`;
             } else if (digits.startsWith('27') && digits.length === 11) {
-              // Add + prefix
-              normalizedMobileNumber = `+${digits}`;
+              normalizedMobileNumber = digits;
             } else {
-              // Use as-is if we can't normalize
-              normalizedMobileNumber = beneficiary.identifier;
+              normalizedMobileNumber = digits;
             }
           }
           
