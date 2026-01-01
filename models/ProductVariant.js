@@ -210,10 +210,10 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         isValidDenominations(value) {
-          // Bill payment variants are own-amount only – they are constrained by min/max,
+          // Bill payment and electricity variants are own-amount only – they are constrained by min/max,
           // not by a fixed denomination list. Allow empty/null here.
           const vasType = this.vasType || (this.get ? this.get('vasType') : undefined);
-          if (vasType === 'bill_payment') {
+          if (vasType === 'bill_payment' || vasType === 'electricity') {
             if (value == null) {
               this.setDataValue('denominations', []);
               return;
