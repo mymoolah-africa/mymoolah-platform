@@ -482,15 +482,13 @@ class CatalogSynchronizationService {
       
       // LAUNCH STRATEGY: Filter products based on pinned/pinless requirement
       // - Airtime/Data: Only sync PINLESS products (pinned === false)
-      // - Electricity: Only sync PINNED products (pinned === true)
+      // - Utility/Electricity/Vouchers/Bill-payment: Sync ALL products (both pinned and pinless)
       let products = allProducts;
       if (vasType === 'airtime' || vasType === 'data') {
         products = allProducts.filter(p => p.pinned === false);
         console.log(`    🎯 Filtered to ${products.length} PINLESS products (${allProducts.length - products.length} pinned skipped)`);
-      } else if (vasType === 'utility' || vasType === 'electricity') {
-        products = allProducts.filter(p => p.pinned === true);
-        console.log(`    🎯 Filtered to ${products.length} PINNED products (${allProducts.length - products.length} pinless skipped)`);
       }
+      // Note: Utility, Vouchers, and Bill-payment include all products (no filtering)
       
       // Sync each product
       for (const mmProduct of products) {
