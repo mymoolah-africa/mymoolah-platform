@@ -1234,9 +1234,10 @@ class UnifiedBeneficiaryService {
                 : `Data - ${network ? network.charAt(0).toUpperCase() + network.slice(1) : ''}`,
             isDefault: account.isDefault || false,
             metadata: {
-              network: network,
               msisdn: msisdn,
-              ...serviceData
+              ...serviceData,
+              // Override network with extracted value if it was null/undefined
+              network: network || serviceData.network
             }
           });
         }
@@ -1261,9 +1262,10 @@ class UnifiedBeneficiaryService {
               label: service.label || `Airtime - ${network ? network.charAt(0).toUpperCase() + network.slice(1) : ''}`,
               isDefault: false,
               metadata: {
-                network: network,
                 msisdn: msisdn,
-                ...service
+                ...service,
+                // Override network with extracted value if it was null/undefined
+                network: network || service.network
               }
             });
           }
@@ -1288,9 +1290,10 @@ class UnifiedBeneficiaryService {
               label: service.label || `Data - ${network ? network.charAt(0).toUpperCase() + network.slice(1) : ''}`,
               isDefault: false,
               metadata: {
-                network: network,
                 msisdn: msisdn,
-                ...service
+                ...service,
+                // Override network with extracted value if it was null/undefined
+                network: network || service.network
               }
             });
           }
