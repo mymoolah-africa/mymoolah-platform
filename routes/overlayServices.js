@@ -721,17 +721,18 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             const isUAT = mobilemartAuth.baseUrl && mobilemartAuth.baseUrl.includes('uat.fulcrumswitch.com');
             
             if (isUAT) {
-              // UAT: Use LOCAL FORMAT (10 digits starting with 0)
-              // Documentation: "All mobile numbers are in local format (10 digits, starting with 0)"
+              // UAT: Use INTERNATIONAL FORMAT WITHOUT + (11 digits starting with 27)
+              // MobileMart UAT API rejects local format (0830012300) with error 1013
+              // Must use international format without + prefix (27830012300)
               if (digits.startsWith('0') && digits.length === 10) {
-                // Already in local format, use as-is
-                normalizedMobileNumber = digits;
+                // Convert local format to international format (without +)
+                normalizedMobileNumber = `27${digits.slice(1)}`;
               } else if (digits.startsWith('27') && digits.length === 11) {
-                // Convert from international to local format for UAT
-                normalizedMobileNumber = `0${digits.slice(2)}`;
+                // Already in international format, use as-is (no + prefix)
+                normalizedMobileNumber = digits;
               } else if (digits.length === 9) {
-                // Missing leading 0, add it
-                normalizedMobileNumber = `0${digits}`;
+                // Missing leading 0 or 27, assume local format and add 27
+                normalizedMobileNumber = `27${digits}`;
               } else {
                 // Use as-is if format is unclear
                 normalizedMobileNumber = digits;
@@ -759,11 +760,11 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             const isUAT = mobilemartAuth.baseUrl && mobilemartAuth.baseUrl.includes('uat.fulcrumswitch.com');
             
             if (isUAT) {
-              // UAT fallback: prefer local format
+              // UAT fallback: prefer international format without +
               if (digits.startsWith('0') && digits.length === 10) {
-                normalizedMobileNumber = digits;
+                normalizedMobileNumber = `27${digits.slice(1)}`;
               } else if (digits.startsWith('27') && digits.length === 11) {
-                normalizedMobileNumber = `0${digits.slice(2)}`;
+                normalizedMobileNumber = digits;
               } else {
                 normalizedMobileNumber = digits;
               }
@@ -798,8 +799,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           console.log('📱 Mobile number normalization:', {
             original: beneficiary.identifier,
             normalized: normalizedMobileNumber,
-            environment: isUATEnv ? 'UAT (local format)' : 'Production (international format)',
-            format: isUATEnv ? 'local (10 digits, starts with 0)' : 'international (11 digits, starts with 27)'
+            environment: isUATEnv ? 'UAT (international format without +)' : 'Production (international format)',
+            format: isUATEnv ? 'international without + (11 digits, starts with 27)' : 'international (11 digits, starts with 27)'
           });
           
           console.log('📤 MobileMart request:', { endpoint, payload: mobilemartRequest });
