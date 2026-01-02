@@ -679,7 +679,9 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         }).catch(() => {});
         // #endregion agent log
 
-        await transaction.rollback();
+        if (transaction && !transaction.finished) {
+          await transaction.rollback();
+        }
         return res.status(400).json({
           success: false,
           error: debitCheck.reason || 'Insufficient balance',
@@ -830,7 +832,10 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           
           // Rollback transaction if MobileMart API call fails
           // No transaction records created, wallet not debited
-          await transaction.rollback();
+          // Check if transaction is still active before rolling back
+          if (transaction && !transaction.finished) {
+            await transaction.rollback();
+          }
           
           // Extract detailed error information from MobileMart API response
           const errorResponse = mobilemartError.response?.data || {};
@@ -1062,7 +1067,15 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       
     } catch (dbError) {
       // Rollback transaction on database error
-      await transaction.rollback();
+      // Check if transaction is still active before rolling back (may have been rolled back already)
+      if (transaction && !transaction.finished) {
+        try {
+          await transaction.rollback();
+        } catch (rollbackError) {
+          // Transaction may have already been rolled back, log but don't fail
+          console.warn('⚠️ Transaction rollback failed (may already be rolled back):', rollbackError.message);
+        }
+      }
       
       console.error(`❌ [DB_TXN_ERR] Database transaction failed:`, {
         error: dbError.message,
