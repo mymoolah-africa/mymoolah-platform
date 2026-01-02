@@ -8,6 +8,7 @@ import { ErrorModal } from '../ui/ErrorModal';
 import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { AddAdditionalNumberModal } from './shared/AddAdditionalNumberModal';
+import { AccountSelectorModal } from './shared/AccountSelectorModal';
 import { ConfirmationModal } from './shared/ConfirmationModal';
 import { ConfirmSheet } from './shared/ConfirmSheet';
 import { 
@@ -50,6 +51,8 @@ export function AirtimeDataOverlay() {
   const [alternativeProduct, setAlternativeProduct] = useState<any>(null);
   const [showBeneficiaryModal, setShowBeneficiaryModal] = useState(false);
   const [showAddNumberModal, setShowAddNumberModal] = useState(false);
+  const [showAccountSelector, setShowAccountSelector] = useState(false);
+  const [pendingBeneficiary, setPendingBeneficiary] = useState<Beneficiary | null>(null);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<Beneficiary | null>(null);
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
@@ -109,13 +112,27 @@ export function AirtimeDataOverlay() {
   };
 
   const handleBeneficiarySelect = (beneficiary: any, accountId?: number): void => {
+    const normalized = {
+      ...(beneficiary as any),
+      id: beneficiary.id != null ? String(beneficiary.id) : ''
+    } as Beneficiary;
+    
+    // Check if beneficiary has multiple accounts
+    const beneficiaryAny = normalized as any;
+    const accounts = beneficiaryAny.accounts || [];
+    const hasMultipleAccounts = accounts.length > 1;
+    
+    // If multiple accounts and no accountId specified, show account selector modal
+    if (hasMultipleAccounts && !accountId) {
+      setPendingBeneficiary(normalized);
+      setShowAccountSelector(true);
+      return;
+    }
+    
+    // Otherwise, proceed with selection
     void (async () => {
       try {
         setLoadingState('loading');
-        const normalized = {
-          ...(beneficiary as any),
-          id: beneficiary.id != null ? String(beneficiary.id) : ''
-        } as Beneficiary;
         setSelectedBeneficiary(normalized);
         setSelectedAccountId(accountId || null);
       
@@ -1803,6 +1820,25 @@ export function AirtimeDataOverlay() {
             // Reload beneficiaries to show the new number
             await loadBeneficiaries();
             setShowAddNumberModal(false);
+          }}
+        />
+      )}
+
+      {/* Account Selector Modal - for recipients with multiple numbers */}
+      {pendingBeneficiary && (
+        <AccountSelectorModal
+          isOpen={showAccountSelector}
+          onClose={() => {
+            setShowAccountSelector(false);
+            setPendingBeneficiary(null);
+          }}
+          recipientName={pendingBeneficiary.name}
+          accounts={(pendingBeneficiary as any).accounts || []}
+          onSelectAccount={(accountId) => {
+            setShowAccountSelector(false);
+            // Now call handleBeneficiarySelect with the chosen accountId
+            handleBeneficiarySelect(pendingBeneficiary, accountId);
+            setPendingBeneficiary(null);
           }}
         />
       )}
