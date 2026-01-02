@@ -428,6 +428,22 @@ export function LoginPage() {
                   </div>
                 </div>
 
+                {/* Forgot Password Link */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/forgot-password")}
+                    className="text-xs text-[#2D8CCA] hover:text-[#2680B8] underline"
+                    style={{
+                      fontFamily: "Montserrat, sans-serif",
+                      fontSize: "var(--mobile-font-small)",
+                      fontWeight: "var(--font-weight-normal)",
+                    }}
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+
                 {/* Submit Button */}
                 <Button
                   type="submit"
