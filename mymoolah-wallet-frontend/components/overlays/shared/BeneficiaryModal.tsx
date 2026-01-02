@@ -103,7 +103,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
       case 'biller':
         return 'Bill Account';
       default:
-        return 'Beneficiary';
+        return 'Recipient';
     }
   };
 
@@ -201,8 +201,8 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
         billerName: ''
       });
     } catch (err: any) {
-      console.error('Failed to create beneficiary:', err);
-      setError(err.response?.data?.message || 'Failed to create beneficiary');
+      console.error('Failed to create recipient:', err);
+      setError(err.response?.data?.message || 'Failed to create recipient');
     } finally {
       setIsLoading(false);
     }
@@ -265,7 +265,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
                   fontSize: '12px',
                   color: '#6b7280'
                 }}>
-                  Add a new {type} beneficiary
+                  Add a new {type} recipient
                 </p>
               </div>
             </div>
@@ -301,7 +301,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Enter a name for this beneficiary"
+                placeholder="Enter a name for this recipient"
                 style={{
                   fontFamily: 'Montserrat, sans-serif',
                   fontSize: '14px',
@@ -914,7 +914,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
                 }}
                 disabled={isLoading}
               >
-                {isLoading ? (editBeneficiary ? 'Updating...' : 'Creating...') : (editBeneficiary ? 'Update Beneficiary' : 'Create Beneficiary')}
+                {isLoading ? (editBeneficiary ? 'Updating...' : 'Creating...') : (editBeneficiary ? 'Update Recipient' : 'Create Recipient')}
               </Button>
             </div>
           </form>

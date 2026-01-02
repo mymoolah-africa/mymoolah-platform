@@ -761,7 +761,7 @@ export function SendMoneyPage() {
       setShowPaymentConfirmationModal(true);
     } catch (error: any) {
       logError('SendMoneyPage', 'Failed to add beneficiary', error as Error);
-      showError('Error', error?.message || 'Failed to add beneficiary. Please try again.', 'error');
+      showError('Error', error?.message || 'Failed to add recipient. Please try again.', 'error');
     }
   };
 
@@ -803,7 +803,7 @@ export function SendMoneyPage() {
       setShowRemoveConfirmationModal(false);
     } catch (error) {
       logError('SendMoneyPage', 'Failed to remove beneficiary', error as Error);
-      showError('Error', 'Failed to remove beneficiary. Please try again.', 'error');
+      showError('Error', 'Failed to remove recipient. Please try again.', 'error');
     }
   };
 
@@ -859,9 +859,9 @@ export function SendMoneyPage() {
             const dedup = prev.filter(b => !(b.accountType === 'bank' && b.identifier === added.identifier));
             return [added, ...dedup];
           });
-          showError('Success', 'Beneficiary saved. Bank payments will be enabled soon.', 'info');
+          showError('Success', 'Recipient saved. Bank payments will be enabled soon.', 'info');
         } catch (e: any) {
-          showError('Error', e?.message || 'Failed to save beneficiary', 'error');
+          showError('Error', e?.message || 'Failed to save recipient', 'error');
         }
       } else {
         showError('Info', 'Bank payments will be enabled soon. Please choose MyMoolah account for now.', 'info');
@@ -2394,7 +2394,7 @@ export function SendMoneyPage() {
           }
           setShowPaymentConfirmationModal(false);
         }}
-        title="Beneficiary Added Successfully!"
+        title="Recipient Added Successfully!"
         message="Would you like to make a payment now to"
         confirmText="Yes, make payment"
         cancelText="Not now"
@@ -2418,9 +2418,9 @@ export function SendMoneyPage() {
             <div className="space-y-4">
               {/* Beneficiary Name */}
               <div>
-                <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Beneficiary Name</Label>
+                <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Recipient Name</Label>
                 <Input
-                  placeholder="Enter beneficiary name"
+                  placeholder="Enter recipient name"
                   value={editingBeneficiary.name}
                   onChange={(e) => setEditingBeneficiary(prev => prev ? { ...prev, name: e.target.value } : null)}
                   style={{
@@ -2544,7 +2544,7 @@ export function SendMoneyPage() {
                     
                     // Validate required fields
                     if (!editingBeneficiary.name?.trim()) {
-                      showError('Validation Error', 'Beneficiary name is required', 'warning');
+                      showError('Validation Error', 'Recipient name is required', 'warning');
                       return;
                     }
                     
@@ -2588,10 +2588,10 @@ export function SendMoneyPage() {
                       
                     setShowEditBeneficiaryModal(false);
                     setEditingBeneficiary(null);
-                      showError('Success', 'Beneficiary updated successfully', 'info');
+                      showError('Success', 'Recipient updated successfully', 'info');
                     } catch (error: any) {
                       logError('SendMoneyPage', 'Failed to update beneficiary', error as Error);
-                      showError('Error', error?.message || 'Failed to update beneficiary. Please try again.', 'error');
+                      showError('Error', error?.message || 'Failed to update recipient. Please try again.', 'error');
                     }
                   }}
                   className="flex-1 bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] text-white"
@@ -2609,7 +2609,7 @@ export function SendMoneyPage() {
         isOpen={showRemoveConfirmationModal}
         onClose={() => setShowRemoveConfirmationModal(false)}
         onConfirm={handleConfirmRemoveBeneficiary}
-        title="Remove Beneficiary"
+        title="Remove Recipient"
         message="Are you sure you want to remove"
         confirmText="Yes, remove"
         cancelText="Cancel"

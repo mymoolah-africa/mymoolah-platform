@@ -107,8 +107,8 @@ export function BeneficiaryList({
   onRemove,
   isLoading = false,
   searchPlaceholder = "Search name or number",
-  title = "Select Beneficiary",
-  addNewButtonText = "Add New Beneficiary",
+  title = "Select Recipient",
+  addNewButtonText = "Add New Recipient",
   showFilters = true
 }: BeneficiaryListProps) {
   const [searchQuery, setSearchQuery] = useState('');

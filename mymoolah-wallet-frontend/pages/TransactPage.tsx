@@ -131,7 +131,7 @@ export function TransactPage() {
         },
         {
           id: 'send-money',
-          title: 'Pay Beneficiary',
+          title: 'Pay Recipient',
           description: 'Transfer to MyMoolah users or bank accounts',
           icon: <Send className="w-6 h-6" />,
           route: '/send-money',

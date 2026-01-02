@@ -684,7 +684,7 @@ export function ElectricityOverlay() {
           setBeneficiaryToRemove(null);
         }}
         onConfirm={handleConfirmRemove}
-        title="Remove Beneficiary"
+        title="Remove Recipient"
         message="Are you sure you want to remove"
         confirmText="Yes, remove"
         cancelText="Cancel"
