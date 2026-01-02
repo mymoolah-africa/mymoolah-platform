@@ -1046,12 +1046,16 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           
           // Error 1013: Mobile Number is invalid
           // Note: This can occur if the mobile number is not valid for the specific product/network
-          // or if MobileMart UAT has restrictions on certain products
+          // or if MobileMart has restrictions on certain products
           if (mobilemartErrorCode === '1013' || mobilemartErrorCode === 1013) {
-            const productNetwork = productVariant?.provider || productVariant?.metadata?.network || 'this network';
-            const productName = productVariant?.product?.name || 'this product';
+            const productNetwork = productVariant?.provider || productVariant?.metadata?.network || beneficiary.metadata?.network || 'the selected network';
+            const productName = productVariant?.product?.name || productVariant?.name || 'this product';
             
-            userFriendlyMessage = `The mobile number ${beneficiary.identifier} is not valid for ${productName} (${productNetwork}). This may be a MobileMart UAT restriction. Please try a different ${productNetwork} product or contact support if the issue persists.`;
+            // Don't mention UAT in production/staging environments
+            const isUAT = process.env.MOBILEMART_API_URL?.includes('uat.fulcrumswitch.com');
+            const restrictionNote = isUAT ? 'This may be a MobileMart UAT restriction.' : 'This may be a MobileMart restriction for this specific product.';
+            
+            userFriendlyMessage = `The mobile number ${beneficiary.identifier} is not valid for ${productName} (${productNetwork}). ${restrictionNote} Please try a different ${productNetwork} product or contact support if the issue persists.`;
             primaryErrorMessage = userFriendlyMessage;
           }
           
