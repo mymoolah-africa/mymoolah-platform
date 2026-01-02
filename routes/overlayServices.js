@@ -705,38 +705,73 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             : `/${type}/pinless`;
           
           // Normalize mobile number for MobileMart API
-          // CRITICAL: MobileMart UAT API does NOT accept + prefix
-          // Use international format WITHOUT + (e.g., 27798569159, NOT +27798569159)
-          // According to documentation, UAT accepts local format (0798569159) or international without + (27798569159)
+          // CRITICAL: MobileMart UAT API requires LOCAL FORMAT (10 digits starting with 0)
+          // UAT: Use local format (0798569159) - REQUIRED for UAT test numbers
+          // Production: Use international format WITHOUT + (27798569159)
           let normalizedMobileNumber;
           try {
             // Extract digits only
             const digits = beneficiary.identifier.replace(/\D/g, '');
             
-            // Convert to international format WITHOUT + prefix for MobileMart API
-            if (digits.startsWith('0') && digits.length === 10) {
-              // Convert local format to international format (without +)
-              normalizedMobileNumber = `27${digits.slice(1)}`;
-            } else if (digits.startsWith('27') && digits.length === 11) {
-              // Already in international format, use as-is (no + prefix)
-              normalizedMobileNumber = digits;
-            } else if (digits.length === 9) {
-              // Missing leading 0 or 27, assume local format and add 27
-              normalizedMobileNumber = `27${digits}`;
+            // Check if we're using UAT or Production
+            const isUAT = mobilemartAuth.baseUrl && mobilemartAuth.baseUrl.includes('uat.fulcrumswitch.com');
+            
+            if (isUAT) {
+              // UAT: Use LOCAL FORMAT (10 digits starting with 0)
+              // Documentation: "All mobile numbers are in local format (10 digits, starting with 0)"
+              if (digits.startsWith('0') && digits.length === 10) {
+                // Already in local format, use as-is
+                normalizedMobileNumber = digits;
+              } else if (digits.startsWith('27') && digits.length === 11) {
+                // Convert from international to local format for UAT
+                normalizedMobileNumber = `0${digits.slice(2)}`;
+              } else if (digits.length === 9) {
+                // Missing leading 0, add it
+                normalizedMobileNumber = `0${digits}`;
+              } else {
+                // Use as-is if format is unclear
+                normalizedMobileNumber = digits;
+              }
             } else {
-              // Use as-is if format is unclear
-              normalizedMobileNumber = digits;
+              // Production: Use international format WITHOUT + prefix
+              if (digits.startsWith('0') && digits.length === 10) {
+                // Convert local format to international format (without +)
+                normalizedMobileNumber = `27${digits.slice(1)}`;
+              } else if (digits.startsWith('27') && digits.length === 11) {
+                // Already in international format, use as-is (no + prefix)
+                normalizedMobileNumber = digits;
+              } else if (digits.length === 9) {
+                // Missing leading 0 or 27, assume local format and add 27
+                normalizedMobileNumber = `27${digits}`;
+              } else {
+                // Use as-is if format is unclear
+                normalizedMobileNumber = digits;
+              }
             }
           } catch (msisdnError) {
             console.error('❌ Failed to normalize mobile number:', msisdnError.message);
-            // Fallback: extract digits and convert
+            // Fallback: extract digits and convert based on environment
             const digits = beneficiary.identifier.replace(/\D/g, '');
-            if (digits.startsWith('0') && digits.length === 10) {
-              normalizedMobileNumber = `27${digits.slice(1)}`;
-            } else if (digits.startsWith('27') && digits.length === 11) {
-              normalizedMobileNumber = digits;
+            const isUAT = mobilemartAuth.baseUrl && mobilemartAuth.baseUrl.includes('uat.fulcrumswitch.com');
+            
+            if (isUAT) {
+              // UAT fallback: prefer local format
+              if (digits.startsWith('0') && digits.length === 10) {
+                normalizedMobileNumber = digits;
+              } else if (digits.startsWith('27') && digits.length === 11) {
+                normalizedMobileNumber = `0${digits.slice(2)}`;
+              } else {
+                normalizedMobileNumber = digits;
+              }
             } else {
-              normalizedMobileNumber = digits;
+              // Production fallback: prefer international format
+              if (digits.startsWith('0') && digits.length === 10) {
+                normalizedMobileNumber = `27${digits.slice(1)}`;
+              } else if (digits.startsWith('27') && digits.length === 11) {
+                normalizedMobileNumber = digits;
+              } else {
+                normalizedMobileNumber = digits;
+              }
             }
           }
           
@@ -755,9 +790,12 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             mobilemartRequest.amount = amountInCentsValue / 100; // Convert cents to Rands
           }
           
+          const isUATEnv = mobilemartAuth.baseUrl && mobilemartAuth.baseUrl.includes('uat.fulcrumswitch.com');
           console.log('📱 Mobile number normalization:', {
             original: beneficiary.identifier,
-            normalized: normalizedMobileNumber
+            normalized: normalizedMobileNumber,
+            environment: isUATEnv ? 'UAT (local format)' : 'Production (international format)',
+            format: isUATEnv ? 'local (10 digits, starts with 0)' : 'international (11 digits, starts with 27)'
           });
           
           console.log('📤 MobileMart request:', { endpoint, payload: mobilemartRequest });
