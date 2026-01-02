@@ -1048,14 +1048,13 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           // Note: This can occur if the mobile number is not valid for the specific product/network
           // or if MobileMart has restrictions on certain products
           if (mobilemartErrorCode === '1013' || mobilemartErrorCode === 1013) {
-            const productNetwork = productVariant?.provider || productVariant?.metadata?.network || beneficiary.metadata?.network || 'the selected network';
             const productName = productVariant?.product?.name || productVariant?.name || 'this product';
             
             // Don't mention UAT in production/staging environments
             const isUAT = process.env.MOBILEMART_API_URL?.includes('uat.fulcrumswitch.com');
-            const restrictionNote = isUAT ? 'This may be a MobileMart UAT restriction.' : 'This may be a MobileMart restriction for this specific product.';
+            const restrictionNote = isUAT ? 'This may be a MobileMart UAT restriction.' : 'This mobile number is not accepted by MobileMart for this product.';
             
-            userFriendlyMessage = `The mobile number ${beneficiary.identifier} is not valid for ${productName} (${productNetwork}). ${restrictionNote} Please try a different ${productNetwork} product or contact support if the issue persists.`;
+            userFriendlyMessage = `The mobile number ${beneficiary.identifier} is not valid for ${productName}. ${restrictionNote} Please try a different product or use a different mobile number.`;
             primaryErrorMessage = userFriendlyMessage;
           }
           
