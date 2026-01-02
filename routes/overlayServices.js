@@ -857,7 +857,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                 endpoint: errorEndpoint,
                 productCode,
                 beneficiaryId: beneficiary.id,
-                mobileNumber: normalizedMobileNumber,
+                mobileNumber: normalizedMobileNumber || beneficiary.identifier || 'unknown',
                 httpStatus: httpStatus
               }
             } : {})
