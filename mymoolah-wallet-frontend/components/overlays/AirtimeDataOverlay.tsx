@@ -923,25 +923,6 @@ export function AirtimeDataOverlay() {
       {/* Step 1: Beneficiary Selection */}
       {currentStep === 'beneficiary' && (
         <div>
-          <Card style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
-            marginBottom: '1rem'
-          }}>
-            <CardHeader>
-              <CardTitle style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '16px',
-                fontWeight: '700',
-                color: '#1f2937'
-              }}>
-                Select Recipient
-              </CardTitle>
-            </CardHeader>
-          </Card>
-
           <BeneficiaryList
             type="airtime"
             beneficiaries={beneficiaries}
