@@ -321,13 +321,14 @@ export function BeneficiaryList({
                     role="button"
                     tabIndex={0}
                     onClick={() => {
-                      // Always select - will use default account
-                      onSelect(beneficiary, displayAccount?.id);
+                      // If multiple accounts, don't pass accountId - let parent show account selector
+                      // If single account, pass the account ID
+                      onSelect(beneficiary, hasMultipleAccounts ? undefined : displayAccount?.id);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        onSelect(beneficiary, displayAccount?.id);
+                        onSelect(beneficiary, hasMultipleAccounts ? undefined : displayAccount?.id);
                       }
                     }}
                     style={{
