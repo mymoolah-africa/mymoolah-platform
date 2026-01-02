@@ -832,12 +832,30 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           // No transaction records created, wallet not debited
           await transaction.rollback();
           
-          return res.status(500).json({
+          // Extract detailed error information from MobileMart API response
+          const errorResponse = mobilemartError.response?.data || {};
+          const mobilemartErrorCode = errorResponse.fulcrumErrorCode || errorResponse.errorCode || '';
+          const mobilemartErrorMessage = errorResponse.title || errorResponse.detail || errorResponse.message || mobilemartError.message;
+          const httpStatus = mobilemartError.response?.status || 500;
+          
+          return res.status(httpStatus).json({
             success: false,
             error: 'MobileMart purchase fulfillment failed',
-            message: mobilemartError.message || 'Failed to fulfill purchase with MobileMart',
-            errorCode: 'MOBILEMART_FULFILLMENT_FAILED',
-            errorId: `MM_ERR_${Date.now()}`
+            message: mobilemartErrorMessage || 'Failed to fulfill purchase with MobileMart',
+            errorCode: mobilemartErrorCode ? `MOBILEMART_${mobilemartErrorCode}` : 'MOBILEMART_FULFILLMENT_FAILED',
+            mobilemartErrorCode: mobilemartErrorCode || null,
+            mobilemartError: mobilemartErrorMessage || null,
+            errorId: `MM_ERR_${Date.now()}`,
+            // Include additional context for debugging
+            ...(process.env.NODE_ENV !== 'production' ? {
+              debug: {
+                endpoint: errorEndpoint,
+                productCode,
+                beneficiaryId: beneficiary.id,
+                mobileNumber: normalizedMobileNumber,
+                httpStatus: httpStatus
+              }
+            } : {})
           });
         }
       } else if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION !== 'true') {
