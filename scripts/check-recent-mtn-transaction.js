@@ -17,16 +17,50 @@ async function checkRecentMTNTransaction() {
   try {
     console.log('🔍 Checking recent MTN transactions...\n');
     
-    // Find recent transactions for "UAT Test Number" beneficiary
-    const beneficiary = await Beneficiary.findOne({
+    // Find recent transactions for MTN test beneficiary
+    // Try multiple possible names
+    let beneficiary = await Beneficiary.findOne({
       where: {
-        name: { [require('sequelize').Op.like]: '%UAT Test Number%' }
+        name: { [require('sequelize').Op.like]: '%MTN Test%' }
       }
     });
     
     if (!beneficiary) {
-      console.log('❌ No beneficiary found with "UAT Test Number" in name');
-      return;
+      beneficiary = await Beneficiary.findOne({
+        where: {
+          name: { [require('sequelize').Op.like]: '%UAT Test%' }
+        }
+      });
+    }
+    
+    if (!beneficiary) {
+      // Try to find by identifier (0830012300)
+      beneficiary = await Beneficiary.findOne({
+        where: {
+          identifier: { [require('sequelize').Op.like]: '%0830012300%' }
+        }
+      });
+    }
+    
+    if (!beneficiary) {
+      console.log('❌ No MTN test beneficiary found. Searching for any recent data/airtime transactions...\n');
+      
+      // Get most recent data/airtime transaction regardless of beneficiary
+      const recentTx = await VasTransaction.findOne({
+        where: {
+          vasType: { [require('sequelize').Op.in]: ['airtime', 'data'] }
+        },
+        order: [['createdAt', 'DESC']],
+        include: [{ model: Beneficiary, as: 'Beneficiary' }]
+      });
+      
+      if (recentTx && recentTx.Beneficiary) {
+        beneficiary = recentTx.Beneficiary;
+        console.log(`✅ Found most recent transaction beneficiary: ${beneficiary.name}\n`);
+      } else {
+        console.log('❌ No recent transactions found');
+        return;
+      }
     }
     
     console.log(`✅ Found beneficiary: ${beneficiary.name} (ID: ${beneficiary.id})`);
