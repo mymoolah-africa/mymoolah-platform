@@ -5,7 +5,7 @@ const {
   sequelize
 } = require('../models');
 const { Op } = require('sequelize');
-const { normalizeToE164, toLocal, isValidE164, maskMsisdn } = require('../utils/msisdn');
+const { normalizeToE164, toLocal, isValidE164, maskMsisdn, getNetworkFromMsisdn } = require('../utils/msisdn');
 
 class UnifiedBeneficiaryService {
   /**
