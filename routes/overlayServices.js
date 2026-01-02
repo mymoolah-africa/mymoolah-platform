@@ -693,6 +693,9 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       // This ensures we only record successful transactions where the product was actually delivered
       let supplierFulfillmentResult = null;
       
+      // Declare normalizedMobileNumber outside try block so it's available in catch block for error reporting
+      let normalizedMobileNumber = null;
+      
       if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION === 'true') {
         try {
           console.log('📞 Calling MobileMart API to fulfill purchase (BEFORE creating transaction)...');
@@ -710,7 +713,6 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           // CRITICAL: MobileMart UAT API requires LOCAL FORMAT (10 digits starting with 0)
           // UAT: Use local format (0798569159) - REQUIRED for UAT test numbers
           // Production: Use international format WITHOUT + (27798569159)
-          let normalizedMobileNumber;
           try {
             // Extract digits only
             const digits = beneficiary.identifier.replace(/\D/g, '');
