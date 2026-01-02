@@ -136,7 +136,20 @@ export function ForgotPasswordPage() {
     }
   };
 
-  // Step 2: Verify OTP and set new password
+  // Step 2: Verify OTP (just move to password step)
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (otp.length !== 6) {
+      setError("Please enter the complete 6-digit OTP");
+      return;
+    }
+
+    setError("");
+    // Move to password step (OTP will be verified when password is submitted)
+    setStep('password');
+  };
+
+  // Step 3: Reset password with OTP
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length !== 6 || !passwordValidation.isValid || !passwordsMatch) return;
@@ -235,7 +248,7 @@ export function ForgotPasswordPage() {
   );
 
   const renderOtpStep = () => (
-    <form onSubmit={handleResetPassword} className="space-y-4">
+    <form onSubmit={handleVerifyOtp} className="space-y-4">
       {/* OTP Input */}
       <div className="space-y-2">
         <Label
@@ -268,6 +281,41 @@ export function ForgotPasswordPage() {
         </p>
       </div>
 
+      <Button
+        type="submit"
+        disabled={otp.length !== 6 || isLoading}
+        className="w-full bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] hover:from-[#7AB139] hover:to-[#2680B8] text-white disabled:opacity-60"
+        style={{
+          height: "var(--mobile-touch-target)",
+          fontFamily: "Montserrat, sans-serif",
+          fontSize: "var(--mobile-font-base)",
+          fontWeight: "var(--font-weight-medium)",
+          borderRadius: "var(--mobile-border-radius)",
+        }}
+      >
+        {isLoading ? (
+          <span className="flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Verifying...
+          </span>
+        ) : (
+          "Verify OTP"
+        )}
+      </Button>
+
+      <button
+        type="button"
+        onClick={() => { setStep('phone'); setOtp(''); setError(''); setSuccess(''); }}
+        className="w-full text-sm text-[#2D8CCA] hover:text-[#2680B8] underline"
+        style={{ fontFamily: "Montserrat, sans-serif" }}
+      >
+        Didn't receive OTP? Try again
+      </button>
+    </form>
+  );
+
+  const renderPasswordStep = () => (
+    <form onSubmit={handleResetPassword} className="space-y-4">
       {/* New Password */}
       <div className="space-y-2">
         <Label
@@ -368,7 +416,7 @@ export function ForgotPasswordPage() {
 
       <Button
         type="submit"
-        disabled={otp.length !== 6 || !passwordValidation.isValid || !passwordsMatch || isLoading}
+        disabled={!passwordValidation.isValid || !passwordsMatch || isLoading}
         className="w-full bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] hover:from-[#7AB139] hover:to-[#2680B8] text-white disabled:opacity-60"
         style={{
           height: "var(--mobile-touch-target)",
@@ -390,11 +438,11 @@ export function ForgotPasswordPage() {
 
       <button
         type="button"
-        onClick={() => { setStep('phone'); setOtp(''); setNewPassword(''); setConfirmPassword(''); setError(''); }}
+        onClick={() => { setStep('otp'); setNewPassword(''); setConfirmPassword(''); setError(''); }}
         className="w-full text-sm text-[#2D8CCA] hover:text-[#2680B8] underline"
         style={{ fontFamily: "Montserrat, sans-serif" }}
       >
-        Didn't receive OTP? Try again
+        Back to OTP
       </button>
     </form>
   );
@@ -476,7 +524,8 @@ export function ForgotPasswordPage() {
               }}
             >
               {step === 'phone' && "Enter your mobile number to receive an OTP"}
-              {step === 'otp' && "Enter the OTP and set your new password"}
+              {step === 'otp' && "Enter the 6-digit code sent to your phone"}
+              {step === 'password' && "Set your new password"}
               {step === 'success' && "Your password has been reset"}
             </p>
           </div>
@@ -492,7 +541,7 @@ export function ForgotPasswordPage() {
               </AlertDescription>
             </Alert>
           )}
-          {success && step === 'otp' && (
+          {success && (step === 'otp' || step === 'password') && (
             <Alert className="border-green-200 bg-green-50 mb-4">
               <Check className="h-4 w-4 text-green-600" />
               <AlertDescription
@@ -509,7 +558,11 @@ export function ForgotPasswordPage() {
               <div className="flex items-center gap-2">
                 {step !== 'success' && (
                   <button
-                    onClick={() => step === 'otp' ? setStep('phone') : navigate("/login")}
+                    onClick={() => {
+                      if (step === 'otp') setStep('phone');
+                      else if (step === 'password') setStep('otp');
+                      else navigate("/login");
+                    }}
                     className="text-gray-500 hover:text-gray-700"
                   >
                     <ArrowLeft className="w-5 h-5" />
@@ -526,12 +579,13 @@ export function ForgotPasswordPage() {
                     }}
                   >
                     {step === 'phone' && "Forgot Password"}
-                    {step === 'otp' && "Verify & Reset"}
+                    {step === 'otp' && "Verify OTP"}
+                    {step === 'password' && "Set New Password"}
                     {step === 'success' && "Success"}
                   </CardTitle>
                   {step !== 'success' && (
                     <CardDescription className="text-center mt-1" style={{ fontFamily: "Montserrat, sans-serif" }}>
-                      Step {step === 'phone' ? '1' : '2'} of 2
+                      Step {step === 'phone' ? '1' : step === 'otp' ? '2' : '3'} of 3
                     </CardDescription>
                   )}
                 </div>
@@ -541,6 +595,7 @@ export function ForgotPasswordPage() {
             <CardContent>
               {step === 'phone' && renderPhoneStep()}
               {step === 'otp' && renderOtpStep()}
+              {step === 'password' && renderPasswordStep()}
               {step === 'success' && renderSuccessStep()}
             </CardContent>
           </Card>
