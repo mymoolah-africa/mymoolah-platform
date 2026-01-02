@@ -416,9 +416,22 @@ class AuthController {
       
       if (!result.success) {
         // Rate limit or other error
+        let errorMessage = result.error || 'Unable to process request. Please try again later.';
+        
+        // Add reset time if available (for rate limit errors)
+        if (result.resetAt) {
+          const resetTime = new Date(result.resetAt);
+          const now = new Date();
+          const minutesUntilReset = Math.ceil((resetTime - now) / (1000 * 60));
+          
+          if (minutesUntilReset > 0) {
+            errorMessage += ` You can try again in ${minutesUntilReset} minute(s).`;
+          }
+        }
+        
         return res.status(429).json({
           success: false,
-          message: result.error || 'Unable to process request. Please try again later.'
+          message: errorMessage
         });
       }
       
