@@ -190,8 +190,9 @@ export function AirtimeDataOverlay() {
       }
       
       // Get unique networks (only if we haven't already set beneficiaryNetwork from selected account)
+      let uniqueNetworks: string[] = [];
       if (!beneficiaryNetwork) {
-        const uniqueNetworks = [...new Set(allNetworks.map(n => normalizeNetwork(n)).filter(Boolean))];
+        uniqueNetworks = [...new Set(allNetworks.map(n => normalizeNetwork(n)).filter(Boolean))];
         
         // If beneficiary has exactly one network, use it for filtering
         if (uniqueNetworks.length === 1) {
@@ -208,6 +209,8 @@ export function AirtimeDataOverlay() {
       console.log('🔍 Beneficiary network extraction:', {
         beneficiaryId: normalized.id,
         beneficiaryName: normalized.name,
+        accountId: accountId || null,
+        selectedAccountNetwork: accountId ? beneficiaryAny.accounts?.find((acc: any) => acc.id === accountId)?.metadata?.network : null,
         metadata: normalized.metadata,
         metadataNetwork: normalized.metadata?.network,
         vasServices: beneficiaryAny.vasServices,
