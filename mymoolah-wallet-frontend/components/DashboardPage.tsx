@@ -8,7 +8,8 @@ import {
   Phone,
   ArrowUpRight,
   Coffee,
-  Car
+  Car,
+  Wifi
 } from 'lucide-react';
 
 // Transaction type
@@ -47,17 +48,24 @@ function getTransactionIcon(transaction: Omit<Transaction, 'icon'>) {
       }
       return <ShoppingBag style={iconStyle} />;
     case 'payment':
+      // Check for data transactions FIRST (more specific)
+      const desc = transaction.description.toLowerCase();
       if (
-        transaction.description.toLowerCase().includes('airtime') ||
-        transaction.description.toLowerCase().includes('vodacom') ||
-        transaction.description.toLowerCase().includes('mtn')
+        desc.includes('data purchase') ||
+        desc.includes('data bundle') ||
+        desc.includes('internet') ||
+        desc.includes('wifi')
       ) {
+        return <Wifi style={iconStyle} />;
+      }
+      // Then check for airtime (only match "airtime" keyword, not network names)
+      if (desc.includes('airtime purchase') || desc.includes('airtime for') || desc.includes('airtime')) {
         return <Phone style={iconStyle} />;
       }
       if (
-        transaction.description.toLowerCase().includes('uber') ||
-        transaction.description.toLowerCase().includes('taxi') ||
-        transaction.description.toLowerCase().includes('transport')
+        desc.includes('uber') ||
+        desc.includes('taxi') ||
+        desc.includes('transport')
       ) {
         return <Car style={iconStyle} />;
       }

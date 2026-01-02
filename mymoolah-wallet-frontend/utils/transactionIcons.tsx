@@ -38,14 +38,31 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <Ticket style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 2. AIRTIME TRANSACTIONS
-  if (description.includes('airtime') || description.includes('vodacom') || description.includes('mtn') || description.includes('cell c')) {
-    return <Phone style={{ ...iconStyle, color: iconColor }} />;
+  // 2. DATA TRANSACTIONS (Check BEFORE airtime to avoid false matches)
+  // Check metadata first (most reliable), then description
+  const isData = 
+    transaction.metadata?.productType === 'data' ||
+    transaction.metadata?.type === 'data' ||
+    transaction.metadata?.vasType === 'data' ||
+    description.includes('data purchase') ||
+    description.includes('data bundle') ||
+    description.includes('internet') ||
+    description.includes('wifi');
+  if (isData) {
+    return <Wifi style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 3. DATA TRANSACTIONS
-  if (description.includes('data') || description.includes('internet') || description.includes('wifi')) {
-    return <Wifi style={{ ...iconStyle, color: iconColor }} />;
+  // 3. AIRTIME TRANSACTIONS (Check metadata first, then description)
+  // Only match "airtime" keyword, NOT network names (to avoid false matches with data)
+  const isAirtime = 
+    transaction.metadata?.productType === 'airtime' ||
+    transaction.metadata?.type === 'airtime' ||
+    transaction.metadata?.vasType === 'airtime' ||
+    description.includes('airtime purchase') ||
+    description.includes('airtime for') ||
+    description.includes('airtime');
+  if (isAirtime) {
+    return <Phone style={{ ...iconStyle, color: iconColor }} />;
   }
   
   // 4. ELECTRICITY TRANSACTIONS
