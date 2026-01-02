@@ -36,9 +36,75 @@
 
 ---
 
-**Last Updated**: January 1, 2026  
-**Version**: 2.4.42 - MobileMart UAT vs Production Catalog Comparison  
-**Status**: ✅ **MOBILEMART CATALOG COMPARED** ✅ **REFERRAL 4-LEVEL VERIFIED** ✅ **L4 ROUNDING FIXED** ✅ **STATS CORRECTED** ✅ **11-LANGUAGE SUPPORT** ✅ **17/17 TESTS PASSED** ✅ **WORLD-CLASS QUALITY** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: January 2, 2026  
+**Version**: 2.4.43 - UI Terminology & Recipient UX Improvements  
+**Status**: ✅ **RECIPIENT UX IMPROVED** ✅ **TERMINOLOGY UPDATED** ✅ **ACCOUNT SELECTOR MODAL** ✅ **11-LANGUAGE SUPPORT** ✅ **17/17 TESTS PASSED** ✅ **WORLD-CLASS QUALITY** ✅ **MOJALOOP COMPLIANT**
+
+---
+
+## Update 2026-01-02 (16:12) - MobileMart Error Message Refinement ✅
+
+### **Session Summary**
+Refined MobileMart error message for code 1013 to remove redundant network name repetition, making error messages more concise and user-friendly. Verified workflow for committing and pushing changes from local worktree to main repository and GitHub.
+
+### **Major Changes** ✅
+- ✅ **Error Message Simplification**: Removed redundant "(the selected network)" placeholder from MobileMart error 1013 message
+  - Before: "not valid for [product] (the selected network)... try a different the selected network product"
+  - After: "not valid for [product name]... try a different product or use a different mobile number"
+  - More concise and actionable messaging
+- ✅ **Workflow Verification**: Confirmed all changes are committed and pushed to GitHub main branch
+
+### **Files Modified**
+- `routes/overlayServices.js` - Simplified MobileMart error 1013 message, removed redundant network repetition
+
+### **Status**: ✅ **ERROR MESSAGE REFINEMENT COMPLETED - READY FOR STAGING DEPLOYMENT**
+
+---
+
+## Update 2026-01-02 (12:00) - UI Terminology & Recipient UX Improvements ✅
+
+### **Session Summary**
+Completed comprehensive UI/UX improvements for recipient management and transaction history. Changed all user-facing "Beneficiary" terminology to "Recipient" (aligning with modern fintech standards like PayPal, Venmo, Cash App). Fixed transaction icon inconsistencies, improved MobileMart error handling, and implemented clean account selector modal for recipients with multiple phone numbers. Removed confusing dropdown UX and replaced with professional modal-based selection.
+
+### **Major Changes** ✅
+- ✅ **Terminology Migration**: All user-facing text changed from "Beneficiary" to "Recipient"
+  - 15 files updated across frontend
+  - Internal code (variables, types, API, database) unchanged for backward compatibility
+  - No breaking changes
+- ✅ **Account Selector Modal**: Clean UX for recipients with multiple phone numbers
+  - Modal opens when clicking recipient with 2+ accounts
+  - Shows network name and phone number in clean list
+  - Products filter by chosen network
+  - Replaced horrible inline dropdown that overlapped content
+- ✅ **Add Additional Number**: New feature to add multiple numbers per recipient
+  - Modal with "Add Additional Number" title and "Add Number" button
+  - Integrated into edit flow with "Add Number" button in edit modal
+  - Uses `unifiedBeneficiaryService.addServiceToBeneficiary` API
+- ✅ **Transaction Icons Fix**: Data transactions now show correct WiFi icon
+  - Reordered icon logic to check data before airtime
+  - Consistent color coding (green for credits, red for debits)
+- ✅ **MobileMart Error Handling**: Improved user-facing error messages
+  - Error 1013 (invalid mobile number) - indicates UAT restriction
+  - Error 1016 (consumer account error) - extracts network name for clarity
+- ✅ **UI Cleanup**: Removed "Fill demo credentials" button from login page
+
+### **Files Modified**
+- `mymoolah-wallet-frontend/utils/transactionIcons.tsx`
+- `mymoolah-wallet-frontend/components/DashboardPage.tsx`
+- `mymoolah-wallet-frontend/components/ui/ErrorModal.tsx`
+- `mymoolah-wallet-frontend/components/overlays/shared/BeneficiaryList.tsx`
+- `mymoolah-wallet-frontend/components/overlays/shared/BeneficiaryModal.tsx`
+- `mymoolah-wallet-frontend/components/overlays/shared/AddAdditionalNumberModal.tsx` (NEW)
+- `mymoolah-wallet-frontend/components/overlays/shared/AccountSelectorModal.tsx` (NEW)
+- `mymoolah-wallet-frontend/components/overlays/AirtimeDataOverlay.tsx`
+- `mymoolah-wallet-frontend/components/overlays/ElectricityOverlay.tsx`
+- `mymoolah-wallet-frontend/pages/SendMoneyPage.tsx`
+- `mymoolah-wallet-frontend/pages/TransactPage.tsx`
+- `mymoolah-wallet-frontend/pages/LoginPage.tsx`
+- `mymoolah-wallet-frontend/components/BottomNavigation.tsx`
+- `routes/overlayServices.js`
+
+### **Status**: ✅ **UI/UX IMPROVEMENTS COMPLETED - PRODUCTION READY**
 
 ---
 
