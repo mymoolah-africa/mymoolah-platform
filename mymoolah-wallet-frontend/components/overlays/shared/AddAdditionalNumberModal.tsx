@@ -261,9 +261,26 @@ export function AddAdditionalNumberModal({
                 >
                   <SelectValue placeholder="Select network" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent
+                  style={{
+                    zIndex: 9999,
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                >
                   {NETWORKS.map((network) => (
-                    <SelectItem key={network} value={network}>
+                    <SelectItem 
+                      key={network} 
+                      value={network}
+                      style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '14px',
+                        padding: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
                       {network}
                     </SelectItem>
                   ))}
