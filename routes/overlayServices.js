@@ -1045,8 +1045,13 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           }
           
           // Error 1013: Mobile Number is invalid
+          // Note: This can occur if the mobile number is not valid for the specific product/network
+          // or if MobileMart UAT has restrictions on certain products
           if (mobilemartErrorCode === '1013' || mobilemartErrorCode === 1013) {
-            userFriendlyMessage = 'The mobile number format is invalid. Please check the number and try again.';
+            const productNetwork = productVariant?.provider || productVariant?.metadata?.network || 'this network';
+            const productName = productVariant?.product?.name || 'this product';
+            
+            userFriendlyMessage = `The mobile number ${beneficiary.identifier} is not valid for ${productName} (${productNetwork}). This may be a MobileMart UAT restriction. Please try a different ${productNetwork} product or contact support if the issue persists.`;
             primaryErrorMessage = userFriendlyMessage;
           }
           
