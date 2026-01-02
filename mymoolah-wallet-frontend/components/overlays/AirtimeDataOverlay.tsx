@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ErrorModal } from '../ui/ErrorModal';
 import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
+import { AddAdditionalNumberModal } from './shared/AddAdditionalNumberModal';
 import { ConfirmationModal } from './shared/ConfirmationModal';
 import { ConfirmSheet } from './shared/ConfirmSheet';
 import { 
@@ -48,6 +49,7 @@ export function AirtimeDataOverlay() {
   const [errorModalType, setErrorModalType] = useState<'error' | 'warning' | 'info'>('error');
   const [alternativeProduct, setAlternativeProduct] = useState<any>(null);
   const [showBeneficiaryModal, setShowBeneficiaryModal] = useState(false);
+  const [showAddNumberModal, setShowAddNumberModal] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<Beneficiary | null>(null);
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
@@ -1779,7 +1781,28 @@ export function AirtimeDataOverlay() {
         type="airtime"
         onSuccess={handleBeneficiaryCreated}
         editBeneficiary={editingBeneficiary}
+        onAddNumber={() => {
+          setShowBeneficiaryModal(false);
+          setShowAddNumberModal(true);
+        }}
       />
+
+      {/* Add Additional Number Modal */}
+      {editingBeneficiary && (
+        <AddAdditionalNumberModal
+          isOpen={showAddNumberModal}
+          onClose={() => {
+            setShowAddNumberModal(false);
+          }}
+          beneficiaryId={editingBeneficiary.id}
+          beneficiaryName={editingBeneficiary.name}
+          onSuccess={async () => {
+            // Reload beneficiaries to show the new number
+            await loadBeneficiaries();
+            setShowAddNumberModal(false);
+          }}
+        />
+      )}
 
       {/* Confirmation Modal */}
       <ConfirmationModal

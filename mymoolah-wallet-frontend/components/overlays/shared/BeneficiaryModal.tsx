@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Smartphone, Zap, FileText, Check, AlertTriangle } from 'lucide-react';
+import { X, Smartphone, Zap, FileText, Check, AlertTriangle, Plus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -13,6 +13,7 @@ interface BeneficiaryModalProps {
   type: 'airtime' | 'data' | 'electricity' | 'biller';
   onSuccess: (beneficiary: Beneficiary) => void;
   editBeneficiary?: Beneficiary | null; // Add support for editing existing beneficiary
+  onAddNumber?: () => void; // Callback to open "Add Additional Number" modal
 }
 
 interface BeneficiaryFormData {
@@ -23,7 +24,7 @@ interface BeneficiaryFormData {
   billerName?: string;
 }
 
-export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBeneficiary }: BeneficiaryModalProps) {
+export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBeneficiary, onAddNumber }: BeneficiaryModalProps) {
   const [formData, setFormData] = useState<BeneficiaryFormData>({
     name: '',
     identifier: '',
@@ -258,15 +259,8 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
                   fontWeight: '700',
                   color: '#1f2937'
                 }}>
-                  {editBeneficiary ? `Edit ${getTypeTitle()}` : `Add ${getTypeTitle()}`}
+                  {editBeneficiary ? `Edit ${getTypeTitle()}` : 'Add New Recipient'}
                 </CardTitle>
-                <p style={{
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '12px',
-                  color: '#6b7280'
-                }}>
-                  Add a new {type} recipient
-                </p>
               </div>
             </div>
             <Button
@@ -878,6 +872,34 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
                 }}>
                   {error}
                 </p>
+              </div>
+            )}
+
+            {/* Add Number Button (only when editing airtime/data recipients) */}
+            {editBeneficiary && (type === 'airtime' || type === 'data') && onAddNumber && (
+              <div className="mt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    onClose();
+                    onAddNumber();
+                  }}
+                  style={{
+                    width: '100%',
+                    minHeight: '44px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    borderRadius: '12px',
+                    border: '1px solid #86BE41',
+                    color: '#86BE41',
+                    backgroundColor: 'transparent'
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                  Add Number
+                </Button>
               </div>
             )}
 
