@@ -414,10 +414,13 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     // Check if productId is a numeric variantId (from compareSuppliers)
     const variantId = /^\d+$/.test(productId.toString()) ? parseInt(productId, 10) : null;
     
+    // Store productVariant for use in error handling
+    let productVariant = null;
+    
     if (variantId) {
       // New format: Look up ProductVariant
       const { ProductVariant } = require('../models');
-      const productVariant = await ProductVariant.findOne({
+      productVariant = await ProductVariant.findOne({
         where: { id: variantId, status: 'active' },
         include: [
           {
@@ -848,10 +851,30 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           const mobilemartErrorMessage = errorResponse.title || errorResponse.detail || errorResponse.message || mobilemartError.message;
           const httpStatus = mobilemartError.response?.status || 500;
           
+          // Log the availability issue BEFORE attempting fallback
+          const productAvailabilityLogger = require('../services/productAvailabilityLogger');
+          await productAvailabilityLogger.logAvailabilityIssue({
+            variantId: variantId || null,
+            supplierCode: supplier || 'MOBILEMART',
+            productName: productVariant?.product?.name || productCode || 'Unknown Product',
+            productType: type,
+            errorCode: mobilemartErrorCode?.toString() || null,
+            errorMessage: mobilemartErrorMessage || null,
+            userId: req.user?.id || null,
+            beneficiaryId: beneficiary?.id || null,
+            amountInCents: amountInCentsValue || null,
+            alternativeUsed: false, // Will be updated if fallback succeeds
+            metadata: {
+              endpoint: errorEndpoint,
+              productCode: productCode,
+              network: beneficiary.metadata?.network || null
+            }
+          });
+
           // Check if this is Error 1002 (Cannot source product) - upstream provider issue
-          // In this case, we should try fallback to other suppliers if available
+          // In this case, we should AUTOMATICALLY try fallback to other suppliers if available
           if (mobilemartErrorCode === '1002' || mobilemartErrorCode === 1002 || mobilemartErrorMessage?.includes('Cannot source product')) {
-            console.log('⚠️ MobileMart Error 1002: Product unavailable from upstream provider. Attempting fallback to other suppliers...');
+            console.log('⚠️ MobileMart Error 1002: Product unavailable from upstream provider. Attempting automatic fallback to other suppliers...');
             
             // Try to find alternative supplier for the same product
             try {
@@ -865,33 +888,135 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                 beneficiary.metadata?.network || null
               );
               
-              // Find best alternative (excluding MobileMart)
+              // Find best alternative (excluding MobileMart and the failed variant)
               const bestAlternative = alternatives.bestDeals?.find(
                 deal => deal.supplierCode !== 'MOBILEMART' && deal.variantId !== variantId
               );
               
               if (bestAlternative) {
-                console.log(`✅ Found alternative supplier: ${bestAlternative.supplierCode} for product ${bestAlternative.variantId}`);
+                console.log(`✅ Found alternative supplier: ${bestAlternative.supplierCode} for product ${bestAlternative.variantId}. Automatically retrying purchase...`);
                 
-                // Return error with suggestion to try alternative
-                return res.status(400).json({
-                  success: false,
-                  error: 'Product temporarily unavailable from MobileMart. Please try an alternative product.',
-                  message: `This product is currently unavailable. We found an alternative: ${bestAlternative.productName} from ${bestAlternative.supplierName} for R${(bestAlternative.price / 100).toFixed(2)}.`,
-                  errorCode: 'PRODUCT_UNAVAILABLE',
-                  alternativeProduct: {
-                    variantId: bestAlternative.variantId,
-                    productName: bestAlternative.productName,
-                    supplierName: bestAlternative.supplierName,
-                    price: bestAlternative.price
-                  },
-                  details: process.env.NODE_ENV !== 'production' ? {
-                    originalError: mobilemartErrorMessage,
-                    errorCode: mobilemartErrorCode,
-                    originalSupplier: 'MOBILEMART',
-                    alternativeSupplier: bestAlternative.supplierCode
-                  } : undefined
-                });
+                // AUTOMATIC RETRY: Attempt purchase with alternative supplier
+                try {
+                  // Update the product details for the alternative
+                  const alternativeVariant = await ProductVariant.findOne({
+                    where: { id: bestAlternative.variantId, status: 'active' },
+                    include: [
+                      {
+                        model: require('../models').Supplier,
+                        as: 'supplier',
+                        attributes: ['id', 'code', 'name']
+                      },
+                      {
+                        model: require('../models').Product,
+                        as: 'product',
+                        attributes: ['id', 'name', 'type']
+                      }
+                    ]
+                  });
+
+                  if (alternativeVariant) {
+                    // Update variables for alternative product
+                    const altSupplier = alternativeVariant.supplier?.code || bestAlternative.supplierCode;
+                    const altProductCode = alternativeVariant.supplierProductId;
+                    const altType = alternativeVariant.product?.type || type;
+                    
+                    console.log(`🔄 Retrying purchase with alternative: ${bestAlternative.productName} from ${altSupplier}`);
+                    
+                    // Route to appropriate supplier service based on alternative supplier
+                    if (altSupplier === 'FLASH') {
+                      // Use Flash service for alternative
+                      const { flashService } = require('../services/flashService');
+                      const flashResult = await flashService.purchaseAirtimeOrData({
+                        type: altType,
+                        amount: amountInCentsValue / 100,
+                        recipient: normalizedMobileNumber || beneficiary.identifier,
+                        productCode: altProductCode
+                      });
+                      
+                      if (flashResult.success) {
+                        // Update availability log to reflect alternative was used
+                        await productAvailabilityLogger.logAvailabilityIssue({
+                          variantId: variantId || null,
+                          supplierCode: supplier || 'MOBILEMART',
+                          productName: productVariant?.product?.name || productCode || 'Unknown Product',
+                          productType: type,
+                          errorCode: mobilemartErrorCode?.toString() || null,
+                          errorMessage: mobilemartErrorMessage || null,
+                          userId: req.user?.id || null,
+                          beneficiaryId: beneficiary?.id || null,
+                          amountInCents: amountInCentsValue || null,
+                          alternativeUsed: true,
+                          alternativeSupplierCode: altSupplier,
+                          alternativeVariantId: bestAlternative.variantId,
+                          metadata: {
+                            endpoint: errorEndpoint,
+                            productCode: productCode,
+                            network: beneficiary.metadata?.network || null
+                          }
+                        });
+                        
+                        // Continue with successful Flash purchase flow
+                        supplierFulfillmentResult = flashResult;
+                        supplier = altSupplier;
+                        productCode = altProductCode;
+                        type = altType;
+                        console.log(`✅ Alternative supplier (${altSupplier}) purchase successful!`);
+                        // Continue with normal transaction creation flow below
+                      } else {
+                        throw new Error(`Alternative supplier (${altSupplier}) also failed: ${flashResult.error || 'Unknown error'}`);
+                      }
+                    } else {
+                      // For other suppliers, return error with alternative suggestion
+                      // (We can extend this to support more suppliers later)
+                      return res.status(400).json({
+                        success: false,
+                        error: 'Product temporarily unavailable from MobileMart. Please try an alternative product.',
+                        message: `This product is currently unavailable. We found an alternative: ${bestAlternative.productName} from ${bestAlternative.supplierName} for R${(bestAlternative.price / 100).toFixed(2)}.`,
+                        errorCode: 'PRODUCT_UNAVAILABLE',
+                        alternativeProduct: {
+                          variantId: bestAlternative.variantId,
+                          productName: bestAlternative.productName,
+                          supplierName: bestAlternative.supplierName,
+                          price: bestAlternative.price
+                        },
+                        details: process.env.NODE_ENV !== 'production' ? {
+                          originalError: mobilemartErrorMessage,
+                          errorCode: mobilemartErrorCode,
+                          originalSupplier: 'MOBILEMART',
+                          alternativeSupplier: bestAlternative.supplierCode
+                        } : undefined
+                      });
+                    }
+                  } else {
+                    throw new Error('Alternative variant not found');
+                  }
+                } catch (retryError) {
+                  console.error(`❌ Automatic retry with alternative failed: ${retryError.message}`);
+                  // Fall through to return error with alternative suggestion
+                  return res.status(400).json({
+                    success: false,
+                    error: 'Product temporarily unavailable from MobileMart. Please try an alternative product.',
+                    message: `This product is currently unavailable. We found an alternative: ${bestAlternative.productName} from ${bestAlternative.supplierName} for R${(bestAlternative.price / 100).toFixed(2)}.`,
+                    errorCode: 'PRODUCT_UNAVAILABLE',
+                    alternativeProduct: {
+                      variantId: bestAlternative.variantId,
+                      productName: bestAlternative.productName,
+                      supplierName: bestAlternative.supplierName,
+                      price: bestAlternative.price
+                    },
+                    details: process.env.NODE_ENV !== 'production' ? {
+                      originalError: mobilemartErrorMessage,
+                      retryError: retryError.message,
+                      errorCode: mobilemartErrorCode,
+                      originalSupplier: 'MOBILEMART',
+                      alternativeSupplier: bestAlternative.supplierCode
+                    } : undefined
+                  });
+                }
+              } else {
+                console.log('⚠️ No alternative supplier found for this product');
+                // No alternative found, continue with original error response
               }
             } catch (fallbackError) {
               console.error('❌ Failed to find alternative supplier:', fallbackError.message);
@@ -899,14 +1024,39 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             }
           }
           
+          // Handle specific MobileMart error codes with user-friendly messages
+          let primaryErrorMessage = mobilemartErrorMessage || 'MobileMart purchase fulfillment failed';
+          let userFriendlyMessage = primaryErrorMessage;
+          
+          // Error 1016: Consumer account error - Subscriber not allowed to recharge on network
+          if (mobilemartErrorCode === '1016' || mobilemartErrorCode === 1016) {
+            const errorDetail = errorResponse.detail || '';
+            if (errorDetail.includes('Subscriber not allowed to recharge')) {
+              // Extract network from error detail
+              const networkMatch = errorDetail.match(/on (\w+) network/i);
+              const network = networkMatch ? networkMatch[1] : (beneficiary.metadata?.network || beneficiary.name?.match(/(\w+)/)?.[1] || 'this network');
+              
+              userFriendlyMessage = `This mobile number cannot be recharged on the ${network} network. Please verify the mobile number belongs to ${network} or select a different product.`;
+              primaryErrorMessage = userFriendlyMessage;
+            } else if (errorDetail.includes('Consumer account error')) {
+              userFriendlyMessage = 'This mobile number cannot be recharged. Please verify the mobile number is correct and belongs to the selected network.';
+              primaryErrorMessage = userFriendlyMessage;
+            }
+          }
+          
+          // Error 1013: Mobile Number is invalid
+          if (mobilemartErrorCode === '1013' || mobilemartErrorCode === 1013) {
+            userFriendlyMessage = 'The mobile number format is invalid. Please check the number and try again.';
+            primaryErrorMessage = userFriendlyMessage;
+          }
+          
           // Prioritize detailed MobileMart error message for frontend display
           // Frontend apiClient uses: data.error || data.message
-          const primaryErrorMessage = mobilemartErrorMessage || 'MobileMart purchase fulfillment failed';
           
           return res.status(httpStatus).json({
             success: false,
             error: primaryErrorMessage, // Frontend will use this first
-            message: primaryErrorMessage, // Fallback for frontend
+            message: userFriendlyMessage, // User-friendly message
             errorCode: mobilemartErrorCode ? `MOBILEMART_${mobilemartErrorCode}` : 'MOBILEMART_FULFILLMENT_FAILED',
             mobilemartErrorCode: mobilemartErrorCode || null,
             mobilemartError: mobilemartErrorMessage || null,
@@ -918,7 +1068,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
                 productCode,
                 beneficiaryId: beneficiary.id,
                 mobileNumber: normalizedMobileNumber || beneficiary.identifier || 'unknown',
-                httpStatus: httpStatus
+                httpStatus: httpStatus,
+                originalErrorDetail: errorResponse.detail || null
               }
             } : {})
           });
