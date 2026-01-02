@@ -1236,8 +1236,8 @@ class UnifiedBeneficiaryService {
             metadata: {
               msisdn: msisdn,
               ...serviceData,
-              // Override network with extracted value if it was null/undefined
-              network: network || serviceData.network
+              // Always use extracted network if available, otherwise fall back to serviceData.network
+              network: network || serviceData.network || null
             }
           });
         }
