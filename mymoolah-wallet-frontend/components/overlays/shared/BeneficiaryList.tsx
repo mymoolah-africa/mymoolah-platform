@@ -321,7 +321,7 @@ export function BeneficiaryList({
                     role="button"
                     tabIndex={0}
                     onClick={() => {
-                      // If single account or dropdown handles selection, just select
+                      // Always select - will use default account
                       onSelect(beneficiary, displayAccount?.id);
                     }}
                     onKeyDown={(e) => {
@@ -402,7 +402,7 @@ export function BeneficiaryList({
                         </div>
                         
                         {displayAccount ? (
-                          <>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <p
                               style={{
                                 fontFamily: 'Montserrat, sans-serif',
@@ -410,14 +410,23 @@ export function BeneficiaryList({
                                 color: '#6b7280'
                               }}
                             >
-                              {
-                                // Show just the network name for clarity (e.g., "Vodacom" not "Airtime - Vodacom")
-                                displayAccount.metadata?.network || 
-                                displayAccount.label ||
-                                displayAccount.identifier
-                              }
+                              {displayAccount.metadata?.network || displayAccount.label || displayAccount.identifier}
                             </p>
-                          </>
+                            {hasMultipleAccounts && (
+                              <Badge 
+                                variant="secondary"
+                                style={{
+                                  fontSize: '10px',
+                                  backgroundColor: '#e2e8f0',
+                                  color: '#6b7280',
+                                  padding: '2px 8px',
+                                  fontWeight: '500'
+                                }}
+                              >
+                                +{accounts.length - 1} more
+                              </Badge>
+                            )}
+                          </div>
                         ) : (
                           <p style={{
                             fontFamily: 'Montserrat, sans-serif',
@@ -429,70 +438,6 @@ export function BeneficiaryList({
                         )}
                       </div>
                     </div>
-                    
-                    {/* Account Selector Dropdown (if multiple accounts) */}
-                    {hasMultipleAccounts && (
-                      <div 
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          minWidth: '140px',
-                          flexShrink: 0,
-                          zIndex: 20
-                        }}
-                      >
-                        <Select
-                          value={displayAccount?.id?.toString() || ''}
-                          onValueChange={(value) => {
-                            const accountId = parseInt(value);
-                            onSelect(beneficiary, accountId);
-                          }}
-                        >
-                          <SelectTrigger
-                            style={{
-                              fontFamily: 'Montserrat, sans-serif',
-                              fontSize: '12px',
-                              height: '32px',
-                              padding: '0 8px',
-                              backgroundColor: '#ffffff',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '6px'
-                            }}
-                          >
-                            <SelectValue>
-                              {displayAccount?.metadata?.network || displayAccount?.label || displayAccount?.identifier || 'Select'}
-                            </SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {accounts.map((account) => (
-                              <SelectItem 
-                                key={account.id} 
-                                value={account.id.toString()}
-                              >
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                  <span>
-                                    {account.metadata?.network || account.label || account.identifier}
-                                  </span>
-                                  {account.isDefault && (
-                                    <Badge 
-                                      variant="secondary"
-                                      style={{
-                                        fontSize: '9px',
-                                        backgroundColor: '#86BE41',
-                                        color: '#ffffff',
-                                        padding: '2px 6px',
-                                        marginLeft: '8px'
-                                      }}
-                                    >
-                                      Default
-                                    </Badge>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
                     
                     {/* Action Buttons */}
                     <div 
