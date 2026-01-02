@@ -1,8 +1,7 @@
 import React from 'react';
-import { X, Smartphone, Check } from 'lucide-react';
+import { X, Smartphone } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
-import { Badge } from '../../ui/badge';
 
 interface Account {
   id: number;
@@ -172,21 +171,6 @@ export function AccountSelectorModal({
                     </div>
                   </div>
                 </div>
-                
-                {account.isDefault && (
-                  <Badge 
-                    variant="secondary"
-                    style={{
-                      fontSize: '10px',
-                      backgroundColor: '#86BE41',
-                      color: '#ffffff',
-                      padding: '4px 8px',
-                      fontWeight: '500'
-                    }}
-                  >
-                    Default
-                  </Badge>
-                )}
               </button>
             ))}
           </div>
