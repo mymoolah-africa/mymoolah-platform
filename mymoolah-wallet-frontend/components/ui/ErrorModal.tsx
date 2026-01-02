@@ -48,7 +48,10 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm mx-auto" aria-describedby="error-modal-description">
+      <DialogContent className="max-w-sm mx-auto">
+        <DialogDescription id="error-modal-description" className="sr-only">
+          {message || 'Error dialog content'}
+        </DialogDescription>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertCircle className={`w-5 h-5 ${getIconColor()}`} />
@@ -64,9 +67,6 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
               <X className="h-4 w-4" />
             </Button>
           )}
-          <DialogDescription id="error-modal-description" className="sr-only">
-            {message || 'Error dialog content'}
-          </DialogDescription>
         </DialogHeader>
         
         <div className="py-4">
