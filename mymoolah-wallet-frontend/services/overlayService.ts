@@ -375,8 +375,12 @@ export const formatCurrency = (amount: number): string => {
 
 export const validateMobileNumber = (number: string): boolean => {
   // South African mobile number validation
+  // Accepts all 3 formats: 0XXXXXXXXX, 27XXXXXXXXX, +27XXXXXXXXX
+  // Trims whitespace to handle user input with spaces
+  if (!number || typeof number !== 'string') return false;
+  const trimmed = number.trim();
   const saMobileRegex = /^(\+27|27|0)[6-8][0-9]{8}$/;
-  return saMobileRegex.test(number);
+  return saMobileRegex.test(trimmed);
 };
 
 export const validateMeterNumber = (meterNumber: string): boolean => {
