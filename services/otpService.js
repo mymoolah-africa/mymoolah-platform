@@ -25,7 +25,8 @@ const OTP_LENGTH = 6;
 const OTP_EXPIRY_MINUTES = 10;
 const MAX_ATTEMPTS = 3;
 const RATE_LIMIT_WINDOW_HOURS = 1;
-const MAX_OTPS_PER_WINDOW = 3;
+// More lenient rate limits in non-production for testing (10 vs 3 in production)
+const MAX_OTPS_PER_WINDOW = (process.env.NODE_ENV === 'production') ? 3 : 10;
 const BCRYPT_ROUNDS = 10;
 
 class OtpService {
@@ -98,6 +99,9 @@ class OtpService {
     const windowStart = new Date();
     windowStart.setHours(windowStart.getHours() - RATE_LIMIT_WINDOW_HOURS);
 
+    // Get current limit based on environment (more lenient in non-production)
+    const maxOtps = (process.env.NODE_ENV === 'production') ? 3 : 10;
+
     const count = await this.OtpVerification.count({
       where: {
         phoneNumber,
@@ -110,8 +114,8 @@ class OtpService {
     resetAt.setHours(resetAt.getHours() + RATE_LIMIT_WINDOW_HOURS);
 
     return {
-      allowed: count < MAX_OTPS_PER_WINDOW,
-      remaining: Math.max(0, MAX_OTPS_PER_WINDOW - count),
+      allowed: count < maxOtps,
+      remaining: Math.max(0, maxOtps - count),
       resetAt
     };
   }
