@@ -113,19 +113,6 @@ export function BeneficiaryList({
 }: BeneficiaryListProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState<string>(type);
-  const [expandedBeneficiaries, setExpandedBeneficiaries] = useState<Set<string>>(new Set());
-
-  const toggleAccountSelector = useCallback((beneficiaryId: string) => {
-    setExpandedBeneficiaries(prev => {
-      const next = new Set(prev);
-      if (next.has(beneficiaryId)) {
-        next.delete(beneficiaryId);
-      } else {
-        next.add(beneficiaryId);
-      }
-      return next;
-    });
-  }, []);
 
   // Filter beneficiaries based on search and type
   const filteredBeneficiaries = beneficiaries.filter(beneficiary => {
@@ -314,7 +301,6 @@ export function BeneficiaryList({
               const defaultAccount = getDefaultAccount(beneficiary);
               const hasMultipleAccounts = accounts.length > 1;
               const beneficiaryIdStr = String(beneficiary.id);
-              const isExpanded = expandedBeneficiaries.has(beneficiaryIdStr);
               const isSelected = selectedBeneficiary?.id === beneficiary.id;
               
               // Determine which account to show/use
@@ -335,20 +321,13 @@ export function BeneficiaryList({
                     role="button"
                     tabIndex={0}
                     onClick={() => {
-                      if (hasMultipleAccounts && !isExpanded) {
-                        toggleAccountSelector(beneficiaryIdStr);
-                      } else {
-                        onSelect(beneficiary, displayAccount?.id);
-                      }
+                      // If single account or dropdown handles selection, just select
+                      onSelect(beneficiary, displayAccount?.id);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault();
-                        if (hasMultipleAccounts && !isExpanded) {
-                          toggleAccountSelector(beneficiaryIdStr);
-                        } else {
-                          onSelect(beneficiary, displayAccount?.id);
-                        }
+                        onSelect(beneficiary, displayAccount?.id);
                       }
                     }}
                     style={{
@@ -420,19 +399,6 @@ export function BeneficiaryList({
                             {beneficiary.name}
                           </p>
                           {isUnifiedBeneficiary(beneficiary) ? null : getValidationStatus(beneficiary as LegacyBeneficiary)}
-                          {hasMultipleAccounts && (
-                            <Badge 
-                              variant="secondary"
-                              style={{
-                                fontSize: '10px',
-                                backgroundColor: '#e2e8f0',
-                                color: '#6b7280',
-                                padding: '2px 6px'
-                              }}
-                            >
-                              {accounts.length} accounts
-                            </Badge>
-                          )}
                         </div>
                         
                         {displayAccount ? (
@@ -445,17 +411,10 @@ export function BeneficiaryList({
                               }}
                             >
                               {
-                                // Prefer explicit label, but for airtime/data ensure
-                                // we always include the network name when available,
-                                // so we show "Airtime - Vodacom" / "Data - MTN"
+                                // Show just the network name for clarity (e.g., "Vodacom" not "Airtime - Vodacom")
+                                displayAccount.metadata?.network || 
                                 displayAccount.label ||
-                                (displayAccount.type === 'airtime' &&
-                                  displayAccount.metadata?.network
-                                  ? `Airtime - ${displayAccount.metadata.network}`
-                                  : displayAccount.type === 'data' &&
-                                    displayAccount.metadata?.network
-                                  ? `Data - ${displayAccount.metadata.network}`
-                                  : displayAccount.identifier)
+                                displayAccount.identifier
                               }
                             </p>
                           </>
@@ -471,6 +430,70 @@ export function BeneficiaryList({
                       </div>
                     </div>
                     
+                    {/* Account Selector Dropdown (if multiple accounts) */}
+                    {hasMultipleAccounts && (
+                      <div 
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          minWidth: '140px',
+                          flexShrink: 0,
+                          zIndex: 20
+                        }}
+                      >
+                        <Select
+                          value={displayAccount?.id?.toString() || ''}
+                          onValueChange={(value) => {
+                            const accountId = parseInt(value);
+                            onSelect(beneficiary, accountId);
+                          }}
+                        >
+                          <SelectTrigger
+                            style={{
+                              fontFamily: 'Montserrat, sans-serif',
+                              fontSize: '12px',
+                              height: '32px',
+                              padding: '0 8px',
+                              backgroundColor: '#ffffff',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px'
+                            }}
+                          >
+                            <SelectValue>
+                              {displayAccount?.metadata?.network || displayAccount?.label || displayAccount?.identifier || 'Select'}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {accounts.map((account) => (
+                              <SelectItem 
+                                key={account.id} 
+                                value={account.id.toString()}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                  <span>
+                                    {account.metadata?.network || account.label || account.identifier}
+                                  </span>
+                                  {account.isDefault && (
+                                    <Badge 
+                                      variant="secondary"
+                                      style={{
+                                        fontSize: '9px',
+                                        backgroundColor: '#86BE41',
+                                        color: '#ffffff',
+                                        padding: '2px 6px',
+                                        marginLeft: '8px'
+                                      }}
+                                    >
+                                      Default
+                                    </Badge>
+                                  )}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                    
                     {/* Action Buttons */}
                     <div 
                       className="flex gap-1 items-center"
@@ -479,35 +502,6 @@ export function BeneficiaryList({
                         zIndex: 10
                       }}
                     >
-                      {/* Account Selector Toggle (if multiple accounts) */}
-                      {hasMultipleAccounts && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleAccountSelector(beneficiaryIdStr);
-                          }}
-                          style={{
-                            minWidth: '32px',
-                            minHeight: '32px',
-                            padding: '0',
-                            position: 'relative',
-                            zIndex: 20
-                          }}
-                        >
-                          <ChevronDown 
-                            style={{ 
-                              width: '16px', 
-                              height: '16px', 
-                              color: '#6b7280',
-                              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                              transition: 'transform 0.2s ease'
-                            }} 
-                          />
-                        </Button>
-                      )}
-                      
                       {/* Edit Button */}
                       <Button
                         variant="ghost"
@@ -549,80 +543,6 @@ export function BeneficiaryList({
                       )}
                     </div>
                   </div>
-                  
-                  {/* Account Selector Dropdown (when expanded) */}
-                  {hasMultipleAccounts && isExpanded && (
-                    <div
-                      style={{
-                        padding: '8px',
-                        backgroundColor: '#f9fafb',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                        marginTop: '-4px'
-                      }}
-                    >
-                      {accounts.map((account) => (
-                        <button
-                          key={account.id}
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelect(beneficiary, account.id);
-                            toggleAccountSelector(beneficiaryIdStr);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            width: '100%',
-                            padding: '8px 12px',
-                            borderRadius: '6px',
-                            backgroundColor: selectedAccountId === account.id ? 'rgba(134, 190, 65, 0.1)' : 'transparent',
-                            border: selectedAccountId === account.id ? '1px solid #86BE41' : '1px solid transparent',
-                            cursor: 'pointer',
-                            marginBottom: '4px',
-                            textAlign: 'left'
-                          }}
-                        >
-                          <div className="flex items-center gap-2 flex-1">
-                            {getTypeIcon(account.type)}
-                            <div>
-                              <p style={{
-                                fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '13px',
-                                fontWeight: '500',
-                                color: '#1f2937',
-                                margin: 0
-                              }}>
-                                {account.label || account.identifier}
-                              </p>
-                              <p style={{
-                                fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '11px',
-                                color: '#6b7280',
-                                margin: 0
-                              }}>
-                                {account.identifier}
-                              </p>
-                            </div>
-                          </div>
-                          {account.isDefault && (
-                            <Badge 
-                              variant="secondary"
-                              style={{
-                                fontSize: '9px',
-                                backgroundColor: '#86BE41',
-                                color: '#ffffff',
-                                padding: '2px 6px'
-                              }}
-                            >
-                              Default
-                            </Badge>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               );
             })

@@ -34,6 +34,7 @@ export function AirtimeDataOverlay() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<Step>('beneficiary');
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<number | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<AirtimeDataProduct | null>(null);
   const [catalog, setCatalog] = useState<AirtimeDataCatalog | null>(null);
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
@@ -114,6 +115,7 @@ export function AirtimeDataOverlay() {
           id: beneficiary.id != null ? String(beneficiary.id) : ''
         } as Beneficiary;
         setSelectedBeneficiary(normalized);
+        setSelectedAccountId(accountId || null);
       
       // Helper to normalize network names for comparison (must be defined first)
       const normalizeNetwork = (network: string | null | undefined): string => {
@@ -164,7 +166,19 @@ export function AirtimeDataOverlay() {
       }
       
       // 4. Check accounts (alternative format - most likely for unified beneficiaries)
-      if (beneficiaryAny.accounts && Array.isArray(beneficiaryAny.accounts)) {
+      // CRITICAL: If accountId is provided, only use that specific account's network
+      if (accountId && beneficiaryAny.accounts && Array.isArray(beneficiaryAny.accounts)) {
+        const selectedAccount = beneficiaryAny.accounts.find((acc: any) => acc.id === accountId);
+        if (selectedAccount) {
+          // Use the selected account's network for filtering
+          if (selectedAccount.metadata?.network) {
+            beneficiaryNetwork = normalizeNetwork(selectedAccount.metadata.network);
+          } else if (selectedAccount.network) {
+            beneficiaryNetwork = normalizeNetwork(selectedAccount.network);
+          }
+        }
+      } else if (beneficiaryAny.accounts && Array.isArray(beneficiaryAny.accounts)) {
+        // No specific account selected - check all accounts
         beneficiaryAny.accounts
           .filter((acc: any) => acc.type === 'airtime' || acc.type === 'data')
           .forEach((acc: any) => {
@@ -173,17 +187,18 @@ export function AirtimeDataOverlay() {
           });
       }
       
-      // Get unique networks
-      const uniqueNetworks = [...new Set(allNetworks.map(n => normalizeNetwork(n)).filter(Boolean))];
-      
-      // If beneficiary has exactly one network, use it for filtering
-      // If multiple networks, we could show all, but for PINless we should probably only show if single network
-      if (uniqueNetworks.length === 1) {
-        beneficiaryNetwork = uniqueNetworks[0];
-      } else if (uniqueNetworks.length > 1) {
-        // Multiple networks - for PINless, we might want to show all, but let's be strict and require single network
-        console.warn('⚠️ Beneficiary has multiple networks:', uniqueNetworks, '- Will show all products');
-        beneficiaryNetwork = null; // Show all if multiple networks
+      // Get unique networks (only if we haven't already set beneficiaryNetwork from selected account)
+      if (!beneficiaryNetwork) {
+        const uniqueNetworks = [...new Set(allNetworks.map(n => normalizeNetwork(n)).filter(Boolean))];
+        
+        // If beneficiary has exactly one network, use it for filtering
+        if (uniqueNetworks.length === 1) {
+          beneficiaryNetwork = uniqueNetworks[0];
+        } else if (uniqueNetworks.length > 1) {
+          // Multiple networks - show all products
+          console.warn('⚠️ Beneficiary has multiple networks:', uniqueNetworks, '- Will show all products');
+          beneficiaryNetwork = null; // Show all if multiple networks
+        }
       }
       
       // Debug logging - log the FULL beneficiary object to see structure
@@ -927,6 +942,7 @@ export function AirtimeDataOverlay() {
             type="airtime"
             beneficiaries={beneficiaries}
             selectedBeneficiary={selectedBeneficiary}
+            selectedAccountId={selectedAccountId}
             onSelect={handleBeneficiarySelect}
             onAddNew={handleAddNewBeneficiary}
             onEdit={handleEditBeneficiary}
