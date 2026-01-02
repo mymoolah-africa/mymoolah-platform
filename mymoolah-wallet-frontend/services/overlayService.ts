@@ -376,11 +376,16 @@ export const formatCurrency = (amount: number): string => {
 export const validateMobileNumber = (number: string): boolean => {
   // South African mobile number validation
   // Accepts all 3 formats: 0XXXXXXXXX, 27XXXXXXXXX, +27XXXXXXXXX
-  // Trims whitespace to handle user input with spaces
+  // Handles input with spaces, dashes, parentheses, etc.
   if (!number || typeof number !== 'string') return false;
-  const trimmed = number.trim();
+  
+  // Remove all non-digit characters except + (for +27 format)
+  // This allows: "083 001 2300", "083-001-2300", "(083) 001-2300", etc.
+  const cleaned = number.trim().replace(/[^\d+]/g, '');
+  
+  // Validate the cleaned number
   const saMobileRegex = /^(\+27|27|0)[6-8][0-9]{8}$/;
-  return saMobileRegex.test(trimmed);
+  return saMobileRegex.test(cleaned);
 };
 
 export const validateMeterNumber = (meterNumber: string): boolean => {
