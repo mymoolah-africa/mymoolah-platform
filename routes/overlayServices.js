@@ -845,10 +845,14 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           const mobilemartErrorMessage = errorResponse.title || errorResponse.detail || errorResponse.message || mobilemartError.message;
           const httpStatus = mobilemartError.response?.status || 500;
           
+          // Prioritize detailed MobileMart error message for frontend display
+          // Frontend apiClient uses: data.error || data.message
+          const primaryErrorMessage = mobilemartErrorMessage || 'MobileMart purchase fulfillment failed';
+          
           return res.status(httpStatus).json({
             success: false,
-            error: 'MobileMart purchase fulfillment failed',
-            message: mobilemartErrorMessage || 'Failed to fulfill purchase with MobileMart',
+            error: primaryErrorMessage, // Frontend will use this first
+            message: primaryErrorMessage, // Fallback for frontend
             errorCode: mobilemartErrorCode ? `MOBILEMART_${mobilemartErrorCode}` : 'MOBILEMART_FULFILLMENT_FAILED',
             mobilemartErrorCode: mobilemartErrorCode || null,
             mobilemartError: mobilemartErrorMessage || null,
