@@ -1212,6 +1212,14 @@ class UnifiedBeneficiaryService {
       serviceAccountRecords.forEach((account, idx) => {
         if (account.serviceType === 'airtime' || account.serviceType === 'data') {
           const serviceData = account.serviceData || {};
+          const msisdn = serviceData.msisdn || serviceData.mobileNumber || beneficiary.identifier;
+          
+          // Extract network from mobile number if not already stored
+          let network = serviceData.network;
+          if (!network && msisdn) {
+            network = getNetworkFromMsisdn(msisdn);
+          }
+          
           accounts.push({
             id:
               account.id ||
@@ -1219,15 +1227,15 @@ class UnifiedBeneficiaryService {
                 (account.serviceType === 'airtime' ? 100 : 200) +
                 idx),
             type: account.serviceType,
-            identifier:
-              serviceData.msisdn || serviceData.mobileNumber || beneficiary.identifier,
+            identifier: msisdn,
             label:
               account.serviceType === 'airtime'
-                ? `Airtime - ${serviceData.network || ''}`
-                : `Data - ${serviceData.network || ''}`,
+                ? `Airtime - ${network ? network.charAt(0).toUpperCase() + network.slice(1) : ''}`
+                : `Data - ${network ? network.charAt(0).toUpperCase() + network.slice(1) : ''}`,
             isDefault: account.isDefault || false,
             metadata: {
-              network: serviceData.network,
+              network: network,
+              msisdn: msisdn,
               ...serviceData
             }
           });
@@ -1238,14 +1246,23 @@ class UnifiedBeneficiaryService {
       if (beneficiaryData.vasServices.airtime && Array.isArray(beneficiaryData.vasServices.airtime)) {
         beneficiaryData.vasServices.airtime.forEach((service, idx) => {
           if (service.isActive !== false) {
+            const msisdn = service.mobileNumber || service.msisdn || beneficiary.identifier;
+            
+            // Extract network from mobile number if not already stored
+            let network = service.network;
+            if (!network && msisdn) {
+              network = getNetworkFromMsisdn(msisdn);
+            }
+            
             accounts.push({
               id: beneficiary.id * 1000 + 100 + idx,
               type: 'airtime',
-              identifier: service.mobileNumber || service.msisdn || beneficiary.identifier,
-              label: service.label || `Airtime - ${service.network || ''}`,
+              identifier: msisdn,
+              label: service.label || `Airtime - ${network ? network.charAt(0).toUpperCase() + network.slice(1) : ''}`,
               isDefault: false,
               metadata: {
-                network: service.network,
+                network: network,
+                msisdn: msisdn,
                 ...service
               }
             });
@@ -1256,14 +1273,23 @@ class UnifiedBeneficiaryService {
       if (beneficiaryData.vasServices.data && Array.isArray(beneficiaryData.vasServices.data)) {
         beneficiaryData.vasServices.data.forEach((service, idx) => {
           if (service.isActive !== false) {
+            const msisdn = service.mobileNumber || service.msisdn || beneficiary.identifier;
+            
+            // Extract network from mobile number if not already stored
+            let network = service.network;
+            if (!network && msisdn) {
+              network = getNetworkFromMsisdn(msisdn);
+            }
+            
             accounts.push({
               id: beneficiary.id * 1000 + 200 + idx,
               type: 'data',
-              identifier: service.mobileNumber || service.msisdn || beneficiary.identifier,
-              label: service.label || `Data - ${service.network || ''}`,
+              identifier: msisdn,
+              label: service.label || `Data - ${network ? network.charAt(0).toUpperCase() + network.slice(1) : ''}`,
               isDefault: false,
               metadata: {
-                network: service.network,
+                network: network,
+                msisdn: msisdn,
                 ...service
               }
             });
