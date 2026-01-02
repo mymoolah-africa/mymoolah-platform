@@ -848,6 +848,57 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           const mobilemartErrorMessage = errorResponse.title || errorResponse.detail || errorResponse.message || mobilemartError.message;
           const httpStatus = mobilemartError.response?.status || 500;
           
+          // Check if this is Error 1002 (Cannot source product) - upstream provider issue
+          // In this case, we should try fallback to other suppliers if available
+          if (mobilemartErrorCode === '1002' || mobilemartErrorCode === 1002 || mobilemartErrorMessage?.includes('Cannot source product')) {
+            console.log('⚠️ MobileMart Error 1002: Product unavailable from upstream provider. Attempting fallback to other suppliers...');
+            
+            // Try to find alternative supplier for the same product
+            try {
+              const { SupplierComparisonService } = require('../services/supplierComparisonService');
+              const comparisonService = new SupplierComparisonService();
+              
+              // Get alternative products from other suppliers
+              const alternatives = await comparisonService.compareProducts(
+                type,
+                amountInCentsValue,
+                beneficiary.metadata?.network || null
+              );
+              
+              // Find best alternative (excluding MobileMart)
+              const bestAlternative = alternatives.bestDeals?.find(
+                deal => deal.supplierCode !== 'MOBILEMART' && deal.variantId !== variantId
+              );
+              
+              if (bestAlternative) {
+                console.log(`✅ Found alternative supplier: ${bestAlternative.supplierCode} for product ${bestAlternative.variantId}`);
+                
+                // Return error with suggestion to try alternative
+                return res.status(400).json({
+                  success: false,
+                  error: 'Product temporarily unavailable from MobileMart. Please try an alternative product.',
+                  message: `This product is currently unavailable. We found an alternative: ${bestAlternative.productName} from ${bestAlternative.supplierName} for R${(bestAlternative.price / 100).toFixed(2)}.`,
+                  errorCode: 'PRODUCT_UNAVAILABLE',
+                  alternativeProduct: {
+                    variantId: bestAlternative.variantId,
+                    productName: bestAlternative.productName,
+                    supplierName: bestAlternative.supplierName,
+                    price: bestAlternative.price
+                  },
+                  details: process.env.NODE_ENV !== 'production' ? {
+                    originalError: mobilemartErrorMessage,
+                    errorCode: mobilemartErrorCode,
+                    originalSupplier: 'MOBILEMART',
+                    alternativeSupplier: bestAlternative.supplierCode
+                  } : undefined
+                });
+              }
+            } catch (fallbackError) {
+              console.error('❌ Failed to find alternative supplier:', fallbackError.message);
+              // Continue with original error response
+            }
+          }
+          
           // Prioritize detailed MobileMart error message for frontend display
           // Frontend apiClient uses: data.error || data.message
           const primaryErrorMessage = mobilemartErrorMessage || 'MobileMart purchase fulfillment failed';
