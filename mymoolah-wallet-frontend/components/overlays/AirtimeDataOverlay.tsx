@@ -701,6 +701,7 @@ export function AirtimeDataOverlay() {
       setBeneficiaries((prev) => prev.filter((b) => b.id !== beneficiaryToRemove.id));
       if (selectedBeneficiary?.id === beneficiaryToRemove.id) {
         setSelectedBeneficiary(null);
+    setSelectedAccountId(null);
       }
 
       // Refresh from API to stay in sync and ensure backend removal is reflected
@@ -822,6 +823,7 @@ export function AirtimeDataOverlay() {
   const handleDoAnotherTransaction = () => {
     setShowSuccess(false);
     setSelectedBeneficiary(null);
+    setSelectedAccountId(null);
     setSelectedProduct(null);
     setCatalog(null);
     setCurrentStep('beneficiary');
