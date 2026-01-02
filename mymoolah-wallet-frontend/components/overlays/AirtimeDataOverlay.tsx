@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { ErrorModal } from '../ui/ErrorModal';
 import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { ConfirmationModal } from './shared/ConfirmationModal';
@@ -40,6 +41,11 @@ export function AirtimeDataOverlay() {
   const [showSuccess, setShowSuccess] = useState(false);
   const [transactionRef, setTransactionRef] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalTitle, setErrorModalTitle] = useState<string>('Purchase Failed');
+  const [errorModalMessage, setErrorModalMessage] = useState<string>('');
+  const [errorModalType, setErrorModalType] = useState<'error' | 'warning' | 'info'>('error');
+  const [alternativeProduct, setAlternativeProduct] = useState<any>(null);
   const [showBeneficiaryModal, setShowBeneficiaryModal] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<Beneficiary | null>(null);
@@ -557,8 +563,65 @@ export function AirtimeDataOverlay() {
         setLoadingState('success');
         setShowSuccess(true);
       } else {
-        setError(err.response?.data?.message || err.message || 'Purchase failed');
-        setLoadingState('error');
+        // Check if there's an alternative product available for automatic retry
+        if (errorResponse?.alternativeProduct && errorResponse?.autoRetry) {
+          console.log('🔄 Automatic retry with alternative product:', errorResponse.alternativeProduct);
+          
+          // Store alternative product for automatic retry
+          setAlternativeProduct(errorResponse.alternativeProduct);
+          
+          // Automatically retry with alternative product
+          try {
+            setLoadingState('loading');
+            setError('');
+            
+            const retryIdempotencyKey = generateIdempotencyKey();
+            const retryPurchaseData = {
+              beneficiaryId: String(selectedBeneficiary?.id),
+              productId: String(errorResponse.alternativeProduct.variantId || errorResponse.alternativeProduct.productId),
+              amount: errorResponse.alternativeProduct.amount || errorResponse.alternativeProduct.price / 100,
+              idempotencyKey: retryIdempotencyKey
+            };
+            
+            console.log('🔄 Retrying purchase with alternative:', retryPurchaseData);
+            const retryResult = await airtimeDataService.purchase(retryPurchaseData);
+            
+            // Success with alternative
+            const reference = retryResult?.reference || retryIdempotencyKey;
+            setTransactionRef(reference);
+            setBeneficiaryIsMyMoolahUser(retryResult?.beneficiaryIsMyMoolahUser || false);
+            setLoadingState('success');
+            setShowSuccess(true);
+            
+            // Show success message indicating alternative was used
+            setErrorModalTitle('Purchase Successful');
+            setErrorModalMessage(`The original product was unavailable, but we successfully processed your purchase using an alternative: ${errorResponse.alternativeProduct.productName} from ${errorResponse.alternativeProduct.supplierName}.`);
+            setErrorModalType('info');
+            setShowErrorModal(true);
+            
+            await loadBeneficiaries();
+          } catch (retryErr: any) {
+            console.error('Automatic retry also failed:', retryErr);
+            // Show error with alternative suggestion
+            setErrorModalTitle('Product Unavailable');
+            setErrorModalMessage(errorResponse?.message || err.response?.data?.message || err.message || 'Purchase failed. Please try again.');
+            setErrorModalType('error');
+            setAlternativeProduct(errorResponse?.alternativeProduct || null);
+            setShowErrorModal(true);
+            setLoadingState('error');
+          }
+        } else {
+          // Regular error - show error modal
+          // Backend sends error in both 'error' and 'message' fields, prioritize 'message' as it's more user-friendly
+          const errorMessage = errorResponse?.message || errorResponse?.error || err.message || 'Purchase failed. Please try again.';
+          setErrorModalTitle('Purchase Failed');
+          setErrorModalMessage(errorMessage);
+          setErrorModalType('error');
+          setAlternativeProduct(errorResponse?.alternativeProduct || null);
+          setShowErrorModal(true);
+          setError(errorMessage);
+          setLoadingState('error');
+        }
       }
     }
   };
@@ -1912,6 +1975,18 @@ export function AirtimeDataOverlay() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Error Modal */}
+      <ErrorModal
+        isOpen={showErrorModal}
+        onClose={() => {
+          setShowErrorModal(false);
+          setAlternativeProduct(null);
+        }}
+        title={errorModalTitle}
+        message={errorModalMessage}
+        type={errorModalType}
+      />
     </div>
   );
 }
