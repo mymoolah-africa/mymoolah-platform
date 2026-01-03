@@ -17,6 +17,15 @@
  */
 
 require('dotenv').config();
+
+// CRITICAL: Use db-connection-helper for UAT database connection
+// NEVER create custom database connections - always use the helper
+const { getUATDatabaseURL, closeAll } = require('./db-connection-helper');
+
+// Set DATABASE_URL from db-connection-helper before loading models
+// This ensures proper proxy detection and password handling
+process.env.DATABASE_URL = getUATDatabaseURL();
+
 const referralPayoutService = require('../services/referralPayoutService');
 
 async function main() {
@@ -49,11 +58,22 @@ async function main() {
       }
     }
     
+    // Cleanup database connections
+    await closeAll();
+    
     process.exit(0);
     
   } catch (error) {
     console.error('❌ Payout processing failed:', error);
     console.error('Stack:', error.stack);
+    
+    // Cleanup database connections even on error
+    try {
+      await closeAll();
+    } catch (cleanupError) {
+      console.error('⚠️  Error during cleanup:', cleanupError.message);
+    }
+    
     process.exit(1);
   }
 }
