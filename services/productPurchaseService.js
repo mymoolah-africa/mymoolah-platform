@@ -234,7 +234,7 @@ class ProductPurchaseService {
         }, { transaction });
 
         // Post VAT (output) on commission and ledger entries
-        await this.allocateCommissionVatAndLedger({
+        const commissionResult = await this.allocateCommissionVatAndLedger({
           commissionCents: pricing.commissionCents,
           walletTransactionId: walletTransaction.transactionId,
           idempotencyKey,
@@ -243,6 +243,25 @@ class ProductPurchaseService {
           supplierCode: product.supplier.code,
           transaction
         });
+
+        // Update wallet transaction metadata with commission info (matching airtime/data pattern)
+        if (commissionResult) {
+          const existingMetadata = walletTransaction.metadata || {};
+          await walletTransaction.update({
+            metadata: {
+              ...existingMetadata,
+              commission: {
+                supplierCode: product.supplier.code,
+                serviceType: this.mapProductTypeToServiceType(product.type),
+                ratePct: pricing.commissionRate,
+                amountCents: commissionResult.commissionCents,
+                vatCents: commissionResult.vatCents ?? undefined,
+                netAmountCents: commissionResult.netCommissionCents ?? undefined,
+                vatRate: commissionResult.vatRate ?? 0.15,
+              },
+            },
+          }, { transaction });
+        }
       } else {
         await order.update({
           status: 'failed',
@@ -264,6 +283,10 @@ class ProductPurchaseService {
       if (supplierResult.success) {
         setImmediate(async () => {
           try {
+            // STEP 1: Reload wallet transaction to get updated commission metadata
+            await walletTransaction.reload();
+            
+            // STEP 2: Calculate referral earnings (matching airtime/data pattern)
             const referralService = require('./referralService');
             const referralEarningsService = require('./referralEarningsService');
             
@@ -275,13 +298,16 @@ class ProductPurchaseService {
             }
             
             // Calculate referral earnings (only on successful purchases with commission)
-            console.log(`🔍 Voucher referral check: commissionCents=${pricing.commissionCents}, userId=${userId}, txnId=${walletTransaction.id}`);
+            // Get net commission from metadata (after VAT) - matching airtime/data pattern
+            const netCommissionCents = walletTransaction.metadata?.commission?.netAmountCents;
             
-            if (pricing.commissionCents > 0) {
+            console.log(`🔍 Voucher referral check: netCommissionCents=${netCommissionCents}, userId=${userId}, txnId=${walletTransaction.id}`);
+            
+            if (netCommissionCents && netCommissionCents > 0) {
               const earnings = await referralEarningsService.calculateEarnings({
                 userId,
                 id: walletTransaction.id, // Use integer ID, not string transactionId
-                netRevenueCents: pricing.commissionCents, // MM's commission from supplier
+                netRevenueCents: netCommissionCents, // MM's net commission (after VAT) - matching airtime/data
                 type: 'vas_purchase'
               });
               
@@ -292,10 +318,11 @@ class ProductPurchaseService {
                 console.log(`ℹ️ No referral earnings created (no referral chain or below minimum)`);
               }
             } else {
-              console.log(`⚠️ No commission for voucher purchase - skipping referral earnings`);
+              console.log(`⚠️ No commission found in metadata for referral earnings calculation`);
             }
           } catch (error) {
             console.error('⚠️ Referral earnings failed (non-blocking):', error.message);
+            console.error(error.stack);
             // Don't fail transaction if referral calculation fails
           }
         });
@@ -391,6 +418,7 @@ class ProductPurchaseService {
 
   /**
    * Allocate VAT on commission and post ledger entry if accounts are configured.
+   * Returns commission breakdown including netCommissionCents (after VAT).
    */
   async allocateCommissionVatAndLedger({
     commissionCents,
@@ -401,7 +429,7 @@ class ProductPurchaseService {
     supplierCode,
     transaction = null
   }) {
-    await commissionVatService.postCommissionVatAndLedger({
+    const result = await commissionVatService.postCommissionVatAndLedger({
       commissionCents,
       supplierCode,
       serviceType,
@@ -409,8 +437,10 @@ class ProductPurchaseService {
       sourceTransactionId: walletTransactionId,
       idempotencyKey,
       purchaserUserId,
-    transaction
+      transaction
     });
+    
+    return result; // Return { commissionCents, vatCents, netCommissionCents, vatRate }
   }
 
   /**
