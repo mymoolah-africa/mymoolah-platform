@@ -22,7 +22,6 @@ const { getUATDatabaseURL, closeAll } = require('./db-connection-helper');
 // Set DATABASE_URL for Sequelize models
 process.env.DATABASE_URL = getUATDatabaseURL();
 
-
 const db = require('../models');
 const { Product, ProductVariant, ProductBrand, Supplier } = db;
 const { Op } = require('sequelize');
@@ -184,12 +183,21 @@ async function verifyCatalog() {
         // Show sample deals
         console.log('\n   Sample best deals:');
         comparison.bestDeals.slice(0, 5).forEach((deal, idx) => {
-          console.log(`   ${idx + 1}. ${deal.productName || deal.name || 'N/A'}`);
-          console.log(`      Supplier: ${deal.supplierCode || deal.supplier?.code || 'N/A'}`);
+          const productName = deal.productName || deal.name || deal.product?.name || 'N/A';
+          const supplierCode = deal.supplierCode || deal.supplier?.code || deal.supplierCode || 'N/A';
+          const commission = deal.commission !== null && deal.commission !== undefined ? `${deal.commission}%` : 'N/A';
+          const price = deal.userPrice || deal.price || (deal.minAmount && deal.maxAmount ? `${deal.minAmount}-${deal.maxAmount}` : 'N/A');
+          const denominations = deal.denominations || deal.predefinedAmounts || [];
+          
+          console.log(`   ${idx + 1}. ${productName}`);
+          console.log(`      Supplier: ${supplierCode}`);
           console.log(`      Product ID: ${deal.productId || 'MISSING'}`);
           console.log(`      Variant ID: ${deal.variantId || deal.id || 'N/A'}`);
-          console.log(`      Commission: ${deal.commission || 'N/A'}%`);
-          console.log(`      Price: ${deal.userPrice || deal.price || 'N/A'} cents`);
+          console.log(`      Commission: ${commission}`);
+          console.log(`      Price Range: ${price} cents`);
+          if (denominations.length > 0) {
+            console.log(`      Denominations: ${denominations.slice(0, 5).join(', ')}${denominations.length > 5 ? '...' : ''}`);
+          }
         });
       } else {
         console.warn('   ⚠️  Comparison service returned no best deals');
