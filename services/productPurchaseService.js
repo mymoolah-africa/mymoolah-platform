@@ -163,8 +163,12 @@ class ProductPurchaseService {
         transaction
       );
 
+      // Declare walletTransaction outside if/else so it's accessible in setImmediate callback
+      let walletTransaction = null;
+
       // Update order status based on supplier result
-      if (supplierResult.success) {
+      if (supplierResult.success && walletTransaction) {
+        console.log(`🔍 Voucher purchase successful - starting commission allocation: userId=${userId}, commissionCents=${pricing.commissionCents}, txnId=${walletTransaction.transactionId}`);
         const rawVoucherCode = supplierResult.data?.voucherCode;
         const maskedVoucher = this.maskVoucherCode(rawVoucherCode);
         const voucherEnvelope = this.createVoucherEnvelope(
@@ -200,7 +204,7 @@ class ProductPurchaseService {
 
         const transactionId = `VOUCHER_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
 
-        const walletTransaction = await Transaction.create({
+        walletTransaction = await Transaction.create({
           transactionId,
           userId,
           walletId: wallet.walletId,
@@ -254,7 +258,8 @@ class ProductPurchaseService {
 
       // Phase 2: Commission allocation and referral system integration (non-blocking)
       // Moved to setImmediate to match airtime/data pattern - ensures metadata is available for referral calculation
-      if (supplierResult.success) {
+      if (supplierResult.success && walletTransaction) {
+        console.log(`🔍 Voucher purchase successful - starting commission allocation: userId=${userId}, commissionCents=${pricing.commissionCents}, txnId=${walletTransaction.transactionId}`);
         setImmediate(async () => {
           try {
             // STEP 1: Allocate commission and VAT FIRST (matching airtime/data pattern)
