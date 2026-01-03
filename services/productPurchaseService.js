@@ -167,8 +167,7 @@ class ProductPurchaseService {
       let walletTransaction = null;
 
       // Update order status based on supplier result
-      if (supplierResult.success && walletTransaction) {
-        console.log(`🔍 Voucher purchase successful - starting commission allocation: userId=${userId}, commissionCents=${pricing.commissionCents}, txnId=${walletTransaction.transactionId}`);
+      if (supplierResult.success) {
         const rawVoucherCode = supplierResult.data?.voucherCode;
         const maskedVoucher = this.maskVoucherCode(rawVoucherCode);
         const voucherEnvelope = this.createVoucherEnvelope(
