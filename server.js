@@ -5,12 +5,15 @@ process.stderr.write(`📋 Working directory: ${process.cwd()}\n`);
 process.stderr.write(`📋 Environment: ${process.env.NODE_ENV || 'development'}\n`);
 process.stderr.write(`📋 PORT: ${process.env.PORT || 'not set'}\n`);
 process.stderr.write(`📋 User: ${process.getuid ? process.getuid() : 'unknown'}\n`);
+// Check /app directory only if it exists (Docker container path, not available in Codespaces)
 try {
   const fs = require('fs');
-  const files = fs.readdirSync('/app').slice(0, 5).join(', ');
-  process.stderr.write(`📋 Files in /app: ${files}\n`);
+  if (fs.existsSync('/app')) {
+    const files = fs.readdirSync('/app').slice(0, 5).join(', ');
+    process.stderr.write(`📋 Files in /app: ${files}\n`);
+  }
 } catch (e) {
-  process.stderr.write(`📋 Error reading /app: ${e.message}\n`);
+  // Silently ignore - /app doesn't exist in Codespaces/local dev, only in Docker containers
 }
 console.log('🚀 Starting MyMoolah Backend Server...');
 console.log('📋 Node version:', process.version);
