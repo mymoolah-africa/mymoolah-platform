@@ -16,6 +16,10 @@
  * @date 2026-01-03
  */
 
+
+// Load environment variables from .env file
+require('dotenv').config();
+
 const db = require('../models');
 const { Product, ProductVariant, ProductBrand, Supplier } = db;
 const { Op } = require('sequelize');
