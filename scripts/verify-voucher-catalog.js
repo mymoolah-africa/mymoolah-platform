@@ -16,9 +16,12 @@
  * @date 2026-01-03
  */
 
+// Set DATABASE_URL from db-connection-helper before loading models
+const { getUATDatabaseURL, closeAll } = require('./db-connection-helper');
 
-// Load environment variables from .env file
-require('dotenv').config();
+// Set DATABASE_URL for Sequelize models
+process.env.DATABASE_URL = getUATDatabaseURL();
+
 
 const db = require('../models');
 const { Product, ProductVariant, ProductBrand, Supplier } = db;
@@ -228,6 +231,7 @@ async function verifyCatalog() {
     console.error('❌ Error verifying catalog:', error);
     throw error;
   } finally {
+    await closeAll();
     await db.sequelize.close();
   }
 }
