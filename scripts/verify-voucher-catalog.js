@@ -165,7 +165,7 @@ async function verifyCatalog() {
     const comparisonService = new SupplierComparisonService();
     
     try {
-      const comparison = await comparisonService.compareSuppliers('voucher');
+      const comparison = await comparisonService.compareProducts('voucher');
       
       if (comparison && comparison.bestDeals) {
         console.log(`   ✅ Comparison service returned ${comparison.bestDeals.length} best deals`);
