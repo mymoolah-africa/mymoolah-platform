@@ -12,6 +12,8 @@ import { apiService } from '../../../services/apiService';
 
 interface Voucher {
   id: string;
+  productId?: number; // Actual product ID from products table (for purchase)
+  variantId?: number; // Variant ID from product_variants table (for reference)
   name: string;
   brand: string;
   category: 'Gaming' | 'Entertainment' | 'Transport' | 'Shopping' | 'MyMoolah';
@@ -265,8 +267,16 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
         ? undefined
         : normalizeToLocalMsisdn(recipientInfo.phone);
 
+      // Use productId if available (from products table), otherwise fallback to variantId or id
+      // The backend expects productId from products table, not variantId
+      const productIdForPurchase = voucher.productId || voucher.variantId || Number(voucher.id);
+      
+      if (!productIdForPurchase) {
+        throw new Error('Product ID is required for purchase');
+      }
+
       const purchaseData = {
-        productId: Number(voucher.id),
+        productId: Number(productIdForPurchase),
         denomination: selectedDenomination!,
         recipient: recipientInfo.sendToSelf
           ? undefined

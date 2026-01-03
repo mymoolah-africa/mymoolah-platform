@@ -305,6 +305,11 @@ class SupplierComparisonService {
 
             // Take the top commercial pick as the base object
             const best = variants[0];
+            
+            // Ensure productId is included (variants have productId linking to products table)
+            if (!best.productId && best.product?.id) {
+                best.productId = best.product.id;
+            }
 
             // 🔢 Aggregate all available denominations across variants that belong to the same logical product
             // This fixes cases like LottoStar / Showmax where each denomination is a separate variant.
@@ -356,7 +361,15 @@ class SupplierComparisonService {
                     : maxD;
             }
 
-            bestPerProduct.push(best);
+            // Format the best variant for response (ensures productId and all fields are included)
+            const formattedBest = this.formatProductForResponse(best);
+            // Preserve aggregated denominations from the raw variant
+            if (uniqueDenoms.length > 0) {
+                formattedBest.denominations = uniqueDenoms;
+                formattedBest.predefinedAmounts = uniqueDenoms;
+            }
+            
+            bestPerProduct.push(formattedBest);
         }
 
         // Return all best picks (no slicing) with aggregated denominations
