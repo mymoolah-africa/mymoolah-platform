@@ -779,7 +779,6 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
           padding: '24px',
           paddingBottom: '32px'
         }}
-        aria-describedby="product-detail-description"
       >
         <DialogHeader>
           <DialogTitle style={{
@@ -794,7 +793,6 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
              currentStep === 'success' ? 'Success!' : 'Error'}
           </DialogTitle>
           <DialogDescription 
-            id="product-detail-description"
             style={{
               fontFamily: 'Montserrat, sans-serif',
               fontSize: '14px',
