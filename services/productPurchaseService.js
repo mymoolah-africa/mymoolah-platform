@@ -233,35 +233,8 @@ class ProductPurchaseService {
           }
         }, { transaction });
 
-        // Post VAT (output) on commission and ledger entries
-        const commissionResult = await this.allocateCommissionVatAndLedger({
-          commissionCents: pricing.commissionCents,
-          walletTransactionId: walletTransaction.transactionId,
-          idempotencyKey,
-          purchaserUserId: userId,
-          serviceType: this.mapProductTypeToServiceType(product.type),
-          supplierCode: product.supplier.code,
-          transaction
-        });
-
-        // Update wallet transaction metadata with commission info (matching airtime/data pattern)
-        if (commissionResult) {
-          const existingMetadata = walletTransaction.metadata || {};
-          await walletTransaction.update({
-            metadata: {
-              ...existingMetadata,
-              commission: {
-                supplierCode: product.supplier.code,
-                serviceType: this.mapProductTypeToServiceType(product.type),
-                ratePct: pricing.commissionRate,
-                amountCents: commissionResult.commissionCents,
-                vatCents: commissionResult.vatCents ?? undefined,
-                netAmountCents: commissionResult.netCommissionCents ?? undefined,
-                vatRate: commissionResult.vatRate ?? 0.15,
-              },
-            },
-          }, { transaction });
-        }
+        // Note: Commission allocation moved to setImmediate callback (after transaction commit)
+        // This matches the airtime/data pattern and ensures metadata is available for referral calculation
       } else {
         await order.update({
           status: 'failed',
@@ -279,14 +252,45 @@ class ProductPurchaseService {
 
       await transaction.commit();
 
-      // Phase 2: Referral system integration (non-blocking)
+      // Phase 2: Commission allocation and referral system integration (non-blocking)
+      // Moved to setImmediate to match airtime/data pattern - ensures metadata is available for referral calculation
       if (supplierResult.success) {
         setImmediate(async () => {
           try {
-            // STEP 1: Reload wallet transaction to get updated commission metadata
+            // STEP 1: Allocate commission and VAT FIRST (matching airtime/data pattern)
+            const commissionResult = await this.allocateCommissionVatAndLedger({
+              commissionCents: pricing.commissionCents,
+              walletTransactionId: walletTransaction.transactionId,
+              idempotencyKey,
+              purchaserUserId: userId,
+              serviceType: this.mapProductTypeToServiceType(product.type),
+              supplierCode: product.supplier.code,
+              transaction: null // No transaction needed here (already committed)
+            });
+
+            // STEP 2: Update wallet transaction metadata with commission info
+            if (commissionResult) {
+              const existingMetadata = walletTransaction.metadata || {};
+              await walletTransaction.update({
+                metadata: {
+                  ...existingMetadata,
+                  commission: {
+                    supplierCode: product.supplier.code,
+                    serviceType: this.mapProductTypeToServiceType(product.type),
+                    ratePct: pricing.commissionRate,
+                    amountCents: commissionResult.commissionCents,
+                    vatCents: commissionResult.vatCents ?? undefined,
+                    netAmountCents: commissionResult.netCommissionCents ?? undefined,
+                    vatRate: commissionResult.vatRate ?? 0.15,
+                  },
+                },
+              });
+            }
+
+            // STEP 3: Reload wallet transaction to get updated commission metadata
             await walletTransaction.reload();
             
-            // STEP 2: Calculate referral earnings (matching airtime/data pattern)
+            // STEP 4: Calculate referral earnings (matching airtime/data pattern)
             const referralService = require('./referralService');
             const referralEarningsService = require('./referralEarningsService');
             
@@ -321,9 +325,9 @@ class ProductPurchaseService {
               console.log(`⚠️ No commission found in metadata for referral earnings calculation`);
             }
           } catch (error) {
-            console.error('⚠️ Referral earnings failed (non-blocking):', error.message);
+            console.error('⚠️ Commission allocation or referral earnings failed (non-blocking):', error.message);
             console.error(error.stack);
-            // Don't fail transaction if referral calculation fails
+            // Don't fail transaction if commission/referral calculation fails
           }
         });
       }
