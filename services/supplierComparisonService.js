@@ -150,15 +150,20 @@ class SupplierComparisonService {
      * @returns {Object} Formatted product for response
      */
     formatProductForResponse(productVariant) {
+        // Handle both Sequelize instances and plain objects
         const pv = productVariant.toJSON ? productVariant.toJSON() : productVariant;
+        
+        // Safely extract product and supplier info (handle both Sequelize instances and plain objects)
+        const product = pv.product || (productVariant.product ? (productVariant.product.toJSON ? productVariant.product.toJSON() : productVariant.product) : null);
+        const supplier = pv.supplier || (productVariant.supplier ? (productVariant.supplier.toJSON ? productVariant.supplier.toJSON() : productVariant.supplier) : null);
         
         return {
             id: pv.id,
             productId: pv.productId,
-            productName: pv.product ? pv.product.name : 'Unknown Product',
+            productName: product?.name || 'Unknown Product',
             supplierProductId: pv.supplierProductId,
-            supplier: pv.supplier ? pv.supplier.name : 'Unknown Supplier',
-            supplierCode: pv.supplier ? pv.supplier.code : null,
+            supplier: supplier?.name || 'Unknown Supplier',
+            supplierCode: supplier?.code || null,
             vasType: pv.vasType,
             transactionType: pv.transactionType,
             provider: pv.provider,
@@ -172,7 +177,10 @@ class SupplierComparisonService {
             promotionalDiscount: pv.promotionalDiscount,
             priority: pv.priority,
             status: pv.status,
-            metadata: pv.metadata
+            metadata: pv.metadata,
+            // Preserve product and supplier objects for reference
+            product: product,
+            supplier: supplier
         };
     }
 
