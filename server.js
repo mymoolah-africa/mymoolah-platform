@@ -688,6 +688,34 @@ const initializeBackgroundServices = async () => {
       console.error('❌ Failed to start Catalog Synchronization Service:', catalogErr.message);
     }
     
+    // Start Daily Referral Payout (runs every day at 2:00 AM SAST)
+    try {
+      const cron = require('node-cron');
+      const referralPayoutService = require('./services/referralPayoutService');
+      
+      // Schedule daily referral payout: every day at 2:00 AM SAST
+      cron.schedule('0 2 * * *', async () => {
+        console.log('💰 Running scheduled daily referral payout...');
+        try {
+          const result = await referralPayoutService.processDailyPayouts();
+          if (result.success) {
+            console.log(`✅ Daily referral payout complete: ${result.totalUsers} users, R${result.totalAmountRand.toFixed(2)} paid, ${result.totalEarningsCount} earnings processed`);
+          } else {
+            console.error('❌ Daily referral payout failed:', result.error);
+          }
+        } catch (error) {
+          console.error('❌ Daily referral payout error:', error.message);
+          console.error(error.stack);
+        }
+      }, {
+        timezone: 'Africa/Johannesburg'
+      });
+      
+      console.log('✅ Daily referral payout scheduler started (every day at 2:00 AM SAST)');
+    } catch (error) {
+      console.error('❌ Failed to start daily referral payout scheduler:', error.message);
+    }
+    
   } catch (error) {
     console.error('❌ Error starting background services:', error.message);
     console.error('❌ Full error details:', error);
