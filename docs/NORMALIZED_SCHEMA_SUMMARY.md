@@ -501,7 +501,7 @@ console.log(results);
 
 - **Deployment Guide:** `docs/NORMALIZED_SCHEMA_DEPLOYMENT_GUIDE.md` (comprehensive step-by-step)
 - **Product Mappers:** `services/productMappers/README.md` (usage and examples)
-- **Schema Comparison:** `scripts/SCHEMA_COMPARISON_GUIDE.md` (how to compare schemas)
+- **Schema Comparison:** `docs/SCHEMA_COMPARISON_GUIDE.md` (how to compare schemas)
 - **GCP Staging:** `docs/GCP_STAGING_DEPLOYMENT.md` (general staging deployment)
 
 ---
