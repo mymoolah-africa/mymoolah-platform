@@ -36,9 +36,66 @@
 
 ---
 
-**Last Updated**: January 2, 2026  
-**Version**: 2.4.43 - UI Terminology & Recipient UX Improvements  
-**Status**: ✅ **RECIPIENT UX IMPROVED** ✅ **TERMINOLOGY UPDATED** ✅ **ACCOUNT SELECTOR MODAL** ✅ **11-LANGUAGE SUPPORT** ✅ **17/17 TESTS PASSED** ✅ **WORLD-CLASS QUALITY** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: January 4, 2026  
+**Version**: 2.4.45 - Referral Payout Scheduler & Script Fix  
+**Status**: ✅ **REFERRAL PAYOUT SCHEDULER ACTIVE** ✅ **SCRIPT FIXED AND WORKING** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED** ✅ **CORS CONFIGURATION VERIFIED** ✅ **RECIPIENT UX IMPROVED** ✅ **TERMINOLOGY UPDATED** ✅ **ACCOUNT SELECTOR MODAL** ✅ **11-LANGUAGE SUPPORT** ✅ **17/17 TESTS PASSED** ✅ **WORLD-CLASS QUALITY** ✅ **MOJALOOP COMPLIANT**
+
+---
+
+## Update 2026-01-04 (04:15) - Referral Payout Scheduler & Script Fix ✅
+
+### **Session Summary**
+Fixed missing referral payout scheduler in server.js and improved referral payout script to use db-connection-helper with proper proxy detection, increased timeout, and better error handling. Script now works correctly in Codespaces and processes payouts successfully.
+
+### **Major Changes** ✅
+- ✅ **Referral Payout Scheduler Added**: Added daily referral payout scheduler to server.js
+  - Runs at 2:00 AM SAST daily
+  - Uses node-cron with timezone: 'Africa/Johannesburg'
+  - Calls `referralPayoutService.processDailyPayouts()`
+  - Includes error handling and logging
+- ✅ **Referral Payout Script Fixed**: Updated script to use db-connection-helper (Rule 12a compliance)
+  - Added proxy detection check before connection attempt
+  - Increased timeout from 30 seconds to 5 minutes
+  - Added proper cleanup of database connections
+  - Improved error messages with instructions to start proxy
+- ✅ **Testing Verified**: Script tested successfully in Codespaces
+  - Processed 26 pending earnings for 4 users
+  - Total payout: R1.71
+  - Transactions visible in wallet transaction history
+
+### **Files Modified**
+- `server.js` - Added referral payout scheduler (lines 691-717)
+- `scripts/process-referral-payouts.js` - Fixed database connection, timeout, and error handling
+
+### **Commits**
+- `bfc8ad14` - "fix: add daily referral payout scheduler to server.js"
+- `8eea024f` - "fix: improve referral payout script proxy detection and timeout"
+
+### **Status**: ✅ **REFERRAL PAYOUT SYSTEM FULLY FUNCTIONAL** ✅ **SCHEDULER ACTIVE** ✅ **SCRIPT WORKING IN CODESPACES**
+
+---
+
+## Update 2026-01-03 (16:23) - Database Connection Helper Documentation & CORS Investigation ✅
+
+### **Session Summary**
+Documented mandatory requirement (Rule 12a) to use `db-connection-helper.js` for all UAT/Staging database connections. Investigated CORS login issue that turned out to be port forwarding problem. Reverted db-connection-helper changes to referral payout script per user request after login issue resolved.
+
+### **Major Changes** ✅
+- ✅ **Rule 12a Documented**: Added mandatory requirement in `docs/CURSOR_2.0_RULES_FINAL.md` to ALWAYS use `scripts/db-connection-helper.js` for UAT/Staging connections
+  - Prevents connection/password issues in scripts
+  - Includes code pattern and explanation
+  - References `docs/DATABASE_CONNECTION_GUIDE.md`
+- ✅ **CORS Investigation**: Verified CORS configuration is correct - regex matches Codespaces URLs
+  - Login issue was port forwarding, not CORS
+  - CORS middleware properly configured
+- ✅ **Referral Payout Script**: Updated to use db-connection-helper (then reverted per user request)
+  - May need to re-apply if user requests
+
+### **Files Modified**
+- `docs/CURSOR_2.0_RULES_FINAL.md` - Added Rule 12a: Database Connection Helper requirement
+- `scripts/process-referral-payouts.js` - Added db-connection-helper usage (reverted in commit `ab030c8b`)
+
+### **Status**: ✅ **RULE 12A DOCUMENTED** ⚠️ **REFERRAL PAYOUT SCRIPT REVERTED** (may need re-application)
 
 ---
 
