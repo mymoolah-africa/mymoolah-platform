@@ -17,6 +17,31 @@
  */
 
 require('dotenv').config();
+// CRITICAL: Use db-connection-helper for UAT database connection
+// NEVER create custom database connections - always use the helper
+const { getUATDatabaseURL, closeAll, detectProxyPort, CONFIG } = require('./db-connection-helper');
+
+// Check if proxy is running before proceeding
+try {
+  const proxyPort = detectProxyPort(CONFIG.UAT.PROXY_PORTS, 'UAT');
+  console.log(`✅ UAT proxy detected on port ${proxyPort}`);
+} catch (error) {
+  console.error('❌ Proxy not running:', error.message);
+  console.error('💡 Start proxy first: ./scripts/ensure-proxies-running.sh');
+  console.error('   Or use: ./scripts/one-click-restart-and-start.sh');
+  process.exit(1);
+}
+
+// Set DATABASE_URL from db-connection-helper before loading models
+// This ensures proper proxy detection and password handling
+try {
+  process.env.DATABASE_URL = getUATDatabaseURL();
+  console.log(`✅ Database URL configured via proxy`);
+} catch (error) {
+  console.error('❌ Failed to get database URL:', error.message);
+  process.exit(1);
+}
+
 const referralPayoutService = require('../services/referralPayoutService');
 
 async function main() {
@@ -24,9 +49,10 @@ async function main() {
     console.log('💰 Starting daily referral payout processing...');
     console.log(`⏰ Time: ${new Date().toISOString()}`);
     
-    // Add timeout to prevent hanging forever
+    // Add timeout to prevent hanging forever (5 minutes for database operations)
+    const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Payout processing timed out after 30 seconds')), 30000);
+      setTimeout(() => reject(new Error(`Payout processing timed out after ${TIMEOUT_MS / 1000} seconds`)), TIMEOUT_MS);
     });
     
     const result = await Promise.race([
@@ -49,11 +75,22 @@ async function main() {
       }
     }
     
+    // Cleanup database connections
+    await closeAll();
+    
     process.exit(0);
     
   } catch (error) {
     console.error('❌ Payout processing failed:', error);
     console.error('Stack:', error.stack);
+    
+    // Cleanup database connections even on error
+    try {
+      await closeAll();
+    } catch (cleanupError) {
+      console.error('⚠️  Error during cleanup:', cleanupError.message);
+    }
+    
     process.exit(1);
   }
 }
