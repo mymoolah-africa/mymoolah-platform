@@ -153,3 +153,6 @@ module.exports = (sequelize, DataTypes) => {
   return OtpVerification;
 };
 
+
+
+
