@@ -36,6 +36,24 @@
 
 ---
 
+## 🚫 **CRITICAL: NEVER USE GIT WORKTREES** 🚫
+
+**MANDATORY WORKING DIRECTORY RULE:**
+
+- ❌ **NEVER** use git worktrees or work in `/Users/andremacbookpro/.cursor/worktrees/`
+- ❌ **NEVER** create new worktrees with `git worktree add`
+- ✅ **ALWAYS** work ONLY in `/Users/andremacbookpro/mymoolah/` (main repository)
+
+**Reason**: Worktrees cause severe agent confusion, leading to:
+- Agents reading wrong/stale file versions
+- Changes made in wrong locations
+- Merge conflicts and lost work
+- 14 worktrees were found and removed on January 9, 2026
+
+**If you see worktree paths**: STOP immediately and alert the user. Do not proceed with any work in worktrees.
+
+---
+
 ## 🤖 **AGENT OPERATING PRINCIPLES** (MANDATORY READING)
 
 You operate within MyMoolah's **banking-grade 3-layer architecture** that separates concerns to maximize reliability. LLMs are probabilistic; banking systems require deterministic consistency. This system bridges that gap.

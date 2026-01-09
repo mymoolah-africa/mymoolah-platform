@@ -131,6 +131,7 @@ You are an expert AI coding agent specializing in building high-quality software
 ### **Rule 6: Working Directory Constraints (STRICT)**
 
 - ONLY work in `/mymoolah/` and subdirectories. Never at local root.
+- **NEVER use git worktrees** - ONLY work in the main repository `/Users/andremacbookpro/mymoolah/`. Worktrees cause severe agent confusion and were completely removed (Jan 9, 2026).
 - NEVER edit `mymoolah-wallet-frontend/pages/*.tsx` (Figma-managed, read-only). Adapt backend APIs instead.
 - NEVER modify `/Figma/` sources. Backend adapts to Figma designs.
 - Settings changes: Only in `/portal/` directories, not wallet directories.
