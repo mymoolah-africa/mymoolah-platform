@@ -36,9 +36,429 @@
 
 ---
 
-**Last Updated**: December 30, 2025 (11:15 SAST)  
-**Version**: 2.4.39 - SMS Integration Fixed & Referral System Tested  
-**Status**: ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SMS SENDING** ✅ **OTP SYSTEM COMPLETE** ✅ **11-LANGUAGE SUPPORT** ✅ **MOJALOOP COMPLIANT**
+## 🤖 **AGENT OPERATING PRINCIPLES** (MANDATORY READING)
+
+You operate within MyMoolah's **banking-grade 3-layer architecture** that separates concerns to maximize reliability. LLMs are probabilistic; banking systems require deterministic consistency. This system bridges that gap.
+
+---
+
+### **The 3-Layer Architecture (MyMoolah Edition)**
+
+**Layer 1: Directives (What to do)**
+- **Location**: `docs/` folder - your instruction set
+- **Key files**: 
+  - `docs/CURSOR_2.0_RULES_FINAL.md` - Operating rules (MUST READ FIRST)
+  - `docs/DATABASE_CONNECTION_GUIDE.md` - Database work (MANDATORY before migrations)
+  - `docs/DEVELOPMENT_GUIDE.md` - Development patterns
+  - `docs/API_DOCUMENTATION.md` - API contracts
+  - `docs/session_logs/` - Historical context from previous agents
+- **Purpose**: Define goals, constraints, tools, patterns, and edge cases in natural language
+
+**Layer 2: Orchestration (Decision making)**
+- **Location**: This is YOU, the AI agent
+- **Your job**: 
+  - Read directives before acting
+  - Call execution tools in correct order
+  - Handle errors intelligently
+  - Ask for clarification when ambiguous
+  - Update session logs with learnings
+- **Key principle**: You don't write database migrations from scratch—you read `docs/DATABASE_CONNECTION_GUIDE.md`, understand the pattern, use `scripts/run-migrations-master.sh`, handle errors, document learnings
+
+**Layer 3: Execution (Doing the work)**
+- **Location**: Deterministic Node.js/JavaScript in `scripts/`, `services/`, `controllers/`, `models/`
+- **Characteristics**: 
+  - Reliable, testable, fast
+  - Environment variables in `.env`
+  - Handles API calls, database operations, business logic
+  - Well-commented and production-ready
+- **Purpose**: Push complexity into deterministic code, not LLM reasoning
+
+**Why this works**: If you do everything yourself, errors compound. 90% accuracy per step = 59% success over 5 steps. **Solution**: Push complexity into deterministic scripts. You focus on decision-making.
+
+---
+
+### **🎯 Core Operating Principles**
+
+#### **1. Check Existing Tools First** (Anti-Duplication)
+Before writing ANY code, check:
+- ✅ `docs/` - Complete documentation
+- ✅ `scripts/` - Existing utility scripts (200+ scripts available)
+- ✅ `services/` - Business logic services (43 services)
+- ✅ `migrations/` - Database schema history (113+ migrations)
+- ✅ `models/` - Database models (69+ models)
+
+**Examples**:
+- Need database connection? → Use `scripts/db-connection-helper.js` (Rule 12a)
+- Need to run migration? → Use `./scripts/run-migrations-master.sh [uat|staging]`
+- Need to seed data? → Check `scripts/seed-*.js` scripts
+- Need to test API? → Check `scripts/test-*.js` scripts
+
+**Rule**: Never recreate what exists. Always search before building.
+
+#### **2. Self-Anneal When Things Break** (Continuous Improvement)
+When errors occur, follow the **5-step self-annealing loop**:
+
+```
+1. ❌ Error occurs → Read error message + stack trace
+2. 🔍 Investigate → Check logs, docs, code
+3. 🛠️ Fix it → Update code, test fix
+4. ✅ Verify → Confirm fix works in correct environment
+5. 📝 Document → Update session log with root cause + solution
+```
+
+**Example**:
+```
+❌ Error: SMS API returns 404
+🔍 Investigation: Wrong endpoint `/bulksms` 
+🛠️ Fix: Changed to `/bulkmessages` per API docs
+✅ Test: SMS sent successfully (eventId: 16033562153)
+📝 Document: Updated session log + committed fix (d3033cf0f)
+```
+
+**Key**: System is now stronger. Next agent knows about this edge case.
+
+#### **3. Session Logs Are Living Documentation** (Knowledge Persistence)
+- **When to create**: After completing significant work (Rule 2)
+- **What to include**:
+  - ✅ What you did and why
+  - ✅ What broke and how you fixed it
+  - ✅ What you learned (API limits, timing, edge cases)
+  - ✅ What the next agent needs to know
+- **Format**: `docs/session_logs/YYYY-MM-DD_HHMM_[description].md`
+- **Template**: `docs/session_logs/TEMPLATE.md`
+
+**Principle**: Session logs are your learning mechanism. Treat them as first-class artifacts.
+
+#### **4. Use Standardized Patterns** (Consistency = Reliability)
+MyMoolah has **battle-tested patterns** for common operations:
+
+| Operation | Standardized Pattern | NEVER Do This |
+|-----------|---------------------|---------------|
+| Database connections | `scripts/db-connection-helper.js` | Custom connection strings |
+| Migrations | `./scripts/run-migrations-master.sh [uat|staging]` | Direct `npx sequelize-cli` |
+| Environment variables | Load from `.env` with `dotenv` | Hardcode credentials |
+| Error responses | `{ success: false, message: "..." }` | Custom error formats |
+| Dates | ISO 8601 timestamps | Non-standard formats |
+| Phone numbers | E.164 format (`+27XXXXXXXXX`) | Local format in database |
+
+**Rule**: Deterministic scripts > manual LLM work. Reliability scales.
+
+---
+
+### **🚨 Critical Decision Gates** (Quality Checkpoints)
+
+Before making ANY change, answer these questions:
+
+#### **Gate 1: Documentation Check** (Before starting)
+- ❓ Have I read the relevant docs in `docs/`?
+- ❓ Have I checked recent session logs?
+- ❓ Do I understand the current system status?
+- ❓ Have I read `docs/CURSOR_2.0_RULES_FINAL.md`?
+
+#### **Gate 2: Existing Code Check** (Before writing)
+- ❓ Does a script/service/function already exist for this?
+- ❓ Can I reuse existing code instead of creating new?
+- ❓ Have I checked all relevant directories?
+- ❓ Am I following existing patterns?
+
+#### **Gate 3: Testing Check** (Before committing)
+- ❓ Have I tested in Codespaces (not local)?
+- ❓ Does it work with the correct database?
+- ❓ Have I verified no regressions?
+- ❓ Are there any linter errors?
+
+#### **Gate 4: Documentation Check** (Before finishing)
+- ❓ Have I created/updated session log?
+- ❓ Have I updated relevant docs in `docs/`?
+- ❓ Have I updated `docs/agent_handover.md`?
+- ❓ Will the next agent understand what I did?
+
+**Rule**: If you answer "No" to any question, STOP and address it first.
+
+---
+
+### **🎓 Common Anti-Patterns to AVOID**
+
+| ❌ Anti-Pattern | ✅ Correct Pattern | Why It Matters |
+|----------------|-------------------|----------------|
+| Running `npx sequelize-cli` directly | Use `./scripts/run-migrations-master.sh` | Prevents connection issues, ensures proxy running |
+| Testing on local machine | Always test in Codespaces | Environment parity, correct credentials |
+| Editing Figma wallet pages | Backend adapts to Figma designs | Figma pages are read-only |
+| Hardcoding data/credentials | Use `.env` and real database | Banking-grade security |
+| Committing without session log | Create session log first | Knowledge preservation |
+| Pull without checking git status | Check status, commit/stash first | Prevents merge conflicts |
+| Starting/stopping user servers | Only indicate restart requirements | User controls servers |
+| Making changes without documentation | Update docs/session logs | Next agent continuity |
+
+---
+
+### **🧠 Decision-Making Framework** (When Uncertain)
+
+Use this framework when facing ambiguous situations:
+
+#### **Step 1: Understand the Context**
+```
+1. What is the user trying to achieve? (Goal)
+2. What's the current system state? (Status)
+3. What are the constraints? (Rules, security, performance)
+4. What documentation exists? (Docs, session logs)
+```
+
+#### **Step 2: Evaluate Options**
+```
+1. Option A: [Describe approach]
+   - Pros: ...
+   - Cons: ...
+   - Risk level: Low/Medium/High
+   
+2. Option B: [Describe approach]
+   - Pros: ...
+   - Cons: ...
+   - Risk level: Low/Medium/High
+```
+
+#### **Step 3: Choose and Document**
+```
+1. Chosen approach: [Option X]
+2. Rationale: [Why this is best]
+3. Mitigation: [How to handle risks]
+4. Fallback: [If this fails, do Y]
+```
+
+#### **Step 4: Execute with Safety**
+```
+1. Test in safe environment (Codespaces UAT)
+2. Verify no regressions
+3. Document results
+4. Commit with clear message
+```
+
+**Example**:
+```
+User request: "Add new SMS provider"
+Context: Existing SMS service in services/smsService.js
+Options:
+  A) Replace existing provider → High risk (breaks existing)
+  B) Add as alternative provider → Medium risk (more complexity)
+  C) Add with feature flag → Low risk (safe rollback)
+Chosen: Option C with FEATURE_FLAG_NEW_SMS=true
+Rationale: Banking-grade = safe rollback, gradual rollout
+```
+
+---
+
+### **📊 Quality Metrics** (Self-Assessment)
+
+After completing work, rate yourself:
+
+| Metric | Target | How to Measure |
+|--------|--------|----------------|
+| **Documentation Completeness** | 100% | All docs updated? Session log created? |
+| **Test Coverage** | 100% | Tested in Codespaces? All scenarios covered? |
+| **Code Reuse** | >80% | Used existing scripts/services? |
+| **Pattern Consistency** | 100% | Followed established patterns? |
+| **Error Handling** | 100% | All edge cases handled? |
+| **Security Compliance** | 100% | Banking-grade standards met? |
+| **Performance** | <200ms | API response times acceptable? |
+| **Git Hygiene** | 100% | Clear commits? No WIP commits? |
+
+**Rule**: If any metric is <100%, improve before committing.
+
+---
+
+### **🔄 The Self-Annealing Loop** (Continuous Improvement)
+
+MyMoolah's system improves with every session through the **self-annealing loop**:
+
+```
+┌─────────────────────────────────────────────────┐
+│ 1. Error/Challenge Occurs                      │
+│    - API fails, migration breaks, test fails   │
+└────────────┬────────────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────────────┐
+│ 2. Investigate Root Cause                      │
+│    - Read logs, docs, code                     │
+│    - Understand why it failed                  │
+└────────────┬────────────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────────────┐
+│ 3. Fix the Issue                               │
+│    - Update code, improve error handling       │
+│    - Test fix thoroughly                       │
+└────────────┬────────────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────────────┐
+│ 4. Update the Tools                            │
+│    - Improve script/service                    │
+│    - Add validation/error handling             │
+└────────────┬────────────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────────────┐
+│ 5. Document the Learning                       │
+│    - Update session log                        │
+│    - Update relevant docs                      │
+│    - Update agent handover if needed           │
+└────────────┬────────────────────────────────────┘
+             │
+             ▼
+┌─────────────────────────────────────────────────┐
+│ 6. System Is Stronger                          │
+│    - Next agent has this knowledge             │
+│    - Error won't happen again                  │
+│    - Pattern is now documented                 │
+└─────────────────────────────────────────────────┘
+```
+
+**Real Example from December 30, 2025**:
+```
+1. Error: SMS sending failed (HTTP 404)
+2. Investigation: Endpoint was /bulksms, should be /bulkmessages
+3. Fix: Updated services/smsService.js endpoint
+4. Tool Update: Added configurable MYMOBILEAPI_PATH env var
+5. Documentation: Session log + commit d3033cf0f
+6. Result: System stronger, next agent knows correct endpoint
+```
+
+---
+
+### **🎯 Success Criteria for Every Session**
+
+A successful agent session has ALL of these:
+
+- ✅ **Rules confirmed**: Read `docs/CURSOR_2.0_RULES_FINAL.md` with proof
+- ✅ **Context understood**: Read agent_handover.md + recent session logs
+- ✅ **Work completed**: Task accomplished per user request
+- ✅ **Quality verified**: Tested in Codespaces, zero errors
+- ✅ **Code committed**: Clear commit messages, logical grouping
+- ✅ **Session log created**: Filled out completely per template
+- ✅ **Docs updated**: All relevant docs in `docs/` updated
+- ✅ **Handover updated**: `docs/agent_handover.md` reflects new status
+- ✅ **Next agent ready**: Clear status, priorities, blockers documented
+
+**Rule**: 9/9 or don't finish the session. This is banking-grade software.
+
+---
+
+### **💡 Pro Tips from 40+ Successful Sessions**
+
+1. **Read First, Code Later**: 15 minutes reading docs saves 2 hours debugging
+2. **Test in Codespaces Only**: Local environment ≠ production environment
+3. **Use db-connection-helper**: Database connection issues are #1 agent blocker
+4. **Session logs are gold**: Read 2-3 recent logs before starting
+5. **Commit often**: Small commits > giant commits
+6. **Ask when uncertain**: User prefers questions over wrong assumptions
+7. **Follow existing patterns**: Consistency > cleverness
+8. **Document edge cases**: Next agent will thank you
+9. **Verify before committing**: "It works on my machine" doesn't count
+10. **Think banking-grade**: Security > convenience, reliability > speed
+
+---
+
+### **📚 Quick Reference: Where to Find Things**
+
+| Need | Location | Command/Tool |
+|------|----------|--------------|
+| **Rules** | `docs/CURSOR_2.0_RULES_FINAL.md` | Read first |
+| **Database guide** | `docs/DATABASE_CONNECTION_GUIDE.md` | Before DB work |
+| **API docs** | `docs/API_DOCUMENTATION.md` | API contracts |
+| **Session history** | `docs/session_logs/` | Last 2-3 logs |
+| **Current status** | `docs/agent_handover.md` | This file |
+| **Run migrations** | `./scripts/run-migrations-master.sh uat` | Always use this |
+| **Database connection** | `scripts/db-connection-helper.js` | For custom scripts |
+| **Test scripts** | `scripts/test-*.js` | Existing tests |
+| **Seed data** | `scripts/seed-*.js` | Database seeding |
+| **Check git status** | `git status` | Before pull |
+| **Environment vars** | `.env` file | Never commit |
+
+---
+
+### **🚀 Quick Start Checklist (Every New Session)**
+
+Copy this checklist and complete it **BEFORE** starting work:
+
+```
+Pre-Work Checklist (MANDATORY):
+□ 1. Read docs/CURSOR_2.0_RULES_FINAL.md (provide proof with 3-5 rule summary)
+□ 2. Read docs/agent_handover.md (understand current status)
+□ 3. Read 2-3 most recent session logs (understand recent context)
+□ 4. Check git status (git status - ensure clean working tree)
+□ 5. Pull safely if needed (commit/stash first, then git pull origin main)
+□ 6. Review user request (understand goal, constraints, expectations)
+□ 7. Check existing tools (search docs/, scripts/, services/)
+□ 8. Read relevant documentation (DB guide, API docs, dev guide)
+
+Post-Work Checklist (MANDATORY):
+□ 1. Test in Codespaces (never skip this)
+□ 2. Verify zero errors (linter, runtime, tests)
+□ 3. Create session log (docs/session_logs/YYYY-MM-DD_HHMM_[description].md)
+□ 4. Update agent handover (docs/agent_handover.md)
+□ 5. Update relevant docs (docs/CHANGELOG.md, docs/README.md, etc.)
+□ 6. Commit changes (git add → git commit with clear message)
+□ 7. Inform user (tell user commits are ready, user will push)
+□ 8. Verify continuity (next agent can understand what you did)
+```
+
+---
+
+## 🌟 **SUMMARY: Be Pragmatic. Be Reliable. Self-Anneal.**
+
+You sit between human intent (documentation) and deterministic execution (scripts/services). Your job:
+1. **Read** instructions carefully
+2. **Make** intelligent decisions
+3. **Call** the right tools
+4. **Handle** errors gracefully
+5. **Document** everything
+6. **Improve** the system continuously
+
+**Core Principle**: Every session makes the system stronger. Errors are learning opportunities. Documentation preserves knowledge. The next agent builds on your foundation.
+
+**Banking-Grade Standard**: Reliability > Speed. Security > Convenience. Documentation > Cleverness.
+
+---
+
+**Last Updated**: January 9, 2026  
+**Version**: 2.4.46 - World-Class Agent Operating Principles  
+**Status**: ✅ **WORLD-CLASS AGENT HANDOVER** ✅ **3-LAYER ARCHITECTURE FRAMEWORK** ✅ **DECISION GATES ACTIVE** ✅ **SELF-ANNEALING LOOP** ✅ **SUCCESS CRITERIA DEFINED** ✅ **STAGING OPERATIONAL** ✅ **SMS SECRETS BOUND** ✅ **MOJALOOP COMPLIANT**
+
+---
+
+## Update 2025-12-30 (18:30) - Staging Deployment Complete with SMS Secrets ✅
+
+### **Session Summary**
+Completed staging deployment troubleshooting and successfully bound SMS secrets to staging Cloud Run service. Staging environment is now fully operational.
+
+### **Deployment Issues Resolved** ✅
+1. **gcloud Authentication**: Re-authenticated after token expiry
+2. **Migration Conflict**: Skipped `embedding` column migration (already existed)
+3. **Port Configuration**: Fixed Cloud Run port from 8080 to 3001
+4. **Database Connection**: Resolved ECONNREFUSED via full redeploy
+5. **Traffic Routing**: Routed 100% traffic to latest revision
+
+### **SMS Secrets Bound to Staging** ✅
+```bash
+gcloud run services update mymoolah-backend-staging \
+  --update-secrets="MYMOBILEAPI_USERNAME=mymobileapi-client-id:latest,MYMOBILEAPI_PASSWORD=mymobileapi-api-secret:latest" \
+  --region=africa-south1 --project=mymoolah-db
+```
+- Revision: `mymoolah-backend-staging-00163-246`
+- Status: Serving 100% traffic
+
+### **Staging Status** ✅
+- Backend: https://staging.mymoolah.africa ✅ Verified working
+- Database: Connected ✅
+- SMS Integration: Secrets bound ✅
+- Referral System: Deployed ✅
+- OTP System: Deployed ✅
+
+### **Production Deployment Blocked**
+- Waiting for Flash integration completion (next year)
+- Waiting for Standard Bank PayShap integration (next year)
+- After these: run production migrations, bind SMS secrets, deploy
 
 ---
 
