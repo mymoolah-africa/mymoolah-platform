@@ -2014,7 +2014,9 @@ router.get('/bills/search', auth, async (req, res) => {
     const billerMap = new Map();
     
     billPaymentVariants.forEach(variant => {
-      const billerName = variant.provider || variant.product?.name || 'Unknown Biller';
+      // FIX: Use product.name (actual company name) instead of provider field
+      // Provider field may contain generic categories like "retail", "attorneyandcollectionservices"
+      const billerName = variant.product?.name || variant.provider || 'Unknown Biller';
       const billerCategory = variant.metadata?.category || 
                              variant.metadata?.billerCategory || 
                              'other';

@@ -382,7 +382,8 @@ class MobileMartStagingSync {
       vasType: normalizedType,  // Use normalized type for enum compatibility
       transactionType: transactionType,
       networkType: 'local',
-      provider: mmProduct.contentCreator || mmProduct.provider || 'Unknown',
+      // FIX: Use productName for provider (company name), not contentCreator (generic category)
+      provider: mmProduct.productName || mmProduct.provider || 'Unknown',
       minAmount: minAmount,
       maxAmount: maxAmount,
       predefinedAmounts: hasFixedAmount && typeof baseAmountCents === 'number' ? [baseAmountCents] : null,

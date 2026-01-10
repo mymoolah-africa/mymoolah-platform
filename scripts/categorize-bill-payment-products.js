@@ -54,7 +54,8 @@ const CATEGORY_RULES = {
  * Determine category from product name or content creator
  */
 function determineCategory(provider, productName) {
-  const searchText = `${provider || ''} ${productName || ''}`.toLowerCase();
+  // Use product name (actual company name) as primary source
+  const searchText = `${productName || ''} ${provider || ''}`.toLowerCase();
   
   for (const [category, keywords] of Object.entries(CATEGORY_RULES)) {
     for (const keyword of keywords) {
@@ -78,6 +79,7 @@ async function main() {
   
   try {
     // Get all bill-payment products
+    // Query all bill-payment products, including those with NULL categories
     const result = await client.query(`
       SELECT 
         pv.id,
@@ -86,7 +88,9 @@ async function main() {
         pv.metadata
       FROM product_variants pv
       JOIN products p ON pv."productId" = p.id
-      WHERE p.type = 'bill_payment' AND pv.status = 'active'
+      WHERE p.type = 'bill_payment' 
+        AND pv.status = 'active'
+        AND (pv.metadata->>'category' IS NULL OR pv.metadata->>'category' = 'null')
       ORDER BY pv.provider, p.name
     `);
     
