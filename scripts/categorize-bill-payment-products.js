@@ -17,8 +17,7 @@
  *   node scripts/categorize-bill-payment-products.js [uat|staging]
  */
 
-const { Pool } = require('pg');
-require('dotenv').config();
+const { getUATClient, getStagingClient, closeAll } = require('./db-connection-helper');
 
 // Category mapping rules (case-insensitive matching)
 const CATEGORY_RULES = {
@@ -68,42 +67,14 @@ function determineCategory(provider, productName) {
   return 'other'; // Default fallback
 }
 
-/**
- * Get database connection pool
- */
-function getPool(environment) {
-  if (environment === 'staging') {
-    // Staging: Use Cloud SQL Auth Proxy on port 6544
-    const stagingPassword = process.env.STAGING_DB_PASSWORD || 
-                           process.execSync('gcloud secrets versions access latest --secret="db-mmtp-pg-staging-password" --project=mymoolah-db 2>/dev/null').toString().trim();
-    
-    return new Pool({
-      host: '127.0.0.1',
-      port: 6544,
-      database: 'mymoolah_staging',
-      user: 'mymoolah_app',
-      password: stagingPassword
-    });
-  } else {
-    // UAT: Use local proxy on port 6543 (or 5433 locally)
-    const uatPassword = process.env.DB_PASSWORD || process.env.DATABASE_URL?.match(/:(.*?)@/)?.[1];
-    
-    return new Pool({
-      host: '127.0.0.1',
-      port: process.env.UAT_PROXY_PORT || 6543,
-      database: 'mymoolah',
-      user: 'mymoolah_app',
-      password: uatPassword
-    });
-  }
-}
-
 async function main() {
   const environment = process.argv[2] || 'uat';
   console.log(`\n🏷️  Categorizing Bill-Payment Products (${environment.toUpperCase()})\n`);
   
-  const pool = getPool(environment);
-  const client = await pool.connect();
+  // Use db-connection-helper for proper password handling
+  const client = environment === 'staging' 
+    ? await getStagingClient()
+    : await getUATClient();
   
   try {
     // Get all bill-payment products
@@ -178,7 +149,7 @@ async function main() {
     process.exit(1);
   } finally {
     client.release();
-    await pool.end();
+    await closeAll();
   }
 }
 
