@@ -41,11 +41,11 @@ function getTransactionType(vasType, product) {
   const mapping = {
     'airtime': product.pinned ? 'voucher' : 'topup',
     'data': product.pinned ? 'voucher' : 'topup',
-    'utility': 'direct',
-    'electricity': 'direct',
+    'utility': 'voucher',  // Electricity returns PIN
+    'electricity': 'voucher',  // Electricity returns PIN
     'voucher': 'voucher',
-    'bill-payment': 'direct',
-    'bill_payment': 'direct'
+    'bill-payment': 'voucher',  // Bill-payment returns PIN (regardless of API's pinned field)
+    'bill_payment': 'voucher'   // Bill-payment returns PIN
   };
   return mapping[vasType] || 'topup';
 }
@@ -81,16 +81,20 @@ class MobileMartStagingSync {
       console.log(`  Found ${allProducts.length} ${vasType} products from Production API`);
       
       // LAUNCH STRATEGY: Filter products based on pinned/pinless requirement
-      // - Airtime/Data: Only sync PINLESS products (pinned === false)
-      // - Electricity/Bill-Payment: Only sync PINNED products (pinned === true)
+      // - Airtime/Data: Only sync PINLESS products (pinned === false) - MyMoolah business requirement
+      // - Bill-Payment: Sync ALL products (API returns them as pinned=false, but we need them all)
+      // - Electricity/Utility: Only sync PINNED products (pinned === true)
       // - Voucher: Sync ALL products
       let products = allProducts;
       if (vasType === 'airtime' || vasType === 'data') {
         products = allProducts.filter(p => p.pinned === false);
         console.log(`  🎯 Filtered to ${products.length} PINLESS products (${allProducts.length - products.length} pinned skipped)`);
-      } else if (vasType === 'utility' || vasType === 'electricity' || vasType === 'bill-payment') {
+      } else if (vasType === 'utility' || vasType === 'electricity') {
         products = allProducts.filter(p => p.pinned === true);
         console.log(`  🎯 Filtered to ${products.length} PINNED products (${allProducts.length - products.length} pinless skipped)`);
+      } else if (vasType === 'bill-payment') {
+        // Keep ALL bill-payment products (don't filter by pinned field)
+        console.log(`  🎯 Syncing ALL ${products.length} bill-payment products (no pinned filter applied)`);
       }
       
       this.stats.byVasType[vasType] = {
@@ -104,9 +108,14 @@ class MobileMartStagingSync {
       // Sync each product
       for (const mmProduct of products) {
         try {
-          await this.syncProduct(mmProduct, vasType, supplier);
-          this.stats.byVasType[vasType].created++;
-          this.stats.created++;
+          const result = await this.syncProduct(mmProduct, vasType, supplier);
+          if (result === 'created') {
+            this.stats.byVasType[vasType].created++;
+            this.stats.created++;
+          } else if (result === 'updated') {
+            this.stats.byVasType[vasType].updated++;
+            this.stats.updated++;
+          }
         } catch (error) {
           console.error(`  ❌ Failed to sync product ${mmProduct.merchantProductId}: ${error.message}`);
           this.stats.byVasType[vasType].failed++;
@@ -124,7 +133,27 @@ class MobileMartStagingSync {
   }
 
   /**
+   * Sanitize JSON to prevent parsing errors
+   */
+  safeStringify(obj) {
+    try {
+      return JSON.stringify(obj);
+    } catch (error) {
+      // Fallback: stringify with replacer that handles circular refs and undefined
+      return JSON.stringify(obj, (key, value) => {
+        if (value === undefined) return null;
+        if (typeof value === 'object' && value !== null) {
+          // Remove circular references
+          return value;
+        }
+        return value;
+      });
+    }
+  }
+
+  /**
    * Sync a single product
+   * Returns 'created' or 'updated'
    */
   async syncProduct(mmProduct, vasType, supplier) {
     const normalizedType = normalizeProductType(vasType);
@@ -147,7 +176,7 @@ class MobileMartStagingSync {
         INSERT INTO product_brands (name, category, "isActive", metadata, "createdAt", "updatedAt")
         VALUES ($1, $2, true, $3, NOW(), NOW())
         RETURNING id
-      `, [brandName, brandCategory, JSON.stringify({ source: 'mobilemart' })]);
+      `, [brandName, brandCategory, this.safeStringify({ source: 'mobilemart' })]);
       brandId = insertResult.rows[0].id;
     }
     
@@ -184,7 +213,7 @@ class MobileMartStagingSync {
         normalizedType,
         mmProduct.merchantProductId.toString(),
         mmProduct.fixedAmount ? [Math.round(mmProduct.amount * 100)] : [],
-        JSON.stringify({ source: 'mobilemart', synced: true, synced_from: 'production_api' })
+        this.safeStringify({ source: 'mobilemart', synced: true, synced_from: 'production_api' })
       ]);
       productId = insertResult.rows[0].id;
     }
@@ -218,8 +247,7 @@ class MobileMartStagingSync {
         variantData.status,
         existingVariant.rows[0].id
       ]);
-      this.stats.updated++;
-      this.stats.byVasType[vasType].updated++;
+      return 'updated';
     } else {
       // Create new ProductVariant
       await this.client.query(`
@@ -255,13 +283,14 @@ class MobileMartStagingSync {
         variantData.promotionalDiscount,
         variantData.priority,
         variantData.status,
-        JSON.stringify(variantData.denominations),
-        JSON.stringify(variantData.pricing),
-        JSON.stringify(variantData.constraints),
-        JSON.stringify(variantData.metadata),
+        this.safeStringify(variantData.denominations),
+        this.safeStringify(variantData.pricing),
+        this.safeStringify(variantData.constraints),
+        this.safeStringify(variantData.metadata),
         variantData.sortOrder,
         variantData.isPreferred
       ]);
+      return 'created';
     }
   }
 
@@ -270,7 +299,8 @@ class MobileMartStagingSync {
    */
   mapToProductVariant(mmProduct, vasType, supplierId, productId) {
     const transactionType = getTransactionType(vasType, mmProduct);
-    const isBillPayment = vasType === 'bill_payment';
+    const isBillPayment = vasType === 'bill_payment' || vasType === 'bill-payment';
+    const isElectricity = vasType === 'electricity' || vasType === 'utility';
     const hasFixedAmount = !!mmProduct.fixedAmount && !isBillPayment;
     const baseAmountCents = typeof mmProduct.amount === 'number' ? Math.round(mmProduct.amount * 100) : null;
 
@@ -288,6 +318,10 @@ class MobileMartStagingSync {
     const denominations = hasFixedAmount && typeof baseAmountCents === 'number'
       ? [baseAmountCents]
       : [];
+
+    // BUSINESS LOGIC: Override pinned field for bill-payment and electricity
+    // MobileMart API may return pinned=false, but MyMoolah REQUIRES pinned=true for these types
+    const isPinnedProduct = (isBillPayment || isElectricity) ? true : mmProduct.pinned;
 
     return {
       productId: productId,
@@ -315,19 +349,20 @@ class MobileMartStagingSync {
       constraints: {
         minAmount: mmProduct.minimumAmount ? mmProduct.minimumAmount * 100 : null,
         maxAmount: mmProduct.maximumAmount ? mmProduct.maximumAmount * 100 : null,
-        pinned: mmProduct.pinned
+        pinned: isPinnedProduct  // Override with business logic
       },
       metadata: {
         mobilemart_merchant_product_id: mmProduct.merchantProductId,
         mobilemart_product_name: mmProduct.productName,
         mobilemart_content_creator: mmProduct.contentCreator,
-        mobilemart_pinned: mmProduct.pinned,
+        mobilemart_pinned_api_value: mmProduct.pinned,  // Store original API value
+        mobilemart_pinned_overridden: isPinnedProduct,   // Store our override
         mobilemart_fixed_amount: mmProduct.fixedAmount,
         synced_at: new Date().toISOString(),
         synced_from: 'production_api'
       },
-      sortOrder: mmProduct.pinned ? 1 : 2,
-      isPreferred: mmProduct.pinned
+      sortOrder: isPinnedProduct ? 1 : 2,
+      isPreferred: isPinnedProduct
     };
   }
 
