@@ -276,47 +276,60 @@ class MobileMartStagingSync {
       return 'updated';
     } else {
       // Create new ProductVariant
-      await this.client.query(`
-        INSERT INTO product_variants (
-          "productId", "supplierId", "supplierProductId",
-          "vasType", "transactionType", "networkType", provider,
-          "minAmount", "maxAmount", "predefinedAmounts",
-          commission, "fixedFee",
-          "isPromotional", "promotionalDiscount",
-          priority, status, denominations, pricing, constraints, metadata,
-          "lastSyncedAt", "sortOrder", "isPreferred",
-          "createdAt", "updatedAt"
-        )
-        VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb,
-          $11, $12, $13, $14, $15, $16, $17::jsonb, $18::jsonb, $19::jsonb, $20::jsonb,
-          NOW(), $21, $22, NOW(), NOW()
-        )
-      `, [
-        variantData.productId,
-        variantData.supplierId,
-        variantData.supplierProductId,
-        variantData.vasType,
-        variantData.transactionType,
-        variantData.networkType,
-        variantData.provider,
-        variantData.minAmount,
-        variantData.maxAmount,
-        variantData.predefinedAmounts ? JSON.stringify(variantData.predefinedAmounts) : null,
-        variantData.commission,
-        variantData.fixedFee,
-        variantData.isPromotional,
-        variantData.promotionalDiscount,
-        variantData.priority,
-        variantData.status,
-        this.safeStringify(variantData.denominations),
-        this.safeStringify(variantData.pricing),
-        this.safeStringify(variantData.constraints),
-        this.safeStringify(variantData.metadata),
-        variantData.sortOrder,
-        variantData.isPreferred
-      ]);
-      return 'created';
+      try {
+        await this.client.query(`
+          INSERT INTO product_variants (
+            "productId", "supplierId", "supplierProductId",
+            "vasType", "transactionType", "networkType", provider,
+            "minAmount", "maxAmount", "predefinedAmounts",
+            commission, "fixedFee",
+            "isPromotional", "promotionalDiscount",
+            priority, status, denominations, pricing, constraints, metadata,
+            "lastSyncedAt", "sortOrder", "isPreferred",
+            "createdAt", "updatedAt"
+          )
+          VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb,
+            $11, $12, $13, $14, $15, $16, $17::jsonb, $18::jsonb, $19::jsonb, $20::jsonb,
+            NOW(), $21, $22, NOW(), NOW()
+          )
+        `, [
+          variantData.productId,
+          variantData.supplierId,
+          variantData.supplierProductId,
+          variantData.vasType,
+          variantData.transactionType,
+          variantData.networkType,
+          variantData.provider,
+          variantData.minAmount,
+          variantData.maxAmount,
+          variantData.predefinedAmounts ? this.safeStringify(variantData.predefinedAmounts) : null,
+          variantData.commission,
+          variantData.fixedFee,
+          variantData.isPromotional,
+          variantData.promotionalDiscount,
+          variantData.priority,
+          variantData.status,
+          this.safeStringify(variantData.denominations),
+          this.safeStringify(variantData.pricing),
+          this.safeStringify(variantData.constraints),
+          this.safeStringify(variantData.metadata),
+          variantData.sortOrder,
+          variantData.isPreferred
+        ]);
+        return 'created';
+      } catch (insertError) {
+        // Enhanced error logging for JSON issues
+        if (insertError.message.includes('invalid input syntax for type json')) {
+          console.error(`     JSON Error Details:`);
+          console.error(`       - predefinedAmounts: ${variantData.predefinedAmounts ? this.safeStringify(variantData.predefinedAmounts) : 'null'}`);
+          console.error(`       - denominations: ${this.safeStringify(variantData.denominations)}`);
+          console.error(`       - pricing: ${this.safeStringify(variantData.pricing)}`);
+          console.error(`       - constraints: ${this.safeStringify(variantData.constraints)}`);
+          console.error(`       - metadata: ${this.safeStringify(variantData.metadata)}`);
+        }
+        throw insertError;
+      }
     }
   }
 
