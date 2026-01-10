@@ -200,7 +200,7 @@ class MobileMartStagingSync {
       // Create new brand
       const insertResult = await this.client.query(`
         INSERT INTO product_brands (name, category, "isActive", metadata, "createdAt", "updatedAt")
-        VALUES ($1, $2, true, $3, NOW(), NOW())
+        VALUES ($1, $2, true, $3::jsonb, NOW(), NOW())
         RETURNING id
       `, [brandName, brandCategory, this.safeStringify({ source: 'mobilemart' })]);
       brandId = insertResult.rows[0].id;
@@ -230,7 +230,7 @@ class MobileMartStagingSync {
           status, denominations, "isFeatured", "sortOrder", metadata,
           "createdAt", "updatedAt"
         )
-        VALUES ($1, $2, $3, $4, $5, 'active', $6, false, 0, $7, NOW(), NOW())
+        VALUES ($1, $2, $3, $4, $5, 'active', $6, false, 0, $7::jsonb, NOW(), NOW())
         RETURNING id
       `, [
         supplier.id,
@@ -247,12 +247,12 @@ class MobileMartStagingSync {
     // Map to ProductVariant
     const variantData = this.mapToProductVariant(mmProduct, vasType, supplier.id, productId);
     
-    // Check if ProductVariant exists
+    // Check if ProductVariant exists (using the unique constraint: productId + supplierId)
     const existingVariant = await this.client.query(`
       SELECT id FROM product_variants 
-      WHERE "supplierId" = $1 AND "supplierProductId" = $2 
+      WHERE "productId" = $1 AND "supplierId" = $2
       LIMIT 1
-    `, [variantData.supplierId, variantData.supplierProductId]);
+    `, [productId, supplier.id]);
     
     if (existingVariant.rows.length > 0) {
       // Update existing variant
@@ -288,8 +288,8 @@ class MobileMartStagingSync {
           "createdAt", "updatedAt"
         )
         VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-          $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb,
+          $11, $12, $13, $14, $15, $16, $17::jsonb, $18::jsonb, $19::jsonb, $20::jsonb,
           NOW(), $21, $22, NOW(), NOW()
         )
       `, [
