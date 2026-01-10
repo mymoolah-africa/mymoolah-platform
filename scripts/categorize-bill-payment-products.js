@@ -69,7 +69,7 @@ function determineCategory(provider, productName) {
 }
 
 async function main() {
-  const environment = process.argv[2] || 'uat';
+  const environment = process.argv[2] || 'staging'; // Default to staging for Codespaces
   console.log(`\n🏷️  Categorizing Bill-Payment Products (${environment.toUpperCase()})\n`);
   
   // Use db-connection-helper for proper password handling
