@@ -77,17 +77,18 @@ class MobileMartStagingSync {
         `/${normalizedVasType}/products`
       );
       
-      const allProducts = response.products || response || [];
+      const allProducts = Array.isArray(response.products) ? response.products : (Array.isArray(response) ? response : []);
       console.log(`  Found ${allProducts.length} ${vasType} products from Production API`);
       
       // LAUNCH STRATEGY: Filter products based on pinned/pinless requirement
       // - Airtime/Data: Only sync PINLESS products (pinned === false)
-      // - Electricity: Only sync PINNED products (pinned === true)
+      // - Electricity/Bill-Payment: Only sync PINNED products (pinned === true)
+      // - Voucher: Sync ALL products
       let products = allProducts;
       if (vasType === 'airtime' || vasType === 'data') {
         products = allProducts.filter(p => p.pinned === false);
         console.log(`  🎯 Filtered to ${products.length} PINLESS products (${allProducts.length - products.length} pinned skipped)`);
-      } else if (vasType === 'utility' || vasType === 'electricity') {
+      } else if (vasType === 'utility' || vasType === 'electricity' || vasType === 'bill-payment') {
         products = allProducts.filter(p => p.pinned === true);
         console.log(`  🎯 Filtered to ${products.length} PINNED products (${allProducts.length - products.length} pinless skipped)`);
       }
@@ -132,87 +133,136 @@ class MobileMartStagingSync {
     const brandName = mmProduct.contentCreator || mmProduct.productName || 'MobileMart';
     const brandCategory = getBrandCategory(normalizedType);
     
-    const brandResult = await this.client.query(`
-      INSERT INTO product_brands (name, category, "isActive", metadata, "createdAt", "updatedAt")
-      VALUES ($1, $2, true, $3, NOW(), NOW())
-      ON CONFLICT (name) DO UPDATE SET "updatedAt" = NOW()
-      RETURNING id
-    `, [brandName, brandCategory, JSON.stringify({ source: 'mobilemart' })]);
+    // Try to find existing brand first
+    let brandResult = await this.client.query(`
+      SELECT id FROM product_brands WHERE name = $1 LIMIT 1
+    `, [brandName]);
     
-    const brandId = brandResult.rows[0].id;
+    let brandId;
+    if (brandResult.rows.length > 0) {
+      brandId = brandResult.rows[0].id;
+    } else {
+      // Create new brand
+      const insertResult = await this.client.query(`
+        INSERT INTO product_brands (name, category, "isActive", metadata, "createdAt", "updatedAt")
+        VALUES ($1, $2, true, $3, NOW(), NOW())
+        RETURNING id
+      `, [brandName, brandCategory, JSON.stringify({ source: 'mobilemart' })]);
+      brandId = insertResult.rows[0].id;
+    }
     
     // Create or get base product
-    const productResult = await this.client.query(`
-      INSERT INTO products (
-        "supplierId", "brandId", name, type, "supplierProductId",
-        status, denominations, "isFeatured", "sortOrder", metadata,
-        "createdAt", "updatedAt"
-      )
-      VALUES ($1, $2, $3, $4, $5, 'active', $6, false, 0, $7, NOW(), NOW())
-      ON CONFLICT ("supplierId", name, type) DO UPDATE 
-      SET "updatedAt" = NOW(), "supplierProductId" = $5
-      RETURNING id
-    `, [
-      supplier.id,
-      brandId,
-      mmProduct.productName,
-      normalizedType,
-      mmProduct.merchantProductId.toString(),
-      mmProduct.fixedAmount ? [Math.round(mmProduct.amount * 100)] : [],
-      JSON.stringify({ source: 'mobilemart', synced: true, synced_from: 'production_api' })
-    ]);
+    let productResult = await this.client.query(`
+      SELECT id FROM products 
+      WHERE "supplierId" = $1 AND name = $2 AND type = $3 
+      LIMIT 1
+    `, [supplier.id, mmProduct.productName, normalizedType]);
     
-    const productId = productResult.rows[0].id;
+    let productId;
+    if (productResult.rows.length > 0) {
+      // Update existing
+      productId = productResult.rows[0].id;
+      await this.client.query(`
+        UPDATE products 
+        SET "supplierProductId" = $1, "updatedAt" = NOW()
+        WHERE id = $2
+      `, [mmProduct.merchantProductId.toString(), productId]);
+    } else {
+      // Insert new
+      const insertResult = await this.client.query(`
+        INSERT INTO products (
+          "supplierId", "brandId", name, type, "supplierProductId",
+          status, denominations, "isFeatured", "sortOrder", metadata,
+          "createdAt", "updatedAt"
+        )
+        VALUES ($1, $2, $3, $4, $5, 'active', $6, false, 0, $7, NOW(), NOW())
+        RETURNING id
+      `, [
+        supplier.id,
+        brandId,
+        mmProduct.productName,
+        normalizedType,
+        mmProduct.merchantProductId.toString(),
+        mmProduct.fixedAmount ? [Math.round(mmProduct.amount * 100)] : [],
+        JSON.stringify({ source: 'mobilemart', synced: true, synced_from: 'production_api' })
+      ]);
+      productId = insertResult.rows[0].id;
+    }
     
     // Map to ProductVariant
     const variantData = this.mapToProductVariant(mmProduct, vasType, supplier.id, productId);
     
-    // Create or update ProductVariant
-    await this.client.query(`
-      INSERT INTO product_variants (
-        "productId", "supplierId", "supplierProductId",
-        "vasType", "transactionType", "networkType", provider,
-        "minAmount", "maxAmount", "predefinedAmounts",
-        commission, "fixedFee",
-        "isPromotional", "promotionalDiscount",
-        priority, status, denominations, pricing, constraints, metadata,
-        "lastSyncedAt", "sortOrder", "isPreferred",
-        "createdAt", "updatedAt"
-      )
-      VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-        $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-        NOW(), $21, $22, NOW(), NOW()
-      )
-      ON CONFLICT ("supplierId", "supplierProductId") DO UPDATE 
-      SET 
-        "minAmount" = $8, "maxAmount" = $9,
-        provider = $7, status = $16,
-        "lastSyncedAt" = NOW(), "updatedAt" = NOW()
-    `, [
-      variantData.productId,
-      variantData.supplierId,
-      variantData.supplierProductId,
-      variantData.vasType,
-      variantData.transactionType,
-      variantData.networkType,
-      variantData.provider,
-      variantData.minAmount,
-      variantData.maxAmount,
-      variantData.predefinedAmounts ? JSON.stringify(variantData.predefinedAmounts) : null,
-      variantData.commission,
-      variantData.fixedFee,
-      variantData.isPromotional,
-      variantData.promotionalDiscount,
-      variantData.priority,
-      variantData.status,
-      JSON.stringify(variantData.denominations),
-      JSON.stringify(variantData.pricing),
-      JSON.stringify(variantData.constraints),
-      JSON.stringify(variantData.metadata),
-      variantData.sortOrder,
-      variantData.isPreferred
-    ]);
+    // Check if ProductVariant exists
+    const existingVariant = await this.client.query(`
+      SELECT id FROM product_variants 
+      WHERE "supplierId" = $1 AND "supplierProductId" = $2 
+      LIMIT 1
+    `, [variantData.supplierId, variantData.supplierProductId]);
+    
+    if (existingVariant.rows.length > 0) {
+      // Update existing variant
+      await this.client.query(`
+        UPDATE product_variants 
+        SET 
+          "minAmount" = $1, 
+          "maxAmount" = $2,
+          provider = $3, 
+          status = $4,
+          "lastSyncedAt" = NOW(), 
+          "updatedAt" = NOW()
+        WHERE id = $5
+      `, [
+        variantData.minAmount,
+        variantData.maxAmount,
+        variantData.provider,
+        variantData.status,
+        existingVariant.rows[0].id
+      ]);
+      this.stats.updated++;
+      this.stats.byVasType[vasType].updated++;
+    } else {
+      // Create new ProductVariant
+      await this.client.query(`
+        INSERT INTO product_variants (
+          "productId", "supplierId", "supplierProductId",
+          "vasType", "transactionType", "networkType", provider,
+          "minAmount", "maxAmount", "predefinedAmounts",
+          commission, "fixedFee",
+          "isPromotional", "promotionalDiscount",
+          priority, status, denominations, pricing, constraints, metadata,
+          "lastSyncedAt", "sortOrder", "isPreferred",
+          "createdAt", "updatedAt"
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
+          NOW(), $21, $22, NOW(), NOW()
+        )
+      `, [
+        variantData.productId,
+        variantData.supplierId,
+        variantData.supplierProductId,
+        variantData.vasType,
+        variantData.transactionType,
+        variantData.networkType,
+        variantData.provider,
+        variantData.minAmount,
+        variantData.maxAmount,
+        variantData.predefinedAmounts ? JSON.stringify(variantData.predefinedAmounts) : null,
+        variantData.commission,
+        variantData.fixedFee,
+        variantData.isPromotional,
+        variantData.promotionalDiscount,
+        variantData.priority,
+        variantData.status,
+        JSON.stringify(variantData.denominations),
+        JSON.stringify(variantData.pricing),
+        JSON.stringify(variantData.constraints),
+        JSON.stringify(variantData.metadata),
+        variantData.sortOrder,
+        variantData.isPreferred
+      ]);
+    }
   }
 
   /**
