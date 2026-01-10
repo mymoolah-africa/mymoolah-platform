@@ -198,12 +198,18 @@ class MobileMartStagingSync {
       brandId = brandResult.rows[0].id;
     } else {
       // Create new brand
-      const insertResult = await this.client.query(`
-        INSERT INTO product_brands (name, category, "isActive", metadata, "createdAt", "updatedAt")
-        VALUES ($1, $2, true, $3::jsonb, NOW(), NOW())
-        RETURNING id
-      `, [brandName, brandCategory, this.safeStringify({ source: 'mobilemart' })]);
-      brandId = insertResult.rows[0].id;
+      try {
+        const insertResult = await this.client.query(`
+          INSERT INTO product_brands (name, category, "isActive", metadata, "createdAt", "updatedAt")
+          VALUES ($1, $2, true, $3::jsonb, NOW(), NOW())
+          RETURNING id
+        `, [brandName, brandCategory, this.safeStringify({ source: 'mobilemart' })]);
+        brandId = insertResult.rows[0].id;
+      } catch (brandError) {
+        console.error(`     Brand INSERT failed: ${brandError.message}`);
+        console.error(`     Brand data: name="${brandName}", category="${brandCategory}"`);
+        throw brandError;
+      }
     }
     
     // Create or get base product
@@ -224,24 +230,30 @@ class MobileMartStagingSync {
       `, [mmProduct.merchantProductId.toString(), productId]);
     } else {
       // Insert new
-      const insertResult = await this.client.query(`
-        INSERT INTO products (
-          "supplierId", "brandId", name, type, "supplierProductId",
-          status, denominations, "isFeatured", "sortOrder", metadata,
-          "createdAt", "updatedAt"
-        )
-        VALUES ($1, $2, $3, $4, $5, 'active', $6, false, 0, $7::jsonb, NOW(), NOW())
-        RETURNING id
-      `, [
-        supplier.id,
-        brandId,
-        mmProduct.productName,
-        normalizedType,
-        mmProduct.merchantProductId.toString(),
-        mmProduct.fixedAmount ? [Math.round(mmProduct.amount * 100)] : [],
-        this.safeStringify({ source: 'mobilemart', synced: true, synced_from: 'production_api' })
-      ]);
-      productId = insertResult.rows[0].id;
+      try {
+        const insertResult = await this.client.query(`
+          INSERT INTO products (
+            "supplierId", "brandId", name, type, "supplierProductId",
+            status, denominations, "isFeatured", "sortOrder", metadata,
+            "createdAt", "updatedAt"
+          )
+          VALUES ($1, $2, $3, $4, $5, 'active', $6, false, 0, $7::jsonb, NOW(), NOW())
+          RETURNING id
+        `, [
+          supplier.id,
+          brandId,
+          mmProduct.productName,
+          normalizedType,
+          mmProduct.merchantProductId.toString(),
+          mmProduct.fixedAmount ? [Math.round(mmProduct.amount * 100)] : [],
+          this.safeStringify({ source: 'mobilemart', synced: true, synced_from: 'production_api' })
+        ]);
+        productId = insertResult.rows[0].id;
+      } catch (productError) {
+        console.error(`     Product INSERT failed: ${productError.message}`);
+        console.error(`     Product metadata being inserted: ${this.safeStringify({ source: 'mobilemart', synced: true, synced_from: 'production_api' })}`);
+        throw productError;
+      }
     }
     
     // Map to ProductVariant
