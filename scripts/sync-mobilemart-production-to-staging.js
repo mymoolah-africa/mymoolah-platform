@@ -118,6 +118,15 @@ class MobileMartStagingSync {
           }
         } catch (error) {
           console.error(`  ❌ Failed to sync product ${mmProduct.merchantProductId}: ${error.message}`);
+          if (error.message.includes('invalid input syntax for type json')) {
+            console.error(`     Debug: Product data: ${JSON.stringify({
+              merchantProductId: mmProduct.merchantProductId,
+              productName: mmProduct.productName,
+              amount: mmProduct.amount,
+              minimumAmount: mmProduct.minimumAmount,
+              maximumAmount: mmProduct.maximumAmount
+            }, null, 2)}`);
+          }
           this.stats.byVasType[vasType].failed++;
           this.stats.failed++;
         }
@@ -136,18 +145,35 @@ class MobileMartStagingSync {
    * Sanitize JSON to prevent parsing errors
    */
   safeStringify(obj) {
+    if (obj === null || obj === undefined) {
+      return JSON.stringify({});
+    }
+    
     try {
-      return JSON.stringify(obj);
+      // First try: normal stringify
+      const result = JSON.stringify(obj);
+      // Validate it can be parsed back
+      JSON.parse(result);
+      return result;
     } catch (error) {
-      // Fallback: stringify with replacer that handles circular refs and undefined
-      return JSON.stringify(obj, (key, value) => {
-        if (value === undefined) return null;
-        if (typeof value === 'object' && value !== null) {
-          // Remove circular references
+      try {
+        // Second try: stringify with replacer that handles problematic values
+        return JSON.stringify(obj, (key, value) => {
+          // Handle undefined
+          if (value === undefined) return null;
+          // Handle NaN and Infinity
+          if (typeof value === 'number' && !isFinite(value)) return null;
+          // Handle functions
+          if (typeof value === 'function') return null;
+          // Handle symbols
+          if (typeof value === 'symbol') return null;
           return value;
-        }
-        return value;
-      });
+        });
+      } catch (secondError) {
+        // Last resort: return empty object
+        console.warn(`⚠️  JSON stringify failed for object, returning {}: ${secondError.message}`);
+        return JSON.stringify({});
+      }
     }
   }
 
@@ -298,6 +324,7 @@ class MobileMartStagingSync {
    * Map MobileMart product to ProductVariant schema
    */
   mapToProductVariant(mmProduct, vasType, supplierId, productId) {
+    const normalizedType = normalizeProductType(vasType);  // Normalize for enums
     const transactionType = getTransactionType(vasType, mmProduct);
     const isBillPayment = vasType === 'bill_payment' || vasType === 'bill-payment';
     const isElectricity = vasType === 'electricity' || vasType === 'utility';
@@ -327,7 +354,7 @@ class MobileMartStagingSync {
       productId: productId,
       supplierId: supplierId,
       supplierProductId: mmProduct.merchantProductId,
-      vasType: vasType,
+      vasType: normalizedType,  // Use normalized type for enum compatibility
       transactionType: transactionType,
       networkType: 'local',
       provider: mmProduct.contentCreator || mmProduct.provider || 'Unknown',
@@ -358,6 +385,7 @@ class MobileMartStagingSync {
         mobilemart_pinned_api_value: mmProduct.pinned,  // Store original API value
         mobilemart_pinned_overridden: isPinnedProduct,   // Store our override
         mobilemart_fixed_amount: mmProduct.fixedAmount,
+        mobilemart_original_vastype: vasType,  // Store original API vasType
         synced_at: new Date().toISOString(),
         synced_from: 'production_api'
       },
