@@ -16,7 +16,13 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models');
 const ReconciliationOrchestrator = require('../services/reconciliation/ReconciliationOrchestrator');
-const logger = require('../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[ReconciliationRoutes]', ...args),
+  error: (...args) => console.error('[ReconciliationRoutes]', ...args),
+  warn: (...args) => console.warn('[ReconciliationRoutes]', ...args),
+  debug: (...args) => console.log('[ReconciliationRoutes]', ...args)
+};
 const { authenticateToken } = require('../middleware/auth');
 
 const orchestrator = new ReconciliationOrchestrator();
