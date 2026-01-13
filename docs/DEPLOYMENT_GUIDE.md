@@ -1,9 +1,10 @@
 # MyMoolah Deployment Guide
 
-## 🚀 Current Deployment Procedures (November 11, 2025 - Staging & Production Database Setup)
+## 🚀 Current Deployment Procedures (January 13, 2026 - Reconciliation System Deployment)
 
 **Status**: ✅ **VALIDATED** - All deployment procedures tested and working
-**New**: Staging and Production Cloud SQL instances created with banking-grade security, Secret Manager integration, and complete environment isolation.
+**Latest**: Banking-grade reconciliation system deployed to UAT with automated multi-supplier transaction reconciliation.
+**Previous**: Staging and Production Cloud SQL instances created with banking-grade security, Secret Manager integration, and complete environment isolation.
 
 ## 📋 Deployment Overview
 
@@ -218,6 +219,165 @@ curl http://localhost:5050/api/v1/users
 curl http://localhost:5050/api/v1/transactions
 curl http://localhost:5050/api/v1/kyc
 ```
+
+---
+
+## 🏦 **Reconciliation System Deployment**
+
+### **Overview**
+The reconciliation system is deployed as part of the main MyMoolah platform. It requires additional database tables and configuration for SFTP access.
+
+### **Prerequisites**
+- Database migration completed (`20260113000001_create_reconciliation_system.js`)
+- SFTP service configured (Google Cloud Storage + SFTP server)
+- Supplier SSH keys configured
+- Email SMTP configured (optional, for alerts)
+
+### **Deployment Steps**
+
+#### **1. Database Migration**
+```bash
+# In Codespaces (UAT)
+cd /workspaces/mymoolah-platform
+./scripts/run-migrations-master.sh uat
+
+# For Staging
+./scripts/run-migrations-master.sh staging
+
+# Verify tables created
+node -e "
+const { Sequelize } = require('sequelize');
+require('dotenv').config();
+const { getUATDatabaseURL } = require('./scripts/db-connection-helper');
+(async () => {
+  const sequelize = new Sequelize(getUATDatabaseURL(), { logging: false });
+  const [tables] = await sequelize.query(\`
+    SELECT table_name FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name LIKE 'recon_%'
+    ORDER BY table_name;
+  \`);
+  console.log('Reconciliation Tables:', tables.map(t => t.table_name));
+  process.exit(0);
+})();
+"
+```
+
+#### **2. Install Dependencies**
+```bash
+# Install reconciliation-specific packages
+npm install exceljs@^4.4.0 moment-timezone@^0.5.45 csv-parse@^5.5.3 @google-cloud/storage@^7.14.0
+
+# Verify installation
+npm audit fix
+```
+
+#### **3. Configure Environment Variables**
+```bash
+# Add to .env file
+
+# Reconciliation System
+RECON_SFTP_HOST=34.35.168.101
+RECON_SFTP_PORT=22
+RECON_GCS_BUCKET=mymoolah-sftp-inbound
+
+# Email Alerts (Optional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=alerts@mymoolah.africa
+SMTP_PASS=your-smtp-password
+RECON_ALERT_EMAIL=finance@mymoolah.africa
+
+# GCS Configuration (already configured)
+GOOGLE_CLOUD_PROJECT=mymoolah-platform
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
+```
+
+#### **4. Configure Supplier Access**
+```bash
+# Add MobileMart SSH public key to SFTP service
+# (Done via Google Cloud Console or gcloud CLI)
+
+# Configure firewall rules for MobileMart IP range
+gcloud compute firewall-rules create allow-mobilemart-sftp \
+  --allow=tcp:22 \
+  --source-ranges=MOBILEMART_IP_RANGE \
+  --target-tags=sftp-server \
+  --description="Allow SFTP access from MobileMart"
+```
+
+#### **5. Verify Deployment**
+```bash
+# Test database connection
+curl -X GET http://localhost:3001/api/v1/reconciliation/suppliers \
+  -H "Authorization: Bearer $ADMIN_JWT_TOKEN"
+
+# Expected response:
+# {
+#   "success": true,
+#   "data": {
+#     "suppliers": [
+#       {
+#         "code": "MMART",
+#         "name": "MobileMart",
+#         "is_active": true
+#       }
+#     ]
+#   }
+# }
+
+# Test manual reconciliation trigger (with test file)
+curl -X POST http://localhost:3001/api/v1/reconciliation/trigger \
+  -H "Authorization: Bearer $ADMIN_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "supplierCode": "MMART",
+    "filePath": "gs://mymoolah-sftp-inbound/mobilemart/test_recon.csv",
+    "runType": "manual"
+  }'
+```
+
+### **Production Deployment Checklist**
+- [ ] Database migration applied to production
+- [ ] Environment variables configured
+- [ ] Supplier SSH keys configured
+- [ ] Firewall rules configured
+- [ ] SMTP configured for alerts
+- [ ] Test reconciliation run completed
+- [ ] Monitoring alerts configured
+- [ ] Documentation updated
+- [ ] Team trained on reconciliation reports
+- [ ] Backup procedures verified
+
+### **Rollback Procedure**
+```bash
+# If issues occur, rollback migration
+./scripts/rollback-reconciliation-migration.sh
+
+# Or manually
+npx sequelize-cli db:migrate:undo --name 20260113000001_create_reconciliation_system.js
+```
+
+### **Post-Deployment Monitoring**
+```bash
+# Monitor reconciliation runs
+curl -X GET "http://localhost:3001/api/v1/reconciliation/runs?limit=10" \
+  -H "Authorization: Bearer $ADMIN_JWT_TOKEN"
+
+# Monitor reconciliation analytics
+curl -X GET "http://localhost:3001/api/v1/reconciliation/analytics" \
+  -H "Authorization: Bearer $ADMIN_JWT_TOKEN"
+
+# Check audit trail integrity
+node scripts/verify-recon-audit-trail.js
+```
+
+### **Documentation**
+- **Framework**: `docs/RECONCILIATION_FRAMEWORK.md`
+- **Quick Start**: `docs/RECONCILIATION_QUICK_START.md`
+- **Testing**: `docs/TESTING_GUIDE.md#reconciliation-testing`
+- **API Reference**: `docs/API_DOCUMENTATION.md#reconciliation-api`
+
+---
 
 ## 🐳 Docker Deployment
 

@@ -2,7 +2,7 @@
 
 **For**: André (andre@mymoolah.africa)  
 **Project**: mymoolah-db  
-**Date**: November 15, 2025
+**Date**: January 13, 2026 (Updated for Reconciliation System)
 
 ---
 
@@ -116,6 +116,62 @@ cd /Users/andremacbookpro/mymoolah
 **Expected time**: 2-5 minutes
 
 **Check for success**: Should see "✅ Migrations complete!" with table count
+
+---
+
+### Step 6.5: Reconciliation System Setup (NEW - January 2026)
+```bash
+# Verify reconciliation tables created
+node -e "
+const { Sequelize } = require('sequelize');
+require('dotenv').config();
+const { getStagingDatabaseURL } = require('./scripts/db-connection-helper');
+(async () => {
+  const sequelize = new Sequelize(getStagingDatabaseURL(), { logging: false });
+  const [tables] = await sequelize.query(\`
+    SELECT table_name FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name LIKE 'recon_%'
+    ORDER BY table_name;
+  \`);
+  console.log('✅ Reconciliation Tables:', tables.map(t => t.table_name));
+  process.exit(0);
+})();
+"
+```
+
+**What it does**:
+- Verifies 4 reconciliation tables exist:
+  - `recon_supplier_configs`
+  - `recon_runs`
+  - `recon_transaction_matches`
+  - `recon_audit_trail`
+- Confirms MobileMart pre-configuration
+
+**Expected time**: 30 seconds
+
+**Check for success**: Should see all 4 reconciliation tables listed
+
+**Optional - Configure SFTP Access**:
+```bash
+# Add MobileMart SSH public key (when received)
+# Configure via Google Cloud Console or:
+gcloud compute firewall-rules create allow-mobilemart-sftp \
+  --allow=tcp:22 \
+  --source-ranges=MOBILEMART_IP_RANGE \
+  --target-tags=sftp-server
+```
+
+**Optional - Configure Email Alerts**:
+```bash
+# Add SMTP credentials to Secret Manager
+gcloud secrets create recon-smtp-password \
+  --data-file=- <<< "your-smtp-password"
+
+# Update Cloud Run service with SMTP environment variables
+gcloud run services update mymoolah-backend-staging \
+  --set-env-vars="SMTP_HOST=smtp.gmail.com,SMTP_PORT=587,SMTP_USER=alerts@mymoolah.africa" \
+  --set-secrets="SMTP_PASS=recon-smtp-password:latest"
+```
 
 ---
 

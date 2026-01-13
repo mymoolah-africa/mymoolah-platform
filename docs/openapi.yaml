@@ -1,9 +1,16 @@
 openapi: 3.0.3
 info:
   title: MyMoolah API
-  version: 1.0.0
+  version: 2.5.0
   description: |
     RESTful API for the MyMoolah banking and wallet platform.
+    
+    **NEW - January 2026**: Banking-Grade Reconciliation System
+    - 7 REST endpoints at `/api/v1/reconciliation/*`
+    - Multi-supplier transaction reconciliation
+    - Self-healing (80% auto-resolution)
+    - Immutable audit trail
+    - See docs/API_DOCUMENTATION.md for complete reconciliation API reference
 servers:
   - url: https://api.mymoolah.com
 
@@ -20,6 +27,8 @@ tags:
     description: User notifications
   - name: Support
     description: Support ticketing
+  - name: Reconciliation
+    description: Banking-grade multi-supplier transaction reconciliation (v2.5.0)
 
 paths:
   /api/wallets:

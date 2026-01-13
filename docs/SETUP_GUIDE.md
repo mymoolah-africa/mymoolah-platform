@@ -24,9 +24,9 @@ Env files
 
 ## 🎯 **Quick Start Guide**
 
-**Current Version:** 3.1.0  
-**Status:** ✅ **ALL INTEGRATIONS COMPLETE + TRANSACTION DISPLAY FIXED**  
-**Last Updated:** August 16, 2025
+**Current Version:** 2.5.0  
+**Status:** ✅ **RECONCILIATION SYSTEM COMPLETE** ✅ **ALL INTEGRATIONS COMPLETE**  
+**Last Updated:** January 13, 2026
 
 ---
 
@@ -79,6 +79,58 @@ npm install
 # Backend environment (optional - uses defaults)
 cp .env.example .env
 # Edit .env with your configuration
+```
+
+### **5. Reconciliation System Setup (NEW - January 2026)**
+```bash
+# Install reconciliation dependencies
+npm install exceljs@^4.4.0 moment-timezone@^0.5.45 csv-parse@^5.5.3 @google-cloud/storage@^7.14.0
+
+# Run reconciliation migration
+./scripts/run-migrations-master.sh uat
+
+# Verify reconciliation tables
+node -e "
+const { Sequelize } = require('sequelize');
+require('dotenv').config();
+const { getUATDatabaseURL } = require('./scripts/db-connection-helper');
+(async () => {
+  const sequelize = new Sequelize(getUATDatabaseURL(), { logging: false });
+  const [tables] = await sequelize.query(\`
+    SELECT table_name FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name LIKE 'recon_%'
+    ORDER BY table_name;
+  \`);
+  console.log('✅ Reconciliation Tables:', tables.map(t => t.table_name));
+  process.exit(0);
+})();
+"
+```
+
+**Optional - Configure SFTP Access**:
+```bash
+# Add reconciliation environment variables to .env
+echo "
+# Reconciliation System
+RECON_SFTP_HOST=34.35.168.101
+RECON_SFTP_PORT=22
+RECON_GCS_BUCKET=mymoolah-sftp-inbound
+
+# Email Alerts (Optional)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=alerts@mymoolah.africa
+SMTP_PASS=your-smtp-password
+RECON_ALERT_EMAIL=finance@mymoolah.africa
+" >> .env
+```
+
+**Run Test Suite**:
+```bash
+# Run reconciliation tests
+npm test -- tests/reconciliation.test.js
+
+# Expected: All 23+ tests passing
 ```
 
 ---
