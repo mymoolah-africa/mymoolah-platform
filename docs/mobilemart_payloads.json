@@ -1,0 +1,131 @@
+{
+  "environment": "UAT",
+  "baseUrl": "https://uat.fulcrumswitch.com",
+  "clientId": "mymoolah",
+  "testDate": "2026-01-13T13:59:00Z",
+  "summary": {
+    "workingNetworks": ["Telkom", "MTN"],
+    "failingNetworks": ["Vodacom", "CellC"]
+  },
+  "failedTransactions": {
+    "vodacom": {
+      "status": "FAILED",
+      "network": "Vodacom",
+      "mobileNumber": "0829802807",
+      "productName": "Vodacom Power 60min Voice Bundle R5",
+      "amount": 5,
+      "request": {
+        "method": "POST",
+        "endpoint": "/v1/airtime/pinless",
+        "fullUrl": "https://uat.fulcrumswitch.com/v1/airtime/pinless",
+        "payload": {
+          "requestId": "overlay_user_1768312780903_qhhfptdsw",
+          "merchantProductId": "D1eiCf7vEOVbYERfE1vZ",
+          "tenderType": "CreditCard",
+          "mobileNumber": "0829802807",
+          "amount": 5
+        }
+      },
+      "response": {
+        "httpStatus": 400,
+        "httpStatusText": "Bad Request",
+        "body": {
+          "type": "https://uat.fulcrumswitch.com/error-codes#1013",
+          "title": "Mobile Number is invalid.",
+          "status": 400,
+          "detail": "The mobile number supplied is invalid.",
+          "traceId": "00-da0fffb46e8571eb11def5213b218f5f-4c878850f5557d62-01",
+          "fulcrumErrorCode": 1013,
+          "msisdn": "0829802807"
+        }
+      },
+      "errorAnalysis": {
+        "errorCode": 1013,
+        "errorMessage": "Mobile Number is invalid.",
+        "traceId": "00-da0fffb46e8571eb11def5213b218f5f-4c878850f5557d62-01",
+        "possibleCauses": [
+          "UAT environment only accepts whitelisted test numbers for Vodacom",
+          "Product D1eiCf7vEOVbYERfE1vZ may not be available in UAT",
+          "Mobile number format issue (though format appears correct: 10 digits, starts with 0)"
+        ]
+      }
+    },
+    "cellc": {
+      "status": "FAILED",
+      "network": "CellC",
+      "variantId": 403,
+      "amount": 20,
+      "request": {
+        "note": "Full MobileMart API payload not captured in logs",
+        "myMoolahRequest": {
+          "beneficiaryId": "22",
+          "productId": "403",
+          "amount": 20,
+          "idempotencyKey": "overlay_user_1768307527715_ut23g7gfr"
+        }
+      },
+      "response": {
+        "httpStatus": 400,
+        "httpStatusText": "Bad Request",
+        "errorMessage": "This mobile number cannot be recharged on the CellC network. Please verify the mobile number belongs to CellC or select a different product."
+      },
+      "errorAnalysis": {
+        "possibleCauses": [
+          "Similar UAT restriction as Vodacom",
+          "Mobile number may not be a valid CellC number",
+          "Product availability issue in UAT"
+        ]
+      }
+    }
+  },
+  "successfulTransactions": {
+    "telkom": {
+      "status": "SUCCESS",
+      "network": "Telkom",
+      "note": "Working 100% - Payload not captured in provided logs. Need to extract from Codespaces backend logs or perform new test transaction."
+    },
+    "mtn": {
+      "status": "SUCCESS",
+      "network": "MTN",
+      "note": "Working 100% - Payload not captured in provided logs. Need to extract from Codespaces backend logs or perform new test transaction."
+    }
+  },
+  "questionsForMobileMart": [
+    {
+      "question": "Are there specific whitelisted test numbers for Vodacom/CellC in UAT?",
+      "context": "Telkom and MTN work perfectly, suggesting our integration is correct, but Vodacom and CellC fail with invalid number errors."
+    },
+    {
+      "question": "Is product 'D1eiCf7vEOVbYERfE1vZ' (Vodacom Power 60min Voice Bundle R5) available in UAT?",
+      "context": "Receiving error 1013 'Mobile Number is invalid' which may actually be a product availability issue."
+    },
+    {
+      "question": "What mobile number formats should we use for testing each network in UAT?",
+      "context": "We're using standard SA format (0829802807) which works for Telkom/MTN but fails for Vodacom/CellC."
+    },
+    {
+      "question": "Can you provide test mobile numbers for all networks (Vodacom, CellC, MTN, Telkom)?",
+      "context": "To ensure comprehensive UAT testing before production deployment."
+    }
+  ],
+  "technicalDetails": {
+    "authenticationStatus": "Working ✅",
+    "tokenEndpoint": "https://uat.fulcrumswitch.com/connect/token",
+    "grantType": "client_credentials",
+    "tokenType": "Bearer",
+    "tokenExpiresIn": 7199,
+    "integrationStatus": {
+      "mobileMartAuthService": "Working",
+      "tokenGeneration": "Successful",
+      "requestFormat": "Validated (evidenced by Telkom/MTN success)",
+      "responseHandling": "Working"
+    }
+  },
+  "nextSteps": [
+    "Extract successful Telkom/MTN payloads from Codespaces logs",
+    "Send complete report to MobileMart support",
+    "Request UAT test numbers for all networks",
+    "Verify product availability in UAT for Vodacom/CellC",
+    "Re-test with MobileMart-provided test numbers"
+  ]
+}

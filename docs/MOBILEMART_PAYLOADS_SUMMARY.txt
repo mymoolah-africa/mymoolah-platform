@@ -1,0 +1,141 @@
+================================================================================
+MOBILEMART UAT API PAYLOADS - QUICK REFERENCE FOR SUPPORT TICKET
+================================================================================
+Date: 2026-01-13 13:59 UTC
+Environment: UAT (https://uat.fulcrumswitch.com)
+Issue: Vodacom & CellC failing, Telkom & MTN working
+
+================================================================================
+❌ FAILED: VODACOM TRANSACTION
+================================================================================
+
+Mobile Number: 0829802807
+Product: Vodacom Power 60min Voice Bundle R5
+Amount: R5.00
+
+REQUEST TO MOBILEMART:
+----------------------
+POST https://uat.fulcrumswitch.com/v1/airtime/pinless
+
+{
+  "requestId": "overlay_user_1768312780903_qhhfptdsw",
+  "merchantProductId": "D1eiCf7vEOVbYERfE1vZ",
+  "tenderType": "CreditCard",
+  "mobileNumber": "0829802807",
+  "amount": 5
+}
+
+RESPONSE FROM MOBILEMART:
+-------------------------
+HTTP 400 Bad Request
+
+{
+  "type": "https://uat.fulcrumswitch.com/error-codes#1013",
+  "title": "Mobile Number is invalid.",
+  "status": 400,
+  "detail": "The mobile number supplied is invalid.",
+  "traceId": "00-da0fffb46e8571eb11def5213b218f5f-4c878850f5557d62-01",
+  "fulcrumErrorCode": 1013,
+  "msisdn": "0829802807"
+}
+
+ERROR CODE: 1013
+ERROR MESSAGE: "Mobile Number is invalid."
+
+
+================================================================================
+❌ FAILED: CELLC TRANSACTION
+================================================================================
+
+Variant ID: 403
+Amount: R20.00
+
+REQUEST TO MYMOOLAH API:
+------------------------
+{
+  "beneficiaryId": "22",
+  "productId": "403",
+  "amount": 20,
+  "idempotencyKey": "overlay_user_1768307527715_ut23g7gfr"
+}
+
+RESPONSE:
+---------
+HTTP 400 Bad Request
+
+"This mobile number cannot be recharged on the CellC network. 
+Please verify the mobile number belongs to CellC or select a different product."
+
+NOTE: Full MobileMart API request/response not captured in logs.
+
+
+================================================================================
+✅ SUCCESSFUL: TELKOM & MTN TRANSACTIONS
+================================================================================
+
+Status: Working 100% ✅
+Payloads: NOT CAPTURED in provided console logs
+
+TO EXTRACT:
+-----------
+In Codespaces, run:
+  cd /workspaces/mymoolah-platform
+  grep -A 20 "MobileMart request:" logs/*.log | grep -i telkom -B 5 -A 15
+  grep -A 20 "MobileMart request:" logs/*.log | grep -i mtn -B 5 -A 15
+
+OR make new test purchases and capture backend terminal output.
+
+
+================================================================================
+QUESTIONS FOR MOBILEMART SUPPORT
+================================================================================
+
+1. Are there specific whitelisted test numbers for Vodacom/CellC in UAT?
+   
+2. Is product "D1eiCf7vEOVbYERfE1vZ" (Vodacom Power 60min Voice Bundle R5) 
+   available in UAT environment?
+   
+3. Why does error 1013 occur for "0829802807" when this appears to be a 
+   correctly formatted South African mobile number?
+   
+4. Why do Telkom and MTN work perfectly but Vodacom and CellC fail?
+   
+5. What mobile number formats/ranges should we use for testing each network 
+   in UAT?
+
+
+================================================================================
+KEY OBSERVATIONS
+================================================================================
+
+✅ WORKING:
+  - Telkom airtime purchases
+  - MTN airtime purchases
+  - MyMoolah → MobileMart authentication (token generation working)
+  - Request format (validated by working networks)
+
+❌ FAILING:
+  - Vodacom (Error 1013: "Mobile Number is invalid")
+  - CellC ("cannot be recharged on the CellC network")
+
+CONCLUSION:
+  - Integration code is correct (evidenced by Telkom/MTN success)
+  - Issue appears to be UAT environment restrictions for specific networks
+  - Likely need whitelisted test numbers for Vodacom/CellC
+
+
+================================================================================
+CONTACT INFORMATION
+================================================================================
+
+Client: MyMoolah
+Environment: UAT
+Client ID: mymoolah (UAT credentials)
+Trace ID (Vodacom): 00-da0fffb46e8571eb11def5213b218f5f-4c878850f5557d62-01
+
+Full technical report: docs/MOBILEMART_UAT_API_PAYLOADS.md
+
+
+================================================================================
+END OF SUMMARY
+================================================================================
