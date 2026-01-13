@@ -10,7 +10,13 @@
 'use strict';
 
 const db = require('../../models');
-const logger = require('../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[AuditLogger]', ...args),
+  error: (...args) => console.error('[AuditLogger]', ...args),
+  warn: (...args) => console.warn('[AuditLogger]', ...args),
+  debug: (...args) => console.log('[AuditLogger]', ...args)
+};
 
 class AuditLogger {
   /**

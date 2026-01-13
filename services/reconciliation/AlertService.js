@@ -12,7 +12,13 @@
 
 'use strict';
 
-const logger = require('../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[AlertService]', ...args),
+  error: (...args) => console.error('[AlertService]', ...args),
+  warn: (...args) => console.warn('[AlertService]', ...args),
+  debug: (...args) => console.log('[AlertService]', ...args)
+};
 const nodemailer = require('nodemailer');
 const path = require('path');
 

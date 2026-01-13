@@ -13,7 +13,13 @@
 
 'use strict';
 
-const logger = require('../../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[MobileMartAdapter]', ...args),
+  error: (...args) => console.error('[MobileMartAdapter]', ...args),
+  warn: (...args) => console.warn('[MobileMartAdapter]', ...args),
+  debug: (...args) => console.log('[MobileMartAdapter]', ...args)
+};
 const { parse } = require('csv-parse/sync');
 const moment = require('moment-timezone');
 

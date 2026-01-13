@@ -11,7 +11,13 @@
 
 'use strict';
 
-const logger = require('../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[MatchingEngine]', ...args),
+  error: (...args) => console.error('[MatchingEngine]', ...args),
+  warn: (...args) => console.warn('[MatchingEngine]', ...args),
+  debug: (...args) => console.log('[MatchingEngine]', ...args)
+};
 const db = require('../../models');
 const moment = require('moment');
 

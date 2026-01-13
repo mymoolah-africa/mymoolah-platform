@@ -13,7 +13,13 @@
 
 'use strict';
 
-const logger = require('../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[DiscrepancyDetector]', ...args),
+  error: (...args) => console.error('[DiscrepancyDetector]', ...args),
+  warn: (...args) => console.warn('[DiscrepancyDetector]', ...args),
+  debug: (...args) => console.log('[DiscrepancyDetector]', ...args)
+};
 const db = require('../../models');
 const moment = require('moment');
 

@@ -12,7 +12,13 @@
 
 const fs = require('fs').promises;
 const crypto = require('crypto');
-const logger = require('../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[FileParserService]', ...args),
+  error: (...args) => console.error('[FileParserService]', ...args),
+  warn: (...args) => console.warn('[FileParserService]', ...args),
+  debug: (...args) => console.log('[FileParserService]', ...args)
+};
 const MobileMartAdapter = require('./adapters/MobileMartAdapter');
 
 class FileParserService {

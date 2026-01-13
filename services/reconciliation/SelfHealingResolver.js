@@ -13,7 +13,13 @@
 
 'use strict';
 
-const logger = require('../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[SelfHealingResolver]', ...args),
+  error: (...args) => console.error('[SelfHealingResolver]', ...args),
+  warn: (...args) => console.warn('[SelfHealingResolver]', ...args),
+  debug: (...args) => console.log('[SelfHealingResolver]', ...args)
+};
 const db = require('../../models');
 
 class SelfHealingResolver {

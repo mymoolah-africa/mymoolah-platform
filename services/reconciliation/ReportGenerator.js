@@ -11,7 +11,13 @@
 
 'use strict';
 
-const logger = require('../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[ReportGenerator]', ...args),
+  error: (...args) => console.error('[ReportGenerator]', ...args),
+  warn: (...args) => console.warn('[ReportGenerator]', ...args),
+  debug: (...args) => console.log('[ReportGenerator]', ...args)
+};
 const db = require('../../models');
 const path = require('path');
 const fs = require('fs').promises;

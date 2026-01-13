@@ -10,7 +10,13 @@
 
 'use strict';
 
-const logger = require('../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[ReconciliationOrchestrator]', ...args),
+  error: (...args) => console.error('[ReconciliationOrchestrator]', ...args),
+  warn: (...args) => console.warn('[ReconciliationOrchestrator]', ...args),
+  debug: (...args) => console.log('[ReconciliationOrchestrator]', ...args)
+};
 const db = require('../../models');
 const FileParserService = require('./FileParserService');
 const MatchingEngine = require('./MatchingEngine');

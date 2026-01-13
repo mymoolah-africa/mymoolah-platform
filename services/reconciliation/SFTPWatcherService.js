@@ -12,7 +12,13 @@
 'use strict';
 
 const { Storage } = require('@google-cloud/storage');
-const logger = require('../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[SFTPWatcherService]', ...args),
+  error: (...args) => console.error('[SFTPWatcherService]', ...args),
+  warn: (...args) => console.warn('[SFTPWatcherService]', ...args),
+  debug: (...args) => console.log('[SFTPWatcherService]', ...args)
+};
 const db = require('../../models');
 const ReconciliationOrchestrator = require('./ReconciliationOrchestrator');
 const path = require('path');

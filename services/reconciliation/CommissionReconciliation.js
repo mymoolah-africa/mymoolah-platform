@@ -11,7 +11,13 @@
 
 'use strict';
 
-const logger = require('../../utils/logger');
+// Simple logger using console (matches other services in the project)
+const logger = {
+  info: (...args) => console.log('[CommissionReconciliation]', ...args),
+  error: (...args) => console.error('[CommissionReconciliation]', ...args),
+  warn: (...args) => console.warn('[CommissionReconciliation]', ...args),
+  debug: (...args) => console.log('[CommissionReconciliation]', ...args)
+};
 const db = require('../../models');
 
 class CommissionReconciliation {
