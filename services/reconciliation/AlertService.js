@@ -24,16 +24,29 @@ const path = require('path');
 
 class AlertService {
   constructor() {
-    // Configure email transporter
-    this.transporter = nodemailer.createTransporter({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: process.env.SMTP_PORT || 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
+    // Only configure email transporter if SMTP credentials are provided
+    this.transporter = null;
+    this.smtpConfigured = false;
+    
+    if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+      try {
+        this.transporter = nodemailer.createTransporter({
+          host: process.env.SMTP_HOST || 'smtp.gmail.com',
+          port: process.env.SMTP_PORT || 587,
+          secure: false,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        });
+        this.smtpConfigured = true;
+        logger.info('Email alerts configured');
+      } catch (error) {
+        logger.warn('Failed to configure email transporter:', error.message);
       }
-    });
+    } else {
+      logger.info('SMTP not configured - email alerts disabled (set SMTP_USER and SMTP_PASS to enable)');
+    }
   }
   
   /**
@@ -44,6 +57,15 @@ class AlertService {
    * @param {Object} options - Alert options
    */
   async sendReconAlert(reconRun, supplierConfig, options = {}) {
+    // Skip if SMTP not configured
+    if (!this.smtpConfigured) {
+      logger.info('[AlertService] Skipping email alert (SMTP not configured)', {
+        run_id: reconRun.run_id,
+        supplier: supplierConfig.supplier_name
+      });
+      return { success: false, message: 'SMTP not configured' };
+    }
+    
     try {
       const severity = options.severity || 'medium';
       const recipients = supplierConfig.alert_email || ['finance@mymoolah.africa'];
@@ -283,6 +305,14 @@ class AlertService {
    * Send SLA breach alert
    */
   async sendSLABreachAlert(supplierConfig) {
+    // Skip if SMTP not configured
+    if (!this.smtpConfigured) {
+      logger.info('[AlertService] Skipping SLA breach alert (SMTP not configured)', {
+        supplier: supplierConfig.supplier_name
+      });
+      return { success: false, message: 'SMTP not configured' };
+    }
+    
     try {
       const recipients = supplierConfig.alert_email || ['finance@mymoolah.africa'];
       
