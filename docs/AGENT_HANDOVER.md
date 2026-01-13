@@ -1,7 +1,86 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-01-13  
-**Latest Feature**: Banking-Grade Automated Reconciliation System
+**Latest Feature**: Banking-Grade Automated Reconciliation System  
+**Document Version**: 2.5.0  
+**Classification**: Internal - Banking-Grade Operations Manual
+
+---
+
+## 📋 **TABLE OF CONTENTS**
+
+### **I. Critical Requirements (MUST READ FIRST)**
+1. [Critical: New Agents Must Read Rules First](#-critical-new-agents-must-read-rules-first-)
+2. [Critical: All Testing Must Be in Codespaces](#-critical-all-testing-must-be-in-codespaces-)
+3. [Critical: Never Use Git Worktrees](#-critical-never-use-git-worktrees-)
+
+### **II. Operating Principles**
+4. [Agent Operating Principles](#-agent-operating-principles-mandatory-reading)
+5. [Decision Gates](#decision-gates)
+6. [Common Anti-Patterns](#common-anti-patterns-avoid-these)
+
+### **III. Current Project Status**
+7. [Current Session Summary](#-current-session-summary)
+8. [Recent Updates](#recent-updates-chronological)
+9. [Reconciliation System](#-new-reconciliation-system---deployed-to-uat--completed-2026-01-13)
+
+### **IV. System Architecture & Integrations**
+10. [Peach Payments Integration](#-peach-payments-integration---complete-implementation)
+11. [Zapper Integration](#-zapper-integration---comprehensive-review)
+12. [MMAP (MyMoolah Admin Portal)](#-mmap-mymoolah-admin-portal-implementation-details)
+13. [Figma Design System](#-figma-design-system-integration)
+
+### **V. Operations & Maintenance**
+14. [Current System Status](#-current-system-status)
+15. [Next Development Priorities](#-next-development-priorities)
+16. [Technical Debt & Maintenance](#-technical-debt--maintenance)
+17. [Documentation Status](#-documentation-status)
+18. [Testing & Validation](#-testing--validation)
+
+### **VI. Reference Information**
+19. [Critical Information](#-critical-information)
+20. [Support & Contacts](#-support--contacts)
+21. [Success Metrics](#-success-metrics)
+22. [Reminders & Pending Tasks](#-reminders--pending-tasks)
+23. [Recommendations for Next Agent](#-recommendations-for-next-agent)
+
+---
+
+## 📊 **EXECUTIVE SUMMARY**
+
+### **Platform Status**
+The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
+
+### **Latest Achievement (January 13, 2026)**
+**Banking-Grade Automated Reconciliation System** - Complete multi-supplier transaction reconciliation with self-healing capabilities (80% auto-resolution), immutable audit trails, and <200ms performance per transaction.
+
+### **Core Capabilities**
+- ✅ **Multi-Supplier Payments**: MobileMart (1,769 products), Zapper QR, Peach Payments (archived)
+- ✅ **Advanced Features**: 5-tier referral system, KYC/FICA compliance, real-time notifications
+- ✅ **Banking-Grade Security**: TLS 1.3, JWT HS512, AES-256-GCM, RBAC, immutable audit trails
+- ✅ **Global Reach**: 11 languages (English, Afrikaans, Zulu, Xhosa, Sotho, Tswana, Pedi, Venda, Tsonga, Ndebele, Swati)
+- ✅ **Production Infrastructure**: Google Cloud Platform (Staging + Production), Cloud SQL, Secret Manager
+- ✅ **Reconciliation**: Automated multi-supplier recon, self-healing, 99%+ match rate, SFTP integration
+
+### **Technology Stack**
+- **Backend**: Node.js 22.x, Express.js, Sequelize ORM, PostgreSQL 15.x
+- **Frontend**: React 18.x, TypeScript, Tailwind CSS
+- **Infrastructure**: Google Cloud Run, Cloud SQL, Secret Manager, Cloud Storage, Load Balancers
+- **Security**: Google Cloud IAM, TLS 1.3, JWT HS512, bcrypt, rate limiting
+- **Integrations**: MobileMart API, Zapper API, Google Cloud Services, SMTP alerts
+
+### **Key Performance Indicators**
+- API Response Time: <200ms (target)
+- Database Queries: <50ms (target)
+- Throughput: >1,000 requests/second
+- Availability: 99.95% uptime
+- Match Rate: >99% (reconciliation)
+- Auto-Resolution: 80% (reconciliation)
+
+### **Critical Reading Requirements**
+1. **`docs/CURSOR_2.0_RULES_FINAL.md`** - MANDATORY reading before any work
+2. **`docs/DATABASE_CONNECTION_GUIDE.md`** - MANDATORY for database operations
+3. **This document (AGENT_HANDOVER.md)** - Complete operational context
 
 ---
 
@@ -811,42 +890,6 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
   - `controllers/requestController.js` - Added notification creation on decline
 - **Status**: ✅ Complete and tested - requester now receives decline notification
 
-### **🔔 REAL-TIME NOTIFICATION UPDATES - COMPLETE (2025-12-04)** ✅
-- **Problem**: Users had to logout/login to see new notifications (poor UX)
-- **Solution Implemented**: Both Option 1 (auto-refresh on bell click) + Option 2 (smart polling)
-- **Option 1 - Auto-Refresh**: Notification bell click automatically refreshes notifications before showing panel
-- **Option 2 - Smart Polling**: Automatic polling every 10 seconds when tab is visible, pauses when hidden
-- **Polling Interval**: 10 seconds (balanced between responsiveness and server load)
-- **Resource Efficiency**: Automatically pauses when browser tab is hidden, resumes when visible
-- **Files Modified**:
-  - `mymoolah-wallet-frontend/components/TopBanner.tsx` - Added refreshNotifications() on bell click
-  - `mymoolah-wallet-frontend/contexts/MoolahContext.tsx` - Added smart polling with tab visibility awareness
-- **User Experience**: Users now receive notifications automatically within 10 seconds, no logout/login required
-- **Status**: ✅ Complete and tested - notifications work in real-time
-
-### **💻 INPUT FIELD STABILITY FIX - COMPLETE (2025-12-04)** ✅
-- **Issue**: Payment request amount field was auto-changing from R10 to R9.95
-- **Root Cause**: Input field used `type="number"` which causes browser auto-formatting
-- **Fix Applied**: Changed to `type="text"` with banking-grade input stability pattern (same as voucher redeem field)
-- **Files Modified**:
-  - `mymoolah-wallet-frontend/pages/RequestMoneyPage.tsx` - Applied banking-grade input protections
-- **Status**: ✅ Fixed - amount no longer auto-changes
-
-### **🔧 PAYMENT REQUEST ERROR HANDLING - COMPLETE (2025-12-04)** ✅
-- **Improvement**: Enhanced error handling for payment request respond endpoint
-- **Features**: Better error logging, graceful 404 handling, detailed error information
-- **Files Modified**:
-  - `mymoolah-wallet-frontend/contexts/MoolahContext.tsx` - Improved error handling
-- **Status**: ✅ Complete - better debugging and user experience
-
-### **📬 DECLINE NOTIFICATION IMPLEMENTATION - COMPLETE (2025-12-04)** ✅
-- **Issue**: When payment request was declined, requester did not receive notification
-- **Fix Applied**: Added notification creation when payment request is declined
-- **Implementation**: Notification sent to requester after transaction commit (non-blocking)
-- **Files Modified**:
-  - `controllers/requestController.js` - Added notification creation on decline
-- **Status**: ✅ Complete and tested - requester now receives decline notification
-
 ### **🚀 LAUNCH STRATEGY: PINLESS PRODUCTS & STRICT BENEFICIARY FILTERING - COMPLETE (2025-12-04)** ✅
 - **Launch Strategy Implementation**: Implemented product filtering and beneficiary filtering for launch
 - **Product Sync Filtering**: Updated MobileMart product sync to filter products based on launch requirements:
@@ -917,8 +960,6 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 - **Status**: ✅ Proposal documented, ⏳ Awaiting Standard Bank approval and API credentials
 
 ### **📦 PEACH PAYMENTS INTEGRATION ARCHIVAL - COMPLETE (2025-11-26)** ✅
-
-### **📦 PEACH PAYMENTS INTEGRATION ARCHIVAL - COMPLETE (2025-11-26)** ✅
 - **Business Reason**: Peach Payments temporarily canceled integration agreement due to PayShap provider competition with MyMoolah
 - **Archive Flag**: Added `PEACH_INTEGRATION_ARCHIVED=true` to `.env` files (local and Codespaces)
 - **Route Disabling**: Updated `server.js` to conditionally load Peach routes - routes disabled when archived
@@ -932,8 +973,6 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 - **Banking-Grade Archival**: Follows banking best practices for deprecated integrations and Mojaloop service lifecycle management
 - **Files Modified**: `config/security.js`, `server.js`, `docs/archive/PEACH_ARCHIVAL_RECORD.md`, `docs/integrations/PeachPayments.md`, `docs/changelog.md`, `docs/agent_handover.md`
 - **Status**: ✅ Integration archived, ✅ Routes disabled, ✅ Zero resource consumption, ✅ Code and data preserved, ✅ Reactivation procedure documented
-
-### **🔧 CORS FIX, PASSWORD & KYC SCRIPTS - COMPLETE (2025-11-22)** ✅
 
 ### **🔧 CORS FIX, PASSWORD & KYC SCRIPTS - COMPLETE (2025-11-22)** ✅
 - **CORS Fix**: Fixed CORS configuration for Codespaces URLs - improved regex pattern to explicitly match `*.app.github.dev` and `*.github.dev` patterns
@@ -1042,12 +1081,9 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 - **Next Actions**:
   1. Run the latency sampler after backend changes (`node scripts/perf-test-api-latencies.js` with valid wallet creds).
   2. Prioritize caching/indexing work for `/suppliers/trending`, `/suppliers/compare/*`, `/settings`, and voucher-heavy endpoints called out by the script.
-  3. Consider extracting a `TRANSACTION_FEE_LABEL` constant so future work can’t drift back to provider-specific wording.
+  3. Consider extracting a `TRANSACTION_FEE_LABEL` constant so future work can't drift back to provider-specific wording.
 
 ### **🤖 gpt-4o UPGRADE & CODEBASE SWEEP OPTIMIZATION - COMPLETE** ✅
-This session upgraded all OpenAI models from GPT-4o/gpt-4o to gpt-4o, fixed API compatibility issues (max_tokens → max_completion_tokens, removed temperature parameters), added codebase sweep disable feature to save OpenAI tokens during development, improved server startup performance with delayed sweep, enhanced startup script to automatically refresh Google Cloud ADC credentials, and improved beneficiary service token handling.
-
-### **📋 gpt-4o UPGRADE & CODEBASE SWEEP OPTIMIZATION - COMPLETE** ✅
 - **Model Upgrade**: All OpenAI models upgraded from `gpt-4`, `gpt-4o`, and `gpt-4o` to `gpt-4o` (17 occurrences across 8 files)
 - **API Compatibility**: Updated API parameters from `max_tokens` to `max_completion_tokens` (gpt-4o requirement)
 - **Temperature Parameter**: Removed all `temperature` parameters (gpt-4o only supports default value of 1)
@@ -1123,22 +1159,6 @@ Previous session implemented comprehensive validation for South African driver's
 - ⏳ Test with actual SA driver's license to verify all format handling
 - ⏳ Verify Tesseract OCR fallback works when OpenAI refuses
 - ⏳ Remove temporary testing exception for user ID 1 once validation confirmed
-
-### **🚀 PREVIOUS SESSION: GCP STAGING DEPLOYMENT SCRIPTS COMPLETE**
-Previous session created comprehensive deployment scripts and documentation for migrating the entire MyMoolah Treasury Platform (MMTP) to Google Cloud Staging. All scripts follow banking-grade security standards, Mojaloop FSPIOP compliance, and cost-optimized architecture. Scripts are ready for execution - user needs to authenticate with gcloud and run them in sequence.
-
-### **📋 GCP STAGING DEPLOYMENT - SCRIPTS READY** ✅
-- **Database Setup Script**: `scripts/setup-staging-database.sh` - Creates database, user, stores password in Secret Manager
-- **Secrets Setup Script**: `scripts/setup-secrets-staging.sh` - Stores all Zapper and application secrets
-- **Service Account Script**: `scripts/create-cloud-run-service-account.sh` - Creates IAM service account with permissions
-- **Docker Build Script**: `scripts/build-and-push-docker.sh` - Builds and pushes Docker image to GCR
-- **Cloud Run Deployment**: `scripts/deploy-cloud-run-staging.sh` - Deploys service with cost-optimized configuration
-- **Migrations Script**: `scripts/run-migrations-staging.sh` - Runs database migrations via Cloud SQL Auth Proxy
-- **Testing Script**: `scripts/test-staging-service.sh` - Tests deployed service endpoints
-- **Documentation**: `docs/GCP_STAGING_DEPLOYMENT.md` - Complete deployment guide
-- **Dockerfile Updated**: Cloud Run compatible (non-root user, PORT env var, health checks)
-- **Server.js Updated**: Reads `process.env.PORT` for Cloud Run compatibility
-- **Status**: ✅ All scripts created and ready, ⏳ Awaiting user execution (requires gcloud auth)
 
 ### **🌐 STAGING CUSTOM DOMAINS & HTTPS LOAD BALANCER - COMPLETE (2025-11-21)** ✅
 - **Domains Live**: `staging.mymoolah.africa` (API) and `stagingwallet.mymoolah.africa` (wallet UI) secured via global HTTPS load balancer.
@@ -1446,21 +1466,6 @@ Previous session successfully created **banking-grade Staging and Production Clo
 - **Test Suite**: Comprehensive test suite with all scenarios passing
 - **Production Ready**: Code ready for production with float account setup
 - **Documentation**: Complete integration documentation and testing guides
-
-### **🔍 ZAPPER INTEGRATION - UAT TESTING COMPLETE** ✅
-- **UAT Test Suite**: Comprehensive test suite created (`scripts/test-zapper-uat-complete.js`) with 20 tests
-- **Test Results**: 92.3% success rate (12/13 critical tests passed)
-- **Payment History**: Added `getPaymentHistory()` and `getCustomerPaymentHistory()` methods
-- **Health Check Fix**: Updated to handle Bearer token requirement in UAT
-- **Core Functionality**: All critical payment features verified and working
-  - ✅ Authentication (3/3): Service account login, token reuse, expiry handling
-  - ✅ QR Code Decoding (3/3): Valid codes, invalid codes, URL format
-  - ✅ Payment History (2/2): Organization (7 payments found), Customer (1 payment found)
-  - ✅ End-to-End Payment Flow (1/1): Complete payment processing verified
-  - ✅ Error Handling (2/2): Invalid authentication, invalid API key
-- **Frontend**: Removed "coming soon" banner from QR payment page (integration is live)
-- **Status**: ✅ Ready for production credentials request
-- **Documentation**: Complete UAT test report created (`docs/ZAPPER_UAT_TEST_REPORT.md`)
 
 ### **🏢 MMAP (MyMoolah Admin Portal) Foundation** ✅ **COMPLETED**
 This session successfully implemented the **foundation of the MyMoolah Admin Portal (MMAP)** with **banking-grade architecture**, **Figma design integration**, and **complete portal infrastructure** for the MyMoolah Treasury Platform.
