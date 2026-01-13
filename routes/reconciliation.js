@@ -23,7 +23,7 @@ const logger = {
   warn: (...args) => console.warn('[ReconciliationRoutes]', ...args),
   debug: (...args) => console.log('[ReconciliationRoutes]', ...args)
 };
-const { authenticateToken } = require('../middleware/auth');
+const authenticateToken = require('../middleware/auth'); // Default export, not destructured
 
 const orchestrator = new ReconciliationOrchestrator();
 
