@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-01-13  
-**Latest Feature**: Banking-Grade Automated Reconciliation System  
-**Document Version**: 2.5.0  
+**Last Updated**: 2026-01-14  
+**Latest Feature**: Flash Reconciliation Integration & SFTP IP Standardization  
+**Document Version**: 2.5.1  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -22,7 +22,7 @@
 ### **III. Current Project Status**
 7. [Current Session Summary](#-current-session-summary)
 8. [Recent Updates](#recent-updates-chronological)
-9. [Reconciliation System](#-new-reconciliation-system---deployed-to-uat--completed-2026-01-13)
+9. [Reconciliation System](#-new-reconciliation-system---deployed-to-uat--mobilemart--flash-completed-2026-01-13--2026-01-14)
 
 ### **IV. System Architecture & Integrations**
 10. [Peach Payments Integration](#-peach-payments-integration---complete-implementation)
@@ -51,8 +51,11 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (January 13, 2026)**
-**Banking-Grade Automated Reconciliation System** - Complete multi-supplier transaction reconciliation with self-healing capabilities (80% auto-resolution), immutable audit trails, and <200ms performance per transaction.
+### **Latest Achievement (January 14, 2026)**
+**Flash Reconciliation Integration & SFTP IP Standardization** - Complete Flash supplier reconciliation system integrated (FlashAdapter, file generator, database config), SFTP infrastructure standardized to static IP (34.35.137.166), both MobileMart and Flash configured for automated reconciliation.
+
+### **Previous Achievement (January 13, 2026)**
+**Banking-Grade Automated Reconciliation System** - Complete multi-supplier transaction reconciliation framework with self-healing capabilities (80% auto-resolution), immutable audit trails, and <200ms performance per transaction.
 
 ### **Core Capabilities**
 - ✅ **Multi-Supplier Payments**: MobileMart (1,769 products), Zapper QR, Peach Payments (archived)
@@ -60,7 +63,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 - ✅ **Banking-Grade Security**: TLS 1.3, JWT HS512, AES-256-GCM, RBAC, immutable audit trails
 - ✅ **Global Reach**: 11 languages (English, Afrikaans, Zulu, Xhosa, Sotho, Tswana, Pedi, Venda, Tsonga, Ndebele, Swati)
 - ✅ **Production Infrastructure**: Google Cloud Platform (Staging + Production), Cloud SQL, Secret Manager
-- ✅ **Reconciliation**: Automated multi-supplier recon, self-healing, 99%+ match rate, SFTP integration
+- ✅ **Reconciliation**: Automated multi-supplier recon (MobileMart + Flash), self-healing, 99%+ match rate, SFTP integration (static IP: 34.35.137.166)
 
 ### **Technology Stack**
 - **Backend**: Node.js 22.x, Express.js, Sequelize ORM, PostgreSQL 15.x
@@ -787,13 +790,24 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 - Startup log ordering fixed: “🎉 All background services started successfully” now prints after services start/server listen. Ledger readiness check remains (warn in dev, fail in prod if missing).
 - Outstanding: adjust specific product rates if business requests; seed non-Flash suppliers similarly if needed.
 
-### NEW: SFTP Gateway for MobileMart (2025-12-08) ✅ infrastructure in place
-- Provisioned SFTP Gateway Standard VM `sftp-1-vm` (africa-south1-a) using instance service account `sftp-gateway` with full API access.
-- GCS bucket `mymoolah-sftp-inbound` (africa-south1, private, uniform, versioning on) connected via “Use instance’s service account”; read/write verified.
-- Folder/prefix created for `mobilemart` (home directory). User `mobilemart` to be finalized once their SSH public key is received.
-- Firewall: SSH 22 and HTTPS 443 restricted to admin IP and tag `sftp-1-deployment`; update allowlist with MobileMart IP/CIDR when provided.
-- Connection details (after key install): host 34.35.137.166, port 22, username `mobilemart`, key auth only. Self-signed cert expected on UI (https).
-- TODO: Add MobileMart public key, add their IP/CIDR to firewall, create/enable SFTP user, and (optional) add GCS event trigger for recon ingestion.
+### NEW: SFTP Gateway for Reconciliation (2025-12-08, Updated 2026-01-14) ✅ infrastructure in place
+- **VM**: SFTP Gateway Standard VM `sftp-1-vm` (africa-south1-a) using instance service account `sftp-gateway` with full API access.
+- **Static IP**: `34.35.137.166` (attached January 14, 2026 - was ephemeral `34.35.168.101`)
+- **GCS Bucket**: `mymoolah-sftp-inbound` (africa-south1, private, uniform, versioning on) connected via "Use instance's service account"; read/write verified.
+- **MobileMart Configuration**:
+  - Folder/prefix: `/home/mobilemart` → `gs://mymoolah-sftp-inbound/mobilemart/`
+  - Username: `mobilemart` (to be finalized once SSH public key is received)
+  - Connection: host `34.35.137.166`, port 22, key auth only
+- **Flash Configuration** (2026-01-14):
+  - Folder/prefix: `/home/flash` → `gs://mymoolah-sftp-inbound/flash/`
+  - Username: `flash` (to be finalized once SSH public key is received)
+  - Connection: host `34.35.137.166`, port 22, key auth only
+- **Firewall**: SSH 22 and HTTPS 443 restricted to admin IP and tag `sftp-1-deployment`; update allowlist with supplier IP/CIDR ranges when provided.
+- **TODO**: 
+  - Add MobileMart SSH public key and IP/CIDR to firewall
+  - Add Flash SSH public key and IP/CIDR to firewall
+  - Create/enable SFTP users for both suppliers
+  - (Optional) Add GCS event trigger for recon ingestion
 
 ### NEW: Airtime/Data Beneficiary Cleanup (2025-12-08) ✅ frontend filtering
 - Change: Frontend now skips creating fallback accounts for airtime/data when no active services exist, preventing removed beneficiaries from reappearing as stale entries.
@@ -2245,19 +2259,20 @@ LOG_LEVEL=warn
 
 ## ⏰ **REMINDERS & PENDING TASKS**
 
-### **🆕 NEW: Reconciliation System - DEPLOYED TO UAT** ✅ COMPLETED (2026-01-13)
-- **Status**: ✅ **Deployed to UAT** (Migration: 3.543s, 0 vulnerabilities)
+### **🆕 NEW: Reconciliation System - DEPLOYED TO UAT** ✅ COMPLETED (2026-01-13, Flash added 2026-01-14)
+- **Status**: ✅ **Deployed to UAT** (MobileMart + Flash configured)
 - **What was built**:
   - Banking-grade automated reconciliation system
-  - Multi-supplier support (starting with MobileMart)
+  - Multi-supplier support (MobileMart + Flash configured, extensible for others)
   - Database schema (4 tables: configs, runs, matches, audit trail)
-  - 11 core services (orchestrator, matching, discrepancy detection, self-healing)
+  - 12 core services (orchestrator, audit logger, parser, MobileMart adapter, Flash adapter, matching, discrepancy detection, self-healing, commission, SFTP watcher, reports, alerts, file generator)
   - REST API (7 endpoints at `/api/v1/reconciliation/*`)
   - Comprehensive test suite (23+ tests)
-  - Full documentation (framework + quick start guide)
+  - Full documentation (framework + quick start guide + Flash integration guide)
   - Excel/JSON report generation
   - Email alerting system
-  - SFTP watcher for automated ingestion
+  - SFTP watcher for automated ingestion (supports multiple suppliers)
+  - Flash reconciliation file generator (creates upload files per Flash requirements)
 - **Key Features**:
   - Exact + fuzzy matching (>99% match rate target)
   - Self-healing resolution (auto-resolves 80% of discrepancies)
@@ -2265,35 +2280,47 @@ LOG_LEVEL=warn
   - Banking-grade security (SHA-256, idempotency, event integrity)
   - Mojaloop-aligned (ISO 20022 standards)
   - High performance (<200ms per transaction)
-- **Database Migration**: ✅ **COMPLETE**
-  - Migration: `20260113000001_create_reconciliation_system.js`
-  - Executed in UAT: 2026-01-13 (3.543s)
+- **Database Migrations**: ✅ **COMPLETE**
+  - Migration 1: `20260113000001_create_reconciliation_system.js` (3.543s, 2026-01-13)
+  - Migration 2: `20260114_add_flash_reconciliation_config.js` (0.942s, 2026-01-14)
+  - Migration 3: `20260114_update_mobilemart_sftp_ip.js` (0.940s, 2026-01-14)
   - Tables created: `recon_supplier_configs`, `recon_runs`, `recon_transaction_matches`, `recon_audit_trail`
   - MobileMart pre-configured: Supplier config, SFTP details, adapter ready
+  - Flash pre-configured: Supplier config, SFTP details, adapter ready, file generator ready
 - **Dependencies**: ✅ **INSTALLED**
   - `exceljs@^4.4.0` - Excel report generation
   - `moment-timezone@^0.5.45` - Timezone handling
   - `csv-parse@^5.5.3` - CSV parsing
   - `@google-cloud/storage@^7.14.0` - GCS integration
+  - `nodemailer@^7.0.12` - Email alerts (optional, requires SMTP config)
   - Security: 8 npm vulnerabilities fixed (11 packages updated)
 - **Documentation**: ✅ **COMPLETE**
   - `docs/RECONCILIATION_FRAMEWORK.md` (540+ lines) - Full architecture
   - `docs/RECONCILIATION_QUICK_START.md` (320+ lines) - Quick start guide
-  - `docs/session_logs/2026-01-13_recon_system_implementation.md` - Session log
-  - All major docs updated (README, CHANGELOG, API_DOCUMENTATION, BANKING_GRADE_ARCHITECTURE, SECURITY, PROJECT_STATUS, DEVELOPMENT_GUIDE)
-- **SFTP Integration**: ✅ **CONFIGURED**
-  - Host: `34.35.137.166:22`
-  - Username: `mobilemart`
-  - Storage: `gs://mymoolah-sftp-inbound/mobilemart/`
-  - Infrastructure ready
+  - `docs/integrations/Flash_Reconciliation.md` (302+ lines) - Flash integration guide
+  - `docs/session_logs/2026-01-13_recon_system_implementation.md` - Initial implementation log
+  - `docs/session_logs/2026-01-14_flash_reconciliation_and_ip_updates.md` - Flash integration log
+  - All major docs updated (README, CHANGELOG, API_DOCUMENTATION, BANKING_GRADE_ARCHITECTURE, SECURITY, PROJECT_STATUS, DEVELOPMENT_GUIDE, PERFORMANCE, TESTING_GUIDE, DEPLOYMENT_CHECKLIST, INTEGRATIONS_COMPLETE)
+- **SFTP Integration**: ✅ **CONFIGURED** (Standardized to static IP on 2026-01-14)
+  - **Static IP**: `34.35.137.166:22` (was ephemeral, now static for whitelisting stability)
+  - **MobileMart**: Username `mobilemart`, Path `/home/mobilemart` → `gs://mymoolah-sftp-inbound/mobilemart/`
+  - **Flash**: Username `flash`, Path `/home/flash` → `gs://mymoolah-sftp-inbound/flash/`
+  - **VM**: `sftp-1-vm` (africa-south1-a) with static IP attached
+  - **Infrastructure**: Ready for both suppliers
+- **Flash Reconciliation Components** (2026-01-14):
+  - **FlashAdapter**: Semicolon-delimited CSV parser (`YYYY/MM/DD HH:mm` dates)
+  - **FlashReconciliationFileGenerator**: Generates 7-field CSV files for Flash upload
+  - **Verification Scripts**: `verify-flash-recon-config.js`, `verify-recon-sftp-configs.js`
+  - **File Format**: Handles Flash's unique format (semicolon delimiter, metadata JSON parsing)
 - **Next Steps**:
-  1. ⏳ Receive MobileMart SSH public key and source IP/CIDR range
-  2. ⏳ Configure SFTP firewall rules and enable access
-  3. ⏳ Receive sample reconciliation file from MobileMart
-  4. ⏳ Execute UAT testing (end-to-end reconciliation flow)
-  5. ⏳ Configure SMTP for email alerts (optional: SMTP_HOST, SMTP_USER, SMTP_PASS)
-  6. ⏳ Deploy SFTP watcher as background service
-  7. 🔜 Deploy to Production after UAT sign-off
+  1. ⏳ Receive SSH public keys and source IP/CIDR ranges from MobileMart and Flash
+  2. ⏳ Configure SFTP firewall rules and enable access for both suppliers
+  3. ⏳ Receive sample reconciliation files from suppliers
+  4. ⏳ Execute UAT testing (end-to-end reconciliation flow for both suppliers)
+  5. ⏳ Test Flash reconciliation file generation and upload
+  6. ⏳ Configure SMTP for email alerts (optional: SMTP_HOST, SMTP_USER, SMTP_PASS)
+  7. ⏳ Deploy SFTP watcher as background service
+  8. 🔜 Deploy to Production after UAT sign-off
 - **Important Notes**:
   - User explicitly requested **blockchain-free implementation**
   - Uses standard technologies (PostgreSQL, Redis, Node.js) with SHA-256 hashing
