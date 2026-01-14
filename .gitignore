@@ -8,6 +8,12 @@ reports/
 *.backup2
 .DS_Store
 
+# Generated reconciliation files (ignore all generated recon CSV files)
+*_recon_*.csv
+flash_recon_*.csv
+mobilemart_recon_*.csv
+recon_*.csv
+
 # Local-only
 .env
 .gcp-sa.json
