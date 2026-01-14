@@ -792,7 +792,7 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 - GCS bucket `mymoolah-sftp-inbound` (africa-south1, private, uniform, versioning on) connected via “Use instance’s service account”; read/write verified.
 - Folder/prefix created for `mobilemart` (home directory). User `mobilemart` to be finalized once their SSH public key is received.
 - Firewall: SSH 22 and HTTPS 443 restricted to admin IP and tag `sftp-1-deployment`; update allowlist with MobileMart IP/CIDR when provided.
-- Connection details (after key install): host 34.35.168.101, port 22, username `mobilemart`, key auth only. Self-signed cert expected on UI (https).
+- Connection details (after key install): host 34.35.137.166, port 22, username `mobilemart`, key auth only. Self-signed cert expected on UI (https).
 - TODO: Add MobileMart public key, add their IP/CIDR to firewall, create/enable SFTP user, and (optional) add GCS event trigger for recon ingestion.
 
 ### NEW: Airtime/Data Beneficiary Cleanup (2025-12-08) ✅ frontend filtering
@@ -2282,7 +2282,7 @@ LOG_LEVEL=warn
   - `docs/session_logs/2026-01-13_recon_system_implementation.md` - Session log
   - All major docs updated (README, CHANGELOG, API_DOCUMENTATION, BANKING_GRADE_ARCHITECTURE, SECURITY, PROJECT_STATUS, DEVELOPMENT_GUIDE)
 - **SFTP Integration**: ✅ **CONFIGURED**
-  - Host: `34.35.168.101:22`
+  - Host: `34.35.137.166:22`
   - Username: `mobilemart`
   - Storage: `gs://mymoolah-sftp-inbound/mobilemart/`
   - Infrastructure ready

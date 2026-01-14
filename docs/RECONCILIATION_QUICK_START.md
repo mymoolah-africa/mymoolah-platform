@@ -100,7 +100,7 @@ await watcher.start({ pollIntervalSeconds: 60 }); // Check every 60 seconds
 **SFTP Details for MobileMart:**
 
 ```
-Host: 34.35.168.101
+Host: 34.35.137.166
 Port: 22
 Username: mobilemart
 Authentication: SSH public key
@@ -359,7 +359,7 @@ await ReconSupplierConfig.create({
   file_name_pattern: 'flash_recon_YYYYMMDD.csv',
   delimiter: ',',
   has_header: true,
-  sftp_host: '34.35.168.101',
+  sftp_host: '34.35.137.166',
   sftp_port: 22,
   sftp_username: 'flash',
   sftp_path: '/home/flash',

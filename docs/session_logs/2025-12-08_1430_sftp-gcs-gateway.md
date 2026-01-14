@@ -21,7 +21,7 @@
 ## Pending / Next Steps
 - MobileMart to provide SSH public key and source IP/CIDR.
 - Add their key to SFTP user `mobilemart` and update firewall allowlist to include their IP.
-- Provide final connection details (host 34.35.168.101, port 22, username `mobilemart`, key auth only) after key is installed.
+- Provide final connection details (host 34.35.137.166, port 22, username `mobilemart`, key auth only) after key is installed.
 - Optional: add GCS event trigger for recon processing once files begin arriving.
 
 ## Issues / Risks
@@ -34,7 +34,7 @@
 - Firewall rules: SSH (22) and HTTPS (443) restricted to admin IP and tag `sftp-1-deployment`.
 
 ## Handover Notes
-- Gateway UI: https://34.35.168.101 (self-signed); admin account created during setup.
+- Gateway UI: https://34.35.137.166 (self-signed); admin account created during setup.
 - Bucket mapping already confirmed via “Use instance’s service account” with read/write.
 - SFTP user `mobilemart` ready to be created/updated once public key is received. Home path/prefix: `mobilemart/`.
 

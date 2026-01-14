@@ -20,11 +20,13 @@ const logger = {
   debug: (...args) => console.log('[FileParserService]', ...args)
 };
 const MobileMartAdapter = require('./adapters/MobileMartAdapter');
+const FlashAdapter = require('./adapters/FlashAdapter');
 
 class FileParserService {
   constructor() {
     this.adapters = {
       MobileMartAdapter: new MobileMartAdapter(),
+      FlashAdapter: new FlashAdapter(),
       // Add more adapters as needed
     };
   }

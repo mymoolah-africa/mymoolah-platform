@@ -61,7 +61,7 @@ Four new PostgreSQL tables created:
   - Edge cases (duplicate files, zero transactions, large files)
 
 ### **SFTP Integration** ✅
-- **Host**: `34.35.168.101:22`
+- **Host**: `34.35.137.166:22`
 - **Username**: `mobilemart`
 - **Auth**: SSH public key (awaiting from MobileMart)
 - **Storage**: Google Cloud Storage (`gs://mymoolah-sftp-inbound/mobilemart/`)
@@ -102,7 +102,7 @@ New packages installed:
 
 🏪 MobileMart Pre-configured: ✅
   - Supplier: MobileMart (Code: MMART)
-  - SFTP: 34.35.168.101:22
+  - SFTP: 34.35.137.166:22
   - Status: Active
 ```
 

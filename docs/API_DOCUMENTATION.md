@@ -1308,7 +1308,7 @@ GET /api/v1/reconciliation/suppliers
         "name": "MobileMart",
         "is_active": true,
         "sftp_config": {
-          "host": "34.35.168.101",
+          "host": "34.35.137.166",
           "port": 22,
           "username": "mobilemart",
           "path": "/home/mobilemart/"

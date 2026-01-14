@@ -343,7 +343,7 @@ Not all transactions have exact ID matches. Fuzzy matching uses:
    - ✅ MobileMart config verified:
      - Supplier: MobileMart
      - Code: MMART
-     - SFTP Host: 34.35.168.101
+     - SFTP Host: 34.35.137.166
      - Active: true
 
 2. **MobileMart SSH Key Setup** ⏳ WAITING
@@ -484,7 +484,7 @@ LEDGER_ACCOUNT_VAT_CONTROL=2100
 - Source IP/CIDR range
 
 **MyMoolah SFTP Server** (already configured):
-- Host: `34.35.168.101`
+- Host: `34.35.137.166`
 - Port: `22`
 - Username: `mobilemart`
 - Path: `/home/mobilemart` (maps to `gs://mymoolah-sftp-inbound/mobilemart/`)
@@ -644,7 +644,7 @@ Ready for UAT testing with MobileMart.
 🏪 MobileMart Configuration:
   ✅ Supplier: MobileMart
   ✅ Code: MMART
-  ✅ SFTP Host: 34.35.168.101
+  ✅ SFTP Host: 34.35.137.166
   ✅ Active: true
 ```
 
