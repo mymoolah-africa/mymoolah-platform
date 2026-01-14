@@ -1,5 +1,88 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-01-14 - ⚡ Flash Reconciliation Integration & SFTP IP Standardization (v2.5.1) ✅
+
+### **Session Overview**
+Added complete Flash supplier reconciliation support to the banking-grade reconciliation framework and standardized SFTP infrastructure to use static IP addresses. Flash reconciliation system is fully configured and ready for integration once Flash provides SSH key and IP whitelisting details.
+
+### **⚡ Flash Reconciliation Integration** ✅
+- **FlashAdapter Created**: Semicolon-delimited CSV parser for Flash reconciliation files
+- **File Format Support**: Handles Flash's unique format (`YYYY/MM/DD HH:mm` dates, semicolon delimiter, metadata JSON parsing)
+- **Database Configuration**: Flash supplier config added via migration
+- **File Generator**: `FlashReconciliationFileGenerator` creates upload files per Flash requirements (7 fields)
+- **Verification Scripts**: Automated tools to verify Flash and SFTP configurations
+- **Documentation**: Comprehensive Flash reconciliation integration guide created
+
+**Flash File Format**:
+- Delimiter: Semicolon (`;`)
+- Date Format: `YYYY/MM/DD HH:mm`
+- Columns: 14 fields (Date, Reference, Transaction ID, Product Code, Product, Gross Amount, Fee, Commission, Net Amount, Status, Metadata, etc.)
+- Footer: Calculated (Flash files don't have footer rows)
+
+**Flash Upload Requirements** (7 fields):
+- Date, Product_id, Product_description, Amount, Partner_transaction_reference, Flash_transactionID, Transaction_state
+
+### **🔧 SFTP Infrastructure Standardization** ✅
+- **Static IP Attached**: SFTP gateway VM now uses static IP `34.35.137.166` (was ephemeral `34.35.168.101`)
+- **MobileMart Updated**: Migration created to update MobileMart SFTP host to static IP
+- **Flash Configured**: Flash reconciliation uses static IP from the start
+- **Documentation Updated**: 13 documentation files updated with correct IP address
+- **Verification**: Both MobileMart and Flash verified using static IP
+
+**SFTP Gateway Details**:
+- VM: `sftp-1-vm` (africa-south1-a)
+- Static IP: `34.35.137.166` (reserved as `sftp-gateway-static-ip`)
+- GCS Bucket: `mymoolah-sftp-inbound`
+- MobileMart Path: `/home/mobilemart` → `gs://mymoolah-sftp-inbound/mobilemart/`
+- Flash Path: `/home/flash` → `gs://mymoolah-sftp-inbound/flash/`
+
+### **📁 Files Created** ✅
+1. `services/reconciliation/adapters/FlashAdapter.js` (292 lines)
+2. `services/reconciliation/FlashReconciliationFileGenerator.js` (116 lines)
+3. `migrations/20260114_add_flash_reconciliation_config.js` (162 lines)
+4. `migrations/20260114_update_mobilemart_sftp_ip.js` (70 lines)
+5. `scripts/generate-flash-reconciliation-file.js` (183 lines)
+6. `scripts/verify-flash-recon-config.js` (87 lines)
+7. `scripts/verify-recon-sftp-configs.js` (95 lines)
+8. `docs/integrations/Flash_Reconciliation.md` (302 lines)
+9. `docs/troubleshooting/FIX_CODESPACES_GIT_ISSUE.md` (new)
+
+### **📝 Files Modified** ✅
+- `services/reconciliation/FileParserService.js` - Registered FlashAdapter
+- `migrations/20260113000001_create_reconciliation_system.js` - Updated IP
+- 13 documentation files - Updated IP references
+- `.gitignore` - Added patterns for generated reconciliation CSV files
+
+### **🔧 Git Repository Management** ✅
+- Added generated CSV files to `.gitignore` (`*_recon_*.csv`, `flash_recon_*.csv`, etc.)
+- Removed accidentally committed CSV file from git tracking
+- Fixed empty `FETCH_HEAD` and `main` files issue in Codespaces
+
+### **✅ Database Migrations** ✅
+- `20260114_add_flash_reconciliation_config`: Flash supplier configuration added
+- `20260114_update_mobilemart_sftp_ip`: MobileMart SFTP host updated to static IP
+- Both migrations executed successfully in UAT
+
+### **Status**
+- ✅ **Flash Adapter**: Complete and tested
+- ✅ **Flash Config**: Added to database and verified
+- ✅ **SFTP IP**: Standardized to static IP for both suppliers
+- ✅ **File Generator**: Ready for Flash upload files
+- ✅ **Documentation**: Complete
+- ⏳ **Flash Integration**: Awaiting SSH key + IP whitelisting from Flash
+
+### **Next Steps**
+1. Receive SSH public key + IP ranges from Flash
+2. Configure SFTP access and firewall rules
+3. Test Flash reconciliation file processing
+4. Generate and upload reconciliation file to Flash
+5. Execute UAT testing (end-to-end)
+
+**Implementation Time**: ~3 hours (adapter, config, migrations, documentation, verification)  
+**Documentation**: See `docs/integrations/Flash_Reconciliation.md` for complete guide
+
+---
+
 ## 2026-01-13 - 🏦 Banking-Grade Automated Reconciliation System (v2.5.0) ✅
 
 ### **Session Overview**
@@ -23,18 +106,20 @@ Four new PostgreSQL tables created:
 **Migration**: `20260113000001_create_reconciliation_system.js` (3.543s, deployed to UAT)
 
 ### **Core Services Implemented** ✅
-11 production-ready services:
+12 production-ready services:
 1. **ReconciliationOrchestrator**: End-to-end workflow coordination
 2. **AuditLogger**: Immutable audit trail with SHA-256 event chaining
 3. **FileParserService**: Generic parser with supplier-specific adapters
 4. **MobileMartAdapter**: MobileMart CSV parser (per Recon Spec Final.pdf)
-5. **MatchingEngine**: Exact + fuzzy matching with confidence scoring
-6. **DiscrepancyDetector**: Identifies missing, amount, status, timestamp, product mismatches
-7. **SelfHealingResolver**: Auto-fixes 80% of common issues
-8. **CommissionReconciliation**: Commission calculation and verification
-9. **SFTPWatcherService**: Automated file ingestion from GCS bucket
-10. **ReportGenerator**: Excel/JSON reports with summaries and details
-11. **AlertService**: Real-time email notifications for critical issues
+5. **FlashAdapter**: Flash semicolon-delimited CSV parser (added 2026-01-14)
+6. **MatchingEngine**: Exact + fuzzy matching with confidence scoring
+7. **DiscrepancyDetector**: Identifies missing, amount, status, timestamp, product mismatches
+8. **SelfHealingResolver**: Auto-fixes 80% of common issues
+9. **CommissionReconciliation**: Commission calculation and verification
+10. **SFTPWatcherService**: Automated file ingestion from GCS bucket
+11. **ReportGenerator**: Excel/JSON reports with summaries and details
+12. **AlertService**: Real-time email notifications for critical issues
+13. **FlashReconciliationFileGenerator**: Generates upload files for Flash (added 2026-01-14)
 
 ### **API Endpoints** ✅
 7 new REST endpoints at `/api/v1/reconciliation/*`:
@@ -61,12 +146,15 @@ Four new PostgreSQL tables created:
   - Edge cases (duplicate files, zero transactions, large files)
 
 ### **SFTP Integration** ✅
-- **Host**: `34.35.137.166:22`
-- **Username**: `mobilemart`
-- **Auth**: SSH public key (awaiting from MobileMart)
-- **Storage**: Google Cloud Storage (`gs://mymoolah-sftp-inbound/mobilemart/`)
-- **Watcher**: Auto-ingestion from GCS bucket
-- **Status**: Infrastructure ready, awaiting MobileMart's SSH key + IP range
+- **Host**: `34.35.137.166:22` (Static IP - updated from ephemeral on 2026-01-14)
+- **MobileMart Username**: `mobilemart`
+- **Flash Username**: `flash`
+- **Auth**: SSH public key (awaiting from suppliers)
+- **Storage**: Google Cloud Storage (`gs://mymoolah-sftp-inbound/`)
+  - MobileMart: `gs://mymoolah-sftp-inbound/mobilemart/`
+  - Flash: `gs://mymoolah-sftp-inbound/flash/`
+- **Watcher**: Auto-ingestion from GCS bucket (supports multiple suppliers)
+- **Status**: Infrastructure ready, both suppliers configured, awaiting SSH keys + IP ranges
 
 ### **Documentation** ✅
 4 new comprehensive docs:
@@ -81,16 +169,18 @@ New packages installed:
 - `moment-timezone@^0.5.45` - Timezone handling
 - `csv-parse@^5.5.3` - CSV parsing
 - `@google-cloud/storage@^7.14.0` - GCS integration
+- `nodemailer@^7.0.12` - Email alerts (added 2026-01-13, optional)
 
 **Security**: All 8 npm audit vulnerabilities fixed (11 packages updated)
 
 ### **Key Technical Decisions**
 - **No Blockchain**: Practical approach using proven technologies (PostgreSQL, SHA-256, event chaining)
-- **Adapter Pattern**: Easily extensible for multiple suppliers (Flash, Zapper, etc.)
+- **Adapter Pattern**: Easily extensible for multiple suppliers (MobileMart ✅, Flash ✅, Zapper, etc.)
 - **Self-Healing First**: Auto-resolve 80% of issues, manual review for 20%
 - **Banking-Grade**: Idempotency, immutable audit, file integrity, event chaining
 - **Performance**: Database aggregation (not JavaScript), indexed queries, Redis caching
 - **Mojaloop Alignment**: ISO 20022 messaging, distributed ledger concepts (without blockchain)
+- **Static IPs**: All external services use static IPs for whitelisting stability (updated 2026-01-14)
 
 ### **Database State (UAT Verified)** ✅
 ```bash
@@ -100,21 +190,25 @@ New packages installed:
   - recon_supplier_configs ✅
   - recon_transaction_matches ✅
 
-🏪 MobileMart Pre-configured: ✅
-  - Supplier: MobileMart (Code: MMART)
-  - SFTP: 34.35.137.166:22
-  - Status: Active
+🏪 Suppliers Pre-configured: ✅
+  - MobileMart (Code: MMART)
+    - SFTP: 34.35.137.166:22 (Static IP)
+    - Status: Active
+  - Flash (Code: FLASH)
+    - SFTP: 34.35.137.166:22 (Static IP)
+    - Status: Active
 ```
 
 ### **Status**
 - ✅ **Framework**: Complete and documented
-- ✅ **Database**: Migrated in UAT
-- ✅ **Services**: 11 core services implemented
+- ✅ **Database**: Migrated in UAT (MobileMart + Flash configured)
+- ✅ **Services**: 12 core services implemented (added FlashAdapter + FileGenerator)
 - ✅ **API**: 7 endpoints live
 - ✅ **Testing**: 23+ test cases ready
 - ✅ **Documentation**: Complete
-- ⏳ **SFTP**: Awaiting MobileMart's SSH key + IP range
-- 🔜 **UAT Testing**: Pending sample reconciliation file from MobileMart
+- ✅ **SFTP IP**: Standardized to static IP (34.35.137.166)
+- ⏳ **SFTP Access**: Awaiting SSH keys + IP ranges from MobileMart and Flash
+- 🔜 **UAT Testing**: Pending sample reconciliation files from suppliers
 
 ### **Next Steps**
 1. Receive SSH public key + IP range from MobileMart

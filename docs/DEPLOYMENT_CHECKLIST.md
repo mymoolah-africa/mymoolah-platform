@@ -2,7 +2,7 @@
 
 **For**: André (andre@mymoolah.africa)  
 **Project**: mymoolah-db  
-**Date**: January 13, 2026 (Updated for Reconciliation System)
+**Date**: January 14, 2026 (Updated for Flash Reconciliation Integration)
 
 ---
 
@@ -145,20 +145,40 @@ const { getStagingDatabaseURL } = require('./scripts/db-connection-helper');
   - `recon_runs`
   - `recon_transaction_matches`
   - `recon_audit_trail`
-- Confirms MobileMart pre-configuration
+- Confirms MobileMart and Flash pre-configuration
 
 **Expected time**: 30 seconds
 
-**Check for success**: Should see all 4 reconciliation tables listed
+**Check for success**: Should see all 4 reconciliation tables listed, and both MobileMart and Flash suppliers configured
 
 **Optional - Configure SFTP Access**:
 ```bash
-# Add MobileMart SSH public key (when received)
-# Configure via Google Cloud Console or:
+# Add supplier SSH public keys (when received)
+# MobileMart SFTP configuration
 gcloud compute firewall-rules create allow-mobilemart-sftp \
   --allow=tcp:22 \
   --source-ranges=MOBILEMART_IP_RANGE \
-  --target-tags=sftp-server
+  --target-tags=sftp-1-deployment
+
+# Flash SFTP configuration
+gcloud compute firewall-rules create allow-flash-sftp \
+  --allow=tcp:22 \
+  --source-ranges=FLASH_IP_RANGE \
+  --target-tags=sftp-1-deployment
+
+# Verify SFTP gateway static IP
+gcloud compute addresses describe sftp-gateway-static-ip \
+  --region=africa-south1
+# Should show: 34.35.137.166
+```
+
+**Flash Reconciliation Verification**:
+```bash
+# Verify Flash configuration
+node scripts/verify-flash-recon-config.js
+
+# Verify both suppliers using static IP
+node scripts/verify-recon-sftp-configs.js
 ```
 
 **Optional - Configure Email Alerts**:

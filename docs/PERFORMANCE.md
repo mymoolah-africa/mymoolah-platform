@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Performance Documentation
 
-**Last Updated**: January 13, 2026  
-**Version**: 2.5.0 - Banking-Grade Reconciliation System Performance
-**Status**: ✅ **RECONCILIATION OPTIMIZED** ✅ **REFERRAL SYSTEM OPTIMIZED** ✅ **PEACH PAYMENTS COMPLETE** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
+**Last Updated**: January 14, 2026  
+**Version**: 2.5.1 - Flash Reconciliation Integration Performance  
+**Status**: ✅ **RECONCILIATION OPTIMIZED** ✅ **FLASH + MOBILEMART** ✅ **REFERRAL SYSTEM OPTIMIZED** ✅ **PEACH PAYMENTS COMPLETE** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
 
 ---
 
@@ -288,9 +288,13 @@ const referralMetrics = {
 
 ## 🏦 **RECONCILIATION SYSTEM PERFORMANCE**
 
-### **Banking-Grade Reconciliation Performance (January 13, 2026)**
+### **Banking-Grade Reconciliation Performance (January 13-14, 2026)**
 
-The reconciliation system is optimized for **high-volume transaction processing** with strict performance targets for banking-grade operations.
+The reconciliation system is optimized for **high-volume transaction processing** with strict performance targets for banking-grade operations. Supports multiple suppliers (MobileMart + Flash) with extensible adapter pattern.
+
+**Suppliers Configured**:
+- **MobileMart**: Comma-delimited CSV, date format `YYYY-MM-DD HH:mm:ss`
+- **Flash**: Semicolon-delimited CSV, date format `YYYY/MM/DD HH:mm` (added January 14, 2026)
 
 #### **Performance Targets**
 ```javascript

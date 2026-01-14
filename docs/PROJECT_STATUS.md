@@ -1,16 +1,48 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: January 13, 2026  
-**Version**: 2.5.0 - Banking-Grade Reconciliation System  
-**Status**: ✅ **RECONCILIATION LIVE** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 14, 2026  
+**Version**: 2.5.1 - Flash Reconciliation Integration & SFTP IP Standardization  
+**Status**: ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has successfully implemented a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026). The platform now includes complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
+The MyMoolah Treasury Platform has successfully implemented a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026). The platform now includes **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
 
-### **🚀 Latest Achievement: Banking-Grade Reconciliation System (January 13, 2026)** ✅ **COMPLETE**
+### **⚡ Latest Achievement: Flash Reconciliation Integration & SFTP IP Standardization (January 14, 2026)** ✅ **COMPLETE**
+
+#### **⚡ Flash Reconciliation System**
+- **FlashAdapter**: Complete semicolon-delimited CSV parser for Flash files
+- **File Format**: Handles Flash's unique format (`YYYY/MM/DD HH:mm` dates, semicolon delimiter)
+- **File Generator**: Creates upload files per Flash requirements (7 fields)
+- **Database Config**: Flash supplier configuration added and verified
+- **SFTP Integration**: Flash configured for same SFTP gateway as MobileMart
+- **Status**: ✅ **Configured and ready** (awaiting Flash SSH key + IP whitelisting)
+
+#### **🔧 SFTP Infrastructure Standardization**
+- **Static IP**: SFTP gateway now uses static IP `34.35.137.166` (was ephemeral)
+- **MobileMart Updated**: Migration executed to update MobileMart SFTP host
+- **Flash Configured**: Flash uses static IP from the start
+- **Documentation**: 13 files updated with correct IP address
+- **Status**: ✅ **Both suppliers using static IP**
+
+#### **Technical Implementation**
+- **New Services**: FlashAdapter, FlashReconciliationFileGenerator
+- **Migrations**: 2 new migrations (Flash config, MobileMart IP update)
+- **Scripts**: 3 new verification/generation scripts
+- **Documentation**: Flash reconciliation integration guide created
+
+#### **Next Steps**
+1. Receive SSH public key + IP ranges from Flash
+2. Configure SFTP access and firewall rules for Flash
+3. Test Flash reconciliation file processing
+4. Generate and upload reconciliation file to Flash
+5. Execute UAT testing (end-to-end)
+
+---
+
+### **🚀 Previous Achievement: Banking-Grade Reconciliation System (January 13, 2026)** ✅ **COMPLETE**
 
 #### **🏦 World-Class Reconciliation Framework**
 - **Multi-Supplier Support**: Extensible adapter pattern (MobileMart pre-configured, others easily added)
@@ -24,29 +56,34 @@ The MyMoolah Treasury Platform has successfully implemented a **world-class auto
 
 #### **Technical Implementation**
 - **Database**: 4 new tables (`recon_supplier_configs`, `recon_runs`, `recon_transaction_matches`, `recon_audit_trail`)
-- **Services**: 11 core services (orchestrator, audit logger, parser, matching, discrepancy, self-healing, commission, SFTP watcher, reports, alerts)
+- **Services**: 12 core services (orchestrator, audit logger, parser, MobileMart adapter, Flash adapter, matching, discrepancy, self-healing, commission, SFTP watcher, reports, alerts, file generator)
 - **API Endpoints**: 7 REST endpoints at `/api/v1/reconciliation/*`
 - **Testing**: 23+ comprehensive test cases
-- **Dependencies**: 4 new packages (`exceljs`, `moment-timezone`, `csv-parse`, `@google-cloud/storage`)
-- **Security**: 8 npm vulnerabilities fixed (11 packages updated, 4 added)
+- **Dependencies**: 5 new packages (`exceljs`, `moment-timezone`, `csv-parse`, `@google-cloud/storage`, `nodemailer`)
+- **Security**: 8 npm vulnerabilities fixed (11 packages updated, 5 added)
 
 #### **Migration & Deployment**
-- **Migration**: `20260113000001_create_reconciliation_system.js`
-- **Execution Time**: 3.543s (UAT deployment)
+- **Migrations**: 
+  - `20260113000001_create_reconciliation_system.js` (3.543s, UAT deployment)
+  - `20260114_add_flash_reconciliation_config.js` (0.942s, UAT deployment)
+  - `20260114_update_mobilemart_sftp_ip.js` (0.940s, UAT deployment)
 - **MobileMart Pre-configured**: Supplier config, SFTP details, file adapter ready
-- **Status**: ✅ **Deployed in UAT**, ⏳ Awaiting MobileMart SSH key + IP range
+- **Flash Pre-configured**: Supplier config, SFTP details, file adapter ready
+- **Status**: ✅ **Deployed in UAT**, ⏳ Awaiting SSH keys + IP ranges from suppliers
 
 #### **Documentation**
 1. `docs/RECONCILIATION_FRAMEWORK.md` (540+ lines) - Complete framework
 2. `docs/RECONCILIATION_QUICK_START.md` (320+ lines) - Setup guide
-3. `docs/session_logs/2026-01-13_recon_system_implementation.md` - Session log
-4. `docs/AGENT_HANDOVER.md` - Updated with reconciliation context
+3. `docs/integrations/Flash_Reconciliation.md` (302+ lines) - Flash integration guide
+4. `docs/session_logs/2026-01-13_recon_system_implementation.md` - Initial implementation log
+5. `docs/session_logs/2026-01-14_flash_reconciliation_and_ip_updates.md` - Flash integration log
+6. `docs/AGENT_HANDOVER.md` - Updated with reconciliation context
 
 #### **Next Steps**
-1. Receive SSH public key + IP range from MobileMart
-2. Configure SFTP access and firewall rules
-3. Receive sample reconciliation file from MobileMart
-4. Execute UAT testing (end-to-end)
+1. Receive SSH public keys + IP ranges from MobileMart and Flash
+2. Configure SFTP access and firewall rules for both suppliers
+3. Receive sample reconciliation files from suppliers
+4. Execute UAT testing (end-to-end for both suppliers)
 5. Configure SMTP for email alerts (optional)
 6. Deploy to Production
 

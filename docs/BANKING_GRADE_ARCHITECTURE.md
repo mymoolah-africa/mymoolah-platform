@@ -1,12 +1,12 @@
 # 🏦 Banking-Grade Architecture for MyMoolah
 
-**Last Updated**: January 13, 2026  
-**Version**: 2.5.0 - Banking-Grade Reconciliation System  
-**Status**: ✅ **RECONCILIATION LIVE** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
+**Last Updated**: January 14, 2026  
+**Version**: 2.5.1 - Flash Reconciliation Integration & SFTP IP Standardization  
+**Status**: ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
 
 ## Overview
 
-This document outlines the banking-grade architecture implemented for MyMoolah to handle **millions of customers and transactions** with enterprise-level performance, security, and scalability. The platform now includes **complete Peach Payments integration**, **comprehensive Zapper integration review**, and a **world-class automated reconciliation system** for multi-supplier transaction reconciliation.
+This document outlines the banking-grade architecture implemented for MyMoolah to handle **millions of customers and transactions** with enterprise-level performance, security, and scalability. The platform now includes **complete Peach Payments integration**, **comprehensive Zapper integration review**, and a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (MobileMart + Flash configured, January 14, 2026).
 
 ## 🎯 Architecture Principles
 
@@ -390,8 +390,11 @@ CREATE INDEX idx_recon_audit_hash ON recon_audit_trail(event_hash);
 
 #### 3. **FileParserService + Adapters**
 - Generic parsing framework
-- Supplier-specific adapters (MobileMart, Flash, etc.)
+- Supplier-specific adapters:
+  - **MobileMartAdapter**: Comma-delimited CSV parser (date format: `YYYY-MM-DD HH:mm:ss`)
+  - **FlashAdapter**: Semicolon-delimited CSV parser (date format: `YYYY/MM/DD HH:mm`)
 - Validates file integrity and format
+- Extensible for additional suppliers (Zapper, etc.)
 
 #### 4. **MatchingEngine**
 - Exact matching (transaction ref, amount, timestamp)
@@ -422,11 +425,17 @@ CREATE INDEX idx_recon_audit_hash ON recon_audit_trail(event_hash);
 - Identifies commission discrepancies
 
 #### 8. **SFTPWatcherService**
-- Monitors Google Cloud Storage bucket
-- Auto-ingests new reconciliation files
-- Handles file locking and duplicate detection
+- Monitors GCS bucket for new reconciliation files
+- Supports multiple suppliers (MobileMart, Flash, etc.)
+- Auto-triggers reconciliation on file arrival
+- Uses static IP: `34.35.137.166` (standardized January 14, 2026)
 
-#### 9. **ReportGenerator**
+#### 9. **FlashReconciliationFileGenerator**
+- Generates CSV files for upload to Flash
+- Formats 7 required fields per Flash requirements
+- Maps MMTP transaction status to Flash transaction states
+
+#### 10. **ReportGenerator**
 - Generates Excel reports with:
   - Summary statistics
   - Match details
@@ -434,7 +443,7 @@ CREATE INDEX idx_recon_audit_hash ON recon_audit_trail(event_hash);
   - Resolution recommendations
 - Exports JSON for API integration
 
-#### 10. **AlertService**
+#### 11. **AlertService**
 - Real-time email notifications
 - Configurable alert rules
 - Escalation for critical issues

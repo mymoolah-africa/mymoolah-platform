@@ -1,18 +1,42 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: January 13, 2026  
-**Version**: 2.5.0 - Banking-Grade Reconciliation System  
-**Status**: ✅ **RECONCILIATION LIVE** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 14, 2026  
+**Version**: 2.5.1 - Flash Reconciliation Integration & SFTP IP Standardization  
+**Status**: ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: Banking-Grade Automated Reconciliation System (January 13, 2026)**
+## 🚀 **LATEST UPDATE: Flash Reconciliation Integration & SFTP IP Standardization (January 14, 2026)**
+
+### **⚡ Flash Reconciliation System Integration**
+Added **complete Flash supplier reconciliation support** to the banking-grade reconciliation framework:
+
+**Flash Integration Features**:
+- ✅ **FlashAdapter**: Semicolon-delimited CSV parser for Flash files
+- ✅ **FlashReconciliationFileGenerator**: Generates upload files for Flash (7-field format)
+- ✅ **Database Configuration**: Flash supplier config added to `recon_supplier_configs`
+- ✅ **SFTP Integration**: Flash configured for same SFTP gateway as MobileMart
+- ✅ **File Format**: Handles Flash's unique format (semicolon delimiter, `YYYY/MM/DD HH:mm` dates)
+- ✅ **Verification Scripts**: Automated config verification tools
+
+**SFTP Infrastructure Updates**:
+- ✅ **Static IP Attached**: SFTP gateway now uses static IP `34.35.137.166` (was ephemeral)
+- ✅ **MobileMart Updated**: Migration to update MobileMart SFTP host to static IP
+- ✅ **Flash Configured**: Flash reconciliation uses static IP from the start
+- ✅ **Documentation Updated**: All 13 documentation files updated with correct IP
+
+**Status**: ✅ **Flash configured and ready** (awaiting Flash SSH key + IP whitelisting)  
+**Documentation**: `docs/integrations/Flash_Reconciliation.md`
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Banking-Grade Automated Reconciliation System (January 13, 2026)**
 
 ### **🏦 World-Class Reconciliation Framework**
 Implemented a **complete, production-ready automated reconciliation system** for multi-supplier transaction reconciliation:
 
 **Key Features**:
-- ✅ **Multi-Supplier Support**: Extensible adapter pattern (MobileMart configured)
+- ✅ **Multi-Supplier Support**: Extensible adapter pattern (MobileMart + Flash configured)
 - ✅ **Exact + Fuzzy Matching**: >99% match rate target with confidence scoring
 - ✅ **Self-Healing**: Auto-resolves 80% of discrepancies (timing, rounding, status)
 - ✅ **Immutable Audit Trail**: Blockchain-style event chaining (without blockchain)
@@ -23,11 +47,11 @@ Implemented a **complete, production-ready automated reconciliation system** for
 
 **Technical Stack**:
 - PostgreSQL (4 tables: configs, runs, matches, audit_trail)
-- 11 core services (orchestrator, matching, discrepancy, self-healing)
+- 12 core services (orchestrator, audit logger, parser, matching, discrepancy, self-healing, commission, SFTP watcher, reports, alerts, Flash adapter, file generator)
 - 7 REST API endpoints at `/api/v1/reconciliation/*`
 - Practical, blockchain-free (SHA-256 hashing, PostgreSQL event chaining)
 
-**Status**: ✅ **Deployed in UAT** (Migration: 3.543s, 0 vulnerabilities)  
+**Status**: ✅ **Deployed in UAT** (MobileMart + Flash configured)  
 **Documentation**: `docs/RECONCILIATION_FRAMEWORK.md`, `docs/RECONCILIATION_QUICK_START.md`
 
 ---
