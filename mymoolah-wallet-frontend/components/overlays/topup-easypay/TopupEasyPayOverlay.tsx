@@ -122,7 +122,7 @@ export function TopupEasyPayOverlay() {
         description: 'Top-up at EasyPay'
       };
       
-      const response = await fetch(`${APP_CONFIG.API_BASE_URL}/api/v1/vouchers/easypay`, {
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/issue`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,11 +131,19 @@ export function TopupEasyPayOverlay() {
         body: JSON.stringify(requestData)
       });
       
-      const result = await response.json();
-      
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to create top-up request');
+        const errorText = await response.text();
+        let errorMessage = 'Failed to create top-up request';
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || errorMessage;
+        } catch (e) {
+          errorMessage = errorText || `Server returned ${response.status}`;
+        }
+        throw new Error(errorMessage);
       }
+      
+      const result = await response.json();
       
       // Set success data
       setEasyPayPIN(result.data.easypay_code || '');
