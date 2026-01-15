@@ -40,8 +40,7 @@ async function checkAllFloatBalances() {
         'settlementMethod',
         'settlementPeriod',
         'status',
-        'isActive',
-        'currency'
+        'isActive'
       ]
     });
 
@@ -103,7 +102,6 @@ async function checkAllFloatBalances() {
       console.log(`   Settlement Method: ${float.settlementMethod || 'N/A'}`);
       console.log(`   Settlement Period: ${float.settlementPeriod || 'N/A'}`);
       console.log(`   Status: ${statusText}`);
-      console.log(`   Currency: ${float.currency || 'ZAR'}`);
       
       // Check if balance is below minimum threshold
       if (balance < minBalance && float.isActive) {
