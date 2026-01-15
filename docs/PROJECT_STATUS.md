@@ -1,16 +1,48 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: January 14, 2026  
-**Version**: 2.5.1 - Flash Reconciliation Integration & SFTP IP Standardization  
-**Status**: ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 15, 2026  
+**Version**: 2.6.0 - EasyPay Top-up @ EasyPay Transformation  
+**Status**: ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has successfully implemented a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026). The platform now includes **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
+The MyMoolah Treasury Platform has successfully transformed the EasyPay voucher system into a "Top-up @ EasyPay" feature (January 15, 2026), allowing users to create top-up requests, pay at EasyPay stores, and receive instant wallet credit. The platform also includes a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026), **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
 
-### **⚡ Latest Achievement: Flash Reconciliation Integration & SFTP IP Standardization (January 14, 2026)** ✅ **COMPLETE**
+### **💳 Latest Achievement: EasyPay Top-up @ EasyPay Transformation (January 15, 2026)** ✅ **COMPLETE**
+
+#### **🔄 Complete System Transformation**
+- **New Flow**: "Create top-up request → Pay at store → Get wallet credit" (replaces "Buy voucher → Pay at store")
+- **No Wallet Debit**: Top-up request creation doesn't debit wallet (user hasn't paid yet)
+- **Instant Credit**: Wallet credited with net amount (gross - R2.50 fees) when user pays at store
+- **Transaction Display**: Split display (gross in Recent Transactions, net + fee in Transaction History)
+- **Cancel/Expiry**: No wallet credit on cancel/expiry (wallet was never debited)
+
+#### **🎨 Frontend Enhancements**
+- **New Button**: "Top-up at EasyPay" on Transact page
+- **PIN Formatting**: 14-digit PIN displayed as `x xxxx xxxx xxxx x` on single line
+- **UAT Simulation**: Red "Simulate" button for testing settlement flow
+- **UI Simplification**: Removed fee breakdown section, updated Next Steps text
+
+#### **🔧 Backend Implementation**
+- **Voucher Types**: New `easypay_topup` and `easypay_topup_active` types
+- **Settlement Logic**: Creates two transactions (net amount + fee)
+- **Transaction Model**: Updated to allow negative amounts for fee transactions
+- **Cancel/Expiry Handlers**: Fixed to skip wallet credit for top-up vouchers
+- **Fee Structure**: R2.50 total (R2.00 provider + R0.50 MM margin), configurable
+
+#### **Technical Implementation**
+- **Migration**: `20260115_transform_easypay_to_topup.js` - Updates existing voucher types
+- **New Components**: TopupEasyPayOverlay, TopupEasyPayPage
+- **API Endpoints**: `/api/v1/vouchers/easypay/issue`, `/api/v1/vouchers/easypay/settlement`
+- **Documentation**: Session log, API docs, business logic docs updated
+
+#### **Status**: ✅ **Deployed in UAT**, ✅ **All fixes applied**, ✅ **Ready for production**
+
+---
+
+### **⚡ Previous Achievement: Flash Reconciliation Integration & SFTP IP Standardization (January 14, 2026)** ✅ **COMPLETE**
 
 #### **⚡ Flash Reconciliation System**
 - **FlashAdapter**: Complete semicolon-delimited CSV parser for Flash files

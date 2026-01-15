@@ -1,10 +1,17 @@
-**Last Updated**: January 13, 2026 (12:00 SAST)  
-**Version**: 2.5.0 - Banking-Grade Reconciliation System
-**Status**: ✅ **RECONCILIATION LIVE** ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED**
+**Last Updated**: January 15, 2026 (14:00 SAST)  
+**Version**: 2.6.0 - EasyPay Top-up @ EasyPay Transformation
+**Status**: ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED**
 
 ---
 
 ## Recent Updates
+
+### 2026-01-15 - EasyPay Top-up @ EasyPay Transformation
+- **Top-up Request Creation**: New endpoint `/api/v1/vouchers/easypay/issue` for creating top-up requests (no wallet debit)
+- **Settlement Callback**: Updated `/api/v1/vouchers/easypay/settlement` to credit wallet with net amount (gross - fees)
+- **Transaction Display**: Split transaction display (gross in Recent Transactions, net + fee in Transaction History)
+- **Cancel/Expiry Handling**: No wallet credit for top-up vouchers on cancel/expiry (wallet was never debited)
+- **Fee Structure**: R2.50 total (R2.00 provider + R0.50 MM margin), configurable via environment variables
 
 ### 2026-01-13 - Banking-Grade Reconciliation System
 - **Reconciliation API**: 7 new endpoints at `/api/v1/reconciliation/*`
@@ -605,6 +612,183 @@ GET /api/v1/transactions/type/:type
 ```
 
 **Description**: Retrieves transactions filtered by type (airtime, data, electricity, etc.).
+
+---
+
+## 🎫 **VOUCHER API**
+
+### **EasyPay Top-up @ EasyPay**
+
+#### **1. Create Top-up Request**
+```http
+POST /api/v1/vouchers/easypay/issue
+```
+
+**Description**: Creates a new EasyPay top-up request. No wallet debit occurs - user pays at EasyPay store, then wallet is credited on settlement.
+
+**Authentication**: Required (JWT Bearer token)
+
+**Request Body**:
+```json
+{
+  "original_amount": 100.00,
+  "issued_to": "self",
+  "description": "Top-up at EasyPay"
+}
+```
+
+**Response** (201 Created):
+```json
+{
+  "success": true,
+  "message": "EasyPay top-up request created successfully",
+  "data": {
+    "easypay_code": "91234754101297",
+    "amount": 100.00,
+    "expires_at": "2026-01-19T14:53:00.000Z",
+    "sms_sent": false,
+    "wallet_balance": 500.00,
+    "voucher_id": 123
+  }
+}
+```
+
+**Notes**:
+- Amount range: R50 - R4000
+- Voucher expires 4 days (96 hours) after creation
+- Wallet balance remains unchanged (no debit on creation)
+- User must pay at EasyPay store to complete top-up
+
+#### **2. Process Settlement Callback**
+```http
+POST /api/v1/vouchers/easypay/settlement
+```
+
+**Description**: Processes EasyPay settlement callback when user pays at store. Credits wallet with net amount (gross - fees).
+
+**Authentication**: API Key (EasyPay integration)
+
+**Request Body**:
+```json
+{
+  "easypay_code": "91234754101297",
+  "settlement_amount": "100.00",
+  "merchant_id": "MERCHANT123",
+  "transaction_id": "EP-TXN-123456"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "EasyPay top-up settled successfully",
+  "data": {
+    "easypay_code": "91234754101297",
+    "gross_amount": 100.00,
+    "net_amount": 97.50,
+    "fee_applied": 2.50,
+    "status": "completed",
+    "settlement_transaction_id": "STL-..."
+  }
+}
+```
+
+**Transaction Creation**:
+- Creates two transaction records:
+  1. Deposit: Net amount (R97.50) - "Top-up @ EasyPay: {PIN}"
+  2. Fee: Negative amount (-R2.50) - "Transaction Fee"
+
+**Fee Structure**:
+- Total Fee: R2.50 (configurable)
+- Provider Fee: R2.00 (`EASYPAY_TOPUP_PROVIDER_FEE`)
+- MM Margin: R0.50 (`EASYPAY_TOPUP_MM_MARGIN`)
+
+#### **3. Cancel Top-up Voucher**
+```http
+DELETE /api/v1/vouchers/easypay/:voucherId
+```
+
+**Description**: Cancels a pending top-up voucher. No wallet credit occurs (wallet was never debited).
+
+**Authentication**: Required (JWT Bearer token)
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Top-up voucher cancelled successfully",
+  "data": {
+    "voucherId": 123,
+    "easyPayCode": "91234754101297",
+    "originalAmount": 100.00,
+    "refundAmount": 0,
+    "note": "Top-up vouchers do not require refund as wallet was never debited",
+    "cancelledAt": "2026-01-15T15:00:00.000Z"
+  }
+}
+```
+
+**Notes**:
+- Only pending top-up vouchers can be cancelled
+- No wallet credit on cancellation (wallet was never debited)
+- Voucher status changes to `cancelled`
+
+### **Voucher Management**
+
+#### **1. Get User Vouchers**
+```http
+GET /api/v1/vouchers
+```
+
+**Description**: Retrieves all vouchers for the authenticated user.
+
+**Authentication**: Required (JWT Bearer token)
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 123,
+      "voucherType": "easypay_topup",
+      "status": "pending_payment",
+      "easyPayCode": "91234754101297",
+      "originalAmount": 100.00,
+      "balance": 0,
+      "expiresAt": "2026-01-19T14:53:00.000Z"
+    }
+  ]
+}
+```
+
+#### **2. Get Voucher Balance Summary**
+```http
+GET /api/v1/vouchers/balance-summary
+```
+
+**Description**: Retrieves voucher balance summary (excludes top-up vouchers from active assets).
+
+**Authentication**: Required (JWT Bearer token)
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": {
+    "activeValue": 360.00,
+    "pendingValue": 0,
+    "totalValue": 360.00,
+    "activeCount": 1,
+    "pendingCount": 1
+  }
+}
+```
+
+**Notes**:
+- `activeValue` excludes top-up vouchers (user hasn't paid yet)
+- Top-up vouchers are tracked separately
 
 ---
 
