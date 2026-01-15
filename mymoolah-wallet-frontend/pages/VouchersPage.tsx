@@ -82,6 +82,7 @@ interface MMVoucher {
   merchantName?: string;
   merchantId?: string;
   description: string;
+  voucherType?: string; // Original voucherType from backend (easypay_topup, easypay_cashout, etc.)
   transactionId: string;
   linkedVoucherId?: string; // For EasyPay → MM voucher linking
   redemptionLocations: string[];
