@@ -421,6 +421,8 @@ export function VouchersPage() {
           expiryDate: voucher.expiresAt || computedExpiry,
           // expose expiresAt for export logic
           expiresAt: voucher.expiresAt || undefined,
+          // Preserve original voucherType for settlement detection
+          voucherType: voucher.voucherType,
           description: voucher.metadata?.description || 
             (voucher.voucherType === 'easypay_cashout' || voucher.voucherType === 'easypay_cashout_active' 
               ? 'Cash-out @ EasyPay' 
