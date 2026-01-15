@@ -453,25 +453,8 @@ exports.issueEasyPayVoucher = async (req, res) => {
         }
       });
 
-      // Create request transaction record (no debit)
-      const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      await Transaction.create({
-        transactionId: requestId,
-        userId: req.user.id,
-        walletId: wallet.walletId,
-        amount: 0, // No amount movement on request
-        type: 'request',
-        status: 'pending',
-        description: `Top-up request: ${easyPayCode}`,
-        currency: 'ZAR',
-        fee: 0.00,
-        metadata: {
-          voucherId: voucher.id,
-          voucherCode: easyPayCode,
-          voucherType: 'easypay_topup',
-          requestType: 'easypay_topup_request'
-        }
-      });
+      // No transaction record created - no wallet movement on request creation
+      // Transaction will be created when settlement occurs (wallet credit)
 
       res.status(201).json({
         success: true,
@@ -482,7 +465,7 @@ exports.issueEasyPayVoucher = async (req, res) => {
           expires_at: voucher.expiresAt,
           sms_sent: false,
           wallet_balance: wallet.balance, // Unchanged balance
-          request_id: requestId
+          voucher_id: voucher.id
         }
       });
     } catch (error) {

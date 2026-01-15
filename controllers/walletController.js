@@ -433,8 +433,17 @@ class WalletController {
 
       // Build where clause for keyset pagination
       // Query transactions by userId - each transaction is already assigned to the correct user
+      // Exclude zero-amount 'request' type transactions (e.g., top-up requests with no wallet movement)
       const whereClause = {
-        userId: userId
+        userId: userId,
+        [Op.and]: [
+          {
+            [Op.or]: [
+              { type: { [Op.ne]: 'request' } },
+              { amount: { [Op.ne]: 0 } }
+            ]
+          }
+        ]
       };
       if (cursor) {
         // Parse cursor (ISO timestamp string)

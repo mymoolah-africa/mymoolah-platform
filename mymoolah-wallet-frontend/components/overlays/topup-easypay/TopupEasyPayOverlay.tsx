@@ -38,7 +38,6 @@ export function TopupEasyPayOverlay() {
   
   // Success state
   const [easyPayPIN, setEasyPayPIN] = useState<string>('');
-  const [requestId, setRequestId] = useState<string>('');
   const [copiedPIN, setCopiedPIN] = useState(false);
 
   // Quick amount options
@@ -147,7 +146,6 @@ export function TopupEasyPayOverlay() {
       
       // Set success data
       setEasyPayPIN(result.data.easypay_code || '');
-      setRequestId(result.data.request_id || '');
       setCurrentStep('success');
       
     } catch (error: any) {
