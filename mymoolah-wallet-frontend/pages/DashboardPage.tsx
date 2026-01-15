@@ -30,7 +30,8 @@ function formatCurrency(amount: number | undefined): string {
   if (amount < 0) {
     return `R -${Math.abs(amount).toLocaleString('en-ZA', { 
       minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
+      maximumFractionDigits: 2,
+      useGrouping: true // Ensure thousand separators are used
     })}`;
   }
   
