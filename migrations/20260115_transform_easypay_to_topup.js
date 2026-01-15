@@ -16,15 +16,55 @@ module.exports = {
   up: async (queryInterface, Sequelize) => {
     console.log('🔄 Starting EasyPay to Top-up @ EasyPay transformation...');
 
-    // First, add the new ENUM values
+    // First, check if ENUM exists and add the new ENUM values
     console.log('📝 Adding new voucher types to ENUM...');
-    await queryInterface.sequelize.query(`
-      ALTER TYPE "enum_vouchers_voucherType" ADD VALUE IF NOT EXISTS 'easypay_topup';
+    
+    // Check if ENUM type exists
+    const [enumCheck] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_type WHERE typname = 'enum_vouchers_voucherType'
+      ) as exists;
     `);
 
-    await queryInterface.sequelize.query(`
-      ALTER TYPE "enum_vouchers_voucherType" ADD VALUE IF NOT EXISTS 'easypay_topup_active';
-    `);
+    if (enumCheck[0].exists) {
+      // Check if values already exist before adding
+      const [topupCheck] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_enum 
+          WHERE enumlabel = 'easypay_topup' 
+          AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'enum_vouchers_voucherType')
+        ) as exists;
+      `);
+
+      if (!topupCheck[0].exists) {
+        await queryInterface.sequelize.query(`
+          ALTER TYPE "enum_vouchers_voucherType" ADD VALUE 'easypay_topup';
+        `);
+        console.log('✅ Added easypay_topup to ENUM');
+      } else {
+        console.log('ℹ️  easypay_topup already exists in ENUM');
+      }
+
+      const [topupActiveCheck] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_enum 
+          WHERE enumlabel = 'easypay_topup_active' 
+          AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'enum_vouchers_voucherType')
+        ) as exists;
+      `);
+
+      if (!topupActiveCheck[0].exists) {
+        await queryInterface.sequelize.query(`
+          ALTER TYPE "enum_vouchers_voucherType" ADD VALUE 'easypay_topup_active';
+        `);
+        console.log('✅ Added easypay_topup_active to ENUM');
+      } else {
+        console.log('ℹ️  easypay_topup_active already exists in ENUM');
+      }
+    } else {
+      console.log('⚠️  ENUM type enum_vouchers_voucherType does not exist. Skipping ENUM value addition.');
+      console.log('   This migration may have already been run or the schema is different.');
+    }
 
     // Update existing voucher types
     console.log('🔄 Transforming existing EasyPay vouchers...');

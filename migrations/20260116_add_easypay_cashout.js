@@ -15,13 +15,53 @@ module.exports = {
 
     // Step 1: Add new voucher types to ENUM
     console.log('📝 Adding new voucher types to ENUM...');
-    await queryInterface.sequelize.query(`
-      ALTER TYPE "enum_vouchers_voucherType" ADD VALUE IF NOT EXISTS 'easypay_cashout';
+    
+    // Check if ENUM type exists
+    const [enumCheck] = await queryInterface.sequelize.query(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_type WHERE typname = 'enum_vouchers_voucherType'
+      ) as exists;
     `);
 
-    await queryInterface.sequelize.query(`
-      ALTER TYPE "enum_vouchers_voucherType" ADD VALUE IF NOT EXISTS 'easypay_cashout_active';
-    `);
+    if (enumCheck[0].exists) {
+      // Check if values already exist before adding
+      const [cashoutCheck] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_enum 
+          WHERE enumlabel = 'easypay_cashout' 
+          AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'enum_vouchers_voucherType')
+        ) as exists;
+      `);
+
+      if (!cashoutCheck[0].exists) {
+        await queryInterface.sequelize.query(`
+          ALTER TYPE "enum_vouchers_voucherType" ADD VALUE 'easypay_cashout';
+        `);
+        console.log('✅ Added easypay_cashout to ENUM');
+      } else {
+        console.log('ℹ️  easypay_cashout already exists in ENUM');
+      }
+
+      const [cashoutActiveCheck] = await queryInterface.sequelize.query(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_enum 
+          WHERE enumlabel = 'easypay_cashout_active' 
+          AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'enum_vouchers_voucherType')
+        ) as exists;
+      `);
+
+      if (!cashoutActiveCheck[0].exists) {
+        await queryInterface.sequelize.query(`
+          ALTER TYPE "enum_vouchers_voucherType" ADD VALUE 'easypay_cashout_active';
+        `);
+        console.log('✅ Added easypay_cashout_active to ENUM');
+      } else {
+        console.log('ℹ️  easypay_cashout_active already exists in ENUM');
+      }
+    } else {
+      console.log('⚠️  ENUM type enum_vouchers_voucherType does not exist. Skipping ENUM value addition.');
+      console.log('   This migration may have already been run or the schema is different.');
+    }
 
     console.log('✅ Added easypay_cashout and easypay_cashout_active to voucherType ENUM');
 
