@@ -3604,7 +3604,7 @@ export function VouchersPage() {
             }}>
               Cancel this EasyPay voucher?
             </AlertDialogTitle>
-            <AlertDialogDescription style={{
+            <div style={{
               fontFamily: 'Montserrat, sans-serif',
               fontSize: '14px',
               color: '#6b7280',
@@ -3658,7 +3658,7 @@ export function VouchersPage() {
               ) : (
                 'Loading voucher details...'
               )}
-            </AlertDialogDescription>
+            </div>
           </AlertDialogHeader>
           <AlertDialogFooter style={{
             display: 'flex',
