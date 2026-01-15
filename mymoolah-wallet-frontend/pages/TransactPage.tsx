@@ -130,6 +130,16 @@ export function TransactPage() {
           badgeType: 'success'
         },
         {
+          id: 'topup-easypay',
+          title: 'Top-up at EasyPay',
+          description: 'Create top-up request, pay at EasyPay, get money in wallet',
+          icon: <Wallet className="w-6 h-6" />,
+          route: '/topup-easypay',
+          available: true,
+          badge: 'New',
+          badgeType: 'warning'
+        },
+        {
           id: 'send-money',
           title: 'Pay Recipient',
           description: 'Transfer to MyMoolah users or bank accounts',

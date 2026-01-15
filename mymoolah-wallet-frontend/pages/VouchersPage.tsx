@@ -1721,9 +1721,7 @@ export function VouchersPage() {
                     </Label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
                       {[
-                        { id: 'mm_voucher', name: 'MyMoolah Voucher', desc: 'Redeemable at MyMoolah network and partner retailers', icon: <Wallet style={{ width: '20px', height: '20px' }} /> },
-                        { id: 'easypay_voucher', name: 'EasyPay Voucher', desc: 'Pay at 8000+ retail stores, auto-convert to MyMoolah voucher', icon: <Building2 style={{ width: '20px', height: '20px' }} /> },
-                        { id: 'third_party_voucher', name: '3rd Party Voucher', desc: 'External vouchers like 1Voucher, OTT, Blu vouchers', icon: <Users style={{ width: '20px', height: '20px' }} /> }
+                        { id: 'mm_voucher', name: 'MyMoolah Voucher', desc: 'Redeemable at MyMoolah network and partner retailers', icon: <Wallet style={{ width: '20px', height: '20px' }} /> }
                       ].map((type) => (
                         <button
                           key={type.id}

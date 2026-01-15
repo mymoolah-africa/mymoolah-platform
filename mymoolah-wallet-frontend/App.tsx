@@ -34,6 +34,7 @@ import { BillPaymentOverlay } from './components/overlays/BillPaymentOverlay';
 import { FlashEeziCashOverlay } from './components/overlays/flash-eezicash/FlashEeziCashOverlay';
 import { MMCashRetailOverlay } from './components/overlays/mmcash-retail/MMCashRetailOverlay';
 import { ATMCashSendOverlay } from './components/overlays/atm-cashsend/ATMCashSendOverlay';
+import { TopupEasyPayOverlay } from './components/overlays/topup-easypay/TopupEasyPayOverlay';
 import { DigitalVouchersOverlay } from './components/overlays/digital-vouchers/DigitalVouchersOverlay';
 
 // KYC Pages
@@ -51,7 +52,7 @@ function AppContent() {
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
-  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/referrals', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/vouchers-overlay'];
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/referrals', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/vouchers-overlay'];
   const showTopBanner = pagesWithTopBanner.includes(location.pathname);
 
   return (
@@ -122,6 +123,7 @@ function AppContent() {
             <Route path="/flash-eezicash-overlay" element={<ProtectedRoute><FlashEeziCashOverlay /></ProtectedRoute>} />
             <Route path="/mmcash-retail-overlay" element={<ProtectedRoute><MMCashRetailOverlay /></ProtectedRoute>} />
             <Route path="/atm-cashsend-overlay" element={<ProtectedRoute><ATMCashSendOverlay /></ProtectedRoute>} />
+            <Route path="/topup-easypay" element={<ProtectedRoute><TopupEasyPayOverlay /></ProtectedRoute>} />
             <Route path="/vouchers-overlay" element={<ProtectedRoute><DigitalVouchersOverlay /></ProtectedRoute>} />
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
