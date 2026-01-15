@@ -310,7 +310,8 @@ export function VouchersPage() {
           const balance = parseFloat(data.data.balance);
           const formattedBalance = balance.toLocaleString('en-ZA', {
             minimumFractionDigits: 2,
-            maximumFractionDigits: 2
+            maximumFractionDigits: 2,
+            useGrouping: true // Ensure thousand separators are used
           });
           setWalletBalance(`R${formattedBalance}`);
         }
@@ -3612,7 +3613,11 @@ export function VouchersPage() {
                       EasyPay Number: {voucherToCancel.easyPayNumber}
                     </p>
                     <p style={{ margin: '0', fontWeight: '600', color: '#1f2937' }}>
-                      Amount: R {voucherToCancel.originalAmount}
+                      Amount: R {parseFloat(voucherToCancel.originalAmount || 0).toLocaleString('en-ZA', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                        useGrouping: true
+                      })}
                     </p>
                   </div>
                   <div style={{ marginTop: '16px' }}>
@@ -3621,7 +3626,27 @@ export function VouchersPage() {
                     </p>
                     <ul style={{ margin: '0 0 16px 0', paddingLeft: '20px', listStyle: 'disc' }}>
                       <li>Cancel the voucher immediately</li>
-                      <li>Refund R {voucherToCancel.originalAmount} to your wallet</li>
+                      <li>
+                        Refund R {
+                          (() => {
+                            // For cash-out vouchers, refund includes voucher amount + transaction fee (R8.00)
+                            const isCashout = voucherToCancel.voucherType === 'easypay_cashout' || voucherToCancel.voucherType === 'easypay_cashout_active';
+                            if (isCashout) {
+                              const voucherAmount = parseFloat(voucherToCancel.originalAmount || 0);
+                              const transactionFee = 8.00; // R8.00 transaction fee for cash-out
+                              const totalRefund = voucherAmount + transactionFee;
+                              return totalRefund.toLocaleString('en-ZA', {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                                useGrouping: true
+                              });
+                            } else {
+                              // For top-up vouchers, no refund (wallet was never debited)
+                              return '0.00';
+                            }
+                          })()
+                        } to your wallet
+                      </li>
                       <li>This action cannot be undone</li>
                     </ul>
                   </div>
