@@ -22,7 +22,6 @@ import {
   Loader2,
   AlertTriangle,
   DollarSign,
-  Store,
   AtSign,
   HandCoins
 } from 'lucide-react';
@@ -173,7 +172,7 @@ export function TransactPage() {
           id: 'mmcash-retail',
           title: 'Cash-out at Retail',
           description: 'MMCash vouchers for retail partner cash-out',
-          icon: <Store className="w-6 h-6" />,
+          icon: <DollarSign className="w-6 h-6" />,
           route: '/mmcash-retail-overlay',
           available: false,
           badge: 'Coming Soon',
