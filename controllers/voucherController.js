@@ -726,9 +726,14 @@ exports.issueEasyPayCashout = async (req, res) => {
         }, { transaction: t });
 
         // Create Bill record for EasyPay lookup
+        // Extract receiverId from EasyPay code (4 digits after the leading 9)
+        const { extractReceiverId } = require('../utils/easyPayUtils');
+        const receiverId = extractReceiverId(easyPayCode) || '1234'; // Fallback to default if extraction fails
+        
         await Bill.create({
           userId: req.user.id,
           easyPayNumber: easyPayCode,
+          receiverId: receiverId, // Required field - extract from EasyPay code
           amount: amount,
           minAmount: amount,
           maxAmount: amount,
@@ -736,7 +741,7 @@ exports.issueEasyPayCashout = async (req, res) => {
           billType: 'easypay_cashout',
           description: `Cash-out @ EasyPay: ${easyPayCode}`,
           customerName: req.user.name || req.user.phoneNumber,
-          accountNumber: easyPayCode,
+          accountNumber: easyPayCode.substring(5, 13), // Account number portion (8 digits)
           dueDate: expiresAt,
           metadata: {
             voucherId: voucher.id,
