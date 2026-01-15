@@ -6,10 +6,23 @@ const authMiddleware = require('../middleware/auth');
 // Issue a new voucher
 router.post('/issue', authMiddleware, voucherController.issueVoucher);
 
-// Issue EasyPay voucher
-router.post('/easypay/issue', authMiddleware, voucherController.issueEasyPayVoucher);
+// Issue EasyPay Top-up voucher
+router.post('/easypay/topup/issue', authMiddleware, voucherController.issueEasyPayVoucher);
 
-// Process EasyPay settlement callback
+// Process EasyPay Top-up settlement callback
+router.post('/easypay/topup/settlement', voucherController.processEasyPaySettlement);
+
+// Issue EasyPay Cash-out voucher
+router.post('/easypay/cashout/issue', authMiddleware, voucherController.issueEasyPayCashout);
+
+// Process EasyPay Cash-out settlement callback
+router.post('/easypay/cashout/settlement', voucherController.processEasyPayCashoutSettlement);
+
+// Cancel EasyPay Cash-out voucher
+router.delete('/easypay/cashout/:voucherId', authMiddleware, voucherController.cancelEasyPayCashout);
+
+// Legacy routes (for backward compatibility)
+router.post('/easypay/issue', authMiddleware, voucherController.issueEasyPayVoucher);
 router.post('/easypay/settlement', voucherController.processEasyPaySettlement);
 
 // Redeem a voucher (must be authenticated so we credit the redeemer's wallet)

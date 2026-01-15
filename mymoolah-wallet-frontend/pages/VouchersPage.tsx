@@ -362,7 +362,9 @@ export function VouchersPage() {
         if (voucher.voucherType === 'easypay_pending' || 
             voucher.voucherType === 'easypay_active' ||
             voucher.voucherType === 'easypay_topup' ||
-            voucher.voucherType === 'easypay_topup_active') {
+            voucher.voucherType === 'easypay_topup_active' ||
+            voucher.voucherType === 'easypay_cashout' ||
+            voucher.voucherType === 'easypay_cashout_active') {
           voucherType = 'easypay_voucher';
         } else {
           voucherType = 'mm_voucher';
@@ -419,7 +421,12 @@ export function VouchersPage() {
           expiryDate: voucher.expiresAt || computedExpiry,
           // expose expiresAt for export logic
           expiresAt: voucher.expiresAt || undefined,
-          description: voucher.metadata?.description || (voucherType === 'easypay_voucher' ? 'EasyPay voucher' : 'MMVoucher'),
+          description: voucher.metadata?.description || 
+            (voucher.voucherType === 'easypay_cashout' || voucher.voucherType === 'easypay_cashout_active' 
+              ? 'Cash-out @ EasyPay' 
+              : voucher.voucherType === 'easypay_topup' || voucher.voucherType === 'easypay_topup_active'
+              ? 'Top-up @ EasyPay'
+              : voucherType === 'easypay_voucher' ? 'EasyPay voucher' : 'MMVoucher'),
           transactionId: `VOUCHER-${voucher.id}`,
           redemptionLocations: voucherType === 'easypay_voucher' ? ['EasyPay Network', 'MyMoolah Network'] : ['MyMoolah Network'],
           remainingValue: computedRemainingValue,
@@ -976,8 +983,14 @@ export function VouchersPage() {
       setSimulatingVoucherId(voucher.id);
       setError(null);
 
+      // Determine if this is a cash-out or top-up voucher
+      const isCashout = voucher.description?.includes('Cash-out @ EasyPay');
+      const endpoint = isCashout 
+        ? `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/cashout/settlement`
+        : `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/topup/settlement`;
+
       // Call settlement endpoint to simulate EasyPay payment
-      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/settlement`, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1013,7 +1026,11 @@ export function VouchersPage() {
         z-index: 9999;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       `;
-      successToast.textContent = `Settlement simulated! Wallet credited with R${result.data?.net_amount?.toFixed(2) || voucher.originalAmount.toFixed(2)}`;
+      const isCashout = voucher.description?.includes('Cash-out @ EasyPay');
+      const successMessage = isCashout
+        ? `Settlement simulated! Cash-out voucher redeemed.`
+        : `Settlement simulated! Wallet credited with R${result.data?.net_amount?.toFixed(2) || voucher.originalAmount.toFixed(2)}`;
+      successToast.textContent = successMessage;
       document.body.appendChild(successToast);
       setTimeout(() => {
         document.body.removeChild(successToast);

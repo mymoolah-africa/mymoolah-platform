@@ -42,7 +42,7 @@ module.exports = (sequelize) => {
       defaultValue: 'pending'
     },
     voucherType: {
-      type: DataTypes.ENUM('standard', 'premium', 'business', 'corporate', 'student', 'senior', 'easypay_pending', 'easypay_active', 'easypay_topup', 'easypay_topup_active'),
+      type: DataTypes.ENUM('standard', 'premium', 'business', 'corporate', 'student', 'senior', 'easypay_pending', 'easypay_active', 'easypay_topup', 'easypay_topup_active', 'easypay_cashout', 'easypay_cashout_active'),
       allowNull: false,
       defaultValue: 'standard'
     },
@@ -109,7 +109,9 @@ module.exports = (sequelize) => {
     return this.voucherType === 'easypay_pending' ||
            this.voucherType === 'easypay_active' ||
            this.voucherType === 'easypay_topup' ||
-           this.voucherType === 'easypay_topup_active';
+           this.voucherType === 'easypay_topup_active' ||
+           this.voucherType === 'easypay_cashout' ||
+           this.voucherType === 'easypay_cashout_active';
   };
 
   Voucher.prototype.isPendingEasyPay = function() {
@@ -134,6 +136,18 @@ module.exports = (sequelize) => {
 
   Voucher.prototype.isRedeemedEasyPay = function() {
     return this.voucherType === 'easypay_active' && this.status === 'redeemed';
+  };
+
+  Voucher.prototype.isCashoutEasyPay = function() {
+    return this.voucherType === 'easypay_cashout' || this.voucherType === 'easypay_cashout_active';
+  };
+
+  Voucher.prototype.isPendingCashoutEasyPay = function() {
+    return this.voucherType === 'easypay_cashout' && this.status === 'pending_payment';
+  };
+
+  Voucher.prototype.isActiveCashoutEasyPay = function() {
+    return this.voucherType === 'easypay_cashout_active' && this.status === 'active';
   };
 
   return Voucher;

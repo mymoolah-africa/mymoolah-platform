@@ -169,6 +169,16 @@ export function TransactPage() {
           badgeType: 'warning'
         },
         {
+          id: 'cashout-easypay',
+          title: 'Cash-out at EasyPay',
+          description: 'Cash-out vouchers for EasyPay store withdrawal',
+          icon: <DollarSign className="w-6 h-6" />,
+          route: '/cashout-easypay',
+          available: true,
+          badge: 'New',
+          badgeType: 'warning'
+        },
+        {
           id: 'mmcash-retail',
           title: 'Cash-out at Retail',
           description: 'MMCash vouchers for retail partner cash-out',

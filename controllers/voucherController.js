@@ -56,6 +56,117 @@ const handleExpiredVouchers = async () => {
           continue; // Skip to next voucher
         }
 
+        // Check if this is a cash-out voucher - refund voucher + fee
+        const isCashoutVoucher = voucher.voucherType === 'easypay_cashout' || voucher.voucherType === 'easypay_cashout_active';
+        
+        if (isCashoutVoucher) {
+          // Get user's wallet and EasyPay Cash-out Float
+          const { Wallet, Transaction, SupplierFloat } = require('../models');
+          const { sequelize } = require('../models');
+          const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
+          
+          if (!wallet) {
+            console.error(`❌ Wallet not found for user ${voucher.userId}`);
+            continue;
+          }
+
+          const cashoutFloat = await SupplierFloat.findOne({
+            where: { supplierId: 'easypay_cashout' }
+          });
+
+          if (!cashoutFloat) {
+            console.error(`❌ EasyPay Cash-out Float not found`);
+            continue;
+          }
+
+          // Get fee structure from metadata
+          const userFee = parseFloat(voucher.metadata?.feeStructure?.userFee || process.env.EASYPAY_CASHOUT_USER_FEE || '800') / 100;
+          const voucherAmount = parseFloat(voucher.originalAmount);
+          const totalRefund = voucherAmount + userFee; // Refund voucher + fee
+
+          // Use transaction to ensure atomicity
+          await sequelize.transaction(async (t) => {
+            // Update voucher status to expired
+            await voucher.update({ 
+              status: 'expired',
+              balance: 0,
+              metadata: {
+                ...voucher.metadata,
+                expiredAt: new Date().toISOString(),
+                refundAmount: totalRefund,
+                processedBy: 'auto_expiration_handler',
+                note: 'Cash-out voucher expired - full refund (voucher + fee)'
+              }
+            }, { transaction: t });
+
+            // Credit user wallet (voucher + fee)
+            await wallet.credit(totalRefund, 'easypay_cashout_expired_refund', { transaction: t });
+
+            // Credit EasyPay Cash-out Float (voucher amount only)
+            cashoutFloat.currentBalance = parseFloat(cashoutFloat.currentBalance) + voucherAmount;
+            await cashoutFloat.save({ transaction: t });
+
+            // Create refund transaction 1: Voucher amount
+            const voucherRefundId = `CASHOUT-EXP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            await Transaction.create({
+              transactionId: voucherRefundId,
+              userId: voucher.userId,
+              walletId: wallet.walletId,
+              amount: voucherAmount,
+              type: 'refund',
+              status: 'completed',
+              description: `Cash-out @ EasyPay expired - voucher refund: ${voucher.easyPayCode}`,
+              currency: 'ZAR',
+              fee: 0,
+              metadata: {
+                voucherId: voucher.id,
+                voucherCode: voucher.easyPayCode,
+                voucherType: 'easypay_cashout',
+                originalAmount: voucherAmount,
+                refundAmount: voucherAmount,
+                expiryDate: voucher.expiresAt,
+                refundReason: 'easypay_cashout_expired',
+                isCashoutVoucherRefund: true,
+                auditTrail: {
+                  processedAt: new Date().toISOString(),
+                  handler: 'auto_expiration_handler'
+                }
+              }
+            }, { transaction: t });
+
+            // Create refund transaction 2: Fee amount
+            const feeRefundId = `FEE-EXP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            await Transaction.create({
+              transactionId: feeRefundId,
+              userId: voucher.userId,
+              walletId: wallet.walletId,
+              amount: userFee,
+              type: 'refund',
+              status: 'completed',
+              description: 'Transaction Fee Refund',
+              currency: 'ZAR',
+              fee: 0,
+              metadata: {
+                voucherId: voucher.id,
+                voucherCode: voucher.easyPayCode,
+                voucherType: 'easypay_cashout',
+                feeRefundAmount: userFee,
+                expiryDate: voucher.expiresAt,
+                refundReason: 'easypay_cashout_expired',
+                isCashoutFeeRefund: true,
+                relatedTransactionId: voucherRefundId,
+                auditTrail: {
+                  processedAt: new Date().toISOString(),
+                  handler: 'auto_expiration_handler'
+                }
+              }
+            }, { transaction: t });
+          });
+
+          console.log(`✅ Processed expired cash-out voucher ${voucher.easyPayCode}: Refunded R${totalRefund} (Voucher: R${voucherAmount} + Fee: R${userFee})`);
+          continue; // Skip to next voucher
+        }
+
         // Get user's wallet
         const { Wallet, Transaction } = require('../models');
         const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
@@ -498,6 +609,255 @@ exports.issueEasyPayVoucher = async (req, res) => {
   }
 };
 
+// Issue EasyPay Cash-out Voucher
+exports.issueEasyPayCashout = async (req, res) => {
+  try {
+    const voucherData = req.body;
+
+    // Validate required fields
+    if (!voucherData.original_amount || !voucherData.issued_to) {
+      return res.status(400).json({ error: 'Amount and issued_to are required' });
+    }
+
+    // Validate amount (50-3000 for cash-out)
+    const amount = Number(voucherData.original_amount);
+    if (isNaN(amount) || amount < 50 || amount > 3000) {
+      return res.status(400).json({ error: 'Amount must be between 50 and 3000' });
+    }
+
+    // Get fee structure (VAT Inclusive)
+    const userFee = parseFloat(process.env.EASYPAY_CASHOUT_USER_FEE || '800') / 100; // R8.00
+    const providerFee = parseFloat(process.env.EASYPAY_CASHOUT_PROVIDER_FEE || '500') / 100; // R5.00
+    const mmMargin = parseFloat(process.env.EASYPAY_CASHOUT_MM_MARGIN || '300') / 100; // R3.00
+    const vatRate = parseFloat(process.env.EASYPAY_CASHOUT_VAT_RATE || '0.15'); // 15%
+
+    // Calculate VAT breakdown (VAT Inclusive amounts)
+    const userFeeVAT = (userFee / (1 + vatRate)) * vatRate; // R1.04
+    const providerFeeVAT = (providerFee / (1 + vatRate)) * vatRate; // R0.65
+    const mmMarginVAT = (mmMargin / (1 + vatRate)) * vatRate; // R0.39
+
+    const totalRequired = amount + userFee; // Voucher amount + transaction fee
+
+    // Get user's wallet
+    const { Wallet, Transaction, SupplierFloat, Bill } = require('../models');
+    const { sequelize } = require('../models');
+    const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+
+    if (!wallet) {
+      return res.status(404).json({ error: 'User wallet not found' });
+    }
+
+    if (wallet.status !== 'active') {
+      return res.status(400).json({ error: 'Wallet is not active' });
+    }
+
+    // Check wallet balance
+    if (parseFloat(wallet.balance) < totalRequired) {
+      return res.status(400).json({ 
+        error: `Insufficient balance. Required: R${totalRequired.toFixed(2)} (Voucher: R${amount.toFixed(2)} + Fee: R${userFee.toFixed(2)}). Available: R${parseFloat(wallet.balance).toFixed(2)}` 
+      });
+    }
+
+    // Get EasyPay Cash-out Float Account
+    const cashoutFloat = await SupplierFloat.findOne({
+      where: { supplierId: 'easypay_cashout' }
+    });
+
+    if (!cashoutFloat) {
+      return res.status(500).json({ error: 'EasyPay Cash-out Float Account not configured' });
+    }
+
+    if (!cashoutFloat.isActive) {
+      return res.status(400).json({ error: 'EasyPay Cash-out Float Account is not active' });
+    }
+
+    // Check EasyPay Cash-out Float balance
+    if (parseFloat(cashoutFloat.currentBalance) < amount) {
+      return res.status(400).json({ 
+        error: `Insufficient EasyPay Cash-out Float balance. Required: R${amount.toFixed(2)}, Available: R${parseFloat(cashoutFloat.currentBalance).toFixed(2)}` 
+      });
+    }
+
+    // Generate EasyPay number
+    const easyPayCode = generateEasyPayNumber();
+
+    // Set expiration (96 hours from now - 4 days)
+    const expiresAt = new Date(Date.now() + 96 * 60 * 60 * 1000);
+
+    try {
+      // Use transaction to ensure atomicity
+      const result = await sequelize.transaction(async (t) => {
+        // Debit user wallet (voucher amount + fee)
+        await wallet.debit(totalRequired, 'easypay_cashout_creation', { transaction: t });
+
+        // Debit EasyPay Cash-out Float
+        cashoutFloat.currentBalance = parseFloat(cashoutFloat.currentBalance) - amount;
+        await cashoutFloat.save({ transaction: t });
+
+        // Create EasyPay cash-out voucher
+        const voucher = await Voucher.create({
+          userId: req.user.id,
+          voucherCode: easyPayCode,
+          easyPayCode,
+          originalAmount: amount,
+          balance: amount, // Full amount available for cash-out
+          status: 'pending_payment',
+          voucherType: 'easypay_cashout',
+          expiresAt,
+          metadata: {
+            issuedTo: voucherData.issued_to,
+            issuedBy: 'system',
+            callbackReceived: false,
+            smsSent: false,
+            description: voucherData.description || null,
+            merchant: voucherData.merchant || null,
+            feeStructure: {
+              userFee: userFee,
+              providerFee: providerFee,
+              mmMargin: mmMargin,
+              vatBreakdown: {
+                userFeeVAT: userFeeVAT,
+                providerFeeVAT: providerFeeVAT,
+                mmMarginVAT: mmMarginVAT,
+                totalVAT: userFeeVAT + providerFeeVAT + mmMarginVAT
+              }
+            }
+          }
+        }, { transaction: t });
+
+        // Create Bill record for EasyPay lookup
+        await Bill.create({
+          userId: req.user.id,
+          easyPayNumber: easyPayCode,
+          amount: amount,
+          minAmount: amount,
+          maxAmount: amount,
+          status: 'pending',
+          billType: 'easypay_cashout',
+          description: `Cash-out @ EasyPay: ${easyPayCode}`,
+          customerName: req.user.name || req.user.phoneNumber,
+          accountNumber: easyPayCode,
+          dueDate: expiresAt,
+          metadata: {
+            voucherId: voucher.id,
+            voucherType: 'easypay_cashout',
+            feeStructure: {
+              userFee: userFee,
+              providerFee: providerFee,
+              mmMargin: mmMargin
+            }
+          }
+        }, { transaction: t });
+
+        // Create transaction 1: Voucher amount debit
+        const voucherTransactionId = `CASHOUT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await Transaction.create({
+          transactionId: voucherTransactionId,
+          userId: req.user.id,
+          walletId: wallet.walletId,
+          amount: -amount, // Negative for debit
+          type: 'payment',
+          status: 'completed',
+          description: `Cash-out @ EasyPay: ${easyPayCode}`,
+          currency: 'ZAR',
+          fee: 0, // Fee shown as separate transaction
+          metadata: {
+            voucherId: voucher.id,
+            voucherCode: easyPayCode,
+            voucherType: 'easypay_cashout',
+            operationType: 'easypay_cashout_creation',
+            grossAmount: amount,
+            isCashoutVoucherAmount: true
+          }
+        }, { transaction: t });
+
+        // Create transaction 2: Fee debit
+        const feeTransactionId = `FEE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await Transaction.create({
+          transactionId: feeTransactionId,
+          userId: req.user.id,
+          walletId: wallet.walletId,
+          amount: -userFee, // Negative for debit
+          type: 'fee',
+          status: 'completed',
+          description: 'Transaction Fee',
+          currency: 'ZAR',
+          fee: 0,
+          metadata: {
+            voucherId: voucher.id,
+            voucherCode: easyPayCode,
+            voucherType: 'easypay_cashout',
+            operationType: 'easypay_cashout_fee',
+            feeAmount: userFee,
+            feeStructure: {
+              total: userFee,
+              providerCost: providerFee,
+              serviceRevenue: mmMargin,
+              vatBreakdown: {
+                userFeeVAT: userFeeVAT,
+                providerFeeVAT: providerFeeVAT,
+                mmMarginVAT: mmMarginVAT,
+                totalVAT: userFeeVAT + providerFeeVAT + mmMarginVAT
+              }
+            },
+            isCashoutFee: true,
+            relatedTransactionId: voucherTransactionId
+          }
+        }, { transaction: t });
+
+        // Post ledger entries (double-entry accounting)
+        const { ledgerService } = require('../services/ledgerService');
+        
+        // DR User Wallet, CR EasyPay Cash-out Float, CR Revenue, CR VAT Payable, DR Provider Expense
+        await ledgerService.postJournalEntry({
+          description: `EasyPay Cash-out: ${easyPayCode}`,
+          lines: [
+            { accountCode: `WALLET_${req.user.id}`, debit: totalRequired, credit: 0 },
+            { accountCode: 'EASYPAY_CASHOUT_FLOAT', debit: 0, credit: amount },
+            { accountCode: 'MM_REV_FEES', debit: 0, credit: mmMargin },
+            { accountCode: 'VAT_PAYABLE', debit: 0, credit: userFeeVAT },
+            { accountCode: 'PROVIDER_FEE_EXP', debit: providerFee, credit: 0 }
+          ],
+          reference: voucherTransactionId,
+          metadata: {
+            voucherId: voucher.id,
+            easyPayCode: easyPayCode,
+            operationType: 'easypay_cashout_creation'
+          }
+        }, { transaction: t });
+
+        return { voucher, voucherTransactionId, feeTransactionId };
+      });
+
+      const { voucher } = result;
+
+      // Reload wallet to get updated balance
+      await wallet.reload();
+
+      res.status(201).json({
+        success: true,
+        message: 'EasyPay cash-out voucher created successfully',
+        data: {
+          easypay_code: voucher.easyPayCode,
+          amount: voucher.originalAmount,
+          transaction_fee: userFee,
+          total_debited: totalRequired,
+          expires_at: voucher.expiresAt,
+          sms_sent: false,
+          wallet_balance: wallet.balance,
+          voucher_id: voucher.id
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error in EasyPay cash-out voucher creation:', error);
+      res.status(500).json({ error: 'Database error during EasyPay cash-out voucher creation. Please try again.' });
+    }
+  } catch (err) {
+    console.error('❌ Issue EasyPay cash-out voucher error:', err);
+    res.status(500).json({ error: err.message || 'Failed to create EasyPay cash-out voucher' });
+  }
+};
+
 // Process EasyPay top-up settlement callback
 exports.processEasyPaySettlement = async (req, res) => {
   try {
@@ -634,6 +994,116 @@ exports.processEasyPaySettlement = async (req, res) => {
   } catch (err) {
     console.error('❌ Process EasyPay top-up settlement error:', err);
     res.status(500).json({ error: err.message || 'Failed to process top-up settlement' });
+  }
+};
+
+// Process EasyPay Cash-out Settlement Callback
+exports.processEasyPayCashoutSettlement = async (req, res) => {
+  try {
+    const { easypay_code, settlement_amount, merchant_id, transaction_id } = req.body;
+
+    // Find the pending EasyPay cash-out voucher
+    const voucher = await Voucher.findOne({
+      where: {
+        easyPayCode: easypay_code,
+        voucherType: 'easypay_cashout',
+        status: 'pending_payment'
+      }
+    });
+
+    if (!voucher) {
+      return res.status(404).json({ error: 'EasyPay cash-out voucher not found or already settled' });
+    }
+
+    // Verify settlement amount matches voucher amount
+    const voucherAmount = parseFloat(voucher.originalAmount);
+    const settlementAmount = parseFloat(settlement_amount);
+
+    if (Math.abs(voucherAmount - settlementAmount) > 0.01) {
+      return res.status(400).json({ 
+        error: `Settlement amount mismatch. Expected: R${voucherAmount.toFixed(2)}, Received: R${settlementAmount.toFixed(2)}` 
+      });
+    }
+
+    // Get user's wallet (for audit purposes, wallet already debited on creation)
+    const { Wallet, Transaction, Bill } = require('../models');
+    const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
+
+    if (!wallet) {
+      return res.status(404).json({ error: 'User wallet not found' });
+    }
+
+    // Update Bill status to paid
+    const bill = await Bill.findOne({ where: { easyPayNumber: easypay_code } });
+    if (bill) {
+      await bill.update({
+        status: 'paid',
+        paidAt: new Date(),
+        metadata: {
+          ...bill.metadata,
+          settlementAmount: settlement_amount,
+          settlementMerchant: merchant_id,
+          settlementTransactionId: transaction_id,
+          settlementTimestamp: new Date().toISOString()
+        }
+      });
+    }
+
+    // Create settlement audit transaction (no wallet movement - already debited)
+    const settlementId = `CASHOUT-STL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    await Transaction.create({
+      transactionId: settlementId,
+      userId: voucher.userId,
+      walletId: wallet.walletId,
+      amount: 0, // No wallet movement - already debited on creation
+      type: 'payment',
+      status: 'completed',
+      description: `Cash-out @ EasyPay settled: ${easypay_code}`,
+      currency: 'ZAR',
+      fee: 0,
+      metadata: {
+        voucherId: voucher.id,
+        voucherCode: easypay_code,
+        voucherType: 'easypay_cashout',
+        settlementType: 'easypay_cashout_settlement',
+        voucherAmount: voucherAmount,
+        settlementAmount: settlementAmount,
+        easyPayTransactionId: transaction_id,
+        merchantId: merchant_id,
+        settlementTimestamp: new Date().toISOString(),
+        note: 'Wallet already debited on voucher creation'
+      }
+    });
+
+    // Update voucher as redeemed (consumed)
+    await voucher.update({
+      status: 'redeemed', // Consumed
+      voucherType: 'easypay_cashout', // Keep type for tracking
+      balance: 0, // Consumed
+      metadata: {
+        ...voucher.metadata,
+        settlementAmount: settlement_amount,
+        settlementMerchant: merchant_id,
+        settlementTimestamp: new Date().toISOString(),
+        callbackReceived: true,
+        transactionId: transaction_id,
+        settlementTransactionId: settlementId
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'EasyPay cash-out settled successfully',
+      data: {
+        easypay_code: easypay_code,
+        voucher_amount: voucherAmount,
+        status: 'completed',
+        settlement_transaction_id: settlementId
+      }
+    });
+  } catch (err) {
+    console.error('❌ Process EasyPay cash-out settlement error:', err);
+    res.status(500).json({ error: err.message || 'Failed to process cash-out settlement' });
   }
 };
 
@@ -1355,6 +1825,214 @@ exports.cancelEasyPayVoucher = async (req, res) => {
     console.error('❌ Error in cancelEasyPayVoucher:', error);
     res.status(500).json({ 
       error: 'Server error during voucher cancellation' 
+    });
+  }
+};
+
+// Cancel EasyPay Cash-out Voucher
+exports.cancelEasyPayCashout = async (req, res) => {
+  try {
+    const { voucherId } = req.params;
+    
+    console.log(`🔄 Cash-out cancellation request for voucher ID: ${voucherId}, User ID: ${req.user?.id}`);
+    
+    if (!voucherId) {
+      return res.status(400).json({ error: 'Voucher ID is required' });
+    }
+
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Find the cash-out voucher
+    const voucher = await Voucher.findOne({
+      where: {
+        id: voucherId,
+        userId: req.user.id,
+        voucherType: { [Op.in]: ['easypay_cashout', 'easypay_cashout_active'] },
+        status: { [Op.in]: ['pending_payment', 'active'] }
+      }
+    });
+
+    if (!voucher) {
+      console.log(`❌ Cash-out voucher not found: ID=${voucherId}, User=${req.user.id}`);
+      return res.status(404).json({ 
+        error: 'Cash-out voucher not found or cannot be cancelled' 
+      });
+    }
+
+    console.log(`✅ Found cash-out voucher: ${voucher.easyPayCode}, Status: ${voucher.status}, Amount: ${voucher.originalAmount}`);
+
+    // Check if voucher has already expired
+    if (voucher.expiresAt && new Date() > voucher.expiresAt) {
+      return res.status(400).json({ 
+        error: 'Cannot cancel expired voucher. It will be automatically refunded.' 
+      });
+    }
+
+    // Check if voucher has already been settled
+    if (voucher.metadata?.callbackReceived) {
+      return res.status(400).json({ 
+        error: 'Cannot cancel voucher that has already been settled' 
+      });
+    }
+
+    // Get fee structure from metadata
+    const userFee = parseFloat(voucher.metadata?.feeStructure?.userFee || process.env.EASYPAY_CASHOUT_USER_FEE || '800') / 100;
+    const voucherAmount = parseFloat(voucher.originalAmount);
+    const totalRefund = voucherAmount + userFee; // Refund voucher + fee
+
+    // Get user's wallet and EasyPay Cash-out Float
+    const { Wallet, Transaction, SupplierFloat } = require('../models');
+    const { sequelize } = require('../models');
+    const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+    
+    if (!wallet) {
+      return res.status(404).json({ error: 'User wallet not found' });
+    }
+
+    const cashoutFloat = await SupplierFloat.findOne({
+      where: { supplierId: 'easypay_cashout' }
+    });
+
+    if (!cashoutFloat) {
+      return res.status(500).json({ error: 'EasyPay Cash-out Float Account not configured' });
+    }
+
+    try {
+      // Use transaction to ensure atomicity
+      const result = await sequelize.transaction(async (t) => {
+        // Update voucher status to cancelled
+        await voucher.update({ 
+          status: 'cancelled',
+          balance: 0,
+          metadata: {
+            ...voucher.metadata,
+            cancelledAt: new Date().toISOString(),
+            cancellationReason: 'user_requested',
+            cancelledBy: req.user.id,
+            refundAmount: totalRefund,
+            auditTrail: {
+              action: 'easypay_cashout_cancellation',
+              userInitiated: true,
+              processedAt: new Date().toISOString(),
+              originalStatus: voucher.status,
+              newStatus: 'cancelled'
+            }
+          }
+        }, { transaction: t });
+
+        // Credit user wallet (voucher amount + fee)
+        await wallet.credit(totalRefund, 'easypay_cashout_cancellation_refund', { transaction: t });
+
+        // Credit EasyPay Cash-out Float (voucher amount only)
+        cashoutFloat.currentBalance = parseFloat(cashoutFloat.currentBalance) + voucherAmount;
+        await cashoutFloat.save({ transaction: t });
+
+        // Create refund transaction 1: Voucher amount
+        const voucherRefundId = `CASHOUT-REF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await Transaction.create({
+          transactionId: voucherRefundId,
+          userId: req.user.id,
+          walletId: wallet.walletId,
+          amount: voucherAmount,
+          type: 'refund',
+          status: 'completed',
+          description: `Cash-out @ EasyPay cancelled - voucher refund: ${voucher.easyPayCode}`,
+          currency: 'ZAR',
+          fee: 0,
+          metadata: {
+            voucherId: voucher.id,
+            voucherCode: voucher.easyPayCode,
+            voucherType: 'easypay_cashout',
+            originalAmount: voucherAmount,
+            refundAmount: voucherAmount,
+            cancellationReason: 'user_requested',
+            cancelledAt: new Date().toISOString(),
+            isCashoutVoucherRefund: true
+          }
+        }, { transaction: t });
+
+        // Create refund transaction 2: Fee amount
+        const feeRefundId = `FEE-REF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await Transaction.create({
+          transactionId: feeRefundId,
+          userId: req.user.id,
+          walletId: wallet.walletId,
+          amount: userFee,
+          type: 'refund',
+          status: 'completed',
+          description: 'Transaction Fee Refund',
+          currency: 'ZAR',
+          fee: 0,
+          metadata: {
+            voucherId: voucher.id,
+            voucherCode: voucher.easyPayCode,
+            voucherType: 'easypay_cashout',
+            feeRefundAmount: userFee,
+            cancellationReason: 'user_requested',
+            cancelledAt: new Date().toISOString(),
+            isCashoutFeeRefund: true,
+            relatedTransactionId: voucherRefundId
+          }
+        }, { transaction: t });
+
+        // Post ledger entries (contra entries)
+        const { ledgerService } = require('../services/ledgerService');
+        
+        await ledgerService.postJournalEntry({
+          description: `EasyPay Cash-out Cancellation: ${voucher.easyPayCode}`,
+          lines: [
+            { accountCode: 'EASYPAY_CASHOUT_FLOAT', debit: voucherAmount, credit: 0 },
+            { accountCode: `WALLET_${req.user.id}`, debit: 0, credit: totalRefund }
+          ],
+          reference: voucherRefundId,
+          metadata: {
+            voucherId: voucher.id,
+            easyPayCode: voucher.easyPayCode,
+            operationType: 'easypay_cashout_cancellation'
+          }
+        }, { transaction: t });
+
+        console.log(`✅ Cash-out voucher cancelled: ${voucher.easyPayCode}, Refunded: R${totalRefund} (Voucher: R${voucherAmount} + Fee: R${userFee})`);
+        
+        return { voucherRefundId, feeRefundId };
+      });
+
+      const { voucherRefundId, feeRefundId } = result;
+
+      // Reload wallet to get updated balance
+      await wallet.reload();
+
+      res.json({
+        success: true,
+        message: 'EasyPay cash-out voucher cancelled successfully',
+        data: {
+          voucherId: voucher.id,
+          easyPayCode: voucher.easyPayCode,
+          originalAmount: voucherAmount,
+          transactionFee: userFee,
+          totalRefund: totalRefund,
+          newWalletBalance: wallet.balance,
+          cancelledAt: new Date().toISOString(),
+          transactionIds: {
+            voucherRefund: voucherRefundId,
+            feeRefund: feeRefundId
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ Error cancelling EasyPay cash-out voucher:', error);
+      res.status(500).json({ 
+        error: 'Failed to cancel cash-out voucher. Please try again.' 
+      });
+    }
+
+  } catch (error) {
+    console.error('❌ Error in cancelEasyPayCashout:', error);
+    res.status(500).json({ 
+      error: 'Server error during cash-out voucher cancellation' 
     });
   }
 };

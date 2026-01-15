@@ -496,6 +496,10 @@ class WalletController {
           displayAmount = parseFloat(metadata.grossAmount);
         }
         
+        // For cash-out transactions: show voucher amount only (fee is separate transaction)
+        // Cash-out voucher amount is already correct (negative for debit), no adjustment needed
+        // Fee transaction will be filtered out in Recent Transactions
+        
         return {
           id: t.id,
           transactionId: t.transactionId || `tx_${t.id}`, // Fallback if missing
@@ -574,9 +578,12 @@ class WalletController {
           return false;
         }
         
-        // Dashboard: Exclude Transaction Fees (for top-up transactions)
+        // Dashboard: Exclude Transaction Fees (for top-up and cash-out transactions)
         // Transactions page: Keep Transaction Fees
-        if (isDashboard && (desc === 'transaction fee' || (tx.metadata && tx.metadata.isTopUpFee))) {
+        if (isDashboard && (
+          desc === 'transaction fee' || 
+          (tx.metadata && (tx.metadata.isTopUpFee || tx.metadata.isCashoutFee))
+        )) {
           return false;
         }
         
