@@ -70,7 +70,22 @@ class FloatBalanceMonitoringService {
     }
 
     // Use provided schedule or default to hourly
-    const cronSchedule = schedule || `*/${this.checkIntervalMinutes} * * * *`;
+    // For intervals > 59 minutes, use hourly schedule (0 * * * *)
+    let cronSchedule;
+    if (schedule) {
+      cronSchedule = schedule;
+    } else if (this.checkIntervalMinutes >= 60) {
+      // For hourly or longer, use hourly schedule
+      const hours = Math.floor(this.checkIntervalMinutes / 60);
+      if (hours === 1) {
+        cronSchedule = '0 * * * *'; // Every hour at minute 0
+      } else {
+        cronSchedule = `0 */${hours} * * *`; // Every N hours
+      }
+    } else {
+      // For intervals < 60 minutes, use minute-based schedule
+      cronSchedule = `*/${this.checkIntervalMinutes} * * * *`;
+    }
     
     console.log(`[FloatBalanceMonitoring] Starting service with schedule: ${cronSchedule}`);
     console.log(`[FloatBalanceMonitoring] Check interval: ${this.checkIntervalMinutes} minutes`);
