@@ -984,7 +984,8 @@ export function VouchersPage() {
       setError(null);
 
       // Determine if this is a cash-out or top-up voucher
-      const isCashout = voucher.description?.includes('Cash-out @ EasyPay');
+      // Check voucherType directly (more reliable than description)
+      const isCashout = voucher.voucherType === 'easypay_cashout' || voucher.voucherType === 'easypay_cashout_active';
       const endpoint = isCashout 
         ? `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/cashout/settlement`
         : `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/topup/settlement`;
