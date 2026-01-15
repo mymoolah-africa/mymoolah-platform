@@ -1928,7 +1928,15 @@ exports.cancelEasyPayCashout = async (req, res) => {
     }
 
     // Get fee structure from metadata
-    const userFee = parseFloat(voucher.metadata?.feeStructure?.userFee || process.env.EASYPAY_CASHOUT_USER_FEE || '800') / 100;
+    // Fee in metadata is already in rands (not cents), so don't divide by 100 if it's from metadata
+    let userFee;
+    if (voucher.metadata?.feeStructure?.userFee) {
+      // Fee from metadata is already in rands (stored as 8.00, not 800)
+      userFee = parseFloat(voucher.metadata.feeStructure.userFee);
+    } else {
+      // Fee from env is in cents (800), so divide by 100
+      userFee = parseFloat(process.env.EASYPAY_CASHOUT_USER_FEE || '800') / 100;
+    }
     const voucherAmount = parseFloat(voucher.originalAmount);
     const totalRefund = voucherAmount + userFee; // Refund voucher + fee
 
