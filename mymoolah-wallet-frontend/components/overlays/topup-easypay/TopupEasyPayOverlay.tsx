@@ -179,7 +179,6 @@ export function TopupEasyPayOverlay() {
     setPricing(null);
     setErrors({});
     setEasyPayPIN('');
-    setRequestId('');
     setCopiedPIN(false);
     setCurrentStep('form');
   };
