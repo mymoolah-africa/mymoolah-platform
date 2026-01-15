@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
-import { Separator } from '../../ui/separator';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { APP_CONFIG } from '../../../config/app-config';
 import { getToken as getSessionToken } from '../../../utils/authToken';
@@ -316,98 +315,6 @@ export function TopupEasyPayOverlay() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Pricing Breakdown Card */}
-          {pricing && (
-            <Card className="bg-gradient-to-r from-[#86BE41]/10 to-[#2D8CCA]/10 border-[#86BE41]/30">
-              <CardHeader>
-                <CardTitle style={{
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: 'var(--mobile-font-base)',
-                  fontWeight: 'var(--font-weight-bold)',
-                  color: '#1f2937'
-                }}>
-                  Fee Breakdown
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: 'var(--mobile-font-small)',
-                    color: '#6b7280'
-                  }}>
-                    You pay at EasyPay
-                  </span>
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: 'var(--mobile-font-base)',
-                    fontWeight: 'var(--font-weight-bold)',
-                    color: '#1f2937'
-                  }}>
-                    R {pricing.grossAmount.toFixed(2)}
-                  </span>
-                </div>
-                
-                <Separator />
-                
-                <div className="flex justify-between items-center">
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: 'var(--mobile-font-small)',
-                    color: '#6b7280'
-                  }}>
-                    Provider fee
-                  </span>
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: 'var(--mobile-font-small)',
-                    color: '#dc2626'
-                  }}>
-                    - R {pricing.providerFee.toFixed(2)}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: 'var(--mobile-font-small)',
-                    color: '#6b7280'
-                  }}>
-                    Service fee
-                  </span>
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: 'var(--mobile-font-small)',
-                    color: '#dc2626'
-                  }}>
-                    - R {pricing.mmFee.toFixed(2)}
-                  </span>
-                </div>
-                
-                <Separator />
-                
-                <div className="flex justify-between items-center">
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: 'var(--mobile-font-base)',
-                    fontWeight: 'var(--font-weight-bold)',
-                    color: '#1f2937'
-                  }}>
-                    You'll receive in wallet
-                  </span>
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: 'var(--mobile-font-base)',
-                    fontWeight: 'var(--font-weight-bold)',
-                    color: '#16a34a'
-                  }}>
-                    R {pricing.netAmount.toFixed(2)}
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Submit Button */}
           <Button
