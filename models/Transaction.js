@@ -59,9 +59,7 @@ module.exports = (sequelize, DataTypes) => {
     amount: {
       type: DataTypes.DECIMAL(15, 2), // Banking-grade precision
       allowNull: false,
-      validate: {
-        min: 0,
-      },
+      // Amount validation is handled in beforeValidate hook to allow negative amounts for fee transactions
     },
     type: {
       type: DataTypes.ENUM('send', 'receive', 'deposit', 'withdraw', 'transfer', 'payment', 'refund', 'fee'),
@@ -161,6 +159,20 @@ module.exports = (sequelize, DataTypes) => {
       },
     ],
     hooks: {
+      beforeValidate: (transaction) => {
+        // Allow negative amounts for fee transactions
+        if (transaction.type === 'fee') {
+          // Skip amount validation for fee transactions (can be negative)
+          return;
+        }
+        // For all other transaction types, amount must be >= 0
+        if (transaction.amount !== null && transaction.amount !== undefined) {
+          const amountValue = parseFloat(transaction.amount);
+          if (amountValue < 0) {
+            throw new Error('Amount must be greater than or equal to 0 for non-fee transactions');
+          }
+        }
+      },
       beforeCreate: (transaction) => {
         // Generate transaction ID if not provided
         if (!transaction.transactionId) {
