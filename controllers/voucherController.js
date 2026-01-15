@@ -36,6 +36,26 @@ const handleExpiredVouchers = async () => {
 
     for (const voucher of expiredVouchers) {
       try {
+        // Check if this is a top-up voucher - no wallet credit needed (wallet was never debited)
+        const isTopUpVoucher = voucher.voucherType === 'easypay_topup' || voucher.voucherType === 'easypay_topup_active';
+        
+        if (isTopUpVoucher) {
+          // For top-up vouchers, just mark as expired - no wallet credit (no debit was made)
+          await voucher.update({ 
+            status: 'expired',
+            balance: 0,
+            metadata: {
+              ...voucher.metadata,
+              expiredAt: new Date().toISOString(),
+              processedBy: 'auto_expiration_handler',
+              note: 'No wallet credit - top-up voucher was never paid'
+            }
+          });
+
+          console.log(`✅ Processed expired top-up voucher ${voucher.easyPayCode}: No refund (wallet was never debited)`);
+          continue; // Skip to next voucher
+        }
+
         // Get user's wallet
         const { Wallet, Transaction } = require('../models');
         const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
@@ -1194,6 +1214,45 @@ exports.cancelEasyPayVoucher = async (req, res) => {
       });
     }
 
+    // Check if this is a top-up voucher - no wallet credit needed (wallet was never debited)
+    const isTopUpVoucher = voucher.voucherType === 'easypay_topup' || voucher.voucherType === 'easypay_topup_active';
+    
+    if (isTopUpVoucher) {
+      // For top-up vouchers, just mark as cancelled - no wallet credit (no debit was made)
+      await voucher.update({ 
+        status: 'cancelled',
+        balance: 0,
+        metadata: {
+          ...voucher.metadata,
+          cancelledAt: new Date().toISOString(),
+          cancellationReason: 'user_requested',
+          cancelledBy: req.user.id,
+          auditTrail: {
+            action: 'easypay_topup_cancellation',
+            userInitiated: true,
+            processedAt: new Date().toISOString(),
+            originalStatus: voucher.status,
+            newStatus: 'cancelled',
+            note: 'No wallet credit - top-up voucher was never paid'
+          }
+        }
+      });
+
+      return res.json({
+        success: true,
+        message: 'Top-up voucher cancelled successfully',
+        data: {
+          voucherId: voucher.id,
+          easyPayCode: voucher.easyPayCode,
+          originalAmount: voucher.originalAmount,
+          refundAmount: 0, // No refund - wallet was never debited
+          note: 'Top-up vouchers do not require refund as wallet was never debited',
+          cancelledAt: new Date().toISOString()
+        }
+      });
+    }
+
+    // For regular EasyPay vouchers (not top-up), proceed with refund
     // Get user's wallet
     const { Wallet, Transaction } = require('../models');
     const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
