@@ -516,8 +516,11 @@ exports.processEasyPaySettlement = async (req, res) => {
     // Credit wallet with net amount
     await wallet.credit(netAmount, 'easypay_topup_settlement');
 
-    // Create settlement transaction record
+    // Create TWO transaction records:
+    // 1. Net top-up deposit transaction
     const settlementId = `STL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const feeTransactionId = `FEE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
     await Transaction.create({
       transactionId: settlementId,
       userId: voucher.userId,
@@ -527,7 +530,7 @@ exports.processEasyPaySettlement = async (req, res) => {
       status: 'completed',
       description: `Top-up @ EasyPay: ${easypay_code}`,
       currency: 'ZAR',
-      fee: totalFee / 100, // Fee in rands
+      fee: 0, // Fee shown as separate transaction
       metadata: {
         voucherId: voucher.id,
         voucherCode: easypay_code,
@@ -542,7 +545,39 @@ exports.processEasyPaySettlement = async (req, res) => {
         },
         easyPayTransactionId: transaction_id,
         merchantId: merchant_id,
-        settlementTimestamp: new Date().toISOString()
+        settlementTimestamp: new Date().toISOString(),
+        isTopUpNetAmount: true
+      }
+    });
+
+    // 2. Fee transaction (separate entry for Transaction History)
+    await Transaction.create({
+      transactionId: feeTransactionId,
+      userId: voucher.userId,
+      walletId: wallet.walletId,
+      amount: -(totalFee / 100), // Negative amount (fee deduction)
+      type: 'fee',
+      status: 'completed',
+      description: 'Transaction Fee',
+      currency: 'ZAR',
+      fee: 0,
+      metadata: {
+        voucherId: voucher.id,
+        voucherCode: easypay_code,
+        voucherType: 'easypay_topup',
+        settlementType: 'easypay_topup_fee',
+        grossAmount: grossAmount,
+        feeAmount: totalFee / 100,
+        feeStructure: {
+          total: totalFee / 100,
+          providerCost: providerFee / 100,
+          serviceRevenue: mmMargin / 100
+        },
+        easyPayTransactionId: transaction_id,
+        merchantId: merchant_id,
+        settlementTimestamp: new Date().toISOString(),
+        isTopUpFee: true,
+        relatedTransactionId: settlementId
       }
     });
 

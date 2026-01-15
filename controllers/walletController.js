@@ -486,24 +486,35 @@ class WalletController {
 
       // Transform to trimmed payload with banking-grade type mapping
       const transformStart = Date.now();
-      const normalizedRows = transactions.map((t) => ({
-        id: t.id,
-        transactionId: t.transactionId || `tx_${t.id}`, // Fallback if missing
-        amount: parseFloat(t.amount || 0),
-        type: t.type === 'credit' ? 'deposit' : 
-              t.type === 'debit' ? 'payment' : 
-              t.type === 'send' ? 'sent' : 
-              t.type === 'receive' ? 'received' : t.type,
-        status: t.status || 'completed',
-        description: t.description || 'Transaction',
-        currency: t.currency || 'ZAR',
-        fee: t.fee ? parseFloat(t.fee) : 0,
-        createdAt: t.createdAt,
-        // Essential fields for frontend icon classification
-        senderWalletId: t.senderWalletId || null,
-        receiverWalletId: t.receiverWalletId || null,
-        metadata: t.metadata || {}
-      }));
+      const normalizedRows = transactions.map((t) => {
+        const metadata = t.metadata || {};
+        let displayAmount = parseFloat(t.amount || 0);
+        
+        // For top-up transactions in Recent Transactions: show gross amount
+        // Check if this is a top-up net amount transaction and we're showing Recent Transactions
+        if (isDashboard && metadata.isTopUpNetAmount && metadata.grossAmount) {
+          displayAmount = parseFloat(metadata.grossAmount);
+        }
+        
+        return {
+          id: t.id,
+          transactionId: t.transactionId || `tx_${t.id}`, // Fallback if missing
+          amount: displayAmount,
+          type: t.type === 'credit' ? 'deposit' : 
+                t.type === 'debit' ? 'payment' : 
+                t.type === 'send' ? 'sent' : 
+                t.type === 'receive' ? 'received' : t.type,
+          status: t.status || 'completed',
+          description: t.description || 'Transaction',
+          currency: t.currency || 'ZAR',
+          fee: t.fee ? parseFloat(t.fee) : 0,
+          createdAt: t.createdAt,
+          // Essential fields for frontend icon classification
+          senderWalletId: t.senderWalletId || null,
+          receiverWalletId: t.receiverWalletId || null,
+          metadata: metadata
+        };
+      });
 
       // CRITICAL FIX: Deduplicate by transaction ID to prevent duplicates
       const uniqueTransactions = new Map();
@@ -563,9 +574,9 @@ class WalletController {
           return false;
         }
         
-        // Dashboard: Exclude Transaction Fees
+        // Dashboard: Exclude Transaction Fees (for top-up transactions)
         // Transactions page: Keep Transaction Fees
-        if (isDashboard && desc === 'transaction fee') {
+        if (isDashboard && (desc === 'transaction fee' || (tx.metadata && tx.metadata.isTopUpFee))) {
           return false;
         }
         
