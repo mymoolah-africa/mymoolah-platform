@@ -1,5 +1,73 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-01-15 - 💳 EasyPay Top-up @ EasyPay Transformation (v2.6.0) ✅
+
+### **Session Overview**
+Complete transformation of EasyPay voucher system from "buy voucher, then pay at store" to "create top-up request, pay at store, get money back". The system now allows users to create a top-up request (no wallet debit), pay at any EasyPay store, and receive instant wallet credit with fees applied. All fixes and enhancements completed with banking-grade compliance.
+
+### **🔄 Core Transformation** ✅
+- **Voucher Creation**: No wallet debit on top-up request creation (wallet balance unchanged)
+- **Voucher Type**: Changed from `easypay_pending`/`easypay_active` to `easypay_topup`/`easypay_topup_active`
+- **Settlement Flow**: Wallet credited with net amount (gross - R2.50 fees) when user pays at store
+- **Business Logic**: Top-up vouchers excluded from active assets (user hasn't paid yet)
+- **Cancel/Expiry**: No wallet credit on cancel/expiry (wallet was never debited)
+
+### **💰 Transaction Display** ✅
+- **Recent Transactions**: Shows gross amount (R50.00) for top-up transactions
+- **Transaction History**: Shows two separate entries:
+  - Net top-up amount (R47.50) - "Top-up @ EasyPay: {PIN}"
+  - Transaction Fee (R2.50) - "Transaction Fee"
+- **Zero-Amount Filter**: Top-up request creation transactions excluded from history (no wallet movement)
+
+### **🎨 Frontend Enhancements** ✅
+- **New Button**: "Top-up at EasyPay" button on Transact page (between Request Money and Pay Recipient)
+- **PIN Formatting**: 14-digit PIN displayed as `x xxxx xxxx xxxx x` on single line
+- **UI Simplification**: Removed fee breakdown section from creation overlay
+- **Next Steps**: Updated to "Your wallet will be credited instantly" (removed amount)
+- **UAT Simulation**: Red "Simulate" button for pending top-up vouchers (UAT only)
+
+### **🔧 Backend Fixes** ✅
+- **API Configuration**: Fixed `APP_CONFIG.API_BASE_URL` → `APP_CONFIG.API.baseUrl`
+- **Route Fix**: Corrected endpoint `/api/v1/vouchers/easypay` → `/api/v1/vouchers/easypay/issue`
+- **Transaction Model**: Updated validation to allow negative amounts for fee transactions
+- **Cancel Handler**: Fixed to skip wallet credit for top-up vouchers
+- **Expiration Handler**: Fixed to skip wallet credit for top-up vouchers on expiry
+
+### **📁 Files Created** ✅
+1. `migrations/20260115_transform_easypay_to_topup.js` - Database migration for voucher type updates
+2. `mymoolah-wallet-frontend/components/overlays/topup-easypay/TopupEasyPayOverlay.tsx` - Top-up creation component
+3. `mymoolah-wallet-frontend/pages/TopupEasyPayPage.tsx` - Page wrapper for top-up overlay
+4. `docs/session_logs/20260115_easypay_topup_transformation.md` - Complete session log
+
+### **📝 Files Modified** ✅
+1. `models/voucherModel.js` - Added new ENUM values and instance methods
+2. `models/Transaction.js` - Updated validation for fee transactions
+3. `controllers/voucherController.js` - Complete transformation of creation, settlement, cancel, and expiry logic
+4. `controllers/walletController.js` - Updated transaction history display logic
+5. `mymoolah-wallet-frontend/pages/TransactPage.tsx` - Added "Top-up at EasyPay" button
+6. `mymoolah-wallet-frontend/pages/VouchersPage.tsx` - Removed old voucher options, added Simulate button
+7. `mymoolah-wallet-frontend/App.tsx` - Added route for `/topup-easypay`
+8. `docs/VOUCHER_BUSINESS_LOGIC.md` - Documented new exception to core business rules
+9. `env.template` - Added configurable fee environment variables
+
+### **⚙️ Configuration** ✅
+- **Fee Structure**: R2.50 total (R2.00 provider + R0.50 MM margin)
+- **Environment Variables**: 
+  - `EASYPAY_TOPUP_PROVIDER_FEE=200` (R2.00 in cents)
+  - `EASYPAY_TOPUP_MM_MARGIN=50` (R0.50 in cents)
+
+### **✅ Testing Status**
+- [x] Code review for banking-grade compliance
+- [x] Business logic validation
+- [x] Database migration testing
+- [x] API endpoint testing
+- [x] Frontend UI testing
+- [x] Transaction display testing
+- [x] Cancel/expiry handler testing
+- [x] UAT simulation testing
+
+---
+
 ## 2026-01-14 - ⚡ Flash Reconciliation Integration & SFTP IP Standardization (v2.5.1) ✅
 
 ### **Session Overview**

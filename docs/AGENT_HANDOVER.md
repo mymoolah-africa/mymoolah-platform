@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-01-14  
-**Latest Feature**: Flash Reconciliation Integration & SFTP IP Standardization  
-**Document Version**: 2.5.1  
+**Last Updated**: 2026-01-15  
+**Latest Feature**: EasyPay Top-up @ EasyPay Transformation  
+**Document Version**: 2.6.0  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -51,7 +51,10 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (January 14, 2026)**
+### **Latest Achievement (January 15, 2026)**
+**EasyPay Top-up @ EasyPay Transformation** - Complete transformation of EasyPay voucher system from "buy voucher, then pay at store" to "create top-up request, pay at store, get money back". Features include: split transaction display (gross in Recent, net + fee in History), PIN formatting (x xxxx xxxx xxxx x), UAT simulation button, proper cancel/expiry handling (no wallet credit for top-up vouchers), and banking-grade compliance.
+
+### **Previous Achievement (January 14, 2026)**
 **Flash Reconciliation Integration & SFTP IP Standardization** - Complete Flash supplier reconciliation system integrated (FlashAdapter, file generator, database config), SFTP infrastructure standardized to static IP (34.35.137.166), both MobileMart and Flash configured for automated reconciliation.
 
 ### **Previous Achievement (January 13, 2026)**
