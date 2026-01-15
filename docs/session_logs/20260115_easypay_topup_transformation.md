@@ -37,6 +37,11 @@ Successfully transformed the existing EasyPay voucher system from "buy voucher, 
 - `controllers/voucherController.js` - Complete transformation of creation and settlement logic
 - `docs/VOUCHER_BUSINESS_LOGIC.md` - Documented new exception to core business rules
 - `env.template` - Added configurable fee environment variables
+- `mymoolah-wallet-frontend/pages/TransactPage.tsx` - Added "Top-up at EasyPay" button between Request Money and Pay Recipient
+- `mymoolah-wallet-frontend/pages/VouchersPage.tsx` - Removed EasyPay Voucher and 3rd Party Voucher options from creation modal
+- `mymoolah-wallet-frontend/components/overlays/topup-easypay/TopupEasyPayOverlay.tsx` - New component for top-up creation flow
+- `mymoolah-wallet-frontend/App.tsx` - Added route for /topup-easypay
+- `mymoolah-wallet-frontend/pages/TopupEasyPayPage.tsx` - Page wrapper for TopupEasyPayOverlay
 
 ---
 
@@ -57,11 +62,13 @@ Successfully transformed the existing EasyPay voucher system from "buy voucher, 
 ---
 
 ## Testing Performed
-- [ ] Code review for compliance with banking-grade standards
-- [ ] Business logic validation (active assets calculation)
-- [ ] Migration testing (ENUM additions and data transformation)
-- [ ] Fee calculation validation (configurable structure)
-- [ ] Documentation accuracy check
+- [x] Code review for compliance with banking-grade standards
+- [x] Business logic validation (active assets calculation)
+- [x] Migration testing (ENUM additions and data transformation)
+- [x] Fee calculation validation (configurable structure)
+- [x] Documentation accuracy check
+- [ ] Frontend UI testing (button placement, modal updates)
+- [ ] End-to-end flow testing (creation → PIN display → voucher list)
 
 ---
 
