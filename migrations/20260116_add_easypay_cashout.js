@@ -86,7 +86,7 @@ module.exports = {
         minimumBalance: 10000.00, // R10,000 minimum threshold
         maximumBalance: null, // No maximum limit
         settlementPeriod: 'real_time',
-        settlementMethod: 'automatic',
+        settlementMethod: 'prefunded',
         status: 'active',
         isActive: true,
         bankAccountNumber: null, // To be configured
