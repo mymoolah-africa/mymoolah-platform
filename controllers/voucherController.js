@@ -1962,11 +1962,17 @@ exports.cancelEasyPayCashout = async (req, res) => {
         }, { transaction: t });
 
         // Credit user wallet (voucher amount + fee)
+        console.log(`💰 Crediting wallet: R${totalRefund} (Voucher: R${voucherAmount} + Fee: R${userFee})`);
+        const walletBalanceBefore = parseFloat(wallet.balance);
         await wallet.credit(totalRefund, 'easypay_cashout_cancellation_refund', { transaction: t });
+        const walletBalanceAfter = parseFloat(wallet.balance);
+        console.log(`✅ Wallet credited: R${walletBalanceBefore} → R${walletBalanceAfter} (+R${totalRefund})`);
 
         // Credit EasyPay Cash-out Float (voucher amount only)
+        const floatBalanceBefore = parseFloat(cashoutFloat.currentBalance);
         cashoutFloat.currentBalance = parseFloat(cashoutFloat.currentBalance) + voucherAmount;
         await cashoutFloat.save({ transaction: t });
+        console.log(`✅ Float credited: R${floatBalanceBefore} → R${cashoutFloat.currentBalance} (+R${voucherAmount})`);
 
         // Create refund transaction 1: Voucher amount
         const voucherRefundId = `CASHOUT-REF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
