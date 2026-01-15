@@ -1712,6 +1712,14 @@ exports.cancelEasyPayVoucher = async (req, res) => {
 
     console.log(`✅ Found voucher: ${voucher.easyPayCode || voucher.voucherCode}, Status: ${voucher.status}, Amount: ${voucher.originalAmount}`);
 
+    // Check if this is a cash-out voucher - route to cash-out cancellation handler
+    const isCashoutVoucher = voucher.voucherType === 'easypay_cashout' || voucher.voucherType === 'easypay_cashout_active';
+    if (isCashoutVoucher) {
+      console.log(`🔄 Routing cash-out voucher to cancelEasyPayCashout handler`);
+      // Call the cash-out cancellation handler
+      return await exports.cancelEasyPayCashout(req, res);
+    }
+
     // Check if voucher has already expired
     if (voucher.expiresAt && new Date() > voucher.expiresAt) {
       return res.status(400).json({ 
