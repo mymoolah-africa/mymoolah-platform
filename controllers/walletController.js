@@ -526,11 +526,9 @@ class WalletController {
           // Check if this is a cash-out refund transaction
           if (tx.type === 'refund' && 
               (metadata.isCashoutVoucherRefund || metadata.isCashoutFeeRefund) &&
-              metadata.relatedTransactionId) {
-            // Group by relatedTransactionId (voucher refund ID)
-            const groupKey = metadata.isCashoutVoucherRefund 
-              ? tx.transactionId 
-              : metadata.relatedTransactionId;
+              metadata.voucherId) {
+            // Group by voucherId (both refunds have the same voucherId)
+            const groupKey = metadata.voucherId;
             
             if (!cashoutRefundGroups.has(groupKey)) {
               cashoutRefundGroups.set(groupKey, {
