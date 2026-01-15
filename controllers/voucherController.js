@@ -897,6 +897,17 @@ exports.processEasyPaySettlement = async (req, res) => {
     });
 
     if (!voucher) {
+      // Debug: Check if voucher exists with different status or type
+      const debugVoucher = await Voucher.findOne({
+        where: { easyPayCode: easypay_code }
+      });
+      console.log('🔍 Voucher lookup debug:', {
+        easypay_code,
+        found: !!debugVoucher,
+        voucherType: debugVoucher?.voucherType,
+        status: debugVoucher?.status,
+        id: debugVoucher?.id
+      });
       return res.status(404).json({ error: 'EasyPay top-up request not found or already settled' });
     }
 
