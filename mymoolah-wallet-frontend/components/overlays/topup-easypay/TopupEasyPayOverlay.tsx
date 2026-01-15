@@ -437,7 +437,7 @@ export function TopupEasyPayOverlay() {
                 <li>Visit any EasyPay store</li>
                 <li>Show this 14-digit PIN</li>
                 <li>Pay R{pricing?.grossAmount.toFixed(2)}</li>
-                <li>Your wallet will be credited with R{pricing?.netAmount.toFixed(2)}</li>
+                <li>Your wallet will be credited instantly</li>
               </ol>
             </AlertDescription>
           </Alert>
