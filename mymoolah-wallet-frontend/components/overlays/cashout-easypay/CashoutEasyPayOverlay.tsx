@@ -49,7 +49,7 @@ export function CashoutEasyPayOverlay() {
     const fetchWalletBalance = async () => {
       try {
         const token = getSessionToken();
-        const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallet/balance`, {
+        const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
