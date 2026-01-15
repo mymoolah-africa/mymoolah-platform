@@ -27,11 +27,13 @@ module.exports = {
         console.log('⚠️  EasyPay Top-up Float Account not found. Creating it...\n');
         
         // Create the float account with R50,000
+        const LEDGER_ACCOUNT_EASYPAY_TOPUP_FLOAT = process.env.LEDGER_ACCOUNT_EASYPAY_TOPUP_FLOAT || '1200-10-02';
         topupFloat = await SupplierFloat.create({
           supplierId: 'easypay_topup',
           supplierName: 'EasyPay Top-up',
           floatAccountNumber: 'EASYPAY_TOPUP_FLOAT_001',
           floatAccountName: 'EasyPay Top-up Float Account',
+          ledgerAccountCode: LEDGER_ACCOUNT_EASYPAY_TOPUP_FLOAT,
           currentBalance: 50000.00,
           initialBalance: 50000.00,
           minimumBalance: 10000.00,

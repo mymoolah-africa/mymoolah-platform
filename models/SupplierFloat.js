@@ -19,12 +19,17 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING, 
       allowNull: false, 
       unique: true,
-      comment: 'Unique float account number for this supplier' 
+      comment: 'Unique float account number for this supplier (operational identifier)' 
     },
     floatAccountName: { 
       type: DataTypes.STRING, 
       allowNull: false,
       comment: 'Descriptive name for the float account' 
+    },
+    ledgerAccountCode: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+      comment: 'Ledger account code for this float (e.g., 1200-10-01). Must exist in ledger_accounts table.'
     },
     
     // Financial tracking

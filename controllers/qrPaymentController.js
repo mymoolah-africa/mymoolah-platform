@@ -849,11 +849,13 @@ class QRPaymentController {
 
       if (!zapperFloat) {
         // Create Zapper float account if it doesn't exist
+        const LEDGER_ACCOUNT_ZAPPER_FLOAT = process.env.LEDGER_ACCOUNT_ZAPPER_FLOAT || '1200-10-01';
         zapperFloat = await SupplierFloat.create({
           supplierId: 'zapper',
           supplierName: 'Zapper',
           floatAccountNumber: ZAPPER_FLOAT_ACCOUNT_NUMBER,
           floatAccountName: 'Zapper QR Payments Float',
+          ledgerAccountCode: LEDGER_ACCOUNT_ZAPPER_FLOAT,
           currentBalance: 0.00,
           initialBalance: 0.00,
           minimumBalance: 0.00,

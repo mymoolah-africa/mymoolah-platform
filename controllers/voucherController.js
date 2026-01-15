@@ -823,20 +823,25 @@ exports.issueEasyPayCashout = async (req, res) => {
           
           // Only post if required account codes are configured
           if (LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE && LEDGER_ACCOUNT_VAT_CONTROL && LEDGER_ACCOUNT_CLIENT_FLOAT) {
-            // Get EasyPay Cash-out Float account code (from floatAccountNumber or use default)
-            const floatAccountCode = cashoutFloat.floatAccountNumber || 'EASYPAY_CASHOUT_FLOAT_001';
+            // Get EasyPay Cash-out Float ledger account code (from float record or env var)
+            const LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT = process.env.LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT;
+            const floatLedgerCode = cashoutFloat.ledgerAccountCode || LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT;
             
-            await ledgerService.postJournalEntry({
-              description: `EasyPay Cash-out: ${easyPayCode}`,
-              lines: [
-                { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: totalRequired, memo: 'User wallet debit (voucher + fee)' },
-                { accountCode: floatAccountCode, dc: 'credit', amount: amount, memo: 'EasyPay Cash-out Float credit' },
-                { accountCode: LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE, dc: 'credit', amount: mmMargin, memo: 'MM revenue (fee margin)' },
-                { accountCode: LEDGER_ACCOUNT_VAT_CONTROL, dc: 'credit', amount: userFeeVAT, memo: 'VAT payable (on user fee)' },
-                { accountCode: 'PROVIDER_FEE_EXP', dc: 'debit', amount: providerFee, memo: 'Provider fee expense (EasyPay)' }
-              ],
-              reference: voucherTransactionId
-            });
+            if (!floatLedgerCode) {
+              console.warn('⚠️ Ledger posting skipped: EasyPay Cash-out Float ledger account code not configured');
+            } else {
+              await ledgerService.postJournalEntry({
+                description: `EasyPay Cash-out: ${easyPayCode}`,
+                lines: [
+                  { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: totalRequired, memo: 'User wallet debit (voucher + fee)' },
+                  { accountCode: floatLedgerCode, dc: 'credit', amount: amount, memo: 'EasyPay Cash-out Float credit' },
+                  { accountCode: LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE, dc: 'credit', amount: mmMargin, memo: 'MM revenue (fee margin)' },
+                  { accountCode: LEDGER_ACCOUNT_VAT_CONTROL, dc: 'credit', amount: userFeeVAT, memo: 'VAT payable (on user fee)' },
+                  { accountCode: 'PROVIDER_FEE_EXP', dc: 'debit', amount: providerFee, memo: 'Provider fee expense (EasyPay)' }
+                ],
+                reference: voucherTransactionId
+              });
+            }
             console.log('✅ Ledger entry posted for cash-out voucher');
           } else {
             console.warn('⚠️ Ledger posting skipped: missing required LEDGER_ACCOUNT_* env vars');
@@ -2060,17 +2065,22 @@ exports.cancelEasyPayCashout = async (req, res) => {
           const LEDGER_ACCOUNT_CLIENT_FLOAT = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT;
           
           if (LEDGER_ACCOUNT_CLIENT_FLOAT) {
-            // Get EasyPay Cash-out Float account code
-            const floatAccountCode = cashoutFloat.floatAccountNumber || 'EASYPAY_CASHOUT_FLOAT_001';
+            // Get EasyPay Cash-out Float ledger account code (from float record or env var)
+            const LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT = process.env.LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT;
+            const floatLedgerCode = cashoutFloat.ledgerAccountCode || LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT;
             
-            await ledgerService.postJournalEntry({
-              description: `EasyPay Cash-out Cancellation: ${voucher.easyPayCode}`,
-              lines: [
-                { accountCode: floatAccountCode, dc: 'debit', amount: voucherAmount, memo: 'EasyPay Cash-out Float debit (refund)' },
-                { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'credit', amount: totalRefund, memo: 'User wallet credit (voucher + fee refund)' }
-              ],
-              reference: voucherRefundId
-            });
+            if (!floatLedgerCode) {
+              console.warn('⚠️ Ledger posting skipped: EasyPay Cash-out Float ledger account code not configured');
+            } else {
+              await ledgerService.postJournalEntry({
+                description: `EasyPay Cash-out Cancellation: ${voucher.easyPayCode}`,
+                lines: [
+                  { accountCode: floatLedgerCode, dc: 'debit', amount: voucherAmount, memo: 'EasyPay Cash-out Float debit (refund)' },
+                  { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'credit', amount: totalRefund, memo: 'User wallet credit (voucher + fee refund)' }
+                ],
+                reference: voucherRefundId
+              });
+            }
             console.log('✅ Ledger entry posted for cash-out cancellation');
           } else {
             console.warn('⚠️ Ledger posting skipped: missing LEDGER_ACCOUNT_CLIENT_FLOAT env var');

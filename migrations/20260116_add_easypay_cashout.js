@@ -76,11 +76,13 @@ module.exports = {
     });
 
     if (!existingFloat) {
+      const LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT = process.env.LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT || '1200-10-03';
       await SupplierFloat.create({
         supplierId: 'easypay_cashout',
         supplierName: 'EasyPay Cash-out',
         floatAccountNumber: 'EASYPAY_CASHOUT_FLOAT_001',
         floatAccountName: 'EasyPay Cash-out Float Account',
+        ledgerAccountCode: LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT,
         currentBalance: 50000.00, // R50,000 initial balance (dummy amount for testing)
         initialBalance: 50000.00, // R50,000 initial balance
         minimumBalance: 10000.00, // R10,000 minimum threshold
