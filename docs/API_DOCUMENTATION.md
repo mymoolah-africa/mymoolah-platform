@@ -1,6 +1,6 @@
 **Last Updated**: January 15, 2026 (14:00 SAST)  
-**Version**: 2.6.0 - EasyPay Top-up @ EasyPay Transformation
-**Status**: ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED**
+**Version**: 2.6.1 - Float Account Ledger Integration & Monitoring
+**Status**: ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED**
 
 ---
 

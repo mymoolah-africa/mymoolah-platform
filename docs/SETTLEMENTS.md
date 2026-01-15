@@ -1,6 +1,6 @@
 # Settlements & Float Model (Mojaloop/Banking Grade)
 
-Last Updated: 2025-08-20
+Last Updated: 2026-01-15
 
 ## Scope
 Closed‑loop settlement for MMTP using Mojaloop switch APIs. All product/service payments to Suppliers are settled from pre‑funded floats. Each Client also maintains a pre‑funded float with MMTP. MM earns configurable commissions/fees. This document defines accounts, flows, and journal patterns.
@@ -94,12 +94,37 @@ Net client debit becomes 90.00; supplier still receives 95.00 (subsidy + top‑u
 
 This document is canonical for settlements. Update alongside any change to fee models or ledger structures.
 
-## Example Account Code Conventions (suggested)
-- CLIENT_FLOAT_<clientId> (liability)
-- CLIENT_CLEARING_<clientId>
-- SUPPLIER_CLEARING_<supplierId>
-- INTERCHANGE
-- MM_REV_FEES
-- MM_PROMO_EXP
+## Example Account Code Conventions (implemented)
+- **Supplier Float Accounts**: 1200-10-XX format (Asset accounts - prefunded balances payable to suppliers)
+  - `1200-10-01`: Zapper Float Account
+  - `1200-10-02`: EasyPay Top-up Float Account
+  - `1200-10-03`: EasyPay Cash-out Float Account
+  - `1200-10-04`: Flash Float Account
+  - `1200-10-05`: MobileMart Float Account
+  - `1200-10-06`: DTMercury Float Account
+- **Client Float Accounts**: Format TBD (liability accounts - client balances)
+- **Client Clearing Accounts**: Format TBD
+- **Supplier Clearing Accounts**: Format TBD
 
-These are examples only; align with your chart of accounts and configure codes per environment.
+## Float Account Ledger Integration (2026-01-15)
+
+### **Implementation Status** ✅
+All supplier float accounts now have proper ledger account codes linked to the general ledger:
+- **Database Field**: `supplier_floats.ledgerAccountCode` (references `ledger_accounts.account_code`)
+- **Ledger Posting**: All float movements use `ledgerAccountCode` instead of operational identifiers
+- **Compliance**: Banking-grade double-entry accounting with proper chart of accounts structure
+
+### **Float Balance Monitoring** ✅
+Automated monitoring service checks all active float account balances hourly:
+- **Service**: `FloatBalanceMonitoringService` (runs every hour at minute 0)
+- **Thresholds**: 
+  - Warning: Balance within 15% above minimum
+  - Critical: Balance within 5% above minimum or below minimum
+- **Notifications**: Email alerts to suppliers (or CC email) with HTML templates
+- **Cooldown**: 24-hour notification cooldown to prevent spam
+- **Configuration**: Environment variables for intervals, thresholds, and cooldown periods
+
+### **Float Account Status**
+- **Active Floats**: 4 (EasyPay Cash-out, EasyPay Top-up, MobileMart, Zapper)
+- **All Configured**: Every float has proper ledger account code and monitoring enabled
+- **Documentation**: See `docs/FLOAT_ACCOUNT_LEDGER_INTEGRATION_ISSUE.md` for complete details

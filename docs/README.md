@@ -1,12 +1,52 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: January 14, 2026  
-**Version**: 2.5.1 - Flash Reconciliation Integration & SFTP IP Standardization  
-**Status**: ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 15, 2026  
+**Version**: 2.6.1 - Float Account Ledger Integration & Monitoring  
+**Status**: ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: Flash Reconciliation Integration & SFTP IP Standardization (January 14, 2026)**
+## 🚀 **LATEST UPDATE: Float Account Ledger Integration & Monitoring (January 15, 2026)**
+
+### **💰 Banking-Grade Ledger Integration**
+Fixed critical compliance issue and implemented complete ledger integration for all supplier float accounts:
+
+**Ledger Integration Features**:
+- ✅ **Proper Account Codes**: All floats now use ledger codes (1200-10-XX format) instead of operational IDs
+- ✅ **Database Schema**: Added `ledgerAccountCode` field to `SupplierFloat` model
+- ✅ **Migrations**: 3 migrations to add column, seed accounts, and update existing floats
+- ✅ **Code Updates**: All ledger posting code uses proper `ledgerAccountCode` field
+- ✅ **Float Cleanup**: Consolidated duplicate Zapper floats, created missing MobileMart float
+
+**Float Balance Monitoring**:
+- ✅ **Scheduled Service**: Hourly balance checks with configurable thresholds
+- ✅ **Email Notifications**: HTML email alerts to suppliers when balances are low
+- ✅ **Thresholds**: Warning (15% above minimum) and Critical (5% above minimum)
+- ✅ **Cooldown**: 24-hour notification cooldown to prevent spam
+- ✅ **Auto-Start**: Service starts automatically on server boot
+
+**Status**: ✅ **All float accounts configured** (4 active: EasyPay Cash-out, EasyPay Top-up, MobileMart, Zapper)  
+**Documentation**: `docs/FLOAT_ACCOUNT_LEDGER_INTEGRATION_ISSUE.md`
+
+---
+
+## 🚀 **PREVIOUS UPDATE: EasyPay Top-up @ EasyPay Transformation (January 15, 2026)**
+
+### **💳 Complete System Transformation**
+Transformed EasyPay voucher system from "buy voucher, then pay at store" to "create top-up request, pay at store, get money back":
+
+**Key Features**:
+- ✅ **No Wallet Debit**: Top-up request creation doesn't debit wallet
+- ✅ **Instant Credit**: Wallet credited with net amount (gross - fees) when user pays at store
+- ✅ **Transaction Display**: Split display (gross in Recent, net + fee in History)
+- ✅ **UAT Simulation**: Red "Simulate" button for testing settlement flow
+- ✅ **PIN Formatting**: 14-digit PIN displayed as `x xxxx xxxx xxxx x`
+
+**Status**: ✅ **Deployed in UAT**, ✅ **All fixes applied**, ✅ **Ready for production**
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Flash Reconciliation Integration & SFTP IP Standardization (January 14, 2026)**
 
 ### **⚡ Flash Reconciliation System Integration**
 Added **complete Flash supplier reconciliation support** to the banking-grade reconciliation framework:

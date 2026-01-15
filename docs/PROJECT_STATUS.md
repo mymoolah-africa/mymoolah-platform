@@ -1,16 +1,48 @@
 # MyMoolah Treasury Platform - Project Status
 
 **Last Updated**: January 15, 2026  
-**Version**: 2.6.0 - EasyPay Top-up @ EasyPay Transformation  
-**Status**: ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Version**: 2.6.1 - Float Account Ledger Integration & Monitoring  
+**Status**: ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has successfully transformed the EasyPay voucher system into a "Top-up @ EasyPay" feature (January 15, 2026), allowing users to create top-up requests, pay at EasyPay stores, and receive instant wallet credit. The platform also includes a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026), **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
+The MyMoolah Treasury Platform has successfully implemented banking-grade ledger integration for all supplier float accounts and automated float balance monitoring (January 15, 2026). The platform also includes the EasyPay "Top-up @ EasyPay" feature transformation (January 15, 2026), a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026), **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
 
-### **💳 Latest Achievement: EasyPay Top-up @ EasyPay Transformation (January 15, 2026)** ✅ **COMPLETE**
+### **💰 Latest Achievement: Float Account Ledger Integration & Monitoring (January 15, 2026)** ✅ **COMPLETE**
+
+#### **🏦 Banking-Grade Ledger Integration**
+- **Problem Fixed**: Float accounts were using operational identifiers (ZAPPER_FLOAT_001) as ledger account codes, violating banking-grade accounting standards
+- **Solution**: Implemented proper ledger account codes (1200-10-XX format) for all supplier floats
+- **Database Changes**: Added `ledgerAccountCode` field to `SupplierFloat` model
+- **Migrations**: 3 migrations created (add column, seed ledger accounts, update existing floats)
+- **Code Updates**: All ledger posting code now uses `ledgerAccountCode` instead of `floatAccountNumber`
+
+#### **📊 Float Account Management**
+- **Duplicate Cleanup**: Consolidated 2 Zapper float accounts into 1 (R5,435 transferred to primary)
+- **MobileMart Float**: Created missing MobileMart float account (R60,000 initial balance, ledger code 1200-10-05)
+- **Float Status**: 4 active float accounts (EasyPay Cash-out, EasyPay Top-up, MobileMart, Zapper)
+- **All Configured**: Every float account now has proper ledger account code
+
+#### **🔔 Float Balance Monitoring Service**
+- **New Service**: `FloatBalanceMonitoringService` with scheduled hourly checks
+- **Email Notifications**: HTML email templates with balance status and actionable instructions
+- **Thresholds**: Warning (15% above minimum) and Critical (5% above minimum or below)
+- **Cooldown**: 24-hour notification cooldown to prevent spam
+- **Integration**: Service starts automatically on server boot, graceful shutdown on exit
+
+#### **Technical Implementation**
+- **Migrations**: 4 new migrations (ledger column, seed accounts, update floats, create MobileMart)
+- **New Service**: Float balance monitoring with cron scheduling
+- **Scripts**: 3 new scripts (consolidate duplicates, delete inactive, check balances)
+- **Documentation**: Complete issue documentation and resolution guide
+
+#### **Status**: ✅ **All float accounts configured**, ✅ **Monitoring service active**, ✅ **Ready for production**
+
+---
+
+### **💳 Previous Achievement: EasyPay Top-up @ EasyPay Transformation (January 15, 2026)** ✅ **COMPLETE**
 
 #### **🔄 Complete System Transformation**
 - **New Flow**: "Create top-up request → Pay at store → Get wallet credit" (replaces "Buy voucher → Pay at store")

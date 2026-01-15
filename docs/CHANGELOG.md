@@ -1,5 +1,81 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-01-15 - 💰 Float Account Ledger Integration & Monitoring (v2.6.1) ✅
+
+### **Session Overview**
+Fixed critical banking-grade compliance issue where float accounts were using operational identifiers instead of proper ledger account codes. Implemented complete ledger integration for all supplier float accounts, consolidated duplicate Zapper float accounts, created missing MobileMart float account, and implemented scheduled float balance monitoring service with email notifications to suppliers.
+
+### **🏦 Ledger Integration Fix** ✅
+- **Problem Identified**: Float accounts used operational IDs (e.g., `ZAPPER_FLOAT_001`) as ledger account codes, violating banking-grade accounting standards
+- **Solution**: Implemented proper ledger account codes (1200-10-XX format) for all supplier floats
+- **Database Changes**: Added `ledgerAccountCode` field to `SupplierFloat` model
+- **Migrations**: 3 new migrations (add column, seed ledger accounts, update existing floats)
+- **Code Updates**: All ledger posting code now uses `ledgerAccountCode` instead of `floatAccountNumber`
+
+### **📊 Float Account Management** ✅
+- **Duplicate Cleanup**: Consolidated 2 Zapper float accounts into 1 (R5,435 transferred to primary)
+- **MobileMart Float**: Created missing MobileMart float account (R60,000 initial balance, ledger code 1200-10-05)
+- **Float Status**: 4 active float accounts (EasyPay Cash-out, EasyPay Top-up, MobileMart, Zapper)
+- **All Floats Configured**: Every float account now has proper ledger account code
+
+### **🔔 Float Balance Monitoring Service** ✅
+- **New Service**: `FloatBalanceMonitoringService` with scheduled hourly checks
+- **Email Notifications**: HTML email templates with balance status and actionable instructions
+- **Thresholds**: Warning (15% above minimum) and Critical (5% above minimum or below)
+- **Cooldown**: 24-hour notification cooldown to prevent spam
+- **Integration**: Service starts automatically on server boot, graceful shutdown on exit
+
+### **📁 Files Created** ✅
+1. `services/floatBalanceMonitoringService.js` - Scheduled float balance monitoring service
+2. `migrations/20260115_add_ledger_account_code_to_supplier_floats.js` - Adds ledgerAccountCode column
+3. `migrations/20260115_seed_supplier_float_ledger_accounts.js` - Creates ledger accounts in database
+4. `migrations/20260115_update_supplier_floats_with_ledger_codes.js` - Updates existing floats with codes
+5. `migrations/20260115_create_mobilemart_float_account.js` - Creates MobileMart float account
+6. `scripts/consolidate-duplicate-zapper-floats.js` - Consolidates duplicate Zapper float accounts
+7. `scripts/delete-inactive-zapper-float.js` - Deletes inactive duplicate float accounts
+8. `scripts/check-all-supplier-float-balances.js` - Lists all supplier float account balances
+9. `docs/FLOAT_ACCOUNT_LEDGER_INTEGRATION_ISSUE.md` - Complete issue documentation and resolution
+
+### **📝 Files Modified** ✅
+1. `models/SupplierFloat.js` - Added `ledgerAccountCode` field
+2. `controllers/voucherController.js` - Fixed EasyPay cash-out ledger posting
+3. `controllers/qrPaymentController.js` - Fixed Zapper float creation
+4. `migrations/20260116_add_easypay_cashout.js` - Updated to include ledgerAccountCode
+5. `migrations/20260116_check_and_fund_easypay_topup_float.js` - Updated to include ledgerAccountCode
+6. `scripts/audit-and-update-zapper-transactions.js` - Updated to include ledgerAccountCode
+7. `server.js` - Integrated Float Balance Monitoring Service
+8. `services/reconciliation/AlertService.js` - Fixed nodemailer method name
+9. `env.template` - Added ledger account codes and monitoring configuration
+
+### **⚙️ Configuration** ✅
+- **Ledger Account Codes**: 6 codes added (1200-10-01 through 1200-10-06)
+- **Environment Variables**: 
+  - `LEDGER_ACCOUNT_ZAPPER_FLOAT=1200-10-01`
+  - `LEDGER_ACCOUNT_EASYPAY_TOPUP_FLOAT=1200-10-02`
+  - `LEDGER_ACCOUNT_EASYPAY_CASHOUT_FLOAT=1200-10-03`
+  - `LEDGER_ACCOUNT_FLASH_FLOAT=1200-10-04`
+  - `LEDGER_ACCOUNT_MOBILEMART_FLOAT=1200-10-05`
+  - `LEDGER_ACCOUNT_DTMERCURY_FLOAT=1200-10-06`
+- **Monitoring Configuration**:
+  - `FLOAT_BALANCE_CHECK_INTERVAL_MINUTES=60`
+  - `FLOAT_BALANCE_WARNING_THRESHOLD=0.15`
+  - `FLOAT_BALANCE_CRITICAL_THRESHOLD=0.05`
+  - `FLOAT_BALANCE_NOTIFICATION_COOLDOWN_HOURS=24`
+
+### **🐛 Bug Fixes** ✅
+- **Cron Schedule**: Fixed invalid `*/60 * * * *` pattern → `0 * * * *` for hourly checks
+- **Nodemailer**: Fixed `createTransporter` → `createTransport` method name
+- **Currency Column**: Removed non-existent `currency` column from balance check script
+
+### **✅ Testing Status**
+- [x] Migrations tested in UAT - All 4 migrations ran successfully
+- [x] Float account consolidation tested - Successfully merged duplicate accounts
+- [x] Balance check script tested - Successfully displays all 4 active float accounts
+- [x] Monitoring service startup tested - Service starts correctly with proper cron schedule
+- [x] Email configuration tested - SMTP configured correctly (no errors in logs)
+
+---
+
 ## 2026-01-15 - 💳 EasyPay Top-up @ EasyPay Transformation (v2.6.0) ✅
 
 ### **Session Overview**

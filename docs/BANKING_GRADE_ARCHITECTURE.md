@@ -1,8 +1,8 @@
 # 🏦 Banking-Grade Architecture for MyMoolah
 
-**Last Updated**: January 14, 2026  
-**Version**: 2.5.1 - Flash Reconciliation Integration & SFTP IP Standardization  
-**Status**: ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
+**Last Updated**: January 15, 2026  
+**Version**: 2.6.1 - Float Account Ledger Integration & Monitoring  
+**Status**: ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
 
 ## Overview
 
@@ -503,6 +503,44 @@ CREATE INDEX idx_recon_audit_hash ON recon_audit_trail(event_hash);
 - **Framework**: `docs/RECONCILIATION_FRAMEWORK.md` (540+ lines)
 - **Quick Start**: `docs/RECONCILIATION_QUICK_START.md` (320+ lines)
 - **Session Log**: `docs/session_logs/2026-01-13_recon_system_implementation.md`
+
+---
+
+## 💰 Float Account Management & Monitoring
+
+### **Float Account Ledger Integration (2026-01-15)** ✅
+
+All supplier float accounts are now properly integrated with the general ledger:
+- **Ledger Account Codes**: All floats use proper account codes (1200-10-XX format)
+- **Database Field**: `supplier_floats.ledgerAccountCode` links to `ledger_accounts.account_code`
+- **Ledger Posting**: All float movements use `ledgerAccountCode` for double-entry accounting
+- **Compliance**: Banking-grade chart of accounts structure
+
+**Active Float Accounts**:
+- EasyPay Cash-out Float (1200-10-03)
+- EasyPay Top-up Float (1200-10-02)
+- MobileMart Float (1200-10-05)
+- Zapper Float (1200-10-01)
+
+### **Float Balance Monitoring Service** ✅
+
+Automated hourly monitoring of all active float account balances:
+- **Service**: `FloatBalanceMonitoringService` (scheduled via `node-cron`)
+- **Schedule**: Hourly checks at minute 0 of each hour
+- **Thresholds**: 
+  - Warning: Balance within 15% above minimum
+  - Critical: Balance within 5% above minimum or below minimum
+- **Email Notifications**: HTML email alerts to suppliers with balance status
+- **Cooldown**: 24-hour notification cooldown to prevent spam
+- **Configuration**: Environment variables for intervals, thresholds, and cooldown
+
+**Service Integration**:
+- Starts automatically on server boot
+- Graceful shutdown on server exit
+- Error handling with retry logic
+- Comprehensive logging
+
+**Documentation**: See `docs/FLOAT_ACCOUNT_LEDGER_INTEGRATION_ISSUE.md` for complete details
 
 ---
 
