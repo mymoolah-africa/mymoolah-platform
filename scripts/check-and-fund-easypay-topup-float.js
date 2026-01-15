@@ -9,8 +9,11 @@
 
 require('dotenv').config();
 
-// Use database connection helper to ensure proper connection
-require('./db-connection-helper');
+// Set DATABASE_URL from db-connection-helper before loading models
+const { getUATDatabaseURL, closeAll } = require('./db-connection-helper');
+
+// Set DATABASE_URL for Sequelize models
+process.env.DATABASE_URL = getUATDatabaseURL();
 
 const { SupplierFloat } = require('../models');
 
@@ -84,10 +87,16 @@ async function checkAndFundTopupFloat() {
     }
 
     console.log('\n✅ Operation completed successfully!');
+    
+    // Close database connections
+    await closeAll();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error:', error.message);
     console.error(error);
+    
+    // Close database connections on error
+    await closeAll().catch(() => {});
     process.exit(1);
   }
 }
