@@ -175,9 +175,10 @@ export function TransactPage() {
           description: 'MMCash vouchers for retail partner cash-out',
           icon: <Store className="w-6 h-6" />,
           route: '/mmcash-retail-overlay',
-          available: true,
-          badge: 'New',
-          badgeType: 'warning'
+          available: false,
+          badge: 'Coming Soon',
+          badgeType: 'info',
+          comingSoon: true
         },
         {
           id: 'atm-cashsend',
