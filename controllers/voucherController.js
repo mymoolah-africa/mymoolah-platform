@@ -878,6 +878,12 @@ exports.issueEasyPayCashout = async (req, res) => {
 
 // Process EasyPay top-up settlement callback
 exports.processEasyPaySettlement = async (req, res) => {
+  console.log('🔔 processEasyPaySettlement called:', {
+    method: req.method,
+    path: req.path,
+    url: req.url,
+    body: req.body
+  });
   try {
     const { easypay_code, settlement_amount, merchant_id, transaction_id } = req.body;
 
