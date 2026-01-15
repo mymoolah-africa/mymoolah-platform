@@ -176,6 +176,18 @@ export function VouchersPage() {
   const [showValidationErrorModal, setShowValidationErrorModal] = useState(false);
   const [validationErrorMessage, setValidationErrorMessage] = useState<string>('');
 
+  // Simulate settlement state
+  const [simulatingVoucherId, setSimulatingVoucherId] = useState<string | null>(null);
+
+  // Check if in UAT/test environment
+  const isUATEnvironment = () => {
+    const apiUrl = APP_CONFIG.API.baseUrl.toLowerCase();
+    return apiUrl.includes('uat') || 
+           apiUrl.includes('test') || 
+           apiUrl.includes('localhost') ||
+           APP_CONFIG.ENVIRONMENT === 'development';
+  };
+
   // Voucher formatting functions
   const generateMMVoucherCode = (): string => {
     // Generate 16 numerical digits grouped in 4 groups of 4 with spaces
@@ -347,7 +359,10 @@ export function VouchersPage() {
         // Determine voucher type based on new structure
         let voucherType: 'mm_voucher' | 'easypay_voucher' | 'third_party_voucher';
         
-        if (voucher.voucherType === 'easypay_pending' || voucher.voucherType === 'easypay_active') {
+        if (voucher.voucherType === 'easypay_pending' || 
+            voucher.voucherType === 'easypay_active' ||
+            voucher.voucherType === 'easypay_topup' ||
+            voucher.voucherType === 'easypay_topup_active') {
           voucherType = 'easypay_voucher';
         } else {
           voucherType = 'mm_voucher';
@@ -944,6 +959,98 @@ export function VouchersPage() {
     
     setVoucherToCancel(voucher);
     setShowCancelConfirmModal(true);
+  };
+
+  // Handle simulating EasyPay settlement (UAT only)
+  const handleSimulateSettlement = async (voucher: MMVoucher) => {
+    if (!isUATEnvironment()) {
+      return; // Only allow in UAT/test environments
+    }
+
+    if (!voucher.easyPayNumber) {
+      setError('EasyPay PIN not found');
+      return;
+    }
+
+    try {
+      setSimulatingVoucherId(voucher.id);
+      setError(null);
+
+      // Call settlement endpoint to simulate EasyPay payment
+      const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/settlement`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getSessionToken()}`
+        },
+        body: JSON.stringify({
+          easypay_code: voucher.easyPayNumber,
+          settlement_amount: voucher.originalAmount,
+          merchant_id: 'SIMULATED_MERCHANT_UAT',
+          transaction_id: `SIM-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to simulate settlement');
+      }
+
+      // Show success message
+      const successToast = document.createElement('div');
+      successToast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #16a34a;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      successToast.textContent = `Settlement simulated! Wallet credited with R${result.data?.net_amount?.toFixed(2) || voucher.originalAmount.toFixed(2)}`;
+      document.body.appendChild(successToast);
+      setTimeout(() => {
+        document.body.removeChild(successToast);
+      }, 4000);
+
+      // Refresh vouchers to show updated status
+      await fetchVouchers();
+      await fetchWalletBalance();
+
+    } catch (err: any) {
+      console.error('Simulate settlement error:', err);
+      setError(err.message || 'Failed to simulate settlement');
+      
+      // Show error toast
+      const errorToast = document.createElement('div');
+      errorToast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #dc2626;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-family: 'Montserrat', sans-serif;
+        font-size: 14px;
+        font-weight: 600;
+        z-index: 9999;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      `;
+      errorToast.textContent = err.message || 'Failed to simulate settlement';
+      document.body.appendChild(errorToast);
+      setTimeout(() => {
+        document.body.removeChild(errorToast);
+      }, 4000);
+    } finally {
+      setSimulatingVoucherId(null);
+    }
   };
 
   // Handle confirming cancellation
@@ -1636,34 +1743,78 @@ export function VouchersPage() {
                               </span>
                             </div>
                             
-                            {/* Cancel Button */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCancelEasyPayVoucher(voucher);
-                              }}
-                              style={{
-                                backgroundColor: '#dc2626',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '8px',
-                                width: '32px',
-                                height: '32px',
-                                cursor: 'pointer',
-                                fontFamily: 'Montserrat, sans-serif',
-                                transition: 'background-color 0.2s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
-                              }}
-                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-                              title="Cancel voucher and get refund"
-                            >
-                              <X style={{ width: '14px', height: '14px' }} />
-                            </button>
+                            {/* Action Buttons */}
+                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                              {/* Simulate Button (UAT only) */}
+                              {isUATEnvironment() && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSimulateSettlement(voucher);
+                                  }}
+                                  disabled={simulatingVoucherId === voucher.id}
+                                  style={{
+                                    backgroundColor: '#dc2626',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    padding: '6px 10px',
+                                    height: '32px',
+                                    cursor: simulatingVoucherId === voucher.id ? 'not-allowed' : 'pointer',
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    fontSize: '10px',
+                                    fontWeight: '600',
+                                    transition: 'background-color 0.2s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    opacity: simulatingVoucherId === voucher.id ? 0.6 : 1
+                                  }}
+                                  onMouseOver={(e) => {
+                                    if (simulatingVoucherId !== voucher.id) {
+                                      e.currentTarget.style.backgroundColor = '#b91c1c';
+                                    }
+                                  }}
+                                  onMouseOut={(e) => {
+                                    if (simulatingVoucherId !== voucher.id) {
+                                      e.currentTarget.style.backgroundColor = '#dc2626';
+                                    }
+                                  }}
+                                  title="Simulate EasyPay payment (UAT only)"
+                                >
+                                  {simulatingVoucherId === voucher.id ? '...' : 'Simulate'}
+                                </button>
+                              )}
+                              
+                              {/* Cancel Button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelEasyPayVoucher(voucher);
+                                }}
+                                style={{
+                                  backgroundColor: '#dc2626',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '8px',
+                                  width: '32px',
+                                  height: '32px',
+                                  cursor: 'pointer',
+                                  fontFamily: 'Montserrat, sans-serif',
+                                  transition: 'background-color 0.2s ease',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                                title="Cancel voucher and get refund"
+                              >
+                                <X style={{ width: '14px', height: '14px' }} />
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -2761,34 +2912,78 @@ export function VouchersPage() {
                               </span>
                             </div>
                             
-                            {/* Cancel Button */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleCancelEasyPayVoucher(voucher);
-                              }}
-                              style={{
-                                backgroundColor: '#dc2626',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                padding: '8px',
-                                width: '32px',
-                                height: '32px',
-                                cursor: 'pointer',
-                                fontFamily: 'Montserrat, sans-serif',
-                                transition: 'background-color 0.2s ease',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
-                              }}
-                              onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-                              onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-                              title="Cancel voucher and get refund"
-                            >
-                              <X style={{ width: '14px', height: '14px' }} />
-                            </button>
+                            {/* Action Buttons */}
+                            <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
+                              {/* Simulate Button (UAT only) */}
+                              {isUATEnvironment() && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSimulateSettlement(voucher);
+                                  }}
+                                  disabled={simulatingVoucherId === voucher.id}
+                                  style={{
+                                    backgroundColor: '#dc2626',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    padding: '6px 10px',
+                                    height: '32px',
+                                    cursor: simulatingVoucherId === voucher.id ? 'not-allowed' : 'pointer',
+                                    fontFamily: 'Montserrat, sans-serif',
+                                    fontSize: '10px',
+                                    fontWeight: '600',
+                                    transition: 'background-color 0.2s ease',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    opacity: simulatingVoucherId === voucher.id ? 0.6 : 1
+                                  }}
+                                  onMouseOver={(e) => {
+                                    if (simulatingVoucherId !== voucher.id) {
+                                      e.currentTarget.style.backgroundColor = '#b91c1c';
+                                    }
+                                  }}
+                                  onMouseOut={(e) => {
+                                    if (simulatingVoucherId !== voucher.id) {
+                                      e.currentTarget.style.backgroundColor = '#dc2626';
+                                    }
+                                  }}
+                                  title="Simulate EasyPay payment (UAT only)"
+                                >
+                                  {simulatingVoucherId === voucher.id ? '...' : 'Simulate'}
+                                </button>
+                              )}
+                              
+                              {/* Cancel Button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCancelEasyPayVoucher(voucher);
+                                }}
+                                style={{
+                                  backgroundColor: '#dc2626',
+                                  color: 'white',
+                                  border: 'none',
+                                  borderRadius: '6px',
+                                  padding: '8px',
+                                  width: '32px',
+                                  height: '32px',
+                                  cursor: 'pointer',
+                                  fontFamily: 'Montserrat, sans-serif',
+                                  transition: 'background-color 0.2s ease',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0
+                                }}
+                                onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                                onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                                title="Cancel voucher and get refund"
+                              >
+                                <X style={{ width: '14px', height: '14px' }} />
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
