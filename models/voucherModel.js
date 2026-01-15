@@ -42,7 +42,7 @@ module.exports = (sequelize) => {
       defaultValue: 'pending'
     },
     voucherType: {
-      type: DataTypes.ENUM('standard', 'premium', 'business', 'corporate', 'student', 'senior', 'easypay_pending', 'easypay_active'),
+      type: DataTypes.ENUM('standard', 'premium', 'business', 'corporate', 'student', 'senior', 'easypay_pending', 'easypay_active', 'easypay_topup', 'easypay_topup_active'),
       allowNull: false,
       defaultValue: 'standard'
     },
@@ -106,15 +106,30 @@ module.exports = (sequelize) => {
   };
 
   Voucher.prototype.isEasyPayVoucher = function() {
-    return this.voucherType === 'easypay_pending' || this.voucherType === 'easypay_active';
+    return this.voucherType === 'easypay_pending' ||
+           this.voucherType === 'easypay_active' ||
+           this.voucherType === 'easypay_topup' ||
+           this.voucherType === 'easypay_topup_active';
   };
 
   Voucher.prototype.isPendingEasyPay = function() {
-    return this.voucherType === 'easypay_pending' && this.status === 'pending';
+    return this.voucherType === 'easypay_pending' && this.status === 'pending_payment';
   };
 
   Voucher.prototype.isActiveEasyPay = function() {
     return this.voucherType === 'easypay_active' && this.status === 'active';
+  };
+
+  Voucher.prototype.isTopupEasyPay = function() {
+    return this.voucherType === 'easypay_topup' || this.voucherType === 'easypay_topup_active';
+  };
+
+  Voucher.prototype.isPendingTopupEasyPay = function() {
+    return this.voucherType === 'easypay_topup' && this.status === 'pending_payment';
+  };
+
+  Voucher.prototype.isActiveTopupEasyPay = function() {
+    return this.voucherType === 'easypay_topup_active' && this.status === 'active';
   };
 
   Voucher.prototype.isRedeemedEasyPay = function() {

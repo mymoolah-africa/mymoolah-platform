@@ -13,6 +13,7 @@
 The Dashboard "Active Vouchers" balance must include:
 1. **Active MMVouchers**: Use `balance` field (remaining value)
 2. **Pending EPVouchers**: Use `originalAmount` field (full value)
+   - **EXCEPTION**: `easypay_topup` vouchers are excluded (user hasn't paid yet)
 
 **Implementation**: This logic is implemented in JavaScript, NOT in SQL aggregation.
 
@@ -60,15 +61,27 @@ The Dashboard "Active Vouchers" balance must include:
   - Wallet credited with **current balance** (not original)
 - **Cancellation**: **NOT ALLOWED**
 
-### **EPVouchers (14-digit EP Code)**
+### **EPVouchers (14-digit EP Code) - Traditional**
 - **Expiry**: Automatic after 96 hours if not settled
 - **Status Change**: `pending_payment` → `expired`
-- **Balance Impact**: 
+- **Balance Impact**:
   - Voucher becomes **R0.00**
   - Wallet credited with **original amount**
 - **Cancellation**: User can cancel before settlement
 - **Status Change**: `pending_payment` → `cancelled`
 - **Balance Impact**: Same as expiry
+- **Asset Treatment**: Counted as active assets (user has paid upfront)
+
+### **EPVouchers (14-digit EP Code) - Top-up @ EasyPay**
+- **Creation**: No upfront payment required
+- **Settlement**: User pays at EasyPay store, wallet credited with net amount
+- **Status Change**: `pending_payment` → `redeemed` (consumed)
+- **Balance Impact**:
+  - Wallet credited with **gross amount - fees** (net amount)
+  - Voucher consumed (balance = 0)
+- **Fees**: R2.50 total (R2.00 provider + R0.50 MyMoolah margin)
+- **Asset Treatment**: **NOT counted as active assets** (user hasn't paid yet)
+- **Exception**: This is the ONLY exception to the "Active Vouchers = Active Status + Pending Payment Status" rule
 
 ---
 
@@ -83,6 +96,7 @@ The Dashboard "Active Vouchers" balance must include:
 ### **MUST MAINTAIN:**
 - ✅ Multiple-query approach with JavaScript business logic
 - ✅ Status-based calculations (active + pending_payment = active vouchers)
+  - **EXCEPTION**: `easypay_topup` vouchers excluded from active calculation
 - ✅ Cross-user redemption impact on balances
 - ✅ Proper field usage (balance vs originalAmount)
 

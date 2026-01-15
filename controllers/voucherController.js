@@ -398,11 +398,11 @@ exports.issueVoucher = async (req, res) => {
   }
 };
 
-// Issue EasyPay voucher
+// Issue EasyPay Top-up Request
 exports.issueEasyPayVoucher = async (req, res) => {
   try {
     const voucherData = req.body;
-    
+
     // Validate required fields
     if (!voucherData.original_amount || !voucherData.issued_to) {
       return res.status(400).json({ error: 'Amount and issued_to are required' });
@@ -417,28 +417,23 @@ exports.issueEasyPayVoucher = async (req, res) => {
     // Get user's wallet
     const { Wallet, Transaction } = require('../models');
     const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
-    
+
     if (!wallet) {
       return res.status(404).json({ error: 'User wallet not found' });
     }
-    
+
     if (wallet.status !== 'active') {
       return res.status(400).json({ error: 'Wallet is not active' });
-    }
-    
-    // Check if user has sufficient balance
-    if (wallet.balance < amount) {
-      return res.status(400).json({ error: 'Insufficient wallet balance' });
     }
 
     // Generate EasyPay number
     const easyPayCode = generateEasyPayNumber();
-    
-    // Set expiration (96 hours from now - 4 days) for EasyPay pending
+
+    // Set expiration (96 hours from now - 4 days) for EasyPay top-up request
     const expiresAt = new Date(Date.now() + 96 * 60 * 60 * 1000);
-    
+
     try {
-      // Create EasyPay voucher
+      // Create EasyPay top-up request voucher
       const voucher = await Voucher.create({
         userId: req.user.id, // Add user ID
         voucherCode: easyPayCode, // Use EasyPay code as voucher code initially
@@ -446,7 +441,7 @@ exports.issueEasyPayVoucher = async (req, res) => {
         originalAmount: amount,
         balance: 0, // No balance until settled
         status: 'pending_payment',
-        voucherType: 'easypay_pending',
+        voucherType: 'easypay_topup', // Changed to topup type
         expiresAt,
         metadata: {
           issuedTo: voucherData.issued_to,
@@ -458,103 +453,149 @@ exports.issueEasyPayVoucher = async (req, res) => {
         }
       });
 
-      // Debit user's wallet
-      await wallet.debit(amount, 'voucher_purchase');
-      
-      // Create transaction record
-      const transactionId = `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Create request transaction record (no debit)
+      const requestId = `REQ-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       await Transaction.create({
-        transactionId: transactionId,
+        transactionId: requestId,
         userId: req.user.id,
         walletId: wallet.walletId,
-        amount: amount,
-        type: 'payment',
-        status: 'completed',
-        description: `Voucher purchase: ${easyPayCode}`,
+        amount: 0, // No amount movement on request
+        type: 'request',
+        status: 'pending',
+        description: `Top-up request: ${easyPayCode}`,
         currency: 'ZAR',
         fee: 0.00,
         metadata: {
           voucherId: voucher.id,
           voucherCode: easyPayCode,
-          voucherType: 'easypay_pending',
-          purchaseType: 'easypay_voucher_issue'
+          voucherType: 'easypay_topup',
+          requestType: 'easypay_topup_request'
         }
       });
 
       res.status(201).json({
         success: true,
-        message: 'EasyPay voucher created successfully',
+        message: 'EasyPay top-up request created successfully',
         data: {
           easypay_code: voucher.easyPayCode,
           amount: voucher.originalAmount,
           expires_at: voucher.expiresAt,
           sms_sent: false,
-          wallet_balance: wallet.balance,
-          transaction_id: transactionId
+          wallet_balance: wallet.balance, // Unchanged balance
+          request_id: requestId
         }
       });
     } catch (error) {
-      console.error('❌ Error in EasyPay voucher issuance:', error);
-      res.status(500).json({ error: 'Database error during EasyPay voucher issuance. Please try again.' });
+      console.error('❌ Error in EasyPay top-up request creation:', error);
+      res.status(500).json({ error: 'Database error during EasyPay top-up request creation. Please try again.' });
     }
   } catch (err) {
-    console.error('❌ Issue EasyPay voucher error:', err);
-    res.status(500).json({ error: err.message || 'Failed to issue EasyPay voucher' });
+    console.error('❌ Issue EasyPay top-up request error:', err);
+    res.status(500).json({ error: err.message || 'Failed to create EasyPay top-up request' });
   }
 };
 
-// Process EasyPay settlement callback
+// Process EasyPay top-up settlement callback
 exports.processEasyPaySettlement = async (req, res) => {
   try {
     const { easypay_code, settlement_amount, merchant_id, transaction_id } = req.body;
-    
-    // Find the pending EasyPay voucher
+
+    // Find the pending EasyPay top-up voucher
     const voucher = await Voucher.findOne({
       where: {
         easyPayCode: easypay_code,
-        voucherType: 'easypay_pending',
+        voucherType: 'easypay_topup',
         status: 'pending_payment'
       }
     });
-    
+
     if (!voucher) {
-      return res.status(404).json({ error: 'EasyPay voucher not found or already settled' });
+      return res.status(404).json({ error: 'EasyPay top-up request not found or already settled' });
     }
-    
-    // Generate MM voucher code
-    const mmVoucherCode = generateMMVoucherCode();
-    
-    // Update voucher to settled state (MMVoucher active, 12 months)
+
+    // Apply fee structure (configurable via environment variables)
+    const providerFee = parseFloat(process.env.EASYPAY_TOPUP_PROVIDER_FEE || '200'); // R2.00 in cents
+    const mmMargin = parseFloat(process.env.EASYPAY_TOPUP_MM_MARGIN || '50');    // R0.50 in cents
+    const totalFee = providerFee + mmMargin; // Total R2.50 in cents
+
+    // Calculate net amount to credit (gross amount minus total fee)
+    const grossAmount = parseFloat(voucher.originalAmount);
+    const netAmount = grossAmount - (totalFee / 100); // Convert cents to rands
+
+    // Get user's wallet
+    const { Wallet, Transaction } = require('../models');
+    const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
+
+    if (!wallet) {
+      return res.status(404).json({ error: 'User wallet not found' });
+    }
+
+    // Credit wallet with net amount
+    await wallet.credit(netAmount, 'easypay_topup_settlement');
+
+    // Create settlement transaction record
+    const settlementId = `STL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    await Transaction.create({
+      transactionId: settlementId,
+      userId: voucher.userId,
+      walletId: wallet.walletId,
+      amount: netAmount,
+      type: 'deposit',
+      status: 'completed',
+      description: `Top-up @ EasyPay: ${easypay_code}`,
+      currency: 'ZAR',
+      fee: totalFee / 100, // Fee in rands
+      metadata: {
+        voucherId: voucher.id,
+        voucherCode: easypay_code,
+        voucherType: 'easypay_topup',
+        settlementType: 'easypay_topup_settlement',
+        grossAmount: grossAmount,
+        netAmount: netAmount,
+        feeStructure: {
+          total: totalFee / 100,
+          providerCost: providerFee / 100,
+          serviceRevenue: mmMargin / 100
+        },
+        easyPayTransactionId: transaction_id,
+        merchantId: merchant_id,
+        settlementTimestamp: new Date().toISOString()
+      }
+    });
+
+    // Update voucher as consumed (no longer active, but track for history)
     await voucher.update({
-      voucherCode: mmVoucherCode,
-      status: 'active',
-      voucherType: 'easypay_active',
-      balance: voucher.originalAmount,
-      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 12 months
+      status: 'redeemed', // Consumed
+      voucherType: 'easypay_topup', // Keep type for tracking
+      balance: 0, // Consumed
       metadata: {
         ...voucher.metadata,
         settlementAmount: settlement_amount,
         settlementMerchant: merchant_id,
         settlementTimestamp: new Date().toISOString(),
         callbackReceived: true,
-        transactionId: transaction_id
+        transactionId: transaction_id,
+        feeApplied: totalFee / 100,
+        netCredited: netAmount,
+        settlementTransactionId: settlementId
       }
     });
-    
 
-    
     res.json({
       success: true,
-      message: 'EasyPay voucher settled successfully',
+      message: 'EasyPay top-up settled successfully',
       data: {
         easypay_code: easypay_code,
-        mm_voucher_code: mmVoucherCode,
-        status: 'active'
+        gross_amount: grossAmount,
+        net_amount: netAmount,
+        fee_applied: totalFee / 100,
+        status: 'completed',
+        settlement_transaction_id: settlementId
       }
     });
   } catch (err) {
-    console.error('❌ Process EasyPay settlement error:', err);
-    res.status(500).json({ error: err.message || 'Failed to process settlement' });
+    console.error('❌ Process EasyPay top-up settlement error:', err);
+    res.status(500).json({ error: err.message || 'Failed to process top-up settlement' });
   }
 };
 
@@ -979,9 +1020,12 @@ exports.getVoucherBalanceSummary = async (req, res) => {
       if (voucher.status === 'active') {
         // Active MMVouchers: use balance (remaining value)
         activeValue += balance;
-      } else if (voucher.status === 'pending_payment') {
-        // Pending EPVouchers: use originalAmount (full value) - EVEN THOUGH status is pending
+      } else if (voucher.status === 'pending_payment' && voucher.voucherType === 'easypay_pending') {
+        // Traditional EPVouchers: use originalAmount (user already paid)
         activeValue += amount;
+      } else if (voucher.status === 'pending_payment' && voucher.voucherType === 'easypay_topup') {
+        // Top-up @ EasyPay: use 0 (user hasn't paid yet)
+        // Don't add to activeValue - not an asset yet
       } else if (voucher.status === 'redeemed') {
         // Redeemed vouchers: use originalAmount
         redeemedValue += amount;
