@@ -1026,7 +1026,6 @@ export function VouchersPage() {
         z-index: 9999;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       `;
-      const isCashout = voucher.description?.includes('Cash-out @ EasyPay');
       const successMessage = isCashout
         ? `Settlement simulated! Cash-out voucher redeemed.`
         : `Settlement simulated! Wallet credited with R${result.data?.net_amount?.toFixed(2) || voucher.originalAmount.toFixed(2)}`;
