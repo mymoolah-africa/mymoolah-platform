@@ -980,6 +980,7 @@ exports.processEasyPaySettlement = async (req, res) => {
     });
 
     // Update voucher as consumed (no longer active, but track for history)
+    const redeemedAt = new Date().toISOString();
     await voucher.update({
       status: 'redeemed', // Consumed
       voucherType: 'easypay_topup', // Keep type for tracking
@@ -988,12 +989,13 @@ exports.processEasyPaySettlement = async (req, res) => {
         ...voucher.metadata,
         settlementAmount: settlement_amount,
         settlementMerchant: merchant_id,
-        settlementTimestamp: new Date().toISOString(),
+        settlementTimestamp: redeemedAt,
         callbackReceived: true,
         transactionId: transaction_id,
         feeApplied: totalFee / 100,
         netCredited: netAmount,
-        settlementTransactionId: settlementId
+        settlementTransactionId: settlementId,
+        redeemedAt: redeemedAt // Track when voucher was redeemed
       }
     });
 
@@ -1094,6 +1096,7 @@ exports.processEasyPayCashoutSettlement = async (req, res) => {
     });
 
     // Update voucher as redeemed (consumed)
+    const redeemedAt = new Date().toISOString();
     await voucher.update({
       status: 'redeemed', // Consumed
       voucherType: 'easypay_cashout', // Keep type for tracking
@@ -1102,10 +1105,11 @@ exports.processEasyPayCashoutSettlement = async (req, res) => {
         ...voucher.metadata,
         settlementAmount: settlement_amount,
         settlementMerchant: merchant_id,
-        settlementTimestamp: new Date().toISOString(),
+        settlementTimestamp: redeemedAt,
         callbackReceived: true,
         transactionId: transaction_id,
-        settlementTransactionId: settlementId
+        settlementTransactionId: settlementId,
+        redeemedAt: redeemedAt // Track when voucher was redeemed
       }
     });
 
