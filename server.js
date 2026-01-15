@@ -718,6 +718,25 @@ const initializeBackgroundServices = async () => {
       console.error('❌ Failed to start daily referral payout scheduler:', error.message);
     }
     
+    // Start Float Balance Monitoring Service (runs hourly by default)
+    try {
+      const FloatBalanceMonitoringService = require('./services/floatBalanceMonitoringService');
+      const floatMonitoringService = new FloatBalanceMonitoringService();
+      
+      // Start with default hourly schedule (configurable via FLOAT_BALANCE_CHECK_INTERVAL_MINUTES)
+      // Or use custom cron schedule from env: FLOAT_BALANCE_CHECK_SCHEDULE
+      const customSchedule = process.env.FLOAT_BALANCE_CHECK_SCHEDULE || null;
+      floatMonitoringService.start(customSchedule);
+      
+      // Store reference for graceful shutdown
+      global.floatBalanceMonitoringService = floatMonitoringService;
+      
+      console.log('✅ Float Balance Monitoring Service started');
+    } catch (error) {
+      console.error('❌ Failed to start Float Balance Monitoring Service:', error.message);
+      console.error('   Email notifications will be disabled');
+    }
+    
   } catch (error) {
     console.error('❌ Error starting background services:', error.message);
     console.error('❌ Full error details:', error);
@@ -767,6 +786,11 @@ process.on('SIGTERM', () => {
     if (databasePerformanceMonitor && databasePerformanceMonitor.stopMonitoring) {
       databasePerformanceMonitor.stopMonitoring();
       console.log('✅ Database Performance Monitor stopped');
+    }
+    
+    if (global.floatBalanceMonitoringService && global.floatBalanceMonitoringService.stop) {
+      global.floatBalanceMonitoringService.stop();
+      console.log('✅ Float Balance Monitoring Service stopped');
     }
   } catch (error) {
     console.error('⚠️  Error stopping background services:', error.message);
