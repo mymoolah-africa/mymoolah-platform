@@ -3617,7 +3617,7 @@ export function VouchersPage() {
                       EasyPay Number: {voucherToCancel.easyPayNumber}
                     </p>
                     <p style={{ margin: '0', fontWeight: '600', color: '#1f2937' }}>
-                      Amount: R {(parseFloat(voucherToCancel.originalAmount || '0') || 0).toLocaleString('en-ZA', {
+                      Amount: R {(voucherToCancel.originalAmount || 0).toLocaleString('en-ZA', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,
                         useGrouping: true
@@ -3636,7 +3636,7 @@ export function VouchersPage() {
                             // For cash-out vouchers, refund includes voucher amount + transaction fee (R8.00)
                             const isCashout = voucherToCancel.voucherType === 'easypay_cashout' || voucherToCancel.voucherType === 'easypay_cashout_active';
                             if (isCashout) {
-                              const voucherAmount = parseFloat(voucherToCancel.originalAmount || '0') || 0;
+                              const voucherAmount = voucherToCancel.originalAmount || 0;
                               const transactionFee = 8.00; // R8.00 transaction fee for cash-out
                               const totalRefund = voucherAmount + transactionFee;
                               return totalRefund.toLocaleString('en-ZA', {
