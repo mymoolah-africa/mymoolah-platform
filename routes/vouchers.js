@@ -10,7 +10,16 @@ router.post('/issue', authMiddleware, voucherController.issueVoucher);
 router.post('/easypay/topup/issue', authMiddleware, voucherController.issueEasyPayVoucher);
 
 // Process EasyPay Top-up settlement callback
-router.post('/easypay/topup/settlement', voucherController.processEasyPaySettlement);
+// Note: This route is for EasyPay callbacks and UAT simulation
+router.post('/easypay/topup/settlement', (req, res, next) => {
+  console.log('🔔 Route matched: /easypay/topup/settlement', {
+    method: req.method,
+    path: req.path,
+    url: req.url,
+    body: req.body
+  });
+  next();
+}, voucherController.processEasyPaySettlement);
 
 // Issue EasyPay Cash-out voucher
 router.post('/easypay/cashout/issue', authMiddleware, voucherController.issueEasyPayCashout);
