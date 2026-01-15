@@ -42,6 +42,7 @@ Successfully transformed the existing EasyPay voucher system from "buy voucher, 
 - `mymoolah-wallet-frontend/components/overlays/topup-easypay/TopupEasyPayOverlay.tsx` - New component for top-up creation flow
 - `mymoolah-wallet-frontend/App.tsx` - Added route for /topup-easypay
 - `mymoolah-wallet-frontend/pages/TopupEasyPayPage.tsx` - Page wrapper for TopupEasyPayOverlay
+- `mymoolah-wallet-frontend/pages/VouchersPage.tsx` - Added Simulate button for UAT testing, updated voucher type mapping
 
 ---
 
@@ -87,6 +88,7 @@ Successfully transformed the existing EasyPay voucher system from "buy voucher, 
 - **Fee Structure**: R2.50 total (configurable), applied on settlement, not creation
 - **Wallet Flow**: No debit on creation, credit on settlement with fees deducted
 - **Voucher Status**: Settlement changes to 'redeemed' (consumed), not 'active' (redeemable)
+- **UAT Testing**: Small red "Simulate" button added to pending top-up vouchers (UAT only) to simulate EasyPay settlement
 
 ---
 
