@@ -282,7 +282,7 @@ export function BottomNavigation() {
   const activeTab = getActiveTabId();
 
   // Check if we should show the bottom navigation
-  const showBottomNav = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/vouchers-overlay', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments', '/support', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay'].includes(location.pathname);
+  const showBottomNav = ['/dashboard', '/send-money', '/transact', '/qr-payment', '/vouchers', '/vouchers-overlay', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments', '/support', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/cashout-easypay'].includes(location.pathname);
   
   if (!showBottomNav) return null;
 
