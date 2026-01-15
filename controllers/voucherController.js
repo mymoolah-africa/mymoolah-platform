@@ -100,7 +100,10 @@ const handleExpiredVouchers = async () => {
             }, { transaction: t });
 
             // Credit user wallet (voucher + fee)
-            await wallet.credit(totalRefund, 'easypay_cashout_expired_refund', { transaction: t });
+            // Manually update balance within transaction to ensure it's committed
+            wallet.balance = parseFloat(wallet.balance) + totalRefund;
+            wallet.lastTransactionAt = new Date();
+            await wallet.save({ transaction: t });
 
             // Credit EasyPay Cash-out Float (voucher amount only)
             cashoutFloat.currentBalance = parseFloat(cashoutFloat.currentBalance) + voucherAmount;
@@ -1924,6 +1927,8 @@ exports.cancelEasyPayCashout = async (req, res) => {
     // Get user's wallet and EasyPay Cash-out Float
     const { Wallet, Transaction, SupplierFloat } = require('../models');
     const { sequelize } = require('../models');
+    
+    // Get wallet and float OUTSIDE transaction to ensure fresh instances
     const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
     
     if (!wallet) {
@@ -1938,9 +1943,15 @@ exports.cancelEasyPayCashout = async (req, res) => {
       return res.status(500).json({ error: 'EasyPay Cash-out Float Account not configured' });
     }
 
+    // Log initial balances
+    console.log(`📊 Initial balances - Wallet: R${wallet.balance}, Float: R${cashoutFloat.currentBalance}`);
+
     try {
       // Use transaction to ensure atomicity
       const result = await sequelize.transaction(async (t) => {
+        // Reload wallet and float within transaction to get latest state
+        await wallet.reload({ transaction: t });
+        await cashoutFloat.reload({ transaction: t });
         // Update voucher status to cancelled
         await voucher.update({ 
           status: 'cancelled',
@@ -1964,7 +1975,12 @@ exports.cancelEasyPayCashout = async (req, res) => {
         // Credit user wallet (voucher amount + fee)
         console.log(`💰 Crediting wallet: R${totalRefund} (Voucher: R${voucherAmount} + Fee: R${userFee})`);
         const walletBalanceBefore = parseFloat(wallet.balance);
-        await wallet.credit(totalRefund, 'easypay_cashout_cancellation_refund', { transaction: t });
+        
+        // Manually update balance within transaction to ensure it's committed
+        wallet.balance = parseFloat(wallet.balance) + totalRefund;
+        wallet.lastTransactionAt = new Date();
+        await wallet.save({ transaction: t });
+        
         const walletBalanceAfter = parseFloat(wallet.balance);
         console.log(`✅ Wallet credited: R${walletBalanceBefore} → R${walletBalanceAfter} (+R${totalRefund})`);
 
