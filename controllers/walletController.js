@@ -513,6 +513,78 @@ class WalletController {
         };
       });
 
+      // CRITICAL: For cash-out refund transactions in Recent Transactions (dashboard):
+      // Combine voucher refund + fee refund into ONE transaction showing total refund
+      if (isDashboard) {
+        const cashoutRefundGroups = new Map();
+        const otherTransactions = [];
+        
+        normalizedRows.forEach(tx => {
+          const metadata = tx.metadata || {};
+          const desc = (tx.description || '').toLowerCase();
+          
+          // Check if this is a cash-out refund transaction
+          if (tx.type === 'refund' && 
+              (metadata.isCashoutVoucherRefund || metadata.isCashoutFeeRefund) &&
+              metadata.relatedTransactionId) {
+            // Group by relatedTransactionId (voucher refund ID)
+            const groupKey = metadata.isCashoutVoucherRefund 
+              ? tx.transactionId 
+              : metadata.relatedTransactionId;
+            
+            if (!cashoutRefundGroups.has(groupKey)) {
+              cashoutRefundGroups.set(groupKey, {
+                voucherRefund: null,
+                feeRefund: null,
+                createdAt: tx.createdAt
+              });
+            }
+            
+            const group = cashoutRefundGroups.get(groupKey);
+            if (metadata.isCashoutVoucherRefund) {
+              group.voucherRefund = tx;
+            } else if (metadata.isCashoutFeeRefund) {
+              group.feeRefund = tx;
+            }
+          } else {
+            otherTransactions.push(tx);
+          }
+        });
+        
+        // Combine grouped refunds into single transactions
+        const combinedRefunds = [];
+        cashoutRefundGroups.forEach((group, groupKey) => {
+          if (group.voucherRefund && group.feeRefund) {
+            // Combine both refunds into one transaction
+            const totalRefund = parseFloat(group.voucherRefund.amount) + parseFloat(group.feeRefund.amount);
+            combinedRefunds.push({
+              ...group.voucherRefund,
+              amount: totalRefund,
+              description: `Cash-out @ EasyPay cancelled - refund: ${group.voucherRefund.metadata?.voucherCode || ''}`,
+              metadata: {
+                ...group.voucherRefund.metadata,
+                combinedRefund: true,
+                voucherRefundAmount: parseFloat(group.voucherRefund.amount),
+                feeRefundAmount: parseFloat(group.feeRefund.amount),
+                totalRefundAmount: totalRefund
+              }
+            });
+          } else if (group.voucherRefund) {
+            // Only voucher refund found (shouldn't happen, but handle gracefully)
+            combinedRefunds.push(group.voucherRefund);
+          } else if (group.feeRefund) {
+            // Only fee refund found (shouldn't happen, but handle gracefully)
+            combinedRefunds.push(group.feeRefund);
+          }
+        });
+        
+        // Replace normalizedRows with combined refunds + other transactions
+        normalizedRows.length = 0;
+        normalizedRows.push(...combinedRefunds, ...otherTransactions);
+        // Re-sort by createdAt DESC
+        normalizedRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      }
+
       // CRITICAL FIX: Deduplicate by transaction ID to prevent duplicates
       const uniqueTransactions = new Map();
       normalizedRows.forEach(tx => {
@@ -572,10 +644,12 @@ class WalletController {
         }
         
         // Dashboard: Exclude Transaction Fees (for top-up and cash-out transactions)
+        // Also exclude individual cash-out fee refunds (they're combined with voucher refund)
         // Transactions page: Keep Transaction Fees
         if (isDashboard && (
           desc === 'transaction fee' || 
-          (tx.metadata && (tx.metadata.isTopUpFee || tx.metadata.isCashoutFee))
+          (tx.metadata && (tx.metadata.isTopUpFee || tx.metadata.isCashoutFee)) ||
+          (tx.metadata && tx.metadata.isCashoutFeeRefund && !tx.metadata.combinedRefund) // Exclude individual fee refunds (already combined)
         )) {
           return false;
         }
