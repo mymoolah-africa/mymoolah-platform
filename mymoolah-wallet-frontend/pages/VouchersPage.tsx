@@ -883,7 +883,8 @@ export function VouchersPage() {
     
     const formattedAmount = amount.toLocaleString('en-ZA', {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
+      useGrouping: true // Ensure thousand separators are used
     });
     
     // For negative amounts, show R -amount (negative sign after R)
@@ -905,7 +906,8 @@ export function VouchersPage() {
     
     const formattedAmount = amount.toLocaleString('en-ZA', {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
+      useGrouping: true // Ensure thousand separators are used
     });
     
     // For negative amounts, show R-amount (negative sign after R)
