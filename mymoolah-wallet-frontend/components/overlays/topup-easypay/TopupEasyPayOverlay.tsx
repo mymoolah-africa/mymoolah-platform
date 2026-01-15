@@ -166,9 +166,11 @@ export function TopupEasyPayOverlay() {
     }
   };
 
-  // Format PIN for display (group by 4 digits)
+  // Format PIN for display: x xxxx xxxx xxxx x (14 digits on one line)
   const formatPIN = (pin: string): string => {
-    return pin.replace(/(.{4})/g, '$1 ').trim();
+    if (!pin || pin.length !== 14) return pin;
+    // Format as: x xxxx xxxx xxxx x
+    return `${pin[0]} ${pin.substring(1, 5)} ${pin.substring(5, 9)} ${pin.substring(9, 13)} ${pin[13]}`;
   };
 
   // Reset form
@@ -392,13 +394,15 @@ export function TopupEasyPayOverlay() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-white p-6 rounded-lg text-center mb-4">
+              <div className="bg-white p-6 rounded-lg text-center mb-4" style={{ overflowX: 'auto' }}>
                 <p style={{
                   fontFamily: 'Montserrat, monospace',
-                  fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                  fontSize: 'clamp(1.25rem, 3.5vw, 1.75rem)',
                   fontWeight: 'var(--font-weight-bold)',
                   color: '#1f2937',
-                  letterSpacing: '0.1em'
+                  letterSpacing: '0.05em',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-block'
                 }}>
                   {formatPIN(easyPayPIN)}
                 </p>
