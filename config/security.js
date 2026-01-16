@@ -450,6 +450,47 @@ class SecurityConfig {
       encryptionAlgorithm: this.encryptionConfig.algorithm
     };
   }
+
+  // Sanitize data for logging (remove sensitive information)
+  sanitizeForLogging(data) {
+    if (!data) return data;
+    
+    // If data is a string, apply mask patterns
+    if (typeof data === 'string') {
+      let sanitized = data;
+      this.loggingConfig.maskPatterns.forEach(({ pattern, replacement }) => {
+        sanitized = sanitized.replace(pattern, replacement);
+      });
+      return sanitized;
+    }
+    
+    // If data is an object, recursively sanitize
+    if (typeof data === 'object' && data !== null) {
+      const sanitized = Array.isArray(data) ? [] : {};
+      
+      for (const key in data) {
+        if (data.hasOwnProperty(key)) {
+          // Check if key is in sensitive fields list
+          const isSensitive = this.loggingConfig.sensitiveFields.some(
+            field => key.toLowerCase().includes(field.toLowerCase())
+          );
+          
+          if (isSensitive) {
+            sanitized[key] = '***';
+          } else if (typeof data[key] === 'object' && data[key] !== null) {
+            // Recursively sanitize nested objects
+            sanitized[key] = this.sanitizeForLogging(data[key]);
+          } else {
+            sanitized[key] = data[key];
+          }
+        }
+      }
+      
+      return sanitized;
+    }
+    
+    return data;
+  }
 }
 
 // Create and export security configuration instance
