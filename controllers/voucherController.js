@@ -1,5 +1,7 @@
 const { Voucher, VoucherType, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
+const { sendErrorResponse, ERROR_CODES, requestIdMiddleware } = require('../utils/errorHandler');
+const { validateEasyPayNumber } = require('../utils/easyPayUtils');
 
 // Configuration for EasyPay expiration handling
 const EASYPAY_EXPIRATION_CONFIG = {
@@ -886,14 +888,46 @@ exports.issueEasyPayCashout = async (req, res) => {
 
 // Process EasyPay top-up settlement callback
 exports.processEasyPaySettlement = async (req, res) => {
+  const requestId = req.requestId || req.headers['x-request-id'];
+  
   console.log('🔔 processEasyPaySettlement called:', {
     method: req.method,
     path: req.path,
     url: req.url,
-    body: req.body
+    body: req.body,
+    requestId
   });
+  
   try {
     const { easypay_code, settlement_amount, merchant_id, transaction_id } = req.body;
+
+    // Validate required fields
+    if (!easypay_code) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'easypay_code is required', requestId);
+    }
+    
+    if (!settlement_amount) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'settlement_amount is required', requestId);
+    }
+    
+    if (!merchant_id) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'merchant_id is required', requestId);
+    }
+    
+    if (!transaction_id) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'transaction_id is required', requestId);
+    }
+
+    // Validate EasyPay PIN format
+    if (!validateEasyPayNumber(easypay_code)) {
+      return sendErrorResponse(res, ERROR_CODES.INVALID_PIN, `Invalid EasyPay PIN format: ${easypay_code}`, requestId);
+    }
+
+    // Validate amount
+    const amount = parseFloat(settlement_amount);
+    if (isNaN(amount) || amount < 50 || amount > 4000) {
+      return sendErrorResponse(res, ERROR_CODES.INVALID_AMOUNT, `Amount must be between R50 and R4000. Received: R${amount}`, requestId);
+    }
 
     // Find the pending EasyPay top-up voucher
     const voucher = await Voucher.findOne({
@@ -905,18 +939,28 @@ exports.processEasyPaySettlement = async (req, res) => {
     });
 
     if (!voucher) {
-      // Debug: Check if voucher exists with different status or type
+      // Check if voucher exists with different status or type
       const debugVoucher = await Voucher.findOne({
         where: { easyPayCode: easypay_code }
       });
-      console.log('🔍 Voucher lookup debug:', {
-        easypay_code,
-        found: !!debugVoucher,
-        voucherType: debugVoucher?.voucherType,
-        status: debugVoucher?.status,
-        id: debugVoucher?.id
-      });
-      return res.status(404).json({ error: 'EasyPay top-up request not found or already settled' });
+      
+      if (debugVoucher) {
+        if (debugVoucher.status === 'redeemed') {
+          return sendErrorResponse(res, ERROR_CODES.VOUCHER_ALREADY_SETTLED, 'This EasyPay top-up has already been settled', requestId);
+        }
+        if (debugVoucher.voucherType !== 'easypay_topup') {
+          return sendErrorResponse(res, ERROR_CODES.INVALID_FORMAT, `Voucher type mismatch. Expected: easypay_topup, Found: ${debugVoucher.voucherType}`, requestId);
+        }
+      }
+      
+      return sendErrorResponse(res, ERROR_CODES.PIN_NOT_FOUND, 'EasyPay top-up request not found', requestId);
+    }
+    
+    // Check if voucher has expired (96 hours = 96 * 60 * 60 * 1000 ms)
+    const expiryTime = 96 * 60 * 60 * 1000;
+    const voucherAge = Date.now() - new Date(voucher.createdAt).getTime();
+    if (voucherAge > expiryTime) {
+      return sendErrorResponse(res, ERROR_CODES.PIN_EXPIRED, 'EasyPay PIN has expired. PINs expire after 96 hours.', requestId);
     }
 
     // Apply fee structure (configurable via environment variables)
@@ -928,12 +972,20 @@ exports.processEasyPaySettlement = async (req, res) => {
     const grossAmount = parseFloat(voucher.originalAmount);
     const netAmount = grossAmount - (totalFee / 100); // Convert cents to rands
 
+    // Verify settlement amount matches voucher amount (with tolerance for rounding)
+    const voucherAmount = parseFloat(voucher.originalAmount);
+    if (Math.abs(voucherAmount - amount) > 0.01) {
+      return sendErrorResponse(res, ERROR_CODES.AMOUNT_MISMATCH, 
+        `Settlement amount mismatch. Expected: R${voucherAmount.toFixed(2)}, Received: R${amount.toFixed(2)}`, 
+        requestId);
+    }
+
     // Get user's wallet
     const { Wallet, Transaction } = require('../models');
     const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
 
     if (!wallet) {
-      return res.status(404).json({ error: 'User wallet not found' });
+      return sendErrorResponse(res, ERROR_CODES.WALLET_NOT_FOUND, 'User wallet not found', requestId);
     }
 
     // Credit wallet with net amount
@@ -1038,14 +1090,48 @@ exports.processEasyPaySettlement = async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Process EasyPay top-up settlement error:', err);
-    res.status(500).json({ error: err.message || 'Failed to process top-up settlement' });
+    const requestId = req.requestId || req.headers['x-request-id'];
+    sendErrorResponse(res, ERROR_CODES.INTERNAL_ERROR, 
+      err.message || 'Failed to process top-up settlement', 
+      requestId,
+      { error_type: err.name || 'UnknownError' });
   }
 };
 
 // Process EasyPay Cash-out Settlement Callback
 exports.processEasyPayCashoutSettlement = async (req, res) => {
+  const requestId = req.requestId || req.headers['x-request-id'];
+  
   try {
     const { easypay_code, settlement_amount, merchant_id, transaction_id } = req.body;
+
+    // Validate required fields
+    if (!easypay_code) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'easypay_code is required', requestId);
+    }
+    
+    if (!settlement_amount) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'settlement_amount is required', requestId);
+    }
+    
+    if (!merchant_id) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'merchant_id is required', requestId);
+    }
+    
+    if (!transaction_id) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'transaction_id is required', requestId);
+    }
+
+    // Validate EasyPay PIN format
+    if (!validateEasyPayNumber(easypay_code)) {
+      return sendErrorResponse(res, ERROR_CODES.INVALID_PIN, `Invalid EasyPay PIN format: ${easypay_code}`, requestId);
+    }
+
+    // Validate amount
+    const settlementAmount = parseFloat(settlement_amount);
+    if (isNaN(settlementAmount) || settlementAmount < 50 || settlementAmount > 3000) {
+      return sendErrorResponse(res, ERROR_CODES.INVALID_AMOUNT, `Amount must be between R50 and R3000. Received: R${settlementAmount}`, requestId);
+    }
 
     // Find the pending EasyPay cash-out voucher
     const voucher = await Voucher.findOne({
@@ -1057,17 +1143,36 @@ exports.processEasyPayCashoutSettlement = async (req, res) => {
     });
 
     if (!voucher) {
-      return res.status(404).json({ error: 'EasyPay cash-out voucher not found or already settled' });
+      // Check if voucher exists with different status
+      const debugVoucher = await Voucher.findOne({
+        where: { easyPayCode: easypay_code }
+      });
+      
+      if (debugVoucher) {
+        if (debugVoucher.status === 'redeemed') {
+          return sendErrorResponse(res, ERROR_CODES.VOUCHER_ALREADY_SETTLED, 'This EasyPay cash-out has already been settled', requestId);
+        }
+        if (debugVoucher.voucherType !== 'easypay_cashout') {
+          return sendErrorResponse(res, ERROR_CODES.INVALID_FORMAT, `Voucher type mismatch. Expected: easypay_cashout, Found: ${debugVoucher.voucherType}`, requestId);
+        }
+      }
+      
+      return sendErrorResponse(res, ERROR_CODES.PIN_NOT_FOUND, 'EasyPay cash-out voucher not found', requestId);
+    }
+    
+    // Check if voucher has expired (96 hours)
+    const expiryTime = 96 * 60 * 60 * 1000;
+    const voucherAge = Date.now() - new Date(voucher.createdAt).getTime();
+    if (voucherAge > expiryTime) {
+      return sendErrorResponse(res, ERROR_CODES.PIN_EXPIRED, 'EasyPay PIN has expired. PINs expire after 96 hours.', requestId);
     }
 
     // Verify settlement amount matches voucher amount
     const voucherAmount = parseFloat(voucher.originalAmount);
-    const settlementAmount = parseFloat(settlement_amount);
-
     if (Math.abs(voucherAmount - settlementAmount) > 0.01) {
-      return res.status(400).json({ 
-        error: `Settlement amount mismatch. Expected: R${voucherAmount.toFixed(2)}, Received: R${settlementAmount.toFixed(2)}` 
-      });
+      return sendErrorResponse(res, ERROR_CODES.AMOUNT_MISMATCH, 
+        `Settlement amount mismatch. Expected: R${voucherAmount.toFixed(2)}, Received: R${settlementAmount.toFixed(2)}`, 
+        requestId);
     }
 
     // Get user's wallet (for audit purposes, wallet already debited on creation)
@@ -1075,7 +1180,7 @@ exports.processEasyPayCashoutSettlement = async (req, res) => {
     const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
 
     if (!wallet) {
-      return res.status(404).json({ error: 'User wallet not found' });
+      return sendErrorResponse(res, ERROR_CODES.WALLET_NOT_FOUND, 'User wallet not found', requestId);
     }
 
     // Update Bill status to paid
@@ -1150,7 +1255,11 @@ exports.processEasyPayCashoutSettlement = async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Process EasyPay cash-out settlement error:', err);
-    res.status(500).json({ error: err.message || 'Failed to process cash-out settlement' });
+    const requestId = req.requestId || req.headers['x-request-id'];
+    sendErrorResponse(res, ERROR_CODES.INTERNAL_ERROR, 
+      err.message || 'Failed to process cash-out settlement', 
+      requestId,
+      { error_type: err.name || 'UnknownError' });
   }
 };
 

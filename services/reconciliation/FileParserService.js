@@ -21,12 +21,14 @@ const logger = {
 };
 const MobileMartAdapter = require('./adapters/MobileMartAdapter');
 const FlashAdapter = require('./adapters/FlashAdapter');
+const EasyPayAdapter = require('./adapters/EasyPayAdapter');
 
 class FileParserService {
   constructor() {
     this.adapters = {
       MobileMartAdapter: new MobileMartAdapter(),
       FlashAdapter: new FlashAdapter(),
+      EasyPayAdapter: new EasyPayAdapter(),
       // Add more adapters as needed
     };
   }

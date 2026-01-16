@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const voucherController = require('../controllers/voucherController');
 const authMiddleware = require('../middleware/auth');
+const { idempotencyMiddleware } = require('../middleware/idempotency');
+const { easypayAuthMiddleware } = require('../middleware/easypayAuth');
 
 // Issue a new voucher
 router.post('/issue', authMiddleware, voucherController.issueVoucher);
@@ -11,7 +13,9 @@ router.post('/easypay/topup/issue', authMiddleware, voucherController.issueEasyP
 
 // Process EasyPay Top-up settlement callback
 // Note: This route is for EasyPay callbacks and UAT simulation
-router.post('/easypay/topup/settlement', (req, res, next) => {
+// Authentication: API key required (X-API-Key header)
+// Idempotency: Prevents duplicate processing (X-Idempotency-Key header)
+router.post('/easypay/topup/settlement', easypayAuthMiddleware, idempotencyMiddleware, (req, res, next) => {
   console.log('🔔 Route matched: /easypay/topup/settlement', {
     method: req.method,
     path: req.path,
@@ -25,7 +29,9 @@ router.post('/easypay/topup/settlement', (req, res, next) => {
 router.post('/easypay/cashout/issue', authMiddleware, voucherController.issueEasyPayCashout);
 
 // Process EasyPay Cash-out settlement callback
-router.post('/easypay/cashout/settlement', voucherController.processEasyPayCashoutSettlement);
+// Authentication: API key required (X-API-Key header)
+// Idempotency: Prevents duplicate processing (X-Idempotency-Key header)
+router.post('/easypay/cashout/settlement', easypayAuthMiddleware, idempotencyMiddleware, voucherController.processEasyPayCashoutSettlement);
 
 // Cancel EasyPay Cash-out voucher
 router.delete('/easypay/cashout/:voucherId', authMiddleware, voucherController.cancelEasyPayCashout);

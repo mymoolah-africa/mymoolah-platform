@@ -68,6 +68,7 @@ const {
   corsConfig
 } = require('./middleware/securityMiddleware');
 const { secureLogging, secureErrorLogging } = require('./middleware/secureLogging');
+const { requestIdMiddleware } = require('./utils/errorHandler');
 
 // Get configuration from security config
 const config = securityConfig.getConfig();
@@ -381,6 +382,10 @@ const validateRequest = (req, res, next) => {
   }
   next();
 };
+
+// Request ID middleware (must be early in chain, after CORS/helmet but before body parsing)
+const { requestIdMiddleware } = require('./utils/errorHandler');
+app.use(requestIdMiddleware);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -735,6 +740,16 @@ const initializeBackgroundServices = async () => {
     } catch (error) {
       console.error('❌ Failed to start Float Balance Monitoring Service:', error.message);
       console.error('   Email notifications will be disabled');
+    }
+    
+    // Start Idempotency Key Cleanup Service (runs hourly)
+    try {
+      const { scheduleCleanup } = require('./middleware/idempotency');
+      const { sequelize } = require('./models');
+      scheduleCleanup(sequelize);
+      console.log('✅ Idempotency key cleanup scheduler started (runs hourly)');
+    } catch (error) {
+      console.error('❌ Failed to start idempotency cleanup scheduler:', error.message);
     }
     
   } catch (error) {

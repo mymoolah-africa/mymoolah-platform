@@ -293,6 +293,9 @@ db.SupportInteraction = require('./SupportInteraction')(sequelize, Sequelize.Dat
 db.SupportFeedback = require('./SupportFeedback')(sequelize, Sequelize.DataTypes);
 db.AiKnowledgeBase = require('./AiKnowledgeBase')(sequelize, Sequelize.DataTypes);
 
+// Add IdempotencyKey model to exports
+db.IdempotencyKey = require('./IdempotencyKey')(sequelize, Sequelize.DataTypes);
+
 // Add Feedback System models to exports
 db.FeedbackCategory = require('./FeedbackCategory')(sequelize, Sequelize.DataTypes);
 db.FeedbackSubmission = require('./FeedbackSubmission')(sequelize, Sequelize.DataTypes);

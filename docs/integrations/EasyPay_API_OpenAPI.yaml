@@ -1,0 +1,569 @@
+openapi: 3.0.3
+info:
+  title: MyMoolah EasyPay API
+  description: |
+    Banking-grade API for EasyPay Top-up and Cash-out integration.
+    Provides secure, idempotent settlement endpoints for EasyPay merchant terminals.
+  version: 1.0.0
+  contact:
+    name: MyMoolah Integration Support
+    email: integrations@mymoolah.africa
+    url: https://mymoolah.africa
+  license:
+    name: Proprietary
+    url: https://mymoolah.africa/terms
+
+servers:
+  - url: https://staging.mymoolah.africa/api/v1
+    description: Staging/UAT Environment
+  - url: https://api.mymoolah.africa/api/v1
+    description: Production Environment (when available)
+  - url: http://localhost:3001/api/v1
+    description: Local Development
+
+tags:
+  - name: EasyPay Settlement
+    description: EasyPay Top-up and Cash-out settlement endpoints
+
+paths:
+  /vouchers/easypay/topup/settlement:
+    post:
+      tags:
+        - EasyPay Settlement
+      summary: Top-up @ EasyPay Settlement
+      description: |
+        Called by EasyPay when a user presents a Top-up PIN at a cashier and pays cash.
+        This endpoint credits the user's MyMoolah wallet with the net amount (gross payment minus transaction fee).
+      operationId: processEasyPayTopupSettlement
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: X-Idempotency-Key
+          in: header
+          required: true
+          description: Unique idempotency key to prevent duplicate processing
+          schema:
+            type: string
+            maxLength: 255
+          example: EP_MERCHANT_12345_EP_TXN_20260116_001_1642334433
+        - name: X-Request-ID
+          in: header
+          required: false
+          description: UUID for request tracking
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopupSettlementRequest'
+            examples:
+              example1:
+                summary: R100 Top-up
+                value:
+                  easypay_code: "9123412345678"
+                  settlement_amount: 100.00
+                  merchant_id: "EP_MERCHANT_12345"
+                  transaction_id: "EP_TXN_20260116_123456"
+                  terminal_id: "EP_TERMINAL_001"
+                  cashier_id: "CASHIER_789"
+                  timestamp: "2026-01-16T13:40:33+02:00"
+                  metadata:
+                    merchant_name: "Pick n Pay - Sandton City"
+                    receipt_number: "RCP-001234"
+      responses:
+        '200':
+          description: Settlement successful
+          headers:
+            X-Request-ID:
+              description: Request ID for tracking
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopupSettlementResponse'
+              example:
+                success: true
+                message: "EasyPay top-up settled successfully"
+                data:
+                  easypay_code: "9123412345678"
+                  gross_amount: 100.00
+                  net_amount: 97.50
+                  fee_applied: 2.50
+                  status: "completed"
+                  settlement_transaction_id: "STL-1642334433-abc123"
+        '400':
+          description: Bad request (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidPin:
+                  summary: Invalid PIN format
+                  value:
+                    success: false
+                    error:
+                      code: "INVALID_PIN"
+                      message: "Invalid EasyPay PIN format. PIN must be 14 digits starting with 9."
+                      details: "Invalid EasyPay PIN format: 9999999999999"
+                      request_id: "550e8400-e29b-41d4-a716-446655440000"
+                      timestamp: "2026-01-16T14:05:00.000Z"
+                amountMismatch:
+                  summary: Amount mismatch
+                  value:
+                    success: false
+                    error:
+                      code: "AMOUNT_MISMATCH"
+                      message: "Settlement amount does not match voucher amount."
+                      details: "Settlement amount mismatch. Expected: R100.00, Received: R150.00"
+                      request_id: "550e8400-e29b-41d4-a716-446655440000"
+                      timestamp: "2026-01-16T14:05:00.000Z"
+                pinExpired:
+                  summary: PIN expired
+                  value:
+                    success: false
+                    error:
+                      code: "PIN_EXPIRED"
+                      message: "EasyPay PIN has expired. PINs expire after 96 hours."
+                      details: "EasyPay PIN has expired. PINs expire after 96 hours."
+                      request_id: "550e8400-e29b-41d4-a716-446655440000"
+                      timestamp: "2026-01-16T14:05:00.000Z"
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "INVALID_API_KEY"
+                  message: "Invalid API key"
+                  details: "Invalid API key"
+                  request_id: "550e8400-e29b-41d4-a716-446655440000"
+                  timestamp: "2026-01-16T14:05:00.000Z"
+        '404':
+          description: PIN not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "PIN_NOT_FOUND"
+                  message: "EasyPay PIN not found or already settled."
+                  details: "EasyPay top-up request not found"
+                  request_id: "550e8400-e29b-41d4-a716-446655440000"
+                  timestamp: "2026-01-16T14:05:00.000Z"
+        '409':
+          description: Conflict (idempotency or already processed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                duplicateRequest:
+                  summary: Duplicate request with different body
+                  value:
+                    success: false
+                    error:
+                      code: "DUPLICATE_REQUEST"
+                      message: "Duplicate request detected."
+                      details: "Idempotency key already used with a different request. Use a unique key for each request."
+                      request_id: "550e8400-e29b-41d4-a716-446655440000"
+                      timestamp: "2026-01-16T14:05:00.000Z"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "RATE_LIMIT_EXCEEDED"
+                  message: "Too many requests. Please try again later."
+                  details: "Too many requests. Please try again later."
+                  request_id: "550e8400-e29b-41d4-a716-446655440000"
+                  timestamp: "2026-01-16T14:05:00.000Z"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: "INTERNAL_ERROR"
+                  message: "An internal server error occurred."
+                  details: "Failed to process top-up settlement"
+                  request_id: "550e8400-e29b-41d4-a716-446655440000"
+                  timestamp: "2026-01-16T14:05:00.000Z"
+                  error_type: "DatabaseError"
+
+  /vouchers/easypay/cashout/settlement:
+    post:
+      tags:
+        - EasyPay Settlement
+      summary: Cash-out @ EasyPay Settlement
+      description: |
+        Called by EasyPay when a user presents a Cash-out PIN at a cashier to withdraw cash.
+        This endpoint marks the voucher as redeemed after cash has been dispensed.
+        The user's wallet was already debited when the cash-out voucher was created.
+      operationId: processEasyPayCashoutSettlement
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: X-Idempotency-Key
+          in: header
+          required: true
+          description: Unique idempotency key to prevent duplicate processing
+          schema:
+            type: string
+            maxLength: 255
+          example: EP_MERCHANT_12345_EP_TXN_20260116_002_1642338000
+        - name: X-Request-ID
+          in: header
+          required: false
+          description: UUID for request tracking
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CashoutSettlementRequest'
+            examples:
+              example1:
+                summary: R500 Cash-out
+                value:
+                  easypay_code: "9123498765432"
+                  settlement_amount: 500.00
+                  merchant_id: "EP_MERCHANT_12345"
+                  transaction_id: "EP_TXN_20260116_654321"
+                  terminal_id: "EP_TERMINAL_002"
+                  cashier_id: "CASHIER_456"
+                  timestamp: "2026-01-16T14:00:00+02:00"
+                  metadata:
+                    merchant_name: "Checkers - Rosebank"
+                    receipt_number: "RCP-567890"
+      responses:
+        '200':
+          description: Settlement successful
+          headers:
+            X-Request-ID:
+              description: Request ID for tracking
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CashoutSettlementResponse'
+              example:
+                success: true
+                message: "EasyPay cash-out settled successfully"
+                data:
+                  easypay_code: "9123498765432"
+                  voucher_amount: 500.00
+                  status: "completed"
+                  settlement_transaction_id: "CASHOUT-STL-1642338000-xyz789"
+        '400':
+          description: Bad request (validation error)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidPin:
+                  summary: Invalid PIN format
+                  value:
+                    success: false
+                    error:
+                      code: "INVALID_PIN"
+                      message: "Invalid EasyPay PIN format. PIN must be 14 digits starting with 9."
+                      details: "Invalid EasyPay PIN format: 9999999999999"
+                      request_id: "550e8400-e29b-41d4-a716-446655440000"
+                      timestamp: "2026-01-16T14:05:00.000Z"
+                amountMismatch:
+                  summary: Amount mismatch
+                  value:
+                    success: false
+                    error:
+                      code: "AMOUNT_MISMATCH"
+                      message: "Settlement amount does not match voucher amount."
+                      details: "Settlement amount mismatch. Expected: R500.00, Received: R600.00"
+                      request_id: "550e8400-e29b-41d4-a716-446655440000"
+                      timestamp: "2026-01-16T14:05:00.000Z"
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: PIN not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict (idempotency or already processed)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for EasyPay settlement endpoints
+
+  schemas:
+    TopupSettlementRequest:
+      type: object
+      required:
+        - easypay_code
+        - settlement_amount
+        - merchant_id
+        - transaction_id
+        - terminal_id
+      properties:
+        easypay_code:
+          type: string
+          pattern: '^9\d{13}$'
+          description: 14-digit EasyPay PIN starting with 9
+          example: "9123412345678"
+        settlement_amount:
+          type: number
+          format: float
+          minimum: 50.00
+          maximum: 4000.00
+          description: Amount in ZAR (Rands)
+          example: 100.00
+        merchant_id:
+          type: string
+          maxLength: 50
+          description: EasyPay merchant identifier
+          example: "EP_MERCHANT_12345"
+        transaction_id:
+          type: string
+          maxLength: 100
+          pattern: '^[A-Za-z0-9_-]+$'
+          description: Unique EasyPay transaction ID
+          example: "EP_TXN_20260116_123456"
+        terminal_id:
+          type: string
+          maxLength: 50
+          description: Terminal identifier
+          example: "EP_TERMINAL_001"
+        cashier_id:
+          type: string
+          maxLength: 50
+          description: Cashier identifier (optional)
+          example: "CASHIER_789"
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp with timezone (optional)
+          example: "2026-01-16T13:40:33+02:00"
+        metadata:
+          type: object
+          description: Additional transaction data (optional, max 1KB)
+          additionalProperties: true
+          example:
+            merchant_name: "Pick n Pay - Sandton City"
+            receipt_number: "RCP-001234"
+
+    CashoutSettlementRequest:
+      type: object
+      required:
+        - easypay_code
+        - settlement_amount
+        - merchant_id
+        - transaction_id
+        - terminal_id
+      properties:
+        easypay_code:
+          type: string
+          pattern: '^9\d{13}$'
+          description: 14-digit EasyPay PIN starting with 9
+          example: "9123498765432"
+        settlement_amount:
+          type: number
+          format: float
+          minimum: 50.00
+          maximum: 3000.00
+          description: Amount dispensed in ZAR (Rands), must match voucher amount
+          example: 500.00
+        merchant_id:
+          type: string
+          maxLength: 50
+          description: EasyPay merchant identifier
+          example: "EP_MERCHANT_12345"
+        transaction_id:
+          type: string
+          maxLength: 100
+          description: Unique EasyPay transaction ID
+          example: "EP_TXN_20260116_654321"
+        terminal_id:
+          type: string
+          maxLength: 50
+          description: Terminal identifier
+          example: "EP_TERMINAL_002"
+        cashier_id:
+          type: string
+          maxLength: 50
+          description: Cashier identifier (optional)
+          example: "CASHIER_456"
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp (optional)
+          example: "2026-01-16T14:00:00+02:00"
+        metadata:
+          type: object
+          description: Additional data (optional, max 1KB)
+          additionalProperties: true
+          example:
+            merchant_name: "Checkers - Rosebank"
+            receipt_number: "RCP-567890"
+
+    TopupSettlementResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "EasyPay top-up settled successfully"
+        data:
+          type: object
+          properties:
+            easypay_code:
+              type: string
+              example: "9123412345678"
+            gross_amount:
+              type: number
+              format: float
+              example: 100.00
+            net_amount:
+              type: number
+              format: float
+              example: 97.50
+            fee_applied:
+              type: number
+              format: float
+              example: 2.50
+            status:
+              type: string
+              enum: [completed]
+              example: "completed"
+            settlement_transaction_id:
+              type: string
+              example: "STL-1642334433-abc123"
+
+    CashoutSettlementResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "EasyPay cash-out settled successfully"
+        data:
+          type: object
+          properties:
+            easypay_code:
+              type: string
+              example: "9123498765432"
+            voucher_amount:
+              type: number
+              format: float
+              example: 500.00
+            status:
+              type: string
+              enum: [completed]
+              example: "completed"
+            settlement_transaction_id:
+              type: string
+              example: "CASHOUT-STL-1642338000-xyz789"
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              enum:
+                - INVALID_PIN
+                - INVALID_AMOUNT
+                - AMOUNT_MISMATCH
+                - MISSING_REQUIRED_FIELD
+                - INVALID_FORMAT
+                - PIN_NOT_FOUND
+                - VOUCHER_NOT_FOUND
+                - WALLET_NOT_FOUND
+                - PIN_EXPIRED
+                - VOUCHER_ALREADY_SETTLED
+                - VOUCHER_ALREADY_REDEEMED
+                - INSUFFICIENT_BALANCE
+                - ALREADY_SETTLED
+                - DUPLICATE_REQUEST
+                - AUTH_FAILED
+                - INVALID_API_KEY
+                - MISSING_API_KEY
+                - RATE_LIMIT_EXCEEDED
+                - INTERNAL_ERROR
+                - DATABASE_ERROR
+                - SERVICE_UNAVAILABLE
+              example: "PIN_NOT_FOUND"
+            message:
+              type: string
+              example: "EasyPay PIN not found or already settled."
+            details:
+              type: string
+              example: "EasyPay top-up request not found"
+            request_id:
+              type: string
+              format: uuid
+              example: "550e8400-e29b-41d4-a716-446655440000"
+            timestamp:
+              type: string
+              format: date-time
+              example: "2026-01-16T14:05:00.000Z"
+            error_type:
+              type: string
+              description: Additional error metadata (optional)
+              example: "DatabaseError"
