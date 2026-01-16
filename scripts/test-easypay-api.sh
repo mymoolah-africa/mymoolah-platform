@@ -10,6 +10,18 @@ echo "🧪 EasyPay API Testing - Authentication & Idempotency"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
+# Ensure gcloud is authenticated and project is set
+echo "📋 Checking gcloud authentication..."
+if ! gcloud auth list --filter=status:ACTIVE --format="value(account)" | grep -q .; then
+  echo "⚠️  gcloud not authenticated. Running: gcloud auth login"
+  gcloud auth login
+fi
+
+echo "📋 Setting gcloud project to mymoolah-db..."
+gcloud config set project mymoolah-db
+
+echo ""
+
 # Test 1: Missing API Key (should return 401)
 echo "📋 Test 1: Missing API Key (should return 401)"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
