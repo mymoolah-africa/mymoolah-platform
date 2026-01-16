@@ -22,17 +22,24 @@ Stores all Zapper and application secrets in Secret Manager.
 ```
 Creates service account with necessary IAM permissions.
 
-### 4. Docker Build & Push
+### 4. Build, Push & Deploy (Recommended - Single Command)
 ```bash
-./scripts/build-and-push-docker.sh [tag]
+./scripts/build-push-deploy-staging.sh [optional-image-tag]
 ```
-Builds and pushes Docker image to GCR (default tag: latest).
+**This is the main deployment script** - builds (no cache), pushes to GCR, and deploys to Cloud Run staging in one command.
+- Default tag: `YYYYMMDD-HHMM` (timestamp)
+- Includes all secrets (EasyPay, Zapper, MobileMart, etc.)
+- Includes all environment variables
+- Ready to use immediately
 
-### 5. Cloud Run Deployment
+**Alternative (if you need separate steps):**
 ```bash
+# Build & Push only
+./scripts/build-and-push-docker.sh [tag]
+
+# Deploy only (deprecated - use build-push-deploy-staging.sh instead)
 ./scripts/deploy-cloud-run-staging.sh
 ```
-Deploys Cloud Run service with all configuration.
 
 ### 6. Database Migrations
 ```bash
