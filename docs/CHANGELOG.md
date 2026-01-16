@@ -1,5 +1,50 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-01-16 - 📄 Markdown PDF Converter & EasyPay Simulation Fix (v2.6.2) ✅
+
+### **Session Overview**
+Created a generic markdown-to-PDF converter script for converting any documentation to PDF format, and fixed the EasyPay Top-up Simulate function authentication issue by allowing JWT Bearer tokens in UAT/test environments while maintaining API key requirement for production.
+
+### **📄 Generic PDF Converter** ✅
+- **New Script**: `scripts/md-to-pdf.js` - Converts any markdown file to professional PDF
+- **Usage**: `node scripts/md-to-pdf.js <path-to-markdown-file>`
+- **Features**:
+  - Supports all markdown features (tables, code blocks, lists, headers, links)
+  - Generates HTML and PDF files in same directory as source
+  - Professional print-friendly styling
+  - Falls back to HTML generation if puppeteer unavailable
+- **Dependencies Added**: `marked` (^15.0.12) and `puppeteer` (^24.35.0) as dev dependencies
+- **Output**: Generates `<filename>.pdf` and `<filename>.html` files
+
+### **🔐 EasyPay Simulation Authentication Fix** ✅
+- **Problem**: Frontend simulation button failed with 401 Unauthorized error
+- **Root Cause**: Settlement endpoint requires `X-API-Key` header, but frontend sends JWT Bearer token
+- **Solution**: Modified `easypayAuthMiddleware` to accept JWT tokens in UAT/test environments as fallback
+- **Security**: Production still requires API keys only (no JWT fallback)
+- **Implementation**:
+  - Checks API key first (for external EasyPay callbacks)
+  - Falls back to JWT Bearer token in UAT/test (for frontend simulation)
+  - Production environments enforce API key requirement only
+- **Status**: ✅ Fixed - Simulation now works in UAT/test environments
+
+### **📁 Files Created** ✅
+1. `scripts/md-to-pdf.js` - Generic markdown to PDF converter script
+
+### **📝 Files Modified** ✅
+1. `middleware/easypayAuth.js` - Enhanced to accept JWT Bearer tokens in UAT/test
+2. `package.json` - Added `marked` and `puppeteer` dev dependencies
+3. `package-lock.json` - Updated with new dependencies
+4. `docs/integrations/EasyPay_API_Integration_Guide.html` - Regenerated HTML file
+5. `docs/integrations/EasyPay_API_Integration_Guide.pdf` - Regenerated PDF file (925 KB)
+
+### **✅ Testing Status**
+- [x] PDF converter script tested - Successfully converted EasyPay API Integration Guide
+- [x] Generated PDF verified - 925 KB, print-ready format
+- [x] Authentication middleware logic verified - JWT fallback works in UAT/test
+- [x] All changes committed and pushed to main
+
+---
+
 ## 2026-01-15 - 💰 Float Account Ledger Integration & Monitoring (v2.6.1) ✅
 
 ### **Session Overview**

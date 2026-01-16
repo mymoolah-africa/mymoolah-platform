@@ -1,12 +1,34 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: January 15, 2026  
-**Version**: 2.6.1 - Float Account Ledger Integration & Monitoring  
-**Status**: ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 16, 2026  
+**Version**: 2.6.2 - Markdown PDF Converter & EasyPay Simulation Fix  
+**Status**: ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: Float Account Ledger Integration & Monitoring (January 15, 2026)**
+## 🚀 **LATEST UPDATE: Markdown PDF Converter & EasyPay Simulation Fix (January 16, 2026)**
+
+### **📄 Generic Markdown to PDF Converter**
+Created a reusable tool for converting any markdown documentation to professional PDF format:
+
+**PDF Converter Features**:
+- ✅ **Generic Script**: `scripts/md-to-pdf.js` - Works with any markdown file
+- ✅ **Usage**: `node scripts/md-to-pdf.js <path-to-markdown-file>`
+- ✅ **Professional Output**: Print-ready PDF with proper styling
+- ✅ **Full Markdown Support**: Tables, code blocks, lists, headers, links
+- ✅ **Dual Output**: Generates both PDF and HTML files
+
+**EasyPay Simulation Fix**:
+- ✅ **Authentication Enhancement**: JWT Bearer tokens now accepted in UAT/test environments
+- ✅ **Production Security**: API keys still required for production (external callbacks)
+- ✅ **UAT Testing**: Frontend simulation button now works without exposing API keys
+- ✅ **Dual Authentication**: Supports both API keys (external) and JWT (internal testing)
+
+**Status**: ✅ **PDF converter ready**, ✅ **Simulation fixed**, ✅ **Ready for use**
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Float Account Ledger Integration & Monitoring (January 15, 2026)**
 
 ### **💰 Banking-Grade Ledger Integration**
 Fixed critical compliance issue and implemented complete ledger integration for all supplier float accounts:

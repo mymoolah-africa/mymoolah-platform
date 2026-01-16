@@ -1,16 +1,42 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: January 15, 2026  
-**Version**: 2.6.1 - Float Account Ledger Integration & Monitoring  
-**Status**: ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 16, 2026  
+**Version**: 2.6.2 - Markdown PDF Converter & EasyPay Simulation Fix  
+**Status**: ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has successfully implemented banking-grade ledger integration for all supplier float accounts and automated float balance monitoring (January 15, 2026). The platform also includes the EasyPay "Top-up @ EasyPay" feature transformation (January 15, 2026), a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026), **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
+The MyMoolah Treasury Platform has successfully implemented a generic markdown-to-PDF converter tool and fixed EasyPay simulation authentication (January 16, 2026). The platform also includes banking-grade ledger integration for all supplier float accounts and automated float balance monitoring (January 15, 2026), the EasyPay "Top-up @ EasyPay" feature transformation (January 15, 2026), a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026), **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
 
-### **💰 Latest Achievement: Float Account Ledger Integration & Monitoring (January 15, 2026)** ✅ **COMPLETE**
+### **📄 Latest Achievement: Markdown PDF Converter & EasyPay Simulation Fix (January 16, 2026)** ✅ **COMPLETE**
+
+#### **📄 Generic Markdown to PDF Converter**
+- **New Script**: `scripts/md-to-pdf.js` - Converts any markdown file to professional PDF
+- **Usage**: `node scripts/md-to-pdf.js <path-to-markdown-file>`
+- **Features**: Full markdown support, professional styling, dual output (PDF + HTML)
+- **Dependencies**: Added `marked` and `puppeteer` as dev dependencies
+- **Status**: ✅ Ready for use - Can convert any documentation to PDF
+
+#### **🔐 EasyPay Simulation Authentication Fix**
+- **Problem Fixed**: Frontend simulation button failed with 401 Unauthorized error
+- **Solution**: Modified `easypayAuthMiddleware` to accept JWT Bearer tokens in UAT/test environments
+- **Security**: Production still requires API keys only (no JWT fallback)
+- **Implementation**: Dual authentication (API keys for external callbacks, JWT for internal testing)
+- **Status**: ✅ Fixed - Simulation now works in UAT/test environments
+
+#### **Technical Implementation**
+- **New Script**: Generic PDF converter with puppeteer integration
+- **Middleware Enhancement**: JWT authentication fallback for UAT/test
+- **Dependencies**: Added PDF generation libraries
+- **Documentation**: Session log and handover updated
+
+#### **Status**: ✅ **PDF converter ready**, ✅ **Simulation fixed**, ✅ **Ready for use**
+
+---
+
+### **💰 Previous Achievement: Float Account Ledger Integration & Monitoring (January 15, 2026)** ✅ **COMPLETE**
 
 #### **🏦 Banking-Grade Ledger Integration**
 - **Problem Fixed**: Float accounts were using operational identifiers (ZAPPER_FLOAT_001) as ledger account codes, violating banking-grade accounting standards
