@@ -537,22 +537,15 @@ app.use((err, req, res, next) => {
     });
   }
   
-  // Log error with TLS information
-  const tlsInfo = req.socket.getTLSVersion ? {
-    tlsVersion: req.socket.getTLSVersion(),
-    cipher: req.socket.getCipher ? req.socket.getCipher().name : 'N/A'
-  } : { tlsVersion: 'HTTP', cipher: 'N/A' };
-  
-  secureErrorLogging(err, {
-    url: req.url,
-    method: req.method,
-    ip: req.ip,
-    tls: tlsInfo
-  });
-
-  res.status(500).json({
-    success: false,
-    message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+  // Use secureErrorLogging middleware (it expects err, req, res, next)
+  secureErrorLogging(err, req, res, (nextErr) => {
+    // If secureErrorLogging already sent response, don't send again
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message
+      });
+    }
   });
 });
 
