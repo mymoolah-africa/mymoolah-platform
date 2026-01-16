@@ -68,7 +68,6 @@ const {
   corsConfig
 } = require('./middleware/securityMiddleware');
 const { secureLogging, secureErrorLogging } = require('./middleware/secureLogging');
-const { requestIdMiddleware } = require('./utils/errorHandler');
 
 // Get configuration from security config
 const config = securityConfig.getConfig();
