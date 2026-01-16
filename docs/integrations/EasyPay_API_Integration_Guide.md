@@ -1,6 +1,6 @@
 # EasyPay API Integration Guide
 
-**Version**: 1.0.1  
+**Version**: 1.0.2  
 **Last Updated**: January 16, 2026  
 **API Provider**: MyMoolah Treasury Platform  
 **Integration Partner**: EasyPay South Africa  
