@@ -14,17 +14,8 @@ echo "🧪 EasyPay API Testing - Authentication & Idempotency"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Ensure gcloud is authenticated and project is set (non-blocking, with timeout)
-echo "📋 Checking gcloud authentication..."
-if timeout 2 gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>/dev/null | grep -q .; then
-  echo "✅ gcloud is authenticated"
-  echo "📋 Setting gcloud project to mymoolah-db..."
-  timeout 2 gcloud config set project mymoolah-db 2>/dev/null || echo "⚠️  Could not set gcloud project (non-critical, continuing...)"
-else
-  echo "⚠️  gcloud not authenticated or timeout. Skipping gcloud setup (not required for API testing)"
-  echo "   To authenticate manually, run: gcloud auth login && gcloud config set project mymoolah-db"
-fi
-
+# Note: gcloud setup is optional for API testing
+# If needed, run manually: gcloud auth login && gcloud config set project mymoolah-db
 echo ""
 
 # Test 1: Missing API Key (should return 401)
