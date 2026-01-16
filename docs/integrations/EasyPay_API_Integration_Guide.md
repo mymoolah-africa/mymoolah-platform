@@ -1,6 +1,6 @@
 # EasyPay API Integration Guide
 
-**Version**: 1.0.0  
+**Version**: 1.0.1  
 **Last Updated**: January 16, 2026  
 **API Provider**: MyMoolah Treasury Platform  
 **Integration Partner**: EasyPay South Africa  
@@ -55,7 +55,7 @@ sequenceDiagram
     API-->>EPBackend: 200 OK (Settled)
     EPBackend-->>EP: Payment Confirmed
     EP-->>User: Receipt
-    Note over User: Wallet credited R97.50 (R2.50 fee)
+    Note over User: Wallet credited instantly
 ```
 
 ### 1.3 Key Features
@@ -206,7 +206,7 @@ POST /api/v1/vouchers/easypay/topup/settlement
 
 #### Description
 
-Called by EasyPay when a user presents a Top-up PIN at a cashier and pays cash. This endpoint credits the user's MyMoolah wallet with the net amount (gross payment minus transaction fee).
+Called by EasyPay when a user presents a Top-up PIN at a cashier and pays cash. This endpoint credits the user's MyMoolah wallet with the settlement amount.
 
 #### Request
 
@@ -257,9 +257,7 @@ X-Request-ID: {UUID} (optional)
   "message": "EasyPay top-up settled successfully",
   "data": {
     "easypay_code": "9123412345678",
-    "gross_amount": 100.00,
-    "net_amount": 97.50,
-    "fee_applied": 2.50,
+    "settlement_amount": 100.00,
     "status": "completed",
     "settlement_transaction_id": "STL-1642334433-abc123"
   }
@@ -273,9 +271,7 @@ X-Request-ID: {UUID} (optional)
 | `success` | Boolean | Always `true` for successful responses |
 | `message` | String | Human-readable success message |
 | `data.easypay_code` | String | The 14-digit EasyPay PIN that was settled |
-| `data.gross_amount` | Number | Total amount paid at store (Rands) |
-| `data.net_amount` | Number | Amount credited to user wallet (gross - fee) |
-| `data.fee_applied` | Number | Total transaction fee deducted (Rands) |
+| `data.settlement_amount` | Number | Amount paid at store and credited to wallet (Rands) |
 | `data.status` | String | Settlement status (`completed`) |
 | `data.settlement_transaction_id` | String | MyMoolah internal transaction ID |
 
@@ -400,8 +396,8 @@ stateDiagram-v2
 **States**:
 - `pending_payment`: Voucher created, wallet debited, waiting for cash-out at store
 - `redeemed`: Cash dispensed, voucher consumed
-- `cancelled`: User cancelled, wallet refunded (voucher + fee)
-- `expired`: Voucher expired, wallet refunded (voucher + fee)
+- `cancelled`: User cancelled, wallet refunded
+- `expired`: Voucher expired, wallet refunded
 
 ### 5.3 Settlement Request Schema
 
@@ -612,9 +608,9 @@ const response2 = await fetch(settlementUrl, {
 1. Create top-up voucher via MM app (User, R100)
 2. Note 14-digit PIN generated
 3. Call settlement API with correct details
-4. Verify wallet credited with R97.50 (R2.50 fee deducted)
+4. Verify wallet credited with settlement amount
 
-**Expected Response**: HTTP 200, `status: "completed"`, `net_amount: 97.50`
+**Expected Response**: HTTP 200, `status: "completed"`, `settlement_amount: 100.00`
 
 #### Scenario 2: Invalid PIN
 
@@ -1044,8 +1040,8 @@ sequenceDiagram
     EPTerm->>EPBack: Validate PIN
     EPBack->>API: POST /vouchers/easypay/topup/settlement<br/>(X-API-Key, X-Idempotency-Key)
     API->>DB: Update voucher (status: redeemed)
-    API->>DB: Credit wallet (+R97.50)
-    API->>DB: Create transactions (deposit+fee)
+    API->>DB: Credit wallet (settlement amount)
+    API->>DB: Create transaction record
     API-->>EPBack: 200 OK (settled)
     EPBack-->>EPTerm: Confirmed
     EPTerm-->>U: Receipt
@@ -1069,8 +1065,8 @@ sequenceDiagram
     App->>U: Enter amount (R50-R3000)
     U->>App: Submit R500
     App->>API: POST /vouchers/easypay/cashout/issue
-    API->>DB: Check wallet balance (R500 + R8 fee)
-    API->>DB: Debit wallet (R508)
+    API->>DB: Check wallet balance
+    API->>DB: Debit wallet (voucher amount + transaction fee)
     API->>DB: Create Voucher (status: pending)
     DB-->>API: Voucher ID + PIN
     API-->>App: 14-digit PIN
@@ -1112,34 +1108,16 @@ sequenceDiagram
 |------|------------|
 | **EasyPay Code** | 14-digit PIN starting with '9' using Luhn algorithm |
 | **Settlement** | Process of confirming payment and updating wallet |
-| **Gross Amount** | Total amount paid/withdrawn by user |
-| **Net Amount** | Amount credited to wallet (gross - fees) |
+| **Settlement Amount** | Amount paid/withdrawn by user and processed |
 | **Idempotency Key** | Unique identifier preventing duplicate processing |
 | **Voucher Lifecycle** | States: pending → settled/redeemed/expired/cancelled |
 | **Request ID** | UUID for tracking requests in logs and support |
 
-### Appendix D: Fee Structure
-
-#### Top-up Fees
-
-- **Total Fee**: R2.50 (VAT inclusive)
-  - **Provider Fee**: R2.00 (EasyPay cost)
-  - **MyMoolah Margin**: R0.50 (MM revenue)
-- **Net Credit**: Gross amount - R2.50
-- **Example**: R100 payment → R97.50 credited to wallet
-
-#### Cash-out Fees
-
-- **User Transaction Fee**: R8.00 (VAT inclusive, charged to user)
-  - **Provider Fee**: R5.00 (EasyPay cost)
-  - **MyMoolah Margin**: R3.00 (MM revenue)
-- **Wallet Debit**: Voucher amount + R8.00 (debited on creation)
-- **Example**: R500 cash-out → R508 debited from wallet (R500 voucher + R8 fee)
-
-### Appendix E: Change Log
+### Appendix D: Change Log
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.0.1 | 2026-01-16 | Removed fee and margin references (commercial agreement pending) |
 | 1.0.0 | 2026-01-16 | Initial release - Banking-grade API documentation |
 
 ---
@@ -1147,7 +1125,7 @@ sequenceDiagram
 ## 📞 Need Help?
 
 **Integration Support Team**  
-Email: integrations@mymoolah.africa  
+Email: support@mymoolah.africa  
 Phone: +27 21 140 7030  
 Emergency: +27 82 557 1055
 
