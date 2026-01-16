@@ -31,7 +31,7 @@ curl -X POST "${ENDPOINT}" \
     \"terminal_id\": \"EP_TERMINAL_001\"
   }" \
   -w "\n\nHTTP Status: %{http_code}\n" \
-  -s | jq '.' 2>/dev/null || cat
+  -s --max-time 10 | (jq '.' 2>/dev/null || cat)
 echo ""
 echo ""
 
@@ -49,7 +49,7 @@ curl -X POST "${ENDPOINT}" \
     \"terminal_id\": \"EP_TERMINAL_001\"
   }" \
   -w "\n\nHTTP Status: %{http_code}\n" \
-  -s | jq '.' 2>/dev/null || cat
+  -s --max-time 10 | (jq '.' 2>/dev/null || cat)
 echo ""
 echo ""
 
@@ -71,7 +71,7 @@ RESPONSE1=$(curl -X POST "${ENDPOINT}" \
     \"terminal_id\": \"EP_TERMINAL_001\"
   }" \
   -w "\nHTTP_STATUS:%{http_code}" \
-  -s)
+  -s --max-time 10)
 
 echo "First Request Response:"
 echo "$RESPONSE1" | grep -v "HTTP_STATUS" | jq '.' 2>/dev/null || echo "$RESPONSE1" | grep -v "HTTP_STATUS"
@@ -96,7 +96,7 @@ RESPONSE2=$(curl -X POST "${ENDPOINT}" \
     \"terminal_id\": \"EP_TERMINAL_001\"
   }" \
   -w "\nHTTP_STATUS:%{http_code}" \
-  -s)
+  -s --max-time 10)
 
 echo "Second Request Response (should be identical to first):"
 echo "$RESPONSE2" | grep -v "HTTP_STATUS" | jq '.' 2>/dev/null || echo "$RESPONSE2" | grep -v "HTTP_STATUS"
@@ -130,7 +130,7 @@ curl -X POST "${ENDPOINT}" \
     \"terminal_id\": \"EP_TERMINAL_001\"
   }" \
   -w "\n\nHTTP Status: %{http_code}\n" \
-  -s | jq '.' 2>/dev/null || cat
+  -s --max-time 10 | (jq '.' 2>/dev/null || cat)
 echo ""
 
 # Second request with same key but different body
@@ -146,7 +146,7 @@ curl -X POST "${ENDPOINT}" \
     \"terminal_id\": \"EP_TERMINAL_001\"
   }" \
   -w "\n\nHTTP Status: %{http_code}\n" \
-  -s | jq '.' 2>/dev/null || cat
+  -s --max-time 10 | (jq '.' 2>/dev/null || cat)
 echo ""
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
