@@ -214,10 +214,33 @@ log "Next Steps"
 log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 info "1. Send API keys to EasyPay via secure channel (separate from documentation)"
-info "2. Update deployment scripts to use Secret Manager secrets"
-info "3. Configure IP whitelisting for EasyPay IP: 20.164.206.68"
-info "4. Test API key authentication in each environment"
+if [ "$ENVIRONMENT" == "qa" ] || [ "$ENVIRONMENT" == "all" ]; then
+    echo ""
+    info "   QA/Test Environment:"
+    info "   - Add to local .env file: EASYPAY_API_KEY=${API_KEYS[qa]}"
+    info "   - QA/Test uses .env file (NOT Secret Manager)"
+    info "   - Used for local development and Codespaces testing"
+fi
+if [ "$ENVIRONMENT" == "staging" ] || [ "$ENVIRONMENT" == "all" ]; then
+    echo ""
+    info "   Staging Environment:"
+    info "   - Already stored in Secret Manager: ${SECRET_NAMES[staging]}"
+    info "   - Automatically loaded by Cloud Run deployment"
+fi
+if [ "$ENVIRONMENT" == "production" ] || [ "$ENVIRONMENT" == "all" ]; then
+    echo ""
+    info "   Production Environment:"
+    info "   - Already stored in Secret Manager: ${SECRET_NAMES[prod]}"
+    info "   - Automatically loaded by Cloud Run deployment (when production is deployed)"
+fi
+echo ""
+info "2. Configure IP whitelisting for EasyPay IP: 20.164.206.68"
+info "3. Test API key authentication in each environment"
 echo ""
 warn "⚠️  IMPORTANT: Store these API keys securely. They will not be displayed again."
 warn "⚠️  Send API keys to EasyPay via encrypted email or secure messaging."
+if [ "$ENVIRONMENT" == "qa" ] || [ "$ENVIRONMENT" == "all" ]; then
+    echo ""
+    warn "⚠️  QA/Test: Remember to add the API key to your .env file for local testing."
+fi
 echo ""

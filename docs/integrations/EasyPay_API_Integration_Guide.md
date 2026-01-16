@@ -606,6 +606,7 @@ MyMoolah provides three environments for EasyPay integration:
 - **Cash-out**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
 
 **API Key**: `EASYPAY_API_KEY_QA` (provided separately via secure channel)  
+**Configuration**: Stored in local `.env` file (not Secret Manager)  
 **IP Whitelisting**: Required - Contact MyMoolah Integration Team
 
 ---
@@ -622,6 +623,7 @@ MyMoolah provides three environments for EasyPay integration:
 - **Cash-out**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
 
 **API Key**: `EASYPAY_API_KEY_STAGING` (provided separately via secure channel)  
+**Configuration**: Stored in Google Secret Manager (`easypay-api-key-staging`)  
 **IP Whitelisting**: Required - Contact MyMoolah Integration Team
 
 ---
@@ -638,6 +640,7 @@ MyMoolah provides three environments for EasyPay integration:
 - **Cash-out**: `POST https://api.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
 
 **API Key**: `EASYPAY_API_KEY_PROD` (provided separately via secure channel after UAT sign-off)  
+**Configuration**: Stored in Google Secret Manager (`easypay-api-key-production`)  
 **IP Whitelisting**: Required - Contact MyMoolah Integration Team
 
 ---
@@ -650,8 +653,20 @@ MyMoolah provides three environments for EasyPay integration:
 - EasyPay Technical Contact
 - EasyPay Integration Team Lead
 
+**Storage by Environment**:
+- **QA/Test (UAT)**: Stored in local `.env` file (not in Secret Manager)
+  - Add to `.env`: `EASYPAY_API_KEY=your_qa_api_key_here`
+  - Used for local development and Codespaces testing
+- **Staging**: Stored in Google Secret Manager (`easypay-api-key-staging`)
+  - Automatically loaded by Cloud Run deployment
+  - Managed via `scripts/generate-easypay-api-keys.sh`
+- **Production**: Stored in Google Secret Manager (`easypay-api-key-production`)
+  - Automatically loaded by Cloud Run deployment
+  - Managed via `scripts/generate-easypay-api-keys.sh`
+
 **Storage Requirements**:
-- Store API keys in secure vaults (e.g., Azure Key Vault, AWS Secrets Manager, HashiCorp Vault)
+- **QA/Test**: Store in `.env` file (never commit to git - `.env` is in `.gitignore`)
+- **Staging/Production**: Managed via Google Secret Manager (automated)
 - Never commit API keys to version control
 - Rotate API keys periodically (recommended: every 90 days)
 - Use different API keys for each environment
