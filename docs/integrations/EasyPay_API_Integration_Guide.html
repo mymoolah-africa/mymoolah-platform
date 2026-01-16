@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyPay API Integration Guide - MyMoolah Treasury Platform</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+        }
+        
+        h1 {
+            color: #1a73e8;
+            border-bottom: 3px solid #1a73e8;
+            padding-bottom: 10px;
+            margin-top: 30px;
+            page-break-after: avoid;
+        }
+        
+        h2 {
+            color: #34a853;
+            border-bottom: 2px solid #e8eaed;
+            padding-bottom: 8px;
+            margin-top: 25px;
+            page-break-after: avoid;
+        }
+        
+        h3 {
+            color: #ea4335;
+            margin-top: 20px;
+            page-break-after: avoid;
+        }
+        
+        h4 {
+            color: #fbbc04;
+            margin-top: 15px;
+            page-break-after: avoid;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            overflow-x: auto;
+            page-break-inside: avoid;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            page-break-inside: avoid;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        blockquote {
+            border-left: 4px solid #1a73e8;
+            padding-left: 15px;
+            margin: 15px 0;
+            color: #666;
+            font-style: italic;
+        }
+        
+        a {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        hr {
+            border: none;
+            border-top: 2px solid #e8eaed;
+            margin: 30px 0;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            border: 1px solid #e8eaed;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .toc li {
+            margin: 5px 0;
+        }
+        
+        .toc a {
+            color: #1a73e8;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            h1, h2, h3, h4 {
+                page-break-after: avoid;
+            }
+            
+            pre, table, blockquote {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+<h1>EasyPay API Integration Guide</h1>
+<p><strong>Version</strong>: 1.0.2<br><strong>Last Updated</strong>: January 16, 2026<br><strong>API Provider</strong>: MyMoolah Treasury Platform<br><strong>Integration Partner</strong>: EasyPay South Africa<br><strong>Status</strong>: ✅ Production Ready</p>
+<hr>
+<h2>📑 Table of Contents</h2>
+<ol>
+<li><a href="#executive-summary">Executive Summary</a></li>
+<li><a href="#quick-start-guide">Quick Start Guide</a></li>
+<li><a href="#authentication--security">Authentication &amp; Security</a></li>
+<li><a href="#api-endpoints">API Endpoints</a></li>
+<li><a href="#data-models">Data Models</a></li>
+<li><a href="#error-handling">Error Handling</a></li>
+<li><a href="#idempotency">Idempotency</a></li>
+<li><a href="#testing-guide-uat">Testing Guide (UAT)</a></li>
+<li><a href="#production-deployment">Production Deployment</a></li>
+<li><a href="#reconciliation">Reconciliation</a></li>
+<li><a href="#support--slas">Support &amp; SLAs</a></li>
+<li><a href="#appendices">Appendices</a></li>
+</ol>
+<hr>
+<h2>1. Executive Summary</h2>
+<h3>1.1 Overview</h3>
+<p>MyMoolah Treasury Platform provides two core EasyPay integration services:</p>
+<ol>
+<li><strong>Top-up @ EasyPay</strong>: Enables MyMoolah users to deposit cash into their wallets at any EasyPay merchant location</li>
+<li><strong>Cash-out @ EasyPay</strong>: Enables MyMoolah users to withdraw cash from their wallets at any EasyPay merchant location</li>
+</ol>
+<h3>1.2 Integration Architecture</h3>
+<pre><code class="language-mermaid">sequenceDiagram
+    participant User as MyMoolah User
+    participant App as MM Mobile App
+    participant API as MM Backend API
+    participant EP as EasyPay Terminal
+    participant EPBackend as EasyPay Backend
+    
+    Note over User,EPBackend: Top-up @ EasyPay Flow
+    User-&gt;&gt;App: Request Top-up (R100)
+    App-&gt;&gt;API: POST /vouchers/easypay/topup/issue
+    API--&gt;&gt;App: 14-digit PIN (9123412345678)
+    App--&gt;&gt;User: Display PIN
+    User-&gt;&gt;EP: Present PIN + R100 cash
+    EP-&gt;&gt;EPBackend: Verify PIN
+    EPBackend-&gt;&gt;API: POST /vouchers/easypay/topup/settlement
+    API--&gt;&gt;EPBackend: 200 OK (Settled)
+    EPBackend--&gt;&gt;EP: Payment Confirmed
+    EP--&gt;&gt;User: Receipt
+    Note over User: Wallet credited instantly
+</code></pre>
+<h3>1.3 Key Features</h3>
+<ul>
+<li><strong>Banking-Grade Security</strong>: API key authentication, IP whitelisting (infrastructure-level), TLS 1.3</li>
+<li><strong>Real-Time Settlement</strong>: Instant wallet crediting upon payment confirmation</li>
+<li><strong>Comprehensive Audit Trail</strong>: All transactions logged with full metadata</li>
+<li><strong>Idempotent Operations</strong>: Safe retry mechanisms for network failures</li>
+<li><strong>Mojaloop Compliance</strong>: Aligned with ISO 20022 and Mojaloop specifications</li>
+<li><strong>Structured Error Responses</strong>: Banking-grade error format with codes, request IDs, and timestamps</li>
+</ul>
+<hr>
+<h2>2. Quick Start Guide</h2>
+<h3>2.1 Prerequisites</h3>
+<ul>
+<li>Valid EasyPay Merchant Agreement with MyMoolah</li>
+<li>UAT environment access credentials</li>
+<li>Technical contact designated for integration support</li>
+<li>Firewall rules configured for API access</li>
+</ul>
+<h3>2.2 Integration Checklist</h3>
+<ul>
+<li><input disabled="" type="checkbox"> Obtain UAT API credentials (API key)</li>
+<li><input disabled="" type="checkbox"> Configure IP whitelist (if required)</li>
+<li><input disabled="" type="checkbox"> Implement authentication flow (X-API-Key header)</li>
+<li><input disabled="" type="checkbox"> Integrate settlement endpoints</li>
+<li><input disabled="" type="checkbox"> Implement idempotency (X-Idempotency-Key header)</li>
+<li><input disabled="" type="checkbox"> Test with UAT test users</li>
+<li><input disabled="" type="checkbox"> Complete reconciliation testing</li>
+<li><input disabled="" type="checkbox"> Request production credentials</li>
+<li><input disabled="" type="checkbox"> Deploy to production</li>
+<li><input disabled="" type="checkbox"> Monitor first 48 hours</li>
+</ul>
+<h3>2.3 5-Minute Quick Test</h3>
+<pre><code class="language-bash"># 1. Test Top-up Settlement Endpoint
+curl -X POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement \
+  -H &quot;Content-Type: application/json&quot; \
+  -H &quot;X-API-Key: your_uat_api_key_here&quot; \
+  -H &quot;X-Idempotency-Key: test-topup-$(date +%s)&quot; \
+  -H &quot;X-Request-ID: test-request-$(uuidgen)&quot; \
+  -d &#39;{
+    &quot;easypay_code&quot;: &quot;9123412345678&quot;,
+    &quot;settlement_amount&quot;: 100.00,
+    &quot;merchant_id&quot;: &quot;EP_TEST_MERCHANT_001&quot;,
+    &quot;transaction_id&quot;: &quot;EP_TXN_20260116_001&quot;,
+    &quot;terminal_id&quot;: &quot;EP_TERMINAL_001&quot;,
+    &quot;timestamp&quot;: &quot;2026-01-16T13:40:33+02:00&quot;
+  }&#39;
+
+# 2. Test Cash-out Settlement Endpoint
+curl -X POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement \
+  -H &quot;Content-Type: application/json&quot; \
+  -H &quot;X-API-Key: your_uat_api_key_here&quot; \
+  -H &quot;X-Idempotency-Key: test-cashout-$(date +%s)&quot; \
+  -H &quot;X-Request-ID: test-request-$(uuidgen)&quot; \
+  -d &#39;{
+    &quot;easypay_code&quot;: &quot;9123498765432&quot;,
+    &quot;settlement_amount&quot;: 500.00,
+    &quot;merchant_id&quot;: &quot;EP_TEST_MERCHANT_001&quot;,
+    &quot;transaction_id&quot;: &quot;EP_TXN_20260116_002&quot;,
+    &quot;terminal_id&quot;: &quot;EP_TERMINAL_002&quot;,
+    &quot;timestamp&quot;: &quot;2026-01-16T14:00:00+02:00&quot;
+  }&#39;
+</code></pre>
+<hr>
+<h2>3. Authentication &amp; Security</h2>
+<h3>3.1 Security Architecture</h3>
+<p>MyMoolah employs a <strong>defense-in-depth</strong> security model with multiple layers:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Mechanism</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Transport</strong></td>
+<td>TLS 1.3</td>
+<td>All API calls must use HTTPS with TLS 1.3+</td>
+</tr>
+<tr>
+<td><strong>Authentication</strong></td>
+<td>API Key</td>
+<td>X-API-Key header validation</td>
+</tr>
+<tr>
+<td><strong>Network</strong></td>
+<td>IP Whitelist</td>
+<td>Source IP validation (infrastructure-level, optional)</td>
+</tr>
+<tr>
+<td><strong>Application</strong></td>
+<td>Request ID</td>
+<td>X-Request-ID header for request tracking</td>
+</tr>
+<tr>
+<td><strong>Idempotency</strong></td>
+<td>Idempotency Keys</td>
+<td>Prevent duplicate transactions</td>
+</tr>
+</tbody></table>
+<h3>3.2 API Key Authentication</h3>
+<p><strong>Required Header</strong>: <code>X-API-Key</code></p>
+<p><strong>Format</strong>: Secure random string (minimum 32 characters, recommended 64+)</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="language-http">X-API-Key: a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6
+</code></pre>
+<p><strong>Obtaining API Keys</strong>:</p>
+<ul>
+<li><strong>UAT</strong>: Provided by MyMoolah Integration Team after UAT registration</li>
+<li><strong>Production</strong>: Provided separately via secure channel after UAT sign-off</li>
+</ul>
+<p><strong>Security Best Practices</strong>:</p>
+<ol>
+<li><strong>Credential Storage</strong>: Store API keys in secure vaults (e.g., HashiCorp Vault, AWS Secrets Manager, Google Secret Manager)</li>
+<li><strong>Key Rotation</strong>: Rotate API keys periodically (recommended: every 90 days)</li>
+<li><strong>TLS Pinning</strong>: Optionally pin MyMoolah&#39;s TLS certificate</li>
+<li><strong>Request Logging</strong>: Log all API interactions (mask API key in logs)</li>
+<li><strong>Error Handling</strong>: Never expose API keys in error messages</li>
+</ol>
+<h3>3.3 Required Headers</h3>
+<p>All API requests must include:</p>
+<pre><code class="language-http">X-API-Key: {API_KEY}
+X-Idempotency-Key: {UNIQUE_REQUEST_ID}
+Content-Type: application/json
+X-Request-ID: {UUID} (optional but recommended)
+</code></pre>
+<p><strong>Header Descriptions</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Header</th>
+<th>Required</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>X-API-Key</code></td>
+<td>Yes</td>
+<td>API key for authentication</td>
+<td><code>a1b2c3d4e5f6...</code></td>
+</tr>
+<tr>
+<td><code>X-Idempotency-Key</code></td>
+<td>Recommended</td>
+<td>Unique key to prevent duplicate processing</td>
+<td><code>EP_MERCHANT_12345_EP_TXN_20260116_001_1642334433</code></td>
+</tr>
+<tr>
+<td><code>Content-Type</code></td>
+<td>Yes</td>
+<td>Must be <code>application/json</code></td>
+<td><code>application/json</code></td>
+</tr>
+<tr>
+<td><code>X-Request-ID</code></td>
+<td>Optional</td>
+<td>UUID for request tracking</td>
+<td><code>550e8400-e29b-41d4-a716-446655440000</code></td>
+</tr>
+</tbody></table>
+<h3>3.4 IP Whitelisting (Optional)</h3>
+<p><strong>Infrastructure-Level</strong>: IP whitelisting is handled at the infrastructure level (Google Cloud Load Balancer). Contact MyMoolah Integration Team to register your IP addresses.</p>
+<p><strong>Format</strong>: IPv4 CIDR notation (e.g., <code>197.85.10.0/24</code>)</p>
+<p><strong>UAT Allowed IPs</strong>: Contact MyMoolah Integration Team to register<br><strong>Production Allowed IPs</strong>: Requires formal request with business justification</p>
+<hr>
+<h2>4. API Endpoints</h2>
+<h3>4.1 Top-up @ EasyPay Settlement</h3>
+<h4>Endpoint</h4>
+<pre><code class="language-http">POST /api/v1/vouchers/easypay/topup/settlement
+</code></pre>
+<h4>Description</h4>
+<p>Called by EasyPay when a user presents a Top-up PIN at a cashier and pays cash. This endpoint credits the user&#39;s MyMoolah wallet with the settlement amount.</p>
+<h4>Request</h4>
+<p><strong>Headers</strong>:</p>
+<pre><code class="language-http">X-API-Key: {API_KEY}
+X-Idempotency-Key: {UNIQUE_KEY}
+Content-Type: application/json
+X-Request-ID: {UUID} (optional)
+</code></pre>
+<p><strong>Body</strong>:</p>
+<pre><code class="language-json">{
+  &quot;easypay_code&quot;: &quot;9123412345678&quot;,
+  &quot;settlement_amount&quot;: 100.00,
+  &quot;merchant_id&quot;: &quot;EP_MERCHANT_12345&quot;,
+  &quot;transaction_id&quot;: &quot;EP_TXN_20260116_123456&quot;,
+  &quot;terminal_id&quot;: &quot;EP_TERMINAL_001&quot;,
+  &quot;cashier_id&quot;: &quot;CASHIER_789&quot;,
+  &quot;timestamp&quot;: &quot;2026-01-16T13:40:33+02:00&quot;,
+  &quot;metadata&quot;: {
+    &quot;merchant_name&quot;: &quot;Pick n Pay - Sandton City&quot;,
+    &quot;receipt_number&quot;: &quot;RCP-001234&quot;
+  }
+}
+</code></pre>
+<p><strong>Field Specifications</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>easypay_code</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>14-digit EasyPay PIN</td>
+<td><code>/^9\d{13}$/</code> (starts with 9, 14 digits total)</td>
+</tr>
+<tr>
+<td><code>settlement_amount</code></td>
+<td>Number</td>
+<td>Yes</td>
+<td>Amount in ZAR (Rands)</td>
+<td><code>50.00-4000.00</code> (R50-R4000)</td>
+</tr>
+<tr>
+<td><code>merchant_id</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>EasyPay merchant identifier</td>
+<td>Max 50 chars</td>
+</tr>
+<tr>
+<td><code>transaction_id</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>Unique EasyPay transaction ID</td>
+<td>Max 100 chars, alphanumeric</td>
+</tr>
+<tr>
+<td><code>terminal_id</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>Terminal identifier</td>
+<td>Max 50 chars</td>
+</tr>
+<tr>
+<td><code>cashier_id</code></td>
+<td>String</td>
+<td>No</td>
+<td>Cashier identifier</td>
+<td>Max 50 chars</td>
+</tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>String</td>
+<td>No</td>
+<td>ISO 8601 timestamp with timezone</td>
+<td>Must be within 5 minutes of server time</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>Object</td>
+<td>No</td>
+<td>Additional transaction data</td>
+<td>Max 1KB</td>
+</tr>
+</tbody></table>
+<h4>Response</h4>
+<p><strong>Success (200 OK)</strong>:</p>
+<pre><code class="language-json">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;EasyPay top-up settled successfully&quot;,
+  &quot;data&quot;: {
+    &quot;easypay_code&quot;: &quot;9123412345678&quot;,
+    &quot;settlement_amount&quot;: 100.00,
+    &quot;status&quot;: &quot;completed&quot;,
+    &quot;settlement_transaction_id&quot;: &quot;STL-1642334433-abc123&quot;
+  }
+}
+</code></pre>
+<p><strong>Response Field Descriptions</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>success</code></td>
+<td>Boolean</td>
+<td>Always <code>true</code> for successful responses</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>String</td>
+<td>Human-readable success message</td>
+</tr>
+<tr>
+<td><code>data.easypay_code</code></td>
+<td>String</td>
+<td>The 14-digit EasyPay PIN that was settled</td>
+</tr>
+<tr>
+<td><code>data.settlement_amount</code></td>
+<td>Number</td>
+<td>Amount paid at store and credited to wallet (Rands)</td>
+</tr>
+<tr>
+<td><code>data.status</code></td>
+<td>String</td>
+<td>Settlement status (<code>completed</code>)</td>
+</tr>
+<tr>
+<td><code>data.settlement_transaction_id</code></td>
+<td>String</td>
+<td>MyMoolah internal transaction ID</td>
+</tr>
+</tbody></table>
+<p><strong>Error Responses</strong>: See <a href="#error-handling">Error Handling</a> section</p>
+<hr>
+<h3>4.2 Cash-out @ EasyPay Settlement</h3>
+<h4>Endpoint</h4>
+<pre><code class="language-http">POST /api/v1/vouchers/easypay/cashout/settlement
+</code></pre>
+<h4>Description</h4>
+<p>Called by EasyPay when a user presents a Cash-out PIN at a cashier to withdraw cash. This endpoint marks the voucher as redeemed after cash has been dispensed. The user&#39;s wallet was already debited when the cash-out voucher was created.</p>
+<h4>Request</h4>
+<p><strong>Headers</strong>:</p>
+<pre><code class="language-http">X-API-Key: {API_KEY}
+X-Idempotency-Key: {UNIQUE_KEY}
+Content-Type: application/json
+X-Request-ID: {UUID} (optional)
+</code></pre>
+<p><strong>Body</strong>:</p>
+<pre><code class="language-json">{
+  &quot;easypay_code&quot;: &quot;9123498765432&quot;,
+  &quot;settlement_amount&quot;: 500.00,
+  &quot;merchant_id&quot;: &quot;EP_MERCHANT_12345&quot;,
+  &quot;transaction_id&quot;: &quot;EP_TXN_20260116_654321&quot;,
+  &quot;terminal_id&quot;: &quot;EP_TERMINAL_002&quot;,
+  &quot;cashier_id&quot;: &quot;CASHIER_456&quot;,
+  &quot;timestamp&quot;: &quot;2026-01-16T14:00:00+02:00&quot;,
+  &quot;metadata&quot;: {
+    &quot;merchant_name&quot;: &quot;Checkers - Rosebank&quot;,
+    &quot;receipt_number&quot;: &quot;RCP-567890&quot;
+  }
+}
+</code></pre>
+<p><strong>Field Specifications</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+<th>Validation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>easypay_code</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>14-digit EasyPay PIN</td>
+<td><code>/^9\d{13}$/</code></td>
+</tr>
+<tr>
+<td><code>settlement_amount</code></td>
+<td>Number</td>
+<td>Yes</td>
+<td>Amount dispensed in ZAR (Rands)</td>
+<td><code>50.00-3000.00</code> (R50-R3000), must match voucher amount</td>
+</tr>
+<tr>
+<td><code>merchant_id</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>EasyPay merchant identifier</td>
+<td>Max 50 chars</td>
+</tr>
+<tr>
+<td><code>transaction_id</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>Unique EasyPay transaction ID</td>
+<td>Max 100 chars</td>
+</tr>
+<tr>
+<td><code>terminal_id</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>Terminal identifier</td>
+<td>Max 50 chars</td>
+</tr>
+<tr>
+<td><code>cashier_id</code></td>
+<td>String</td>
+<td>No</td>
+<td>Cashier identifier</td>
+<td>Max 50 chars</td>
+</tr>
+<tr>
+<td><code>timestamp</code></td>
+<td>String</td>
+<td>No</td>
+<td>ISO 8601 timestamp</td>
+<td>Within 5 minutes of server time</td>
+</tr>
+<tr>
+<td><code>metadata</code></td>
+<td>Object</td>
+<td>No</td>
+<td>Additional data</td>
+<td>Max 1KB</td>
+</tr>
+</tbody></table>
+<h4>Response</h4>
+<p><strong>Success (200 OK)</strong>:</p>
+<pre><code class="language-json">{
+  &quot;success&quot;: true,
+  &quot;message&quot;: &quot;EasyPay cash-out settled successfully&quot;,
+  &quot;data&quot;: {
+    &quot;easypay_code&quot;: &quot;9123498765432&quot;,
+    &quot;voucher_amount&quot;: 500.00,
+    &quot;status&quot;: &quot;completed&quot;,
+    &quot;settlement_transaction_id&quot;: &quot;CASHOUT-STL-1642338000-xyz789&quot;
+  }
+}
+</code></pre>
+<p><strong>Response Field Descriptions</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>success</code></td>
+<td>Boolean</td>
+<td>Always <code>true</code> for successful responses</td>
+</tr>
+<tr>
+<td><code>message</code></td>
+<td>String</td>
+<td>Human-readable success message</td>
+</tr>
+<tr>
+<td><code>data.easypay_code</code></td>
+<td>String</td>
+<td>The 14-digit EasyPay PIN that was settled</td>
+</tr>
+<tr>
+<td><code>data.voucher_amount</code></td>
+<td>Number</td>
+<td>Cash-out voucher amount (Rands)</td>
+</tr>
+<tr>
+<td><code>data.status</code></td>
+<td>String</td>
+<td>Settlement status (<code>completed</code>)</td>
+</tr>
+<tr>
+<td><code>data.settlement_transaction_id</code></td>
+<td>String</td>
+<td>MyMoolah internal transaction ID</td>
+</tr>
+</tbody></table>
+<p><strong>Error Responses</strong>: See <a href="#error-handling">Error Handling</a> section</p>
+<hr>
+<h2>5. Data Models</h2>
+<h3>5.1 Top-up Voucher Lifecycle</h3>
+<pre><code class="language-mermaid">stateDiagram-v2
+    [*] --&gt; Pending: User creates top-up
+    Pending --&gt; Settled: EasyPay settlement callback
+    Pending --&gt; Expired: 96 hours elapsed
+    Settled --&gt; [*]
+    Expired --&gt; [*]: Wallet not credited
+</code></pre>
+<p><strong>States</strong>:</p>
+<ul>
+<li><code>pending_payment</code>: Voucher created, waiting for payment at store</li>
+<li><code>redeemed</code>: Payment received, wallet credited</li>
+<li><code>expired</code>: Voucher expired (96 hours), no wallet credit</li>
+</ul>
+<h3>5.2 Cash-out Voucher Lifecycle</h3>
+<pre><code class="language-mermaid">stateDiagram-v2
+    [*] --&gt; Pending: User creates cash-out&lt;br/&gt;(wallet debited)
+    Pending --&gt; Redeemed: EasyPay settlement callback
+    Pending --&gt; Cancelled: User cancels&lt;br/&gt;(wallet refunded)
+    Pending --&gt; Expired: 96 hours elapsed&lt;br/&gt;(wallet refunded)
+    Redeemed --&gt; [*]
+    Cancelled --&gt; [*]
+    Expired --&gt; [*]
+</code></pre>
+<p><strong>States</strong>:</p>
+<ul>
+<li><code>pending_payment</code>: Voucher created, wallet debited, waiting for cash-out at store</li>
+<li><code>redeemed</code>: Cash dispensed, voucher consumed</li>
+<li><code>cancelled</code>: User cancelled, wallet refunded</li>
+<li><code>expired</code>: Voucher expired, wallet refunded</li>
+</ul>
+<h3>5.3 Settlement Request Schema</h3>
+<p><strong>Top-up Settlement Request</strong>:</p>
+<pre><code class="language-json">{
+  &quot;easypay_code&quot;: &quot;string (14 digits, starts with 9)&quot;,
+  &quot;settlement_amount&quot;: &quot;number (50.00-4000.00)&quot;,
+  &quot;merchant_id&quot;: &quot;string (max 50 chars)&quot;,
+  &quot;transaction_id&quot;: &quot;string (max 100 chars, alphanumeric)&quot;,
+  &quot;terminal_id&quot;: &quot;string (max 50 chars)&quot;,
+  &quot;cashier_id&quot;: &quot;string (max 50 chars, optional)&quot;,
+  &quot;timestamp&quot;: &quot;string (ISO 8601, optional)&quot;,
+  &quot;metadata&quot;: &quot;object (max 1KB, optional)&quot;
+}
+</code></pre>
+<p><strong>Cash-out Settlement Request</strong>:</p>
+<pre><code class="language-json">{
+  &quot;easypay_code&quot;: &quot;string (14 digits, starts with 9)&quot;,
+  &quot;settlement_amount&quot;: &quot;number (50.00-3000.00)&quot;,
+  &quot;merchant_id&quot;: &quot;string (max 50 chars)&quot;,
+  &quot;transaction_id&quot;: &quot;string (max 100 chars)&quot;,
+  &quot;terminal_id&quot;: &quot;string (max 50 chars)&quot;,
+  &quot;cashier_id&quot;: &quot;string (max 50 chars, optional)&quot;,
+  &quot;timestamp&quot;: &quot;string (ISO 8601, optional)&quot;,
+  &quot;metadata&quot;: &quot;object (max 1KB, optional)&quot;
+}
+</code></pre>
+<hr>
+<h2>6. Error Handling</h2>
+<h3>6.1 Error Response Format</h3>
+<p>All error responses follow this structured format:</p>
+<pre><code class="language-json">{
+  &quot;success&quot;: false,
+  &quot;error&quot;: {
+    &quot;code&quot;: &quot;ERROR_CODE&quot;,
+    &quot;message&quot;: &quot;Human-readable error message&quot;,
+    &quot;details&quot;: &quot;Additional context or resolution steps&quot;,
+    &quot;request_id&quot;: &quot;uuid-1234-5678-90ab&quot;,
+    &quot;timestamp&quot;: &quot;2026-01-16T14:05:00.000Z&quot;
+  }
+}
+</code></pre>
+<h3>6.2 Error Codes</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>HTTP Status</th>
+<th>Category</th>
+<th>Description</th>
+<th>Resolution</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>INVALID_PIN</code></td>
+<td>400</td>
+<td>Validation</td>
+<td>PIN format incorrect</td>
+<td>Check PIN is 14 digits starting with &#39;9&#39;</td>
+</tr>
+<tr>
+<td><code>PIN_NOT_FOUND</code></td>
+<td>404</td>
+<td>Not Found</td>
+<td>PIN doesn&#39;t exist or already settled</td>
+<td>Verify PIN with user, check settlement status</td>
+</tr>
+<tr>
+<td><code>AMOUNT_MISMATCH</code></td>
+<td>400</td>
+<td>Validation</td>
+<td>Settlement amount doesn&#39;t match voucher</td>
+<td>Verify expected amount with user</td>
+</tr>
+<tr>
+<td><code>PIN_EXPIRED</code></td>
+<td>400</td>
+<td>Business Logic</td>
+<td>PIN &gt;96 hours old</td>
+<td>User must create new top-up/cash-out request</td>
+</tr>
+<tr>
+<td><code>ALREADY_SETTLED</code></td>
+<td>409</td>
+<td>Idempotency</td>
+<td>Duplicate request (idempotency)</td>
+<td>Return original response (idempotent)</td>
+</tr>
+<tr>
+<td><code>DUPLICATE_REQUEST</code></td>
+<td>409</td>
+<td>Conflict</td>
+<td>Idempotency key used with different request</td>
+<td>Use unique idempotency key for each request</td>
+</tr>
+<tr>
+<td><code>MISSING_API_KEY</code></td>
+<td>401</td>
+<td>Security</td>
+<td>X-API-Key header missing</td>
+<td>Include X-API-Key header</td>
+</tr>
+<tr>
+<td><code>INVALID_API_KEY</code></td>
+<td>401</td>
+<td>Security</td>
+<td>Invalid API key</td>
+<td>Verify API key with MyMoolah</td>
+</tr>
+<tr>
+<td><code>MISSING_REQUIRED_FIELD</code></td>
+<td>400</td>
+<td>Validation</td>
+<td>Required field missing</td>
+<td>Check request body for all required fields</td>
+</tr>
+<tr>
+<td><code>INVALID_AMOUNT</code></td>
+<td>400</td>
+<td>Validation</td>
+<td>Amount out of range</td>
+<td>Top-up: R50-R4000, Cash-out: R50-R3000</td>
+</tr>
+<tr>
+<td><code>INVALID_FORMAT</code></td>
+<td>400</td>
+<td>Validation</td>
+<td>Invalid request format</td>
+<td>Verify JSON structure and field types</td>
+</tr>
+<tr>
+<td><code>WALLET_NOT_FOUND</code></td>
+<td>404</td>
+<td>Not Found</td>
+<td>User wallet not found</td>
+<td>Contact MyMoolah support</td>
+</tr>
+<tr>
+<td><code>RATE_LIMIT_EXCEEDED</code></td>
+<td>429</td>
+<td>Rate Limiting</td>
+<td>Too many requests</td>
+<td>Implement exponential backoff</td>
+</tr>
+<tr>
+<td><code>INTERNAL_ERROR</code></td>
+<td>500</td>
+<td>Server</td>
+<td>Unexpected server error</td>
+<td>Contact MyMoolah support with request_id</td>
+</tr>
+</tbody></table>
+<h3>6.3 HTTP Status Codes</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Category</th>
+<th>Usage</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>200</td>
+<td>Success</td>
+<td>Request completed successfully</td>
+</tr>
+<tr>
+<td>400</td>
+<td>Client Error</td>
+<td>Invalid request (validation failed)</td>
+</tr>
+<tr>
+<td>401</td>
+<td>Auth Error</td>
+<td>Authentication failed (missing/invalid API key)</td>
+</tr>
+<tr>
+<td>404</td>
+<td>Client Error</td>
+<td>Resource not found (PIN, voucher, wallet)</td>
+</tr>
+<tr>
+<td>409</td>
+<td>Conflict</td>
+<td>Idempotency conflict or already processed</td>
+</tr>
+<tr>
+<td>429</td>
+<td>Rate Limit</td>
+<td>Too many requests</td>
+</tr>
+<tr>
+<td>500</td>
+<td>Server Error</td>
+<td>Internal server error</td>
+</tr>
+<tr>
+<td>502</td>
+<td>Server Error</td>
+<td>Bad gateway</td>
+</tr>
+<tr>
+<td>503</td>
+<td>Server Error</td>
+<td>Service unavailable</td>
+</tr>
+<tr>
+<td>504</td>
+<td>Server Error</td>
+<td>Gateway timeout</td>
+</tr>
+</tbody></table>
+<h3>6.4 Retry Logic</h3>
+<p><strong>Recommended Retry Strategy</strong>:</p>
+<ol>
+<li><strong>Idempotent Requests</strong>: Safe to retry with same idempotency key</li>
+<li><strong>Exponential Backoff</strong>: Base delay 1s, max 32s</li>
+<li><strong>Retry Conditions</strong>:<ul>
+<li>Network errors</li>
+<li>HTTP 500, 502, 503, 504</li>
+<li>Timeouts</li>
+</ul>
+</li>
+<li><strong>Do NOT Retry</strong>:<ul>
+<li>HTTP 400, 401, 404 (fix request first)</li>
+<li>HTTP 409 (already processed - use original response)</li>
+</ul>
+</li>
+</ol>
+<p><strong>Example Retry Implementation</strong>:</p>
+<pre><code class="language-javascript">async function settlementWithRetry(payload, maxRetries = 3) {
+  const idempotencyKey = generateIdempotencyKey(payload);
+  
+  for (let attempt = 1; attempt &lt;= maxRetries; attempt++) {
+    try {
+      return await callSettlementAPI(payload, idempotencyKey);
+    } catch (error) {
+      if (isRetryable(error) &amp;&amp; attempt &lt; maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 32000);
+        await sleep(delay);
+        continue;
+      }
+      throw error;
+    }
+  }
+}
+
+function isRetryable(error) {
+  const retryableStatuses = [500, 502, 503, 504];
+  return retryableStatuses.includes(error.status) || error.code === &#39;ECONNRESET&#39;;
+}
+</code></pre>
+<hr>
+<h2>7. Idempotency</h2>
+<h3>7.1 Overview</h3>
+<p>Idempotency ensures that making the same request multiple times has the same effect as making it once. This is <strong>critical for financial APIs</strong> to prevent duplicate processing if network errors cause retries.</p>
+<h3>7.2 Implementation</h3>
+<p><strong>Header</strong>: <code>X-Idempotency-Key</code></p>
+<p><strong>Format</strong>: Unique string per request (recommended: <code>{merchant_id}_{terminal_id}_{transaction_id}_{timestamp}</code>)</p>
+<p><strong>Example</strong>:</p>
+<pre><code>X-Idempotency-Key: EP_MERCHANT_12345_EP_TERMINAL_001_EP_TXN_20260116_123456_1642334433
+</code></pre>
+<h3>7.3 How It Works</h3>
+<ol>
+<li><strong>First Request</strong>: Process normally, store response with idempotency key (24-hour TTL)</li>
+<li><strong>Duplicate Request</strong> (same key, same request body): Return cached response (HTTP 200)</li>
+<li><strong>Different Request</strong> (same key, different body): Return HTTP 409 CONFLICT</li>
+</ol>
+<h3>7.4 Best Practices</h3>
+<ol>
+<li><strong>Generate Unique Keys</strong>: Use a combination of merchant_id, terminal_id, transaction_id, and timestamp</li>
+<li><strong>Store Keys</strong>: Keep idempotency keys for at least 24 hours (for retries)</li>
+<li><strong>Handle 409 Responses</strong>: If you receive HTTP 409, use a new idempotency key or verify the request body matches</li>
+<li><strong>Never Reuse Keys</strong>: Each unique request must have a unique idempotency key</li>
+</ol>
+<h3>7.5 Example</h3>
+<pre><code class="language-javascript">// Generate idempotency key
+const idempotencyKey = `${merchantId}_${terminalId}_${transactionId}_${Date.now()}`;
+
+// First request
+const response1 = await fetch(settlementUrl, {
+  method: &#39;POST&#39;,
+  headers: {
+    &#39;X-API-Key&#39;: apiKey,
+    &#39;X-Idempotency-Key&#39;: idempotencyKey,
+    &#39;Content-Type&#39;: &#39;application/json&#39;
+  },
+  body: JSON.stringify(payload)
+});
+
+// If network error, retry with SAME idempotency key
+// Second request (retry) - returns cached response from first request
+const response2 = await fetch(settlementUrl, {
+  method: &#39;POST&#39;,
+  headers: {
+    &#39;X-API-Key&#39;: apiKey,
+    &#39;X-Idempotency-Key&#39;: idempotencyKey, // SAME key
+    &#39;Content-Type&#39;: &#39;application/json&#39;
+  },
+  body: JSON.stringify(payload) // SAME payload
+});
+// response2 === response1 (cached)
+</code></pre>
+<hr>
+<h2>8. Testing Guide (UAT)</h2>
+<h3>8.1 Environment Endpoints &amp; API Keys</h3>
+<p>MyMoolah provides three environments for EasyPay integration:</p>
+<h4>Environment 1: QA/Test (Development)</h4>
+<p><strong>Base URL</strong>: <code>https://staging.mymoolah.africa</code><br><strong>API Base</strong>: <code>https://staging.mymoolah.africa/api/v1</code><br><strong>Status</strong>: ✅ Active<br><strong>Purpose</strong>: Initial development and integration testing</p>
+<p><strong>Settlement Endpoints</strong>:</p>
+<ul>
+<li><strong>Top-up</strong>: <code>POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement</code></li>
+<li><strong>Cash-out</strong>: <code>POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement</code></li>
+</ul>
+<p><strong>API Key</strong>: <code>EASYPAY_API_KEY_QA</code> (provided separately via secure channel)<br><strong>Configuration</strong>: Stored in local <code>.env</code> file (not Secret Manager)<br><strong>IP Whitelisting</strong>: Required - Contact MyMoolah Integration Team</p>
+<hr>
+<h4>Environment 2: Pre-Production/Staging</h4>
+<p><strong>Base URL</strong>: <code>https://staging.mymoolah.africa</code><br><strong>API Base</strong>: <code>https://staging.mymoolah.africa/api/v1</code><br><strong>Status</strong>: ✅ Active<br><strong>Purpose</strong>: Pre-production testing and UAT sign-off</p>
+<p><strong>Settlement Endpoints</strong>:</p>
+<ul>
+<li><strong>Top-up</strong>: <code>POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement</code></li>
+<li><strong>Cash-out</strong>: <code>POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement</code></li>
+</ul>
+<p><strong>API Key</strong>: <code>EASYPAY_API_KEY_STAGING</code> (provided separately via secure channel)<br><strong>Configuration</strong>: Stored in Google Secret Manager (<code>easypay-api-key-staging</code>)<br><strong>IP Whitelisting</strong>: Required - Contact MyMoolah Integration Team</p>
+<hr>
+<h4>Environment 3: Production</h4>
+<p><strong>Base URL</strong>: <code>https://api.mymoolah.africa</code> (when available)<br><strong>API Base</strong>: <code>https://api.mymoolah.africa/api/v1</code><br><strong>Status</strong>: ⚠️ Planned (not yet deployed)<br><strong>Purpose</strong>: Live production traffic</p>
+<p><strong>Settlement Endpoints</strong> (when production is live):</p>
+<ul>
+<li><strong>Top-up</strong>: <code>POST https://api.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement</code></li>
+<li><strong>Cash-out</strong>: <code>POST https://api.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement</code></li>
+</ul>
+<p><strong>API Key</strong>: <code>EASYPAY_API_KEY_PROD</code> (provided separately via secure channel after UAT sign-off)<br><strong>Configuration</strong>: Stored in Google Secret Manager (<code>easypay-api-key-production</code>)<br><strong>IP Whitelisting</strong>: Required - Contact MyMoolah Integration Team</p>
+<hr>
+<h3>8.2 API Key Management</h3>
+<p><strong>Security</strong>: API keys are generated using cryptographically secure random generation (minimum 64 characters).</p>
+<p><strong>Delivery Method</strong>: API keys are delivered via <strong>separate secure channel</strong> (not in documentation) to:</p>
+<ul>
+<li>EasyPay Technical Contact</li>
+<li>EasyPay Integration Team Lead</li>
+</ul>
+<p><strong>Storage by Environment</strong>:</p>
+<ul>
+<li><strong>QA/Test (UAT)</strong>: Stored in local <code>.env</code> file (not in Secret Manager)<ul>
+<li>Add to <code>.env</code>: <code>EASYPAY_API_KEY=your_qa_api_key_here</code></li>
+<li>Used for local development and Codespaces testing</li>
+</ul>
+</li>
+<li><strong>Staging</strong>: Stored in Google Secret Manager (<code>easypay-api-key-staging</code>)<ul>
+<li>Automatically loaded by Cloud Run deployment</li>
+<li>Managed via <code>scripts/generate-easypay-api-keys.sh</code></li>
+</ul>
+</li>
+<li><strong>Production</strong>: Stored in Google Secret Manager (<code>easypay-api-key-production</code>)<ul>
+<li>Automatically loaded by Cloud Run deployment</li>
+<li>Managed via <code>scripts/generate-easypay-api-keys.sh</code></li>
+</ul>
+</li>
+</ul>
+<p><strong>Storage Requirements</strong>:</p>
+<ul>
+<li><strong>QA/Test</strong>: Store in <code>.env</code> file (never commit to git - <code>.env</code> is in <code>.gitignore</code>)</li>
+<li><strong>Staging/Production</strong>: Managed via Google Secret Manager (automated)</li>
+<li>Never commit API keys to version control</li>
+<li>Rotate API keys periodically (recommended: every 90 days)</li>
+<li>Use different API keys for each environment</li>
+</ul>
+<p><strong>Request API Keys</strong>: Contact <code>integrations@mymoolah.africa</code> with:</p>
+<ol>
+<li>Environment(s) required (QA/Test, Staging, Production)</li>
+<li>Technical contact information</li>
+<li>IP addresses for whitelisting (see Section 8.3)</li>
+</ol>
+<hr>
+<h3>8.3 IP Whitelisting</h3>
+<p><strong>Infrastructure-Level</strong>: IP whitelisting is configured at the Google Cloud Load Balancer level.</p>
+<p><strong>Required Information</strong>:</p>
+<ul>
+<li><strong>IP Address(es)</strong>: Provide in CIDR notation (e.g., <code>20.164.206.68/32</code> for single IP, <code>20.164.206.0/24</code> for subnet)</li>
+<li><strong>Environment</strong>: Specify which environment(s) require whitelisting</li>
+<li><strong>Technical Contact</strong>: Name, email, phone for coordination</li>
+</ul>
+<p><strong>EasyPay Azure IP</strong> (provided):</p>
+<ul>
+<li><strong>IP Address</strong>: <code>20.164.206.68</code></li>
+<li><strong>CIDR Notation</strong>: <code>20.164.206.68/32</code></li>
+</ul>
+<p><strong>Setup Process</strong>:</p>
+<ol>
+<li>EasyPay provides IP addresses to MyMoolah Integration Team</li>
+<li>MyMoolah configures whitelist at infrastructure level</li>
+<li>MyMoolah confirms whitelist activation (typically within 24 hours)</li>
+<li>EasyPay tests connectivity</li>
+</ol>
+<p><strong>Contact</strong>: <code>integrations@mymoolah.africa</code> for IP whitelisting requests</p>
+<p><strong>EasyPay IP Address</strong> (provided):</p>
+<ul>
+<li><strong>IP</strong>: <code>20.164.206.68</code></li>
+<li><strong>CIDR</strong>: <code>20.164.206.68/32</code></li>
+<li><strong>Environment</strong>: All environments (QA, Staging, Production)</li>
+</ul>
+<hr>
+<h3>8.4 Test Data &amp; Scenarios</h3>
+<h4>Test Data</h4>
+<p><strong>Test Users</strong>: MyMoolah will provide test user accounts for EasyPay testing:</p>
+<ul>
+<li>Test user phone numbers (for creating top-up/cash-out vouchers)</li>
+<li>Test wallet balances (pre-funded for testing)</li>
+</ul>
+<p><strong>Test PINs</strong>: EasyPay should use PINs generated by MyMoolah test users via the mobile app. Test PINs follow the same format as production PINs (14 digits, starting with &#39;9&#39;, Luhn-validated).</p>
+<p><strong>Test Amounts</strong>:</p>
+<ul>
+<li><strong>Top-up</strong>: R50.00 - R4000.00 (test with various amounts)</li>
+<li><strong>Cash-out</strong>: R50.00 - R3000.00 (test with various amounts)</li>
+</ul>
+<p><strong>Test Merchant IDs</strong> (for settlement requests):</p>
+<ul>
+<li>QA/Test: <code>EP_TEST_MERCHANT_001</code></li>
+<li>Staging: <code>EP_STAGING_MERCHANT_001</code></li>
+<li>Production: <code>EP_PROD_MERCHANT_001</code> (when available)</li>
+</ul>
+<hr>
+<h3>8.5 Test Scenarios</h3>
+<h4>Scenario 1: Successful Top-up</h4>
+<ol>
+<li>Create top-up voucher via MM app (User, R100)</li>
+<li>Note 14-digit PIN generated</li>
+<li>Call settlement API with correct details</li>
+<li>Verify wallet credited with settlement amount</li>
+</ol>
+<p><strong>Expected Response</strong>: HTTP 200, <code>status: &quot;completed&quot;</code>, <code>settlement_amount: 100.00</code></p>
+<h4>Scenario 2: Invalid PIN</h4>
+<ol>
+<li>Call settlement API with non-existent PIN <code>9999999999999</code></li>
+<li>Verify proper error response</li>
+</ol>
+<p><strong>Expected Response</strong>: HTTP 404, <code>error.code: &quot;PIN_NOT_FOUND&quot;</code></p>
+<h4>Scenario 3: Amount Mismatch</h4>
+<ol>
+<li>Create R100 top-up</li>
+<li>Call settlement with R150 amount</li>
+<li>Verify rejection</li>
+</ol>
+<p><strong>Expected Response</strong>: HTTP 400, <code>error.code: &quot;AMOUNT_MISMATCH&quot;</code></p>
+<h4>Scenario 4: Idempotency</h4>
+<ol>
+<li>Call settlement API</li>
+<li>Immediately retry with same idempotency key</li>
+<li>Verify identical response (no double credit)</li>
+</ol>
+<p><strong>Expected Response</strong>: HTTP 200 (both times), same settlement_transaction_id</p>
+<h4>Scenario 5: Expired PIN</h4>
+<ol>
+<li>Use pre-expired test PIN (expired 100 hours ago)</li>
+<li>Attempt settlement</li>
+<li>Verify rejection</li>
+</ol>
+<p><strong>Expected Response</strong>: HTTP 400, <code>error.code: &quot;PIN_EXPIRED&quot;</code></p>
+<h4>Scenario 6: Missing API Key</h4>
+<ol>
+<li>Call settlement API without X-API-Key header</li>
+<li>Verify authentication error</li>
+</ol>
+<p><strong>Expected Response</strong>: HTTP 401, <code>error.code: &quot;MISSING_API_KEY&quot;</code></p>
+<h4>Scenario 7: Invalid API Key</h4>
+<ol>
+<li>Call settlement API with incorrect API key</li>
+<li>Verify authentication error</li>
+</ol>
+<p><strong>Expected Response</strong>: HTTP 401, <code>error.code: &quot;INVALID_API_KEY&quot;</code></p>
+<h3>8.3 UAT Sign-off Checklist</h3>
+<p>Before requesting production credentials:</p>
+<ul>
+<li><input disabled="" type="checkbox"> Successfully completed all 7 test scenarios</li>
+<li><input disabled="" type="checkbox"> Tested with multiple test users</li>
+<li><input disabled="" type="checkbox"> Verified idempotency handling</li>
+<li><input disabled="" type="checkbox"> Tested retry logic</li>
+<li><input disabled="" type="checkbox"> Verified error handling (all error codes)</li>
+<li><input disabled="" type="checkbox"> Completed reconciliation test</li>
+<li><input disabled="" type="checkbox"> Documented integration in internal wiki</li>
+<li><input disabled="" type="checkbox"> Security review passed</li>
+<li><input disabled="" type="checkbox"> Load testing completed (100 TPS)</li>
+</ul>
+<hr>
+<h2>9. Production Deployment</h2>
+<h3>9.1 Production Credentials Request</h3>
+<p>To obtain production credentials, submit the following to <code>integrations@mymoolah.africa</code>:</p>
+<ol>
+<li><strong>UAT Sign-off Report</strong> (proof of successful testing)</li>
+<li><strong>Production IP Addresses</strong> (CIDR notation, if IP whitelisting required)</li>
+<li><strong>Expected Transaction Volume</strong> (daily/monthly)</li>
+<li><strong>Business Contact</strong> (name, email, phone)</li>
+<li><strong>Technical Contact</strong> (name, email, phone, 24/7 on-call number)</li>
+<li><strong>Go-Live Date</strong> (proposed)</li>
+</ol>
+<p><strong>SLA</strong>: 5 business days for credential provisioning</p>
+<h3>9.2 Production Environment</h3>
+<p><strong>Base URL</strong>: <code>https://api.mymoolah.africa</code> (when available)<br><strong>API Base</strong>: <code>https://api.mymoolah.africa/api/v1</code></p>
+<p><strong>Credentials</strong>: Delivered via secure channel after approval</p>
+<p><strong>Note</strong>: Production environment is planned but not yet deployed. Staging environment should be used for production readiness testing.</p>
+<h3>9.3 Go-Live Checklist</h3>
+<ul>
+<li><input disabled="" type="checkbox"> Production credentials received and stored securely</li>
+<li><input disabled="" type="checkbox"> IP whitelist configured (if required)</li>
+<li><input disabled="" type="checkbox"> Production code deployed</li>
+<li><input disabled="" type="checkbox"> Monitoring &amp; alerting configured</li>
+<li><input disabled="" type="checkbox"> Incident response plan documented</li>
+<li><input disabled="" type="checkbox"> MyMoolah support contacts saved</li>
+<li><input disabled="" type="checkbox"> First transaction test completed</li>
+<li><input disabled="" type="checkbox"> Reconciliation process automated</li>
+<li><input disabled="" type="checkbox"> Disaster recovery plan tested</li>
+</ul>
+<h3>9.4 Production Best Practices</h3>
+<ol>
+<li><p><strong>Monitoring</strong>: Set up real-time monitoring for:</p>
+<ul>
+<li>API response times (target: &lt;500ms p95)</li>
+<li>Error rates (target: &lt;0.1%)</li>
+<li>Settlement success rate (target: &gt;99.9%)</li>
+</ul>
+</li>
+<li><p><strong>Alerting</strong>: Configure alerts for:</p>
+<ul>
+<li>Authentication failures</li>
+<li>Consecutive API errors</li>
+<li>Unusual transaction patterns</li>
+</ul>
+</li>
+<li><p><strong>Logging</strong>: Log all API interactions with:</p>
+<ul>
+<li>Request/Response payloads (mask API key)</li>
+<li>Timestamps</li>
+<li>Response times</li>
+<li>Error stack traces</li>
+</ul>
+</li>
+<li><p><strong>Capacity Planning</strong>: MyMoolah API can handle:</p>
+<ul>
+<li>1,000 requests per second</li>
+<li>10,000 concurrent connections</li>
+<li>99.95% uptime SLA</li>
+</ul>
+</li>
+</ol>
+<hr>
+<h2>10. Reconciliation</h2>
+<h3>10.1 SFTP-Based Reconciliation (Primary Method)</h3>
+<p>MyMoolah operates a <strong>secure SFTP server</strong> for automated daily reconciliation file exchange. This is the <strong>recommended</strong> reconciliation method for production environments.</p>
+<h4>10.1.1 SFTP Connection Details</h4>
+<p><strong>Production SFTP Server</strong>:</p>
+<pre><code>Host: 34.35.137.166
+Port: 22
+Username: easypay
+Authentication: SSH public key only (no password authentication)
+Home Directory: /home/easypay (mapped to gs://mymoolah-sftp-inbound/easypay/)
+</code></pre>
+<p><strong>Security Requirements</strong>:</p>
+<ul>
+<li>SSH key-based authentication (RSA 4096-bit or ED25519 recommended)</li>
+<li>Source IP whitelisting (provide your CIDR ranges)</li>
+<li>TLS 1.3 for file transfer encryption</li>
+</ul>
+<h4>10.1.2 SFTP Setup Process</h4>
+<p><strong>Step 1: Generate SSH Key Pair</strong> (if not already available)</p>
+<pre><code class="language-bash"># Generate ED25519 key (recommended)
+ssh-keygen -t ed25519 -C &quot;easypay-reconciliation@easypay.co.za&quot;
+
+# Or generate RSA 4096-bit key
+ssh-keygen -t rsa -b 4096 -C &quot;easypay-reconciliation@easypay.co.za&quot;
+</code></pre>
+<p><strong>Step 2: Provide MyMoolah with the Following</strong></p>
+<p>Email to: <code>integrations@mymoolah.africa</code></p>
+<p>Subject: <code>EasyPay SFTP Reconciliation Setup - [Your Company Name]</code></p>
+<p>Body:</p>
+<pre><code>1. SSH Public Key: [Paste contents of id_ed25519.pub or id_rsa.pub]
+2. Source IP/CIDR Ranges: [e.g., 197.85.10.0/24, 41.203.45.100/32]
+3. Technical Contact: [Name, Email, Phone]
+4. Expected Go-Live Date: [YYYY-MM-DD]
+</code></pre>
+<p><strong>Step 3: Test Connection</strong> (after MyMoolah confirms setup)</p>
+<pre><code class="language-bash">sftp -P 22 easypay@34.35.137.166
+
+# You should see:
+# Connected to 34.35.137.166
+# sftp&gt;
+</code></pre>
+<h4>10.1.3 File Upload Requirements</h4>
+<p><strong>File Naming Convention</strong>:</p>
+<pre><code>easypay_recon_YYYYMMDD.csv
+</code></pre>
+<p><strong>Examples</strong>:</p>
+<ul>
+<li><code>easypay_recon_20260116.csv</code> (daily file for January 16, 2026)</li>
+<li><code>easypay_recon_20260117.csv</code> (daily file for January 17, 2026)</li>
+</ul>
+<p><strong>Upload Schedule</strong>:</p>
+<ul>
+<li><strong>Frequency</strong>: Daily</li>
+<li><strong>Cutoff Time</strong>: 23:59:59 SAST</li>
+<li><strong>Upload Window</strong>: 00:00 - 06:00 SAST (next day)</li>
+<li><strong>Example</strong>: Transactions from Jan 16 (00:00 - 23:59) should be uploaded as <code>easypay_recon_20260116.csv</code> between Jan 17 00:00 - 06:00</li>
+</ul>
+<p><strong>Upload Command</strong>:</p>
+<pre><code class="language-bash"># Upload reconciliation file
+sftp easypay@34.35.137.166 &lt;&lt; EOF
+cd /home/easypay
+put easypay_recon_20260116.csv
+bye
+EOF
+</code></pre>
+<h4>10.1.4 CSV File Format Specification</h4>
+<p><strong>File Encoding</strong>: UTF-8<br><strong>Delimiter</strong>: Comma (<code>,</code>)<br><strong>Line Ending</strong>: LF (<code>\n</code>) or CRLF (<code>\r\n</code>)<br><strong>Quote Character</strong>: Double quote (<code>&quot;</code>) for fields containing commas<br><strong>Header Row</strong>: Required (first line)</p>
+<p><strong>CSV Schema</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Required</th>
+<th>Description</th>
+<th>Format/Rules</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>transaction_id</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>EasyPay transaction ID</td>
+<td>Max 100 chars, alphanumeric + <code>-_</code></td>
+</tr>
+<tr>
+<td><code>easypay_code</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>14-digit PIN</td>
+<td><code>/^9\d{13}$/</code></td>
+</tr>
+<tr>
+<td><code>transaction_type</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>Transaction type</td>
+<td><code>topup</code> or <code>cashout</code></td>
+</tr>
+<tr>
+<td><code>merchant_id</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>Merchant identifier</td>
+<td>Max 50 chars</td>
+</tr>
+<tr>
+<td><code>terminal_id</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>Terminal identifier</td>
+<td>Max 50 chars</td>
+</tr>
+<tr>
+<td><code>cashier_id</code></td>
+<td>String</td>
+<td>No</td>
+<td>Cashier identifier</td>
+<td>Max 50 chars, empty if N/A</td>
+</tr>
+<tr>
+<td><code>transaction_timestamp</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>Transaction date/time</td>
+<td>ISO 8601: <code>YYYY-MM-DDTHH:MM:SS+02:00</code></td>
+</tr>
+<tr>
+<td><code>gross_amount</code></td>
+<td>Decimal</td>
+<td>Yes</td>
+<td>Amount in ZAR</td>
+<td>Format: <code>0.00</code>, 2 decimal places</td>
+</tr>
+<tr>
+<td><code>settlement_status</code></td>
+<td>String</td>
+<td>Yes</td>
+<td>EasyPay settlement status</td>
+<td><code>settled</code>, <code>pending</code>, <code>failed</code></td>
+</tr>
+<tr>
+<td><code>merchant_name</code></td>
+<td>String</td>
+<td>No</td>
+<td>Merchant location name</td>
+<td>Max 100 chars</td>
+</tr>
+<tr>
+<td><code>receipt_number</code></td>
+<td>String</td>
+<td>No</td>
+<td>Receipt number</td>
+<td>Max 50 chars</td>
+</tr>
+</tbody></table>
+<p><strong>Example CSV</strong>:</p>
+<pre><code class="language-csv">transaction_id,easypay_code,transaction_type,merchant_id,terminal_id,cashier_id,transaction_timestamp,gross_amount,settlement_status,merchant_name,receipt_number
+EP_TXN_20260116_001,9123412345678,topup,EP_MERCHANT_12345,EP_TERMINAL_001,CASHIER_789,2026-01-16T13:40:33+02:00,100.00,settled,Pick n Pay - Sandton City,RCP-001234
+EP_TXN_20260116_002,9123498765432,cashout,EP_MERCHANT_12345,EP_TERMINAL_002,CASHIER_456,2026-01-16T14:00:00+02:00,500.00,settled,Checkers - Rosebank,RCP-567890
+EP_TXN_20260116_003,9123400000003,topup,EP_MERCHANT_67890,EP_TERMINAL_005,,2026-01-16T15:30:00+02:00,250.00,settled,Woolworths - Mall of Africa,RCP-123123
+</code></pre>
+<p><strong>CSV Validation Rules</strong>:</p>
+<ul>
+<li>File size: Max 100MB (contact support if larger)</li>
+<li>Row limit: Max 100,000 transactions per file</li>
+<li>All required fields must be non-empty</li>
+<li><code>gross_amount</code> must match the amount in MyMoolah&#39;s records (±R0.01 tolerance)</li>
+<li><code>transaction_timestamp</code> must be within the date range of the filename</li>
+</ul>
+<h4>10.1.5 Automated Reconciliation Process</h4>
+<p>MyMoolah&#39;s <strong>automated reconciliation service</strong> monitors the SFTP server and processes files as follows:</p>
+<pre><code class="language-mermaid">flowchart TD
+    A[EasyPay uploads CSV] --&gt; B[SFTP Server: easypay_recon_20260116.csv]
+    B --&gt; C{File detected&lt;br/&gt;within 5 minutes}
+    C --&gt;|Yes| D[Download &amp; Parse CSV]
+    C --&gt;|No| E[Alert: File not received]
+    D --&gt; F{CSV Valid?}
+    F --&gt;|No| G[Alert: CSV validation failed]
+    F --&gt;|Yes| H[Match against MyMoolah transactions]
+    H --&gt; I{All transactions match?}
+    I --&gt;|Yes| J[Reconciliation: SUCCESS]
+    I --&gt;|No| K[Generate discrepancy report]
+    K --&gt; L[Email finance team + EasyPay contact]
+    J --&gt; M[Move file to /processed/]
+    G --&gt; N[Move file to /error/]
+    E --&gt; O[Email alert to EasyPay contact]
+</code></pre>
+<p><strong>Processing Timeline</strong>:</p>
+<ol>
+<li><strong>File Upload</strong>: 00:00 - 06:00 SAST</li>
+<li><strong>Auto-Detection</strong>: Within 5 minutes of upload</li>
+<li><strong>Validation</strong>: ~1 minute</li>
+<li><strong>Reconciliation</strong>: ~5 minutes (for 10,000 transactions)</li>
+<li><strong>Notification</strong>: Immediate (success or failure)</li>
+</ol>
+<p><strong>Reconciliation Results</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Result</th>
+<th>Action</th>
+<th>Notification</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>100% Match</strong></td>
+<td>File moved to <code>/processed/</code></td>
+<td>Email: &quot;Reconciliation successful&quot;</td>
+</tr>
+<tr>
+<td><strong>Discrepancies Found</strong></td>
+<td>File moved to <code>/discrepancies/</code></td>
+<td>Email with discrepancy report</td>
+</tr>
+<tr>
+<td><strong>CSV Invalid</strong></td>
+<td>File moved to <code>/error/</code></td>
+<td>Email with validation errors</td>
+</tr>
+<tr>
+<td><strong>File Missing</strong></td>
+<td>No file detected by 07:00</td>
+<td>Email: &quot;Reconciliation file not received&quot;</td>
+</tr>
+</tbody></table>
+<p><strong>Discrepancy Handling</strong>:</p>
+<p>If discrepancies are found, MyMoolah generates a report with details. Contact <code>finance@mymoolah.africa</code> for resolution.</p>
+<h4>10.1.6 SFTP Best Practices</h4>
+<ol>
+<li><strong>Automate Uploads</strong>: Use cron jobs or scheduled tasks</li>
+<li><strong>Verify File Integrity</strong>: Calculate MD5 checksum before upload</li>
+<li><strong>Log All Transfers</strong>: Maintain audit log of uploaded files</li>
+<li><strong>Monitor Notifications</strong>: Set up email alerts for reconciliation results</li>
+<li><strong>Backup Files</strong>: Keep local copies for 90 days minimum</li>
+</ol>
+<p><strong>Example Automated Upload Script</strong> (Linux/macOS):</p>
+<pre><code class="language-bash">#!/bin/bash
+# Daily EasyPay Reconciliation Upload
+# Schedule with cron: 0 2 * * * /path/to/upload_recon.sh
+
+DATE=$(date -d &quot;yesterday&quot; +%Y%m%d)
+FILE=&quot;easypay_recon_${DATE}.csv&quot;
+LOCAL_PATH=&quot;/opt/easypay/recon/${FILE}&quot;
+SFTP_HOST=&quot;34.35.137.166&quot;
+SFTP_USER=&quot;easypay&quot;
+
+# Generate reconciliation file (your internal process)
+/opt/easypay/scripts/generate_recon.sh $DATE
+
+# Verify file exists and is not empty
+if [ ! -s &quot;$LOCAL_PATH&quot; ]; then
+    echo &quot;ERROR: Reconciliation file missing or empty&quot; | mail -s &quot;EasyPay Recon Upload Failed&quot; ops@easypay.co.za
+    exit 1
+fi
+
+# Upload to MyMoolah SFTP
+sftp ${SFTP_USER}@${SFTP_HOST} &lt;&lt; EOF
+cd /home/easypay
+put ${LOCAL_PATH}
+bye
+EOF
+
+if [ $? -eq 0 ]; then
+    echo &quot;SUCCESS: Uploaded ${FILE}&quot; | mail -s &quot;EasyPay Recon Upload Successful&quot; ops@easypay.co.za
+else
+    echo &quot;ERROR: SFTP upload failed&quot; | mail -s &quot;EasyPay Recon Upload Failed&quot; ops@easypay.co.za
+    exit 1
+fi
+</code></pre>
+<h3>10.2 Alternative: REST API Reconciliation</h3>
+<p>For partners who cannot use SFTP, MyMoolah provides a REST API endpoint for downloading reconciliation data.</p>
+<p><strong>Endpoint</strong>:</p>
+<pre><code>GET /api/v1/reconciliation/easypay/daily/{date}
+</code></pre>
+<p><strong>Parameters</strong>:</p>
+<ul>
+<li><code>date</code>: YYYY-MM-DD format (e.g., <code>2026-01-16</code>)</li>
+</ul>
+<p><strong>Response</strong>: Same CSV format as SFTP (see Section 10.1.4)</p>
+<p><strong>Authentication</strong>: Requires X-API-Key header</p>
+<p><strong>Example</strong>:</p>
+<pre><code class="language-bash">curl -X GET https://staging.mymoolah.africa/api/v1/reconciliation/easypay/daily/2026-01-16 \
+  -H &quot;X-API-Key: {API_KEY}&quot; \
+  --output easypay_recon_20260116.csv
+</code></pre>
+<p><strong>Note</strong>: SFTP method is <strong>strongly preferred</strong> for production as it provides automated reconciliation processing. REST API requires manual processing on EasyPay&#39;s side.</p>
+<hr>
+<h2>11. Support &amp; SLAs</h2>
+<h3>11.1 Support Channels</h3>
+<table>
+<thead>
+<tr>
+<th>Channel</th>
+<th>Availability</th>
+<th>Response Time</th>
+<th>Use Case</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Email</strong></td>
+<td>24/7</td>
+<td>4 hours</td>
+<td>Non-urgent queries</td>
+</tr>
+<tr>
+<td><strong>Phone</strong></td>
+<td>08:00-17:00 SAST</td>
+<td>Immediate</td>
+<td>Production issues</td>
+</tr>
+<tr>
+<td><strong>Emergency Hotline</strong></td>
+<td>24/7</td>
+<td>15 minutes</td>
+<td>Critical outages</td>
+</tr>
+</tbody></table>
+<p><strong>Contact Details</strong>:</p>
+<ul>
+<li>Email: <code>support@mymoolah.africa</code></li>
+<li>Integration Support: <code>integrations@mymoolah.africa</code></li>
+<li>Phone: <code>+27 21 140 7030</code></li>
+<li>Emergency: <code>+27 82 557 1055</code></li>
+</ul>
+<h3>11.2 Service Level Agreements</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Target</th>
+<th>Measurement</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>API Availability</td>
+<td>99.95%</td>
+<td>Monthly uptime</td>
+</tr>
+<tr>
+<td>API Response Time (p95)</td>
+<td>&lt;500ms</td>
+<td>95th percentile</td>
+</tr>
+<tr>
+<td>Settlement Processing Time</td>
+<td>&lt;5 seconds</td>
+<td>From API call to wallet credit</td>
+</tr>
+<tr>
+<td>Support Response (Critical)</td>
+<td>&lt;15 minutes</td>
+<td>Phone/emergency hotline</td>
+</tr>
+<tr>
+<td>Support Response (Non-Critical)</td>
+<td>&lt;4 hours</td>
+<td>Email</td>
+</tr>
+</tbody></table>
+<h3>11.3 Incident Response</h3>
+<p>In case of production issues:</p>
+<ol>
+<li><strong>Immediate</strong>: Call emergency hotline</li>
+<li><strong>Provide</strong>: Request ID from error response (<code>X-Request-ID</code> header or <code>error.request_id</code> in response)</li>
+<li><strong>Escalation</strong>: Automatic escalation after 30 minutes</li>
+<li><strong>Status Updates</strong>: Posted to status.mymoolah.africa (when available)</li>
+</ol>
+<hr>
+<h2>12. Appendices</h2>
+<h3>Appendix A: Sequence Diagrams</h3>
+<h4>Top-up Flow (Detailed)</h4>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant U as User
+    participant App as MM App
+    participant API as MM API
+    participant DB as Database
+    participant EPTerm as EP Terminal
+    participant EPBack as EP Backend
+    
+    U-&gt;&gt;App: Tap &quot;Top-up @ EasyPay&quot;
+    App-&gt;&gt;U: Enter amount (R50-R4000)
+    U-&gt;&gt;App: Submit R100
+    App-&gt;&gt;API: POST /vouchers/easypay/topup/issue
+    API-&gt;&gt;DB: Create Voucher (status: pending)
+    DB--&gt;&gt;API: Voucher ID + PIN
+    API--&gt;&gt;App: 14-digit PIN
+    App--&gt;&gt;U: Display PIN+QR code
+    
+    Note over U,EPTerm: User goes to EasyPay store
+    U-&gt;&gt;EPTerm: Present PIN + R100 cash
+    EPTerm-&gt;&gt;EPBack: Validate PIN
+    EPBack-&gt;&gt;API: POST /vouchers/easypay/topup/settlement&lt;br/&gt;(X-API-Key, X-Idempotency-Key)
+    API-&gt;&gt;DB: Update voucher (status: redeemed)
+    API-&gt;&gt;DB: Credit wallet (settlement amount)
+    API-&gt;&gt;DB: Create transaction record
+    API--&gt;&gt;EPBack: 200 OK (settled)
+    EPBack--&gt;&gt;EPTerm: Confirmed
+    EPTerm--&gt;&gt;U: Receipt
+    
+    Note over U: Wallet credited instantly
+</code></pre>
+<h4>Cash-out Flow (Detailed)</h4>
+<pre><code class="language-mermaid">sequenceDiagram
+    autonumber
+    participant U as User
+    participant App as MM App
+    participant API as MM API
+    participant DB as Database
+    participant EPTerm as EP Terminal
+    participant EPBack as EP Backend
+    
+    U-&gt;&gt;App: Tap &quot;Cash-out @ EasyPay&quot;
+    App-&gt;&gt;U: Enter amount (R50-R3000)
+    U-&gt;&gt;App: Submit R500
+    App-&gt;&gt;API: POST /vouchers/easypay/cashout/issue
+    API-&gt;&gt;DB: Check wallet balance
+    API-&gt;&gt;DB: Debit wallet (voucher amount + transaction fee)
+    API-&gt;&gt;DB: Create Voucher (status: pending)
+    DB--&gt;&gt;API: Voucher ID + PIN
+    API--&gt;&gt;App: 14-digit PIN
+    App--&gt;&gt;U: Display PIN
+    
+    Note over U,EPTerm: User goes to EasyPay store
+    U-&gt;&gt;EPTerm: Present PIN
+    EPTerm-&gt;&gt;EPBack: Validate PIN
+    EPBack-&gt;&gt;API: POST /vouchers/easypay/cashout/settlement&lt;br/&gt;(X-API-Key, X-Idempotency-Key)
+    API-&gt;&gt;DB: Update voucher (status: redeemed)
+    API--&gt;&gt;EPBack: 200 OK (settled)
+    EPBack--&gt;&gt;EPTerm: Confirmed
+    EPTerm-&gt;&gt;U: Dispense R500 cash
+    EPTerm--&gt;&gt;U: Receipt
+</code></pre>
+<h3>Appendix B: Error Code Reference</h3>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>HTTP</th>
+<th>Category</th>
+<th>Description</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>INVALID_PIN</code></td>
+<td>400</td>
+<td>Validation</td>
+<td>PIN format incorrect</td>
+<td>Fix PIN format</td>
+</tr>
+<tr>
+<td><code>PIN_NOT_FOUND</code></td>
+<td>404</td>
+<td>Not Found</td>
+<td>PIN doesn&#39;t exist</td>
+<td>Verify with user</td>
+</tr>
+<tr>
+<td><code>AMOUNT_MISMATCH</code></td>
+<td>400</td>
+<td>Validation</td>
+<td>Amount ≠ expected</td>
+<td>Verify amount</td>
+</tr>
+<tr>
+<td><code>PIN_EXPIRED</code></td>
+<td>400</td>
+<td>Business Logic</td>
+<td>PIN &gt;96 hours old</td>
+<td>User creates new PIN</td>
+</tr>
+<tr>
+<td><code>ALREADY_SETTLED</code></td>
+<td>409</td>
+<td>Idempotency</td>
+<td>Duplicate request</td>
+<td>Use original response</td>
+</tr>
+<tr>
+<td><code>DUPLICATE_REQUEST</code></td>
+<td>409</td>
+<td>Conflict</td>
+<td>Key used with different request</td>
+<td>Use unique key</td>
+</tr>
+<tr>
+<td><code>MISSING_API_KEY</code></td>
+<td>401</td>
+<td>Security</td>
+<td>X-API-Key missing</td>
+<td>Include header</td>
+</tr>
+<tr>
+<td><code>INVALID_API_KEY</code></td>
+<td>401</td>
+<td>Security</td>
+<td>Invalid API key</td>
+<td>Verify key</td>
+</tr>
+<tr>
+<td><code>MISSING_REQUIRED_FIELD</code></td>
+<td>400</td>
+<td>Validation</td>
+<td>Required field missing</td>
+<td>Check request body</td>
+</tr>
+<tr>
+<td><code>INVALID_AMOUNT</code></td>
+<td>400</td>
+<td>Validation</td>
+<td>Amount out of range</td>
+<td>Check limits</td>
+</tr>
+<tr>
+<td><code>INVALID_FORMAT</code></td>
+<td>400</td>
+<td>Validation</td>
+<td>Invalid format</td>
+<td>Verify JSON structure</td>
+</tr>
+<tr>
+<td><code>WALLET_NOT_FOUND</code></td>
+<td>404</td>
+<td>Not Found</td>
+<td>User wallet not found</td>
+<td>Contact support</td>
+</tr>
+<tr>
+<td><code>RATE_LIMIT_EXCEEDED</code></td>
+<td>429</td>
+<td>Rate Limiting</td>
+<td>Too many requests</td>
+<td>Backoff and retry</td>
+</tr>
+<tr>
+<td><code>INTERNAL_ERROR</code></td>
+<td>500</td>
+<td>Server</td>
+<td>Unexpected error</td>
+<td>Contact support</td>
+</tr>
+</tbody></table>
+<h3>Appendix C: Glossary</h3>
+<table>
+<thead>
+<tr>
+<th>Term</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>EasyPay Code</strong></td>
+<td>14-digit PIN starting with &#39;9&#39; using Luhn algorithm</td>
+</tr>
+<tr>
+<td><strong>Settlement</strong></td>
+<td>Process of confirming payment and updating wallet</td>
+</tr>
+<tr>
+<td><strong>Settlement Amount</strong></td>
+<td>Amount paid/withdrawn by user and processed</td>
+</tr>
+<tr>
+<td><strong>Idempotency Key</strong></td>
+<td>Unique identifier preventing duplicate processing</td>
+</tr>
+<tr>
+<td><strong>Voucher Lifecycle</strong></td>
+<td>States: pending → settled/redeemed/expired/cancelled</td>
+</tr>
+<tr>
+<td><strong>Request ID</strong></td>
+<td>UUID for tracking requests in logs and support</td>
+</tr>
+</tbody></table>
+<h3>Appendix D: Change Log</h3>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Date</th>
+<th>Changes</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1.0.2</td>
+<td>2026-01-16</td>
+<td>Added comprehensive environment endpoints (QA/Test, Staging, Production), API key management section, IP whitelisting instructions, and test data scenarios</td>
+</tr>
+<tr>
+<td>1.0.1</td>
+<td>2026-01-16</td>
+<td>Removed fee and margin references (commercial agreement pending)</td>
+</tr>
+<tr>
+<td>1.0.0</td>
+<td>2026-01-16</td>
+<td>Initial release - Banking-grade API documentation</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>📞 Need Help?</h2>
+<p><strong>Integration Support Team</strong><br>Email: <a href="mailto:support@mymoolah.africa">support@mymoolah.africa</a><br>Phone: +27 21 140 7030<br>Emergency: +27 82 557 1055</p>
+<p><strong>General Support</strong><br>Email: <a href="mailto:support@mymoolah.africa">support@mymoolah.africa</a></p>
+<p><strong>Documentation Feedback</strong><br>If you find any issues or have suggestions for improving this documentation, please email: <a href="mailto:andre@mymoolah.africa">andre@mymoolah.africa</a></p>
+<hr>
+<p><strong>MyMoolah Treasury Platform</strong><br><em>Powering Africa&#39;s Financial Inclusion</em></p>
+<p>© 2026 MyMoolah (Pty) Ltd. All rights reserved.</p>
+
+</body>
+</html>
