@@ -84,7 +84,9 @@
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "marked": "^15.0.12",
+    "nodemon": "^3.0.2",
+    "puppeteer": "^24.35.0"
   },
   "keywords": [
     "wallet",
