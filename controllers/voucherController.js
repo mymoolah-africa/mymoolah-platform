@@ -988,11 +988,11 @@ exports.processEasyPaySettlement = async (req, res) => {
       return sendErrorResponse(res, ERROR_CODES.WALLET_NOT_FOUND, 'User wallet not found', requestId);
     }
 
-    // Credit wallet with net amount
+    // Credit wallet with net amount (correct for balance calculation)
     await wallet.credit(netAmount, 'easypay_topup_settlement');
 
     // Create TWO transaction records:
-    // 1. Net top-up deposit transaction
+    // 1. Top-up deposit transaction (shows GROSS amount for display, wallet credited with NET)
     const settlementId = `STL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const feeTransactionId = `FEE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
@@ -1000,7 +1000,7 @@ exports.processEasyPaySettlement = async (req, res) => {
       transactionId: settlementId,
       userId: voucher.userId,
       walletId: wallet.walletId,
-      amount: netAmount,
+      amount: grossAmount, // Display gross amount (R100.00) in Transaction History
       type: 'deposit',
       status: 'completed',
       description: `Top-up @ EasyPay: ${easypay_code}`,
@@ -1013,6 +1013,7 @@ exports.processEasyPaySettlement = async (req, res) => {
         settlementType: 'easypay_topup_settlement',
         grossAmount: grossAmount,
         netAmount: netAmount,
+        walletCreditedAmount: netAmount, // Actual amount credited to wallet (for audit)
         feeStructure: {
           total: totalFee / 100,
           providerCost: providerFee / 100,
@@ -1021,7 +1022,7 @@ exports.processEasyPaySettlement = async (req, res) => {
         easyPayTransactionId: transaction_id,
         merchantId: merchant_id,
         settlementTimestamp: new Date().toISOString(),
-        isTopUpNetAmount: true
+        isTopUpGrossAmount: true // Flag to indicate this shows gross amount
       }
     });
 

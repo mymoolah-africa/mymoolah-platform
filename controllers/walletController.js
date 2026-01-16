@@ -483,11 +483,8 @@ class WalletController {
         const metadata = t.metadata || {};
         let displayAmount = parseFloat(t.amount || 0);
         
-        // For top-up transactions in Recent Transactions: show gross amount
-        // Check if this is a top-up net amount transaction and we're showing Recent Transactions
-        if (isDashboard && metadata.isTopUpNetAmount && metadata.grossAmount) {
-          displayAmount = parseFloat(metadata.grossAmount);
-        }
+        // For top-up transactions: transaction amount already shows gross amount
+        // No adjustment needed - transaction.amount is already grossAmount
         
         // For cash-out transactions: show voucher amount only (fee is separate transaction)
         // Cash-out voucher amount is already correct (negative for debit), no adjustment needed
