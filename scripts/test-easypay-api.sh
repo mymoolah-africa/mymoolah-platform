@@ -34,11 +34,11 @@ curl -X POST "${ENDPOINT}" \
   -H "Content-Type: application/json" \
   -d "{
     \"easypay_code\": \"${VALID_TEST_PIN}\",
-    "settlement_amount": 100.00,
-    "merchant_id": "EP_TEST_001",
-    "transaction_id": "EP_TXN_TEST_001",
-    "terminal_id": "EP_TERMINAL_001"
-  }' \
+    \"settlement_amount\": 100.00,
+    \"merchant_id\": \"EP_TEST_001\",
+    \"transaction_id\": \"EP_TXN_TEST_001\",
+    \"terminal_id\": \"EP_TERMINAL_001\"
+  }" \
   -w "\n\nHTTP Status: %{http_code}\n" \
   -s | jq '.' 2>/dev/null || cat
 echo ""
@@ -52,11 +52,11 @@ curl -X POST "${ENDPOINT}" \
   -H "X-API-Key: invalid_key_12345" \
   -d "{
     \"easypay_code\": \"${VALID_TEST_PIN}\",
-    "settlement_amount": 100.00,
-    "merchant_id": "EP_TEST_001",
-    "transaction_id": "EP_TXN_TEST_002",
-    "terminal_id": "EP_TERMINAL_001"
-  }' \
+    \"settlement_amount\": 100.00,
+    \"merchant_id\": \"EP_TEST_001\",
+    \"transaction_id\": \"EP_TXN_TEST_002\",
+    \"terminal_id\": \"EP_TERMINAL_001\"
+  }" \
   -w "\n\nHTTP Status: %{http_code}\n" \
   -s | jq '.' 2>/dev/null || cat
 echo ""
@@ -74,11 +74,11 @@ RESPONSE1=$(curl -X POST "${ENDPOINT}" \
   -H "X-Idempotency-Key: ${IDEMPOTENCY_KEY}" \
   -d "{
     \"easypay_code\": \"${VALID_TEST_PIN}\",
-    "settlement_amount": 100.00,
-    "merchant_id": "EP_TEST_001",
-    "transaction_id": "EP_TXN_TEST_003",
-    "terminal_id": "EP_TERMINAL_001"
-  }' \
+    \"settlement_amount\": 100.00,
+    \"merchant_id\": \"EP_TEST_001\",
+    \"transaction_id\": \"EP_TXN_TEST_003\",
+    \"terminal_id\": \"EP_TERMINAL_001\"
+  }" \
   -w "\nHTTP_STATUS:%{http_code}" \
   -s)
 
@@ -99,11 +99,11 @@ RESPONSE2=$(curl -X POST "${ENDPOINT}" \
   -H "X-Idempotency-Key: ${IDEMPOTENCY_KEY}" \
   -d "{
     \"easypay_code\": \"${VALID_TEST_PIN}\",
-    "settlement_amount": 100.00,
-    "merchant_id": "EP_TEST_001",
-    "transaction_id": "EP_TXN_TEST_003",
-    "terminal_id": "EP_TERMINAL_001"
-  }' \
+    \"settlement_amount\": 100.00,
+    \"merchant_id\": \"EP_TEST_001\",
+    \"transaction_id\": \"EP_TXN_TEST_003\",
+    \"terminal_id\": \"EP_TERMINAL_001\"
+  }" \
   -w "\nHTTP_STATUS:%{http_code}" \
   -s)
 
@@ -133,11 +133,11 @@ curl -X POST "${ENDPOINT}" \
   -H "X-Idempotency-Key: ${CONFLICT_KEY}" \
   -d "{
     \"easypay_code\": \"${VALID_TEST_PIN}\",
-    "settlement_amount": 100.00,
-    "merchant_id": "EP_TEST_001",
-    "transaction_id": "EP_TXN_TEST_004",
-    "terminal_id": "EP_TERMINAL_001"
-  }' \
+    \"settlement_amount\": 100.00,
+    \"merchant_id\": \"EP_TEST_001\",
+    \"transaction_id\": \"EP_TXN_TEST_004\",
+    \"terminal_id\": \"EP_TERMINAL_001\"
+  }" \
   -w "\n\nHTTP Status: %{http_code}\n" \
   -s | jq '.' 2>/dev/null || cat
 echo ""
@@ -149,11 +149,11 @@ curl -X POST "${ENDPOINT}" \
   -H "X-Idempotency-Key: ${CONFLICT_KEY}" \
   -d "{
     \"easypay_code\": \"${VALID_TEST_PIN}\",
-    "settlement_amount": 200.00,
-    "merchant_id": "EP_TEST_001",
-    "transaction_id": "EP_TXN_TEST_004",
-    "terminal_id": "EP_TERMINAL_001"
-  }' \
+    \"settlement_amount\": 200.00,
+    \"merchant_id\": \"EP_TEST_001\",
+    \"transaction_id\": \"EP_TXN_TEST_004\",
+    \"terminal_id\": \"EP_TERMINAL_001\"
+  }" \
   -w "\n\nHTTP Status: %{http_code}\n" \
   -s | jq '.' 2>/dev/null || cat
 echo ""
