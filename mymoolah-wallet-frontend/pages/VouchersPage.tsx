@@ -604,7 +604,7 @@ export function VouchersPage() {
       if (sellVoucherType === 'easypay_voucher') {
         setSuccessModalData({
           title: 'EasyPay Voucher Generated!',
-          message: 'Take this number to any of 8000+ EasyPay retail stores to pay. Once paid, your MyMoolah voucher will be activated automatically.',
+          message: 'Redeemable at any EasyPay merchant.',
           voucherCode: result.data.easypay_code,
           amount: `R ${amount}`,
           type: 'easypay'
