@@ -1359,6 +1359,157 @@ exports.processEasyPaySettlement = async (req, res) => {
   }
 };
 
+// Process EasyPay Standalone Voucher Settlement Callback
+exports.processEasyPayStandaloneVoucherSettlement = async (req, res) => {
+  const requestId = req.requestId || req.headers['x-request-id'];
+  
+  try {
+    const { easypay_code, settlement_amount, merchant_id, transaction_id } = req.body;
+
+    // Validate required fields
+    if (!easypay_code) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'easypay_code is required', requestId);
+    }
+    
+    if (!settlement_amount) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'settlement_amount is required', requestId);
+    }
+    
+    if (!merchant_id) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'merchant_id is required', requestId);
+    }
+    
+    if (!transaction_id) {
+      return sendErrorResponse(res, ERROR_CODES.MISSING_REQUIRED_FIELD, 'transaction_id is required', requestId);
+    }
+
+    // Validate EasyPay PIN format
+    if (!validateEasyPayNumber(easypay_code)) {
+      return sendErrorResponse(res, ERROR_CODES.INVALID_PIN, `Invalid EasyPay PIN format: ${easypay_code}`, requestId);
+    }
+
+    // Validate amount
+    const settlementAmount = parseFloat(settlement_amount);
+    const minAmount = parseFloat(process.env.EASYPAY_VOUCHER_MIN_AMOUNT || '50');
+    const maxAmount = parseFloat(process.env.EASYPAY_VOUCHER_MAX_AMOUNT || '3000');
+    if (isNaN(settlementAmount) || settlementAmount < minAmount || settlementAmount > maxAmount) {
+      return sendErrorResponse(res, ERROR_CODES.INVALID_AMOUNT, `Amount must be between R${minAmount} and R${maxAmount}. Received: R${settlementAmount}`, requestId);
+    }
+
+    // Find the active EasyPay standalone voucher
+    const voucher = await Voucher.findOne({
+      where: {
+        easyPayCode: easypay_code,
+        voucherType: 'easypay_voucher',
+        status: 'active'
+      }
+    });
+
+    if (!voucher) {
+      // Check if voucher exists with different status
+      const debugVoucher = await Voucher.findOne({
+        where: { easyPayCode: easypay_code }
+      });
+      
+      if (debugVoucher) {
+        if (debugVoucher.status === 'redeemed') {
+          return sendErrorResponse(res, ERROR_CODES.VOUCHER_ALREADY_SETTLED, 'This EasyPay voucher has already been settled', requestId);
+        }
+        if (debugVoucher.voucherType !== 'easypay_voucher') {
+          return sendErrorResponse(res, ERROR_CODES.INVALID_FORMAT, `Voucher type mismatch. Expected: easypay_voucher, Found: ${debugVoucher.voucherType}`, requestId);
+        }
+      }
+      
+      return sendErrorResponse(res, ERROR_CODES.PIN_NOT_FOUND, 'EasyPay standalone voucher not found', requestId);
+    }
+    
+    // Check if voucher has expired (96 hours = 4 days)
+    const expiryTime = 96 * 60 * 60 * 1000;
+    const voucherAge = Date.now() - new Date(voucher.createdAt).getTime();
+    if (voucherAge > expiryTime) {
+      return sendErrorResponse(res, ERROR_CODES.PIN_EXPIRED, 'EasyPay PIN has expired. PINs expire after 96 hours (4 days).', requestId);
+    }
+
+    // Verify settlement amount matches voucher amount
+    const voucherAmount = parseFloat(voucher.originalAmount);
+    if (Math.abs(voucherAmount - settlementAmount) > 0.01) {
+      return sendErrorResponse(res, ERROR_CODES.AMOUNT_MISMATCH, 
+        `Settlement amount mismatch. Expected: R${voucherAmount.toFixed(2)}, Received: R${settlementAmount.toFixed(2)}`, 
+        requestId);
+    }
+
+    // Get user's wallet (for audit purposes, wallet already debited on creation)
+    const { Wallet, Transaction } = require('../models');
+    const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
+
+    if (!wallet) {
+      return sendErrorResponse(res, ERROR_CODES.WALLET_NOT_FOUND, 'User wallet not found', requestId);
+    }
+
+    // Create settlement audit transaction (no wallet movement - already debited on creation)
+    const settlementId = `EPVOUCHER-STL-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    await Transaction.create({
+      transactionId: settlementId,
+      userId: voucher.userId,
+      walletId: wallet.walletId,
+      amount: 0, // No wallet movement - already debited on creation
+      type: 'payment',
+      status: 'completed',
+      description: `EasyPay Voucher settled: ${easypay_code}`,
+      currency: 'ZAR',
+      fee: 0,
+      metadata: {
+        voucherId: voucher.id,
+        voucherCode: easypay_code,
+        voucherType: 'easypay_voucher',
+        settlementType: 'easypay_voucher_settlement',
+        voucherAmount: voucherAmount,
+        settlementAmount: settlementAmount,
+        easyPayTransactionId: transaction_id,
+        merchantId: merchant_id,
+        settlementTimestamp: new Date().toISOString(),
+        note: 'Wallet already debited on voucher creation'
+      }
+    });
+
+    // Update voucher as redeemed (consumed)
+    const redeemedAt = new Date().toISOString();
+    await voucher.update({
+      status: 'redeemed', // Consumed
+      voucherType: 'easypay_voucher', // Keep type for tracking
+      balance: 0, // Consumed
+      metadata: {
+        ...voucher.metadata,
+        settlementAmount: settlement_amount,
+        settlementMerchant: merchant_id,
+        settlementTimestamp: redeemedAt,
+        callbackReceived: true,
+        transactionId: transaction_id,
+        settlementTransactionId: settlementId,
+        redeemedAt: redeemedAt // Track when voucher was redeemed
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'EasyPay standalone voucher settled successfully',
+      data: {
+        easypay_code: easypay_code,
+        voucher_amount: voucherAmount,
+        status: 'completed',
+        settlement_transaction_id: settlementId
+      }
+    });
+  } catch (err) {
+    console.error('❌ Process EasyPay standalone voucher settlement error:', err);
+    const requestId = req.requestId || req.headers['x-request-id'];
+    sendErrorResponse(res, ERROR_CODES.INTERNAL_ERROR, 
+      err.message || 'Failed to process standalone voucher settlement', 
+      requestId,
+      { error_type: err.name || 'UnknownError' });
+  }
+};
+
 // Process EasyPay Cash-out Settlement Callback
 exports.processEasyPayCashoutSettlement = async (req, res) => {
   const requestId = req.requestId || req.headers['x-request-id'];

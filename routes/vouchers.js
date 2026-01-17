@@ -31,6 +31,11 @@ router.post('/easypay/cashout/issue', authMiddleware, voucherController.issueEas
 // Issue EasyPay Standalone Voucher (for use at 3rd party merchants)
 router.post('/easypay/voucher/issue', authMiddleware, voucherController.issueEasyPayStandaloneVoucher);
 
+// Process EasyPay Standalone Voucher settlement callback
+// Authentication: API key required (X-API-Key header)
+// Idempotency: Prevents duplicate processing (X-Idempotency-Key header)
+router.post('/easypay/voucher/settlement', easypayAuthMiddleware, idempotencyMiddleware, voucherController.processEasyPayStandaloneVoucherSettlement);
+
 // Process EasyPay Cash-out settlement callback
 // Authentication: API key required (X-API-Key header)
 // Idempotency: Prevents duplicate processing (X-Idempotency-Key header)
