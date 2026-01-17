@@ -1,8 +1,8 @@
 # GCP Staging Deployment - Step-by-Step Checklist
 
-**For**: André (andre@mymoolah.africa)  
-**Project**: mymoolah-db  
-**Date**: January 14, 2026 (Updated for Flash Reconciliation Integration)
+**For**: André (andre@mymoolah.africa)
+**Project**: mymoolah-db
+**Date**: January 16, 2026 (Updated for Markdown PDF Converter & EasyPay Simulation Fix)
 
 ---
 
