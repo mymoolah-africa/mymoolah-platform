@@ -58,6 +58,108 @@ const handleExpiredVouchers = async () => {
           continue; // Skip to next voucher
         }
 
+        // Check if this is an EasyPay standalone voucher - refund voucher + fee
+        const isEasyPayStandaloneVoucher = voucher.voucherType === 'easypay_voucher';
+        
+        if (isEasyPayStandaloneVoucher) {
+          // Get user's wallet
+          const { Wallet, Transaction } = require('../models');
+          const { sequelize } = require('../models');
+          const wallet = await Wallet.findOne({ where: { userId: voucher.userId } });
+          
+          if (!wallet) {
+            console.error(`❌ Wallet not found for user ${voucher.userId}`);
+            continue;
+          }
+
+          const voucherAmount = parseFloat(voucher.originalAmount);
+          const transactionFee = parseFloat(voucher.metadata?.transactionFee || process.env.EASYPAY_VOUCHER_TRANSACTION_FEE || '2.50');
+          const totalRefund = voucherAmount + transactionFee; // Refund voucher + fee
+
+          // Use transaction to ensure atomicity
+          await sequelize.transaction(async (t) => {
+            // Update voucher status to expired
+            await voucher.update({ 
+              status: 'expired',
+              balance: 0,
+              metadata: {
+                ...voucher.metadata,
+                expiredAt: new Date().toISOString(),
+                refundAmount: totalRefund,
+                voucherRefundAmount: voucherAmount,
+                feeRefundAmount: transactionFee,
+                processedBy: 'auto_expiration_handler',
+                refundReason: 'easypay_voucher_expired',
+                note: 'EasyPay voucher expired - full refund (voucher + fee)'
+              }
+            }, { transaction: t });
+
+            // Credit user wallet (voucher + fee)
+            wallet.balance = parseFloat(wallet.balance) + totalRefund;
+            wallet.lastTransactionAt = new Date();
+            await wallet.save({ transaction: t });
+
+            // Create refund transaction 1: Voucher amount
+            const voucherRefundId = `EPVOUCHER-EXP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            await Transaction.create({
+              transactionId: voucherRefundId,
+              userId: voucher.userId,
+              walletId: wallet.walletId,
+              amount: voucherAmount,
+              type: 'refund',
+              status: 'completed',
+              description: 'EasyPay Voucher Refund',
+              currency: 'ZAR',
+              fee: 0,
+              metadata: {
+                voucherId: voucher.id,
+                voucherCode: voucher.easyPayCode,
+                voucherType: 'easypay_voucher',
+                originalAmount: voucherAmount,
+                refundAmount: voucherAmount,
+                expiryDate: voucher.expiresAt,
+                refundReason: 'easypay_voucher_expired',
+                isEasyPayVoucherRefund: true,
+                auditTrail: {
+                  processedAt: new Date().toISOString(),
+                  handler: 'auto_expiration_handler'
+                }
+              }
+            }, { transaction: t });
+
+            // Create refund transaction 2: Fee amount
+            const feeRefundId = `FEE-EXP-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            await Transaction.create({
+              transactionId: feeRefundId,
+              userId: voucher.userId,
+              walletId: wallet.walletId,
+              amount: transactionFee,
+              type: 'refund',
+              status: 'completed',
+              description: 'Transaction Fee Refund',
+              currency: 'ZAR',
+              fee: 0,
+              metadata: {
+                voucherId: voucher.id,
+                voucherCode: voucher.easyPayCode,
+                voucherType: 'easypay_voucher',
+                feeRefundAmount: transactionFee,
+                expiryDate: voucher.expiresAt,
+                refundReason: 'easypay_voucher_expired',
+                isEasyPayVoucherFeeRefund: true,
+                relatedTransactionId: voucherRefundId,
+                auditTrail: {
+                  processedAt: new Date().toISOString(),
+                  handler: 'auto_expiration_handler'
+                }
+              }
+            }, { transaction: t });
+          });
+
+          console.log(`✅ Processed expired EasyPay voucher ${voucher.easyPayCode}: Refunded R${totalRefund} (Voucher: R${voucherAmount} + Fee: R${transactionFee})`);
+          continue; // Skip to next voucher
+        }
+
         // Check if this is a cash-out voucher - refund voucher + fee
         const isCashoutVoucher = voucher.voucherType === 'easypay_cashout' || voucher.voucherType === 'easypay_cashout_active';
         
@@ -883,6 +985,162 @@ exports.issueEasyPayCashout = async (req, res) => {
   } catch (err) {
     console.error('❌ Issue EasyPay cash-out voucher error:', err);
     res.status(500).json({ error: err.message || 'Failed to create EasyPay cash-out voucher' });
+  }
+};
+
+// Issue EasyPay Standalone Voucher (for use at 3rd party merchants like EasyBet)
+exports.issueEasyPayStandaloneVoucher = async (req, res) => {
+  try {
+    const voucherData = req.body;
+
+    // Validate required fields
+    if (!voucherData.original_amount) {
+      return res.status(400).json({ error: 'Amount is required' });
+    }
+
+    // Validate amount (50-3000 for EasyPay voucher)
+    const amount = Number(voucherData.original_amount);
+    const minAmount = parseFloat(process.env.EASYPAY_VOUCHER_MIN_AMOUNT || '50');
+    const maxAmount = parseFloat(process.env.EASYPAY_VOUCHER_MAX_AMOUNT || '3000');
+    
+    if (isNaN(amount) || amount < minAmount || amount > maxAmount) {
+      return res.status(400).json({ 
+        error: `Amount must be between R${minAmount} and R${maxAmount}` 
+      });
+    }
+
+    // Get transaction fee (R2.50 default)
+    const transactionFee = parseFloat(process.env.EASYPAY_VOUCHER_TRANSACTION_FEE || '2.50');
+    const totalRequired = amount + transactionFee;
+
+    // Get user's wallet
+    const { Wallet, Transaction } = require('../models');
+    const { sequelize } = require('../models');
+    const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+
+    if (!wallet) {
+      return res.status(404).json({ error: 'User wallet not found' });
+    }
+
+    if (wallet.status !== 'active') {
+      return res.status(400).json({ error: 'Wallet is not active' });
+    }
+
+    // Check wallet balance
+    if (parseFloat(wallet.balance) < totalRequired) {
+      return res.status(400).json({ 
+        error: `Insufficient balance. Required: R${totalRequired.toFixed(2)} (Voucher: R${amount.toFixed(2)} + Fee: R${transactionFee.toFixed(2)}). Available: R${parseFloat(wallet.balance).toFixed(2)}` 
+      });
+    }
+
+    // Generate EasyPay number (14-digit PIN)
+    const easyPayCode = generateEasyPayNumber();
+
+    // Set expiration (96 hours from now - 4 days)
+    const expiryHours = parseFloat(process.env.EASYPAY_VOUCHER_EXPIRY_HOURS || '96');
+    const expiresAt = new Date(Date.now() + expiryHours * 60 * 60 * 1000);
+
+    try {
+      // Use transaction to ensure atomicity
+      const result = await sequelize.transaction(async (t) => {
+        // Debit user wallet (voucher amount + fee)
+        await wallet.debit(totalRequired, 'easypay_voucher_creation', { transaction: t });
+
+        // Create EasyPay standalone voucher (active immediately, like MMVoucher)
+        const voucher = await Voucher.create({
+          userId: req.user.id,
+          voucherCode: easyPayCode,
+          easyPayCode,
+          originalAmount: amount,
+          balance: amount, // Full amount available
+          status: 'active', // Active immediately, NOT pending
+          voucherType: 'easypay_voucher', // New distinct type
+          expiresAt,
+          metadata: {
+            issuedTo: voucherData.issued_to || 'self',
+            issuedBy: 'system',
+            description: voucherData.description || null,
+            merchant: voucherData.merchant || null,
+            transactionFee: transactionFee,
+            feeType: 'user_charged', // For future commission model
+            commissionRate: null, // For future use
+            redemptionCommission: null // For future use
+          }
+        }, { transaction: t });
+
+        // Create transaction 1: Voucher purchase debit
+        const voucherTransactionId = `EPVOUCHER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await Transaction.create({
+          transactionId: voucherTransactionId,
+          userId: req.user.id,
+          walletId: wallet.walletId,
+          amount: -amount, // Negative for debit
+          type: 'payment',
+          status: 'completed',
+          description: `EasyPay Voucher: ${easyPayCode}`,
+          currency: 'ZAR',
+          fee: 0, // Fee shown as separate transaction
+          metadata: {
+            voucherId: voucher.id,
+            voucherCode: easyPayCode,
+            voucherType: 'easypay_voucher',
+            operationType: 'easypay_voucher_creation',
+            isEasyPayVoucher: true
+          }
+        }, { transaction: t });
+
+        // Create transaction 2: Transaction fee debit
+        const feeTransactionId = `FEE-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        await Transaction.create({
+          transactionId: feeTransactionId,
+          userId: req.user.id,
+          walletId: wallet.walletId,
+          amount: -transactionFee, // Negative for debit
+          type: 'payment',
+          status: 'completed',
+          description: 'Transaction Fee',
+          currency: 'ZAR',
+          fee: 0,
+          metadata: {
+            voucherId: voucher.id,
+            voucherCode: easyPayCode,
+            voucherType: 'easypay_voucher',
+            operationType: 'easypay_voucher_fee',
+            feeAmount: transactionFee,
+            isEasyPayVoucherFee: true,
+            isTransactionFee: true,
+            relatedTransactionId: voucherTransactionId
+          }
+        }, { transaction: t });
+
+        return { voucher, voucherTransactionId, feeTransactionId };
+      });
+
+      const { voucher } = result;
+
+      // Reload wallet to get updated balance
+      await wallet.reload();
+
+      res.status(201).json({
+        success: true,
+        message: 'EasyPay voucher created successfully',
+        data: {
+          easypay_code: voucher.easyPayCode,
+          amount: voucher.originalAmount,
+          transaction_fee: transactionFee,
+          total_debited: totalRequired,
+          expires_at: voucher.expiresAt,
+          wallet_balance: wallet.balance,
+          voucher_id: voucher.id
+        }
+      });
+    } catch (error) {
+      console.error('❌ Error in EasyPay voucher creation:', error);
+      res.status(500).json({ error: 'Database error during EasyPay voucher creation. Please try again.' });
+    }
+  } catch (err) {
+    console.error('❌ Issue EasyPay voucher error:', err);
+    res.status(500).json({ error: err.message || 'Failed to create EasyPay voucher' });
   }
 };
 
@@ -1852,6 +2110,9 @@ exports.cancelEasyPayVoucher = async (req, res) => {
     // Check if this is a top-up voucher - no wallet credit needed (wallet was never debited)
     const isTopUpVoucher = voucher.voucherType === 'easypay_topup' || voucher.voucherType === 'easypay_topup_active';
     
+    // Check if this is an EasyPay standalone voucher - needs voucher + fee refund
+    const isEasyPayStandaloneVoucher = voucher.voucherType === 'easypay_voucher';
+    
     if (isTopUpVoucher) {
       // For top-up vouchers, just mark as cancelled - no wallet credit (no debit was made)
       await voucher.update({ 
@@ -1887,9 +2148,131 @@ exports.cancelEasyPayVoucher = async (req, res) => {
       });
     }
 
-    // For regular EasyPay vouchers (not top-up), proceed with refund
+    // For EasyPay standalone vouchers, proceed with voucher + fee refund
+    if (isEasyPayStandaloneVoucher) {
+      // Get user's wallet
+      const { Wallet, Transaction } = require('../models');
+      const { sequelize } = require('../models');
+      const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+      
+      if (!wallet) {
+        return res.status(404).json({ error: 'User wallet not found' });
+      }
+
+      const voucherAmount = parseFloat(voucher.originalAmount);
+      const transactionFee = parseFloat(voucher.metadata?.transactionFee || process.env.EASYPAY_VOUCHER_TRANSACTION_FEE || '2.50');
+      const totalRefund = voucherAmount + transactionFee;
+
+      try {
+        // Use transaction to ensure atomicity
+        const result = await sequelize.transaction(async (t) => {
+          // Update voucher status to cancelled
+          await voucher.update({ 
+            status: 'cancelled',
+            balance: 0,
+            metadata: {
+              ...voucher.metadata,
+              cancelledAt: new Date().toISOString(),
+              cancellationReason: 'user_requested',
+              cancelledBy: req.user.id,
+              refundAmount: totalRefund,
+              voucherRefundAmount: voucherAmount,
+              feeRefundAmount: transactionFee,
+              auditTrail: {
+                action: 'easypay_voucher_cancellation',
+                userInitiated: true,
+                processedAt: new Date().toISOString(),
+                originalStatus: voucher.status,
+                newStatus: 'cancelled'
+              }
+            }
+          }, { transaction: t });
+
+          // Credit user's wallet with full refund (voucher + fee)
+          await wallet.credit(totalRefund, 'easypay_voucher_cancellation_refund', { transaction: t });
+        
+          // Create refund transaction 1: Voucher amount
+          const voucherRefundId = `EPVOUCHER-REF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          await Transaction.create({
+            transactionId: voucherRefundId,
+            userId: req.user.id,
+            walletId: wallet.walletId,
+            amount: voucherAmount,
+            type: 'refund',
+            status: 'completed',
+            description: 'EasyPay Voucher Refund',
+            currency: 'ZAR',
+            fee: 0,
+            metadata: {
+              voucherId: voucher.id,
+              voucherCode: voucher.easyPayCode,
+              voucherType: 'easypay_voucher',
+              refundAmount: voucherAmount,
+              cancellationReason: 'user_requested',
+              isEasyPayVoucherRefund: true,
+              cancelledAt: new Date().toISOString()
+            }
+          }, { transaction: t });
+
+          // Create refund transaction 2: Fee amount
+          const feeRefundId = `FEE-REF-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+          await Transaction.create({
+            transactionId: feeRefundId,
+            userId: req.user.id,
+            walletId: wallet.walletId,
+            amount: transactionFee,
+            type: 'refund',
+            status: 'completed',
+            description: 'Transaction Fee Refund',
+            currency: 'ZAR',
+            fee: 0,
+            metadata: {
+              voucherId: voucher.id,
+              voucherCode: voucher.easyPayCode,
+              voucherType: 'easypay_voucher',
+              feeRefundAmount: transactionFee,
+              cancellationReason: 'user_requested',
+              isEasyPayVoucherFeeRefund: true,
+              relatedTransactionId: voucherRefundId,
+              cancelledAt: new Date().toISOString()
+            }
+          }, { transaction: t });
+
+          console.log(`✅ EasyPay voucher cancelled: ${voucher.easyPayCode}, Refunded: R${totalRefund} (Voucher: R${voucherAmount} + Fee: R${transactionFee})`);
+          
+          return { voucherRefundId, feeRefundId };
+        });
+
+        // Reload wallet to get updated balance
+        await wallet.reload();
+
+        res.json({
+          success: true,
+          message: 'EasyPay voucher cancelled successfully',
+          data: {
+            voucherId: voucher.id,
+            easyPayCode: voucher.easyPayCode,
+            originalAmount: voucher.originalAmount,
+            transactionFee: transactionFee,
+            refundAmount: totalRefund,
+            newWalletBalance: wallet.balance,
+            cancelledAt: new Date().toISOString()
+          }
+        });
+
+      } catch (error) {
+        console.error('❌ Error cancelling EasyPay voucher:', error);
+        res.status(500).json({ 
+          error: 'Failed to cancel voucher. Please try again.' 
+        });
+      }
+      return; // Exit early for standalone voucher
+    }
+
+    // For regular EasyPay vouchers (not top-up, not standalone), proceed with refund
     // Get user's wallet
     const { Wallet, Transaction } = require('../models');
+    const { sequelize } = require('../models');
     const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
     
     if (!wallet) {

@@ -227,17 +227,15 @@ export function VouchersPage() {
         mainCode: `${paddedCode.substring(0, 4)} ${paddedCode.substring(4, 8)} ${paddedCode.substring(8, 12)} ${paddedCode.substring(12, 16)}`
       };
     } else if (voucher.type === 'easypay_voucher') {
-      // For EasyPay vouchers, check status
-      if (voucher.status === 'pending_payment') {
-        // Pending EasyPay voucher - show only EasyPay number
-        if (voucher.easyPayNumber) {
-          const epNumber = voucher.easyPayNumber;
-          return {
-            mainCode: `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`
-          };
-        }
-        return { mainCode: voucher.voucherCode };
-      } else if (voucher.status === 'active' || voucher.status === 'redeemed') {
+      // For EasyPay vouchers, format 14-digit PIN as x xxxx xxxx xxxx x
+      if (voucher.easyPayNumber || voucher.voucherCode) {
+        const epNumber = voucher.easyPayNumber || voucher.voucherCode;
+        // Format as: x xxxx xxxx xxxx x (14 digits)
+        return {
+          mainCode: `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`
+        };
+      }
+      return { mainCode: voucher.voucherCode }; else if (voucher.status === 'active' || voucher.status === 'redeemed') {
         // Active or Redeemed EasyPay voucher - show MMVoucher code as main, EasyPay as sub
         if (voucher.voucherCode && voucher.voucherCode.length >= 16) {
           // Has MMVoucher code - show it as main
@@ -557,8 +555,8 @@ export function VouchersPage() {
     
     // Validate amount based on voucher type
     if (sellVoucherType === 'easypay_voucher') {
-      if (amount < 50 || amount > 4000) {
-        setValidationErrorMessage('EasyPay vouchers must be between R 50 and R 4000');
+      if (amount < 50 || amount > 3000) {
+        setValidationErrorMessage('EasyPay vouchers must be between R 50 and R 3000');
         setShowValidationErrorModal(true);
         return;
       }
@@ -575,7 +573,7 @@ export function VouchersPage() {
     try {
       // Determine API endpoint based on voucher type
       const apiEndpoint = sellVoucherType === 'easypay_voucher' 
-        ? `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/issue`
+        ? `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/voucher/issue`
         : `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/issue`;
 
       // Call backend API to issue voucher
@@ -1897,7 +1895,8 @@ export function VouchersPage() {
                     </Label>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
                       {[
-                        { id: 'mm_voucher', name: 'MyMoolah Voucher', desc: 'Redeemable at MyMoolah network and partner retailers', icon: <Wallet style={{ width: '20px', height: '20px' }} /> }
+                        { id: 'mm_voucher', name: 'MyMoolah Voucher', desc: 'Redeemable at MyMoolah network and partner retailers', icon: <Wallet style={{ width: '20px', height: '20px' }} /> },
+                        { id: 'easypay_voucher', name: 'EasyPay Voucher', desc: 'Use at EasyBet and other 3rd party merchants', icon: <Ticket style={{ width: '20px', height: '20px' }} /> }
                       ].map((type) => (
                         <button
                           key={type.id}
@@ -3477,7 +3476,7 @@ export function VouchersPage() {
                 </p>
                 <p 
                   style={{
-                    fontFamily: 'Montserrat, sans-serif',
+                    fontFamily: 'monospace',
                     fontSize: '18px',
                     fontWeight: '700',
                     color: '#1f2937',
@@ -3485,7 +3484,9 @@ export function VouchersPage() {
                     letterSpacing: '1px'
                   }}
                 >
-                  {successModalData.voucherCode}
+                  {successModalData.type === 'easypay' && successModalData.voucherCode
+                    ? `${successModalData.voucherCode.substring(0, 1)} ${successModalData.voucherCode.substring(1, 5)} ${successModalData.voucherCode.substring(5, 9)} ${successModalData.voucherCode.substring(9, 13)} ${successModalData.voucherCode.substring(13, 14)}`
+                    : successModalData.voucherCode}
                 </p>
               </div>
             )}

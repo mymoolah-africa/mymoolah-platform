@@ -42,7 +42,7 @@ module.exports = (sequelize) => {
       defaultValue: 'pending'
     },
     voucherType: {
-      type: DataTypes.ENUM('standard', 'premium', 'business', 'corporate', 'student', 'senior', 'easypay_pending', 'easypay_active', 'easypay_topup', 'easypay_topup_active', 'easypay_cashout', 'easypay_cashout_active'),
+      type: DataTypes.ENUM('standard', 'premium', 'business', 'corporate', 'student', 'senior', 'easypay_pending', 'easypay_active', 'easypay_topup', 'easypay_topup_active', 'easypay_cashout', 'easypay_cashout_active', 'easypay_voucher'),
       allowNull: false,
       defaultValue: 'standard'
     },
@@ -111,7 +111,12 @@ module.exports = (sequelize) => {
            this.voucherType === 'easypay_topup' ||
            this.voucherType === 'easypay_topup_active' ||
            this.voucherType === 'easypay_cashout' ||
-           this.voucherType === 'easypay_cashout_active';
+           this.voucherType === 'easypay_cashout_active' ||
+           this.voucherType === 'easypay_voucher';
+  };
+
+  Voucher.prototype.isEasyPayStandaloneVoucher = function() {
+    return this.voucherType === 'easypay_voucher';
   };
 
   Voucher.prototype.isPendingEasyPay = function() {

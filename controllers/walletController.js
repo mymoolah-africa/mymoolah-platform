@@ -514,6 +514,7 @@ class WalletController {
       // Combine voucher refund + fee refund into ONE transaction showing total refund
       if (isDashboard) {
         const cashoutRefundGroups = new Map();
+        const epVoucherRefundGroups = new Map();
         const otherTransactions = [];
         
         normalizedRows.forEach(tx => {
@@ -541,6 +542,26 @@ class WalletController {
             } else if (metadata.isCashoutFeeRefund) {
               group.feeRefund = tx;
             }
+          } else if (tx.type === 'refund' && 
+              (metadata.isEasyPayVoucherRefund || metadata.isEasyPayVoucherFeeRefund) &&
+              metadata.voucherId) {
+            // Check if this is an EasyPay voucher refund transaction
+            const groupKey = metadata.voucherId;
+            
+            if (!epVoucherRefundGroups.has(groupKey)) {
+              epVoucherRefundGroups.set(groupKey, {
+                voucherRefund: null,
+                feeRefund: null,
+                createdAt: tx.createdAt
+              });
+            }
+            
+            const group = epVoucherRefundGroups.get(groupKey);
+            if (metadata.isEasyPayVoucherRefund) {
+              group.voucherRefund = tx;
+            } else if (metadata.isEasyPayVoucherFeeRefund) {
+              group.feeRefund = tx;
+            }
           } else {
             otherTransactions.push(tx);
           }
@@ -548,6 +569,8 @@ class WalletController {
         
         // Combine grouped refunds into single transactions
         const combinedRefunds = [];
+        
+        // Process cash-out refunds
         cashoutRefundGroups.forEach((group, groupKey) => {
           if (group.voucherRefund && group.feeRefund) {
             // Combine both refunds into one transaction
@@ -556,6 +579,32 @@ class WalletController {
               ...group.voucherRefund,
               amount: totalRefund,
               description: `Cash-out @ EasyPay cancelled - refund: ${group.voucherRefund.metadata?.voucherCode || ''}`,
+              metadata: {
+                ...group.voucherRefund.metadata,
+                combinedRefund: true,
+                voucherRefundAmount: parseFloat(group.voucherRefund.amount),
+                feeRefundAmount: parseFloat(group.feeRefund.amount),
+                totalRefundAmount: totalRefund
+              }
+            });
+          } else if (group.voucherRefund) {
+            // Only voucher refund found (shouldn't happen, but handle gracefully)
+            combinedRefunds.push(group.voucherRefund);
+          } else if (group.feeRefund) {
+            // Only fee refund found (shouldn't happen, but handle gracefully)
+            combinedRefunds.push(group.feeRefund);
+          }
+        });
+        
+        // Process EasyPay voucher refunds
+        epVoucherRefundGroups.forEach((group, groupKey) => {
+          if (group.voucherRefund && group.feeRefund) {
+            // Combine both refunds into one transaction
+            const totalRefund = parseFloat(group.voucherRefund.amount) + parseFloat(group.feeRefund.amount);
+            combinedRefunds.push({
+              ...group.voucherRefund,
+              amount: totalRefund,
+              description: `EasyPay Voucher refund: ${group.voucherRefund.metadata?.voucherCode || ''}`,
               metadata: {
                 ...group.voucherRefund.metadata,
                 combinedRefund: true,
@@ -638,13 +687,14 @@ class WalletController {
           return false;
         }
         
-        // Dashboard: Exclude Transaction Fees (for top-up and cash-out transactions)
-        // Also exclude individual cash-out fee refunds (they're combined with voucher refund)
+        // Dashboard: Exclude Transaction Fees (for top-up, cash-out, and EasyPay voucher transactions)
+        // Also exclude individual fee refunds (they're combined with voucher refund)
         // Transactions page: Keep Transaction Fees
         if (isDashboard && (
           desc === 'transaction fee' || 
-          (tx.metadata && (tx.metadata.isTopUpFee || tx.metadata.isCashoutFee)) ||
-          (tx.metadata && tx.metadata.isCashoutFeeRefund && !tx.metadata.combinedRefund) // Exclude individual fee refunds (already combined)
+          (tx.metadata && (tx.metadata.isTopUpFee || tx.metadata.isCashoutFee || tx.metadata.isEasyPayVoucherFee)) ||
+          (tx.metadata && tx.metadata.isCashoutFeeRefund && !tx.metadata.combinedRefund) || // Exclude individual cash-out fee refunds (already combined)
+          (tx.metadata && tx.metadata.isEasyPayVoucherFeeRefund && !tx.metadata.combinedRefund) // Exclude individual EasyPay voucher fee refunds (already combined)
         )) {
           return false;
         }
