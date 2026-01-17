@@ -973,12 +973,20 @@ export function VouchersPage() {
       setSimulatingVoucherId(voucher.id);
       setError(null);
 
-      // Determine if this is a cash-out or top-up voucher
+      // Determine voucher type and endpoint
       // Check voucherType directly (more reliable than description)
       const isCashout = voucher.voucherType === 'easypay_cashout' || voucher.voucherType === 'easypay_cashout_active';
-      const endpoint = isCashout 
-        ? `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/cashout/settlement`
-        : `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/topup/settlement`;
+      const isStandalone = voucher.voucherType === 'easypay_voucher';
+      
+      let endpoint;
+      if (isCashout) {
+        endpoint = `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/cashout/settlement`;
+      } else if (isStandalone) {
+        endpoint = `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/voucher/settlement`;
+      } else {
+        // Top-up voucher
+        endpoint = `${APP_CONFIG.API.baseUrl}/api/v1/vouchers/easypay/topup/settlement`;
+      }
 
       // Call settlement endpoint to simulate EasyPay payment
       const response = await fetch(endpoint, {
@@ -1017,9 +1025,14 @@ export function VouchersPage() {
         z-index: 9999;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       `;
-      const successMessage = isCashout
-        ? `Settlement simulated! Cash-out voucher redeemed.`
-        : `Settlement simulated! Wallet credited with R${result.data?.net_amount?.toFixed(2) || voucher.originalAmount.toFixed(2)}`;
+      let successMessage;
+      if (isCashout) {
+        successMessage = `Settlement simulated! Cash-out voucher redeemed.`;
+      } else if (isStandalone) {
+        successMessage = `Settlement simulated! EasyPay voucher redeemed at merchant.`;
+      } else {
+        successMessage = `Settlement simulated! Wallet credited with R${result.data?.net_amount?.toFixed(2) || voucher.originalAmount.toFixed(2)}`;
+      }
       successToast.textContent = successMessage;
       document.body.appendChild(successToast);
       setTimeout(() => {
@@ -1756,8 +1769,11 @@ export function VouchersPage() {
                             
                             {/* Action Buttons */}
                             <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                              {/* Simulate Button (UAT only) - Only show for pending_payment */}
-                              {isUATEnvironment() && voucher.status === 'pending_payment' && (
+                              {/* Simulate Button (UAT only) - Show for pending_payment (top-up/cash-out) or active (standalone) */}
+                              {isUATEnvironment() && (
+                                (voucher.status === 'pending_payment') || 
+                                (voucher.status === 'active' && voucher.voucherType === 'easypay_voucher')
+                              ) && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -2930,8 +2946,11 @@ export function VouchersPage() {
                             
                             {/* Action Buttons */}
                             <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                              {/* Simulate Button (UAT only) - Only show for pending_payment */}
-                              {isUATEnvironment() && voucher.status === 'pending_payment' && (
+                              {/* Simulate Button (UAT only) - Show for pending_payment (top-up/cash-out) or active (standalone) */}
+                              {isUATEnvironment() && (
+                                (voucher.status === 'pending_payment') || 
+                                (voucher.status === 'active' && voucher.voucherType === 'easypay_voucher')
+                              ) && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
