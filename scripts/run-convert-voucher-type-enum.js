@@ -94,13 +94,35 @@ async function runMigration() {
       }
 
       // Convert to ENUM using ALTER COLUMN
+      // Note: This requires table owner or superuser permissions
       console.log('   Converting column type to ENUM...');
-      await client.query(`
-        ALTER TABLE vouchers
-        ALTER COLUMN "voucherType" TYPE "enum_vouchers_voucherType"
-        USING "voucherType"::text::"enum_vouchers_voucherType";
-      `);
-      console.log('   ✅ Column type converted\n');
+      console.log('   ⚠️  This operation requires table owner permissions');
+      
+      try {
+        await client.query(`
+          ALTER TABLE vouchers
+          ALTER COLUMN "voucherType" TYPE "enum_vouchers_voucherType"
+          USING "voucherType"::text::"enum_vouchers_voucherType";
+        `);
+        console.log('   ✅ Column type converted\n');
+      } catch (error) {
+        if (error.message.includes('must be owner') || error.message.includes('permission denied')) {
+          console.log('   ⚠️  Permission denied: User does not have table owner permissions');
+          console.log('   📝 The ENUM type has been created successfully');
+          console.log('   📝 The easypay_voucher value exists in the ENUM');
+          console.log('   📝 However, the column conversion requires database admin privileges');
+          console.log('\n   💡 Next steps:');
+          console.log('      1. Ask database admin to run this SQL:');
+          console.log('         ALTER TABLE vouchers');
+          console.log('         ALTER COLUMN "voucherType" TYPE "enum_vouchers_voucherType"');
+          console.log('         USING "voucherType"::text::"enum_vouchers_voucherType";');
+          console.log('      2. Or connect as postgres superuser and run this script again');
+          console.log('\n   ⚠️  Until the column is converted, the application will still work');
+          console.log('       but voucherType will remain VARCHAR in the database.\n');
+          throw error;
+        }
+        throw error;
+      }
 
       // Set default value
       console.log('   Setting default value...');
