@@ -235,7 +235,9 @@ export function VouchersPage() {
           mainCode: `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`
         };
       }
-      return { mainCode: voucher.voucherCode }; else if (voucher.status === 'active' || voucher.status === 'redeemed') {
+      
+      // If no EasyPay number, check status
+      if (voucher.status === 'active' || voucher.status === 'redeemed') {
         // Active or Redeemed EasyPay voucher - show MMVoucher code as main, EasyPay as sub
         if (voucher.voucherCode && voucher.voucherCode.length >= 16) {
           // Has MMVoucher code - show it as main
