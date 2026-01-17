@@ -631,6 +631,15 @@ export function VouchersPage() {
         return;
       }
 
+      // Business rule: EasyPay codes (14 digits) cannot be redeemed in the wallet
+      // They can only be used at EasyPay merchants
+      const cleanedCode = cleanVoucherCode(redeemCode.trim());
+      if (cleanedCode.length === 14) {
+        setError('EasyPay vouchers (14-digit PINs) cannot be redeemed in the wallet. They can only be used as payment at EasyPay merchants.');
+        setIsLoading(false);
+        return;
+      }
+
       // Call backend API to redeem voucher
       const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/vouchers/redeem`, {
         method: 'POST',
@@ -3588,7 +3597,7 @@ export function VouchersPage() {
             }}>
               Cancel this EasyPay voucher?
             </AlertDialogTitle>
-            <div style={{
+            <AlertDialogDescription style={{
               fontFamily: 'Montserrat, sans-serif',
               fontSize: '14px',
               color: '#6b7280',
@@ -3642,7 +3651,7 @@ export function VouchersPage() {
               ) : (
                 'Loading voucher details...'
               )}
-            </div>
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter style={{
             display: 'flex',
