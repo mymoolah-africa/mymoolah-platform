@@ -16,21 +16,29 @@ async function checkEnum() {
     const dbUser = process.env.DB_USER || 'mymoolah_app';
     const dbPassword = process.env.DB_PASSWORD;
     const dbHost = process.env.DB_HOST || '127.0.0.1';
-    const dbPort = process.env.PROXY_PORT || '6543';
+    const dbPort = process.env.PROXY_PORT || process.env.DB_PORT || '6543';
     const dbName = process.env.DB_NAME || 'mymoolah';
     
     if (!dbPassword) {
       console.error('❌ DB_PASSWORD or DATABASE_URL must be set');
+      console.error('   Please ensure .env file is loaded or DATABASE_URL is set');
       process.exit(1);
     }
     
-    // URL encode password
+    // URL encode password (handle special characters)
     const encodedPassword = encodeURIComponent(dbPassword);
     databaseUrl = `postgres://${dbUser}:${encodedPassword}@${dbHost}:${dbPort}/${dbName}?sslmode=disable`;
+    console.log(`📋 Constructed DATABASE_URL (host: ${dbHost}, port: ${dbPort})`);
+  } else {
+    console.log('📋 Using DATABASE_URL from environment');
   }
   
   const sequelize = new Sequelize(databaseUrl, {
-    logging: false
+    logging: false,
+    dialect: 'postgres',
+    dialectOptions: {
+      ssl: false
+    }
   });
   
   try {
