@@ -31,45 +31,11 @@ class SettingsController {
       // Get available services list - SINGLE SOURCE OF TRUTH from TransactPage
       // Organized by type groups: Active services first, then Coming Soon services
       const availableServices = [
-        // ===== ACTIVE SERVICES =====
-        // Payments & Transfers (Active)
-        {
-          id: 'send-money',
-          name: 'Pay Beneficiary',
-          description: 'Transfer money to MyMoolah users or bank accounts',
-          category: 'payment',
-          available: true,
-          comingSoon: false
-        },
-        {
-          id: 'request-money',
-          name: 'Request Money',
-          description: 'Request payment from MyMoolah users or bank accounts',
-          category: 'payment',
-          available: true,
-          comingSoon: false
-        },
-        {
-          id: 'qr-scan',
-          name: 'Scan QR to Pay',
-          description: 'Pay merchants by scanning QR codes',
-          category: 'payment',
-          available: true,
-          comingSoon: false
-        },
-        // Bills & Utilities (Active)
+        // ===== ACTIVE SERVICES (Alphabetical) =====
         {
           id: 'airtime-data',
           name: 'Airtime & Data',
           description: 'Purchase Airtime & Data with AI-powered best deals',
-          category: 'utility',
-          available: true,
-          comingSoon: false
-        },
-        {
-          id: 'electricity',
-          name: 'Electricity & Water',
-          description: 'Pay your utility bills quickly',
           category: 'utility',
           available: true,
           comingSoon: false
@@ -83,14 +49,61 @@ class SettingsController {
           comingSoon: false
         },
         {
-          id: 'insurance',
-          name: 'Insurance',
-          description: 'Pay insurance premiums',
+          id: 'cashout-easypay',
+          name: 'Cash-out at EasyPay',
+          description: 'Cash-out vouchers for EasyPay store withdrawal',
+          category: 'payment',
+          available: true,
+          comingSoon: false
+        },
+        {
+          id: 'electricity',
+          name: 'Electricity & Water',
+          description: 'Pay your utility bills quickly',
           category: 'utility',
           available: true,
           comingSoon: false
         },
-        // Vouchers & Digital Services (Active)
+        {
+          id: 'flash-eezicash',
+          name: 'Cash-out at Flash',
+          description: 'eeziCash vouchers for instant cash withdrawal',
+          category: 'payment',
+          available: true,
+          comingSoon: false
+        },
+        {
+          id: 'qr-scan',
+          name: 'Scan QR to Pay',
+          description: 'Pay merchants by scanning QR codes',
+          category: 'payment',
+          available: true,
+          comingSoon: false
+        },
+        {
+          id: 'request-money',
+          name: 'Request Money',
+          description: 'Request payment from MyMoolah users or bank accounts',
+          category: 'payment',
+          available: true,
+          comingSoon: false
+        },
+        {
+          id: 'send-money',
+          name: 'Pay Beneficiary',
+          description: 'Transfer money to MyMoolah users or bank accounts',
+          category: 'payment',
+          available: true,
+          comingSoon: false
+        },
+        {
+          id: 'topup-easypay',
+          name: 'Top-up at EasyPay',
+          description: 'Create top-up request, pay at EasyPay, get money in wallet',
+          category: 'payment',
+          available: true,
+          comingSoon: false
+        },
         {
           id: 'vouchers',
           name: 'Vouchers',
@@ -99,31 +112,29 @@ class SettingsController {
           available: true,
           comingSoon: false
         },
-        // ===== COMING SOON SERVICES =====
-        // Payments & Transfers (Coming Soon)
+        // ===== COMING SOON SERVICES (Alphabetical) =====
         {
-          id: 'wallet-withdraw',
-          name: 'Cash Withdrawal',
-          description: 'Get cash at Flash traders or Formal retail brands',
+          id: 'atm-cashsend',
+          name: 'ATM Cash Send',
+          description: 'Send cash vouchers for ATM withdrawal',
           category: 'payment',
-          available: true,
-          comingSoon: true
-        },
-        // Digital Services (Coming Soon)
-        {
-          id: 'gaming',
-          name: 'Gaming Credits',
-          description: 'Top up gaming accounts',
-          category: 'digital',
-          available: true,
+          available: false,
           comingSoon: true
         },
         {
-          id: 'streaming',
-          name: 'Streaming Services',
-          description: 'Pay for Netflix, Spotify, etc.',
-          category: 'digital',
-          available: true,
+          id: 'loyalty',
+          name: 'Rewards Program',
+          description: 'Cashback deals and special offers',
+          category: 'loyalty',
+          available: false,
+          comingSoon: true
+        },
+        {
+          id: 'mmcash-retail',
+          name: 'Cash-out at Retail',
+          description: 'MMCash vouchers for retail partner cash-out',
+          category: 'payment',
+          available: false,
           comingSoon: true
         }
       ];

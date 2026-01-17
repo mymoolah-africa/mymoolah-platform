@@ -22,7 +22,8 @@ import {
   MessageSquare,
   DollarSign,
   Store,
-  AtSign
+  AtSign,
+  Star
 } from "lucide-react";
 
 interface NavItem {
@@ -61,11 +62,17 @@ const serviceMapping = {
     label: 'Scan QR to Pay',
     icon: () => <QrCode style={{ width: '20px', height: '20px' }} />
   },
-  'wallet-withdraw': {
-    id: 'wallet-withdraw',
-    path: '/service-cash_withdrawal',
-    label: 'Cash Withdrawal',
-    icon: () => <Banknote style={{ width: '20px', height: '20px' }} />
+  'topup-easypay': {
+    id: 'topup-easypay',
+    path: '/topup-easypay',
+    label: 'Top-up at EasyPay',
+    icon: () => <Wallet style={{ width: '20px', height: '20px' }} />
+  },
+  'cashout-easypay': {
+    id: 'cashout-easypay',
+    path: '/cashout-easypay',
+    label: 'Cash-out at EasyPay',
+    icon: () => <DollarSign style={{ width: '20px', height: '20px' }} />
   },
   'airtime-data': {
     id: 'airtime-data',
@@ -85,29 +92,17 @@ const serviceMapping = {
     label: 'Bill Payments',
     icon: () => <Receipt style={{ width: '20px', height: '20px' }} />
   },
-  'insurance': {
-    id: 'insurance',
-    path: '/services',
-    label: 'Insurance',
-    icon: () => <Home style={{ width: '20px', height: '20px' }} />
-  },
   'vouchers': {
     id: 'vouchers',
     path: '/vouchers',
     label: 'Vouchers',
     icon: () => <Ticket style={{ width: '20px', height: '20px' }} />
   },
-  'gaming': {
-    id: 'gaming',
-    path: '/service-gaming',
-    label: 'Gaming Credits',
-    icon: () => <CreditCard style={{ width: '20px', height: '20px' }} />
-  },
-  'streaming': {
-    id: 'streaming',
-    path: '/service-streaming',
-    label: 'Streaming Services',
-    icon: () => <Wallet style={{ width: '20px', height: '20px' }} />
+  'loyalty': {
+    id: 'loyalty',
+    path: '/loyalty-overlay',
+    label: 'Rewards Program',
+    icon: () => <Star style={{ width: '20px', height: '20px' }} />
   },
   // New Cash-out Services
   'flash-eezicash': {

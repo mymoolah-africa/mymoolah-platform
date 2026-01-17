@@ -36,7 +36,8 @@ import {
   Banknote,
   Home,
   Store,
-  AtSign
+  AtSign,
+  Star
 } from 'lucide-react';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
@@ -103,8 +104,10 @@ export function WalletSettingsPage() {
         return <Download className="w-6 h-6" />;
       case 'qr-scan':
         return <QrCode className="w-6 h-6" />;
-      case 'wallet-withdraw':
-        return <Banknote className="w-6 h-6" />;
+      case 'cashout-easypay':
+        return <DollarSign className="w-6 h-6" />;
+      case 'topup-easypay':
+        return <Wallet className="w-6 h-6" />;
       // Bills & Utilities
       case 'airtime-data':
         return <Smartphone className="w-6 h-6" />;
@@ -112,15 +115,9 @@ export function WalletSettingsPage() {
         return <Zap className="w-6 h-6" />;
       case 'bill-payments':
         return <Receipt className="w-6 h-6" />;
-      case 'insurance':
-        return <Home className="w-6 h-6" />;
       // Vouchers & Digital Services
       case 'vouchers':
         return <Gift className="w-6 h-6" />;
-      case 'gaming':
-        return <CreditCard className="w-6 h-6" />;
-      case 'streaming':
-        return <Wallet className="w-6 h-6" />;
       // New Cash-out Services
       case 'flash-eezicash':
         return <DollarSign className="w-6 h-6" />;
@@ -128,6 +125,9 @@ export function WalletSettingsPage() {
         return <Store className="w-6 h-6" />;
       case 'atm-cashsend':
         return <AtSign className="w-6 h-6" />;
+      // Loyalty & Promotions
+      case 'loyalty':
+        return <Star className="w-6 h-6" />;
       default:
         return <Settings className="w-6 h-6" />;
     }
@@ -169,18 +169,27 @@ export function WalletSettingsPage() {
         });
 
         // Transform services data
-        const transformedServices = data.data.availableServices.map((service: any) => ({
-          id: service.id,
-          name: service.name,
-          description: service.description,
-          icon: getServiceIcon(service.id),
-          enabled: service.enabled,
-          available: service.available,
-          comingSoon: service.comingSoon,
-          category: service.category,
-          color: service.enabled ? '#ffffff' : '#6b7280',
-          bgColor: service.enabled ? '#86BE41' : '#f8fafc'
-        }));
+        const transformedServices = data.data.availableServices
+          .map((service: any) => ({
+            id: service.id,
+            name: service.name,
+            description: service.description,
+            icon: getServiceIcon(service.id),
+            enabled: service.enabled,
+            available: service.available,
+            comingSoon: service.comingSoon,
+            category: service.category,
+            color: service.enabled ? '#ffffff' : '#6b7280',
+            bgColor: service.enabled ? '#86BE41' : '#f8fafc'
+          }))
+          .sort((a, b) => {
+            // Active services first
+            if (a.comingSoon !== b.comingSoon) {
+              return a.comingSoon ? 1 : -1;
+            }
+            // Then alphabetical by name
+            return a.name.localeCompare(b.name);
+          });
 
         setServices(transformedServices);
       } else {
