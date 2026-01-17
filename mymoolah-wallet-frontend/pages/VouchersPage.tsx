@@ -227,49 +227,21 @@ export function VouchersPage() {
         mainCode: `${paddedCode.substring(0, 4)} ${paddedCode.substring(4, 8)} ${paddedCode.substring(8, 12)} ${paddedCode.substring(12, 16)}`
       };
     } else if (voucher.type === 'easypay_voucher') {
-      // For EasyPay vouchers, format 14-digit PIN as x xxxx xxxx xxxx x
-      if (voucher.easyPayNumber || voucher.voucherCode) {
-        const epNumber = voucher.easyPayNumber || voucher.voucherCode;
-        // Format as: x xxxx xxxx xxxx x (14 digits)
-        return {
-          mainCode: `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`
-        };
-      }
-      
-      // If no EasyPay number, check status
-      if (voucher.status === 'active' || voucher.status === 'redeemed') {
-        // Active or Redeemed EasyPay voucher - show MMVoucher code as main, EasyPay as sub
-        if (voucher.voucherCode && voucher.voucherCode.length >= 16) {
-          // Has MMVoucher code - show it as main
-          const numericCode = voucher.voucherCode.replace(/\D/g, '');
-          const paddedCode = numericCode.padEnd(16, '0').substring(0, 16);
-          const mmCode = `${paddedCode.substring(0, 4)} ${paddedCode.substring(4, 8)} ${paddedCode.substring(8, 12)} ${paddedCode.substring(12, 16)}`;
-          
-          // Show EasyPay number as subcode if available
-          if (voucher.easyPayNumber) {
-            const epNumber = voucher.easyPayNumber;
-            const epCode = `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`;
-            return {
-              mainCode: mmCode,
-              subCode: epCode
-            };
-          }
-          
-          return { mainCode: mmCode };
-        }
-      } else if (voucher.status === 'cancelled') {
-        // Cancelled EasyPay voucher - show only EasyPay number (formatted)
-        if (voucher.easyPayNumber) {
-          const epNumber = voucher.easyPayNumber;
+      // For EasyPay vouchers, ALWAYS use the 14-digit EasyPay PIN (easyPayNumber)
+      // EasyPay standalone vouchers CANNOT be redeemed in wallet - only at EasyPay merchants
+      if (voucher.easyPayNumber) {
+        const epNumber = voucher.easyPayNumber.replace(/\D/g, ''); // Remove any non-digits
+        // Ensure it's exactly 14 digits
+        if (epNumber.length === 14) {
+          // Format as: x xxxx xxxx xxxx x (14 digits: 9 + 4-digit MM code + 8 digits + 1 check digit)
           return {
             mainCode: `${epNumber.substring(0, 1)} ${epNumber.substring(1, 5)} ${epNumber.substring(5, 9)} ${epNumber.substring(9, 13)} ${epNumber.substring(13, 14)}`
           };
         }
-        return { mainCode: voucher.voucherCode };
       }
       
-      // Fallback - show original code
-      return { mainCode: voucher.voucherCode };
+      // If no valid EasyPay number, show error placeholder
+      return { mainCode: 'Invalid EasyPay PIN' };
     } else {
       // For other vouchers, show the original code
       return { mainCode: voucher.voucherCode };
@@ -366,7 +338,8 @@ export function VouchersPage() {
             voucher.voucherType === 'easypay_topup' ||
             voucher.voucherType === 'easypay_topup_active' ||
             voucher.voucherType === 'easypay_cashout' ||
-            voucher.voucherType === 'easypay_cashout_active') {
+            voucher.voucherType === 'easypay_cashout_active' ||
+            voucher.voucherType === 'easypay_voucher') {
           voucherType = 'easypay_voucher';
         } else {
           voucherType = 'mm_voucher';
