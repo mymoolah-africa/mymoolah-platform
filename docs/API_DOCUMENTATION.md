@@ -1,10 +1,18 @@
-**Last Updated**: January 16, 2026 (14:00 SAST)
-**Version**: 2.6.2 - Markdown PDF Converter & EasyPay Simulation Fix
-**Status**: ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED**
+**Last Updated**: January 17, 2026 (22:14 SAST)
+**Version**: 2.6.4 - EasyPay Standalone Voucher UI Improvements
+**Status**: ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED**
 
 ---
 
 ## Recent Updates
+
+### 2026-01-17 - EasyPay Standalone Voucher UI Improvements
+- **Voucher Messaging**: Updated to business-focused messaging reflecting award-winning platform positioning
+- **EPVoucher Badge**: Changed badge from "EasyPay" to "EPVoucher" (blue) for standalone vouchers
+- **Redemption Validation**: Frontend prevents redeeming 14-digit EasyPay PINs in wallet (business rule)
+- **Simulate Function**: Extended to support standalone vouchers using `/api/v1/vouchers/easypay/voucher/settlement` endpoint
+- **Accessibility**: Fixed AlertDialog warnings with proper screen reader support
+- **Business Rules**: EasyPay standalone vouchers can only be used at EasyPay merchants, not redeemed in wallet
 
 ### 2026-01-15 - EasyPay Top-up @ EasyPay Transformation
 - **Top-up Request Creation**: New endpoint `/api/v1/vouchers/easypay/issue` for creating top-up requests (no wallet debit)

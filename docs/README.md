@@ -1,12 +1,34 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: January 16, 2026  
-**Version**: 2.6.2 - Markdown PDF Converter & EasyPay Simulation Fix  
-**Status**: ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 17, 2026  
+**Version**: 2.6.4 - EasyPay Standalone Voucher UI Improvements  
+**Status**: ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: Markdown PDF Converter & EasyPay Simulation Fix (January 16, 2026)**
+## 🚀 **LATEST UPDATE: EasyPay Standalone Voucher UI Improvements (January 17, 2026)**
+
+### **🎫 EasyPay Standalone Voucher Enhancements**
+Enhanced user experience for EasyPay standalone vouchers with business-focused messaging and proper functionality:
+
+**UI/UX Improvements**:
+- ✅ **Business-Focused Messaging**: Updated voucher information to reflect award-winning platform positioning
+- ✅ **EPVoucher Badge**: Changed badge from "EasyPay" to "EPVoucher" (blue) for standalone vouchers
+- ✅ **Redemption Validation**: Frontend prevents redeeming 14-digit EasyPay PINs in wallet (business rule)
+- ✅ **UAT Simulate Button**: Extended simulate function to support standalone vouchers for testing
+- ✅ **Accessibility**: Fixed AlertDialog warnings with proper screen reader support
+
+**Business Rules**:
+- EasyPay standalone vouchers (14-digit PINs) can only be used at EasyPay merchants, not redeemed in wallet
+- Badge shows "EPVoucher" (blue) to distinguish from other EasyPay voucher types
+- Simulate button (UAT only) allows testing merchant redemption flow
+- Settlement changes status from `active` to `redeemed`, moves voucher to history
+
+**Status**: ✅ **UI improvements complete**, ✅ **Business rules implemented**, ✅ **Ready for testing**
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Markdown PDF Converter & EasyPay Simulation Fix (January 16, 2026)**
 
 ### **📄 Generic Markdown to PDF Converter**
 Created a reusable tool for converting any markdown documentation to professional PDF format:

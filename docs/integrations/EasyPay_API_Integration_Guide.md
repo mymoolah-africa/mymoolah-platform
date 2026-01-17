@@ -1,7 +1,7 @@
 # EasyPay API Integration Guide
 
-**Version**: 1.0.2  
-**Last Updated**: January 16, 2026  
+**Version**: 1.0.3  
+**Last Updated**: January 17, 2026  
 **API Provider**: MyMoolah Treasury Platform  
 **Integration Partner**: EasyPay South Africa  
 **Status**: ✅ Production Ready
@@ -29,10 +29,11 @@
 
 ### 1.1 Overview
 
-MyMoolah Treasury Platform provides two core EasyPay integration services:
+MyMoolah Treasury Platform provides three core EasyPay integration services:
 
 1. **Top-up @ EasyPay**: Enables MyMoolah users to deposit cash into their wallets at any EasyPay merchant location
 2. **Cash-out @ EasyPay**: Enables MyMoolah users to withdraw cash from their wallets at any EasyPay merchant location
+3. **Standalone Voucher**: Enables MyMoolah users to create EasyPay vouchers for use as payment at any EasyPay merchant (online or in-store)
 
 ### 1.2 Integration Architecture
 
@@ -122,6 +123,19 @@ curl -X POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/set
     "transaction_id": "EP_TXN_20260116_002",
     "terminal_id": "EP_TERMINAL_002",
     "timestamp": "2026-01-16T14:00:00+02:00"
+  }'
+
+# 3. Test Standalone Voucher Settlement Endpoint
+curl -X POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/voucher/settlement \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your_uat_api_key_here" \
+  -H "X-Idempotency-Key: test-voucher-$(date +%s)" \
+  -H "X-Request-ID: test-request-$(uuidgen)" \
+  -d '{
+    "easypay_code": "9506312345678",
+    "settlement_amount": 200.00,
+    "merchant_id": "EP_TEST_MERCHANT_001",
+    "transaction_id": "EP_TXN_20260117_003"
   }'
 ```
 
@@ -362,6 +376,78 @@ X-Request-ID: {UUID} (optional)
 
 ---
 
+### 4.3 Standalone Voucher Settlement
+
+#### Endpoint
+
+```http
+POST /api/v1/vouchers/easypay/voucher/settlement
+```
+
+#### Description
+
+Called by EasyPay when a user presents a Standalone Voucher PIN at a merchant (online or in-store) as payment. This endpoint marks the voucher as redeemed. The user's wallet was already debited when the standalone voucher was created, so no wallet movement occurs on settlement.
+
+#### Request
+
+**Headers**:
+```http
+X-API-Key: {API_KEY}
+X-Idempotency-Key: {UNIQUE_KEY}
+Content-Type: application/json
+X-Request-ID: {UUID} (optional)
+```
+
+**Body**:
+```json
+{
+  "easypay_code": "9506312345678",
+  "settlement_amount": 200.00,
+  "merchant_id": "EP_MERCHANT_12345",
+  "transaction_id": "EP_TXN_20260117_789012"
+}
+```
+
+**Field Specifications**:
+
+| Field | Type | Required | Description | Validation |
+|-------|------|----------|-------------|------------|
+| `easypay_code` | String | Yes | 14-digit EasyPay PIN | `/^9\d{13}$/` (starts with 9, 14 digits total) |
+| `settlement_amount` | Number | Yes | Amount in ZAR (Rands) | `50.00-3000.00` (R50-R3000), must match voucher original amount |
+| `merchant_id` | String | Yes | EasyPay merchant identifier | Max 50 chars |
+| `transaction_id` | String | Yes | Unique EasyPay transaction ID | Max 100 chars, alphanumeric |
+
+**Note**: Standalone voucher settlement requires fewer fields than top-up/cash-out as it's used for payment at merchants (online or in-store), not at cashier terminals.
+
+#### Response
+
+**Success (200 OK)**:
+```json
+{
+  "success": true,
+  "message": "EasyPay standalone voucher settled successfully",
+  "data": {
+    "easypay_code": "9506312345678",
+    "status": "redeemed",
+    "settlement_amount": 200.00
+  }
+}
+```
+
+**Response Field Descriptions**:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | Boolean | Always `true` for successful responses |
+| `message` | String | Human-readable success message |
+| `data.easypay_code` | String | The 14-digit EasyPay PIN that was settled |
+| `data.status` | String | Settlement status (`redeemed`) |
+| `data.settlement_amount` | Number | Amount used at merchant (Rands) |
+
+**Error Responses**: See [Error Handling](#error-handling) section
+
+---
+
 ## 5. Data Models
 
 ### 5.1 Top-up Voucher Lifecycle
@@ -428,6 +514,41 @@ stateDiagram-v2
   "metadata": "object (max 1KB, optional)"
 }
 ```
+
+**Standalone Voucher Settlement Request**:
+```json
+{
+  "easypay_code": "string (14 digits, starts with 9)",
+  "settlement_amount": "number (50.00-3000.00)",
+  "merchant_id": "string (max 50 chars)",
+  "transaction_id": "string (max 100 chars)"
+}
+```
+
+### 5.4 Standalone Voucher Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Active: User creates voucher<br/>(wallet debited)
+    Active --> Redeemed: EasyPay settlement callback<br/>(merchant payment)
+    Active --> Cancelled: User cancels<br/>(wallet refunded)
+    Active --> Expired: 96 hours elapsed<br/>(wallet refunded)
+    Redeemed --> [*]
+    Cancelled --> [*]
+    Expired --> [*]
+```
+
+**States**:
+- `active`: Voucher created, wallet debited, ready for use at EasyPay merchants
+- `redeemed`: Voucher used at merchant, consumed
+- `cancelled`: User cancelled, wallet refunded (voucher amount + transaction fee)
+- `expired`: Voucher expired (96 hours), wallet refunded (voucher amount + transaction fee)
+
+**Key Differences from Top-up/Cash-out**:
+- Created as `active` (not `pending_payment`)
+- Can be used at any EasyPay merchant (online or in-store) as payment
+- Cannot be redeemed in MyMoolah wallet (only at EasyPay merchants)
+- Wallet already debited on creation (no credit on settlement)
 
 ---
 
@@ -604,6 +725,7 @@ MyMoolah provides three environments for EasyPay integration:
 **Settlement Endpoints**:
 - **Top-up**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement`
 - **Cash-out**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
+- **Standalone Voucher**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/voucher/settlement`
 
 **API Key**: `EASYPAY_API_KEY_QA` (provided separately via secure channel)  
 **Configuration**: Stored in local `.env` file (not Secret Manager)  
@@ -621,6 +743,7 @@ MyMoolah provides three environments for EasyPay integration:
 **Settlement Endpoints**:
 - **Top-up**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement`
 - **Cash-out**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
+- **Standalone Voucher**: `POST https://staging.mymoolah.africa/api/v1/vouchers/easypay/voucher/settlement`
 
 **API Key**: `EASYPAY_API_KEY_STAGING` (provided separately via secure channel)  
 **Configuration**: Stored in Google Secret Manager (`easypay-api-key-staging`)  
@@ -638,6 +761,7 @@ MyMoolah provides three environments for EasyPay integration:
 **Settlement Endpoints** (when production is live):
 - **Top-up**: `POST https://api.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement`
 - **Cash-out**: `POST https://api.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
+- **Standalone Voucher**: `POST https://api.mymoolah.africa/api/v1/vouchers/easypay/voucher/settlement`
 
 **API Key**: `EASYPAY_API_KEY_PROD` (provided separately via secure channel after UAT sign-off)  
 **Configuration**: Stored in Google Secret Manager (`easypay-api-key-production`)  
@@ -719,6 +843,7 @@ MyMoolah provides three environments for EasyPay integration:
 **Test Amounts**:
 - **Top-up**: R50.00 - R4000.00 (test with various amounts)
 - **Cash-out**: R50.00 - R3000.00 (test with various amounts)
+- **Standalone Voucher**: R50.00 - R3000.00 (test with various amounts)
 
 **Test Merchant IDs** (for settlement requests):
 - QA/Test: `EP_TEST_MERCHANT_001`

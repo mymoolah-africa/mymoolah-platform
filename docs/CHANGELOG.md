@@ -1,5 +1,54 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-01-17 - 🎫 EasyPay Standalone Voucher UI Improvements (v2.6.4) ✅
+
+### **Session Overview**
+Enhanced EasyPay standalone voucher user experience with business-focused messaging, proper badge display (EPVoucher blue badge), redemption validation to prevent invalid attempts, Simulate button for UAT testing, and accessibility improvements.
+
+### **🎨 UI/UX Improvements** ✅
+- **Voucher Messaging**: Updated from technical format details to business value proposition
+  - Changed "EasyPay numbers are 14 digits starting with '9'..." to "EasyPay Vouchers enable seamless payments at hundreds of online and in-store merchants through our award-winning payment network."
+  - Updated description from "Use at EasyBet and other 3rd party merchants" to "Redeemable at any EasyPay merchant"
+  - Simplified success modal message to match business logic
+- **Badge System**: Changed badge from "EasyPay" to "EPVoucher" (blue #2D8CCA) for standalone vouchers
+  - Distinguishes standalone vouchers from other EasyPay types (cash-out, top-up)
+  - Type detection updated to include `easypay_voucher` type
+- **Redemption Validation**: Added frontend validation to prevent redeeming 14-digit EasyPay PINs in wallet
+  - Business rule: EasyPay standalone vouchers can only be used at EasyPay merchants, not redeemed in wallet
+  - Clear error message: "EasyPay codes (14 digits) cannot be redeemed. Use the 16‑digit MMVoucher code."
+- **Simulate Button**: Extended simulate function to support standalone vouchers in UAT
+  - Uses `/api/v1/vouchers/easypay/voucher/settlement` endpoint for standalone vouchers
+  - Shows for active standalone vouchers (not just pending_payment)
+  - Simulates merchant redemption, changes status from `active` to `redeemed`
+- **Accessibility**: Fixed AlertDialog accessibility warnings
+  - Added AlertDialogDescription to Cancel EasyPay Voucher confirmation modal
+  - Proper screen reader support
+
+### **📝 Files Modified** ✅
+1. `mymoolah-wallet-frontend/pages/VouchersPage.tsx` - Multiple UI/UX improvements:
+   - Updated EasyPay voucher information messages (business-focused)
+   - Changed badge from "EasyPay" to "EPVoucher" for standalone vouchers
+   - Added frontend validation in `handleRedeemVoucher` to prevent EasyPay PIN redemption
+   - Extended `handleSimulateSettlement` to support standalone vouchers
+   - Updated Simulate button visibility for active standalone vouchers
+   - Added AlertDialogDescription for accessibility
+
+### **✅ Testing Status**
+- [x] Message updates verified - All EasyPay voucher messages updated correctly
+- [x] Badge display tested - EPVoucher badge shows blue for standalone vouchers
+- [x] Redemption validation tested - Frontend prevents 14-digit PIN redemption
+- [x] Simulate function tested - Logic verified for standalone vouchers
+- [x] Accessibility fixes verified - AlertDialogDescription added correctly
+- [x] All changes committed and pushed to main
+
+### **📋 Business Rules Documented**
+- EasyPay standalone vouchers (14-digit PINs) cannot be redeemed in wallet - only at EasyPay merchants
+- Badge shows "EPVoucher" (blue) for standalone vouchers to distinguish from other types
+- Simulate button (UAT only) shows for active standalone vouchers, simulates merchant redemption
+- Settlement changes status from `active` to `redeemed`, moves voucher to history
+
+---
+
 ## 2026-01-16 - 📄 Markdown PDF Converter & EasyPay Simulation Fix (v2.6.2) ✅
 
 ### **Session Overview**

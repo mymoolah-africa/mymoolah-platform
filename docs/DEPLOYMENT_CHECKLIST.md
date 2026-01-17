@@ -2,7 +2,7 @@
 
 **For**: André (andre@mymoolah.africa)
 **Project**: mymoolah-db
-**Date**: January 16, 2026 (Updated for Markdown PDF Converter & EasyPay Simulation Fix)
+**Date**: January 17, 2026 (Updated for EasyPay Standalone Voucher UI Improvements)
 
 ---
 

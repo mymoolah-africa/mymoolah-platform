@@ -83,6 +83,22 @@ The Dashboard "Active Vouchers" balance must include:
 - **Asset Treatment**: **NOT counted as active assets** (user hasn't paid yet)
 - **Exception**: This is the ONLY exception to the "Active Vouchers = Active Status + Pending Payment Status" rule
 
+### **EPVouchers (14-digit EP Code) - Standalone Voucher**
+- **Creation**: Wallet debited immediately (voucher amount + transaction fee)
+- **Status**: Created as `active` (not `pending_payment`)
+- **Usage**: Can only be used at EasyPay merchants (online or in-store), **NOT redeemable in wallet**
+- **Settlement**: When used at merchant, EasyPay sends callback, status changes to `redeemed`
+- **Status Change**: `active` → `redeemed` (when used at merchant)
+- **Balance Impact**:
+  - Wallet already debited on creation (no credit on settlement)
+  - Voucher consumed (balance = 0)
+- **Fees**: Transaction fee (R2.50 default, configurable) charged on creation
+- **Expiry**: 4 days (96 hours) from creation
+- **Cancellation**: Available while `active`, refunds voucher amount + transaction fee
+- **Asset Treatment**: Counted as active assets (user has paid upfront)
+- **Badge**: Shows "EPVoucher" (blue #2D8CCA) to distinguish from other EasyPay types
+- **PIN Format**: 14 digits starting with 9, format: X XXXX XXXX XXXX X (9 + 4-digit MM code 5063 + 8 digits + 1 check digit)
+
 ---
 
 ## 🏗️ **Implementation Requirements**
