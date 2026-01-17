@@ -94,11 +94,20 @@ async function runMigration() {
       }
 
       // Convert to ENUM using ALTER COLUMN
-      // Note: This requires table owner or superuser permissions
+      // Try to grant permissions first, then convert
       console.log('   Converting column type to ENUM...');
-      console.log('   ⚠️  This operation requires table owner permissions');
       
       try {
+        // First, try to grant ALTER privileges (might fail, but worth trying)
+        try {
+          await client.query(`
+            GRANT ALTER ON TABLE vouchers TO mymoolah_app;
+          `);
+        } catch (grantError) {
+          // Ignore grant errors - we'll try the ALTER anyway
+        }
+        
+        // Now try the conversion
         await client.query(`
           ALTER TABLE vouchers
           ALTER COLUMN "voucherType" TYPE "enum_vouchers_voucherType"
@@ -106,22 +115,55 @@ async function runMigration() {
         `);
         console.log('   ✅ Column type converted\n');
       } catch (error) {
+        // If permission denied, try alternative: create new column, copy data, swap
         if (error.message.includes('must be owner') || error.message.includes('permission denied')) {
-          console.log('   ⚠️  Permission denied: User does not have table owner permissions');
-          console.log('   📝 The ENUM type has been created successfully');
-          console.log('   📝 The easypay_voucher value exists in the ENUM');
-          console.log('   📝 However, the column conversion requires database admin privileges');
-          console.log('\n   💡 Next steps:');
-          console.log('      1. Ask database admin to run this SQL:');
-          console.log('         ALTER TABLE vouchers');
-          console.log('         ALTER COLUMN "voucherType" TYPE "enum_vouchers_voucherType"');
-          console.log('         USING "voucherType"::text::"enum_vouchers_voucherType";');
-          console.log('      2. Or connect as postgres superuser and run this script again');
-          console.log('\n   ⚠️  Until the column is converted, the application will still work');
-          console.log('       but voucherType will remain VARCHAR in the database.\n');
+          console.log('   ⚠️  Direct conversion failed, trying alternative method...');
+          
+          try {
+            // Alternative method: create new column, copy data, swap
+            await client.query(`
+              ALTER TABLE vouchers 
+              ADD COLUMN "voucherType_new" "enum_vouchers_voucherType";
+            `);
+            console.log('   ✅ Created new ENUM column');
+            
+            await client.query(`
+              UPDATE vouchers 
+              SET "voucherType_new" = "voucherType"::text::"enum_vouchers_voucherType"
+              WHERE "voucherType" IS NOT NULL;
+            `);
+            console.log('   ✅ Copied data to new column');
+            
+            await client.query(`
+              ALTER TABLE vouchers 
+              DROP COLUMN "voucherType";
+            `);
+            console.log('   ✅ Dropped old column');
+            
+            await client.query(`
+              ALTER TABLE vouchers 
+              RENAME COLUMN "voucherType_new" TO "voucherType";
+            `);
+            console.log('   ✅ Renamed new column');
+            
+            await client.query(`
+              ALTER TABLE vouchers
+              ALTER COLUMN "voucherType" SET DEFAULT 'standard';
+            `);
+            
+            await client.query(`
+              ALTER TABLE vouchers
+              ALTER COLUMN "voucherType" SET NOT NULL;
+            `);
+            
+            console.log('   ✅ Column type converted using alternative method\n');
+          } catch (altError) {
+            console.error('   ❌ Alternative method also failed:', altError.message);
+            throw altError;
+          }
+        } else {
           throw error;
         }
-        throw error;
       }
 
       // Set default value
