@@ -1898,7 +1898,7 @@ export function VouchersPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
                       {[
                         { id: 'mm_voucher', name: 'MyMoolah Voucher', desc: 'Redeemable at MyMoolah network and partner retailers', icon: <Wallet style={{ width: '20px', height: '20px' }} /> },
-                        { id: 'easypay_voucher', name: 'EasyPay Voucher', desc: 'Use at EasyBet and other 3rd party merchants', icon: <Ticket style={{ width: '20px', height: '20px' }} /> }
+                        { id: 'easypay_voucher', name: 'EasyPay Voucher', desc: 'Redeemable at any EasyPay merchant', icon: <Ticket style={{ width: '20px', height: '20px' }} /> }
                       ].map((type) => (
                         <button
                           key={type.id}
@@ -2073,7 +2073,7 @@ export function VouchersPage() {
                         }}
                       >
                         {sellVoucherType === 'mm_voucher' && 'MyMoolah vouchers use 16 digits in format: XXXX XXXX XXXX XXXX'}
-                        {sellVoucherType === 'easypay_voucher' && 'EasyPay numbers are 14 digits starting with "9". Customer pays at retail stores, then auto-converts to MyMoolah voucher.'}
+                        {sellVoucherType === 'easypay_voucher' && 'EasyPay Vouchers enable seamless payments at hundreds of online and in-store merchants through our award-winning payment network.'}
                         {sellVoucherType === 'third_party_voucher' && 'Third party vouchers use custom merchant format codes.'}
                       </p>
                     </AlertDescription>
