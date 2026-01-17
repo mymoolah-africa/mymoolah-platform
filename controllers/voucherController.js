@@ -480,9 +480,10 @@ exports.triggerExpirationHandler = async (req, res) => {
 // Generate EasyPay number using Luhn algorithm
 const generateEasyPayNumber = () => {
   const EASYPAY_PREFIX = '9';
-  const RECEIVER_ID = '1234'; // MyMoolah's EasyPay receiver ID
+  // Use environment variable for receiver ID, fallback to 5063 (MyMoolah's EasyPay receiver ID)
+  const RECEIVER_ID = process.env.EASYPAY_RECEIVER_ID || '5063'; // MyMoolah's EasyPay receiver ID (4-digit MM code)
   
-  // Generate random account number (8 digits) - fixed length for Receiver 1234
+  // Generate random account number (8 digits) - fixed length
   const accountNumber = Math.floor(Math.random() * 100000000).toString().padStart(8, '0');
   
   // Combine receiver ID and account number (excluding the leading 9)
@@ -491,7 +492,8 @@ const generateEasyPayNumber = () => {
   // Calculate check digit using Luhn algorithm on baseDigits
   const checkDigit = generateLuhnCheckDigit(baseDigits);
   
-  // Return complete EasyPay number (14 digits)
+  // Return complete EasyPay number (14 digits): 9 + 4-digit MM code + 8-digit account + 1 check digit
+  // Format: X XXXX XXXX XXXX X
   return EASYPAY_PREFIX + baseDigits + checkDigit;
 };
 

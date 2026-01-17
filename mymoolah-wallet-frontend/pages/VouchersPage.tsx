@@ -849,7 +849,7 @@ export function VouchersPage() {
       case 'mm_voucher':
         return { text: 'MMVoucher', color: 'bg-[#86BE41] text-white' };
       case 'easypay_voucher':
-        return { text: 'EasyPay', color: 'bg-[#2D8CCA] text-white' };
+        return { text: 'EPVoucher', color: 'bg-[#2D8CCA] text-white' };
       case 'third_party_voucher':
         return { text: '3rd Party', color: 'bg-orange-500 text-white' };
       default:
@@ -1726,8 +1726,10 @@ export function VouchersPage() {
                           </div>
                         </div>
 
-                        {/* EasyPay Pending Expiry Information with Cancel Button */}
-                        {voucher.type === 'easypay_voucher' && voucher.status === 'pending_payment' && !isVoucherExpired(voucher) && (
+                        {/* EasyPay Expiry Information with Cancel Button - Show for both pending and active standalone vouchers */}
+                        {voucher.type === 'easypay_voucher' && 
+                         (voucher.status === 'pending_payment' || (voucher.status === 'active' && voucher.voucherType === 'easypay_voucher')) && 
+                         !isVoucherExpired(voucher) && (
                           <div style={{ 
                             marginTop: '8px',
                             display: 'flex',
@@ -1764,14 +1766,16 @@ export function VouchersPage() {
                                   fontWeight: '500'
                                 }}
                               >
-                                Make payment at any EasyPay terminal
+                                {voucher.status === 'pending_payment' 
+                                  ? 'Make payment at any EasyPay terminal'
+                                  : 'Redeemable at any EasyPay merchant'}
                               </span>
                             </div>
                             
                             {/* Action Buttons */}
                             <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                              {/* Simulate Button (UAT only) */}
-                              {isUATEnvironment() && (
+                              {/* Simulate Button (UAT only) - Only show for pending_payment */}
+                              {isUATEnvironment() && voucher.status === 'pending_payment' && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -2896,8 +2900,10 @@ export function VouchersPage() {
                           </div>
                         </div>
 
-                        {/* EasyPay Pending Expiry Information with Cancel Button */}
-                        {voucher.type === 'easypay_voucher' && voucher.status === 'pending_payment' && !isVoucherExpired(voucher) && (
+                        {/* EasyPay Expiry Information with Cancel Button - Show for both pending and active standalone vouchers */}
+                        {voucher.type === 'easypay_voucher' && 
+                         (voucher.status === 'pending_payment' || (voucher.status === 'active' && voucher.voucherType === 'easypay_voucher')) && 
+                         !isVoucherExpired(voucher) && (
                           <div style={{ 
                             marginTop: '8px',
                             display: 'flex',
@@ -2934,14 +2940,16 @@ export function VouchersPage() {
                                   fontWeight: '500'
                                 }}
                               >
-                                Make payment at any EasyPay terminal
+                                {voucher.status === 'pending_payment' 
+                                  ? 'Make payment at any EasyPay terminal'
+                                  : 'Redeemable at any EasyPay merchant'}
                               </span>
                             </div>
                             
                             {/* Action Buttons */}
                             <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
-                              {/* Simulate Button (UAT only) */}
-                              {isUATEnvironment() && (
+                              {/* Simulate Button (UAT only) - Only show for pending_payment */}
+                              {isUATEnvironment() && voucher.status === 'pending_payment' && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
