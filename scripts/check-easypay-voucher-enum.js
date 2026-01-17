@@ -72,15 +72,22 @@ async function checkEnum() {
       SELECT column_name, data_type, udt_name
       FROM information_schema.columns
       WHERE table_name = 'vouchers' 
-      AND column_name = 'voucherType';
+      AND (column_name = 'voucherType' OR column_name = 'type')
+      ORDER BY column_name;
     `);
     
     const tableInfo = tableInfoResult.rows;
     if (tableInfo.length > 0) {
-      console.log(`   Column type: ${tableInfo[0].data_type}`);
-      console.log(`   UDT name: ${tableInfo[0].udt_name}`);
+      tableInfo.forEach(col => {
+        console.log(`   Column: ${col.column_name}, Type: ${col.data_type}, UDT: ${col.udt_name}`);
+        
+        if (col.data_type === 'character varying' || col.udt_name === 'varchar') {
+          console.log(`   ⚠️  WARNING: Column is VARCHAR, not ENUM!`);
+          console.log(`   📝 Run migration: 20260117_convert_voucher_type_to_enum.js to convert to ENUM`);
+        }
+      });
     } else {
-      console.log('   ⚠️  voucherType column not found');
+      console.log('   ⚠️  voucherType or type column not found');
     }
     
     client.release();
