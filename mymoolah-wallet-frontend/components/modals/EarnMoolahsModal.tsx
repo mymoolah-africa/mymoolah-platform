@@ -14,7 +14,7 @@
  * @date 2026-01-20
  */
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play,
   Clock,
