@@ -58,8 +58,29 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
   const [viewId, setViewId] = useState<string | null>(null);
   const [watchStartTime, setWatchStartTime] = useState<number | null>(null);
   const [earnedAmount, setEarnedAmount] = useState<number>(0);
+  const [autoCloseCountdown, setAutoCloseCountdown] = useState<number>(3);
   
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Auto-close after success
+  useEffect(() => {
+    if (state === 'success') {
+      const timer = setInterval(() => {
+        setAutoCloseCountdown(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            handleClose();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    } else {
+      setAutoCloseCountdown(3);
+    }
+  }, [state]);
 
   // Fetch available ads
   useEffect(() => {
@@ -150,7 +171,11 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to complete ad view');
+        // Handle error object or string
+        const errorMessage = typeof errorData.error === 'string' 
+          ? errorData.error 
+          : errorData.message || 'Failed to complete ad view';
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
@@ -164,7 +189,8 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
       }
     } catch (err: any) {
       console.error('Error completing ad view:', err);
-      setError(err.message || 'Failed to complete ad. Please try again.');
+      const message = err.message || 'Failed to complete ad. Please try again.';
+      setError(typeof message === 'string' ? message : String(message));
     }
   };
 
@@ -564,8 +590,19 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                 width: '100%'
               }}
             >
-              Done
+              Done ({autoCloseCountdown})
             </Button>
+            
+            <p
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '11px',
+                color: '#9ca3af',
+                marginTop: '12px'
+              }}
+            >
+              Closing automatically in {autoCloseCountdown}s...
+            </p>
           </div>
         )}
       </DialogContent>

@@ -7,7 +7,8 @@ import {
   Phone, 
   Zap,
   Wifi,
-  QrCode
+  QrCode,
+  Film
 } from 'lucide-react';
 
 // Transaction interface for type safety
@@ -70,8 +71,21 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <Zap style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 5. QR/ZAPPER PAYMENT TRANSACTIONS (QR Code icons) - CHECK BEFORE OTHER TRANSACTIONS
+  // 5. WATCH TO EARN / AD REWARD TRANSACTIONS (Film/Movie icons) - Always green as it's a credit
   const metadata = transaction.metadata || {};
+  const isWatchToEarn = (
+    description.includes('watch to earn') ||
+    description.includes('ad reward') ||
+    metadata.isWatchToEarn === true ||
+    metadata.adType ||
+    metadata.campaignId
+  );
+  
+  if (isWatchToEarn) {
+    return <Film style={{ ...iconStyle, color: '#16a34a' }} />; // Always green for earnings
+  }
+  
+  // 6. QR/ZAPPER PAYMENT TRANSACTIONS (QR Code icons) - CHECK BEFORE OTHER TRANSACTIONS
   const isQRTransaction = (
     description.includes('qr payment') ||
     description.includes('zapper') ||
@@ -85,7 +99,7 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <QrCode style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 6. BANKING TRANSACTIONS (External bank transfers via APIs)
+  // 7. BANKING TRANSACTIONS (External bank transfers via APIs)
   if (isBankingTransaction(transaction)) {
     if (isCredit) {
       // Credit (money received) - Green down arrow
@@ -96,12 +110,12 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     }
   }
   
-  // 7. MYMOOLAH WALLET TRANSACTIONS (Internal transfers)
+  // 8. MYMOOLAH WALLET TRANSACTIONS (Internal transfers)
   if (isMyMoolahTransaction(transaction)) {
     return <Wallet style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 8. DEFAULT: Other transactions use arrows
+  // 9. DEFAULT: Other transactions use arrows
   if (isCredit) {
     // Credit (money received) - Green down arrow
     return <ArrowDownLeft style={{ ...iconStyle, color: '#16a34a' }} />;

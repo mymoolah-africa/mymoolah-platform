@@ -23,6 +23,13 @@ async function seedWatchToEarn() {
     client = await getUATClient();
     console.log('✅ Connected to database');
     
+    // First, clear old ad views so users can watch ads again (for testing)
+    console.log('🗑️  Clearing old ad views for test campaigns...');
+    await client.query(`
+      DELETE FROM ad_views WHERE "campaignId" LIKE '00000000-00%'
+    `);
+    console.log('✅ Old ad views cleared');
+    
     console.log('📝 Creating dummy merchant float with ad float account...');
     
     // 1. Create dummy merchant float
@@ -171,6 +178,7 @@ async function seedWatchToEarn() {
           description = $4,
           "videoUrl" = $5,
           "thumbnailUrl" = $6,
+          "durationSeconds" = 15,
           "adType" = $7,
           "costPerView" = $9,
           "rewardPerView" = $10,
