@@ -44,15 +44,24 @@ class AdService {
       });
 
       // Filter out ads user has already viewed (fraud prevention)
-      const viewedCampaignIds = await AdView.findAll({
-        where: { userId, status: 'completed' },
-        attributes: ['campaignId']
-      });
+      // ONLY in production - UAT/Staging show all ads for testing
+      const isProduction = process.env.NODE_ENV === 'production' && 
+                           !process.env.DATABASE_URL?.includes('uat') &&
+                           !process.env.DATABASE_URL?.includes('staging');
       
-      const viewedIds = viewedCampaignIds.map(v => v.campaignId);
-      const availableAds = ads.filter(ad => !viewedIds.includes(ad.id));
-
-      return availableAds;
+      if (isProduction) {
+        const viewedCampaignIds = await AdView.findAll({
+          where: { userId, status: 'completed' },
+          attributes: ['campaignId']
+        });
+        
+        const viewedIds = viewedCampaignIds.map(v => v.campaignId);
+        const availableAds = ads.filter(ad => !viewedIds.includes(ad.id));
+        return availableAds;
+      }
+      
+      // UAT/Staging: Return all ads for testing (no filtering)
+      return ads;
     } catch (error) {
       console.error('❌ Error fetching available ads:', error);
       throw error;
@@ -68,6 +77,11 @@ class AdService {
    */
   async startView(userId, campaignId) {
     try {
+      // Check environment - UAT/Staging allows re-watching for testing
+      const isProduction = process.env.NODE_ENV === 'production' && 
+                           !process.env.DATABASE_URL?.includes('uat') &&
+                           !process.env.DATABASE_URL?.includes('staging');
+
       // Check if user already viewed this ad
       const existingView = await AdView.findOne({
         where: { userId, campaignId }
@@ -75,10 +89,15 @@ class AdService {
 
       if (existingView) {
         if (existingView.status === 'completed') {
-          throw new Error('You have already watched this ad');
+          if (isProduction) {
+            throw new Error('You have already watched this ad');
+          }
+          // UAT/Staging: Allow re-watching - delete old view and create new
+          await existingView.destroy();
+        } else {
+          // If started but not completed, return existing view
+          return existingView;
         }
-        // If started but not completed, return existing view
-        return existingView;
       }
 
       // Create new view record
