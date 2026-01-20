@@ -402,18 +402,11 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                   controls={true}
                   width="100%"
                   height="100%"
-                  config={{
-                    file: {
-                      attributes: {
-                        controlsList: 'nodownload',
-                        disablePictureInPicture: true
-                      }
-                    }
-                  }}
                   onEnded={handleVideoEnd}
+                  onReady={() => console.log('Video ready to play:', selectedAd.videoUrl)}
                   onError={(error) => {
-                    console.error('Video player error:', error);
-                    setError('Failed to play video. Please try another ad.');
+                    console.error('Video player error:', error, 'URL:', selectedAd.videoUrl);
+                    setError('Video failed to load. Use "Test Complete" button below to continue testing.');
                   }}
                 />
               </div>
@@ -425,11 +418,29 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                   fontFamily: 'Montserrat, sans-serif',
                   fontSize: '13px',
                   color: '#4a5568',
-                  textAlign: 'center'
+                  textAlign: 'center',
+                  marginBottom: error ? '12px' : '0'
                 }}
               >
                 Watch the entire video to earn <strong style={{ color: '#86BE41' }}>R{parseFloat(selectedAd.rewardPerView).toFixed(2)}</strong>
               </p>
+              
+              {/* UAT Testing: Skip video button */}
+              {(window.location.hostname.includes('github.dev') || window.location.hostname.includes('localhost')) && (
+                <Button
+                  onClick={handleVideoEnd}
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '13px',
+                    backgroundColor: '#2D8CCA',
+                    color: 'white',
+                    width: '100%',
+                    marginTop: '8px'
+                  }}
+                >
+                  🧪 Test Complete (UAT Only)
+                </Button>
+              )}
             </div>
           </div>
         )}

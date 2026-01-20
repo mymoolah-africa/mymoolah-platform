@@ -144,10 +144,11 @@ async function seedWatchToEarn() {
       }
     ];
     
-    // Use Vimeo video (ReactPlayer has native Vimeo support - most reliable)
-    // This is a short demo video that will work perfectly for advertiser demos
-    const videoUrl = 'https://vimeo.com/148751763';  // 30-second demo video
-    const thumbnailUrl = 'https://i.vimeocdn.com/video/540903384-9c1b1d846f1e6e1f8b3b3b3b3b3b3b3b3b3b3b3b_640.jpg';
+    // Use YouTube video (ReactPlayer has native YouTube support - most reliable)
+    // These are public test videos that will work perfectly for advertiser demos
+    // Using short promotional-style videos from YouTube
+    const videoUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';  // Famous video, guaranteed to work
+    const thumbnailUrl = 'https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg';
     
     for (const ad of ads) {
       await client.query(`
@@ -201,7 +202,7 @@ async function seedWatchToEarn() {
     console.log('   - 5 Reach ads (R2.00 reward each)');
     console.log('   - 5 Engagement ads (R3.00 reward each)');
     console.log('   - All ads approved and active');
-    console.log('   - Using public test video (Big Buck Bunny)');
+    console.log('   - Using YouTube test videos (guaranteed playback)');
     console.log('');
     console.log('✅ Watch to Earn seed data complete!');
     
