@@ -155,8 +155,8 @@ async function seedWatchToEarn() {
           "totalViews", "totalEngagements", metadata, "createdAt", "updatedAt"
         ) VALUES (
           $1, 'DUMMY_AD_MERCHANT_001', $2, $3,
-          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-          'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg',
+          'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4',
+          'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.jpg',
           25, $4, 'active', 600.00, 600.00,
           $5, $6, NULL,
           'leads-test@mymoolah.africa', NULL,
