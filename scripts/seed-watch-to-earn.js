@@ -155,8 +155,8 @@ async function seedWatchToEarn() {
           "totalViews", "totalEngagements", metadata, "createdAt", "updatedAt"
         ) VALUES (
           $1, 'DUMMY_AD_MERCHANT_001', $2, $3,
-          'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4',
-          'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.jpg',
+          'https://www.youtube.com/watch?v=aqz-KE-bpKQ',  // 10-second test video
+          'https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg',
           25, $4, 'active', 600.00, 600.00,
           $5, $6, NULL,
           'leads-test@mymoolah.africa', NULL,
