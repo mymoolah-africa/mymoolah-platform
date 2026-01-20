@@ -24,6 +24,7 @@ import { ServicesPage } from './pages/ServicesPage';
 import { SupportPage } from './pages/SupportPage';
 import FeedbackPage from './pages/FeedbackPage';
 import { ReferralPage } from './pages/ReferralPage';
+import { LoyaltyPromotionsPage } from './pages/LoyaltyPromotionsPage';
 
 // Overlay Components
 import { AirtimeDataOverlay } from './components/overlays/AirtimeDataOverlay';
@@ -114,6 +115,7 @@ function AppContent() {
             <Route path="/support" element={<ProtectedRoute><SupportPage /></ProtectedRoute>} />
             <Route path="/feedback" element={<ProtectedRoute><FeedbackPage /></ProtectedRoute>} />
             <Route path="/referrals" element={<ProtectedRoute><ReferralPage /></ProtectedRoute>} />
+            <Route path="/loyalty-promotions" element={<ProtectedRoute><LoyaltyPromotionsPage /></ProtectedRoute>} />
             <Route path="/electricity" element={<ProtectedRoute><div>Electricity Page - Coming Soon</div></ProtectedRoute>} />
             <Route path="/bill-payments" element={<ProtectedRoute><div>Bill Payments Page - Coming Soon</div></ProtectedRoute>} />
             

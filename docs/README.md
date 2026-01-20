@@ -1,12 +1,33 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: January 17, 2026  
-**Version**: 2.6.4 - EasyPay Standalone Voucher UI Improvements  
-**Status**: ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 20, 2026  
+**Version**: 2.7.0 - Watch to Earn Implementation  
+**Status**: ✅ **WATCH TO EARN IMPLEMENTED** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: EasyPay Standalone Voucher UI Improvements (January 17, 2026)**
+## 🚀 **LATEST UPDATE: Watch to Earn Platform (January 20, 2026)**
+
+### **📺 Revolutionary Video Advertising Platform**
+Implemented complete Watch to Earn feature - users earn R2.00-R3.00 by watching 20-30s video ads, merchants gain cost-effective advertising channel with prefunded ad float accounts.
+
+**Key Features**:
+- ✅ **Dual Ad Types**: Reach (brand awareness, R2.00) and Engagement (lead generation, R3.00)
+- ✅ **Prefunded Ad Float**: Merchants prepay into ad float account (separate from voucher balance)
+- ✅ **B2B Incentive**: "Payout-to-Promote" - R200 payout = R6.00 ad float credit (attracts Betway, Hollywoodbets, etc.)
+- ✅ **Banking-Grade**: Atomic transactions, double-entry ledger, idempotency, rate limiting
+- ✅ **Cost-Optimized**: R0.001 per view (GCS + Cloudflare CDN), manual moderation (R0.00)
+- ✅ **Lead Delivery**: Engagement ads send user details to merchants via email/webhook
+- ✅ **Fraud Prevention**: 5 ads/hour limit, unique constraints, server-side watch verification
+- ✅ **Mobile-Optimized**: 360p max, <2MB videos, low data consumption
+
+**Revenue Model**: Merchant pays R6.00 (Reach) or R15.00 (Engagement), MM earns R4.00 / R12.00 net profit per view/engagement
+
+**Status**: ✅ **Implementation complete**, ⏳ **Ready for UAT testing**
+
+---
+
+## 🎫 **PREVIOUS UPDATE: EasyPay Standalone Voucher UI Improvements (January 17, 2026)**
 
 ### **🎫 EasyPay Standalone Voucher Enhancements**
 Enhanced user experience for EasyPay standalone vouchers with business-focused messaging and proper functionality:

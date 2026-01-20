@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-01-15  
-**Latest Feature**: EasyPay Top-up @ EasyPay Transformation  
-**Document Version**: 2.6.0  
+**Last Updated**: 2026-01-20  
+**Latest Feature**: Watch to Earn Implementation  
+**Document Version**: 2.7.0  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -51,7 +51,19 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (January 15, 2026)**
+### **Latest Achievement (January 20, 2026)**
+**Watch to Earn Implementation** - Complete video advertising platform implemented with banking-grade security. Users earn R2.00-R3.00 by watching 20-30s video ads. Merchants prepay into ad float accounts (prefunded float system). Dual ad types: Reach (brand awareness) and Engagement (lead generation with email/webhook delivery). B2B "Payout-to-Promote" incentive: merchants earn ad float credits when making payouts (R200 payout = R6.00 credit = 1 free ad). Includes 3 new database tables, 3 services, 5 API endpoints, frontend components (LoyaltyPromotionsPage + EarnMoolahsModal), manual moderation queue, rate limiting (5 ads/hour), server-side watch verification, and double-entry ledger integration. Cost-optimized: R0.001 per view with CDN. Ready for UAT with dummy merchant and 10 test ads.
+
+### **Previous Achievement (January 17, 2026)**
+**EasyPay Standalone Voucher UI Improvements** - Enhanced EasyPay standalone voucher user experience with business-focused messaging, proper badge display (EPVoucher blue badge), redemption validation to prevent invalid attempts, Simulate button for UAT testing, and accessibility improvements. Updated voucher information messages to reflect award-winning platform positioning, fixed badge to show "EPVoucher" instead of "MMVoucher", added frontend validation to prevent redeeming 14-digit EasyPay PINs in wallet, extended Simulate function to support standalone vouchers, and fixed AlertDialog accessibility warnings.
+
+### **Previous Achievement (January 16, 2026)**
+**Markdown PDF Converter & EasyPay Simulation Fix** - Created generic markdown-to-PDF converter script (`scripts/md-to-pdf.js`) for converting any documentation to PDF format. Fixed EasyPay Top-up Simulate function authentication issue by allowing JWT Bearer tokens in UAT/test environments while maintaining API key requirement for production. Added `marked` and `puppeteer` dependencies for PDF generation.
+
+### **Previous Achievement (January 15, 2026)**
+**Float Account Ledger Integration & Balance Monitoring** - Fixed critical banking-grade compliance issue where float accounts used operational identifiers instead of proper ledger account codes. Implemented complete ledger integration (all floats now have ledger codes 1200-10-XX), consolidated duplicate Zapper float accounts, created missing MobileMart float account, and implemented scheduled float balance monitoring service with email notifications to suppliers when balances are low.
+
+### **Previous Achievement (January 15, 2026)**
 **EasyPay Top-up @ EasyPay Transformation** - Complete transformation of EasyPay voucher system from "buy voucher, then pay at store" to "create top-up request, pay at store, get money back". Features include: split transaction display (gross in Recent, net + fee in History), PIN formatting (x xxxx xxxx xxxx x), UAT simulation button, proper cancel/expiry handling (no wallet credit for top-up vouchers), and banking-grade compliance.
 
 ### **Previous Achievement (January 14, 2026)**
@@ -870,6 +882,79 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 - Tests: `node --test tests/productPurchaseService.voucher.dev.test.js` (uses stub DATABASE_URL).
 
 ## 🎯 **CURRENT SESSION SUMMARY**
+
+**Date**: 2026-01-17  
+**Session**: EasyPay Standalone Voucher UI Improvements
+
+### **Completed Tasks**
+1. ✅ **Updated EasyPay Voucher Messages** - Changed technical format message to business value proposition
+2. ✅ **Changed Badge from EasyPay to EPVoucher** - Updated badge text and ensured blue color for standalone vouchers
+3. ✅ **Fixed Voucher Redemption Validation** - Added frontend check to prevent redeeming EasyPay 14-digit PINs in wallet
+4. ✅ **Added Simulate Button for Standalone Vouchers** - Extended simulate function to support standalone vouchers in UAT
+5. ✅ **Fixed Accessibility Warnings** - Added AlertDialogDescription to Cancel EasyPay Voucher modal
+
+### **Key Changes**
+- **Voucher Messages**: Updated from technical format details to award-winning platform messaging
+- **Badge System**: Changed from "EasyPay" to "EPVoucher" (blue #2D8CCA) for standalone vouchers
+- **Redemption Validation**: Frontend now prevents redeeming 14-digit EasyPay PINs in wallet (business rule)
+- **Simulate Function**: Extended to support standalone vouchers using `/easypay/voucher/settlement` endpoint
+- **Accessibility**: Added AlertDialogDescription to Cancel EasyPay Voucher modal for screen reader support
+
+### **Issues Fixed**
+- **Incorrect Voucher Messages** - Updated to business-focused messaging about merchant coverage
+- **Badge Still Showing MMVoucher** - Fixed type detection and badge text for standalone vouchers
+- **EasyPay Voucher Redemption Attempt** - Added frontend validation to prevent invalid redemption attempts
+- **Missing Simulate Button** - Extended button visibility to show for active standalone vouchers
+- **Accessibility Warning** - Fixed missing AlertDialogDescription in Cancel modal
+
+### **Next Steps**
+- [ ] Test in Codespaces to verify all EasyPay standalone voucher features
+- [ ] Verify Simulate button for active standalone vouchers in UAT
+- [ ] Test settlement flow to verify status changes from active to redeemed
+- [ ] Test badge display to confirm EPVoucher badge shows correctly
+- [ ] Test redemption validation to verify frontend prevents EasyPay PIN redemption attempts
+
+### **Git Commits**
+- `[commit hash]` - Update EasyPay voucher information message to reflect business logic
+- `[commit hash]` - Update EasyPay voucher description to remove EasyBet reference
+- `[commit hash]` - Fix EasyPay voucher redemption and accessibility issues
+- `[commit hash]` - Fix EasyPay standalone voucher display issues
+- `39906a44` - Add Simulate button for EasyPay standalone vouchers (UAT only)
+
+### **Session Log**
+- `docs/session_logs/2026-01-17_2214_easypay-standalone-voucher-ui-improvements.md`
+
+---
+
+## 🎯 **PREVIOUS SESSION SUMMARY**
+
+### **🚀 STAGING DEPLOYMENT & FIXES - COMPLETE (2026-01-15)** ✅
+- **Manifest.json CORS Fix**: Restored conditional loading to prevent Codespaces CORS errors (regression fix)
+- **TypeScript Build Fixes**: Fixed toLocaleString and setRequestId errors, updated build script to use `build:staging`
+- **Bottom Navigation**: Added `/topup-easypay` and `/cashout-easypay` to bottom navigation pages list
+- **Staging Migrations**: Ran 10 pending migrations in staging database (ledger codes, float accounts, EasyPay features)
+- **Staging Deployment**: Successfully deployed backend and frontend to Cloud Run staging
+- **Status**: ✅ All features working in staging, schema parity with UAT achieved
+
+### **💰 FLOAT ACCOUNT LEDGER INTEGRATION & MONITORING - COMPLETE (2026-01-15)** ✅
+- **Problem**: Float accounts were using operational identifiers (ZAPPER_FLOAT_001) as ledger account codes, violating banking-grade accounting standards
+- **Solution Implemented**: Complete ledger integration with proper account codes (1200-10-XX format), consolidated duplicate Zapper floats, created missing MobileMart float, and implemented scheduled float balance monitoring service
+- **Key Changes**:
+  - Added `ledgerAccountCode` field to `SupplierFloat` model
+  - Created 3 migrations: add column, seed ledger accounts, update existing floats
+  - Updated all ledger posting code to use `ledgerAccountCode` instead of `floatAccountNumber`
+  - Consolidated duplicate Zapper float accounts (R5,435 transferred to primary)
+  - Created missing MobileMart float account (R60,000 initial balance)
+  - Implemented `FloatBalanceMonitoringService` with hourly checks and email notifications
+- **Files Modified**:
+  - `models/SupplierFloat.js` - Added ledgerAccountCode field
+  - `controllers/voucherController.js`, `controllers/qrPaymentController.js` - Fixed ledger posting
+  - `migrations/20260115_*.js` - 4 new migrations for ledger integration
+  - `services/floatBalanceMonitoringService.js` - New scheduled monitoring service
+  - `server.js` - Integrated monitoring service with graceful shutdown
+  - `env.template` - Added ledger account codes and monitoring configuration
+- **Status**: ✅ Complete - All float accounts now have proper ledger codes, monitoring service active
+- **Session Log**: `docs/session_logs/2026-01-15_1920_float-account-ledger-integration-and-monitoring.md`
 
 ### **🔔 REAL-TIME NOTIFICATION UPDATES - COMPLETE (2025-12-04)** ✅
 - **Problem**: Users had to logout/login to see new notifications (poor UX)

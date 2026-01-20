@@ -1,5 +1,87 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-01-20 - 📺 Watch to Earn Implementation (v2.7.0) ✅
+
+### **Session Overview**
+Implemented complete Watch to Earn video advertising platform with banking-grade security, prefunded merchant ad float accounts, dual ad types (Reach and Engagement), manual content moderation, and B2B "Payout-to-Promote" incentive system. Comprehensive, cost-optimized solution ready for 10-ad pilot scaling to hundreds.
+
+### **🎯 Features Implemented** ✅
+- **Database Schema**: Extended `MerchantFloat` with ad float account fields, created 3 new tables (AdCampaigns, AdViews, AdEngagements)
+- **Ad Types**: Reach ads (R2.00 reward) and Engagement ads (R3.00 reward with lead capture)
+- **Prefunded Float**: Merchant ad float account separate from voucher balance, follows existing float pattern
+- **Backend Services**: adService (core logic + ledger), engagementService (lead capture), payoutIncentiveService (B2B incentive)
+- **API Endpoints**: 5 RESTful endpoints with authentication, rate limiting, and idempotency
+- **Frontend**: LoyaltyPromotionsPage with 3-button layout, EarnMoolahsModal with react-player integration
+- **B2B Incentive**: "Payout-to-Promote" - merchants earn ad float credits (R200 payout = R6.00 credit = 1 free ad)
+- **Security**: Rate limiting (5 ads/hour), unique constraints, server-side watch verification, idempotency
+- **Ledger Integration**: Double-entry accounting with existing ledgerService
+- **Manual Moderation**: Admin approval queue for launch (AI moderation planned for future)
+
+### **📊 Financial Model** ✅
+**Reach Ads**:
+- Merchant pays: R6.00 (from prefunded ad float account)
+- User earns: R2.00 (instant wallet credit)
+- MM revenue: R4.00 per view
+- Data cost: R0.001 (CDN-optimized)
+
+**Engagement Ads**:
+- Merchant pays: R15.00 (from prefunded ad float account)
+- User earns: R3.00 (R2.00 view + R1.00 engagement bonus)
+- MM revenue: R12.00 per engagement
+- Lead sent to merchant (email/webhook)
+
+### **📝 Files Created** ✅
+**Backend**:
+- `migrations/20260120_01_add_ad_float_to_merchant_floats.js`
+- `migrations/20260120_02_create_ad_campaigns.js`
+- `migrations/20260120_03_create_ad_views.js`
+- `migrations/20260120_04_create_ad_engagements.js`
+- `models/AdCampaign.js`
+- `models/AdView.js`
+- `models/AdEngagement.js`
+- `services/adService.js`
+- `services/engagementService.js`
+- `services/payoutIncentiveService.js`
+- `controllers/adController.js`
+- `routes/ads.js`
+- `seeders/20260120_seed_watch_to_earn.js`
+
+**Frontend**:
+- `pages/LoyaltyPromotionsPage.tsx`
+- `components/modals/EarnMoolahsModal.tsx`
+- Installed `react-player` package
+
+**Documentation**:
+- `docs/WATCH_TO_EARN.md`
+
+### **🔒 Security & Compliance** ✅
+- Banking-grade atomic transactions
+- Rate limiting: 5 ads/hour, 10 engagements/day
+- Unique constraints: one view per user per campaign
+- Server-side watch duration verification (95%+ required)
+- Idempotency for all mutations
+- Double-entry ledger posting
+- TLS 1.3 encrypted data transmission
+- Fraud prevention via database constraints
+
+### **✅ Testing Status**
+- [x] Migrations created and ready to run
+- [x] Models created with associations
+- [x] Services implement banking-grade patterns
+- [x] API endpoints with proper error handling
+- [x] Frontend components follow Figma style
+- [x] Seed data created (dummy merchant + 10 ads)
+- [ ] End-to-end UAT testing (pending)
+
+### **📋 Next Steps**
+1. Run migrations in UAT Codespaces
+2. Run seeder to populate test data
+3. Upload 10 test videos to GCS
+4. End-to-end testing
+5. Deploy to staging after UAT validation
+
+---
+
 ## 2026-01-17 - 🎫 EasyPay Standalone Voucher UI Improvements (v2.6.4) ✅
 
 ### **Session Overview**

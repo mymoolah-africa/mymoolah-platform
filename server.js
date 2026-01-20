@@ -154,6 +154,7 @@ const catalogSyncRoutes = require('./routes/catalogSync.js');
 const userFavoritesRoutes = require('./routes/userFavorites.js');
 const referralRoutes = require('./routes/referrals.js');
 const reconciliationRoutes = require('./routes/reconciliation.js');
+const adRoutes = require('./routes/ads.js'); // Watch to Earn
 const { LedgerAccount, sequelize } = require('./models');
 
 // Validate external service credentials
@@ -434,6 +435,7 @@ app.use('/api/v1/overlay', overlayRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/catalog-sync', catalogSyncRoutes);
 app.use('/api/v1/user-favorites', userFavoritesRoutes);
+app.use('/api/v1/ads', adRoutes); // Watch to Earn
 app.use('/api/v1/referrals', referralRoutes);
 app.use('/api/v1/reconciliation', reconciliationRoutes);
 
