@@ -23,10 +23,13 @@ import {
   AlertTriangle,
   DollarSign,
   AtSign,
-  HandCoins
+  HandCoins,
+  Play,
+  Tag
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import EarnMoolahsModal from '../components/modals/EarnMoolahsModal';
 
 // Service interface for type safety
 interface Service {
@@ -53,6 +56,7 @@ interface ServiceSection {
 export function TransactPage() {
   const navigate = useNavigate();
   const { user, requiresKYC } = useAuth();
+  const [showEarnMoolahsModal, setShowEarnMoolahsModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingService, setLoadingService] = useState<string | null>(null);
   const [trendingProducts, setTrendingProducts] = useState<VASProduct[]>([]);
@@ -88,6 +92,12 @@ export function TransactPage() {
   // Service navigation handler with KYC checks
   const handleServiceClick = async (service: Service) => {
     if (!service.available) return;
+    
+    // Special case: Watch to Earn opens modal instead of navigating
+    if (service.id === 'watch-to-earn') {
+      setShowEarnMoolahsModal(true);
+      return;
+    }
     
     // Show loading state for service
     setLoadingService(service.id);
@@ -265,11 +275,33 @@ export function TransactPage() {
       color: '#8b5cf6',
       services: [
         {
-          id: 'loyalty-overlay',
+          id: 'watch-to-earn',
+          title: 'Watch to Earn',
+          description: 'Watch videos and earn R2-R3 per ad',
+          icon: <Play className="w-6 h-6" />,
+          route: '#watch-to-earn', // Special: opens modal instead of navigating
+          available: true,
+          badge: 'New',
+          badgeType: 'success',
+          comingSoon: false
+        },
+        {
+          id: 'rewards-program',
           title: 'Rewards Program',
           description: 'Cashback deals and special offers',
           icon: <Star className="w-6 h-6" />,
-          route: '/loyalty-overlay',
+          route: '/rewards-program',
+          available: false,
+          badge: 'Coming Soon',
+          badgeType: 'info',
+          comingSoon: true
+        },
+        {
+          id: 'promotions',
+          title: 'Promotions',
+          description: 'Exclusive deals and discounts',
+          icon: <Tag className="w-6 h-6" />,
+          route: '/promotions',
           available: false,
           badge: 'Coming Soon',
           badgeType: 'info',
@@ -549,6 +581,14 @@ export function TransactPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Watch to Earn Modal */}
+      {showEarnMoolahsModal && (
+        <EarnMoolahsModal
+          isOpen={showEarnMoolahsModal}
+          onClose={() => setShowEarnMoolahsModal(false)}
+        />
+      )}
     </div>
   );
 }
