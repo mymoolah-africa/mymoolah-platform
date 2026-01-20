@@ -15,9 +15,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import ReactPlayer from 'react-player';
 import { 
-  X,
   Play,
   Clock,
   DollarSign,
@@ -61,7 +59,7 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
   const [watchStartTime, setWatchStartTime] = useState<number | null>(null);
   const [earnedAmount, setEarnedAmount] = useState<number>(0);
   
-  const playerRef = useRef<ReactPlayer>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   // Fetch available ads
   useEffect(() => {
@@ -388,28 +386,29 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
               style={{
                 position: 'relative',
                 width: '100%',
-                paddingTop: '56.25%', // 16:9 aspect ratio
                 backgroundColor: '#000',
                 borderRadius: '8px',
                 overflow: 'hidden'
               }}
             >
-              <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}>
-                <ReactPlayer
-                  ref={playerRef}
-                  url={selectedAd.videoUrl}
-                  playing={true}
-                  controls={true}
-                  width="100%"
-                  height="100%"
-                  onEnded={handleVideoEnd}
-                  onReady={() => console.log('Video ready to play:', selectedAd.videoUrl)}
-                  onError={(error) => {
-                    console.error('Video player error:', error, 'URL:', selectedAd.videoUrl);
-                    setError('Video failed to load. Use "Test Complete" button below to continue testing.');
-                  }}
-                />
-              </div>
+              <video
+                ref={videoRef}
+                src={selectedAd.videoUrl}
+                controls
+                autoPlay
+                playsInline
+                onEnded={handleVideoEnd}
+                onCanPlay={() => console.log('Video ready to play:', selectedAd.videoUrl)}
+                onError={(e) => {
+                  console.error('Video player error:', e, 'URL:', selectedAd.videoUrl);
+                  setError('Video failed to load. Please try again.');
+                }}
+                style={{
+                  width: '100%',
+                  maxHeight: '400px',
+                  display: 'block'
+                }}
+              />
             </div>
             
             <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f0f7e8', borderRadius: '8px' }}>
