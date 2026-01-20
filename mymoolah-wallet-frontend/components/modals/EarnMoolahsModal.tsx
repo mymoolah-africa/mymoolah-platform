@@ -256,34 +256,14 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
-        className="earn-moolahs-dialog"
         style={{
           fontFamily: 'Montserrat, sans-serif',
           maxWidth: '600px',
           width: '90%',
           maxHeight: '80vh',
-          overflow: 'auto',
-          position: 'relative'
+          overflow: 'auto'
         }}
       >
-        {/* CSS to style the default close button */}
-        <style>{`
-          .earn-moolahs-dialog [data-slot="dialog-close"],
-          .earn-moolahs-dialog button[class*="absolute"][class*="top-4"][class*="right-4"] {
-            width: 32px !important;
-            height: 32px !important;
-            border-radius: 50% !important;
-            background-color: #f3f4f6 !important;
-            opacity: 1 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-          }
-          .earn-moolahs-dialog [data-slot="dialog-close"]:hover,
-          .earn-moolahs-dialog button[class*="absolute"][class*="top-4"][class*="right-4"]:hover {
-            background-color: #e5e7eb !important;
-          }
-        `}</style>
         <DialogHeader>
           <DialogTitle
             style={{
