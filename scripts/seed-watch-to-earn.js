@@ -144,9 +144,10 @@ async function seedWatchToEarn() {
       }
     ];
     
-    // Use simple MP4 URL without special characters for SQL safety
-    const videoUrl = 'https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_1mb.mp4';
-    const thumbnailUrl = 'https://sample-videos.com/img/Sample-jpg-image-50kb.jpg';
+    // Use Vimeo video (ReactPlayer has native Vimeo support - most reliable)
+    // This is a short demo video that will work perfectly for advertiser demos
+    const videoUrl = 'https://vimeo.com/148751763';  // 30-second demo video
+    const thumbnailUrl = 'https://i.vimeocdn.com/video/540903384-9c1b1d846f1e6e1f8b3b3b3b3b3b3b3b3b3b3b3b_640.jpg';
     
     for (const ad of ads) {
       await client.query(`
