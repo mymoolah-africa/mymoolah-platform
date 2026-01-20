@@ -194,8 +194,9 @@ class AdService {
         transactionId,
         userId,
         walletId: wallet.walletId,
+        receiverWalletId: wallet.walletId, // User receives the reward
         amount: campaign.rewardPerView,
-        type: 'credit',
+        type: 'receive', // Valid ENUM value - user receives ad reward
         status: 'completed',
         description: `Watch to Earn: ${campaign.title}`,
         currency: 'ZAR',
@@ -207,7 +208,11 @@ class AdService {
           merchantId: campaign.merchantId,
           merchantDebitAmount: campaign.costPerView,
           watchDuration: watchDuration,
-          isWatchToEarn: true
+          isWatchToEarn: true,
+          // VAT Note: User wallet credits are not subject to VAT as individual users
+          // are not VAT registered. The merchant's cost already includes VAT.
+          vatExempt: true,
+          vatNote: 'User reward exempt - non-VAT registered individual'
         }
       }, { transaction });
 

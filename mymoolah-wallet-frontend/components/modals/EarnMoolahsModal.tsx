@@ -191,6 +191,15 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
       console.error('Error completing ad view:', err);
       const message = err.message || 'Failed to complete ad. Please try again.';
       setError(typeof message === 'string' ? message : String(message));
+      // Reset to list after 3 seconds on error
+      setTimeout(() => {
+        setState('list');
+        setSelectedAd(null);
+        setViewId(null);
+        setWatchStartTime(null);
+        setError('');
+        fetchAvailableAds(); // Refresh the list
+      }, 3000);
     }
   };
 
