@@ -120,10 +120,16 @@ class AdController {
 
       const result = await adService.completeView(userId, campaignId, viewId, watchDuration);
 
+      // Convert Decimal to number for formatting
+      const rewardAmount = parseFloat(result.rewardAmount) || 0;
+
       res.json({
         success: true,
-        message: `You earned R${result.rewardAmount.toFixed(2)}!`,
-        data: result
+        message: `You earned R${rewardAmount.toFixed(2)}!`,
+        data: {
+          ...result,
+          rewardAmount: rewardAmount
+        }
       });
     } catch (error) {
       console.error('❌ Error in completeView:', error.message);
