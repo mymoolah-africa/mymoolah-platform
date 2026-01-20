@@ -187,7 +187,11 @@ class AdService {
         throw new Error('User wallet not found');
       }
 
-      await wallet.credit(campaign.rewardPerView, 'ad_reward', { transaction });
+      // Credit wallet directly with increment (simpler, doesn't require credit method)
+      await wallet.increment('balance', {
+        by: parseFloat(campaign.rewardPerView),
+        transaction
+      });
 
       // 7. Update campaign budget and stats
       await campaign.decrement('remainingBudget', {

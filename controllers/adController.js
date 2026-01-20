@@ -126,7 +126,8 @@ class AdController {
         data: result
       });
     } catch (error) {
-      console.error('❌ Error in completeView:', error);
+      console.error('❌ Error in completeView:', error.message);
+      console.error('❌ Full error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
 
       if (error.message.includes('not watched completely')) {
         return sendErrorResponse(
@@ -146,10 +147,19 @@ class AdController {
         );
       }
 
+      if (error.message.includes('not found') || error.message.includes('already completed')) {
+        return sendErrorResponse(
+          res,
+          ERROR_CODES.NOT_FOUND,
+          error.message,
+          requestId
+        );
+      }
+
       return sendErrorResponse(
         res,
         ERROR_CODES.DATABASE_ERROR,
-        'Failed to complete ad view',
+        `Failed to complete ad view: ${error.message}`,
         requestId,
         error
       );

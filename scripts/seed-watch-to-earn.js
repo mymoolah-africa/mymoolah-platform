@@ -23,12 +23,84 @@ async function seedWatchToEarn() {
     client = await getUATClient();
     console.log('✅ Connected to database');
     
+    // Ensure ad float columns exist in merchant_floats
+    console.log('📋 Ensuring ad float columns exist...');
+    try {
+      await client.query(`
+        ALTER TABLE merchant_floats 
+        ADD COLUMN IF NOT EXISTS "adFloatBalance" DECIMAL(15,2) DEFAULT 0.00,
+        ADD COLUMN IF NOT EXISTS "adFloatInitialBalance" DECIMAL(15,2) DEFAULT 0.00,
+        ADD COLUMN IF NOT EXISTS "adFloatMinimumBalance" DECIMAL(15,2) DEFAULT 0.00
+      `);
+      console.log('✅ Ad float columns ready');
+    } catch (e) {
+      console.log('ℹ️  Ad float columns check:', e.message);
+    }
+    
+    // Ensure ad_campaigns table exists
+    console.log('📋 Ensuring ad_campaigns table exists...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ad_campaigns (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        "merchantId" VARCHAR(255) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        "videoUrl" TEXT NOT NULL,
+        "thumbnailUrl" TEXT,
+        "durationSeconds" INTEGER NOT NULL DEFAULT 30,
+        "adType" VARCHAR(50) NOT NULL DEFAULT 'reach',
+        status VARCHAR(50) NOT NULL DEFAULT 'draft',
+        "totalBudget" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+        "remainingBudget" DECIMAL(15,2) NOT NULL DEFAULT 0.00,
+        "costPerView" DECIMAL(10,2) NOT NULL DEFAULT 6.00,
+        "rewardPerView" DECIMAL(10,2) NOT NULL DEFAULT 2.00,
+        "targetingRules" JSONB,
+        "conversionEmail" VARCHAR(255),
+        "conversionWebhookUrl" TEXT,
+        "moderationStatus" VARCHAR(50) NOT NULL DEFAULT 'pending',
+        "moderatedAt" TIMESTAMP WITH TIME ZONE,
+        "moderatedBy" VARCHAR(255),
+        "moderationNotes" TEXT,
+        "totalViews" INTEGER NOT NULL DEFAULT 0,
+        "totalEngagements" INTEGER NOT NULL DEFAULT 0,
+        metadata JSONB,
+        "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log('✅ ad_campaigns table ready');
+    
+    // Ensure ad_views table exists
+    console.log('📋 Ensuring ad_views table exists...');
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ad_views (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        "campaignId" UUID NOT NULL,
+        "userId" INTEGER NOT NULL,
+        status VARCHAR(50) NOT NULL DEFAULT 'started',
+        "startedAt" TIMESTAMP WITH TIME ZONE,
+        "completedAt" TIMESTAMP WITH TIME ZONE,
+        "watchDurationSeconds" INTEGER,
+        "rewardAmount" DECIMAL(10,2),
+        "merchantDebitAmount" DECIMAL(10,2),
+        "deviceInfo" JSONB,
+        "ipAddress" VARCHAR(45),
+        "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+        "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+      )
+    `);
+    console.log('✅ ad_views table ready');
+    
     // First, clear old ad views so users can watch ads again (for testing)
     console.log('🗑️  Clearing old ad views for test campaigns...');
-    await client.query(`
-      DELETE FROM ad_views WHERE "campaignId"::text LIKE '00000000-00%'
-    `);
-    console.log('✅ Old ad views cleared');
+    try {
+      await client.query(`
+        DELETE FROM ad_views WHERE "campaignId"::text LIKE '00000000-00%'
+      `);
+      console.log('✅ Old ad views cleared');
+    } catch (e) {
+      console.log('ℹ️  ad_views table might not exist yet:', e.message);
+    }
     
     console.log('📝 Creating dummy merchant float with ad float account...');
     
