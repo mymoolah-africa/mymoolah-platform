@@ -25,7 +25,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -247,6 +247,12 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
             {state === 'engagement' && "We'd Like to Hear From You"}
             {state === 'success' && 'Success!'}
           </DialogTitle>
+          <DialogDescription style={{ display: 'none' }}>
+            {state === 'list' && 'Select an ad to watch and earn wallet credits'}
+            {state === 'playing' && 'Watch the video to completion to earn your reward'}
+            {state === 'engagement' && 'Click to share your details with the merchant and earn a bonus'}
+            {state === 'success' && 'Your wallet has been credited successfully'}
+          </DialogDescription>
         </DialogHeader>
 
         {/* Error Alert */}
@@ -362,7 +368,7 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#86BE41', fontWeight: 600 }}>
                               <DollarSign style={{ width: '14px', height: '14px' }} />
-                              <span>Earn R{ad.rewardPerView.toFixed(2)}</span>
+                              <span>Earn R{parseFloat(ad.rewardPerView).toFixed(2)}</span>
                             </div>
                           </div>
                         </div>
@@ -422,7 +428,7 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                   textAlign: 'center'
                 }}
               >
-                Watch the entire video to earn <strong style={{ color: '#86BE41' }}>R{selectedAd.rewardPerView.toFixed(2)}</strong>
+                Watch the entire video to earn <strong style={{ color: '#86BE41' }}>R{parseFloat(selectedAd.rewardPerView).toFixed(2)}</strong>
               </p>
             </div>
           </div>
