@@ -20,7 +20,7 @@ import {
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import BottomNavigation from '../components/BottomNavigation';
+import { BottomNavigation } from '../components/BottomNavigation';
 import logo3 from "../assets/logo3.svg";
 import EarnMoolahsModal from '../components/modals/EarnMoolahsModal';
 
