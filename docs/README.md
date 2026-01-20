@@ -1,12 +1,32 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: January 20, 2026  
-**Version**: 2.7.0 - Watch to Earn Implementation  
-**Status**: ✅ **WATCH TO EARN IMPLEMENTED** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 20, 2026 18:27  
+**Version**: 2.7.1 - Watch to Earn UAT Fixes  
+**Status**: ✅ **WATCH TO EARN UAT READY** ✅ **ALL ADS VISIBLE IN UAT** ✅ **RE-WATCHING ENABLED** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: Watch to Earn Platform (January 20, 2026)**
+## 🚀 **LATEST UPDATE: Watch to Earn UAT Fixes (January 20, 2026 - 18:27)**
+
+### **🔧 UAT Testing Ready**
+Fixed critical issues for UAT demos: all 10 ads remain visible and re-watchable in UAT/Staging, fixed 500 error on video completion, improved error handling, and ensured database safety.
+
+**UAT Fixes**:
+- ✅ **Re-watching Enabled**: All 10 ads remain visible in UAT/Staging (production still enforces one-view-per-ad)
+- ✅ **500 Error Fixed**: Converted Decimal to number for response formatting
+- ✅ **Error Handling**: Enhanced logging with full error details for debugging
+- ✅ **Database Safety**: Idempotent seeder script ensures tables/columns exist
+- ✅ **Wallet Updates**: Simplified balance updates using direct increment
+
+**Environment Behavior**:
+- **UAT/Staging**: All ads visible, re-watching allowed (perfect for demos)
+- **Production**: One-view-per-ad fraud prevention enforced
+
+**Status**: ✅ **UAT fixes complete**, ✅ **Ready for demos**, ⏳ **Production testing pending**
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Watch to Earn Platform (January 20, 2026)**
 
 ### **📺 Revolutionary Video Advertising Platform**
 Implemented complete Watch to Earn feature - users earn R2.00-R3.00 by watching 20-30s video ads, merchants gain cost-effective advertising channel with prefunded ad float accounts.
@@ -23,7 +43,7 @@ Implemented complete Watch to Earn feature - users earn R2.00-R3.00 by watching 
 
 **Revenue Model**: Merchant pays R6.00 (Reach) or R15.00 (Engagement), MM earns R4.00 / R12.00 net profit per view/engagement
 
-**Status**: ✅ **Implementation complete**, ⏳ **Ready for UAT testing**
+**Status**: ✅ **Implementation complete**, ✅ **UAT fixes complete**
 
 ---
 

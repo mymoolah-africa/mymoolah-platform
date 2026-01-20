@@ -1,10 +1,25 @@
-**Last Updated**: January 17, 2026 (22:14 SAST)
-**Version**: 2.6.4 - EasyPay Standalone Voucher UI Improvements
-**Status**: ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED**
+**Last Updated**: January 20, 2026 (18:27 SAST)
+**Version**: 2.7.1 - Watch to Earn UAT Fixes
+**Status**: ✅ **WATCH TO EARN UAT READY** ✅ **ALL ADS VISIBLE IN UAT** ✅ **RE-WATCHING ENABLED** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **SMS INTEGRATION WORKING** ✅ **REFERRAL SYSTEM LIVE** ✅ **OTP SYSTEM LIVE** ✅ **MOBILEMART INTEGRATED**
 
 ---
 
 ## Recent Updates
+
+### 2026-01-20 - Watch to Earn UAT Fixes
+- **Re-watching Enabled**: All 10 ads remain visible in UAT/Staging (production still enforces one-view-per-ad)
+- **500 Error Fixed**: Converted Decimal to number for response formatting
+- **Error Handling**: Enhanced logging with full error details for debugging
+- **Database Safety**: Idempotent seeder script ensures tables/columns exist
+- **Environment Behavior**: UAT/Staging shows all ads, Production enforces fraud prevention
+
+### 2026-01-20 - Watch to Earn Implementation
+- **Watch to Earn API**: 5 new endpoints at `/api/v1/ads/*`
+- **Ad Types**: Reach ads (R2.00 reward) and Engagement ads (R3.00 reward with lead capture)
+- **Prefunded Float**: Merchant ad float account separate from voucher balance
+- **B2B Incentive**: "Payout-to-Promote" - merchants earn ad float credits when making payouts
+- **Security**: Rate limiting (5 ads/hour), unique constraints, server-side watch verification, idempotency
+- **Ledger Integration**: Double-entry accounting with existing ledgerService
 
 ### 2026-01-17 - EasyPay Standalone Voucher UI Improvements
 - **Voucher Messaging**: Updated to business-focused messaging reflecting award-winning platform positioning
@@ -741,6 +756,258 @@ DELETE /api/v1/vouchers/easypay/:voucherId
 - Only pending top-up vouchers can be cancelled
 - No wallet credit on cancellation (wallet was never debited)
 - Voucher status changes to `cancelled`
+
+---
+
+## 📺 **WATCH TO EARN API**
+
+### **Watch to Earn Endpoints**
+
+The Watch to Earn API allows users to earn wallet credits by watching video advertisements. Merchants prepay into ad float accounts, and users earn R2.00-R3.00 per ad view.
+
+#### **1. Get Available Ads**
+```http
+GET /api/v1/ads/available
+```
+
+**Description**: Retrieves all available video ads that the user can watch to earn credits.
+
+**Authentication**: Required (JWT Bearer token)
+
+**Rate Limiting**: 10 requests/hour
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "00000000-0001-0000-0000-000000000001",
+      "title": "Capitec Bank Savings",
+      "description": "Open a savings account with zero monthly fees",
+      "videoUrl": "https://storage.googleapis.com/...",
+      "thumbnailUrl": "https://storage.googleapis.com/...",
+      "durationSeconds": 15,
+      "adType": "reach",
+      "rewardPerView": 2.00,
+      "costPerView": 6.00
+    },
+    {
+      "id": "00000000-0002-0000-0000-000000000002",
+      "title": "Takealot Black Friday",
+      "description": "Biggest sale of the year! Free delivery on orders over R500.",
+      "videoUrl": "https://storage.googleapis.com/...",
+      "thumbnailUrl": "https://storage.googleapis.com/...",
+      "durationSeconds": 15,
+      "adType": "engagement",
+      "rewardPerView": 3.00,
+      "costPerView": 15.00
+    }
+  ]
+}
+```
+
+**Notes**:
+- UAT/Staging: All ads visible, re-watching allowed
+- Production: Ads disappear after viewing (one-view-per-ad fraud prevention)
+
+#### **2. Start Ad View**
+```http
+POST /api/v1/ads/:campaignId/start
+```
+
+**Description**: Starts tracking an ad view session. Creates a view record with status 'started'.
+
+**Authentication**: Required (JWT Bearer token)
+
+**Rate Limiting**: 5 ads/hour
+
+**Idempotency**: Supported (X-Idempotency-Key header)
+
+**Path Parameters**:
+- `campaignId` (UUID): Campaign ID from available ads
+
+**Request Body**:
+```json
+{
+  "idempotencyKey": "unique-key-123"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": {
+    "id": "00000000-0001-0000-0000-000000000010",
+    "campaignId": "00000000-0001-0000-0000-000000000001",
+    "userId": 1,
+    "status": "started",
+    "startedAt": "2026-01-20T16:00:00.000Z"
+  }
+}
+```
+
+**Notes**:
+- UAT/Staging: Deletes old view record if user re-watches same ad
+- Production: Returns error if user already watched ad
+
+#### **3. Complete Ad View**
+```http
+POST /api/v1/ads/:campaignId/complete
+```
+
+**Description**: Completes an ad view and credits the user's wallet. Requires watching 95%+ of video duration.
+
+**Authentication**: Required (JWT Bearer token)
+
+**Rate Limiting**: 5 ads/hour
+
+**Idempotency**: Supported (X-Idempotency-Key header)
+
+**Path Parameters**:
+- `campaignId` (UUID): Campaign ID
+
+**Request Body**:
+```json
+{
+  "viewId": "00000000-0001-0000-0000-000000000010",
+  "watchDuration": 14,
+  "idempotencyKey": "unique-key-123"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "You earned R2.00!",
+  "data": {
+    "viewId": "00000000-0001-0000-0000-000000000010",
+    "rewardAmount": 2.00,
+    "transactionId": "AD_VIEW_1737388800000_abc123",
+    "walletBalance": 150.00
+  }
+}
+```
+
+**Error Responses**:
+- `400 Bad Request`: Video not watched completely (required: 95%+ of duration)
+- `400 Bad Request`: View not found or already completed
+- `400 Bad Request`: Merchant has insufficient ad budget
+- `500 Internal Server Error`: Database or transaction error
+
+**Notes**:
+- Atomic transaction: debits merchant ad float, credits user wallet, updates view record
+- Creates transaction history entry with type 'receive'
+- Posts to ledger (async, non-blocking)
+
+#### **4. Record Engagement (Engagement Ads Only)**
+```http
+POST /api/v1/ads/:campaignId/engage
+```
+
+**Description**: Records user engagement (lead capture) for Engagement ads. Sends user details to merchant and credits R1.00 bonus.
+
+**Authentication**: Required (JWT Bearer token)
+
+**Rate Limiting**: 10 engagements/day
+
+**Idempotency**: Supported (X-Idempotency-Key header)
+
+**Path Parameters**:
+- `campaignId` (UUID): Campaign ID (must be Engagement ad type)
+
+**Request Body**:
+```json
+{
+  "viewId": "00000000-0001-0000-0000-000000000010",
+  "name": "John Doe",
+  "phone": "+27821234567",
+  "email": "john@example.com",
+  "idempotencyKey": "unique-key-123"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Engagement recorded! You earned R1.00 bonus!",
+  "data": {
+    "engagementId": "00000000-0001-0000-0000-000000000020",
+    "bonusAmount": 1.00,
+    "leadSent": true,
+    "deliveryMethod": "email"
+  }
+}
+```
+
+**Notes**:
+- Only works for Engagement ad types
+- Sends lead to merchant via email or webhook (configured in campaign)
+- Credits R1.00 bonus to user wallet (in addition to R2.00 view reward)
+
+#### **5. Get Ad View History**
+```http
+GET /api/v1/ads/history
+```
+
+**Description**: Retrieves user's ad view history with rewards earned.
+
+**Authentication**: Required (JWT Bearer token)
+
+**Query Parameters**:
+- `limit` (optional, default: 50): Number of records to return
+- `offset` (optional, default: 0): Pagination offset
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "00000000-0001-0000-0000-000000000010",
+      "campaignId": "00000000-0001-0000-0000-000000000001",
+      "campaignTitle": "Capitec Bank Savings",
+      "status": "completed",
+      "rewardAmount": 2.00,
+      "watchDurationSeconds": 14,
+      "completedAt": "2026-01-20T16:00:15.000Z"
+    }
+  ],
+  "pagination": {
+    "total": 10,
+    "limit": 50,
+    "offset": 0
+  }
+}
+```
+
+### **Watch to Earn Business Rules**
+
+1. **Rate Limiting**:
+   - 5 ads/hour per user
+   - 10 engagements/day per user
+
+2. **Watch Duration**:
+   - Must watch 95%+ of video duration to earn reward
+   - Server-side verification (client-reported duration validated)
+
+3. **Fraud Prevention**:
+   - Production: One view per user per campaign (unique constraint)
+   - UAT/Staging: Re-watching allowed for testing
+
+4. **Financial Model**:
+   - Reach ads: Merchant pays R6.00, user earns R2.00, MM revenue R4.00
+   - Engagement ads: Merchant pays R15.00, user earns R3.00 (R2.00 view + R1.00 bonus), MM revenue R12.00
+
+5. **Prefunded Float**:
+   - Merchants prepay into ad float account (separate from voucher balance)
+   - Ad views debited from merchant ad float balance
+   - Campaign paused when merchant has insufficient balance
+
+---
 
 ### **Voucher Management**
 

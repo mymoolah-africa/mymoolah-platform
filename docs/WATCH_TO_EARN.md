@@ -585,4 +585,72 @@ For questions or issues, contact:
 ---
 
 **Version History**:
+- v1.0.1 (2026-01-20 18:27): UAT fixes - re-watching enabled, 500 error fixed, database safety improvements
 - v1.0.0 (2026-01-20): Initial implementation with Reach and Engagement ads
+
+---
+
+## UAT Testing & Environment Behavior
+
+### Environment-Based Ad Filtering
+
+**UAT/Staging Environment**:
+- ✅ All 10 ads always visible (no "already watched" filter)
+- ✅ Users can re-watch same ad multiple times for testing
+- ✅ Old view records deleted when re-watching
+- ✅ Perfect for demos and testing
+
+**Production Environment**:
+- ✅ One-view-per-ad fraud prevention enforced
+- ✅ Ads disappear after viewing
+- ✅ Users cannot re-watch same ad
+- ✅ Prevents abuse and ensures fair distribution
+
+### Implementation Details
+
+**Environment Detection**:
+```javascript
+const isProduction = process.env.NODE_ENV === 'production' && 
+                     !process.env.DATABASE_URL?.includes('uat') &&
+                     !process.env.DATABASE_URL?.includes('staging');
+```
+
+**Re-watching Logic**:
+- UAT/Staging: Deletes old view record and creates new one
+- Production: Throws error if user already watched ad
+
+### Known Issues & Fixes
+
+**Issue 1: 500 Error on Video Completion**
+- **Problem**: `TypeError: result.rewardAmount.toFixed is not a function`
+- **Root Cause**: Sequelize Decimal type doesn't have `.toFixed()` method
+- **Solution**: Convert Decimal to number: `parseFloat(result.rewardAmount) || 0`
+- **Status**: ✅ Fixed
+
+**Issue 2: Ads Disappearing After Viewing in UAT**
+- **Problem**: Users couldn't re-watch ads for testing
+- **Root Cause**: Production fraud prevention logic active in UAT
+- **Solution**: Environment-based filtering (skip "already watched" in UAT/Staging)
+- **Status**: ✅ Fixed
+
+**Issue 3: Database Tables/Columns Missing**
+- **Problem**: Migration might not have run, causing errors
+- **Root Cause**: Tables/columns might not exist in Codespaces database
+- **Solution**: Idempotent seeder script with `CREATE TABLE IF NOT EXISTS`
+- **Status**: ✅ Fixed
+
+**Issue 4: Ledger Account Error (Non-blocking)**
+- **Problem**: `Account not found (2100-05-001)` in ledger posting
+- **Impact**: Doesn't affect core Watch to Earn flow (wallet credit works)
+- **Status**: ⏳ Can be addressed later, not critical for UAT demos
+
+### Testing Checklist
+
+- [x] All 10 ads visible in UAT
+- [x] Re-watching same ad works in UAT
+- [x] Video completion credits wallet correctly
+- [x] Success message displays correctly
+- [x] Transaction history shows Watch to Earn entries
+- [x] Error handling shows specific messages
+- [ ] Production fraud prevention tested
+- [ ] Ledger account created and tested

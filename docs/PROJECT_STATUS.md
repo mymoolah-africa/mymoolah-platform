@@ -1,16 +1,55 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: January 17, 2026  
-**Version**: 2.6.4 - EasyPay Standalone Voucher UI Improvements  
-**Status**: ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 20, 2026 18:27  
+**Version**: 2.7.1 - Watch to Earn UAT Fixes  
+**Status**: ✅ **WATCH TO EARN UAT READY** ✅ **ALL ADS VISIBLE IN UAT** ✅ **RE-WATCHING ENABLED** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has successfully enhanced EasyPay standalone voucher user experience with business-focused messaging, proper badge display, redemption validation, and UAT testing capabilities (January 17, 2026). The platform also includes a generic markdown-to-PDF converter tool and fixed EasyPay simulation authentication (January 16, 2026), banking-grade ledger integration for all supplier float accounts and automated float balance monitoring (January 15, 2026), the EasyPay "Top-up @ EasyPay" feature transformation (January 15, 2026), a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026), **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
+The MyMoolah Treasury Platform has successfully implemented and fixed Watch to Earn video advertising platform for UAT testing (January 20, 2026). All 10 ads remain visible and re-watchable in UAT/Staging, 500 error fixed, error handling improved, and database safety ensured. The platform also includes enhanced EasyPay standalone voucher user experience (January 17, 2026), a generic markdown-to-PDF converter tool and fixed EasyPay simulation authentication (January 16, 2026), banking-grade ledger integration for all supplier float accounts and automated float balance monitoring (January 15, 2026), the EasyPay "Top-up @ EasyPay" feature transformation (January 15, 2026), a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026), **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
 
-### **🎫 Latest Achievement: EasyPay Standalone Voucher UI Improvements (January 17, 2026)** ✅ **COMPLETE**
+### **📺 Latest Achievement: Watch to Earn UAT Fixes (January 20, 2026 - 18:27)** ✅ **COMPLETE**
+
+#### **🔧 UAT Testing Fixes**
+- **Re-watching Enabled**: All 10 ads remain visible in UAT/Staging (production still enforces one-view-per-ad fraud prevention)
+- **500 Error Fixed**: Converted Decimal to number for response formatting (`parseFloat(result.rewardAmount) || 0`)
+- **Error Handling**: Enhanced logging with full error details for debugging
+- **Database Safety**: Idempotent seeder script ensures tables/columns exist (`CREATE TABLE IF NOT EXISTS`)
+- **Wallet Updates**: Simplified balance updates using direct `wallet.increment()` instead of `wallet.credit()`
+
+#### **🌍 Environment Behavior**
+- **UAT/Staging**: All ads visible, re-watching allowed (perfect for demos and testing)
+- **Production**: One-view-per-ad fraud prevention enforced (prevents abuse)
+
+#### **Technical Implementation**
+- **Environment Detection**: `isProduction` check based on `NODE_ENV` and `DATABASE_URL`
+- **Files Modified**: `services/adService.js`, `controllers/adController.js`, `scripts/seed-watch-to-earn.js`
+- **Type Safety**: Proper Decimal to number conversion throughout
+- **Status**: ✅ **UAT fixes complete**, ✅ **Ready for demos**
+
+---
+
+### **📺 Previous Achievement: Watch to Earn Implementation (January 20, 2026)** ✅ **COMPLETE**
+
+#### **🎯 Features Implemented**
+- **Database Schema**: Extended `MerchantFloat` with ad float account fields, created 3 new tables (AdCampaigns, AdViews, AdEngagements)
+- **Ad Types**: Reach ads (R2.00 reward) and Engagement ads (R3.00 reward with lead capture)
+- **Prefunded Float**: Merchant ad float account separate from voucher balance, follows existing float pattern
+- **Backend Services**: adService (core logic + ledger), engagementService (lead capture), payoutIncentiveService (B2B incentive)
+- **API Endpoints**: 5 RESTful endpoints with authentication, rate limiting, and idempotency
+- **Frontend**: LoyaltyPromotionsPage with 3-button layout, EarnMoolahsModal with native HTML5 video
+- **B2B Incentive**: "Payout-to-Promote" - merchants earn ad float credits (R200 payout = R6.00 credit = 1 free ad)
+- **Security**: Rate limiting (5 ads/hour), unique constraints, server-side watch verification, idempotency
+- **Ledger Integration**: Double-entry accounting with existing ledgerService
+- **Manual Moderation**: Admin approval queue for launch (AI moderation planned for future)
+
+#### **Status**: ✅ **Implementation complete**, ✅ **UAT fixes complete**
+
+---
+
+### **🎫 Previous Achievement: EasyPay Standalone Voucher UI Improvements (January 17, 2026)** ✅ **COMPLETE**
 
 #### **🎨 UI/UX Enhancements**
 - **Business-Focused Messaging**: Updated voucher information to reflect award-winning platform positioning
