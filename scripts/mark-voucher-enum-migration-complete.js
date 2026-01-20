@@ -1,14 +1,16 @@
+#!/usr/bin/env node
+
 /**
  * Mark voucher enum migration as complete
  * 
  * The 20260117_convert_voucher_type_to_enum migration requires table ownership
  * which we don't have in Codespaces. The voucherType column works fine as VARCHAR
  * (Sequelize handles it as ENUM in code), so we can safely mark it as complete.
+ * 
+ * Uses db-connection-helper.js for proper connection management.
  */
 
-const { Client } = require('pg');
-const fs = require('fs');
-const path = require('path');
+const { getUATClient } = require('./db-connection-helper');
 
 async function markMigrationComplete() {
   let client;
@@ -16,18 +18,8 @@ async function markMigrationComplete() {
   try {
     console.log('📋 Connecting to UAT database...');
     
-    // Read database config from .env or use proxy
-    const dbConfig = {
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '6543'), // UAT proxy port
-      database: process.env.DB_NAME || 'mymoolah_uat',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || '',
-      ssl: false // Using Cloud SQL proxy
-    };
-    
-    client = new Client(dbConfig);
-    await client.connect();
+    // Use db-connection-helper for proper connection
+    client = await getUATClient();
     console.log('✅ Connected to database');
     
     console.log('📝 Marking 20260117_convert_voucher_type_to_enum.js as complete...');
@@ -53,6 +45,7 @@ async function markMigrationComplete() {
     }
     
     await client.end();
+    console.log('✅ Connection closed');
     process.exit(0);
   } catch (error) {
     console.error('❌ Error:', error.message);
