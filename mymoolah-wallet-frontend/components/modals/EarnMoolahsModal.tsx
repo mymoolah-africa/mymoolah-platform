@@ -189,17 +189,14 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
       }
     } catch (err: any) {
       console.error('Error completing ad view:', err);
-      const message = err.message || 'Failed to complete ad. Please try again.';
-      setError(typeof message === 'string' ? message : String(message));
-      // Reset to list after 3 seconds on error
-      setTimeout(() => {
-        setState('list');
-        setSelectedAd(null);
-        setViewId(null);
-        setWatchStartTime(null);
-        setError('');
-        fetchAvailableAds(); // Refresh the list
-      }, 3000);
+      // On error, silently reset to list (the reward might have still been credited)
+      // Don't show error to user - just refresh the list
+      setState('list');
+      setSelectedAd(null);
+      setViewId(null);
+      setWatchStartTime(null);
+      setError('');
+      fetchAvailableAds(); // Refresh the list
     }
   };
 
@@ -288,8 +285,8 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
           </DialogDescription>
         </DialogHeader>
 
-        {/* Error Alert */}
-        {error && (
+        {/* Error Alert - only show during active states, not on list view */}
+        {error && state !== 'list' && (
           <div
             style={{
               padding: '12px',
