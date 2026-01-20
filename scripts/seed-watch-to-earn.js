@@ -144,6 +144,10 @@ async function seedWatchToEarn() {
       }
     ];
     
+    // Use simple MP4 URL without special characters for SQL safety
+    const videoUrl = 'https://sample-videos.com/video321/mp4/240/big_buck_bunny_240p_1mb.mp4';
+    const thumbnailUrl = 'https://sample-videos.com/img/Sample-jpg-image-50kb.jpg';
+    
     for (const ad of ads) {
       await client.query(`
         INSERT INTO ad_campaigns (
@@ -154,23 +158,39 @@ async function seedWatchToEarn() {
           "moderationStatus", "moderatedAt", "moderatedBy", "moderationNotes",
           "totalViews", "totalEngagements", metadata, "createdAt", "updatedAt"
         ) VALUES (
-          $1, 'DUMMY_AD_MERCHANT_001', $2, $3,
-          'https://www.youtube.com/watch?v=aqz-KE-bpKQ',  // 10-second test video
-          'https://i.ytimg.com/vi/aqz-KE-bpKQ/hqdefault.jpg',
-          25, $4, 'active', 600.00, 600.00,
-          $5, $6, NULL,
-          'leads-test@mymoolah.africa', NULL,
-          'approved', NOW(), 'admin', 'Test ad - approved for UAT testing',
-          0, 0, '{"isTestAd": true}', NOW(), NOW()
+          $1, $2, $3, $4, $5, $6,
+          25, $7, $8, 600.00, 600.00,
+          $9, $10, NULL,
+          $11, NULL,
+          $12, NOW(), $13, $14,
+          0, 0, $15, NOW(), NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
-          title = $2,
-          description = $3,
-          "adType" = $4,
-          "costPerView" = $5,
-          "rewardPerView" = $6,
+          title = $3,
+          description = $4,
+          "videoUrl" = $5,
+          "thumbnailUrl" = $6,
+          "adType" = $7,
+          "costPerView" = $9,
+          "rewardPerView" = $10,
           "updatedAt" = NOW();
-      `, [ad.id, ad.title, ad.description, ad.adType, ad.costPerView, ad.rewardPerView]);
+      `, [
+        ad.id,                           // $1
+        'DUMMY_AD_MERCHANT_001',        // $2
+        ad.title,                        // $3
+        ad.description,                  // $4
+        videoUrl,                        // $5
+        thumbnailUrl,                    // $6
+        ad.adType,                       // $7
+        'active',                        // $8
+        ad.costPerView,                  // $9
+        ad.rewardPerView,                // $10
+        'leads-test@mymoolah.africa',   // $11
+        'approved',                      // $12
+        'admin',                         // $13
+        'Test ad - approved for UAT testing', // $14
+        '{"isTestAd": true}'            // $15
+      ]);
     }
     
     console.log(`✅ 10 dummy ads created (5 Reach + 5 Engagement)`);
