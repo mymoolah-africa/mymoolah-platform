@@ -26,7 +26,7 @@ async function seedWatchToEarn() {
     // First, clear old ad views so users can watch ads again (for testing)
     console.log('🗑️  Clearing old ad views for test campaigns...');
     await client.query(`
-      DELETE FROM ad_views WHERE "campaignId" LIKE '00000000-00%'
+      DELETE FROM ad_views WHERE "campaignId"::text LIKE '00000000-00%'
     `);
     console.log('✅ Old ad views cleared');
     
