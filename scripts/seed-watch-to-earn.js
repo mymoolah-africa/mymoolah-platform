@@ -144,10 +144,10 @@ async function seedWatchToEarn() {
       }
     ];
     
-    // Use direct MP4 URLs from Cloudinary (CORS-enabled, works everywhere)
-    // These are public sample videos perfect for advertiser demos
-    const videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
-    const thumbnailUrl = 'https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_big.jpg';
+    // Use short 15-second test video from Google (CORS-enabled, works everywhere)
+    // Perfect for UAT demos - quick to watch and test the full flow
+    const videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+    const thumbnailUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg';
     
     for (const ad of ads) {
       await client.query(`
@@ -160,7 +160,7 @@ async function seedWatchToEarn() {
           "totalViews", "totalEngagements", metadata, "createdAt", "updatedAt"
         ) VALUES (
           $1, $2, $3, $4, $5, $6,
-          25, $7, $8, 600.00, 600.00,
+          15, $7, $8, 600.00, 600.00,
           $9, $10, NULL,
           $11, NULL,
           $12, NOW(), $13, $14,
@@ -201,7 +201,7 @@ async function seedWatchToEarn() {
     console.log('   - 5 Reach ads (R2.00 reward each)');
     console.log('   - 5 Engagement ads (R3.00 reward each)');
     console.log('   - All ads approved and active');
-    console.log('   - Using direct MP4 videos (CORS-enabled, works everywhere)');
+    console.log('   - Using 15-second test video (perfect for UAT demos)');
     console.log('');
     console.log('✅ Watch to Earn seed data complete!');
     
