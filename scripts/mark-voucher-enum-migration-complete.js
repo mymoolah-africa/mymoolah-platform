@@ -6,18 +6,33 @@
  * (Sequelize handles it as ENUM in code), so we can safely mark it as complete.
  */
 
-const { sequelize } = require('../models');
+const { Client } = require('pg');
+const fs = require('fs');
+const path = require('path');
 
 async function markMigrationComplete() {
+  let client;
+  
   try {
-    console.log('📋 Connecting to database...');
+    console.log('📋 Connecting to UAT database...');
     
-    await sequelize.authenticate();
-    console.log('✅ Connected');
+    // Read database config from .env or use proxy
+    const dbConfig = {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '6543'), // UAT proxy port
+      database: process.env.DB_NAME || 'mymoolah_uat',
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || '',
+      ssl: false // Using Cloud SQL proxy
+    };
     
-    console.log('📝 Marking 20260117_convert_voucher_type_to_enum as complete...');
+    client = new Client(dbConfig);
+    await client.connect();
+    console.log('✅ Connected to database');
     
-    const [result] = await sequelize.query(`
+    console.log('📝 Marking 20260117_convert_voucher_type_to_enum.js as complete...');
+    
+    await client.query(`
       INSERT INTO "SequelizeMeta" (name) 
       VALUES ('20260117_convert_voucher_type_to_enum.js')
       ON CONFLICT (name) DO NOTHING;
@@ -26,20 +41,22 @@ async function markMigrationComplete() {
     console.log('✅ Migration marked as complete');
     
     // Verify
-    const [check] = await sequelize.query(`
+    const result = await client.query(`
       SELECT name FROM "SequelizeMeta" 
       WHERE name = '20260117_convert_voucher_type_to_enum.js';
     `);
     
-    if (check.length > 0) {
+    if (result.rows.length > 0) {
       console.log('✅ Verified: Migration is now in SequelizeMeta table');
     } else {
       console.log('⚠️  Warning: Migration not found in SequelizeMeta table');
     }
     
+    await client.end();
     process.exit(0);
   } catch (error) {
     console.error('❌ Error:', error.message);
+    if (client) await client.end();
     process.exit(1);
   }
 }
