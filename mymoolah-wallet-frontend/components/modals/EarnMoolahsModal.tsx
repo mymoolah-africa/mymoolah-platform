@@ -59,24 +59,9 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
   const [watchStartTime, setWatchStartTime] = useState<number | null>(null);
   const [earnedAmount, setEarnedAmount] = useState<number>(0);
   const [autoCloseCountdown, setAutoCloseCountdown] = useState<number>(3);
-  const [videoLoading, setVideoLoading] = useState<boolean>(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Add spinning animation for loading indicator
-  React.useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    `;
-    document.head.appendChild(style);
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
 
   // Auto-close after success
   useEffect(() => {
@@ -135,7 +120,6 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
   const handleSelectAd = async (ad: AdCampaign) => {
     setSelectedAd(ad);
     setError('');
-    setVideoLoading(true);
 
     try {
       const token = getSessionToken();
@@ -162,7 +146,6 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
     } catch (err: any) {
       console.error('Error starting ad view:', err);
       setError(err.message || 'Failed to start ad. Please try again.');
-      setVideoLoading(false);
     }
   };
 
@@ -273,6 +256,7 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
+        className="earn-moolahs-dialog"
         style={{
           fontFamily: 'Montserrat, sans-serif',
           maxWidth: '600px',
@@ -282,37 +266,24 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
           position: 'relative'
         }}
       >
-        {/* Styled Close Button */}
-        <button
-          onClick={handleClose}
-          style={{
-            position: 'absolute',
-            top: '16px',
-            right: '16px',
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            border: 'none',
-            backgroundColor: '#f3f4f6',
-            color: '#6b7280',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s',
-            zIndex: 10
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#e5e7eb';
-            e.currentTarget.style.color = '#1f2937';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#f3f4f6';
-            e.currentTarget.style.color = '#6b7280';
-          }}
-        >
-          ✕
-        </button>
+        {/* CSS to style the default close button */}
+        <style>{`
+          .earn-moolahs-dialog [data-slot="dialog-close"],
+          .earn-moolahs-dialog button[class*="absolute"][class*="top-4"][class*="right-4"] {
+            width: 32px !important;
+            height: 32px !important;
+            border-radius: 50% !important;
+            background-color: #f3f4f6 !important;
+            opacity: 1 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+          }
+          .earn-moolahs-dialog [data-slot="dialog-close"]:hover,
+          .earn-moolahs-dialog button[class*="absolute"][class*="top-4"][class*="right-4"]:hover {
+            background-color: #e5e7eb !important;
+          }
+        `}</style>
         <DialogHeader>
           <DialogTitle
             style={{
@@ -464,41 +435,6 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
         {/* State 2: Video Player */}
         {state === 'playing' && selectedAd && (
           <div>
-            {/* Video Loading Indicator */}
-            {videoLoading && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                  color: 'white',
-                  padding: '20px 30px',
-                  borderRadius: '12px',
-                  zIndex: 100,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: '12px'
-                }}
-              >
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    border: '4px solid rgba(255,255,255,0.3)',
-                    borderTop: '4px solid #86BE41',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }}
-                />
-                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', margin: 0 }}>
-                  Loading video...
-                </p>
-              </div>
-            )}
-            
             <div
               style={{
                 position: 'relative',
@@ -514,16 +450,11 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                 controls
                 autoPlay
                 playsInline
-                onLoadStart={() => setVideoLoading(true)}
-                onCanPlay={() => {
-                  console.log('Video ready to play:', selectedAd.videoUrl);
-                  setVideoLoading(false);
-                }}
+                onCanPlay={() => console.log('Video ready to play:', selectedAd.videoUrl)}
                 onEnded={handleVideoEnd}
                 onError={(e) => {
                   console.error('Video player error:', e, 'URL:', selectedAd.videoUrl);
                   setError('Video failed to load. Please try again.');
-                  setVideoLoading(false);
                 }}
                 style={{
                   width: '100%',
