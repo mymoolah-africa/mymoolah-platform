@@ -418,29 +418,11 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                   fontFamily: 'Montserrat, sans-serif',
                   fontSize: '13px',
                   color: '#4a5568',
-                  textAlign: 'center',
-                  marginBottom: error ? '12px' : '0'
+                  textAlign: 'center'
                 }}
               >
                 Watch the entire video to earn <strong style={{ color: '#86BE41' }}>R{parseFloat(selectedAd.rewardPerView).toFixed(2)}</strong>
               </p>
-              
-              {/* UAT Testing: Skip video button */}
-              {(window.location.hostname.includes('github.dev') || window.location.hostname.includes('localhost')) && (
-                <Button
-                  onClick={handleVideoEnd}
-                  style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '13px',
-                    backgroundColor: '#2D8CCA',
-                    color: 'white',
-                    width: '100%',
-                    marginTop: '8px'
-                  }}
-                >
-                  🧪 Test Complete (UAT Only)
-                </Button>
-              )}
             </div>
           </div>
         )}

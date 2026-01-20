@@ -144,11 +144,10 @@ async function seedWatchToEarn() {
       }
     ];
     
-    // Use YouTube video (ReactPlayer has native YouTube support - most reliable)
-    // These are public test videos that will work perfectly for advertiser demos
-    // Using short promotional-style videos from YouTube
-    const videoUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';  // Famous video, guaranteed to work
-    const thumbnailUrl = 'https://img.youtube.com/vi/dQw4w9WgXcQ/0.jpg';
+    // Use direct MP4 URLs from Cloudinary (CORS-enabled, works everywhere)
+    // These are public sample videos perfect for advertiser demos
+    const videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+    const thumbnailUrl = 'https://upload.wikimedia.org/wikipedia/commons/c/c5/Big_buck_bunny_poster_big.jpg';
     
     for (const ad of ads) {
       await client.query(`
@@ -202,7 +201,7 @@ async function seedWatchToEarn() {
     console.log('   - 5 Reach ads (R2.00 reward each)');
     console.log('   - 5 Engagement ads (R3.00 reward each)');
     console.log('   - All ads approved and active');
-    console.log('   - Using YouTube test videos (guaranteed playback)');
+    console.log('   - Using direct MP4 videos (CORS-enabled, works everywhere)');
     console.log('');
     console.log('✅ Watch to Earn seed data complete!');
     
