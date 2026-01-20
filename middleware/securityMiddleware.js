@@ -327,35 +327,8 @@ const securityMonitor = (req, res, next) => {
   next();
 };
 
-/**
- * CORS configuration
- */
-const corsConfig = {
-  origin: (origin, callback) => {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:3002',
-      'http://192.168.3.198:3000',
-      'http://192.168.3.198:3002',
-      'https://mymoolah.com',
-      'https://www.mymoolah.com'
-    ];
-    
-    // Allow requests with no origin (mobile apps, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Idempotency-Key', 'X-Request-Id'],
-  maxAge: 86400 // 24 hours
-};
+// CORS configuration removed from here - now centralized in config/security.js
+// This prevents duplicate configs and confusion
 
 module.exports = {
   rateLimiters,
@@ -365,6 +338,5 @@ module.exports = {
   requestLogger,
   ipWhitelist,
   requestSizeLimit,
-  securityMonitor,
-  corsConfig
+  securityMonitor
 };

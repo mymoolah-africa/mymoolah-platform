@@ -204,9 +204,11 @@ class SecurityConfig {
         'Content-Type', 
         'Authorization', 
         'X-Requested-With',
-        'X-API-Key',
-        'X-Client-Version',
-        'X-Device-ID'
+        'X-Idempotency-Key',  // For duplicate request prevention
+        'X-Request-Id',        // For request tracking
+        'X-API-Key',           // For API authentication
+        'X-Client-Version',    // For version tracking
+        'X-Device-ID'          // For device tracking
       ],
       exposedHeaders: [
         'X-Rate-Limit-Remaining',
