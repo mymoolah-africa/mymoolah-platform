@@ -278,7 +278,7 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
         style={{
           fontFamily: 'Montserrat, sans-serif',
           maxWidth: '400px',
-          width: '90vw',
+          width: 'calc(100% - 32px)',
           maxHeight: '85vh',
           overflowY: 'auto',
           borderRadius: '16px',
