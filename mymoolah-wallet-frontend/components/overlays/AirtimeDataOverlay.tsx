@@ -24,6 +24,7 @@ import {
 } from '../../services/overlayService';
 import { apiService } from '../../services/apiService';
 import { beneficiaryService as centralizedBeneficiaryService } from '../../services/beneficiaryService';
+import { unifiedBeneficiaryService } from '../../services/unifiedBeneficiaryService';
 
 interface AirtimeDataBeneficiary extends Beneficiary {
   // Uses accountType from base Beneficiary interface
@@ -734,6 +735,48 @@ export function AirtimeDataOverlay() {
     } catch (error) {
       console.error('Failed to remove beneficiary services:', error);
       alert('Failed to remove recipient. Please try again.');
+    }
+  };
+
+  const handleRemoveAccount = async (accountId: number) => {
+    if (!pendingBeneficiary) return;
+    
+    try {
+      // Remove the specific service account from the beneficiary
+      // Service type is 'airtime-data' for airtime/data beneficiaries
+      await unifiedBeneficiaryService.removeServiceFromBeneficiary(
+        String(pendingBeneficiary.id),
+        'airtime-data',
+        String(accountId)
+      );
+      
+      // Reload beneficiaries to reflect the change
+      await loadBeneficiaries();
+      
+      // If the removed account was the only one, close the modal
+      const remainingAccounts = ((pendingBeneficiary as any).accounts || []).filter(
+        (acc: any) => acc.id !== accountId
+      );
+      
+      if (remainingAccounts.length === 0) {
+        // No accounts left, close the modal
+        setShowAccountSelector(false);
+        setPendingBeneficiary(null);
+      } else if (remainingAccounts.length === 1) {
+        // Only one account left, auto-select it and close modal
+        setShowAccountSelector(false);
+        handleBeneficiarySelect(pendingBeneficiary, remainingAccounts[0].id);
+        setPendingBeneficiary(null);
+      } else {
+        // Multiple accounts remain, update the pending beneficiary accounts list
+        setPendingBeneficiary({
+          ...pendingBeneficiary,
+          accounts: remainingAccounts
+        } as any);
+      }
+    } catch (error) {
+      console.error('Failed to remove account:', error);
+      alert('Failed to remove number. Please try again.');
     }
   };
 
@@ -1844,6 +1887,7 @@ export function AirtimeDataOverlay() {
             handleBeneficiarySelect(pendingBeneficiary, accountId);
             setPendingBeneficiary(null);
           }}
+          onRemoveAccount={handleRemoveAccount}
         />
       )}
 

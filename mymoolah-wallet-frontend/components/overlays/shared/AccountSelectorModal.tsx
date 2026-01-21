@@ -22,6 +22,7 @@ interface AccountSelectorModalProps {
   recipientName: string;
   accounts: Account[];
   onSelectAccount: (accountId: number) => void;
+  onRemoveAccount?: (accountId: number) => void; // Optional callback to remove an account
 }
 
 export function AccountSelectorModal({ 
@@ -29,7 +30,8 @@ export function AccountSelectorModal({
   onClose, 
   recipientName, 
   accounts,
-  onSelectAccount 
+  onSelectAccount,
+  onRemoveAccount 
 }: AccountSelectorModalProps) {
   if (!isOpen) return null;
 
@@ -110,13 +112,8 @@ export function AccountSelectorModal({
         <CardContent style={{ padding: '1rem' }}>
           <div className="space-y-2">
             {accounts.map((account) => (
-              <button
+              <div
                 key={account.id}
-                type="button"
-                onClick={() => {
-                  onSelectAccount(account.id);
-                  onClose();
-                }}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -126,9 +123,7 @@ export function AccountSelectorModal({
                   borderRadius: '12px',
                   border: '2px solid #e2e8f0',
                   backgroundColor: '#ffffff',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  textAlign: 'left'
+                  transition: 'all 0.2s ease'
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.borderColor = '#86BE41';
@@ -139,7 +134,24 @@ export function AccountSelectorModal({
                   e.currentTarget.style.backgroundColor = '#ffffff';
                 }}
               >
-                <div className="flex items-center gap-3 flex-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onSelectAccount(account.id);
+                    onClose();
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    flex: 1,
+                    cursor: 'pointer',
+                    background: 'none',
+                    border: 'none',
+                    textAlign: 'left',
+                    padding: 0
+                  }}
+                >
                   <div style={{
                     width: '40px',
                     height: '40px',
@@ -170,8 +182,30 @@ export function AccountSelectorModal({
                       {account.identifier}
                     </div>
                   </div>
-                </div>
-              </button>
+                </button>
+                
+                {/* Remove Button - only show if there are multiple accounts and onRemoveAccount is provided */}
+                {onRemoveAccount && accounts.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemoveAccount(account.id);
+                    }}
+                    style={{
+                      minWidth: '44px',
+                      minHeight: '44px',
+                      padding: '0',
+                      position: 'relative',
+                      zIndex: 20,
+                      marginLeft: '8px'
+                    }}
+                  >
+                    <X style={{ width: '16px', height: '16px', color: '#dc2626' }} />
+                  </Button>
+                )}
+              </div>
             ))}
           </div>
         </CardContent>
