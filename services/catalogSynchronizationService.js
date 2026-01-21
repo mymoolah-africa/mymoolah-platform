@@ -9,7 +9,7 @@ const MobileMartAuthService = require('./mobilemartAuthService');
 class CatalogSynchronizationService {
   constructor() {
     this.isRunning = false;
-    this.dailySweepInterval = null;
+    this.dailySweepCron = null; // node-cron task for daily sweep
     this.frequentUpdateInterval = null;
     this.lastSweepTime = null;
     this.lastUpdateTime = null;
@@ -70,9 +70,9 @@ class CatalogSynchronizationService {
     console.log('🛑 Stopping catalog synchronization service...');
     this.isRunning = false;
 
-    if (this.dailySweepInterval) {
-      clearInterval(this.dailySweepInterval);
-      this.dailySweepInterval = null;
+    if (this.dailySweepCron) {
+      this.dailySweepCron.stop();
+      this.dailySweepCron = null;
     }
 
     if (this.frequentUpdateInterval) {
@@ -84,26 +84,38 @@ class CatalogSynchronizationService {
   }
 
   /**
-   * Schedule daily sweep at 02:00 local time
+   * Schedule daily sweep at 02:00 SAST (Africa/Johannesburg timezone)
+   * Uses node-cron for proper timezone handling, consistent with other scheduled tasks
    */
   scheduleDailySweep() {
+    const cron = require('node-cron');
+    
+    // Schedule daily sweep at 2:00 AM SAST (Africa/Johannesburg)
+    // Cron format: minute hour day month weekday
+    // '0 2 * * *' = Every day at 2:00 AM
+    this.dailySweepCron = cron.schedule('0 2 * * *', async () => {
+      console.log('🔄 Running scheduled daily catalog sweep...');
+      try {
+        await this.performDailySweep();
+      } catch (error) {
+        console.error('❌ Scheduled catalog sweep error:', error.message);
+      }
+    }, {
+      timezone: 'Africa/Johannesburg',
+      scheduled: true
+    });
+
+    // Calculate next run time for logging
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(2, 0, 0, 0); // 02:00 local time
-
-    const timeUntilSweep = tomorrow.getTime() - now.getTime();
-
-    // Schedule the first sweep
-    setTimeout(() => {
-      this.performDailySweep();
-      // Then schedule it to run every 24 hours
-      this.dailySweepInterval = setInterval(() => {
-        this.performDailySweep();
-      }, 24 * 60 * 60 * 1000); // 24 hours
-    }, timeUntilSweep);
-
-    console.log(`📅 Daily catalog sweep scheduled for ${tomorrow.toLocaleString()}`);
+    tomorrow.setHours(2, 0, 0, 0);
+    
+    // Convert to SAST for display (Africa/Johannesburg is UTC+2)
+    const sastTime = new Date(tomorrow.toLocaleString('en-US', { timeZone: 'Africa/Johannesburg' }));
+    
+    console.log(`📅 Daily catalog sweep scheduled for 2:00 AM SAST (Africa/Johannesburg)`);
+    console.log(`   Next run: ${sastTime.toLocaleString('en-US', { timeZone: 'Africa/Johannesburg', timeZoneName: 'short' })}`);
   }
 
   /**
