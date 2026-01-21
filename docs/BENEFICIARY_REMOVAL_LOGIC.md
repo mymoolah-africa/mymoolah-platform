@@ -85,10 +85,12 @@
 5. ✅ **Never affects user accounts**
 
 **Supported Service Types:**
-- `airtime-data` → Removes all airtime AND data services
+- `airtime-data` → Removes all airtime services (which support both airtime and data purchases)
 - `electricity` → Removes all electricity services
 - `biller` → Removes all biller services
 - Future service types automatically supported
+
+**Note (2026-01-20):** Only 'airtime' service accounts are created now, but they support both airtime and data purchases. The `airtime-data` removal removes all 'airtime' service accounts (and any legacy 'data' accounts for backward compatibility).
 
 ### **API Endpoint:**
 

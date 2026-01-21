@@ -1449,6 +1449,8 @@ class UnifiedBeneficiaryService {
         case 'airtime-data':
           // STRICT FILTERING: Only show beneficiaries with explicit airtime/data services
           // Banking-grade best practice: Clear separation between payment beneficiaries and service beneficiaries
+          // OPTION 1: Only 'airtime' service accounts are created now, but they support both airtime and data purchases
+          // The product catalog and purchase flow use vasType from products, not service account serviceType
           
           // Check JSONB first
           shouldInclude = Boolean(
@@ -1458,6 +1460,7 @@ class UnifiedBeneficiaryService {
           );
           
           // If not found in JSONB, check normalized tables (from includes - no query needed)
+          // 'airtime' service accounts support both airtime and data purchases
           if (!shouldInclude) {
             const hasAirtimeData = serviceAccounts.some(sa => 
               sa.isActive && (sa.serviceType === 'airtime' || sa.serviceType === 'data')

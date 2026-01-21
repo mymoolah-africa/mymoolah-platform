@@ -459,10 +459,12 @@ class BeneficiaryService {
         const isAirtimeOrData = acc.type === 'airtime' || acc.type === 'data';
         
         if (isAirtimeOrData && identifier) {
-          // Deduplicate: Merge airtime/data accounts with the same identifier
+          // OPTION 1: Only 'airtime' service accounts are created now, but keep deduplication
+          // for backward compatibility with existing beneficiaries that may have both airtime and data
           const existing = accountMap.get(identifier);
           if (existing) {
             // Merge: Keep the account with more metadata or prefer airtime
+            // This handles legacy data where both airtime and data service accounts exist
             if (acc.type === 'airtime' || (!existing.metadata?.network && acc.metadata?.network)) {
               accountMap.set(identifier, {
                 id: acc.id, // Use the first account's ID (or prefer airtime ID)
@@ -473,7 +475,7 @@ class BeneficiaryService {
                 metadata: {
                   ...acc.metadata,
                   ...existing.metadata,
-                  // Track both service types
+                  // Track both service types for backward compatibility
                   _serviceTypes: [...(acc.metadata?._serviceTypes || [acc.type]), existing.type].filter((v, i, a) => a.indexOf(v) === i)
                 }
               });
@@ -486,7 +488,7 @@ class BeneficiaryService {
               };
             }
           } else {
-            // First occurrence of this identifier
+            // First occurrence of this identifier (new beneficiaries will only have 'airtime')
             accountMap.set(identifier, {
               id: acc.id,
               type: acc.type,

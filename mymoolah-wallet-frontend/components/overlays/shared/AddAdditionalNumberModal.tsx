@@ -81,9 +81,11 @@ export function AddAdditionalNumberModal({
 
     try {
       // Add service to existing beneficiary
+      // OPTION 1: Only create 'airtime' service account - it supports both airtime and data purchases
+      // The product catalog and purchase flow use vasType from products, not service account serviceType
       await unifiedBeneficiaryService.addServiceToBeneficiary(
         beneficiaryId,
-        'airtime', // Service type
+        'airtime', // Service type - supports both airtime and data purchases
         {
           msisdn: formData.identifier.trim(),
           mobileNumber: formData.identifier.trim(),
@@ -91,23 +93,6 @@ export function AddAdditionalNumberModal({
           isDefault: false // New numbers are not default by default
         }
       );
-
-      // Also add as data service if it's a mobile number
-      try {
-        await unifiedBeneficiaryService.addServiceToBeneficiary(
-          beneficiaryId,
-          'data',
-          {
-            msisdn: formData.identifier.trim(),
-            mobileNumber: formData.identifier.trim(),
-            network: formData.network,
-            isDefault: false
-          }
-        );
-      } catch (dataError) {
-        // If data service fails, that's okay - continue
-        console.warn('Failed to add data service (non-critical):', dataError);
-      }
 
       onSuccess();
       onClose();

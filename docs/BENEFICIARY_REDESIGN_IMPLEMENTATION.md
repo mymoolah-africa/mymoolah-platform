@@ -25,6 +25,13 @@ The unified beneficiary system has been implemented following banking-grade and 
 - **Multiple Payment Methods** per beneficiary (MyMoolah wallet, bank accounts, mobile money)
 - **Multiple Service Accounts** per beneficiary (airtime, data, electricity meters, biller accounts)
 
+### **Service Account Design (Option 1 - Implemented 2026-01-20)**
+- **Only 'airtime' service accounts are created** for mobile numbers (not separate 'data' accounts)
+- **'airtime' service accounts support both airtime and data purchases**
+- The product catalog and purchase flow use `vasType` from products, not service account `serviceType`
+- This eliminates duplicate service accounts and simplifies the UI
+- Backward compatibility: Deduplication logic still handles legacy beneficiaries with both airtime and data accounts
+
 ### **Database Schema**
 
 #### **New Tables Created**
