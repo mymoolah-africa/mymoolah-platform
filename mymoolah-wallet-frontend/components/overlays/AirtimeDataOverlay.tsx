@@ -742,21 +742,94 @@ export function AirtimeDataOverlay() {
     if (!pendingBeneficiary) return;
     
     try {
+      // Find the account to get its type and real service account ID
+      const accountToRemove = ((pendingBeneficiary as any).accounts || []).find(
+        (acc: any) => acc.id === accountId
+      );
+      
+      if (!accountToRemove) {
+        console.error('Account not found:', accountId);
+        alert('Account not found. Please try again.');
+        return;
+      }
+      
+      // Determine service type from account type ('airtime' or 'data')
+      const serviceType = accountToRemove.type === 'airtime' ? 'airtime' : 'data';
+      
+      // Get the real service account ID
+      // If account.id is from backend accounts array, it's the real ID
+      // If it's computed (legacy.id * 1000 + ...), we need to find it from serviceAccountRecords
+      let realServiceAccountId: string | null = null;
+      
+      const beneficiaryAny = pendingBeneficiary as any;
+      
+      // Check if we have serviceAccountRecords (new unified format)
+      if (beneficiaryAny.serviceAccountRecords && Array.isArray(beneficiaryAny.serviceAccountRecords)) {
+        const matchingRecord = beneficiaryAny.serviceAccountRecords.find((rec: any) => {
+          return rec.serviceType === serviceType && 
+                 (rec.serviceData?.mobileNumber === accountToRemove.identifier ||
+                  rec.serviceData?.msisdn === accountToRemove.identifier ||
+                  rec.serviceData?.network === accountToRemove.metadata?.network);
+        });
+        
+        if (matchingRecord && matchingRecord.id) {
+          realServiceAccountId = String(matchingRecord.id);
+        }
+      }
+      
+      // If we couldn't find it in serviceAccountRecords, check if account.id is the real ID
+      // (accounts from backend should have real IDs)
+      if (!realServiceAccountId) {
+        // Check if account.id looks like a computed ID (very large number)
+        // Real service account IDs are typically smaller
+        if (accountId < 1000000) {
+          // Likely a real service account ID
+          realServiceAccountId = String(accountId);
+        } else {
+          // Computed ID - we need to fetch the beneficiary services to get real IDs
+          try {
+            const beneficiaryServices = await unifiedBeneficiaryService.getBeneficiaryServices(
+              String(pendingBeneficiary.id)
+            );
+            const services = (beneficiaryServices as any).serviceAccountRecords || [];
+            const matchingService = services.find((s: any) => {
+              return s.serviceType === serviceType &&
+                     (s.serviceData?.mobileNumber === accountToRemove.identifier ||
+                      s.serviceData?.msisdn === accountToRemove.identifier);
+            });
+            
+            if (matchingService && matchingService.id) {
+              realServiceAccountId = String(matchingService.id);
+            }
+          } catch (fetchError) {
+            console.error('Failed to fetch beneficiary services:', fetchError);
+          }
+        }
+      }
+      
+      if (!realServiceAccountId) {
+        console.error('Could not determine real service account ID for account:', accountToRemove);
+        alert('Could not find service account. Please try again.');
+        return;
+      }
+      
       // Remove the specific service account from the beneficiary
-      // Service type is 'airtime-data' for airtime/data beneficiaries
       await unifiedBeneficiaryService.removeServiceFromBeneficiary(
         String(pendingBeneficiary.id),
-        'airtime-data',
-        String(accountId)
+        serviceType,
+        realServiceAccountId
       );
       
       // Reload beneficiaries to reflect the change
-      await loadBeneficiaries();
+      const updatedBeneficiaries = await loadBeneficiaries();
+      
+      // Find the updated beneficiary in the reloaded list
+      const updatedBeneficiary = updatedBeneficiaries.find(
+        (b: any) => String(b.id) === String(pendingBeneficiary.id)
+      );
       
       // If the removed account was the only one, close the modal
-      const remainingAccounts = ((pendingBeneficiary as any).accounts || []).filter(
-        (acc: any) => acc.id !== accountId
-      );
+      const remainingAccounts = (updatedBeneficiary as any)?.accounts || [];
       
       if (remainingAccounts.length === 0) {
         // No accounts left, close the modal
@@ -765,14 +838,20 @@ export function AirtimeDataOverlay() {
       } else if (remainingAccounts.length === 1) {
         // Only one account left, auto-select it and close modal
         setShowAccountSelector(false);
-        handleBeneficiarySelect(pendingBeneficiary, remainingAccounts[0].id);
+        if (updatedBeneficiary) {
+          handleBeneficiarySelect(updatedBeneficiary, remainingAccounts[0].id);
+        }
         setPendingBeneficiary(null);
       } else {
-        // Multiple accounts remain, update the pending beneficiary accounts list
-        setPendingBeneficiary({
-          ...pendingBeneficiary,
-          accounts: remainingAccounts
-        } as any);
+        // Multiple accounts remain, update the pending beneficiary with fresh data
+        if (updatedBeneficiary) {
+          setPendingBeneficiary(updatedBeneficiary as any);
+          // Modal stays open with updated account list
+        } else {
+          // Beneficiary not found (shouldn't happen), close modal
+          setShowAccountSelector(false);
+          setPendingBeneficiary(null);
+        }
       }
     } catch (error) {
       console.error('Failed to remove account:', error);
