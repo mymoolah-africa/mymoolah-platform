@@ -112,20 +112,20 @@ class SettingsController {
           available: true,
           comingSoon: false
         },
+        {
+          id: 'loyalty',
+          name: 'Watch to Earn',
+          description: 'Watch videos and earn wallet credits',
+          category: 'loyalty',
+          available: true,
+          comingSoon: false
+        },
         // ===== COMING SOON SERVICES (Alphabetical) =====
         {
           id: 'atm-cashsend',
           name: 'ATM Cash Send',
           description: 'Send cash vouchers for ATM withdrawal',
           category: 'payment',
-          available: false,
-          comingSoon: true
-        },
-        {
-          id: 'loyalty',
-          name: 'Rewards Program',
-          description: 'Cashback deals and special offers',
-          category: 'loyalty',
           available: false,
           comingSoon: true
         },

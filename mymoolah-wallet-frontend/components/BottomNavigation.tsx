@@ -23,7 +23,8 @@ import {
   DollarSign,
   Store,
   AtSign,
-  Star
+  Star,
+  Play
 } from "lucide-react";
 
 interface NavItem {
@@ -100,9 +101,9 @@ const serviceMapping = {
   },
   'loyalty': {
     id: 'loyalty',
-    path: '/loyalty-overlay',
-    label: 'Rewards Program',
-    icon: () => <Star style={{ width: '20px', height: '20px' }} />
+    path: '/loyalty-promotions',
+    label: 'Watch to Earn',
+    icon: () => <Play style={{ width: '20px', height: '20px' }} />
   },
   // New Cash-out Services
   'flash-eezicash': {

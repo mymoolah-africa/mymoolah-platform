@@ -37,7 +37,8 @@ import {
   Home,
   Store,
   AtSign,
-  Star
+  Star,
+  Play
 } from 'lucide-react';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
@@ -127,7 +128,7 @@ export function WalletSettingsPage() {
         return <AtSign className="w-6 h-6" />;
       // Loyalty & Promotions
       case 'loyalty':
-        return <Star className="w-6 h-6" />;
+        return <Play className="w-6 h-6" />;
       default:
         return <Settings className="w-6 h-6" />;
     }

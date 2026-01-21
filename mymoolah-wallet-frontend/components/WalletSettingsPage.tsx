@@ -36,7 +36,8 @@ import {
   Banknote,
   Home,
   Store,
-  AtSign
+  AtSign,
+  Play
 } from 'lucide-react';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
@@ -121,6 +122,9 @@ export function WalletSettingsPage() {
         return <CreditCard className="w-6 h-6" />;
       case 'streaming':
         return <Wallet className="w-6 h-6" />;
+      // Loyalty & Promotions
+      case 'loyalty':
+        return <Play className="w-6 h-6" />;
       // New Cash-out Services
       case 'flash-eezicash':
         return <DollarSign className="w-6 h-6" />;
