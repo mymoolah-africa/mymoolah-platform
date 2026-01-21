@@ -75,11 +75,11 @@ function isUnifiedBeneficiary(b: Beneficiary): b is UnifiedBeneficiary {
 }
 
 // Helper to get accounts for a beneficiary (unified or legacy)
-// Banking-grade: Filters out inactive accounts to prevent stale data
+// Banking-grade: Filters out inactive accounts and deduplicates airtime/data accounts with same identifier
 function getBeneficiaryAccounts(b: Beneficiary): BeneficiaryAccount[] {
   if (isUnifiedBeneficiary(b)) {
     // Filter out inactive accounts - backend should already filter, but add safety check
-    return (b.accounts || []).filter((acc: any) => {
+    const activeAccounts = (b.accounts || []).filter((acc: any) => {
       // If account has isActive property, respect it
       if (acc.isActive !== undefined) {
         return acc.isActive !== false;
@@ -91,6 +91,55 @@ function getBeneficiaryAccounts(b: Beneficiary): BeneficiaryAccount[] {
       // Default to active if not specified (backward compatibility)
       return true;
     });
+    
+    // Deduplicate: Merge airtime/data accounts with the same identifier into a single account
+    // This prevents showing duplicate numbers when both airtime and data services exist for the same number
+    const accountMap = new Map<string, BeneficiaryAccount>();
+    
+    activeAccounts.forEach((acc: any) => {
+      const identifier = acc.identifier?.trim() || '';
+      const isAirtimeOrData = acc.type === 'airtime' || acc.type === 'data';
+      
+      if (isAirtimeOrData && identifier) {
+        const existing = accountMap.get(identifier);
+        if (existing) {
+          // Merge: Keep the account with more metadata or prefer airtime
+          if (acc.type === 'airtime' || (!existing.metadata?.network && acc.metadata?.network)) {
+            accountMap.set(identifier, {
+              ...acc,
+              // Preserve both service types in metadata for backend compatibility
+              metadata: {
+                ...acc.metadata,
+                ...existing.metadata,
+                serviceTypes: [...(acc.metadata?.serviceTypes || [acc.type]), ...(existing.metadata?.serviceTypes || [existing.type])].filter((v, i, a) => a.indexOf(v) === i)
+              }
+            });
+          } else {
+            // Update existing with additional metadata
+            existing.metadata = {
+              ...existing.metadata,
+              ...acc.metadata,
+              serviceTypes: [...(existing.metadata?.serviceTypes || [existing.type]), acc.type].filter((v, i, a) => a.indexOf(v) === i)
+            };
+          }
+        } else {
+          // First occurrence of this identifier
+          accountMap.set(identifier, {
+            ...acc,
+            metadata: {
+              ...acc.metadata,
+              serviceTypes: [acc.type]
+            }
+          });
+        }
+      } else {
+        // Non-airtime/data accounts or accounts without identifier - add as-is
+        const key = identifier || `account-${acc.id}`;
+        accountMap.set(key, acc);
+      }
+    });
+    
+    return Array.from(accountMap.values());
   }
   // Legacy format - create single account
   return [{

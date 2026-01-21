@@ -445,22 +445,76 @@ class BeneficiaryService {
     // array (including airtime/data service accounts from BeneficiaryServiceAccount),
     // use it directly as the source of truth. This preserves metadata.network
     // for PINless filtering and avoids double-transforming.
-    // Banking-grade: Filter out inactive accounts to prevent stale data
+    // Banking-grade: Filter out inactive accounts and deduplicate airtime/data accounts
     if (Array.isArray(legacy.accounts) && legacy.accounts.length > 0) {
+      const accountMap = new Map<string, any>();
+      
       legacy.accounts.forEach((acc: any) => {
         // Skip inactive accounts - backend should filter, but add safety check
         if (acc.isActive === false || acc.metadata?.isActive === false) {
           return;
         }
-        accounts.push({
-          id: acc.id,
-          type: acc.type,
-          identifier: acc.identifier,
-          label: acc.label,
-          isDefault: !!acc.isDefault,
-          metadata: acc.metadata || {}
-        });
+        
+        const identifier = acc.identifier?.trim() || '';
+        const isAirtimeOrData = acc.type === 'airtime' || acc.type === 'data';
+        
+        if (isAirtimeOrData && identifier) {
+          // Deduplicate: Merge airtime/data accounts with the same identifier
+          const existing = accountMap.get(identifier);
+          if (existing) {
+            // Merge: Keep the account with more metadata or prefer airtime
+            if (acc.type === 'airtime' || (!existing.metadata?.network && acc.metadata?.network)) {
+              accountMap.set(identifier, {
+                id: acc.id, // Use the first account's ID (or prefer airtime ID)
+                type: acc.type, // Prefer airtime type for display
+                identifier: acc.identifier,
+                label: acc.label || existing.label,
+                isDefault: acc.isDefault || existing.isDefault,
+                metadata: {
+                  ...acc.metadata,
+                  ...existing.metadata,
+                  // Track both service types
+                  _serviceTypes: [...(acc.metadata?._serviceTypes || [acc.type]), existing.type].filter((v, i, a) => a.indexOf(v) === i)
+                }
+              });
+            } else {
+              // Update existing with additional metadata
+              existing.metadata = {
+                ...existing.metadata,
+                ...acc.metadata,
+                _serviceTypes: [...(existing.metadata?._serviceTypes || [existing.type]), acc.type].filter((v, i, a) => a.indexOf(v) === i)
+              };
+            }
+          } else {
+            // First occurrence of this identifier
+            accountMap.set(identifier, {
+              id: acc.id,
+              type: acc.type,
+              identifier: acc.identifier,
+              label: acc.label,
+              isDefault: !!acc.isDefault,
+              metadata: {
+                ...(acc.metadata || {}),
+                _serviceTypes: [acc.type]
+              }
+            });
+          }
+        } else {
+          // Non-airtime/data accounts or accounts without identifier - add as-is
+          const key = identifier || `account-${acc.id}`;
+          accountMap.set(key, {
+            id: acc.id,
+            type: acc.type,
+            identifier: acc.identifier,
+            label: acc.label,
+            isDefault: !!acc.isDefault,
+            metadata: acc.metadata || {}
+          });
+        }
       });
+      
+      // Convert map to array
+      accounts.push(...Array.from(accountMap.values()));
     } else {
       // Legacy JSONB path: reconstruct accounts from paymentMethods + vasServices
       if (legacy.paymentMethods) {
