@@ -21,7 +21,8 @@ import {
   DollarSign,
   Users,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -330,8 +331,33 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
         {state === 'list' && (
           <div>
             {isLoading ? (
-              <div style={{ textAlign: 'center', padding: '40px' }}>
-                <p style={{ color: '#6b7280' }}>Loading available ads...</p>
+              <div style={{ 
+                textAlign: 'center', 
+                padding: '60px 24px',
+                fontFamily: 'Montserrat, sans-serif'
+              }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  margin: '0 auto 16px',
+                  border: '3px solid #e5e7eb',
+                  borderTop: '3px solid #86BE41',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }} />
+                <p style={{ 
+                  color: '#6b7280',
+                  fontSize: '14px',
+                  fontWeight: 500
+                }}>
+                  Loading available ads...
+                </p>
+                <style>{`
+                  @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                  }
+                `}</style>
               </div>
             ) : ads.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px' }}>
