@@ -1103,34 +1103,51 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           let userFriendlyMessage = primaryErrorMessage;
           
           // Error 1016: Consumer account error - Subscriber not allowed to recharge on network
+          // This indicates MobileMart account configuration restrictions (not a user error)
           if (mobilemartErrorCode === '1016' || mobilemartErrorCode === 1016) {
             const errorDetail = errorResponse.detail || '';
+            const isUAT = process.env.MOBILEMART_API_URL?.includes('uat.fulcrumswitch.com');
+            
             if (errorDetail.includes('Subscriber not allowed to recharge')) {
               // Extract network from error detail
               const networkMatch = errorDetail.match(/on (\w+) network/i);
               const network = networkMatch ? networkMatch[1] : (beneficiary.metadata?.network || beneficiary.name?.match(/(\w+)/)?.[1] || 'this network');
               
-              userFriendlyMessage = `This mobile number cannot be recharged on the ${network} network. Please verify the mobile number belongs to ${network} or select a different product.`;
+              if (isUAT) {
+                userFriendlyMessage = `MobileMart UAT account restrictions: This account is not configured to recharge ${network} numbers. This is a MobileMart account limitation, not an issue with your mobile number. Please try a different network or contact support.`;
+              } else {
+                userFriendlyMessage = `This mobile number cannot be recharged on the ${network} network. Please verify the mobile number belongs to ${network} or select a different product.`;
+              }
               primaryErrorMessage = userFriendlyMessage;
             } else if (errorDetail.includes('Consumer account error')) {
-              userFriendlyMessage = 'This mobile number cannot be recharged. Please verify the mobile number is correct and belongs to the selected network.';
+              if (isUAT) {
+                userFriendlyMessage = 'MobileMart UAT account restrictions: This account has limitations on which networks can be recharged. This is a MobileMart account configuration issue, not an issue with your mobile number.';
+              } else {
+                userFriendlyMessage = 'This mobile number cannot be recharged. Please verify the mobile number is correct and belongs to the selected network.';
+              }
               primaryErrorMessage = userFriendlyMessage;
             }
           }
           
           // Error 1013: Mobile Number is invalid
           // Note: This can occur if the mobile number is not valid for the specific product/network
-          // or if MobileMart has restrictions on certain products
+          // or if MobileMart has restrictions on certain products/test numbers
           if (mobilemartErrorCode === '1013' || mobilemartErrorCode === 1013) {
             const productName = productVariant?.product?.name || productVariant?.name || 'this product';
+            const productType = productVariant?.productType || productVariant?.extractedType || 'this product type';
             
             // Don't mention UAT in production/staging environments
             const isUAT = process.env.MOBILEMART_API_URL?.includes('uat.fulcrumswitch.com');
-            const restrictionNote = isUAT ? 'This may be a MobileMart UAT restriction.' : 'This mobile number is not accepted by MobileMart for this product.';
             
             // Show the normalized number that was actually sent to MobileMart (not the stored E.164 format)
             const displayedNumber = normalizedMobileNumber || beneficiary.identifier;
-            userFriendlyMessage = `The mobile number ${displayedNumber} is not valid for ${productName}. ${restrictionNote} Please try a different product or use a different mobile number.`;
+            
+            if (isUAT) {
+              // In UAT, be more specific about test number limitations
+              userFriendlyMessage = `MobileMart UAT test number limitation: The number ${displayedNumber} is not activated for ${productName} (${productType}). MobileMart UAT has restrictions on which test numbers work with which products. Please try a different product or contact MobileMart support to activate this test number for ${productType} products.`;
+            } else {
+              userFriendlyMessage = `The mobile number ${displayedNumber} is not valid for ${productName}. This mobile number is not accepted by MobileMart for this product. Please try a different product or use a different mobile number.`;
+            }
             primaryErrorMessage = userFriendlyMessage;
           }
           
