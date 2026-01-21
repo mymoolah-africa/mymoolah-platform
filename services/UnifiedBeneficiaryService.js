@@ -939,6 +939,26 @@ class UnifiedBeneficiaryService {
         );
       }
 
+      // CRITICAL: Update beneficiary.metadata.network for airtime/data services
+      // This ensures the catalog filtering works correctly
+      if ((normalizedType === 'airtime' || normalizedType === 'data') && normalizedData.network) {
+        const currentMetadata = beneficiary.metadata || {};
+        const network = normalizedData.network; // Already capitalized in normalizeServiceAccountData
+        
+        // Only update if network changed or is missing
+        if (currentMetadata.network !== network) {
+          await beneficiary.update(
+            {
+              metadata: {
+                ...currentMetadata,
+                network: network
+              }
+            },
+            { transaction: tx }
+          );
+        }
+      }
+
       // Previously we also mirrored airtime/data service accounts into the legacy
       // vasServices JSONB here. In staging this UPDATE has proven to be slow and
       // to hold row locks, causing long-running transactions when creating
@@ -1002,9 +1022,25 @@ class UnifiedBeneficiaryService {
     switch (serviceType) {
       case 'airtime':
       case 'data':
+        // Auto-detect network from phone number if not provided
+        let network = serviceData.network || null;
+        const msisdn = serviceData.msisdn || serviceData.mobileNumber || null;
+        
+        if (!network && msisdn) {
+          // Auto-detect network from phone number
+          const detectedNetwork = getNetworkFromMsisdn(msisdn);
+          if (detectedNetwork) {
+            // Capitalize first letter to match expected format (Vodacom, MTN, CellC, Telkom)
+            network = detectedNetwork.charAt(0).toUpperCase() + detectedNetwork.slice(1);
+            // Handle special cases
+            if (network === 'Cellc') network = 'CellC';
+            if (network === 'Mtn') network = 'MTN';
+          }
+        }
+        
         base.serviceData = {
-          msisdn: serviceData.msisdn || serviceData.mobileNumber || null,
-          network: serviceData.network || null,
+          msisdn: msisdn,
+          network: network,
           label: serviceData.label || null
         };
         break;

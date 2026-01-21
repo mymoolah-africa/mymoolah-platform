@@ -10,6 +10,7 @@
 
 const express = require('express');
 const router = express.Router();
+const { Op } = require('sequelize');
 const auth = require('../middleware/auth');
 const {
   calculateCommissionCents,
@@ -109,8 +110,38 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
       });
     }
 
-    // Get beneficiary network from metadata
-    const beneficiaryNetwork = beneficiary.metadata?.network || 'Vodacom'; // Default to Vodacom
+    // Get beneficiary network from metadata, or auto-detect from phone number
+    let beneficiaryNetwork = beneficiary.metadata?.network;
+    
+    // If network is missing, auto-detect from phone number
+    if (!beneficiaryNetwork && beneficiary.identifier) {
+      const { getNetworkFromMsisdn } = require('../utils/msisdn');
+      const detectedNetwork = getNetworkFromMsisdn(beneficiary.identifier);
+      if (detectedNetwork) {
+        // Capitalize first letter to match expected format (Vodacom, MTN, CellC, Telkom)
+        beneficiaryNetwork = detectedNetwork.charAt(0).toUpperCase() + detectedNetwork.slice(1);
+        // Handle special cases
+        if (beneficiaryNetwork === 'Cellc') beneficiaryNetwork = 'CellC';
+        if (beneficiaryNetwork === 'Mtn') beneficiaryNetwork = 'MTN';
+        
+        // Update beneficiary metadata with detected network
+        const currentMetadata = beneficiary.metadata || {};
+        await beneficiary.update({
+          metadata: {
+            ...currentMetadata,
+            network: beneficiaryNetwork
+          }
+        });
+        console.log(`✅ Auto-detected and saved network: ${beneficiaryNetwork} for beneficiary ${beneficiary.id}`);
+      }
+    }
+    
+    // Default to Vodacom if still not found
+    if (!beneficiaryNetwork) {
+      beneficiaryNetwork = 'Vodacom';
+      console.warn(`⚠️ Network not detected for beneficiary ${beneficiary.id}, defaulting to Vodacom`);
+    }
+    
     console.log(`📱 Beneficiary network: ${beneficiaryNetwork}`);
     
     // Get products from database instead of calling supplier APIs
@@ -125,11 +156,16 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
       const isGlobalData = beneficiaryNetwork === 'global-data';
 
       // Get airtime and data products from database, filtered by network (or Global) and transaction type
+      // Use case-insensitive comparison to handle different capitalization (Vodacom vs vodacom vs VODACOM)
+      const networkFilter = isGlobalAirtime ? 'Global' : (isGlobalData ? 'Global' : beneficiaryNetwork);
+      
       airtimeProducts = await VasProduct.findAll({
         where: {
           vasType: 'airtime',
           isActive: true,
-          provider: isGlobalAirtime ? 'Global' : beneficiaryNetwork,
+          provider: {
+            [Op.iLike]: networkFilter // Case-insensitive match
+          },
           transactionType: 'topup' // Only show top-ups, not vouchers
         },
         order: [['priority', 'ASC'], ['productName', 'ASC']]
@@ -139,7 +175,9 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
         where: {
           vasType: 'data',
           isActive: true,
-          provider: isGlobalData ? 'Global' : beneficiaryNetwork,
+          provider: {
+            [Op.iLike]: networkFilter // Case-insensitive match
+          },
           transactionType: 'topup' // Only show top-ups, not vouchers
         },
         order: [['priority', 'ASC'], ['productName', 'ASC']]
