@@ -882,7 +882,8 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    onClose();
+                    // Don't call onClose() - it clears editingBeneficiary which is needed for AddAdditionalNumberModal
+                    // The onAddNumber handler will close the modal without clearing editingBeneficiary
                     onAddNumber();
                   }}
                   style={{

@@ -1813,6 +1813,8 @@ export function AirtimeDataOverlay() {
           isOpen={showAddNumberModal}
           onClose={() => {
             setShowAddNumberModal(false);
+            // Clear editingBeneficiary when add number modal is closed
+            setEditingBeneficiary(null);
           }}
           beneficiaryId={editingBeneficiary.id}
           beneficiaryName={editingBeneficiary.name}
@@ -1820,6 +1822,8 @@ export function AirtimeDataOverlay() {
             // Reload beneficiaries to show the new number
             await loadBeneficiaries();
             setShowAddNumberModal(false);
+            // Clear editingBeneficiary after successful add
+            setEditingBeneficiary(null);
           }}
         />
       )}
