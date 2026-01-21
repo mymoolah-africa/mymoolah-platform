@@ -268,9 +268,10 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
           paddingBottom: '32px'
         }}
       >
-        <style>{`
+        <style dangerouslySetInnerHTML={{__html: `
           .earn-moolahs-modal button[data-slot="dialog-close"],
-          .earn-moolahs-modal > button,
+          .earn-moolahs-modal > button[class*="absolute"],
+          [data-slot="dialog-content"].earn-moolahs-modal button,
           button[data-slot="dialog-close"] {
             width: 32px !important;
             height: 32px !important;
@@ -292,20 +293,22 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
             right: 16px !important;
           }
           .earn-moolahs-modal button[data-slot="dialog-close"]:hover,
-          .earn-moolahs-modal > button:hover,
+          .earn-moolahs-modal > button[class*="absolute"]:hover,
+          [data-slot="dialog-content"].earn-moolahs-modal button:hover,
           button[data-slot="dialog-close"]:hover {
             opacity: 1 !important;
             background-color: #e5e7eb !important;
           }
           .earn-moolahs-modal button[data-slot="dialog-close"] svg,
           .earn-moolahs-modal > button svg,
+          [data-slot="dialog-content"].earn-moolahs-modal button svg,
           button[data-slot="dialog-close"] svg {
             width: 18px !important;
             height: 18px !important;
             color: #374151 !important;
             stroke-width: 2 !important;
           }
-        `}</style>
+        `}} />
         <DialogHeader>
           <DialogTitle
             style={{
