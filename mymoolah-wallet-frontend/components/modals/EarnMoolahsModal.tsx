@@ -258,10 +258,13 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
       <DialogContent
         style={{
           fontFamily: 'Montserrat, sans-serif',
-          maxWidth: '600px',
-          width: '90%',
-          maxHeight: '80vh',
-          overflow: 'auto'
+          maxWidth: '400px',
+          width: '90vw',
+          maxHeight: '85vh',
+          overflowY: 'auto',
+          borderRadius: '16px',
+          padding: '24px',
+          paddingBottom: '32px'
         }}
       >
         <DialogHeader>
@@ -337,13 +340,13 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                   >
-                    <CardContent style={{ padding: '16px' }}>
-                      <div style={{ display: 'flex', gap: '16px' }}>
+                    <CardContent style={{ padding: '12px' }}>
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                         {/* Thumbnail */}
                         <div
                           style={{
-                            width: '80px',
-                            height: '80px',
+                            width: '56px',
+                            height: '56px',
                             borderRadius: '8px',
                             background: 'linear-gradient(135deg, #86BE41 0%, #6ba332 100%)',
                             display: 'flex',
@@ -352,18 +355,21 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                             flexShrink: 0
                           }}
                         >
-                          <Play style={{ width: '32px', height: '32px', color: 'white', fill: 'white' }} />
+                          <Play style={{ width: '24px', height: '24px', color: 'white', fill: 'white' }} />
                         </div>
                         
                         {/* Ad Details */}
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', marginBottom: '4px', flexWrap: 'wrap' }}>
                             <h4
                               style={{
                                 fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '15px',
+                                fontSize: '14px',
                                 fontWeight: 600,
-                                color: '#1a1a1a'
+                                color: '#1a1a1a',
+                                lineHeight: '1.3',
+                                flex: 1,
+                                minWidth: 0
                               }}
                             >
                               {ad.title}
@@ -372,8 +378,9 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                               style={{
                                 backgroundColor: ad.adType === 'reach' ? '#3b82f6' : '#86BE41',
                                 color: 'white',
-                                fontSize: '10px',
-                                padding: '2px 8px'
+                                fontSize: '9px',
+                                padding: '2px 6px',
+                                flexShrink: 0
                               }}
                             >
                               {ad.adType === 'reach' ? 'Reach' : 'Engagement'}
@@ -383,22 +390,23 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                           <p
                             style={{
                               fontFamily: 'Montserrat, sans-serif',
-                              fontSize: '12px',
+                              fontSize: '11px',
                               color: '#6b7280',
-                              marginBottom: '8px'
+                              marginBottom: '8px',
+                              lineHeight: '1.4'
                             }}
                           >
                             {ad.description}
                           </p>
                           
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6b7280' }}>
-                              <Clock style={{ width: '14px', height: '14px' }} />
+                              <Clock style={{ width: '12px', height: '12px' }} />
                               <span>{ad.durationSeconds}s</span>
                             </div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#86BE41', fontWeight: 600 }}>
-                              <DollarSign style={{ width: '14px', height: '14px' }} />
+                              <DollarSign style={{ width: '12px', height: '12px' }} />
                               <span>Earn R{parseFloat(ad.rewardPerView).toFixed(2)}</span>
                             </div>
                           </div>
