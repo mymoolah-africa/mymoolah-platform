@@ -39,7 +39,22 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <Ticket style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 2. DATA TRANSACTIONS (Check BEFORE airtime to avoid false matches)
+  // 2. WATCH TO EARN / AD REWARD TRANSACTIONS (Film/Movie icons) - Check BEFORE data/airtime
+  // Always green as it's a credit - Must check early to avoid false matches
+  const metadata = transaction.metadata || {};
+  const isWatchToEarn = (
+    description.includes('watch to earn') ||
+    description.includes('ad reward') ||
+    metadata.isWatchToEarn === true ||
+    metadata.adType ||
+    metadata.campaignId
+  );
+  
+  if (isWatchToEarn) {
+    return <Film style={{ ...iconStyle, color: '#16a34a' }} />; // Always green for earnings
+  }
+  
+  // 3. DATA TRANSACTIONS (Check BEFORE airtime to avoid false matches)
   // Check metadata first (most reliable), then description
   const isData = 
     transaction.metadata?.productType === 'data' ||
@@ -53,7 +68,7 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <Wifi style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 3. AIRTIME TRANSACTIONS (Check metadata first, then description)
+  // 4. AIRTIME TRANSACTIONS (Check metadata first, then description)
   // Only match "airtime" keyword, NOT network names (to avoid false matches with data)
   const isAirtime = 
     transaction.metadata?.productType === 'airtime' ||
@@ -66,23 +81,9 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <Phone style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 4. ELECTRICITY TRANSACTIONS
+  // 5. ELECTRICITY TRANSACTIONS
   if (description.includes('electricity') || description.includes('eskom') || description.includes('power')) {
     return <Zap style={{ ...iconStyle, color: iconColor }} />;
-  }
-  
-  // 5. WATCH TO EARN / AD REWARD TRANSACTIONS (Film/Movie icons) - Always green as it's a credit
-  const metadata = transaction.metadata || {};
-  const isWatchToEarn = (
-    description.includes('watch to earn') ||
-    description.includes('ad reward') ||
-    metadata.isWatchToEarn === true ||
-    metadata.adType ||
-    metadata.campaignId
-  );
-  
-  if (isWatchToEarn) {
-    return <Film style={{ ...iconStyle, color: '#16a34a' }} />; // Always green for earnings
   }
   
   // 6. QR/ZAPPER PAYMENT TRANSACTIONS (QR Code icons) - CHECK BEFORE OTHER TRANSACTIONS
