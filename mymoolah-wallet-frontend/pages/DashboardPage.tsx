@@ -658,7 +658,7 @@ export function DashboardPage() {
                 margin: '0'
               }}
             >
-              Invite friends • Earn up to 4% commission
+              Invite friends • Earn up to 15% commission
             </p>
           </div>
 
