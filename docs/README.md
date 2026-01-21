@@ -1,12 +1,34 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: January 20, 2026 18:27  
-**Version**: 2.7.1 - Watch to Earn UAT Fixes  
-**Status**: ✅ **WATCH TO EARN UAT READY** ✅ **ALL ADS VISIBLE IN UAT** ✅ **RE-WATCHING ENABLED** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 21, 2026 14:52  
+**Version**: 2.7.2 - Watch to Earn UI Improvements  
+**Status**: ✅ **WATCH TO EARN UI IMPROVED** ✅ **QUICK ACCESS SERVICES SPLIT** ✅ **MODAL STYLING FIXED** ✅ **WATCH TO EARN UAT READY** ✅ **ALL ADS VISIBLE IN UAT** ✅ **RE-WATCHING ENABLED** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: Watch to Earn UAT Fixes (January 20, 2026 - 18:27)**
+## 🚀 **LATEST UPDATE: Watch to Earn UI Improvements (January 21, 2026 - 14:52)**
+
+### **🎨 UI/UX Enhancements**
+Improved Watch to Earn modal styling and Quick Access Services configuration for better user experience:
+
+**Quick Access Services**:
+- ✅ **3 Separate Services**: Split "Loyalty & Promotions" into independent services (Watch to Earn active, Rewards Program and Promotions coming soon)
+- ✅ **Independent Selection**: Each service can be selected separately for Quick Access positions 2 and 4
+- ✅ **Auto-Open Modal**: Watch to Earn opens modal automatically when accessed from Quick Access
+
+**Modal Improvements**:
+- ✅ **Width Fixed**: Changed from `90vw` to `calc(100% - 48px)` to prevent overflow
+- ✅ **Close Button**: Proper circular gray button (32px) with hover effects via component prop system
+- ✅ **Loading State**: Spinner animation matching other components
+
+**Terminology**:
+- ✅ **Consistency**: Replaced "beneficiaries" with "recipients" in BeneficiaryList component
+
+**Status**: ✅ **UI improvements complete**, ✅ **Ready for testing**
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Watch to Earn UAT Fixes (January 20, 2026 - 18:27)**
 
 ### **🔧 UAT Testing Ready**
 Fixed critical issues for UAT demos: all 10 ads remain visible and re-watchable in UAT/Staging, fixed 500 error on video completion, improved error handling, and ensured database safety.

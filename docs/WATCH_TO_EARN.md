@@ -1,8 +1,8 @@
 # Watch to Earn - Complete Documentation
 
-**Version**: 1.0.0  
-**Last Updated**: January 20, 2026  
-**Status**: ✅ **IMPLEMENTED** - Ready for UAT Testing
+**Version**: 1.1.0  
+**Last Updated**: January 21, 2026  
+**Status**: ✅ **IMPLEMENTED** - UI Improvements Complete - Ready for UAT Testing
 
 ---
 
@@ -372,8 +372,27 @@ npx sequelize-cli db:seed --seed 20260120_seed_watch_to_earn
 - `seeders/20260120_seed_watch_to_earn.js`
 
 ### Frontend
-- `pages/LoyaltyPromotionsPage.tsx`
-- `components/modals/EarnMoolahsModal.tsx`
+
+#### Pages
+- `pages/LoyaltyPromotionsPage.tsx` - Main landing page for Loyalty & Promotions section
+
+#### Components
+- `components/modals/EarnMoolahsModal.tsx` - Main modal for viewing and watching ads
+  - **Modal Width**: `calc(100% - 48px)` for proper fit within page boundaries
+  - **Close Button**: Circular gray button (32px) styled via `closeButtonStyle` prop
+  - **Loading State**: Spinner animation matching other components
+  - **States**: List, Playing, Engagement, Success
+
+#### Quick Access Services Integration
+- **3 Separate Services**: Watch to Earn (active), Rewards Program (coming soon), Promotions (coming soon)
+- **Backend**: `controllers/settingsController.js` - Service definitions
+- **Frontend**: `components/BottomNavigation.tsx` - Service mappings
+- **Auto-Open**: Navigates to `/transact?service=watch-to-earn` and auto-opens modal
+- **Icons**: Play (Watch to Earn), Star (Rewards Program), Tag (Promotions)
+
+#### Component Enhancements
+- **DialogContent Component**: Enhanced with `closeButtonStyle` prop for proper close button styling
+- **Terminology**: "Recipients" used consistently in BeneficiaryList (not "beneficiaries")
 
 ### Documentation
 - `docs/WATCH_TO_EARN.md` (this file)
@@ -585,6 +604,7 @@ For questions or issues, contact:
 ---
 
 **Version History**:
+- v1.1.0 (2026-01-21 14:52): UI improvements - Quick Access Services split, modal width fix, close button styling, loading spinner, terminology update
 - v1.0.1 (2026-01-20 18:27): UAT fixes - re-watching enabled, 500 error fixed, database safety improvements
 - v1.0.0 (2026-01-20): Initial implementation with Reach and Engagement ads
 
@@ -644,6 +664,22 @@ const isProduction = process.env.NODE_ENV === 'production' &&
 - **Impact**: Doesn't affect core Watch to Earn flow (wallet credit works)
 - **Status**: ⏳ Can be addressed later, not critical for UAT demos
 
+**Issue 5: Modal Width Overflow**
+- **Problem**: Modal too wide (90vw) causing overflow on mobile devices
+- **Solution**: Changed to `calc(100% - 48px)` for proper fit with margins
+- **Status**: ✅ Fixed
+
+**Issue 6: Close Button Styling**
+- **Problem**: Close button had blue border and square shape, not matching design
+- **Solution**: Added `closeButtonStyle` prop to DialogContent component for inline styling
+- **Result**: Circular gray button (32px) with proper hover effects
+- **Status**: ✅ Fixed
+
+**Issue 7: Loading State Styling**
+- **Problem**: Simple text loading message looked unprofessional
+- **Solution**: Added spinner animation matching other components (FlashEeziCashOverlay pattern)
+- **Status**: ✅ Fixed
+
 ### Testing Checklist
 
 - [x] All 10 ads visible in UAT
@@ -652,5 +688,10 @@ const isProduction = process.env.NODE_ENV === 'production' &&
 - [x] Success message displays correctly
 - [x] Transaction history shows Watch to Earn entries
 - [x] Error handling shows specific messages
+- [x] Modal width fits within page boundaries
+- [x] Close button displays correctly (circular, gray)
+- [x] Loading spinner animation works
+- [x] Quick Access Services split into 3 separate services
+- [x] Auto-open modal from Quick Access works
 - [ ] Production fraud prevention tested
 - [ ] Ledger account created and tested

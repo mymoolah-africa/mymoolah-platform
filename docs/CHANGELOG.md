@@ -1,5 +1,51 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-01-21 - 🎨 Watch to Earn UI Improvements (v2.7.2) ✅
+
+### **Session Overview**
+Improved Watch to Earn modal styling and Quick Access Services configuration. Split "Loyalty & Promotions" into 3 separate services for independent Quick Access selection, fixed modal width and close button styling, improved loading state, and updated terminology consistency.
+
+### **🎨 UI/UX Improvements** ✅
+- **Quick Access Services Split**: Separated into 3 independent services:
+  - `watch-to-earn` (Watch to Earn) - Active, opens modal from Quick Access
+  - `loyalty` (Rewards Program) - Coming soon
+  - `promotions` (Promotions) - Coming soon
+  - Each can be independently selected for Quick Access positions 2 and 4
+- **Modal Width Fix**: Changed from `90vw` to `calc(100% - 48px)` to prevent overflow and ensure proper fit within page boundaries
+- **Close Button Styling**: Added `closeButtonStyle` prop to DialogContent component for proper inline styling (circular gray button, 32px, no border)
+- **Loading State**: Improved with spinner animation matching other components (FlashEeziCashOverlay pattern)
+- **Terminology Update**: Replaced "beneficiaries" with "recipients" in BeneficiaryList to match "Select Recipient" heading
+
+### **🔧 Component Enhancements** ✅
+- **DialogContent Component**: Enhanced with `closeButtonStyle` prop for proper close button styling without workarounds
+- **Auto-Open Logic**: Watch to Earn modal auto-opens when navigating from Quick Access via `/transact?service=watch-to-earn`
+- **Icon Updates**: Added Play icon for Watch to Earn, Star for Rewards Program, Tag for Promotions
+
+### **📝 Files Modified** ✅
+- `controllers/settingsController.js` - Added 3 separate services
+- `mymoolah-wallet-frontend/components/ui/dialog.tsx` - Added closeButtonStyle prop
+- `mymoolah-wallet-frontend/components/BottomNavigation.tsx` - Added service mappings
+- `mymoolah-wallet-frontend/pages/TransactPage.tsx` - Added auto-open logic
+- `mymoolah-wallet-frontend/pages/WalletSettingsPage.tsx` - Updated icon mappings
+- `mymoolah-wallet-frontend/components/WalletSettingsPage.tsx` - Updated icon mappings
+- `mymoolah-wallet-frontend/components/modals/EarnMoolahsModal.tsx` - Fixed width, close button, loading state
+- `mymoolah-wallet-frontend/components/overlays/shared/BeneficiaryList.tsx` - Updated terminology
+
+### **✅ Testing Status**
+- [x] Quick Access Services tested - 3 separate services available
+- [x] Modal width verified - No overflow, proper fit
+- [x] Close button tested - Circular gray button displays correctly
+- [x] Loading state verified - Spinner animation works
+- [x] Terminology updated - "Recipients" used consistently
+- [x] Git commits verified - All changes committed and pushed
+
+### **📋 Next Steps**
+- [ ] Test in Codespaces: Verify all UI improvements work correctly
+- [ ] Monitor user feedback on Quick Access Services selection
+- [ ] Consider applying closeButtonStyle pattern to other modals if needed
+
+---
+
 ## 2026-01-20 - 🔧 Watch to Earn UAT Fixes (v2.7.1) ✅
 
 ### **Session Overview**
