@@ -256,6 +256,7 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
+        className="earn-moolahs-modal"
         style={{
           fontFamily: 'Montserrat, sans-serif',
           maxWidth: '400px',
@@ -268,8 +269,9 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
         }}
       >
         <style>{`
-          [data-slot="dialog-content"] > button[data-slot="dialog-close"],
-          [data-slot="dialog-content"] button[data-slot="dialog-close"] {
+          .earn-moolahs-modal button[data-slot="dialog-close"],
+          .earn-moolahs-modal > button,
+          button[data-slot="dialog-close"] {
             width: 32px !important;
             height: 32px !important;
             min-width: 32px !important;
@@ -278,20 +280,26 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
             background-color: #f3f4f6 !important;
             border: none !important;
             box-shadow: none !important;
+            outline: none !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             opacity: 0.7 !important;
             padding: 0 !important;
             margin: 0 !important;
+            position: absolute !important;
+            top: 16px !important;
+            right: 16px !important;
           }
-          [data-slot="dialog-content"] > button[data-slot="dialog-close"]:hover,
-          [data-slot="dialog-content"] button[data-slot="dialog-close"]:hover {
+          .earn-moolahs-modal button[data-slot="dialog-close"]:hover,
+          .earn-moolahs-modal > button:hover,
+          button[data-slot="dialog-close"]:hover {
             opacity: 1 !important;
             background-color: #e5e7eb !important;
           }
-          [data-slot="dialog-content"] > button[data-slot="dialog-close"] svg,
-          [data-slot="dialog-content"] button[data-slot="dialog-close"] svg {
+          .earn-moolahs-modal button[data-slot="dialog-close"] svg,
+          .earn-moolahs-modal > button svg,
+          button[data-slot="dialog-close"] svg {
             width: 18px !important;
             height: 18px !important;
             color: #374151 !important;
