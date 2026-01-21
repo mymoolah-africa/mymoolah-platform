@@ -75,9 +75,22 @@ function isUnifiedBeneficiary(b: Beneficiary): b is UnifiedBeneficiary {
 }
 
 // Helper to get accounts for a beneficiary (unified or legacy)
+// Banking-grade: Filters out inactive accounts to prevent stale data
 function getBeneficiaryAccounts(b: Beneficiary): BeneficiaryAccount[] {
   if (isUnifiedBeneficiary(b)) {
-    return b.accounts;
+    // Filter out inactive accounts - backend should already filter, but add safety check
+    return (b.accounts || []).filter((acc: any) => {
+      // If account has isActive property, respect it
+      if (acc.isActive !== undefined) {
+        return acc.isActive !== false;
+      }
+      // If account has metadata.isActive, respect it
+      if (acc.metadata?.isActive !== undefined) {
+        return acc.metadata.isActive !== false;
+      }
+      // Default to active if not specified (backward compatibility)
+      return true;
+    });
   }
   // Legacy format - create single account
   return [{

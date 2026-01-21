@@ -445,8 +445,13 @@ class BeneficiaryService {
     // array (including airtime/data service accounts from BeneficiaryServiceAccount),
     // use it directly as the source of truth. This preserves metadata.network
     // for PINless filtering and avoids double-transforming.
+    // Banking-grade: Filter out inactive accounts to prevent stale data
     if (Array.isArray(legacy.accounts) && legacy.accounts.length > 0) {
       legacy.accounts.forEach((acc: any) => {
+        // Skip inactive accounts - backend should filter, but add safety check
+        if (acc.isActive === false || acc.metadata?.isActive === false) {
+          return;
+        }
         accounts.push({
           id: acc.id,
           type: acc.type,
