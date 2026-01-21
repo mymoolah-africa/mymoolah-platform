@@ -257,6 +257,7 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
         className="earn-moolahs-modal"
+        closeButtonClassName="!w-8 !h-8 !min-w-8 !min-h-8 !rounded-full !bg-gray-100 !border-0 !shadow-none !p-0 !m-0 hover:!bg-gray-200 hover:!opacity-100 [&_svg]:!w-[18px] [&_svg]:!h-[18px] [&_svg]:!text-gray-700"
         style={{
           fontFamily: 'Montserrat, sans-serif',
           maxWidth: '400px',
@@ -268,47 +269,6 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
           paddingBottom: '32px'
         }}
       >
-        <style dangerouslySetInnerHTML={{__html: `
-          .earn-moolahs-modal button[data-slot="dialog-close"],
-          .earn-moolahs-modal > button[class*="absolute"],
-          [data-slot="dialog-content"].earn-moolahs-modal button,
-          button[data-slot="dialog-close"] {
-            width: 32px !important;
-            height: 32px !important;
-            min-width: 32px !important;
-            min-height: 32px !important;
-            border-radius: 50% !important;
-            background-color: #f3f4f6 !important;
-            border: none !important;
-            box-shadow: none !important;
-            outline: none !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            opacity: 0.7 !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            position: absolute !important;
-            top: 16px !important;
-            right: 16px !important;
-          }
-          .earn-moolahs-modal button[data-slot="dialog-close"]:hover,
-          .earn-moolahs-modal > button[class*="absolute"]:hover,
-          [data-slot="dialog-content"].earn-moolahs-modal button:hover,
-          button[data-slot="dialog-close"]:hover {
-            opacity: 1 !important;
-            background-color: #e5e7eb !important;
-          }
-          .earn-moolahs-modal button[data-slot="dialog-close"] svg,
-          .earn-moolahs-modal > button svg,
-          [data-slot="dialog-content"].earn-moolahs-modal button svg,
-          button[data-slot="dialog-close"] svg {
-            width: 18px !important;
-            height: 18px !important;
-            color: #374151 !important;
-            stroke-width: 2 !important;
-          }
-        `}} />
         <DialogHeader>
           <DialogTitle
             style={{
