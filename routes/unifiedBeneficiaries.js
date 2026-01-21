@@ -110,7 +110,7 @@ router.post('/:beneficiaryId/services', authenticateToken, async (req, res) => {
       });
     }
 
-    // Get beneficiary and verify ownership
+    // Verify beneficiary exists and belongs to user
     const beneficiary = await unifiedBeneficiaryService.getBeneficiaryServices(beneficiaryId);
     if (!beneficiary || beneficiary.userId !== userId) {
       return res.status(404).json({
@@ -119,11 +119,13 @@ router.post('/:beneficiaryId/services', authenticateToken, async (req, res) => {
       });
     }
 
-    await unifiedBeneficiaryService.addServiceToBeneficiary(
-      beneficiaryId,
+    // Use addOrUpdateServiceAccount (normalized table approach) instead of addServiceToBeneficiary
+    // This properly supports multiple service accounts per beneficiary using the BeneficiaryServiceAccount table
+    await unifiedBeneficiaryService.addOrUpdateServiceAccount(userId, {
+      beneficiaryId: parseInt(beneficiaryId),
       serviceType,
       serviceData
-    );
+    });
 
     res.json({
       success: true,
