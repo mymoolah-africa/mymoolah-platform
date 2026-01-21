@@ -264,38 +264,9 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
           overflowY: 'auto',
           borderRadius: '16px',
           padding: '24px',
-          paddingBottom: '32px',
-          position: 'relative'
+          paddingBottom: '32px'
         }}
       >
-        <style>{`
-          [data-slot="dialog-content"] button[data-slot="dialog-close"] {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background-color: #f3f4f6;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            opacity: 0.7;
-            transition: all 0.2s ease;
-            z-index: 10;
-          }
-          [data-slot="dialog-content"] button[data-slot="dialog-close"]:hover {
-            opacity: 1;
-            background-color: #e5e7eb;
-          }
-          [data-slot="dialog-content"] button[data-slot="dialog-close"] svg {
-            width: 18px;
-            height: 18px;
-            color: #374151;
-          }
-        `}</style>
         <DialogHeader>
           <DialogTitle
             style={{
