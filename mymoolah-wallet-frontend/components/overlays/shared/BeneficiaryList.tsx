@@ -390,7 +390,7 @@ export function BeneficiaryList({
                       
                       {/* Beneficiary Info */}
                       <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-2">
                           <p style={{
                             fontFamily: 'Montserrat, sans-serif',
                             fontSize: '14px',
@@ -399,44 +399,28 @@ export function BeneficiaryList({
                           }}>
                             {beneficiary.name}
                           </p>
-                          {isUnifiedBeneficiary(beneficiary) ? null : getValidationStatus(beneficiary as LegacyBeneficiary)}
-                        </div>
-                        
-                        {displayAccount ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <p
+                          {/* Badge for multiple numbers - award-winning banking/telecom UI pattern */}
+                          {hasMultipleAccounts && (
+                            <Badge 
+                              variant="secondary"
                               style={{
-                                fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '12px',
-                                color: '#6b7280'
+                                fontSize: '10px',
+                                backgroundColor: '#e2e8f0',
+                                color: '#4b5563',
+                                padding: '2px 6px',
+                                fontWeight: '600',
+                                borderRadius: '8px',
+                                lineHeight: '1.2',
+                                minWidth: '20px',
+                                textAlign: 'center'
                               }}
                             >
-                              {displayAccount.metadata?.network || displayAccount.label || displayAccount.identifier}
-                            </p>
-                            {hasMultipleAccounts && (
-                              <Badge 
-                                variant="secondary"
-                                style={{
-                                  fontSize: '10px',
-                                  backgroundColor: '#e2e8f0',
-                                  color: '#6b7280',
-                                  padding: '2px 8px',
-                                  fontWeight: '500'
-                                }}
-                              >
-                                +{accounts.length - 1} more
-                              </Badge>
-                            )}
-                          </div>
-                        ) : (
-                          <p style={{
-                            fontFamily: 'Montserrat, sans-serif',
-                            fontSize: '12px',
-                            color: '#6b7280'
-                          }}>
-                            {isUnifiedBeneficiary(beneficiary) ? beneficiary.accounts[0]?.identifier : (beneficiary as LegacyBeneficiary).identifier}
-                          </p>
-                        )}
+                              {accounts.length}
+                            </Badge>
+                          )}
+                          {isUnifiedBeneficiary(beneficiary) ? null : getValidationStatus(beneficiary as LegacyBeneficiary)}
+                        </div>
+                        {/* Network name removed - only beneficiary name displayed for cleaner UI */}
                       </div>
                     </div>
                     
