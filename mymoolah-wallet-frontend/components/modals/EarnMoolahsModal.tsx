@@ -257,7 +257,23 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent
         className="earn-moolahs-modal"
-        closeButtonClassName="!w-8 !h-8 !min-w-8 !min-h-8 !rounded-full !bg-gray-100 !border-0 !shadow-none !p-0 !m-0 hover:!bg-gray-200 hover:!opacity-100 [&_svg]:!w-[18px] [&_svg]:!h-[18px] [&_svg]:!text-gray-700"
+        closeButtonStyle={{
+          width: '32px',
+          height: '32px',
+          minWidth: '32px',
+          minHeight: '32px',
+          borderRadius: '50%',
+          backgroundColor: '#f3f4f6',
+          border: 'none',
+          boxShadow: 'none',
+          padding: 0,
+          margin: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: 0.7,
+          transition: 'all 0.2s ease'
+        }}
         style={{
           fontFamily: 'Montserrat, sans-serif',
           maxWidth: '400px',

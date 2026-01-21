@@ -48,12 +48,13 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   closeButtonClassName?: string;
+  closeButtonStyle?: React.CSSProperties;
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, closeButtonClassName, children, ...props }, ref) => {
+>(({ className, closeButtonClassName, closeButtonStyle, children, ...props }, ref) => {
   // Auto-provide an accessible description if none is supplied
   const autoDescId = React.useId();
   const describedByProp = (props as any)["aria-describedby"] as string | undefined;
