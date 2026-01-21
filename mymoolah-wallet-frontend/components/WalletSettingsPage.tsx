@@ -37,7 +37,9 @@ import {
   Home,
   Store,
   AtSign,
-  Play
+  Star,
+  Play,
+  Tag
 } from 'lucide-react';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
