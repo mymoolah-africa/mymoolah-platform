@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog';
 import { Button } from './button';
 import { AlertCircle, X } from 'lucide-react';
@@ -20,6 +20,21 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
   type = 'error',
   showCloseButton = true
 }) => {
+  // Ensure error modal appears above other modals (ConfirmSheet has z-index 1000)
+  useEffect(() => {
+    if (isOpen) {
+      // Find and update overlay z-index
+      const overlay = document.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
+      if (overlay) {
+        overlay.style.zIndex = '10000';
+      }
+      // Find and update content z-index
+      const content = document.querySelector('[data-slot="dialog-content"]') as HTMLElement;
+      if (content) {
+        content.style.zIndex = '10001';
+      }
+    }
+  }, [isOpen]);
   const getIconColor = () => {
     switch (type) {
       case 'error':
@@ -48,7 +63,9 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-sm mx-auto">
+      <DialogContent 
+        className="max-w-sm mx-auto"
+      >
         <DialogDescription id="error-modal-description" className="sr-only">
           {message || 'Error dialog content'}
         </DialogDescription>

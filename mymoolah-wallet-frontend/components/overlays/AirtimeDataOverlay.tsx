@@ -647,6 +647,8 @@ export function AirtimeDataOverlay() {
             setAlternativeProduct(errorResponse?.alternativeProduct || null);
             setShowErrorModal(true);
             setLoadingState('error');
+            // Close confirm modal when showing error
+            setCurrentStep('catalog');
           }
         } else {
           // Regular error - show error modal
@@ -659,6 +661,8 @@ export function AirtimeDataOverlay() {
           setShowErrorModal(true);
           setError(errorMessage);
           setLoadingState('error');
+          // Close confirm modal when showing error
+          setCurrentStep('catalog');
         }
       }
     }
