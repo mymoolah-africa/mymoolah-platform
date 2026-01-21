@@ -554,40 +554,66 @@ class BeneficiaryService {
       }
       
       // Extract service accounts (airtime, data, electricity, etc.)
+      // Banking-grade: Deduplicate airtime/data accounts with same identifier
       if (legacy.vasServices) {
+        const vasAccountMap = new Map<string, any>();
+        
         if (legacy.vasServices.airtime && Array.isArray(legacy.vasServices.airtime)) {
           legacy.vasServices.airtime.forEach((service: any, idx: number) => {
             if (service.isActive === false) return;
-            accounts.push({
-              id: legacy.id * 1000 + 100 + idx,
-              type: 'airtime',
-              identifier: service.mobileNumber || service.msisdn,
-              label: service.label || `Airtime - ${service.network || ''}`,
-              isDefault: false,
-              metadata: {
-                network: service.network,
-                ...service
-              }
-            });
+            const identifier = (service.mobileNumber || service.msisdn || '').trim();
+            if (identifier) {
+              vasAccountMap.set(identifier, {
+                id: legacy.id * 1000 + 100 + idx,
+                type: 'airtime',
+                identifier: identifier,
+                label: service.label || `Airtime - ${service.network || ''}`,
+                isDefault: false,
+                metadata: {
+                  network: service.network,
+                  ...service,
+                  _serviceTypes: ['airtime']
+                }
+              });
+            }
           });
         }
         
         if (legacy.vasServices.data && Array.isArray(legacy.vasServices.data)) {
           legacy.vasServices.data.forEach((service: any, idx: number) => {
             if (service.isActive === false) return;
-            accounts.push({
-              id: legacy.id * 1000 + 200 + idx,
-              type: 'data',
-              identifier: service.mobileNumber || service.msisdn,
-              label: service.label || `Data - ${service.network || ''}`,
-              isDefault: false,
-              metadata: {
-                network: service.network,
-                ...service
+            const identifier = (service.mobileNumber || service.msisdn || '').trim();
+            if (identifier) {
+              const existing = vasAccountMap.get(identifier);
+              if (existing) {
+                // Merge with existing airtime account
+                existing.metadata = {
+                  ...existing.metadata,
+                  ...service,
+                  network: existing.metadata.network || service.network,
+                  _serviceTypes: [...(existing.metadata._serviceTypes || ['airtime']), 'data']
+                };
+              } else {
+                // New data-only account
+                vasAccountMap.set(identifier, {
+                  id: legacy.id * 1000 + 200 + idx,
+                  type: 'data',
+                  identifier: identifier,
+                  label: service.label || `Data - ${service.network || ''}`,
+                  isDefault: false,
+                  metadata: {
+                    network: service.network,
+                    ...service,
+                    _serviceTypes: ['data']
+                  }
+                });
               }
-            });
+            }
           });
         }
+        
+        // Add all deduplicated VAS accounts
+        accounts.push(...Array.from(vasAccountMap.values()));
       }
       
       if (legacy.utilityServices) {
