@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiService, type VASProduct, type SupplierComparison } from '../services/apiService';
 import { 
@@ -55,6 +55,7 @@ interface ServiceSection {
 
 export function TransactPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, requiresKYC } = useAuth();
   const [showEarnMoolahsModal, setShowEarnMoolahsModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +63,16 @@ export function TransactPage() {
   const [trendingProducts, setTrendingProducts] = useState<VASProduct[]>([]);
   const [bestDeals, setBestDeals] = useState<VASProduct[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // Check for watch-to-earn query param and auto-open modal (from Quick Access Services)
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('service') === 'watch-to-earn') {
+      setShowEarnMoolahsModal(true);
+      // Clean up URL by removing query param
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location, navigate]);
 
   // Load trending products and best deals on component mount
   useEffect(() => {

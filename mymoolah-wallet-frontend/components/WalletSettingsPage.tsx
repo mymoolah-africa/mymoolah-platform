@@ -123,8 +123,12 @@ export function WalletSettingsPage() {
       case 'streaming':
         return <Wallet className="w-6 h-6" />;
       // Loyalty & Promotions
-      case 'loyalty':
+      case 'watch-to-earn':
         return <Play className="w-6 h-6" />;
+      case 'loyalty':
+        return <Star className="w-6 h-6" />;
+      case 'promotions':
+        return <Tag className="w-6 h-6" />;
       // New Cash-out Services
       case 'flash-eezicash':
         return <DollarSign className="w-6 h-6" />;

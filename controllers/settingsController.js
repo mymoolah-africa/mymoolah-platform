@@ -113,7 +113,7 @@ class SettingsController {
           comingSoon: false
         },
         {
-          id: 'loyalty',
+          id: 'watch-to-earn',
           name: 'Watch to Earn',
           description: 'Watch videos and earn wallet credits',
           category: 'loyalty',
@@ -130,10 +130,26 @@ class SettingsController {
           comingSoon: true
         },
         {
+          id: 'loyalty',
+          name: 'Rewards Program',
+          description: 'Cashback deals and special offers',
+          category: 'loyalty',
+          available: false,
+          comingSoon: true
+        },
+        {
           id: 'mmcash-retail',
           name: 'Cash-out at Retail',
           description: 'MMCash vouchers for retail partner cash-out',
           category: 'payment',
+          available: false,
+          comingSoon: true
+        },
+        {
+          id: 'promotions',
+          name: 'Promotions',
+          description: 'Exclusive deals and discounts',
+          category: 'loyalty',
           available: false,
           comingSoon: true
         }

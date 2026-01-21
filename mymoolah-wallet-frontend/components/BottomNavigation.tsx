@@ -24,7 +24,8 @@ import {
   Store,
   AtSign,
   Star,
-  Play
+  Play,
+  Tag
 } from "lucide-react";
 
 interface NavItem {
@@ -99,11 +100,23 @@ const serviceMapping = {
     label: 'Vouchers',
     icon: () => <Ticket style={{ width: '20px', height: '20px' }} />
   },
+  'watch-to-earn': {
+    id: 'watch-to-earn',
+    path: '/transact?service=watch-to-earn',
+    label: 'Watch to Earn',
+    icon: () => <Play style={{ width: '20px', height: '20px' }} />
+  },
   'loyalty': {
     id: 'loyalty',
     path: '/loyalty-promotions',
-    label: 'Watch to Earn',
-    icon: () => <Play style={{ width: '20px', height: '20px' }} />
+    label: 'Rewards Program',
+    icon: () => <Star style={{ width: '20px', height: '20px' }} />
+  },
+  'promotions': {
+    id: 'promotions',
+    path: '/loyalty-promotions',
+    label: 'Promotions',
+    icon: () => <Tag style={{ width: '20px', height: '20px' }} />
   },
   // New Cash-out Services
   'flash-eezicash': {
