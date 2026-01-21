@@ -341,7 +341,7 @@ export function BeneficiaryList({
                 color: '#6b7280',
                 marginBottom: '12px'
               }}>
-                {searchQuery ? 'No beneficiaries found' : 'No beneficiaries yet'}
+                {searchQuery ? 'No recipients found' : 'No recipients yet'}
               </p>
               <Button
                 onClick={onAddNew}
