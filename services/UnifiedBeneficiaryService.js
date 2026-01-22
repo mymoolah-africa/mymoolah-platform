@@ -881,6 +881,15 @@ class UnifiedBeneficiaryService {
     const normalized = this.normalizeServiceAccountData(serviceType, serviceData);
     const { serviceType: normalizedType, serviceData: normalizedData, isDefault } = normalized;
 
+    // Log for debugging
+    console.log('🔍 [addOrUpdateServiceAccount] Processing update:', {
+      beneficiaryId,
+      serviceType: normalizedType,
+      oldIdentifier: oldIdentifier ? `${oldIdentifier.substring(0, 4)}****` : null,
+      newIdentifier: normalizedData[this.getServiceIdentifierKey(normalizedType)] ? 
+        `${normalizedData[this.getServiceIdentifierKey(normalizedType)].substring(0, 4)}****` : null
+    });
+
     const tx = await sequelize.transaction();
     try {
       const beneficiary = await Beneficiary.findOne({
@@ -908,19 +917,82 @@ class UnifiedBeneficiaryService {
       let existing = null;
       
       // PRIORITY 1: If oldIdentifier is provided (editing a specific number), find that service account
+      // Normalize oldIdentifier to E.164 format for comparison (database stores in E.164)
       if (oldIdentifier && identifierKey) {
-        existing = await BeneficiaryServiceAccount.findOne({
+        let normalizedOldIdentifier = oldIdentifier;
+        try {
+          // Normalize to E.164 format for comparison
+          const { normalizeToE164 } = require('../utils/msisdn');
+          normalizedOldIdentifier = normalizeToE164(oldIdentifier);
+        } catch (e) {
+          // If normalization fails, try with original value
+          console.warn('⚠️ Failed to normalize oldIdentifier, using as-is:', oldIdentifier);
+        }
+
+        console.log('🔍 [addOrUpdateServiceAccount] Searching for service account with oldIdentifier:', {
+          original: oldIdentifier ? `${oldIdentifier.substring(0, 4)}****` : null,
+          normalized: normalizedOldIdentifier ? `${normalizedOldIdentifier.substring(0, 4)}****` : null,
+          identifierKey
+        });
+
+        // Fetch all service accounts and filter in JavaScript (more reliable than JSONB queries)
+        // This ensures we can compare normalized formats correctly
+        const allServiceAccounts = await BeneficiaryServiceAccount.findAll({
           where: {
             beneficiaryId,
             serviceType: normalizedType,
-            isActive: true,
-            serviceData: {
-              [identifierKey]: oldIdentifier
-            }
+            isActive: true
           },
           transaction: tx,
           lock: tx.LOCK.UPDATE
         });
+
+        // Find the one matching oldIdentifier (normalize both stored value and oldIdentifier for comparison)
+        existing = allServiceAccounts.find(acc => {
+          const storedValue = acc.serviceData?.[identifierKey];
+          if (!storedValue) return false;
+          
+          // Normalize stored value to E.164 for comparison (database stores in E.164)
+          let normalizedStoredValue = String(storedValue).trim();
+          try {
+            normalizedStoredValue = normalizeToE164(normalizedStoredValue);
+          } catch (e) {
+            // If normalization fails, use as-is
+            console.warn('⚠️ Failed to normalize stored value for comparison, using as-is:', normalizedStoredValue);
+          }
+          
+          // Normalize both sides for comparison
+          const normalizedStr = String(normalizedOldIdentifier).trim();
+          const originalStr = String(oldIdentifier).trim();
+          const storedStr = String(storedValue).trim();
+          
+          // Try multiple comparison strategies:
+          // 1. Normalized stored value vs normalized oldIdentifier
+          // 2. Normalized stored value vs original oldIdentifier (in case oldIdentifier was already E.164)
+          // 3. Original stored value vs normalized oldIdentifier
+          // 4. Original stored value vs original oldIdentifier
+          return normalizedStoredValue === normalizedStr || 
+                 normalizedStoredValue === originalStr ||
+                 storedStr === normalizedStr ||
+                 storedStr === originalStr;
+        });
+
+        if (existing) {
+          console.log('✅ [addOrUpdateServiceAccount] Found existing service account to update:', {
+            serviceAccountId: existing.id,
+            storedMsisdn: existing.serviceData?.[identifierKey] ? `${String(existing.serviceData[identifierKey]).substring(0, 4)}****` : 'N/A',
+            matchedBy: 'oldIdentifier'
+          });
+        } else {
+          console.log('⚠️ [addOrUpdateServiceAccount] No service account found with oldIdentifier', {
+            oldIdentifier: oldIdentifier ? `${oldIdentifier.substring(0, 4)}****` : null,
+            normalizedOldIdentifier: normalizedOldIdentifier ? `${normalizedOldIdentifier.substring(0, 4)}****` : null,
+            availableAccounts: allServiceAccounts.map(acc => ({
+              id: acc.id,
+              msisdn: acc.serviceData?.[identifierKey] ? `${String(acc.serviceData[identifierKey]).substring(0, 4)}****` : 'N/A'
+            }))
+          });
+        }
       }
 
       // PRIORITY 2: If not found by oldIdentifier, try to find by new identifier (in case user changed to match existing)
@@ -1073,7 +1145,16 @@ class UnifiedBeneficiaryService {
       case 'data':
         // Auto-detect network from phone number if not provided
         let network = serviceData.network || null;
-        const msisdn = serviceData.msisdn || serviceData.mobileNumber || null;
+        let msisdn = serviceData.msisdn || serviceData.mobileNumber || null;
+        
+        // CRITICAL: Normalize msisdn to E.164 format (database stores in E.164)
+        if (msisdn) {
+          try {
+            msisdn = normalizeToE164(msisdn);
+          } catch (e) {
+            console.warn('⚠️ Failed to normalize msisdn in normalizeServiceAccountData, using as-is:', msisdn);
+          }
+        }
         
         if (!network && msisdn) {
           // Auto-detect network from phone number
