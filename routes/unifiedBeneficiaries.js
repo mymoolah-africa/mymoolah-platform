@@ -279,6 +279,17 @@ router.patch('/:beneficiaryId', authenticateToken, async (req, res) => {
 
     // Update service account if serviceType and serviceData provided
     if (serviceType && serviceData) {
+      console.log('🔍 [PATCH /unified-beneficiaries/:id] Updating service account:', {
+        beneficiaryId: parseInt(beneficiaryId, 10),
+        serviceType,
+        serviceData: {
+          ...serviceData,
+          // Don't log full phone numbers in production, but helpful for debugging
+          msisdn: serviceData.msisdn ? `${serviceData.msisdn.substring(0, 4)}****` : undefined,
+          mobileNumber: serviceData.mobileNumber ? `${serviceData.mobileNumber.substring(0, 4)}****` : undefined,
+          oldIdentifier: serviceData.oldIdentifier ? `${serviceData.oldIdentifier.substring(0, 4)}****` : undefined
+        }
+      });
       await unifiedBeneficiaryService.addOrUpdateServiceAccount(userId, {
         beneficiaryId: parseInt(beneficiaryId, 10),
         serviceType,
