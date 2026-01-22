@@ -946,49 +946,74 @@ class UnifiedBeneficiaryService {
           transaction: tx,
           lock: tx.LOCK.UPDATE
         });
+        
+        console.log('🔍 [addOrUpdateServiceAccount] Found service accounts:', {
+          count: allServiceAccounts.length,
+          accounts: allServiceAccounts.map(acc => ({
+            id: acc.id,
+            msisdn: acc.serviceData?.[identifierKey] ? `${String(acc.serviceData[identifierKey]).substring(0, 4)}****` : 'N/A',
+            serviceData: acc.serviceData
+          }))
+        });
 
-        // Find the one matching oldIdentifier (normalize both stored value and oldIdentifier for comparison)
+        // Find the one matching oldIdentifier
+        // CRITICAL: Both stored value and oldIdentifier must be normalized to E.164 for accurate comparison
+        // Database stores msisdn in E.164 format, so we normalize both to E.164 and compare
         existing = allServiceAccounts.find(acc => {
           const storedValue = acc.serviceData?.[identifierKey];
-          if (!storedValue) return false;
-          
-          // Normalize stored value to E.164 for comparison (database stores in E.164)
-          let normalizedStoredValue = String(storedValue).trim();
-          try {
-            normalizedStoredValue = normalizeToE164(normalizedStoredValue);
-          } catch (e) {
-            // If normalization fails, use as-is
-            console.warn('⚠️ Failed to normalize stored value for comparison, using as-is:', normalizedStoredValue);
+          if (!storedValue) {
+            return false;
           }
           
-          // Normalize both sides for comparison
-          const normalizedStr = String(normalizedOldIdentifier).trim();
-          const originalStr = String(oldIdentifier).trim();
           const storedStr = String(storedValue).trim();
           
-          // Try multiple comparison strategies:
-          // 1. Normalized stored value vs normalized oldIdentifier
-          // 2. Normalized stored value vs original oldIdentifier (in case oldIdentifier was already E.164)
-          // 3. Original stored value vs normalized oldIdentifier
-          // 4. Original stored value vs original oldIdentifier
-          return normalizedStoredValue === normalizedStr || 
-                 normalizedStoredValue === originalStr ||
-                 storedStr === normalizedStr ||
-                 storedStr === originalStr;
+          // Normalize stored value to E.164 (database should store in E.164, but handle edge cases)
+          let normalizedStoredValue;
+          try {
+            normalizedStoredValue = normalizeToE164(storedStr);
+          } catch (e) {
+            // If stored value is already in E.164 format, use as-is
+            if (storedStr.startsWith('+27') && storedStr.length === 13) {
+              normalizedStoredValue = storedStr;
+            } else {
+              // Cannot normalize - skip this account
+              return false;
+            }
+          }
+          
+          // Compare normalized values (both in E.164 format)
+          // normalizedOldIdentifier is already in E.164 from line 926
+          const match = normalizedStoredValue === normalizedOldIdentifier;
+          
+          if (match) {
+            console.log('✅ [addOrUpdateServiceAccount] MATCH FOUND:', {
+              accountId: acc.id,
+              storedValue: storedStr,
+              normalizedStoredValue: normalizedStoredValue,
+              oldIdentifier: oldIdentifier,
+              normalizedOldIdentifier: normalizedOldIdentifier
+            });
+          }
+          
+          return match;
         });
 
         if (existing) {
           console.log('✅ [addOrUpdateServiceAccount] Found existing service account to update:', {
             serviceAccountId: existing.id,
             storedMsisdn: existing.serviceData?.[identifierKey] ? `${String(existing.serviceData[identifierKey]).substring(0, 4)}****` : 'N/A',
+            storedValue: existing.serviceData?.[identifierKey],
+            oldIdentifier: oldIdentifier,
             matchedBy: 'oldIdentifier'
           });
         } else {
           console.log('⚠️ [addOrUpdateServiceAccount] No service account found with oldIdentifier', {
-            oldIdentifier: oldIdentifier ? `${oldIdentifier.substring(0, 4)}****` : null,
-            normalizedOldIdentifier: normalizedOldIdentifier ? `${normalizedOldIdentifier.substring(0, 4)}****` : null,
+            oldIdentifier: oldIdentifier,
+            normalizedOldIdentifier: normalizedOldIdentifier,
+            identifierKey: identifierKey,
             availableAccounts: allServiceAccounts.map(acc => ({
               id: acc.id,
+              storedValue: acc.serviceData?.[identifierKey],
               msisdn: acc.serviceData?.[identifierKey] ? `${String(acc.serviceData[identifierKey]).substring(0, 4)}****` : 'N/A'
             }))
           });
@@ -1011,10 +1036,9 @@ class UnifiedBeneficiaryService {
         });
       }
 
-      // PRIORITY 3: If not found by identifier, check if this is an edit scenario:
-      // If there's only ONE active service account for this beneficiary and service type,
-      // we should UPDATE it instead of creating a new one (user is editing the existing number)
-      if (!existing) {
+      // PRIORITY 3: If not found by oldIdentifier and no oldIdentifier provided, check for single account scenario
+      // This handles the case where user is editing the only number (no oldIdentifier needed)
+      if (!existing && !oldIdentifier) {
         const existingAccounts = await BeneficiaryServiceAccount.findAll({
           where: {
             beneficiaryId,
@@ -1025,15 +1049,27 @@ class UnifiedBeneficiaryService {
           lock: tx.LOCK.UPDATE
         });
 
-        // If there's exactly one active service account, update it (edit scenario)
+        // If there's exactly one active service account, update it (edit scenario without oldIdentifier)
         if (existingAccounts.length === 1) {
           existing = existingAccounts[0];
+          console.log('✅ [addOrUpdateServiceAccount] PRIORITY 3: Using single existing account for update (no oldIdentifier provided)');
         }
-        // If there are multiple accounts, prefer the default one for updates
-        else if (existingAccounts.length > 1) {
-          const defaultAccount = existingAccounts.find(acc => acc.isDefault);
-          existing = defaultAccount || existingAccounts[0]; // Use default or first one
-        }
+      }
+      
+      // If oldIdentifier was provided but no match found, this is an error - fail fast
+      if (!existing && oldIdentifier) {
+        console.error('❌ [addOrUpdateServiceAccount] CRITICAL: oldIdentifier provided but no matching account found', {
+          oldIdentifier: oldIdentifier,
+          normalizedOldIdentifier: normalizedOldIdentifier,
+          beneficiaryId: beneficiaryId,
+          serviceType: normalizedType,
+          identifierKey: identifierKey,
+          availableAccounts: allServiceAccounts.map(acc => ({
+            id: acc.id,
+            storedValue: acc.serviceData?.[identifierKey]
+          }))
+        });
+        throw new Error(`Cannot update: No service account found matching old identifier. Please verify the number exists.`);
       }
 
       if (existing) {
@@ -1386,6 +1422,27 @@ class UnifiedBeneficiaryService {
             network = getNetworkFromMsisdn(msisdn);
           }
           
+          // Convert E.164 format to local format for display (0XXXXXXXXX)
+          // Frontend expects local format for display, but we store in E.164 internally
+          let displayIdentifier = msisdn;
+          if (msisdn && typeof msisdn === 'string' && !msisdn.startsWith('NON_MSI_')) {
+            try {
+              // If msisdn is in E.164 format, convert to local for display
+              if (msisdn.startsWith('+27')) {
+                displayIdentifier = toLocal(msisdn);
+              }
+              // If already in local format (starts with 0), use as-is
+              // Otherwise try to normalize and convert
+              else if (!msisdn.startsWith('0')) {
+                const normalized = normalizeToE164(msisdn);
+                displayIdentifier = toLocal(normalized);
+              }
+            } catch (e) {
+              // If conversion fails, use original value
+              console.warn('⚠️ Failed to convert msisdn to local format for display, using as-is:', msisdn);
+            }
+          }
+          
           accounts.push({
             id:
               account.id ||
@@ -1393,14 +1450,14 @@ class UnifiedBeneficiaryService {
                 (account.serviceType === 'airtime' ? 100 : 200) +
                 idx),
             type: account.serviceType,
-            identifier: msisdn,
+            identifier: displayIdentifier, // Use local format for display
             label:
               account.serviceType === 'airtime'
                 ? `Airtime - ${network ? network.charAt(0).toUpperCase() + network.slice(1) : ''}`
                 : `Data - ${network ? network.charAt(0).toUpperCase() + network.slice(1) : ''}`,
             isDefault: account.isDefault || false,
             metadata: {
-              msisdn: msisdn,
+              msisdn: msisdn, // Keep E.164 in metadata for backend use
               ...serviceData,
               // Always use extracted network if available, otherwise fall back to serviceData.network
               network: network || serviceData.network || null
