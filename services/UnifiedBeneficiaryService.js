@@ -180,6 +180,17 @@ class UnifiedBeneficiaryService {
             accounts: accounts.map(acc => ({ type: acc.type, network: acc.metadata?.network }))
           });
           
+          // CRITICAL: Use the active service account identifier (from accounts array) instead of legacy vasServices
+          // This ensures identifier matches the actual active account, not stale legacy data
+          let activeIdentifier = base.identifier; // Fallback to base identifier
+          if (accounts && accounts.length > 0) {
+            // Use the first account's identifier (already in local format for display)
+            activeIdentifier = accounts[0].identifier;
+          } else {
+            // Fallback to legacy vasServices if no accounts exist (backward compatibility)
+            activeIdentifier = this.getVasIdentifier(beneficiaryData.vasServices || beneficiary.vasServices, base.identifier);
+          }
+          
           return {
             ...base,
             vasServices: beneficiaryData.vasServices || beneficiary.vasServices,
@@ -189,7 +200,8 @@ class UnifiedBeneficiaryService {
             accounts: accounts,
             // Legacy compatibility
             accountType: this.getVasAccountType(beneficiaryData.vasServices || beneficiary.vasServices, beneficiary.accountType),
-            identifier: this.getVasIdentifier(beneficiaryData.vasServices || beneficiary.vasServices, base.identifier)
+            // CRITICAL: Use active service account identifier, not stale legacy data
+            identifier: activeIdentifier
           };
           
         case 'electricity':
