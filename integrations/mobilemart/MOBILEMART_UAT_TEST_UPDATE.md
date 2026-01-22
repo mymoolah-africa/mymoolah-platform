@@ -11,7 +11,7 @@
 
 | Network | Mobile Number | Status |
 |---------|---------------|--------|
-| **Vodacom** | `0829802807` | ✅ Updated |
+| **Vodacom** | `0720012345` | ✅ Updated |
 | **MTN** | `0830012300` | ✅ Updated |
 | **MTN (Alt)** | `0737111113` | ✅ Available |
 | **CellC** | `0840012300` | ✅ Updated |
@@ -36,7 +36,7 @@
 
 ### **2. Provider-Based Number Selection** ✅
 The test script now automatically selects the correct test number based on the product's provider:
-- **Vodacom products** → `0829802807`
+- **Vodacom products** → `0720012345`
 - **MTN products** → `0830012300`
 - **CellC products** → `0840012300`
 - **Telkom products** → `0850012345`

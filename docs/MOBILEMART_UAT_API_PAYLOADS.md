@@ -14,7 +14,7 @@
 - Supplier Product ID: `D1eiCf7vEOVbYERfE1vZ`
 - Variant ID: `401`
 - Amount: R5.00
-- Mobile Number: `0829802807`
+- Mobile Number: `0720012345`
 - Beneficiary: "Vodacom Test Number" (ID: 21)
 
 **MyMoolah → MobileMart Request:**
@@ -23,7 +23,7 @@
   "requestId": "overlay_user_1768312780903_qhhfptdsw",
   "merchantProductId": "D1eiCf7vEOVbYERfE1vZ",
   "tenderType": "CreditCard",
-  "mobileNumber": "0829802807",
+  "mobileNumber": "0720012345",
   "amount": 5
 }
 ```
@@ -42,7 +42,7 @@ POST https://uat.fulcrumswitch.com/v1/airtime/pinless
   "detail": "The mobile number supplied is invalid.",
   "traceId": "00-da0fffb46e8571eb11def5213b218f5f-4c878850f5557d62-01",
   "fulcrumErrorCode": 1013,
-  "msisdn": "0829802807"
+  "msisdn": "0720012345"
 }
 ```
 
@@ -138,7 +138,7 @@ ORDER BY "checkedAt" DESC;
 
 ### Vodacom Error (1013)
 - **MobileMart says**: "Mobile Number is invalid"
-- **Mobile Number Used**: `0829802807`
+- **Mobile Number Used**: `0720012345`
 - **Format**: Correct (10 digits, starts with 0)
 - **Product**: `D1eiCf7vEOVbYERfE1vZ` (Vodacom Power 60min Voice Bundle R5)
 - **Possible Causes**:
@@ -174,7 +174,7 @@ ORDER BY "checkedAt" DESC;
 ### Question for MobileMart Support
 > "We're testing the UAT environment and encountering network-specific failures:
 > 
-> 1. **Vodacom**: Error 1013 "Mobile Number is invalid" for number `0829802807`
+> 1. **Vodacom**: Error 1013 "Mobile Number is invalid" for number `0720012345`
 >    - Product: `D1eiCf7vEOVbYERfE1vZ` (Vodacom Power 60min Voice Bundle R5)
 >    - Trace ID: `00-da0fffb46e8571eb11def5213b218f5f-4c878850f5557d62-01`
 > 

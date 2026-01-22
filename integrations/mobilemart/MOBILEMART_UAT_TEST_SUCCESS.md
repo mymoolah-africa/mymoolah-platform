@@ -45,7 +45,7 @@
 - **Status:** ✅ Working
 - **Transaction ID:** `3f215dd3-ebbb-4f78-856d-035e4c2695d2`
 - **Provider:** Vodacom
-- **Mobile Number:** `0829802807` (valid UAT test number)
+- **Mobile Number:** `0720012345` (valid UAT test number)
 - **Fix:** Provider-based mobile number selection
 
 ### **3. Airtime Pinned** ✅
@@ -91,7 +91,7 @@
 |-----------|--------|----------------|-------|
 | Airtime Pinless | ✅ **WORKING** | `7ddf94e4-1af4-4885-8dda-f6d72e563554` | MTN: 0830012300 |
 | Airtime Pinned | ✅ Working | `013e4dbc-a531-4679-adfb-2dbc0ba01e54` | Voucher-based |
-| Data Pinless | ✅ **WORKING** | `3f215dd3-ebbb-4f78-856d-035e4c2695d2` | Vodacom: 0829802807 |
+| Data Pinless | ✅ **WORKING** | `3f215dd3-ebbb-4f78-856d-035e4c2695d2` | Vodacom: 0720012345 |
 | Data Pinned | ✅ Working | `c183dfb3-f662-43d0-adfb-2dbc0ba01e54` | Voucher-based |
 | Voucher | ✅ Working | `351e3230-1e51-497e-a09f-74a768582120` | Generic voucher |
 | Bill Payment | ⚠️ Failing | `118c85be-1a39-4e41-b1e8-bca327f803b3` | Upstream provider issue (Error 1002) |
@@ -109,7 +109,7 @@
 - **Result:** Both pinless types now working!
 
 ### **2. Valid UAT Test Numbers** ✅
-- **Vodacom:** `0829802807`
+- **Vodacom:** `0720012345`
 - **MTN:** `0830012300`
 - **CellC:** `0840012300`
 - **Telkom:** `0850012345`

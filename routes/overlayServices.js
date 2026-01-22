@@ -752,7 +752,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           
           // Normalize mobile number for MobileMart API
           // MOBILEMART REQUIREMENTS:
-          // - UAT: LOCAL FORMAT (10 digits starting with 0) - e.g., 0829802807
+          // - UAT: LOCAL FORMAT (10 digits starting with 0) - e.g., 0720012345
           // - Production: INTERNATIONAL FORMAT WITHOUT + (11 digits starting with 27) - e.g., 27829802807
           // 
           // ACCEPTS ALL 3 INPUT FORMATS: 0XXXXXXXXX, +27XXXXXXXXX, 27825571055
@@ -772,7 +772,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             
             if (isUAT) {
               // UAT: MobileMart REQUIRES LOCAL FORMAT (10 digits starting with 0)
-              // Examples: 0829802807, 0830012300, 0840012300, 0850012345
+              // Examples: 0720012345, 0830012300, 0840012300, 0850012345
               if (digits.startsWith('0') && digits.length === 10) {
                 // Already in local format (0XXXXXXXXX) - use as-is
                 normalizedMobileNumber = digits;

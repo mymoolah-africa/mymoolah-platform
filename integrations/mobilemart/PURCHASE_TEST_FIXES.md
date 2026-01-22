@@ -11,7 +11,7 @@
 - **Initial Error:** 1013 - "Mobile Number is invalid"
 - **Root Cause:** Using numbers not valid for UAT and/or wrong format
 - **Fix:** Use provider-based valid UAT test numbers in local format  
-  - Vodacom: `0829802807`  
+  - Vodacom: `0720012345`  
   - MTN: `0830012300`  
   - CellC: `0840012300`  
   - Telkom: `0850012345`
@@ -64,7 +64,7 @@ if (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('sslmode=requi
 - Do not convert to international format for UAT pinless tests
 
 ### **Validated UAT Test Numbers (Local Format):**
-- Vodacom: `0829802807`
+- Vodacom: `0720012345`
 - MTN: `0830012300`
 - CellC: `0840012300`
 - Telkom: `0850012345`

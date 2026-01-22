@@ -103,7 +103,7 @@ All 5 VAS types are working and returning products:
 - **Fix:** Provider-based mobile number selection using valid UAT test numbers
 - **Status:** ✅ Working - Airtime Pinless and Data Pinless both working
 - **Test Numbers Used:**
-  - Vodacom: `0829802807`
+  - Vodacom: `0720012345`
   - MTN: `0830012300`
   - CellC: `0840012300`
   - Telkom: `0850012345`

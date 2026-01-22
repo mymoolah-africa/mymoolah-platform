@@ -11,7 +11,7 @@
 
 | Network | Mobile Number | Usage |
 |---------|---------------|-------|
-| **Vodacom** | `0829802807` | Pinless Airtime & Data |
+| **Vodacom** | `0720012345` | Pinless Airtime & Data |
 | **MTN** | `0830012300` | Pinless Airtime & Data |
 | **MTN** | `0737111113` | Pinless Airtime & Data (alternative) |
 | **CellC** | `0840012300` | Pinless Airtime & Data |
@@ -34,13 +34,13 @@
 ## 🧪 **Test Strategy**
 
 ### **Pinless Airtime Testing:**
-1. Test with Vodacom number (`0829802807`) for Vodacom products
+1. Test with Vodacom number (`0720012345`) for Vodacom products
 2. Test with MTN number (`0830012300` or `0737111113`) for MTN products
 3. Test with CellC number (`0840012300`) for CellC products
 4. Test with Telkom number (`0850012345`) for Telkom products
 
 ### **Pinless Data Testing:**
-1. Test with Vodacom number (`0829802807`) for Vodacom products
+1. Test with Vodacom number (`0720012345`) for Vodacom products
 2. Test with MTN number (`0830012300` or `0737111113`) for MTN products
 3. Test with CellC number (`0840012300`) for CellC products
 4. Test with Telkom number (`0850012345`) for Telkom products
@@ -75,7 +75,7 @@
 
 ### **Error 1013: Mobile Number Invalid**
 - **Issue:** Test numbers may not be activated for all product types
-- **Example:** Vodacom number `0829802807` works for airtime but may fail for data products
+- **Example:** Vodacom number `0720012345` works for airtime but may fail for data products
 - **Error Message:** "Mobile Number is invalid" or "The mobile number supplied is invalid"
 - **Root Cause:** MobileMart UAT test numbers have product-specific restrictions (some numbers only work for airtime, not data, or vice versa)
 - **Workaround:** 

@@ -144,7 +144,7 @@ node scripts/test-mobilemart-load.js --tps 1000 --duration 10 --type airtime-pin
 
 ### **3. Test Data**
 - Uses valid UAT test mobile numbers:
-  - Vodacom: `0829802807`
+  - Vodacom: `0720012345`
   - MTN: `0830012300`
   - CellC: `0840012300`
   - Telkom: `0850012345`

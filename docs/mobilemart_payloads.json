@@ -11,7 +11,7 @@
     "vodacom": {
       "status": "FAILED",
       "network": "Vodacom",
-      "mobileNumber": "0829802807",
+      "mobileNumber": "0720012345",
       "productName": "Vodacom Power 60min Voice Bundle R5",
       "amount": 5,
       "request": {
@@ -22,7 +22,7 @@
           "requestId": "overlay_user_1768312780903_qhhfptdsw",
           "merchantProductId": "D1eiCf7vEOVbYERfE1vZ",
           "tenderType": "CreditCard",
-          "mobileNumber": "0829802807",
+          "mobileNumber": "0720012345",
           "amount": 5
         }
       },
@@ -36,7 +36,7 @@
           "detail": "The mobile number supplied is invalid.",
           "traceId": "00-da0fffb46e8571eb11def5213b218f5f-4c878850f5557d62-01",
           "fulcrumErrorCode": 1013,
-          "msisdn": "0829802807"
+          "msisdn": "0720012345"
         }
       },
       "errorAnalysis": {
@@ -101,7 +101,7 @@
     },
     {
       "question": "What mobile number formats should we use for testing each network in UAT?",
-      "context": "We're using standard SA format (0829802807) which works for Telkom/MTN but fails for Vodacom/CellC."
+      "context": "We're using standard SA format (0720012345) which works for Telkom/MTN but fails for Vodacom/CellC."
     },
     {
       "question": "Can you provide test mobile numbers for all networks (Vodacom, CellC, MTN, Telkom)?",

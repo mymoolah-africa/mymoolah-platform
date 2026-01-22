@@ -9,7 +9,7 @@
 
 Pinless failures were caused by using invalid numbers/format. Using provider-based valid UAT test numbers in local format resolved the issue:
 - ✅ Local format examples (valid UAT numbers):
-  - Vodacom: `0829802807`
+  - Vodacom: `0720012345`
   - MTN: `0830012300`
   - CellC: `0840012300`
   - Telkom: `0850012345`
