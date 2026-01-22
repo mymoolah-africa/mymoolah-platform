@@ -428,9 +428,18 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     }
 
     // Get beneficiary details
-    const { Beneficiary, VasTransaction, Wallet, Transaction, User, sequelize } = require('../models');
+    const { Beneficiary, BeneficiaryServiceAccount, VasTransaction, Wallet, Transaction, User, sequelize } = require('../models');
     const beneficiary = await Beneficiary.findOne({
-      where: { id: beneficiaryId, userId: req.user.id }
+      where: { id: beneficiaryId, userId: req.user.id },
+      include: [{
+        model: BeneficiaryServiceAccount,
+        as: 'serviceAccountRecords',
+        where: { 
+          serviceType: { [Op.in]: ['airtime', 'data'] },
+          isActive: true 
+        },
+        required: false
+      }]
     });
 
     if (!beneficiary) {
@@ -439,6 +448,42 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
         error: 'Beneficiary not found'
       });
     }
+    
+    // CRITICAL: Get the active service account identifier (not stale legacy identifier)
+    // The purchase flow needs the current active account number, not the legacy identifier column
+    // This ensures MobileMart gets the correct number (082...) not the old one (072...)
+    let activeIdentifier = beneficiary.identifier; // Fallback to legacy
+    const serviceAccounts = beneficiary.serviceAccountRecords || [];
+    if (serviceAccounts.length > 0) {
+      // Get the default account or first active account
+      const activeAccount = serviceAccounts.find(acc => acc.isDefault) || serviceAccounts[0];
+      const msisdn = activeAccount.serviceData?.msisdn || activeAccount.serviceData?.mobileNumber;
+      if (msisdn) {
+        // Convert E.164 to local format for MobileMart (MobileMart will convert based on environment)
+        // Database stores in E.164 (+27720012345), but we need local format (0720012345) for MobileMart UAT
+        const { toLocal } = require('../utils/msisdn');
+        try {
+          activeIdentifier = toLocal(msisdn);
+        } catch (e) {
+          // If conversion fails, manually convert E.164 to local format
+          if (msisdn.startsWith('+27')) {
+            activeIdentifier = `0${msisdn.slice(3)}`; // +27720012345 -> 0720012345
+          } else {
+            activeIdentifier = msisdn; // Use as-is if not E.164
+          }
+        }
+        console.log('📱 Using active service account identifier for purchase:', {
+          legacyIdentifier: beneficiary.identifier,
+          activeMsisdn: msisdn,
+          activeIdentifier: activeIdentifier,
+          accountId: activeAccount.id
+        });
+      }
+    }
+    
+    // Update beneficiary object with active identifier for use in purchase flow
+    // This ensures MobileMart gets the correct number, not stale legacy data
+    beneficiary.identifier = activeIdentifier;
 
     // Support two formats:
     // 1. Old format: type_supplier_productCode_amount (from VasProduct table)
