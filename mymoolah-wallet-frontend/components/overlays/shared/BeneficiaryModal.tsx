@@ -39,17 +39,21 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
   const [meterTypeSearchTerm, setMeterTypeSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const meterTypeDropdownRef = useRef<HTMLDivElement>(null);
+  const [oldIdentifier, setOldIdentifier] = useState<string>(''); // Track old identifier when editing
 
   // Populate form when editing
   useEffect(() => {
     if (editBeneficiary) {
+      const initialIdentifier = editBeneficiary.identifier || '';
       setFormData({
         name: editBeneficiary.name,
-        identifier: editBeneficiary.identifier,
+        identifier: initialIdentifier,
         network: editBeneficiary.metadata?.network || '',
         meterType: editBeneficiary.metadata?.meterType || '',
         billerName: editBeneficiary.metadata?.billerName || ''
       });
+      // Store the old identifier so we know which service account to update
+      setOldIdentifier(initialIdentifier);
     } else {
       // Reset form when adding new beneficiary
       setFormData({
@@ -59,6 +63,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
         meterType: '',
         billerName: ''
       });
+      setOldIdentifier('');
     }
   }, [editBeneficiary, isOpen]);
 
@@ -170,6 +175,11 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
         network: formData.network,
         isDefault: true
       };
+
+      // When editing, include the old identifier so backend knows which service account to update
+      if (editBeneficiary && oldIdentifier) {
+        serviceData.oldIdentifier = oldIdentifier;
+      }
 
       let beneficiary;
       

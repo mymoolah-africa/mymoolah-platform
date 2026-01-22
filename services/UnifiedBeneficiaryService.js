@@ -875,6 +875,9 @@ class UnifiedBeneficiaryService {
       throw new Error('beneficiaryId is required to add a service account');
     }
 
+    // Extract oldIdentifier before normalization (it's only used for lookup, not stored)
+    const oldIdentifier = serviceData.oldIdentifier || null;
+
     const normalized = this.normalizeServiceAccountData(serviceType, serviceData);
     const { serviceType: normalizedType, serviceData: normalizedData, isDefault } = normalized;
 
@@ -903,11 +906,30 @@ class UnifiedBeneficiaryService {
       const identifierValue = normalizedData[identifierKey];
 
       let existing = null;
-      if (identifierKey && identifierValue) {
+      
+      // PRIORITY 1: If oldIdentifier is provided (editing a specific number), find that service account
+      if (oldIdentifier && identifierKey) {
         existing = await BeneficiaryServiceAccount.findOne({
           where: {
             beneficiaryId,
             serviceType: normalizedType,
+            isActive: true,
+            serviceData: {
+              [identifierKey]: oldIdentifier
+            }
+          },
+          transaction: tx,
+          lock: tx.LOCK.UPDATE
+        });
+      }
+
+      // PRIORITY 2: If not found by oldIdentifier, try to find by new identifier (in case user changed to match existing)
+      if (!existing && identifierKey && identifierValue) {
+        existing = await BeneficiaryServiceAccount.findOne({
+          where: {
+            beneficiaryId,
+            serviceType: normalizedType,
+            isActive: true,
             serviceData: {
               [identifierKey]: identifierValue
             }
@@ -917,7 +939,33 @@ class UnifiedBeneficiaryService {
         });
       }
 
+      // PRIORITY 3: If not found by identifier, check if this is an edit scenario:
+      // If there's only ONE active service account for this beneficiary and service type,
+      // we should UPDATE it instead of creating a new one (user is editing the existing number)
+      if (!existing) {
+        const existingAccounts = await BeneficiaryServiceAccount.findAll({
+          where: {
+            beneficiaryId,
+            serviceType: normalizedType,
+            isActive: true
+          },
+          transaction: tx,
+          lock: tx.LOCK.UPDATE
+        });
+
+        // If there's exactly one active service account, update it (edit scenario)
+        if (existingAccounts.length === 1) {
+          existing = existingAccounts[0];
+        }
+        // If there are multiple accounts, prefer the default one for updates
+        else if (existingAccounts.length > 1) {
+          const defaultAccount = existingAccounts.find(acc => acc.isDefault);
+          existing = defaultAccount || existingAccounts[0]; // Use default or first one
+        }
+      }
+
       if (existing) {
+        // Update existing service account
         await existing.update(
           {
             serviceData: normalizedData,
@@ -927,6 +975,7 @@ class UnifiedBeneficiaryService {
           { transaction: tx }
         );
       } else {
+        // Create new service account (no existing one found)
         await BeneficiaryServiceAccount.create(
           {
             beneficiaryId,
