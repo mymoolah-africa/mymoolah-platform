@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-01-20  
-**Latest Feature**: Watch to Earn Implementation  
-**Document Version**: 2.7.0  
+**Last Updated**: 2026-01-24 09:09  
+**Latest Feature**: NFC Deposit/Payment Implementation Plan  
+**Document Version**: 2.7.3  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -51,7 +51,16 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (January 20, 2026)**
+### **Latest Achievement (January 24, 2026 - 09:09)**
+**NFC Deposit/Payment Implementation Plan** - Comprehensive banking-grade implementation plan created for NFC deposits (SoftPOS inbound) and NFC payments (tokenized virtual card outbound) with Standard Bank T-PPP. Plan enforces MPoC/CPoC compliance, mandates native kernels (Android: certified EMV L2/MPoC kernel, iOS: Tap to Pay on iPhone), and uses push provisioning to Apple/Google wallets for outbound payments. Includes complete architecture, data models, services, APIs, security requirements, testing strategy, and rollout plan. Plan documented for later execution.
+
+### **Previous Achievement (January 21, 2026 - 14:52)**
+**Watch to Earn UI Improvements** - Improved Watch to Earn modal styling and Quick Access Services configuration. Split "Loyalty & Promotions" into 3 independent services (Watch to Earn active, Rewards Program and Promotions coming soon), fixed modal width and close button styling, improved loading state, and updated terminology consistency.
+
+### **Previous Achievement (January 20, 2026 - 18:27)**
+**Watch to Earn UAT Fixes** - Fixed critical issues for UAT testing: allowed re-watching ads in UAT/Staging (all 10 ads remain visible for demos), fixed 500 error on video completion by converting Decimal to number for response formatting, improved error handling and logging, ensured database tables/columns exist via idempotent seeder script, and simplified wallet balance updates. Watch to Earn is now fully functional for UAT demos with all ads visible and re-watchable. Environment-based behavior: UAT/Staging shows all ads and allows re-watching, Production enforces one-view-per-ad fraud prevention.
+
+### **Previous Achievement (January 20, 2026)**
 **Watch to Earn Implementation** - Complete video advertising platform implemented with banking-grade security. Users earn R2.00-R3.00 by watching 20-30s video ads. Merchants prepay into ad float accounts (prefunded float system). Dual ad types: Reach (brand awareness) and Engagement (lead generation with email/webhook delivery). B2B "Payout-to-Promote" incentive: merchants earn ad float credits when making payouts (R200 payout = R6.00 credit = 1 free ad). Includes 3 new database tables, 3 services, 5 API endpoints, frontend components (LoyaltyPromotionsPage + EarnMoolahsModal), manual moderation queue, rate limiting (5 ads/hour), server-side watch verification, and double-entry ledger integration. Cost-optimized: R0.001 per view with CDN. Ready for UAT with dummy merchant and 10 test ads.
 
 ### **Previous Achievement (January 17, 2026)**
@@ -882,6 +891,49 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 - Tests: `node --test tests/productPurchaseService.voucher.dev.test.js` (uses stub DATABASE_URL).
 
 ## 🎯 **CURRENT SESSION SUMMARY**
+
+**Session Date**: 2026-01-24 09:09  
+**Focus**: NFC Deposit/Payment Implementation Plan
+
+### **Work Completed**
+1. **NFC Implementation Plan Created**: Comprehensive banking-grade implementation plan for NFC deposits (SoftPOS inbound) and NFC payments (tokenized virtual card outbound) with Standard Bank T-PPP.
+
+2. **Architecture Defined**:
+   - **Inbound NFC Deposits**: SoftPOS kernel (Android) / Tap to Pay on iPhone (iOS) → Standard Bank acquiring → MyMoolah callback API → wallet ledger credit
+   - **Outbound NFC Payments**: Virtual card issued via T-PPP → push provisioning to Apple Pay/Google Wallet → POS auth → Standard Bank issuer webhook → MyMoolah auth service → ledger post
+
+3. **Compliance Requirements Documented**:
+   - MPoC/CPoC certification required (no browser NFC)
+   - Native kernels mandatory (Android: certified EMV L2/MPoC kernel, iOS: Tap to Pay on iPhone)
+   - Tokenized payments only (no PAN/CVV storage)
+   - Strict ledger alignment with existing double-entry patterns
+
+4. **Implementation Roadmap Outlined**:
+   - Data models (VirtualCard, SoftPosDevice, auth/callback logs)
+   - Backend services (NFCDepositService, VirtualCardService, CardAuthService)
+   - Native bridge apps (Android MPoC terminal, iOS Tap to Pay wrapper)
+   - API contracts (secure webhooks with mTLS/HMAC, idempotency)
+   - Testing & certification strategy
+
+### **Files Changed**
+- Planning only: `.cursor/plans/nfc-tppp-implementation_d579e17c.plan.md` - Complete implementation plan
+- Documentation: `docs/session_logs/2026-01-24_0909_nfc-deposit-payment-plan.md` - Session log
+
+### **Key Technical Decisions**
+- **Certified kernel required**: Browser/Web NFC is non-compliant; must use certified SoftPOS kernel (Android) or Tap to Pay on iPhone (iOS)
+- **Tokenized outbound payments**: Issue virtual card via T-PPP, push-provision to Apple Pay/Google Wallet; no raw PAN/CVV storage
+- **Strict ledger alignment**: All NFC events must map to existing double-entry patterns with idempotency keys
+- **Secure webhooks**: All callbacks use mTLS/HMAC + idempotency; audit trails for all auth/settlement decisions
+
+### **Next Steps**
+- Secure T-PPP issuing/acquiring agreements and Apple/Google wallet issuer entitlements
+- Begin implementation: models/migrations, backend services, native bridge apps
+- Define and secure NFC webhooks (mTLS/HMAC, idempotency, attestation checks)
+- Run certification test suites (MPoC/CPoC, Apple Pay, Google Wallet, Standard Bank UAT)
+
+---
+
+## 🎯 **PREVIOUS SESSION SUMMARY**
 
 **Date**: 2026-01-17  
 **Session**: EasyPay Standalone Voucher UI Improvements

@@ -1,16 +1,39 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: January 20, 2026 18:27  
-**Version**: 2.7.1 - Watch to Earn UAT Fixes  
-**Status**: ✅ **WATCH TO EARN UAT READY** ✅ **ALL ADS VISIBLE IN UAT** ✅ **RE-WATCHING ENABLED** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: January 24, 2026 09:09  
+**Version**: 2.7.3 - NFC Deposit/Payment Implementation Plan  
+**Status**: ✅ **NFC IMPLEMENTATION PLAN COMPLETE** ✅ **WATCH TO EARN UAT READY** ✅ **ALL ADS VISIBLE IN UAT** ✅ **RE-WATCHING ENABLED** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **EASYPAY TOP-UP LIVE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-The MyMoolah Treasury Platform has successfully implemented and fixed Watch to Earn video advertising platform for UAT testing (January 20, 2026). All 10 ads remain visible and re-watchable in UAT/Staging, 500 error fixed, error handling improved, and database safety ensured. The platform also includes enhanced EasyPay standalone voucher user experience (January 17, 2026), a generic markdown-to-PDF converter tool and fixed EasyPay simulation authentication (January 16, 2026), banking-grade ledger integration for all supplier float accounts and automated float balance monitoring (January 15, 2026), the EasyPay "Top-up @ EasyPay" feature transformation (January 15, 2026), a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026), **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
+The MyMoolah Treasury Platform has created a comprehensive banking-grade implementation plan for NFC deposits (SoftPOS inbound) and NFC payments (tokenized virtual card outbound) with Standard Bank T-PPP (January 24, 2026). The plan enforces MPoC/CPoC compliance, mandates native kernels (Android: certified EMV L2/MPoC kernel, iOS: Tap to Pay on iPhone), and uses push provisioning to Apple/Google wallets for outbound payments. The platform has also successfully implemented and fixed Watch to Earn video advertising platform for UAT testing (January 20, 2026). All 10 ads remain visible and re-watchable in UAT/Staging, 500 error fixed, error handling improved, and database safety ensured. The platform also includes enhanced EasyPay standalone voucher user experience (January 17, 2026), a generic markdown-to-PDF converter tool and fixed EasyPay simulation authentication (January 16, 2026), banking-grade ledger integration for all supplier float accounts and automated float balance monitoring (January 15, 2026), the EasyPay "Top-up @ EasyPay" feature transformation (January 15, 2026), a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (deployed to UAT, January 13, 2026), **Flash reconciliation integration** (January 14, 2026), complete MobileMart Production API integration (1,769/1,780 products), banking-grade referral system, 11-language support, and comprehensive payment integrations (Peach, Zapper). The reconciliation system follows best practices from leading fintechs, is Mojaloop-aligned, and uses practical proven technologies (PostgreSQL, SHA-256, event chaining) instead of blockchain.
 
-### **📺 Latest Achievement: Watch to Earn UAT Fixes (January 20, 2026 - 18:27)** ✅ **COMPLETE**
+### **📱 Latest Achievement: NFC Deposit/Payment Implementation Plan (January 24, 2026 - 09:09)** ✅ **PLAN COMPLETE**
+
+#### **🏗️ Architecture Defined**
+- **Inbound NFC Deposits**: SoftPOS kernel (Android) / Tap to Pay on iPhone (iOS) → Standard Bank acquiring → MyMoolah callback API → wallet ledger credit
+- **Outbound NFC Payments**: Virtual card issued via T-PPP → push provisioning to Apple Pay/Google Wallet → POS auth → Standard Bank issuer webhook → MyMoolah auth service → ledger post
+
+#### **🔒 Compliance Requirements**
+- **MPoC/CPoC Certification**: Browser/Web NFC is non-compliant; certified SoftPOS kernel required (Android: EMV L2/MPoC, iOS: Tap to Pay on iPhone)
+- **Tokenized Payments**: No PAN/CVV storage; virtual card push-provisioned to Apple/Google wallets
+- **Strict Ledger Alignment**: All NFC events map to existing double-entry patterns with idempotency keys
+- **Secure Webhooks**: mTLS/HMAC + idempotency; audit trails for all auth/settlement decisions
+
+#### **📋 Implementation Roadmap**
+- Data models (VirtualCard, SoftPosDevice, auth/callback logs, transaction enum updates)
+- Backend services (NFCDepositService, VirtualCardService, CardAuthService, provisioning controller)
+- Native bridge apps (Android MPoC terminal app, iOS Tap to Pay wrapper with deep links from PWA/TWA)
+- API contracts (secure webhooks with mTLS/HMAC, idempotency, attestation checks)
+- Testing & certification strategy (unit/integration/load tests, MPoC/CPoC certification, Apple/Google wallet issuer tests)
+
+#### **Status**: ✅ **Plan complete**, ⏳ **Awaiting T-PPP agreements and entitlements**, ⏳ **Implementation pending**
+
+---
+
+### **📺 Previous Achievement: Watch to Earn UAT Fixes (January 20, 2026 - 18:27)** ✅ **COMPLETE**
 
 #### **🔧 UAT Testing Fixes**
 - **Re-watching Enabled**: All 10 ads remain visible in UAT/Staging (production still enforces one-view-per-ad fraud prevention)

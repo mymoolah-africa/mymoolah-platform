@@ -1,5 +1,49 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-01-24 - 📱 NFC Deposit/Payment Implementation Plan (v2.7.3) ✅
+
+### **Session Overview**
+Created comprehensive banking-grade implementation plan for NFC deposits (SoftPOS inbound) and NFC payments (tokenized virtual card outbound) with Standard Bank T-PPP. Plan enforces MPoC/CPoC compliance, mandates native kernels (Android: certified EMV L2/MPoC kernel, iOS: Tap to Pay on iPhone), and uses push provisioning to Apple/Google wallets for outbound payments. No code changes executed—plan documented for later execution.
+
+### **📋 Planning Completed** ✅
+- **Architecture Defined**: Complete inbound/outbound NFC flow architecture
+  - Inbound: SoftPOS kernel → Standard Bank acquiring → MyMoolah callback → wallet credit
+  - Outbound: Virtual card (T-PPP) → Apple Pay/Google Wallet → POS auth → issuer webhook → ledger post
+- **Compliance Requirements**: MPoC/CPoC certification, native kernels mandatory, tokenized payments only
+- **Data Models Outlined**: VirtualCard, SoftPosDevice, auth/callback logs, transaction enum updates
+- **Services Planned**: NFCDepositService, VirtualCardService, CardAuthService, provisioning controller
+- **Native Bridge Apps**: Android MPoC terminal app, iOS Tap to Pay wrapper with deep links from PWA/TWA
+- **API Contracts**: Secure webhooks (mTLS/HMAC, idempotency, attestation checks)
+- **Testing Strategy**: Unit/integration/load tests, MPoC/CPoC certification, Apple/Google wallet issuer tests
+
+### **🔒 Security & Compliance** ✅
+- **PCI Scope Minimization**: All cardholder data stays in certified kernel / Apple Secure Enclave / Google HCE tokenization
+- **MPoC/CPoC Evidence**: Device attestations and kernel version tracking per transaction
+- **KYC Gating**: Issue/provision only for KYC2+ users; enforce per-transaction and daily limits
+- **Secrets Management**: HSM-backed keys or KMS; rotate signing keys; pin TLS; mutual TLS for callbacks
+
+### **📝 Files Created** ✅
+- `.cursor/plans/nfc-tppp-implementation_d579e17c.plan.md` - Complete implementation plan
+- `docs/session_logs/2026-01-24_0909_nfc-deposit-payment-plan.md` - Session log
+
+### **✅ Planning Status**
+- [x] Architecture defined - Inbound/outbound flows documented
+- [x] Compliance requirements identified - MPoC/CPoC, PCI scope, KYC gating
+- [x] Data models outlined - VirtualCard, SoftPosDevice, logs, enums
+- [x] Services planned - Deposit, card, auth, provisioning services
+- [x] Native bridge apps specified - Android MPoC, iOS Tap to Pay
+- [x] API contracts defined - Secure webhooks, mTLS/HMAC, idempotency
+- [x] Testing strategy documented - Unit/integration/load, certification
+- [x] Rollout plan created - Feature flags, observability, runbooks
+
+### **📋 Next Steps**
+- [ ] Secure T-PPP issuing/acquiring agreements and Apple/Google wallet issuer entitlements
+- [ ] Begin implementation: models/migrations, backend services, native bridge apps
+- [ ] Define and secure NFC webhooks (mTLS/HMAC, idempotency, attestation checks)
+- [ ] Run certification test suites (MPoC/CPoC, Apple Pay, Google Wallet, Standard Bank UAT)
+
+---
+
 ## 2026-01-21 - 🎨 Watch to Earn UI Improvements (v2.7.2) ✅
 
 ### **Session Overview**

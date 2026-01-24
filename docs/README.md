@@ -1,12 +1,31 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: January 21, 2026 14:52  
-**Version**: 2.7.2 - Watch to Earn UI Improvements  
+**Last Updated**: January 24, 2026 09:09  
+**Version**: 2.7.3 - NFC Deposit/Payment Implementation Plan  
 **Status**: ✅ **WATCH TO EARN UI IMPROVED** ✅ **QUICK ACCESS SERVICES SPLIT** ✅ **MODAL STYLING FIXED** ✅ **WATCH TO EARN UAT READY** ✅ **ALL ADS VISIBLE IN UAT** ✅ **RE-WATCHING ENABLED** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **1,769 MOBILEMART PRODUCTS** ✅ **WORLD-CLASS QUALITY** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: Watch to Earn UI Improvements (January 21, 2026 - 14:52)**
+## 🚀 **LATEST UPDATE: NFC Deposit/Payment Implementation Plan (January 24, 2026 - 09:09)**
+
+### **📱 Banking-Grade NFC Implementation Plan**
+Comprehensive implementation plan created for NFC deposits (SoftPOS inbound) and NFC payments (tokenized virtual card outbound) with Standard Bank T-PPP:
+
+**Architecture**:
+- ✅ **Inbound NFC Deposits**: SoftPOS kernel (Android) / Tap to Pay on iPhone (iOS) → Standard Bank acquiring → MyMoolah callback API → wallet ledger credit
+- ✅ **Outbound NFC Payments**: Virtual card issued via T-PPP → push provisioning to Apple Pay/Google Wallet → POS auth → Standard Bank issuer webhook → MyMoolah auth service → ledger post
+
+**Compliance Requirements**:
+- ✅ **MPoC/CPoC Certification**: Browser/Web NFC is non-compliant; certified SoftPOS kernel required (Android: EMV L2/MPoC, iOS: Tap to Pay on iPhone)
+- ✅ **Tokenized Payments**: No PAN/CVV storage; virtual card push-provisioned to Apple/Google wallets
+- ✅ **Strict Ledger Alignment**: All NFC events map to existing double-entry patterns with idempotency keys
+- ✅ **Secure Webhooks**: mTLS/HMAC + idempotency; audit trails for all auth/settlement decisions
+
+**Status**: ✅ **Plan complete**, ⏳ **Awaiting T-PPP agreements and entitlements**, ⏳ **Implementation pending**
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Watch to Earn UI Improvements (January 21, 2026 - 14:52)**
 
 ### **🎨 UI/UX Enhancements**
 Improved Watch to Earn modal styling and Quick Access Services configuration for better user experience:
