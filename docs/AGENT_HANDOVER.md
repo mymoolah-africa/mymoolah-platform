@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-01-24 09:09  
-**Latest Feature**: NFC Deposit/Payment Implementation Plan  
-**Document Version**: 2.7.3  
+**Last Updated**: 2026-01-26 23:15  
+**Latest Feature**: Documentation Consolidation & Sync  
+**Document Version**: 2.7.4  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -51,8 +51,11 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (January 24, 2026 - 09:09)**
-**NFC Deposit/Payment Implementation Plan** - Comprehensive banking-grade implementation plan created for NFC deposits (SoftPOS inbound) and NFC payments (tokenized virtual card outbound) with Standard Bank T-PPP. Plan enforces MPoC/CPoC compliance, mandates native kernels (Android: certified EMV L2/MPoC kernel, iOS: Tap to Pay on iPhone), and uses push provisioning to Apple/Google wallets for outbound payments. Includes complete architecture, data models, services, APIs, security requirements, testing strategy, and rollout plan. Plan documented for later execution.
+### **Latest Achievement (January 26, 2026 - 23:15)**
+**Documentation Consolidation & Sync** - Consolidated multiple conflicting development and onboarding guides into a single source of truth (`DEVELOPMENT_GUIDE.md`). Standardized environment configurations (ports, database access) and the official Git sync workflow across all documentation. Archived redundant files (`SETUP_GUIDE.md`, `PROJECT_ONBOARDING.md`) to prevent future drift.
+
+### **Previous Achievement (January 24, 2026 - 09:09)**
+**NFC Deposit/Payment Implementation Plan** - Comprehensive banking-grade implementation plan created for NFC deposits (SoftPOS inbound) and NFC payments (tokenized virtual card outbound) with Standard Bank T-PPP. Plan enforces MPoC/CPoC compliance, mandates native kernels (Android: certified EMV L2/MPoC kernel, iOS: Tap to Pay on iPhone), and uses push provisioning to Apple/Google wallets for outbound payments. Includes complete architecture, data models, services, APIs, security requirements, testing strategy, and rollout plan. Plan documented in `docs/integrations/StandardBankNFC.md` for later execution.
 
 ### **Previous Achievement (January 21, 2026 - 14:52)**
 **Watch to Earn UI Improvements** - Improved Watch to Earn modal styling and Quick Access Services configuration. Split "Loyalty & Promotions" into 3 independent services (Watch to Earn active, Rewards Program and Promotions coming soon), fixed modal width and close button styling, improved loading state, and updated terminology consistency.

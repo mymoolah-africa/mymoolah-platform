@@ -810,16 +810,14 @@ npm run dev
 
 ## 📚 **DOCUMENTATION**
 
-### **Complete Documentation Coverage**
+### **📚 Documentation**
+- **Consolidated Development Guide**: **MANDATORY** reading for all developers (`docs/DEVELOPMENT_GUIDE.md`)
+- **NFC Implementation Plan**: Banking-grade NFC deposit/payment strategy (`docs/integrations/StandardBankNFC.md`)
 - **Database Connection Guide**: **MANDATORY** reading for database/migration work (`docs/DATABASE_CONNECTION_GUIDE.md`)
-- **Quick Reference Database**: One-page cheat sheet for database operations (`docs/QUICK_REFERENCE_DATABASE.md`)
-- **API Documentation**: Comprehensive endpoint documentation
-- **Development Guide**: Complete development setup and guidelines
-- **Architecture Documentation**: System architecture and design
-- **Security Documentation**: Security features and compliance
-- **Performance Documentation**: Performance optimization and monitoring
-- **Testing Documentation**: Testing strategy and guidelines
-- **Schema Sync Guide**: Banking-grade schema synchronization procedures (`docs/BANKING_GRADE_STAGING_SYNC_ARCHITECTURE.md`)
+- **API Documentation**: Comprehensive endpoint documentation (`docs/API_DOCUMENTATION.md`)
+- **Security Documentation**: Security features and compliance (`docs/SECURITY.md`)
+- **Performance Documentation**: Performance optimization and monitoring (`docs/PERFORMANCE.md`)
+- **Testing Guide**: Testing strategy and guidelines (`docs/TESTING_GUIDE.md`)
 
 ### **Documentation Quality**
 - **Technical Documentation**: 100% coverage with detailed examples

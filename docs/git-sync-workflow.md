@@ -4,44 +4,12 @@ This guide ensures your Codespaces (cloud) and local development environments st
 
 ---
 
-## Codespaces (CS) Sync Process
+## 🔄 **OFFICIAL SYNC WORKFLOW**
 
-**Whenever you start working in Codespaces, or before you switch to another environment:**
+To maintain consistency and avoid "stale file" issues, always follow this sequence:
 
-```sh
-# 1. Go to your project directory
-cd ~/workspaces/mymoolah-platform
-
-# 2. Check for uncommitted changes (including any work done in the cloud)
-git status
-
-# 3. If you have uncommitted changes, commit them first:
-git add .
-git commit -m "WIP: save cloud changes before sync"
-
-# 4. Pull the latest changes from GitHub (to get any updates from local or other sources)
-git pull origin main
-
-# 5. Do your work: create/edit files, etc.
-
-# 6. Check the status of your changes
-git status
-
-# 7. Stage all changes
-git add .
-
-# 8. Commit your changes with a descriptive message
-git commit -m "Describe your changes"
-
-# 9. Push your changes to GitHub
-git push origin main
-```
-
----
-
-## Local Drive Sync Process
-
-**Whenever you start working on your local machine, or before you switch to another environment:**
+### **1. Local Development (Mac)**
+**Whenever you start working on your local machine:**
 
 ```sh
 # 1. Go to your project directory
@@ -50,53 +18,58 @@ cd ~/mymoolah
 # 2. Check for uncommitted changes
 git status
 
-# 3. If you have uncommitted changes, commit them first:
-git add .
-git commit -m "WIP: save local changes before sync"
-
-# 4. Pull the latest changes from GitHub
+# 3. Pull the latest changes from GitHub
 git pull origin main
 
-# 5. Do your work: create/edit files, etc.
+# 4. Do your work: create/edit files, etc.
 
-# 6. Check the status of your changes
-git status
-
-# 7. Stage all changes
+# 5. Commit your changes
 git add .
+git commit -m "feat: your descriptive message"
 
-# 8. Commit your changes with a descriptive message
-git commit -m "Describe your changes"
-
-# 9. Push your changes to GitHub
+# 6. Push to GitHub
 git push origin main
+```
+
+### **2. Codespaces (CS) Sync**
+**Switch to Codespaces for testing and deployment:**
+
+```sh
+# 1. Go to your project directory
+cd /workspaces/mymoolah-platform
+
+# 2. Pull the latest changes from local push
+git pull origin main
+
+# 3. Run Tests (MANDATORY)
+npm test
+
+# 4. Deploy to Staging (if tests pass)
+# (Follow deployment guide)
 ```
 
 ---
 
-## Key Reminders
-- **Always check for and commit uncommitted changes before pulling.**
-- **Always run `git pull origin main` before starting work in either environment.**
-- **Always run `git push origin main` after you finish your work.**
-- If you see a merge conflict, resolve it, then repeat the add/commit/pull/push steps.
-- Only files tracked by git (not in `.gitignore`) will sync.
+## ⚠️ **KEY REMINDERS**
+
+- **GitHub is Source of Truth**: Always push from Local and pull in Codespaces.
+- **Never Pull with Dirty Tree**: Always commit or stash your local changes before running `git pull`.
+- **Test in CS Only**: Local environment setup may differ; Codespaces is the definitive testing environment.
+- **No Worktrees**: Work only in the main repository path to avoid agent confusion.
 
 ---
 
-## Summary Table
+## 📋 **SUMMARY TABLE**
 
-| Step                | Codespaces Command Example                | Local Command Example         |
-|---------------------|-------------------------------------------|------------------------------|
-| Go to project dir   | `cd ~/workspaces/mymoolah-platform`       | `cd ~/mymoolah`              |
-| Check status        | `git status`                              | `git status`                 |
-| Commit uncommitted  | `git add . && git commit -m "WIP: ..."`   | `git add . && git commit -m "WIP: ..."` |
-| Pull latest         | `git pull origin main`                    | `git pull origin main`       |
-| Work                | (edit/create files)                       | (edit/create files)          |
-| Check status        | `git status`                              | `git status`                 |
-| Stage changes       | `git add .`                               | `git add .`                  |
-| Commit              | `git commit -m "Your message"`            | `git commit -m "Your message"`|
-| Push                | `git push origin main`                    | `git push origin main`       |
+| Step | Action | Command |
+| :--- | :--- | :--- |
+| **1** | Start Work (Local) | `git pull origin main` |
+| **2** | Develop (Local) | (edit files) |
+| **3** | Save Work (Local) | `git add . && git commit -m "..."` |
+| **4** | Sync to Cloud | `git push origin main` |
+| **5** | Switch to CS | `git pull origin main` |
+| **6** | Verify (CS) | `npm test` |
 
 ---
 
-**Keep this file handy for reference and share with your team!** 
+**Keep this workflow consistent to ensure banking-grade reliability.**
