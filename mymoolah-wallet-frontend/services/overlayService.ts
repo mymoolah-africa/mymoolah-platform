@@ -190,12 +190,30 @@ export const beneficiaryService = {
         ? 'bank'
         : 'airtime'; // Default fallback
 
-    const serviceData: any = {
+    let serviceData: any = {
       msisdn: data.identifier,
       mobileNumber: data.identifier,
       network: data.network || data.metadata?.network,
       isDefault: true
     };
+
+    if (serviceType === 'electricity') {
+      serviceData = {
+        meterNumber: data.identifier,
+        meterType: data.metadata?.meterType || null,
+        provider: data.metadata?.meterType || data.metadata?.provider || null,
+        isDefault: true
+      };
+    }
+
+    if (serviceType === 'biller') {
+      serviceData = {
+        accountNumber: data.identifier,
+        billerName: data.metadata?.billerName || null,
+        category: data.metadata?.billerCategory || data.metadata?.category || null,
+        isDefault: true
+      };
+    }
 
     const beneficiary = await centralizedBeneficiaryService.createOrUpdateBeneficiary({
       name: data.name,

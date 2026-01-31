@@ -167,14 +167,34 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
       setIsLoading(true);
       setError('');
 
-      // Build unified payload for airtime/data services
-      const serviceType = type === 'data' ? 'data' : 'airtime';
-      const serviceData: any = {
-        msisdn: formData.identifier,
-        mobileNumber: formData.identifier,
-        network: formData.network,
-        isDefault: true
-      };
+      // Build unified payload based on beneficiary type
+      let serviceType: string = type;
+      let serviceData: any = {};
+
+      if (type === 'airtime' || type === 'data') {
+        serviceType = type === 'data' ? 'data' : 'airtime';
+        serviceData = {
+          msisdn: formData.identifier,
+          mobileNumber: formData.identifier,
+          network: formData.network,
+          isDefault: true
+        };
+      } else if (type === 'electricity') {
+        serviceType = 'electricity';
+        serviceData = {
+          meterNumber: formData.identifier,
+          meterType: formData.meterType || null,
+          provider: formData.meterType || null,
+          isDefault: true
+        };
+      } else if (type === 'biller') {
+        serviceType = 'biller';
+        serviceData = {
+          accountNumber: formData.identifier,
+          billerName: formData.billerName || null,
+          isDefault: true
+        };
+      }
 
       // When editing, include the old identifier so backend knows which service account to update
       if (editBeneficiary && oldIdentifier) {
@@ -196,7 +216,11 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
           name: formData.name,
           identifier: formData.identifier,
           accountType: type,
-          network: formData.network
+          network: formData.network,
+          metadata: {
+            meterType: formData.meterType,
+            billerName: formData.billerName
+          }
         });
       }
 

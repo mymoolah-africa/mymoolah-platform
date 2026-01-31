@@ -1,5 +1,22 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-01-31 - ⚡ Electricity Beneficiary Create/Remove Fixes (v2.7.5) ✅
+
+### **Session Overview**
+Fixed electricity recipient creation and removal in UAT by correcting service payload mapping for electricity/biller and preventing accountType updates that violate MSISDN constraints.
+
+### **🐛 Fixes** ✅
+- **Electricity Create**: Frontend now sends `meterNumber`/`meterType` for electricity instead of mobile MSISDN.
+- **Biller Create**: Frontend now sends `accountNumber`/`billerName` for billers instead of mobile MSISDN.
+- **Electricity Remove**: Backend now avoids switching `accountType` to `mymoolah` when MSISDN is not a valid mobile number and filters electricity list using active services only.
+
+### **📝 Files Modified** ✅
+- `mymoolah-wallet-frontend/components/overlays/shared/BeneficiaryModal.tsx`
+- `mymoolah-wallet-frontend/services/overlayService.ts`
+- `services/UnifiedBeneficiaryService.js`
+
+---
+
 ## 2026-01-24 - 📱 NFC Deposit/Payment Implementation Plan (v2.7.3) ✅
 
 ### **Session Overview**

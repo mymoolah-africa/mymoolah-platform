@@ -553,11 +553,23 @@ class UnifiedBeneficiaryService {
       // Step 2: Update legacy JSONB fields for backward compatibility
       const updateData = {};
       
-      // NEW: If the primary accountType matches the service being removed, 
-      // change it to 'mymoolah' (default) to satisfy NOT NULL constraint
-      // and hide it from the current service list.
+      // NEW: If the primary accountType matches the service being removed,
+      // only switch to 'mymoolah' when the msisdn is a valid mobile number.
+      // This avoids DB check-constraint failures for utility/biller identifiers.
       if (serviceTypesArray.includes(beneficiary.accountType)) {
-        updateData.accountType = 'mymoolah';
+        const canSwitchToMymoolah = (() => {
+          if (!beneficiary.msisdn) return false;
+          try {
+            const normalized = normalizeToE164(beneficiary.msisdn);
+            return !normalized.startsWith('NON_MSI_');
+          } catch (error) {
+            return false;
+          }
+        })();
+
+        if (canSwitchToMymoolah) {
+          updateData.accountType = 'mymoolah';
+        }
       }
       
       // Handle airtime/data together (both stored in vasServices JSONB)
@@ -1736,8 +1748,7 @@ class UnifiedBeneficiaryService {
         case 'electricity':
           shouldInclude = Boolean(
             (beneficiaryData.utilityServices?.electricity || []).length ||
-            (beneficiaryData.utilityServices?.water || []).length ||
-            beneficiaryData.accountType === 'electricity'
+            (beneficiaryData.utilityServices?.water || []).length
           );
           
           // If not found in JSONB, check normalized tables (from includes - no query needed)
