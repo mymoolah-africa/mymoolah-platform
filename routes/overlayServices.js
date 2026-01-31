@@ -1943,13 +1943,13 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     // and get back either success with token or error with reason
     
     // Simulate meter validation (basic format check)
-    const isValidMeterFormat = meterNumber.length >= 10 && /^[0-9]+$/.test(meterNumber);
+    const isValidMeterFormat = meterNumber.length >= 8 && /^[0-9]+$/.test(meterNumber);
     if (!isValidMeterFormat) {
       return res.status(400).json({
         success: false,
         error: 'Invalid meter number format',
         errorCode: 'INVALID_METER_FORMAT',
-        details: 'Meter number must be at least 10 digits'
+        details: 'Meter number must be at least 8 digits'
       });
     }
 

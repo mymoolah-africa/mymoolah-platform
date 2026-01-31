@@ -335,7 +335,10 @@ export const electricityService = {
     amount: number;
     idempotencyKey: string;
   }): Promise<PurchaseResult> {
-    const response = await apiClient.post('/api/v1/overlay/electricity/purchase', data);
+    const response = await apiClient.post('/api/v1/overlay/electricity/purchase', {
+      ...data,
+      acceptTerms: true
+    });
     return response.data as PurchaseResult;
   }
 };
