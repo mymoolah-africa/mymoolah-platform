@@ -247,33 +247,41 @@ class UnifiedBeneficiaryService {
       }
 
       // For bank accounts, always use NON_MSI_ identifier
-      let primaryMsisdn;
+      let primaryMsisdn = msisdn;
+      
       if (serviceType === 'bank') {
         // Always generate NON_MSI_ identifier for bank accounts
         primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
-      } else {
-        // For non-bank services, derive MSISDN from msisdn parameter or serviceData
-        primaryMsisdn = msisdn;
-        if (!primaryMsisdn) {
-          // Try to extract from serviceData
-          if (serviceData?.walletMsisdn) {
-            primaryMsisdn = serviceData.walletMsisdn;
-          } else if (serviceData?.msisdn) {
-            primaryMsisdn = serviceData.msisdn;
-          } else if (serviceData?.mobileNumber) {
-            primaryMsisdn = serviceData.mobileNumber;
-          }
-          // For non-MSI services (electricity, biller), use a placeholder or generate from name
-          if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller')) {
-            // Generate a stable identifier from name for non-MSI services
-            primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
-          }
+      } else if (serviceType === 'electricity' || serviceType === 'biller') {
+        // For electricity/biller, if the msisdn is actually a meter/account number (not a phone),
+        // we must use a NON_MSI_ identifier to avoid validation failures
+        const isPhone = /^\+?27[6-8][0-9]{8}$/.test(msisdn) || /^0[6-8][0-9]{8}$/.test(msisdn);
+        if (msisdn && !isPhone && !msisdn.startsWith('NON_MSI_')) {
+          console.log(`ℹ️ [createOrUpdateBeneficiary] Converting non-phone identifier ${msisdn} to NON_MSI for ${serviceType}`);
+          primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
         }
+      }
 
-        // MSISDN is required for non-bank services (except electricity/biller which use NON_MSI_)
-        if (!primaryMsisdn && serviceType !== 'electricity' && serviceType !== 'biller') {
-          throw new Error('MSISDN is required. Provide msisdn or ensure serviceData contains walletMsisdn/msisdn/mobileNumber');
+      if (!primaryMsisdn) {
+        // Try to extract from serviceData
+        if (serviceData?.walletMsisdn) {
+          primaryMsisdn = serviceData.walletMsisdn;
+        } else if (serviceData?.msisdn) {
+          primaryMsisdn = serviceData.msisdn;
+        } else if (serviceData?.mobileNumber) {
+          primaryMsisdn = serviceData.mobileNumber;
         }
+        
+        // For non-MSI services (electricity, biller), use a placeholder or generate from name
+        if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller')) {
+          // Generate a stable identifier from name for non-MSI services
+          primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
+        }
+      }
+
+      // MSISDN is required for non-bank services (except electricity/biller which use NON_MSI_)
+      if (!primaryMsisdn && serviceType !== 'electricity' && serviceType !== 'biller') {
+        throw new Error('MSISDN is required. Provide msisdn or ensure serviceData contains walletMsisdn/msisdn/mobileNumber');
       }
 
       // 1) Resolve / create the party-level beneficiary (one per user + msisdn)
@@ -545,10 +553,11 @@ class UnifiedBeneficiaryService {
       // Step 2: Update legacy JSONB fields for backward compatibility
       const updateData = {};
       
-      // NEW: If the primary accountType matches the service being removed, clear it
-      // This ensures the recipient is properly hidden from service-specific lists
+      // NEW: If the primary accountType matches the service being removed, 
+      // change it to 'mymoolah' (default) to satisfy NOT NULL constraint
+      // and hide it from the current service list.
       if (serviceTypesArray.includes(beneficiary.accountType)) {
-        updateData.accountType = null;
+        updateData.accountType = 'mymoolah';
       }
       
       // Handle airtime/data together (both stored in vasServices JSONB)
