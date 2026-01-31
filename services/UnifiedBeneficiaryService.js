@@ -545,6 +545,12 @@ class UnifiedBeneficiaryService {
       // Step 2: Update legacy JSONB fields for backward compatibility
       const updateData = {};
       
+      // NEW: If the primary accountType matches the service being removed, clear it
+      // This ensures the recipient is properly hidden from service-specific lists
+      if (serviceTypesArray.includes(beneficiary.accountType)) {
+        updateData.accountType = null;
+      }
+      
       // Handle airtime/data together (both stored in vasServices JSONB)
       if (serviceTypesArray.includes('airtime') || serviceTypesArray.includes('data')) {
         const vasServices = beneficiary.vasServices || {};
