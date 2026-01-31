@@ -150,7 +150,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
 
     if (type === 'electricity') {
       if (!validateMeterNumber(formData.identifier)) {
-        setError('Please enter a valid meter number (minimum 10 digits)');
+        setError('Please enter a valid meter number (minimum 8 digits)');
         return false;
       }
     }

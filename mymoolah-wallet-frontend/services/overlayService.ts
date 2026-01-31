@@ -389,8 +389,8 @@ export const validateMobileNumber = (number: string): boolean => {
 };
 
 export const validateMeterNumber = (meterNumber: string): boolean => {
-  // Basic meter number validation (minimum 10 digits)
-  return meterNumber.length >= 10 && /^\d+$/.test(meterNumber);
+  // Basic meter number validation (minimum 8 digits for UAT testing)
+  return meterNumber.length >= 8 && /^\d+$/.test(meterNumber);
 };
 
 // ========================================
