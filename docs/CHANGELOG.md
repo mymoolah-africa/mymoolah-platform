@@ -9,6 +9,7 @@ Fixed electricity recipient creation and removal in UAT by correcting service pa
 - **Electricity Create**: Frontend now sends `meterNumber`/`meterType` for electricity instead of mobile MSISDN.
 - **Biller Create**: Frontend now sends `accountNumber`/`billerName` for billers instead of mobile MSISDN.
 - **Electricity Remove**: Backend now avoids switching `accountType` to `mymoolah` when MSISDN is not a valid mobile number and filters electricity list using active services only.
+- **NON_MSI Placeholder**: Backend now generates a short `NON_MSI_` token (fits VARCHAR(15)) for non-mobile beneficiaries.
 
 ### **📝 Files Modified** ✅
 - `mymoolah-wallet-frontend/components/overlays/shared/BeneficiaryModal.tsx`

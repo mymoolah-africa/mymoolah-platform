@@ -107,6 +107,17 @@ class UnifiedBeneficiaryService {
     return normalizeToE164(msisdn);
   }
 
+  /**
+   * Generate a short NON_MSI_ placeholder that fits VARCHAR(15).
+   * Format: NON_MSI_ + 7-char hex hash (total length 15).
+   */
+  generateNonMsiMsisdn(userId, serviceType, identifier, name) {
+    const crypto = require('crypto');
+    const seed = `${userId}|${serviceType}|${identifier || ''}|${name || ''}`;
+    const hash = crypto.createHash('sha256').update(seed).digest('hex').slice(0, 7);
+    return `NON_MSI_${hash}`;
+  }
+
   // Note: Removed checkMsisdnExists function as it's no longer needed
   // We now only check user-scoped uniqueness, not global uniqueness
 
@@ -250,15 +261,16 @@ class UnifiedBeneficiaryService {
       let primaryMsisdn = msisdn;
       
       if (serviceType === 'bank') {
-        // Always generate NON_MSI_ identifier for bank accounts
-        primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
+        // Always generate short NON_MSI_ identifier for bank accounts (VARCHAR(15))
+        primaryMsisdn = this.generateNonMsiMsisdn(userId, serviceType, serviceData?.accountNumber, name);
       } else if (serviceType === 'electricity' || serviceType === 'biller') {
         // For electricity/biller, if the msisdn is actually a meter/account number (not a phone),
         // we must use a NON_MSI_ identifier to avoid validation failures
         const isPhone = /^\+?27[6-8][0-9]{8}$/.test(msisdn) || /^0[6-8][0-9]{8}$/.test(msisdn);
         if (msisdn && !isPhone && !msisdn.startsWith('NON_MSI_')) {
           console.log(`ℹ️ [createOrUpdateBeneficiary] Converting non-phone identifier ${msisdn} to NON_MSI for ${serviceType}`);
-          primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
+          const identifier = serviceType === 'electricity' ? serviceData?.meterNumber : serviceData?.accountNumber;
+          primaryMsisdn = this.generateNonMsiMsisdn(userId, serviceType, identifier, name);
         }
       }
 
@@ -274,8 +286,9 @@ class UnifiedBeneficiaryService {
         
         // For non-MSI services (electricity, biller), use a placeholder or generate from name
         if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller')) {
-          // Generate a stable identifier from name for non-MSI services
-          primaryMsisdn = `NON_MSI_${userId}_${name.toLowerCase().replace(/\s+/g, '_')}`;
+          // Generate a short NON_MSI_ identifier for non-MSI services (VARCHAR(15))
+          const identifier = serviceType === 'electricity' ? serviceData?.meterNumber : serviceData?.accountNumber;
+          primaryMsisdn = this.generateNonMsiMsisdn(userId, serviceType, identifier, name);
         }
       }
 
