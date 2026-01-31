@@ -1,0 +1,28 @@
+Error codes 
+
+2400	3rd party system error
+2401	The voucher you have entered has already been used, please use another voucher pin.
+2402	The voucher you have entered could not be found
+2403	The voucher you have entered has been cancelled
+2405	The voucher you have entered has expired
+2406	Amount entered is too small
+2408	Amount entered is too large
+2409	The voucher has already been cancelled
+2410	Refund amount does not match the redemption amount
+2412	The voucher you have entered cannot be reversed
+2413	The voucher has already been reversed
+2414	The voucher cannot be cancelled
+
+
+
+QA Environment
+
+Cancelled - 1148012471316791
+
+Invalid- 11919009804153931
+
+Expired - 1349050685110149
+
+Already used -1107477562497306
+
+Invalid/Not found - 1807477522497507
