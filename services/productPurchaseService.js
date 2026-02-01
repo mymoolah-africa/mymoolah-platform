@@ -641,22 +641,102 @@ class ProductPurchaseService {
    * Process voucher purchase with MobileMart
    */
   async processWithMobileMart(product, denomination, recipient, supplierTransaction, transaction) {
-    // Simulate MobileMart processing (same as Flash for UAT)
-    const mobilemartReference = `MOBILEMART_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const voucherCode = `VOUCHER_${mobilemartReference}`;
-    
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const useMobileMartAPI = process.env.MOBILEMART_LIVE_INTEGRATION === 'true';
 
-    return {
-      success: true,
-      data: {
-        reference: mobilemartReference,
-        status: 'success',
-        voucherCode,
-        message: 'Voucher purchased successfully'
+    if (useMobileMartAPI) {
+      // PRODUCTION/STAGING: Use real MobileMart API
+      try {
+        const MobileMartAuthService = require('./mobilemartAuthService');
+        const mobileMartService = new MobileMartAuthService();
+
+        // Get voucher products to find merchantProductId
+        console.log('📞 MobileMart: Getting voucher products...');
+        const productsResponse = await mobileMartService.makeAuthenticatedRequest(
+          'GET',
+          '/voucher/products'
+        );
+        const products = productsResponse.products || productsResponse || [];
+        
+        // Try to find matching product or use first available
+        const voucherProduct = products.find((p) => 
+          p.productName?.toLowerCase().includes(product.name?.toLowerCase()) ||
+          p.contentCreator?.toLowerCase().includes(product.name?.toLowerCase())
+        ) || products[0];
+
+        if (!voucherProduct || !voucherProduct.merchantProductId) {
+          throw new Error('No voucher products available from MobileMart');
+        }
+        console.log(`✅ Found voucher product: ${voucherProduct.productName} (${voucherProduct.merchantProductId})`);
+
+        // Purchase voucher from MobileMart
+        const purchasePayload = {
+          requestId: `VOUCH_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          merchantProductId: voucherProduct.merchantProductId,
+          tenderType: 'CreditCard',
+          amount: denomination / 100 // Convert cents to Rands
+        };
+
+        console.log('📞 MobileMart Voucher Purchase:', JSON.stringify(purchasePayload, null, 2));
+        const purchaseResponse = await mobileMartService.makeAuthenticatedRequest(
+          'POST',
+          '/voucher/purchase',
+          purchasePayload
+        );
+        console.log('✅ MobileMart Voucher Response:', JSON.stringify(purchaseResponse, null, 2));
+
+        // Extract voucher code/PIN from MobileMart response
+        const mobileMartTransactionId = purchaseResponse.transactionId;
+        let voucherCode = 'VOUCHER_PENDING';
+        
+        if (purchaseResponse.additionalDetails) {
+          voucherCode = purchaseResponse.additionalDetails.pin ||
+                       purchaseResponse.additionalDetails.serialNumber ||
+                       purchaseResponse.additionalDetails.referenceNumber ||
+                       mobileMartTransactionId;
+        }
+
+        console.log(`✅ Extracted voucher code: ${voucherCode}`);
+
+        return {
+          success: true,
+          data: {
+            reference: mobileMartTransactionId,
+            status: 'success',
+            voucherCode,
+            message: 'Voucher purchased successfully',
+            mobilemartResponse: purchaseResponse,
+            mobilemartFulfilled: true
+          }
+        };
+
+      } catch (apiError) {
+        console.error('❌ MobileMart Voucher API Error:', apiError.message);
+        console.error('❌ MobileMart Error Details:', {
+          error: apiError.message,
+          response: apiError.response?.data,
+          status: apiError.response?.status
+        });
+        
+        throw new Error(`MobileMart voucher purchase failed: ${apiError.message}`);
       }
-    };
+    } else {
+      // UAT/SIMULATION: Use fake voucher code for UI testing
+      const mobilemartReference = `MOBILEMART_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const voucherCode = `VOUCHER_${mobilemartReference}`;
+      
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      return {
+        success: true,
+        data: {
+          reference: mobilemartReference,
+          status: 'success',
+          voucherCode,
+          message: 'Voucher purchased successfully (simulated)',
+          mobilemartFulfilled: false
+        }
+      };
+    }
   }
 
   /**
