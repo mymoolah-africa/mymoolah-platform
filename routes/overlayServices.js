@@ -2017,13 +2017,26 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         mobileMartTransactionId = purchaseResponse.transactionId;
         
         // MobileMart utility response has tokens in additionalDetails.tokens array
+        // Tokens can be either strings or objects with token/value properties
         if (purchaseResponse.additionalDetails && Array.isArray(purchaseResponse.additionalDetails.tokens)) {
-          electricityToken = purchaseResponse.additionalDetails.tokens.join(' ');
+          const tokens = purchaseResponse.additionalDetails.tokens;
+          console.log('🔍 Raw tokens from MobileMart:', JSON.stringify(tokens, null, 2));
+          
+          // Extract token values (handle both string[] and object[] formats)
+          const tokenValues = tokens.map(t => {
+            if (typeof t === 'string') return t;
+            if (typeof t === 'object') return t.token || t.value || t.tokenValue || t.pin || JSON.stringify(t);
+            return String(t);
+          });
+          
+          electricityToken = tokenValues.join(' ');
+          console.log(`✅ Extracted electricity token: ${electricityToken}`);
         } else {
           // Fallback: use receipt number or first available token field
           electricityToken = purchaseResponse.additionalDetails?.receiptNumber || 
                             purchaseResponse.additionalDetails?.reference ||
                             'TOKEN_PENDING';
+          console.log(`⚠️ No tokens array found, using fallback: ${electricityToken}`);
         }
 
       } catch (apiError) {
