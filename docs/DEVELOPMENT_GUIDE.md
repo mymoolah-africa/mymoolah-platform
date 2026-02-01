@@ -1,8 +1,38 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: January 17, 2026  
-**Version**: 2.6.4 - EasyPay Standalone Voucher UI Improvements  
-**Status**: ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: February 01, 2026  
+**Version**: 2.8.0 - Electricity Purchase MobileMart Integration  
+**Status**: ✅ **ELECTRICITY PURCHASE COMPLETE** ✅ **MOBILEMART PRODUCTION READY** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **STAGING READY**
+
+---
+
+## 🚀 **LATEST UPDATE: Electricity Purchase with MobileMart Integration (February 01, 2026)**
+
+### **⚡ Production-Ready Electricity Purchase**
+Complete end-to-end electricity purchase implementation:
+
+**User Flow**:
+1. Select Electricity service
+2. Create/select meter recipient (8-digit UAT support)
+3. Enter amount (R20-R2000)
+4. Purchase electricity
+5. View transaction in history
+6. Click transaction → see 16-digit electricity PIN/token
+
+**Backend Integration**:
+- ✅ **MobileMart API**: Full prevend → purchase flow
+- ✅ **Environment Aware**: UAT simulation, Staging/Production real API
+- ✅ **Real Tokens**: Extracts authentic electricity tokens from MobileMart
+- ✅ **Wallet Integration**: Automatic debit and transaction history
+- ✅ **Error Handling**: Comprehensive API error handling
+
+**Frontend Features**:
+- ✅ **Transaction Detail Modal**: View electricity PIN/token by clicking transaction
+- ✅ **Copy Token**: One-click token copying
+- ✅ **Zap Icon**: Red lightning bolt for electricity debits
+- ✅ **Receipt View**: Complete purchase details (meter, amount, status)
+
+**Status**: ✅ **UAT Tested**, ✅ **Ready for Staging Deployment**
 
 ---
 
