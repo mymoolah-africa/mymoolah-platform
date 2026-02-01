@@ -1962,15 +1962,18 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         const mobileMartService = new MobileMartAuthService();
 
         // Step 1: Prevend - validate meter and get prevendTransactionId
+        console.log(`📞 MobileMart Prevend: meter=${meterNumber}, amount=${amount}`);
         const prevendResponse = await mobileMartService.makeAuthenticatedRequest(
           'GET',
           `/utility/prevend?meterNumber=${meterNumber}&amount=${amount}`
         );
+        console.log('✅ MobileMart Prevend Response:', JSON.stringify(prevendResponse, null, 2));
 
         const prevendTransactionId = prevendResponse.transactionId || prevendResponse.prevendTransactionId;
         if (!prevendTransactionId) {
           throw new Error('MobileMart prevend did not return transactionId');
         }
+        console.log(`✅ Prevend Transaction ID: ${prevendTransactionId}`);
 
         // Step 2: Get utility products to find merchantProductId
         const productsResponse = await mobileMartService.makeAuthenticatedRequest(
@@ -1991,11 +1994,13 @@ router.post('/electricity/purchase', auth, async (req, res) => {
           tenderType: 'CreditCard'
         };
 
+        console.log('📞 MobileMart Purchase Request:', JSON.stringify(purchasePayload, null, 2));
         const purchaseResponse = await mobileMartService.makeAuthenticatedRequest(
           'POST',
           '/utility/purchase',
           purchasePayload
         );
+        console.log('✅ MobileMart Purchase Response:', JSON.stringify(purchaseResponse, null, 2));
 
         // Extract electricity token from MobileMart response
         mobileMartResponse = purchaseResponse;
@@ -2013,11 +2018,30 @@ router.post('/electricity/purchase', auth, async (req, res) => {
 
       } catch (apiError) {
         console.error('❌ MobileMart API Error:', apiError.message);
+        console.error('❌ MobileMart Error Details:', {
+          error: apiError.message,
+          response: apiError.response?.data,
+          status: apiError.response?.status,
+          stack: apiError.stack
+        });
+        
+        // Extract MobileMart error details for frontend display
+        const mobileMartError = apiError.response?.data || {};
+        const errorCode = mobileMartError.fulcrumErrorCode || mobileMartError.errorCode || 'UNKNOWN';
+        const errorMessage = mobileMartError.title || mobileMartError.detail || mobileMartError.message || apiError.message;
+        
         return res.status(500).json({
           success: false,
           error: 'Failed to purchase electricity from MobileMart',
-          errorCode: 'MOBILEMART_API_ERROR',
-          message: apiError.message
+          errorCode: `MOBILEMART_${errorCode}`,
+          message: errorMessage,
+          details: {
+            mobileMartErrorCode: errorCode,
+            mobileMartError: errorMessage,
+            meterNumber: meterNumber,
+            amount: amount,
+            httpStatus: apiError.response?.status
+          }
         });
       }
     } else {
