@@ -11,7 +11,7 @@ Fixed electricity recipient creation and removal in UAT by correcting service pa
 - **Electricity Remove**: Backend now avoids switching `accountType` to `mymoolah` when MSISDN is not a valid mobile number and filters electricity list using active services only.
 - **NON_MSI Placeholder**: Backend now generates a short `NON_MSI_` token (fits VARCHAR(15)) for non-mobile beneficiaries.
 - **Electricity Purchase**: Frontend now sends `acceptTerms`, backend accepts 8-digit meters for UAT tests.
-- **Electricity Txn Record**: Backend now populates required `VasTransaction` fields (transactionId, walletId, vasProductId, transactionType, totalAmount).
+- **Electricity Txn Record**: Backend now populates required `VasTransaction` fields (transactionId, walletId, vasProductId, transactionType, totalAmount). Uses `topup` transaction type.
 
 ### **📝 Files Modified** ✅
 - `mymoolah-wallet-frontend/components/overlays/shared/BeneficiaryModal.tsx`

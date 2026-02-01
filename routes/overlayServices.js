@@ -1989,7 +1989,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         supplierProductId: 'FLASH_ELECTRICITY_PREPAID',
         productName: 'Electricity Prepaid',
         vasType: 'electricity',
-        transactionType: 'direct',
+        transactionType: 'topup',
         provider: beneficiary.metadata?.meterType || 'Electricity',
         networkType: 'local',
         predefinedAmounts: null,
@@ -2013,7 +2013,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       beneficiaryId: beneficiary.id,
       vasProductId: vasProduct.id,
       vasType: 'electricity',
-      transactionType: vasProduct.transactionType || 'direct',
+      transactionType: vasProduct.transactionType || 'topup',
       supplierId: 'flash',
       supplierProductId: 'FLASH_ELECTRICITY_PREPAID',
       amount: amountInCentsValue, // Convert to cents
