@@ -166,94 +166,63 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
           {isElectricity && transaction.metadata?.electricityToken && (
             <>
               <div style={{
-                background: 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)',
-                border: '2px dashed #86BE41',
-                borderRadius: '16px',
-                padding: '2rem 1.5rem',
-                textAlign: 'center',
-                marginBottom: '1.5rem',
-                boxShadow: '0 4px 6px -1px rgba(134, 190, 65, 0.1)'
+                padding: '1rem',
+                backgroundColor: '#f3f4f6',
+                borderRadius: '12px',
+                border: '2px dashed #d1d5db'
               }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: '0.75rem'
-                }}>
-                  <div style={{
-                    width: '48px',
-                    height: '48px',
-                    backgroundColor: '#86BE41',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <Zap style={{ width: '28px', height: '28px', color: '#ffffff' }} />
-                  </div>
-                </div>
-                <p style={{
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                  color: '#059669',
-                  marginBottom: '1rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  Your Electricity Token
-                </p>
-                <p style={{
-                  fontFamily: 'Monaco, Consolas, monospace',
-                  fontSize: '20px',
-                  fontWeight: '700',
-                  color: '#1f2937',
-                  letterSpacing: '0.1em',
-                  marginBottom: '1.25rem',
-                  lineHeight: '1.6',
-                  wordSpacing: '0.3em'
-                }}>
-                  {formatToken(transaction.metadata.electricityToken)}
-                </p>
-                <Button
-                  onClick={handleCopyToken}
-                  data-copy-token
-                  style={{
-                    background: '#86BE41',
-                    color: '#ffffff',
+                <div style={{ textAlign: 'center' }}>
+                  <Zap style={{
+                    width: '32px',
+                    height: '32px',
+                    color: '#f59e0b',
+                    margin: '0 auto 8px'
+                  }} />
+                  <p style={{
                     fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    padding: '10px 24px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    margin: '0 auto',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 2px 4px rgba(134, 190, 65, 0.2)'
-                  }}
-                  onMouseEnter={(e: any) => {
-                    e.currentTarget.style.background = '#7ab038';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(134, 190, 65, 0.3)';
-                  }}
-                  onMouseLeave={(e: any) => {
-                    e.currentTarget.style.background = '#86BE41';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(134, 190, 65, 0.2)';
-                  }}
-                >
-                  <Copy style={{ width: '16px', height: '16px' }} />
-                  Copy Token
-                </Button>
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    marginBottom: '8px'
+                  }}>
+                    Your Electricity Token
+                  </p>
+                  <p style={{
+                    fontFamily: 'Monaco, Courier, monospace',
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    color: '#1f2937',
+                    letterSpacing: '2px',
+                    wordBreak: 'break-all',
+                    marginBottom: '1rem'
+                  }}>
+                    {formatToken(transaction.metadata.electricityToken)}
+                  </p>
+                  <Button
+                    onClick={handleCopyToken}
+                    data-copy-token
+                    variant="outline"
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      minHeight: '44px',
+                      borderRadius: '12px',
+                      margin: '0 auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Copy style={{ width: '16px', height: '16px' }} />
+                    Copy Token
+                  </Button>
+                </div>
               </div>
 
               <div style={{
                 borderBottom: '1px solid #e5e7eb',
-                marginBottom: '1.5rem'
+                marginBottom: '1rem',
+                marginTop: '1rem'
               }}></div>
             </>
           )}
@@ -368,26 +337,18 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
               )}
 
               {/* Amount */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '12px',
-                backgroundColor: transaction.amount >= 0 ? '#f0fdf4' : '#fef2f2',
-                borderRadius: '10px',
-                border: `2px solid ${transaction.amount >= 0 ? '#86BE41' : '#ef4444'}`
-              }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{
                   fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '15px',
-                  fontWeight: '600',
-                  color: '#1f2937'
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#6b7280'
                 }}>
                   Amount
                 </span>
                 <span style={{
                   fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '24px',
+                  fontSize: '18px',
                   fontWeight: '700',
                   color: transaction.amount >= 0 ? '#16a34a' : '#dc2626'
                 }}>
@@ -434,25 +395,12 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
             onClick={onClose}
             style={{
               width: '100%',
-              background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
-              color: '#ffffff',
               fontFamily: 'Montserrat, sans-serif',
               fontSize: '16px',
-              fontWeight: '700',
-              padding: '14px',
+              fontWeight: '600',
+              padding: '12px',
               borderRadius: '12px',
-              border: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e: any) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
-            }}
-            onMouseLeave={(e: any) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+              minHeight: '48px'
             }}
           >
             Done
