@@ -2623,7 +2623,7 @@ router.post('/bills/pay', auth, async (req, res) => {
         const products = productsResponse.products || productsResponse || [];
         
         // Try to find product matching the biller name, or use first available
-        let billProduct = products.find((p: any) => 
+        let billProduct = products.find(p => 
           p.productName?.toLowerCase().includes(billerName.toLowerCase()) ||
           p.contentCreator?.toLowerCase().includes(billerName.toLowerCase())
         ) || products[0];
