@@ -1916,7 +1916,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     const meterNumber = beneficiary.identifier;
 
     // Simulate electricity purchase using database
-    const { VasTransaction } = require('../models');
+    const { VasTransaction, VasProduct, Wallet } = require('../models');
     
     // Validate amount (R20 minimum, R2,000 maximum for electricity)
     const minAmount = 20;
@@ -1970,13 +1970,55 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     // If we get here, meter is valid - proceed with purchase
     // Create electricity transaction
     const amountInCentsValue = Math.round(Number(amount) * 100);
+
+    const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+    if (!wallet) {
+      return res.status(404).json({
+        success: false,
+        error: 'Wallet not found'
+      });
+    }
+
+    const [vasProduct] = await VasProduct.findOrCreate({
+      where: {
+        supplierId: 'flash',
+        supplierProductId: 'FLASH_ELECTRICITY_PREPAID'
+      },
+      defaults: {
+        supplierId: 'flash',
+        supplierProductId: 'FLASH_ELECTRICITY_PREPAID',
+        productName: 'Electricity Prepaid',
+        vasType: 'electricity',
+        transactionType: 'direct',
+        provider: beneficiary.metadata?.meterType || 'Electricity',
+        networkType: 'local',
+        predefinedAmounts: null,
+        minAmount: 2000,
+        maxAmount: 200000,
+        commission: 0,
+        fixedFee: 0,
+        isPromotional: false,
+        isActive: true,
+        metadata: {
+          autoCreated: true
+        }
+      }
+    });
+
+    const transactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const transaction = await VasTransaction.create({
+      transactionId,
       userId: req.user.id,
+      walletId: wallet.walletId,
       beneficiaryId: beneficiary.id,
+      vasProductId: vasProduct.id,
       vasType: 'electricity',
+      transactionType: vasProduct.transactionType || 'direct',
       supplierId: 'flash',
       supplierProductId: 'FLASH_ELECTRICITY_PREPAID',
       amount: amountInCentsValue, // Convert to cents
+      fee: 0,
+      totalAmount: amountInCentsValue,
       mobileNumber: beneficiary.identifier, // Using identifier as meter number
       status: 'completed',
       reference: idempotencyKey,
