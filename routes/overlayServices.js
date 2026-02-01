@@ -1949,11 +1949,14 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       });
     }
 
-    // Determine if using live MobileMart API or simulation
+    // Determine which supplier API to use
     const useMobileMartAPI = process.env.MOBILEMART_LIVE_INTEGRATION === 'true';
+    const useFlashAPI = process.env.FLASH_LIVE_INTEGRATION === 'true';
     let electricityToken;
     let mobileMartTransactionId;
     let mobileMartResponse;
+    let flashTransactionId;
+    let flashResponse;
 
     if (useMobileMartAPI) {
       // PRODUCTION/STAGING: Use real MobileMart API
@@ -2067,6 +2070,93 @@ router.post('/electricity/purchase', auth, async (req, res) => {
           }
         });
       }
+    } else if (useFlashAPI) {
+      // PRODUCTION/STAGING: Use real Flash API
+      try {
+        const FlashAuthService = require('../services/flashAuthService');
+        const flashService = new FlashAuthService();
+
+        // Step 1: Lookup meter to validate it exists
+        console.log('📞 Flash: Looking up meter...');
+        const lookupResponse = await flashService.makeAuthenticatedRequest(
+          'POST',
+          '/prepaid-utilities/lookup',
+          {
+            meterNumber: meterNumber,
+            serviceProvider: 'ESKOM' // Default to ESKOM, can be made dynamic later
+          }
+        );
+        console.log('✅ Flash Meter Lookup Response:', JSON.stringify(lookupResponse, null, 2));
+
+        if (!lookupResponse.isValid) {
+          throw new Error('Meter number not found or invalid');
+        }
+
+        // Step 2: Purchase prepaid utility (electricity)
+        const purchasePayload = {
+          reference: `ELEC_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          accountNumber: process.env.FLASH_ACCOUNT_NUMBER || 'FLASH001234',
+          meterNumber: meterNumber,
+          amount: Math.round(amount * 100), // Convert to cents
+          productCode: 1, // Flash prepaid utility product code
+          serviceProvider: 'ESKOM',
+          metadata: {
+            source: 'ElectricityOverlay',
+            userId: req.user.id,
+            beneficiaryId: beneficiaryId
+          }
+        };
+
+        console.log('📞 Flash Purchase Request:', JSON.stringify(purchasePayload, null, 2));
+        const purchaseResponse = await flashService.makeAuthenticatedRequest(
+          'POST',
+          '/prepaid-utilities/purchase',
+          purchasePayload
+        );
+        console.log('✅ Flash Purchase Response:', JSON.stringify(purchaseResponse, null, 2));
+
+        // Extract electricity token from Flash response
+        flashResponse = purchaseResponse;
+        flashTransactionId = purchaseResponse.transactionId || purchaseResponse.reference;
+        
+        // Flash returns token in various possible fields
+        electricityToken = purchaseResponse.token || 
+                          purchaseResponse.tokenNumber ||
+                          purchaseResponse.pin ||
+                          purchaseResponse.serialNumber ||
+                          purchaseResponse.additionalDetails?.token ||
+                          'TOKEN_PENDING';
+        
+        console.log(`✅ Flash electricity token: ${electricityToken}`);
+
+      } catch (apiError) {
+        console.error('❌ Flash API Error:', apiError.message);
+        console.error('❌ Flash Error Details:', {
+          error: apiError.message,
+          response: apiError.response?.data,
+          status: apiError.response?.status,
+          stack: apiError.stack
+        });
+        
+        // Extract Flash error details for frontend display
+        const flashError = apiError.response?.data || {};
+        const errorCode = flashError.errorCode || flashError.code || 'UNKNOWN';
+        const errorMessage = flashError.message || flashError.detail || apiError.message;
+        
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to purchase electricity from Flash',
+          errorCode: `FLASH_${errorCode}`,
+          message: errorMessage,
+          details: {
+            flashErrorCode: errorCode,
+            flashError: errorMessage,
+            meterNumber: meterNumber,
+            amount: amount,
+            httpStatus: apiError.response?.status
+          }
+        });
+      }
     } else {
       // UAT/SIMULATION: Use fake token for UI testing
       const invalidMeterNumbers = ['1234567890', '0000000000', '9999999999'];
@@ -2082,6 +2172,8 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       electricityToken = `${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}`;
       mobileMartTransactionId = null;
       mobileMartResponse = null;
+      flashTransactionId = null;
+      flashResponse = null;
     }
 
     // If we get here, meter is valid and purchase succeeded - create database records
@@ -2097,8 +2189,8 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     }
 
     // Determine supplier based on API mode
-    const supplierId = useMobileMartAPI ? 'MOBILEMART' : 'flash';
-    const supplierProductId = useMobileMartAPI ? 'MOBILEMART_UTILITY' : 'FLASH_ELECTRICITY_PREPAID';
+    const supplierId = useMobileMartAPI ? 'MOBILEMART' : (useFlashAPI ? 'FLASH' : 'flash');
+    const supplierProductId = useMobileMartAPI ? 'MOBILEMART_UTILITY' : (useFlashAPI ? 'FLASH_ELECTRICITY_PREPAID' : 'FLASH_ELECTRICITY_PREPAID');
 
     const [vasProduct] = await VasProduct.findOrCreate({
       where: {
@@ -2191,8 +2283,12 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         electricityToken: electricityToken,
         purchasedAt: new Date().toISOString(),
         useMobileMartAPI,
+        useFlashAPI,
         ...(useMobileMartAPI && mobileMartTransactionId ? {
           mobilemartTransactionId: mobileMartTransactionId
+        } : {}),
+        ...(useFlashAPI && flashTransactionId ? {
+          flashTransactionId: flashTransactionId
         } : {})
       },
       currency: wallet.currency
