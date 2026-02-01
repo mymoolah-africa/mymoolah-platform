@@ -2033,6 +2033,44 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         processedAt: new Date().toISOString()
       }
     });
+
+    // Debit wallet for electricity purchase
+    await wallet.debit(amount, 'payment');
+
+    // Create wallet ledger transaction for history
+    const ledgerTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const { Transaction } = require('../models');
+    const ledgerTransaction = await Transaction.create({
+      transactionId: ledgerTransactionId,
+      userId: req.user.id,
+      walletId: wallet.walletId,
+      amount: amount,
+      type: 'payment',
+      status: 'completed',
+      description: `Electricity purchase for ${beneficiary.name}`,
+      metadata: {
+        beneficiaryId,
+        beneficiaryMeter: beneficiary.identifier,
+        meterType: beneficiary.metadata?.meterType || 'Prepaid',
+        supplierCode: 'flash',
+        supplierProductId: 'FLASH_ELECTRICITY_PREPAID',
+        idempotencyKey,
+        vasTransactionId: transaction.id,
+        vasType: 'electricity',
+        amountCents: amountInCentsValue,
+        channel: 'overlay_services'
+      },
+      currency: wallet.currency
+    });
+
+    // Link wallet ledger transaction to vas transaction metadata
+    await transaction.update({
+      metadata: {
+        ...(transaction.metadata || {}),
+        walletTransactionId: ledgerTransaction.transactionId,
+        walletId: wallet.walletId
+      }
+    });
     
     // Simulate successful result
     const purchaseResult = {
