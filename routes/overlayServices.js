@@ -1491,7 +1491,7 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     
     try {
       beneficiaryUser = await User.findOne({
-        where: { phone: beneficiary.identifier }
+        where: { phoneNumber: beneficiary.identifier }
       });
       beneficiaryIsMyMoolahUser = !!beneficiaryUser;
     } catch (userLookupError) {
@@ -2064,7 +2064,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     // Check if beneficiary is a MyMoolah user
     const { User } = require('../models');
     const beneficiaryUser = await User.findOne({
-      where: { phone: beneficiary.identifier }
+      where: { phoneNumber: beneficiary.identifier }
     });
 
     // Prepare token and receipt data
@@ -2476,7 +2476,7 @@ router.post('/bills/pay', auth, async (req, res) => {
     // Check if beneficiary is a MyMoolah user
     const { User } = require('../models');
     const beneficiaryUser = await User.findOne({
-      where: { phone: beneficiary.identifier }
+      where: { phoneNumber: beneficiary.identifier }
     });
 
     // Prepare receipt data
