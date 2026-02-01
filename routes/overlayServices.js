@@ -1961,21 +1961,8 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         const MobileMartAuthService = require('../services/mobilemartAuthService');
         const mobileMartService = new MobileMartAuthService();
 
-        // Step 1: Prevend - validate meter and get prevendTransactionId
-        console.log(`📞 MobileMart Prevend: meter=${meterNumber}, amount=${amount}`);
-        const prevendResponse = await mobileMartService.makeAuthenticatedRequest(
-          'GET',
-          `/utility/prevend?meterNumber=${meterNumber}&amount=${amount}`
-        );
-        console.log('✅ MobileMart Prevend Response:', JSON.stringify(prevendResponse, null, 2));
-
-        const prevendTransactionId = prevendResponse.transactionId || prevendResponse.prevendTransactionId;
-        if (!prevendTransactionId) {
-          throw new Error('MobileMart prevend did not return transactionId');
-        }
-        console.log(`✅ Prevend Transaction ID: ${prevendTransactionId}`);
-
-        // Step 2: Get utility products to find merchantProductId
+        // Step 1: Get utility products to find merchantProductId
+        console.log('📞 MobileMart: Getting utility products...');
         const productsResponse = await mobileMartService.makeAuthenticatedRequest(
           'GET',
           '/utility/products'
@@ -1986,6 +1973,29 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         if (!utilityProduct || !utilityProduct.merchantProductId) {
           throw new Error('No utility products available from MobileMart');
         }
+        console.log(`✅ Found utility product: ${utilityProduct.name || 'Electricity'} (${utilityProduct.merchantProductId})`);
+
+        // Step 2: Prevend - validate meter and get prevendTransactionId
+        const prevendRequestId = `PRE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        const prevendParams = new URLSearchParams({
+          merchantProductId: utilityProduct.merchantProductId,
+          requestId: prevendRequestId,
+          meterNumber: meterNumber,
+          amount: amount.toString()
+        });
+        
+        console.log(`📞 MobileMart Prevend: ${prevendParams.toString()}`);
+        const prevendResponse = await mobileMartService.makeAuthenticatedRequest(
+          'GET',
+          `/utility/prevend?${prevendParams.toString()}`
+        );
+        console.log('✅ MobileMart Prevend Response:', JSON.stringify(prevendResponse, null, 2));
+
+        const prevendTransactionId = prevendResponse.transactionId || prevendResponse.prevendTransactionId;
+        if (!prevendTransactionId) {
+          throw new Error('MobileMart prevend did not return transactionId');
+        }
+        console.log(`✅ Prevend Transaction ID: ${prevendTransactionId}`);
 
         // Step 3: Purchase - complete the transaction
         const purchasePayload = {

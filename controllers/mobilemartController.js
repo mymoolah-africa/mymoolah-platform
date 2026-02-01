@@ -100,14 +100,14 @@ class MobileMartController {
     /**
      * Prevend a utility or bill payment transaction
      * @route GET /api/v1/mobilemart/prevend/:vasType
-     * @query { meterNumber, amount, accountNumber }
+     * @query { merchantProductId, requestId, meterNumber, amount, accountNumber }
      * 
      * Returns prevendTransactionId needed for purchase
      */
     async prevend(req, res) {
         try {
             const { vasType } = req.params;
-            const { meterNumber, accountNumber, amount } = req.query;
+            const { merchantProductId, requestId, meterNumber, accountNumber, amount } = req.query;
             
             const normalizedVasType = this.normalizeVasType(vasType);
             
@@ -118,8 +118,21 @@ class MobileMartController {
                 });
             }
             
+            // MobileMart requires merchantProductId and requestId for prevend
+            if (!merchantProductId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'merchantProductId is required for prevend'
+                });
+            }
+            
+            // Generate requestId if not provided
+            const txnRequestId = requestId || `PRE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+            
             // Build query parameters
             const params = new URLSearchParams();
+            params.append('merchantProductId', merchantProductId);
+            params.append('requestId', txnRequestId);
             
             if (normalizedVasType === 'utility') {
                 if (!meterNumber) {
