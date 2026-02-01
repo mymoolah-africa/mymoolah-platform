@@ -1938,11 +1938,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       });
     }
 
-    // Simulate meter validation and purchase in one call
-    // In a live system, this would call the supplier API with meter number and amount
-    // and get back either success with token or error with reason
-    
-    // Simulate meter validation (basic format check)
+    // Validate meter format
     const isValidMeterFormat = meterNumber.length >= 8 && /^[0-9]+$/.test(meterNumber);
     if (!isValidMeterFormat) {
       return res.status(400).json({
@@ -1953,21 +1949,95 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       });
     }
 
-    // Simulate supplier API call - in real implementation this would be:
-    // const supplierResponse = await flashService.purchaseElectricity(meterNumber, amount);
-    
-    // For demo purposes, simulate some meter numbers as invalid
-    const invalidMeterNumbers = ['1234567890', '0000000000', '9999999999'];
-    if (invalidMeterNumbers.includes(meterNumber)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Meter number not found',
-        errorCode: 'METER_NOT_FOUND',
-        details: 'This meter number is not registered with the electricity provider'
-      });
+    // Determine if using live MobileMart API or simulation
+    const useMobileMartAPI = process.env.MOBILEMART_LIVE_INTEGRATION === 'true';
+    let electricityToken;
+    let mobileMartTransactionId;
+    let mobileMartResponse;
+
+    if (useMobileMartAPI) {
+      // PRODUCTION/STAGING: Use real MobileMart API
+      try {
+        const MobileMartAuthService = require('../services/mobilemartAuthService');
+        const mobileMartService = new MobileMartAuthService();
+
+        // Step 1: Prevend - validate meter and get prevendTransactionId
+        const prevendResponse = await mobileMartService.makeAuthenticatedRequest(
+          'GET',
+          `/utility/prevend?meterNumber=${meterNumber}&amount=${amount}`
+        );
+
+        const prevendTransactionId = prevendResponse.transactionId || prevendResponse.prevendTransactionId;
+        if (!prevendTransactionId) {
+          throw new Error('MobileMart prevend did not return transactionId');
+        }
+
+        // Step 2: Get utility products to find merchantProductId
+        const productsResponse = await mobileMartService.makeAuthenticatedRequest(
+          'GET',
+          '/utility/products'
+        );
+        const products = productsResponse.products || productsResponse || [];
+        const utilityProduct = products[0]; // Use first available utility product
+
+        if (!utilityProduct || !utilityProduct.merchantProductId) {
+          throw new Error('No utility products available from MobileMart');
+        }
+
+        // Step 3: Purchase - complete the transaction
+        const purchasePayload = {
+          requestId: `ELEC_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          prevendTransactionId: prevendTransactionId,
+          tenderType: 'CreditCard'
+        };
+
+        const purchaseResponse = await mobileMartService.makeAuthenticatedRequest(
+          'POST',
+          '/utility/purchase',
+          purchasePayload
+        );
+
+        // Extract electricity token from MobileMart response
+        mobileMartResponse = purchaseResponse;
+        mobileMartTransactionId = purchaseResponse.transactionId;
+        
+        // MobileMart utility response has tokens in additionalDetails.tokens array
+        if (purchaseResponse.additionalDetails && Array.isArray(purchaseResponse.additionalDetails.tokens)) {
+          electricityToken = purchaseResponse.additionalDetails.tokens.join(' ');
+        } else {
+          // Fallback: use receipt number or first available token field
+          electricityToken = purchaseResponse.additionalDetails?.receiptNumber || 
+                            purchaseResponse.additionalDetails?.reference ||
+                            'TOKEN_PENDING';
+        }
+
+      } catch (apiError) {
+        console.error('❌ MobileMart API Error:', apiError.message);
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to purchase electricity from MobileMart',
+          errorCode: 'MOBILEMART_API_ERROR',
+          message: apiError.message
+        });
+      }
+    } else {
+      // UAT/SIMULATION: Use fake token for UI testing
+      const invalidMeterNumbers = ['1234567890', '0000000000', '9999999999'];
+      if (invalidMeterNumbers.includes(meterNumber)) {
+        return res.status(400).json({
+          success: false,
+          error: 'Meter number not found',
+          errorCode: 'METER_NOT_FOUND',
+          details: 'This meter number is not registered with the electricity provider'
+        });
+      }
+      
+      electricityToken = `${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}`;
+      mobileMartTransactionId = null;
+      mobileMartResponse = null;
     }
 
-    // If we get here, meter is valid - proceed with purchase
+    // If we get here, meter is valid and purchase succeeded - create database records
     // Create electricity transaction
     const amountInCentsValue = Math.round(Number(amount) * 100);
 
@@ -1979,14 +2049,18 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       });
     }
 
+    // Determine supplier based on API mode
+    const supplierId = useMobileMartAPI ? 'MOBILEMART' : 'flash';
+    const supplierProductId = useMobileMartAPI ? 'MOBILEMART_UTILITY' : 'FLASH_ELECTRICITY_PREPAID';
+
     const [vasProduct] = await VasProduct.findOrCreate({
       where: {
-        supplierId: 'flash',
-        supplierProductId: 'FLASH_ELECTRICITY_PREPAID'
+        supplierId: supplierId,
+        supplierProductId: supplierProductId
       },
       defaults: {
-        supplierId: 'flash',
-        supplierProductId: 'FLASH_ELECTRICITY_PREPAID',
+        supplierId: supplierId,
+        supplierProductId: supplierProductId,
         productName: 'Electricity Prepaid',
         vasType: 'electricity',
         transactionType: 'topup',
@@ -2000,7 +2074,8 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         isPromotional: false,
         isActive: true,
         metadata: {
-          autoCreated: true
+          autoCreated: true,
+          useMobileMartAPI
         }
       }
     });
@@ -2014,31 +2089,34 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       vasProductId: vasProduct.id,
       vasType: 'electricity',
       transactionType: vasProduct.transactionType || 'topup',
-      supplierId: 'flash',
-      supplierProductId: 'FLASH_ELECTRICITY_PREPAID',
-      amount: amountInCentsValue, // Convert to cents
+      supplierId: supplierId,
+      supplierProductId: supplierProductId,
+      amount: amountInCentsValue,
       fee: 0,
       totalAmount: amountInCentsValue,
-      mobileNumber: beneficiary.identifier, // Using identifier as meter number
+      mobileNumber: beneficiary.identifier,
       status: 'completed',
       reference: idempotencyKey,
+      supplierReference: mobileMartTransactionId,
       metadata: {
         beneficiaryId,
         type: 'electricity',
         userId: req.user.id,
-        simulated: true,
+        simulated: !useMobileMartAPI,
         meterNumber: beneficiary.identifier,
         meterType: beneficiary.metadata?.meterType || 'Prepaid',
         amountCents: amountInCentsValue,
-        processedAt: new Date().toISOString()
+        processedAt: new Date().toISOString(),
+        ...(useMobileMartAPI && mobileMartResponse ? {
+          mobilemartResponse: mobileMartResponse,
+          mobilemartTransactionId: mobileMartTransactionId,
+          mobilemartFulfilled: true
+        } : {})
       }
     });
 
     // Debit wallet for electricity purchase
     await wallet.debit(amount, 'payment');
-
-    // Generate electricity token
-    const electricityToken = `${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}`;
 
     // Create wallet ledger transaction for history
     const ledgerTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
@@ -2056,15 +2134,19 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         beneficiaryName: beneficiary.name,
         beneficiaryMeter: beneficiary.identifier,
         meterType: beneficiary.metadata?.meterType || 'Prepaid',
-        supplierCode: 'flash',
-        supplierProductId: 'FLASH_ELECTRICITY_PREPAID',
+        supplierCode: supplierId,
+        supplierProductId: supplierProductId,
         idempotencyKey,
         vasTransactionId: transaction.id,
         vasType: 'electricity',
         amountCents: amountInCentsValue,
         channel: 'overlay_services',
         electricityToken: electricityToken,
-        purchasedAt: new Date().toISOString()
+        purchasedAt: new Date().toISOString(),
+        useMobileMartAPI,
+        ...(useMobileMartAPI && mobileMartTransactionId ? {
+          mobilemartTransactionId: mobileMartTransactionId
+        } : {})
       },
       currency: wallet.currency
     });

@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-01 - ⚡ Electricity Purchase MobileMart Integration (v2.8.0) ✅
+
+### **Session Overview**
+Integrated MobileMart API for electricity purchases with environment-aware mode (UAT simulation, Staging/Production real API). Added prevend endpoint support and real token extraction from MobileMart responses.
+
+### **🔌 MobileMart Integration** ✅
+- **Prevend Endpoint**: Added `/api/v1/mobilemart/prevend/:vasType` for utility and bill payment validation
+- **Environment Detection**: Uses `MOBILEMART_LIVE_INTEGRATION` flag to switch between simulation and real API
+- **UAT Mode**: Simulation with fake tokens for UI testing
+- **Staging/Production Mode**: Real MobileMart prevend → purchase flow with authentic electricity tokens
+- **Token Extraction**: Extracts real tokens from `additionalDetails.tokens` array in MobileMart response
+
+### **📝 Files Modified** ✅
+- `controllers/mobilemartController.js` - Added `prevend()` method
+- `routes/mobilemart.js` - Added prevend route
+- `routes/overlayServices.js` - Environment-aware electricity purchase with MobileMart integration
+
+---
+
 ## 2026-01-31 - ⚡ Electricity Beneficiary Create/Remove Fixes (v2.7.5) ✅
 
 ### **Session Overview**

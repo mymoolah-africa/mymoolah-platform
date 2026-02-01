@@ -98,6 +98,90 @@ class MobileMartController {
     }
 
     /**
+     * Prevend a utility or bill payment transaction
+     * @route GET /api/v1/mobilemart/prevend/:vasType
+     * @query { meterNumber, amount, accountNumber }
+     * 
+     * Returns prevendTransactionId needed for purchase
+     */
+    async prevend(req, res) {
+        try {
+            const { vasType } = req.params;
+            const { meterNumber, accountNumber, amount } = req.query;
+            
+            const normalizedVasType = this.normalizeVasType(vasType);
+            
+            if (normalizedVasType !== 'utility' && normalizedVasType !== 'bill-payment') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Prevend is only required for utility and bill-payment'
+                });
+            }
+            
+            // Build query parameters
+            const params = new URLSearchParams();
+            
+            if (normalizedVasType === 'utility') {
+                if (!meterNumber) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'meterNumber is required for utility prevend'
+                    });
+                }
+                if (!amount) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'amount is required for utility prevend'
+                    });
+                }
+                params.append('meterNumber', meterNumber);
+                params.append('amount', amount);
+            } else if (normalizedVasType === 'bill-payment') {
+                if (!accountNumber) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'accountNumber is required for bill payment prevend'
+                    });
+                }
+                if (!amount) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'amount is required for bill payment prevend'
+                    });
+                }
+                params.append('accountNumber', accountNumber);
+                params.append('amount', amount);
+            }
+            
+            // Determine endpoint
+            const endpoint = normalizedVasType === 'bill-payment' 
+                ? '/v2/bill-payment/prevend'
+                : '/utility/prevend';
+            
+            const response = await this.authService.makeAuthenticatedRequest(
+                'GET',
+                `${endpoint}?${params.toString()}`
+            );
+            
+            res.json({
+                success: true,
+                data: {
+                    prevendTransactionId: response.transactionId || response.prevendTransactionId,
+                    details: response,
+                    timestamp: new Date().toISOString()
+                }
+            });
+        } catch (error) {
+            console.error('❌ MobileMart Controller: Prevend error:', error.message);
+            res.status(500).json({
+                success: false,
+                error: 'Failed to prevend MobileMart transaction',
+                message: error.message
+            });
+        }
+    }
+
+    /**
      * Purchase a VAS product (airtime, data, electricity, etc.)
      * @route POST /api/v1/mobilemart/purchase/:vasType
      * @body { requestId, merchantProductId, tenderType, amount, mobileNumber, prevendTransactionId, etc. }

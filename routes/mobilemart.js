@@ -38,6 +38,18 @@ router.get('/health', mobilemartController.healthCheck.bind(mobilemartController
 router.get('/products/:vasType', mobilemartController.listProducts.bind(mobilemartController));
 
 // ========================================
+// MOBILEMART PREVEND ENDPOINTS
+// ========================================
+
+/**
+ * @route   GET /api/v1/mobilemart/prevend/:vasType
+ * @desc    Prevend a utility or bill payment transaction (required before purchase)
+ * @access  Public
+ * @query   { meterNumber, amount } for utility OR { accountNumber, amount } for bill-payment
+ */
+router.get('/prevend/:vasType', mobilemartController.prevend.bind(mobilemartController));
+
+// ========================================
 // MOBILEMART PURCHASE ENDPOINTS
 // ========================================
 
