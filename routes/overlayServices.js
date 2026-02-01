@@ -2599,35 +2599,237 @@ router.post('/bills/pay', auth, async (req, res) => {
       supplierProductId = selectedVariant.supplierProductId || 'FLASH_BILL_PAYMENT';
     }
     
-    // Create bill payment transaction using database
-    const { VasTransaction } = require('../models');
+    // Determine if using live MobileMart API or simulation
+    const useMobileMartAPI = process.env.MOBILEMART_LIVE_INTEGRATION === 'true' && supplierCode === 'MOBILEMART';
+    let billPaymentReceipt;
+    let mobileMartTransactionId;
+    let mobileMartResponse;
+
     const amountInCentsValue = Math.round(Number(amount) * 100);
+    const accountNumber = beneficiary.identifier;
+
+    if (useMobileMartAPI) {
+      // PRODUCTION/STAGING: Use real MobileMart API
+      try {
+        const MobileMartAuthService = require('../services/mobilemartAuthService');
+        const mobileMartService = new MobileMartAuthService();
+
+        // Step 1: Get bill payment products to find merchantProductId
+        console.log('📞 MobileMart: Getting bill payment products...');
+        const productsResponse = await mobileMartService.makeAuthenticatedRequest(
+          'GET',
+          '/bill-payment/products'
+        );
+        const products = productsResponse.products || productsResponse || [];
+        
+        // Try to find product matching the biller name, or use first available
+        let billProduct = products.find((p: any) => 
+          p.productName?.toLowerCase().includes(billerName.toLowerCase()) ||
+          p.contentCreator?.toLowerCase().includes(billerName.toLowerCase())
+        ) || products[0];
+
+        if (!billProduct || !billProduct.merchantProductId) {
+          throw new Error('No bill payment products available from MobileMart');
+        }
+        console.log(`✅ Found bill payment product: ${billProduct.productName || billProduct.contentCreator} (${billProduct.merchantProductId})`);
+
+        // Step 2: Prevend - validate account and get prevendTransactionId
+        const prevendRequestId = `BILLPRE_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        const prevendParams = new URLSearchParams({
+          merchantProductId: billProduct.merchantProductId,
+          requestId: prevendRequestId,
+          accountNumber: accountNumber,
+          amount: amount.toString()
+        });
+        
+        console.log(`📞 MobileMart Bill Payment Prevend: ${prevendParams.toString()}`);
+        const prevendResponse = await mobileMartService.makeAuthenticatedRequest(
+          'GET',
+          `/v2/bill-payment/prevend?${prevendParams.toString()}`
+        );
+        console.log('✅ MobileMart Prevend Response:', JSON.stringify(prevendResponse, null, 2));
+
+        const prevendTransactionId = prevendResponse.transactionId || prevendResponse.prevendTransactionId;
+        if (!prevendTransactionId) {
+          throw new Error('MobileMart prevend did not return transactionId');
+        }
+        console.log(`✅ Prevend Transaction ID: ${prevendTransactionId}`);
+
+        // Step 3: Pay - complete the transaction
+        const payPayload = {
+          requestId: `BILLPAY_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          prevendTransactionId: prevendTransactionId,
+          tenderType: 'CreditCard',
+          amount: parseFloat(amount)
+        };
+
+        console.log('📞 MobileMart Bill Payment Request:', JSON.stringify(payPayload, null, 2));
+        const payResponse = await mobileMartService.makeAuthenticatedRequest(
+          'POST',
+          '/v2/bill-payment/pay',
+          payPayload
+        );
+        console.log('✅ MobileMart Bill Payment Response:', JSON.stringify(payResponse, null, 2));
+
+        // Extract receipt from MobileMart response
+        mobileMartResponse = payResponse;
+        mobileMartTransactionId = payResponse.transactionId;
+        billPaymentReceipt = payResponse.reference || payResponse.receiptNumber || mobileMartTransactionId;
+
+      } catch (apiError) {
+        console.error('❌ MobileMart Bill Payment API Error:', apiError.message);
+        console.error('❌ MobileMart Error Details:', {
+          error: apiError.message,
+          response: apiError.response?.data,
+          status: apiError.response?.status,
+          stack: apiError.stack
+        });
+        
+        // Extract MobileMart error details for frontend display
+        const mobileMartError = apiError.response?.data || {};
+        const errorCode = mobileMartError.fulcrumErrorCode || mobileMartError.errorCode || 'UNKNOWN';
+        const errorMessage = mobileMartError.title || mobileMartError.detail || mobileMartError.message || apiError.message;
+        
+        return res.status(500).json({
+          success: false,
+          error: 'Failed to process bill payment via MobileMart',
+          errorCode: `MOBILEMART_${errorCode}`,
+          message: errorMessage,
+          details: {
+            mobileMartErrorCode: errorCode,
+            mobileMartError: errorMessage,
+            accountNumber: accountNumber,
+            amount: amount,
+            billerName: billerName,
+            httpStatus: apiError.response?.status
+          }
+        });
+      }
+    } else {
+      // UAT/SIMULATION: Use fake receipt for UI testing
+      billPaymentReceipt = `RECEIPT_${Date.now()}`;
+      mobileMartTransactionId = null;
+      mobileMartResponse = null;
+    }
+
+    // Create bill payment transaction in database
+    const { VasTransaction, VasProduct, Wallet, Transaction } = require('../models');
     
-    // Create a simulated bill payment transaction
+    const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+    if (!wallet) {
+      return res.status(404).json({
+        success: false,
+        error: 'Wallet not found'
+      });
+    }
+
+    const [vasProduct] = await VasProduct.findOrCreate({
+      where: {
+        supplierId: useMobileMartAPI ? 'MOBILEMART' : supplierCode,
+        supplierProductId: useMobileMartAPI ? 'MOBILEMART_BILL_PAYMENT' : supplierProductId
+      },
+      defaults: {
+        supplierId: useMobileMartAPI ? 'MOBILEMART' : supplierCode,
+        supplierProductId: useMobileMartAPI ? 'MOBILEMART_BILL_PAYMENT' : supplierProductId,
+        productName: `Bill Payment - ${billerName}`,
+        vasType: 'bill_payment',
+        transactionType: 'topup',
+        provider: billerName,
+        networkType: 'local',
+        predefinedAmounts: null,
+        minAmount: 1000,
+        maxAmount: 1000000,
+        commission: 0,
+        fixedFee: 0,
+        isPromotional: false,
+        isActive: true,
+        metadata: {
+          autoCreated: true,
+          useMobileMartAPI
+        }
+      }
+    });
+
+    const transactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const transaction = await VasTransaction.create({
+      transactionId,
       userId: req.user.id,
+      walletId: wallet.walletId,
       beneficiaryId: beneficiary.id,
+      vasProductId: vasProduct.id,
       vasType: 'bill_payment',
-      supplierId: supplierCode,
-      supplierProductId: supplierProductId,
-      amount: amountInCentsValue, // Convert to cents
-      mobileNumber: beneficiary.identifier, // Using identifier as account number
+      transactionType: 'topup',
+      supplierId: useMobileMartAPI ? 'MOBILEMART' : supplierCode,
+      supplierProductId: useMobileMartAPI ? 'MOBILEMART_BILL_PAYMENT' : supplierProductId,
+      amount: amountInCentsValue,
+      fee: 0,
+      totalAmount: amountInCentsValue,
+      mobileNumber: accountNumber,
       status: 'completed',
       reference: idempotencyKey,
+      supplierReference: mobileMartTransactionId,
       metadata: {
         beneficiaryId,
         type: 'bill_payment',
         userId: req.user.id,
-        simulated: true,
+        simulated: !useMobileMartAPI,
         billerName: billerName,
-        accountNumber: beneficiary.identifier,
+        accountNumber: accountNumber,
         amountCents: amountInCentsValue,
         productVariantId: selectedVariant?.id || null,
-        processedAt: new Date().toISOString()
+        processedAt: new Date().toISOString(),
+        billPaymentReceipt: billPaymentReceipt,
+        ...(useMobileMartAPI && mobileMartResponse ? {
+          mobilemartResponse: mobileMartResponse,
+          mobilemartTransactionId: mobileMartTransactionId,
+          mobilemartFulfilled: true
+        } : {})
       }
     });
-    
-    const transactionId = transaction.id;
+
+    // Debit wallet for bill payment
+    await wallet.debit(amount, 'payment');
+
+    // Create wallet ledger transaction for history
+    const ledgerTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+    const ledgerTransaction = await Transaction.create({
+      transactionId: ledgerTransactionId,
+      userId: req.user.id,
+      walletId: wallet.walletId,
+      amount: amount,
+      type: 'payment',
+      status: 'completed',
+      description: `Bill payment for ${beneficiary.name}`,
+      metadata: {
+        beneficiaryId,
+        beneficiaryName: beneficiary.name,
+        beneficiaryAccount: accountNumber,
+        billerName: billerName,
+        supplierCode: useMobileMartAPI ? 'MOBILEMART' : supplierCode,
+        supplierProductId: useMobileMartAPI ? 'MOBILEMART_BILL_PAYMENT' : supplierProductId,
+        idempotencyKey,
+        vasTransactionId: transaction.id,
+        vasType: 'bill_payment',
+        amountCents: amountInCentsValue,
+        channel: 'overlay_services',
+        billPaymentReceipt: billPaymentReceipt,
+        purchasedAt: new Date().toISOString(),
+        useMobileMartAPI,
+        ...(useMobileMartAPI && mobileMartTransactionId ? {
+          mobilemartTransactionId: mobileMartTransactionId
+        } : {})
+      },
+      currency: wallet.currency
+    });
+
+    // Link wallet ledger transaction to vas transaction metadata
+    await transaction.update({
+      metadata: {
+        ...(transaction.metadata || {}),
+        walletTransactionId: ledgerTransaction.transactionId,
+        walletId: wallet.walletId
+      }
+    });
     
     // Update beneficiary lastPaidAt
     await beneficiary.update({
@@ -2640,7 +2842,7 @@ router.post('/bills/pay', auth, async (req, res) => {
       serviceType: 'bill_payment',
       amountInCents: amountInCentsValue,
       vasTransaction: transaction,
-      walletTransactionId: null,
+      walletTransactionId: ledgerTransaction.transactionId,
       idempotencyKey,
       purchaserUserId: req.user.id,
     });
@@ -2648,20 +2850,25 @@ router.post('/bills/pay', auth, async (req, res) => {
     // Check if beneficiary is a MyMoolah user
     const { User } = require('../models');
     const beneficiaryUser = await User.findOne({
-      where: { phoneNumber: beneficiary.identifier }
+      where: { phoneNumber: accountNumber }
     });
 
     // Prepare receipt data
     const receiptData = {
-      transactionId: transactionId,
+      transactionId: transaction.id,
       reference: idempotencyKey,
       amount: amount,
       type: 'bill_payment',
       beneficiaryName: beneficiary.name,
-      beneficiaryAccount: beneficiary.identifier,
-      billerName: beneficiary.metadata?.billerName || 'Unknown Biller',
+      beneficiaryAccount: accountNumber,
+      billerName: billerName,
+      billPaymentReceipt: billPaymentReceipt,
       purchasedAt: new Date().toISOString(),
-      status: 'completed'
+      status: 'completed',
+      useMobileMartAPI,
+      ...(useMobileMartAPI && mobileMartTransactionId ? {
+        mobilemartTransactionId: mobileMartTransactionId
+      } : {})
     };
 
     // Send notification to beneficiary if they are a MyMoolah user
@@ -2711,10 +2918,12 @@ router.post('/bills/pay', auth, async (req, res) => {
     res.json({
       success: true,
       data: {
-        transactionId,
+        transactionId: transaction.id,
         status: 'completed',
         reference: idempotencyKey,
-        beneficiaryIsMyMoolahUser: !!beneficiaryUser
+        receipt: billPaymentReceipt,
+        beneficiaryIsMyMoolahUser: !!beneficiaryUser,
+        usedMobileMartAPI: useMobileMartAPI
       }
     });
 
