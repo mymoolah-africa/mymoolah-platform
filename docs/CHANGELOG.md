@@ -13,6 +13,7 @@ Fixed electricity recipient creation and removal in UAT by correcting service pa
 - **Electricity Purchase**: Frontend now sends `acceptTerms`, backend accepts 8-digit meters for UAT tests.
 - **Electricity Txn Record**: Backend now populates required `VasTransaction` fields (transactionId, walletId, vasProductId, transactionType, totalAmount). Uses `topup` transaction type. Fixed `User.phone` → `User.phoneNumber`.
 - **Electricity Wallet Debit**: Backend now debits wallet and creates Transaction record for history. Frontend auto-displays Zap icon (red for debit).
+- **Electricity Transaction Details**: Click on electricity transactions in history to view token, meter info, and receipt details.
 
 ### **📝 Files Modified** ✅
 - `mymoolah-wallet-frontend/components/overlays/shared/BeneficiaryModal.tsx`

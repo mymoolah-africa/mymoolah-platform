@@ -2037,6 +2037,9 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     // Debit wallet for electricity purchase
     await wallet.debit(amount, 'payment');
 
+    // Generate electricity token
+    const electricityToken = `${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}`;
+
     // Create wallet ledger transaction for history
     const ledgerTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
     const { Transaction } = require('../models');
@@ -2050,6 +2053,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       description: `Electricity purchase for ${beneficiary.name}`,
       metadata: {
         beneficiaryId,
+        beneficiaryName: beneficiary.name,
         beneficiaryMeter: beneficiary.identifier,
         meterType: beneficiary.metadata?.meterType || 'Prepaid',
         supplierCode: 'flash',
@@ -2058,7 +2062,9 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         vasTransactionId: transaction.id,
         vasType: 'electricity',
         amountCents: amountInCentsValue,
-        channel: 'overlay_services'
+        channel: 'overlay_services',
+        electricityToken: electricityToken,
+        purchasedAt: new Date().toISOString()
       },
       currency: wallet.currency
     });
@@ -2079,7 +2085,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
         transactionId: transaction.id,
         status: 'completed',
         reference: idempotencyKey,
-        token: `${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}`
+        token: electricityToken
       }
     };
 
@@ -2105,8 +2111,7 @@ router.post('/electricity/purchase', auth, async (req, res) => {
       where: { phoneNumber: beneficiary.identifier }
     });
 
-    // Prepare token and receipt data
-    const electricityToken = purchaseResult.data?.token || `${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}-${Math.random().toString().slice(2, 6)}`;
+    // Prepare receipt data (token already generated earlier)
     const receiptData = {
       transactionId: purchaseResult.data?.transactionId || `TXN_${Date.now()}`,
       reference: idempotencyKey,

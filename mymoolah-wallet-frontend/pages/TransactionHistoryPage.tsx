@@ -6,6 +6,7 @@ import { APP_CONFIG } from '../config/app-config';
 
 // Import centralized transaction icon utility
 import { getTransactionIcon } from '../utils/transactionIcons.tsx';
+import { TransactionDetailModal } from '../components/TransactionDetailModal';
 
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -28,6 +29,7 @@ type TransactionStatus = 'completed' | 'pending' | 'failed';
 
 interface Transaction {
   id: string;
+  transactionId?: string;
   type: 'money_in' | 'money_out';
   amount: number;
   currency: 'ZAR';
@@ -61,6 +63,8 @@ export function TransactionHistoryPage() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [itemsPerPage] = useState(50);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Fetch transactions from API with keyset pagination
   const fetchTransactions = async (cursor?: string | null, append: boolean = false) => {
@@ -700,8 +704,8 @@ export function TransactionHistoryPage() {
                   className="hover:shadow-md transition-shadow cursor-pointer"
                   style={{ borderRadius: 'var(--mobile-border-radius)' }}
                   onClick={() => {
-                    // Future: Add transaction details modal/page
-            
+                    setSelectedTransaction(transaction);
+                    setShowDetailModal(true);
                   }}
                 >
                   <CardContent style={{ padding: 'var(--mobile-padding)' }}>
@@ -896,6 +900,16 @@ export function TransactionHistoryPage() {
           </Card>
         )}
       </div>
+
+      {/* Transaction Detail Modal */}
+      <TransactionDetailModal
+        isOpen={showDetailModal}
+        onClose={() => {
+          setShowDetailModal(false);
+          setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction}
+      />
     </div>
   );
 }
