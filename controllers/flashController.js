@@ -729,7 +729,7 @@ class FlashController {
                     supplierId: 'FLASH',
                     supplierProductId: 'FLASH_CASH_OUT_PIN',
                     productName: 'Flash Eezi Cash',
-                    vasType: 'bill_payment', // Using bill_payment as cash-out is a payment service
+                    vasType: 'cash_out',
                     transactionType: 'voucher',
                     provider: 'Flash',
                     networkType: 'local',
@@ -756,7 +756,7 @@ class FlashController {
                 userId: req.user.id,
                 walletId: wallet.walletId,
                 vasProductId: vasProduct.id,
-                vasType: 'bill_payment', // Using bill_payment as cash-out is a payment service
+                vasType: 'cash_out',
                 transactionType: 'voucher',
                 supplierId: 'FLASH',
                 supplierProductId: 'FLASH_CASH_OUT_PIN',
