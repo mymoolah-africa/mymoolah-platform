@@ -33,10 +33,15 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
 
   const isElectricity = transaction.metadata?.vasType === 'electricity' || 
                         transaction.description?.toLowerCase().includes('electricity');
+  
+  const isCashOut = transaction.metadata?.vasType === 'cash_out' ||
+                    transaction.description?.toLowerCase().includes('eezi cash') ||
+                    transaction.description?.toLowerCase().includes('cash out');
 
   const handleCopyToken = () => {
-    if (transaction.metadata?.electricityToken) {
-      navigator.clipboard.writeText(transaction.metadata.electricityToken);
+    const tokenToCopy = transaction.metadata?.electricityToken || transaction.metadata?.pin;
+    if (tokenToCopy) {
+      navigator.clipboard.writeText(tokenToCopy);
       // Optional: Show copied confirmation
       const button = document.querySelector('[data-copy-token]') as HTMLElement;
       if (button) {
@@ -223,7 +228,130 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                 borderBottom: '1px solid #e5e7eb',
                 marginBottom: '1rem',
                 marginTop: '1rem'
-              }}></div>
+              }}>              </div>
+            </>
+          )}
+
+          {/* Flash Cash-Out PIN (if available) */}
+          {isCashOut && transaction.metadata?.pin && (
+            <>
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#f3f4f6',
+                borderRadius: '12px',
+                border: '2px dashed #d1d5db'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    marginBottom: '8px'
+                  }}>
+                    Your EeziCash PIN
+                  </p>
+                  <p style={{
+                    fontFamily: 'Monaco, Courier, monospace',
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: '#1f2937',
+                    letterSpacing: '3px',
+                    marginBottom: '1rem'
+                  }}>
+                    {transaction.metadata.pin}
+                  </p>
+                  <Button
+                    onClick={handleCopyToken}
+                    data-copy-token
+                    variant="outline"
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      minHeight: '44px',
+                      borderRadius: '12px',
+                      width: '100%',
+                      backgroundColor: '#ffffff',
+                      border: '2px solid #2D8CCA',
+                      color: '#2D8CCA'
+                    }}
+                  >
+                    <Copy style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                    Copy PIN
+                  </Button>
+                </div>
+              </div>
+
+              {/* PIN Value and Fee Breakdown */}
+              {transaction.metadata?.faceValue && (
+                <div style={{
+                  padding: '1rem',
+                  backgroundColor: '#f8fafe',
+                  borderRadius: '12px',
+                  border: '1px solid #e2e8f0',
+                  marginTop: '1rem'
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '14px',
+                        color: '#6b7280'
+                      }}>
+                        PIN Value
+                      </span>
+                      <span style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#1f2937'
+                      }}>
+                        R {(transaction.metadata.faceValue / 100).toFixed(2)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '14px',
+                        color: '#6b7280'
+                      }}>
+                        Transaction Fee
+                      </span>
+                      <span style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        color: '#1f2937'
+                      }}>
+                        R {(transaction.metadata.transactionFee || transaction.metadata.customerFee / 100 || 8).toFixed(2)}
+                      </span>
+                    </div>
+                    <div style={{
+                      paddingTop: '0.75rem',
+                      borderTop: '1px solid #e5e7eb',
+                      display: 'flex',
+                      justifyContent: 'space-between'
+                    }}>
+                      <span style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        color: '#1f2937'
+                      }}>
+                        Total Paid
+                      </span>
+                      <span style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '16px',
+                        fontWeight: '700',
+                        color: '#dc2626'
+                      }}>
+                        R {Math.abs(transaction.amount).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
