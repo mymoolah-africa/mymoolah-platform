@@ -434,40 +434,7 @@ export function FlashEeziCashOverlay() {
                 </AlertDescription>
               </Alert>
 
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  style={{
-                    flex: '1',
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    minHeight: '44px',
-                    borderRadius: '12px'
-                  }}
-                  onClick={handleCopyCode}
-                >
-                  <Copy style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                  Copy
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  style={{
-                    flex: '1',
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    minHeight: '44px',
-                    borderRadius: '12px'
-                  }}
-                >
-                  <Share style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-                  Share
-                </Button>
-              </div>
-              
+              {/* Done Button */}
               <Button
                 onClick={() => navigate('/transact')}
                 style={{
