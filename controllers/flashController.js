@@ -788,13 +788,13 @@ class FlashController {
             console.log(`💳 Wallet debited: R${(totalCustomerChargeCents / 100).toFixed(2)}`);
 
             // Create TWO separate wallet ledger transactions for Transaction History
-            // Transaction 1: Total Charge (shown in Recent Transactions as total, split in History)
+            // Transaction 1: Face Value (R50.00 for Transaction History)
             const mainTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
             const mainTransaction = await Transaction.create({
                 transactionId: mainTransactionId,
                 userId: req.user.id,
                 walletId: wallet.walletId,
-                amount: totalCustomerChargeCents / 100, // Total charge (R58.00) for Recent Transactions
+                amount: faceValueCents / 100, // Face value only (R50.00)
                 type: 'payment',
                 status: 'completed',
                 description: 'Flash Eezi Cash purchase',
