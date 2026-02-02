@@ -349,8 +349,8 @@ class SecurityConfig {
       peach: false
     };
 
-    // Check Flash credentials
-    if (process.env.FLASH_API_KEY && process.env.FLASH_API_ENDPOINT) {
+    // Check Flash credentials (OAuth 2.0 credentials)
+    if (process.env.FLASH_CONSUMER_KEY && process.env.FLASH_CONSUMER_SECRET) {
       credentials.flash = true;
     }
 
