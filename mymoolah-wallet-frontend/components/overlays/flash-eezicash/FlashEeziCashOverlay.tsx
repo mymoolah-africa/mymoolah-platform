@@ -8,6 +8,8 @@ import { Label } from '../../ui/label';
 import { Separator } from '../../ui/separator';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { apiClient } from '../../../services/apiClient';
+import { APP_CONFIG } from '../../../config/app-config';
+import { getToken as getSessionToken } from '../../../utils/authToken';
 
 interface FlashVoucherData {
   amount: number;
@@ -32,8 +34,10 @@ export function FlashEeziCashOverlay() {
   const [amount, setAmount] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<Step>('form');
   const [pricing, setPricing] = useState<PricingInfo | null>(null);
-  const [errors, setErrors] = useState<{ amount?: string }>({});
+  const [errors, setErrors] = useState<{ amount?: string; balance?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [copiedPIN, setCopiedPIN] = useState(false);
   
   // Success state
   const [voucherToken, setVoucherToken] = useState<string>('');
@@ -48,14 +52,32 @@ export function FlashEeziCashOverlay() {
 
   // Quick amount options
   const quickAmounts = [50, 100, 150, 200, 300, 400, 500];
+  
+  // Transaction fee
+  const TRANSACTION_FEE = 8.00;
 
-  // SA mobile number validation
-  const validateSAMobile = (phone: string): boolean => {
-    if (!phone.trim()) return true; // Optional field
-    const cleanPhone = phone.trim().replace(/\s/g, '');
-    const saPhonePattern = /^(\+27|27|0)?[6-8][0-9]{8}$/;
-    return saPhonePattern.test(cleanPhone);
-  };
+  // Fetch wallet balance on mount
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      try {
+        const token = getSessionToken();
+        const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/wallets/balance`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          setWalletBalance(parseFloat(data.data.balance || 0));
+        }
+      } catch (error) {
+        console.error('Failed to fetch wallet balance:', error);
+      }
+    };
+    
+    fetchWalletBalance();
+  }, []);
 
   // Amount validation
   const validateAmount = (value: string): boolean => {
@@ -81,10 +103,23 @@ export function FlashEeziCashOverlay() {
     if (amount && validateAmount(amount)) {
       const amountValue = parseFloat(amount);
       setPricing(calculatePricing(amountValue));
+      
+      // Check wallet balance
+      if (walletBalance !== null) {
+        const totalRequired = amountValue + TRANSACTION_FEE;
+        if (totalRequired > walletBalance) {
+          setErrors(prev => ({ 
+            ...prev, 
+            balance: `Insufficient balance. Required: R${totalRequired.toFixed(2)}, Available: R${walletBalance.toFixed(2)}` 
+          }));
+        } else {
+          setErrors(prev => ({ ...prev, balance: undefined }));
+        }
+      }
     } else {
       setPricing(null);
     }
-  }, [amount]);
+  }, [amount, walletBalance]);
 
   // Handle amount input
   const handleAmountChange = (value: string) => {
@@ -107,14 +142,29 @@ export function FlashEeziCashOverlay() {
 
   // Validate form
   const validateForm = (): boolean => {
-    const newErrors: { amount?: string } = {};
+    const newErrors: { amount?: string; balance?: string } = {};
     
     if (!amount || !validateAmount(amount)) {
       newErrors.amount = 'Amount must be between R50 and R500';
     }
     
+    if (pricing && walletBalance !== null && pricing.totalPayable > walletBalance) {
+      newErrors.balance = `Insufficient balance. Required: R${pricing.totalPayable.toFixed(2)}, Available: R${walletBalance.toFixed(2)}`;
+    }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+  
+  // Handle copy PIN
+  const handleCopyPIN = async () => {
+    try {
+      await navigator.clipboard.writeText(voucherToken);
+      setCopiedPIN(true);
+      setTimeout(() => setCopiedPIN(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy PIN:', err);
+    }
   };
 
   // Handle form submission
@@ -184,9 +234,10 @@ export function FlashEeziCashOverlay() {
     }
   };
 
-  // Form can be submitted
-  const canSubmit = amount && validateAmount(amount) && !isSubmitting;
+  // Form can be submitted  
+  const canSubmit = amount && validateAmount(amount) && !isSubmitting && !errors.balance;
 
+  // Main container for all steps
   if (currentStep === 'success') {
     return (
       <div 
@@ -555,6 +606,61 @@ export function FlashEeziCashOverlay() {
           </p>
         </div>
       </div>
+
+      {/* Info Alert */}
+      <Alert className="bg-blue-50 border-blue-200 mb-6">
+        <Info className="h-4 w-4 text-blue-600" />
+        <AlertDescription style={{
+          fontFamily: 'Montserrat, sans-serif',
+          fontSize: 'var(--mobile-font-small)',
+          color: '#1e40af'
+        }}>
+          <strong>How it works:</strong> Create a cash-out voucher, visit any Flash trader, show the PIN, and receive cash. Transaction fee: R8.00.
+        </AlertDescription>
+      </Alert>
+
+      {/* Wallet Balance Display */}
+      {walletBalance !== null && (
+        <Card className="bg-gradient-to-r from-[#86BE41]/10 to-[#2D8CCA]/10 mb-6">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-[#86BE41]" />
+                <span style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: 'var(--mobile-font-small)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  color: '#374151'
+                }}>
+                  Available Balance
+                </span>
+              </div>
+              <span style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: 'var(--mobile-font-base)',
+                fontWeight: 'var(--font-weight-bold)',
+                color: '#1f2937'
+              }}>
+                R{walletBalance.toFixed(2)}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Insufficient Balance Error */}
+      {errors.balance && (
+        <Alert className="bg-red-50 border-red-200 mb-6">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertDescription style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: 'var(--mobile-font-small)',
+            color: '#dc2626'
+          }}>
+            {errors.balance}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Main Form Card */}
       <Card style={{
