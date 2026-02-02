@@ -191,8 +191,44 @@ async function syncFlashProducts() {
     log.data(`Staging Flash Supplier ID: ${stagingFlashSupplierId}`);
     console.log();
 
-    // Step 4: Export Flash products from UAT
-    log.step('Step 4: Exporting Flash products from UAT...');
+    // Step 4: Sync product brands first (required for foreign key)
+    log.step('Step 4: Syncing product brands from UAT to Staging...');
+    const uatBrandsResult = await uatPool.query(`
+      SELECT DISTINCT pb.id, pb.name, pb.category, pb."logoUrl", pb.metadata
+      FROM product_brands pb
+      JOIN products p ON p."brandId" = pb.id
+      WHERE p."supplierId" = $1
+    `, [uatFlashSupplierId]);
+    
+    const brandIdMapping = {}; // Map UAT brand IDs to Staging brand IDs
+    let brandsCreated = 0;
+    let brandsExisting = 0;
+    
+    for (const brand of uatBrandsResult.rows) {
+      const existingBrand = await stagingPool.query(
+        'SELECT id FROM product_brands WHERE name = $1',
+        [brand.name]
+      );
+      
+      if (existingBrand.rows.length > 0) {
+        brandIdMapping[brand.id] = existingBrand.rows[0].id;
+        brandsExisting++;
+      } else {
+        const newBrand = await stagingPool.query(`
+          INSERT INTO product_brands (name, category, "logoUrl", metadata, "createdAt", "updatedAt")
+          VALUES ($1, $2, $3, $4, NOW(), NOW())
+          RETURNING id
+        `, [brand.name, brand.category, brand.logoUrl, brand.metadata]);
+        brandIdMapping[brand.id] = newBrand.rows[0].id;
+        brandsCreated++;
+      }
+    }
+    
+    log.success(`Product brands synced: ${brandsCreated} created, ${brandsExisting} existing`);
+    console.log();
+    
+    // Step 5: Export Flash products from UAT
+    log.step('Step 5: Exporting Flash products from UAT...');
     const uatProductsResult = await uatPool.query(`
       SELECT 
         id, name, type, status, "supplierId", "brandId",
@@ -207,8 +243,8 @@ async function syncFlashProducts() {
     log.success(`Exported ${uatProducts.length} Flash products from UAT`);
     console.log();
 
-    // Step 5: Export Flash ProductVariants from UAT
-    log.step('Step 5: Exporting Flash ProductVariants from UAT...');
+    // Step 6: Export Flash ProductVariants from UAT
+    log.step('Step 6: Exporting Flash ProductVariants from UAT...');
     const uatVariantsResult = await uatPool.query(`
       SELECT 
         pv.id, pv."productId", pv."supplierId", pv."supplierProductId",
@@ -228,8 +264,8 @@ async function syncFlashProducts() {
     log.success(`Exported ${uatVariants.length} Flash ProductVariants from UAT`);
     console.log();
 
-    // Step 6: Sync products to Staging
-    log.step('Step 6: Syncing products to Staging...');
+    // Step 7: Sync products to Staging
+    log.step('Step 7: Syncing products to Staging...');
     let productsCreated = 0;
     let productsUpdated = 0;
     let productsSkipped = 0;
@@ -238,6 +274,17 @@ async function syncFlashProducts() {
     
     for (const product of uatProducts) {
       try {
+        // Get Staging brandId (map from UAT brandId)
+        const stagingBrandId = brandIdMapping[product.brandId];
+        if (!stagingBrandId) {
+          throw new Error(`Brand ID ${product.brandId} not found in mapping`);
+        }
+        
+        // Serialize JSONB fields properly
+        const denominationsJson = product.denominations ? JSON.stringify(product.denominations) : '[]';
+        const constraintsJson = product.constraints ? JSON.stringify(product.constraints) : null;
+        const metadataJson = product.metadata ? JSON.stringify(product.metadata) : null;
+        
         // Check if product exists in Staging
         const existingResult = await stagingPool.query(
           'SELECT id FROM products WHERE name = $1 AND "supplierId" = $2',
@@ -251,19 +298,21 @@ async function syncFlashProducts() {
             UPDATE products SET
               type = $1,
               status = $2,
-              "supplierProductId" = $3,
-              denominations = $4,
-              constraints = $5,
-              metadata = $6,
+              "brandId" = $3,
+              "supplierProductId" = $4,
+              denominations = $5::jsonb,
+              constraints = $6::jsonb,
+              metadata = $7::jsonb,
               "updatedAt" = NOW()
-            WHERE id = $7
+            WHERE id = $8
           `, [
             product.type,
             product.status,
+            stagingBrandId,
             product.supplierProductId,
-            product.denominations,
-            product.constraints,
-            product.metadata,
+            denominationsJson,
+            constraintsJson,
+            metadataJson,
             stagingProductId
           ]);
           
@@ -277,18 +326,18 @@ async function syncFlashProducts() {
               name, type, status, "supplierId", "brandId",
               "supplierProductId", denominations, constraints, metadata,
               "createdAt", "updatedAt"
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, $9::jsonb, NOW(), NOW())
             RETURNING id
           `, [
             product.name,
             product.type,
             product.status,
             stagingFlashSupplierId,
-            product.brandId,
+            stagingBrandId,
             product.supplierProductId,
-            product.denominations,
-            product.constraints,
-            product.metadata
+            denominationsJson,
+            constraintsJson,
+            metadataJson
           ]);
           
           productIdMapping[product.id] = insertResult.rows[0].id;
@@ -304,8 +353,8 @@ async function syncFlashProducts() {
     log.success(`Products synced: ${productsCreated} created, ${productsUpdated} updated, ${productsSkipped} skipped`);
     console.log();
 
-    // Step 7: Sync ProductVariants to Staging
-    log.step('Step 7: Syncing ProductVariants to Staging...');
+    // Step 8: Sync ProductVariants to Staging
+    log.step('Step 8: Syncing ProductVariants to Staging...');
     let variantsCreated = 0;
     let variantsUpdated = 0;
     let variantsSkipped = 0;
@@ -320,10 +369,18 @@ async function syncFlashProducts() {
           continue;
         }
         
+        // Serialize JSONB fields properly
+        const predefinedAmountsJson = variant.predefinedAmounts ? JSON.stringify(variant.predefinedAmounts) : null;
+        const denominationsJson = variant.denominations ? JSON.stringify(variant.denominations) : null;
+        const pricingJson = variant.pricing ? JSON.stringify(variant.pricing) : null;
+        const constraintsJson = variant.constraints ? JSON.stringify(variant.constraints) : null;
+        const metadataJson = variant.metadata ? JSON.stringify(variant.metadata) : null;
+        
         // Check if variant exists in Staging
+        const providerValue = variant.provider || 'Flash';
         const existingResult = await stagingPool.query(
           'SELECT id FROM product_variants WHERE "productId" = $1 AND "supplierId" = $2 AND provider = $3',
-          [stagingProductId, stagingFlashSupplierId, variant.provider]
+          [stagingProductId, stagingFlashSupplierId, providerValue]
         );
         
         if (existingResult.rows.length > 0) {
@@ -334,21 +391,21 @@ async function syncFlashProducts() {
               "vasType" = $2,
               "transactionType" = $3,
               "networkType" = $4,
-              "predefinedAmounts" = $5,
-              denominations = $6,
-              pricing = $7,
+              "predefinedAmounts" = $5::jsonb,
+              denominations = $6::jsonb,
+              pricing = $7::jsonb,
               "minAmount" = $8,
               "maxAmount" = $9,
               commission = $10,
               "fixedFee" = $11,
               "isPromotional" = $12,
               "promotionalDiscount" = $13,
-              constraints = $14,
+              constraints = $14::jsonb,
               status = $15,
               "isPreferred" = $16,
               priority = $17,
               "sortOrder" = $18,
-              metadata = $19,
+              metadata = $19::jsonb,
               "updatedAt" = NOW()
             WHERE id = $20
           `, [
@@ -356,21 +413,21 @@ async function syncFlashProducts() {
             variant.vasType,
             variant.transactionType,
             variant.networkType,
-            variant.predefinedAmounts,
-            variant.denominations,
-            variant.pricing,
+            predefinedAmountsJson,
+            denominationsJson,
+            pricingJson,
             variant.minAmount,
             variant.maxAmount,
             variant.commission,
             variant.fixedFee,
             variant.isPromotional,
             variant.promotionalDiscount,
-            variant.constraints,
+            constraintsJson,
             variant.status,
             variant.isPreferred,
             variant.priority,
             variant.sortOrder,
-            variant.metadata,
+            metadataJson,
             existingResult.rows[0].id
           ]);
           
@@ -387,30 +444,30 @@ async function syncFlashProducts() {
               "isPromotional", "promotionalDiscount", constraints,
               status, "isPreferred", priority, "sortOrder", metadata,
               "createdAt", "updatedAt"
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, NOW(), NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13, $14, $15, $16, $17::jsonb, $18, $19, $20, $21, $22::jsonb, NOW(), NOW())
           `, [
             stagingProductId,
             stagingFlashSupplierId,
             variant.supplierProductId,
             variant.vasType,
             variant.transactionType,
-            variant.provider,
+            providerValue,
             variant.networkType,
-            variant.predefinedAmounts,
-            variant.denominations,
-            variant.pricing,
+            predefinedAmountsJson,
+            denominationsJson,
+            pricingJson,
             variant.minAmount,
             variant.maxAmount,
             variant.commission,
             variant.fixedFee,
             variant.isPromotional,
             variant.promotionalDiscount,
-            variant.constraints,
+            constraintsJson,
             variant.status,
             variant.isPreferred,
             variant.priority,
             variant.sortOrder,
-            variant.metadata
+            metadataJson
           ]);
           
           variantsCreated++;
@@ -425,8 +482,8 @@ async function syncFlashProducts() {
     log.success(`ProductVariants synced: ${variantsCreated} created, ${variantsUpdated} updated, ${variantsSkipped} skipped`);
     console.log();
 
-    // Step 8: Verify sync completed successfully
-    log.step('Step 8: Verifying sync results...');
+    // Step 9: Verify sync completed successfully
+    log.step('Step 9: Verifying sync results...');
     
     const stagingProductsResult = await stagingPool.query(
       'SELECT COUNT(*) as count FROM products WHERE "supplierId" = $1',
