@@ -917,6 +917,7 @@ export function FlashEeziCashOverlay() {
             <Button
               onClick={handleSubmit}
               disabled={!canSubmit}
+              className="flex items-center justify-center gap-2"
               style={{
                 flex: '2',
                 background: canSubmit 
@@ -929,12 +930,13 @@ export function FlashEeziCashOverlay() {
                 fontSize: '14px',
                 fontWeight: '600',
                 minHeight: '48px',
-                padding: '0 16px',
-                cursor: canSubmit ? 'pointer' : 'not-allowed'
+                padding: '12px 20px',
+                cursor: canSubmit ? 'pointer' : 'not-allowed',
+                whiteSpace: 'nowrap'
               }}
             >
-              <CreditCard style={{ width: '18px', height: '18px', marginRight: '8px' }} />
-              Buy eeziCash Voucher
+              <CreditCard style={{ width: '18px', height: '18px', flexShrink: 0 }} />
+              <span>Buy eeziCash</span>
             </Button>
           </div>
         </CardContent>
