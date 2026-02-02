@@ -634,6 +634,51 @@ class FlashController {
                 });
             }
 
+            // Flash Cash-Out Fee Structure:
+            // Customer pays: Face value + R8.00 fee (VAT Inclusive)
+            // Flash charges MM: R5.00 (VAT Exclusive) = R5.75 (VAT Inclusive @ 15%)
+            // MM revenue: R8.00 - R5.75 = R2.25 (VAT Inclusive)
+            const faceValueCents = amount; // Amount in cents
+            const customerFeeCents = 800; // R8.00 flat fee (VAT Inclusive)
+            const totalCustomerChargeCents = faceValueCents + customerFeeCents;
+            
+            const flashFeeCents = 500; // R5.00 (VAT Exclusive)
+            const VAT_RATE = 0.15;
+            const flashFeeVatCents = Math.round(flashFeeCents * VAT_RATE); // R0.75
+            const flashFeeTotalCents = flashFeeCents + flashFeeVatCents; // R5.75 (VAT Inclusive)
+            
+            const mmRevenueCents = customerFeeCents - flashFeeTotalCents; // R8.00 - R5.75 = R2.25
+            
+            console.log(`💰 Flash Cash-Out Fee Breakdown:`);
+            console.log(`   Face Value: R${(faceValueCents / 100).toFixed(2)}`);
+            console.log(`   Customer Fee: R${(customerFeeCents / 100).toFixed(2)} (VAT Incl)`);
+            console.log(`   Total Customer Charge: R${(totalCustomerChargeCents / 100).toFixed(2)}`);
+            console.log(`   Flash Fee: R${(flashFeeCents / 100).toFixed(2)} (VAT Excl) + R${(flashFeeVatCents / 100).toFixed(2)} VAT = R${(flashFeeTotalCents / 100).toFixed(2)}`);
+            console.log(`   MM Revenue: R${(mmRevenueCents / 100).toFixed(2)}`);
+
+            // Get user wallet
+            const { Wallet, Transaction, VasTransaction, VasProduct } = require('../models');
+            const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+            
+            if (!wallet) {
+                return res.status(404).json({
+                    success: false,
+                    error: 'Wallet not found'
+                });
+            }
+
+            // Check sufficient balance
+            if (wallet.balance < (totalCustomerChargeCents / 100)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Insufficient wallet balance',
+                    details: {
+                        required: totalCustomerChargeCents / 100,
+                        available: wallet.balance
+                    }
+                });
+            }
+
             const requestData = {
                 reference,
                 accountNumber,
@@ -642,16 +687,159 @@ class FlashController {
                 ...(metadata && { metadata })
             };
 
-            const response = await this.authService.makeAuthenticatedRequest(
-                'POST',
-                '/cash-out-pin/purchase',
-                requestData
-            );
+            // Determine if using real Flash API or simulation
+            const useFlashAPI = process.env.FLASH_LIVE_INTEGRATION === 'true';
+            let flashResponse = null;
+            let cashOutPin = null;
+
+            if (useFlashAPI) {
+                // PRODUCTION/STAGING: Call real Flash API
+                console.log('📞 Flash: Calling cash-out PIN purchase API...');
+                flashResponse = await this.authService.makeAuthenticatedRequest(
+                    'POST',
+                    '/cash-out-pin/purchase',
+                    requestData
+                );
+                
+                console.log('✅ Flash: Cash-out response received');
+                
+                // Extract PIN from Flash response
+                const transaction = flashResponse.transaction || flashResponse;
+                cashOutPin = transaction?.pin || 
+                           transaction?.token || 
+                           transaction?.serialNumber || 
+                           transaction?.reference || 
+                           'PIN_PENDING';
+                
+                console.log(`✅ Flash cash-out PIN extracted: ${cashOutPin.substring(0, 4)}***`);
+            } else {
+                // UAT/SIMULATION: Generate fake PIN
+                cashOutPin = `EZ${Math.random().toString(36).substr(2, 8).toUpperCase()}`;
+                flashResponse = { simulated: true, pin: cashOutPin };
+                console.log(`🧪 Simulation: Generated fake PIN: ${cashOutPin}`);
+            }
+
+            // Create VasProduct for Flash cash-out if it doesn't exist
+            const [vasProduct] = await VasProduct.findOrCreate({
+                where: {
+                    supplierId: 'FLASH',
+                    supplierProductId: 'FLASH_CASH_OUT_PIN'
+                },
+                defaults: {
+                    supplierId: 'FLASH',
+                    supplierProductId: 'FLASH_CASH_OUT_PIN',
+                    productName: 'Flash Eezi Cash',
+                    vasType: 'cash_out',
+                    transactionType: 'voucher',
+                    provider: 'Flash',
+                    networkType: 'local',
+                    predefinedAmounts: null,
+                    minAmount: 5000, // R50
+                    maxAmount: 50000, // R500
+                    commission: 0,
+                    fixedFee: customerFeeCents, // R8.00 fee
+                    isPromotional: false,
+                    isActive: true,
+                    metadata: {
+                        flatFee: true,
+                        customerFee: customerFeeCents,
+                        flashFee: flashFeeTotalCents,
+                        mmRevenue: mmRevenueCents
+                    }
+                }
+            });
+
+            // Create VasTransaction record
+            const vasTransactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const vasTransaction = await VasTransaction.create({
+                transactionId: vasTransactionId,
+                userId: req.user.id,
+                walletId: wallet.walletId,
+                vasProductId: vasProduct.id,
+                vasType: 'cash_out',
+                transactionType: 'voucher',
+                supplierId: 'FLASH',
+                supplierProductId: 'FLASH_CASH_OUT_PIN',
+                amount: faceValueCents,
+                fee: customerFeeCents,
+                totalAmount: totalCustomerChargeCents,
+                mobileNumber: null,
+                status: 'completed',
+                reference: reference,
+                supplierReference: flashResponse?.transactionId || flashResponse?.reference || reference,
+                metadata: {
+                    productCode: productCode,
+                    accountNumber: accountNumber,
+                    pin: cashOutPin,
+                    faceValue: faceValueCents,
+                    customerFee: customerFeeCents,
+                    totalCharge: totalCustomerChargeCents,
+                    flashFee: flashFeeTotalCents,
+                    flashFeeVAT: flashFeeVatCents,
+                    mmRevenue: mmRevenueCents,
+                    useFlashAPI: useFlashAPI,
+                    flashResponse: useFlashAPI ? flashResponse : null,
+                    processedAt: new Date().toISOString()
+                }
+            });
+
+            // Debit wallet (face value + fee)
+            await wallet.debit(totalCustomerChargeCents / 100, 'payment');
+            console.log(`💳 Wallet debited: R${(totalCustomerChargeCents / 100).toFixed(2)}`);
+
+            // Create wallet ledger transaction
+            const ledgerTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const ledgerTransaction = await Transaction.create({
+                transactionId: ledgerTransactionId,
+                userId: req.user.id,
+                walletId: wallet.walletId,
+                amount: totalCustomerChargeCents / 100, // Total amount (face value + fee)
+                type: 'payment',
+                status: 'completed',
+                description: 'Flash Eezi Cash purchase',
+                metadata: {
+                    vasTransactionId: vasTransaction.id,
+                    vasType: 'cash_out',
+                    faceValue: faceValueCents / 100,
+                    transactionFee: customerFeeCents / 100,
+                    pin: cashOutPin,
+                    reference: reference,
+                    supplierCode: 'FLASH',
+                    channel: 'flash_controller'
+                },
+                currency: wallet.currency
+            });
+
+            // Post to ledger (Flash float account + VAT)
+            try {
+                const { postCommissionVatAndLedger } = require('../services/commissionVatService');
+                
+                await postCommissionVatAndLedger({
+                    commissionCents: flashFeeCents, // R5.00 to Flash (VAT Excl)
+                    supplierCode: 'FLASH',
+                    serviceType: 'cash_out',
+                    walletTransactionId: ledgerTransaction.transactionId,
+                    sourceTransactionId: vasTransaction.transactionId,
+                    idempotencyKey: reference,
+                    purchaserUserId: req.user.id
+                });
+                
+                console.log(`📒 Ledger posted: Flash fee R${(flashFeeCents / 100).toFixed(2)} + VAT R${(flashFeeVatCents / 100).toFixed(2)}`);
+            } catch (ledgerError) {
+                console.error('⚠️ Ledger posting failed:', ledgerError.message);
+                // Continue - transaction already completed
+            }
 
             res.json({
                 success: true,
                 data: {
-                    transaction: response,
+                    transaction: flashResponse,
+                    pin: cashOutPin,
+                    reference: reference,
+                    transactionId: vasTransactionId,
+                    amount: faceValueCents / 100,
+                    fee: customerFeeCents / 100,
+                    totalCharged: totalCustomerChargeCents / 100,
                     timestamp: new Date().toISOString()
                 }
             });

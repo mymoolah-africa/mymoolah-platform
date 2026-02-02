@@ -11,7 +11,6 @@ import { apiClient } from '../../../services/apiClient';
 
 interface FlashVoucherData {
   amount: number;
-  recipientPhone?: string;
   reference: string;
   accountNumber: string;
   productCode: string;
@@ -31,10 +30,9 @@ export function FlashEeziCashOverlay() {
   
   // Form state
   const [amount, setAmount] = useState<string>('');
-  const [recipientPhone, setRecipientPhone] = useState<string>('');
   const [currentStep, setCurrentStep] = useState<Step>('form');
   const [pricing, setPricing] = useState<PricingInfo | null>(null);
-  const [errors, setErrors] = useState<{ amount?: string; phone?: string }>({});
+  const [errors, setErrors] = useState<{ amount?: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Success state
@@ -67,18 +65,14 @@ export function FlashEeziCashOverlay() {
 
   // Calculate pricing based on amount
   const calculatePricing = (amountValue: number): PricingInfo => {
-    // Tiered commission structure
-    let commissionRate = 0.05; // 5% base rate
-    if (amountValue >= 300) commissionRate = 0.03; // 3% for higher amounts
-    if (amountValue >= 500) commissionRate = 0.02; // 2% for highest amounts
-    
-    const commission = Math.round(amountValue * commissionRate * 100) / 100;
+    // Flat transaction fee: R8.00 (VAT Inclusive)
+    const transactionFee = 8.00;
     
     return {
       faceValue: amountValue,
-      commission,
-      totalPayable: amountValue + commission,
-      commissionRate: commissionRate * 100
+      commission: transactionFee,
+      totalPayable: amountValue + transactionFee,
+      commissionRate: 0 // Not used - flat fee instead
     };
   };
 
@@ -104,15 +98,6 @@ export function FlashEeziCashOverlay() {
     }
   };
 
-  // Handle phone input
-  const handlePhoneChange = (value: string) => {
-    setRecipientPhone(value);
-    
-    // Clear phone error if valid
-    if (validateSAMobile(value)) {
-      setErrors(prev => ({ ...prev, phone: undefined }));
-    }
-  };
 
   // Handle quick amount selection
   const handleQuickAmount = (quickAmount: number) => {
@@ -122,14 +107,10 @@ export function FlashEeziCashOverlay() {
 
   // Validate form
   const validateForm = (): boolean => {
-    const newErrors: { amount?: string; phone?: string } = {};
+    const newErrors: { amount?: string } = {};
     
     if (!amount || !validateAmount(amount)) {
       newErrors.amount = 'Amount must be between R50 and R500';
-    }
-    
-    if (recipientPhone && !validateSAMobile(recipientPhone)) {
-      newErrors.phone = 'Please enter a valid SA mobile number';
     }
     
     setErrors(newErrors);
@@ -147,7 +128,6 @@ export function FlashEeziCashOverlay() {
       // Prepare request data for Flash API
       const requestData = {
         amount: Math.round(parseFloat(amount) * 100), // Convert to cents
-        recipientPhone: recipientPhone || undefined,
         reference: systemData.reference,
         accountNumber: systemData.accountNumber,
         productCode: parseInt(systemData.productCode) || 1, // Product code as integer
@@ -367,25 +347,6 @@ export function FlashEeziCashOverlay() {
                   </span>
                 </div>
 
-                {recipientPhone && (
-                  <div className="flex justify-between">
-                    <span style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      color: '#6b7280'
-                    }}>
-                      Recipient
-                    </span>
-                    <span style={{
-                      fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      color: '#1f2937'
-                    }}>
-                      {recipientPhone}
-                    </span>
-                  </div>
-                )}
               </div>
 
               {/* How to Cash Out */}
@@ -721,63 +682,6 @@ export function FlashEeziCashOverlay() {
             )}
           </div>
 
-          {/* Recipient Phone (Optional) */}
-          <div className="space-y-3">
-            <Label 
-              htmlFor="recipient-phone"
-              style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#1f2937'
-              }}
-            >
-              Recipient SA Mobile Number (optional)
-            </Label>
-            
-            <Input
-              id="recipient-phone"
-              type="tel"
-              placeholder="27 XX XXX XXXX"
-              value={recipientPhone}
-              onChange={(e) => handlePhoneChange(e.target.value)}
-              style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '14px',
-                fontWeight: '400',
-                borderRadius: '12px',
-                minHeight: '44px',
-                border: errors.phone ? '1px solid #dc2626' : '1px solid #e2e8f0'
-              }}
-              aria-describedby={errors.phone ? 'phone-error' : 'phone-help'}
-            />
-
-            <p 
-              id="phone-help"
-              style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '12px',
-                color: '#6b7280'
-              }}
-            >
-              Optional: Send voucher details via SMS
-            </p>
-
-            {errors.phone && (
-              <p 
-                id="phone-error"
-                style={{
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '12px',
-                  color: '#dc2626'
-                }}
-                role="alert"
-              >
-                {errors.phone}
-              </p>
-            )}
-          </div>
-
           {/* Pricing Summary */}
           {pricing && (
             <div style={{
@@ -821,7 +725,7 @@ export function FlashEeziCashOverlay() {
                     fontSize: '14px',
                     color: '#6b7280'
                   }}>
-                    Commission ({pricing.commissionRate}%)
+                    Transaction Fee
                   </span>
                   <span style={{
                     fontFamily: 'Montserrat, sans-serif',
@@ -862,7 +766,7 @@ export function FlashEeziCashOverlay() {
                 marginTop: '12px',
                 fontStyle: 'italic'
               }}>
-                Commission varies by volume/client. VAT included where applicable.
+                Transaction fee: R8.00 flat rate (VAT Inclusive)
               </p>
             </div>
           )}
