@@ -95,34 +95,31 @@ You are an expert AI coding agent specializing in building high-quality software
 
 ### **Rule 5: Git Workflow (CRITICAL)**
 
-- **OFFICIAL WORKFLOW (CONFIRMED - December 22, 2025)**:
-  1. **Local Development**: AI agent develops/edits code on local machine (`/Users/andremacbookpro/mymoolah/`)
-  2. **Commit Locally**: AI agent runs `git add . && git commit -m "[description]"` (user approves/executes in terminal)
-  3. **User Pushes to GitHub**: User manually runs `git push origin main` to push changes to GitHub
-  4. **Pull in Codespaces**: User manually runs `git pull origin main` in Codespaces to sync changes
-  5. **Test in Codespaces**: User tests the changes in Codespaces environment (production-like)
-  6. **GitHub is source of truth**: All environments sync from GitHub (Local → GitHub → Codespaces)
+- **⚠️ MANDATORY - READ EVERY SESSION**: After making any code or doc changes, the AI agent **MUST** run: (1) `git add . && git commit -m "[description]"` and (2) **`git push origin main`**. Never commit without pushing. Never leave the push for the user. This is non-negotiable.
 
-- **Important Notes**:
-  - **AI agent NEVER pushes to GitHub** - user always pushes manually
+- **OFFICIAL WORKFLOW (CONFIRMED - AI AGENT MUST COMMIT AND PUSH)**:
+  1. **Local Development**: AI agent develops/edits code on local machine (`/Users/andremacbookpro/mymoolah/`)
+  2. **Commit and push to main**: AI agent **MUST** run `git add . && git commit -m "[description]"` **AND** `git push origin main` after every change. No exceptions.
+  3. **Pull in Codespaces**: User runs `git pull origin main` in Codespaces to sync changes
+  4. **Test in Codespaces**: User tests the changes in Codespaces environment (production-like)
+  5. **GitHub is source of truth**: All environments sync from GitHub (Local → GitHub → Codespaces)
+
+- **CRITICAL - DO NOT SKIP**:
+  - **AI agent MUST ALWAYS run git commit AND push to main after making changes.** This is mandatory. Do not leave pushes for the user.
   - **Always develop locally first** - never develop directly in Codespaces
   - **Always test in Codespaces** - never test on local machine
   - **Local = Development**, **Codespaces = Testing/Staging**, **GitHub = Source of Truth**
 
 - **During work**: Make changes locally, update documentation
 
-- **After work (AI AGENT COMMITS LOCALLY - USER PUSHES)**:
-  1. AI agent runs `git add . && git commit -m "[descriptive message for all changes]"` (user approves/executes)
-  2. AI agent informs user: "✅ Changes committed locally. Please run: `git push origin main` to push to GitHub, then `git pull origin main` in Codespaces to test."
-  3. User pushes to GitHub: `git push origin main`
+- **After work (AI AGENT MUST COMMIT AND PUSH - MANDATORY)**:
+  1. AI agent runs `git add . && git commit -m "[descriptive message for all changes]"` (user approves/executes if in terminal)
+  2. **AI agent MUST then run `git push origin main`** - do not stop at commit. Push every time.
+  3. AI agent informs user: "✅ Changes committed and pushed to main. Pull in Codespaces (`git pull origin main`) to test."
   4. User pulls in Codespaces: `git pull origin main`
   5. User tests in Codespaces
 
-- **User actions (REQUIRED)**: 
-  - Approve/execute git commit commands
-  - Manually push to GitHub
-  - Manually pull in Codespaces
-  - Test changes in Codespaces
+- **User actions**: Pull in Codespaces and test. **Agent handles commit and push.**
 
 ---
 
@@ -190,7 +187,7 @@ vasType: 'cash_out' // Semantically correct, requires migration
 
 ### **Rule 7: Definition of Done (EVERY TASK)**
 
-Every task must have: (1) Clean code with zero linter errors, (2) Documentation updated in `docs/`, (3) Tests authored with run instructions, (4) Migrations with rollbacks, (5) Security review, (6) Restart statement, (7) Changes committed and pushed, (8) PR created if applicable. No hardcoded data - use real database transactions.
+Every task must have: (1) Clean code with zero linter errors, (2) Documentation updated in `docs/`, (3) Tests authored with run instructions, (4) Migrations with rollbacks, (5) Security review, (6) Restart statement, (7) **Changes committed and pushed by AI agent** (agent runs `git add . && git commit -m "..."` then `git push origin main`—do not skip push), (8) PR created if applicable. No hardcoded data - use real database transactions.
 
 ### **Rule 8: Banking-Grade Security (NON-NEGOTIABLE)**
 
@@ -253,14 +250,10 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
   - **Proactively create it** - don't wait for explicit "session end" signal
   - **AI agent MUST create and fill in** session log file completely with: session summary, tasks completed, key decisions, files modified, issues encountered, next steps, and important context for next agent
   - **AI agent MUST update** `docs/agent_handover.md` with official handover
-  - **AI agent MUST commit locally**: Run `git add . && git commit -m "[description]"` - user approves/executes
-  - **AI agent MUST inform user**: "✅ Changes committed locally. Please push to GitHub (`git push origin main`), then pull in Codespaces (`git pull origin main`) to test."
+  - **AI agent MUST commit AND push**: Run `git add . && git commit -m "[description]"` then **`git push origin main`** - every time after changes. No exceptions.
+  - **AI agent MUST inform user**: "✅ Changes committed and pushed to main. Pull in Codespaces (`git pull origin main`) to test."
 - **Integration**: Session logs (detailed chat history) + Agent handover (official status) = Complete continuity
-- **User actions**: 
-  - Approve/execute git commit command
-  - Push to GitHub manually
-  - Pull in Codespaces manually
-  - Test changes in Codespaces
+- **User actions**: Pull in Codespaces and test. **Agent always runs commit and push.**
 
 ### **Quick Post-Work Checklist (AI AGENT MUST COMPLETE - DO THIS WHEN WORK IS DONE, NOT WAITING FOR SESSION END)**
 
@@ -268,13 +261,10 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 - Update all relevant documentation
 - Update `docs/agent_handover.md` with official handover
 - Verify zero linter errors
-- **Commit all changes locally**: AI agent runs `git add . && git commit -m "[descriptive commit message for all changes including docs]"` (user approves/executes)
-- **Inform user of next steps**: Tell user: "✅ Changes committed locally. Please run these commands:
-  1. `git push origin main` (push to GitHub)
-  2. `git pull origin main` (in Codespaces to sync changes)
-  3. Test the changes in Codespaces"
+- **Commit AND push to main (MANDATORY)**: AI agent runs `git add . && git commit -m "[descriptive commit message]"` **then `git push origin main`**. Do not skip the push.
+- **Inform user**: "✅ Changes committed and pushed to main. Run `git pull origin main` in Codespaces to test."
 - **Important**: Create session log when work is done, not waiting for session end (user may close chat, lose connection, etc.)
-- **Workflow Reminder**: Local → Commit → Push to GitHub (user) → Pull in Codespaces (user) → Test in Codespaces (user)
+- **Workflow Reminder**: Local → **Commit + Push (agent)** → Pull in Codespaces (user) → Test in Codespaces (user)
 
 ---
 
@@ -282,7 +272,7 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 
 **ZERO TOLERANCE FOR SHORTCUTS**: NEVER use workarounds, quick fixes, or compromises when encountering errors. ALWAYS implement proper banking-grade solutions with migrations, proper enum values, and correct data models. Mojaloop/ISO 20022 compliance is mandatory. Data integrity is non-negotiable. See Rule 6A and docs/ZERO_SHORTCUTS_POLICY.md for details.
 
-GitHub is source of truth. Documentation is mandatory. Session logging is required for continuity and MUST be done by AI agent when work is complete (create, fill in, commit locally) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. **WORKFLOW**: AI agent develops locally → commits locally → user pushes to GitHub → user pulls in Codespaces → user tests in Codespaces. **IMPORTANT**: Any rules added to Cursor Settings must immediately be added to this .md file to keep them in sync.
+GitHub is source of truth. Documentation is mandatory. Session logging is required for continuity and MUST be done by AI agent when work is complete (create, fill in, commit locally) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. **WORKFLOW**: AI agent develops locally → **commits AND pushes to main (agent MUST do both every time)** → user pulls in Codespaces → user tests. **Agent must never leave push to the user.** **IMPORTANT**: Any rules added to Cursor Settings must immediately be added to this .md file to keep them in sync.
 
 **Current date**: December 22, 2025. Proceed with the user's coding request.
 
