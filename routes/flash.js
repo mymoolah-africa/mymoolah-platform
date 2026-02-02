@@ -11,6 +11,7 @@
 const express = require('express');
 const router = express.Router();
 const FlashController = require('../controllers/flashController');
+const auth = require('../middleware/auth');
 
 // Initialize Flash Controller
 const flashController = new FlashController();
@@ -99,10 +100,10 @@ router.post('/gift-vouchers/purchase', flashController.purchaseGiftVoucher.bind(
 /**
  * @route   POST /api/v1/flash/cash-out-pin/purchase
  * @desc    Purchase a Cash Out PIN
- * @access  Public
+ * @access  Private (requires authentication)
  * @body    { reference, accountNumber, amount, productCode, metadata? }
  */
-router.post('/cash-out-pin/purchase', flashController.purchaseCashOutPin.bind(flashController));
+router.post('/cash-out-pin/purchase', auth, flashController.purchaseCashOutPin.bind(flashController));
 
 /**
  * @route   POST /api/v1/flash/cash-out-pin/cancel
