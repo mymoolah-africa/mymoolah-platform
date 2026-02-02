@@ -195,8 +195,8 @@ async function syncFlashProducts() {
     log.step('Step 4: Exporting Flash products from UAT...');
     const uatProductsResult = await uatPool.query(`
       SELECT 
-        id, name, description, type, category, status,
-        "supplierId", "imageUrl", "iconUrl", tags, metadata,
+        id, name, type, status, "supplierId", "brandId",
+        "supplierProductId", denominations, constraints, metadata,
         "createdAt", "updatedAt"
       FROM products
       WHERE "supplierId" = $1
@@ -249,24 +249,20 @@ async function syncFlashProducts() {
           const stagingProductId = existingResult.rows[0].id;
           await stagingPool.query(`
             UPDATE products SET
-              description = $1,
-              type = $2,
-              category = $3,
-              status = $4,
-              "imageUrl" = $5,
-              "iconUrl" = $6,
-              tags = $7,
-              metadata = $8,
+              type = $1,
+              status = $2,
+              "supplierProductId" = $3,
+              denominations = $4,
+              constraints = $5,
+              metadata = $6,
               "updatedAt" = NOW()
-            WHERE id = $9
+            WHERE id = $7
           `, [
-            product.description,
             product.type,
-            product.category,
             product.status,
-            product.imageUrl,
-            product.iconUrl,
-            product.tags,
+            product.supplierProductId,
+            product.denominations,
+            product.constraints,
             product.metadata,
             stagingProductId
           ]);
@@ -278,21 +274,20 @@ async function syncFlashProducts() {
           // Create new product
           const insertResult = await stagingPool.query(`
             INSERT INTO products (
-              name, description, type, category, status,
-              "supplierId", "imageUrl", "iconUrl", tags, metadata,
+              name, type, status, "supplierId", "brandId",
+              "supplierProductId", denominations, constraints, metadata,
               "createdAt", "updatedAt"
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
             RETURNING id
           `, [
             product.name,
-            product.description,
             product.type,
-            product.category,
             product.status,
             stagingFlashSupplierId,
-            product.imageUrl,
-            product.iconUrl,
-            product.tags,
+            product.brandId,
+            product.supplierProductId,
+            product.denominations,
+            product.constraints,
             product.metadata
           ]);
           
