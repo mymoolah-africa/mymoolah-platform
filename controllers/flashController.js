@@ -787,39 +787,64 @@ class FlashController {
             await wallet.debit(totalCustomerChargeCents / 100, 'payment');
             console.log(`💳 Wallet debited: R${(totalCustomerChargeCents / 100).toFixed(2)}`);
 
-            // Create wallet ledger transaction
-            const ledgerTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
-            const ledgerTransaction = await Transaction.create({
-                transactionId: ledgerTransactionId,
+            // Create TWO separate wallet ledger transactions for Transaction History
+            // Transaction 1: PIN Face Value (R50.00)
+            const mainTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const mainTransaction = await Transaction.create({
+                transactionId: mainTransactionId,
                 userId: req.user.id,
                 walletId: wallet.walletId,
-                amount: totalCustomerChargeCents / 100, // Total amount (face value + fee)
+                amount: faceValueCents / 100, // Face value only (R50.00)
                 type: 'payment',
                 status: 'completed',
                 description: 'Flash Eezi Cash purchase',
                 metadata: {
                     vasTransactionId: vasTransaction.id,
-                    vasType: 'cash_out', // For identification in transaction modal
-                    serviceType: 'cash_out', // Additional identifier
+                    vasType: 'cash_out',
+                    serviceType: 'cash_out',
                     faceValue: faceValueCents / 100,
                     transactionFee: customerFeeCents / 100,
                     pin: cashOutPin,
                     reference: reference,
                     supplierCode: 'FLASH',
-                    channel: 'flash_controller'
+                    channel: 'flash_controller',
+                    splitTransaction: true, // Indicates this is part of split display
+                    totalCharge: totalCustomerChargeCents / 100
+                },
+                currency: wallet.currency
+            });
+
+            // Transaction 2: Transaction Fee (R8.00)
+            const feeTransactionId = `FEE-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            await Transaction.create({
+                transactionId: feeTransactionId,
+                userId: req.user.id,
+                walletId: wallet.walletId,
+                amount: customerFeeCents / 100, // Fee only (R8.00)
+                type: 'fee',
+                status: 'completed',
+                description: 'Transaction Fee',
+                metadata: {
+                    relatedTransactionId: mainTransactionId,
+                    vasTransactionId: vasTransaction.id,
+                    vasType: 'cash_out',
+                    feeType: 'flash_cashout_fee',
+                    supplierCode: 'FLASH',
+                    channel: 'flash_controller',
+                    splitTransaction: true
                 },
                 currency: wallet.currency
             });
 
             // Post to ledger (Flash float account + VAT)
             try {
-                const { postCommissionVatAndLedger } = require('../services/commissionVatService');
+                const { postCommissionVatAndLedger } = require('../services/commissionVatAndLedger');
                 
                 await postCommissionVatAndLedger({
                     commissionCents: flashFeeCents, // R5.00 to Flash (VAT Excl)
                     supplierCode: 'FLASH',
                     serviceType: 'cash_out',
-                    walletTransactionId: ledgerTransaction.transactionId,
+                    walletTransactionId: mainTransactionId,
                     sourceTransactionId: vasTransaction.transactionId,
                     idempotencyKey: reference,
                     purchaserUserId: req.user.id
