@@ -788,13 +788,13 @@ class FlashController {
             console.log(`💳 Wallet debited: R${(totalCustomerChargeCents / 100).toFixed(2)}`);
 
             // Create TWO separate wallet ledger transactions for Transaction History
-            // Transaction 1: PIN Face Value (R50.00)
+            // Transaction 1: Total Charge (shown in Recent Transactions as total, split in History)
             const mainTransactionId = `TXN-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
             const mainTransaction = await Transaction.create({
                 transactionId: mainTransactionId,
                 userId: req.user.id,
                 walletId: wallet.walletId,
-                amount: faceValueCents / 100, // Face value only (R50.00)
+                amount: totalCustomerChargeCents / 100, // Total charge (R58.00) for Recent Transactions
                 type: 'payment',
                 status: 'completed',
                 description: 'Flash Eezi Cash purchase',
@@ -802,19 +802,21 @@ class FlashController {
                     vasTransactionId: vasTransaction.id,
                     vasType: 'cash_out',
                     serviceType: 'cash_out',
-                    faceValue: faceValueCents / 100,
-                    transactionFee: customerFeeCents / 100,
+                    faceValue: faceValueCents / 100, // R50.00 for modal display
+                    transactionFee: customerFeeCents / 100, // R8.00 for modal display
                     pin: cashOutPin,
                     reference: reference,
                     supplierCode: 'FLASH',
                     channel: 'flash_controller',
-                    splitTransaction: true, // Indicates this is part of split display
-                    totalCharge: totalCustomerChargeCents / 100
+                    displayGrossInRecent: true, // Show total in Recent Transactions
+                    displaySplitInHistory: true, // Show split in Transaction History
+                    netAmount: faceValueCents / 100, // R50.00 net
+                    feeAmount: customerFeeCents / 100 // R8.00 fee
                 },
                 currency: wallet.currency
             });
 
-            // Transaction 2: Transaction Fee (R8.00)
+            // Transaction 2: Fee Entry (for Transaction History split display)
             const feeTransactionId = `FEE-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
             await Transaction.create({
                 transactionId: feeTransactionId,
@@ -830,8 +832,7 @@ class FlashController {
                     vasType: 'cash_out',
                     feeType: 'flash_cashout_fee',
                     supplierCode: 'FLASH',
-                    channel: 'flash_controller',
-                    splitTransaction: true
+                    channel: 'flash_controller'
                 },
                 currency: wallet.currency
             });
