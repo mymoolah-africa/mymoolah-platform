@@ -641,7 +641,7 @@ export function FlashEeziCashOverlay() {
                 fontWeight: 'var(--font-weight-bold)',
                 color: '#1f2937'
               }}>
-                R{walletBalance.toFixed(2)}
+                R{walletBalance.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
             </div>
           </CardContent>
@@ -821,7 +821,7 @@ export function FlashEeziCashOverlay() {
                     fontWeight: '500',
                     color: '#1f2937'
                   }}>
-                    R{pricing.faceValue}
+                    R{pricing.faceValue.toFixed(2)}
                   </span>
                 </div>
 
@@ -927,13 +927,14 @@ export function FlashEeziCashOverlay() {
                 borderRadius: '12px',
                 fontFamily: 'Montserrat, sans-serif',
                 fontSize: '14px',
-                fontWeight: '500',
-                minHeight: '44px',
+                fontWeight: '600',
+                minHeight: '48px',
+                padding: '0 16px',
                 cursor: canSubmit ? 'pointer' : 'not-allowed'
               }}
             >
-              <CreditCard style={{ width: '16px', height: '16px', marginRight: '8px' }} />
-              Purchase eeziCash Voucher
+              <CreditCard style={{ width: '18px', height: '18px', marginRight: '8px' }} />
+              Buy eeziCash Voucher
             </Button>
           </div>
         </CardContent>
