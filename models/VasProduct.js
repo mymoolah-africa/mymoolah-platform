@@ -23,7 +23,7 @@ module.exports = (sequelize, DataTypes) => {
       comment: 'Display name for the product'
     },
     vasType: {
-      type: DataTypes.ENUM('airtime', 'data', 'electricity', 'bill_payment'),
+      type: DataTypes.ENUM('airtime', 'data', 'electricity', 'bill_payment', 'cash_out'),
       allowNull: false,
       comment: 'Type of VAS product'
     },
