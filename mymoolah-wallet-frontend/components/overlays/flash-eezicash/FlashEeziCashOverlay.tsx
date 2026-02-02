@@ -7,7 +7,7 @@ import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Separator } from '../../ui/separator';
 import { Alert, AlertDescription } from '../../ui/alert';
-import apiClient from '../../../services/apiClient';
+import { apiClient } from '../../../services/apiClient';
 
 interface FlashVoucherData {
   amount: number;
