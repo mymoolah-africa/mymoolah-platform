@@ -74,36 +74,85 @@ export function AirtimeDataOverlay() {
   const loadBeneficiaries = async (): Promise<Beneficiary[]> => {
     try {
       setLoadingState('loading');
-      const airtimeBeneficiaries = await beneficiaryService.getBeneficiaries('airtime');
-      const dataBeneficiaries = await beneficiaryService.getBeneficiaries('data');
+      // Single call: airtime and data both use airtime-data service; no need to call twice
+      const airtimeDataList = await beneficiaryService.getBeneficiaries('airtime');
 
-      // Banking-grade normalization: unify airtime & data entries by identifier (MSISDN)
-      // Prefer the most recently updated entry; default accountType to 'airtime' for display
-      const mapByMsisdn = new Map<string, AirtimeDataBeneficiary>();
-      [...airtimeBeneficiaries, ...dataBeneficiaries].forEach((b: any) => {
-        const key = String(b.identifier).trim();
-        const existing = mapByMsisdn.get(key);
-        if (!existing) {
-          mapByMsisdn.set(key, {
+      // Banking-grade: one display row per (identifier + network) so same number with different
+      // networks (e.g. eeziAirtime vs Global Airtime) are shown as separate selectable recipients
+      const normalizeNetwork = (network: string | null | undefined): string => {
+        if (!network) return 'unknown';
+        const n = String(network).toLowerCase().trim();
+        const map: Record<string, string> = {
+          vodacom: 'vodacom', mtn: 'mtn', cellc: 'cellc', 'cell c': 'cellc',
+          telkom: 'telkom', eeziairtime: 'eeziairtime', 'eezi airtime': 'eeziairtime',
+          global: 'global', 'global airtime': 'global', 'global data': 'global'
+        };
+        return map[n] || n;
+      };
+
+      const expanded: AirtimeDataBeneficiary[] = [];
+      const seenKey = new Set<string>();
+
+      (airtimeDataList as any[]).forEach((b: any) => {
+        const accounts = b.accounts || [];
+        const hasUnifiedAccounts = accounts.length > 0;
+
+        if (hasUnifiedAccounts) {
+          (accounts as any[]).forEach((acc: any) => {
+            if (acc.type !== 'airtime' && acc.type !== 'data') return;
+            const identifier = String(acc.identifier || b.identifier || '').trim();
+            if (!identifier) return;
+            const network = normalizeNetwork(acc.metadata?.network || acc.network || b.metadata?.network);
+            const key = `${identifier}|${network}`;
+            if (seenKey.has(key)) return;
+            seenKey.add(key);
+            const networkLabel = (acc.metadata?.network || acc.network || b.metadata?.network || network) as string;
+            const displayName = acc.metadata?.label || acc.label || (networkLabel ? `${b.name} (${networkLabel})` : b.name);
+            expanded.push({
+              id: `${b.id}-${acc.id}`,
+              name: displayName,
+              identifier,
+              accountType: 'airtime',
+              metadata: {
+                ...(b.metadata || {}),
+                network: networkLabel,
+                _beneficiaryId: b.id,
+                _accountId: acc.id
+              },
+              lastPaidAt: b.lastPaidAt,
+              timesPaid: (b.timesPaid ?? 0),
+              createdAt: b.createdAt,
+              updatedAt: b.updatedAt,
+              accounts: [acc],
+              serviceAccountRecords: b.serviceAccountRecords,
+              vasServices: b.vasServices
+            } as AirtimeDataBeneficiary);
+          });
+        } else {
+          const identifier = String(b.identifier || '').trim();
+          if (!identifier) return;
+          const network = normalizeNetwork(b.metadata?.network);
+          const key = `${identifier}|${network}`;
+          if (seenKey.has(key)) return;
+          seenKey.add(key);
+          expanded.push({
             ...(b as AirtimeDataBeneficiary),
             accountType: 'airtime',
           });
-        } else {
-          const existingUpdated = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-          const currentUpdated = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-          if (currentUpdated >= existingUpdated) {
-            mapByMsisdn.set(key, {
-              ...(b as AirtimeDataBeneficiary),
-              accountType: 'airtime',
-            });
-          }
         }
       });
 
-      const combined = Array.from(mapByMsisdn.values());
-      setBeneficiaries(combined);
+      // Stable sort: most recently updated first, then by name
+      expanded.sort((a, b) => {
+        const ta = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+        const tb = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+        if (tb !== ta) return tb - ta;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      setBeneficiaries(expanded);
       setLoadingState('idle');
-      return combined;
+      return expanded;
     } catch (err) {
       console.error('Failed to load beneficiaries:', err);
       setError('Failed to load beneficiaries');
@@ -558,8 +607,9 @@ export function AirtimeDataOverlay() {
       }
       
       // Log purchase request data for debugging
+      const realBeneficiaryId = (selectedBeneficiary as any).metadata?._beneficiaryId ?? selectedBeneficiary.id;
       const purchaseData = {
-        beneficiaryId: String(selectedBeneficiary.id),
+        beneficiaryId: String(realBeneficiaryId),
         productId: String(productIdForPurchase),
         amount: selectedProduct.price,
         idempotencyKey: String(idempotencyKey)
@@ -614,8 +664,9 @@ export function AirtimeDataOverlay() {
             setError('');
             
             const retryIdempotencyKey = generateIdempotencyKey();
+            const retryRealBeneficiaryId = (selectedBeneficiary as any)?.metadata?._beneficiaryId ?? selectedBeneficiary?.id;
             const retryPurchaseData = {
-              beneficiaryId: String(selectedBeneficiary?.id),
+              beneficiaryId: String(retryRealBeneficiaryId),
               productId: String(errorResponse.alternativeProduct.variantId || errorResponse.alternativeProduct.productId),
               amount: errorResponse.alternativeProduct.amount || errorResponse.alternativeProduct.price / 100,
               idempotencyKey: retryIdempotencyKey
@@ -719,21 +770,30 @@ export function AirtimeDataOverlay() {
     if (!beneficiaryToRemove) return;
     
     try {
-      // Banking-grade: Remove only airtime/data service accounts, not the entire beneficiary
-      // This allows the beneficiary to still exist for other services (e.g., if they have electricity)
-      // Never affects their user account if they're a registered MyMoolah user
-      await beneficiaryService.removeAllServicesOfType(beneficiaryToRemove.id, 'airtime-data');
+      const meta = (beneficiaryToRemove as any).metadata;
+      const realBeneficiaryId = meta?._beneficiaryId ?? beneficiaryToRemove.id;
+      const accounts = (beneficiaryToRemove as any).accounts || [];
 
-      // Optimistically update local state
+      // Banking-grade: Remove only the specific service account when this is an expanded row
+      // (one recipient = one account, e.g. eeziAirtime vs Global for same number). Otherwise remove all airtime-data.
+      if (meta?._accountId != null && accounts.length === 1) {
+        const serviceType = accounts[0].type === 'data' ? 'data' : 'airtime';
+        await unifiedBeneficiaryService.removeServiceFromBeneficiary(
+          String(realBeneficiaryId),
+          serviceType,
+          String(meta._accountId ?? accounts[0].id)
+        );
+      } else {
+        await beneficiaryService.removeAllServicesOfType(realBeneficiaryId, 'airtime-data');
+      }
+
       setBeneficiaries((prev) => prev.filter((b) => b.id !== beneficiaryToRemove.id));
       if (selectedBeneficiary?.id === beneficiaryToRemove.id) {
         setSelectedBeneficiary(null);
-    setSelectedAccountId(null);
+        setSelectedAccountId(null);
       }
 
-      // Refresh from API to stay in sync and ensure backend removal is reflected
       await loadBeneficiaries();
-
       setBeneficiaryToRemove(null);
       setShowConfirmationModal(false);
     } catch (error) {
