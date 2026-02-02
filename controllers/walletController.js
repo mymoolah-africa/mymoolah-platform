@@ -627,6 +627,53 @@ class WalletController {
         normalizedRows.push(...combinedRefunds, ...otherTransactions);
         // Re-sort by createdAt DESC
         normalizedRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        // Recent Transactions (Dashboard): Combine Flash Eezi Cash and EasyPay cash-out (face + fee) into ONE row showing total
+        // Transaction History (limit > 10) is unchanged and continues to show two lines (face + fee)
+        const flashCashoutGroups = new Map();
+        const easypayCashoutGroups = new Map();
+        const otherForRecent = [];
+        normalizedRows.forEach((tx) => {
+          const metadata = tx.metadata || {};
+          // Flash Eezi Cash: group by vasTransactionId (main has isFlashCashoutAmount, fee has isFlashCashoutFee)
+          if (metadata.isFlashCashoutAmount || metadata.isFlashCashoutFee) {
+            const key = metadata.vasTransactionId;
+            if (!key) { otherForRecent.push(tx); return; }
+            if (!flashCashoutGroups.has(key)) flashCashoutGroups.set(key, { main: null, fee: null });
+            const g = flashCashoutGroups.get(key);
+            if (metadata.isFlashCashoutAmount) g.main = tx;
+            else if (metadata.isFlashCashoutFee) g.fee = tx;
+            return;
+          }
+          // EasyPay cash-out: group by voucherId (main has isCashoutVoucherAmount, fee has isCashoutFee)
+          if ((metadata.isCashoutVoucherAmount || metadata.isCashoutFee) && metadata.voucherId && metadata.voucherType === 'easypay_cashout') {
+            const key = String(metadata.voucherId);
+            if (!easypayCashoutGroups.has(key)) easypayCashoutGroups.set(key, { main: null, fee: null });
+            const g = easypayCashoutGroups.get(key);
+            if (metadata.isCashoutVoucherAmount) g.main = tx;
+            else if (metadata.isCashoutFee) g.fee = tx;
+            return;
+          }
+          otherForRecent.push(tx);
+        });
+        const combinedCashoutRows = [];
+        flashCashoutGroups.forEach((g) => {
+          if (g.main && g.fee) {
+            const totalAmount = parseFloat(g.main.amount) + parseFloat(g.fee.amount);
+            combinedCashoutRows.push({ ...g.main, amount: totalAmount });
+          } else if (g.main) combinedCashoutRows.push(g.main);
+          else if (g.fee) combinedCashoutRows.push(g.fee);
+        });
+        easypayCashoutGroups.forEach((g) => {
+          if (g.main && g.fee) {
+            const totalAmount = parseFloat(g.main.amount) + parseFloat(g.fee.amount);
+            combinedCashoutRows.push({ ...g.main, amount: totalAmount });
+          } else if (g.main) combinedCashoutRows.push(g.main);
+          else if (g.fee) combinedCashoutRows.push(g.fee);
+        });
+        normalizedRows.length = 0;
+        normalizedRows.push(...combinedCashoutRows, ...otherForRecent);
+        normalizedRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 
       // CRITICAL FIX: Deduplicate by transaction ID to prevent duplicates
@@ -687,12 +734,12 @@ class WalletController {
           return false;
         }
         
-        // Dashboard: Exclude Transaction Fees (for top-up, cash-out, and EasyPay voucher transactions)
+        // Dashboard: Exclude Transaction Fees (for top-up, cash-out, Flash Eezi Cash, and EasyPay voucher transactions)
         // Also exclude individual fee refunds (they're combined with voucher refund)
-        // Transactions page: Keep Transaction Fees
+        // Transactions page: Keep Transaction Fees (shows two lines: face + fee)
         if (isDashboard && (
-          desc === 'transaction fee' || 
-          (tx.metadata && (tx.metadata.isTopUpFee || tx.metadata.isCashoutFee || tx.metadata.isEasyPayVoucherFee)) ||
+          desc === 'transaction fee' ||
+          (tx.metadata && (tx.metadata.isTopUpFee || tx.metadata.isCashoutFee || tx.metadata.isFlashCashoutFee || tx.metadata.isEasyPayVoucherFee)) ||
           (tx.metadata && tx.metadata.isCashoutFeeRefund && !tx.metadata.combinedRefund) || // Exclude individual cash-out fee refunds (already combined)
           (tx.metadata && tx.metadata.isEasyPayVoucherFeeRefund && !tx.metadata.combinedRefund) // Exclude individual EasyPay voucher fee refunds (already combined)
         )) {
