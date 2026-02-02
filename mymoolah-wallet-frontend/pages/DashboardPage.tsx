@@ -322,13 +322,22 @@ export function DashboardPage() {
 
   // Get transaction icon background color
   const getIconBackgroundColor = (transaction: Transaction) => {
-    // Check for voucher transactions first
-    if (transaction.description.toLowerCase().includes('voucher')) {
+    const desc = (transaction.description || '').toLowerCase();
+    const isVoucherOrEeziCash =
+      desc.includes('voucher') ||
+      desc.includes('eezi cash') ||
+      desc.includes('flash eezi') ||
+      transaction.metadata?.vasType === 'cash_out';
+    if (isVoucherOrEeziCash) {
       if (transaction.type === 'received') {
         return '#f0fdf4'; // Light green background for voucher redemptions
       } else {
-        return '#fef3f2'; // Light red background for voucher purchases
+        return '#fef3f2'; // Light red background for voucher/eeziCash purchases
       }
+    }
+    // Transaction Fee: use normal arrow background (red for debit)
+    if (desc === 'transaction fee' || transaction.metadata?.isFlashCashoutFee || transaction.metadata?.isCashoutFee) {
+      return '#fef3f2'; // Light red (fees are debits)
     }
     
     switch (transaction.type) {

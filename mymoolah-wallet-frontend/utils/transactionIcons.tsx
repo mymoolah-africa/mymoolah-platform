@@ -28,10 +28,33 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
   
   const description = (transaction.description || '').toLowerCase();
   const isCredit = transaction.amount > 0;
-  const iconColor = isCredit ? '#16a34a' : '#dc2626'; // Green for credit, red for debit
-  
-  // 1. VOUCHER TRANSACTIONS (Ticket icons)
+  const iconColor = isCredit ? '#16a34a' : '#dc2626'; // Green for credit, red for debit (always)
+
+  // 0. TRANSACTION FEE (normal arrows only – not Voucher icon)
+  const isTransactionFee =
+    description === 'transaction fee' ||
+    transaction.metadata?.isFlashCashoutFee === true ||
+    transaction.metadata?.isCashoutFee === true ||
+    transaction.metadata?.isEasyPayVoucherFee === true ||
+    transaction.metadata?.isTopUpFee === true ||
+    transaction.type === 'fee';
+  if (isTransactionFee) {
+    if (isCredit) {
+      return <ArrowDownLeft style={{ ...iconStyle, color: '#16a34a' }} />;
+    }
+    return <ArrowUpRight style={{ ...iconStyle, color: '#dc2626' }} />;
+  }
+
+  // 1. VOUCHER / EEZICASH / CASH-OUT (Ticket icon – green for credit, red for debit)
+  const isEeziCashOrCashOut =
+    description.includes('eezi cash') ||
+    description.includes('flash eezi') ||
+    description.includes('cash-out') ||
+    transaction.metadata?.vasType === 'cash_out' ||
+    transaction.metadata?.isFlashCashoutAmount === true ||
+    transaction.metadata?.isCashoutVoucherAmount === true;
   const isVoucher =
+    isEeziCashOrCashOut ||
     description.includes('voucher') ||
     transaction.metadata?.productType === 'voucher' ||
     transaction.metadata?.voucher;
