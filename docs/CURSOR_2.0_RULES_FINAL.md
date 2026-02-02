@@ -141,6 +141,53 @@ You are an expert AI coding agent specializing in building high-quality software
 
 ## 🏗️ **DEVELOPMENT STANDARDS**
 
+### **Rule 6A: ZERO TOLERANCE FOR SHORTCUTS AND WORKAROUNDS (CRITICAL)**
+
+**NEVER EVER use shortcuts, workarounds, or "quick fixes" when encountering errors.**
+
+**ALWAYS implement proper banking-grade solutions:**
+
+- ❌ **FORBIDDEN**: Using wrong enum values as workarounds (e.g., using 'voucher' when 'cash_out' is needed)
+- ❌ **FORBIDDEN**: Skipping migrations to avoid "complexity"
+- ❌ **FORBIDDEN**: Hardcoding values instead of proper configuration
+- ❌ **FORBIDDEN**: Using placeholder logic instead of proper implementation
+- ❌ **FORBIDDEN**: "It works" mentality without proper architecture
+
+- ✅ **REQUIRED**: Create proper migrations for database schema changes
+- ✅ **REQUIRED**: Add enum values properly when needed
+- ✅ **REQUIRED**: Use semantically correct categorization
+- ✅ **REQUIRED**: Follow Mojaloop and ISO 20022 standards
+- ✅ **REQUIRED**: Implement proper data models (no hacks)
+
+**Example of WRONG approach:**
+```javascript
+// WRONG: Using 'voucher' as workaround for cash_out
+vasType: 'voucher' // This works but violates data integrity
+```
+
+**Example of CORRECT approach:**
+```javascript
+// CORRECT: Create migration to add cash_out to enum, then use it
+vasType: 'cash_out' // Semantically correct, requires migration
+```
+
+**Rationale:**
+- MyMoolah is a global award-winning banking platform
+- Security, compliance, and data integrity are NON-NEGOTIABLE
+- Shortcuts create technical debt and regulatory risks
+- Proper architecture is ALWAYS worth the extra 15 minutes
+
+**When encountering enum/schema errors:**
+1. STOP - Do NOT use workarounds
+2. CREATE proper migration to fix the schema
+3. UPDATE models with correct values
+4. TEST the proper solution
+5. DOCUMENT why the proper approach was needed
+
+**This rule supersedes all convenience considerations. Banking-grade quality is paramount.**
+
+---
+
 ### **Rule 7: Definition of Done (EVERY TASK)**
 
 Every task must have: (1) Clean code with zero linter errors, (2) Documentation updated in `docs/`, (3) Tests authored with run instructions, (4) Migrations with rollbacks, (5) Security review, (6) Restart statement, (7) Changes committed and pushed, (8) PR created if applicable. No hardcoded data - use real database transactions.
@@ -232,6 +279,8 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 ---
 
 ## ⚠️ **CRITICAL REMINDERS**
+
+**ZERO TOLERANCE FOR SHORTCUTS**: NEVER use workarounds, quick fixes, or compromises when encountering errors. ALWAYS implement proper banking-grade solutions with migrations, proper enum values, and correct data models. Mojaloop/ISO 20022 compliance is mandatory. Data integrity is non-negotiable. See Rule 6A and docs/ZERO_SHORTCUTS_POLICY.md for details.
 
 GitHub is source of truth. Documentation is mandatory. Session logging is required for continuity and MUST be done by AI agent when work is complete (create, fill in, commit locally) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. **WORKFLOW**: AI agent develops locally → commits locally → user pushes to GitHub → user pulls in Codespaces → user tests in Codespaces. **IMPORTANT**: Any rules added to Cursor Settings must immediately be added to this .md file to keep them in sync.
 
