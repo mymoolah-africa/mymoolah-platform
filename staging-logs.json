@@ -1,0 +1,2156 @@
+[
+  {
+    "insertId": "697f3d300003be4355e0e157",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:56.486986846Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:56.247Z] GET /api/v1/notifications?status=unread&limit=50 - 200 - 5ms",
+    "timestamp": "2026-02-01T11:46:56.245315Z"
+  },
+  {
+    "insertId": "697f3d300003acf57e6cd657",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:56.486986846Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:56.242Z] GET /api/v1/notifications?status=unread&limit=50 - IP: 34.8.79.152",
+    "timestamp": "2026-02-01T11:46:56.240885Z"
+  },
+  {
+    "insertId": "697f3d300003aadf29fd996d",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:56.486986846Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "🌐 GET /api/v1/notifications?status=unread&limit=50 - 2026-02-01T11:46:56.242Z - TLS: HTTP - Cipher: N/A",
+    "timestamp": "2026-02-01T11:46:56.240351Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.007143831s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://stagingwallet.mymoolah.africa/",
+      "remoteIp": "169.1.89.194",
+      "requestMethod": "GET",
+      "requestSize": "1065",
+      "requestUrl": "https://staging.mymoolah.africa/api/v1/notifications?status=unread&limit=50",
+      "responseSize": "1384",
+      "serverIp": "34.8.79.152",
+      "status": 200,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    },
+    "insertId": "697f3d300003c11ba103ef38",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-01T11:46:56.324575655Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "47842b48646863fe",
+    "timestamp": "2026-02-01T11:46:56.237567Z",
+    "trace": "projects/mymoolah-db/traces/65d4e0a678ff8064ba4d919cddc03b5a"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.001922730s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://stagingwallet.mymoolah.africa/",
+      "remoteIp": "169.1.89.194",
+      "requestMethod": "OPTIONS",
+      "requestSize": "839",
+      "requestUrl": "https://staging.mymoolah.africa/api/v1/notifications?status=unread&limit=50",
+      "responseSize": "523",
+      "serverIp": "34.8.79.152",
+      "status": 204,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    },
+    "insertId": "697f3d30000324f1f4549c06",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-01T11:46:56.324575655Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "ad02f6b410c78af3",
+    "timestamp": "2026-02-01T11:46:56.202671Z",
+    "trace": "projects/mymoolah-db/traces/c95ee64811aa9918ba4d919cddc0300d",
+    "traceSampled": true
+  },
+  {
+    "insertId": "697f3d260003cff1782993e1",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:46.497236163Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:46.251Z] GET /api/v1/notifications?status=unread&limit=50 - 200 - 5ms",
+    "timestamp": "2026-02-01T11:46:46.249841Z"
+  },
+  {
+    "insertId": "697f3d260003bef397ca77da",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:46.497236163Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:46.246Z] GET /api/v1/notifications?status=unread&limit=50 - IP: 34.8.79.152",
+    "timestamp": "2026-02-01T11:46:46.245491Z"
+  },
+  {
+    "insertId": "697f3d260003bdfed8671d54",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:46.497236163Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "🌐 GET /api/v1/notifications?status=unread&limit=50 - 2026-02-01T11:46:46.246Z - TLS: HTTP - Cipher: N/A",
+    "timestamp": "2026-02-01T11:46:46.245246Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.006664240s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://stagingwallet.mymoolah.africa/",
+      "remoteIp": "169.1.89.194",
+      "requestMethod": "GET",
+      "requestSize": "1064",
+      "requestUrl": "https://staging.mymoolah.africa/api/v1/notifications?status=unread&limit=50",
+      "responseSize": "1384",
+      "serverIp": "34.8.79.152",
+      "status": 200,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    },
+    "insertId": "697f3d260003d275d341b6c7",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-01T11:46:46.334065432Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "2ec2d0d3e05def3e",
+    "timestamp": "2026-02-01T11:46:46.242498Z",
+    "trace": "projects/mymoolah-db/traces/737a4990007cd6bdbd0eaed8f3231113"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.002312s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://stagingwallet.mymoolah.africa/",
+      "remoteIp": "169.1.89.194",
+      "requestMethod": "OPTIONS",
+      "requestSize": "839",
+      "requestUrl": "https://staging.mymoolah.africa/api/v1/notifications?status=unread&limit=50",
+      "responseSize": "523",
+      "serverIp": "34.8.79.152",
+      "status": 204,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    },
+    "insertId": "697f3d2600032cd386d448af",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-01T11:46:46.334065432Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "bb5759325c5d43ea",
+    "timestamp": "2026-02-01T11:46:46.204219Z",
+    "trace": "projects/mymoolah-db/traces/c87714e8c202676fbd0eaed8f32319ac"
+  },
+  {
+    "insertId": "697f3d1c0003d8c8bfdd00a6",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:36.506600674Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:36.253Z] GET /api/v1/notifications?status=unread&limit=50 - 200 - 4ms",
+    "timestamp": "2026-02-01T11:46:36.252104Z"
+  },
+  {
+    "insertId": "697f3d1c0003c80ece79dae1",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:36.506600674Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:36.249Z] GET /api/v1/notifications?status=unread&limit=50 - IP: 34.8.79.152",
+    "timestamp": "2026-02-01T11:46:36.247822Z"
+  },
+  {
+    "insertId": "697f3d1c0003c6fe5ed6302a",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:36.506600674Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "🌐 GET /api/v1/notifications?status=unread&limit=50 - 2026-02-01T11:46:36.248Z - TLS: HTTP - Cipher: N/A",
+    "timestamp": "2026-02-01T11:46:36.247550Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.006480761s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://stagingwallet.mymoolah.africa/",
+      "remoteIp": "169.1.89.194",
+      "requestMethod": "GET",
+      "requestSize": "1063",
+      "requestUrl": "https://staging.mymoolah.africa/api/v1/notifications?status=unread&limit=50",
+      "responseSize": "1384",
+      "serverIp": "34.8.79.152",
+      "status": 200,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    },
+    "insertId": "697f3d1c0003db7d83394642",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-01T11:46:36.343983126Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "ff2c029314f09dc2",
+    "timestamp": "2026-02-01T11:46:36.244722Z",
+    "trace": "projects/mymoolah-db/traces/8c090027adfcc746cdea08d13106ad96",
+    "traceSampled": true
+  },
+  {
+    "httpRequest": {
+      "latency": "0.001903751s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://stagingwallet.mymoolah.africa/",
+      "remoteIp": "169.1.89.194",
+      "requestMethod": "OPTIONS",
+      "requestSize": "838",
+      "requestUrl": "https://staging.mymoolah.africa/api/v1/notifications?status=unread&limit=50",
+      "responseSize": "523",
+      "serverIp": "34.8.79.152",
+      "status": 204,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    },
+    "insertId": "697f3d1c0003480a5e7b5439",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-01T11:46:36.343983126Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "07f31d949bfc65e7",
+    "timestamp": "2026-02-01T11:46:36.211498Z",
+    "trace": "projects/mymoolah-db/traces/9e7b73c3ccaf2b16cdea08d13106ad01"
+  },
+  {
+    "insertId": "697f3d120003d39a360eafc1",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:26.517059516Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:26.251Z] GET /api/v1/notifications?status=unread&limit=50 - 200 - 4ms",
+    "timestamp": "2026-02-01T11:46:26.250778Z"
+  },
+  {
+    "insertId": "697f3d120003c2c99a32745c",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:26.517059516Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:26.247Z] GET /api/v1/notifications?status=unread&limit=50 - IP: 34.8.79.152",
+    "timestamp": "2026-02-01T11:46:26.246473Z"
+  },
+  {
+    "insertId": "697f3d120003c1bc0dcff54d",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:26.517059516Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "🌐 GET /api/v1/notifications?status=unread&limit=50 - 2026-02-01T11:46:26.247Z - TLS: HTTP - Cipher: N/A",
+    "timestamp": "2026-02-01T11:46:26.246204Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.006880609s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://stagingwallet.mymoolah.africa/",
+      "remoteIp": "169.1.89.194",
+      "requestMethod": "GET",
+      "requestSize": "1064",
+      "requestUrl": "https://staging.mymoolah.africa/api/v1/notifications?status=unread&limit=50",
+      "responseSize": "1384",
+      "serverIp": "34.8.79.152",
+      "status": 200,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    },
+    "insertId": "697f3d120003d63822ef8f86",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-01T11:46:26.353933754Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "514dac147a529872",
+    "timestamp": "2026-02-01T11:46:26.243103Z",
+    "trace": "projects/mymoolah-db/traces/996cef817d602402af71c8c15f7935b7",
+    "traceSampled": true
+  },
+  {
+    "httpRequest": {
+      "latency": "0.001989720s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://stagingwallet.mymoolah.africa/",
+      "remoteIp": "169.1.89.194",
+      "requestMethod": "OPTIONS",
+      "requestSize": "838",
+      "requestUrl": "https://staging.mymoolah.africa/api/v1/notifications?status=unread&limit=50",
+      "responseSize": "523",
+      "serverIp": "34.8.79.152",
+      "status": 204,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    },
+    "insertId": "697f3d1200034880b186d5f8",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-01T11:46:26.353933754Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "4595ec944b31dd89",
+    "timestamp": "2026-02-01T11:46:26.211804Z",
+    "trace": "projects/mymoolah-db/traces/645bde36cdd61dd7af71c8c15f793c7f"
+  },
+  {
+    "insertId": "697f3d080003d22a6cc283fc",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:16.526373954Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:16.251Z] GET /api/v1/notifications?status=unread&limit=50 - 200 - 5ms",
+    "timestamp": "2026-02-01T11:46:16.250410Z"
+  },
+  {
+    "insertId": "697f3d080003c04a089b8a06",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:16.526373954Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:16.246Z] GET /api/v1/notifications?status=unread&limit=50 - IP: 34.8.79.152",
+    "timestamp": "2026-02-01T11:46:16.245834Z"
+  },
+  {
+    "insertId": "697f3d080003bcb417b1e982",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:16.526373954Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "🌐 GET /api/v1/notifications?status=unread&limit=50 - 2026-02-01T11:46:16.245Z - TLS: HTTP - Cipher: N/A",
+    "timestamp": "2026-02-01T11:46:16.244916Z"
+  },
+  {
+    "httpRequest": {
+      "latency": "0.008040172s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://stagingwallet.mymoolah.africa/",
+      "remoteIp": "169.1.89.194",
+      "requestMethod": "GET",
+      "requestSize": "1064",
+      "requestUrl": "https://staging.mymoolah.africa/api/v1/notifications?status=unread&limit=50",
+      "responseSize": "1384",
+      "serverIp": "34.8.79.152",
+      "status": 200,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    },
+    "insertId": "697f3d080003d5557b41c860",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-01T11:46:16.362323328Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "4b9fb41e202e6561",
+    "timestamp": "2026-02-01T11:46:16.241760Z",
+    "trace": "projects/mymoolah-db/traces/323e0fe5483155453890c11984651eea",
+    "traceSampled": true
+  },
+  {
+    "httpRequest": {
+      "latency": "0.001803250s",
+      "protocol": "HTTP/1.1",
+      "referer": "https://stagingwallet.mymoolah.africa/",
+      "remoteIp": "169.1.89.194",
+      "requestMethod": "OPTIONS",
+      "requestSize": "839",
+      "requestUrl": "https://staging.mymoolah.africa/api/v1/notifications?status=unread&limit=50",
+      "responseSize": "523",
+      "serverIp": "34.8.79.152",
+      "status": 204,
+      "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+    },
+    "insertId": "697f3d08000331a47541c4f5",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Frequests",
+    "receiveTimestamp": "2026-02-01T11:46:16.362323328Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "severity": "INFO",
+    "spanId": "abf43a78f9d7029c",
+    "timestamp": "2026-02-01T11:46:16.206353Z",
+    "trace": "projects/mymoolah-db/traces/fe2e49ca9f80eb483890c1198465141b"
+  },
+  {
+    "insertId": "697f3d040000fe32e16270d7",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:12.196038152Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "[2026-02-01T11:46:12.066Z] POST /api/v1/overlay/electricity/purchase - 500 - 1724ms",
+    "timestamp": "2026-02-01T11:46:12.065074Z"
+  },
+  {
+    "insertId": "697f3d040000fd2d41abbf77",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "}",
+    "timestamp": "2026-02-01T11:46:12.064813Z"
+  },
+  {
+    "insertId": "697f3d040000fd2b4c3e1a41",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    '    at async /app/routes/overlayServices.js:1966:33'",
+    "timestamp": "2026-02-01T11:46:12.064811Z"
+  },
+  {
+    "insertId": "697f3d040000fd2811606e5a",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    '    at async MobileMartAuthService.makeAuthenticatedRequest (/app/services/mobilemartAuthService.js:232:30)\\n' +",
+    "timestamp": "2026-02-01T11:46:12.064808Z"
+  },
+  {
+    "insertId": "697f3d040000fd239289cc4b",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    '    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)\\n' +",
+    "timestamp": "2026-02-01T11:46:12.064803Z"
+  },
+  {
+    "insertId": "697f3d040000fd20d6528d8f",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    '    at Axios.request (/app/node_modules/axios/dist/node/axios.cjs:4731:41)\\n' +",
+    "timestamp": "2026-02-01T11:46:12.064800Z"
+  },
+  {
+    "insertId": "697f3d040000fd1e35a24ac7",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    '    at process.processTicksAndRejections (node:internal/process/task_queues:82:21)\\n' +",
+    "timestamp": "2026-02-01T11:46:12.064798Z"
+  },
+  {
+    "insertId": "697f3d040000fd1bd277dda8",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    '    at endReadableNT (node:internal/streams/readable:1400:12)\\n' +",
+    "timestamp": "2026-02-01T11:46:12.064795Z"
+  },
+  {
+    "insertId": "697f3d040000fd181e659440",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    '    at IncomingMessage.emit (node:events:529:35)\\n' +",
+    "timestamp": "2026-02-01T11:46:12.064792Z"
+  },
+  {
+    "insertId": "697f3d040000fd15cec8e6f6",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    '    at IncomingMessage.handleStreamEnd (/app/node_modules/axios/dist/node/axios.cjs:3491:11)\\n' +",
+    "timestamp": "2026-02-01T11:46:12.064789Z"
+  },
+  {
+    "insertId": "697f3d040000fd13eb8e3b1a",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    '    at settle (/app/node_modules/axios/dist/node/axios.cjs:2106:12)\\n' +",
+    "timestamp": "2026-02-01T11:46:12.064787Z"
+  },
+  {
+    "insertId": "697f3d040000fd10e34c0002",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  stack: 'AxiosError: Request failed with status code 400\\n' +",
+    "timestamp": "2026-02-01T11:46:12.064784Z"
+  },
+  {
+    "insertId": "697f3d040000fd0c387dd1e1",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  status: 400,",
+    "timestamp": "2026-02-01T11:46:12.064780Z"
+  },
+  {
+    "insertId": "697f3d040000fd0a7c1924f6",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  },",
+    "timestamp": "2026-02-01T11:46:12.064778Z"
+  },
+  {
+    "insertId": "697f3d040000fd07207320a4",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    fulcrumErrorCode: 1010",
+    "timestamp": "2026-02-01T11:46:12.064775Z"
+  },
+  {
+    "insertId": "697f3d040000fd0471aeca9e",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    traceId: '00-542e1391e6dcd421f0b6f12b4a77ffe7-8c0a77fbe1a40b2e-00',",
+    "timestamp": "2026-02-01T11:46:12.064772Z"
+  },
+  {
+    "insertId": "697f3d040000fd012ba19585",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    detail: 'MerchantProductId is required RequestId is required',",
+    "timestamp": "2026-02-01T11:46:12.064769Z"
+  },
+  {
+    "insertId": "697f3d040000fcffab0e2b6b",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    status: 400,",
+    "timestamp": "2026-02-01T11:46:12.064767Z"
+  },
+  {
+    "insertId": "697f3d040000fcfc0d9f8ca6",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    title: 'Merchant error',",
+    "timestamp": "2026-02-01T11:46:12.064764Z"
+  },
+  {
+    "insertId": "697f3d040000fcfa67d5f7fc",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    type: 'https://fulcrumswitch.com/error-codes#1010',",
+    "timestamp": "2026-02-01T11:46:12.064762Z"
+  },
+  {
+    "insertId": "697f3d040000fcf7bbc4f9c2",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  response: {",
+    "timestamp": "2026-02-01T11:46:12.064759Z"
+  },
+  {
+    "insertId": "697f3d040000fcf468af8973",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  error: 'Request failed with status code 400',",
+    "timestamp": "2026-02-01T11:46:12.064756Z"
+  },
+  {
+    "insertId": "697f3d040000fcefe788c956",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "❌ MobileMart Error Details: {",
+    "timestamp": "2026-02-01T11:46:12.064751Z"
+  },
+  {
+    "insertId": "697f3d040000fbe03381f01f",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "❌ MobileMart API Error: Request failed with status code 400",
+    "timestamp": "2026-02-01T11:46:12.064480Z"
+  },
+  {
+    "insertId": "697f3d040000fbdc91a9ef04",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "}",
+    "timestamp": "2026-02-01T11:46:12.064476Z"
+  },
+  {
+    "insertId": "697f3d040000fbd9467aa97c",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  fullUrl: 'https://fulcrumswitch.com/v1/utility/prevend?meterNumber=01068206711&amount=20'",
+    "timestamp": "2026-02-01T11:46:12.064473Z"
+  },
+  {
+    "insertId": "697f3d040000fbd7e8a19bd7",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  endpoint: '/utility/prevend?meterNumber=01068206711&amount=20',",
+    "timestamp": "2026-02-01T11:46:12.064471Z"
+  },
+  {
+    "insertId": "697f3d040000fbd4499a2096",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  message: 'Request failed with status code 400',",
+    "timestamp": "2026-02-01T11:46:12.064468Z"
+  },
+  {
+    "insertId": "697f3d040000fbd13d4880ce",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  },",
+    "timestamp": "2026-02-01T11:46:12.064465Z"
+  },
+  {
+    "insertId": "697f3d040000fbcfa3b1d6fa",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    fulcrumErrorCode: 1010",
+    "timestamp": "2026-02-01T11:46:12.064463Z"
+  },
+  {
+    "insertId": "697f3d040000fbccf488fc4c",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    traceId: '00-542e1391e6dcd421f0b6f12b4a77ffe7-8c0a77fbe1a40b2e-00',",
+    "timestamp": "2026-02-01T11:46:12.064460Z"
+  },
+  {
+    "insertId": "697f3d040000fbc93a8f0d6a",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    detail: 'MerchantProductId is required RequestId is required',",
+    "timestamp": "2026-02-01T11:46:12.064457Z"
+  },
+  {
+    "insertId": "697f3d040000fbc67382a58e",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    status: 400,",
+    "timestamp": "2026-02-01T11:46:12.064454Z"
+  },
+  {
+    "insertId": "697f3d040000fbc3e1fd8aea",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    title: 'Merchant error',",
+    "timestamp": "2026-02-01T11:46:12.064451Z"
+  },
+  {
+    "insertId": "697f3d040000fbc1034329a9",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    type: 'https://fulcrumswitch.com/error-codes#1010',",
+    "timestamp": "2026-02-01T11:46:12.064449Z"
+  },
+  {
+    "insertId": "697f3d040000fbbe71bbe18a",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  data: {",
+    "timestamp": "2026-02-01T11:46:12.064446Z"
+  },
+  {
+    "insertId": "697f3d040000fbbb5a59f7eb",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  mobilemartError: 'Merchant error',",
+    "timestamp": "2026-02-01T11:46:12.064443Z"
+  },
+  {
+    "insertId": "697f3d040000fbb58a1b9239",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  errorCode: 1010,",
+    "timestamp": "2026-02-01T11:46:12.064437Z"
+  },
+  {
+    "insertId": "697f3d040000fbb327c132c6",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  statusText: 'Bad Request',",
+    "timestamp": "2026-02-01T11:46:12.064435Z"
+  },
+  {
+    "insertId": "697f3d040000fbb02056723f",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  status: 400,",
+    "timestamp": "2026-02-01T11:46:12.064432Z"
+  },
+  {
+    "insertId": "697f3d040000fbab556a868b",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.400439001Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "❌ MobileMart Error Details: {",
+    "timestamp": "2026-02-01T11:46:12.064427Z"
+  },
+  {
+    "insertId": "697f3d040000fa351736c7a9",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstderr",
+    "receiveTimestamp": "2026-02-01T11:46:12.065355531Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "❌ MobileMart Auth Service: Error 400 Bad Request on /utility/prevend?meterNumber=01068206711&amount=20 (Code: 1010): Merchant error",
+    "timestamp": "2026-02-01T11:46:12.064053Z"
+  },
+  {
+    "insertId": "697f3d030004d652c6dac4d1",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "}",
+    "timestamp": "2026-02-01T11:46:11.317010Z"
+  },
+  {
+    "insertId": "697f3d030004d650d59a4ff8",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  dataType: 'object'",
+    "timestamp": "2026-02-01T11:46:11.317008Z"
+  },
+  {
+    "insertId": "697f3d030004d64d9ff3ed2b",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  },",
+    "timestamp": "2026-02-01T11:46:11.317005Z"
+  },
+  {
+    "insertId": "697f3d030004d64b6e0e3fb4",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    expires_in: 7200",
+    "timestamp": "2026-02-01T11:46:11.317003Z"
+  },
+  {
+    "insertId": "697f3d030004d64803e52662",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    token_type: 'Bearer',",
+    "timestamp": "2026-02-01T11:46:11.317Z"
+  },
+  {
+    "insertId": "697f3d030004d644f0d78d89",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    access_token: 'eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZDQkMtSFM1MTIiLCJraWQiOiJDMzRBQjAzNUY0OTE4NUE2NTMxRUQ1ODgwRDIxNkJDNzBEOTk3MDRFIiwidHlwIjoiYXQrand0IiwiY3R5IjoiSldUIn0.nN3z6IQW609WSrRO_Lqcn1qWMmBDn7ci8q2cAg8fIffDL2JEgXYLzXU5JQV1osCCDeJyOkVfX58U-V_dmsSBZ7402XTT1loCpLknDgdOGqbVpcunEpaMf3P_MjEP-UwBaDY-bkVoFN13P80hX14Xev278Fz_kZeGsro1TbvX6Yjb6mgKsCweh44hKwFcnl9cGG7ZXUb1EhKrMNb5ncsPEOiPCwYy-nQGFuVAnjadhsdXC9qucY7zhNky9Thi3SiWUeckV2aU3EP9Cb7jVooCO6kPUxSz0OnSbWulLYXPggyi4o67ipyU-25geeDZTehgWgQGznqZYBuVsVouAaDgow.Y7Gx5S09YP8GbC_sWQXAdg._Bzf79SQGTMe4dLPCV8zGPT6smTP5OB5LLz8nKqIbFem2vF90CqEPUnMgI1puY1OSv85qMb2nMGKR4z4X139QMLf-SuO__Xnd_-5EfiJB4SGaxk3VZAVcHHFr_leML2IXUThdl5r3_YrZ7jFYVxOyLRzHsbAUvallaYi5fyJjomzDJREKDjrWAJ3c5YsjK3XiUTOm3PByHcalQEvzxXP4EuAS1xdPzxcBSDY1XFXvYwjrSOOQBw6q0lXQOz7zvst4ovLL4ef0AlCvV1beYSN9O3IVHj1OU7M1ikf7YjO8EifVochHqdguR1B91K0LpK4utwwgiPQbsQJ1FohjEFX5Z6aJkwyDHwlSDOdIrwUUBb-ff_TfS19sCQE31MKiy6rtEWD0n5iUAfRMOm3W4vmFM3eQg0dlrVJwoxLNVvKiIrmf87MawejZxy4jAxvbivYIldvwYlmwWeytR2i3n325SSWbVm9mXrpq3djta0Ldl9VC2VECI51RGmcRZ3xG0OSTEZK1l1NnoBEDJDnxgk2nTiJWJMbNmZrfyOw4LvN7C_8Q5fiF6FK0wZmHDUArCxRws2eIs1ZLv2iSvE7Pi6xmR38FS6NaG4niwSlZfYQkQvBbk1fxnElhfHg7tdYIb3v35MdfMWQ2dnRW8r6VMLT43AovnNyXJpU4IqkWa0qXIpvlUBFHYmPsdWCIHL_eRevx8VUjIby1JQqU5gHufbUcQ-8SU_htguXur8iNf3LNlxYfjyh_2zSPNkhT6jo66zEPELWAu0TIWbRnKyk2R6Cpc50VZRsQM3dk3BTMnM8RerKLB9gNNhCWbHz8qwxvISAwROZe6pjGNVq4WTYIASAfi1Vy1U2ofZWQ-40OY4umzGsu96S7yCf2ZTVmw_D39N0apn24_tj2gKQjGLnFy48ZpHnFjzK9Y8vZywhz6nAseHu8cUrVfxUK_yPLYUhWrj9Tvv3SRYXhDq1qQZgZVFNrx9BCdTN2e64hpG9SR1lOvUwflZmD8fRvzeOBzFCSVmY6p5k4JdpuD82GJuYEfU27h5xqJnJxRBeycEoTEupLASPdtJGNzCkZhx9krgJswEHLHpY1Q-N5s6wFis9NVHG72aUmkSCigHE8eAebbU5A3yAOQ3cTflILjxGgqyV8wtIpdkbfVy7IHIaQySLybrHm0lEdHk43D3o3la2eCJyPwEBGBza4H0_lTlyijy8uMAjOPOetwGY1qZnmCnsI_LuJhs_3k6heZT1yU1H5OeepOsJUnsPmc28Y6nt9isV1fAst9hTsa8px85729CdgI50N7WK5eTxVzvAzCPgsn1MkTqSzfakmgvD7AFWwyTYsOW-JKQp1cN5Ca7Tatk5nyLzss8Qtl7IP12RFDohubOB34c.6CMFuYAVFCn1uxmf_w3ywc2dp4HdUK1Ju7mEgzCNwqk',",
+    "timestamp": "2026-02-01T11:46:11.316996Z"
+  },
+  {
+    "insertId": "697f3d030004d63cb3eef9ae",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  data: {",
+    "timestamp": "2026-02-01T11:46:11.316988Z"
+  },
+  {
+    "insertId": "697f3d030004d63aaa87d89a",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  },",
+    "timestamp": "2026-02-01T11:46:11.316986Z"
+  },
+  {
+    "insertId": "697f3d030004d637278c29c7",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    'x-cache': 'CONFIG_NOCACHE'",
+    "timestamp": "2026-02-01T11:46:11.316983Z"
+  },
+  {
+    "insertId": "697f3d030004d634064bc2f0",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    'x-azure-ref': '20260201T114610Z-165d6fc6f85j9wjbhC1JNBc3240000000uc0000000007dz9',",
+    "timestamp": "2026-02-01T11:46:11.316980Z"
+  },
+  {
+    "insertId": "697f3d030004d6317a10c09d",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    'x-powered-by': 'ASP.NET',",
+    "timestamp": "2026-02-01T11:46:11.316977Z"
+  },
+  {
+    "insertId": "697f3d030004d62e1c0cce37",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    'x-trace-id': '00-f3fa56ac13412f0be6983726ea8aaceb-eda488353bc5f5e1-01',",
+    "timestamp": "2026-02-01T11:46:11.316974Z"
+  },
+  {
+    "insertId": "697f3d030004d62c47c68fb4",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    'strict-transport-security': 'max-age=31536000; includeSubDomains',",
+    "timestamp": "2026-02-01T11:46:11.316972Z"
+  },
+  {
+    "insertId": "697f3d030004d6293a3208c6",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    vary: 'Accept-Encoding',",
+    "timestamp": "2026-02-01T11:46:11.316969Z"
+  },
+  {
+    "insertId": "697f3d030004d625178f9ee3",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    ],",
+    "timestamp": "2026-02-01T11:46:11.316965Z"
+  },
+  {
+    "insertId": "697f3d030004d6231c265739",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "      'ASLBSACORS=0003e284f765a5d71f112590a0c9561a844250e66a1c4fb0eaa00c6cbf7759539de9; SameSite=none; Path=/; Secure; HttpOnly;'",
+    "timestamp": "2026-02-01T11:46:11.316963Z"
+  },
+  {
+    "insertId": "697f3d030004d620ff91a0f7",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "      'ASLBSA=0003e284f765a5d71f112590a0c9561a844250e66a1c4fb0eaa00c6cbf7759539de9; Path=/; Secure; HttpOnly;',",
+    "timestamp": "2026-02-01T11:46:11.316960Z"
+  },
+  {
+    "insertId": "697f3d030004d61ddfce70b1",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "      'x-ms-routing-name=self; path=/; HttpOnly; Domain=webserver-prod-fulcrum-mobilemart.azurewebsites.net; Max-Age=3600; Secure; SameSite=None',",
+    "timestamp": "2026-02-01T11:46:11.316957Z"
+  },
+  {
+    "insertId": "697f3d030004d61a170b9488",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "      'TiPMix=86.66492608994812; path=/; HttpOnly; Domain=webserver-prod-fulcrum-mobilemart.azurewebsites.net; Max-Age=3600; Secure; SameSite=None',",
+    "timestamp": "2026-02-01T11:46:11.316954Z"
+  },
+  {
+    "insertId": "697f3d030004d616369b31b3",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    'set-cookie': [",
+    "timestamp": "2026-02-01T11:46:11.316950Z"
+  },
+  {
+    "insertId": "697f3d030004d61424864187",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    pragma: 'no-cache',",
+    "timestamp": "2026-02-01T11:46:11.316948Z"
+  },
+  {
+    "insertId": "697f3d030004d61196867e1f",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    expires: 'Thu, 01 Jan 1970 00:00:00 GMT',",
+    "timestamp": "2026-02-01T11:46:11.316945Z"
+  },
+  {
+    "insertId": "697f3d030004d60e6074c8ae",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    'cache-control': 'no-store',",
+    "timestamp": "2026-02-01T11:46:11.316942Z"
+  },
+  {
+    "insertId": "697f3d030004d60bee8606d2",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    connection: 'close',",
+    "timestamp": "2026-02-01T11:46:11.316939Z"
+  },
+  {
+    "insertId": "697f3d030004d6088ed6e624",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    'transfer-encoding': 'chunked',",
+    "timestamp": "2026-02-01T11:46:11.316936Z"
+  },
+  {
+    "insertId": "697f3d030004d6058d5794b0",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    'content-type': 'application/json;charset=UTF-8',",
+    "timestamp": "2026-02-01T11:46:11.316933Z"
+  },
+  {
+    "insertId": "697f3d030004d603a1347122",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "    date: 'Sun, 01 Feb 2026 11:46:11 GMT',",
+    "timestamp": "2026-02-01T11:46:11.316931Z"
+  },
+  {
+    "insertId": "697f3d030004d5ff97821dc3",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  headers: Object [AxiosHeaders] {",
+    "timestamp": "2026-02-01T11:46:11.316927Z"
+  },
+  {
+    "insertId": "697f3d030004d5fc27eb3eb3",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  statusText: 'OK',",
+    "timestamp": "2026-02-01T11:46:11.316924Z"
+  },
+  {
+    "insertId": "697f3d030004d5f9d4783975",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  status: 200,",
+    "timestamp": "2026-02-01T11:46:11.316921Z"
+  },
+  {
+    "insertId": "697f3d030004d5ef9399baf7",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:11.530199887Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "🔍 MobileMart HTTP Response: {",
+    "timestamp": "2026-02-01T11:46:11.316911Z"
+  },
+  {
+    "insertId": "697f3d0200055e5fd68db6cf",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:10.531376450Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "}",
+    "timestamp": "2026-02-01T11:46:10.351839Z"
+  },
+  {
+    "insertId": "697f3d0200055e5ba933302b",
+    "labels": {
+      "instanceId": "005eb6974c4ed3751247e66c2259d8ae32273b54b0a1c36f11d00e469dd1c39084cf69be4ad94c90048841f0397a8c64f9a7aa16b8d25cd2a49fb986cad3e3893f8dfe75f7f8fec292762d309e032a46146af065c909"
+    },
+    "logName": "projects/mymoolah-db/logs/run.googleapis.com%2Fstdout",
+    "receiveTimestamp": "2026-02-01T11:46:10.531376450Z",
+    "resource": {
+      "labels": {
+        "configuration_name": "mymoolah-backend-staging",
+        "location": "africa-south1",
+        "project_id": "mymoolah-db",
+        "revision_name": "mymoolah-backend-staging-00177-6g2",
+        "service_name": "mymoolah-backend-staging"
+      },
+      "type": "cloud_run_revision"
+    },
+    "textPayload": "  has_secret: true",
+    "timestamp": "2026-02-01T11:46:10.351835Z"
+  }
+]
