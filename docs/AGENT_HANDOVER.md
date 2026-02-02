@@ -320,6 +320,8 @@ Before proceeding with ANY change, pass these 4 gates:
 
 | ❌ Anti-Pattern | ✅ Correct Pattern | Why It Matters |
 |----------------|-------------------|----------------|
+| **Use shortcuts/workarounds for enum errors** | **Create proper migration to fix schema** | **Banking-grade data integrity** |
+| **Use wrong enum values as workarounds** | **Add new enum value via migration** | **Mojaloop/regulatory compliance** |
 | Write custom DB connection logic | Use `scripts/db-connection-helper.js` | Prevents password/SSL issues |
 | Run `npx sequelize-cli` directly | Use `./scripts/run-migrations-master.sh [env]` | Ensures correct environment |
 | Test on local machine | Test in Codespaces | Local != Production config |
@@ -328,6 +330,10 @@ Before proceeding with ANY change, pass these 4 gates:
 | Duplicate existing script | Search `scripts/` first | Avoid code drift |
 | Make assumptions | Read docs, ask user | Assumptions = bugs |
 | Skip testing | Test thoroughly in Codespaces | Bugs compound |
+
+**🚨 CRITICAL: ZERO TOLERANCE FOR SHORTCUTS**
+
+MyMoolah is a global award-winning banking platform. Shortcuts, workarounds, and "quick fixes" are ABSOLUTELY FORBIDDEN. Always implement proper banking-grade solutions even if they require migrations or additional work. Data integrity, regulatory compliance, and architectural correctness are NON-NEGOTIABLE.
 
 ---
 
