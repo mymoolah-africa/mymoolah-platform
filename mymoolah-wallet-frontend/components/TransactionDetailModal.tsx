@@ -99,7 +99,7 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
         border: '1px solid #e2e8f0',
         borderRadius: '12px',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        maxWidth: '90vw',
+        maxWidth: '420px',
         width: '100%',
         maxHeight: '90vh',
         overflow: 'auto'
