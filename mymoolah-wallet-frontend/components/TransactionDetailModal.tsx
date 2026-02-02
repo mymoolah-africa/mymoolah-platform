@@ -99,7 +99,7 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
         border: '1px solid #e2e8f0',
         borderRadius: '12px',
         boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        maxWidth: '500px',
+        maxWidth: '90vw',
         width: '100%',
         maxHeight: '90vh',
         overflow: 'auto'
@@ -306,7 +306,7 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                         fontWeight: '600',
                         color: '#1f2937'
                       }}>
-                        R {(transaction.metadata.faceValue / 100).toFixed(2)}
+                        R {Number(transaction.metadata.faceValue).toFixed(2)}
                       </span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
