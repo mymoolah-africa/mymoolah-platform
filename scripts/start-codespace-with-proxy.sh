@@ -281,23 +281,29 @@ ensure_adc_valid() {
 start_proxy() {
   log "Starting Cloud SQL Auth Proxy on port ${PROXY_PORT}..."
   
-  # Remove expired ADC file if it exists but is invalid
-  # This forces the proxy to use gcloud user credentials instead
-  local adc_file="${HOME}/.config/gcloud/application_default_credentials.json"
-  if [ -f "$adc_file" ]; then
-    # Test if ADC can generate tokens - if not, remove the expired file
-    if ! gcloud auth application-default print-access-token >/dev/null 2>&1; then
-      log "Removing expired ADC file to use gcloud user credentials..."
-      rm -f "$adc_file"
-    fi
+  # Get access token from gcloud user credentials (works even when ADC are blocked)
+  local access_token=""
+  if command -v gcloud >/dev/null 2>&1; then
+    access_token=$(gcloud auth print-access-token 2>/dev/null || true)
   fi
   
-  nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
-    --auto-iam-authn \
-    --port "${PROXY_PORT}" \
-    --structured-logs \
-    --gcloud-auth \
-    > "${PROXY_LOG}" 2>&1 &
+  if [ -n "$access_token" ]; then
+    log "Using gcloud user credentials (access token)"
+    nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
+      --auto-iam-authn \
+      --port "${PROXY_PORT}" \
+      --structured-logs \
+      --token "$access_token" \
+      > "${PROXY_LOG}" 2>&1 &
+  else
+    # Fallback to default ADC behavior
+    log "Using default Application Default Credentials"
+    nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
+      --auto-iam-authn \
+      --port "${PROXY_PORT}" \
+      --structured-logs \
+      > "${PROXY_LOG}" 2>&1 &
+  fi
 
   local proxy_pid=$!
   log "Proxy started (PID: ${proxy_pid})"
