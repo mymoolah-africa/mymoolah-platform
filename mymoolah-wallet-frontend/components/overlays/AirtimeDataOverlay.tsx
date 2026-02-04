@@ -640,11 +640,12 @@ export function AirtimeDataOverlay() {
         console.log('⚠️ Using legacy string format for purchase:', productIdForPurchase);
       } else if (isOwnProduct) {
         setLoadingState('error');
-        const msg = 'No matching product for this amount. Please choose a product from the list.';
+        const msg = 'This amount isn\'t available for this recipient. Please pick a product from the list, or try a different amount.';
         setError(msg);
-        setErrorModalTitle('Product not found');
+        setErrorModalTitle('Amount not available');
         setErrorModalMessage(msg);
         setErrorModalType('error');
+        setCurrentStep('catalog'); // Close confirm sheet so only the error modal is visible
         setShowErrorModal(true);
         return;
       } else {

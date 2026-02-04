@@ -65,6 +65,7 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
         className="max-w-sm mx-auto"
+        aria-describedby="error-modal-description"
       >
         <DialogDescription id="error-modal-description" className="sr-only">
           {message || 'Error dialog content'}
