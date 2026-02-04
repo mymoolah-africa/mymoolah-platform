@@ -270,42 +270,12 @@ ensure_adc_valid() {
     log "⚠️  ADC file exists but cannot generate tokens (likely expired)"
   fi
   
-  # Only attempt refresh if we're in an interactive terminal
-  if [ -t 0 ] && [ -t 1 ]; then
-    log "Attempting to refresh Application Default Credentials (interactive mode)..."
-    log "You will need to authenticate via device code..."
-    log ""
-    
-    if gcloud auth application-default login --no-launch-browser; then
-      log "✅ ADC refreshed successfully"
-      # Give credentials a moment to propagate
-      sleep 2
-      
-      # Verify the refresh worked - test if we can generate tokens
-      if gcloud auth application-default print-access-token >/dev/null 2>&1; then
-        log "✅ ADC verification successful (can generate access tokens)"
-        return 0
-      else
-        error "❌ ADC refresh completed but cannot generate tokens"
-        return 1
-      fi
-    else
-      error "❌ Failed to refresh ADC"
-      error "If device code flow fails, try running manually:"
-      error "   gcloud auth application-default login --no-launch-browser"
-      return 1
-    fi
-  else
-    # Non-interactive mode - provide instructions
-    error "❌ ADC expired or invalid (non-interactive mode)"
-    error "Please run these commands to refresh ADC:"
-    error "   gcloud auth login --no-launch-browser"
-    error "   gcloud auth application-default login --no-launch-browser"
-    error "   gcloud config set project mymoolah-db"
-    error ""
-    error "Then restart the backend server."
-    return 1
-  fi
+  # ADC not available - just return failure
+  # The proxy can use user credentials from 'gcloud auth login' as fallback
+  # Don't attempt interactive ADC refresh - it may be blocked by org policy
+  warn "⚠️  ADC not available or expired"
+  warn "Proxy will attempt to use user credentials from 'gcloud auth login' instead"
+  return 1
 }
 
 start_proxy() {
