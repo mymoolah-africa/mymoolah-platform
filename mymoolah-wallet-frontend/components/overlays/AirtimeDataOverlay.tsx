@@ -483,21 +483,30 @@ export function AirtimeDataOverlay() {
   const handleOwnAirtimeAmount = () => {
     const amount = parseFloat(ownAirtimeAmount);
     if (amount && amount > 0 && amount <= 1000) {
-      const ownProduct: AirtimeDataProduct = {
-        id: `airtime_own_${Date.now()}`,
-        name: `${selectedBeneficiary?.metadata?.network || 'Vodacom'} Airtime Top-up`,
-        size: `R${amount.toFixed(2)}`,
-        price: amount,
-        provider: selectedBeneficiary?.metadata?.network || 'Vodacom',
-        type: 'airtime',
-        validity: 'Immediate',
-        isBestDeal: false,
-        supplier: 'flash',
-        description: 'Custom airtime amount',
-        commission: 0,
-        fixedFee: 0
-      };
-      setSelectedProduct(ownProduct);
+      // Prefer a catalog product with matching amount so we send a valid variantId
+      const match = catalog?.products?.find(
+        (p: any) => p.type === 'airtime' && (
+          Math.abs((p.price ?? 0) - amount) < 0.02 ||
+          (Array.isArray(p.denominations) && p.denominations.includes(Math.round(amount * 100)))
+        )
+      );
+      const product: AirtimeDataProduct = match
+        ? { ...match, name: match.name || `${selectedBeneficiary?.metadata?.network || 'Vodacom'} Airtime R${amount}`, size: `R${amount.toFixed(2)}`, price: amount }
+        : {
+            id: `airtime_own_${Date.now()}`,
+            name: `${selectedBeneficiary?.metadata?.network || 'Vodacom'} Airtime Top-up`,
+            size: `R${amount.toFixed(2)}`,
+            price: amount,
+            provider: selectedBeneficiary?.metadata?.network || 'Vodacom',
+            type: 'airtime',
+            validity: 'Immediate',
+            isBestDeal: false,
+            supplier: 'flash',
+            description: 'Custom airtime amount',
+            commission: 0,
+            fixedFee: 0
+          };
+      setSelectedProduct(product);
       setCurrentStep('confirm');
     }
   };
@@ -505,21 +514,30 @@ export function AirtimeDataOverlay() {
   const handleOwnDataAmount = () => {
     const amount = parseFloat(ownDataAmount);
     if (amount && amount > 0 && amount <= 1000) {
-      const ownProduct: AirtimeDataProduct = {
-        id: `data_own_${Date.now()}`,
-        name: `${selectedBeneficiary?.metadata?.network || 'Vodacom'} Data Top-up`,
-        size: `${amount.toFixed(0)}MB`,
-        price: amount,
-        provider: selectedBeneficiary?.metadata?.network || 'Vodacom',
-        type: 'data',
-        validity: '30 days',
-        isBestDeal: false,
-        supplier: 'flash',
-        description: 'Custom data amount',
-        commission: 0,
-        fixedFee: 0
-      };
-      setSelectedProduct(ownProduct);
+      // Prefer a catalog product with matching amount so we send a valid variantId
+      const match = catalog?.products?.find(
+        (p: any) => p.type === 'data' && (
+          Math.abs((p.price ?? 0) - amount) < 0.02 ||
+          (p.minAmount != null && Math.abs((p.minAmount / 100) - amount) < 0.02)
+        )
+      );
+      const product: AirtimeDataProduct = match
+        ? { ...match, name: match.name || `${selectedBeneficiary?.metadata?.network || 'Vodacom'} Data ${amount}MB`, size: `${amount.toFixed(0)}MB`, price: amount }
+        : {
+            id: `data_own_${Date.now()}`,
+            name: `${selectedBeneficiary?.metadata?.network || 'Vodacom'} Data Top-up`,
+            size: `${amount.toFixed(0)}MB`,
+            price: amount,
+            provider: selectedBeneficiary?.metadata?.network || 'Vodacom',
+            type: 'data',
+            validity: '30 days',
+            isBestDeal: false,
+            supplier: 'flash',
+            description: 'Custom data amount',
+            commission: 0,
+            fixedFee: 0
+          };
+      setSelectedProduct(product);
       setCurrentStep('confirm');
     }
   };
@@ -584,6 +602,24 @@ export function AirtimeDataOverlay() {
       
       const idempotencyKey = generateIdempotencyKey();
       
+      // Resolve "own" product (airtime_own_* / data_own_*) to a catalog variant when possible
+      let productToUse = selectedProduct;
+      const isOwnProduct = typeof selectedProduct.id === 'string' && /^(airtime|data)_own_/.test(selectedProduct.id);
+      if (isOwnProduct && catalog?.products?.length) {
+        const match = catalog.products.find(
+          (p: any) => p.type === selectedProduct.type && (
+            Math.abs((p.price ?? 0) - selectedProduct.price) < 0.02 ||
+            (selectedProduct.type === 'airtime' && Array.isArray(p.denominations) && p.denominations.includes(Math.round(selectedProduct.price * 100))) ||
+            (selectedProduct.type === 'data' && p.minAmount != null && Math.abs((p.minAmount / 100) - selectedProduct.price) < 0.02)
+          )
+        );
+        if (match && (match as any).variantId) {
+          productToUse = { ...selectedProduct, ...match, variantId: (match as any).variantId };
+        } else if (match) {
+          productToUse = { ...selectedProduct, ...match };
+        }
+      }
+      
       // Determine productId format for purchase endpoint
       // Backend supports two formats:
       // 1. Numeric variantId (from ProductVariant table - preferred for bestDeals)
@@ -591,18 +627,19 @@ export function AirtimeDataOverlay() {
       let productIdForPurchase: string | number;
       
       // CRITICAL: If variantId exists (from bestDeals/ProductVariant), use it directly
-      // The backend will look up ProductVariant by ID and find the corresponding VasProduct
-      if ((selectedProduct as any).variantId) {
-        productIdForPurchase = (selectedProduct as any).variantId;
+      if ((productToUse as any).variantId) {
+        productIdForPurchase = (productToUse as any).variantId;
         console.log('✅ Using variantId for purchase:', productIdForPurchase);
-      } else if ((selectedProduct as any).supplierCode && (selectedProduct as any).supplierProductId) {
-        // Fallback: Construct old format string (for legacy products)
-        const amountInCents = Math.round(selectedProduct.price * 100);
-        productIdForPurchase = `${(selectedProduct as any).vasType || selectedProduct.type}_${(selectedProduct as any).supplierCode}_${(selectedProduct as any).supplierProductId}_${amountInCents}`;
+      } else if ((productToUse as any).supplierCode && (productToUse as any).supplierProductId) {
+        const amountInCents = Math.round(productToUse.price * 100);
+        productIdForPurchase = `${(productToUse as any).vasType || productToUse.type}_${(productToUse as any).supplierCode}_${(productToUse as any).supplierProductId}_${amountInCents}`;
         console.log('⚠️ Using legacy string format for purchase:', productIdForPurchase);
+      } else if (isOwnProduct) {
+        setLoadingState('error');
+        setError('No matching product for this amount. Please choose a product from the list.');
+        return;
       } else {
-        // Last resort: use the product.id
-        productIdForPurchase = selectedProduct.id;
+        productIdForPurchase = productToUse.id;
         console.warn('⚠️ Using product.id as fallback:', productIdForPurchase);
       }
       
