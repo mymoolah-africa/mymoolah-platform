@@ -274,10 +274,11 @@ export function AirtimeDataOverlay() {
         }
       }
       
-      // Global Airtime (Flash): show all products (Vodacom, MTN, etc.) so user can pick e.g. "1GB R25"
-      if (beneficiaryNetwork === 'global') {
+      // Global Airtime (Flash): no network filter, but show only Flash products (recipient is Flash)
+      const isGlobalAirtimeBeneficiary = (beneficiaryNetwork === 'global');
+      if (isGlobalAirtimeBeneficiary) {
         beneficiaryNetwork = null;
-        console.log('🌐 Global Airtime beneficiary - showing all products (no network filter)');
+        console.log('🌐 Global Airtime (Flash) beneficiary - showing Flash products only (no network filter)');
       }
       
       // Debug logging - log the FULL beneficiary object to see structure
@@ -413,6 +414,14 @@ export function AirtimeDataOverlay() {
           const matches = productNetwork === beneficiaryNetworkNorm;
           console.log(`🔍 Airtime product filter: "${p.name}" (provider: ${p.provider}, extracted: ${productNetwork}) vs beneficiary (${beneficiaryNetworkNorm}) = ${matches}`);
           return matches;
+        })
+        // Global Airtime (Flash) recipient: show only Flash-supplied products
+        .filter((p: any) => {
+          if (!isGlobalAirtimeBeneficiary) return true;
+          const supplier = (p.supplierCode || p.supplier || '').toString().toUpperCase();
+          const isFlash = supplier === 'FLASH';
+          if (!isFlash) console.log(`🔍 Global Airtime: filtered out non-Flash product "${p.name}" (supplier: ${supplier || 'unknown'})`);
+          return isFlash;
         });
       
       const dataProds = extractProducts(dataComparison)
@@ -454,6 +463,14 @@ export function AirtimeDataOverlay() {
             console.log(`❌ Filtered out: "${p.name}" (${productNetwork}) - beneficiary is ${beneficiaryNetworkNorm}`);
           }
           return matches;
+        })
+        // Global Airtime (Flash) recipient: show only Flash-supplied products
+        .filter((p: any) => {
+          if (!isGlobalAirtimeBeneficiary) return true;
+          const supplier = (p.supplierCode || p.supplier || '').toString().toUpperCase();
+          const isFlash = supplier === 'FLASH';
+          if (!isFlash) console.log(`🔍 Global Airtime: filtered out non-Flash data product "${p.name}" (supplier: ${supplier || 'unknown'})`);
+          return isFlash;
         });
       
       // Create catalog in expected format
@@ -1798,7 +1815,7 @@ export function AirtimeDataOverlay() {
                         fontSize: '12px',
                         color: '#6b7280'
                       }}>
-                        Top-up international numbers
+                        Top-up international numbers · Flash
                       </p>
                     </div>
                   </div>
@@ -1863,7 +1880,7 @@ export function AirtimeDataOverlay() {
                         fontSize: '12px',
                         color: '#6b7280'
                       }}>
-                        Global data roaming packages
+                        Global data roaming packages · Flash
                       </p>
                     </div>
                   </div>
