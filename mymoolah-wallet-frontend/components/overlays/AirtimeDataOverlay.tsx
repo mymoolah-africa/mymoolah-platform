@@ -198,7 +198,10 @@ export function AirtimeDataOverlay() {
           'telkom': 'telkom',
           'eeziairtime': 'eeziairtime',
           'eezi airtime': 'eeziairtime',
-          'global': 'global'
+          'global': 'global',
+          'global-airtime': 'global',
+          'global airtime': 'global',
+          'global data': 'global'
         };
         return networkMap[normalized] || normalized;
       };
@@ -341,7 +344,7 @@ export function AirtimeDataOverlay() {
       
       // Helper to extract network from product name (NOT provider - provider is supplier like MOBILEMART/FLASH)
       const extractProductNetwork = (product: any): string => {
-        // CRITICAL: Check product name FIRST - it contains the network (e.g., "Vodacom Airtime", "MTN Airtime")
+        // CRITICAL: Check product name FIRST - it contains the network (e.g., "Vodacom Airtime", "MTN Airtime", "Global Airtime")
         if (product.productName || product.name) {
           const name = (product.productName || product.name).toLowerCase();
           if (name.includes('vodacom')) return 'vodacom';
@@ -349,6 +352,7 @@ export function AirtimeDataOverlay() {
           if (name.includes('cellc') || name.includes('cell c')) return 'cellc';
           if (name.includes('telkom')) return 'telkom';
           if (name.includes('eeziairtime') || name.includes('eezi airtime')) return 'eeziairtime';
+          if (name.includes('global')) return 'global';
         }
         
         // Fallback: Check if there's a network field directly (some products might have this)
@@ -636,7 +640,12 @@ export function AirtimeDataOverlay() {
         console.log('⚠️ Using legacy string format for purchase:', productIdForPurchase);
       } else if (isOwnProduct) {
         setLoadingState('error');
-        setError('No matching product for this amount. Please choose a product from the list.');
+        const msg = 'No matching product for this amount. Please choose a product from the list.';
+        setError(msg);
+        setErrorModalTitle('Product not found');
+        setErrorModalMessage(msg);
+        setErrorModalType('error');
+        setShowErrorModal(true);
         return;
       } else {
         productIdForPurchase = productToUse.id;
