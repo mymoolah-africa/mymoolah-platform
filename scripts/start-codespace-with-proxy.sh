@@ -391,7 +391,14 @@ trap cleanup EXIT INT TERM
 main() {
   ensure_in_project_root
   ensure_gcloud_loaded
-  ensure_adc_valid || exit 1
+  
+  # Try to ensure ADC, but don't fail if it doesn't work
+  # The proxy can use user credentials from 'gcloud auth login' as fallback
+  if ! ensure_adc_valid; then
+    warn "⚠️  ADC not available, but proxy will attempt to use user credentials from 'gcloud auth login'"
+    warn "This is fine if you're already authenticated with: gcloud auth login"
+  fi
+  
   stop_existing_proxy
   ensure_proxy_binary
   start_proxy
