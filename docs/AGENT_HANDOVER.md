@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-01 20:00  
-**Latest Feature**: Complete Flash API Integration (Cash-Out + Electricity)  
+**Last Updated**: 2026-02-02 12:00  
+**Latest Feature**: Global Airtime (Own Amount) variantId Fix + Git Workflow  
 **Document Version**: 2.8.1  
 **Classification**: Internal - Banking-Grade Operations Manual
 
@@ -51,14 +51,17 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 01, 2026 - 20:00)**
+### **Latest Achievement (February 02, 2026 - 12:00)**
+**Global Airtime Purchase Fix (Own Amount)** - Fixed 404 "Product not found in catalog" when purchasing Global airtime (Flash) via "own amount" flow. Frontend was sending synthetic product id (`airtime_own_*` / `data_own_*`); backend accepts only numeric variantId or legacy string format. AirtimeDataOverlay now resolves "own" products to a matching catalog product (type + amount) so purchase uses valid variantId; fallback at confirm step; clear error if no match. Session log and handover created; changes committed (user to push, then pull in CS for testing).
+
+### **Previous Achievement (February 01, 2026 - 20:00)**
 **Complete Flash API Integration** - Flash integration upgraded from "database label only" to "full production API integration". Integrated Flash cash-out overlay with real API (replaced simulation with real PIN extraction). Integrated Flash electricity purchase following MobileMart pattern (lookup meter + purchase flow). Environment-aware operation implemented (`FLASH_LIVE_INTEGRATION` flag). Token/PIN extraction from Flash API responses with comprehensive error handling. Transaction metadata includes Flash transaction details. Flash infrastructure (controller, auth service, routes) now 100% connected and production-ready. Ready for Staging testing with production credentials from Tia (Flash IT engineer).
 
 ### **Previous Achievement (February 01, 2026 - 17:00)**
 **Complete MobileMart Production Integration** - Full end-to-end implementation of electricity purchase with MobileMart production API (prevend + purchase flow, real 20-digit token extraction). Extended integration to bill payments and digital vouchers. All 5 MobileMart services now environment-aware (UAT simulation, Staging/Production real API). Successfully deployed to staging and tested with production credentials (R20 live electricity transaction confirmed). Transaction detail modal with token display (grouped by 4 digits, MMTP-aligned styling). All services production-ready.
 
-### **Next Priority (February 01, 2026 - 21:00)**
-**Flash Integration Testing** - Test Flash integration in Codespaces (cash-out and electricity). Add Flash production credentials to Staging Secret Manager (credentials received from Tia, Flash IT engineer). Verify token extraction, wallet debits, and transaction history. Monitor first live transactions. Optional: Extend Flash integration to airtime/data, bill payments, and vouchers following same pattern.
+### **Next Priority (February 02, 2026 - 12:00)**
+**Git workflow and CS testing** - User: from local run `git push origin main`. In Codespaces run `git pull origin main` then test Global airtime purchase (beneficiary Global Airtime (Flash), own amount e.g. R25 or pick product from list). Confirm no 404 and purchase completes. Optional: continue Flash integration testing (cash-out, electricity) in CS.
 
 ### **Previous Achievement (January 26, 2026 - 23:15)**
 **Documentation Consolidation & Sync** - Consolidated multiple conflicting development and onboarding guides into a single source of truth (`DEVELOPMENT_GUIDE.md`). Standardized environment configurations (ports, database access) and the official Git sync workflow across all documentation. Archived redundant files (`SETUP_GUIDE.md`, `PROJECT_ONBOARDING.md`) to prevent future drift.
