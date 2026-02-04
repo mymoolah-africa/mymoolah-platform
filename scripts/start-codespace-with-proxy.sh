@@ -289,17 +289,20 @@ start_proxy() {
   
   if [ -n "$access_token" ]; then
     log "Using gcloud user credentials (access token)"
+    log "Token obtained successfully (${#access_token} chars)"
+    
+    # Export token as environment variable for the proxy
+    export GOOGLE_OAUTH_ACCESS_TOKEN="$access_token"
+    
     nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
-      --auto-iam-authn \
       --port "${PROXY_PORT}" \
       --structured-logs \
-      --token "$access_token" \
+      --token "${access_token}" \
       > "${PROXY_LOG}" 2>&1 &
   else
     # Fallback to default ADC behavior
-    log "Using default Application Default Credentials"
+    log "⚠️  No access token obtained - falling back to ADC"
     nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
-      --auto-iam-authn \
       --port "${PROXY_PORT}" \
       --structured-logs \
       > "${PROXY_LOG}" 2>&1 &
