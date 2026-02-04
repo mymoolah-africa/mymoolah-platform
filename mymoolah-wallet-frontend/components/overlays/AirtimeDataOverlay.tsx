@@ -274,6 +274,12 @@ export function AirtimeDataOverlay() {
         }
       }
       
+      // Global Airtime (Flash): show all products (Vodacom, MTN, etc.) so user can pick e.g. "1GB R25"
+      if (beneficiaryNetwork === 'global') {
+        beneficiaryNetwork = null;
+        console.log('🌐 Global Airtime beneficiary - showing all products (no network filter)');
+      }
+      
       // Debug logging - log the FULL beneficiary object to see structure
       console.log('🔍 FULL Beneficiary object:', JSON.stringify(beneficiaryAny, null, 2));
       console.log('🔍 Beneficiary network extraction:', {
