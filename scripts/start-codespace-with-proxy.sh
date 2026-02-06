@@ -278,20 +278,41 @@ ensure_adc_valid() {
   return 1
 }
 
+# Try to obtain a gcloud access token; if none and interactive TTY, run gcloud auth login
+ensure_gcloud_token() {
+  local token=""
+  if command -v gcloud >/dev/null 2>&1; then
+    token=$(gcloud auth print-access-token 2>/dev/null || true)
+    if [ -z "$token" ]; then
+      token=$(gcloud auth application-default print-access-token 2>/dev/null || true)
+    fi
+  fi
+  if [ -n "$token" ]; then
+    echo "$token"
+    return 0
+  fi
+  # No token: if interactive and gcloud available, run auth login (send prompt to stderr so we only echo token)
+  if [ -t 0 ] && [ -t 1 ] && command -v gcloud >/dev/null 2>&1; then
+    log "No gcloud credentials found. Starting interactive login..."
+    log "Complete the sign-in in your browser, then paste the verification code when prompted."
+    if gcloud auth login --no-launch-browser >&2; then
+      token=$(gcloud auth print-access-token 2>/dev/null || true)
+      if [ -n "$token" ]; then
+        log "✅ gcloud login successful"
+        echo "$token"
+        return 0
+      fi
+    fi
+  fi
+  return 1
+}
+
 start_proxy() {
   log "Starting Cloud SQL Auth Proxy on port ${PROXY_PORT}..."
   
-  # Get access token: try (1) gcloud user credentials, (2) ADC
+  # Get access token: try (1) gcloud user credentials, (2) ADC, (3) interactive login
   local access_token=""
-  if command -v gcloud >/dev/null 2>&1; then
-    access_token=$(gcloud auth print-access-token 2>/dev/null || true)
-    if [ -z "$access_token" ]; then
-      access_token=$(gcloud auth application-default print-access-token 2>/dev/null || true)
-      [ -n "$access_token" ] && log "Using gcloud application-default credentials (ADC token)"
-    else
-      log "Using gcloud user credentials (access token)"
-    fi
-  fi
+  access_token=$(ensure_gcloud_token) || true
   
   if [ -n "$access_token" ]; then
     log "Token obtained successfully (${#access_token} chars)"
