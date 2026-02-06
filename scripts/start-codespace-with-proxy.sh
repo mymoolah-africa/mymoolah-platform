@@ -281,31 +281,54 @@ ensure_adc_valid() {
 start_proxy() {
   log "Starting Cloud SQL Auth Proxy on port ${PROXY_PORT}..."
   
-  # Get access token from gcloud user credentials (works even when ADC are blocked)
+  # Get access token: try (1) gcloud user credentials, (2) ADC
   local access_token=""
   if command -v gcloud >/dev/null 2>&1; then
     access_token=$(gcloud auth print-access-token 2>/dev/null || true)
+    if [ -z "$access_token" ]; then
+      access_token=$(gcloud auth application-default print-access-token 2>/dev/null || true)
+      [ -n "$access_token" ] && log "Using gcloud application-default credentials (ADC token)"
+    else
+      log "Using gcloud user credentials (access token)"
+    fi
   fi
   
   if [ -n "$access_token" ]; then
-    log "Using gcloud user credentials (access token)"
     log "Token obtained successfully (${#access_token} chars)"
-    
-    # Export token as environment variable for the proxy
     export GOOGLE_OAUTH_ACCESS_TOKEN="$access_token"
-    
     nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
       --port "${PROXY_PORT}" \
       --structured-logs \
       --token "${access_token}" \
       > "${PROXY_LOG}" 2>&1 &
   else
-    # Fallback to default ADC behavior
-    log "⚠️  No access token obtained - falling back to ADC"
-    nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
-      --port "${PROXY_PORT}" \
-      --structured-logs \
-      > "${PROXY_LOG}" 2>&1 &
+    # No token: only start proxy without --token if ADC file or env is present
+    local adc_ok=false
+    if [ -f "${HOME}/.config/gcloud/application_default_credentials.json" ]; then
+      adc_ok=true
+    fi
+    if [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ] && [ -f "${GOOGLE_APPLICATION_CREDENTIALS}" ]; then
+      adc_ok=true
+    fi
+    if [ "$adc_ok" = true ]; then
+      log "No gcloud token; starting proxy with ADC (file or GOOGLE_APPLICATION_CREDENTIALS)"
+      nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
+        --port "${PROXY_PORT}" \
+        --structured-logs \
+        > "${PROXY_LOG}" 2>&1 &
+    else
+      error "No Cloud SQL credentials available."
+      error "  - gcloud auth print-access-token returned nothing (run: gcloud auth login)"
+      error "  - ADC not found (run: gcloud auth application-default login)"
+      error "  - Google Workspaces / browser login does NOT provide gcloud credentials."
+      error ""
+      error "In Codespaces, run in a terminal:"
+      error "  gcloud auth login --no-launch-browser"
+      error "  (or) gcloud auth application-default login"
+      error ""
+      error "Then run this script again."
+      exit 1
+    fi
   fi
 
   local proxy_pid=$!
@@ -324,6 +347,12 @@ start_proxy() {
     else
       error "Proxy failed to start. Check logs: ${PROXY_LOG}"
       tail -20 "${PROXY_LOG}" 2>/dev/null || true
+      if grep -q "could not find default credentials" "${PROXY_LOG}" 2>/dev/null; then
+        error ""
+        error "Credentials missing. In Codespaces run:"
+        error "  gcloud auth login --no-launch-browser"
+        error "  (or) gcloud auth application-default login"
+      fi
       exit 1
     fi
   fi

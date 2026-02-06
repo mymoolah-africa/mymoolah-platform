@@ -24,18 +24,31 @@ else
   REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 fi
 
-# Get access token from gcloud (works when ADC is blocked by org policy)
+# Get access token: try user credentials, then ADC
 ACCESS_TOKEN=""
 if command -v gcloud >/dev/null 2>&1; then
   ACCESS_TOKEN=$(gcloud auth print-access-token 2>/dev/null || true)
+  if [ -z "$ACCESS_TOKEN" ]; then
+    ACCESS_TOKEN=$(gcloud auth application-default print-access-token 2>/dev/null || true)
+    [ -n "$ACCESS_TOKEN" ] && echo "🔑 Using gcloud application-default credentials (ADC)"
+  else
+    echo "🔑 Using gcloud user credentials (access token)"
+  fi
 fi
 
 if [ -n "$ACCESS_TOKEN" ]; then
-  echo "🔑 Using gcloud user credentials (access token)"
   TOKEN_FLAG="--token ${ACCESS_TOKEN}"
 else
-  echo "⚠️  No access token - using default credentials"
-  TOKEN_FLAG=""
+  # No token: only use ADC if file or env exists
+  if [ -f "${HOME}/.config/gcloud/application_default_credentials.json" ] || [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
+    echo "⚠️  No gcloud token - starting proxy with ADC (file or env)"
+    TOKEN_FLAG=""
+  else
+    echo -e "${RED}❌ No Cloud SQL credentials. Run: gcloud auth login --no-launch-browser${NC}"
+    echo "   Or: gcloud auth application-default login"
+    echo "   (Google Workspaces / browser login does NOT provide gcloud credentials.)"
+    exit 1
+  fi
 fi
 
 # Check UAT proxy (6543)
