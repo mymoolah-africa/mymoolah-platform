@@ -23,7 +23,7 @@
  */
 
 const crypto = require('crypto');
-const { Op } = require('sequelize');
+const { Op, fn, col } = require('sequelize');
 const {
   User,
   Wallet,
@@ -201,18 +201,19 @@ class UsdcTransactionService {
       };
     }
 
-    // Daily limit (rolling 24 hours)
+    // Daily limit (rolling 24 hours) - database aggregation only (no JS sum)
     const dailyCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-    const dailyTransactions = await Transaction.findAll({
+    const dailyRow = await Transaction.findOne({
+      attributes: [[fn('COALESCE', fn('SUM', fn('ABS', col('amount'))), 0), 'total']],
       where: {
         userId,
         'metadata.transactionType': 'usdc_send',
         status: { [Op.in]: ['completed', 'pending'] },
         createdAt: { [Op.gte]: dailyCutoff }
-      }
+      },
+      raw: true
     });
-    
-    const dailySum = dailyTransactions.reduce((sum, txn) => sum + Math.abs(txn.amount), 0);
+    const dailySum = parseInt(dailyRow?.total ?? 0, 10) || 0;
     const dailySumZar = dailySum / 100;
     
     if (dailySumZar + zarAmount > this.limits.daily) {
@@ -227,18 +228,19 @@ class UsdcTransactionService {
       };
     }
 
-    // Monthly limit (rolling 30 days)
+    // Monthly limit (rolling 30 days) - database aggregation only (no JS sum)
     const monthlyCutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const monthlyTransactions = await Transaction.findAll({
+    const monthlyRow = await Transaction.findOne({
+      attributes: [[fn('COALESCE', fn('SUM', fn('ABS', col('amount'))), 0), 'total']],
       where: {
         userId,
         'metadata.transactionType': 'usdc_send',
         status: { [Op.in]: ['completed', 'pending'] },
         createdAt: { [Op.gte]: monthlyCutoff }
-      }
+      },
+      raw: true
     });
-    
-    const monthlySum = monthlyTransactions.reduce((sum, txn) => sum + Math.abs(txn.amount), 0);
+    const monthlySum = parseInt(monthlyRow?.total ?? 0, 10) || 0;
     const monthlySumZar = monthlySum / 100;
     
     if (monthlySumZar + zarAmount > this.limits.monthly) {
@@ -261,18 +263,19 @@ class UsdcTransactionService {
         const daysSinceCreation = (Date.now() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
         
         if (daysSinceCreation <= 7) {
-          // Check daily limit to this beneficiary
-          const benefDailyTransactions = await Transaction.findAll({
+          // New beneficiary daily limit - database aggregation only (no JS sum)
+          const benefDailyRow = await Transaction.findOne({
+            attributes: [[fn('COALESCE', fn('SUM', fn('ABS', col('amount'))), 0), 'total']],
             where: {
               userId,
               'metadata.transactionType': 'usdc_send',
               'metadata.beneficiaryId': beneficiary.id,
               status: { [Op.in]: ['completed', 'pending'] },
               createdAt: { [Op.gte]: dailyCutoff }
-            }
+            },
+            raw: true
           });
-          
-          const benefDailySum = benefDailyTransactions.reduce((sum, txn) => sum + Math.abs(txn.amount), 0);
+          const benefDailySum = parseInt(benefDailyRow?.total ?? 0, 10) || 0;
           const benefDailySumZar = benefDailySum / 100;
           
           if (benefDailySumZar + zarAmount > this.limits.newBeneficiaryDaily) {
@@ -750,23 +753,64 @@ class UsdcTransactionService {
   }
 
   /**
+   * Get a single USDC transaction by ID for a user (banking-grade: service layer only)
+   *
+   * @param {number} userId - User ID (ownership check)
+   * @param {string} transactionId - Transaction ID
+   * @returns {Promise<Object|null>} Transaction DTO or null if not found
+   */
+  async getTransactionById(userId, transactionId) {
+    const transaction = await Transaction.findOne({
+      where: {
+        transactionId,
+        userId,
+        'metadata.transactionType': 'usdc_send'
+      }
+    });
+    if (!transaction) return null;
+    const meta = transaction.metadata || {};
+    return {
+      id: transaction.id,
+      transactionId: transaction.transactionId,
+      zarAmount: Math.abs(transaction.amount) / 100,
+      usdcAmount: parseFloat(meta.usdcAmount),
+      exchangeRate: parseFloat(meta.exchangeRate),
+      platformFee: (meta.platformFee || 0) / 100,
+      platformFeeVat: (meta.platformFeeVat || 0) / 100,
+      networkFee: (meta.networkFee || 0) / 100,
+      beneficiaryName: meta.beneficiaryName,
+      beneficiaryWalletAddress: meta.beneficiaryWalletAddress,
+      beneficiaryCountry: meta.beneficiaryCountry,
+      beneficiaryRelationship: meta.beneficiaryRelationship,
+      purpose: meta.beneficiaryPurpose,
+      valrOrderId: meta.valrOrderId,
+      valrWithdrawalId: meta.valrWithdrawalId,
+      blockchainTxHash: meta.blockchainTxHash,
+      blockchainStatus: meta.blockchainStatus,
+      blockchainConfirmations: meta.blockchainConfirmations,
+      status: transaction.status,
+      complianceHold: meta.complianceHold,
+      createdAt: transaction.createdAt
+    };
+  }
+
+  /**
    * Get USDC transaction history for user
    * 
    * @param {number} userId - User ID
-   * @param {Object} options - Query options
+   * @param {Object} options - Query options (limit capped 1-100, offset >= 0)
    * @returns {Promise<Array>} Transactions
    */
   async getTransactionHistory(userId, options = {}) {
-    const { limit = 50, offset = 0, status } = options;
-    
+    const limit = Math.min(100, Math.max(1, parseInt(options.limit, 10) || 50));
+    const offset = Math.max(0, parseInt(options.offset, 10) || 0);
+    const { status } = options;
+
     const where = {
       userId,
       'metadata.transactionType': 'usdc_send'
     };
-    
-    if (status) {
-      where.status = status;
-    }
+    if (status) where.status = status;
 
     const transactions = await Transaction.findAll({
       where,

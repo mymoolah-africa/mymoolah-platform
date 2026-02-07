@@ -13,8 +13,12 @@
  * - GET    /api/v1/usdc/health             Service health check
  */
 
+const crypto = require('crypto');
 const usdcTransactionService = require('../services/usdcTransactionService');
 const { isValidSolanaAddress, detectKnownPattern } = require('../utils/solanaAddressValidator');
+
+const ADDRESS_MAX_LENGTH = 64;
+const IDEMPOTENCY_KEY_MAX_LENGTH = 128;
 
 class UsdcController {
   /**
@@ -111,7 +115,15 @@ class UsdcController {
         });
       }
 
-      // VALR credentials missing or invalid (e.g. Codespaces .env not configured)
+      if (error.code === 'VALR_NOT_CONFIGURED') {
+        return res.status(503).json({
+          success: false,
+          error: {
+            code: 'QUOTE_SERVICE_UNAVAILABLE',
+            message: 'Quote service is temporarily unavailable. Please try again later.'
+          }
+        });
+      }
       const isValrAuthError = error.response?.status === 401 ||
         /401|API key or secret is invalid|VALR.*request failed/i.test(error.message || '');
       if (isValrAuthError) {
@@ -157,12 +169,16 @@ class UsdcController {
         });
       }
 
-      // Execute transaction
+      // Banking-grade idempotency: client-supplied key or cryptographically secure server-generated
+      const effectiveIdempotencyKey = (idempotencyKey && typeof idempotencyKey === 'string' && idempotencyKey.length <= IDEMPOTENCY_KEY_MAX_LENGTH)
+        ? idempotencyKey.trim().slice(0, IDEMPOTENCY_KEY_MAX_LENGTH)
+        : crypto.randomUUID();
+
       const result = await usdcTransactionService.executeBuyAndSend(userId, walletId, {
         zarAmount,
         beneficiaryId,
         purpose,
-        idempotencyKey: idempotencyKey || `USDC-${Date.now()}-${req.user.id}`
+        idempotencyKey: effectiveIdempotencyKey
       });
 
       // Handle compliance hold
@@ -254,16 +270,16 @@ class UsdcController {
         });
       }
 
-      if (error.code === 'CIRCUIT_BREAKER_OPEN') {
+      if (error.code === 'CIRCUIT_BREAKER_OPEN' || error.code === 'VALR_NOT_CONFIGURED') {
         return res.status(503).json({
           success: false,
           error: {
-            code: error.code,
+            code: error.code === 'VALR_NOT_CONFIGURED' ? 'SERVICE_UNAVAILABLE' : error.code,
             message: 'USDC service is temporarily unavailable. Please try again in a few minutes.'
           }
         });
       }
-      
+
       res.status(500).json({
         success: false,
         error: {
@@ -282,11 +298,13 @@ class UsdcController {
   async getTransactions(req, res) {
     try {
       const userId = req.user.id;
-      const { limit = 50, offset = 0, status } = req.query;
+      const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 50));
+      const offset = Math.max(0, parseInt(req.query.offset, 10) || 0);
+      const status = req.query.status;
 
       const transactions = await usdcTransactionService.getTransactionHistory(userId, {
-        limit: parseInt(limit),
-        offset: parseInt(offset),
+        limit,
+        offset,
         status
       });
 
@@ -294,8 +312,8 @@ class UsdcController {
         success: true,
         data: transactions,
         pagination: {
-          limit: parseInt(limit),
-          offset: parseInt(offset),
+          limit,
+          offset,
           total: transactions.length
         }
       });
@@ -324,14 +342,7 @@ class UsdcController {
     try {
       const userId = req.user.id;
       const { transactionId } = req.params;
-
-      const transaction = await Transaction.findOne({
-        where: {
-          transactionId,
-          userId,
-          'metadata.transactionType': 'usdc_send'
-        }
-      });
+      const transaction = await usdcTransactionService.getTransactionById(userId, transactionId);
 
       if (!transaction) {
         return res.status(404).json({
@@ -346,30 +357,10 @@ class UsdcController {
       res.json({
         success: true,
         data: {
-          id: transaction.id,
-          transactionId: transaction.transactionId,
-          zarAmount: Math.abs(transaction.amount) / 100,
-          usdcAmount: parseFloat(transaction.metadata.usdcAmount),
-          exchangeRate: parseFloat(transaction.metadata.exchangeRate),
-          platformFee: transaction.metadata.platformFee / 100,
-          platformFeeVat: transaction.metadata.platformFeeVat / 100,
-          networkFee: transaction.metadata.networkFee / 100,
-          beneficiaryName: transaction.metadata.beneficiaryName,
-          beneficiaryWalletAddress: transaction.metadata.beneficiaryWalletAddress,
-          beneficiaryCountry: transaction.metadata.beneficiaryCountry,
-          beneficiaryRelationship: transaction.metadata.beneficiaryRelationship,
-          purpose: transaction.metadata.beneficiaryPurpose,
-          valrOrderId: transaction.metadata.valrOrderId,
-          valrWithdrawalId: transaction.metadata.valrWithdrawalId,
-          blockchainTxHash: transaction.metadata.blockchainTxHash,
-          blockchainStatus: transaction.metadata.blockchainStatus,
-          blockchainConfirmations: transaction.metadata.blockchainConfirmations,
-          explorerUrl: transaction.metadata.blockchainTxHash
-            ? `https://solscan.io/tx/${transaction.metadata.blockchainTxHash}`
-            : null,
-          status: transaction.status,
-          complianceHold: transaction.metadata.complianceHold,
-          createdAt: transaction.createdAt
+          ...transaction,
+          explorerUrl: transaction.blockchainTxHash
+            ? `https://solscan.io/tx/${transaction.blockchainTxHash}`
+            : null
         }
       });
     } catch (error) {
@@ -397,9 +388,8 @@ class UsdcController {
    */
   async validateAddress(req, res) {
     try {
-      const { address } = req.body;
-
-      if (!address) {
+      const rawAddress = req.body?.address;
+      if (rawAddress == null || typeof rawAddress !== 'string') {
         return res.status(400).json({
           success: false,
           error: {
@@ -408,6 +398,7 @@ class UsdcController {
           }
         });
       }
+      const address = rawAddress.trim().slice(0, ADDRESS_MAX_LENGTH);
 
       const validation = isValidSolanaAddress(address);
       const knownPattern = validation.valid ? detectKnownPattern(address) : null;

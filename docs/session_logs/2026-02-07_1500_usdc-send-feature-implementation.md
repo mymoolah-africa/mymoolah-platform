@@ -242,7 +242,7 @@ Implemented complete "Buy USDC" cross-border value transfer feature with VALR in
 ### **Feature is DISABLED by Default**
 - `USDC_FEATURE_ENABLED=false` in env.template
 - Requires explicit enablement after VALR credentials configured
-- Frontend will show service but should check feature flag (TODO: add flag check)
+- Frontend may check feature flag (USDC_FEATURE_ENABLED) before showing service; recommended for production
 
 ### **VALR Integration Notes**
 - VALR uses PRODUCTION API only (no sandbox/UAT)

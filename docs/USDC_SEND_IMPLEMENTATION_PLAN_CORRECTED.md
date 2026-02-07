@@ -753,6 +753,14 @@ gcloud secrets add-iam-policy-binding valr-api-key-staging \
 - ✅ Follows Google Secret Manager pattern
 - ✅ No workarounds or shortcuts
 
+**Post-Implementation Banking-Grade Sweep (Feb 2026)**  
+- All USDC routes use express-validator with `handleValidation`; no unvalidated input at API boundary.  
+- Limit checks use database aggregation (SUM/ABS) only; no JavaScript sum over result sets.  
+- Idempotency: client key accepted (max 128 chars) or server-generated `crypto.randomUUID()`.  
+- VALR: `isConfigured()` and `signRequest` guard missing credentials; no unsupported body fields sent.  
+- Controller uses service layer only (`getTransactionById`); no direct Transaction model in controller.  
+- Address and query params sanitized (length caps, type coercion) for security and performance.
+
 **Status**: Ready for implementation with your approval.
 
 **Next Step**: Await your final approval, then begin Phase 1 implementation.

@@ -40,6 +40,11 @@ class ValrService {
    * @returns {string} HMAC-SHA512 hex signature
    */
   signRequest(timestamp, verb, path, body = '') {
+    if (!this.apiSecret || typeof this.apiSecret !== 'string') {
+      const err = new Error('VALR API secret not configured');
+      err.code = 'VALR_NOT_CONFIGURED';
+      throw err;
+    }
     const payload = `${timestamp}${verb.toUpperCase()}${path}${body}`;
     return crypto
       .createHmac('sha512', this.apiSecret)
@@ -57,6 +62,11 @@ class ValrService {
    * @returns {Promise<Object>} API response data
    */
   async makeRequest(method, path, data = null, options = {}) {
+    if (!this.isConfigured()) {
+      const err = new Error('VALR API not configured (missing API key or secret)');
+      err.code = 'VALR_NOT_CONFIGURED';
+      throw err;
+    }
     // Circuit breaker check
     if (this.circuitOpen) {
       if (Date.now() - this.lastFailureTime > this.circuitBreakerResetTime) {
@@ -269,18 +279,12 @@ class ValrService {
    */
   async executeInstantOrder(orderId, idempotencyKey) {
     try {
-      // Add idempotency key to prevent duplicate orders
+      // Idempotency is enforced in our backend before calling VALR; do not send unsupported fields
       const data = await this.makeRequest('POST', '/v1/simple/order', {
-        orderId,
-        // VALR doesn't support idempotency key in body, but we log it
-        _idempotencyKey: idempotencyKey
+        orderId
       });
       
-      console.log('[ValrService] Instant order executed', {
-        orderId,
-        idempotencyKey,
-        status: data.status
-      });
+      console.log('[ValrService] Instant order executed', { orderId, status: data.status });
       
       return {
         orderId: data.orderId,
