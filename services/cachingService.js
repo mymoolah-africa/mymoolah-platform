@@ -142,21 +142,29 @@ class CachingService {
 
   /**
    * Set value in cache (both Redis and memory)
+   * @param {string} key - Cache key
+   * @param {*} value - Value to store
+   * @param {Object|number} options - Options object or TTL in seconds (number)
    */
   async set(key, value, options = {}) {
-    const { 
+    const opts = typeof options === 'number' ? { ttl: options } : options;
+    const {
       ttl = 300, // 5 minutes default
-      useRedis = true, 
+      useRedis = true,
       useMemory = true,
-      serialize = true 
-    } = options;
+      serialize = true
+    } = opts;
 
     try {
       const serializedValue = serialize ? this.serializeValue(value) : value;
 
-      // Set in Redis if available
+      // Set in Redis if available (Redis v5 uses set(key, value, { EX: ttl }), v4 uses setex)
       if (useRedis && this.isRedisConnected && this.redisClient) {
-        await this.redisClient.setex(key, ttl, serializedValue);
+        if (typeof this.redisClient.setex === 'function') {
+          await this.redisClient.setex(key, ttl, serializedValue);
+        } else {
+          await this.redisClient.set(key, serializedValue, { EX: ttl });
+        }
         this.cacheStats.redis.sets++;
       }
 

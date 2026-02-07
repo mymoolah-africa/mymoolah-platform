@@ -110,7 +110,20 @@ class UsdcController {
           }
         });
       }
-      
+
+      // VALR credentials missing or invalid (e.g. Codespaces .env not configured)
+      const isValrAuthError = error.response?.status === 401 ||
+        /401|API key or secret is invalid|VALR.*request failed/i.test(error.message || '');
+      if (isValrAuthError) {
+        return res.status(503).json({
+          success: false,
+          error: {
+            code: 'QUOTE_SERVICE_UNAVAILABLE',
+            message: 'Quote service is temporarily unavailable. Please try again later.'
+          }
+        });
+      }
+
       res.status(500).json({
         success: false,
         error: {

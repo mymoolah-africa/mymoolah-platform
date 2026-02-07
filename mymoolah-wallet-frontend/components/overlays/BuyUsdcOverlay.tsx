@@ -51,6 +51,7 @@ export function BuyUsdcOverlay() {
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
   const [showBeneficiaryModal, setShowBeneficiaryModal] = useState(false);
+  const [editingBeneficiary, setEditingBeneficiary] = useState<Beneficiary | null>(null);
   
   // Amount step
   const [zarAmount, setZarAmount] = useState<string>('');
@@ -114,6 +115,12 @@ export function BuyUsdcOverlay() {
   const handleCreateBeneficiary = async () => {
     await loadBeneficiaries();
     setShowBeneficiaryModal(false);
+    setEditingBeneficiary(null);
+  };
+
+  const handleEditBeneficiary = (beneficiary: Beneficiary) => {
+    setEditingBeneficiary(beneficiary);
+    setShowBeneficiaryModal(true);
   };
 
   const handleGetQuote = async () => {
@@ -352,7 +359,13 @@ export function BuyUsdcOverlay() {
             <>
               <BeneficiaryList
                 beneficiaries={beneficiaries}
+                selectedBeneficiary={selectedBeneficiary}
                 onSelect={handleBeneficiarySelect}
+                onAddNew={() => {
+                  setEditingBeneficiary(null);
+                  setShowBeneficiaryModal(true);
+                }}
+                onEdit={handleEditBeneficiary}
                 serviceType="usdc"
                 emptyMessage="No USDC recipients saved yet"
               />
@@ -1044,9 +1057,13 @@ export function BuyUsdcOverlay() {
       {showBeneficiaryModal && (
         <BeneficiaryModal
           isOpen={showBeneficiaryModal}
-          onClose={() => setShowBeneficiaryModal(false)}
+          onClose={() => {
+            setShowBeneficiaryModal(false);
+            setEditingBeneficiary(null);
+          }}
           onSave={handleCreateBeneficiary}
           type="usdc"
+          editBeneficiary={editingBeneficiary ?? undefined}
         />
       )}
 

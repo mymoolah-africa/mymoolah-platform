@@ -55,15 +55,22 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
   useEffect(() => {
     if (editBeneficiary) {
       const initialIdentifier = editBeneficiary.identifier || '';
+      const walletAddress = (editBeneficiary as any).walletAddress || initialIdentifier;
       setFormData({
         name: editBeneficiary.name,
         identifier: initialIdentifier,
         network: editBeneficiary.metadata?.network || '',
         meterType: editBeneficiary.metadata?.meterType || '',
-        billerName: editBeneficiary.metadata?.billerName || ''
+        billerName: editBeneficiary.metadata?.billerName || '',
+        ...(type === 'usdc' && {
+          walletAddress,
+          country: (editBeneficiary as any).country || 'US',
+          relationship: (editBeneficiary as any).relationship || 'self',
+          purpose: (editBeneficiary as any).purpose || 'support'
+        })
       });
       // Store the old identifier so we know which service account to update
-      setOldIdentifier(initialIdentifier);
+      setOldIdentifier(type === 'usdc' ? walletAddress : initialIdentifier);
     } else {
       // Reset form when adding new beneficiary
       setFormData({
