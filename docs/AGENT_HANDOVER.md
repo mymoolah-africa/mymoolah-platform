@@ -2506,11 +2506,12 @@ LOG_LEVEL=warn
 5. **Check Migration Status**: Use `node scripts/check-migration-status.js` to verify migration state
 
 ### **Immediate Actions (General)**
-1. **Verify TLS Configuration**: Run `node scripts/test-tls.js` to validate TLS setup
-2. **Check Security Headers**: Verify all security headers are present
-3. **Monitor Performance**: Monitor TLS performance metrics
-4. **Update Documentation**: Keep documentation current with any changes
-5. **Security Updates**: Apply any security updates or patches
+1. **USDC / Staging**: Beneficiary data (including USDC recipients) is **per-environment**. UAT and Staging use separate databases; recipients added on UAT do not appear on Staging until added there (use "+ Add Recipient" on stagingwallet.mymoolah.africa/buy-usdc).
+2. **Verify TLS Configuration**: Run `node scripts/test-tls.js` to validate TLS setup
+3. **Check Security Headers**: Verify all security headers are present
+4. **Monitor Performance**: Monitor TLS performance metrics
+5. **Update Documentation**: Keep documentation current with any changes
+6. **Security Updates**: Apply any security updates or patches
 
 ### **Next Development Phase**
 1. **International Services Backend**: Implement backend for international services
