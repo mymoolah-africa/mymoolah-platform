@@ -26,20 +26,14 @@ module.exports = {
           code,
           name,
           type,
-          parent_code,
-          is_active,
-          description,
-          created_at,
-          updated_at
+          "normalSide",
+          "isActive"
         ) VALUES (
           '1200-10-06',
           'VALR USDC Float',
           'asset',
-          '1200-10',
-          true,
-          'VALR cryptocurrency exchange float account for USDC purchases and transfers',
-          NOW(),
-          NOW()
+          'debit',
+          true
         )
       `);
       console.log('✅ VALR float ledger account created: 1200-10-06');

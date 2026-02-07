@@ -25,20 +25,14 @@ module.exports = {
           code,
           name,
           type,
-          parent_code,
-          is_active,
-          description,
-          created_at,
-          updated_at
+          "normalSide",
+          "isActive"
         ) VALUES (
           '4100-01-06',
           'USDC Transaction Fee Revenue',
           'revenue',
-          '4100-01',
-          true,
-          'Revenue from USDC purchase and transfer fees (7.5% incl VAT)',
-          NOW(),
-          NOW()
+          'credit',
+          true
         )
       `);
       console.log('✅ USDC fee revenue account created: 4100-01-06');
