@@ -1,61 +1,36 @@
 /**
  * Buy USDC Overlay
  * 
- * Overlay component for USDC purchase and transfer to Solana wallets
+ * Full-page overlay for USDC purchase and transfer to Solana wallets
+ * Follows MyMoolah standard overlay pattern (beneficiary-first flow)
  * 
  * Flow:
- * 1. Enter amount → Get quote
- * 2. Select/add beneficiary (Solana wallet)
- * 3. Review and confirm
- * 4. Processing (VALR + blockchain)
- * 5. Success (show tx hash + explorer link)
- * 
- * Banking-Grade Features:
- * - Real-time quote with expiry timer
- * - Comprehensive error handling
- * - Irreversibility warnings
- * - Travel Rule compliance data collection
- * - Solana address validation
+ * 1. Beneficiary (Select/create USDC recipient)
+ * 2. Amount (Enter ZAR amount, get USDC quote)
+ * 3. Confirm (ConfirmSheet with warnings)
+ * 4. Processing (VALR execution + blockchain)
+ * 5. Success (Transaction complete, blockchain link)
  */
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Coins, CheckCircle, ExternalLink, AlertTriangle, Copy, Clock } from 'lucide-react';
+import { ArrowLeft, Coins, CheckCircle, ExternalLink, AlertTriangle, Copy, Clock, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { ConfirmSheet } from './shared/ConfirmSheet';
+import { BeneficiaryList } from './shared/BeneficiaryList';
+import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { ErrorModal } from '../ui/ErrorModal';
 import { usdcService, type UsdcQuote } from '../../services/usdcService';
 import { unifiedBeneficiaryService, type Beneficiary } from '../../services/unifiedBeneficiaryService';
 import { formatCurrency } from '../../services/overlayService';
 
-type Step = 'amount' | 'beneficiary' | 'review' | 'processing' | 'success';
+type Step = 'beneficiary' | 'amount' | 'confirm' | 'processing' | 'success';
+type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
-const COUNTRY_LIST = [
-  { code: 'US', name: 'United States' },
-  { code: 'GB', name: 'United Kingdom' },
-  { code: 'CA', name: 'Canada' },
-  { code: 'AU', name: 'Australia' },
-  { code: 'NG', name: 'Nigeria' },
-  { code: 'KE', name: 'Kenya' },
-  { code: 'GH', name: 'Ghana' },
-  { code: 'ZW', name: 'Zimbabwe' },
-  { code: 'ZA', name: 'South Africa' }
-  // Add more countries as needed
-];
-
-const RELATIONSHIP_LIST = [
-  { value: 'self', label: 'Myself (own wallet)' },
-  { value: 'family', label: 'Family Member' },
-  { value: 'friend', label: 'Friend' },
-  { value: 'business', label: 'Business Partner' },
-  { value: 'other', label: 'Other' }
-];
-
-const PURPOSE_LIST = [
+const PURPOSE_OPTIONS = [
   { value: 'support', label: 'Financial Support' },
   { value: 'gift', label: 'Gift' },
   { value: 'payment', label: 'Payment for Goods/Services' },
@@ -64,48 +39,39 @@ const PURPOSE_LIST = [
   { value: 'other', label: 'Other' }
 ];
 
-interface Props {
-  isOpen: boolean;
-  onClose: () => void;
-  user: any;
-  wallet: any;
-}
-
-export function BuyUsdcOverlay({ isOpen, onClose, user, wallet }: Props) {
+export function BuyUsdcOverlay() {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState<Step>('amount');
   
-  // Amount step
-  const [zarAmount, setZarAmount] = useState<string>('');
-  const [quote, setQuote] = useState<UsdcQuote | null>(null);
-  const [quoteLoading, setQuoteLoading] = useState(false);
-  const [quoteExpiry, setQuoteExpiry] = useState<number>(60);
+  // Step management
+  const [currentStep, setCurrentStep] = useState<Step>('beneficiary');
+  const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   
   // Beneficiary step
   const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
-  const [showAddBeneficiary, setShowAddBeneficiary] = useState(false);
-  const [newBeneficiary, setNewBeneficiary] = useState({
-    name: '',
-    walletAddress: '',
-    country: 'US',
-    relationship: 'self',
-    purpose: 'support'
-  });
-  const [addressValidation, setAddressValidation] = useState<any>(null);
-  const [beneficiariesLoading, setBeneficiariesLoading] = useState(false);
+  const [showBeneficiaryModal, setShowBeneficiaryModal] = useState(false);
   
-  // Review step
+  // Amount step
+  const [zarAmount, setZarAmount] = useState<string>('');
+  const [quote, setQuote] = useState<UsdcQuote | null>(null);
+  const [quoteExpiry, setQuoteExpiry] = useState<number>(60);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  
+  // Confirm step  
   const [purpose, setPurpose] = useState<string>('support');
-  const [agreeToTerms, setAgreeToTerms] = useState(false);
   
-  // Processing/Success
-  const [processing, setProcessing] = useState(false);
+  // Success step
   const [transactionResult, setTransactionResult] = useState<any>(null);
   
   // Error handling
   const [error, setError] = useState<string>('');
   const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState<string>('');
+
+  // Load beneficiaries on mount
+  useEffect(() => {
+    loadBeneficiaries();
+  }, []);
 
   // Quote expiry timer
   useEffect(() => {
@@ -127,21 +93,28 @@ export function BuyUsdcOverlay({ isOpen, onClose, user, wallet }: Props) {
     return () => clearInterval(timer);
   }, [quote]);
 
-  // Load beneficiaries when needed
   const loadBeneficiaries = async () => {
     try {
-      setBeneficiariesLoading(true);
+      setLoadingState('loading');
       const list = await unifiedBeneficiaryService.getBeneficiaries('usdc');
       setBeneficiaries(list);
+      setLoadingState('success');
     } catch (err: any) {
       console.error('Failed to load USDC beneficiaries:', err);
-      setError('Failed to load beneficiaries');
-    } finally {
-      setBeneficiariesLoading(false);
+      setLoadingState('error');
     }
   };
 
-  // Get quote
+  const handleBeneficiarySelect = (beneficiary: Beneficiary) => {
+    setSelectedBeneficiary(beneficiary);
+    setCurrentStep('amount');
+  };
+
+  const handleCreateBeneficiary = async () => {
+    await loadBeneficiaries();
+    setShowBeneficiaryModal(false);
+  };
+
   const handleGetQuote = async () => {
     try {
       const amount = parseFloat(zarAmount);
@@ -161,6 +134,7 @@ export function BuyUsdcOverlay({ isOpen, onClose, user, wallet }: Props) {
       const quoteData = await usdcService.getQuote(amount);
       setQuote(quoteData);
       setQuoteExpiry(60);
+      setCurrentStep('confirm');
     } catch (err: any) {
       console.error('Failed to get quote:', err);
       setError(err.message || 'Failed to get quote. Please try again.');
@@ -170,82 +144,14 @@ export function BuyUsdcOverlay({ isOpen, onClose, user, wallet }: Props) {
     }
   };
 
-  // Validate Solana address
-  const handleValidateAddress = async (address: string) => {
-    if (!address || address.trim().length < 32) {
-      setAddressValidation(null);
-      return;
-    }
-    
-    try {
-      const validation = await usdcService.validateAddress(address.trim());
-      setAddressValidation(validation);
-    } catch (err) {
-      setAddressValidation({
-        valid: false,
-        reason: 'Validation failed'
-      });
-    }
-  };
-
-  // Create beneficiary
-  const handleCreateBeneficiary = async () => {
-    try {
-      if (!newBeneficiary.name || !newBeneficiary.walletAddress) {
-        setError('Name and wallet address are required');
-        return;
-      }
-      
-      if (!addressValidation || !addressValidation.valid) {
-        setError('Please enter a valid Solana address');
-        return;
-      }
-      
-      setBeneficiariesLoading(true);
-      
-      // Create beneficiary with cryptoServices
-      const created = await unifiedBeneficiaryService.createBeneficiary({
-        name: newBeneficiary.name,
-        serviceType: 'usdc',
-        serviceData: {
-          walletAddress: newBeneficiary.walletAddress.trim(),
-          network: 'solana',
-          country: newBeneficiary.country,
-          relationship: newBeneficiary.relationship,
-          purpose: newBeneficiary.purpose
-        },
-        isFavorite: false
-      });
-      
-      // Reload beneficiaries
-      await loadBeneficiaries();
-      
-      // Select the new beneficiary
-      setSelectedBeneficiary(created);
-      setShowAddBeneficiary(false);
-      setCurrentStep('review');
-    } catch (err: any) {
-      console.error('Failed to create beneficiary:', err);
-      setError(err.message || 'Failed to create beneficiary');
-    } finally {
-      setBeneficiariesLoading(false);
-    }
-  };
-
-  // Execute send
-  const handleSend = async () => {
+  const handleConfirmSend = async () => {
     try {
       if (!quote || !selectedBeneficiary) {
         setError('Missing quote or beneficiary');
         return;
       }
       
-      if (!agreeToTerms) {
-        setError('Please accept the terms and warnings');
-        return;
-      }
-      
-      setProcessing(true);
+      setLoadingState('loading');
       setCurrentStep('processing');
       setError('');
       
@@ -258,523 +164,908 @@ export function BuyUsdcOverlay({ isOpen, onClose, user, wallet }: Props) {
       
       if (result.success) {
         setTransactionResult(result.data);
+        setLoadingState('success');
         setCurrentStep('success');
       } else {
-        setError(result.error?.message || 'Transaction failed');
+        setErrorModalMessage(result.error?.message || 'Transaction failed');
         setShowErrorModal(true);
-        setCurrentStep('review');
+        setLoadingState('error');
+        setCurrentStep('confirm');
       }
     } catch (err: any) {
       console.error('Failed to send USDC:', err);
-      setError(err.message || 'Transaction failed');
+      setErrorModalMessage(err.message || 'Transaction failed');
       setShowErrorModal(true);
-      setCurrentStep('review');
-    } finally {
-      setProcessing(false);
+      setLoadingState('error');
+      setCurrentStep('confirm');
     }
   };
 
-  // Reset and start over
   const handleStartOver = () => {
-    setCurrentStep('amount');
+    setCurrentStep('beneficiary');
     setZarAmount('');
     setQuote(null);
     setSelectedBeneficiary(null);
     setPurpose('support');
-    setAgreeToTerms(false);
     setTransactionResult(null);
     setError('');
+    setLoadingState('idle');
   };
 
-  // Close overlay
-  const handleClose = () => {
-    handleStartOver();
-    onClose();
+  const handleBack = () => {
+    if (currentStep === 'amount') {
+      setCurrentStep('beneficiary');
+      setZarAmount('');
+      setQuote(null);
+    } else if (currentStep === 'confirm') {
+      setCurrentStep('amount');
+    }
   };
-
-  if (!isOpen) return null;
 
   return (
-    <>
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-          <CardHeader className="border-b">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {currentStep !== 'amount' && currentStep !== 'success' && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      if (currentStep === 'beneficiary') setCurrentStep('amount');
-                      if (currentStep === 'review') setCurrentStep('beneficiary');
-                    }}
-                  >
-                    <ArrowLeft className="w-5 h-5" />
-                  </Button>
-                )}
-                <Coins className="w-6 h-6 text-purple-600" />
-                <CardTitle>Buy USDC</CardTitle>
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleClose}>
-                ✕
+    <div style={{
+      padding: '1rem',
+      minHeight: '100vh',
+      backgroundColor: '#f9fafb',
+      fontFamily: 'Montserrat, sans-serif'
+    }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        marginBottom: '1.5rem',
+        position: 'relative'
+      }}>
+        {/* Back Button */}
+        {(currentStep === 'amount' || currentStep === 'confirm') && (
+          <Button
+            variant="ghost"
+            onClick={handleBack}
+            style={{
+              padding: '8px',
+              minWidth: '44px',
+              minHeight: '44px',
+              position: 'absolute',
+              left: '0',
+              zIndex: 1
+            }}
+          >
+            <ArrowLeft style={{ width: '20px', height: '20px' }} />
+          </Button>
+        )}
+        
+        {currentStep === 'beneficiary' && (
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/transact')}
+            style={{
+              padding: '8px',
+              minWidth: '44px',
+              minHeight: '44px',
+              position: 'absolute',
+              left: '0',
+              zIndex: 1
+            }}
+          >
+            <ArrowLeft style={{ width: '20px', height: '20px' }} />
+          </Button>
+        )}
+
+        {/* Title */}
+        <div style={{
+          flex: 1,
+          textAlign: 'center',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center'
+        }}>
+          <h1 style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '18px',
+            fontWeight: '700',
+            color: '#1f2937',
+            margin: 0
+          }}>
+            Buy USDC
+          </h1>
+          <p style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '12px',
+            color: '#6b7280',
+            margin: 0
+          }}>
+            Send value globally via USDC
+          </p>
+        </div>
+      </div>
+
+      {/* Step 1: Beneficiary Selection */}
+      {currentStep === 'beneficiary' && (
+        <div>
+          {loadingState === 'loading' ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '2rem',
+              color: '#6b7280'
+            }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                border: '3px solid #e2e8f0',
+                borderTop: '3px solid #86BE41',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite',
+                margin: '0 auto 1rem'
+              }} />
+              Loading recipients...
+            </div>
+          ) : beneficiaries.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '3rem 1rem',
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0'
+            }}>
+              <Coins style={{ width: '48px', height: '48px', color: '#9333ea', margin: '0 auto 1rem' }} />
+              <p style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '16px',
+                fontWeight: '600',
+                color: '#1f2937',
+                marginBottom: '0.5rem'
+              }}>
+                No USDC Recipients Yet
+              </p>
+              <p style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                color: '#6b7280',
+                marginBottom: '1.5rem'
+              }}>
+                Add a recipient to start sending USDC
+              </p>
+              <Button
+                onClick={() => setShowBeneficiaryModal(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '12px 24px',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  minHeight: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  margin: '0 auto'
+                }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Add Recipient
               </Button>
             </div>
-          </CardHeader>
+          ) : (
+            <>
+              <BeneficiaryList
+                beneficiaries={beneficiaries}
+                onSelect={handleBeneficiarySelect}
+                onRefresh={loadBeneficiaries}
+                serviceType="usdc"
+                emptyMessage="No USDC recipients saved yet"
+              />
+              
+              <Button
+                onClick={() => setShowBeneficiaryModal(true)}
+                style={{
+                  width: '100%',
+                  marginTop: '1rem',
+                  background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  padding: '12px',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  minHeight: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Add New Recipient
+              </Button>
+            </>
+          )}
 
-          <CardContent className="p-6">
-            {/* Step 1: Amount Entry */}
-            {currentStep === 'amount' && (
-              <div className="space-y-6">
-                <div>
-                  <Label htmlFor="zarAmount">Amount (ZAR)</Label>
-                  <Input
-                    id="zarAmount"
-                    type="number"
-                    min="10"
-                    max="5000"
-                    step="0.01"
-                    value={zarAmount}
-                    onChange={(e) => setZarAmount(e.target.value)}
-                    placeholder="Enter amount (R10 - R5,000)"
-                    className="text-lg"
-                  />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Available: {formatCurrency(wallet?.balance / 100 || 0)}
-                  </p>
+          {/* Important Information Card */}
+          <div style={{
+            marginTop: '1.5rem',
+            backgroundColor: '#fef3c7',
+            border: '1px solid #f59e0b',
+            borderRadius: '12px',
+            padding: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+              <AlertTriangle style={{ width: '20px', height: '20px', color: '#f59e0b', flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <p style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#92400e',
+                  marginBottom: '8px'
+                }}>
+                  Important Information:
+                </p>
+                <ul style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '11px',
+                  color: '#92400e',
+                  paddingLeft: '1rem',
+                  margin: 0,
+                  lineHeight: '1.6'
+                }}>
+                  <li>Crypto transfers are <strong>irreversible</strong></li>
+                  <li>Only send to <strong>Solana</strong> compatible wallets</li>
+                  <li>Recipient converts USDC to local currency (MyMoolah does not provide cash-out)</li>
+                  <li>Tier 2 KYC required</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 2: Amount Entry & Quote */}
+      {currentStep === 'amount' && selectedBeneficiary && (
+        <div>
+          {/* Selected Beneficiary Card */}
+          <div style={{
+            backgroundColor: '#f8fafe',
+            border: '1px solid #86BE41',
+            borderRadius: '12px',
+            padding: '1rem',
+            marginBottom: '1.5rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#1f2937',
+                  marginBottom: '4px'
+                }}>
+                  {selectedBeneficiary.name}
+                </p>
+                <p style={{
+                  fontFamily: 'Monaco, monospace',
+                  fontSize: '11px',
+                  color: '#6b7280',
+                  wordBreak: 'break-all'
+                }}>
+                  {selectedBeneficiary.walletAddress?.substring(0, 12)}...{selectedBeneficiary.walletAddress?.slice(-8)}
+                </p>
+                <p style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '11px',
+                  color: '#6b7280',
+                  marginTop: '4px'
+                }}>
+                  {selectedBeneficiary.country} · {selectedBeneficiary.relationship}
+                </p>
+              </div>
+              <div style={{
+                backgroundColor: '#9333ea',
+                color: '#ffffff',
+                padding: '4px 12px',
+                borderRadius: '12px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '11px',
+                fontWeight: '600'
+              }}>
+                USDC
+              </div>
+            </div>
+          </div>
+
+          {/* Amount Input */}
+          <div style={{ marginBottom: '1rem' }}>
+            <Label htmlFor="zarAmount" style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#1f2937',
+              marginBottom: '8px',
+              display: 'block'
+            }}>
+              Amount (ZAR)
+            </Label>
+            <Input
+              id="zarAmount"
+              type="number"
+              min="10"
+              max="5000"
+              step="0.01"
+              value={zarAmount}
+              onChange={(e) => setZarAmount(e.target.value)}
+              placeholder="Enter amount (R10 - R5,000)"
+              style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '16px',
+                padding: '12px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                width: '100%'
+              }}
+            />
+            <p style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '12px',
+              color: '#6b7280',
+              marginTop: '6px'
+            }}>
+              Limits: R10 min · R5,000 per transaction
+            </p>
+          </div>
+
+          {/* Quote Card */}
+          {quote && quoteExpiry > 0 && (
+            <div style={{
+              backgroundColor: '#f5f3ff',
+              border: '2px solid #9333ea',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '1rem'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <span style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  color: '#581c87'
+                }}>
+                  Quote
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Clock style={{ width: '14px', height: '14px', color: '#9333ea' }} />
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '12px',
+                    color: '#9333ea',
+                    fontWeight: '500'
+                  }}>
+                    {quoteExpiry}s
+                  </span>
                 </div>
+              </div>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '13px',
+                    color: '#6b7280'
+                  }}>
+                    You pay:
+                  </span>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    color: '#1f2937'
+                  }}>
+                    {formatCurrency(quote.zarAmount)}
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '13px',
+                    color: '#6b7280'
+                  }}>
+                    Platform fee (7.5%):
+                  </span>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '13px',
+                    color: '#6b7280'
+                  }}>
+                    {formatCurrency(quote.platformFee)}
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '13px',
+                    color: '#6b7280'
+                  }}>
+                    Network fee (est.):
+                  </span>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '13px',
+                    color: '#6b7280'
+                  }}>
+                    {formatCurrency(quote.networkFee)}
+                  </span>
+                </div>
+                
+                <div style={{
+                  borderTop: '1px solid #ddd6fe',
+                  paddingTop: '8px',
+                  display: 'flex',
+                  justifyContent: 'space-between'
+                }}>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#581c87'
+                  }}>
+                    Recipient receives:
+                  </span>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    color: '#9333ea'
+                  }}>
+                    ${quote.usdcAmount.toFixed(2)} USDC
+                  </span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '11px',
+                    color: '#6b7280'
+                  }}>
+                    Exchange rate:
+                  </span>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '11px',
+                    color: '#6b7280'
+                  }}>
+                    1 USDC = R{quote.exchangeRate.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
-                {quote && quoteExpiry > 0 && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-purple-900">Quote</span>
-                      <div className="flex items-center gap-1 text-sm text-purple-600">
-                        <Clock className="w-4 h-4" />
-                        <span>Expires in {quoteExpiry}s</span>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span>You pay:</span>
-                        <span className="font-semibold">{formatCurrency(quote.zarAmount)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Platform fee (7.5%):</span>
-                        <span>{formatCurrency(quote.platformFee)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Network fee (est.):</span>
-                        <span>{formatCurrency(quote.networkFee)}</span>
-                      </div>
-                      <div className="flex justify-between border-t pt-2 text-base font-semibold">
-                        <span>You receive:</span>
-                        <span className="text-purple-600">${quote.usdcAmount.toFixed(2)} USDC</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-500">
-                        <span>Exchange rate:</span>
-                        <span>1 USDC = R{quote.exchangeRate.toFixed(2)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
+          {/* Error Message */}
+          {error && (
+            <div style={{
+              backgroundColor: '#fee2e2',
+              border: '1px solid #dc2626',
+              borderRadius: '12px',
+              padding: '12px',
+              marginBottom: '1rem'
+            }}>
+              <p style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '13px',
+                color: '#991b1b',
+                margin: 0
+              }}>
+                {error}
+              </p>
+            </div>
+          )}
 
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                    {error}
-                  </div>
-                )}
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '1.5rem' }}>
+            <Button
+              onClick={handleGetQuote}
+              disabled={quoteLoading || !zarAmount || parseFloat(zarAmount) < 10}
+              style={{
+                flex: 1,
+                background: quoteLoading || !zarAmount || parseFloat(zarAmount) < 10
+                  ? '#e2e8f0'
+                  : quote 
+                    ? '#6b7280'
+                    : 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '500',
+                minHeight: '44px'
+              }}
+            >
+              {quoteLoading ? 'Getting quote...' : quote ? 'Refresh Quote' : 'Get Quote'}
+            </Button>
+          </div>
 
-                <div className="flex gap-3">
-                  <Button
-                    onClick={handleGetQuote}
-                    disabled={quoteLoading || !zarAmount}
-                    className="flex-1"
-                  >
-                    {quoteLoading ? 'Getting quote...' : quote ? 'Refresh Quote' : 'Get Quote'}
-                  </Button>
-                  
-                  {quote && quoteExpiry > 0 && (
-                    <Button
-                      onClick={async () => {
-                        await loadBeneficiaries();
-                        setCurrentStep('beneficiary');
+          {/* Info Card */}
+          <div style={{
+            backgroundColor: '#e0f2fe',
+            border: '1px solid #2D8CCA',
+            borderRadius: '12px',
+            padding: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+              <Coins style={{ width: '20px', height: '20px', color: '#2D8CCA', flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <p style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  color: '#0c4a6e',
+                  marginBottom: '6px'
+                }}>
+                  About USDC
+                </p>
+                <p style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '11px',
+                  color: '#0c4a6e',
+                  lineHeight: '1.5',
+                  margin: 0
+                }}>
+                  USDC is a stablecoin pegged 1:1 to the US Dollar. Your recipient can convert it to local currency using their preferred exchange or P2P service.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Step 3: Confirm (uses ConfirmSheet) */}
+      {currentStep === 'confirm' && quote && selectedBeneficiary && (
+        <>
+          {/* Purpose Selection (above ConfirmSheet) */}
+          <div style={{ marginBottom: '100px' }}>
+            <Label htmlFor="purpose" style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '14px',
+              fontWeight: '500',
+              color: '#1f2937',
+              marginBottom: '8px',
+              display: 'block'
+            }}>
+              Purpose of Transfer
+            </Label>
+            <Select value={purpose} onValueChange={setPurpose}>
+              <SelectTrigger id="purpose" style={{
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                borderRadius: '12px',
+                border: '1px solid #e2e8f0',
+                padding: '12px',
+                width: '100%',
+                minHeight: '44px'
+              }}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PURPOSE_OPTIONS.map(p => (
+                  <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <ConfirmSheet
+            title="Confirm USDC Send"
+            summaryRows={[
+              { label: 'Recipient', value: selectedBeneficiary.name },
+              { label: 'Wallet', value: `${selectedBeneficiary.walletAddress?.substring(0, 8)}...${selectedBeneficiary.walletAddress?.slice(-6)}` },
+              { label: 'Country', value: selectedBeneficiary.country || 'Unknown' },
+              { label: 'You send', value: formatCurrency(quote.zarAmount) },
+              { label: 'Platform fee', value: formatCurrency(quote.platformFee) },
+              { label: 'Network fee', value: formatCurrency(quote.networkFee) },
+              { label: 'Recipient receives', value: `$${quote.usdcAmount.toFixed(2)} USDC`, highlight: true },
+              { label: 'Exchange rate', value: `1 USDC = R${quote.exchangeRate.toFixed(2)}` }
+            ]}
+            notices={[
+              {
+                id: 'irreversible',
+                type: 'error',
+                title: 'Irreversible Transaction',
+                description: 'Once sent, this transaction CANNOT be cancelled or refunded. Verify all details carefully.'
+              },
+              {
+                id: 'address',
+                type: 'warning',
+                title: 'Verify Recipient Address',
+                description: 'Sending to wrong address = permanent loss of funds. Double-check the address is correct.'
+              },
+              {
+                id: 'network',
+                type: 'warning',
+                title: 'Solana Network Only',
+                description: 'Only send to Solana-compatible wallets. Wrong network = funds lost permanently.'
+              },
+              {
+                id: 'cashout',
+                type: 'info',
+                title: 'Recipient Responsibility',
+                description: 'MyMoolah does not provide cash-out. Recipient must convert USDC using their preferred exchange.'
+              }
+            ]}
+            primaryButtonText="Confirm & Send"
+            secondaryButtonText="Back"
+            onPrimaryAction={handleConfirmSend}
+            onSecondaryAction={() => setCurrentStep('amount')}
+            isLoading={loadingState === 'loading'}
+            estimatedTime="1-5 minutes"
+          />
+        </>
+      )}
+
+      {/* Step 4: Processing */}
+      {currentStep === 'processing' && (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: '60vh',
+          textAlign: 'center'
+        }}>
+          <div style={{
+            width: '60px',
+            height: '60px',
+            border: '4px solid #e2e8f0',
+            borderTop: '4px solid #9333ea',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            marginBottom: '1.5rem'
+          }} />
+          <p style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '18px',
+            fontWeight: '600',
+            color: '#1f2937',
+            marginBottom: '8px'
+          }}>
+            Processing Transaction
+          </p>
+          <p style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '14px',
+            color: '#6b7280',
+            marginBottom: '4px'
+          }}>
+            Buying USDC and sending to recipient...
+          </p>
+          <p style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '12px',
+            color: '#9333ea'
+          }}>
+            This typically takes 1-5 minutes
+          </p>
+        </div>
+      )}
+
+      {/* Step 5: Success */}
+      {currentStep === 'success' && transactionResult && (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          paddingTop: '2rem'
+        }}>
+          {/* Success Icon */}
+          <div style={{
+            width: '80px',
+            height: '80px',
+            background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '1.5rem'
+          }}>
+            <CheckCircle style={{ width: '48px', height: '48px', color: '#ffffff' }} />
+          </div>
+
+          <h2 style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '20px',
+            fontWeight: '700',
+            color: '#1f2937',
+            marginBottom: '8px',
+            textAlign: 'center'
+          }}>
+            USDC Sent Successfully!
+          </h2>
+
+          <p style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '14px',
+            color: '#6b7280',
+            marginBottom: '2rem',
+            textAlign: 'center'
+          }}>
+            ${transactionResult.usdcAmount} USDC sent to {transactionResult.beneficiaryName}
+          </p>
+
+          {/* Transaction Details Card */}
+          <div style={{
+            width: '100%',
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            padding: '1rem',
+            marginBottom: '1.5rem'
+          }}>
+            <p style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: '14px',
+              fontWeight: '600',
+              color: '#1f2937',
+              marginBottom: '12px'
+            }}>
+              Transaction Details
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '12px',
+                  color: '#6b7280'
+                }}>
+                  Transaction ID:
+                </span>
+                <span style={{
+                  fontFamily: 'Monaco, monospace',
+                  fontSize: '10px',
+                  color: '#1f2937'
+                }}>
+                  {transactionResult.transactionId.substring(0, 16)}...
+                </span>
+              </div>
+
+              {transactionResult.blockchainTxHash && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '12px',
+                      color: '#6b7280'
+                    }}>
+                      Blockchain TX:
+                    </span>
+                    <a
+                      href={transactionResult.explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontFamily: 'Monaco, monospace',
+                        fontSize: '10px',
+                        color: '#9333ea',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
                       }}
-                      className="flex-1 bg-purple-600 hover:bg-purple-700"
                     >
-                      Continue
-                    </Button>
-                  )}
-                </div>
-
-                {/* Warnings */}
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-2">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
-                    <div className="text-sm text-yellow-800 space-y-1">
-                      <p className="font-semibold">Important Information:</p>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li>Crypto transfers are <strong>irreversible</strong></li>
-                        <li>Only send to <strong>Solana</strong> compatible wallets</li>
-                        <li>Recipient converts USDC to local currency (MyMoolah does not provide cash-out)</li>
-                        <li>Tier 2 KYC required</li>
-                      </ul>
-                    </div>
+                      {transactionResult.blockchainTxHash.substring(0, 8)}...
+                      <ExternalLink style={{ width: '12px', height: '12px' }} />
+                    </a>
                   </div>
-                </div>
+                </>
+              )}
+
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '12px',
+                  color: '#6b7280'
+                }}>
+                  Recipient:
+                </span>
+                <span style={{
+                  fontFamily: 'Monaco, monospace',
+                  fontSize: '10px',
+                  color: '#1f2937'
+                }}>
+                  {transactionResult.beneficiaryWalletAddress.substring(0, 8)}...
+                </span>
               </div>
-            )}
 
-            {/* Step 2: Beneficiary Selection */}
-            {currentStep === 'beneficiary' && (
-              <div className="space-y-4">
-                <h3 className="font-semibold">Select Recipient</h3>
-                
-                {beneficiariesLoading ? (
-                  <div className="text-center py-8">Loading beneficiaries...</div>
-                ) : beneficiaries.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p>No saved USDC recipients yet.</p>
-                    <Button onClick={() => setShowAddBeneficiary(true)} className="mt-4">
-                      Add New Recipient
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {beneficiaries.map((benef) => (
-                        <button
-                          key={benef.id}
-                          onClick={() => {
-                            setSelectedBeneficiary(benef);
-                            setCurrentStep('review');
-                          }}
-                          className="w-full text-left p-4 border rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-semibold">{benef.name}</p>
-                              <p className="text-sm text-gray-600 font-mono">
-                                {benef.walletAddress?.substring(0, 8)}...{benef.walletAddress?.substring(benef.walletAddress.length - 6)}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {benef.country} · {benef.relationship}
-                              </p>
-                            </div>
-                            <div className="bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-semibold">
-                              USDC
-                            </div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                    
-                    <Button
-                      onClick={() => setShowAddBeneficiary(true)}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      + Add New Recipient
-                    </Button>
-                  </>
-                )}
-
-                {/* Add Beneficiary Form */}
-                {showAddBeneficiary && (
-                  <Dialog open={showAddBeneficiary} onOpenChange={setShowAddBeneficiary}>
-                    <DialogContent className="max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>Add USDC Recipient</DialogTitle>
-                      </DialogHeader>
-                      
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="benefName">Recipient Name *</Label>
-                          <Input
-                            id="benefName"
-                            value={newBeneficiary.name}
-                            onChange={(e) => setNewBeneficiary({ ...newBeneficiary, name: e.target.value })}
-                            placeholder="e.g., John Smith"
-                          />
-                        </div>
-
-                        <div>
-                          <Label htmlFor="walletAddr">Solana Wallet Address *</Label>
-                          <Input
-                            id="walletAddr"
-                            value={newBeneficiary.walletAddress}
-                            onChange={(e) => {
-                              const addr = e.target.value;
-                              setNewBeneficiary({ ...newBeneficiary, walletAddress: addr });
-                              handleValidateAddress(addr);
-                            }}
-                            placeholder="32-44 characters"
-                            className="font-mono text-sm"
-                          />
-                          {addressValidation && (
-                            <p className={`text-sm mt-1 ${addressValidation.valid ? 'text-green-600' : 'text-red-600'}`}>
-                              {addressValidation.valid ? '✓ Valid Solana address' : `✗ ${addressValidation.reason}`}
-                            </p>
-                          )}
-                          {addressValidation?.warning && (
-                            <p className="text-sm mt-1 text-yellow-600">
-                              ⚠ {addressValidation.warning}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <Label htmlFor="country">Recipient Country *</Label>
-                          <Select value={newBeneficiary.country} onValueChange={(v) => setNewBeneficiary({ ...newBeneficiary, country: v })}>
-                            <SelectTrigger id="country">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {COUNTRY_LIST.map(c => (
-                                <SelectItem key={c.code} value={c.code}>{c.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="relationship">Relationship *</Label>
-                          <Select value={newBeneficiary.relationship} onValueChange={(v) => setNewBeneficiary({ ...newBeneficiary, relationship: v })}>
-                            <SelectTrigger id="relationship">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {RELATIONSHIP_LIST.map(r => (
-                                <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div>
-                          <Label htmlFor="purpose">Purpose</Label>
-                          <Select value={newBeneficiary.purpose} onValueChange={(v) => setNewBeneficiary({ ...newBeneficiary, purpose: v })}>
-                            <SelectTrigger id="purpose">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {PURPOSE_LIST.map(p => (
-                                <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <Button
-                          onClick={handleCreateBeneficiary}
-                          disabled={!addressValidation?.valid || beneficiariesLoading}
-                          className="w-full"
-                        >
-                          {beneficiariesLoading ? 'Creating...' : 'Save Recipient'}
-                        </Button>
-                      </div>
-                    </DialogContent>
-                  </Dialog>
-                )}
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '12px',
+                  color: '#6b7280'
+                }}>
+                  Status:
+                </span>
+                <span style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '12px',
+                  fontWeight: '500',
+                  color: transactionResult.blockchainStatus === 'confirmed' ? '#16a34a' : '#f59e0b'
+                }}>
+                  {transactionResult.blockchainStatus === 'confirmed' ? 'Confirmed ✓' : 'Pending confirmation'}
+                </span>
               </div>
-            )}
+            </div>
+          </div>
 
-            {/* Step 3: Review & Confirm */}
-            {currentStep === 'review' && quote && selectedBeneficiary && (
-              <div className="space-y-6">
-                <h3 className="font-semibold text-lg">Review Transaction</h3>
-                
-                {/* Summary */}
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">You send:</span>
-                    <span className="font-semibold text-lg">{formatCurrency(quote.zarAmount)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Recipient receives:</span>
-                    <span className="font-semibold text-lg text-purple-600">${quote.usdcAmount.toFixed(2)} USDC</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Platform fee:</span>
-                    <span>{formatCurrency(quote.platformFee)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Network fee (est.):</span>
-                    <span>{formatCurrency(quote.networkFee)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm border-t pt-2">
-                    <span className="text-gray-600">Rate:</span>
-                    <span>1 USDC = R{quote.exchangeRate.toFixed(2)}</span>
-                  </div>
-                </div>
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+            <Button
+              onClick={handleStartOver}
+              style={{
+                flex: 1,
+                background: '#ffffff',
+                color: '#6b7280',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                padding: '12px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '500',
+                minHeight: '44px'
+              }}
+            >
+              Send Another
+            </Button>
+            <Button
+              onClick={() => navigate('/transact')}
+              style={{
+                flex: 1,
+                background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px',
+                fontFamily: 'Montserrat, sans-serif',
+                fontSize: '14px',
+                fontWeight: '500',
+                minHeight: '44px'
+              }}
+            >
+              Done
+            </Button>
+          </div>
+        </div>
+      )}
 
-                {/* Recipient Details */}
-                <div className="border rounded-lg p-4 space-y-2">
-                  <p className="font-semibold">{selectedBeneficiary.name}</p>
-                  <p className="text-sm text-gray-600 font-mono break-all">
-                    {selectedBeneficiary.walletAddress}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {selectedBeneficiary.country} · {selectedBeneficiary.relationship}
-                  </p>
-                </div>
-
-                {/* Purpose */}
-                <div>
-                  <Label htmlFor="purposeSelect">Purpose of Transfer *</Label>
-                  <Select value={purpose} onValueChange={setPurpose}>
-                    <SelectTrigger id="purposeSelect">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PURPOSE_LIST.map(p => (
-                        <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Warnings & Terms */}
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4 space-y-3">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                    <div className="text-sm text-red-800 space-y-2">
-                      <p className="font-semibold">Critical Warnings:</p>
-                      <ul className="list-disc list-inside space-y-1">
-                        <li><strong>Irreversible:</strong> Once sent, cannot be cancelled or refunded</li>
-                        <li><strong>Address accuracy:</strong> Sending to wrong address = permanent loss</li>
-                        <li><strong>Network compatibility:</strong> Only Solana USDC wallets</li>
-                        <li><strong>Recipient responsibility:</strong> MyMoolah does not provide cash-out</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    id="agreeTerms"
-                    checked={agreeToTerms}
-                    onChange={(e) => setAgreeToTerms(e.target.checked)}
-                    className="mt-1"
-                  />
-                  <label htmlFor="agreeTerms" className="text-sm text-gray-700 cursor-pointer">
-                    I understand this transaction is <strong>irreversible</strong>, I have verified the recipient address is correct, and I accept the risks.
-                  </label>
-                </div>
-
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
-                    {error}
-                  </div>
-                )}
-
-                <Button
-                  onClick={handleSend}
-                  disabled={!agreeToTerms || processing}
-                  className="w-full bg-purple-600 hover:bg-purple-700"
-                >
-                  {processing ? 'Processing...' : 'Confirm & Send'}
-                </Button>
-              </div>
-            )}
-
-            {/* Step 4: Processing */}
-            {currentStep === 'processing' && (
-              <div className="text-center py-12 space-y-4">
-                <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
-                <div className="space-y-2">
-                  <p className="font-semibold text-lg">Processing Transaction</p>
-                  <p className="text-sm text-gray-600">
-                    Buying USDC and sending to recipient...
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    This typically takes 1-5 minutes
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Step 5: Success */}
-            {currentStep === 'success' && transactionResult && (
-              <div className="text-center py-8 space-y-6">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle className="w-10 h-10 text-green-600" />
-                </div>
-                
-                <div className="space-y-2">
-                  <p className="font-semibold text-xl text-green-600">USDC Sent Successfully!</p>
-                  <p className="text-sm text-gray-600">
-                    ${transactionResult.usdcAmount} USDC sent to {transactionResult.beneficiaryName}
-                  </p>
-                </div>
-
-                {/* Transaction Details */}
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3 text-left">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Transaction ID:</span>
-                    <span className="font-mono text-xs">{transactionResult.transactionId}</span>
-                  </div>
-                  
-                  {transactionResult.blockchainTxHash && (
-                    <div className="flex justify-between text-sm items-center">
-                      <span className="text-gray-600">Blockchain TX:</span>
-                      <a
-                        href={transactionResult.explorerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-purple-600 hover:underline flex items-center gap-1 text-xs font-mono"
-                      >
-                        {transactionResult.blockchainTxHash.substring(0, 8)}...
-                        <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Recipient:</span>
-                    <span className="font-mono text-xs">
-                      {transactionResult.beneficiaryWalletAddress.substring(0, 8)}...
-                    </span>
-                  </div>
-                  
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Status:</span>
-                    <span className="text-yellow-600">
-                      {transactionResult.blockchainStatus === 'confirmed' ? 'Confirmed' : 'Pending confirmation'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <Button
-                    onClick={handleStartOver}
-                    variant="outline"
-                    className="flex-1"
-                  >
-                    Send Another
-                  </Button>
-                  <Button
-                    onClick={handleClose}
-                    className="flex-1"
-                  >
-                    Done
-                  </Button>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Beneficiary Modal */}
+      {showBeneficiaryModal && (
+        <BeneficiaryModal
+          isOpen={showBeneficiaryModal}
+          onClose={() => setShowBeneficiaryModal(false)}
+          onSave={handleCreateBeneficiary}
+          type="usdc"
+        />
+      )}
 
       {/* Error Modal */}
       <ErrorModal
         isOpen={showErrorModal}
         onClose={() => setShowErrorModal(false)}
         title="Transaction Failed"
-        message={error}
+        message={errorModalMessage}
         type="error"
       />
-    </>
+
+      {/* Spinner Animation */}
+      <style>{`
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
   );
 }

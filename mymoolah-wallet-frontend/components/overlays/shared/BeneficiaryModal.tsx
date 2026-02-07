@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Smartphone, Zap, FileText, Check, AlertTriangle, Plus } from 'lucide-react';
+import { X, Smartphone, Zap, FileText, Check, AlertTriangle, Plus, Coins } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
@@ -10,8 +10,9 @@ import { beneficiaryService, validateMobileNumber, validateMeterNumber, type Ben
 interface BeneficiaryModalProps {
   isOpen: boolean;
   onClose: () => void;
-  type: 'airtime' | 'data' | 'electricity' | 'biller';
-  onSuccess: (beneficiary: Beneficiary) => void;
+  type: 'airtime' | 'data' | 'electricity' | 'biller' | 'usdc';
+  onSuccess?: (beneficiary: Beneficiary) => void;
+  onSave?: () => void;
   editBeneficiary?: Beneficiary | null; // Add support for editing existing beneficiary
   onAddNumber?: () => void; // Callback to open "Add Additional Number" modal
 }
@@ -22,15 +23,23 @@ interface BeneficiaryFormData {
   network?: string;
   meterType?: string;
   billerName?: string;
+  walletAddress?: string;
+  country?: string;
+  relationship?: string;
+  purpose?: string;
 }
 
-export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBeneficiary, onAddNumber }: BeneficiaryModalProps) {
+export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, editBeneficiary, onAddNumber }: BeneficiaryModalProps) {
   const [formData, setFormData] = useState<BeneficiaryFormData>({
     name: '',
     identifier: '',
     network: '',
     meterType: '',
-    billerName: ''
+    billerName: '',
+    walletAddress: '',
+    country: 'US',
+    relationship: 'self',
+    purpose: 'support'
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string>('');
@@ -93,6 +102,8 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
         return <Zap style={{ width: '20px', height: '20px' }} />;
       case 'biller':
         return <FileText style={{ width: '20px', height: '20px' }} />;
+      case 'usdc':
+        return <Coins style={{ width: '20px', height: '20px' }} />;
       default:
         return <FileText style={{ width: '20px', height: '20px' }} />;
     }
@@ -104,6 +115,8 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
         return 'Airtime Recipient';
       case 'data':
         return 'Data Recipient';
+      case 'usdc':
+        return 'USDC Recipient';
       case 'electricity':
         return 'Electricity Meter';
       case 'biller':
@@ -155,6 +168,21 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
       }
     }
 
+    if (type === 'usdc') {
+      if (!formData.walletAddress || formData.walletAddress.length < 32 || formData.walletAddress.length > 44) {
+        setError('Please enter a valid Solana wallet address (32-44 characters)');
+        return false;
+      }
+      if (!formData.country) {
+        setError('Please select recipient country');
+        return false;
+      }
+      if (!formData.relationship) {
+        setError('Please select relationship');
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -194,6 +222,16 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
           billerName: formData.billerName || null,
           isDefault: true
         };
+      } else if (type === 'usdc') {
+        serviceType = 'usdc';
+        serviceData = {
+          walletAddress: formData.walletAddress,
+          network: 'solana',
+          country: formData.country,
+          relationship: formData.relationship,
+          purpose: formData.purpose,
+          isDefault: true
+        };
       }
 
       // When editing, include the old identifier so backend knows which service account to update
@@ -224,7 +262,12 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
         });
       }
 
-      onSuccess(beneficiary);
+      if (onSuccess) {
+        onSuccess(beneficiary);
+      }
+      if (onSave) {
+        onSave();
+      }
       onClose();
       
       // Reset form
@@ -341,34 +384,156 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
               />
             </div>
 
-            {/* Identifier Field */}
-            <div>
-              <Label htmlFor="identifier" style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '14px',
-                fontWeight: '500',
-                color: '#1f2937',
-                marginBottom: '8px',
-                display: 'block'
-              }}>
-                {type === 'airtime' || type === 'data' ? 'Mobile Number' :
-                 type === 'electricity' ? 'Meter Number' : 'Account Number'}
-              </Label>
-              <Input
-                id="identifier"
-                value={formData.identifier}
-                onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
-                placeholder={getIdentifierPlaceholder()}
-                style={{
+            {/* Identifier Field (not for USDC) */}
+            {type !== 'usdc' && (
+              <div>
+                <Label htmlFor="identifier" style={{
                   fontFamily: 'Montserrat, sans-serif',
                   fontSize: '14px',
-                  borderRadius: '12px',
-                  border: '1px solid #e2e8f0',
-                  padding: '12px'
-                }}
-                required
-              />
-            </div>
+                  fontWeight: '500',
+                  color: '#1f2937',
+                  marginBottom: '8px',
+                  display: 'block'
+                }}>
+                  {type === 'airtime' || type === 'data' ? 'Mobile Number' :
+                   type === 'electricity' ? 'Meter Number' : 'Account Number'}
+                </Label>
+                <Input
+                  id="identifier"
+                  value={formData.identifier}
+                  onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
+                  placeholder={getIdentifierPlaceholder()}
+                  style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0',
+                    padding: '12px'
+                  }}
+                  required
+                />
+              </div>
+            )}
+            
+            {/* USDC-Specific Fields */}
+            {type === 'usdc' && (
+              <>
+                <div>
+                  <Label htmlFor="walletAddress" style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#1f2937',
+                    marginBottom: '8px',
+                    display: 'block'
+                  }}>
+                    Solana Wallet Address
+                  </Label>
+                  <Input
+                    id="walletAddress"
+                    value={formData.walletAddress}
+                    onChange={(e) => setFormData({ ...formData, walletAddress: e.target.value })}
+                    placeholder="32-44 characters"
+                    style={{
+                      fontFamily: 'Monaco, monospace',
+                      fontSize: '12px',
+                      borderRadius: '12px',
+                      border: '1px solid #e2e8f0',
+                      padding: '12px'
+                    }}
+                    required
+                  />
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '11px',
+                    color: '#6b7280',
+                    marginTop: '6px'
+                  }}>
+                    Must be a Solana-compatible wallet address
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="country" style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#1f2937',
+                    marginBottom: '8px',
+                    display: 'block'
+                  }}>
+                    Recipient Country
+                  </Label>
+                  <Select value={formData.country} onValueChange={(v) => setFormData({ ...formData, country: v })}>
+                    <SelectTrigger id="country">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="US">United States</SelectItem>
+                      <SelectItem value="GB">United Kingdom</SelectItem>
+                      <SelectItem value="CA">Canada</SelectItem>
+                      <SelectItem value="AU">Australia</SelectItem>
+                      <SelectItem value="NG">Nigeria</SelectItem>
+                      <SelectItem value="KE">Kenya</SelectItem>
+                      <SelectItem value="GH">Ghana</SelectItem>
+                      <SelectItem value="ZW">Zimbabwe</SelectItem>
+                      <SelectItem value="ZA">South Africa</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="relationship" style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#1f2937',
+                    marginBottom: '8px',
+                    display: 'block'
+                  }}>
+                    Relationship
+                  </Label>
+                  <Select value={formData.relationship} onValueChange={(v) => setFormData({ ...formData, relationship: v })}>
+                    <SelectTrigger id="relationship">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="self">Myself (own wallet)</SelectItem>
+                      <SelectItem value="family">Family Member</SelectItem>
+                      <SelectItem value="friend">Friend</SelectItem>
+                      <SelectItem value="business">Business Partner</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="purpose" style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#1f2937',
+                    marginBottom: '8px',
+                    display: 'block'
+                  }}>
+                    Purpose (Optional)
+                  </Label>
+                  <Select value={formData.purpose} onValueChange={(v) => setFormData({ ...formData, purpose: v })}>
+                    <SelectTrigger id="purpose">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="support">Financial Support</SelectItem>
+                      <SelectItem value="gift">Gift</SelectItem>
+                      <SelectItem value="payment">Payment for Goods/Services</SelectItem>
+                      <SelectItem value="investment">Investment</SelectItem>
+                      <SelectItem value="savings">Savings Transfer</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
 
             {/* Type-specific fields */}
             {(type === 'airtime' || type === 'data') && (
