@@ -66,18 +66,25 @@ class UnifiedBeneficiaryService {
           beneficiaryData.paymentMethods = this.normalizedToLegacyPaymentMethods(beneficiaryData.paymentMethodRecords);
         }
         
-        const hasLegacyServices = (beneficiaryData.vasServices && 
+        const hasLegacyServices = (beneficiaryData.vasServices &&
           ((Array.isArray(beneficiaryData.vasServices.airtime) && beneficiaryData.vasServices.airtime.length > 0) ||
            (Array.isArray(beneficiaryData.vasServices.data) && beneficiaryData.vasServices.data.length > 0))) ||
-          (beneficiaryData.utilityServices && 
+          (beneficiaryData.utilityServices &&
            (Array.isArray(beneficiaryData.utilityServices.electricity) && beneficiaryData.utilityServices.electricity.length > 0));
-        
+        const hasLegacyCrypto = beneficiaryData.cryptoServices &&
+          Array.isArray(beneficiaryData.cryptoServices.usdc) &&
+          beneficiaryData.cryptoServices.usdc.length > 0;
+
         // Use the association alias 'serviceAccountRecords' (not JSONB attributes)
-        if (!hasLegacyServices && beneficiaryData.serviceAccountRecords && beneficiaryData.serviceAccountRecords.length > 0) {
-          // Use the already-fetched serviceAccountRecords from include
-          const { vasServices, utilityServices } = this.normalizedToLegacyServiceAccounts(beneficiaryData.serviceAccountRecords);
-          if (!beneficiaryData.vasServices) beneficiaryData.vasServices = vasServices;
-          if (!beneficiaryData.utilityServices) beneficiaryData.utilityServices = utilityServices;
+        if ((!hasLegacyServices || !hasLegacyCrypto) && beneficiaryData.serviceAccountRecords && beneficiaryData.serviceAccountRecords.length > 0) {
+          const { vasServices, utilityServices, cryptoServices } = this.normalizedToLegacyServiceAccounts(beneficiaryData.serviceAccountRecords);
+          if (!hasLegacyServices) {
+            if (!beneficiaryData.vasServices) beneficiaryData.vasServices = vasServices;
+            if (!beneficiaryData.utilityServices) beneficiaryData.utilityServices = utilityServices;
+          }
+          if (!hasLegacyCrypto && cryptoServices?.usdc?.length > 0) {
+            beneficiaryData.cryptoServices = cryptoServices;
+          }
         }
         
         // Merge enriched data back into the model instance
@@ -727,9 +734,12 @@ class UnifiedBeneficiaryService {
       
       // Enrich with normalized data (same as getBeneficiariesByService)
       if (beneficiaryData.serviceAccountRecords && beneficiaryData.serviceAccountRecords.length > 0) {
-        const { vasServices, utilityServices } = this.normalizedToLegacyServiceAccounts(beneficiaryData.serviceAccountRecords);
+        const { vasServices, utilityServices, cryptoServices } = this.normalizedToLegacyServiceAccounts(beneficiaryData.serviceAccountRecords);
         if (!beneficiaryData.vasServices) beneficiaryData.vasServices = vasServices;
         if (!beneficiaryData.utilityServices) beneficiaryData.utilityServices = utilityServices;
+        if (cryptoServices?.usdc?.length > 0 && !beneficiaryData.cryptoServices?.usdc?.length) {
+          beneficiaryData.cryptoServices = cryptoServices;
+        }
       }
 
       return {
@@ -745,6 +755,7 @@ class UnifiedBeneficiaryService {
         utilityServices: beneficiaryData.utilityServices || beneficiary.utilityServices,
         billerServices: beneficiary.billerServices,
         voucherServices: beneficiary.voucherServices,
+        cryptoServices: beneficiaryData.cryptoServices || beneficiary.cryptoServices,
         preferredPaymentMethod: beneficiary.preferredPaymentMethod,
         isFavorite: beneficiary.isFavorite,
         notes: beneficiary.notes,
@@ -1689,14 +1700,16 @@ class UnifiedBeneficiaryService {
 
   /**
    * Convert normalized service accounts to legacy JSONB format
+   * Includes vasServices, utilityServices, and cryptoServices (usdc/crypto)
    */
   normalizedToLegacyServiceAccounts(serviceAccounts) {
     const vasServices = {};
     const utilityServices = {};
-    
+    const cryptoServices = { usdc: [] };
+
     serviceAccounts.forEach((account) => {
       const serviceData = account.serviceData || {};
-      
+
       if (account.serviceType === 'airtime') {
         if (!vasServices.airtime) vasServices.airtime = [];
         vasServices.airtime.push({
@@ -1727,10 +1740,23 @@ class UnifiedBeneficiaryService {
           isDefault: account.isDefault,
           ...serviceData
         });
+      } else if (account.serviceType === 'usdc' || account.serviceType === 'crypto') {
+        cryptoServices.usdc.push({
+          walletAddress: serviceData.walletAddress,
+          network: serviceData.network || 'solana',
+          isActive: account.isActive,
+          isDefault: account.isDefault,
+          country: serviceData.country,
+          relationship: serviceData.relationship,
+          purpose: serviceData.purpose,
+          totalSends: serviceData.totalSends || 0,
+          totalUsdcSent: serviceData.totalUsdcSent || 0,
+          ...serviceData
+        });
       }
     });
-    
-    return { vasServices, utilityServices };
+
+    return { vasServices, utilityServices, cryptoServices };
   }
 
   /**
@@ -1835,12 +1861,19 @@ class UnifiedBeneficiaryService {
           
         case 'usdc':
         case 'crypto':
-          // Check if beneficiary has active USDC crypto services
+          // Check JSONB cryptoServices first
           shouldInclude = Boolean(
-            beneficiaryData.cryptoServices && 
-            beneficiaryData.cryptoServices.usdc && 
-            beneficiaryData.cryptoServices.usdc.some(w => w.isActive)
+            beneficiaryData.cryptoServices &&
+            beneficiaryData.cryptoServices.usdc &&
+            beneficiaryData.cryptoServices.usdc.some(w => w.isActive !== false)
           );
+          // If not in JSONB, check normalized serviceAccountRecords (usdc/crypto from BeneficiaryServiceAccount)
+          if (!shouldInclude) {
+            const hasUsdcServiceAccount = serviceAccounts.some(sa =>
+              sa.isActive && (sa.serviceType === 'usdc' || sa.serviceType === 'crypto')
+            );
+            shouldInclude = hasUsdcServiceAccount;
+          }
           break;
           
         default:

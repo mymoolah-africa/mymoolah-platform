@@ -36,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
       comment: 'For MyMoolah: same as MSISDN. For Bank: bank account number. For others: service-specific identifier',
     },
     accountType: {
-      type: DataTypes.ENUM('mymoolah', 'bank', 'airtime', 'data', 'electricity', 'biller'),
+      type: DataTypes.ENUM('mymoolah', 'bank', 'airtime', 'data', 'electricity', 'biller', 'usdc', 'crypto'),
       allowNull: false,
     },
     bankName: {
@@ -75,8 +75,14 @@ module.exports = (sequelize, DataTypes) => {
       comment: 'Voucher services: gaming, streaming platforms',
       // Structure: { gaming: [{ accountId, platform, isActive }], streaming: [...] }
     },
+    cryptoServices: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      field: 'crypto_services',
+      comment: 'Crypto wallet services: { usdc: [{ walletAddress, network, isActive, country, relationship, purpose, totalSends, totalUsdcSent }] }',
+    },
     preferredPaymentMethod: {
-      type: DataTypes.ENUM('mymoolah', 'bank', 'airtime', 'data', 'electricity', 'biller', 'voucher'),
+      type: DataTypes.ENUM('mymoolah', 'bank', 'airtime', 'data', 'electricity', 'biller', 'voucher', 'usdc', 'crypto'),
       allowNull: true,
       comment: 'User preferred payment method for this beneficiary',
     },
@@ -130,6 +136,7 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['utilityServices'], using: 'gin' },
       { fields: ['billerServices'], using: 'gin' },
       { fields: ['voucherServices'], using: 'gin' },
+      { fields: ['crypto_services'], using: 'gin', name: 'idx_beneficiaries_crypto_services' },
     ],
   });
 
