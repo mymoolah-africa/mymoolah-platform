@@ -22,10 +22,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { ConfirmSheet } from './shared/ConfirmSheet';
 import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
+import { ConfirmationModal } from './shared/ConfirmationModal';
 import { ErrorModal } from '../ui/ErrorModal';
 import { usdcService, type UsdcQuote } from '../../services/usdcService';
 import { unifiedBeneficiaryService, type UnifiedBeneficiary } from '../../services/unifiedBeneficiaryService';
-import { formatCurrency } from '../../services/overlayService';
+import { formatCurrency, beneficiaryService } from '../../services/overlayService';
 
 type Step = 'beneficiary' | 'amount' | 'confirm' | 'processing' | 'success';
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
@@ -52,6 +53,8 @@ export function BuyUsdcOverlay() {
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
   const [showBeneficiaryModal, setShowBeneficiaryModal] = useState(false);
   const [editingBeneficiary, setEditingBeneficiary] = useState<Beneficiary | null>(null);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<Beneficiary | null>(null);
   
   // Amount step
   const [zarAmount, setZarAmount] = useState<string>('');
@@ -121,6 +124,30 @@ export function BuyUsdcOverlay() {
   const handleEditBeneficiary = (beneficiary: Beneficiary) => {
     setEditingBeneficiary(beneficiary);
     setShowBeneficiaryModal(true);
+  };
+
+  const handleRemoveBeneficiary = (beneficiary: Beneficiary) => {
+    setBeneficiaryToRemove(beneficiary);
+    setShowConfirmationModal(true);
+  };
+
+  const handleConfirmRemove = async () => {
+    if (!beneficiaryToRemove) return;
+    try {
+      const id = beneficiaryToRemove.id != null ? String(beneficiaryToRemove.id) : '';
+      if (!id) return;
+      await beneficiaryService.removeAllServicesOfType(id, 'usdc');
+      await loadBeneficiaries();
+      if (selectedBeneficiary?.id === beneficiaryToRemove.id) {
+        setSelectedBeneficiary(null);
+      }
+      setBeneficiaryToRemove(null);
+      setShowConfirmationModal(false);
+    } catch (err) {
+      console.error('Failed to remove USDC recipient:', err);
+      setErrorModalMessage('Failed to remove recipient. Please try again.');
+      setShowErrorModal(true);
+    }
   };
 
   const handleGetQuote = async () => {
@@ -366,6 +393,7 @@ export function BuyUsdcOverlay() {
                   setShowBeneficiaryModal(true);
                 }}
                 onEdit={handleEditBeneficiary}
+                onRemove={handleRemoveBeneficiary}
                 serviceType="usdc"
                 showFilters={false}
                 emptyMessage="No USDC recipients saved yet"
@@ -1067,6 +1095,22 @@ export function BuyUsdcOverlay() {
           editBeneficiary={editingBeneficiary ?? undefined}
         />
       )}
+
+      {/* Remove recipient confirmation */}
+      <ConfirmationModal
+        isOpen={showConfirmationModal}
+        onClose={() => {
+          setShowConfirmationModal(false);
+          setBeneficiaryToRemove(null);
+        }}
+        onConfirm={handleConfirmRemove}
+        title="Remove Recipient"
+        message="Are you sure you want to remove"
+        confirmText="Yes, remove"
+        cancelText="Cancel"
+        type="danger"
+        beneficiaryName={beneficiaryToRemove?.name}
+      />
 
       {/* Error Modal */}
       <ErrorModal

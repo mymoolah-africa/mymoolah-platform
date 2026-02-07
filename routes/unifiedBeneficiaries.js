@@ -183,7 +183,7 @@ router.delete('/:beneficiaryId/services/:serviceType', authenticateToken, async 
     const { beneficiaryId, serviceType } = req.params;
     const userId = req.user.id;
 
-    // Map service type to actual service types (e.g., 'airtime-data' -> ['airtime', 'data'])
+    // Map service type to actual service types (e.g., 'airtime-data' -> ['airtime', 'data'], 'usdc' -> ['usdc', 'crypto'])
     let serviceTypesToRemove = [];
     if (serviceType === 'airtime-data') {
       serviceTypesToRemove = ['airtime', 'data'];
@@ -191,6 +191,8 @@ router.delete('/:beneficiaryId/services/:serviceType', authenticateToken, async 
       serviceTypesToRemove = ['electricity'];
     } else if (serviceType === 'biller') {
       serviceTypesToRemove = ['biller'];
+    } else if (serviceType === 'usdc') {
+      serviceTypesToRemove = ['usdc', 'crypto'];
     } else {
       // Support single service type removal
       serviceTypesToRemove = [serviceType];
