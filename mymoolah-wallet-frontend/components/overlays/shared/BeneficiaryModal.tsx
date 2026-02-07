@@ -6,6 +6,7 @@ import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
 import { beneficiaryService, validateMobileNumber, validateMeterNumber, type Beneficiary } from '../../../services/overlayService';
+import { unifiedBeneficiaryService } from '../../../services/unifiedBeneficiaryService';
 
 interface BeneficiaryModalProps {
   isOpen: boolean;
@@ -246,7 +247,15 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
 
       let beneficiary;
       
-      if (editBeneficiary) {
+      if (type === 'usdc') {
+        // USDC uses unified service directly
+        beneficiary = await unifiedBeneficiaryService.createOrUpdateBeneficiary({
+          name: formData.name,
+          serviceType,
+          serviceData,
+          isFavorite: false
+        });
+      } else if (editBeneficiary) {
         // Update existing beneficiary
         beneficiary = await beneficiaryService.updateBeneficiary(editBeneficiary.id, {
           name: formData.name,
