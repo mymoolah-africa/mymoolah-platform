@@ -66,7 +66,7 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     // Validate service type
-    const validServiceTypes = ['mymoolah', 'bank', 'airtime', 'data', 'electricity', 'water', 'biller', 'voucher'];
+    const validServiceTypes = ['mymoolah', 'bank', 'airtime', 'data', 'electricity', 'water', 'biller', 'voucher', 'usdc', 'crypto'];
     if (!validServiceTypes.includes(serviceType)) {
       return res.status(400).json({
         success: false,
