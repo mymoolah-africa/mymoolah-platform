@@ -16,16 +16,16 @@ module.exports = {
     
     // Check if account already exists
     const [existingAccount] = await queryInterface.sequelize.query(
-      `SELECT id FROM ledger_accounts WHERE account_code = '4100-01-06'`
+      `SELECT id FROM ledger_accounts WHERE code = '4100-01-06'`
     );
     
     if (existingAccount.length === 0) {
       await queryInterface.sequelize.query(`
         INSERT INTO ledger_accounts (
-          account_code,
-          account_name,
-          account_type,
-          parent_account_code,
+          code,
+          name,
+          type,
+          parent_code,
           is_active,
           description,
           created_at,
@@ -50,7 +50,7 @@ module.exports = {
   down: async (queryInterface, Sequelize) => {
     console.log('Removing USDC fee revenue account...');
     await queryInterface.sequelize.query(
-      `DELETE FROM ledger_accounts WHERE account_code = '4100-01-06'`
+      `DELETE FROM ledger_accounts WHERE code = '4100-01-06'`
     );
     console.log('✅ USDC fee revenue account removed');
   }

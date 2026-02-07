@@ -586,12 +586,12 @@ class UsdcTransactionService {
       });
       
       const valrFloatAccount = await LedgerAccount.findOne({
-        where: { account_code: '1200-10-06' },
+        where: { code: '1200-10-06' },
         transaction: dbTransaction
       });
       
       const feeRevenueAccount = await LedgerAccount.findOne({
-        where: { account_code: '4100-01-06' },
+        where: { code: '4100-01-06' },
         transaction: dbTransaction
       });
 
@@ -603,43 +603,37 @@ class UsdcTransactionService {
       await ledgerService.postJournalEntry({
         description: `USDC Send to ${beneficiary.name}`,
         reference: transactionId,
-        journalEntries: [
-          // Debit: User wallet (asset decrease)
+        lines: [
+          // Credit: User wallet (asset decrease)
           {
-            ledgerAccountId: userWalletAccount.id,
-            accountCode: userWalletAccount.account_code,
-            debit: 0,
-            credit: totalZarCents
+            accountCode: userWalletAccount.code,
+            dc: 'credit',
+            amount: totalZarCents,
+            memo: 'USDC purchase debit from user wallet'
           },
-          // Credit: VALR float (asset increase)
+          // Debit: VALR float (asset increase)
           {
-            ledgerAccountId: valrFloatAccount.id,
             accountCode: '1200-10-06',
-            debit: amounts.netToValrCents,
-            credit: 0
+            dc: 'debit',
+            amount: amounts.netToValrCents,
+            memo: 'USDC purchase - funds to VALR'
           },
-          // Credit: Fee revenue (excluding VAT)
+          // Debit: Fee revenue (excluding VAT)
           {
-            ledgerAccountId: feeRevenueAccount.id,
             accountCode: '4100-01-06',
-            debit: amounts.platformFeeExVatCents,
-            credit: 0
+            dc: 'debit',
+            amount: amounts.platformFeeExVatCents,
+            memo: 'USDC transaction fee revenue (ex VAT)'
           },
-          // Credit: VAT payable
+          // Debit: VAT payable
           {
             accountCode: '2300-01-01',
-            debit: amounts.platformFeeVatCents,
-            credit: 0
+            dc: 'debit',
+            amount: amounts.platformFeeVatCents,
+            memo: 'VAT on USDC transaction fee'
           }
-        ],
-        metadata: {
-          transactionId,
-          transactionType: 'usdc_send',
-          userId,
-          beneficiaryId,
-          valrOrderId: valrOrder.orderId
-        }
-      }, dbTransaction);
+        ]
+      });
 
       // 11. Initiate USDC withdrawal to Solana address
       const withdrawal = await valrService.withdrawUsdc({
