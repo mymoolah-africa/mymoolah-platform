@@ -24,6 +24,28 @@ class AdService {
    */
   async getAvailableAds(userId) {
     try {
+      // Staging/UAT: allow demo ads (staging often has NODE_ENV=production but DB name contains 'staging')
+      const isNonProduction = process.env.NODE_ENV !== 'production' ||
+        process.env.NODE_ENV === 'staging' ||
+        (process.env.DATABASE_URL && (process.env.DATABASE_URL.includes('uat') || process.env.DATABASE_URL.includes('staging')));
+
+      // UAT/Staging: if no ads in DB, ensure demo data so Earn Moolahs shows demo videos (same as UAT)
+      if (isNonProduction) {
+        const adsBefore = await AdCampaign.findAll({
+          where: { status: 'active', moderationStatus: 'approved', remainingBudget: { [Op.gt]: 0 } },
+          include: [{
+            model: MerchantFloat,
+            as: 'merchant',
+            where: { adFloatBalance: { [Op.gte]: sequelize.col('AdCampaign.costPerView') } },
+            required: true
+          }],
+          limit: 1
+        });
+        if (adsBefore.length === 0) {
+          await this._ensureDemoAdsForNonProduction();
+        }
+      }
+
       // Get ads with sufficient budget
       const ads = await AdCampaign.findAll({
         where: {
@@ -65,6 +87,82 @@ class AdService {
     } catch (error) {
       console.error('❌ Error fetching available ads:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Ensure demo merchant + 10 demo ads exist in non-production (UAT/Staging).
+   * Idempotent: safe to call on every request when DB has no ads; first call seeds, subsequent calls no-op.
+   * So staging shows "Earn Moolahs" demo videos without manual seed step.
+   */
+  async _ensureDemoAdsForNonProduction() {
+    const videoUrl = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+    const thumbnailUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/images/ForBiggerBlazes.jpg';
+    const demoAds = [
+      { id: '00000000-0001-0000-0000-000000000001', title: 'Vodacom Airtime Deals', description: 'Get amazing airtime deals with Vodacom. Top up now and save!', adType: 'reach', costPerView: 6.00, rewardPerView: 2.00 },
+      { id: '00000000-0002-0000-0000-000000000002', title: 'MTN Data Bundles', description: 'Stream, browse, and stay connected with MTN data bundles.', adType: 'reach', costPerView: 6.00, rewardPerView: 2.00 },
+      { id: '00000000-0003-0000-0000-000000000003', title: 'Shoprite Specials', description: 'Fresh groceries at unbeatable prices. Visit Shoprite today!', adType: 'reach', costPerView: 6.00, rewardPerView: 2.00 },
+      { id: '00000000-0004-0000-0000-000000000004', title: 'Checkers Fresh Produce', description: 'Farm-fresh produce delivered to your door. Shop Checkers now!', adType: 'reach', costPerView: 6.00, rewardPerView: 2.00 },
+      { id: '00000000-0005-0000-0000-000000000005', title: 'Capitec Bank Savings', description: 'Save smarter with Capitec. Open a savings account today!', adType: 'reach', costPerView: 6.00, rewardPerView: 2.00 },
+      { id: '00000000-0006-0000-0000-000000000006', title: 'Hollywoodbets - New Player Bonus', description: 'Sign up now and get R25 free bet!', adType: 'engagement', costPerView: 15.00, rewardPerView: 3.00 },
+      { id: '00000000-0007-0000-0000-000000000007', title: 'Betway Sports Betting', description: 'Bet on your favorite sports. Get R50 welcome bonus!', adType: 'engagement', costPerView: 15.00, rewardPerView: 3.00 },
+      { id: '00000000-0008-0000-0000-000000000008', title: 'Old Mutual Life Insurance', description: 'Protect your family with affordable life insurance.', adType: 'engagement', costPerView: 15.00, rewardPerView: 3.00 },
+      { id: '00000000-0009-0000-0000-000000000009', title: 'TymeBank Student Account', description: 'Free banking for students. No monthly fees!', adType: 'engagement', costPerView: 15.00, rewardPerView: 3.00 },
+      { id: '00000000-0010-0000-0000-000000000010', title: 'Takealot Black Friday', description: 'Biggest sale of the year! Free delivery on orders over R500.', adType: 'engagement', costPerView: 15.00, rewardPerView: 3.00 }
+    ];
+    try {
+      await sequelize.query(`
+        INSERT INTO merchant_floats (
+          "merchantId", "merchantName", "merchantType", "floatAccountNumber", "floatAccountName",
+          "currentBalance", "initialBalance", "minimumBalance", "maximumBalance",
+          "adFloatBalance", "adFloatInitialBalance", "adFloatMinimumBalance",
+          "settlementPeriod", "settlementMethod", status, "isActive",
+          "canSellVouchers", "canRedeemVouchers", "voucherSaleCommission", "voucherRedemptionFee",
+          "ledgerAccountCode", metadata, "createdAt", "updatedAt"
+        ) VALUES (
+          'DUMMY_AD_MERCHANT_001', 'Test Advertiser (Dummy)', 'other', 'MF-AD-DUMMY-001', 'Dummy Advertiser Float Account',
+          1000.00, 1000.00, 0.00, NULL, 600.00, 600.00, 0.00,
+          'monthly', 'prefunded', 'active', true, false, false, 0.000, 0.000,
+          '2100-05-001', '{"isTestMerchant": true, "createdFor": "watch_to_earn_testing"}', NOW(), NOW()
+        )
+        ON CONFLICT ("merchantId") DO UPDATE SET
+          "adFloatBalance" = 600.00, "adFloatInitialBalance" = 600.00, "updatedAt" = NOW()
+      `);
+      for (const ad of demoAds) {
+        await sequelize.query(`
+          INSERT INTO ad_campaigns (
+            id, "merchantId", title, description, "videoUrl", "thumbnailUrl",
+            "durationSeconds", "adType", status, "totalBudget", "remainingBudget",
+            "costPerView", "rewardPerView", "targetingRules",
+            "conversionEmail", "conversionWebhookUrl",
+            "moderationStatus", "moderatedAt", "moderatedBy", "moderationNotes",
+            "totalViews", "totalEngagements", metadata, "createdAt", "updatedAt"
+          ) VALUES (
+            :id, 'DUMMY_AD_MERCHANT_001', :title, :description, :videoUrl, :thumbnailUrl,
+            15, :adType, 'active', 600.00, 600.00, :costPerView, :rewardPerView, NULL,
+            'leads-test@mymoolah.africa', NULL, 'approved', NOW(), 'admin', 'Test ad - approved for UAT/Staging',
+            0, 0, '{"isTestAd": true}', NOW(), NOW()
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            title = :title, description = :description, "videoUrl" = :videoUrl, "thumbnailUrl" = :thumbnailUrl,
+            "durationSeconds" = 15, "costPerView" = :costPerView, "rewardPerView" = :rewardPerView, "updatedAt" = NOW()
+        `, {
+          replacements: {
+            id: ad.id,
+            title: ad.title,
+            description: ad.description,
+            videoUrl,
+            thumbnailUrl,
+            adType: ad.adType,
+            costPerView: ad.costPerView,
+            rewardPerView: ad.rewardPerView
+          }
+        });
+      }
+      console.log('✅ [AdService] Demo ads ensured for non-production (UAT/Staging)');
+    } catch (err) {
+      console.error('❌ [AdService] Failed to ensure demo ads:', err.message);
+      // Non-fatal: getAvailableAds will still return [] if this fails
     }
   }
 

@@ -1,8 +1,16 @@
 # Watch to Earn - Complete Documentation
 
-**Version**: 1.1.0  
-**Last Updated**: January 21, 2026  
-**Status**: ✅ **IMPLEMENTED** - UI Improvements Complete - Ready for UAT Testing
+**Version**: 1.2.0  
+**Last Updated**: February 2026  
+**Status**: ✅ **IMPLEMENTED** - Staging demo videos auto-seeded - Ready for UAT/Staging Testing
+
+---
+
+## Staging & UAT – demo videos
+
+- **UAT**: Run `node scripts/seed-watch-to-earn.js` (with UAT proxy on 6543) to seed 10 demo ads. Re-watching is allowed.
+- **Staging**: The backend **auto-seeds** demo ads when the DB has no ads in non-production (NODE_ENV ≠ production or DATABASE_URL contains `uat`/`staging`). The first request to **Earn Moolahs** on staging will create the dummy merchant and 10 demo campaigns (same public test video as UAT), so demo videos appear without a manual seed step.
+- **Optional manual seed for staging**: With staging proxy on 6544, run `node scripts/seed-watch-to-earn.js --staging` (or `SEED_TARGET=staging node scripts/seed-watch-to-earn.js`) to pre-populate the staging DB.
 
 ---
 

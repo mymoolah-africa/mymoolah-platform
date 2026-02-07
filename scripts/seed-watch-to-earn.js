@@ -9,19 +9,32 @@
  * 
  * Uses db-connection-helper.js for proper connection management.
  * 
+ * Usage:
+ *   node scripts/seed-watch-to-earn.js           # Seed UAT (default)
+ *   node scripts/seed-watch-to-earn.js --staging # Seed Staging (requires staging proxy on 6544)
+ *   SEED_TARGET=staging node scripts/seed-watch-to-earn.js
+ * 
  * @author MyMoolah Development Team
  * @date 2026-01-20
  */
 
-const { getUATClient } = require('./db-connection-helper');
+const { getUATClient, getStagingClient } = require('./db-connection-helper');
+
+const isStaging = process.argv.includes('--staging') || process.env.SEED_TARGET === 'staging';
 
 async function seedWatchToEarn() {
   let client;
   
   try {
-    console.log('📋 Connecting to UAT database...');
-    client = await getUATClient();
-    console.log('✅ Connected to database');
+    if (isStaging) {
+      console.log('📋 Connecting to Staging database (ensure staging proxy is on 6544)...');
+      client = await getStagingClient();
+      console.log('✅ Connected to Staging database');
+    } else {
+      console.log('📋 Connecting to UAT database...');
+      client = await getUATClient();
+      console.log('✅ Connected to database');
+    }
     
     // Ensure ad float columns exist in merchant_floats
     console.log('📋 Ensuring ad float columns exist...');
