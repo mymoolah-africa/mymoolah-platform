@@ -49,34 +49,41 @@ module.exports = {
 
     // Check if supplier float record already exists
     const [existingFloat] = await queryInterface.sequelize.query(
-      `SELECT id FROM supplier_floats WHERE supplier_code = 'VALR'`
+      `SELECT id FROM supplier_floats WHERE "supplierId" = 'VALR'`
     );
     
     if (existingFloat.length === 0) {
       // Create supplier float record for monitoring
+      // Note: warning/critical thresholds are calculated dynamically, not stored
       await queryInterface.sequelize.query(`
         INSERT INTO supplier_floats (
-          supplier_code,
-          supplier_name,
-          ledger_account_code,
-          minimum_balance,
-          warning_threshold,
-          critical_threshold,
-          currency,
-          is_active,
-          alert_email,
-          created_at,
-          updated_at
+          "supplierId",
+          "supplierName",
+          "floatAccountNumber",
+          "floatAccountName",
+          "ledgerAccountCode",
+          "currentBalance",
+          "initialBalance",
+          "minimumBalance",
+          "settlementPeriod",
+          "settlementMethod",
+          "status",
+          "isActive",
+          "createdAt",
+          "updatedAt"
         ) VALUES (
           'VALR',
           'VALR',
+          'VALR_FLOAT_001',
+          'VALR USDC Float Account',
           '1200-10-06',
-          10000,
-          15000,
-          10500,
-          'ZAR',
+          0,
+          0,
+          100.00,
+          'real_time',
+          'prefunded',
+          'active',
           true,
-          'finance@mymoolah.africa',
           NOW(),
           NOW()
         )
@@ -90,7 +97,7 @@ module.exports = {
   down: async (queryInterface, Sequelize) => {
     console.log('Removing VALR supplier float record...');
     await queryInterface.sequelize.query(
-      `DELETE FROM supplier_floats WHERE supplier_code = 'VALR'`
+      `DELETE FROM supplier_floats WHERE "supplierId" = 'VALR'`
     );
     
     console.log('Removing VALR float ledger account...');
