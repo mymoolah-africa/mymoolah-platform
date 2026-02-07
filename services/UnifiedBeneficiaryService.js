@@ -1341,7 +1341,9 @@ class UnifiedBeneficiaryService {
       'electricity': 'utilityServices',
       'water': 'utilityServices',
       'biller': 'billerServices',
-      'voucher': 'voucherServices'
+      'voucher': 'voucherServices',
+      'usdc': 'cryptoServices',
+      'crypto': 'cryptoServices'
     };
     return serviceMap[serviceType];
   }
@@ -1409,6 +1411,24 @@ class UnifiedBeneficiaryService {
         const voucherType = newServiceData.type || 'gaming';
         const voucherServices = currentServices[voucherType] || [];
         return { ...currentServices, [voucherType]: [...voucherServices, newServiceData] };
+      case 'usdc':
+      case 'crypto':
+        const usdcWallets = currentServices.usdc || [];
+        const usdcWallet = {
+          walletAddress: newServiceData.walletAddress,
+          network: newServiceData.network || 'solana',
+          isActive: true,
+          isVerified: true,
+          isDefault: usdcWallets.length === 0, // First wallet is default
+          country: newServiceData.country,
+          relationship: newServiceData.relationship,
+          purpose: newServiceData.purpose,
+          totalSends: 0,
+          totalUsdcSent: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        return { ...currentServices, usdc: [...usdcWallets, usdcWallet] };
       default:
         return currentServices;
     }
