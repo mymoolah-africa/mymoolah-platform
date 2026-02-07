@@ -37,7 +37,6 @@ const valrService = require('./valrService');
 const ledgerService = require('./ledgerService');
 const cachingService = require('./cachingService');
 const auditLogger = require('./auditLogger');
-const logger = require('../utils/logger');
 const { isValidSolanaAddress } = require('../utils/solanaAddressValidator');
 
 class UsdcTransactionService {
@@ -77,7 +76,7 @@ class UsdcTransactionService {
         return JSON.parse(cached);
       }
     } catch (cacheError) {
-      logger.warn('[UsdcService] Cache read failed, fetching fresh rate', { error: cacheError.message });
+      console.warn('[UsdcService] Cache read failed, fetching fresh rate', { error: cacheError.message });
     }
     
     // Fetch from VALR
@@ -87,7 +86,7 @@ class UsdcTransactionService {
     try {
       await cachingService.set(cacheKey, JSON.stringify(rate), 60);
     } catch (cacheError) {
-      logger.warn('[UsdcService] Cache write failed', { error: cacheError.message });
+      console.warn('[UsdcService] Cache write failed', { error: cacheError.message });
     }
     
     return rate;
@@ -725,7 +724,7 @@ class UsdcTransactionService {
         });
       });
 
-      logger.info('[UsdcService] USDC send executed successfully', {
+      console.log('[UsdcService] USDC send executed successfully', {
         transactionId,
         userId,
         zarAmount,
@@ -744,7 +743,7 @@ class UsdcTransactionService {
       // Rollback database transaction
       await dbTransaction.rollback();
       
-      logger.error('[UsdcService] USDC send failed', {
+      console.error('[UsdcService] USDC send failed', {
         userId,
         zarAmount,
         beneficiaryId,
@@ -830,7 +829,7 @@ class UsdcTransactionService {
     
     await transaction.save();
 
-    logger.info('[UsdcService] Blockchain status updated', {
+      console.log('[UsdcService] Blockchain status updated', {
       transactionId,
       blockchainStatus: statusUpdate.status,
       confirmations: statusUpdate.confirmations
@@ -878,7 +877,7 @@ class UsdcTransactionService {
         txHash: withdrawalStatus.txHash
       };
     } catch (error) {
-      logger.error('[UsdcService] Failed to poll withdrawal status', {
+      console.error('[UsdcService] Failed to poll withdrawal status', {
         transactionId,
         error: error.message
       });

@@ -15,7 +15,6 @@
 
 const usdcTransactionService = require('../services/usdcTransactionService');
 const { isValidSolanaAddress, detectKnownPattern } = require('../utils/solanaAddressValidator');
-const logger = require('../utils/logger');
 
 class UsdcController {
   /**
@@ -40,7 +39,7 @@ class UsdcController {
         }
       });
     } catch (error) {
-      logger.error('[UsdcController] Failed to get rate', {
+      console.error('[UsdcController] Failed to get rate', {
         error: error.message,
         userId: req.user?.id
       });
@@ -94,7 +93,7 @@ class UsdcController {
         }
       });
     } catch (error) {
-      logger.error('[UsdcController] Failed to get quote', {
+      console.error('[UsdcController] Failed to get quote', {
         error: error.message,
         userId: req.user?.id,
         zarAmount: req.body.zarAmount
@@ -187,7 +186,7 @@ class UsdcController {
         }
       });
     } catch (error) {
-      logger.error('[UsdcController] Failed to execute send', {
+      console.error('[UsdcController] Failed to execute send', {
         error: error.message,
         code: error.code,
         userId: req.user?.id,
@@ -288,7 +287,7 @@ class UsdcController {
         }
       });
     } catch (error) {
-      logger.error('[UsdcController] Failed to get transactions', {
+      console.error('[UsdcController] Failed to get transactions', {
         error: error.message,
         userId: req.user?.id
       });
@@ -361,7 +360,7 @@ class UsdcController {
         }
       });
     } catch (error) {
-      logger.error('[UsdcController] Failed to get transaction', {
+      console.error('[UsdcController] Failed to get transaction', {
         error: error.message,
         userId: req.user?.id,
         transactionId: req.params.transactionId
@@ -412,7 +411,7 @@ class UsdcController {
         }
       });
     } catch (error) {
-      logger.error('[UsdcController] Failed to validate address', {
+      console.error('[UsdcController] Failed to validate address', {
         error: error.message,
         address: req.body.address
       });
@@ -454,7 +453,7 @@ class UsdcController {
         }
       });
     } catch (error) {
-      logger.error('[UsdcController] Health check failed', {
+      console.error('[UsdcController] Health check failed', {
         error: error.message
       });
       

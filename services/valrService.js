@@ -15,7 +15,6 @@
 
 const crypto = require('crypto');
 const axios = require('axios');
-const logger = require('../utils/logger');
 
 class ValrService {
   constructor() {
@@ -63,7 +62,7 @@ class ValrService {
       if (Date.now() - this.lastFailureTime > this.circuitBreakerResetTime) {
         this.circuitOpen = false;
         this.failureCount = 0;
-        logger.info('[ValrService] Circuit breaker reset');
+        console.log('[ValrService] Circuit breaker reset');
       } else {
         const error = new Error('VALR service temporarily unavailable (circuit breaker open)');
         error.code = 'CIRCUIT_BREAKER_OPEN';
@@ -85,7 +84,7 @@ class ValrService {
     let lastError;
     for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
       try {
-        logger.info('[ValrService] Request', {
+        console.log('[ValrService] Request', {
           method,
           path,
           attempt,
@@ -103,7 +102,7 @@ class ValrService {
         // Success - reset failure count
         this.failureCount = 0;
         
-        logger.info('[ValrService] Response', {
+        console.log('[ValrService] Response', {
           method,
           path,
           status: response.status,
@@ -116,7 +115,7 @@ class ValrService {
         lastError = error;
         
         // Log error with details
-        logger.error('[ValrService] Request failed', {
+        console.error('[ValrService] Request failed', {
           attempt,
           maxRetries: this.maxRetries,
           method,
@@ -130,7 +129,7 @@ class ValrService {
 
         // Check if retryable
         if (attempt === this.maxRetries || !this.isRetryableError(error)) {
-          logger.error('[ValrService] Max retries reached or non-retryable error', {
+          console.error('[ValrService] Max retries reached or non-retryable error', {
             attempt,
             maxRetries: this.maxRetries,
             retryable: this.isRetryableError(error)
@@ -140,7 +139,7 @@ class ValrService {
 
         // Exponential backoff: 1s, 2s, 4s
         const backoffMs = 1000 * Math.pow(2, attempt - 1);
-        logger.info('[ValrService] Retrying after backoff', { backoffMs, nextAttempt: attempt + 1 });
+        console.log('[ValrService] Retrying after backoff', { backoffMs, nextAttempt: attempt + 1 });
         await this.sleep(backoffMs);
       }
     }
@@ -152,7 +151,7 @@ class ValrService {
     // Open circuit breaker if threshold reached
     if (this.failureCount >= this.circuitBreakerThreshold) {
       this.circuitOpen = true;
-      logger.error('[ValrService] Circuit breaker opened', {
+      console.error('[ValrService] Circuit breaker opened', {
         failureCount: this.failureCount,
         threshold: this.circuitBreakerThreshold,
         resetTimeMs: this.circuitBreakerResetTime
@@ -222,7 +221,7 @@ class ValrService {
         timestamp: new Date()
       };
     } catch (error) {
-      logger.error('[ValrService] Failed to get market rate', { pair, error: error.message });
+      console.error('[ValrService] Failed to get market rate', { pair, error: error.message });
       throw error;
     }
   }
@@ -252,7 +251,7 @@ class ValrService {
         createdAt: new Date()
       };
     } catch (error) {
-      logger.error('[ValrService] Failed to get instant quote', { 
+      console.error('[ValrService] Failed to get instant quote', { 
         pair, 
         zarAmount, 
         error: error.message 
@@ -277,7 +276,7 @@ class ValrService {
         _idempotencyKey: idempotencyKey
       });
       
-      logger.info('[ValrService] Instant order executed', {
+      console.log('[ValrService] Instant order executed', {
         orderId,
         idempotencyKey,
         status: data.status
@@ -291,7 +290,7 @@ class ValrService {
         executedAt: new Date()
       };
     } catch (error) {
-      logger.error('[ValrService] Failed to execute instant order', { 
+      console.error('[ValrService] Failed to execute instant order', { 
         orderId,
         idempotencyKey,
         error: error.message 
@@ -326,7 +325,7 @@ class ValrService {
         paymentReference
       });
       
-      logger.info('[ValrService] USDC withdrawal initiated', {
+      console.log('[ValrService] USDC withdrawal initiated', {
         withdrawalId: data.id,
         amount,
         address: address.substring(0, 8) + '...',  // Log partial address only
@@ -341,7 +340,7 @@ class ValrService {
         createdAt: new Date()
       };
     } catch (error) {
-      logger.error('[ValrService] Failed to withdraw USDC', { 
+      console.error('[ValrService] Failed to withdraw USDC', { 
         amount,
         address: address.substring(0, 8) + '...',
         error: error.message 
@@ -368,7 +367,7 @@ class ValrService {
         completedAt: data.completedTime ? new Date(data.completedTime) : null
       };
     } catch (error) {
-      logger.error('[ValrService] Failed to get withdrawal status', { 
+      console.error('[ValrService] Failed to get withdrawal status', { 
         withdrawalId,
         error: error.message 
       });
@@ -386,7 +385,7 @@ class ValrService {
       const data = await this.makeRequest('GET', '/v1/account/balances');
       return data;
     } catch (error) {
-      logger.error('[ValrService] Failed to get account balances', { error: error.message });
+      console.error('[ValrService] Failed to get account balances', { error: error.message });
       throw error;
     }
   }
@@ -450,7 +449,7 @@ class ValrService {
     this.circuitOpen = false;
     this.failureCount = 0;
     this.lastFailureTime = null;
-    logger.info('[ValrService] Circuit breaker manually reset');
+    console.log('[ValrService] Circuit breaker manually reset');
   }
 }
 
