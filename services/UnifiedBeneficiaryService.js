@@ -302,15 +302,18 @@ class UnifiedBeneficiaryService {
         }
         
         // For non-MSI services (electricity, biller), use a placeholder or generate from name
-        if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller')) {
+        if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller' || serviceType === 'usdc' || serviceType === 'crypto')) {
           // Generate a short NON_MSI_ identifier for non-MSI services (VARCHAR(15))
-          const identifier = serviceType === 'electricity' ? serviceData?.meterNumber : serviceData?.accountNumber;
+          const identifier = serviceType === 'electricity' ? serviceData?.meterNumber : 
+                            serviceType === 'biller' ? serviceData?.accountNumber :
+                            serviceType === 'usdc' || serviceType === 'crypto' ? serviceData?.walletAddress : 
+                            null;
           primaryMsisdn = this.generateNonMsiMsisdn(userId, serviceType, identifier, name);
         }
       }
 
-      // MSISDN is required for non-bank services (except electricity/biller which use NON_MSI_)
-      if (!primaryMsisdn && serviceType !== 'electricity' && serviceType !== 'biller') {
+      // MSISDN is required for non-bank services (except electricity/biller/usdc which use NON_MSI_)
+      if (!primaryMsisdn && serviceType !== 'electricity' && serviceType !== 'biller' && serviceType !== 'usdc' && serviceType !== 'crypto') {
         throw new Error('MSISDN is required. Provide msisdn or ensure serviceData contains walletMsisdn/msisdn/mobileNumber');
       }
 
