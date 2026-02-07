@@ -138,7 +138,7 @@ export type UnifiedBeneficiary =
   | VoucherBeneficiary;
 
 // Service types for API calls
-export type ServiceType = 'payment' | 'airtime-data' | 'electricity' | 'biller' | 'voucher';
+export type ServiceType = 'payment' | 'airtime-data' | 'electricity' | 'biller' | 'voucher' | 'usdc';
 
 // ========================================
 // SERVICE METHODS

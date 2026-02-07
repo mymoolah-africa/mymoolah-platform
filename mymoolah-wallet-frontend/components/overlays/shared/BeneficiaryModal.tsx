@@ -152,7 +152,8 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
       return false;
     }
 
-    if (!formData.identifier.trim()) {
+    // Skip identifier check for USDC (uses walletAddress instead)
+    if (type !== 'usdc' && !formData.identifier.trim()) {
       setError('Identifier is required');
       return false;
     }
