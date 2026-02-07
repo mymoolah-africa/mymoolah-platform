@@ -367,6 +367,7 @@ export function BuyUsdcOverlay() {
                 }}
                 onEdit={handleEditBeneficiary}
                 serviceType="usdc"
+                showFilters={false}
                 emptyMessage="No USDC recipients saved yet"
               />
               
@@ -374,7 +375,7 @@ export function BuyUsdcOverlay() {
                 onClick={() => setShowBeneficiaryModal(true)}
                 style={{
                   width: '100%',
-                  marginTop: '1rem',
+                  marginTop: '1.5rem',
                   background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
                   color: '#ffffff',
                   border: 'none',
