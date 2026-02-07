@@ -9,9 +9,8 @@
 const express = require('express');
 const router = express.Router();
 const usdcController = require('../controllers/usdcController');
-const authenticateToken = require('../middleware/authenticateToken');
-const { body, query, param } = require('express-validator');
-const validate = require('../middleware/validate');
+const authenticateToken = require('../middleware/auth');
+const { body, query, param, validationResult } = require('express-validator');
 
 // Apply authentication to all USDC routes
 router.use(authenticateToken);
@@ -34,12 +33,10 @@ router.get(
  */
 router.post(
   '/quote',
-  [
-    body('zarAmount')
-      .isFloat({ min: 10, max: 5000 })
-      .withMessage('Amount must be between R10 and R5,000'),
-    validate
-  ],
+  authenticateToken,
+  body('zarAmount')
+    .isFloat({ min: 10, max: 5000 })
+    .withMessage('Amount must be between R10 and R5,000'),
   usdcController.getQuote.bind(usdcController)
 );
 
@@ -55,25 +52,7 @@ router.post(
  */
 router.post(
   '/send',
-  [
-    body('zarAmount')
-      .isFloat({ min: 10, max: 5000 })
-      .withMessage('Amount must be between R10 and R5,000'),
-    body('beneficiaryId')
-      .isInt({ min: 1 })
-      .withMessage('Valid beneficiary ID is required'),
-    body('purpose')
-      .optional()
-      .isString()
-      .isLength({ max: 200 })
-      .withMessage('Purpose must be a string (max 200 characters)'),
-    body('idempotencyKey')
-      .optional()
-      .isString()
-      .isLength({ max: 100 })
-      .withMessage('Idempotency key must be a string (max 100 characters)'),
-    validate
-  ],
+  authenticateToken,
   usdcController.executeSend.bind(usdcController)
 );
 
@@ -88,21 +67,7 @@ router.post(
  */
 router.get(
   '/transactions',
-  [
-    query('limit')
-      .optional()
-      .isInt({ min: 1, max: 100 })
-      .withMessage('Limit must be between 1 and 100'),
-    query('offset')
-      .optional()
-      .isInt({ min: 0 })
-      .withMessage('Offset must be a positive integer'),
-    query('status')
-      .optional()
-      .isIn(['pending', 'completed', 'failed', 'cancelled'])
-      .withMessage('Invalid status value'),
-    validate
-  ],
+  authenticateToken,
   usdcController.getTransactions.bind(usdcController)
 );
 
@@ -112,13 +77,7 @@ router.get(
  */
 router.get(
   '/transactions/:transactionId',
-  [
-    param('transactionId')
-      .isString()
-      .isLength({ min: 1, max: 100 })
-      .withMessage('Valid transaction ID is required'),
-    validate
-  ],
+  authenticateToken,
   usdcController.getTransaction.bind(usdcController)
 );
 
@@ -131,14 +90,7 @@ router.get(
  */
 router.post(
   '/validate-address',
-  [
-    body('address')
-      .isString()
-      .trim()
-      .isLength({ min: 32, max: 44 })
-      .withMessage('Solana address must be 32-44 characters'),
-    validate
-  ],
+  authenticateToken,
   usdcController.validateAddress.bind(usdcController)
 );
 
