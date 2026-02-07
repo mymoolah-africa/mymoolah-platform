@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: January 17, 2026
-**Version**: 2.6.4 - EasyPay Standalone Voucher UI Improvements
-**Status**: ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **PDF CONVERTER SECURE** ✅ **EASYPAY SIMULATION SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED**
+**Last Updated**: February 07, 2026
+**Version**: 2.9.1 - USDC Fixes & Banking-Grade Sweep
+**Status**: ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED**
 
 ---
 
@@ -60,6 +60,7 @@ See: `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for full au
 ---
 
 ### **🏆 Security Achievements**
+- ✅ **USDC API (Feb 2026)**: All USDC endpoints use express-validator at boundary; idempotency (client key or crypto.randomUUID()); VALR credentials guarded; no unsupported request body fields; limit/offset/address length sanitized
 - ✅ **TLS 1.3 Implementation**: Complete TLS 1.3 with banking-grade cipher suites
 - ✅ **OTP System**: Banking-grade OTP verification for password reset and phone changes
 - ❌ **Mojaloop Compliance**: FSPIOP Party ID system NOT implemented (non-compliant)

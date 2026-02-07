@@ -2,10 +2,20 @@
 
 ## **🧪 Testing Strategy Overview**
 
-**Last Updated**: January 17, 2026
-**Version**: 2.6.4 - EasyPay Standalone Voucher UI Improvements
-**Testing Phase**: Production Ready - EasyPay Standalone Voucher UI + PDF Converter + EasyPay Simulation + Reconciliation + SMS + Referral Tested
-**Next Phase**: Production Deployment & Monitoring
+**Last Updated**: February 07, 2026
+**Version**: 2.9.1 - USDC Fixes & Banking-Grade Sweep
+**Testing Phase**: Production Ready - USDC Send (validation/limits/idempotency sweep) + EasyPay Standalone Voucher UI + Reconciliation + SMS + Referral Tested
+**Next Phase**: USDC UAT with VALR credentials; Production Deployment & Monitoring
+
+---
+
+## **🪙 USDC Send Testing (February 2026)** ✅ **VALIDATION & SWEEP COMPLETE**
+
+- **Quote / Send**: Require valid VALR API credentials in `.env`; missing or invalid credentials return **503** with `QUOTE_SERVICE_UNAVAILABLE` (not 500).
+- **Validation**: All USDC routes use express-validator; invalid input returns 400 with structured body.
+- **Limits**: Daily/monthly/new-beneficiary limits use DB aggregation only (no JS sum).
+- **Idempotency**: Client may send `idempotencyKey` (string, max 128 chars); otherwise server generates `crypto.randomUUID()`.
+- **UAT**: Run quote/send flows in an environment with VALR configured; see `docs/session_logs/2026-02-07_2230_usdc-fixes-banners-banking-grade-sweep.md` for implementation details.
 
 ---
 

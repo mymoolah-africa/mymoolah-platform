@@ -1,12 +1,18 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: February 01, 2026 17:00  
-**Version**: 2.8.0 - Complete MobileMart Production Integration  
-**Status**: ✅ **ALL MOBILEMART SERVICES INTEGRATED** ✅ **ELECTRICITY PURCHASE LIVE** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **STAGING TESTED** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: February 07, 2026 22:30  
+**Version**: 2.9.1 - USDC Fixes & Banking-Grade Sweep  
+**Status**: ✅ **USDC SEND + BANKING-GRADE SWEEP** ✅ **ALL MOBILEMART SERVICES INTEGRATED** ✅ **ELECTRICITY PURCHASE LIVE** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **STAGING TESTED** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: Electricity Purchase with MobileMart Integration (February 01, 2026)**
+## 🚀 **LATEST UPDATE: USDC Fixes & Banking-Grade Sweep (February 07, 2026)**
+
+USDC service hardened: beneficiary list fix (model + enrichment + filter), Redis v5 cache, VALR 503 handling, edit flow and overlay banners. All USDC routes use express-validator and DB-only aggregation for limits. See `docs/session_logs/2026-02-07_2230_usdc-fixes-banners-banking-grade-sweep.md`.
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Electricity Purchase with MobileMart Integration (February 01, 2026)**
 
 ### **⚡ Production-Ready Electricity Purchase**
 Complete end-to-end electricity purchase implementation:

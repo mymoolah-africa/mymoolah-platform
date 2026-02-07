@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-07 15:00  
-**Latest Feature**: USDC Send Feature (Cross-Border Value Transfer)  
+**Last Updated**: 2026-02-07 22:30  
+**Latest Feature**: USDC Send Feature (Cross-Border Value Transfer) — fixes, banners, banking-grade sweep  
 **Document Version**: 2.9.0  
 **Classification**: Internal - Banking-Grade Operations Manual
 
@@ -51,8 +51,11 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 07, 2026 - 15:00)**
-**USDC Send Feature Implementation** - Complete implementation of "Buy USDC" cross-border value transfer feature with VALR integration (FSCA-licensed CASP FSP 53308). Banking-grade architecture corrections applied: uses existing `transactions` table (not new table), extends `beneficiaries` with `crypto_services` JSONB (unified system), full ledger integration with VALR float account (1200-10-06), Redis rate caching (not DB table), overlay pattern (not page), comprehensive error handling (retry + circuit breaker). Compliance controls include Travel Rule data collection, sanctions screening (8 blocked countries), transaction limits (R5k/txn, R15k/day, R50k/month), new beneficiary controls (7-day limit, 24h cooldown). Frontend includes full overlay flow (amount/quote → beneficiary → review → processing → success) with real-time quote expiry timer, Solana address validation, irreversibility warnings, and blockchain explorer links. VALR API integration complete with HMAC-SHA512 signing, exponential backoff retry logic, and circuit breaker pattern. Seven new API endpoints created. Feature disabled by default pending VALR credentials and RMCP approval.
+### **Latest Achievement (February 07, 2026 - 22:30)**
+**USDC Fixes, Banners & Banking-Grade Sweep** - Fixed USDC beneficiary list not showing (Beneficiary model `cryptoServices` field, enrichment from `serviceAccountRecords`, filter by normalized table). Fixed Redis v5 cache compatibility (`set` with EX), VALR 503 on missing/invalid credentials, and USDC beneficiary edit flow (onEdit/onAddNew, modal prefill for wallet/country/relationship/purpose). Buy USDC overlay now shows top and bottom sticky banners (App + BottomNavigation); removed filter row (All/Airtime/Data/etc) and improved spacing. Full banking-grade sweep: all USDC routes use express-validator + handleValidation; limit checks use DB aggregation only (SUM/ABS, no JS sum); idempotency via client key or crypto.randomUUID(); VALR guarded (isConfigured/signRequest), unsupported _idempotencyKey removed from VALR body; controller uses service layer only (getTransactionById); limit/offset/address sanitized. Session log: `docs/session_logs/2026-02-07_2230_usdc-fixes-banners-banking-grade-sweep.md`. Commits: bf2d271a, b8d662f5, f1095d11, 429c7a60, 1c7b9f65.
+
+### **Previous Achievement (February 07, 2026 - 15:00)**
+**USDC Send Feature Implementation** - Complete implementation of "Buy USDC" cross-border value transfer feature with VALR integration (FSCA-licensed CASP FSP 53308). Banking-grade architecture: existing `transactions` table, `beneficiaries.crypto_services` JSONB, full ledger integration (VALR float 1200-10-06), Redis rate caching, overlay pattern, retry + circuit breaker. Compliance: Travel Rule, sanctions (8 blocked countries), limits (R5k/txn, R15k/day, R50k/month), new beneficiary controls. Frontend: overlay flow, quote expiry, Solana validation, explorer links. Seven API endpoints. Disabled by default pending VALR credentials and RMCP approval.
 
 ### **Previous Achievement (February 01, 2026 - 20:00)**
 **Complete Flash API Integration** - Flash integration upgraded from "database label only" to "full production API integration". Integrated Flash cash-out overlay with real API (replaced simulation with real PIN extraction). Integrated Flash electricity purchase following MobileMart pattern (lookup meter + purchase flow). Environment-aware operation implemented (`FLASH_LIVE_INTEGRATION` flag). Token/PIN extraction from Flash API responses with comprehensive error handling. Transaction metadata includes Flash transaction details. Flash infrastructure (controller, auth service, routes) now 100% connected and production-ready. Ready for Staging testing with production credentials from Tia (Flash IT engineer).

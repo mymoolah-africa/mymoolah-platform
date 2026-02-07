@@ -1,12 +1,12 @@
 # 🏦 Banking-Grade Architecture for MyMoolah
 
-**Last Updated**: January 17, 2026
-**Version**: 2.6.4 - EasyPay Standalone Voucher UI Improvements
-**Status**: ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
+**Last Updated**: February 07, 2026
+**Version**: 2.9.1 - USDC Fixes & Banking-Grade Sweep
+**Status**: ✅ **USDC DB-AGGREGATION ONLY (NO JS SUM)** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
 
 ## Overview
 
-This document outlines the banking-grade architecture implemented for MyMoolah to handle **millions of customers and transactions** with enterprise-level performance, security, and scalability. The platform now includes **complete Peach Payments integration**, **comprehensive Zapper integration review**, and a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (MobileMart + Flash configured, January 14, 2026).
+This document outlines the banking-grade architecture implemented for MyMoolah to handle **millions of customers and transactions** with enterprise-level performance, security, and scalability. The platform now includes **USDC Send with full API validation and DB-only aggregation for limits** (February 2026), **complete Peach Payments integration**, **comprehensive Zapper integration review**, and a **world-class automated reconciliation system** for multi-supplier transaction reconciliation (MobileMart + Flash configured, January 14, 2026).
 
 ## 🎯 Architecture Principles
 

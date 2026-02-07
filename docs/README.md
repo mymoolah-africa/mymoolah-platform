@@ -1,12 +1,25 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: February 01, 2026 17:00  
-**Version**: 2.8.0 - Electricity Purchase & MobileMart Production Integration  
-**Status**: ✅ **ELECTRICITY PURCHASE COMPLETE** ✅ **MOBILEMART PRODUCTION INTEGRATED** ✅ **STAGING TESTED** ✅ **TRANSACTION MODAL** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: February 07, 2026 22:30  
+**Version**: 2.9.1 - USDC Fixes, Banners & Banking-Grade Sweep  
+**Status**: ✅ **USDC SEND FEATURE** ✅ **USDC BANKING-GRADE SWEEP** ✅ **BENEFICIARY LIST FIXED** ✅ **BUY USDC BANNERS** ✅ **ELECTRICITY PURCHASE COMPLETE** ✅ **MOBILEMART PRODUCTION INTEGRATED** ✅ **STAGING TESTED** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: Electricity Purchase MobileMart Integration (February 01, 2026 - 07:20)**
+## 🚀 **LATEST UPDATE: USDC Fixes & Banking-Grade Sweep (February 07, 2026 - 22:30)**
+
+### **🪙 USDC Hardening & UX**
+- **Beneficiary list**: Model `cryptoServices`, enrichment from normalized table, filter by service type so USDC recipients display correctly.
+- **Quote/503**: Return 503 when VALR credentials missing/invalid; Redis v5 cache compatibility.
+- **Edit flow**: Buy USDC overlay supports edit recipient with modal prefill (wallet, country, relationship, purpose).
+- **Overlay UX**: Top and bottom sticky banners on Buy USDC page; filter row (All/Airtime/Data/etc) removed; spacing improved.
+- **Banking-grade**: All USDC endpoints validated at boundary; limit checks use DB aggregation only; idempotency via client key or crypto.randomUUID(); VALR guarded; controller uses service layer only.
+
+**Session log**: `docs/session_logs/2026-02-07_2230_usdc-fixes-banners-banking-grade-sweep.md`
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Electricity Purchase MobileMart Integration (February 01, 2026 - 07:20)**
 
 ### **⚡ Production-Ready Electricity Purchase**
 Complete electricity purchase implementation with MobileMart production API integration:

@@ -1,5 +1,28 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-07 - 🪙 USDC Fixes, Banners & Banking-Grade Sweep (v2.9.1) ✅
+
+### **Session Overview**
+Post-implementation fixes and banking-grade hardening of the USDC service: beneficiary list visibility, quote/503 handling, Redis v5 cache compatibility, edit flow, Buy USDC overlay banners and UX, and full API/validation/limits/idempotency/VALR alignment with banking standards.
+
+### **Fixes & Improvements**
+- **USDC beneficiary list**: Added `cryptoServices` to Beneficiary model (field: `crypto_services`), enrichment from `serviceAccountRecords`, filter by normalized table for `usdc`/`crypto`.
+- **Redis cache**: Redis v5 compatibility in `cachingService.set` (use `set(key, value, { EX: ttl })` when `setex` missing); support TTL as number.
+- **VALR/quote**: Return 503 with `QUOTE_SERVICE_UNAVAILABLE` when VALR credentials missing or invalid; VALR guards (`isConfigured()`, `signRequest`); removed unsupported `_idempotencyKey` from VALR request body.
+- **USDC edit**: `onEdit`/`onAddNew` passed to BeneficiaryList in BuyUsdcOverlay; `editingBeneficiary` state; BeneficiaryModal prefill for USDC (wallet, country, relationship, purpose).
+- **Buy USDC overlay**: Top and bottom sticky banners (App.tsx, BottomNavigation.tsx); filter row removed (`showFilters={false}`); spacing improved.
+- **Banking-grade sweep**: All USDC routes use express-validator + `handleValidation`; limit checks use DB aggregation only (SUM/ABS, no JS sum); idempotency via client key or `crypto.randomUUID()`; controller uses service layer only (`getTransactionById`); limit/offset/address sanitized; VALR_NOT_CONFIGURED handled.
+
+### **Files Modified**
+- `models/Beneficiary.js`, `services/UnifiedBeneficiaryService.js`, `services/cachingService.js`, `controllers/usdcController.js`, `services/usdcTransactionService.js`, `services/valrService.js`, `routes/usdc.js`
+- `mymoolah-wallet-frontend`: BuyUsdcOverlay.tsx, BeneficiaryModal.tsx, App.tsx, BottomNavigation.tsx
+- `docs/USDC_SEND_IMPLEMENTATION_PLAN_CORRECTED.md`, `docs/session_logs/2026-02-07_1500_usdc-send-feature-implementation.md`, `docs/agent_handover.md`
+
+### **Session Log**
+- `docs/session_logs/2026-02-07_2230_usdc-fixes-banners-banking-grade-sweep.md`
+
+---
+
 ## 2026-02-07 - 🪙 USDC Send Feature Implementation (v2.9.0) ✅
 
 ### **Session Overview**
