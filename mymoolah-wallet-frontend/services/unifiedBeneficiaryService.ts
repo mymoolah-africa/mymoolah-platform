@@ -164,7 +164,8 @@ export const unifiedBeneficiaryService = {
         `/api/v1/unified-beneficiaries/by-service/${serviceType}?${params.toString()}`
       );
       
-      return (response.data as any).data.beneficiaries || [];
+      // Backend returns: { success: true, data: { beneficiaries: [...] } }
+      return (response.data as any).beneficiaries || [];
     } catch (error) {
       console.error('Error getting beneficiaries by service:', error);
       throw error;
