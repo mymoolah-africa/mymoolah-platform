@@ -70,7 +70,11 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
         identifier: '',
         network: '',
         meterType: '',
-        billerName: ''
+        billerName: '',
+        walletAddress: '',
+        country: 'US',
+        relationship: 'self',
+        purpose: 'support'
       });
       setOldIdentifier('');
     }
@@ -464,7 +468,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                   }}>
                     Recipient Country
                   </Label>
-                  <Select value={formData.country} onValueChange={(v) => setFormData({ ...formData, country: v })}>
+                  <Select value={formData.country || 'US'} onValueChange={(v) => setFormData({ ...formData, country: v })}>
                     <SelectTrigger id="country">
                       <SelectValue />
                     </SelectTrigger>
@@ -493,7 +497,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                   }}>
                     Relationship
                   </Label>
-                  <Select value={formData.relationship} onValueChange={(v) => setFormData({ ...formData, relationship: v })}>
+                  <Select value={formData.relationship || 'self'} onValueChange={(v) => setFormData({ ...formData, relationship: v })}>
                     <SelectTrigger id="relationship">
                       <SelectValue />
                     </SelectTrigger>
@@ -518,7 +522,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                   }}>
                     Purpose (Optional)
                   </Label>
-                  <Select value={formData.purpose} onValueChange={(v) => setFormData({ ...formData, purpose: v })}>
+                  <Select value={formData.purpose || 'support'} onValueChange={(v) => setFormData({ ...formData, purpose: v })}>
                     <SelectTrigger id="purpose">
                       <SelectValue />
                     </SelectTrigger>

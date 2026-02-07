@@ -13,11 +13,11 @@ router.get('/by-service/:serviceType', authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     // Validate service type
-    const validServiceTypes = ['payment', 'airtime-data', 'electricity', 'biller', 'voucher'];
+    const validServiceTypes = ['payment', 'airtime-data', 'electricity', 'biller', 'voucher', 'usdc'];
     if (!validServiceTypes.includes(serviceType)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid service type. Must be one of: payment, airtime-data, electricity, biller, voucher'
+        message: 'Invalid service type. Must be one of: payment, airtime-data, electricity, biller, voucher, usdc'
       });
     }
 
@@ -350,7 +350,7 @@ router.get('/search', authenticateToken, async (req, res) => {
       );
     } else {
       // Search across all service types
-      const allServiceTypes = ['payment', 'airtime-data', 'electricity', 'biller', 'voucher'];
+      const allServiceTypes = ['payment', 'airtime-data', 'electricity', 'biller', 'voucher', 'usdc'];
       
       for (const serviceType of allServiceTypes) {
         const serviceBeneficiaries = await unifiedBeneficiaryService.getBeneficiariesByService(
