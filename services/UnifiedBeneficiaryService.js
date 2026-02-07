@@ -233,6 +233,23 @@ class UnifiedBeneficiaryService {
             identifier: this.getBillerIdentifier(beneficiary.billerServices, base.identifier)
           };
           
+        case 'usdc':
+        case 'crypto':
+          const primaryUsdcWallet = this.getPrimaryUsdcWallet(beneficiary.cryptoServices);
+          return {
+            ...base,
+            cryptoServices: beneficiary.cryptoServices,
+            accountType: 'usdc',
+            identifier: primaryUsdcWallet?.walletAddress || base.identifier,
+            walletAddress: primaryUsdcWallet?.walletAddress,
+            network: primaryUsdcWallet?.network || 'solana',
+            country: primaryUsdcWallet?.country,
+            relationship: primaryUsdcWallet?.relationship,
+            purpose: primaryUsdcWallet?.purpose,
+            totalSends: primaryUsdcWallet?.totalSends || 0,
+            totalUsdcSent: primaryUsdcWallet?.totalUsdcSent || 0
+          };
+          
         default:
           return base;
       }
@@ -382,6 +399,12 @@ class UnifiedBeneficiaryService {
           return {
             identifier: serviceData.accountNumber || primaryMsisdn,
             accountType: 'biller'
+          };
+        case 'usdc':
+        case 'crypto':
+          return {
+            identifier: serviceData.walletAddress || primaryMsisdn || 'PENDING',
+            accountType: 'usdc'
           };
         default:
           return {
@@ -1787,6 +1810,16 @@ class UnifiedBeneficiaryService {
           );
           break;
           
+        case 'usdc':
+        case 'crypto':
+          // Check if beneficiary has active USDC crypto services
+          shouldInclude = Boolean(
+            beneficiaryData.cryptoServices && 
+            beneficiaryData.cryptoServices.usdc && 
+            beneficiaryData.cryptoServices.usdc.some(w => w.isActive)
+          );
+          break;
+          
         default:
           shouldInclude = true;
       }
@@ -1982,10 +2015,49 @@ class UnifiedBeneficiaryService {
             beneficiary.voucherServices ||
             beneficiary.accountType === 'voucher'
           );
+        case 'usdc':
+        case 'crypto':
+          return Boolean(
+            beneficiary.cryptoServices?.usdc?.some(w => w.isActive)
+          );
         default:
           return true;
       }
     });
+  }
+
+  /**
+   * Get primary USDC wallet from cryptoServices
+   * 
+   * @param {Object} cryptoServices - Crypto services JSONB data
+   * @returns {Object|null} Primary USDC wallet or null
+   */
+  getPrimaryUsdcWallet(cryptoServices) {
+    if (!cryptoServices || !cryptoServices.usdc || !Array.isArray(cryptoServices.usdc)) {
+      return null;
+    }
+    
+    // Find default wallet first
+    const defaultWallet = cryptoServices.usdc.find(w => w.isDefault && w.isActive);
+    if (defaultWallet) return defaultWallet;
+    
+    // Find first active wallet
+    const activeWallet = cryptoServices.usdc.find(w => w.isActive);
+    if (activeWallet) return activeWallet;
+    
+    return null;
+  }
+
+  /**
+   * Get crypto identifier (wallet address) for display
+   * 
+   * @param {Object} cryptoServices - Crypto services JSONB data
+   * @param {string} fallbackIdentifier - Fallback identifier
+   * @returns {string} Wallet address or fallback
+   */
+  getCryptoIdentifier(cryptoServices, fallbackIdentifier) {
+    const primaryWallet = this.getPrimaryUsdcWallet(cryptoServices);
+    return primaryWallet?.walletAddress || fallbackIdentifier;
   }
 }
 

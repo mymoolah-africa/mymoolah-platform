@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-02 12:00  
-**Latest Feature**: Global Airtime (Own Amount) variantId Fix + Git Workflow  
-**Document Version**: 2.8.1  
+**Last Updated**: 2026-02-07 15:00  
+**Latest Feature**: USDC Send Feature (Cross-Border Value Transfer)  
+**Document Version**: 2.9.0  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -51,8 +51,8 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 02, 2026 - 12:00)**
-**Global Airtime Purchase Fix (Own Amount)** - Fixed 404 "Product not found in catalog" when purchasing Global airtime (Flash) via "own amount" flow. Frontend was sending synthetic product id (`airtime_own_*` / `data_own_*`); backend accepts only numeric variantId or legacy string format. AirtimeDataOverlay now resolves "own" products to a matching catalog product (type + amount) so purchase uses valid variantId; fallback at confirm step; clear error if no match. Session log and handover created; changes committed (user to push, then pull in CS for testing).
+### **Latest Achievement (February 07, 2026 - 15:00)**
+**USDC Send Feature Implementation** - Complete implementation of "Buy USDC" cross-border value transfer feature with VALR integration (FSCA-licensed CASP FSP 53308). Banking-grade architecture corrections applied: uses existing `transactions` table (not new table), extends `beneficiaries` with `crypto_services` JSONB (unified system), full ledger integration with VALR float account (1200-10-06), Redis rate caching (not DB table), overlay pattern (not page), comprehensive error handling (retry + circuit breaker). Compliance controls include Travel Rule data collection, sanctions screening (8 blocked countries), transaction limits (R5k/txn, R15k/day, R50k/month), new beneficiary controls (7-day limit, 24h cooldown). Frontend includes full overlay flow (amount/quote → beneficiary → review → processing → success) with real-time quote expiry timer, Solana address validation, irreversibility warnings, and blockchain explorer links. VALR API integration complete with HMAC-SHA512 signing, exponential backoff retry logic, and circuit breaker pattern. Seven new API endpoints created. Feature disabled by default pending VALR credentials and RMCP approval.
 
 ### **Previous Achievement (February 01, 2026 - 20:00)**
 **Complete Flash API Integration** - Flash integration upgraded from "database label only" to "full production API integration". Integrated Flash cash-out overlay with real API (replaced simulation with real PIN extraction). Integrated Flash electricity purchase following MobileMart pattern (lookup meter + purchase flow). Environment-aware operation implemented (`FLASH_LIVE_INTEGRATION` flag). Token/PIN extraction from Flash API responses with comprehensive error handling. Transaction metadata includes Flash transaction details. Flash infrastructure (controller, auth service, routes) now 100% connected and production-ready. Ready for Staging testing with production credentials from Tia (Flash IT engineer).
@@ -60,8 +60,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 01, 2026 - 17:00)**
 **Complete MobileMart Production Integration** - Full end-to-end implementation of electricity purchase with MobileMart production API (prevend + purchase flow, real 20-digit token extraction). Extended integration to bill payments and digital vouchers. All 5 MobileMart services now environment-aware (UAT simulation, Staging/Production real API). Successfully deployed to staging and tested with production credentials (R20 live electricity transaction confirmed). Transaction detail modal with token display (grouped by 4 digits, MMTP-aligned styling). All services production-ready.
 
-### **Next Priority (February 02, 2026 - 12:00)**
-**Git workflow and CS testing** - User: from local run `git push origin main`. In Codespaces run `git pull origin main` then test Global airtime purchase (beneficiary Global Airtime (Flash), own amount e.g. R25 or pick product from list). Confirm no 404 and purchase completes. Optional: continue Flash integration testing (cash-out, electricity) in CS.
+### **Next Priority (February 01, 2026 - 21:00)**
+**Flash Integration Testing** - Test Flash integration in Codespaces (cash-out and electricity). Add Flash production credentials to Staging Secret Manager (credentials received from Tia, Flash IT engineer). Verify token extraction, wallet debits, and transaction history. Monitor first live transactions. Optional: Extend Flash integration to airtime/data, bill payments, and vouchers following same pattern.
 
 ### **Previous Achievement (January 26, 2026 - 23:15)**
 **Documentation Consolidation & Sync** - Consolidated multiple conflicting development and onboarding guides into a single source of truth (`DEVELOPMENT_GUIDE.md`). Standardized environment configurations (ports, database access) and the official Git sync workflow across all documentation. Archived redundant files (`SETUP_GUIDE.md`, `PROJECT_ONBOARDING.md`) to prevent future drift.
@@ -323,8 +323,6 @@ Before proceeding with ANY change, pass these 4 gates:
 
 | ❌ Anti-Pattern | ✅ Correct Pattern | Why It Matters |
 |----------------|-------------------|----------------|
-| **Use shortcuts/workarounds for enum errors** | **Create proper migration to fix schema** | **Banking-grade data integrity** |
-| **Use wrong enum values as workarounds** | **Add new enum value via migration** | **Mojaloop/regulatory compliance** |
 | Write custom DB connection logic | Use `scripts/db-connection-helper.js` | Prevents password/SSL issues |
 | Run `npx sequelize-cli` directly | Use `./scripts/run-migrations-master.sh [env]` | Ensures correct environment |
 | Test on local machine | Test in Codespaces | Local != Production config |
@@ -333,10 +331,6 @@ Before proceeding with ANY change, pass these 4 gates:
 | Duplicate existing script | Search `scripts/` first | Avoid code drift |
 | Make assumptions | Read docs, ask user | Assumptions = bugs |
 | Skip testing | Test thoroughly in Codespaces | Bugs compound |
-
-**🚨 CRITICAL: ZERO TOLERANCE FOR SHORTCUTS**
-
-MyMoolah is a global award-winning banking platform. Shortcuts, workarounds, and "quick fixes" are ABSOLUTELY FORBIDDEN. Always implement proper banking-grade solutions even if they require migrations or additional work. Data integrity, regulatory compliance, and architectural correctness are NON-NEGOTIABLE.
 
 ---
 

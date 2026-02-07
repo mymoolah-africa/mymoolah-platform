@@ -8,7 +8,8 @@ import {
   Zap,
   Wifi,
   QrCode,
-  Film
+  Film,
+  Coins
 } from 'lucide-react';
 
 // Transaction interface for type safety
@@ -77,7 +78,19 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <Film style={{ ...iconStyle, color: '#16a34a' }} />; // Always green for earnings
   }
   
-  // 3. DATA TRANSACTIONS (Check BEFORE airtime to avoid false matches)
+  // 3. USDC TRANSACTIONS (Crypto purchase and transfer)
+  const isUsdcTransaction = (
+    description.includes('usdc send') ||
+    metadata.transactionType === 'usdc_send' ||
+    metadata.usdcAmount ||
+    metadata.blockchainTxHash
+  );
+  
+  if (isUsdcTransaction) {
+    return <Coins style={{ ...iconStyle, color: '#9333ea' }} />; // Purple for crypto
+  }
+  
+  // 4. DATA TRANSACTIONS (Check BEFORE airtime to avoid false matches)
   // Check metadata first (most reliable), then description
   const isData = 
     transaction.metadata?.productType === 'data' ||
@@ -91,7 +104,7 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <Wifi style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 4. AIRTIME TRANSACTIONS (Check metadata first, then description)
+  // 5. AIRTIME TRANSACTIONS (Check metadata first, then description)
   // Only match "airtime" keyword, NOT network names (to avoid false matches with data)
   const isAirtime = 
     transaction.metadata?.productType === 'airtime' ||
@@ -104,12 +117,12 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <Phone style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 5. ELECTRICITY TRANSACTIONS
+  // 6. ELECTRICITY TRANSACTIONS
   if (description.includes('electricity') || description.includes('eskom') || description.includes('power')) {
     return <Zap style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 6. QR/ZAPPER PAYMENT TRANSACTIONS (QR Code icons) - CHECK BEFORE OTHER TRANSACTIONS
+  // 7. QR/ZAPPER PAYMENT TRANSACTIONS (QR Code icons) - CHECK BEFORE OTHER TRANSACTIONS
   const isQRTransaction = (
     description.includes('qr payment') ||
     description.includes('zapper') ||
@@ -123,7 +136,7 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     return <QrCode style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 7. BANKING TRANSACTIONS (External bank transfers via APIs)
+  // 8. BANKING TRANSACTIONS (External bank transfers via APIs)
   if (isBankingTransaction(transaction)) {
     if (isCredit) {
       // Credit (money received) - Green down arrow
@@ -134,12 +147,12 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
     }
   }
   
-  // 8. MYMOOLAH WALLET TRANSACTIONS (Internal transfers)
+  // 9. MYMOOLAH WALLET TRANSACTIONS (Internal transfers)
   if (isMyMoolahTransaction(transaction)) {
     return <Wallet style={{ ...iconStyle, color: iconColor }} />;
   }
   
-  // 9. DEFAULT: Other transactions use arrows
+  // 10. DEFAULT: Other transactions use arrows
   if (isCredit) {
     // Credit (money received) - Green down arrow
     return <ArrowDownLeft style={{ ...iconStyle, color: '#16a34a' }} />;

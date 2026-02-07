@@ -155,6 +155,7 @@ const userFavoritesRoutes = require('./routes/userFavorites.js');
 const referralRoutes = require('./routes/referrals.js');
 const reconciliationRoutes = require('./routes/reconciliation.js');
 const adRoutes = require('./routes/ads.js'); // Watch to Earn
+const usdcRoutes = require('./routes/usdc.js'); // USDC Send
 const { LedgerAccount, sequelize } = require('./models');
 
 // Validate external service credentials
@@ -404,6 +405,7 @@ app.use('/api/v1/auth', authLimiter);
 app.use('/api/v1/transactions', financialLimiter);
 app.use('/api/v1/wallets', financialLimiter);
 app.use('/api/v1/airtime', financialLimiter);
+app.use('/api/v1/usdc', financialLimiter);
 
 // API Routes
 app.use('/api/v1/auth', authRoutes);
@@ -438,6 +440,7 @@ app.use('/api/v1/user-favorites', userFavoritesRoutes);
 app.use('/api/v1/ads', adRoutes); // Watch to Earn
 app.use('/api/v1/referrals', referralRoutes);
 app.use('/api/v1/reconciliation', reconciliationRoutes);
+app.use('/api/v1/usdc', usdcRoutes); // USDC Send
 
 // Conditionally load Flash routes
 if (flashRoutesLoaded) {

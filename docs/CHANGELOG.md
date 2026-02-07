@@ -1,5 +1,128 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-07 - 🪙 USDC Send Feature Implementation (v2.9.0) ✅
+
+### **Session Overview**
+Complete implementation of "Buy USDC" feature - cross-border value transfer via USDC cryptocurrency on Solana. Full integration with VALR (FSCA-licensed CASP FSP 53308) following banking-grade architecture with ledger integration, compliance controls, and unified beneficiary system.
+
+### **🎯 Major Features Completed** ✅
+- **USDC Purchase & Transfer**: ZAR → USDC via VALR → Solana wallet
+- **VALR Integration**: Full API integration with HMAC-SHA512 signing, retry logic, circuit breaker
+- **Unified Beneficiaries**: USDC recipients integrated with existing beneficiary system
+- **Ledger Integration**: Double-entry accounting with VALR float account (1200-10-06)
+- **Compliance Controls**: Travel Rule data collection, sanctions screening, transaction limits
+- **Frontend UI**: Full overlay flow with quote, beneficiary selection, review, and success screens
+
+### **📝 Implementation Details** ✅
+
+**Banking-Grade Architecture Corrections**:
+- ✅ Uses existing `transactions` table (NOT new table) with metadata JSONB
+- ✅ Extends `beneficiaries` with `crypto_services` JSONB (unified system)
+- ✅ Full ledger integration via `ledgerService.js` (double-entry accounting)
+- ✅ VALR float account `1200-10-06` + monitoring integration
+- ✅ Redis rate caching (NOT new DB table) via `cachingService.js`
+- ✅ Overlay pattern (NOT separate page) following MMTP standards
+- ✅ Error handling: Retry + timeout + circuit breaker pattern
+- ✅ Google Secret Manager for Staging/Production credentials
+
+**VALR Integration**:
+- Authentication: HMAC-SHA512 request signing
+- Quote endpoint: `/v1/simple/quote` (60-second expiry)
+- Order execution: `/v1/simple/order` with idempotency
+- Withdrawal: `/v1/wallet/crypto/USDC/withdraw` to Solana address
+- Status polling: Background job for blockchain confirmations
+- Circuit breaker: Opens after 5 consecutive failures (5-minute reset)
+
+**Compliance & Limits**:
+- Minimum KYC: Tier 2 (ID + Address verified)
+- Per-transaction: R5,000 max
+- Daily (rolling 24h): R15,000 max
+- Monthly (rolling 30d): R50,000 max
+- New beneficiary: R5,000/day for first 7 days, 24h cooldown if >R1,000
+- Blocked countries: 8 sanctioned countries (OFAC/EU/UN)
+- High-risk: 15 countries with enhanced review
+- Auto-hold rules: Rapid cashout, velocity, beneficiary surge, high-risk country
+
+**Fee Structure**:
+- Platform fee: 7.5% of ZAR amount (VAT inclusive)
+- Network fee: ~R1-R5 (Solana blockchain gas)
+- Exchange rate: VALR ask price (market-based)
+
+**Database Schema**:
+- `beneficiaries.crypto_services`: JSONB field for USDC wallets
+- `transactions.metadata.transactionType`: 'usdc_send'
+- Ledger accounts: `1200-10-06` (VALR Float), `4100-01-06` (Fee Revenue)
+- Supplier float: VALR monitoring with R100 minimum (UAT), R10,000 (Production)
+
+**API Endpoints** (7 new):
+- `GET /api/v1/usdc/rate` - Current USDC/ZAR rate (cached 60s)
+- `POST /api/v1/usdc/quote` - Get purchase quote
+- `POST /api/v1/usdc/send` - Execute buy + send
+- `GET /api/v1/usdc/transactions` - Transaction history
+- `GET /api/v1/usdc/transactions/:id` - Transaction details
+- `POST /api/v1/usdc/validate-address` - Validate Solana address
+- `GET /api/v1/usdc/health` - Service health check
+
+### **🔧 Files Created** ✅
+
+**Backend**:
+- `migrations/20260207120000-extend-beneficiaries-for-usdc.js`
+- `migrations/20260207120001-create-valr-float-account.js`
+- `migrations/20260207120002-create-usdc-fee-revenue-account.js`
+- `utils/solanaAddressValidator.js` - Cryptographic address validation
+- `services/valrService.js` - VALR API integration (280 lines)
+- `services/usdcTransactionService.js` - Transaction orchestration (480 lines)
+- `controllers/usdcController.js` - API endpoints (280 lines)
+- `routes/usdc.js` - Route definitions
+
+**Frontend**:
+- `pages/BuyUsdcPage.tsx` - Page wrapper
+- `components/overlays/BuyUsdcOverlay.tsx` - Main overlay (470 lines)
+- `services/usdcService.ts` - API client
+
+**Documentation**:
+- `docs/USDC_SEND_IMPLEMENTATION_PLAN_CORRECTED.md` - Architecture corrections
+- Supporting docs from AntiGravity: Implementation plan, RMCP addendum, T&Cs, Support KB
+
+### **🔧 Files Modified** ✅
+- `services/UnifiedBeneficiaryService.js` - USDC support in unified system
+- `server.js` - USDC routes registered with financial rate limiting
+- `utils/transactionIcons.tsx` - Purple Coins icon for USDC transactions
+- `pages/TransactPage.tsx` - Buy USDC service added below Pay Recipient
+- `App.tsx` - `/buy-usdc` route registered
+- `env.template` - VALR and USDC configuration section
+
+### **🧪 Testing Status** ⚠️
+- [ ] UAT testing: Requires VALR API credentials (View + Trade + Withdraw permissions)
+- [ ] Migrations: Ready to run
+- [ ] Unit tests: Not yet created
+- [ ] Integration tests: Not yet created
+
+### **📚 Supporting Documents** ✅
+- RMCP Addendum (Crypto Feature) - Compliance policy ✅
+- Terms & Conditions Schedule 7 - Customer-facing legal terms ✅
+- USDC Support KB - AI support integration ready ✅
+- Implementation Plan (Corrected) - Banking-grade architecture ✅
+
+### **🚀 Next Steps**
+1. Obtain VALR API credentials (https://www.valr.com → Account → API Keys)
+2. Run migrations in UAT: `./scripts/run-migrations-master.sh uat`
+3. Configure VALR env vars in `.env`
+4. Enable feature: `USDC_FEATURE_ENABLED=true`
+5. Test full flow in UAT with small amounts (R10-R50)
+6. Create unit and integration tests
+7. Deploy to Staging for production testing
+
+### **⚠️ Important Notes**
+- VALR has NO separate UAT environment - use production API with test amounts
+- Feature disabled by default (`USDC_FEATURE_ENABLED=false`)
+- Requires RMCP addendum approval before production launch
+- Unified beneficiary system maintains single source of truth
+- All USDC transactions post to general ledger (double-entry accounting)
+- Travel Rule compliance data collected for all transactions
+
+---
+
 ## 2026-02-01 - 🔥 Flash Integration & Product Sync (v2.8.2) ✅
 
 ### **Session Overview**

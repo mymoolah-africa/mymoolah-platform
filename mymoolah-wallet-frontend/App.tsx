@@ -16,6 +16,7 @@ import { SendMoneyPage } from './pages/SendMoneyPage';
 import { TransactPage } from './pages/TransactPage';
 import { VouchersPage } from './pages/VouchersPage';
 import { QRPaymentPage } from './pages/QRPaymentPage';
+import BuyUsdcPage from './pages/BuyUsdcPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { TransactionHistoryPage } from './pages/TransactionHistoryPage';
 import { WalletSettingsPage } from './pages/WalletSettingsPage';
@@ -104,6 +105,7 @@ function AppContent() {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
             <Route path="/send-money" element={<ProtectedRoute><SendMoneyPage /></ProtectedRoute>} />
+            <Route path="/buy-usdc" element={<ProtectedRoute><BuyUsdcPage /></ProtectedRoute>} />
             <Route path="/transact" element={<ProtectedRoute><TransactPage /></ProtectedRoute>} />
             <Route path="/qr-payment" element={<ProtectedRoute><QRPaymentPage /></ProtectedRoute>} />
             <Route path="/vouchers" element={<ProtectedRoute><VouchersPage /></ProtectedRoute>} />
