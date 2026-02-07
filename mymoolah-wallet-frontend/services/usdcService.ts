@@ -94,8 +94,8 @@ class UsdcService {
    * Get current USDC/ZAR exchange rate
    */
   async getRate(): Promise<UsdcRate> {
-    const response = await apiService.get<{ success: boolean; data: UsdcRate }>('/usdc/rate');
-    if (!response.success || !response.data) {
+    const response = await apiService.request<UsdcRate>('/api/v1/usdc/rate');
+    if (!response.data) {
       throw new Error('Failed to get exchange rate');
     }
     return response.data;
@@ -107,11 +107,12 @@ class UsdcService {
    * @param zarAmount - Amount in ZAR
    */
   async getQuote(zarAmount: number): Promise<UsdcQuote> {
-    const response = await apiService.post<{ success: boolean; data: UsdcQuote }>('/usdc/quote', {
-      zarAmount
+    const response = await apiService.request<UsdcQuote>('/api/v1/usdc/quote', {
+      method: 'POST',
+      body: JSON.stringify({ zarAmount })
     });
     
-    if (!response.success || !response.data) {
+    if (!response.data) {
       throw new Error('Failed to get quote');
     }
     return response.data;
@@ -124,10 +125,26 @@ class UsdcService {
    */
   async send(params: SendParams): Promise<SendResult> {
     try {
-      const response = await apiService.post<SendResult>('/usdc/send', params);
-      return response;
+      const response = await apiService.request<any>('/api/v1/usdc/send', {
+        method: 'POST',
+        body: JSON.stringify(params)
+      });
+      
+      if (response.data) {
+        return {
+          success: true,
+          data: response.data
+        };
+      }
+      
+      return {
+        success: false,
+        error: {
+          code: 'SEND_FAILED',
+          message: 'Failed to send USDC'
+        }
+      };
     } catch (error: any) {
-      // API service already wraps errors, but ensure we return proper structure
       return {
         success: false,
         error: {
@@ -149,10 +166,10 @@ class UsdcService {
     if (options.offset) params.append('offset', options.offset.toString());
     if (options.status) params.append('status', options.status);
     
-    const url = `/usdc/transactions${params.toString() ? '?' + params.toString() : ''}`;
-    const response = await apiService.get<{ success: boolean; data: UsdcTransaction[] }>(url);
+    const url = `/api/v1/usdc/transactions${params.toString() ? '?' + params.toString() : ''}`;
+    const response = await apiService.request<UsdcTransaction[]>(url);
     
-    if (!response.success || !response.data) {
+    if (!response.data) {
       throw new Error('Failed to get transactions');
     }
     return response.data;
@@ -164,9 +181,9 @@ class UsdcService {
    * @param transactionId - Transaction ID
    */
   async getTransaction(transactionId: string): Promise<UsdcTransaction> {
-    const response = await apiService.get<{ success: boolean; data: UsdcTransaction }>(`/usdc/transactions/${transactionId}`);
+    const response = await apiService.request<UsdcTransaction>(`/api/v1/usdc/transactions/${transactionId}`);
     
-    if (!response.success || !response.data) {
+    if (!response.data) {
       throw new Error('Transaction not found');
     }
     return response.data;
@@ -178,11 +195,12 @@ class UsdcService {
    * @param address - Solana address to validate
    */
   async validateAddress(address: string): Promise<AddressValidation> {
-    const response = await apiService.post<{ success: boolean; data: AddressValidation }>('/usdc/validate-address', {
-      address
+    const response = await apiService.request<AddressValidation>('/api/v1/usdc/validate-address', {
+      method: 'POST',
+      body: JSON.stringify({ address })
     });
     
-    if (!response.success || !response.data) {
+    if (!response.data) {
       return {
         address,
         valid: false,
@@ -197,10 +215,10 @@ class UsdcService {
    */
   async healthCheck(): Promise<{ status: string; healthy: boolean }> {
     try {
-      const response = await apiService.get<{ success: boolean; data: any }>('/usdc/health');
+      const response = await apiService.request<any>('/api/v1/usdc/health');
       return {
         status: response.data?.status || 'unknown',
-        healthy: response.success
+        healthy: !!response.data
       };
     } catch (error) {
       return {

@@ -24,11 +24,12 @@ import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { ErrorModal } from '../ui/ErrorModal';
 import { usdcService, type UsdcQuote } from '../../services/usdcService';
-import { unifiedBeneficiaryService, type Beneficiary } from '../../services/unifiedBeneficiaryService';
+import { unifiedBeneficiaryService, type UnifiedBeneficiary } from '../../services/unifiedBeneficiaryService';
 import { formatCurrency } from '../../services/overlayService';
 
 type Step = 'beneficiary' | 'amount' | 'confirm' | 'processing' | 'success';
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
+type Beneficiary = UnifiedBeneficiary;
 
 const PURPOSE_OPTIONS = [
   { value: 'support', label: 'Financial Support' },
@@ -96,7 +97,7 @@ export function BuyUsdcOverlay() {
   const loadBeneficiaries = async () => {
     try {
       setLoadingState('loading');
-      const list = await unifiedBeneficiaryService.getBeneficiaries('usdc');
+      const list = await unifiedBeneficiaryService.getBeneficiariesByService('usdc');
       setBeneficiaries(list);
       setLoadingState('success');
     } catch (err: any) {
@@ -352,7 +353,6 @@ export function BuyUsdcOverlay() {
               <BeneficiaryList
                 beneficiaries={beneficiaries}
                 onSelect={handleBeneficiarySelect}
-                onRefresh={loadBeneficiaries}
                 serviceType="usdc"
                 emptyMessage="No USDC recipients saved yet"
               />

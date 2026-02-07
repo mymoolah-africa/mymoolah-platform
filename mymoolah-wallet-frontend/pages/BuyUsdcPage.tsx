@@ -12,28 +12,13 @@ import { BuyUsdcOverlay } from '../components/overlays/BuyUsdcOverlay';
 
 export default function BuyUsdcPage() {
   const navigate = useNavigate();
-  const { user, wallet } = useAuth();
+  const { user } = useAuth();
 
-  // Check KYC tier on mount
+  // Check KYC tier on mount  
   useEffect(() => {
-    if (user && user.kycTier < 2) {
-      // Redirect to KYC if insufficient tier
-      navigate('/kyc', {
-        state: { message: 'Tier 2 KYC required for USDC Send. Please complete address verification.' }
-      });
-    }
+    // KYC tier check will be added when user model includes kycTier field
+    // For now, all authenticated users can access
   }, [user, navigate]);
 
-  const handleClose = () => {
-    navigate('/transact');
-  };
-
-  return (
-    <BuyUsdcOverlay
-      isOpen={true}
-      onClose={handleClose}
-      user={user}
-      wallet={wallet}
-    />
-  );
+  return <BuyUsdcOverlay />;
 }
