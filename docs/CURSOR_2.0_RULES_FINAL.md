@@ -201,6 +201,7 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 - Update ALL relevant docs in `/mymoolah/docs/` after each change: `agent_handover.md`, `changelog.md`, `readme.md`, `development_guide.md`, `security.md`, `performance.md`, `banking_grade_architecture.md`
 - Always check project documentation BEFORE creating or modifying anything.
 - **CRITICAL**: Before any database/migration work, read `docs/DATABASE_CONNECTION_GUIDE.md` - contains standardized connection procedures, password management, and master migration scripts. **NEVER write custom connection logic** - always use provided helpers and scripts.
+- **Migrations vs seeding (UAT/Staging)**: Run **migrations first** when you add or change database schema (new tables, columns, constraints). Use `./scripts/run-migrations-master.sh [uat|staging]`. Run **seed scripts only after** the relevant migrations have been run for that environment—migrations create/update the schema, seeders insert data. Order is always: migrations → then seed (if needed). After any schema change, run migrations on the target env before seeding or deploying.
 - Provide complete file contents when sharing code. Include code examples, API docs, migration procedures, testing instructions.
 
 ### **Rule 10: Testing Requirements (REQUIRED)**

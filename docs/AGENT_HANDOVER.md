@@ -235,8 +235,10 @@ Before writing ANY code, check:
 **Examples**:
 - Need database connection? → Use `scripts/db-connection-helper.js` (Rule 12a)
 - Need to run migration? → Use `./scripts/run-migrations-master.sh [uat|staging]`
-- Need to seed data? → Check `scripts/seed-*.js` scripts
+- Need to seed data? → Check `scripts/seed-*.js` scripts (run **after** migrations for that env)
 - Need to test API? → Check `scripts/test-*.js` scripts
+
+**Rule (migrations vs seeding)**: Run **migrations first** when you add or change UAT/Staging database schema. Run **seed scripts only after** the relevant migrations have been run for that environment. Order is always: migrations → then seed. After any schema change, run migrations on the target env before seeding or deploying.
 
 **Rule**: Never recreate what exists. Always search before building.
 
@@ -298,11 +300,12 @@ Before proceeding with ANY change, pass these 4 gates:
 
 #### **Gate 2: Schema/Migration Safety** ✅
 - [ ] For database work: Read `docs/DATABASE_CONNECTION_GUIDE.md`
-- [ ] Use `scripts/run-migrations-master.sh [uat|staging]`
+- [ ] Use `scripts/run-migrations-master.sh [uat|staging]` for schema changes
+- [ ] Run migrations **before** any seeding: migrations first, then seed scripts
 - [ ] Never write custom connection logic
 - [ ] Verify schema parity after changes
 
-**Why**: Database errors cascade. One bad migration = hours of recovery.
+**Why**: Database errors cascade. One bad migration = hours of recovery. Seeders require the schema to exist (migrations create it).
 
 #### **Gate 3: Testing Verification** ✅
 - [ ] Test in Codespaces (not local)
@@ -448,7 +451,8 @@ Before concluding your session, verify:
 
 | Task | Tool/Script | Documentation |
 |------|-------------|---------------|
-| Run migrations | `./scripts/run-migrations-master.sh [uat\|staging]` | `docs/DATABASE_CONNECTION_GUIDE.md` |
+| Run migrations | `./scripts/run-migrations-master.sh [uat\|staging]` | Run **before** seeding; use after any schema change |
+| Run seed scripts | `node scripts/seed-*.js` (e.g. `--staging` where supported) | Only **after** migrations for that env |
 | Check schema parity | `node scripts/sync-staging-to-uat-banking-grade.js` | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | Test API | `scripts/test-*.js` | `docs/TESTING_GUIDE.md` |
 | Database connection | `scripts/db-connection-helper.js` | `docs/DATABASE_CONNECTION_GUIDE.md` |
