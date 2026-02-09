@@ -160,11 +160,9 @@ module.exports = (sequelize, DataTypes) => {
     ],
     hooks: {
       beforeValidate: (transaction) => {
-        // Allow negative amounts for fee and payment transactions (debits)
-        // Fee transactions: negative fees (deductions)
-        // Payment transactions: negative amounts represent debits (outgoing payments)
-        if (transaction.type === 'fee' || transaction.type === 'payment') {
-          // Skip amount validation - these can be negative
+        // Allow negative amounts for fee, payment, and sent transactions (debits / outflows)
+        // Fee: negative = deduction; Payment: negative = outgoing; Sent: negative = USDC/crypto sent
+        if (transaction.type === 'fee' || transaction.type === 'payment' || transaction.type === 'sent') {
           return;
         }
         // For all other transaction types (deposit, receive, refund, etc.), amount must be >= 0
