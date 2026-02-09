@@ -576,7 +576,7 @@ class UsdcTransactionService {
 
       // 5b. VALR float must be pre-funded: ensure positive balance >= amount we will send to VALR
       const valrFloatBalanceRand = await ledgerService.getAccountBalanceByCode('1200-10-06');
-      const netToValrRand = amounts.netToValrCents / 100;
+      const netToValrRand = Number((amounts.netToValrCents / 100).toFixed(2));
       if (valrFloatBalanceRand == null || valrFloatBalanceRand < netToValrRand) {
         const error = new Error('USDC service is temporarily unavailable. Please try again later.');
         error.code = 'INSUFFICIENT_VALR_FLOAT';
@@ -617,7 +617,6 @@ class UsdcTransactionService {
 
       // 10. Post to general ledger (double-entry accounting). Amounts in Rands.
       const totalZarRand = Number((totalZarCents / 100).toFixed(2));
-      const netToValrRand = Number((amounts.netToValrCents / 100).toFixed(2));
       const feeExVatRand = Number((amounts.platformFeeExVatCents / 100).toFixed(2));
       const feeVatRand = Number((amounts.platformFeeVatCents / 100).toFixed(2));
       await ledgerService.postJournalEntry({
