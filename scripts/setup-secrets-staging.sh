@@ -156,6 +156,25 @@ store_openai_api_key() {
   success "OpenAI API key stored"
 }
 
+# Store VALR API credentials (USDC Send)
+store_valr_credentials() {
+  log "Storing VALR API credentials..."
+  
+  if [ -z "${VALR_API_KEY:-}" ] || [ -z "${VALR_API_SECRET:-}" ]; then
+    warning "VALR_API_KEY or VALR_API_SECRET not provided via environment variable"
+    warning "To add VALR credentials: export VALR_API_KEY='...' VALR_API_SECRET='...'"
+    warning "Then run: ./scripts/setup-secrets-staging.sh or ./scripts/create-valr-secrets-staging.sh"
+    warning ""
+    warning "Skipping VALR credentials. USDC quote/send will return 503 without them."
+    return 0
+  fi
+  
+  create_or_update_secret "valr-api-key-staging" "${VALR_API_KEY}" "VALR API Key for Staging (USDC Send)"
+  create_or_update_secret "valr-api-secret-staging" "${VALR_API_SECRET}" "VALR API Secret for Staging (USDC Send)"
+  
+  success "VALR API credentials stored"
+}
+
 # Store database URL (constructed from password secret)
 # Note: This will need to be constructed at runtime in Cloud Run
 # For now, we'll create a template secret
@@ -193,6 +212,9 @@ main() {
   # Store OpenAI API key
   store_openai_api_key
   
+  # Store VALR API credentials (USDC Send)
+  store_valr_credentials
+  
   # Store database URL template
   store_database_url_template
   
@@ -213,6 +235,8 @@ main() {
   echo "  - jwt-secret-staging"
   echo "  - session-secret-staging"
   echo "  - openai-api-key-staging (if provided)"
+  echo "  - valr-api-key-staging (if provided)"
+  echo "  - valr-api-secret-staging (if provided)"
   echo "  - database-url-template-staging"
   echo "  - db-mmtp-pg-staging-password (from database setup)"
   echo ""
