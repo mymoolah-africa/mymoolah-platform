@@ -171,13 +171,17 @@ class ValrService {
       });
     }
 
-    // Enhance error with context
+    // Enhance error with context; map VALR business errors to domain codes
+    const valrData = lastError.response?.data;
+    const valrCode = valrData && (valrData.code ?? valrData.errorCode);
+    const isInsufficientBalance = valrCode === -6 || /insufficient balance/i.test(String(valrData?.message || ''));
+
     const enhancedError = new Error(`VALR API request failed: ${lastError.message}`);
     enhancedError.originalError = lastError;
     enhancedError.status = lastError.response?.status;
-    enhancedError.data = lastError.response?.data;
-    enhancedError.code = lastError.code || 'VALR_API_ERROR';
-    
+    enhancedError.data = valrData;
+    enhancedError.code = isInsufficientBalance ? 'INSUFFICIENT_VALR_BALANCE' : (lastError.code || 'VALR_API_ERROR');
+
     throw enhancedError;
   }
 

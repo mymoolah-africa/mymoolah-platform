@@ -283,14 +283,17 @@ class UsdcController {
         });
       }
 
-      if (error.code === 'CIRCUIT_BREAKER_OPEN' || error.code === 'VALR_NOT_CONFIGURED' || error.code === 'INSUFFICIENT_VALR_FLOAT') {
+      if (error.code === 'CIRCUIT_BREAKER_OPEN' || error.code === 'VALR_NOT_CONFIGURED' || error.code === 'INSUFFICIENT_VALR_FLOAT' || error.code === 'INSUFFICIENT_VALR_BALANCE') {
+        const message = error.code === 'INSUFFICIENT_VALR_FLOAT'
+          ? 'USDC service is temporarily unavailable. Please try again later.'
+          : error.code === 'INSUFFICIENT_VALR_BALANCE'
+            ? 'USDC is temporarily unavailable due to liquidity limits. Please try again later or a smaller amount.'
+            : 'USDC service is temporarily unavailable. Please try again in a few minutes.';
         return res.status(503).json({
           success: false,
           error: {
             code: error.code === 'VALR_NOT_CONFIGURED' ? 'SERVICE_UNAVAILABLE' : error.code,
-            message: error.code === 'INSUFFICIENT_VALR_FLOAT'
-              ? 'USDC service is temporarily unavailable. Please try again later.'
-              : 'USDC service is temporarily unavailable. Please try again in a few minutes.'
+            message
           }
         });
       }
