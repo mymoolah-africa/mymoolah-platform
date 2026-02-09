@@ -124,7 +124,9 @@ class ValrService {
       } catch (error) {
         lastError = error;
         
-        // Log error with details
+        // Log error with details (include validation errors for 400)
+        const errData = error.response?.data;
+        const validationErrors = errData?.validationErrors?.errors;
         console.error('[ValrService] Request failed', {
           attempt,
           maxRetries: this.maxRetries,
@@ -133,7 +135,8 @@ class ValrService {
           error: error.message,
           status: error.response?.status,
           statusText: error.response?.statusText,
-          data: error.response?.data,
+          data: errData,
+          validationErrors: Array.isArray(validationErrors) ? validationErrors : validationErrors,
           code: error.code
         });
 
@@ -288,9 +291,9 @@ class ValrService {
   async executeInstantOrder(orderId, idempotencyKey, pair = 'USDCZAR') {
     try {
       // VALR path includes pair: /v1/simple/{currencyPair}/order
-      // Idempotency is enforced in our backend before calling VALR; do not send unsupported fields
+      // VALR simple order endpoint expects "quoteId" (the id from the quote response), not "orderId"
       const data = await this.makeRequest('POST', `/v1/simple/${pair}/order`, {
-        orderId
+        quoteId: orderId
       });
       
       console.log('[ValrService] Instant order executed', { orderId, status: data.status });
