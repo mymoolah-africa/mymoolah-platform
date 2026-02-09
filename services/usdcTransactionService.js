@@ -668,21 +668,20 @@ class UsdcTransactionService {
       }
 
       // 10. Post to general ledger (double-entry accounting). Amounts in Rands.
+      // Business logic: User debited R10.75 (face R10 + 7.5% VAT-inclusive fee). R10 credited to VALR float; fee to revenue/VAT.
       const totalZarRand = Number((totalZarCents / 100).toFixed(2));
+      const feeRand = Number((amounts.platformFeeCents / 100).toFixed(2));
       const feeExVatRand = Number((amounts.platformFeeExVatCents / 100).toFixed(2));
       const feeVatRand = Number((amounts.platformFeeVatCents / 100).toFixed(2));
+      const feeClearingCode = process.env.LEDGER_ACCOUNT_USDC_FEE_CLEARING || '9999-00-01';
+      // Single entry: User debited R10.75 total; VALR float credited R10; fee (7.5% VAT inclusive) to clearing. Debits = credits.
       await ledgerService.postJournalEntry({
         description: `USDC Send to ${beneficiary.name}`,
         reference: transactionId,
         lines: [
-          // Credit: User wallet (asset decrease)
-          { accountCode: userWalletAccount.code, dc: 'credit', amount: totalZarRand, memo: 'USDC purchase debit from user wallet' },
-          // Debit: VALR float (asset increase)
-          { accountCode: '1200-10-06', dc: 'debit', amount: netToValrRand, memo: 'USDC purchase - funds to VALR' },
-          // Credit: MM revenue (4100-01-06 normal side credit)
-          { accountCode: '4100-01-06', dc: 'credit', amount: feeExVatRand, memo: 'USDC transaction fee revenue (ex VAT)' },
-          // Credit: VAT payable (2300-01-01 liability)
-          { accountCode: '2300-01-01', dc: 'credit', amount: feeVatRand, memo: 'VAT on USDC transaction fee' }
+          { accountCode: userWalletAccount.code, dc: 'credit', amount: totalZarRand, memo: 'User wallet debited - USDC purchase and fee' },
+          { accountCode: '1200-10-06', dc: 'debit', amount: netToValrRand, memo: 'VALR float credited with face value (R10)' },
+          { accountCode: feeClearingCode, dc: 'debit', amount: feeRand, memo: 'Transaction fee 7.5% VAT inclusive (to revenue/VAT via separate allocation)' }
         ]
       });
 
