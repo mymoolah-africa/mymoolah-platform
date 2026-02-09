@@ -515,6 +515,7 @@ class WalletController {
       if (isDashboard) {
         const cashoutRefundGroups = new Map();
         const epVoucherRefundGroups = new Map();
+        const usdcSendGroups = new Map();
         const otherTransactions = [];
         
         normalizedRows.forEach(tx => {
@@ -654,7 +655,31 @@ class WalletController {
             else if (metadata.isCashoutFee) g.fee = tx;
             return;
           }
+          // USDC Send: group by usdcSendGroupId (usdc_value + usdc_fee) into ONE row with total debit
+          if (metadata.transactionType === 'usdc_send' && metadata.usdcSendGroupId) {
+            const key = String(metadata.usdcSendGroupId);
+            if (!usdcSendGroups.has(key)) usdcSendGroups.set(key, { valueRow: null, feeRow: null });
+            const g = usdcSendGroups.get(key);
+            if (metadata.lineType === 'usdc_value') g.valueRow = tx;
+            else if (metadata.lineType === 'usdc_fee') g.feeRow = tx;
+            return;
+          }
           otherForRecent.push(tx);
+        });
+        const combinedUsdcRows = [];
+        usdcSendGroups.forEach((group) => {
+          const valueRow = group.valueRow;
+          const feeRow = group.feeRow;
+          const totalAmount = (parseFloat(valueRow?.amount || 0) + parseFloat(feeRow?.amount || 0));
+          const mainRow = valueRow || feeRow;
+          if (mainRow) {
+            combinedUsdcRows.push({
+              ...mainRow,
+              amount: totalAmount,
+              description: mainRow.description || 'USDC Send',
+              metadata: { ...(mainRow.metadata || {}), combinedUsdc: true, totalDebit: totalAmount }
+            });
+          }
         });
         const combinedCashoutRows = [];
         flashCashoutGroups.forEach((g) => {
@@ -672,7 +697,7 @@ class WalletController {
           else if (g.fee) combinedCashoutRows.push(g.fee);
         });
         normalizedRows.length = 0;
-        normalizedRows.push(...combinedCashoutRows, ...otherForRecent);
+        normalizedRows.push(...combinedRefunds, ...combinedCashoutRows, ...combinedUsdcRows, ...otherForRecent);
         normalizedRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 

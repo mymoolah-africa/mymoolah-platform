@@ -661,7 +661,7 @@ export function BuyUsdcOverlay() {
                     fontWeight: '700',
                     color: '#9333ea'
                   }}>
-                    ${quote.usdcAmount.toFixed(2)} USDC
+                    ${Number(quote.usdcAmount ?? 0).toFixed(2)} USDC
                   </span>
                 </div>
                 
@@ -678,7 +678,7 @@ export function BuyUsdcOverlay() {
                     fontSize: '11px',
                     color: '#6b7280'
                   }}>
-                    1 USDC = R{quote.exchangeRate.toFixed(2)}
+                    1 USDC = R{Number(quote.exchangeRate ?? 0).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -809,8 +809,8 @@ export function BuyUsdcOverlay() {
               { label: 'You send', value: formatCurrency(quote.zarAmount) },
               { label: 'Platform fee', value: formatCurrency(quote.platformFee) },
               { label: 'Network fee', value: formatCurrency(quote.networkFee) },
-              { label: 'Recipient receives', value: `$${quote.usdcAmount.toFixed(2)} USDC`, highlight: true },
-              { label: 'Exchange rate', value: `1 USDC = R${quote.exchangeRate.toFixed(2)}` }
+              { label: 'Recipient receives', value: `$${Number(quote.usdcAmount ?? 0).toFixed(2)} USDC`, highlight: true },
+              { label: 'Exchange rate', value: `1 USDC = R${Number(quote.exchangeRate ?? 0).toFixed(2)}` }
             ]}
             notices={[
               {

@@ -93,32 +93,35 @@ class UsdcTransactionService {
   }
 
   /**
-   * Calculate USDC amount and fees for a given ZAR amount
-   * 
-   * @param {number} zarAmount - Amount in ZAR
+   * Calculate USDC amount and fees for a given ZAR face value
+   * Face value = ZAR value of the USDC purchase (amount that goes to VALR).
+   * Transaction fee = 7.5% of face value (VAT inclusive); total charged = face value + fee.
+   *
+   * @param {number} zarAmount - Face value in ZAR (amount that buys USDC)
    * @param {number} exchangeRate - USDC/ZAR rate (ask price)
    * @returns {Object} Calculation breakdown
    */
   calculateAmounts(zarAmount, exchangeRate) {
-    // Platform fee (7.5% incl VAT)
-    const platformFeeCents = Math.round(zarAmount * 100 * (this.feePercent / 100));
-    const vatCents = Math.round(platformFeeCents * (15 / 115));  // Extract VAT portion
+    // Face value in cents (ZAR that buys USDC)
+    const faceValueCents = Math.round(zarAmount * 100);
+    // Transaction fee: 7.5% of face value (VAT inclusive) - MyMoolah revenue
+    const platformFeeCents = Math.round(faceValueCents * (this.feePercent / 100));
+    const vatCents = Math.round(platformFeeCents * (15 / 115));  // Extract VAT at 15%
     const platformFeeExVatCents = platformFeeCents - vatCents;
-    
-    // Net amount to VALR (after fee)
-    const netToValrCents = (zarAmount * 100) - platformFeeCents;
+    // Total charged to user = face value + fee
+    const totalZarCents = faceValueCents + platformFeeCents;
+    const netToValrCents = faceValueCents;
     const netToValrZar = netToValrCents / 100;
-    
     // USDC amount (using ask price)
     const usdcAmount = netToValrZar / exchangeRate;
-    
     // Network fee estimate (Solana is ~$0.00025 per transaction)
     const networkFeeUsd = 0.00025;
     const networkFeeZar = networkFeeUsd * exchangeRate;
     const networkFeeCents = Math.round(networkFeeZar * 100);
-    
+
     return {
-      zarAmountCents: zarAmount * 100,
+      zarAmountCents: faceValueCents,
+      totalZarCents,
       zarAmount,
       usdcAmount: parseFloat(usdcAmount.toFixed(6)),
       exchangeRate,
@@ -558,10 +561,10 @@ class UsdcTransactionService {
         throw new Error('Wallet not found');
       }
 
-      // Calculate total amount (ZAR + fee)
+      // Calculate total amount (face value + 7.5% fee)
       const rate = await this.getCurrentRate();
       const amounts = this.calculateAmounts(zarAmount, rate.askPrice);
-      const totalZarCents = amounts.zarAmountCents;
+      const totalZarCents = amounts.totalZarCents;
 
       if (wallet.balance < totalZarCents) {
         const error = new Error(`Insufficient balance. Required: R${(totalZarCents / 100).toFixed(2)}, Available: R${(wallet.balance / 100).toFixed(2)}`);
@@ -602,39 +605,23 @@ class UsdcTransactionService {
         throw new Error('Ledger accounts not found. Run migrations first.');
       }
 
-      // 10. Post to general ledger (double-entry accounting)
+      // 10. Post to general ledger (double-entry accounting). Amounts in Rands.
+      const totalZarRand = Number((totalZarCents / 100).toFixed(2));
+      const netToValrRand = Number((amounts.netToValrCents / 100).toFixed(2));
+      const feeExVatRand = Number((amounts.platformFeeExVatCents / 100).toFixed(2));
+      const feeVatRand = Number((amounts.platformFeeVatCents / 100).toFixed(2));
       await ledgerService.postJournalEntry({
         description: `USDC Send to ${beneficiary.name}`,
         reference: transactionId,
         lines: [
           // Credit: User wallet (asset decrease)
-          {
-            accountCode: userWalletAccount.code,
-            dc: 'credit',
-            amount: totalZarCents,
-            memo: 'USDC purchase debit from user wallet'
-          },
+          { accountCode: userWalletAccount.code, dc: 'credit', amount: totalZarRand, memo: 'USDC purchase debit from user wallet' },
           // Debit: VALR float (asset increase)
-          {
-            accountCode: '1200-10-06',
-            dc: 'debit',
-            amount: amounts.netToValrCents,
-            memo: 'USDC purchase - funds to VALR'
-          },
-          // Debit: Fee revenue (excluding VAT)
-          {
-            accountCode: '4100-01-06',
-            dc: 'debit',
-            amount: amounts.platformFeeExVatCents,
-            memo: 'USDC transaction fee revenue (ex VAT)'
-          },
-          // Debit: VAT payable
-          {
-            accountCode: '2300-01-01',
-            dc: 'debit',
-            amount: amounts.platformFeeVatCents,
-            memo: 'VAT on USDC transaction fee'
-          }
+          { accountCode: '1200-10-06', dc: 'debit', amount: netToValrRand, memo: 'USDC purchase - funds to VALR' },
+          // Credit: MM revenue (4100-01-06 normal side credit)
+          { accountCode: '4100-01-06', dc: 'credit', amount: feeExVatRand, memo: 'USDC transaction fee revenue (ex VAT)' },
+          // Credit: VAT payable (2300-01-01 liability)
+          { accountCode: '2300-01-01', dc: 'credit', amount: feeVatRand, memo: 'VAT on USDC transaction fee' }
         ]
       });
 
@@ -646,43 +633,55 @@ class UsdcTransactionService {
         paymentReference: transactionId
       });
 
-      // 12. Create transaction record (existing transactions table)
-      const transaction = await Transaction.create({
+      // 12. Create two transaction records: USDC value + Transaction fee (for history); dashboard will show one combined row
+      const sharedMeta = {
+        transactionType: 'usdc_send',
+        usdcSendGroupId: transactionId,
+        usdcAmount: valrOrder.usdcAmount.toFixed(6),
+        exchangeRate: valrQuote.rate.toFixed(8),
+        platformFee: amounts.platformFeeCents,
+        platformFeeVat: amounts.platformFeeVatCents,
+        networkFee: amounts.networkFeeCents,
+        beneficiaryId,
+        beneficiaryName: beneficiary.name,
+        beneficiaryWalletAddress: primaryWallet.walletAddress,
+        beneficiaryWalletNetwork: 'solana',
+        beneficiaryCountry: primaryWallet.country,
+        beneficiaryRelationship: primaryWallet.relationship,
+        beneficiaryPurpose: purpose || primaryWallet.purpose,
+        valrOrderId: valrOrder.orderId,
+        valrWithdrawalId: withdrawal.id,
+        blockchainTxHash: withdrawal.txHash,
+        blockchainStatus: 'pending',
+        blockchainConfirmations: 0,
+        complianceHold: false,
+        complianceFlags: complianceResult.flags,
+        riskScore: complianceResult.riskScore
+      };
+      // Record 1: USDC value (ZAR face value) - amount in rands for display
+      const txUsdcValue = await Transaction.create({
         transactionId,
         userId,
         walletId,
-        amount: totalZarCents * -1,  // Negative for debit
+        amount: Number((-amounts.netToValrCents / 100).toFixed(2)),
         type: 'sent',
         status: 'completed',
         description: `USDC Send to ${beneficiary.name}`,
-        metadata: {
-          transactionType: 'usdc_send',
-          // Financial
-          usdcAmount: valrOrder.usdcAmount.toFixed(6),
-          exchangeRate: valrQuote.rate.toFixed(8),
-          platformFee: amounts.platformFeeCents,
-          platformFeeVat: amounts.platformFeeVatCents,
-          networkFee: amounts.networkFeeCents,
-          // Beneficiary (Travel Rule)
-          beneficiaryId,
-          beneficiaryName: beneficiary.name,
-          beneficiaryWalletAddress: primaryWallet.walletAddress,
-          beneficiaryWalletNetwork: 'solana',
-          beneficiaryCountry: primaryWallet.country,
-          beneficiaryRelationship: primaryWallet.relationship,
-          beneficiaryPurpose: purpose || primaryWallet.purpose,
-          // VALR Integration
-          valrOrderId: valrOrder.orderId,
-          valrWithdrawalId: withdrawal.id,
-          blockchainTxHash: withdrawal.txHash,
-          blockchainStatus: 'pending',
-          blockchainConfirmations: 0,
-          // Compliance
-          complianceHold: false,
-          complianceFlags: complianceResult.flags,
-          riskScore: complianceResult.riskScore
-        }
+        metadata: { ...sharedMeta, lineType: 'usdc_value', zarValueCents: amounts.netToValrCents }
       }, { transaction: dbTransaction });
+      // Record 2: Transaction fee (7.5% VAT incl) - amount in rands for display
+      const txFee = await Transaction.create({
+        transactionId: `${transactionId}-FEE`,
+        userId,
+        walletId,
+        amount: Number((-amounts.platformFeeCents / 100).toFixed(2)),
+        type: 'fee',
+        status: 'completed',
+        description: 'Transaction Fee',
+        metadata: { ...sharedMeta, lineType: 'usdc_fee', platformFeeCents: amounts.platformFeeCents }
+      }, { transaction: dbTransaction });
+      // Primary transaction for API response (represents full debit for dashboard when grouped)
+      const transaction = txUsdcValue;
 
       // 13. Update beneficiary stats
       primaryWallet.totalSends = (primaryWallet.totalSends || 0) + 1;

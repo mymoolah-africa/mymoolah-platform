@@ -88,25 +88,22 @@ describe('USDC Send Feature', () => {
       expect(result.platformFeeVatCents).toBeLessThan(990);
     });
 
-    it('should calculate net amount to VALR correctly', () => {
-      const zarAmount = 1000; // R1,000
+    it('should calculate net amount to VALR correctly (face value = amount that buys USDC)', () => {
+      const zarAmount = 1000; // R1,000 face value
       const exchangeRate = 18.5;
-      
       const result = UsdcTransactionService.calculateAmounts(zarAmount, exchangeRate);
-      
-      // Net = R1,000 - R75 fee = R925
-      expect(result.netToValrZar).toBe(925);
-      expect(result.netToValrCents).toBe(92500);
+      // Net to VALR = face value (full R1,000)
+      expect(result.netToValrZar).toBe(1000);
+      expect(result.netToValrCents).toBe(100000);
+      // Total charged = face + 7.5% fee = R1,075
+      expect(result.totalZarCents).toBe(107500);
     });
 
     it('should calculate USDC amount using exchange rate', () => {
-      const zarAmount = 925; // Net after fee
       const exchangeRate = 18.5; // R18.50 per USDC
-      
       const result = UsdcTransactionService.calculateAmounts(1000, exchangeRate);
-      
-      // USDC = R925 / 18.5 = 50 USDC
-      expect(result.usdcAmount).toBeCloseTo(50, 1);
+      // USDC = R1,000 face / 18.5 = 54.05 USDC
+      expect(result.usdcAmount).toBeCloseTo(1000 / 18.5, 1);
     });
 
     it('should estimate network fee for Solana', () => {

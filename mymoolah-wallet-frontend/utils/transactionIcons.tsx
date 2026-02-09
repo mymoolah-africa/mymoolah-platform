@@ -30,8 +30,21 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
   const description = (transaction.description || '').toLowerCase();
   const isCredit = transaction.amount > 0;
   const iconColor = isCredit ? '#16a34a' : '#dc2626'; // Green for credit, red for debit (always)
+  const metadata = transaction.metadata || {};
 
-  // 0. TRANSACTION FEE (normal arrows only – not Voucher icon)
+  // 0. USDC / CRYPTO (check before generic fee so USDC value + fee both get Coins icon)
+  const isUsdcTransaction = (
+    description.includes('usdc send') ||
+    metadata.transactionType === 'usdc_send' ||
+    metadata.lineType === 'usdc_fee' ||
+    metadata.usdcAmount ||
+    metadata.blockchainTxHash
+  );
+  if (isUsdcTransaction) {
+    return <Coins style={{ ...iconStyle, color: '#9333ea' }} />; // Purple for crypto
+  }
+
+  // 1. TRANSACTION FEE (normal arrows only – not Voucher icon)
   const isTransactionFee =
     description === 'transaction fee' ||
     transaction.metadata?.isFlashCashoutFee === true ||
@@ -65,7 +78,6 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
   
   // 2. WATCH TO EARN / AD REWARD TRANSACTIONS (Film/Movie icons) - Check BEFORE data/airtime
   // Always green as it's a credit - Must check early to avoid false matches
-  const metadata = transaction.metadata || {};
   const isWatchToEarn = (
     description.includes('watch to earn') ||
     description.includes('ad reward') ||
@@ -76,18 +88,6 @@ export function getTransactionIcon(transaction: Transaction, size: number = 20):
   
   if (isWatchToEarn) {
     return <Film style={{ ...iconStyle, color: '#16a34a' }} />; // Always green for earnings
-  }
-  
-  // 3. USDC TRANSACTIONS (Crypto purchase and transfer)
-  const isUsdcTransaction = (
-    description.includes('usdc send') ||
-    metadata.transactionType === 'usdc_send' ||
-    metadata.usdcAmount ||
-    metadata.blockchainTxHash
-  );
-  
-  if (isUsdcTransaction) {
-    return <Coins style={{ ...iconStyle, color: '#9333ea' }} />; // Purple for crypto
   }
   
   // 4. DATA TRANSACTIONS (Check BEFORE airtime to avoid false matches)

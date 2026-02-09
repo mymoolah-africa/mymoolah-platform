@@ -107,15 +107,17 @@ class UsdcService {
    * @param zarAmount - Amount in ZAR
    */
   async getQuote(zarAmount: number): Promise<UsdcQuote> {
-    const response = await apiService.request<UsdcQuote>('/api/v1/usdc/quote', {
+    const response = await apiService.request<{ data?: UsdcQuote } & UsdcQuote>('/api/v1/usdc/quote', {
       method: 'POST',
       body: JSON.stringify({ zarAmount })
     });
-    
     if (!response.data) {
       throw new Error('Failed to get quote');
     }
-    return response.data;
+    // API returns { success, data: { zarAmount, usdcAmount, exchangeRate, ... } }; unwrap to quote object
+    const payload = response.data as { data?: UsdcQuote };
+    const quote = payload?.data ?? (response.data as UsdcQuote);
+    return quote;
   }
 
   /**
