@@ -983,7 +983,9 @@ export function BuyUsdcOverlay() {
                   fontSize: '10px',
                   color: '#1f2937'
                 }}>
-                  {transactionResult.transactionId.substring(0, 16)}...
+                  {transactionResult.transactionId != null
+                    ? `${String(transactionResult.transactionId).substring(0, 16)}...`
+                    : '—'}
                 </span>
               </div>
 
@@ -1011,7 +1013,9 @@ export function BuyUsdcOverlay() {
                         gap: '4px'
                       }}
                     >
-                      {transactionResult.blockchainTxHash.substring(0, 8)}...
+                      {transactionResult.blockchainTxHash != null
+                        ? `${String(transactionResult.blockchainTxHash).substring(0, 8)}...`
+                        : '—'}
                       <ExternalLink style={{ width: '12px', height: '12px' }} />
                     </a>
                   </div>
@@ -1031,7 +1035,9 @@ export function BuyUsdcOverlay() {
                   fontSize: '10px',
                   color: '#1f2937'
                 }}>
-                  {transactionResult.beneficiaryWalletAddress.substring(0, 8)}...
+                  {transactionResult.beneficiaryWalletAddress != null
+                    ? `${String(transactionResult.beneficiaryWalletAddress).substring(0, 8)}...`
+                    : '—'}
                 </span>
               </div>
 

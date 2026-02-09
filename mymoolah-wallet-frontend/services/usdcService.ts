@@ -133,9 +133,11 @@ class UsdcService {
       });
       
       if (response.data) {
+        // API returns { success, data: { transactionId, ... } }; unwrap so overlay gets flat payload
+        const payload = (response.data as any)?.data ?? response.data;
         return {
           success: true,
-          data: response.data
+          data: payload
         };
       }
       
