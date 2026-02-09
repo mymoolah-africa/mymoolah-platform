@@ -1,12 +1,18 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: February 07, 2026 22:30  
-**Version**: 2.9.1 - USDC Fixes & Banking-Grade Sweep  
-**Status**: ✅ **USDC SEND + BANKING-GRADE SWEEP** ✅ **ALL MOBILEMART SERVICES INTEGRATED** ✅ **ELECTRICITY PURCHASE LIVE** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **STAGING TESTED** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: February 09, 2026 16:00  
+**Version**: 2.9.2 - Transaction Detail Modal & USDC Fee UI  
+**Status**: ✅ **USDC SEND + BANKING-GRADE SWEEP** ✅ **TRANSACTION DETAIL + FEE UI** ✅ **ALL MOBILEMART SERVICES INTEGRATED** ✅ **ELECTRICITY PURCHASE LIVE** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **STAGING TESTED** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: USDC Fixes & Banking-Grade Sweep (February 07, 2026)**
+## 🚀 **LATEST UPDATE: Transaction Detail Modal & USDC Fee UI (February 09, 2026)**
+
+Transaction Details modal shows Reference, Amount, Status only (no blockchain Tx ID; recipient auto-credited). USDC send: "Platform fee" renamed to "Transaction Fee"; "Network fee" removed from quote and Confirm sheet. **Last 7 days (Feb 2–9)** also: USDC send flow/ledger/UAT fixes (Feb 9); Watch to Earn Staging + migrations-before-seeding (Feb 8); USDC feature + sweep (Feb 7); proxy & gcloud auth (Feb 6); Global Airtime variantId & proxy credentials (Feb 4); Flash cash_out, ZERO SHORTCUTS POLICY, USDC remove beneficiary (Feb 2). See `docs/CHANGELOG.md` and `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`.
+
+---
+
+## 🚀 **PREVIOUS UPDATE: USDC Fixes & Banking-Grade Sweep (February 07, 2026)**
 
 USDC service hardened: beneficiary list fix (model + enrichment + filter), Redis v5 cache, VALR 503 handling, edit flow and overlay banners. All USDC routes use express-validator and DB-only aggregation for limits. See `docs/session_logs/2026-02-07_2230_usdc-fixes-banners-banking-grade-sweep.md`.
 

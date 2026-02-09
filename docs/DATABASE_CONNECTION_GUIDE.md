@@ -48,6 +48,8 @@ This guide ensures **100% reliable** database connections for UAT and Staging. *
 - ✅ URL encoding of passwords
 - ✅ Error handling
 
+**Rule (updated Feb 2026):** Run **migrations first** when you add or change UAT/Staging schema. Run **seed scripts only after** the relevant migrations have been run for that environment. Order is always: migrations → then seed.
+
 ---
 
 ## 📚 **Available Scripts**

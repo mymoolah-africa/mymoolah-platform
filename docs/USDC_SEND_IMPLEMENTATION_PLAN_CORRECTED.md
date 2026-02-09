@@ -8,6 +8,11 @@
 **Network**: USDC on Solana  
 **Status**: ✅ **READY FOR IMPLEMENTATION**
 
+### **Post-implementation UI updates (February 2026)**
+- **Fee labels**: "Platform fee" renamed to **"Transaction Fee"** in quote breakdown and Confirm USDC Send sheet.
+- **Network fee**: Removed from UI (quote and Confirm sheet); was R 0,00 in current flow. Can be re-added if a non-zero network fee is charged.
+- **Transaction Details modal**: Shows Reference (internal ID), Amount, and Status only. No blockchain Tx ID in UI (recipient is auto-credited to wallet on file; aligned with banking/Mojaloop practice).
+
 ---
 
 ## 🔄 **CHANGES FROM ORIGINAL PLAN**

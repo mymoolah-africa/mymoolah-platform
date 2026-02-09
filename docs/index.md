@@ -1,8 +1,10 @@
 # MyMoolah Treasury Platform - Documentation Index
 
-**Last Updated**: August 28, 2025  
-**Project Status**: 🚀 **PRODUCTION READY - CASH-OUT SERVICES INTEGRATED**  
-**Version**: 2.1.0 - Cash-Out Services Integration
+**Last Updated**: February 09, 2026  
+**Project Status**: 🚀 **PRODUCTION READY - USDC SEND, FLASH, MOBILEMART, RECONCILIATION LIVE**  
+**Version**: 2.9.2 - Transaction Detail Modal & USDC Fee UI  
+
+For work in the last 7 days (Feb 2–9, 2026), see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md) (Recent Updates).
 
 ---
 

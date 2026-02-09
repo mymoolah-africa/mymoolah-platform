@@ -1,5 +1,53 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-09 - 📋 Transaction Detail Modal & USDC Fee UI (v2.9.2) ✅
+
+### **Session Overview**
+Transaction Details modal aligned with banking/Mojaloop practice (reference only; no blockchain Tx ID). USDC send UI: "Platform fee" renamed to "Transaction Fee", "Network fee" removed from quote and confirm sheet.
+
+### **Changes**
+- **Transaction Details modal**: Reverted Blockchain Tx ID display. Recipient is auto-credited to wallet on file; modal shows only Reference (internal ID), Amount, and Status per banking practice.
+- **USDC send fee UI**: Renamed "Platform fee" to "Transaction Fee" in quote breakdown ("Transaction Fee (7.5%):") and in Confirm USDC Send sheet.
+- **USDC send**: Removed "Network fee" line from quote breakdown and Confirm sheet (was R 0,00; not needed in current flow).
+
+### **Files Modified**
+- `mymoolah-wallet-frontend/components/TransactionDetailModal.tsx` - Reference + Amount + Status only
+- `mymoolah-wallet-frontend/components/overlays/BuyUsdcOverlay.tsx` - Transaction Fee label; Network fee removed
+
+### **Session Log**
+- `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`
+
+---
+
+## 2026-02-09 - 🪙 USDC Send Flow, Ledger & UAT Fixes ✅
+
+### **Session Overview**
+End-to-end USDC send fixes: VALR API (quoteId, pair in path, payInCurrency/side/payAmount), ledger balance (user R10.75, VALR float R10, fee to clearing 9999-00-01), UAT-only VALR simulation, transaction model negative amount for `sent`, success UI guards, beneficiary/wallet resolution, and VALR float check with user-friendly error modal.
+
+### **Changes**
+- **VALR**: Send `quoteId` for simple order; use pair in path for quote/order (fix 404); send payInCurrency, side, payAmount; map code -6 to 503 INSUFFICIENT_VALR_BALANCE; log validation errors on 400.
+- **Ledger**: Single balanced journal (credit user 10.75, debit VALR float 10, debit fee clearing 9999-00-01); migration for USDC Fee Recognition 9999-00-02; User Wallet Clearing 1100-01-01.
+- **UAT**: When `USDC_VALR_SIMULATE=true` or DB URL contains `uat`, skip real VALR (validate float only, simulate 200 success).
+- **Transaction model**: Allow negative amount for `type === 'sent'` (USDC send debits).
+- **Frontend**: Unwrap send response in usdcService; BuyUsdcOverlay success step safe to transactionId/blockchainTxHash/beneficiaryWalletAddress (null checks, substring guards).
+- **Other**: Resolve beneficiary via UnifiedBeneficiaryService; resolve wallet by userId for executeSend; VALR float check + ErrorModal a11y; load-valr-usdc-float-uat script; env.template VALR/USDC notes.
+
+### **Session Log**
+- See conversation summary and `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md` for related UI work.
+
+---
+
+## 2026-02-08 - 📜 Docs & Watch to Earn Staging ✅
+
+### **Session Overview**
+Documentation and Staging behaviour updates: migrations-before-seeding rule reinforced in Cursor rules and agent handover; Watch to Earn demo videos in Staging (auto-seed when no ads in DB, seed script supports `--staging`).
+
+### **Changes**
+- **Migrations before seeding**: Rule added/clarified in docs and agent handover — run migrations first when adding or changing UAT/Staging schema; run seed scripts only after migrations for that environment.
+- **Watch to Earn (Staging)**: Show demo videos in Staging; auto-seed when no ads in DB; seed script supports `--staging` flag.
+
+---
+
 ## 2026-02-07 - 🪙 USDC Fixes, Banners & Banking-Grade Sweep (v2.9.1) ✅
 
 ### **Session Overview**
@@ -143,6 +191,47 @@ Complete implementation of "Buy USDC" feature - cross-border value transfer via 
 - Unified beneficiary system maintains single source of truth
 - All USDC transactions post to general ledger (double-entry accounting)
 - Travel Rule compliance data collected for all transactions
+
+---
+
+## 2026-02-06 - 🔐 Proxy & gcloud Auth UX ✅
+
+### **Session Overview**
+Staging proxy and gcloud authentication improvements: interactive gcloud auth in start-codespace-with-proxy for one-click flow; try ADC token fallback; fail fast with clear gcloud auth instructions when no credentials.
+
+### **Changes**
+- **Proxy**: Try ADC token fallback; fail fast with gcloud auth instructions when no credentials.
+- **Scripts**: Add interactive gcloud auth to start-codespace-with-proxy for one-click flow; improve prompts and visual feedback.
+
+---
+
+## 2026-02-04 - 📡 Global Airtime & Proxy Credentials ✅
+
+### **Session Overview**
+Global airtime/data "own amount" flow fixed (resolve to catalog variantId); Staging proxy authentication when ADC blocked by org policy (use gcloud user credentials, token flag, clean quoting).
+
+### **Changes**
+- **Global Airtime/Data**: Resolve "own airtime" / "own data" to catalog product with variantId; fallback at confirm; clear error when no matching product; show only Flash products for Global; label International Airtime/Data as Flash; close confirm sheet before error modal; aria-describedby and network filter fixes.
+- **Proxy**: Use gcloud access token for Staging proxy when ADC blocked; clean token passing with proper quoting; use user credentials when ADC blocked by org policy.
+
+### **Session Log**
+- `docs/session_logs/2026-02-02_1200_global-airtime-own-product-variantid-fix.md`
+
+---
+
+## 2026-02-02 - 🔥 Flash Cash-Out, vasType & Zero Shortcuts Policy ✅
+
+### **Session Overview**
+Flash integration improvements: cash_out vasType (proper ENUM migration), transaction splitting (face + fee), Recent Transactions total display, TransactionDetailModal cash-out PIN/breakdown. ZERO SHORTCUTS POLICY established; voucher icon for eeziCash; add remove beneficiary to Buy USDC overlay; docs (migrations-before-seeding, USDC beneficiary per-environment).
+
+### **Changes**
+- **Flash**: cash_out vasType added to both VasProduct and VasTransaction enums; FlashController uses cash_out; transaction splitting; Recent show total (face+fee); modal width and cash-out PIN display; auth middleware on cash-out-pin/purchase; OAuth credential validation.
+- **Policy**: ZERO SHORTCUTS POLICY documented; agent handover and rules updated; agent MUST commit AND push to main after changes.
+- **UI**: Voucher icon for eeziCash, arrows for Transaction Fee; show all recipients by identifier+network.
+- **USDC**: Add remove beneficiary to Buy USDC overlay; docs note beneficiary data per-environment.
+
+### **Session Log**
+- `docs/session_logs/2026-02-02_FINAL_flash-integration-and-improvements.md`, `docs/session_logs/2026-02-02_1200_global-airtime-own-product-variantid-fix.md`, `docs/ZERO_SHORTCUTS_POLICY.md`
 
 ---
 

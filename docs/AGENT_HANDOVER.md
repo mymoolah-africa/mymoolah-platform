@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-07 22:30  
-**Latest Feature**: USDC Send Feature (Cross-Border Value Transfer) — fixes, banners, banking-grade sweep  
-**Document Version**: 2.9.0  
+**Last Updated**: 2026-02-09 16:00  
+**Latest Feature**: Transaction Detail modal clarity & USDC fee UI (Transaction Fee label, Network fee removed)  
+**Document Version**: 2.9.2  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -51,7 +51,18 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 07, 2026 - 22:30)**
+### **Latest Achievement (February 09, 2026 - 16:00)**
+**Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
+
+### **Recent Updates (Last 7 Days – February 02–09, 2026)**
+- **Feb 09**: Transaction Detail modal (Reference/Amount/Status only); USDC fee UI (Transaction Fee label, Network fee removed); USDC send flow fixes (VALR quoteId/path/params, ledger balance, UAT simulation, negative amount for sent, success UI guards, beneficiary/wallet resolution, VALR float check + ErrorModal).
+- **Feb 08**: Migrations-before-seeding rule in Cursor rules and handover; Watch to Earn demo videos in Staging (auto-seed when no ads, seed script `--staging`).
+- **Feb 07**: USDC Send feature implementation; USDC fixes and banking-grade sweep (beneficiary list, Redis v5, VALR 503, edit flow, banners, filter removal, validation/DB aggregation/idempotency/VALR guards).
+- **Feb 06**: Proxy and gcloud auth UX (interactive gcloud auth in start-codespace-with-proxy, ADC fallback, fail-fast with auth instructions).
+- **Feb 04**: Global Airtime/Data own-amount variantId resolution; proxy credentials when ADC blocked (gcloud user credentials, token flag).
+- **Feb 02**: Flash cash_out vasType, transaction splitting, Recent/History display, TransactionDetailModal cash-out PIN; ZERO SHORTCUTS POLICY; voucher icons; USDC remove beneficiary; migrations-before-seeding and USDC per-environment docs; agent commit-and-push rule.
+
+### **Previous Achievement (February 07, 2026 - 22:30)**
 **USDC Fixes, Banners & Banking-Grade Sweep** - Fixed USDC beneficiary list not showing (Beneficiary model `cryptoServices` field, enrichment from `serviceAccountRecords`, filter by normalized table). Fixed Redis v5 cache compatibility (`set` with EX), VALR 503 on missing/invalid credentials, and USDC beneficiary edit flow (onEdit/onAddNew, modal prefill for wallet/country/relationship/purpose). Buy USDC overlay now shows top and bottom sticky banners (App + BottomNavigation); removed filter row (All/Airtime/Data/etc) and improved spacing. Full banking-grade sweep: all USDC routes use express-validator + handleValidation; limit checks use DB aggregation only (SUM/ABS, no JS sum); idempotency via client key or crypto.randomUUID(); VALR guarded (isConfigured/signRequest), unsupported _idempotencyKey removed from VALR body; controller uses service layer only (getTransactionById); limit/offset/address sanitized. Session log: `docs/session_logs/2026-02-07_2230_usdc-fixes-banners-banking-grade-sweep.md`. Commits: bf2d271a, b8d662f5, f1095d11, 429c7a60, 1c7b9f65.
 
 ### **Previous Achievement (February 07, 2026 - 15:00)**
@@ -914,44 +925,26 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Date**: 2026-01-24 09:09  
-**Focus**: NFC Deposit/Payment Implementation Plan
+**Session Date**: 2026-02-09 16:00  
+**Focus**: Transaction Detail Modal & USDC Fee UI
 
 ### **Work Completed**
-1. **NFC Implementation Plan Created**: Comprehensive banking-grade implementation plan for NFC deposits (SoftPOS inbound) and NFC payments (tokenized virtual card outbound) with Standard Bank T-PPP.
+1. **Transaction Details modal**: Reverted Blockchain Tx ID display. User confirmed recipient is auto-credited to wallet address on file; per banking/Mojaloop practice only Reference (internal ID), Amount, and Status are shown — no "paste to top up" Tx ID.
 
-2. **Architecture Defined**:
-   - **Inbound NFC Deposits**: SoftPOS kernel (Android) / Tap to Pay on iPhone (iOS) → Standard Bank acquiring → MyMoolah callback API → wallet ledger credit
-   - **Outbound NFC Payments**: Virtual card issued via T-PPP → push provisioning to Apple Pay/Google Wallet → POS auth → Standard Bank issuer webhook → MyMoolah auth service → ledger post
-
-3. **Compliance Requirements Documented**:
-   - MPoC/CPoC certification required (no browser NFC)
-   - Native kernels mandatory (Android: certified EMV L2/MPoC kernel, iOS: Tap to Pay on iPhone)
-   - Tokenized payments only (no PAN/CVV storage)
-   - Strict ledger alignment with existing double-entry patterns
-
-4. **Implementation Roadmap Outlined**:
-   - Data models (VirtualCard, SoftPosDevice, auth/callback logs)
-   - Backend services (NFCDepositService, VirtualCardService, CardAuthService)
-   - Native bridge apps (Android MPoC terminal, iOS Tap to Pay wrapper)
-   - API contracts (secure webhooks with mTLS/HMAC, idempotency)
-   - Testing & certification strategy
+2. **USDC send fee UI**: Renamed "Platform fee" to "Transaction Fee" in quote breakdown and Confirm USDC Send sheet. Removed "Network fee" line from both (was R 0,00; not needed for current flow).
 
 ### **Files Changed**
-- Planning only: `.cursor/plans/nfc-tppp-implementation_d579e17c.plan.md` - Complete implementation plan
-- Documentation: `docs/session_logs/2026-01-24_0909_nfc-deposit-payment-plan.md` - Session log
+- `mymoolah-wallet-frontend/components/TransactionDetailModal.tsx` - Reverted to Reference + Amount + Status only
+- `mymoolah-wallet-frontend/components/overlays/BuyUsdcOverlay.tsx` - Transaction Fee label; Network fee removed
+- `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md` - Session log
 
-### **Key Technical Decisions**
-- **Certified kernel required**: Browser/Web NFC is non-compliant; must use certified SoftPOS kernel (Android) or Tap to Pay on iPhone (iOS)
-- **Tokenized outbound payments**: Issue virtual card via T-PPP, push-provision to Apple Pay/Google Wallet; no raw PAN/CVV storage
-- **Strict ledger alignment**: All NFC events must map to existing double-entry patterns with idempotency keys
-- **Secure webhooks**: All callbacks use mTLS/HMAC + idempotency; audit trails for all auth/settlement decisions
+### **Key Decisions**
+- **No blockchain Tx ID in modal**: Recipient credited automatically; reference is for user records only (banking/Mojaloop aligned).
+- **Single fee label**: "Transaction Fee" (7.5%); Network fee removed from UI unless needed later.
 
 ### **Next Steps**
-- Secure T-PPP issuing/acquiring agreements and Apple/Google wallet issuer entitlements
-- Begin implementation: models/migrations, backend services, native bridge apps
-- Define and secure NFC webhooks (mTLS/HMAC, idempotency, attestation checks)
-- Run certification test suites (MPoC/CPoC, Apple Pay, Google Wallet, Standard Bank UAT)
+- Optional: Re-add blockchain Tx ID as "View on block explorer" / support-only if required (no "top up" framing).
+- Test USDC send in Codespaces when VALR credentials available.
 
 ---
 

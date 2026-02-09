@@ -1,12 +1,24 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: February 07, 2026 22:30  
-**Version**: 2.9.1 - USDC Fixes, Banners & Banking-Grade Sweep  
+**Last Updated**: February 09, 2026 16:00  
+**Version**: 2.9.2 - Transaction Detail Modal & USDC Fee UI  
 **Status**: ✅ **USDC SEND FEATURE** ✅ **USDC BANKING-GRADE SWEEP** ✅ **BENEFICIARY LIST FIXED** ✅ **BUY USDC BANNERS** ✅ **ELECTRICITY PURCHASE COMPLETE** ✅ **MOBILEMART PRODUCTION INTEGRATED** ✅ **STAGING TESTED** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+
+**Work in the last 7 days (Feb 2–9, 2026)**: Transaction Detail modal & USDC fee UI; USDC send flow, ledger & UAT fixes; USDC Send feature + banking-grade sweep (Feb 7); Watch to Earn Staging demo + migrations-before-seeding rule (Feb 8); proxy & gcloud auth UX (Feb 6); Global Airtime variantId & proxy credentials (Feb 4); Flash cash_out vasType, ZERO SHORTCUTS POLICY, USDC remove beneficiary (Feb 2). See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: USDC Fixes & Banking-Grade Sweep (February 07, 2026 - 22:30)**
+## 🚀 **LATEST UPDATE: Transaction Detail Modal & USDC Fee UI (February 09, 2026 - 16:00)**
+
+### **📋 Transaction Details & USDC Fee Labels**
+- **Transaction Details modal**: Shows only Reference (internal ID), Amount, and Status. No blockchain Tx ID (recipient is auto-credited to wallet on file; aligned with banking/Mojaloop practice).
+- **USDC send**: "Platform fee" renamed to **"Transaction Fee"** in quote and Confirm sheet. "Network fee" removed from UI (was R 0,00).
+
+**Session log**: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`
+
+---
+
+## 🚀 **PREVIOUS UPDATE: USDC Fixes & Banking-Grade Sweep (February 07, 2026 - 22:30)**
 
 ### **🪙 USDC Hardening & UX**
 - **Beneficiary list**: Model `cryptoServices`, enrichment from normalized table, filter by service type so USDC recipients display correctly.
