@@ -246,17 +246,25 @@ class ValrService {
   async getInstantQuote(pair, zarAmount) {
     try {
       // VALR path includes pair: /v1/simple/{currencyPair}/quote
-      const data = await this.makeRequest('POST', `/v1/simple/${pair}/quote`, {
+      const raw = await this.makeRequest('POST', `/v1/simple/${pair}/quote`, {
         payInCurrency: 'ZAR',
         payAmount: zarAmount.toFixed(2),
         side: 'BUY'
       });
-      
+      // VALR may wrap response in a result object
+      const data = raw && typeof raw === 'object' && raw.result != null ? raw.result : raw;
+
+      const usdcAmount = parseFloat(data.receiveAmount);
+      const zarAmountNum = parseFloat(data.payAmount);
+      const orderId = data.orderId ?? data.quoteId ?? data.id;
+      const rateNum = parseFloat(data.price ?? data.costPerCoin ?? data.rate);
+      const rate = Number.isFinite(rateNum) ? rateNum : (zarAmountNum / usdcAmount);
+
       return {
-        orderId: data.orderId,
-        usdcAmount: parseFloat(data.receiveAmount),
-        zarAmount: parseFloat(data.payAmount),
-        rate: parseFloat(data.price),
+        orderId,
+        usdcAmount,
+        zarAmount: zarAmountNum,
+        rate,
         expiresAt: new Date(Date.now() + 60000),  // 60 second quote expiry
         createdAt: new Date()
       };
