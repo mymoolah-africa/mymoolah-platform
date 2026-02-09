@@ -37,7 +37,10 @@ const valrService = require('./valrService');
 const ledgerService = require('./ledgerService');
 const cachingService = require('./cachingService');
 const auditLogger = require('./auditLogger');
+const UnifiedBeneficiaryService = require('./UnifiedBeneficiaryService');
 const { isValidSolanaAddress } = require('../utils/solanaAddressValidator');
+
+const unifiedBeneficiaryService = new UnifiedBeneficiaryService();
 
 class UsdcTransactionService {
   constructor() {
@@ -457,17 +460,23 @@ class UsdcTransactionService {
         throw error;
       }
 
-      // 2. Get beneficiary and validate
+      // 2. Get beneficiary and validate (use unified service so USDC from BeneficiaryServiceAccount is included)
+      const enriched = await unifiedBeneficiaryService.getBeneficiaryServices(beneficiaryId);
+      if (!enriched || enriched.userId !== userId || !enriched.cryptoServices?.usdc?.length) {
+        throw new Error('USDC beneficiary not found');
+      }
+
       const beneficiary = await Beneficiary.findOne({
         where: { id: beneficiaryId, userId },
         transaction: dbTransaction
       });
-      
-      if (!beneficiary || !beneficiary.cryptoServices?.usdc) {
+      if (!beneficiary) {
         throw new Error('USDC beneficiary not found');
       }
+      // Merge enriched cryptoServices so model has USDC data (and updates persist)
+      beneficiary.cryptoServices = enriched.cryptoServices;
 
-      const primaryWallet = beneficiary.cryptoServices.usdc.find(w => w.isDefault || w.isActive);
+      const primaryWallet = beneficiary.cryptoServices.usdc.find(w => w.isDefault || w.isActive) || beneficiary.cryptoServices.usdc[0];
       if (!primaryWallet) {
         throw new Error('No active USDC wallet for beneficiary');
       }
