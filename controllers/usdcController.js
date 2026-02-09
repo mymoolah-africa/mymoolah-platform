@@ -15,6 +15,7 @@
 
 const crypto = require('crypto');
 const usdcTransactionService = require('../services/usdcTransactionService');
+const { Wallet } = require('../models');
 const { isValidSolanaAddress, detectKnownPattern } = require('../utils/solanaAddressValidator');
 
 const ADDRESS_MAX_LENGTH = 64;
@@ -156,7 +157,19 @@ class UsdcController {
     try {
       const { zarAmount, beneficiaryId, purpose, idempotencyKey } = req.body;
       const userId = req.user.id;
-      const walletId = req.user.walletId;
+
+      // Resolve user's wallet (User model does not have walletId; wallet is looked up by userId)
+      const wallet = await Wallet.findOne({ where: { userId } });
+      if (!wallet) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'WALLET_NOT_FOUND',
+            message: 'Wallet not found for this account'
+          }
+        });
+      }
+      const walletId = wallet.id;
 
       // Validate required fields
       if (!zarAmount || !beneficiaryId) {
