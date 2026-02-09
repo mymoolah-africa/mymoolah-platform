@@ -11,7 +11,6 @@ interface Transaction {
   description: string;
   timestamp: string;
   status: string;
-  reference?: string;
   metadata?: {
     electricityToken?: string;
     beneficiaryName?: string;
@@ -19,8 +18,6 @@ interface Transaction {
     meterType?: string;
     purchasedAt?: string;
     vasType?: string;
-    transactionType?: string;
-    blockchainTxHash?: string;
     [key: string]: any;
   };
 }
@@ -41,8 +38,6 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                     transaction.description?.toLowerCase().includes('eezi cash') ||
                     transaction.description?.toLowerCase().includes('cash out');
 
-  const blockchainTxHash = transaction.metadata?.blockchainTxHash;
-
   const handleCopyToken = () => {
     const tokenToCopy = transaction.metadata?.electricityToken || transaction.metadata?.pin;
     if (tokenToCopy) {
@@ -56,15 +51,6 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
           button.textContent = originalText || 'Copy Token';
         }, 2000);
       }
-    }
-  };
-
-  const [copiedTxId, setCopiedTxId] = React.useState(false);
-  const handleCopyBlockchainTxId = () => {
-    if (blockchainTxHash) {
-      navigator.clipboard.writeText(blockchainTxHash);
-      setCopiedTxId(true);
-      setTimeout(() => setCopiedTxId(false), 2000);
     }
   };
 
@@ -383,8 +369,8 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
               Transaction Details
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Reference (internal – for your records) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {/* Reference */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{
                   fontFamily: 'Montserrat, sans-serif',
                   fontSize: '14px',
@@ -394,14 +380,6 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                   Reference
                 </span>
                 <span style={{
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '12px',
-                  color: '#9ca3af',
-                  marginBottom: '2px'
-                }}>
-                  For your records (internal ID)
-                </span>
-                <span style={{
                   fontFamily: 'Monaco, Consolas, monospace',
                   fontSize: '12px',
                   fontWeight: '600',
@@ -409,88 +387,16 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                   backgroundColor: '#f3f4f6',
                   padding: '6px 12px',
                   borderRadius: '6px',
-                  maxWidth: '100%',
+                  maxWidth: '250px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap'
                 }}
-                title={transaction.transactionId || transaction.reference || ''}
+                title={transaction.transactionId}
                 >
                   {formatReference(transaction.transactionId || transaction.reference || 'N/A')}
                 </span>
               </div>
-
-              {/* Blockchain Tx ID (for crypto wallet top-up / tracking) */}
-              {blockchainTxHash && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    color: '#6b7280'
-                  }}>
-                    Blockchain Tx ID
-                  </span>
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '12px',
-                    color: '#9ca3af',
-                    marginBottom: '2px'
-                  }}>
-                    Use this to top up or track in an external crypto wallet
-                  </span>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    flexWrap: 'wrap'
-                  }}>
-                    <span style={{
-                      fontFamily: 'Monaco, Consolas, monospace',
-                      fontSize: '11px',
-                      fontWeight: '600',
-                      color: '#1f2937',
-                      backgroundColor: '#f3f4f6',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      flex: '1 1 0',
-                      minWidth: 0,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
-                    }}
-                    title={blockchainTxHash}
-                    >
-                      {blockchainTxHash.length > 24
-                        ? `${blockchainTxHash.substring(0, 12)}...${blockchainTxHash.substring(blockchainTxHash.length - 12)}`
-                        : blockchainTxHash}
-                    </span>
-                    <Button
-                      type="button"
-                      onClick={handleCopyBlockchainTxId}
-                      variant="outline"
-                      size="sm"
-                      style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '13px',
-                        fontWeight: '500',
-                        minHeight: '36px',
-                        borderRadius: '8px',
-                        flexShrink: 0
-                      }}
-                    >
-                      {copiedTxId ? (
-                        <>Copied!</>
-                      ) : (
-                        <>
-                          <Copy style={{ width: '14px', height: '14px', marginRight: '4px' }} />
-                          Copy
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
 
               {/* Beneficiary Name (if electricity) */}
               {isElectricity && transaction.metadata?.beneficiaryName && (
