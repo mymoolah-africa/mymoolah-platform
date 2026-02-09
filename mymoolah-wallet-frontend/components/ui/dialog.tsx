@@ -49,15 +49,17 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   closeButtonClassName?: string;
   closeButtonStyle?: React.CSSProperties;
+  /** Fallback for description id when aria-describedby is not forwarded (e.g. Radix composition). */
+  'data-description-id'?: string;
 }
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, closeButtonClassName, closeButtonStyle, children, 'aria-describedby': ariaDescribedBy, ...props }, ref) => {
+>(({ className, closeButtonClassName, closeButtonStyle, children, 'aria-describedby': ariaDescribedBy, 'data-description-id': dataDescriptionId, ...props }, ref) => {
   // Auto-provide an accessible description if none is supplied
   const autoDescId = React.useId();
-  const describedByProp = ariaDescribedBy as string | undefined;
+  const describedByProp = (ariaDescribedBy ?? dataDescriptionId) as string | undefined;
 
   const localRef = React.useRef<React.ElementRef<typeof DialogPrimitive.Content> | null>(null);
   const setRefs = React.useCallback((node: any) => {

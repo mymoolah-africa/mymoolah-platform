@@ -20,6 +20,8 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
   type = 'error',
   showCloseButton = true
 }) => {
+  const descriptionId = React.useId();
+
   // Ensure error modal appears above other modals (ConfirmSheet has z-index 1000)
   useEffect(() => {
     if (isOpen) {
@@ -63,11 +65,12 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
+      <DialogContent
         className="max-w-sm mx-auto"
-        aria-describedby="error-modal-description"
+        aria-describedby={descriptionId}
+        data-description-id={descriptionId}
       >
-        <DialogDescription id="error-modal-description" className="sr-only">
+        <DialogDescription id={descriptionId} className="sr-only">
           {message || 'Error dialog content'}
         </DialogDescription>
         <DialogHeader>
