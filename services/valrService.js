@@ -283,18 +283,29 @@ class ValrService {
 
   /**
    * Execute instant buy order
-   * 
+   *
+   * VALR requires quoteId plus payInCurrency, side, and payAmount in the body.
+   *
    * @param {string} orderId - Quote order ID from getInstantQuote
    * @param {string} idempotencyKey - Unique key for idempotent execution
+   * @param {Object} [opts] - Optional: pair, payInCurrency, side, payAmount (from quote)
    * @returns {Promise<Object>} Order execution result
    */
-  async executeInstantOrder(orderId, idempotencyKey, pair = 'USDCZAR') {
+  async executeInstantOrder(orderId, idempotencyKey, pair = 'USDCZAR', opts = {}) {
     try {
-      // VALR path includes pair: /v1/simple/{currencyPair}/order
-      // VALR simple order endpoint expects "quoteId" (the id from the quote response), not "orderId"
-      const data = await this.makeRequest('POST', `/v1/simple/${pair}/order`, {
-        quoteId: orderId
-      });
+      const payInCurrency = opts.payInCurrency ?? 'ZAR';
+      const side = opts.side ?? 'BUY';
+      const payAmount = opts.payAmount != null ? String(Number(opts.payAmount).toFixed(2)) : undefined;
+
+      // VALR path: /v1/simple/{currencyPair}/order
+      // VALR validation requires: quoteId, payInCurrency, side, payAmount
+      const body = {
+        quoteId: orderId,
+        payInCurrency,
+        side,
+        ...(payAmount != null && { payAmount })
+      };
+      const data = await this.makeRequest('POST', `/v1/simple/${pair}/order`, body);
       
       console.log('[ValrService] Instant order executed', { orderId, status: data.status });
       

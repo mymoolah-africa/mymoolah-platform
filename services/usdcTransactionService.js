@@ -596,9 +596,13 @@ class UsdcTransactionService {
       // 6. Get VALR quote (fresh quote for execution)
       const valrQuote = await valrService.getInstantQuote('USDCZAR', amounts.netToValrZar);
       
-      // 7. Execute VALR instant order
+      // 7. Execute VALR instant order (VALR requires quoteId + payInCurrency, side, payAmount)
       const transactionId = idempotencyKey || `USDC-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
-      const valrOrder = await valrService.executeInstantOrder(valrQuote.orderId, transactionId);
+      const valrOrder = await valrService.executeInstantOrder(valrQuote.orderId, transactionId, 'USDCZAR', {
+        payInCurrency: 'ZAR',
+        side: 'BUY',
+        payAmount: valrQuote.zarAmount
+      });
       
       // 8. Debit wallet
       wallet.balance -= totalZarCents;
