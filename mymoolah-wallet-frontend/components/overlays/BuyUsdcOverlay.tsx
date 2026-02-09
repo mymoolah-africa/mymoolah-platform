@@ -202,19 +202,32 @@ export function BuyUsdcOverlay() {
         setLoadingState('success');
         setCurrentStep('success');
       } else {
-        setErrorModalMessage(result.error?.message || 'Transaction failed');
+        setErrorModalMessage(normalizeUsdcErrorMessage(result.error?.message));
         setShowErrorModal(true);
         setLoadingState('error');
         setCurrentStep('confirm');
       }
     } catch (err: any) {
       console.error('Failed to send USDC:', err);
-      setErrorModalMessage(err.message || 'Transaction failed');
+      setErrorModalMessage(normalizeUsdcErrorMessage(err.message));
       setShowErrorModal(true);
       setLoadingState('error');
       setCurrentStep('confirm');
     }
   };
+
+  /** User-friendly error message for modal (no raw HTTP codes). */
+  function normalizeUsdcErrorMessage(raw: string | undefined): string {
+    if (!raw) return 'The transaction could not be completed. Please try again or contact support.';
+    const lower = raw.toLowerCase();
+    if (lower.includes('http 500') || lower.includes('500') || lower.includes('internal server error')) {
+      return 'The transaction could not be completed. Please try again later or contact support.';
+    }
+    if (lower.includes('503') || lower.includes('unavailable')) {
+      return 'USDC service is temporarily unavailable. Please try again later.';
+    }
+    return raw;
+  }
 
   const handleStartOver = () => {
     setCurrentStep('beneficiary');

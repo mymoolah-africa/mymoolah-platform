@@ -270,12 +270,14 @@ class UsdcController {
         });
       }
 
-      if (error.code === 'CIRCUIT_BREAKER_OPEN' || error.code === 'VALR_NOT_CONFIGURED') {
+      if (error.code === 'CIRCUIT_BREAKER_OPEN' || error.code === 'VALR_NOT_CONFIGURED' || error.code === 'INSUFFICIENT_VALR_FLOAT') {
         return res.status(503).json({
           success: false,
           error: {
             code: error.code === 'VALR_NOT_CONFIGURED' ? 'SERVICE_UNAVAILABLE' : error.code,
-            message: 'USDC service is temporarily unavailable. Please try again in a few minutes.'
+            message: error.code === 'INSUFFICIENT_VALR_FLOAT'
+              ? 'USDC service is temporarily unavailable. Please try again later.'
+              : 'USDC service is temporarily unavailable. Please try again in a few minutes.'
           }
         });
       }

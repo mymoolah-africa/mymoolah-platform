@@ -110,10 +110,35 @@ async function getTrialBalance() {
   return { balances, totals };
 }
 
+/**
+ * Get current balance for a ledger account by code.
+ * Balance is in account's normal units (same as journal lines - Rands for revenue/expense/float).
+ * @param {string} accountCode - e.g. '1200-10-06' (VALR float)
+ * @returns {Promise<number>} Balance (positive = asset/debit normal, negative = liability/credit normal)
+ */
+async function getAccountBalanceByCode(accountCode) {
+  const account = await LedgerAccount.findOne({ where: { code: accountCode }, raw: true });
+  if (!account) return null;
+  const rows = await sequelize.query(
+    `SELECT 
+      SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END) AS debits,
+      SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END) AS credits
+     FROM journal_lines jl
+     WHERE jl."accountId" = :accountId`,
+    { replacements: { accountId: account.id }, type: sequelize.QueryTypes.SELECT, raw: true }
+  );
+  const r = rows[0];
+  const debits = Number(r?.debits || 0);
+  const credits = Number(r?.credits || 0);
+  const normal = account.normalSide === 'debit' ? 1 : -1;
+  return (debits - credits) * normal;
+}
+
 module.exports = {
   createAccount,
   postJournalEntry,
   getTrialBalance,
+  getAccountBalanceByCode,
   // Draft-only: Not wired. Use after configuring account codes.
   draftPostVasPurchase,
   draftPostPayShapRtp

@@ -574,6 +574,16 @@ class UsdcTransactionService {
         throw error;
       }
 
+      // 5b. VALR float must be pre-funded: ensure positive balance >= amount we will send to VALR
+      const valrFloatBalanceRand = await ledgerService.getAccountBalanceByCode('1200-10-06');
+      const netToValrRand = amounts.netToValrCents / 100;
+      if (valrFloatBalanceRand == null || valrFloatBalanceRand < netToValrRand) {
+        const error = new Error('USDC service is temporarily unavailable. Please try again later.');
+        error.code = 'INSUFFICIENT_VALR_FLOAT';
+        error.details = valrFloatBalanceRand == null ? 'VALR float account not found' : `Insufficient float (required R${netToValrRand.toFixed(2)})`;
+        throw error;
+      }
+
       // 6. Get VALR quote (fresh quote for execution)
       const valrQuote = await valrService.getInstantQuote('USDCZAR', amounts.netToValrZar);
       
