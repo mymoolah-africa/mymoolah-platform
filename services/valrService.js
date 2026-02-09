@@ -245,8 +245,8 @@ class ValrService {
    */
   async getInstantQuote(pair, zarAmount) {
     try {
-      const data = await this.makeRequest('POST', '/v1/simple/quote', {
-        pair,
+      // VALR path includes pair: /v1/simple/{currencyPair}/quote
+      const data = await this.makeRequest('POST', `/v1/simple/${pair}/quote`, {
         payInCurrency: 'ZAR',
         payAmount: zarAmount.toFixed(2),
         side: 'BUY'
@@ -277,10 +277,11 @@ class ValrService {
    * @param {string} idempotencyKey - Unique key for idempotent execution
    * @returns {Promise<Object>} Order execution result
    */
-  async executeInstantOrder(orderId, idempotencyKey) {
+  async executeInstantOrder(orderId, idempotencyKey, pair = 'USDCZAR') {
     try {
+      // VALR path includes pair: /v1/simple/{currencyPair}/order
       // Idempotency is enforced in our backend before calling VALR; do not send unsupported fields
-      const data = await this.makeRequest('POST', '/v1/simple/order', {
+      const data = await this.makeRequest('POST', `/v1/simple/${pair}/order`, {
         orderId
       });
       
