@@ -593,17 +593,56 @@ class UsdcTransactionService {
         throw error;
       }
 
-      // 6. Get VALR quote (fresh quote for execution)
-      const valrQuote = await valrService.getInstantQuote('USDCZAR', amounts.netToValrZar);
-      
-      // 7. Execute VALR instant order (VALR requires quoteId + payInCurrency, side, payAmount)
       const transactionId = idempotencyKey || `USDC-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`;
-      const valrOrder = await valrService.executeInstantOrder(valrQuote.orderId, transactionId, 'USDCZAR', {
-        payInCurrency: 'ZAR',
-        side: 'BUY',
-        payAmount: valrQuote.zarAmount
-      });
-      
+
+      // UAT only: skip real VALR API calls; validate float only and simulate success (Staging/Prod use real VALR)
+      const isUat = process.env.USDC_VALR_SIMULATE === 'true' ||
+        (process.env.DATABASE_URL && process.env.DATABASE_URL.toLowerCase().includes('uat'));
+
+      let valrQuote;
+      let valrOrder;
+      let withdrawal;
+
+      if (isUat) {
+        const simUsdcAmount = Number((amounts.netToValrZar / rate.askPrice).toFixed(6));
+        valrQuote = {
+          orderId: `UAT-SIM-${transactionId}`,
+          zarAmount: amounts.netToValrZar,
+          usdcAmount: simUsdcAmount,
+          rate: rate.askPrice
+        };
+        valrOrder = {
+          orderId: valrQuote.orderId,
+          usdcAmount: simUsdcAmount,
+          status: 'completed'
+        };
+        withdrawal = {
+          id: `UAT-SIM-WD-${transactionId}`,
+          txHash: `sim-${transactionId}`
+        };
+        console.log('[UsdcService] UAT: VALR simulated (float check passed, no live API call)', {
+          transactionId,
+          netToValrZar: amounts.netToValrZar,
+          usdcAmount: simUsdcAmount
+        });
+      } else {
+        // 6. Get VALR quote (fresh quote for execution)
+        valrQuote = await valrService.getInstantQuote('USDCZAR', amounts.netToValrZar);
+        // 7. Execute VALR instant order (VALR requires quoteId + payInCurrency, side, payAmount)
+        valrOrder = await valrService.executeInstantOrder(valrQuote.orderId, transactionId, 'USDCZAR', {
+          payInCurrency: 'ZAR',
+          side: 'BUY',
+          payAmount: valrQuote.zarAmount
+        });
+        // 11. Initiate USDC withdrawal to Solana address (done below in non-UAT path)
+        withdrawal = await valrService.withdrawUsdc({
+          amount: valrOrder.usdcAmount,
+          address: primaryWallet.walletAddress,
+          network: 'solana',
+          paymentReference: transactionId
+        });
+      }
+
       // 8. Debit wallet
       wallet.balance -= totalZarCents;
       await wallet.save({ transaction: dbTransaction });
@@ -645,14 +684,6 @@ class UsdcTransactionService {
           // Credit: VAT payable (2300-01-01 liability)
           { accountCode: '2300-01-01', dc: 'credit', amount: feeVatRand, memo: 'VAT on USDC transaction fee' }
         ]
-      });
-
-      // 11. Initiate USDC withdrawal to Solana address
-      const withdrawal = await valrService.withdrawUsdc({
-        amount: valrOrder.usdcAmount,
-        address: primaryWallet.walletAddress,
-        network: 'solana',
-        paymentReference: transactionId
       });
 
       // 12. Create two transaction records: USDC value + Transaction fee (for history); dashboard will show one combined row
