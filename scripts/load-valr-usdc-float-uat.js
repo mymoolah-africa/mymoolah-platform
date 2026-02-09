@@ -5,7 +5,10 @@
  * Load R2000 into the prefunded VALR USDC float account (1200-10-06) for UAT testing.
  * Posts a double-entry journal: Debit VALR float R2000, Credit UAT funding source R2000.
  *
- * Usage: node scripts/load-valr-usdc-float-uat.js
+ * Usage (run with Node; ensure DATABASE_URL or .env is set):
+ *   node scripts/load-valr-usdc-float-uat.js
+ * Or, if executable: ./scripts/load-valr-usdc-float-uat.js
+ *
  * Requires: VALR float account 1200-10-06 to exist (run migration 20260207120001 if needed).
  */
 
