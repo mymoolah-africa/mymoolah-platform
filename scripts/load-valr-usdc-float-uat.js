@@ -5,12 +5,17 @@
  * Load R2000 into the prefunded VALR USDC float account (1200-10-06) for UAT testing.
  * Posts a double-entry journal: Debit VALR float R2000, Credit UAT funding source R2000.
  *
- * Usage (run with Node; ensure DATABASE_URL or .env is set):
- *   node scripts/load-valr-usdc-float-uat.js
- * Or, if executable: ./scripts/load-valr-usdc-float-uat.js
+ * Uses db-connection-helper.js for database connection (same as other scripts).
  *
- * Requires: VALR float account 1200-10-06 to exist (run migration 20260207120001 if needed).
+ * Usage: node scripts/load-valr-usdc-float-uat.js   (or ./scripts/load-valr-usdc-float-uat.js)
+ *        Add --staging to target staging DB instead of UAT.
+ * Requires: .env with DATABASE_URL or DB_PASSWORD; proxy running for UAT/Staging. VALR float 1200-10-06 must exist.
  */
+
+const { getUATDatabaseURL, getStagingDatabaseURL, closeAll } = require('./db-connection-helper');
+
+const isStaging = process.argv.includes('--staging');
+process.env.DATABASE_URL = isStaging ? getStagingDatabaseURL() : getUATDatabaseURL();
 
 const ledgerService = require('../services/ledgerService');
 const { LedgerAccount } = require('../models');
@@ -39,7 +44,8 @@ async function ensureUatFundingAccount() {
 }
 
 async function main() {
-  console.log('Loading R2000 into VALR USDC float (1200-10-06) for UAT...\n');
+  const target = isStaging ? 'Staging' : 'UAT';
+  console.log(`Loading R2000 into VALR USDC float (1200-10-06) for ${target}...\n`);
 
   const valrAccount = await LedgerAccount.findOne({ where: { code: VALR_FLOAT_CODE }, raw: true });
   if (!valrAccount) {
@@ -61,10 +67,12 @@ async function main() {
   const balance = await ledgerService.getAccountBalanceByCode(VALR_FLOAT_CODE);
   console.log(`Posted journal entry: ${entry.id}`);
   console.log(`VALR float (${VALR_FLOAT_CODE}) balance after load: R${Number(balance).toFixed(2)}`);
-  console.log('\nDone. UAT can now run USDC send tests against the prefunded float.');
+  console.log(`\nDone. ${target} can now run USDC send tests against the prefunded float.`);
 }
 
-main().catch((err) => {
-  console.error('Error:', err.message);
-  process.exit(1);
-});
+main()
+  .then(() => closeAll())
+  .catch((err) => {
+    console.error('Error:', err.message);
+    process.exit(1);
+  });
