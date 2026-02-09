@@ -626,7 +626,7 @@ export function BuyUsdcOverlay() {
                     fontSize: '13px',
                     color: '#6b7280'
                   }}>
-                    Platform fee (7.5%):
+                    Transaction Fee (7.5%):
                   </span>
                   <span style={{
                     fontFamily: 'Montserrat, sans-serif',
@@ -634,23 +634,6 @@ export function BuyUsdcOverlay() {
                     color: '#6b7280'
                   }}>
                     {formatCurrency(quote.platformFee)}
-                  </span>
-                </div>
-                
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '13px',
-                    color: '#6b7280'
-                  }}>
-                    Network fee (est.):
-                  </span>
-                  <span style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '13px',
-                    color: '#6b7280'
-                  }}>
-                    {formatCurrency(quote.networkFee)}
                   </span>
                 </div>
                 
@@ -820,8 +803,7 @@ export function BuyUsdcOverlay() {
               { label: 'Wallet', value: `${selectedBeneficiary.walletAddress?.substring(0, 8)}...${selectedBeneficiary.walletAddress?.slice(-6)}` },
               { label: 'Country', value: selectedBeneficiary.country || 'Unknown' },
               { label: 'You send', value: formatCurrency(quote.zarAmount) },
-              { label: 'Platform fee', value: formatCurrency(quote.platformFee) },
-              { label: 'Network fee', value: formatCurrency(quote.networkFee) },
+              { label: 'Transaction Fee', value: formatCurrency(quote.platformFee) },
               { label: 'Recipient receives', value: `$${Number(quote.usdcAmount ?? 0).toFixed(2)} USDC`, highlight: true },
               { label: 'Exchange rate', value: `1 USDC = R${Number(quote.exchangeRate ?? 0).toFixed(2)}` }
             ]}
