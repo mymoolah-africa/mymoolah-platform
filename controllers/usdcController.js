@@ -169,7 +169,7 @@ class UsdcController {
           }
         });
       }
-      const walletId = wallet.id;
+      const walletId = wallet.walletId;
 
       // Validate required fields
       if (!zarAmount || !beneficiaryId) {

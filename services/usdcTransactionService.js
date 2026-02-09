@@ -604,12 +604,12 @@ class UsdcTransactionService {
       wallet.balance -= totalZarCents;
       await wallet.save({ transaction: dbTransaction });
 
-      // 9. Get ledger accounts
+      // 9. Get ledger accounts (ledger_accounts has code, not walletId; use shared user-wallet clearing code)
       const userWalletAccount = await LedgerAccount.findOne({
-        where: { walletId },
+        where: { code: '1100-01-01' },
         transaction: dbTransaction
       });
-      
+
       const valrFloatAccount = await LedgerAccount.findOne({
         where: { code: '1200-10-06' },
         transaction: dbTransaction
