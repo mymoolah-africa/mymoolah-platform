@@ -35,7 +35,7 @@ module.exports = (sequelize, DataTypes) => {
     },
   }, {
     tableName: 'nfc_callback_logs',
-    underscored: true,
+    underscored: false,
     timestamps: true,
     updatedAt: false,
   });

@@ -60,7 +60,7 @@ module.exports = (sequelize, DataTypes) => {
     },
   }, {
     tableName: 'nfc_deposit_intents',
-    underscored: true,
+    underscored: false,
     timestamps: true,
   });
 
