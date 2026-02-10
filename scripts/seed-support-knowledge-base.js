@@ -1,9 +1,21 @@
 require('dotenv').config();
 
+const path = require('path');
+const { execSync } = require('child_process');
+
 // Use Cloud SQL Proxy when DATABASE_URL points to direct IP (avoids ETIMEDOUT in Codespaces)
 const dbUrl = process.env.DATABASE_URL || '';
 if (dbUrl && /@(?!127\.0\.0\.1)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+/.test(dbUrl)) {
   try {
+    const repoRoot = path.resolve(__dirname, '..');
+    // Ensure: authenticate → start proxy → run seed (restart proxy for fresh gcloud creds)
+    console.log('🔌 Ensuring Cloud SQL Proxy (authenticate → proxy → seed)...');
+    try {
+      execSync('pkill -f cloud-sql-proxy || true', { stdio: 'ignore', cwd: repoRoot });
+    } catch (_) { /* pkill may fail if no process */ }
+    execSync('./scripts/ensure-proxies-running.sh', { stdio: 'inherit', cwd: repoRoot });
+    execSync('sleep 2', { stdio: 'ignore' }); // Brief settle for proxy
+
     const { getUATDatabaseURL } = require('./db-connection-helper');
     process.env.DATABASE_URL = getUATDatabaseURL();
     console.log('🔌 Using Cloud SQL Proxy (127.0.0.1:6543)');
