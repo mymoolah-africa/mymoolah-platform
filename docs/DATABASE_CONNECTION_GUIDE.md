@@ -200,6 +200,18 @@ This script:
 - Connection helper automatically rewrites URLs to use proxy
 - **Master migration script handles this automatically**
 
+### **Error: "read ECONNRESET"**
+✅ **Solution**: 
+- **Most common cause**: Proxy was started before `gcloud auth login` — it has stale credentials. Restart the proxy **after** authenticating:
+  ```bash
+  pkill -f cloud-sql-proxy
+  ./scripts/ensure-proxies-running.sh
+  ./scripts/run-migrations-master.sh uat
+  ```
+- Check proxy logs: `cat /tmp/uat-proxy-6543.log` — look for auth or connection errors
+- In Codespaces: Ensure `gcloud auth login` completed successfully before running migrations
+- If intermittent: Retry; Codespaces network can occasionally drop connections
+
 ### **Error: "Error parsing url: undefined"**
 ✅ **Solution**: 
 - **ALWAYS use master migration script** (handles this automatically)

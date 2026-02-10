@@ -25,8 +25,7 @@ import {
   AtSign,
   Star,
   Play,
-  Tag,
-  CreditCard
+  Tag
 } from "lucide-react";
 
 interface NavItem {
