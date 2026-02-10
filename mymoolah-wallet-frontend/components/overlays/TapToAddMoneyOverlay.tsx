@@ -23,7 +23,7 @@ import {
 
 type Step = 'amount' | 'tap' | 'confirm' | 'success' | 'error';
 
-const QUICK_AMOUNTS = [50, 100, 200, 500, 1000];
+const QUICK_AMOUNTS = [50, 200, 500, 1000, 3000];
 const MIN_AMOUNT = 1;
 const MAX_AMOUNT = 5000;
 
@@ -149,7 +149,7 @@ export function TapToAddMoneyOverlay() {
             Tap to Add Money
           </CardTitle>
           <p className="text-sm text-gray-600">
-            Tap your card on a device with Halo.Go to add money to your wallet.
+            Tap your card or use Google Pay / Apple Pay to add money to your wallet.
           </p>
         </CardHeader>
       </Card>
