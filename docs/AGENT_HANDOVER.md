@@ -51,7 +51,10 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 09, 2026 - 16:00)**
+### **Latest Achievement (February 02, 2026)**
+**NFC Deposit Implementation Plan (Phase 1) — Halo Dot** - Created comprehensive, implementation-ready plan for NFC tap-to-deposit using Halo Dot (Halo.Link/Halo.Go). Phase 1: deposits only (no virtual card). Full plan: `docs/NFC_DEPOSIT_IMPLEMENTATION_PLAN.md`. Updated `docs/integrations/StandardBankNFC.md` with Phase 1/2 split and Halo Dot vendor. Added NFC env vars to `env.template`. Phase 2 (virtual debit card for POS) deferred until Standard Bank issues virtual cards.
+
+### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
 ### **Recent Updates (Last 7 Days – February 02–09, 2026)**
@@ -542,7 +545,8 @@ Completed Phases 2-5 of the Multi-Level Referral & Earnings Platform. System is 
 - **Modified**: `services/referralService.js`, `services/productPurchaseService.js`, `routes/overlayServices.js`, `controllers/qrPaymentController.js`, `controllers/authController.js`, `server.js`
 
 **Key Features**:
-- 3-level commission structure (5%, 3%, 2%) - no caps
+- 4-level commission structure (4%, 3%, 2%, 1%)
+- Monthly caps per level (R10K, R5K, R2.5K, R1K)
 - SMS invitations in 11 languages
 - Daily batch payouts
 - Complete API for frontend integration
