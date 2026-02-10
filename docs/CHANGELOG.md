@@ -1,5 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-10 - Mobile Store Deployment Plan (Documentation) 📋
+
+### **Session Overview**
+Documented comprehensive plan for deploying MyMoolah to Google Play and Apple App Store as native apps.
+
+### **Changes**
+- **New**: `docs/MOBILE_STORE_DEPLOYMENT_PLAN.md` - Full deployment plan including:
+  - Capacitor shell strategy, environment config, Zero-Rated (FreeData) optimization
+  - Banking-grade security (biometrics, SSL pinning, secure storage)
+  - MMTP alignment review, gaps and adjustments, phased roadmap
+  - Store requirements (Apple, Google, banking compliance)
+  - Relevant file paths and next steps
+- **Status**: Documented for future implementation; to be revisited
+
+---
+
 ## 2026-02-02 - Referral 3-Level Schema, No Caps ✅
 
 ### **Session Overview**
