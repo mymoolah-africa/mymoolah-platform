@@ -25,7 +25,8 @@ import {
   AtSign,
   Star,
   Play,
-  Tag
+  Tag,
+  CreditCard
 } from "lucide-react";
 
 interface NavItem {
@@ -136,6 +137,12 @@ const serviceMapping = {
     path: '/atm-cashsend-overlay',
     label: 'ATM Cash Send',
     icon: () => <AtSign style={{ width: '20px', height: '20px' }} />
+  },
+  'tap-to-add-money': {
+    id: 'tap-to-add-money',
+    path: '/tap-to-add-money',
+    label: 'Tap to Add Money',
+    icon: () => <CreditCard style={{ width: '20px', height: '20px' }} />
   }
 };
 
@@ -188,7 +195,7 @@ export function BottomNavigation() {
 
         // Only fetch settings if we're on a page that shows bottom navigation
         const currentPath = location.pathname;
-        const shouldShowNav = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/vouchers-overlay', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments', '/support', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay'].includes(currentPath);
+        const shouldShowNav = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/vouchers-overlay', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments', '/support', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/tap-to-add-money'].includes(currentPath);
         
         if (!shouldShowNav) {
           setQuickAccessServices(['airtime-data', 'vouchers']);
@@ -291,7 +298,7 @@ export function BottomNavigation() {
   const activeTab = getActiveTabId();
 
   // Check if we should show the bottom navigation
-  const showBottomNav = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/vouchers-overlay', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments', '/support', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/cashout-easypay'].includes(location.pathname);
+  const showBottomNav = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/vouchers-overlay', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/electricity', '/bill-payments', '/support', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/cashout-easypay', '/tap-to-add-money'].includes(location.pathname);
   
   if (!showBottomNav) return null;
 

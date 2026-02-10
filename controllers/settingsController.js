@@ -97,6 +97,14 @@ class SettingsController {
           comingSoon: false
         },
         {
+          id: 'tap-to-add-money',
+          name: 'Tap to Add Money',
+          description: 'Tap your card on device with Halo.Go to add money to your wallet',
+          category: 'payment',
+          available: true,
+          comingSoon: false
+        },
+        {
           id: 'topup-easypay',
           name: 'Top-up at EasyPay',
           description: 'Create top-up request, pay at EasyPay, get money in wallet',

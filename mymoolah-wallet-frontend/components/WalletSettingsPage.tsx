@@ -138,6 +138,8 @@ export function WalletSettingsPage() {
         return <Store className="w-6 h-6" />;
       case 'atm-cashsend':
         return <AtSign className="w-6 h-6" />;
+      case 'tap-to-add-money':
+        return <CreditCard className="w-6 h-6" />;
       default:
         return <Settings className="w-6 h-6" />;
     }

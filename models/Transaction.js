@@ -62,7 +62,7 @@ module.exports = (sequelize, DataTypes) => {
       // Amount validation is handled in beforeValidate hook to allow negative amounts for fee transactions
     },
     type: {
-      type: DataTypes.ENUM('send', 'receive', 'deposit', 'withdraw', 'transfer', 'payment', 'refund', 'fee'),
+      type: DataTypes.ENUM('send', 'receive', 'deposit', 'withdraw', 'transfer', 'payment', 'refund', 'fee', 'nfc_deposit'),
       allowNull: false,
       validate: {
         notEmpty: true,

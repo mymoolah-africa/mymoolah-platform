@@ -1,5 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-10 - 📱 NFC Tap to Add Money — Full Implementation (v2.10.0) ✅
+
+### **Session Overview**
+Implemented complete NFC deposit feature (Option A): backend migrations, haloDotClient, nfcDepositService, controller, routes; frontend TapToAddMoneyOverlay, nfcService, route, BottomNavigation, WalletSettings. Named "Tap to Add Money" for limited-education market. MSISDN in paymentReference for Standard Bank T-PPP.
+
+### **Changes**
+- **Backend**: Migrations (NfcDepositIntent, NfcCallbackLog, nfc_deposit enum, NFC float ledger), haloDotClient.js, nfcDepositService.js, nfcDepositController.js, routes/nfc.js, server registration
+- **Frontend**: TapToAddMoneyOverlay.tsx, nfcService.ts, /tap-to-add-money route, BottomNavigation serviceMapping, WalletSettings icon
+- **Settings**: tap-to-add-money added to quick access options
+
+### **Next Steps**
+- Run migrations in UAT; set NFC_DEPOSIT_ENABLED=true, HALO_DOT_* in .env; test with Halo.Go
+
+---
+
 ## 2026-02-02 - 📱 NFC Deposit Implementation Plan (Phase 1) — Halo Dot (v2.10.0) ✅
 
 ### **Session Overview**

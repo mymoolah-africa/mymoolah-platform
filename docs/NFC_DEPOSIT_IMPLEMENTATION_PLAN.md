@@ -253,7 +253,9 @@ LEDGER_ACCOUNT_NFC_FLOAT=1200-10-10
 
 ### 6.1 Deposit Flow UX
 
-1. User taps "Deposit via NFC" (or "Tap to Deposit")
+**Feature name (limited-education market)**: **"Tap to Add Money"** — Research: VodaPay uses "Add money"; "Tap" is universally understood.
+
+1. User taps "Tap to Add Money" (separate from Request Money — Option A)
 2. User enters amount (or selects preset)
 3. App calls `POST /api/v1/nfc/deposit/create`
 4. App receives `consumerTransactionId`, `jwt`, `deepLink`
