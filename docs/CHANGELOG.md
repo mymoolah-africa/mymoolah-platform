@@ -1,5 +1,22 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-10 - 📱 NFC Tap to Add Money — Refinements & Fixes (v2.10.1) ✅
+
+### **Session Overview**
+Refined NFC Tap to Add Money: fixed frontend duplicate CreditCard import, added card to Transact page, fixed NfcDepositIntent/user_id model mismatch, Halo API amount-as-number (E103), ECONNRESET troubleshooting, copy (Google Pay/Apple Pay), quick amounts R50-R8000, grid layout, max R10k. Rule 9A: sweep scripts before creating. Knowledge base updated.
+
+### **Changes**
+- **Frontend**: BottomNavigation duplicate import fix; TransactPage Tap to Add Money card; overlay description, quick amounts [50,200,500,1000,3000,5000,8000], grid layout, MAX_AMOUNT 10k
+- **Backend**: NfcDepositIntent/NfcCallbackLog underscored:false; haloDotClient amount as number; nfcDepositService pass amountNum
+- **Docs**: DATABASE_CONNECTION_GUIDE ECONNRESET; Rule 9A scripts sweep; agent_handover, changelog, readme, development_guide
+- **Knowledge base**: Tap to Add Money FAQ; Q3.2 load_funds updated; last 3 weeks changes
+
+### **Session Logs**
+- `docs/session_logs/2026-02-10_1400_nfc-tap-to-add-money-implementation.md`
+- `docs/session_logs/2026-02-10_1550_nfc-tap-to-add-money-refinements.md`
+
+---
+
 ## 2026-02-10 - 📱 NFC Tap to Add Money — Full Implementation (v2.10.0) ✅
 
 ### **Session Overview**
@@ -12,6 +29,8 @@ Implemented complete NFC deposit feature (Option A): backend migrations, haloDot
 
 ### **Next Steps**
 - Run migrations in UAT; set NFC_DEPOSIT_ENABLED=true, HALO_DOT_* in .env; test with Halo.Go
+
+### **Note:** Halo requires merchant registration in QA (E122 if not registered)
 
 ---
 

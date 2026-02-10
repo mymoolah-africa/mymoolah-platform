@@ -1,14 +1,26 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: February 09, 2026 16:00  
-**Version**: 2.9.2 - Transaction Detail Modal & USDC Fee UI  
-**Status**: ✅ **USDC SEND FEATURE** ✅ **USDC BANKING-GRADE SWEEP** ✅ **BENEFICIARY LIST FIXED** ✅ **BUY USDC BANNERS** ✅ **ELECTRICITY PURCHASE COMPLETE** ✅ **MOBILEMART PRODUCTION INTEGRATED** ✅ **STAGING TESTED** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: February 10, 2026 16:00  
+**Version**: 2.10.1 - NFC Tap to Add Money Refinements  
+**Status**: ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **USDC BANKING-GRADE SWEEP** ✅ **BENEFICIARY LIST FIXED** ✅ **BUY USDC BANNERS** ✅ **ELECTRICITY PURCHASE COMPLETE** ✅ **MOBILEMART PRODUCTION INTEGRATED** ✅ **STAGING TESTED** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
-**Work in the last 7 days (Feb 2–9, 2026)**: Transaction Detail modal & USDC fee UI; USDC send flow, ledger & UAT fixes; USDC Send feature + banking-grade sweep (Feb 7); Watch to Earn Staging demo + migrations-before-seeding rule (Feb 8); proxy & gcloud auth UX (Feb 6); Global Airtime variantId & proxy credentials (Feb 4); Flash cash_out vasType, ZERO SHORTCUTS POLICY, USDC remove beneficiary (Feb 2). See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 2–10, 2026)**: NFC Tap to Add Money full implementation + refinements (Transact page, model fixes, Halo API, quick amounts R50-R8000); Transaction Detail modal & USDC fee UI; USDC send flow; Watch to Earn Staging; proxy & gcloud auth; Rule 9A scripts sweep. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: Transaction Detail Modal & USDC Fee UI (February 09, 2026 - 16:00)**
+## 🚀 **LATEST UPDATE: NFC Tap to Add Money Refinements (February 10, 2026 - 16:00)**
+
+### **📱 Tap to Add Money**
+- **Transact page**: Tap to Add Money card in Payments & Transfers (visible entry point)
+- **Overlay**: Description "Tap your card or use Google Pay / Apple Pay"; quick amounts R50, R200, R500, R1000, R3000, R5000, R8000; grid layout; max R10,000
+- **Fixes**: Model underscored fix (user_id); Halo API amount as number (E103); ECONNRESET troubleshooting in DB guide
+- **Rule 9A**: MUST sweep scripts/ before creating new scripts
+
+**Session logs**: `docs/session_logs/2026-02-10_1400_nfc-tap-to-add-money-implementation.md`, `docs/session_logs/2026-02-10_1550_nfc-tap-to-add-money-refinements.md`
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Transaction Detail Modal & USDC Fee UI (February 09, 2026 - 16:00)**
 
 ### **📋 Transaction Details & USDC Fee Labels**
 - **Transaction Details modal**: Shows only Reference (internal ID), Amount, and Status. No blockchain Tx ID (recipient is auto-credited to wallet on file; aligned with banking/Mojaloop practice).

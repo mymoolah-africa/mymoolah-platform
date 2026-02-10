@@ -1,14 +1,14 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: February 09, 2026 16:00  
-**Version**: 2.9.2 - Transaction Detail Modal & USDC Fee UI  
-**Status**: ✅ **USDC SEND + BANKING-GRADE SWEEP** ✅ **TRANSACTION DETAIL + FEE UI** ✅ **ALL MOBILEMART SERVICES INTEGRATED** ✅ **ELECTRICITY PURCHASE LIVE** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **STAGING TESTED** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: February 10, 2026 16:00  
+**Version**: 2.10.1 - NFC Tap to Add Money Refinements  
+**Status**: ✅ **TAP TO ADD MONEY** ✅ **USDC SEND + BANKING-GRADE SWEEP** ✅ **TRANSACTION DETAIL + FEE UI** ✅ **ALL MOBILEMART SERVICES INTEGRATED** ✅ **ELECTRICITY PURCHASE LIVE** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **STAGING TESTED** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
-## 🚀 **LATEST UPDATE: Transaction Detail Modal & USDC Fee UI (February 09, 2026)**
+## 🚀 **LATEST UPDATE: NFC Tap to Add Money (February 10, 2026)**
 
-Transaction Details modal shows Reference, Amount, Status only (no blockchain Tx ID; recipient auto-credited). USDC send: "Platform fee" renamed to "Transaction Fee"; "Network fee" removed from quote and Confirm sheet. **Last 7 days (Feb 2–9)** also: USDC send flow/ledger/UAT fixes (Feb 9); Watch to Earn Staging + migrations-before-seeding (Feb 8); USDC feature + sweep (Feb 7); proxy & gcloud auth (Feb 6); Global Airtime variantId & proxy credentials (Feb 4); Flash cash_out, ZERO SHORTCUTS POLICY, USDC remove beneficiary (Feb 2). See `docs/CHANGELOG.md` and `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`.
+Tap to Add Money: NFC deposit via Halo Dot. Visible on Transact page; quick amounts R50-R8000; description "Tap your card or use Google Pay / Apple Pay"; max R10k. Model fixes (user_id), Halo API amount-as-number, ECONNRESET troubleshooting. **Rule 9A**: MUST sweep scripts/ before creating new scripts. **Last 3 weeks (Jan 20–Feb 10)** also: Transaction Detail + USDC fee UI; USDC send flow; Watch to Earn Staging; USDC feature + sweep; proxy & gcloud auth; Global Airtime; Flash cash_out; ZERO SHORTCUTS POLICY. See `docs/CHANGELOG.md` and `docs/session_logs/2026-02-10_1550_nfc-tap-to-add-money-refinements.md`.
 
 ---
 

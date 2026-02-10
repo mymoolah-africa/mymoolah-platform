@@ -138,11 +138,35 @@ const initialKnowledgeBase = [
     audience: 'end-user',
     category: 'load_funds',
     question: 'How can I load money into my wallet?',
-    answer: 'Use Instant Pay proxies, bank EFTs, voucher redemption, or cash-in at participating retailers using generated tokens. Available methods and fees are listed in the app.',
-    keywords: 'load money, deposit, add funds',
-    confidenceScore: 0.9,
+    answer: 'You can add money using Tap to Add Money (tap your card or use Google Pay/Apple Pay at a Halo.Go device), Request Money, Top-up at EasyPay, bank EFTs, voucher redemption, or cash-in at participating retailers. Available methods and fees are listed in the app under Transact.',
+    keywords: 'load money, deposit, add funds, tap to add money',
+    confidenceScore: 0.92,
     language: 'en',
     isActive: true
+  },
+  {
+    faqId: 'Q3.2a',
+    audience: 'end-user',
+    category: 'tap_to_add_money',
+    question: 'What is Tap to Add Money?',
+    answer: 'Tap to Add Money lets you add money to your wallet by tapping your bank card or using Google Pay or Apple Pay on a device with Halo.Go. Go to Transact → Tap to Add Money, enter the amount (R50 to R10,000), then tap your card when prompted. Your wallet is credited once the payment completes.',
+    keywords: 'tap to add money, nfc deposit, add funds, google pay, apple pay, halo',
+    confidenceScore: 0.94,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q3.2,Q3.2b'
+  },
+  {
+    faqId: 'Q3.2b',
+    audience: 'end-user',
+    category: 'tap_to_add_money',
+    question: 'Where do I find Tap to Add Money?',
+    answer: 'Tap to Add Money is in the Transact section under Payments & Transfers. You can also add it to Quick Access in Wallet Settings. Look for the card icon with "Tap to Add Money" and the description about tapping your card or using Google Pay/Apple Pay.',
+    keywords: 'tap to add money, where, transact, payments',
+    confidenceScore: 0.93,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q3.2,Q3.2a'
   },
   {
     faqId: 'Q3.5',
@@ -390,6 +414,31 @@ const initialKnowledgeBase = [
     answer: 'Your tier is based on your monthly transaction count AND monthly transaction value. Bronze (default): 1.50% total fee. Silver: 10+ transactions AND R5,000+ monthly = 1.40% fee. Gold: 25+ transactions AND R15,000+ monthly = 1.20% fee. Platinum: 50+ transactions AND R30,000+ monthly = 1.00% fee. Tiers are reviewed on the 1st of each month.',
     keywords: 'my tier, bronze silver gold platinum, tier status, current tier',
     confidenceScore: 0.93,
+    language: 'en',
+    isActive: true
+  },
+  {
+    faqId: 'Q11.6',
+    audience: 'end-user',
+    category: 'usdc_fees',
+    question: 'What are the USDC send fees?',
+    answer: 'USDC send (Buy USDC) has a 7.5% Transaction Fee shown in the quote and confirm screen. The fee is displayed before you complete the transfer. Recipients are credited to their wallet on file; no blockchain Tx ID is shown in the app.',
+    keywords: 'usdc fee, crypto fee, buy usdc, transaction fee, 7.5',
+    confidenceScore: 0.92,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q11.1,Q11.3'
+  },
+
+  // Section 11.5 – Transaction Details
+  {
+    faqId: 'Q11.5.1',
+    audience: 'end-user',
+    category: 'transactions',
+    question: 'What does the Transaction Detail modal show?',
+    answer: 'The Transaction Detail modal shows Reference (internal ID), Amount, and Status. Per banking practice, blockchain Tx IDs are not displayed. Recipients are auto-credited to their wallet on file. Use the Reference for support or disputes.',
+    keywords: 'transaction detail, reference, status, blockchain, tx id',
+    confidenceScore: 0.9,
     language: 'en',
     isActive: true
   },
