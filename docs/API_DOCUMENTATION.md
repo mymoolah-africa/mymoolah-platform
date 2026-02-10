@@ -1398,7 +1398,7 @@ GET /api/v1/admin/analytics/suppliers
 
 ### **Referral Program Endpoints**
 
-The referral system provides a complete API for managing multi-level referral programs with 4-level commission structure and monthly earning caps.
+The referral system provides a complete API for managing multi-level referral programs with 3-level commission structure (5%, 3%, 2%) and no caps.
 
 #### **1. Get My Referral Code**
 ```http
@@ -1543,7 +1543,7 @@ GET /api/v1/referrals/pending
 ```
 
 ### **Referral System Features**
-- **4-Level Commission**: 4% (1st), 3% (2nd), 2% (3rd), 1% (4th)
+- **3-Level Commission**: 5% (1st), 3% (2nd), 2% (3rd) - no caps
 - **Monthly Caps**: R10K (1st), R5K (2nd), R2.5K (3rd), R1K (4th)
 - **Activation**: After first transaction
 - **Payouts**: Daily batch processing at 2:00 AM SAST

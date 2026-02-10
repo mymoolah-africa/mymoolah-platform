@@ -16,19 +16,12 @@ const referralKnowledgeEntries = [
     audience: 'end-user',
     category: 'REFERRAL_PROGRAM',
     question: 'How do referral earnings work?',
-    answer: `MyMoolah has a 4-level referral program where you earn commissions when people you refer make purchases.
+    answer: `MyMoolah has a 3-level referral program where you earn commissions when people you refer make purchases. No monthly caps.
 
 **Commission Structure:**
-- Level 1 (Direct referrer): 4% of MyMoolah's net commission
+- Level 1 (Direct referrer): 5% of MyMoolah's net commission
 - Level 2: 3% of net commission
 - Level 3: 2% of net commission
-- Level 4: 1% of net commission
-
-**Monthly Caps:**
-- Level 1: R10,000/month maximum
-- Level 2: R5,000/month maximum
-- Level 3: R2,500/month maximum
-- Level 4: R1,000/month maximum
 
 **How It Works:**
 1. When someone you referred makes a purchase (airtime, data, vouchers, QR payments), you earn a percentage of MyMoolah's commission
@@ -38,10 +31,9 @@ const referralKnowledgeEntries = [
 
 **Example:**
 If someone you referred buys R95 airtime, and MyMoolah earns R3.72 commission:
-- Level 1 earns: 4% of R3.72 = R0.15
+- Level 1 earns: 5% of R3.72 = R0.19
 - Level 2 earns: 3% of R3.72 = R0.11
 - Level 3 earns: 2% of R3.72 = R0.07
-- Level 4 earns: 1% of R3.72 = R0.04
 
 **Minimum:** Earnings are created for any commission ≥ R0.01.`,
     keywords: 'referral, earnings, commission, percentage, levels, payout, rewards',
@@ -79,19 +71,17 @@ You don't need to do anything - payouts are automatic!`,
     audience: 'end-user',
     category: 'REFERRAL_PROGRAM',
     question: 'What are the referral commission rates?',
-    answer: `MyMoolah uses a 4-level referral commission structure:
+    answer: `MyMoolah uses a 3-level referral commission structure. No caps.
 
 **Commission Rates:**
-- **Level 1 (Direct referrer)**: 4% of MyMoolah's net commission
+- **Level 1 (Direct referrer)**: 5% of MyMoolah's net commission
 - **Level 2**: 3% of net commission
 - **Level 3**: 2% of net commission
-- **Level 4**: 1% of net commission
 
 **Important Notes:**
 - Commissions are based on MyMoolah's net commission (after costs and VAT), not the purchase amount
 - You only earn if the person you referred makes purchases
 - Earnings are calculated automatically for all transaction types (airtime, data, vouchers, QR payments)
-- Monthly caps apply per level (see monthly cap limits)
 
 **Example Calculation:**
 Purchase: R95 airtime
@@ -99,10 +89,9 @@ MyMoolah commission: R4.28 (before VAT)
 After VAT (15%): R3.72 net commission
 
 Earnings:
-- Level 1: 4% × R3.72 = R0.15
+- Level 1: 5% × R3.72 = R0.19
 - Level 2: 3% × R3.72 = R0.11
-- Level 3: 2% × R3.72 = R0.07
-- Level 4: 1% × R3.72 = R0.04`,
+- Level 3: 2% × R3.72 = R0.07`,
     keywords: 'referral, commission, rate, percentage, level, structure',
     language: 'en'
   },
@@ -110,29 +99,11 @@ Earnings:
     audience: 'end-user',
     category: 'REFERRAL_PROGRAM',
     question: 'What are the monthly caps for referral earnings?',
-    answer: `MyMoolah has monthly earning caps per referral level to ensure sustainable growth:
-
-**Monthly Caps:**
-- **Level 1 (Direct referrer)**: R10,000/month maximum
-- **Level 2**: R5,000/month maximum
-- **Level 3**: R2,500/month maximum
-- **Level 4**: R1,000/month maximum
-
-**How Caps Work:**
-- Caps reset on the 1st of each month
-- If you reach your cap, you won't earn more for that level until next month
-- Caps are tracked separately per level (you can earn at multiple levels)
-- If an earning would exceed your cap, you get the remaining amount up to the cap
-
-**Example:**
-If you're Level 1 and have earned R9,999 this month:
-- New earning would be R50
-- You'll receive R1 (remaining cap), not R50
-- Next month, cap resets and you can earn full amounts again
+    answer: `MyMoolah's referral program has no monthly caps. You earn the full commission on every transaction your referrals make, at all 3 levels.
 
 **Tracking:**
 Your referral stats show how much you've earned this month per level.`,
-    keywords: 'referral, monthly, cap, limit, maximum, earnings, reset',
+    keywords: 'referral, monthly, earnings, tracking',
     language: 'en'
   },
   {
@@ -144,7 +115,7 @@ Your referral stats show how much you've earned this month per level.`,
 **Common Reasons:**
 1. **Referral not activated**: The person must make their first purchase to activate the referral
 2. **Commission too small**: Minimum commission is R0.01 (very rare, most purchases qualify)
-3. **Monthly cap reached**: You've hit your monthly cap for that level
+3. **Level beyond 3**: Referral chain extends only 3 levels
 4. **Commission allocation pending**: Commission is calculated after purchase completes (usually within seconds)
 
 **Check Your Status:**
@@ -155,7 +126,7 @@ Your referral stats show how much you've earned this month per level.`,
 **If Still Missing:**
 - Wait a few minutes (commission calculation happens asynchronously)
 - Check if referral is activated (first purchase required)
-- Verify monthly cap hasn't been reached
+- Verify referral is within 3 levels
 - Contact support if earnings don't appear after 24 hours
 
 **Note:** Earnings are based on MyMoolah's net commission (after costs and VAT), not the purchase amount.`,

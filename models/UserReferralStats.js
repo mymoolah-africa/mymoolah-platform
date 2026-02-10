@@ -60,13 +60,6 @@ module.exports = (sequelize, DataTypes) => {
       field: 'level_3_count',
       comment: 'Level 3 network size'
     },
-    level4Count: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-      field: 'level_4_count',
-      comment: 'Level 4 network size'
-    },
     
     // Earnings (all time, in cents)
     totalEarnedCents: {
@@ -152,20 +145,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false,
       field: 'level_3_capped',
-      comment: 'Hit R2,500 cap for Level 3'
-    },
-    level4MonthCents: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
-      field: 'level_4_month_cents'
-    },
-    level4Capped: {
-      type: DataTypes.BOOLEAN,
-      allowNull: false,
-      defaultValue: false,
-      field: 'level_4_capped',
-      comment: 'Hit R1,000 cap for Level 4'
+      comment: 'Retained for schema compat; caps removed'
     }
   }, {
     tableName: 'user_referral_stats',
@@ -187,7 +167,7 @@ module.exports = (sequelize, DataTypes) => {
    * @returns {number}
    */
   UserReferralStats.prototype.getTotalNetworkSize = function() {
-    return this.level1Count + this.level2Count + this.level3Count + this.level4Count;
+    return this.level1Count + this.level2Count + this.level3Count;
   };
 
   /**
@@ -201,11 +181,11 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   /**
-   * Check if any level is capped this month
+   * Check if any level is capped this month (no caps - always false)
    * @returns {boolean}
    */
   UserReferralStats.prototype.isAnyCapped = function() {
-    return this.level1Capped || this.level2Capped || this.level3Capped || this.level4Capped;
+    return false;
   };
 
   /**
@@ -221,9 +201,7 @@ module.exports = (sequelize, DataTypes) => {
       level2MonthCents: 0,
       level2Capped: false,
       level3MonthCents: 0,
-      level3Capped: false,
-      level4MonthCents: 0,
-      level4Capped: false
+      level3Capped: false
     });
   };
 

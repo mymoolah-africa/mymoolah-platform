@@ -55,8 +55,7 @@ class ReferralController {
           referralsByLevel: {
             level1: stats.level1Count || 0,
             level2: stats.level2Count || 0,
-            level3: stats.level3Count || 0,
-            level4: stats.level4Count || 0
+            level3: stats.level3Count || 0
           }
         },
         recentEarnings
@@ -249,7 +248,6 @@ class ReferralController {
           level1Count: stats.level1Count || 0,
           level2Count: stats.level2Count || 0,
           level3Count: stats.level3Count || 0,
-          level4Count: stats.level4Count || 0,
           monthEarnedCents: stats.monthEarnedCents || 0,
           monthEarnedRand: (stats.monthEarnedCents || 0) / 100
         }
@@ -330,8 +328,7 @@ class ReferralController {
           activeReferrals: network.stats.activeReferrals || 0,
           level1Count: network.stats.level1Count || 0,
           level2Count: network.stats.level2Count || 0,
-          level3Count: network.stats.level3Count || 0,
-          level4Count: network.stats.level4Count || 0
+          level3Count: network.stats.level3Count || 0
         }
       });
     } catch (error) {

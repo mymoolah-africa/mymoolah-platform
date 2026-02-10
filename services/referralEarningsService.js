@@ -1,17 +1,16 @@
 /**
  * Referral Earnings Service
- * 
+ *
  * Calculates and records referral earnings from every transaction
- * Applies 4-level commission structure with monthly caps
+ * Applies 3-level commission structure (no caps)
  * Ensures MyMoolah keeps 90% of net revenue
- * 
+ *
  * Commission Structure:
- * - Level 1 (Direct): 4% (cap: R10,000/month)
- * - Level 2: 3% (cap: R5,000/month)
- * - Level 3: 2% (cap: R2,500/month)
- * - Level 4: 1% (cap: R1,000/month)
- * Total: 10% max (but only pay levels that exist)
- * 
+ * - Level 1 (Direct): 5%
+ * - Level 2: 3%
+ * - Level 3: 2%
+ * Total: 10% max (only pay levels that exist)
+ *
  * @author MyMoolah Treasury Platform
  * @date 2025-12-22
  */
@@ -19,20 +18,11 @@
 const { ReferralChain, ReferralEarning, UserReferralStats } = require('../models');
 const { Op } = require('sequelize');
 
-// Monthly caps per level (in cents)
-const MONTHLY_CAPS = {
-  1: 1000000, // R10,000
-  2: 500000,  // R5,000
-  3: 250000,  // R2,500
-  4: 100000   // R1,000
-};
-
-// Commission percentages per level
+// Commission percentages per level (no caps)
 const COMMISSION_RATES = {
-  1: 4.00,
+  1: 5.00,
   2: 3.00,
-  3: 2.00,
-  4: 1.00
+  3: 2.00
 };
 
 // Minimum transaction for referral earnings (based on net revenue/commission, not purchase amount)
@@ -83,45 +73,18 @@ class ReferralEarningsService {
     for (const earner of earners) {
       const { userId: earnerUserId, level, percentage } = earner;
       
-      // Calculate base earning
-      // Use Math.ceil for very small amounts to ensure at least 1 cent for tiny commissions
-      // This ensures L4 (1%) still earns even on small transactions
-      const baseEarningCents = netRevenueCents * percentage / 100 < 1 
-        ? Math.ceil((netRevenueCents * percentage) / 100) 
+      // Calculate earning (no caps)
+      const baseEarningCents = netRevenueCents * percentage / 100 < 1
+        ? Math.ceil((netRevenueCents * percentage) / 100)
         : Math.round((netRevenueCents * percentage) / 100);
       
-      // Get current month stats for this user/level
+      const finalEarningCents = baseEarningCents;
+      if (finalEarningCents <= 0) continue;
+      
+      // Get current month stats for cumulative tracking
       const stats = await this.getUserStats(earnerUserId, monthYear);
       const levelField = `level${level}MonthCents`;
       const currentMonthCents = stats[levelField] || 0;
-      
-      // Apply monthly cap
-      const cap = MONTHLY_CAPS[level];
-      const remainingCapCents = cap - currentMonthCents;
-      
-      let finalEarningCents = baseEarningCents;
-      let capped = false;
-      let originalAmountCents = null;
-      
-      if (remainingCapCents <= 0) {
-        // Already hit cap this month
-        finalEarningCents = 0;
-        capped = true;
-        originalAmountCents = baseEarningCents;
-      } else if (baseEarningCents > remainingCapCents) {
-        // Would exceed cap, apply limit
-        finalEarningCents = remainingCapCents;
-        capped = true;
-        originalAmountCents = baseEarningCents;
-      }
-      
-      // Skip if no earning (already capped)
-      if (finalEarningCents <= 0) {
-        console.log(`⚠️ User ${earnerUserId} Level ${level} already capped this month`);
-        continue;
-      }
-      
-      // Calculate cumulative for this earning
       const newCumulativeCents = currentMonthCents + finalEarningCents;
       
       // Create earning record
@@ -135,24 +98,17 @@ class ReferralEarningsService {
         earnedAmountCents: finalEarningCents,
         monthYear,
         cumulativeMonthCents: newCumulativeCents,
-        capped,
-        originalAmountCents,
+        capped: false,
+        originalAmountCents: null,
         status: 'pending',
         transactionType,
         metadata: {
-          chainDepth: chain.chainDepth,
-          capInfo: {
-            cap,
-            currentMonth: currentMonthCents,
-            thisEarning: finalEarningCents,
-            newTotal: newCumulativeCents,
-            remaining: cap - newCumulativeCents
-          }
+          chainDepth: chain.chainDepth
         }
       });
       
       // Update user stats
-      await this.updateEarningStats(earnerUserId, level, finalEarningCents, monthYear, newCumulativeCents >= cap);
+      await this.updateEarningStats(earnerUserId, level, finalEarningCents, monthYear);
       
       earnings.push(earning);
       
@@ -189,7 +145,7 @@ class ReferralEarningsService {
   /**
    * Update earning statistics for user
    */
-  async updateEarningStats(userId, level, amountCents, monthYear, nowCapped) {
+  async updateEarningStats(userId, level, amountCents, monthYear) {
     const stats = await this.getUserStats(userId, monthYear);
     
     const updates = {
@@ -198,14 +154,9 @@ class ReferralEarningsService {
       monthEarnedCents: stats.monthEarnedCents + amountCents
     };
     
-    // Update level-specific month totals
+    // Update level-specific month totals (for reporting)
     const levelMonthField = `level${level}MonthCents`;
-    const levelCappedField = `level${level}Capped`;
     updates[levelMonthField] = stats[levelMonthField] + amountCents;
-    
-    if (nowCapped) {
-      updates[levelCappedField] = true;
-    }
     
     await stats.update(updates);
   }

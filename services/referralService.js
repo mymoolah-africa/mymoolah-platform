@@ -1,16 +1,15 @@
 /**
  * Referral Service - Multi-Level Earnings Network
- * 
- * Core service for MyMoolah's 4-level referral program
+ *
+ * Core service for MyMoolah's 3-level referral program
  * Job creation and viral growth engine for South Africa
- * 
+ *
  * Features:
- * - 4-level commission structure (4%, 3%, 2%, 1%)
- * - Monthly caps per level (R10K, R5K, R2.5K, R1K)
+ * - 3-level commission structure (5%, 3%, 2%) - no caps
  * - Fraud prevention (KYC, transaction activation, velocity limits)
  * - Daily batch payouts
  * - Multi-language SMS invitations
- * 
+ *
  * @author MyMoolah Treasury Platform
  * @date 2025-12-22
  */
@@ -18,22 +17,6 @@
 const crypto = require('crypto');
 const { Referral, ReferralChain, User, UserReferralStats } = require('../models');
 const { Op } = require('sequelize');
-
-// Monthly caps per level (in cents)
-const MONTHLY_CAPS = {
-  1: 1000000, // R10,000
-  2: 500000,  // R5,000
-  3: 250000,  // R2,500
-  4: 100000   // R1,000
-};
-
-// Commission percentages per level
-const COMMISSION_RATES = {
-  1: 4.00,
-  2: 3.00,
-  3: 2.00,
-  4: 1.00
-};
 
 // Fraud prevention limits
 const LIMITS = {
@@ -249,7 +232,7 @@ class ReferralService {
   }
 
   /**
-   * Build 4-level referral chain for new user
+   * Build 3-level referral chain for new user
    * @param {number} userId - New user
    * @param {number} referrerId - Direct referrer (Level 1)
    */
@@ -259,13 +242,12 @@ class ReferralService {
       where: { userId: referrerId }
     });
     
-    // Build new user's chain
+    // Build new user's chain (3 levels only)
     const chain = {
       userId: userId,
       level1UserId: referrerId,
       level2UserId: null,
       level3UserId: null,
-      level4UserId: null,
       chainDepth: 1
     };
     
@@ -273,13 +255,10 @@ class ReferralService {
     if (referrerChain) {
       chain.level2UserId = referrerChain.level1UserId;
       chain.level3UserId = referrerChain.level2UserId;
-      chain.level4UserId = referrerChain.level3UserId;
       
-      // Calculate depth
       chain.chainDepth = 1;
       if (chain.level2UserId) chain.chainDepth = 2;
       if (chain.level3UserId) chain.chainDepth = 3;
-      if (chain.level4UserId) chain.chainDepth = 4;
     }
     
     // Create chain record
@@ -383,14 +362,13 @@ class ReferralService {
   }
 
   /**
-   * Update network counts for entire upline
+   * Update network counts for entire upline (3 levels)
    */
   async updateNetworkCounts(chain) {
     const updates = [
       { userId: chain.level1UserId, level: 1 },
       { userId: chain.level2UserId, level: 2 },
-      { userId: chain.level3UserId, level: 3 },
-      { userId: chain.level4UserId, level: 4 }
+      { userId: chain.level3UserId, level: 3 }
     ];
     
     for (const update of updates) {

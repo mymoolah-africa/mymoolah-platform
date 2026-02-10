@@ -250,8 +250,7 @@ MOBILEMART_TOKEN_URL=/connect/token  # Optional (default)
 The MyMoolah platform includes a **banking-grade multi-level referral system** designed to create earning opportunities in South Africa. The system is built on Mojaloop and ISO20022 standards with comprehensive fraud prevention.
 
 #### **Commission Structure**
-- **4-Level System**: 4% (1st level), 3% (2nd level), 2% (3rd level), 1% (4th level)
-- **Monthly Caps**: R10,000 (1st), R5,000 (2nd), R2,500 (3rd), R1,000 (4th) per user per level
+- **3-Level System**: 5% (1st level), 3% (2nd level), 2% (3rd level) - no caps
 - **Revenue Source**: 10% of MyMoolah's net earnings from all transactions (VAS commissions, transaction fees)
 - **Activation**: After first transaction (prevents fraud)
 
@@ -262,7 +261,7 @@ The MyMoolah platform includes a **banking-grade multi-level referral system** d
    - Stores referral codes, invitee phone numbers, status
    - Tracks signup bonuses and activation
 
-2. **`referral_chains`**: 4-level network structure
+2. **`referral_chains`**: 3-level network structure
    - Maintains hierarchical relationships
    - Tracks referrer → referree at each level
 

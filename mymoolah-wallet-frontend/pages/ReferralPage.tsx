@@ -29,12 +29,11 @@ function formatCurrency(amount: number): string {
   return `R ${amount.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-// Commission rates by level (caps disabled for now)
+// Commission rates by level (3 levels, no caps)
 const COMMISSION_RATES = [
-  { level: 1, rate: '4%' },
+  { level: 1, rate: '5%' },
   { level: 2, rate: '3%' },
-  { level: 3, rate: '2%' },
-  { level: 4, rate: '1%' },
+  { level: 3, rate: '2%' }
 ];
 
 export function ReferralPage() {
@@ -485,7 +484,7 @@ export function ReferralPage() {
             <strong>3.</strong> When they make their first transaction, your earnings start
           </p>
           <p>
-            <strong>4.</strong> Earn on every transaction they make (up to 4 levels deep!)
+            <strong>4.</strong> Earn on every transaction they make (up to 3 levels deep!)
           </p>
         </div>
       </div>

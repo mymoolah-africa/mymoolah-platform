@@ -10,7 +10,7 @@
 
 ### **Database Schema (5 tables)**
 - ✅ referrals - Invitation tracking
-- ✅ referral_chains - 4-level network structure  
+- ✅ referral_chains - 3-level network structure  
 - ✅ referral_earnings - Commission records with caps
 - ✅ referral_payouts - Daily batch processing
 - ✅ user_referral_stats - Real-time statistics

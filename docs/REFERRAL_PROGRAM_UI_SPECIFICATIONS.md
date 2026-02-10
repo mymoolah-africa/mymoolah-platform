@@ -143,32 +143,28 @@ Profile Menu:
 ### **Tier 2: Learning (Explanation Page)**
 
 **Headline**: "How the Earnings Network Works"  
-**Subheadline**: "4-Level Commission Structure"
+**Subheadline**: "3-Level Commission Structure"
 
 **Body**:
 ```
 Earn money when you invite friends:
 
-Level 1 (Your Direct Invites): 4% commission
-- 10 active friends earning potential: R160-400/month
+Level 1 (Your Direct Invites): 5% commission
+- 10 active friends earning potential: R200-500/month
 
 Level 2 (Their Invites): 3% commission  
 - Additional earnings from your network's growth
 
-Level 3 & 4: 2% and 1% commission
+Level 3: 2% commission
 - Deeper network = more earnings potential
 
 Real Examples:
-• 5 active friends: ~R150/month
-• 20 active friends: ~R600/month  
-• 50 active friends: ~R1,500/month
-• 200+ friends (top 1%): R3,000-5,000/month
+• 5 active friends: ~R180/month
+• 20 active friends: ~R700/month  
+• 50 active friends: ~R1,800/month
+• 200+ friends (top 1%): R3,500-5,500/month
 
-Monthly Caps (Protection):
-Level 1: R10,000/month max
-Level 2: R5,000/month max
-Level 3: R2,500/month max
-Level 4: R1,000/month max
+No monthly caps - earn unlimited.
 ```
 
 **Why This Works**:

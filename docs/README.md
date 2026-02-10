@@ -299,8 +299,7 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 
 ### **💰 Multi-Level Referral & Earnings Platform (December 29, 2025)**
 The platform now features a **banking-grade multi-level referral system** designed to create earning opportunities in South Africa:
-- **4-Level Commission Structure**: 4% (1st level), 3% (2nd level), 2% (3rd level), 1% (4th level)
-- **Monthly Earning Caps**: R10K (1st), R5K (2nd), R2.5K (3rd), R1K (4th) per user per level
+- **3-Level Commission Structure**: 5% (1st level), 3% (2nd level), 2% (3rd level) - no caps
 - **Revenue Source**: 10% of MyMoolah's net earnings from all transactions (VAS commissions, transaction fees)
 - **Activation**: After first transaction (prevents fraud)
 - **Payouts**: Daily batch processing at 2:00 AM SAST

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * Check Neil Botes (L4) referral relationship with Andre Botes
- * and investigate why Andre didn't earn commission on Neil's R10 purchase
+ * Check Neil Botes referral chain and investigate referral earnings
+ * (3-level system: L1, L2, L3)
  */
 
 const { getUATClient, closeAll } = require('./db-connection-helper');
@@ -37,9 +37,9 @@ async function checkReferralStatus() {
     console.log(`\nAndre ID: ${andre.id}`);
     console.log(`Neil ID: ${neil.id}\n`);
 
-    // 2. Check referral chain for Neil
+    // 2. Check referral chain for Neil (3 levels only)
     const chainResult = await client.query(`
-      SELECT user_id, chain_depth, level_1_user_id, level_2_user_id, level_3_user_id, level_4_user_id
+      SELECT user_id, chain_depth, level_1_user_id, level_2_user_id, level_3_user_id
       FROM referral_chains 
       WHERE user_id = $1
     `, [neil.id]);
@@ -54,13 +54,13 @@ async function checkReferralStatus() {
       console.log(`   L1: ${chain.level_1_user_id || 'none'}`);
       console.log(`   L2: ${chain.level_2_user_id || 'none'}`);
       console.log(`   L3: ${chain.level_3_user_id || 'none'}`);
-      console.log(`   L4: ${chain.level_4_user_id || 'none'}`);
       
-      // Check if Andre is L4
-      if (chain.level_4_user_id === andre.id) {
-        console.log(`   ✅ CONFIRMED: Andre (${andre.id}) IS L4 of Neil (${neil.id})`);
+      const andreInChain = chain.level_1_user_id === andre.id || chain.level_2_user_id === andre.id || chain.level_3_user_id === andre.id;
+      if (andreInChain) {
+        const level = chain.level_1_user_id === andre.id ? 1 : chain.level_2_user_id === andre.id ? 2 : 3;
+        console.log(`   ✅ Andre (${andre.id}) is L${level} of Neil (${neil.id})`);
       } else {
-        console.log(`   ❌ Andre (${andre.id}) is NOT L4. L4 is: ${chain.level_4_user_id || 'none'}`);
+        console.log(`   ℹ️ Andre (${andre.id}) is not in Neil's 3-level chain`);
       }
     }
 
@@ -212,10 +212,9 @@ async function checkReferralStatus() {
             
             const andreEarning = earningsForTxn.rows.find(e => e.earner_user_id === andre.id);
             if (!andreEarning) {
-              console.log(`\n   ❌ PROBLEM: Andre (ID: ${andre.id}, L4) did NOT get an earning!`);
-              console.log(`   💡 Expected: Level 4 earning for Andre (1% of 26 cents = 0.26 cents)`);
+              console.log(`\n   ❌ PROBLEM: Andre (ID: ${andre.id}) did NOT get an earning!`);
               if (chain) {
-                console.log(`   💡 Chain shows: L1=${chain.level_1_user_id}, L2=${chain.level_2_user_id}, L3=${chain.level_3_user_id}, L4=${chain.level_4_user_id}`);
+                console.log(`   💡 Chain shows: L1=${chain.level_1_user_id}, L2=${chain.level_2_user_id}, L3=${chain.level_3_user_id}`);
                 console.log(`   💡 Only ${earningsForTxn.rows.length} earnings created, but chain has depth ${chain.chain_depth}`);
               }
               console.log(`   💡 ROOT CAUSE: Math.round(0.26) = 0 cents - earning rounded down to 0`);
@@ -268,13 +267,13 @@ async function checkReferralStatus() {
     console.log('📋 DIAGNOSIS SUMMARY');
     console.log('='.repeat(80));
     
-    const chain = chainResult.rows[0];
-    const hasChain = chain && chain.level_4_user_id === andre.id;
+    const chainSummary = chainResult.rows[0];
+    const andreInChain = chainSummary && (chainSummary.level_1_user_id === andre.id || chainSummary.level_2_user_id === andre.id || chainSummary.level_3_user_id === andre.id);
     const hasVasTxn = vasResult.rows.length > 0;
     const hasCommission = hasVasTxn && vasResult.rows[0].metadata?.commission;
     const hasEarnings = earningsResult.rows.length > 0;
     
-    console.log(`✅ Referral Chain: ${hasChain ? 'CORRECT (Andre is L4)' : '❌ INCORRECT'}`);
+    console.log(`✅ Referral Chain: ${andreInChain ? 'CORRECT (Andre is in Neil\'s chain)' : '❌ Andre not in Neil\'s 3-level chain'}`);
     console.log(`✅ VAS Transaction: ${hasVasTxn ? 'FOUND' : '❌ NOT FOUND'}`);
     console.log(`✅ Commission Metadata: ${hasCommission ? 'FOUND' : '❌ NOT FOUND'}`);
     console.log(`✅ Referral Earnings: ${hasEarnings ? 'FOUND' : '❌ NOT FOUND'}`);

@@ -907,7 +907,6 @@ export interface ReferralDashboard {
       level1: number;
       level2: number;
       level3: number;
-      level4: number;
     };
   };
   recentEarnings: Array<{
@@ -925,13 +924,11 @@ export interface ReferralNetwork {
     level1: ReferralInfo[];
     level2: ReferralInfo[];
     level3: ReferralInfo[];
-    level4: ReferralInfo[];
   };
   totals: {
     level1: number;
     level2: number;
     level3: number;
-    level4: number;
   };
 }
 

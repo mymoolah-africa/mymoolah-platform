@@ -57,14 +57,14 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         min: 1,
-        max: 4
+        max: 3
       },
-      comment: 'Level in chain: 1, 2, 3, or 4'
+      comment: 'Level in chain: 1 (5%), 2 (3%), 3 (2%)'
     },
     percentage: {
       type: DataTypes.DECIMAL(5, 2),
       allowNull: false,
-      comment: 'Percentage earned (4.00, 3.00, 2.00, or 1.00)'
+      comment: 'Percentage earned (5.00, 3.00, or 2.00)'
     },
     transactionRevenueCents: {
       type: DataTypes.INTEGER,

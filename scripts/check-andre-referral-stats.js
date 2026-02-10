@@ -59,7 +59,6 @@ async function checkStats() {
         level_1_month_cents,
         level_2_month_cents,
         level_3_month_cents,
-        level_4_month_cents,
         month_year
       FROM user_referral_stats 
       WHERE user_id = $1
@@ -74,10 +73,8 @@ async function checkStats() {
       console.log(`   Level 1 Month: R${stats.level_1_month_cents/100}`);
       console.log(`   Level 2 Month: R${stats.level_2_month_cents/100}`);
       console.log(`   Level 3 Month: R${stats.level_3_month_cents/100}`);
-      console.log(`   Level 4 Month: R${stats.level_4_month_cents/100}`);
       
-      const sumOfLevels = stats.level_1_month_cents + stats.level_2_month_cents + 
-                         stats.level_3_month_cents + stats.level_4_month_cents;
+      const sumOfLevels = stats.level_1_month_cents + stats.level_2_month_cents + stats.level_3_month_cents;
       console.log(`   Sum of all levels: R${sumOfLevels/100}`);
       
       console.log(`\n🔍 COMPARISON:`);

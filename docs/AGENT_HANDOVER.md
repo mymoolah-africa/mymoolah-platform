@@ -542,8 +542,7 @@ Completed Phases 2-5 of the Multi-Level Referral & Earnings Platform. System is 
 - **Modified**: `services/referralService.js`, `services/productPurchaseService.js`, `routes/overlayServices.js`, `controllers/qrPaymentController.js`, `controllers/authController.js`, `server.js`
 
 **Key Features**:
-- 4-level commission structure (4%, 3%, 2%, 1%)
-- Monthly caps per level (R10K, R5K, R2.5K, R1K)
+- 3-level commission structure (5%, 3%, 2%) - no caps
 - SMS invitations in 11 languages
 - Daily batch payouts
 - Complete API for frontend integration

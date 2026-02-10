@@ -22,7 +22,6 @@ async function fixStats() {
         level_1_month_cents,
         level_2_month_cents,
         level_3_month_cents,
-        level_4_month_cents,
         month_year
       FROM user_referral_stats 
       WHERE user_id = $1
@@ -34,8 +33,7 @@ async function fixStats() {
     }
 
     const stats = statsResult.rows[0];
-    const sumOfLevels = stats.level_1_month_cents + stats.level_2_month_cents + 
-                       stats.level_3_month_cents + stats.level_4_month_cents;
+    const sumOfLevels = stats.level_1_month_cents + stats.level_2_month_cents + stats.level_3_month_cents;
 
     console.log('📊 CURRENT STATS:');
     console.log(`   Total Earned: R${stats.total_earned_cents/100}`);
@@ -43,8 +41,7 @@ async function fixStats() {
     console.log(`   Sum of Levels: R${sumOfLevels/100}`);
     console.log(`   Level 1: R${stats.level_1_month_cents/100}`);
     console.log(`   Level 2: R${stats.level_2_month_cents/100}`);
-    console.log(`   Level 3: R${stats.level_3_month_cents/100}`);
-    console.log(`   Level 4: R${stats.level_4_month_cents/100}\n`);
+    console.log(`   Level 3: R${stats.level_3_month_cents/100}\n`);
 
     if (stats.month_earned_cents === sumOfLevels) {
       console.log('✅ Stats are already correct! No update needed.');

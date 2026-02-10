@@ -73,7 +73,6 @@ async function checkReferralStatus() {
       console.log(`   - L1 (Direct): ${chainResult.rows[0].level1_user_id || 'none'}`);
       console.log(`   - L2: ${chainResult.rows[0].level2_user_id || 'none'}`);
       console.log(`   - L3: ${chainResult.rows[0].level3_user_id || 'none'}`);
-      console.log(`   - L4: ${chainResult.rows[0].level4_user_id || 'none'}`);
     } else {
       console.log('❌ NO CHAIN FOUND - This is the problem! Leonie has no referral chain.');
     }

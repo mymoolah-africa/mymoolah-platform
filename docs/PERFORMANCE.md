@@ -229,7 +229,7 @@ The referral system is optimized for **high-performance batch processing** and *
 - **Batch Processing**: Earnings calculated in batches for efficiency
 - **Database Indexes**: Optimized indexes on `referral_chains` for fast lookups
 - **Caching**: Referral chain structure cached to reduce database queries
-- **Query Optimization**: Single query retrieves all 4 levels of referrers
+- **Query Optimization**: Single query retrieves all 3 levels of referrers
 
 #### **Daily Payout Performance**
 - **Batch Processing**: All payouts processed in single batch at 2:00 AM SAST

@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-02 - Referral 3-Level Schema, No Caps ✅
+
+### **Session Overview**
+Referral system simplified from 4 levels to 3 levels with no monthly caps. Level 4 was UAT-only and removed entirely.
+
+### **Changes**
+- **Commission structure**: Level 1: 5%, Level 2: 3%, Level 3: 2% (total 10%). No caps.
+- **Database**: Migration `20260202_03_referral_3_levels_remove_l4.js` removes level_4_user_id from referral_chains; level_4_count, level_4_month_cents, level_4_capped from user_referral_stats; deletes referral_earnings WHERE level=4; CHECK constraint to level 1-3.
+- **Services**: referralEarningsService, referralService: 3-level chains, no caps, rates 5/3/2%.
+- **Models**: ReferralChain, UserReferralStats, ReferralEarning updated for 3 levels.
+- **Frontend**: ReferralPage (components + pages): 3 levels, 5/3/2%, "3 levels deep".
+- **Dashboard 15%**: Left as-is (future Platinum tier).
+- **Scripts**: Removed create-missing-l4-earning-andre.js; updated add-referral-knowledge-to-ai, seed-test-referrals, seed-support-knowledge-base, fix-andre-month-earned, check-referral-status, check-andre-referral-stats, check-neil-andre-referral for 3-level.
+
+### **Restart Required**
+- Backend server after migration.
+
+---
+
 ## 2026-02-09 - 📋 Transaction Detail Modal & USDC Fee UI (v2.9.2) ✅
 
 ### **Session Overview**

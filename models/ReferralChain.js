@@ -1,9 +1,9 @@
 /**
  * ReferralChain Model
- * 
- * Stores the complete 4-level referral chain for each user
+ *
+ * Stores the complete 3-level referral chain for each user
  * Enables fast calculation of who earns from each transaction
- * 
+ *
  * @author MyMoolah Treasury Platform
  * @date 2025-12-22
  */
@@ -34,7 +34,7 @@ module.exports = (sequelize, DataTypes) => {
         model: 'users',
         key: 'id'
       },
-      comment: 'Direct referrer (Level 1 - earns 4%)'
+      comment: 'Direct referrer (Level 1 - earns 5%)'
     },
     level2UserId: {
       type: DataTypes.INTEGER,
@@ -56,22 +56,12 @@ module.exports = (sequelize, DataTypes) => {
       },
       comment: 'Level 3 referrer (earns 2%)'
     },
-    level4UserId: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      field: 'level_4_user_id',
-      references: {
-        model: 'users',
-        key: 'id'
-      },
-      comment: 'Level 4 referrer (earns 1%)'
-    },
     chainDepth: {
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
       field: 'chain_depth',
-      comment: 'Number of levels in chain (0-4)'
+      comment: 'Number of levels in chain (0-3)'
     }
   }, {
     tableName: 'referral_chains',
@@ -101,11 +91,6 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: 'level3UserId',
       as: 'level3User'
     });
-    
-    ReferralChain.belongsTo(models.User, {
-      foreignKey: 'level4UserId',
-      as: 'level4User'
-    });
   };
 
   /**
@@ -114,7 +99,7 @@ module.exports = (sequelize, DataTypes) => {
    */
   ReferralChain.prototype.getEarners = function() {
     const earners = [];
-    const percentages = [4.00, 3.00, 2.00, 1.00];
+    const percentages = [5.00, 3.00, 2.00];
     
     if (this.level1UserId) {
       earners.push({ userId: this.level1UserId, level: 1, percentage: percentages[0] });
@@ -124,9 +109,6 @@ module.exports = (sequelize, DataTypes) => {
     }
     if (this.level3UserId) {
       earners.push({ userId: this.level3UserId, level: 3, percentage: percentages[2] });
-    }
-    if (this.level4UserId) {
-      earners.push({ userId: this.level4UserId, level: 4, percentage: percentages[3] });
     }
     
     return earners;

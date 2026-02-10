@@ -220,14 +220,13 @@ async function seedTestReferrals() {
 
     console.log('\n🔗 Creating referral chains...\n');
 
-    // Create referral chains for each user using correct field names
+    // Create referral chains for each user (3 levels only)
     // Andre has no chain (top of the pyramid)
     await ReferralChain.create({
       userId: andre.id,
       level1UserId: null,
       level2UserId: null,
       level3UserId: null,
-      level4UserId: null,
       chainDepth: 0
     }, { transaction });
     console.log('  ✅ Andre (top level - no referrer)');
@@ -238,7 +237,6 @@ async function seedTestReferrals() {
       level1UserId: andre.id,
       level2UserId: null,
       level3UserId: null,
-      level4UserId: null,
       chainDepth: 1
     }, { transaction });
     console.log('  ✅ Leonie: L1=Andre');
@@ -249,7 +247,6 @@ async function seedTestReferrals() {
       level1UserId: leonie.id,
       level2UserId: andre.id,
       level3UserId: null,
-      level4UserId: null,
       chainDepth: 2
     }, { transaction });
     console.log('  ✅ Andre Jr: L1=Leonie, L2=Andre');
@@ -260,39 +257,36 @@ async function seedTestReferrals() {
       level1UserId: andreJr.id,
       level2UserId: leonie.id,
       level3UserId: andre.id,
-      level4UserId: null,
       chainDepth: 3
     }, { transaction });
     console.log('  ✅ HD: L1=Andre Jr, L2=Leonie, L3=Andre');
 
-    // Neil: L1=HD, L2=Andre Jr, L3=Leonie, L4=Andre
+    // Neil: L1=HD, L2=Andre Jr, L3=Leonie (3 levels, Andre drops off)
     await ReferralChain.create({
       userId: neil.id,
       level1UserId: hd.id,
       level2UserId: andreJr.id,
       level3UserId: leonie.id,
-      level4UserId: andre.id,
-      chainDepth: 4
+      chainDepth: 3
     }, { transaction });
-    console.log('  ✅ Neil: L1=HD, L2=Andre Jr, L3=Leonie, L4=Andre');
+    console.log('  ✅ Neil: L1=HD, L2=Andre Jr, L3=Leonie');
 
-    // Denise: L1=Neil, L2=HD, L3=Andre Jr, L4=Leonie (Andre drops off - beyond 4 levels)
+    // Denise: L1=Neil, L2=HD, L3=Andre Jr (3 levels, Andre drops off)
     await ReferralChain.create({
       userId: denise.id,
       level1UserId: neil.id,
       level2UserId: hd.id,
       level3UserId: andreJr.id,
-      level4UserId: leonie.id,
-      chainDepth: 4
+      chainDepth: 3
     }, { transaction });
-    console.log('  ✅ Denise: L1=Neil, L2=HD, L3=Andre Jr, L4=Leonie');
+    console.log('  ✅ Denise: L1=Neil, L2=HD, L3=Andre Jr');
 
     console.log('\n📊 Creating user referral stats...\n');
 
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
-    // Create stats for each user using correct field names
-    // Andre: 1 direct (Leonie), gets earnings from 4 levels
+    // Create stats for each user (3 levels only)
+    // Andre: 1 direct (Leonie), gets earnings from 3 levels
     await UserReferralStats.create({
       userId: andre.id,
       totalReferrals: 1,
@@ -300,7 +294,6 @@ async function seedTestReferrals() {
       level1Count: 1,
       level2Count: 1,
       level3Count: 2,
-      level4Count: 1,
       totalEarnedCents: 0,
       totalPaidCents: 0,
       pendingCents: 0,
@@ -312,9 +305,7 @@ async function seedTestReferrals() {
       level2MonthCents: 0,
       level2Capped: false,
       level3MonthCents: 0,
-      level3Capped: false,
-      level4MonthCents: 0,
-      level4Capped: false
+      level3Capped: false
     }, { transaction });
 
     // Leonie: 1 direct (Andre Jr)
@@ -325,7 +316,6 @@ async function seedTestReferrals() {
       level1Count: 1,
       level2Count: 1,
       level3Count: 1,
-      level4Count: 1,
       totalEarnedCents: 0,
       totalPaidCents: 0,
       pendingCents: 0,
@@ -337,9 +327,7 @@ async function seedTestReferrals() {
       level2MonthCents: 0,
       level2Capped: false,
       level3MonthCents: 0,
-      level3Capped: false,
-      level4MonthCents: 0,
-      level4Capped: false
+      level3Capped: false
     }, { transaction });
 
     // Andre Jr: 1 direct (HD)
@@ -350,7 +338,6 @@ async function seedTestReferrals() {
       level1Count: 1,
       level2Count: 1,
       level3Count: 1,
-      level4Count: 0,
       totalEarnedCents: 0,
       totalPaidCents: 0,
       pendingCents: 0,
@@ -362,9 +349,7 @@ async function seedTestReferrals() {
       level2MonthCents: 0,
       level2Capped: false,
       level3MonthCents: 0,
-      level3Capped: false,
-      level4MonthCents: 0,
-      level4Capped: false
+      level3Capped: false
     }, { transaction });
 
     // HD: 1 direct (Neil)
@@ -375,7 +360,6 @@ async function seedTestReferrals() {
       level1Count: 1,
       level2Count: 1,
       level3Count: 0,
-      level4Count: 0,
       totalEarnedCents: 0,
       totalPaidCents: 0,
       pendingCents: 0,
@@ -387,9 +371,7 @@ async function seedTestReferrals() {
       level2MonthCents: 0,
       level2Capped: false,
       level3MonthCents: 0,
-      level3Capped: false,
-      level4MonthCents: 0,
-      level4Capped: false
+      level3Capped: false
     }, { transaction });
 
     // Neil: 1 direct (Denise)
@@ -400,7 +382,6 @@ async function seedTestReferrals() {
       level1Count: 1,
       level2Count: 0,
       level3Count: 0,
-      level4Count: 0,
       totalEarnedCents: 0,
       totalPaidCents: 0,
       pendingCents: 0,
@@ -412,9 +393,7 @@ async function seedTestReferrals() {
       level2MonthCents: 0,
       level2Capped: false,
       level3MonthCents: 0,
-      level3Capped: false,
-      level4MonthCents: 0,
-      level4Capped: false
+      level3Capped: false
     }, { transaction });
 
     // Denise: 0 referrals (end of chain)
@@ -425,7 +404,6 @@ async function seedTestReferrals() {
       level1Count: 0,
       level2Count: 0,
       level3Count: 0,
-      level4Count: 0,
       totalEarnedCents: 0,
       totalPaidCents: 0,
       pendingCents: 0,
@@ -437,9 +415,7 @@ async function seedTestReferrals() {
       level2MonthCents: 0,
       level2Capped: false,
       level3MonthCents: 0,
-      level3Capped: false,
-      level4MonthCents: 0,
-      level4Capped: false
+      level3Capped: false
     }, { transaction });
 
     console.log('✅ Stats created for all users');
@@ -455,8 +431,8 @@ async function seedTestReferrals() {
     console.log('    └── Leonie Botes (L1 of Andre)');
     console.log('          └── Andre Jr Botes (L1 of Leonie, L2 of Andre)');
     console.log('                └── HD Botes (L1 of Andre Jr, L2 of Leonie, L3 of Andre)');
-    console.log('                      └── Neil Botes (L1 of HD, L2 of Andre Jr, L3 of Leonie, L4 of Andre)');
-    console.log('                            └── Denise Botes (L1 of Neil, L2 of HD, L3 of Andre Jr, L4 of Leonie)');
+    console.log('                      └── Neil Botes (L1 of HD, L2 of Andre Jr, L3 of Leonie)');
+    console.log('                            └── Denise Botes (L1 of Neil, L2 of HD, L3 of Andre Jr)');
     console.log('');
     console.log('💡 Now when any user makes a transaction, their referral chain will earn commissions!');
     console.log('');

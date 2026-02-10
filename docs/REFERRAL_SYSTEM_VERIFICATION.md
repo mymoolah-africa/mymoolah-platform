@@ -29,8 +29,7 @@ REFERRAL_SIGNUP_URL=https://bit.ly/3YhGGlq
 - [x] 5 database migrations created
 - [x] 5 Sequelize models with associations
 - [x] 2 core services (referral, earnings)
-- [x] Commission structure: 4%/3%/2%/1%
-- [x] Monthly caps: Disabled for UAT testing
+- [x] Commission structure: 5%/3%/2% (3 levels, no caps)
 
 ### **Phase 2: Transaction Integration** ✅ COMPLETE
 - [x] Voucher purchase hook (`services/productPurchaseService.js`)
