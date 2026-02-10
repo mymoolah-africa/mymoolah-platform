@@ -1,37 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-02-10 - Mobile Store Deployment Plan (Documentation) 📋
+## 2026-02-02 - 📱 NFC Deposit Implementation Plan (Phase 1) — Halo Dot (v2.10.0) ✅
 
 ### **Session Overview**
-Documented comprehensive plan for deploying MyMoolah to Google Play and Apple App Store as native apps.
+Created comprehensive, implementation-ready NFC deposit plan using Halo Dot (Halo.Link/Halo.Go) SoftPOS. Phase 1: deposits only (no virtual card). Phase 2: virtual debit card deferred until Standard Bank issues virtual cards.
 
 ### **Changes**
-- **New**: `docs/MOBILE_STORE_DEPLOYMENT_PLAN.md` - Full deployment plan including:
-  - Capacitor shell strategy, environment config, Zero-Rated (FreeData) optimization
-  - Banking-grade security (biometrics, SSL pinning, secure storage)
-  - MMTP alignment review, gaps and adjustments, phased roadmap
-  - Store requirements (Apple, Google, banking compliance)
-  - Relevant file paths and next steps
-- **Status**: Documented for future implementation; to be revisited
+- **New plan**: `docs/NFC_DEPOSIT_IMPLEMENTATION_PLAN.md` — Full Phase 1 implementation guide with Halo Dot Intent API, data models, services, API endpoints, frontend flow, security, testing, and checklist.
+- **Updated**: `docs/integrations/StandardBankNFC.md` — Phase 1/2 split; Halo Dot as selected vendor; links to Merchant Portal and implementation plan.
+- **Env template**: Added NFC/Halo Dot section (NFC_DEPOSIT_ENABLED, HALO_DOT_*, limits, LEDGER_ACCOUNT_NFC_FLOAT).
 
----
+### **Key Decisions**
+- **Halo.Link** recommended for Phase 1 (no PCI cert needed; app-to-app via Intents/Deeplinking).
+- **Deposit flow**: Backend creates intent via Halo API → App launches Halo.Go → User taps card → App confirms to backend → Wallet credited.
+- **Settlement**: T+1/T+2 to MyMoolah Treasury (Standard Bank).
 
-## 2026-02-02 - Referral 3-Level Schema, No Caps ✅
-
-### **Session Overview**
-Referral system simplified from 4 levels to 3 levels with no monthly caps. Level 4 was UAT-only and removed entirely.
-
-### **Changes**
-- **Commission structure**: Level 1: 5%, Level 2: 3%, Level 3: 2% (total 10%). No caps.
-- **Database**: Migration `20260202_03_referral_3_levels_remove_l4.js` removes level_4_user_id from referral_chains; level_4_count, level_4_month_cents, level_4_capped from user_referral_stats; deletes referral_earnings WHERE level=4; CHECK constraint to level 1-3.
-- **Services**: referralEarningsService, referralService: 3-level chains, no caps, rates 5/3/2%.
-- **Models**: ReferralChain, UserReferralStats, ReferralEarning updated for 3 levels.
-- **Frontend**: ReferralPage (components + pages): 3 levels, 5/3/2%, "3 levels deep".
-- **Dashboard 15%**: Left as-is (future Platinum tier).
-- **Scripts**: Removed create-missing-l4-earning-andre.js; updated add-referral-knowledge-to-ai, seed-test-referrals, seed-support-knowledge-base, fix-andre-month-earned, check-referral-status, check-andre-referral-stats, check-neil-andre-referral for 3-level.
-
-### **Restart Required**
-- Backend server after migration.
+### **Next Steps**
+- Register on Halo Merchant Portal; obtain Merchant ID and API Key.
+- Implement backend (haloDotClient, nfcDepositService) and migrations.
+- Implement frontend "Tap to Deposit" flow.
 
 ---
 

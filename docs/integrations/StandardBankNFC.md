@@ -1,8 +1,9 @@
 # NFC Deposits & Payments Implementation Plan
 
-**Last Updated**: January 24, 2026  
-**Version**: 1.0.0  
-**Status**: ✅ **PLAN COMPLETE** | ⏳ **AWAITING ENTITLEMENTS**
+**Last Updated**: February 2, 2026  
+**Version**: 2.0.0  
+**Status**: ✅ **PHASE 1 READY** | ⏳ **PHASE 2 AWAITING VIRTUAL CARDS**  
+**SoftPOS Vendor**: Halo Dot (Halo.Link / Halo.Go)
 
 ---
 
@@ -10,13 +11,18 @@
 
 Design and implement banking-grade NFC deposits (SoftPOS) and NFC payments (tokenized virtual card) with Standard Bank T-PPP, fully compliant with PCI/MPoC/CPoC and Mojaloop ledger flows.
 
+**Phase 1** (deposits only): ✅ **Halo Dot selected** — Implement tap-to-deposit using Halo.Link/Halo.Go. No virtual card needed. See `docs/NFC_DEPOSIT_IMPLEMENTATION_PLAN.md` for full implementation.
+
+**Phase 2** (later): Virtual debit card for POS payments — deferred until Standard Bank issues virtual cards.
+
 ---
 
 ## ⚠️ **Critical Compliance & Security**
 
 ### **Brutal Gap Check (Must-fix before build)**
 - **No Web NFC**: Browser-only NFC is non-compliant. Must use certified SoftPOS kernel (Android) and Apple Tap to Pay API (iOS).
-- **Prerequisites**: Need issuing + acquiring agreements, MPoC/CPoC evidence, Apple/Google issuer provisioning entitlements, and Standard Bank (T-PPP) sandbox keys before coding.
+- **Phase 1**: Halo.Link/Halo.Go handles PCI compliance; no PCI cert needed for MyMoolah.
+- **Phase 2**: Need issuing + acquiring agreements, MPoC/CPoC evidence, Apple/Google issuer provisioning entitlements, and Standard Bank (T-PPP) sandbox keys.
 - **Ledger Alignment**: All NFC events must map to existing double-entry patterns and ISO8583/ISO20022 semantics. No parallel balance logic.
 - **Data Protection**: No PAN/CVV storage; only tokens/opaque data. All webhooks must be idempotent and signed.
 
@@ -24,20 +30,22 @@ Design and implement banking-grade NFC deposits (SoftPOS) and NFC payments (toke
 
 ## 🏗️ **Target Architecture**
 
-### **1. Inbound NFC Deposits (SoftPOS)**
-- **Flow**: SoftPOS kernel (Android) / Tap to Pay on iPhone (iOS) → Standard Bank acquiring → MyMoolah NFC callback API → wallet ledger credit.
-- **Ledger**: T-PPP main float debit; User wallet credit.
-- **UX**: Native terminal app triggered via deep link from PWA.
+### **1. Inbound NFC Deposits (Phase 1) — Halo Dot**
+- **Vendor**: Halo Dot (Halo.Link / Halo.Go) — [docs](https://docs.halodot.io/), [Merchant Portal](https://go.merchantportal.prod.haloplus.io/)
+- **Flow**: MyMoolah backend creates intent via Halo API → App launches Halo.Go via intent/deeplink → User taps card → Halo processes → App reports result to backend → NFCDepositService credits wallet + ledger.
+- **Settlement**: T+1/T+2 to MyMoolah Treasury (Standard Bank).
+- **Ledger**: NFC float debit; User wallet credit.
+- **UX**: Native/PWA/TWA; Halo.Go/Halo.Link app required on device.
 
-### **2. Outbound NFC Payments (Virtual Card)**
+### **2. Outbound NFC Payments (Phase 2 — Deferred)**
 - **Flow**: MyMoolah issues virtual card via T-PPP → push provisioning to Apple Pay/Google Wallet → POS auth → Standard Bank issuer webhook → MyMoolah auth service → approval/decline → settlement.
 - **Auth Service**: Checks balance/limits, locks funds, approves/declines with reason codes.
 - **Ledger**: Debit wallet, credit settlement/issuer clearing.
+- **Prerequisite**: Standard Bank virtual card issuance.
 
 ### **3. Bridge Apps**
-- **Android**: Native "Secure Terminal" app embedding certified EMV L2/MPoC kernel.
-- **iOS**: Native companion wrapper using Tap to Pay on iPhone.
-- **PWA**: Used for orchestration and UX only, not card handling.
+- **Phase 1**: Halo.Go/Halo.Link (no MyMoolah native app needed; PWA/TWA launches Halo via intent/deeplink).
+- **Phase 2**: Android MPoC terminal app; iOS Tap to Pay wrapper with deep links from PWA/TWA.
 
 ---
 
@@ -89,10 +97,17 @@ Design and implement banking-grade NFC deposits (SoftPOS) and NFC payments (toke
 
 ## 🚀 **High-Level Roadmap**
 
-1.  **Legal & Entitlements**: Secure T-PPP agreements and Apple/Google entitlements.
-2.  **Models & Migrations**: Implement database changes and transaction enums.
-3.  **Backend Services**: Build core NFC, Card, and Auth services.
-4.  **API Contracts**: Define and secure webhooks (mTLS/HMAC).
-5.  **Mobile Bridges**: Develop Android MPoC and iOS Tap to Pay wrappers.
-6.  **Wallet UI**: Implement issuing and tap-to-deposit UX.
-7.  **Certification**: Run full test suites and obtain bank signoff.
+### Phase 1 — NFC Deposits (Current)
+1. **Halo Dot Onboarding**: Register on Merchant Portal; obtain Merchant ID and API Key.
+2. **Models & Migrations**: `NfcDepositIntent`, `NfcCallbackLog`; add `nfc_deposit` to Transaction enum.
+3. **Backend**: `haloDotClient`, `nfcDepositService`, `/api/v1/nfc/deposit/create`, `/api/v1/nfc/deposit/confirm`.
+4. **Wallet UI**: Tap-to-deposit flow; intent/deeplink to Halo.Go.
+5. **Full plan**: See `docs/NFC_DEPOSIT_IMPLEMENTATION_PLAN.md`.
+
+### Phase 2 — Virtual Card (Deferred)
+1. **Legal & Entitlements**: Secure T-PPP agreements and Apple/Google entitlements.
+2. **Models & Migrations**: VirtualCard, SoftPosDevice, NfcAuthLog.
+3. **Backend Services**: VirtualCardService, CardAuthService, provisioning controller.
+4. **API Contracts**: Define and secure issuer webhooks (mTLS/HMAC).
+5. **Mobile Bridges**: Android MPoC and iOS Tap to Pay wrappers.
+6. **Certification**: Run full test suites and obtain bank signoff.

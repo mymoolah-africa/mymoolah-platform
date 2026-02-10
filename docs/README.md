@@ -853,7 +853,8 @@ npm run dev
 
 ### **📚 Documentation**
 - **Consolidated Development Guide**: **MANDATORY** reading for all developers (`docs/DEVELOPMENT_GUIDE.md`)
-- **NFC Implementation Plan**: Banking-grade NFC deposit/payment strategy (`docs/integrations/StandardBankNFC.md`)
+- **NFC Deposit Implementation Plan**: Phase 1 tap-to-deposit with Halo Dot (`docs/NFC_DEPOSIT_IMPLEMENTATION_PLAN.md`)
+- **NFC Integration Summary**: Banking-grade NFC deposit/payment strategy (`docs/integrations/StandardBankNFC.md`)
 - **Database Connection Guide**: **MANDATORY** reading for database/migration work (`docs/DATABASE_CONNECTION_GUIDE.md`)
 - **API Documentation**: Comprehensive endpoint documentation (`docs/API_DOCUMENTATION.md`)
 - **Security Documentation**: Security features and compliance (`docs/SECURITY.md`)
