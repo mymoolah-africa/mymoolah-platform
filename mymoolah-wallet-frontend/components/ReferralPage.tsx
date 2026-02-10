@@ -355,7 +355,59 @@ export function ReferralPage() {
         <Gift style={{ width: '32px', height: '32px', color: '#16a34a' }} />
       </div>
 
-      {/* Referrals by Level */}
+      {/* Invite via SMS */}
+      <div style={{
+        backgroundColor: '#fff',
+        border: '1px solid #e5e7eb',
+        borderRadius: '12px',
+        padding: '16px',
+        marginBottom: '16px'
+      }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <MessageCircle size={20} />
+          Invite via SMS
+        </h3>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input
+            type="tel"
+            placeholder="Enter phone number"
+            value={invitePhone}
+            onChange={(e) => setInvitePhone(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '12px',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+              fontSize: '14px',
+              fontFamily: 'Montserrat, sans-serif'
+            }}
+          />
+          <button
+            onClick={handleSendInvite}
+            disabled={inviteLoading || !invitePhone.trim()}
+            style={{
+              backgroundColor: inviteLoading ? '#9ca3af' : '#2D8CCA',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '12px 20px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: inviteLoading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            {inviteLoading ? 'Sending...' : 'Send'}
+          </button>
+        </div>
+        {inviteSuccess && (
+          <p style={{ marginTop: '8px', fontSize: '12px', color: '#16a34a' }}>{inviteSuccess}</p>
+        )}
+        {inviteError && (
+          <p style={{ marginTop: '8px', fontSize: '12px', color: '#dc2626' }}>{inviteError}</p>
+        )}
+      </div>
+
+      {/* Your Network */}
       <div style={{
         backgroundColor: '#fff',
         border: '1px solid #e5e7eb',
@@ -409,58 +461,6 @@ export function ReferralPage() {
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Send Invite */}
-      <div style={{
-        backgroundColor: '#fff',
-        border: '1px solid #e5e7eb',
-        borderRadius: '12px',
-        padding: '16px',
-        marginBottom: '16px'
-      }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#1f2937', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <MessageCircle size={20} />
-          Invite via SMS
-        </h3>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <input
-            type="tel"
-            placeholder="Enter phone number"
-            value={invitePhone}
-            onChange={(e) => setInvitePhone(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '12px',
-              border: '1px solid #e5e7eb',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontFamily: 'Montserrat, sans-serif'
-            }}
-          />
-          <button
-            onClick={handleSendInvite}
-            disabled={inviteLoading || !invitePhone.trim()}
-            style={{
-              backgroundColor: inviteLoading ? '#9ca3af' : '#2D8CCA',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '12px 20px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: inviteLoading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {inviteLoading ? 'Sending...' : 'Send'}
-          </button>
-        </div>
-        {inviteSuccess && (
-          <p style={{ marginTop: '8px', fontSize: '12px', color: '#16a34a' }}>{inviteSuccess}</p>
-        )}
-        {inviteError && (
-          <p style={{ marginTop: '8px', fontSize: '12px', color: '#dc2626' }}>{inviteError}</p>
-        )}
       </div>
 
       {/* How it works */}
