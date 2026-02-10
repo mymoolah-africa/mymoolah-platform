@@ -161,6 +161,16 @@ export function TransactPage() {
           badgeType: 'warning'
         },
         {
+          id: 'tap-to-add-money',
+          title: 'Tap to Add Money',
+          description: 'Tap your card at a store to add money to your wallet',
+          icon: <CreditCard className="w-6 h-6" />,
+          route: '/tap-to-add-money',
+          available: true,
+          badge: 'New',
+          badgeType: 'info'
+        },
+        {
           id: 'send-money',
           title: 'Pay Recipient',
           description: 'Transfer to MyMoolah users or bank accounts',
