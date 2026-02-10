@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   Copy, 
-  Share2, 
   TrendingUp, 
   Gift, 
   ChevronRight,
@@ -76,28 +75,6 @@ export function ReferralPage() {
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
-    }
-  };
-
-  // Share via native share or WhatsApp
-  const handleShare = async () => {
-    if (!dashboard) return;
-    const shareText = `Join MyMoolah with my referral code: ${dashboard.referralCode}\n\nSign up and start earning! ${dashboard.shareUrl}`;
-    
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Join MyMoolah',
-          text: shareText,
-          url: dashboard.shareUrl,
-        });
-      } catch (err) {
-        // User cancelled or error
-      }
-    } else {
-      // Fallback to WhatsApp
-      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-      window.open(whatsappUrl, '_blank');
     }
   };
 
@@ -273,29 +250,6 @@ export function ReferralPage() {
             {copied ? 'Copied!' : 'Copy'}
           </button>
         </div>
-        
-        {/* Share buttons */}
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-          <button
-            onClick={handleShare}
-            style={{
-              backgroundColor: '#25D366',
-              border: 'none',
-              borderRadius: '8px',
-              padding: '10px 20px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#fff',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}
-          >
-            <Share2 size={18} />
-            Share
-          </button>
-        </div>
       </div>
 
       {/* Quick Stats */}
@@ -457,7 +411,6 @@ export function ReferralPage() {
               <p style={{ fontSize: '18px', fontWeight: '700', color: '#1f2937' }}>
                 {dashboard?.stats?.referralsByLevel?.[`level${level}` as keyof typeof dashboard.stats.referralsByLevel] || 0}
               </p>
-              <p style={{ fontSize: '11px', color: '#6b7280' }}>referrals</p>
             </div>
           </div>
         ))}

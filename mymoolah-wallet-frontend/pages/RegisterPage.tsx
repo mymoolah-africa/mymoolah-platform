@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -36,6 +36,7 @@ import {
   Info,
   CheckCircle,
   CreditCard,
+  Gift,
 } from "lucide-react";
 // Local validators for ID and phone/email
 
@@ -222,6 +223,7 @@ const validateIdentifier = (
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register, isLoading } = useAuth();
 
   // Form state
@@ -233,7 +235,16 @@ export function RegisterPage() {
     email: "",
     password: "",
     confirmPassword: "",
+    referralCode: "",
   });
+
+  // Prefill referral code from URL (?ref= or ?referralCode=)
+  useEffect(() => {
+    const ref = searchParams.get('ref') || searchParams.get('referralCode') || '';
+    if (ref) {
+      setFormData((prev) => ({ ...prev, referralCode: ref.trim().toUpperCase() }));
+    }
+  }, [searchParams]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] =
     useState(false);
@@ -296,6 +307,7 @@ export function RegisterPage() {
           | "phone"
           | "account"
           | "username",
+        referralCode: formData.referralCode?.trim() || undefined,
       });
       navigate("/dashboard");
     } catch (err) {
@@ -992,6 +1004,54 @@ export function RegisterPage() {
                       </span>
                     </div>
                   )}
+                </div>
+
+                {/* Referral Code (optional) */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="referralCode"
+                    style={{
+                      fontFamily: "Montserrat, sans-serif",
+                      fontSize: "var(--mobile-font-base)",
+                      fontWeight: "var(--font-weight-medium)",
+                      color: "#374151",
+                    }}
+                  >
+                    Referral Code <span className="text-gray-400 font-normal">(optional)</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="referralCode"
+                      type="text"
+                      placeholder="e.g. REF-F31FC6"
+                      value={formData.referralCode}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          referralCode: e.target.value.trim().toUpperCase(),
+                        }))
+                      }
+                      className="bg-white border-gray-200 focus:border-[#86BE41] focus:ring-[#86BE41] pl-12"
+                      style={{
+                        height: "var(--mobile-touch-target)",
+                        fontFamily: "Montserrat, sans-serif",
+                        fontSize: "var(--mobile-font-base)",
+                        fontWeight: "var(--font-weight-normal)",
+                        borderRadius: "var(--mobile-border-radius)",
+                        letterSpacing: "0.5px",
+                      }}
+                    />
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                      <Gift className="w-4 h-4 text-gray-400" />
+                    </div>
+                  </div>
+                  <p style={{
+                    fontFamily: "Montserrat, sans-serif",
+                    fontSize: "var(--mobile-font-small)",
+                    color: "#6b7280",
+                  }}>
+                    Got a code from a friend? Enter it to earn rewards together.
+                  </p>
                 </div>
 
                 {/* Submit Button */}

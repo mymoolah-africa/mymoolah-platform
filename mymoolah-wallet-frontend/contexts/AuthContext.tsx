@@ -44,6 +44,7 @@ interface RegistrationData {
   email: string;
   password: string;
   identifierType: 'phone' | 'account' | 'username';
+  referralCode?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -542,7 +543,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             phoneNumber: cleanPhoneNumber, // FIXED: Use phoneNumber field for backend
             password: registrationData.password,
             idType: registrationData.idType,
-            idNumber: registrationData.idNumber
+            idNumber: registrationData.idNumber,
+            ...(registrationData.referralCode && { referralCode: registrationData.referralCode })
           };
         } else {
           // For account numbers and usernames, send as identifier
@@ -554,7 +556,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             identifierType: registrationData.identifierType,
             password: registrationData.password,
             idType: registrationData.idType,
-            idNumber: registrationData.idNumber
+            idNumber: registrationData.idNumber,
+            ...(registrationData.referralCode && { referralCode: registrationData.referralCode })
           };
         }
 
