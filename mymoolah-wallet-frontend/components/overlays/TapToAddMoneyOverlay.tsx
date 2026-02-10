@@ -23,9 +23,9 @@ import {
 
 type Step = 'amount' | 'tap' | 'confirm' | 'success' | 'error';
 
-const QUICK_AMOUNTS = [50, 200, 500, 1000, 3000];
+const QUICK_AMOUNTS = [50, 200, 500, 1000, 3000, 5000, 8000];
 const MIN_AMOUNT = 1;
-const MAX_AMOUNT = 5000;
+const MAX_AMOUNT = 10000;
 
 export function TapToAddMoneyOverlay() {
   const navigate = useNavigate();
@@ -165,13 +165,14 @@ export function TapToAddMoneyOverlay() {
               onChange={(e) => handleAmountChange(e.target.value)}
               className="mb-4"
             />
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="grid grid-cols-4 gap-3 mb-4">
               {QUICK_AMOUNTS.map((val) => (
                 <Button
                   key={val}
                   variant="outline"
                   size="sm"
                   onClick={() => handleQuickAmount(val)}
+                  className="min-h-[44px]"
                 >
                   R{val}
                 </Button>
