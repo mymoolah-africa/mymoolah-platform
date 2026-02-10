@@ -1,5 +1,20 @@
 require('dotenv').config();
 
+// Use Cloud SQL Proxy when DATABASE_URL points to direct IP (avoids ETIMEDOUT in Codespaces)
+const dbUrl = process.env.DATABASE_URL || '';
+if (dbUrl && /@(?!127\.0\.0\.1)\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+/.test(dbUrl)) {
+  try {
+    const { getUATDatabaseURL } = require('./db-connection-helper');
+    process.env.DATABASE_URL = getUATDatabaseURL();
+    console.log('🔌 Using Cloud SQL Proxy (127.0.0.1:6543)');
+  } catch (e) {
+    console.error('❌ Direct DB connection will timeout from Codespaces. Start proxy first:');
+    console.error('   ./scripts/ensure-proxies-running.sh');
+    console.error('   Then run this script again.');
+    process.exit(1);
+  }
+}
+
 const { AiKnowledgeBase } = require('../models');
 
 const initialKnowledgeBase = [
