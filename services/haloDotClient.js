@@ -38,10 +38,14 @@ async function createIntentTransaction({ merchantId: mId, paymentReference, amou
   }
 
   const url = new URL(`${kernelBaseUrl}/consumer/intentTransaction`);
+  const amountNum = Number(amount);
+  if (isNaN(amountNum)) {
+    throw Object.assign(new Error('Amount must be a valid number'), { code: 'HALO_API_ERROR' });
+  }
   const body = JSON.stringify({
     merchantId: String(mId || merchantId),
     paymentReference: String(paymentReference),
-    amount: String(amount),
+    amount: amountNum,
     timestamp: String(timestamp),
     currencyCode: String(currencyCode || 'ZAR'),
   });
@@ -83,10 +87,11 @@ async function getDeepLink(params) {
   }
 
   const url = new URL(`${kernelBaseUrl}/consumer/qrCode`);
+  const amountNum = Number(params.amount);
   const body = JSON.stringify({
     merchantId: String(params.merchantId || merchantId),
     paymentReference: String(params.paymentReference),
-    amount: String(params.amount),
+    amount: isNaN(amountNum) ? 0 : amountNum,
     timestamp: String(params.timestamp),
     currencyCode: String(params.currencyCode || 'ZAR'),
   });

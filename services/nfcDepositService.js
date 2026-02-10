@@ -80,7 +80,7 @@ async function createDepositIntent(userId, amount, currencyCode = 'ZAR') {
   const { consumerTransactionId, jwt } = await haloDotClient.createIntentTransaction({
     merchantId: haloDotClient.merchantId,
     paymentReference: msisdnForBank,
-    amount: amountNum.toFixed(2),
+    amount: amountNum,
     timestamp,
     currencyCode,
   });
