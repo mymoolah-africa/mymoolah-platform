@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-10 14:00  
-**Latest Feature**: NFC Tap to Add Money — full implementation (Option A)  
-**Document Version**: 2.10.0  
+**Last Updated**: 2026-02-10 16:00  
+**Latest Feature**: NFC Tap to Add Money — refinements & fixes  
+**Document Version**: 2.10.1  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -51,8 +51,8 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 10, 2026 - 14:00)**
-**NFC Tap to Add Money — Full Implementation (Option A)** - Implemented complete NFC deposit feature: backend (migrations NfcDepositIntent/NfcCallbackLog, haloDotClient, nfcDepositService, controller, routes), frontend (TapToAddMoneyOverlay, nfcService, route /tap-to-add-money, BottomNavigation, WalletSettings). Named "Tap to Add Money" for limited-education market (VodaPay "Add money" pattern). MSISDN in paymentReference for Standard Bank T-PPP allocation. Entry: direct URL, Wallet Settings quick access. Session log: `docs/session_logs/2026-02-10_1400_nfc-tap-to-add-money-implementation.md`.
+### **Latest Achievement (February 10, 2026 - 16:00)**
+**NFC Tap to Add Money — Refinements & Fixes** - Fixed frontend duplicate CreditCard import, added Tap to Add Money card to Transact page, fixed NfcDepositIntent/user_id model mismatch, Halo API amount-as-number (E103), ECONNRESET troubleshooting in DB guide, copy updates (Google Pay/Apple Pay), quick amounts R50-R8000 with grid layout, max R10k. Rule 9A: sweep scripts before creating. Knowledge base updated with Tap to Add Money and last 3 weeks. Session logs: `docs/session_logs/2026-02-10_1400_nfc-tap-to-add-money-implementation.md`, `docs/session_logs/2026-02-10_1550_nfc-tap-to-add-money-refinements.md`.
 
 ### **Previous Achievement (February 02, 2026)**
 **NFC Deposit Implementation Plan (Phase 1) — Halo Dot** - Created comprehensive, implementation-ready plan for NFC tap-to-deposit using Halo Dot (Halo.Link/Halo.Go). Phase 1: deposits only (no virtual card). Full plan: `docs/NFC_DEPOSIT_IMPLEMENTATION_PLAN.md`. Updated `docs/integrations/StandardBankNFC.md` with Phase 1/2 split and Halo Dot vendor. Added NFC env vars to `env.template`. Phase 2 (virtual debit card for POS) deferred until Standard Bank issues virtual cards.
