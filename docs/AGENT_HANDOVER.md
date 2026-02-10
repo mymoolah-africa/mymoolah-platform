@@ -307,13 +307,14 @@ When errors occur, follow the **5-step self-annealing loop**:
 
 Before proceeding with ANY change, pass these 4 gates:
 
-#### **Gate 1: Documentation Check** ✅
+#### **Gate 1: Documentation & Scripts Check** ✅
 - [ ] Read relevant `docs/` files before coding
+- [ ] **MUST sweep `scripts/` first** — use `list_dir`, `grep`, or `codebase_search` before creating ANY new script. Verify no existing script already fulfills the same purpose.
 - [ ] Check if pattern exists in `scripts/` or `services/`
 - [ ] Review recent `session_logs/` for similar work
 - [ ] Understand business context from handover docs
 
-**Why**: Prevents reinventing wheels and breaking working patterns.
+**Why**: Prevents reinventing wheels and breaking working patterns. 200+ scripts exist; duplication causes drift.
 
 #### **Gate 2: Schema/Migration Safety** ✅
 - [ ] For database work: Read `docs/DATABASE_CONNECTION_GUIDE.md`

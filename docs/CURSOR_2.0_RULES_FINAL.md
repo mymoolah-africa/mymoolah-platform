@@ -204,6 +204,14 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 - **Migrations vs seeding (UAT/Staging)**: Run **migrations first** when you add or change database schema (new tables, columns, constraints). Use `./scripts/run-migrations-master.sh [uat|staging]`. Run **seed scripts only after** the relevant migrations have been run for that environment—migrations create/update the schema, seeders insert data. Order is always: migrations → then seed (if needed). After any schema change, run migrations on the target env before seeding or deploying.
 - Provide complete file contents when sharing code. Include code examples, API docs, migration procedures, testing instructions.
 
+### **Rule 9A: Scripts — Sweep Before Creating (MANDATORY)**
+
+- **MUST ALWAYS FIRST sweep the `scripts/` directory** before creating any new script.
+- Use `list_dir`, `grep`, or `codebase_search` to verify no existing script already fulfills the same purpose.
+- **NEVER** create a new script without first checking for existing scripts that could be reused or extended.
+- Project has 200+ scripts; duplication causes drift and maintenance burden.
+- If an existing script is close but not perfect: extend or parameterize it rather than creating a duplicate.
+
 ### **Rule 10: Testing Requirements (REQUIRED)**
 
 - Author new tests alongside features (unit/integration/E2E). Provide sample `.env` and seed data. Clear run commands for local and cloud.
@@ -273,7 +281,7 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 
 **ZERO TOLERANCE FOR SHORTCUTS**: NEVER use workarounds, quick fixes, or compromises when encountering errors. ALWAYS implement proper banking-grade solutions with migrations, proper enum values, and correct data models. Mojaloop/ISO 20022 compliance is mandatory. Data integrity is non-negotiable. See Rule 6A and docs/ZERO_SHORTCUTS_POLICY.md for details.
 
-GitHub is source of truth. Documentation is mandatory. Session logging is required for continuity and MUST be done by AI agent when work is complete (create, fill in, commit locally) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. **WORKFLOW**: AI agent develops locally → **commits AND pushes to main (agent MUST do both every time)** → user pulls in Codespaces → user tests. **Agent must never leave push to the user.** **IMPORTANT**: Any rules added to Cursor Settings must immediately be added to this .md file to keep them in sync.
+GitHub is source of truth. Documentation is mandatory. **Scripts**: ALWAYS sweep `scripts/` first before creating any new script—verify no existing script fulfills the same purpose (Rule 9A). Session logging is required for continuity and MUST be done by AI agent when work is complete (create, fill in, commit locally) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. **WORKFLOW**: AI agent develops locally → **commits AND pushes to main (agent MUST do both every time)** → user pulls in Codespaces → user tests. **Agent must never leave push to the user.** **IMPORTANT**: Any rules added to Cursor Settings must immediately be added to this .md file to keep them in sync.
 
 **Current date**: December 22, 2025. Proceed with the user's coding request.
 
