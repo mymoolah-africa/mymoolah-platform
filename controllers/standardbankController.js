@@ -388,11 +388,66 @@ async function initiatePayShapRtp(req, res) {
   }
 }
 
+/**
+ * Deposit Notification - when money hits MM SBSA main account
+ * Reference (CID) = MSISDN → wallet to credit, or float account identifier
+ * POST /api/v1/standardbank/notification
+ */
+async function handleDepositNotification(req, res) {
+  const secret = process.env.SBSA_CALLBACK_SECRET;
+  const signature = req.headers['x-signature'] || req.headers['X-Signature'];
+
+  if (!secret) {
+    console.error('SBSA deposit notification: SBSA_CALLBACK_SECRET not configured');
+    return res.status(503).json({ error: 'Notification not configured' });
+  }
+
+  let body = req.body;
+  if (Buffer.isBuffer(req.body)) {
+    try {
+      body = JSON.parse(req.body.toString('utf8'));
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid JSON' });
+    }
+  }
+
+  const crypto = require('crypto');
+  const rawBody = typeof req.rawBody === 'string' ? req.rawBody : JSON.stringify(body);
+  if (!signature) {
+    return res.status(401).json({ error: 'Missing X-Signature' });
+  }
+  try {
+    const computed = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+    const computedBuf = Buffer.from(computed, 'hex');
+    const sigBuf = Buffer.from(signature, 'hex');
+    if (computedBuf.length !== sigBuf.length || !crypto.timingSafeEqual(computedBuf, sigBuf)) {
+      return res.status(401).json({ error: 'Invalid signature' });
+    }
+  } catch (sigErr) {
+    return res.status(401).json({ error: 'Invalid signature format' });
+  }
+
+  try {
+    const depositService = require('../services/standardbankDepositNotificationService');
+    const result = await depositService.processDepositNotification(body);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error || 'Processing failed' });
+    }
+
+    return res.status(200).json({ success: true, credited: result.credited });
+  } catch (err) {
+    console.error('SBSA deposit notification error:', err.message);
+    return res.status(500).json({ error: 'Callback processing failed' });
+  }
+}
+
 module.exports = {
   handleRppCallback,
   handleRppRealtimeCallback,
   handleRtpCallback,
   handleRtpRealtimeCallback,
+  handleDepositNotification,
   initiatePayShapRpp,
   initiatePayShapRtp,
 };

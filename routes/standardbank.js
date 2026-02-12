@@ -29,6 +29,12 @@ router.post('/payshap/rpp', auth, standardbankController.initiatePayShapRpp);
 // RTP initiation (Request Money)
 router.post('/payshap/rtp', auth, standardbankController.initiatePayShapRtp);
 
+// Deposit notification (when money hits MM SBSA main account; reference = CID = MSISDN)
+router.post('/notification', rawBodyMiddleware, (req, res, next) => {
+  req.rawBody = req.body.toString('utf8');
+  parseJsonBody(req, res, next);
+}, standardbankController.handleDepositNotification);
+
 // Callbacks (no auth - validated via x-GroupHeader-Hash)
 router.post('/callback', rawBodyMiddleware, parseJsonBody, standardbankController.handleRppCallback);
 router.post('/realtime-callback', rawBodyMiddleware, parseJsonBody, standardbankController.handleRppRealtimeCallback);

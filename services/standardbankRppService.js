@@ -106,21 +106,19 @@ async function initiateRppPayment(params) {
 
     await transaction.commit();
 
-    // Ledger posting (non-blocking)
+    // Ledger posting (non-blocking) - Debit Client Float, Credit Bank (outflow from MM SBSA main account)
     try {
       const ledgerService = require('./ledgerService');
       const clientFloatCode = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
-      const sbsaFloatCode = process.env.LEDGER_ACCOUNT_SBSA_PAYSHAP_FLOAT;
-      if (sbsaFloatCode) {
-        await ledgerService.postJournalEntry({
-          reference: `SBSA-RPP-${merchantTransactionId}`,
-          description: `PayShap RPP outbound: ${merchantTransactionId}`,
-          lines: [
-            { accountCode: clientFloatCode, dc: 'debit', amount: numAmount, memo: 'Wallet debit (RPP)' },
-            { accountCode: sbsaFloatCode, dc: 'credit', amount: numAmount, memo: 'SBSA float credit (RPP)' },
-          ],
-        });
-      }
+      const bankCode = process.env.LEDGER_ACCOUNT_BANK || '1100-01-01';
+      await ledgerService.postJournalEntry({
+        reference: `SBSA-RPP-${merchantTransactionId}`,
+        description: `PayShap RPP outbound: ${merchantTransactionId}`,
+        lines: [
+          { accountCode: clientFloatCode, dc: 'debit', amount: numAmount, memo: 'Wallet debit (RPP)' },
+          { accountCode: bankCode, dc: 'credit', amount: numAmount, memo: 'Bank outflow (RPP)' },
+        ],
+      });
     } catch (ledgerErr) {
       console.warn('SBSA RPP ledger posting skipped:', ledgerErr.message);
     }

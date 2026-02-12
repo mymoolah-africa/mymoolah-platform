@@ -7,6 +7,13 @@
 
 **Implementation**: See `docs/SBSA_PAYSHAP_UAT_GUIDE.md` for UAT setup and checklist.
 
+### **Business Model (vs Peach)**
+
+- **SBSA** = sponsor bank; the **MyMoolah SBSA bank account** is the main current account (revenue account)
+- **No prefunded float** – all monies flow through the MM SBSA main account
+- **Deposit notification**: Reference (CID) = MSISDN → wallet to credit
+- **Ledger**: Uses `LEDGER_ACCOUNT_BANK` (1100-01-01), not a separate float
+
 ---
 
 ## 📋 **EXECUTIVE SUMMARY**

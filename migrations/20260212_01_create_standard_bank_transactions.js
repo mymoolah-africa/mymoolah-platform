@@ -37,7 +37,7 @@ module.exports = {
       type: {
         type: Sequelize.STRING(16),
         allowNull: false,
-        comment: 'rpp or rtp',
+        comment: 'rpp, rtp, or deposit',
       },
       direction: {
         type: Sequelize.STRING(16),

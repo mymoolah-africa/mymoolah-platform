@@ -127,7 +127,8 @@ MOBILEMART_TOKEN_URL=https://uat.fulcrumswitch.com/connect/token
 MOBILEMART_SCOPE=api
 
 # Standard Bank PayShap (SBSA RPP/RTP) - UAT
-# Set STANDARDBANK_PAYSHAP_ENABLED=true when OneHub credentials are available
+# SBSA = sponsor bank; MM SBSA main account = operating account (no prefunded float)
+# Uses LEDGER_ACCOUNT_BANK for RPP/RTP/deposit ledger posting
 # See docs/SBSA_PAYSHAP_UAT_GUIDE.md
 # STANDARDBANK_PAYSHAP_ENABLED=false
 # SBSA_PING_CLIENT_ID=

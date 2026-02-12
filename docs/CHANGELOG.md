@@ -1,5 +1,18 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-12 - 🏦 SBSA PayShap Business Model Correction & Deposit Notification ✅
+
+### **Session Overview**
+Corrected SBSA integration: use LEDGER_ACCOUNT_BANK (main SBSA account) instead of prefunded float; implemented deposit notification endpoint with reference resolver (CID = MSISDN → wallet).
+
+### **Changes**
+- **Ledger**: RPP/RTP use LEDGER_ACCOUNT_BANK (1100-01-01); removed LEDGER_ACCOUNT_SBSA_PAYSHAP_FLOAT
+- **Deposit notification**: POST /api/v1/standardbank/notification; reference (CID) = MSISDN or float prefix (SUP-, CLI-, SP-, RES-)
+- **Reference resolver**: standardbankDepositNotificationService.resolveReference + processDepositNotification
+- **Docs**: Business model clarifications, UAT guide updated
+
+---
+
 ## 2026-02-12 - 🏦 Standard Bank PayShap RPP & RTP UAT Implementation ✅
 
 ### **Session Overview**

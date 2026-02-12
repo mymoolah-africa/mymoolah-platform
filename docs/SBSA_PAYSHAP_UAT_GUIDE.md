@@ -13,6 +13,7 @@
    - Client Secret (for HMAC callback validation)
    - IBM Client ID and IBM Client Secret (API gateway)
 3. **Callback URLs** whitelisted:
+   - `https://<your-domain>/api/v1/standardbank/notification` (deposit notification)
    - `https://<your-domain>/api/v1/standardbank/callback`
    - `https://<your-domain>/api/v1/standardbank/realtime-callback`
    - `https://<your-domain>/api/v1/standardbank/rtp-callback`
@@ -51,8 +52,7 @@ SBSA_DEBTOR_NAME=MyMoolah Treasury
 SBSA_CREDITOR_ACCOUNT=<MMTP receiving account for RTP>
 SBSA_CREDITOR_NAME=MyMoolah Treasury
 
-# Ledger (optional)
-LEDGER_ACCOUNT_SBSA_PAYSHAP_FLOAT=1200-10-07
+# Ledger: Uses LEDGER_ACCOUNT_BANK (1100-01-01) - MM SBSA main account
 ```
 
 ---
@@ -96,12 +96,20 @@ Creditor account last digit drives outcome:
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
+| `/api/v1/standardbank/notification` | POST | X-Signature (HMAC) | Deposit notification (reference = CID = MSISDN) |
 | `/api/v1/standardbank/payshap/rpp` | POST | JWT | Initiate PayShap payment (Send Money) |
 | `/api/v1/standardbank/payshap/rtp` | POST | JWT | Initiate Request to Pay |
 | `/api/v1/standardbank/callback` | POST | x-GroupHeader-Hash | RPP batch callback |
 | `/api/v1/standardbank/realtime-callback` | POST | x-GroupHeader-Hash | RPP realtime callback |
 | `/api/v1/standardbank/rtp-callback` | POST | x-GroupHeader-Hash | RTP callback |
 | `/api/v1/standardbank/rtp-realtime-callback` | POST | x-GroupHeader-Hash | RTP realtime callback |
+
+### Deposit Notification
+
+When a deposit hits the MM SBSA main account, SBSA POSTs to `/notification`. The payload must include:
+- `transactionId` - for idempotency
+- `referenceNumber` (or `reference`, `cid`) - CID = MSISDN (wallet to credit) or float identifier (SUP-, CLI-, SP-, RES-)
+- `amount` - amount to credit
 
 ---
 
