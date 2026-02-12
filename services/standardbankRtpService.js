@@ -2,15 +2,26 @@
 
 /**
  * Standard Bank RTP Service - PayShap Request to Pay
- * Validates, builds Pain.013, calls SBSA API, credits wallet on Paid
+ * RTP is an administrative request to payer's bank; no money moves at initiation.
+ * When Paid: credits wallet (principal - fee); fee R4.00 VAT incl deducted from receipt.
  *
  * @author MyMoolah Treasury Platform
  * @date 2026-02-12
  */
 
+const { v4: uuidv4 } = require('uuid');
 const db = require('../models');
 const { buildPain013 } = require('../integrations/standardbank/builders/pain013Builder');
 const sbClient = require('../integrations/standardbank/client');
+
+const VAT_RATE = Number(process.env.VAT_RATE || 0.15);
+const FEE_MM_ZAR = Number(process.env.PAYSHAP_FEE_MM_ZAR || 4);
+
+function getFeeBreakdown(feeAmount) {
+  const vatAmount = Number(((feeAmount / (1 + VAT_RATE)) * VAT_RATE).toFixed(2));
+  const netRevenue = Number((feeAmount - vatAmount).toFixed(2));
+  return { feeAmount, vatAmount, netRevenue };
+}
 
 async function initiateRtpRequest(params) {
   const {
@@ -31,6 +42,11 @@ async function initiateRtpRequest(params) {
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
   if (!Number.isFinite(numAmount) || numAmount <= 0) {
     throw new Error('Invalid amount');
+  }
+  const feeBreakdown = getFeeBreakdown(FEE_MM_ZAR);
+  const netCredit = Number((numAmount - feeBreakdown.feeAmount).toFixed(2));
+  if (netCredit <= 0) {
+    throw new Error(`Amount must exceed fee (R${feeBreakdown.feeAmount}) - minimum request R${(feeBreakdown.feeAmount + 0.01).toFixed(2)}`);
   }
 
   const wallet = await db.Wallet.findOne({ where: { walletId } });
@@ -102,9 +118,18 @@ async function initiateRtpRequest(params) {
 
 /**
  * Credit wallet when RTP callback reports Paid
+ * Principal received minus MM fee (R4 VAT incl) = net credit to wallet
  */
 async function creditWalletOnPaid(rtpRequest, rawBody) {
-  const { walletId, amount, userId, merchantTransactionId } = rtpRequest;
+  const { walletId, amount, userId, merchantTransactionId, payerName } = rtpRequest;
+
+  const principalAmount = parseFloat(amount);
+  const feeBreakdown = getFeeBreakdown(FEE_MM_ZAR);
+  const netCredit = Number((principalAmount - feeBreakdown.feeAmount).toFixed(2));
+
+  if (netCredit <= 0) {
+    throw new Error(`RTP amount ${principalAmount} too small to cover fee ${feeBreakdown.feeAmount}`);
+  }
 
   const wallet = await db.Wallet.findOne({
     where: { walletId },
@@ -115,10 +140,10 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
   }
 
   const sequelize = db.sequelize;
-  const transaction = await sequelize.transaction();
+  const txn = await sequelize.transaction();
 
   try {
-    await wallet.credit(parseFloat(amount), 'credit', { transaction });
+    await wallet.credit(netCredit, 'credit', { transaction: txn });
 
     const sbt = await db.StandardBankTransaction.create(
       {
@@ -127,7 +152,7 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
         originalMessageId: rtpRequest.originalMessageId,
         type: 'rtp',
         direction: 'credit',
-        amount: parseFloat(amount),
+        amount: principalAmount,
         currency: rtpRequest.currency,
         referenceNumber: rtpRequest.referenceNumber,
         accountType: 'wallet',
@@ -140,28 +165,89 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
         webhookReceivedAt: new Date(),
         processedAt: new Date(),
       },
-      { transaction }
+      { transaction: txn }
     );
 
     await rtpRequest.update(
       { standardBankTransactionId: sbt.id, processedAt: new Date() },
-      { transaction }
+      { transaction: txn }
     );
 
-    await transaction.commit();
+    await db.Transaction.create(
+      {
+        transactionId: `RTP-${merchantTransactionId}`,
+        userId,
+        walletId,
+        amount: principalAmount,
+        type: 'receive',
+        status: 'completed',
+        description: `Request to Pay from ${payerName || 'payer'}`,
+        currency: rtpRequest.currency,
+        metadata: { standardBankTransactionId: sbt.id, payshapType: 'rtp', principal: principalAmount },
+      },
+      { transaction: txn }
+    );
 
-    // Ledger posting (non-blocking) - Debit Bank (inflow to MM SBSA main account), Credit Client Float
+    await db.Transaction.create(
+      {
+        transactionId: `RTP-FEE-${merchantTransactionId}`,
+        userId,
+        walletId,
+        amount: -feeBreakdown.feeAmount,
+        type: 'fee',
+        status: 'completed',
+        description: 'Transaction Fee',
+        currency: rtpRequest.currency,
+        metadata: { standardBankTransactionId: sbt.id, payshapType: 'rtp', feeAmount: feeBreakdown.feeAmount, feeVat: feeBreakdown.vatAmount },
+      },
+      { transaction: txn }
+    );
+
+    const now = new Date();
+    const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    await db.TaxTransaction.create({
+      taxTransactionId: `TAX-${uuidv4()}`,
+      originalTransactionId: `RTP-FEE-${merchantTransactionId}`,
+      taxCode: 'VAT_15',
+      taxName: 'VAT 15%',
+      taxType: 'vat',
+      baseAmount: feeBreakdown.netRevenue,
+      taxAmount: feeBreakdown.vatAmount,
+      totalAmount: feeBreakdown.feeAmount,
+      taxRate: VAT_RATE,
+      calculationMethod: 'inclusive',
+      businessContext: 'wallet_user',
+      transactionType: 'payshap_rtp',
+      entityId: String(userId),
+      entityType: 'customer',
+      taxPeriod,
+      taxYear: now.getFullYear(),
+      status: 'calculated',
+      vat_direction: 'output',
+      metadata: { merchantTransactionId, userId },
+    }, { transaction: txn });
+
+    await txn.commit();
+
+    const ledgerService = require('./ledgerService');
+    const clientFloatCode = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
+    const bankCode = process.env.LEDGER_ACCOUNT_BANK || '1100-01-01';
+    const feeRevenueCode = process.env.LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE;
+    const vatControlCode = process.env.LEDGER_ACCOUNT_VAT_CONTROL;
+
     try {
-      const ledgerService = require('./ledgerService');
-      const clientFloatCode = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
-      const bankCode = process.env.LEDGER_ACCOUNT_BANK || '1100-01-01';
+      const lines = [
+        { accountCode: bankCode, dc: 'debit', amount: principalAmount, memo: 'Bank inflow (RTP)' },
+        { accountCode: clientFloatCode, dc: 'credit', amount: netCredit, memo: 'Wallet credit (RTP principal - fee)' },
+      ];
+      if (feeRevenueCode && vatControlCode) {
+        lines.push({ accountCode: feeRevenueCode, dc: 'credit', amount: feeBreakdown.netRevenue, memo: 'PayShap fee revenue (net of VAT)' });
+        lines.push({ accountCode: vatControlCode, dc: 'credit', amount: feeBreakdown.vatAmount, memo: 'VAT payable (PayShap fee)' });
+      }
       await ledgerService.postJournalEntry({
         reference: `SBSA-RTP-${merchantTransactionId}`,
         description: `PayShap RTP inbound (Paid): ${merchantTransactionId}`,
-        lines: [
-          { accountCode: bankCode, dc: 'debit', amount: parseFloat(amount), memo: 'Bank inflow (RTP)' },
-          { accountCode: clientFloatCode, dc: 'credit', amount: parseFloat(amount), memo: 'Wallet credit (RTP)' },
-        ],
+        lines,
       });
     } catch (ledgerErr) {
       console.warn('SBSA RTP ledger posting skipped:', ledgerErr.message);
@@ -169,7 +255,7 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
 
     return sbt;
   } catch (err) {
-    await transaction.rollback();
+    await txn.rollback();
     throw err;
   }
 }

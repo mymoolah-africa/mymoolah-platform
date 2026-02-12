@@ -53,6 +53,10 @@ SBSA_CREDITOR_ACCOUNT=<MMTP receiving account for RTP>
 SBSA_CREDITOR_NAME=MyMoolah Treasury
 
 # Ledger: Uses LEDGER_ACCOUNT_BANK (1100-01-01) - MM SBSA main account
+
+# PayShap fees (VAT incl) - VAT split to LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE + LEDGER_ACCOUNT_VAT_CONTROL
+PAYSHAP_FEE_MM_ZAR=4       # MM charges wallet user (RPP: principal+fee; RTP: principal-fee)
+PAYSHAP_FEE_SBSA_ZAR=3     # SBSA charges MM (recorded when settled)
 ```
 
 ---

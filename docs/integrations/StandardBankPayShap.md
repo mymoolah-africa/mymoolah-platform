@@ -14,6 +14,18 @@
 - **Deposit notification**: Reference (CID) = MSISDN → wallet to credit
 - **Ledger**: Uses `LEDGER_ACCOUNT_BANK` (1100-01-01), not a separate float
 
+### **Fee Structure**
+
+| Fee | Amount | Who pays | Who receives |
+|-----|--------|----------|--------------|
+| **SBSA fee** | R3.00 VAT incl | MM | SBSA |
+| **MM transaction fee** | R4.00 VAT incl | Wallet user | MM |
+
+- **RPP (outbound)**: User debits principal + R4 fee (e.g. send R100 → debit R104)
+- **RTP (inbound)**: RTP is an administrative request; when Paid, user credits principal − R4 fee (e.g. receive R200 → credit R196)
+- **VAT**: Both fees VAT incl; split posted to `LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE` (net) and `LEDGER_ACCOUNT_VAT_CONTROL` (payable)
+- **TaxTransaction**: Output VAT recorded for audit
+
 ---
 
 ## 📋 **EXECUTIVE SUMMARY**

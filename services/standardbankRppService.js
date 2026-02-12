@@ -2,15 +2,26 @@
 
 /**
  * Standard Bank RPP Service - PayShap Outbound Payments
- * Validates, debits wallet, builds Pain.001, calls SBSA API
+ * Validates, debits wallet (principal + fee), builds Pain.001, calls SBSA API
+ * Fee: R4.00 VAT incl charged to user; principal only sent to recipient
  *
  * @author MyMoolah Treasury Platform
  * @date 2026-02-12
  */
 
+const { v4: uuidv4 } = require('uuid');
 const db = require('../models');
 const { buildPain001 } = require('../integrations/standardbank/builders/pain001Builder');
 const sbClient = require('../integrations/standardbank/client');
+
+const VAT_RATE = Number(process.env.VAT_RATE || 0.15);
+const FEE_MM_ZAR = Number(process.env.PAYSHAP_FEE_MM_ZAR || 4);
+
+function getFeeBreakdown(feeAmount) {
+  const vatAmount = Number(((feeAmount / (1 + VAT_RATE)) * VAT_RATE).toFixed(2));
+  const netRevenue = Number((feeAmount - vatAmount).toFixed(2));
+  return { feeAmount, vatAmount, netRevenue };
+}
 
 async function initiateRppPayment(params) {
   const {
@@ -32,6 +43,9 @@ async function initiateRppPayment(params) {
     throw new Error('Invalid amount');
   }
 
+  const feeBreakdown = getFeeBreakdown(FEE_MM_ZAR);
+  const totalDebit = Number((numAmount + feeBreakdown.feeAmount).toFixed(2));
+
   const wallet = await db.Wallet.findOne({
     where: { walletId },
     lock: db.sequelize.Transaction.LOCK.UPDATE,
@@ -40,7 +54,7 @@ async function initiateRppPayment(params) {
     throw new Error('Wallet not found');
   }
 
-  const canDebit = wallet.canDebit(numAmount);
+  const canDebit = wallet.canDebit(totalDebit);
   if (!canDebit.allowed) {
     throw new Error(canDebit.reason || 'Cannot debit wallet');
   }
@@ -59,9 +73,6 @@ async function initiateRppPayment(params) {
     remittanceInfo: description || reference || merchantTransactionId,
   });
 
-  const paymentInfo = pain001.cstmrCdtTrfInitn.pmtInf;
-  const txInf = paymentInfo.cdtTrfTxInf[0];
-
   let sbResponse;
   try {
     sbResponse = await sbClient.initiatePayment(pain001);
@@ -74,10 +85,10 @@ async function initiateRppPayment(params) {
   }
 
   const sequelize = db.sequelize;
-  const transaction = await sequelize.transaction();
+  const txn = await sequelize.transaction();
 
   try {
-    await wallet.debit(numAmount, 'debit', { transaction });
+    await wallet.debit(totalDebit, 'debit', { transaction: txn });
 
     const sbt = await db.StandardBankTransaction.create(
       {
@@ -101,23 +112,84 @@ async function initiateRppPayment(params) {
         rawRequest: pain001,
         rawResponse: sbResponse.data,
       },
-      { transaction }
+      { transaction: txn }
     );
 
-    await transaction.commit();
+    await db.Transaction.create(
+      {
+        transactionId: `RPP-${merchantTransactionId}`,
+        userId,
+        walletId,
+        amount: -numAmount,
+        type: 'payment',
+        status: 'completed',
+        description: description || `PayShap to ${creditorName || 'beneficiary'}`,
+        currency,
+        metadata: { standardBankTransactionId: sbt.id, payshapType: 'rpp', principal: numAmount },
+      },
+      { transaction: txn }
+    );
 
-    // Ledger posting (non-blocking) - Debit Client Float, Credit Bank (outflow from MM SBSA main account)
+    await db.Transaction.create(
+      {
+        transactionId: `RPP-FEE-${merchantTransactionId}`,
+        userId,
+        walletId,
+        amount: -feeBreakdown.feeAmount,
+        type: 'fee',
+        status: 'completed',
+        description: 'Transaction Fee',
+        currency,
+        metadata: { standardBankTransactionId: sbt.id, payshapType: 'rpp', feeAmount: feeBreakdown.feeAmount, feeVat: feeBreakdown.vatAmount },
+      },
+      { transaction: txn }
+    );
+
+    const now = new Date();
+    const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    await db.TaxTransaction.create({
+      taxTransactionId: `TAX-${uuidv4()}`,
+      originalTransactionId: `RPP-FEE-${merchantTransactionId}`,
+      taxCode: 'VAT_15',
+      taxName: 'VAT 15%',
+      taxType: 'vat',
+      baseAmount: feeBreakdown.netRevenue,
+      taxAmount: feeBreakdown.vatAmount,
+      totalAmount: feeBreakdown.feeAmount,
+      taxRate: VAT_RATE,
+      calculationMethod: 'inclusive',
+      businessContext: 'wallet_user',
+      transactionType: 'payshap_rpp',
+      entityId: String(userId),
+      entityType: 'customer',
+      taxPeriod,
+      taxYear: now.getFullYear(),
+      status: 'calculated',
+      vat_direction: 'output',
+      metadata: { merchantTransactionId, userId },
+    }, { transaction: txn });
+
+    await txn.commit();
+
+    const ledgerService = require('./ledgerService');
+    const clientFloatCode = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
+    const bankCode = process.env.LEDGER_ACCOUNT_BANK || '1100-01-01';
+    const feeRevenueCode = process.env.LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE;
+    const vatControlCode = process.env.LEDGER_ACCOUNT_VAT_CONTROL;
+
     try {
-      const ledgerService = require('./ledgerService');
-      const clientFloatCode = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
-      const bankCode = process.env.LEDGER_ACCOUNT_BANK || '1100-01-01';
+      const lines = [
+        { accountCode: clientFloatCode, dc: 'debit', amount: totalDebit, memo: 'Wallet debit (RPP principal + fee)' },
+        { accountCode: bankCode, dc: 'credit', amount: numAmount, memo: 'Bank outflow (RPP)' },
+      ];
+      if (feeRevenueCode && vatControlCode) {
+        lines.push({ accountCode: feeRevenueCode, dc: 'credit', amount: feeBreakdown.netRevenue, memo: 'PayShap fee revenue (net of VAT)' });
+        lines.push({ accountCode: vatControlCode, dc: 'credit', amount: feeBreakdown.vatAmount, memo: 'VAT payable (PayShap fee)' });
+      }
       await ledgerService.postJournalEntry({
         reference: `SBSA-RPP-${merchantTransactionId}`,
         description: `PayShap RPP outbound: ${merchantTransactionId}`,
-        lines: [
-          { accountCode: clientFloatCode, dc: 'debit', amount: numAmount, memo: 'Wallet debit (RPP)' },
-          { accountCode: bankCode, dc: 'credit', amount: numAmount, memo: 'Bank outflow (RPP)' },
-        ],
+        lines,
       });
     } catch (ledgerErr) {
       console.warn('SBSA RPP ledger posting skipped:', ledgerErr.message);
@@ -129,10 +201,12 @@ async function initiateRppPayment(params) {
       originalMessageId: msgId,
       status: 'initiated',
       amount: numAmount,
+      fee: feeBreakdown.feeAmount,
+      totalDebit,
       currency,
     };
   } catch (err) {
-    await transaction.rollback();
+    await txn.rollback();
     throw err;
   }
 }

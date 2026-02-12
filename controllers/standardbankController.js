@@ -299,6 +299,8 @@ async function initiatePayShapRpp(req, res) {
         originalMessageId: result.originalMessageId,
         status: result.status,
         amount: result.amount,
+        fee: result.fee,
+        totalDebit: result.totalDebit,
         currency: result.currency,
       },
     });
@@ -368,6 +370,9 @@ async function initiatePayShapRtp(req, res) {
       expiryMinutes,
     });
 
+    const feeZar = Number(process.env.PAYSHAP_FEE_MM_ZAR || 4);
+    const netCredit = Number((result.amount - feeZar).toFixed(2));
+
     return res.status(202).json({
       success: true,
       data: {
@@ -375,6 +380,8 @@ async function initiatePayShapRtp(req, res) {
         originalMessageId: result.originalMessageId,
         status: result.status,
         amount: result.amount,
+        fee: feeZar,
+        netCredit,
         currency: result.currency,
         expiresAt: result.expiresAt,
       },

@@ -1,38 +1,16 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-02-12 - 🏦 SBSA PayShap Business Model Correction & Deposit Notification ✅
+## 2026-02-12 - 🏦 PayShap Fee Implementation (R4 user fee, VAT split) ✅
 
 ### **Session Overview**
-Corrected SBSA integration: use LEDGER_ACCOUNT_BANK (main SBSA account) instead of prefunded float; implemented deposit notification endpoint with reference resolver (CID = MSISDN → wallet).
+Implemented PayShap transaction fees: R4.00 VAT incl charged to wallet user for RPP and RTP. RPP debits principal+fee; RTP credits principal−fee (fee deducted from receipt). VAT correctly split to revenue and VAT control accounts; TaxTransaction for audit.
 
 ### **Changes**
-- **Ledger**: RPP/RTP use LEDGER_ACCOUNT_BANK (1100-01-01); removed LEDGER_ACCOUNT_SBSA_PAYSHAP_FLOAT
-- **Deposit notification**: POST /api/v1/standardbank/notification; reference (CID) = MSISDN or float prefix (SUP-, CLI-, SP-, RES-)
-- **Reference resolver**: standardbankDepositNotificationService.resolveReference + processDepositNotification
-- **Docs**: Business model clarifications, UAT guide updated
-
----
-
-## 2026-02-12 - 🏦 Standard Bank PayShap RPP & RTP UAT Implementation ✅
-
-### **Session Overview**
-Implemented complete SBSA PayShap integration per plan: migrations, models, Ping auth, API client, Pain.001/Pain.013 builders, callback handler, RPP/RTP services, ledger integration, and Request Money proxy when Peach is archived.
-
-### **Changes**
-- **Migrations**: `standard_bank_transactions`, `standard_bank_rtp_requests` tables
-- **Models**: StandardBankTransaction, StandardBankRtpRequest
-- **Integrations**: pingAuthService, client, callbackValidator, pain001Builder, pain013Builder
-- **Services**: standardbankRppService, standardbankRtpService (with ledger posting)
-- **Controller**: standardbankController (callbacks, initiatePayShapRpp, initiatePayShapRtp)
-- **Routes**: `/api/v1/standardbank/payshap/rpp`, `/rtp`, `/callback`, `/rtp-callback`, etc.
-- **Frontend**: Peach request-money proxied to Standard Bank when STANDARDBANK_PAYSHAP_ENABLED=true
-- **Docs**: SBSA_PAYSHAP_UAT_GUIDE.md, StandardBankPayShap.md updated, env.template extended
-
-### **Next Steps**
-- Obtain OneHub access and credentials from Standard Bank
-- Run migrations in UAT; set STANDARDBANK_PAYSHAP_ENABLED=true and SBSA_* env vars
-- Whitelist callback URLs
-- Test RPP/RTP against SBSA sandbox
+- **RPP**: Debit wallet (principal + R4), post ledger with fee revenue + VAT control
+- **RTP**: Credit wallet (principal − R4) when Paid; fee deducted from receipt
+- **VAT**: R4 → ~R3.48 net revenue, ~R0.52 VAT payable; TaxTransaction created
+- **Env**: PAYSHAP_FEE_MM_ZAR=4, PAYSHAP_FEE_SBSA_ZAR=3 (for future SBSA cost recording)
+- **Docs**: Fee structure in StandardBankPayShap.md, SBSA_PAYSHAP_UAT_GUIDE.md
 
 ---
 
