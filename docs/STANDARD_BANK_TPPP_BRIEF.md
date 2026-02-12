@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform (MMTP) — T-PPP Sponsor Brief (Standard Bank)
 
-Last updated: 2025-11-10
+Last updated: 2026-02-12
 
 ## Executive Summary
 
@@ -12,6 +12,8 @@ MyMoolah operates a banking‑grade Treasury Platform (MMTP) built to Mojaloop p
 - Commission recognition with VAT split to VAT Control and net to Commission Revenue for accurate reconciliation.
 
 The net effect is an always‑in‑balance ledger, instant settlement capability to suppliers, and end‑to‑end auditable flows for sponsor oversight.
+
+**PayShap Integration (2026-02-12)**: RPP (outbound) and RTP (Request to Pay) implemented via Standard Bank OneHub. MM SBSA main account used for all flows (no prefunded float). R4 transaction fee (VAT incl) charged to users; VAT split to revenue and VAT control. Deposit notification endpoint credits wallets when reference (CID) = MSISDN. UAT ready; awaiting OneHub credentials. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md` and `docs/integrations/StandardBankPayShap.md`.
 
 ## Parties and Accounts
 

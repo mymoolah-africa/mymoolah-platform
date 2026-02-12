@@ -32,11 +32,11 @@
 
 MyMoolah Treasury Platform (MMTP) will integrate with Standard Bank's PayShap rails to replace the archived Peach Payments integration. Standard Bank is MMTP's TPP (Third Party Provider) sponsor bank, providing API credentials and endpoints for PayShap payment processing.
 
-### **Integration Scope (Phase 1 – pending SBSA API package)**
+### **Integration Scope (Phase 1 – Implementation Complete)**
 1. **Deposit Notification (Credit) Endpoint**: SBSA notifies when a deposit hits the MMTP T-PPP bank account; resolve reference → wallet/float; credit if valid, error if not found.
-2. **PayShap Outbound & Request Money**: Turn on PayShap API to:
-   - Initiate payments from wallet/float → third-party bank accounts.
-   - Handle Request Money from third-party banks into wallet/float.
+2. **PayShap Outbound & Request Money**:
+   - RPP: Initiate payments from wallet → third-party bank accounts (principal + R4 fee debited).
+   - RTP: Administrative request to payer's bank; when Paid, wallet credited principal − R4 fee.
 
 ### **Key Benefits**
 - Direct integration with sponsor bank (Standard Bank)

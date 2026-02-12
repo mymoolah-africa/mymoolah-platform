@@ -88,5 +88,7 @@ Corrected SBSA PayShap integration to match the intended business model: SBSA is
 ---
 
 ## Related Documentation
-- docs/SBSA_PAYSHAP_UAT_GUIDE.md
-- docs/integrations/StandardBankPayShap.md
+- `docs/SBSA_PAYSHAP_UAT_GUIDE.md`
+- `docs/integrations/StandardBankPayShap.md`
+- Earlier: `2026-02-12_1200_sbsa-payshap-uat-implementation.md`
+- Follow-up: `2026-02-12_1500_payshap-fee-implementation.md` (R4 fee, VAT split)

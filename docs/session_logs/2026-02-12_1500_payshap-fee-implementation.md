@@ -72,5 +72,6 @@ Implemented PayShap transaction fees per business logic: R4.00 VAT incl charged 
 ---
 
 ## Related Documentation
-- docs/integrations/StandardBankPayShap.md
-- docs/SBSA_PAYSHAP_UAT_GUIDE.md
+- `docs/integrations/StandardBankPayShap.md`
+- `docs/SBSA_PAYSHAP_UAT_GUIDE.md`
+- Earlier: `2026-02-12_1200_sbsa-payshap-uat-implementation.md`, `2026-02-12_1400_sbsa-payshap-business-model-deposit-notification.md`

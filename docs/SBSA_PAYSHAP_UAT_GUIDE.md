@@ -5,6 +5,19 @@
 
 ---
 
+## Fee Structure
+
+| Flow | Principal | MM Fee | User wallet effect |
+|------|-----------|--------|--------------------|
+| **RPP** (outbound) | R100 sent | R4 charged | Debit R104 (principal + fee) |
+| **RTP** (inbound) | R200 received | R4 deducted | Credit R196 (principal − fee) |
+
+- **RPP response**: `amount`, `fee`, `totalDebit`, `currency`
+- **RTP response**: `amount`, `fee`, `netCredit`, `currency`, `expiresAt`
+- Env: `PAYSHAP_FEE_MM_ZAR=4`, `PAYSHAP_FEE_SBSA_ZAR=3` (SBSA cost recorded when settled)
+
+---
+
 ## Prerequisites
 
 1. **OneHub access** from Standard Bank CIB
@@ -135,8 +148,8 @@ When Peach is archived and `STANDARDBANK_PAYSHAP_ENABLED=true`, the frontend's c
 - [ ] RTP initiation returns 202
 - [ ] Callbacks received and hash validated
 - [ ] RPP: Wallet debit and transaction created
-- [ ] RTP: Request created; Paid callback credits wallet
-- [ ] Ledger postings correct
+- [ ] RTP: Request created; Paid callback credits wallet (principal − fee)
+- [ ] RPP: Wallet debited principal + fee; ledger postings correct
 - [ ] Sandbox scenarios tested (fail, success, Presented, etc.)
 
 ---

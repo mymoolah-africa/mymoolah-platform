@@ -129,6 +129,7 @@ MOBILEMART_SCOPE=api
 # Standard Bank PayShap (SBSA RPP/RTP) - UAT
 # SBSA = sponsor bank; MM SBSA main account = operating account (no prefunded float)
 # Uses LEDGER_ACCOUNT_BANK for RPP/RTP/deposit ledger posting
+# Fee: PAYSHAP_FEE_MM_ZAR=4 (user fee), PAYSHAP_FEE_SBSA_ZAR=3 (SBSA cost when settled)
 # See docs/SBSA_PAYSHAP_UAT_GUIDE.md
 # STANDARDBANK_PAYSHAP_ENABLED=false
 # SBSA_PING_CLIENT_ID=
@@ -137,6 +138,8 @@ MOBILEMART_SCOPE=api
 # SBSA_IBM_CLIENT_SECRET=
 # SBSA_CALLBACK_SECRET=
 # SBSA_CALLBACK_BASE_URL=https://staging.mymoolah.africa
+# PAYSHAP_FEE_MM_ZAR=4
+# PAYSHAP_FEE_SBSA_ZAR=3
 
 # =============================================================================
 # PORTAL SYSTEM CONFIGURATION

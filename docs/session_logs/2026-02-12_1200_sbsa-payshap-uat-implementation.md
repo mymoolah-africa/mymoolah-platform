@@ -29,7 +29,7 @@ Implemented the complete Standard Bank PayShap RPP & RTP UAT integration per the
 ## Key Decisions
 - **Callback hash**: Used PBKDF2-HMAC-SHA256 with 1000 iterations per plan; validated x-GroupHeader-Hash with timing-safe compare
 - **Peach proxy**: When Peach archived and STANDARDBANK_PAYSHAP_ENABLED=true, POST /api/v1/peach/request-money delegates to Standard Bank (no frontend changes)
-- **Ledger**: Optional posting via LEDGER_ACCOUNT_SBSA_PAYSHAP_FLOAT (1200-10-07); skipped if not set
+- **Ledger**: Initial implementation used LEDGER_ACCOUNT_SBSA_PAYSHAP_FLOAT; superseded by LEDGER_ACCOUNT_BANK in session 2026-02-12_1400
 - **Bank code**: Added getBankCodeFromName in controller for payerBankName → payerBankCode mapping
 
 ---
@@ -40,7 +40,7 @@ Implemented the complete Standard Bank PayShap RPP & RTP UAT integration per the
 - `models/StandardBankTransaction.js` - new
 - `models/StandardBankRtpRequest.js` - new
 - `models/index.js` - registered Standard Bank models
-- `env.template` - added SBSA_* and LEDGER_ACCOUNT_SBSA_PAYSHAP_FLOAT
+- `env.template` - added SBSA_* vars (LEDGER_ACCOUNT_SBSA_PAYSHAP_FLOAT later removed in 2026-02-12_1400)
 - `integrations/standardbank/pingAuthService.js` - new
 - `integrations/standardbank/client.js` - new
 - `integrations/standardbank/callbackValidator.js` - new
@@ -98,6 +98,6 @@ Implemented the complete Standard Bank PayShap RPP & RTP UAT integration per the
 ---
 
 ## Related Documentation
-- Plan: `/Users/andremacbookpro/.cursor/plans/sbsa_payshap_uat_implementation_f935a9c8.plan.md`
 - UAT Guide: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`
 - Integration doc: `docs/integrations/StandardBankPayShap.md`
+- Follow-up sessions: `2026-02-12_1400_sbsa-payshap-business-model-deposit-notification.md`, `2026-02-12_1500_payshap-fee-implementation.md`

@@ -371,6 +371,15 @@ Comprehensive audit revealed **HIGH severity architectural debt** in `msisdn` vs
 
 See `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for comprehensive audit report.
 
+### **🏦 Standard Bank PayShap Integration** ✅ **UAT READY**
+
+- **Status**: Implementation complete – awaiting OneHub credentials for UAT
+- **Scope**: RPP (Send Money), RTP (Request Money), Deposit notification
+- **Business model**: SBSA sponsor bank; MM SBSA main account (no prefunded float)
+- **Fees**: R4.00 VAT incl charged to user (RPP: principal+fee; RTP: principal−fee); R3.00 SBSA cost (recorded when settled)
+- **Request Money proxy**: When Peach archived and `STANDARDBANK_PAYSHAP_ENABLED=true`, frontend `/api/v1/peach/request-money` delegates to Standard Bank
+- **Docs**: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`, `docs/integrations/StandardBankPayShap.md`
+
 ### **📦 Peach Payments Integration Archived**
 
 ⚠️ **STATUS: ARCHIVED** (2025-11-26)  

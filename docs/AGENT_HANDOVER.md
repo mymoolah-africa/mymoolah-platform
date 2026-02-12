@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-02-12 15:00  
-**Latest Feature**: PayShap Fee Implementation (R4 user fee, VAT split)  
+**Latest Feature**: SBSA PayShap Integration Complete (UAT ready)  
 **Document Version**: 2.11.2  
 **Classification**: Internal - Banking-Grade Operations Manual
 
@@ -52,7 +52,7 @@
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
 ### **Latest Achievement (February 12, 2026 - 15:00)**
-**PayShap Fee Implementation** - R4.00 VAT incl transaction fee for RPP and RTP. RPP: debit principal+fee; RTP: credit principal−fee (fee deducted from receipt). VAT split to LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE and LEDGER_ACCOUNT_VAT_CONTROL. TaxTransaction for audit. Env: PAYSHAP_FEE_MM_ZAR=4, PAYSHAP_FEE_SBSA_ZAR=3.
+**SBSA PayShap Integration Complete** - Full Standard Bank PayShap: UAT implementation (migrations, models, Ping auth, API client, Pain.001/Pain.013 builders, callback handler, RPP/RTP services, ledger), business model correction (LEDGER_ACCOUNT_BANK, no prefunded float), deposit notification endpoint (reference = MSISDN), R4 fee (RPP: principal+fee; RTP: principal−fee), VAT split to revenue/VAT control, TaxTransaction audit. Request Money proxy when Peach archived. Awaiting OneHub credentials for UAT. Session logs: `2026-02-12_1200_sbsa-payshap-uat-implementation.md`, `2026-02-12_1400_sbsa-payshap-business-model-deposit-notification.md`, `2026-02-12_1500_payshap-fee-implementation.md`. UAT guide: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
 
 ### **Previous Achievement (February 10, 2026 - 16:00)**
 **NFC Tap to Add Money — Refinements & Fixes** - Fixed frontend duplicate CreditCard import, added Tap to Add Money card to Transact page, fixed NfcDepositIntent/user_id model mismatch, Halo API amount-as-number (E103), ECONNRESET troubleshooting in DB guide, copy updates (Google Pay/Apple Pay), quick amounts R50-R8000 with grid layout, max R10k. Rule 9A: sweep scripts before creating. Knowledge base updated with Tap to Add Money and last 3 weeks. Session logs: `docs/session_logs/2026-02-10_1400_nfc-tap-to-add-money-implementation.md`, `docs/session_logs/2026-02-10_1550_nfc-tap-to-add-money-refinements.md`.
@@ -63,7 +63,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – February 02–09, 2026)**
+### **Recent Updates (Last 7 Days – February 02–12, 2026)**
+- **Feb 12**: SBSA PayShap integration complete (UAT implementation, business model, deposit notification, R4 fee, VAT split). Awaiting OneHub credentials.
 - **Feb 09**: Transaction Detail modal (Reference/Amount/Status only); USDC fee UI (Transaction Fee label, Network fee removed); USDC send flow fixes (VALR quoteId/path/params, ledger balance, UAT simulation, negative amount for sent, success UI guards, beneficiary/wallet resolution, VALR float check + ErrorModal).
 - **Feb 08**: Migrations-before-seeding rule in Cursor rules and handover; Watch to Earn demo videos in Staging (auto-seed when no ads, seed script `--staging`).
 - **Feb 07**: USDC Send feature implementation; USDC fixes and banking-grade sweep (beneficiary list, Redis v5, VALR 503, edit flow, banners, filter removal, validation/DB aggregation/idempotency/VALR guards).
@@ -83,7 +84,9 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 01, 2026 - 17:00)**
 **Complete MobileMart Production Integration** - Full end-to-end implementation of electricity purchase with MobileMart production API (prevend + purchase flow, real 20-digit token extraction). Extended integration to bill payments and digital vouchers. All 5 MobileMart services now environment-aware (UAT simulation, Staging/Production real API). Successfully deployed to staging and tested with production credentials (R20 live electricity transaction confirmed). Transaction detail modal with token display (grouped by 4 digits, MMTP-aligned styling). All services production-ready.
 
-### **Next Priority (February 01, 2026 - 21:00)**
+### **Next Priority**
+**SBSA PayShap UAT** - Obtain OneHub credentials from Standard Bank; run migrations; set STANDARDBANK_PAYSHAP_ENABLED=true and SBSA_* env vars; whitelist callback URLs; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
+
 **Flash Integration Testing** - Test Flash integration in Codespaces (cash-out and electricity). Add Flash production credentials to Staging Secret Manager (credentials received from Tia, Flash IT engineer). Verify token extraction, wallet debits, and transaction history. Monitor first live transactions. Optional: Extend Flash integration to airtime/data, bill payments, and vouchers following same pattern.
 
 ### **Previous Achievement (January 26, 2026 - 23:15)**
@@ -121,6 +124,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 
 ### **Core Capabilities**
 - ✅ **Multi-Supplier Payments**: MobileMart (1,769 products), Zapper QR, Peach Payments (archived)
+- ✅ **PayShap (Standard Bank)**: RPP/RTP integration UAT ready; replaces archived Peach when enabled
 - ✅ **Advanced Features**: 5-tier referral system, KYC/FICA compliance, real-time notifications
 - ✅ **Banking-Grade Security**: TLS 1.3, JWT HS512, AES-256-GCM, RBAC, immutable audit trails
 - ✅ **Global Reach**: 11 languages (English, Afrikaans, Zulu, Xhosa, Sotho, Tswana, Pedi, Venda, Tsonga, Ndebele, Swati)
@@ -1120,23 +1124,20 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 
 ----
 
-### **🏦 STANDARD BANK PAYSHAP INTEGRATION PROPOSAL - DOCUMENTED (2025-11-26)** 📋
-- **Integration Type**: PayShap RPP/RTP via Standard Bank TPP Rails
+### **🏦 STANDARD BANK PAYSHAP INTEGRATION - IMPLEMENTATION COMPLETE (2026-02-12)** ✅ **UAT READY**
+- **Integration Type**: PayShap RPP/RTP via Standard Bank TPP Rails (OneHub)
 - **Replaces**: Peach Payments PayShap Integration (archived)
-- **Status**: Proposal documented, awaiting Standard Bank approval
-- **Three Main Functions**:
-  1. **Notification Endpoint**: Receive transaction notifications from Standard Bank TPP account
-  2. **RPP Endpoint**: Send PayShap money from wallet to bank account
-  3. **RTP Endpoint**: Request money via PayShap from bank account to wallet
-- **Reference Resolution**: MSISDN for wallets, floatAccountNumber for float accounts (suppliers, clients, service providers, resellers)
-- **Architecture**: Banking-grade, Mojaloop-compliant, high-performance async processing
-- **Security**: Webhook signature validation, IP allowlist, idempotency, audit logging
-- **Documentation**: Created comprehensive proposal (`docs/integrations/StandardBankPayShap.md`)
-- **Questions for Standard Bank**: API authentication, webhook security, reference formats, payload structures documented
-- **Implementation Plan**: 6-phase plan documented (Foundation → Notification → RPP → RTP → Testing → Deployment)
-- **Frontend**: Minimal changes required (existing Peach frontend can be reused)
-- **Files Created**: `docs/integrations/StandardBankPayShap.md`
-- **Status**: ✅ Proposal documented, ⏳ Awaiting Standard Bank approval and API credentials
+- **Status**: Implementation complete – awaiting OneHub credentials for UAT
+- **Implemented**:
+  1. **Deposit Notification**: POST `/api/v1/standardbank/notification` – reference (CID) = MSISDN → wallet; HMAC-SHA256 signature validation
+  2. **RPP Endpoint**: POST `/api/v1/standardbank/payshap/rpp` – Send Money; wallet debits principal + R4 fee
+  3. **RTP Endpoint**: POST `/api/v1/standardbank/payshap/rtp` – Request Money; when Paid, wallet credits principal − R4 fee
+- **Business Model**: SBSA sponsor bank; MM SBSA main account (LEDGER_ACCOUNT_BANK); no prefunded float
+- **Fees**: R4.00 VAT incl user fee; R3.00 SBSA cost (recorded when settled); VAT split to revenue/VAT control; TaxTransaction audit
+- **Request Money Proxy**: When Peach archived and STANDARDBANK_PAYSHAP_ENABLED=true, `/api/v1/peach/request-money` delegates to Standard Bank
+- **Documentation**: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`, `docs/integrations/StandardBankPayShap.md`
+- **Session Logs**: `docs/session_logs/2026-02-12_1200_sbsa-payshap-uat-implementation.md`, `2026-02-12_1400_sbsa-payshap-business-model-deposit-notification.md`, `2026-02-12_1500_payshap-fee-implementation.md`
+- **Next**: Obtain OneHub credentials; run UAT; whitelist callback URLs
 
 ### **📦 PEACH PAYMENTS INTEGRATION ARCHIVAL - COMPLETE (2025-11-26)** ✅
 - **Business Reason**: Peach Payments temporarily canceled integration agreement due to PayShap provider competition with MyMoolah

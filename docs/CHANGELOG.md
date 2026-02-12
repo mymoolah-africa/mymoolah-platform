@@ -1,16 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-02-12 - 🏦 PayShap Fee Implementation (R4 user fee, VAT split) ✅
+## 2026-02-12 - 🏦 SBSA PayShap Integration (Complete) ✅
 
 ### **Session Overview**
-Implemented PayShap transaction fees: R4.00 VAT incl charged to wallet user for RPP and RTP. RPP debits principal+fee; RTP credits principal−fee (fee deducted from receipt). VAT correctly split to revenue and VAT control accounts; TaxTransaction for audit.
+Complete Standard Bank PayShap integration: UAT implementation, business model correction (main bank account, no float), deposit notification endpoint, R4 fee (principal+fee RPP, principal−fee RTP), VAT split to revenue/VAT control, TaxTransaction audit. Awaiting OneHub credentials for UAT.
+
+### **Session Logs**
+- `docs/session_logs/2026-02-12_1200_sbsa-payshap-uat-implementation.md`
+- `docs/session_logs/2026-02-12_1400_sbsa-payshap-business-model-deposit-notification.md`
+- `docs/session_logs/2026-02-12_1500_payshap-fee-implementation.md`
 
 ### **Changes**
+- **UAT**: Migrations, models, Ping auth, API client, Pain.001/Pain.013 builders, callback handler, RPP/RTP services, ledger integration, Request Money proxy (when Peach archived)
+- **Business model**: LEDGER_ACCOUNT_BANK (main SBSA account); no prefunded float; deposit notification (reference = MSISDN)
 - **RPP**: Debit wallet (principal + R4), post ledger with fee revenue + VAT control
 - **RTP**: Credit wallet (principal − R4) when Paid; fee deducted from receipt
 - **VAT**: R4 → ~R3.48 net revenue, ~R0.52 VAT payable; TaxTransaction created
-- **Env**: PAYSHAP_FEE_MM_ZAR=4, PAYSHAP_FEE_SBSA_ZAR=3 (for future SBSA cost recording)
-- **Docs**: Fee structure in StandardBankPayShap.md, SBSA_PAYSHAP_UAT_GUIDE.md
+- **Env**: PAYSHAP_FEE_MM_ZAR=4, PAYSHAP_FEE_SBSA_ZAR=3
+- **Docs**: SBSA_PAYSHAP_UAT_GUIDE.md, StandardBankPayShap.md, STANDARD_BANK_TPPP_BRIEF.md, README, INTEGRATIONS_COMPLETE
 
 ---
 

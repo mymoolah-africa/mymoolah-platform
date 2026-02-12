@@ -40,7 +40,15 @@
 - **Catalog Sync**: Script created to sync both pinned and pinless products
 - **Status**: ✅ Product listing working, ✅ 4/7 purchase types working, ⚠️ Awaiting valid UAT test mobile numbers
 
-**3. PEACH PAYMENTS INTEGRATION** 📦 **ARCHIVED** (2025-11-26)
+**3. STANDARD BANK PAYSHAP (SBSA) INTEGRATION** ✅ **UAT READY** (2026-02-12)
+- **Status**: Implementation complete – awaiting OneHub credentials for UAT
+- **Scope**: RPP (Send Money), RTP (Request Money), Deposit notification
+- **Business model**: SBSA sponsor bank; MM SBSA main account (no prefunded float)
+- **Fees**: R4.00 VAT incl user fee; R3.00 SBSA cost (recorded when settled)
+- **Request Money proxy**: When Peach archived, `/api/v1/peach/request-money` delegates to Standard Bank
+- **Docs**: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`, `docs/integrations/StandardBankPayShap.md`
+
+**4. PEACH PAYMENTS INTEGRATION** 📦 **ARCHIVED** (2025-11-26)
 - **Status**: Integration archived due to PayShap provider competition conflict
 - **Archive Type**: Soft archive (code preserved, functionality disabled)
 - **Sandbox Integration**: Complete Peach Payments sandbox integration with working PayShap (preserved)
@@ -52,7 +60,7 @@
 - **Data Retention**: All transaction data preserved per banking compliance requirements
 - **Reactivation**: See `docs/archive/PEACH_ARCHIVAL_RECORD.md` for reactivation procedure
 
-**4. ZAPPER INTEGRATION** ✅ **UAT TESTING COMPLETE - READY FOR PRODUCTION**
+**5. ZAPPER INTEGRATION** ✅ **UAT TESTING COMPLETE - READY FOR PRODUCTION**
 - **UAT Test Suite**: Comprehensive test suite with 20 tests covering all Zapper API endpoints
 - **Test Results**: 92.3% success rate (12/13 critical tests passed)
 - **Payment History**: Organization and customer payment history endpoints implemented and tested
@@ -66,7 +74,7 @@
 - **Documentation**: Complete UAT test report (`docs/ZAPPER_UAT_TEST_REPORT.md`)
 - **Status**: ✅ Ready for production credentials request
 
-**5. EASYPAY INTEGRATION** ✅ **COMPLETE**
+**6. EASYPAY INTEGRATION** ✅ **COMPLETE**
 - **Digital Voucher System**: 14-digit EasyPay codes (format: X XXXX XXXX XXXX X)
 - **Voucher Types**: Cash-out, Top-up, Standalone vouchers
 - **Standalone Vouchers**: New voucher type for use at EasyPay merchants (not redeemable in wallet)
@@ -75,19 +83,19 @@
 - **UI Enhancements**: Business-focused messaging, EPVoucher badge, redemption validation, UAT simulate button
 - **Status**: Fully tested and integrated (January 17, 2026 UI improvements)
 
-**5. DTMERCURY INTEGRATION** ✅ **COMPLETE**
+**7. DTMERCURY INTEGRATION** ✅ **COMPLETE**
 - **PayShap Integration**: External bank transfers
 - **Banking Standards**: Mojaloop and ISO 20022 compliance
 - **Secure Tokens**: Banking-grade security implementation
 - **Status**: Fully tested and integrated
 
-**6. GOOGLE REVIEWS INTEGRATION** ✅ **COMPLETE**
+**8. GOOGLE REVIEWS INTEGRATION** ✅ **COMPLETE**
 - **AI-Powered Generation**: OpenAI GPT-4o integration
 - **Google My Business API**: Full OAuth2 integration
 - **SEO Optimization**: Strategic keyword optimization
 - **Status**: Fully tested and integrated
 
-**7. VOICE INPUT SYSTEM** ✅ **COMPLETE**
+**9. VOICE INPUT SYSTEM** ✅ **COMPLETE**
 - **Multi-Language Support**: 11 South African languages
 - **Real-time Audio**: Live audio visualization
 - **Production Ready**: Error boundaries and resource management
@@ -106,6 +114,7 @@
 
 ### **Banking & Payments**
 - **Real-time Transfers**: Instant bank-to-bank transfers
+- **PayShap (Standard Bank)**: RPP/RTP via SBSA OneHub (UAT ready; replaces archived Peach)
 - **External Banking**: PayShap integration via DTMercury
 - **Secure Processing**: Banking-grade security and compliance
 - **Settlement**: Automated settlement and reconciliation
