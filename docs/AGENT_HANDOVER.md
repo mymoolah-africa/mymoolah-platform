@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-12 12:00  
-**Latest Feature**: Standard Bank PayShap RPP & RTP UAT Implementation  
-**Document Version**: 2.11.0  
+**Last Updated**: 2026-02-12 14:00  
+**Latest Feature**: SBSA PayShap Business Model Correction & Deposit Notification  
+**Document Version**: 2.11.1  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -51,7 +51,10 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 12, 2026 - 12:00)**
+### **Latest Achievement (February 12, 2026 - 14:00)**
+**SBSA PayShap Business Model Correction & Deposit Notification** - Corrected SBSA integration: use LEDGER_ACCOUNT_BANK (main SBSA account) instead of prefunded float; implemented deposit notification endpoint `POST /api/v1/standardbank/notification` with reference resolver (CID = MSISDN → wallet, or SUP-/CLI-/SP-/RES- → float). HMAC-SHA256 signature validation, idempotency via transactionId. Session log: `docs/session_logs/2026-02-12_1400_sbsa-payshap-business-model-deposit-notification.md`.
+
+### **Previous Achievement (February 12, 2026 - 12:00)**
 **Standard Bank PayShap RPP & RTP UAT Implementation** - Complete SBSA PayShap integration per plan: migrations (`standard_bank_transactions`, `standard_bank_rtp_requests`), models, Ping auth, API client, Pain.001/Pain.013 builders, callback handler with HMAC validation, RPP/RTP services with ledger posting. Request Money proxy: when Peach archived and STANDARDBANK_PAYSHAP_ENABLED=true, frontend's `/api/v1/peach/request-money` delegates to Standard Bank. UAT ready; awaiting OneHub credentials. Session log: `docs/session_logs/2026-02-12_1200_sbsa-payshap-uat-implementation.md`. UAT guide: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
 
 ### **Previous Achievement (February 10, 2026 - 16:00)**
