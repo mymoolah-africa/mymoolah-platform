@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-12 14:00  
-**Latest Feature**: SBSA PayShap Business Model Correction & Deposit Notification  
-**Document Version**: 2.11.1  
+**Last Updated**: 2026-02-12 15:00  
+**Latest Feature**: PayShap Fee Implementation (R4 user fee, VAT split)  
+**Document Version**: 2.11.2  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -51,11 +51,8 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 12, 2026 - 14:00)**
-**SBSA PayShap Business Model Correction & Deposit Notification** - Corrected SBSA integration: use LEDGER_ACCOUNT_BANK (main SBSA account) instead of prefunded float; implemented deposit notification endpoint `POST /api/v1/standardbank/notification` with reference resolver (CID = MSISDN → wallet, or SUP-/CLI-/SP-/RES- → float). HMAC-SHA256 signature validation, idempotency via transactionId. Session log: `docs/session_logs/2026-02-12_1400_sbsa-payshap-business-model-deposit-notification.md`.
-
-### **Previous Achievement (February 12, 2026 - 12:00)**
-**Standard Bank PayShap RPP & RTP UAT Implementation** - Complete SBSA PayShap integration per plan: migrations (`standard_bank_transactions`, `standard_bank_rtp_requests`), models, Ping auth, API client, Pain.001/Pain.013 builders, callback handler with HMAC validation, RPP/RTP services with ledger posting. Request Money proxy: when Peach archived and STANDARDBANK_PAYSHAP_ENABLED=true, frontend's `/api/v1/peach/request-money` delegates to Standard Bank. UAT ready; awaiting OneHub credentials. Session log: `docs/session_logs/2026-02-12_1200_sbsa-payshap-uat-implementation.md`. UAT guide: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
+### **Latest Achievement (February 12, 2026 - 15:00)**
+**PayShap Fee Implementation** - R4.00 VAT incl transaction fee for RPP and RTP. RPP: debit principal+fee; RTP: credit principal−fee (fee deducted from receipt). VAT split to LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE and LEDGER_ACCOUNT_VAT_CONTROL. TaxTransaction for audit. Env: PAYSHAP_FEE_MM_ZAR=4, PAYSHAP_FEE_SBSA_ZAR=3.
 
 ### **Previous Achievement (February 10, 2026 - 16:00)**
 **NFC Tap to Add Money — Refinements & Fixes** - Fixed frontend duplicate CreditCard import, added Tap to Add Money card to Transact page, fixed NfcDepositIntent/user_id model mismatch, Halo API amount-as-number (E103), ECONNRESET troubleshooting in DB guide, copy updates (Google Pay/Apple Pay), quick amounts R50-R8000 with grid layout, max R10k. Rule 9A: sweep scripts before creating. Knowledge base updated with Tap to Add Money and last 3 weeks. Session logs: `docs/session_logs/2026-02-10_1400_nfc-tap-to-add-money-implementation.md`, `docs/session_logs/2026-02-10_1550_nfc-tap-to-add-money-refinements.md`.
