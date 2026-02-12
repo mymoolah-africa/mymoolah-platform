@@ -126,6 +126,17 @@ MOBILEMART_API_URL=https://uat.fulcrumswitch.com
 MOBILEMART_TOKEN_URL=https://uat.fulcrumswitch.com/connect/token
 MOBILEMART_SCOPE=api
 
+# Standard Bank PayShap (SBSA RPP/RTP) - UAT
+# Set STANDARDBANK_PAYSHAP_ENABLED=true when OneHub credentials are available
+# See docs/SBSA_PAYSHAP_UAT_GUIDE.md
+# STANDARDBANK_PAYSHAP_ENABLED=false
+# SBSA_PING_CLIENT_ID=
+# SBSA_PING_CLIENT_SECRET=
+# SBSA_IBM_CLIENT_ID=
+# SBSA_IBM_CLIENT_SECRET=
+# SBSA_CALLBACK_SECRET=
+# SBSA_CALLBACK_BASE_URL=https://staging.mymoolah.africa
+
 # =============================================================================
 # PORTAL SYSTEM CONFIGURATION
 # =============================================================================

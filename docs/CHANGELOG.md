@@ -1,5 +1,28 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-12 - 🏦 Standard Bank PayShap RPP & RTP UAT Implementation ✅
+
+### **Session Overview**
+Implemented complete SBSA PayShap integration per plan: migrations, models, Ping auth, API client, Pain.001/Pain.013 builders, callback handler, RPP/RTP services, ledger integration, and Request Money proxy when Peach is archived.
+
+### **Changes**
+- **Migrations**: `standard_bank_transactions`, `standard_bank_rtp_requests` tables
+- **Models**: StandardBankTransaction, StandardBankRtpRequest
+- **Integrations**: pingAuthService, client, callbackValidator, pain001Builder, pain013Builder
+- **Services**: standardbankRppService, standardbankRtpService (with ledger posting)
+- **Controller**: standardbankController (callbacks, initiatePayShapRpp, initiatePayShapRtp)
+- **Routes**: `/api/v1/standardbank/payshap/rpp`, `/rtp`, `/callback`, `/rtp-callback`, etc.
+- **Frontend**: Peach request-money proxied to Standard Bank when STANDARDBANK_PAYSHAP_ENABLED=true
+- **Docs**: SBSA_PAYSHAP_UAT_GUIDE.md, StandardBankPayShap.md updated, env.template extended
+
+### **Next Steps**
+- Obtain OneHub access and credentials from Standard Bank
+- Run migrations in UAT; set STANDARDBANK_PAYSHAP_ENABLED=true and SBSA_* env vars
+- Whitelist callback URLs
+- Test RPP/RTP against SBSA sandbox
+
+---
+
 ## 2026-02-10 - 📱 NFC Tap to Add Money — Refinements & Fixes (v2.10.1) ✅
 
 ### **Session Overview**

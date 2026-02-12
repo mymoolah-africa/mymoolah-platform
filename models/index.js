@@ -296,6 +296,10 @@ db.AiKnowledgeBase = require('./AiKnowledgeBase')(sequelize, Sequelize.DataTypes
 // Add IdempotencyKey model to exports
 db.IdempotencyKey = require('./IdempotencyKey')(sequelize, Sequelize.DataTypes);
 
+// Add Standard Bank PayShap models (RPP/RTP)
+db.StandardBankTransaction = require('./StandardBankTransaction')(sequelize, Sequelize.DataTypes);
+db.StandardBankRtpRequest = require('./StandardBankRtpRequest')(sequelize, Sequelize.DataTypes);
+
 // Add Feedback System models to exports
 db.FeedbackCategory = require('./FeedbackCategory')(sequelize, Sequelize.DataTypes);
 db.FeedbackSubmission = require('./FeedbackSubmission')(sequelize, Sequelize.DataTypes);

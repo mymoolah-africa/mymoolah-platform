@@ -1,9 +1,11 @@
 # Standard Bank PayShap Integration - Architecture Proposal
 
-**Date**: November 26, 2025 (updated December 11, 2025)  
-**Status**: 📋 **PROPOSAL - PASA SUBMISSION ACKNOWLEDGED; AWAITING SBSA API DETAILS**  
+**Date**: November 26, 2025 (updated 2026-02-12)  
+**Status**: ✅ **IMPLEMENTATION COMPLETE** – UAT ready; awaiting OneHub credentials  
 **Integration Type**: PayShap RPP/RTP via Standard Bank TPP Rails  
 **Replaces**: Peach Payments PayShap Integration (archived 2025-11-26)
+
+**Implementation**: See `docs/SBSA_PAYSHAP_UAT_GUIDE.md` for UAT setup and checklist.
 
 ---
 

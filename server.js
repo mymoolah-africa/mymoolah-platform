@@ -184,6 +184,14 @@ if (validCredentials.mobilemart) {
 
 }
 
+// Conditionally load Standard Bank PayShap routes
+const standardbankPayShapEnabled = process.env.STANDARDBANK_PAYSHAP_ENABLED === 'true';
+let standardbankRoutes;
+if (standardbankPayShapEnabled) {
+  standardbankRoutes = require('./routes/standardbank.js');
+  console.log('✅ Standard Bank PayShap routes loaded');
+}
+
 // CORS must be applied BEFORE helmet to allow cross-origin requests
 app.use(cors(config.corsConfig));
 
@@ -455,12 +463,24 @@ if (mobilemartRoutesLoaded) {
   app.use('/api/v1/mobilemart', mobilemartRoutes);
 }
 
+// Conditionally load Standard Bank PayShap routes
+if (standardbankPayShapEnabled) {
+  app.use('/api/v1/standardbank', standardbankRoutes);
+}
+
 // Conditionally load Peach routes
 const isPeachArchived = process.env.PEACH_INTEGRATION_ARCHIVED === 'true';
 if (!isPeachArchived && validCredentials.peach) {
   app.use('/api/v1/peach', peachRoutes);
 } else if (isPeachArchived) {
   console.log('📦 Peach Payments integration ARCHIVED - routes disabled');
+  // When Standard Bank PayShap is enabled, proxy request-money to Standard Bank (frontend calls /api/v1/peach/request-money)
+  if (standardbankPayShapEnabled) {
+    const auth = require('./middleware/auth');
+    const standardbankController = require('./controllers/standardbankController');
+    app.post('/api/v1/peach/request-money', auth, standardbankController.initiatePayShapRtp);
+    console.log('✅ Peach request-money proxied to Standard Bank PayShap');
+  }
   // Provide archived status endpoint
   app.get('/api/v1/peach/status', (req, res) => {
     res.json({
@@ -486,6 +506,7 @@ app.get('/health', (req, res) => {
     services: {
       flash: flashRoutesLoaded,
       mobilemart: mobilemartRoutesLoaded,
+      standardbankPayShap: standardbankPayShapEnabled,
       peach: process.env.PEACH_INTEGRATION_ARCHIVED === 'true' ? 'archived' : validCredentials.peach
     },
     uptime: process.uptime(),
