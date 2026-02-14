@@ -2,7 +2,22 @@
 
 module.exports = {
   up: async (queryInterface, Sequelize) => {
-    // Create feedback_categories table
+    const tableExists = async (name) => {
+      const [r] = await queryInterface.sequelize.query(
+        `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='${name}'`
+      );
+      return r && r.length > 0;
+    };
+    const safeAddIndex = async (table, cols) => {
+      try {
+        await queryInterface.addIndex(table, cols);
+      } catch (e) {
+        if (!e.message?.includes('already exists')) throw e;
+      }
+    };
+
+    // Create feedback_categories table (idempotent)
+    if (!(await tableExists('feedback_categories'))) {
     await queryInterface.createTable('feedback_categories', {
       id: {
         allowNull: false,
@@ -42,8 +57,10 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
+    }
 
-    // Create feedback_submissions table
+    // Create feedback_submissions table (idempotent)
+    if (!(await tableExists('feedback_submissions'))) {
     await queryInterface.createTable('feedback_submissions', {
       id: {
         allowNull: false,
@@ -115,8 +132,10 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
+    }
 
-    // Create feedback_attachments table
+    // Create feedback_attachments table (idempotent)
+    if (!(await tableExists('feedback_attachments'))) {
     await queryInterface.createTable('feedback_attachments', {
       id: {
         allowNull: false,
@@ -160,8 +179,10 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
+    }
 
-    // Create feedback_ai_insights table
+    // Create feedback_ai_insights table (idempotent)
+    if (!(await tableExists('feedback_ai_insights'))) {
     await queryInterface.createTable('feedback_ai_insights', {
       id: {
         allowNull: false,
@@ -206,8 +227,10 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
+    }
 
-    // Create feedback_content_generation table
+    // Create feedback_content_generation table (idempotent)
+    if (!(await tableExists('feedback_content_generation'))) {
     await queryInterface.createTable('feedback_content_generation', {
       id: {
         allowNull: false,
@@ -268,8 +291,10 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
+    }
 
-    // Create feedback_analytics table
+    // Create feedback_analytics table (idempotent)
+    if (!(await tableExists('feedback_analytics'))) {
     await queryInterface.createTable('feedback_analytics', {
       id: {
         allowNull: false,
@@ -321,8 +346,11 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
+    }
 
-    // Insert default feedback categories
+    // Insert default feedback categories (only if empty)
+    const [catCount] = await queryInterface.sequelize.query(`SELECT COUNT(*) as c FROM feedback_categories`);
+    if (catCount && catCount[0] && parseInt(catCount[0].c, 10) === 0) {
     await queryInterface.bulkInsert('feedback_categories', [
       {
         name: 'Bug Report',
@@ -379,21 +407,22 @@ module.exports = {
         updatedAt: new Date()
       }
     ]);
+    }
 
-    // Create indexes for performance
-    await queryInterface.addIndex('feedback_submissions', ['userId']);
-    await queryInterface.addIndex('feedback_submissions', ['categoryId']);
-    await queryInterface.addIndex('feedback_submissions', ['status']);
-    await queryInterface.addIndex('feedback_submissions', ['priority']);
-    await queryInterface.addIndex('feedback_submissions', ['sentiment']);
-    await queryInterface.addIndex('feedback_submissions', ['createdAt']);
-    await queryInterface.addIndex('feedback_ai_insights', ['feedbackId']);
-    await queryInterface.addIndex('feedback_ai_insights', ['insightType']);
-    await queryInterface.addIndex('feedback_content_generation', ['feedbackId']);
-    await queryInterface.addIndex('feedback_content_generation', ['contentType']);
-    await queryInterface.addIndex('feedback_content_generation', ['status']);
-    await queryInterface.addIndex('feedback_analytics', ['date']);
-    await queryInterface.addIndex('feedback_analytics', ['categoryId']);
+    // Create indexes for performance (idempotent)
+    await safeAddIndex('feedback_submissions', ['userId']);
+    await safeAddIndex('feedback_submissions', ['categoryId']);
+    await safeAddIndex('feedback_submissions', ['status']);
+    await safeAddIndex('feedback_submissions', ['priority']);
+    await safeAddIndex('feedback_submissions', ['sentiment']);
+    await safeAddIndex('feedback_submissions', ['createdAt']);
+    await safeAddIndex('feedback_ai_insights', ['feedbackId']);
+    await safeAddIndex('feedback_ai_insights', ['insightType']);
+    await safeAddIndex('feedback_content_generation', ['feedbackId']);
+    await safeAddIndex('feedback_content_generation', ['contentType']);
+    await safeAddIndex('feedback_content_generation', ['status']);
+    await safeAddIndex('feedback_analytics', ['date']);
+    await safeAddIndex('feedback_analytics', ['categoryId']);
   },
 
   down: async (queryInterface, Sequelize) => {
