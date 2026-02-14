@@ -3,7 +3,7 @@
 ##############################################################################
 # Check Cloud SQL Auth Proxy Status in Codespaces
 # 
-# Purpose: Quick check if both UAT and Staging proxies are running
+# Purpose: Quick check if UAT, Staging, and Production proxies are running
 # Usage: ./scripts/check-proxies-cs.sh
 ##############################################################################
 
@@ -35,11 +35,21 @@ else
   echo "   Or manually: cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-staging --port 6544"
 fi
 
+# Check Production proxy
+PRODUCTION_RUNNING=$(lsof -ti:6545 2>/dev/null || echo "")
+if [ -n "$PRODUCTION_RUNNING" ]; then
+  echo -e "${GREEN}✅ Production proxy running on port 6545 (PID: $PRODUCTION_RUNNING)${NC}"
+else
+  echo -e "${RED}❌ Production proxy NOT running on port 6545${NC}"
+  echo "   Start all proxies with: ./scripts/ensure-proxies-running.sh"
+  echo "   Or manually: cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-production --port 6545"
+fi
+
 echo ""
 
 # Summary
-if [ -n "$UAT_RUNNING" ] && [ -n "$STAGING_RUNNING" ]; then
-  echo -e "${GREEN}✅ Both proxies are running - ready to sync!${NC}"
+if [ -n "$UAT_RUNNING" ] && [ -n "$STAGING_RUNNING" ] && [ -n "$PRODUCTION_RUNNING" ]; then
+  echo -e "${GREEN}✅ All proxies are running (UAT, Staging, Production) - ready to sync!${NC}"
   exit 0
 else
   echo -e "${YELLOW}⚠️  Some proxies are not running - start them before syncing${NC}"
