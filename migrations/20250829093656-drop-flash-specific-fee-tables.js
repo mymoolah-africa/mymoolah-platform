@@ -3,22 +3,51 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Safety: abort only if flash tables have data but generic tables are empty (migration was skipped)
     const [[feeCount]] = await queryInterface.sequelize.query(`SELECT COUNT(*)::int AS c FROM supplier_fee_schedule`);
     const [[tierCount]] = await queryInterface.sequelize.query(`SELECT COUNT(*)::int AS c FROM supplier_commission_tiers`);
     const genericHasData = (feeCount?.c || 0) > 0 || (tierCount?.c || 0) > 0;
     if (!genericHasData) {
-      let flashFeeCount = 0, flashTierCount = 0;
-      try {
-        const [[r]] = await queryInterface.sequelize.query(`SELECT COUNT(*)::int AS c FROM flash_fee_schedule`);
-        flashFeeCount = r?.c || 0;
-      } catch { /* table may not exist */ }
+      let flashTierCount = 0;
       try {
         const [[r]] = await queryInterface.sequelize.query(`SELECT COUNT(*)::int AS c FROM flash_commission_tiers`);
         flashTierCount = r?.c || 0;
       } catch { /* table may not exist */ }
-      if (flashFeeCount > 0 || flashTierCount > 0) {
-        throw new Error('Generic supplier tables are empty but flash tables have data; run migrate-flash-fees-to-generic first');
+      if (flashTierCount > 0) {
+        // Migrate inline: create FLASH supplier if missing, copy flash data to generic
+        let [supRows] = await queryInterface.sequelize.query(`SELECT id FROM suppliers WHERE code='FLASH' LIMIT 1`);
+        let supplierId = supRows?.[0]?.id;
+        if (!supplierId) {
+          await queryInterface.sequelize.query(
+            `INSERT INTO suppliers (name, code, "isActive", "createdAt", "updatedAt") VALUES ('Flash', 'FLASH', true, NOW(), NOW()) ON CONFLICT (code) DO NOTHING`
+          );
+          [supRows] = await queryInterface.sequelize.query(`SELECT id FROM suppliers WHERE code='FLASH' LIMIT 1`);
+          supplierId = supRows?.[0]?.id;
+        }
+        if (supplierId) {
+          try {
+            const [feeRows] = await queryInterface.sequelize.query(
+              `SELECT "feeType", "amountCents", "isVatExclusive" FROM flash_fee_schedule WHERE "isActive"=true`
+            );
+            for (const r of feeRows || []) {
+              await queryInterface.sequelize.query(
+                `INSERT INTO supplier_fee_schedule ("supplierId","serviceType","feeType","amountCents","isVatExclusive","isActive","createdAt","updatedAt")
+                 VALUES (:supplierId,'eezi_voucher',:feeType,:amountCents,:isVatExclusive,true,now(),now())
+                 ON CONFLICT ("supplierId","serviceType","feeType") DO NOTHING`,
+                { replacements: { supplierId, feeType: r.feeType, amountCents: r.amountCents, isVatExclusive: r.isVatExclusive } }
+              );
+            }
+          } catch { /* flash_fee_schedule may not exist */ }
+          const [tierRows] = await queryInterface.sequelize.query(
+            `SELECT "minVolume", "maxVolume", "ratePct" FROM flash_commission_tiers WHERE "isActive"=true`
+          );
+          for (const t of tierRows || []) {
+            await queryInterface.sequelize.query(
+              `INSERT INTO supplier_commission_tiers ("supplierId","serviceType","minVolume","maxVolume","ratePct","isActive","createdAt","updatedAt")
+               VALUES (:supplierId,'eezi_voucher',:minVolume,:maxVolume,:ratePct,true,now(),now())`,
+              { replacements: { supplierId, minVolume: t.minVolume, maxVolume: t.maxVolume, ratePct: t.ratePct } }
+            );
+          }
+        }
       }
     }
     try { await queryInterface.dropTable('flash_fee_schedule'); } catch (e) {
