@@ -66,14 +66,22 @@ module.exports = {
       console.log('   This migration may have already been run or the schema is different.');
     }
 
+    // Detect column name (vouchers table uses 'type' not 'voucherType')
+    const [colCheck] = await queryInterface.sequelize.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'vouchers' AND column_name IN ('voucherType', 'type')
+    `);
+    const typeCol = colCheck.find(c => c.column_name === 'voucherType') ? 'voucherType' : 'type';
+    console.log(`📋 Using column: ${typeCol}`);
+
     // Update existing voucher types
     console.log('🔄 Transforming existing EasyPay vouchers...');
 
     // Update pending EasyPay vouchers to topup type
     const [pendingResults] = await queryInterface.sequelize.query(`
       UPDATE vouchers
-      SET "voucherType" = 'easypay_topup'
-      WHERE "voucherType" = 'easypay_pending'
+      SET "${typeCol}" = 'easypay_topup'
+      WHERE "${typeCol}" = 'easypay_pending'
       AND status = 'pending_payment';
     `);
 
@@ -82,8 +90,8 @@ module.exports = {
     // Update active EasyPay vouchers to topup_active type
     const [activeResults] = await queryInterface.sequelize.query(`
       UPDATE vouchers
-      SET "voucherType" = 'easypay_topup_active'
-      WHERE "voucherType" = 'easypay_active'
+      SET "${typeCol}" = 'easypay_topup_active'
+      WHERE "${typeCol}" = 'easypay_active'
       AND status = 'active';
     `);
 
@@ -91,16 +99,16 @@ module.exports = {
 
     // Verify the transformation
     const [verificationResults] = await queryInterface.sequelize.query(`
-      SELECT "voucherType", status, COUNT(*) as count
+      SELECT "${typeCol}" as voucher_type, status, COUNT(*) as count
       FROM vouchers
-      WHERE "voucherType" LIKE 'easypay%'
-      GROUP BY "voucherType", status
-      ORDER BY "voucherType", status;
+      WHERE "${typeCol}" LIKE 'easypay%'
+      GROUP BY "${typeCol}", status
+      ORDER BY "${typeCol}", status;
     `);
 
     console.log('📊 Voucher type distribution after transformation:');
     verificationResults.forEach(row => {
-      console.log(`  ${row.voucherType} (${row.status}): ${row.count} vouchers`);
+      console.log(`  ${row.voucher_type} (${row.status}): ${row.count} vouchers`);
     });
 
     console.log('✅ EasyPay to Top-up @ EasyPay transformation completed successfully!');
@@ -109,17 +117,24 @@ module.exports = {
   down: async (queryInterface, Sequelize) => {
     console.log('🔄 Reverting EasyPay to Top-up @ EasyPay transformation...');
 
+    // Detect column name
+    const [colCheck] = await queryInterface.sequelize.query(`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'vouchers' AND column_name IN ('voucherType', 'type')
+    `);
+    const typeCol = colCheck.find(c => c.column_name === 'voucherType') ? 'voucherType' : 'type';
+
     // Revert voucher types back to original
     const [activeResults] = await queryInterface.sequelize.query(`
       UPDATE vouchers
-      SET "voucherType" = 'easypay_active'
-      WHERE "voucherType" = 'easypay_topup_active';
+      SET "${typeCol}" = 'easypay_active'
+      WHERE "${typeCol}" = 'easypay_topup_active';
     `);
 
     const [pendingResults] = await queryInterface.sequelize.query(`
       UPDATE vouchers
-      SET "voucherType" = 'easypay_pending'
-      WHERE "voucherType" = 'easypay_topup';
+      SET "${typeCol}" = 'easypay_pending'
+      WHERE "${typeCol}" = 'easypay_topup';
     `);
 
     console.log(`✅ Reverted ${activeResults.rowCount || 0} active and ${pendingResults.rowCount || 0} pending vouchers`);
