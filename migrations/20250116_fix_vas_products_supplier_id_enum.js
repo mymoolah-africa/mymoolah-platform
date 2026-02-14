@@ -5,6 +5,16 @@ module.exports = {
   async up(queryInterface, Sequelize) {
     console.log('🔄 Fixing vas_products.supplierId: Converting ENUM to STRING...');
     
+    // Check if vas_products table exists (fresh DBs may not have it yet)
+    const [tables] = await queryInterface.sequelize.query(`
+      SELECT 1 FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name = 'vas_products'
+    `);
+    if (!tables || tables.length === 0) {
+      console.log('⚠️ vas_products table does not exist yet, skipping...');
+      return;
+    }
+    
     // Check if column exists and is ENUM
     const tableDescription = await queryInterface.describeTable('vas_products');
     
