@@ -651,7 +651,19 @@ module.exports = {
     await queryInterface.addIndex('compliance_records', ['validUntil']);
     await queryInterface.addIndex('compliance_records', ['createdAt']);
 
-    // Add foreign key constraints for mymoolah_transactions
+    // Add resellerFloatAccount column to mymoolah_transactions if missing, then add FK
+    const [cols] = await queryInterface.sequelize.query(`
+      SELECT 1 FROM information_schema.columns 
+      WHERE table_schema='public' AND table_name='mymoolah_transactions' AND column_name='resellerFloatAccount'
+    `);
+    if (!cols || cols.length === 0) {
+      await queryInterface.addColumn('mymoolah_transactions', 'resellerFloatAccount', {
+        type: Sequelize.STRING,
+        allowNull: true,
+        comment: 'Reseller float account number involved'
+      });
+    }
+    try {
     await queryInterface.addConstraint('mymoolah_transactions', {
       fields: ['resellerFloatAccount'],
       type: 'foreign key',
@@ -663,6 +675,9 @@ module.exports = {
       onDelete: 'SET NULL',
       onUpdate: 'CASCADE'
     });
+    } catch (e) {
+      if (!e.message?.includes('already exists')) throw e;
+    }
 
     // Add foreign key constraints for tax_transactions
     await queryInterface.addConstraint('tax_transactions', {
