@@ -1,7 +1,29 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Create client_floats table
+    const tableExists = async (name) => {
+      const [r] = await queryInterface.sequelize.query(
+        `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='${name}'`
+      );
+      return r && r.length > 0;
+    };
+    const safeAddIndex = async (table, columns, opts = {}) => {
+      try {
+        await queryInterface.addIndex(table, columns, opts);
+      } catch (e) {
+        if (!e.message?.includes('already exists')) throw e;
+      }
+    };
+    const safeAddConstraint = async (table, constraint) => {
+      try {
+        await queryInterface.addConstraint(table, constraint);
+      } catch (e) {
+        if (!e.message?.includes('already exists')) throw e;
+      }
+    };
+
+    // Create client_floats table (idempotent)
+    if (!(await tableExists('client_floats'))) {
     await queryInterface.createTable('client_floats', {
       id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
       
@@ -170,8 +192,10 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') 
       },
     });
+    }
 
-    // Create merchant_floats table
+    // Create merchant_floats table (idempotent)
+    if (!(await tableExists('merchant_floats'))) {
     await queryInterface.createTable('merchant_floats', {
       id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
       
@@ -357,8 +381,10 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') 
       },
     });
+    }
 
-    // Create mymoolah_transactions table
+    // Create mymoolah_transactions table (idempotent)
+    if (!(await tableExists('mymoolah_transactions'))) {
     await queryInterface.createTable('mymoolah_transactions', {
       id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
       
@@ -577,39 +603,40 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') 
       },
     });
+    }
 
-    // Add indexes for client_floats
-    await queryInterface.addIndex('client_floats', ['clientId']);
-    await queryInterface.addIndex('client_floats', ['floatAccountNumber']);
-    await queryInterface.addIndex('client_floats', ['clientType']);
-    await queryInterface.addIndex('client_floats', ['status']);
-    await queryInterface.addIndex('client_floats', ['isActive']);
-    await queryInterface.addIndex('client_floats', ['settlementPeriod']);
+    // Add indexes for client_floats (idempotent)
+    await safeAddIndex('client_floats', ['clientId']);
+    await safeAddIndex('client_floats', ['floatAccountNumber']);
+    await safeAddIndex('client_floats', ['clientType']);
+    await safeAddIndex('client_floats', ['status']);
+    await safeAddIndex('client_floats', ['isActive']);
+    await safeAddIndex('client_floats', ['settlementPeriod']);
 
-    // Add indexes for merchant_floats
-    await queryInterface.addIndex('merchant_floats', ['merchantId']);
-    await queryInterface.addIndex('merchant_floats', ['floatAccountNumber']);
-    await queryInterface.addIndex('merchant_floats', ['merchantType']);
-    await queryInterface.addIndex('merchant_floats', ['status']);
-    await queryInterface.addIndex('merchant_floats', ['isActive']);
-    await queryInterface.addIndex('merchant_floats', ['canSellVouchers']);
-    await queryInterface.addIndex('merchant_floats', ['canRedeemVouchers']);
-    await queryInterface.addIndex('merchant_floats', ['settlementPeriod']);
+    // Add indexes for merchant_floats (idempotent)
+    await safeAddIndex('merchant_floats', ['merchantId']);
+    await safeAddIndex('merchant_floats', ['floatAccountNumber']);
+    await safeAddIndex('merchant_floats', ['merchantType']);
+    await safeAddIndex('merchant_floats', ['status']);
+    await safeAddIndex('merchant_floats', ['isActive']);
+    await safeAddIndex('merchant_floats', ['canSellVouchers']);
+    await safeAddIndex('merchant_floats', ['canRedeemVouchers']);
+    await safeAddIndex('merchant_floats', ['settlementPeriod']);
 
-    // Add indexes for mymoolah_transactions
-    await queryInterface.addIndex('mymoolah_transactions', ['transactionId']);
-    await queryInterface.addIndex('mymoolah_transactions', ['reference']);
-    await queryInterface.addIndex('mymoolah_transactions', ['businessContext']);
-    await queryInterface.addIndex('mymoolah_transactions', ['userId']);
-    await queryInterface.addIndex('mymoolah_transactions', ['clientId']);
-    await queryInterface.addIndex('mymoolah_transactions', ['merchantId']);
-    await queryInterface.addIndex('mymoolah_transactions', ['transactionType']);
-    await queryInterface.addIndex('mymoolah_transactions', ['status']);
-    await queryInterface.addIndex('mymoolah_transactions', ['supplierId']);
-    await queryInterface.addIndex('mymoolah_transactions', ['createdAt']);
+    // Add indexes for mymoolah_transactions (idempotent)
+    await safeAddIndex('mymoolah_transactions', ['transactionId']);
+    await safeAddIndex('mymoolah_transactions', ['reference']);
+    await safeAddIndex('mymoolah_transactions', ['businessContext']);
+    await safeAddIndex('mymoolah_transactions', ['userId']);
+    await safeAddIndex('mymoolah_transactions', ['clientId']);
+    await safeAddIndex('mymoolah_transactions', ['merchantId']);
+    await safeAddIndex('mymoolah_transactions', ['transactionType']);
+    await safeAddIndex('mymoolah_transactions', ['status']);
+    await safeAddIndex('mymoolah_transactions', ['supplierId']);
+    await safeAddIndex('mymoolah_transactions', ['createdAt']);
 
-    // Add foreign key constraints
-    await queryInterface.addConstraint('mymoolah_transactions', {
+    // Add foreign key constraints (idempotent)
+    await safeAddConstraint('mymoolah_transactions', {
       fields: ['userId'],
       type: 'foreign key',
       name: 'mymoolah_transactions_userId_fkey',
@@ -621,7 +648,7 @@ module.exports = {
       onUpdate: 'CASCADE'
     });
 
-    await queryInterface.addConstraint('mymoolah_transactions', {
+    await safeAddConstraint('mymoolah_transactions', {
       fields: ['clientFloatAccount'],
       type: 'foreign key',
       name: 'mymoolah_transactions_clientFloatAccount_fkey',
@@ -633,7 +660,7 @@ module.exports = {
       onUpdate: 'CASCADE'
     });
 
-    await queryInterface.addConstraint('mymoolah_transactions', {
+    await safeAddConstraint('mymoolah_transactions', {
       fields: ['merchantFloatAccount'],
       type: 'foreign key',
       name: 'mymoolah_transactions_merchantFloatAccount_fkey',
@@ -651,7 +678,7 @@ module.exports = {
       WHERE table_schema = 'public' AND table_name = 'supplier_floats'
     `);
     if (supplierFloats && supplierFloats.length > 0) {
-      await queryInterface.addConstraint('mymoolah_transactions', {
+      await safeAddConstraint('mymoolah_transactions', {
         fields: ['supplierFloatAccount'],
         type: 'foreign key',
         name: 'mymoolah_transactions_supplierFloatAccount_fkey',
