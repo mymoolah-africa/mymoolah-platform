@@ -1,59 +1,70 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Add new columns to peach_payments table
-    await queryInterface.addColumn('peach_payments', 'paymentMethod', {
+    const colExists = async (table, col) => {
+      const [r] = await queryInterface.sequelize.query(
+        `SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='${table}' AND column_name='${col}'`
+      );
+      return r && r.length > 0;
+    };
+    const safeAddColumn = async (table, col, def) => {
+      if (await colExists(table, col)) return;
+      await queryInterface.addColumn(table, col, def);
+    };
+    const safeAddIndex = async (table, cols) => {
+      try {
+        await queryInterface.addIndex(table, cols);
+      } catch (e) {
+        if (!e.message?.includes('already exists')) throw e;
+      }
+    };
+
+    // Add new columns to peach_payments table (idempotent)
+    await safeAddColumn('peach_payments', 'paymentMethod', {
       type: Sequelize.ENUM('proxy', 'account_number'),
       allowNull: false,
       defaultValue: 'proxy',
       comment: 'PayShap proxy (mobile) or direct bank account'
     });
 
-    await queryInterface.addColumn('peach_payments', 'bankCode', {
+    await safeAddColumn('peach_payments', 'bankCode', {
       type: Sequelize.STRING,
       allowNull: true,
       comment: 'Bank code when using account number'
     });
 
-    await queryInterface.addColumn('peach_payments', 'bankName', {
+    await safeAddColumn('peach_payments', 'bankName', {
       type: Sequelize.STRING,
       allowNull: true,
       comment: 'Bank name when using account number'
     });
 
-    await queryInterface.addColumn('peach_payments', 'businessContext', {
+    await safeAddColumn('peach_payments', 'businessContext', {
       type: Sequelize.ENUM('wallet', 'client_integration'),
       allowNull: false,
       defaultValue: 'wallet',
       comment: 'Wallet user or client integration payment'
     });
 
-    await queryInterface.addColumn('peach_payments', 'clientId', {
+    await safeAddColumn('peach_payments', 'clientId', {
       type: Sequelize.STRING,
       allowNull: true,
       comment: 'Client ID for integration payments'
     });
 
-    await queryInterface.addColumn('peach_payments', 'employeeId', {
+    await safeAddColumn('peach_payments', 'employeeId', {
       type: Sequelize.STRING,
       allowNull: true,
       comment: 'Employee ID for client payments'
     });
 
-    // Update existing records to have paymentMethod = 'proxy' and businessContext = 'wallet'
-    await queryInterface.sequelize.query(`
-      UPDATE peach_payments 
-      SET 
-        paymentMethod = 'proxy',
-        businessContext = 'wallet'
-      WHERE paymentMethod IS NULL OR businessContext IS NULL
-    `);
+    // addColumn with defaultValue already sets values for existing rows - no UPDATE needed
 
-    // Add indexes for better performance
-    await queryInterface.addIndex('peach_payments', ['paymentMethod']);
-    await queryInterface.addIndex('peach_payments', ['businessContext']);
-    await queryInterface.addIndex('peach_payments', ['clientId']);
-    await queryInterface.addIndex('peach_payments', ['employeeId']);
+    // Add indexes for better performance (idempotent)
+    await safeAddIndex('peach_payments', ['paymentMethod']);
+    await safeAddIndex('peach_payments', ['businessContext']);
+    await safeAddIndex('peach_payments', ['clientId']);
+    await safeAddIndex('peach_payments', ['employeeId']);
   },
 
   async down(queryInterface, Sequelize) {
