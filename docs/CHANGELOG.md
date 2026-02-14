@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-12 - 🗄️ Production Database Phase 2 (Scripts & Connection Helper) ✅
+
+### **Session Overview**
+Extended database scripts and connection helper for Production environment. Production Cloud SQL instance (`mmtp-pg-production`) is now supported alongside UAT and Staging.
+
+### **Changes**
+- **db-connection-helper.js**: Added `CONFIG.PRODUCTION` (port 6545, database `mymoolah_production`, secret `db-mmtp-pg-production-password`), `getProductionPassword()`, `getProductionPool()`, `getProductionClient()`, `getProductionConfig()`, `getProductionDatabaseURL()`
+- **ensure-proxies-running.sh**: Added Production proxy on port 6545 for `mymoolah-db:africa-south1:mmtp-pg-production`
+- **run-migrations-master.sh**: Added `production` environment; usage: `./scripts/run-migrations-master.sh production`
+- **DATABASE_CONNECTION_GUIDE.md**: Documented Production config, ports, and usage
+
+### **Next Steps**
+- Phase 3: Create `setup-secrets-production.sh`
+- Phase 4: Run migrations and seed scripts on Production
+- Phase 5: Cloud Run production deployment
+
+---
+
 ## 2026-02-12 - 🏦 SBSA PayShap Integration (Complete) ✅
 
 ### **Session Overview**

@@ -1,8 +1,8 @@
-# Database Connection Guide - UAT & Staging
+# Database Connection Guide - UAT, Staging & Production
 
 ## 🎯 **CRITICAL: NEVER STRUGGLE WITH PASSWORDS AGAIN**
 
-This guide ensures **100% reliable** database connections for UAT and Staging. **ALWAYS** use the provided scripts and helpers - never write custom connection logic.
+This guide ensures **100% reliable** database connections for UAT, Staging, and Production. **ALWAYS** use the provided scripts and helpers - never write custom connection logic.
 
 ---
 
@@ -24,6 +24,15 @@ This guide ensures **100% reliable** database connections for UAT and Staging. *
 - **Password Source**: **GCS Secret Manager** (`db-mmtp-pg-staging-password`)
 - **Project**: `mymoolah-db`
 
+### **Production Database**
+- **Host**: `127.0.0.1` (always use localhost - proxy handles routing)
+- **Port**: `6545` (Codespaces) or `5432` (fallback)
+- **Database**: `mymoolah_production`
+- **User**: `mymoolah_app`
+- **Password Source**: **GCS Secret Manager** (`db-mmtp-pg-production-password`)
+- **Project**: `mymoolah-db`
+- **Instance**: `mmtp-pg-production` (Connection: `mymoolah-db:africa-south1:mmtp-pg-production`)
+
 ---
 
 ## 🚀 **Quick Start - Running Migrations**
@@ -37,18 +46,21 @@ This guide ensures **100% reliable** database connections for UAT and Staging. *
 # Run all Staging migrations
 ./scripts/run-migrations-master.sh staging
 
+# Run all Production migrations
+./scripts/run-migrations-master.sh production
+
 # Run specific migration
 ./scripts/run-migrations-master.sh uat 20251203_01_create_sync_audit_logs_table
 ```
 
 **This script handles:**
 - ✅ Proxy detection and startup
-- ✅ Password retrieval (UAT from .env, Staging from Secret Manager)
+- ✅ Password retrieval (UAT from .env, Staging/Production from Secret Manager)
 - ✅ Connection string construction
 - ✅ URL encoding of passwords
 - ✅ Error handling
 
-**Rule (updated Feb 2026):** Run **migrations first** when you add or change UAT/Staging schema. Run **seed scripts only after** the relevant migrations have been run for that environment. Order is always: migrations → then seed.
+**Rule (updated Feb 2026):** Run **migrations first** when you add or change UAT/Staging/Production schema. Run **seed scripts only after** the relevant migrations have been run for that environment. Order is always: migrations → then seed.
 
 ---
 
@@ -56,15 +68,15 @@ This guide ensures **100% reliable** database connections for UAT and Staging. *
 
 ### **1. Master Migration Script** ⭐ **USE THIS FOR MIGRATIONS**
 ```bash
-./scripts/run-migrations-master.sh [uat|staging] [migration-name]
+./scripts/run-migrations-master.sh [uat|staging|production] [migration-name]
 ```
 - Handles everything automatically
 - No manual configuration needed
-- Works for both UAT and Staging
+- Works for UAT, Staging, and Production
 
 ### **2. Connection Helper (Node.js)**
 ```javascript
-const { getUATClient, getStagingClient } = require('./scripts/db-connection-helper');
+const { getUATClient, getStagingClient, getProductionClient } = require('./scripts/db-connection-helper');
 
 // Get a client (remember to release!)
 const uatClient = await getUATClient();
@@ -78,7 +90,7 @@ try {
 
 ### **3. Proxy Management**
 ```bash
-# Ensure both proxies are running
+# Ensure all proxies are running (UAT 6543, Staging 6544, Production 6545)
 ./scripts/ensure-proxies-running.sh
 ```
 

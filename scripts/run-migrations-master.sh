@@ -3,18 +3,19 @@
 set -euo pipefail
 
 # ============================================================================
-# MASTER MIGRATION SCRIPT - UAT & STAGING
+# MASTER MIGRATION SCRIPT - UAT, STAGING & PRODUCTION
 # ============================================================================
 # 
 # This is the ONLY script you need for running migrations
 # Handles all connection, password, and proxy management automatically
 #
 # Usage:
-#   ./scripts/run-migrations-master.sh [uat|staging] [migration-name]
+#   ./scripts/run-migrations-master.sh [uat|staging|production] [migration-name]
 #
 # Examples:
 #   ./scripts/run-migrations-master.sh uat              # Run all UAT migrations
 #   ./scripts/run-migrations-master.sh staging          # Run all Staging migrations
+#   ./scripts/run-migrations-master.sh production      # Run all Production migrations
 #   ./scripts/run-migrations-master.sh uat 20251203_01  # Run specific migration
 # ============================================================================
 
@@ -50,18 +51,19 @@ show_usage() {
   echo "🏦 Master Migration Script"
   echo "=========================="
   echo ""
-  echo "Usage: $0 [uat|staging] [migration-name]"
+  echo "Usage: $0 [uat|staging|production] [migration-name]"
   echo ""
   echo "Examples:"
   echo "  $0 uat                    # Run all pending UAT migrations"
   echo "  $0 staging                # Run all pending Staging migrations"
+  echo "  $0 production             # Run all pending Production migrations"
   echo "  $0 uat 20251203_01        # Run specific UAT migration"
   echo "  $0 staging 20251203_01    # Run specific Staging migration"
   echo ""
 }
 
 # Validate environment
-if [ -z "${ENVIRONMENT}" ] || [[ ! "${ENVIRONMENT}" =~ ^(uat|staging)$ ]]; then
+if [ -z "${ENVIRONMENT}" ] || [[ ! "${ENVIRONMENT}" =~ ^(uat|staging|production)$ ]]; then
   error "Invalid or missing environment"
   show_usage
   exit 1
@@ -82,10 +84,10 @@ fi
 check_proxies() {
   log "Checking Cloud SQL Auth Proxies..."
   
-  # Check UAT proxy (6543)
-  if ! lsof -ti:6543 >/dev/null 2>&1; then
+  # Check UAT proxy (6543) - required for uat
+  if [ "${ENVIRONMENT}" = "uat" ] && ! lsof -ti:6543 >/dev/null 2>&1; then
     warning "UAT proxy not running on port 6543"
-    log "Starting UAT proxy..."
+    log "Starting proxies..."
     cd "$(dirname "$0")/.." || exit 1
     ./scripts/ensure-proxies-running.sh 2>/dev/null || {
       error "Failed to start proxies. Run manually: ./scripts/ensure-proxies-running.sh"
@@ -93,10 +95,10 @@ check_proxies() {
     }
   fi
   
-  # Check Staging proxy (6544)
-  if ! lsof -ti:6544 >/dev/null 2>&1; then
+  # Check Staging proxy (6544) - required for staging
+  if [ "${ENVIRONMENT}" = "staging" ] && ! lsof -ti:6544 >/dev/null 2>&1; then
     warning "Staging proxy not running on port 6544"
-    log "Starting Staging proxy..."
+    log "Starting proxies..."
     cd "$(dirname "$0")/.." || exit 1
     ./scripts/ensure-proxies-running.sh 2>/dev/null || {
       error "Failed to start proxies. Run manually: ./scripts/ensure-proxies-running.sh"
@@ -104,7 +106,18 @@ check_proxies() {
     }
   fi
   
-  success "All proxies are running"
+  # Check Production proxy (6545) - required for production
+  if [ "${ENVIRONMENT}" = "production" ] && ! lsof -ti:6545 >/dev/null 2>&1; then
+    warning "Production proxy not running on port 6545"
+    log "Starting proxies..."
+    cd "$(dirname "$0")/.." || exit 1
+    ./scripts/ensure-proxies-running.sh 2>/dev/null || {
+      error "Failed to start proxies. Run manually: ./scripts/ensure-proxies-running.sh"
+      exit 1
+    }
+  fi
+  
+  success "Required proxy is running"
 }
 
 # Run migrations using Node.js helper
@@ -128,7 +141,7 @@ if (!rootDir) {
 require('dotenv').config({ path: path.join(rootDir, '.env') });
 
 // Load connection helper from project root
-const { getUATDatabaseURL, getStagingDatabaseURL } = require(path.join(rootDir, 'scripts', 'db-connection-helper'));
+const { getUATDatabaseURL, getStagingDatabaseURL, getProductionDatabaseURL } = require(path.join(rootDir, 'scripts', 'db-connection-helper'));
 
 const environment = process.env.MIGRATION_ENV;
 const migrationName = process.env.MIGRATION_NAME;
@@ -141,12 +154,15 @@ try {
   } else if (environment === 'staging') {
     databaseURL = getStagingDatabaseURL();
     console.log('✅ Using Staging database connection');
+  } else if (environment === 'production') {
+    databaseURL = getProductionDatabaseURL();
+    console.log('✅ Using Production database connection');
   } else {
     throw new Error(`Invalid environment: ${environment}`);
   }
 
   process.env.DATABASE_URL = databaseURL;
-  process.env.NODE_ENV = environment === 'uat' ? 'development' : 'staging';
+  process.env.NODE_ENV = environment === 'uat' ? 'development' : (environment === 'staging' ? 'staging' : 'production');
 
   const { execSync } = require('child_process');
   const cmd = migrationName 

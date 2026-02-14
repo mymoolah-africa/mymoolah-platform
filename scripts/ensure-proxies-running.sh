@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ##############################################################################
-# Ensure Both Proxies Are Running
+# Ensure Cloud SQL Auth Proxies Are Running
 # 
-# Purpose: Check if UAT and Staging proxies are running, start if needed
+# Purpose: Check if UAT, Staging, and Production proxies are running, start if needed
 # Usage: ./scripts/ensure-proxies-running.sh
 ##############################################################################
 
@@ -97,6 +97,29 @@ else
   echo -e "${GREEN}✅ Staging proxy running on port 6544 (PID: $STAGING_RUNNING)${NC}"
 fi
 
+# Check Production proxy (6545)
+PRODUCTION_RUNNING=$(lsof -ti:6545 2>/dev/null || echo "")
+if [ -z "$PRODUCTION_RUNNING" ]; then
+  echo -e "${YELLOW}⚠️  Production proxy NOT running on port 6545${NC}"
+  echo "   Starting Production proxy..."
+  cd "$REPO_ROOT" || exit 1
+  nohup ./cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-production \
+    --port 6545 \
+    --structured-logs \
+    $TOKEN_FLAG \
+    > /tmp/production-proxy-6545.log 2>&1 &
+  sleep 3
+  if lsof -ti:6545 >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ Production proxy started${NC}"
+  else
+    echo -e "${RED}❌ Production proxy failed to start${NC}"
+    echo "   Check logs: cat /tmp/production-proxy-6545.log"
+    exit 1
+  fi
+else
+  echo -e "${GREEN}✅ Production proxy running on port 6545 (PID: $PRODUCTION_RUNNING)${NC}"
+fi
+
 echo ""
-echo -e "${GREEN}✅ Both proxies are running!${NC}"
+echo -e "${GREEN}✅ All proxies are running!${NC}"
 echo ""

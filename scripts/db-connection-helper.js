@@ -3,13 +3,14 @@
 /**
  * Database Connection Helper
  * 
- * Centralized, reliable connection management for UAT and Staging
+ * Centralized, reliable connection management for UAT, Staging, and Production
  * NEVER modify passwords or connection logic directly - use this helper
  * 
  * Usage:
- *   const { getUATClient, getStagingClient } = require('./db-connection-helper');
+ *   const { getUATClient, getStagingClient, getProductionClient } = require('./db-connection-helper');
  *   const uatClient = await getUATClient();
  *   const stagingClient = await getStagingClient();
+ *   const productionClient = await getProductionClient();
  */
 
 require('dotenv').config();
@@ -33,6 +34,14 @@ const CONFIG = {
     USER: 'mymoolah_app',
     PASSWORD_SOURCE: 'secret_manager', // From GCS Secret Manager
     SECRET_NAME: 'db-mmtp-pg-staging-password',
+    PROJECT_ID: 'mymoolah-db',
+  },
+  PRODUCTION: {
+    PROXY_PORTS: [6545, 5432], // Primary: 6545 (Codespaces), Fallback: 5432
+    DATABASE: 'mymoolah_production',
+    USER: 'mymoolah_app',
+    PASSWORD_SOURCE: 'secret_manager', // From GCS Secret Manager
+    SECRET_NAME: 'db-mmtp-pg-production-password',
     PROJECT_ID: 'mymoolah-db',
   },
   HOST: '127.0.0.1', // Always use localhost (proxy handles routing)
@@ -98,6 +107,21 @@ function getStagingPassword() {
   }
 }
 
+/**
+ * Get Production password from GCS Secret Manager
+ */
+function getProductionPassword() {
+  try {
+    const password = execSync(
+      `gcloud secrets versions access latest --secret="${CONFIG.PRODUCTION.SECRET_NAME}" --project=${CONFIG.PRODUCTION.PROJECT_ID}`,
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    return password.replace(/[\r\n\s]+$/g, '').trim();
+  } catch (error) {
+    throw new Error(`Failed to get Production password from Secret Manager: ${CONFIG.PRODUCTION.SECRET_NAME} - ${error.message}`);
+  }
+}
+
 // ============================================================================
 // PROXY DETECTION
 // ============================================================================
@@ -126,6 +150,7 @@ function detectProxyPort(ports, name) {
 
 let uatPool = null;
 let stagingPool = null;
+let productionPool = null;
 
 /**
  * Get UAT database connection pool
@@ -182,6 +207,33 @@ function getStagingPool() {
 }
 
 /**
+ * Get Production database connection pool
+ * Uses GCS Secret Manager for credentials
+ */
+function getProductionPool() {
+  if (productionPool) {
+    return productionPool;
+  }
+
+  const proxyPort = detectProxyPort(CONFIG.PRODUCTION.PROXY_PORTS, 'Production');
+  const password = getProductionPassword();
+
+  productionPool = new Pool({
+    host: CONFIG.HOST,
+    port: proxyPort,
+    database: CONFIG.PRODUCTION.DATABASE,
+    user: CONFIG.PRODUCTION.USER,
+    password: password,
+    ssl: CONFIG.SSL,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
+
+  return productionPool;
+}
+
+/**
  * Get a client from UAT pool
  */
 async function getUATClient() {
@@ -194,6 +246,14 @@ async function getUATClient() {
  */
 async function getStagingClient() {
   const pool = getStagingPool();
+  return await pool.connect();
+}
+
+/**
+ * Get a client from Production pool
+ */
+async function getProductionClient() {
+  const pool = getProductionPool();
   return await pool.connect();
 }
 
@@ -228,6 +288,20 @@ function getStagingConfig() {
   };
 }
 
+function getProductionConfig() {
+  const proxyPort = detectProxyPort(CONFIG.PRODUCTION.PROXY_PORTS, 'Production');
+  const password = getProductionPassword();
+  
+  return {
+    host: CONFIG.HOST,
+    port: proxyPort,
+    database: CONFIG.PRODUCTION.DATABASE,
+    user: CONFIG.PRODUCTION.USER,
+    password: password,
+    ssl: CONFIG.SSL,
+  };
+}
+
 /**
  * Get DATABASE_URL for Sequelize CLI (UAT)
  */
@@ -247,6 +321,15 @@ function getStagingDatabaseURL() {
 }
 
 /**
+ * Get DATABASE_URL for Sequelize CLI (Production)
+ */
+function getProductionDatabaseURL() {
+  const config = getProductionConfig();
+  const encodedPassword = encodeURIComponent(config.password);
+  return `postgres://${config.user}:${encodedPassword}@${config.host}:${config.port}/${config.database}?sslmode=disable`;
+}
+
+/**
  * Close all connection pools (cleanup)
  */
 async function closeAll() {
@@ -258,6 +341,10 @@ async function closeAll() {
     await stagingPool.end();
     stagingPool = null;
   }
+  if (productionPool) {
+    await productionPool.end();
+    productionPool = null;
+  }
 }
 
 // ============================================================================
@@ -268,23 +355,28 @@ module.exports = {
   // Connection pools
   getUATPool,
   getStagingPool,
+  getProductionPool,
   
   // Single clients (remember to release!)
   getUATClient,
   getStagingClient,
+  getProductionClient,
   
   // Raw configs (for pg_dump, etc.)
   getUATConfig,
   getStagingConfig,
+  getProductionConfig,
   
   // DATABASE_URL for Sequelize CLI
   getUATDatabaseURL,
   getStagingDatabaseURL,
+  getProductionDatabaseURL,
   
   // Utilities
   detectProxyPort,
   getUATPassword,
   getStagingPassword,
+  getProductionPassword,
   closeAll,
   
   // Constants
