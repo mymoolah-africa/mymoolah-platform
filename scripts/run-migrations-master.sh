@@ -162,7 +162,9 @@ try {
   }
 
   process.env.DATABASE_URL = databaseURL;
-  process.env.NODE_ENV = environment === 'uat' ? 'development' : (environment === 'staging' ? 'staging' : 'production');
+  // Use production-proxy (no SSL) for Production migrations via Cloud SQL Proxy (localhost)
+  // production config requires SSL for direct Cloud Run connections
+  process.env.NODE_ENV = environment === 'uat' ? 'development' : (environment === 'staging' ? 'staging' : 'production-proxy');
 
   const { execSync } = require('child_process');
   const cmd = migrationName 
