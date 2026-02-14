@@ -645,25 +645,34 @@ module.exports = {
       onUpdate: 'CASCADE'
     });
 
-    await queryInterface.addConstraint('mymoolah_transactions', {
-      fields: ['supplierFloatAccount'],
-      type: 'foreign key',
-      name: 'mymoolah_transactions_supplierFloatAccount_fkey',
-      references: {
-        table: 'supplier_floats',
-        field: 'floatAccountNumber'
-      },
-      onDelete: 'SET NULL',
-      onUpdate: 'CASCADE'
-    });
+    // Add supplierFloatAccount FK only if supplier_floats exists (created by create_settlement_system)
+    const [supplierFloats] = await queryInterface.sequelize.query(`
+      SELECT 1 FROM information_schema.tables 
+      WHERE table_schema = 'public' AND table_name = 'supplier_floats'
+    `);
+    if (supplierFloats && supplierFloats.length > 0) {
+      await queryInterface.addConstraint('mymoolah_transactions', {
+        fields: ['supplierFloatAccount'],
+        type: 'foreign key',
+        name: 'mymoolah_transactions_supplierFloatAccount_fkey',
+        references: {
+          table: 'supplier_floats',
+          field: 'floatAccountNumber'
+        },
+        onDelete: 'SET NULL',
+        onUpdate: 'CASCADE'
+      });
+    }
   },
 
   async down(queryInterface, Sequelize) {
-    // Remove foreign key constraints
+    // Remove foreign key constraints (supplierFloatAccount may not exist if supplier_floats was missing)
+    try {
+      await queryInterface.removeConstraint('mymoolah_transactions', 'mymoolah_transactions_supplierFloatAccount_fkey');
+    } catch (e) { /* may not exist */ }
     await queryInterface.removeConstraint('mymoolah_transactions', 'mymoolah_transactions_userId_fkey');
     await queryInterface.removeConstraint('mymoolah_transactions', 'mymoolah_transactions_clientFloatAccount_fkey');
     await queryInterface.removeConstraint('mymoolah_transactions', 'mymoolah_transactions_merchantFloatAccount_fkey');
-    await queryInterface.removeConstraint('mymoolah_transactions', 'mymoolah_transactions_supplierFloatAccount_fkey');
 
     // Remove indexes
     await queryInterface.removeIndex('mymoolah_transactions', ['transactionId']);
