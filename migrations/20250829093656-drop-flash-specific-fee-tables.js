@@ -3,14 +3,30 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Safety: ensure generic tables populated before dropping
+    // Safety: abort only if flash tables have data but generic tables are empty (migration was skipped)
     const [[feeCount]] = await queryInterface.sequelize.query(`SELECT COUNT(*)::int AS c FROM supplier_fee_schedule`);
     const [[tierCount]] = await queryInterface.sequelize.query(`SELECT COUNT(*)::int AS c FROM supplier_commission_tiers`);
-    if ((feeCount.c || 0) === 0 || (tierCount.c || 0) === 0) {
-      throw new Error('Generic supplier tables are empty; aborting drop of flash_* tables');
+    const genericHasData = (feeCount?.c || 0) > 0 || (tierCount?.c || 0) > 0;
+    if (!genericHasData) {
+      let flashFeeCount = 0, flashTierCount = 0;
+      try {
+        const [[r]] = await queryInterface.sequelize.query(`SELECT COUNT(*)::int AS c FROM flash_fee_schedule`);
+        flashFeeCount = r?.c || 0;
+      } catch { /* table may not exist */ }
+      try {
+        const [[r]] = await queryInterface.sequelize.query(`SELECT COUNT(*)::int AS c FROM flash_commission_tiers`);
+        flashTierCount = r?.c || 0;
+      } catch { /* table may not exist */ }
+      if (flashFeeCount > 0 || flashTierCount > 0) {
+        throw new Error('Generic supplier tables are empty but flash tables have data; run migrate-flash-fees-to-generic first');
+      }
     }
-    await queryInterface.dropTable('flash_fee_schedule');
-    await queryInterface.dropTable('flash_commission_tiers');
+    try { await queryInterface.dropTable('flash_fee_schedule'); } catch (e) {
+      if (!e.message?.includes('does not exist')) throw e;
+    }
+    try { await queryInterface.dropTable('flash_commission_tiers'); } catch (e) {
+      if (!e.message?.includes('does not exist')) throw e;
+    }
   },
 
   async down(queryInterface, Sequelize) {
