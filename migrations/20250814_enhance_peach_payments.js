@@ -20,42 +20,37 @@ module.exports = {
     };
 
     // Add new columns to peach_payments table (idempotent)
+    // Note: comments removed - were causing "syntax error at or near or" in PostgreSQL
     await safeAddColumn('peach_payments', 'paymentMethod', {
       type: Sequelize.ENUM('proxy', 'account_number'),
       allowNull: false,
-      defaultValue: 'proxy',
-      comment: 'PayShap proxy (mobile) or direct bank account'
+      defaultValue: 'proxy'
     });
 
     await safeAddColumn('peach_payments', 'bankCode', {
       type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'Bank code when using account number'
+      allowNull: true
     });
 
     await safeAddColumn('peach_payments', 'bankName', {
       type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'Bank name when using account number'
+      allowNull: true
     });
 
     await safeAddColumn('peach_payments', 'businessContext', {
       type: Sequelize.ENUM('wallet', 'client_integration'),
       allowNull: false,
-      defaultValue: 'wallet',
-      comment: 'Wallet user or client integration payment'
+      defaultValue: 'wallet'
     });
 
     await safeAddColumn('peach_payments', 'clientId', {
       type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'Client ID for integration payments'
+      allowNull: true
     });
 
     await safeAddColumn('peach_payments', 'employeeId', {
       type: Sequelize.STRING,
-      allowNull: true,
-      comment: 'Employee ID for client payments'
+      allowNull: true
     });
 
     // addColumn with defaultValue already sets values for existing rows - no UPDATE needed
