@@ -32,6 +32,7 @@ This guide ensures **100% reliable** database connections for UAT, Staging, and 
 - **Password Source**: **GCS Secret Manager** (`db-mmtp-pg-production-password`)
 - **Project**: `mymoolah-db`
 - **Instance**: `mmtp-pg-production` (Connection: `mymoolah-db:africa-south1:mmtp-pg-production`)
+- **Migration Status**: ✅ **COMPLETE** (Feb 12, 2026) - All 80+ migrations applied
 
 ---
 
