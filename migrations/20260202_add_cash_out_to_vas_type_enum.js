@@ -30,84 +30,63 @@ module.exports = {
       // Note: ALTER TYPE ... ADD VALUE cannot be rolled back in a transaction
       // This is safe because it only adds a new value (doesn't modify existing)
       
-      // Add cash_out to enum_vas_products_vasType
-      await queryInterface.sequelize.query(`
-        DO $$
-        BEGIN
-          -- Check if 'cash_out' already exists in enum_vas_products_vasType
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_enum 
-            WHERE enumlabel = 'cash_out' 
-            AND enumtypid = (
-              SELECT oid FROM pg_type WHERE typname = 'enum_vas_products_vasType'
-            )
-          ) THEN
-            -- Add 'cash_out' to the enum
-            ALTER TYPE "enum_vas_products_vasType" ADD VALUE 'cash_out';
-            RAISE NOTICE 'Added cash_out to enum_vas_products_vasType';
-          ELSE
-            RAISE NOTICE 'cash_out already exists in enum_vas_products_vasType - skipping';
-          END IF;
-        END
-        $$;
+      // Check if enum_vas_products_vasType exists before modifying
+      const [productEnumExists] = await queryInterface.sequelize.query(`
+        SELECT 1 FROM pg_type WHERE typname = 'enum_vas_products_vasType'
       `);
       
-      // Add cash_out to enum_vas_transactions_vasType
-      await queryInterface.sequelize.query(`
-        DO $$
-        BEGIN
-          -- Check if 'cash_out' already exists in enum_vas_transactions_vasType
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_enum 
-            WHERE enumlabel = 'cash_out' 
-            AND enumtypid = (
-              SELECT oid FROM pg_type WHERE typname = 'enum_vas_transactions_vasType'
-            )
-          ) THEN
-            -- Add 'cash_out' to the enum
-            ALTER TYPE "enum_vas_transactions_vasType" ADD VALUE 'cash_out';
-            RAISE NOTICE 'Added cash_out to enum_vas_transactions_vasType';
-          ELSE
-            RAISE NOTICE 'cash_out already exists in enum_vas_transactions_vasType - skipping';
-          END IF;
-        END
-        $$;
-      `);
-      
-      console.log('✅ Successfully added cash_out to both vasType ENUMs');
-      
-      // Verify enum_vas_products_vasType
-      const productEnumValues = await queryInterface.sequelize.query(`
-        SELECT enumlabel 
-        FROM pg_enum 
-        WHERE enumtypid = (
-          SELECT oid FROM pg_type WHERE typname = 'enum_vas_products_vasType'
-        )
-        ORDER BY enumlabel;
-      `, { type: Sequelize.QueryTypes.SELECT });
-      
-      console.log('📊 VasProduct vasType ENUM values:', productEnumValues.map(v => v.enumlabel).join(', '));
-      
-      // Verify enum_vas_transactions_vasType
-      const transactionEnumValues = await queryInterface.sequelize.query(`
-        SELECT enumlabel 
-        FROM pg_enum 
-        WHERE enumtypid = (
-          SELECT oid FROM pg_type WHERE typname = 'enum_vas_transactions_vasType'
-        )
-        ORDER BY enumlabel;
-      `, { type: Sequelize.QueryTypes.SELECT });
-      
-      console.log('📊 VasTransaction vasType ENUM values:', transactionEnumValues.map(v => v.enumlabel).join(', '));
-      
-      const productHasCashOut = productEnumValues.some(v => v.enumlabel === 'cash_out');
-      const transactionHasCashOut = transactionEnumValues.some(v => v.enumlabel === 'cash_out');
-      
-      if (!productHasCashOut || !transactionHasCashOut) {
-        throw new Error('Failed to add cash_out to one or both vasType ENUMs');
+      if (productEnumExists && productEnumExists.length > 0) {
+        // Add cash_out to enum_vas_products_vasType
+        await queryInterface.sequelize.query(`
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_enum 
+              WHERE enumlabel = 'cash_out' 
+              AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'enum_vas_products_vasType')
+            ) THEN
+              ALTER TYPE "enum_vas_products_vasType" ADD VALUE 'cash_out';
+              RAISE NOTICE 'Added cash_out to enum_vas_products_vasType';
+            ELSE
+              RAISE NOTICE 'cash_out already exists in enum_vas_products_vasType - skipping';
+            END IF;
+          END
+          $$;
+        `);
+        console.log('✅ Added cash_out to enum_vas_products_vasType');
+      } else {
+        console.log('⚠️  enum_vas_products_vasType does not exist (vas_products table not created), skipping');
       }
       
-      console.log('✅ Verification passed: cash_out is now a valid vasType value in both tables');
+      // Check if enum_vas_transactions_vasType exists before modifying
+      const [txnEnumExists] = await queryInterface.sequelize.query(`
+        SELECT 1 FROM pg_type WHERE typname = 'enum_vas_transactions_vasType'
+      `);
+      
+      if (txnEnumExists && txnEnumExists.length > 0) {
+        // Add cash_out to enum_vas_transactions_vasType
+        await queryInterface.sequelize.query(`
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_enum 
+              WHERE enumlabel = 'cash_out' 
+              AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'enum_vas_transactions_vasType')
+            ) THEN
+              ALTER TYPE "enum_vas_transactions_vasType" ADD VALUE 'cash_out';
+              RAISE NOTICE 'Added cash_out to enum_vas_transactions_vasType';
+            ELSE
+              RAISE NOTICE 'cash_out already exists in enum_vas_transactions_vasType - skipping';
+            END IF;
+          END
+          $$;
+        `);
+        console.log('✅ Added cash_out to enum_vas_transactions_vasType');
+      } else {
+        console.log('⚠️  enum_vas_transactions_vasType does not exist, skipping');
+      }
+      
+      console.log('✅ cash_out ENUM value addition completed');
       
     } catch (error) {
       console.error('❌ Migration failed:', error.message);
