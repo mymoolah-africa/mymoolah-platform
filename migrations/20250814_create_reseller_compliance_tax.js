@@ -1,7 +1,29 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Create reseller_floats table
+    const tableExists = async (name) => {
+      const [r] = await queryInterface.sequelize.query(
+        `SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='${name}'`
+      );
+      return r && r.length > 0;
+    };
+    const safeAddIndex = async (table, columns, opts = {}) => {
+      try {
+        await queryInterface.addIndex(table, columns, opts);
+      } catch (e) {
+        if (!e.message?.includes('already exists')) throw e;
+      }
+    };
+    const safeAddConstraint = async (table, constraint) => {
+      try {
+        await queryInterface.addConstraint(table, constraint);
+      } catch (e) {
+        if (!e.message?.includes('already exists')) throw e;
+      }
+    };
+
+    // Create reseller_floats table (idempotent)
+    if (!(await tableExists('reseller_floats'))) {
     await queryInterface.createTable('reseller_floats', {
       id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
       
@@ -195,8 +217,10 @@ module.exports = {
         defaultValue: Sequelize.fn('NOW') 
       },
     });
+    }
 
-    // Create tax_configurations table
+    // Create tax_configurations table (idempotent)
+    if (!(await tableExists('tax_configurations'))) {
     await queryInterface.createTable('tax_configurations', {
       id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
       
@@ -321,8 +345,10 @@ module.exports = {
         defaultValue: Sequelize.fn('NOW') 
       },
     });
+    }
 
-    // Create tax_transactions table
+    // Create tax_transactions table (idempotent)
+    if (!(await tableExists('tax_transactions'))) {
     await queryInterface.createTable('tax_transactions', {
       id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
       
@@ -472,8 +498,10 @@ module.exports = {
         defaultValue: Sequelize.fn('NOW') 
       },
     });
+    }
 
-    // Create compliance_records table
+    // Create compliance_records table (idempotent)
+    if (!(await tableExists('compliance_records'))) {
     await queryInterface.createTable('compliance_records', {
       id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
       
@@ -609,47 +637,45 @@ module.exports = {
         defaultValue: Sequelize.fn('NOW') 
       },
     });
+    }
 
-    // Add indexes for reseller_floats
-    await queryInterface.addIndex('reseller_floats', ['resellerId']);
-    await queryInterface.addIndex('reseller_floats', ['floatAccountNumber']);
-    await queryInterface.addIndex('reseller_floats', ['resellerType']);
-    await queryInterface.addIndex('reseller_floats', ['tierLevel']);
-    await queryInterface.addIndex('reseller_floats', ['status']);
-    await queryInterface.addIndex('reseller_floats', ['isActive']);
-    await queryInterface.addIndex('reseller_floats', ['settlementPeriod']);
-    await queryInterface.addIndex('reseller_floats', ['region']);
+    // Add indexes (idempotent)
+    await safeAddIndex('reseller_floats', ['resellerId']);
+    await safeAddIndex('reseller_floats', ['floatAccountNumber']);
+    await safeAddIndex('reseller_floats', ['resellerType']);
+    await safeAddIndex('reseller_floats', ['tierLevel']);
+    await safeAddIndex('reseller_floats', ['status']);
+    await safeAddIndex('reseller_floats', ['isActive']);
+    await safeAddIndex('reseller_floats', ['settlementPeriod']);
+    await safeAddIndex('reseller_floats', ['region']);
 
-    // Add indexes for tax_configurations
-    await queryInterface.addIndex('tax_configurations', ['taxCode']);
-    await queryInterface.addIndex('tax_configurations', ['taxType']);
-    await queryInterface.addIndex('tax_configurations', ['isActive']);
-    await queryInterface.addIndex('tax_configurations', ['effectiveFrom']);
-    await queryInterface.addIndex('tax_configurations', ['effectiveTo']);
-    await queryInterface.addIndex('tax_configurations', ['appliesTo']);
+    await safeAddIndex('tax_configurations', ['taxCode']);
+    await safeAddIndex('tax_configurations', ['taxType']);
+    await safeAddIndex('tax_configurations', ['isActive']);
+    await safeAddIndex('tax_configurations', ['effectiveFrom']);
+    await safeAddIndex('tax_configurations', ['effectiveTo']);
+    await safeAddIndex('tax_configurations', ['appliesTo']);
 
-    // Add indexes for tax_transactions
-    await queryInterface.addIndex('tax_transactions', ['taxTransactionId']);
-    await queryInterface.addIndex('tax_transactions', ['originalTransactionId']);
-    await queryInterface.addIndex('tax_transactions', ['taxCode']);
-    await queryInterface.addIndex('tax_transactions', ['taxType']);
-    await queryInterface.addIndex('tax_transactions', ['businessContext']);
-    await queryInterface.addIndex('tax_transactions', ['entityId']);
-    await queryInterface.addIndex('tax_transactions', ['entityType']);
-    await queryInterface.addIndex('tax_transactions', ['taxPeriod']);
-    await queryInterface.addIndex('tax_transactions', ['taxYear']);
-    await queryInterface.addIndex('tax_transactions', ['status']);
-    await queryInterface.addIndex('tax_transactions', ['createdAt']);
+    await safeAddIndex('tax_transactions', ['taxTransactionId']);
+    await safeAddIndex('tax_transactions', ['originalTransactionId']);
+    await safeAddIndex('tax_transactions', ['taxCode']);
+    await safeAddIndex('tax_transactions', ['taxType']);
+    await safeAddIndex('tax_transactions', ['businessContext']);
+    await safeAddIndex('tax_transactions', ['entityId']);
+    await safeAddIndex('tax_transactions', ['entityType']);
+    await safeAddIndex('tax_transactions', ['taxPeriod']);
+    await safeAddIndex('tax_transactions', ['taxYear']);
+    await safeAddIndex('tax_transactions', ['status']);
+    await safeAddIndex('tax_transactions', ['createdAt']);
 
-    // Add indexes for compliance_records
-    await queryInterface.addIndex('compliance_records', ['recordId']);
-    await queryInterface.addIndex('compliance_records', ['complianceType']);
-    await queryInterface.addIndex('compliance_records', ['entityId']);
-    await queryInterface.addIndex('compliance_records', ['entityType']);
-    await queryInterface.addIndex('compliance_records', ['status']);
-    await queryInterface.addIndex('compliance_records', ['riskLevel']);
-    await queryInterface.addIndex('compliance_records', ['validUntil']);
-    await queryInterface.addIndex('compliance_records', ['createdAt']);
+    await safeAddIndex('compliance_records', ['recordId']);
+    await safeAddIndex('compliance_records', ['complianceType']);
+    await safeAddIndex('compliance_records', ['entityId']);
+    await safeAddIndex('compliance_records', ['entityType']);
+    await safeAddIndex('compliance_records', ['status']);
+    await safeAddIndex('compliance_records', ['riskLevel']);
+    await safeAddIndex('compliance_records', ['validUntil']);
+    await safeAddIndex('compliance_records', ['createdAt']);
 
     // Add resellerFloatAccount column to mymoolah_transactions if missing, then add FK
     const [cols] = await queryInterface.sequelize.query(`
@@ -663,8 +689,7 @@ module.exports = {
         comment: 'Reseller float account number involved'
       });
     }
-    try {
-    await queryInterface.addConstraint('mymoolah_transactions', {
+    await safeAddConstraint('mymoolah_transactions', {
       fields: ['resellerFloatAccount'],
       type: 'foreign key',
       name: 'mymoolah_transactions_resellerFloatAccount_fkey',
@@ -675,12 +700,8 @@ module.exports = {
       onDelete: 'SET NULL',
       onUpdate: 'CASCADE'
     });
-    } catch (e) {
-      if (!e.message?.includes('already exists')) throw e;
-    }
 
-    // Add foreign key constraints for tax_transactions
-    await queryInterface.addConstraint('tax_transactions', {
+    await safeAddConstraint('tax_transactions', {
       fields: ['originalTransactionId'],
       type: 'foreign key',
       name: 'tax_transactions_originalTransactionId_fkey',
@@ -692,7 +713,7 @@ module.exports = {
       onUpdate: 'CASCADE'
     });
 
-    await queryInterface.addConstraint('tax_transactions', {
+    await safeAddConstraint('tax_transactions', {
       fields: ['taxCode'],
       type: 'foreign key',
       name: 'tax_transactions_taxCode_fkey',
