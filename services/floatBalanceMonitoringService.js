@@ -30,6 +30,7 @@ class FloatBalanceMonitoringService {
     // Email transporter configuration
     this.transporter = null;
     this.smtpConfigured = false;
+    this.smtpAuthFailed = false; // Set true when send fails with auth error - skip future attempts
     
     if (process.env.SMTP_USER && process.env.SMTP_PASS) {
       try {
@@ -231,6 +232,9 @@ class FloatBalanceMonitoringService {
       console.warn(`[FloatBalanceMonitoring] Cannot send alert - SMTP not configured`);
       return { success: false, message: 'SMTP not configured' };
     }
+    if (this.smtpAuthFailed) {
+      return { success: false, message: 'SMTP auth failed previously - skipping email' };
+    }
 
     try {
       // Get supplier email from metadata or use default
@@ -262,7 +266,16 @@ class FloatBalanceMonitoringService {
         alertLevel
       };
     } catch (error) {
-      console.error(`[FloatBalanceMonitoring] ❌ Failed to send alert:`, error);
+      const isAuthError = error.code === 'EAUTH' ||
+        error.responseCode === 535 ||
+        /Username and Password not accepted|BadCredentials|Invalid login/i.test(String(error.message || ''));
+      if (isAuthError) {
+        this.smtpAuthFailed = true;
+        this.smtpConfigured = false;
+        console.warn(`[FloatBalanceMonitoring] SMTP credentials invalid - email notifications disabled for this session. Check SMTP_USER/SMTP_PASS (use Gmail App Password if using Gmail).`);
+      } else {
+        console.error(`[FloatBalanceMonitoring] ❌ Failed to send alert:`, error);
+      }
       return {
         success: false,
         error: error.message
@@ -429,6 +442,7 @@ class FloatBalanceMonitoringService {
       lastCheckTime: this.lastCheckTime,
       checkIntervalMinutes: this.checkIntervalMinutes,
       smtpConfigured: this.smtpConfigured,
+      smtpAuthFailed: this.smtpAuthFailed,
       notificationHistorySize: this.notificationHistory.size
     };
   }

@@ -31,7 +31,8 @@ if (!process.env.DATABASE_URL) {
 
 process.env.DATABASE_URL = configureDatabaseUrl(process.env.DATABASE_URL);
 process.env.PGSSLMODE = process.env.DATABASE_URL.includes('sslmode=disable') ? "disable" : "no-verify";
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+// Do NOT set NODE_TLS_REJECT_UNAUTHORIZED=0 - it disables cert verification for ALL TLS (nodemailer, APIs, etc).
+// DB SSL is handled by pg via PGSSLMODE/sslmode. For direct Cloud SQL with sslmode=require, use no-verify above.
 
 const child = spawn("node", ["server.js"], { stdio: "inherit" });
 child.on("exit", (code) => process.exit(code));
