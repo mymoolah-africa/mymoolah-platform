@@ -15,10 +15,13 @@ backups/
 .gitignore
 .gitattributes
 
-# Development files
+# Environment files (NEVER include in Docker image - secrets from Secret Manager)
+.env
 .env.local
 .env.development
 .env.test
+.env.production
+.env.staging
 *.log
 logs/
 *.pid
