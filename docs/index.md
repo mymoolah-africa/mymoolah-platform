@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Documentation Index
 
 **Last Updated**: February 15, 2026  
-**Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
+**Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet-mm.mymoolah.africa**  
 **Version**: 2.11.4 - Production Deployment Live  
 
 For work in the last 7 days (Feb 9–15, 2026), see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md) (Recent Updates).

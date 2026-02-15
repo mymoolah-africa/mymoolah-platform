@@ -2,7 +2,7 @@
 
 **Last Updated**: February 15, 2026 18:00  
 **Version**: 2.11.4 - Production Deployment Live  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet-mm.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 **Work in the last 7 days (Feb 9–15, 2026)**: Production deployment live (API, Wallet, SSL, DNS); Production DB migration; SBSA PayShap UAT; NFC Tap to Add Money. See `docs/CHANGELOG.md` for full entries.
 
@@ -12,10 +12,10 @@
 
 ### **🌐 Production Live**
 - **API**: https://api-mm.mymoolah.africa
-- **Wallet**: https://wallet.mymoolah.africa
+- **Wallet**: https://wallet-mm.mymoolah.africa
 - **Static IP**: 34.128.163.17
-- **SSL**: cert-production-v3 (api-mm, wallet)
-- **DNS**: Afrihost (api-mm 5-char workaround; wallet.mymoolah.africa)
+- **SSL**: cert-production-v2 (api-mm, wallet-mm)
+- **DNS**: Afrihost (api-mm, wallet-mm → 34.128.163.17)
 
 **Session log**: `docs/session_logs/2026-02-15_1800_production-deployment-live-ssl-dns.md`
 

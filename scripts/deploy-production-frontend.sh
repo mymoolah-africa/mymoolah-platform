@@ -62,4 +62,4 @@ SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" --region "${REGION}
 echo ""
 log "✅ Production frontend deployed"
 log "Direct URL: ${SERVICE_URL}"
-log "Production Wallet: https://wallet.mymoolah.africa"
+log "Production Wallet: https://wallet-mm.mymoolah.africa"

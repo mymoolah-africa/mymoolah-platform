@@ -328,6 +328,7 @@ class SecurityConfig {
         // Production domains
         'https://api.mymoolah.africa',
         'https://wallet.mymoolah.africa',
+        'https://wallet-mm.mymoolah.africa',
         'https://prodwallet.mymoolah.africa',
         'https://mymoolah.africa',
         'https://www.mymoolah.africa',
