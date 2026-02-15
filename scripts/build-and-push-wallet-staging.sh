@@ -51,10 +51,11 @@ build_and_push() {
   
   cd mymoolah-wallet-frontend
   
-  # Build for linux/amd64 (Cloud Run requirement), always without cache
+  # Build for linux/amd64 (Cloud Run requirement), always without cache (--no-cache + --pull)
   # Use build:staging to skip TypeScript checking (faster builds, UI components work at runtime)
   docker buildx build \
     --no-cache \
+    --pull \
     --platform linux/amd64 \
     --build-arg VITE_API_BASE_URL="${STAGING_BACKEND_URL}" \
     --build-arg BUILD_COMMAND="build:staging" \

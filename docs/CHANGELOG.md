@@ -1,5 +1,27 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-15 - 🚀 Production Deployment Live ✅
+
+### **Session Overview**
+Production platform deployed and live. API: `https://api-mm.mymoolah.africa`, Wallet: `https://wallet.mymoolah.africa`. Fixed database connection (mymoolah_staging → mymoolah_production), graceful OpenAI degradation, SSL cert updates for Afrihost DNS constraints.
+
+### **Changes**
+- **Database**: DATABASE_URL secret (database-url-production), start.sh uses DB_NAME, .dockerignore excludes .env
+- **OpenAI**: 5 services (feedback, googleReview, codebaseSweep, aiSupport, bankingGradeSupport) guard OPENAI_API_KEY; disable AI when missing
+- **Ledger**: server.js logs critical warning instead of throwing when ledger accounts missing
+- **Load balancer**: cert-production-v3 (api-mm.mymoolah.africa, wallet.mymoolah.africa); URL map wallet-mm removed
+- **DNS**: Afrihost 5-char subdomain → api-mm; wallet.mymoolah.africa
+
+### **Production URLs**
+- API: https://api-mm.mymoolah.africa
+- Wallet: https://wallet.mymoolah.africa
+- Static IP: 34.128.163.17
+
+### **Session Log**
+- `docs/session_logs/2026-02-15_1800_production-deployment-live-ssl-dns.md`
+
+---
+
 ## 2026-02-12 - 🚀 Production Deployment Scripts Complete ✅
 
 ### **Session Overview**

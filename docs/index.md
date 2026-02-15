@@ -1,10 +1,10 @@
 # MyMoolah Treasury Platform - Documentation Index
 
-**Last Updated**: February 09, 2026  
-**Project Status**: 🚀 **PRODUCTION READY - USDC SEND, FLASH, MOBILEMART, RECONCILIATION LIVE**  
-**Version**: 2.9.2 - Transaction Detail Modal & USDC Fee UI  
+**Last Updated**: February 15, 2026  
+**Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
+**Version**: 2.11.4 - Production Deployment Live  
 
-For work in the last 7 days (Feb 2–9, 2026), see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md) (Recent Updates).
+For work in the last 7 days (Feb 9–15, 2026), see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md) (Recent Updates).
 
 ---
 

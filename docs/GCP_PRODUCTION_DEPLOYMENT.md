@@ -1,14 +1,16 @@
 # MyMoolah Treasury Platform - Production Deployment Guide
 
-**Date**: February 12, 2026  
-**Status**: ✅ **DEPLOYMENT SCRIPTS READY**  
+**Date**: February 15, 2026  
+**Status**: ✅ **PRODUCTION LIVE**  
 **Architecture**: Banking-Grade, Mojaloop-Compliant, Cost-Optimized
 
 ---
 
 ## Overview
 
-This guide provides step-by-step instructions for deploying the MyMoolah Treasury Platform (MMTP) to **Production** at `api.mymoolah.africa` and `wallet.mymoolah.africa`. The deployment mirrors the staging setup with production-specific configuration.
+This guide provides step-by-step instructions for deploying the MyMoolah Treasury Platform (MMTP) to **Production**. Production is live at:
+- **API**: `https://api-mm.mymoolah.africa` (Afrihost 5-char subdomain requirement)
+- **Wallet**: `https://wallet.mymoolah.africa`
 
 ---
 
@@ -19,7 +21,7 @@ This guide provides step-by-step instructions for deploying the MyMoolah Treasur
 3. **gcloud authenticated**: `gcloud auth login`
 4. **Project set**: `gcloud config set project mymoolah-db`
 5. **Production database** migrated (all migrations applied to `mymoolah_production`)
-6. **DNS access** for `api.mymoolah.africa` and `wallet.mymoolah.africa` (e.g. Afrihost)
+6. **DNS access** for `api-mm.mymoolah.africa` and `wallet.mymoolah.africa` (e.g. Afrihost; note: Afrihost requires subdomain ≥5 chars, hence api-mm)
 
 ---
 
@@ -83,7 +85,7 @@ Builds Docker image (no cache), pushes to GCR, deploys to `mymoolah-backend-prod
 - **Service**: `mymoolah-backend-production`
 - **Cloud SQL**: `mymoolah-db:africa-south1:mmtp-pg-production`
 - **Database**: `mymoolah_production`
-- **CORS**: `https://wallet.mymoolah.africa`
+- **CORS**: `https://wallet.mymoolah.africa` (and api-mm if needed)
 - **CPU**: 1 vCPU, **Memory**: 1Gi
 - **Min Instances**: 0, **Max Instances**: 10
 
@@ -93,7 +95,7 @@ Builds Docker image (no cache), pushes to GCR, deploys to `mymoolah-backend-prod
 
 **Script**: `scripts/build-and-push-wallet-production.sh`
 
-Builds wallet frontend with `VITE_API_BASE_URL=https://api.mymoolah.africa`, pushes to GCR.
+Builds wallet frontend with `VITE_API_BASE_URL=https://api-mm.mymoolah.africa` (production API URL), pushes to GCR.
 
 ```bash
 ./scripts/build-and-push-wallet-production.sh
@@ -127,7 +129,7 @@ Creates global HTTPS load balancer for custom domains. Cloud Run in `africa-sout
 - Static IP: `mymoolah-production-ip`
 - NEGs: `moolah-backend-production-neg`, `neg-production-wallet`
 - Backend services: `be-production-backend`, `be-production-wallet`
-- SSL cert: `cert-production` (api.mymoolah.africa, wallet.mymoolah.africa)
+- SSL cert: `cert-production-v3` (api-mm.mymoolah.africa, wallet.mymoolah.africa)
 - URL map, HTTPS proxy, forwarding rule
 
 **Output**: Script prints the static IP. Use it for DNS.
@@ -136,12 +138,14 @@ Creates global HTTPS load balancer for custom domains. Cloud Run in `africa-sout
 
 ### Step 7: Configure DNS
 
-Point your domains to the load balancer static IP:
+Point your domains to the load balancer static IP (34.128.163.17):
 
 | Record | Type | Value |
 |--------|------|-------|
-| `api.mymoolah.africa` | A | `<static IP from Step 6>` |
-| `wallet.mymoolah.africa` | A | `<static IP from Step 6>` |
+| `api-mm.mymoolah.africa` | A | 34.128.163.17 |
+| `wallet.mymoolah.africa` | A | 34.128.163.17 |
+
+**Note**: Afrihost requires subdomain names ≥5 characters; use `api-mm` instead of `api`.
 
 Get the IP:
 ```bash
@@ -156,10 +160,10 @@ Managed TLS certificate may take 15–60 minutes to reach `ACTIVE`.
 
 ```bash
 # Check certificate status
-gcloud compute ssl-certificates describe cert-production --format='value(managed.status)'
+gcloud compute ssl-certificates describe cert-production-v3 --global --format='value(managed.status)'
 
 # Test after DNS propagates
-curl -I https://api.mymoolah.africa/health
+curl -I https://api-mm.mymoolah.africa/health
 curl -I https://wallet.mymoolah.africa
 ```
 
@@ -175,8 +179,9 @@ curl -I https://wallet.mymoolah.africa
 | Wallet Service | `mymoolah-wallet-production` |
 | Cloud SQL | `mymoolah-db:africa-south1:mmtp-pg-production` |
 | Database | `mymoolah_production` |
-| API URL | `https://api.mymoolah.africa` |
+| API URL | `https://api-mm.mymoolah.africa` |
 | Wallet URL | `https://wallet.mymoolah.africa` |
+| Static IP | 34.128.163.17 |
 
 ---
 
@@ -230,5 +235,5 @@ gcloud run services update-traffic mymoolah-backend-production \
 
 ---
 
-**Last Updated**: February 12, 2026  
-**Version**: 1.0.0
+**Last Updated**: February 15, 2026  
+**Version**: 1.1.0

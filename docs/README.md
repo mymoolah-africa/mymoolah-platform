@@ -1,14 +1,27 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: February 12, 2026 17:00  
-**Version**: 2.11.3 - Production Migration Complete  
-**Status**: ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **USDC BANKING-GRADE SWEEP** ✅ **ELECTRICITY PURCHASE COMPLETE** ✅ **MOBILEMART PRODUCTION INTEGRATED** ✅ **STAGING TESTED** ✅ **BILL PAYMENT INTEGRATED** ✅ **VOUCHER INTEGRATED** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: February 15, 2026 18:00  
+**Version**: 2.11.4 - Production Deployment Live  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 2–12, 2026)**: Production database migration complete (80+ migrations, 5 fixes); SBSA PayShap UAT; NFC Tap to Add Money; Transaction Detail modal & USDC fee UI; Watch to Earn Staging. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 9–15, 2026)**: Production deployment live (API, Wallet, SSL, DNS); Production DB migration; SBSA PayShap UAT; NFC Tap to Add Money. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: Production Database Migration Complete (February 12, 2026 - 17:00)**
+## 🚀 **LATEST UPDATE: Production Deployment Live (February 15, 2026 - 18:00)**
+
+### **🌐 Production Live**
+- **API**: https://api-mm.mymoolah.africa
+- **Wallet**: https://wallet.mymoolah.africa
+- **Static IP**: 34.128.163.17
+- **SSL**: cert-production-v3 (api-mm, wallet)
+- **DNS**: Afrihost (api-mm 5-char workaround; wallet.mymoolah.africa)
+
+**Session log**: `docs/session_logs/2026-02-15_1800_production-deployment-live-ssl-dns.md`
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Production Database Migration Complete (February 12, 2026 - 17:00)**
 
 ### **🗄️ Production Migration**
 - **Status**: All 80+ migrations applied to `mymoolah_production` on Cloud SQL `mmtp-pg-production`

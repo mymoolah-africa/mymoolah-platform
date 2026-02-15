@@ -121,7 +121,7 @@ main() {
   echo "   - Security headers configured"
   echo ""
   echo "📱 Production URLs (after load balancer + DNS):"
-  echo "   - API: https://api.mymoolah.africa"
+  echo "   - API: https://api-mm.mymoolah.africa"
   echo "   - Wallet: https://wallet.mymoolah.africa"
   echo "   - Direct Cloud Run: ${service_url}"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

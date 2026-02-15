@@ -8,7 +8,7 @@ set -euo pipefail
 PROJECT_ID="mymoolah-db"
 REGION="africa-south1"
 IMAGE_NAME="gcr.io/${PROJECT_ID}/mymoolah-wallet-production:latest"
-PRODUCTION_BACKEND_URL="https://api.mymoolah.africa"
+PRODUCTION_BACKEND_URL="https://api-mm.mymoolah.africa"
 
 log() {
   echo "📋 [$(date +'%Y-%m-%d %H:%M:%S')] $*"
@@ -51,10 +51,11 @@ build_and_push() {
   
   cd mymoolah-wallet-frontend
   
-  # Build for linux/amd64 (Cloud Run requirement), always without cache
+  # Build for linux/amd64 (Cloud Run requirement), always without cache (--no-cache + --pull)
   # Use build:staging to skip TypeScript checking (faster builds, UI components work at runtime)
   docker buildx build \
     --no-cache \
+    --pull \
     --platform linux/amd64 \
     --build-arg VITE_API_BASE_URL="${PRODUCTION_BACKEND_URL}" \
     --build-arg BUILD_COMMAND="build:staging" \
