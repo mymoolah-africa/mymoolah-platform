@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-12 - 🚀 Production Deployment Scripts Complete ✅
+
+### **Session Overview**
+Created complete production deployment scripts and runbook for MyMoolah at `api.mymoolah.africa` and `wallet.mymoolah.africa`. All scripts mirror staging with production-specific configuration.
+
+### **Scripts Created**
+- `scripts/setup-secrets-production.sh` - JWT/session, EasyPay/OpenAI/VALR (optional), verifies db password
+- `scripts/build-push-deploy-production.sh` - Backend build + deploy (optional secrets only if exist)
+- `scripts/build-and-push-wallet-production.sh` - Wallet build with api.mymoolah.africa
+- `scripts/deploy-wallet-production.sh` - Wallet Cloud Run deploy
+- `scripts/setup-production-load-balancer.sh` - Global LB, static IP, NEGs, SSL cert, URL map
+- `scripts/create-cloud-run-service-account-production.sh` - mymoolah-production-sa
+- `docs/GCP_PRODUCTION_DEPLOYMENT.md` - Full runbook (Steps 0–8)
+
+### **Session Log**
+- `docs/session_logs/2026-02-12_1800_production-deployment-scripts.md`
+
+---
+
 ## 2026-02-12 - 🗄️ Production Database Migration Complete ✅
 
 ### **Session Overview**
