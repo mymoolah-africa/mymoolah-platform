@@ -88,7 +88,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 **Complete MobileMart Production Integration** - Full end-to-end implementation of electricity purchase with MobileMart production API (prevend + purchase flow, real 20-digit token extraction). Extended integration to bill payments and digital vouchers. All 5 MobileMart services now environment-aware (UAT simulation, Staging/Production real API). Successfully deployed to staging and tested with production credentials (R20 live electricity transaction confirmed). Transaction detail modal with token display (grouped by 4 digits, MMTP-aligned styling). All services production-ready.
 
 ### **Next Priority**
-**Production Deployment** - Production database migrated. Next: run seed scripts (if any), configure Production env vars/secrets, Cloud Run deployment, smoke tests.
+**Production Deployment** - Production deployment scripts and runbook complete. Run in order: (1) create-cloud-run-service-account-production.sh, (2) setup-secrets-production.sh, (3) build-push-deploy-production.sh, (4) build-and-push-wallet-production.sh, (5) deploy-wallet-production.sh, (6) setup-production-load-balancer.sh, (7) DNS (api/wallet.mymoolah.africa → static IP). See `docs/GCP_PRODUCTION_DEPLOYMENT.md`.
 
 **SBSA PayShap UAT** - Obtain OneHub credentials from Standard Bank; run migrations; set STANDARDBANK_PAYSHAP_ENABLED=true and SBSA_* env vars; whitelist callback URLs; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
 
