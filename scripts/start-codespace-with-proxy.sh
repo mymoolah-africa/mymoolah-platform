@@ -392,18 +392,26 @@ build_local_db_url() {
 
   # Load env file and build local proxy URL
   export NODE_ENV_FILE="${ENV_FILE}"
+  export PROXY_PORT="${PROXY_PORT}"
   export DATABASE_URL=$(
     node - <<'NODE'
 const path = process.env.NODE_ENV_FILE || '.env';
 require('dotenv').config({ path });
-if (!process.env.DATABASE_URL) {
-  throw new Error(`DATABASE_URL not set in ${path}`);
+const port = process.env.PROXY_PORT || '6543';
+let url;
+if (process.env.DATABASE_URL) {
+  const u = new URL(process.env.DATABASE_URL);
+  u.hostname = '127.0.0.1';
+  u.port = port;
+  u.searchParams.set('sslmode', 'disable');
+  url = u.toString();
+} else if (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME) {
+  const enc = encodeURIComponent(process.env.DB_PASSWORD);
+  url = `postgres://${process.env.DB_USER}:${enc}@127.0.0.1:${port}/${process.env.DB_NAME}?sslmode=disable`;
+} else {
+  throw new Error(`DATABASE_URL or DB_USER/DB_PASSWORD/DB_NAME not set in ${path}`);
 }
-const u = new URL(process.env.DATABASE_URL);
-u.hostname = '127.0.0.1';
-u.port = process.env.PROXY_PORT || '6543';
-u.searchParams.set('sslmode', 'disable');
-console.log(u.toString());
+console.log(url);
 NODE
   )
 
