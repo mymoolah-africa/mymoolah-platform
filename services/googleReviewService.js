@@ -5,15 +5,31 @@ require('dotenv').config();
 
 class GoogleReviewService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    // Handle missing API key gracefully - don't crash the app
+    if (process.env.OPENAI_API_KEY) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      });
+      this.enabled = true;
+    } else {
+      console.warn('⚠️ GoogleReviewService: OPENAI_API_KEY not set - review generation disabled');
+      this.openai = null;
+      this.enabled = false;
+    }
   }
 
   /**
    * Generate Google Review from user feedback
    */
   async generateReviewFromFeedback(feedback) {
+    if (!this.enabled || !this.openai) {
+      return {
+        success: false,
+        error: 'OpenAI not configured - OPENAI_API_KEY not set',
+        review: null
+      };
+    }
+    
     try {
       const prompt = this.buildReviewPrompt(feedback);
       

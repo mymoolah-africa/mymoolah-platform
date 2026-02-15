@@ -10,9 +10,17 @@ const fg = require('fast-glob');
  */
 class CodebaseSweepService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    // Handle missing API key gracefully - don't crash the app
+    if (process.env.OPENAI_API_KEY) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      });
+      this.aiEnabled = true;
+    } else {
+      console.warn('⚠️ CodebaseSweepService: OPENAI_API_KEY not set - AI analysis disabled');
+      this.openai = null;
+      this.aiEnabled = false;
+    }
     
     this.projectRoot = process.cwd();
     this.discoveredCapabilities = new Map();

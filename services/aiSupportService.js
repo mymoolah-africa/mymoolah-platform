@@ -19,9 +19,17 @@ const CodebaseSweepService = require('./codebaseSweepService');
 
 class BankingGradeAISupportService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // Handle missing API key gracefully - don't crash the app
+    if (process.env.OPENAI_API_KEY) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+      this.aiEnabled = true;
+    } else {
+      console.warn('⚠️ BankingGradeAISupportService: OPENAI_API_KEY not set - AI features disabled');
+      this.openai = null;
+      this.aiEnabled = false;
+    }
     
     // Banking-grade configuration
     this.MAX_RESPONSE_TIME = 2000; // 2 seconds max response time

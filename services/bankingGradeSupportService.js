@@ -86,12 +86,19 @@ class BankingGradeSupportService {
    */
   async initializeServices() {
     try {
-      // OpenAI for AI Processing
-      this.openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-        maxRetries: 3,
-        timeout: 30000
-      });
+      // OpenAI for AI Processing - handle missing key gracefully
+      if (process.env.OPENAI_API_KEY) {
+        this.openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY,
+          maxRetries: 3,
+          timeout: 30000
+        });
+        this.aiEnabled = true;
+      } else {
+        console.warn('⚠️ BankingGradeSupportService: OPENAI_API_KEY not set - AI features disabled');
+        this.openai = null;
+        this.aiEnabled = false;
+      }
 
       // Database Connection Pool
       // IMPORTANT: Check DB_SSL environment variable first (most explicit)
