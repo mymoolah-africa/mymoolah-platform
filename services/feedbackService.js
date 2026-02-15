@@ -5,15 +5,34 @@ require('dotenv').config();
 
 class FeedbackService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    });
+    // Handle missing API key gracefully - don't crash the app
+    if (process.env.OPENAI_API_KEY) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      });
+      this.enabled = true;
+    } else {
+      console.warn('⚠️ FeedbackService: OPENAI_API_KEY not set - AI feedback analysis disabled');
+      this.openai = null;
+      this.enabled = false;
+    }
   }
 
   /**
    * Analyze feedback using AI
    */
   async analyzeFeedback(feedback) {
+    if (!this.enabled || !this.openai) {
+      return {
+        sentiment: 'neutral',
+        priority: 3,
+        topics: ['general'],
+        keywords: [],
+        marketingIdeas: [],
+        summary: 'AI analysis unavailable - OPENAI_API_KEY not configured'
+      };
+    }
+    
     try {
       const analysis = await this.openai.chat.completions.create({
         model: 'gpt-4o',

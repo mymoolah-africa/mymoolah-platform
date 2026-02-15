@@ -19,20 +19,22 @@ else
   find /app -name "*.js" -type f | head -10 >&2
 fi
 
-# Construct DATABASE_URL at runtime from DB_PASSWORD secret
-# This avoids URL encoding issues when passing through gcloud
-if [ -n "${DB_PASSWORD}" ] && [ -n "${CLOUD_SQL_INSTANCE}" ]; then
+# Use DATABASE_URL from Secret Manager if provided (preferred)
+# Otherwise construct it from DB_PASSWORD + DB_NAME + CLOUD_SQL_INSTANCE
+if [ -n "${DATABASE_URL}" ]; then
+  echo "✅ Using DATABASE_URL from Secret Manager" >&2
+elif [ -n "${DB_PASSWORD}" ] && [ -n "${CLOUD_SQL_INSTANCE}" ] && [ -n "${DB_NAME}" ]; then
   echo "📋 Constructing DATABASE_URL from secrets..." >&2
   # URL encode the password using Node.js (more reliable than shell)
-  # Use a here-document to safely pass the password to Node.js
   ENCODED_PASSWORD=$(node -e "const pwd = process.argv[1]; console.log(encodeURIComponent(pwd));" "${DB_PASSWORD}")
-  # For Cloud Run with Unix socket: SSL is handled at socket level, use sslmode=disable
-  # The Unix socket connection is already secure (local socket, not network)
-  export DATABASE_URL="postgres://mymoolah_app:${ENCODED_PASSWORD}@/mymoolah_staging?host=/cloudsql/${CLOUD_SQL_INSTANCE}&sslmode=disable"
-  echo "✅ DATABASE_URL constructed" >&2
+  # Use DB_NAME env var (set per environment: mymoolah_staging or mymoolah_production)
+  export DATABASE_URL="postgres://mymoolah_app:${ENCODED_PASSWORD}@/${DB_NAME}?host=/cloudsql/${CLOUD_SQL_INSTANCE}&sslmode=disable"
+  echo "✅ DATABASE_URL constructed for database: ${DB_NAME}" >&2
 else
-  echo "⚠️  WARNING: DB_PASSWORD or CLOUD_SQL_INSTANCE not set!" >&2
+  echo "⚠️  WARNING: DATABASE_URL not set and missing required env vars!" >&2
+  echo "📋 DATABASE_URL: ${DATABASE_URL:+set}" >&2
   echo "📋 DB_PASSWORD: ${DB_PASSWORD:+set}" >&2
+  echo "📋 DB_NAME: ${DB_NAME:-not set}" >&2
   echo "📋 CLOUD_SQL_INSTANCE: ${CLOUD_SQL_INSTANCE:-not set}" >&2
 fi
 
