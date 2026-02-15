@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="/workspaces/mymoolah-platform"
+ROOT_DIR="${ROOT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 PROXY_PORT="${PROXY_PORT:-6543}"
 PROXY_LOG="/tmp/cloud-sql-proxy.log"
 INSTANCE_CONN_NAME="${INSTANCE_CONN_NAME:-mymoolah-db:africa-south1:mmtp-pg}"

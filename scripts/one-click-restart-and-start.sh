@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="/workspaces/mymoolah-platform"
+ROOT_DIR="${ROOT_DIR:-$(cd "$(dirname "$0")/.." && pwd)}"
 PROXY_NAME="cloud-sql-proxy"
 REDIS_CONTAINER_NAME="redis"
 REDIS_PORT="6379"
