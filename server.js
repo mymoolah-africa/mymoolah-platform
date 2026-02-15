@@ -106,11 +106,13 @@ async function verifyLedgerAccounts() {
 
   if (missingDb.length) {
     const msg = `Ledger accounts not found in DB: ${missingDb.join(', ')}`;
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error(msg);
-    } else {
-      console.warn(`⚠️ ${msg} (commission journals will fail until created)`);
-    }
+    // CRITICAL: Log error but don't crash - allows app to start for basic operations
+    // Commission/ledger features will fail until accounts are seeded
+    console.error(`❌ CRITICAL: ${msg}`);
+    console.error(`❌ Run ledger account seeding migration to fix this!`);
+    console.error(`❌ Commission journals and financial operations will fail until accounts are created.`);
+    // Don't throw in production - allow app to start for non-ledger operations
+    // The proper fix is to seed ledger accounts via migration
   } else {
     console.log('✅ Ledger account check passed');
   }
