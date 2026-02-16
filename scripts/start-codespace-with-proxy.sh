@@ -432,9 +432,19 @@ NODE
     export DATABASE_URL
     log "✅ DATABASE_URL configured from ${ENV_FILE} via proxy: postgres://...@127.0.0.1:${PROXY_PORT}/..."
   else
-    error "DATABASE_URL or DB_USER/DB_PASSWORD/DB_NAME not set in ${ENV_FILE}."
-    error "Add to .env either: DATABASE_URL=postgres://... or DB_USER, DB_PASSWORD, DB_NAME"
-    exit 1
+    # Fallback: build from gcloud secret (mmtp-pg UAT uses staging password)
+    log "Building DATABASE_URL from gcloud secret..."
+    local db_pass enc_pass secret_name="db-mmtp-pg-staging-password"
+    db_pass=$(gcloud secrets versions access latest --secret="${secret_name}" --project=mymoolah-db 2>/dev/null | tr -d '\n\r')
+    if [ -n "${db_pass}" ]; then
+      enc_pass=$(node -e "console.log(encodeURIComponent(process.argv[1]))" "${db_pass}")
+      export DATABASE_URL="postgres://mymoolah_app:${enc_pass}@127.0.0.1:${PROXY_PORT}/mymoolah?sslmode=disable"
+      log "✅ DATABASE_URL configured from Secret Manager (${secret_name}) via proxy"
+    else
+      error "DATABASE_URL or DB_USER/DB_PASSWORD/DB_NAME not set in ${ENV_FILE}."
+      error "Add to .env or run: gcloud auth login"
+      exit 1
+    fi
   fi
 }
 
