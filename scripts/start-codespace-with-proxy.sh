@@ -409,8 +409,7 @@ build_local_db_url() {
   # Load env file and build local proxy URL
   export NODE_ENV_FILE="${ENV_FILE}"
   export PROXY_PORT="${PROXY_PORT}"
-  export DATABASE_URL=$(
-    node - <<'NODE'
+  if DATABASE_URL=$(node - <<'NODE'
 const path = process.env.NODE_ENV_FILE || '.env';
 require('dotenv').config({ path });
 const port = process.env.PROXY_PORT || '6543';
@@ -425,13 +424,18 @@ if (process.env.DATABASE_URL) {
   const enc = encodeURIComponent(process.env.DB_PASSWORD);
   url = `postgres://${process.env.DB_USER}:${enc}@127.0.0.1:${port}/${process.env.DB_NAME}?sslmode=disable`;
 } else {
-  throw new Error(`DATABASE_URL or DB_USER/DB_PASSWORD/DB_NAME not set in ${path}`);
+  process.exit(1);
 }
 console.log(url);
 NODE
-  )
-
-  log "✅ DATABASE_URL configured from ${ENV_FILE} via proxy: postgres://...@127.0.0.1:${PROXY_PORT}/..."
+  ) 2>/dev/null; then
+    export DATABASE_URL
+    log "✅ DATABASE_URL configured from ${ENV_FILE} via proxy: postgres://...@127.0.0.1:${PROXY_PORT}/..."
+  else
+    error "DATABASE_URL or DB_USER/DB_PASSWORD/DB_NAME not set in ${ENV_FILE}."
+    error "Add to .env either: DATABASE_URL=postgres://... or DB_USER, DB_PASSWORD, DB_NAME"
+    exit 1
+  fi
 }
 
 start_backend() {
@@ -441,8 +445,8 @@ start_backend() {
   log "To stop: Press Ctrl+C, then run: pkill -f cloud-sql-proxy"
   log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   
-  # Start backend (this will block)
-  npm run start:cs-ip
+  # Start backend (this will block) - pass DATABASE_URL explicitly so npm inherits it
+  DATABASE_URL="${DATABASE_URL}" npm run start:cs-ip
 }
 
 # Cleanup on exit
