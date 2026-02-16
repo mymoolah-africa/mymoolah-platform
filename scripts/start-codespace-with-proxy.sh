@@ -455,6 +455,31 @@ start_backend() {
   log "To stop: Press Ctrl+C, then run: pkill -f cloud-sql-proxy"
   log "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   
+  # Export required environment variables for Codespaces (config/security.js validates these)
+  # These defaults are safe for development/UAT in Codespaces
+  export NODE_ENV="${NODE_ENV:-development}"
+  export PORT="${PORT:-3001}"
+  export TLS_ENABLED="${TLS_ENABLED:-false}"
+  
+  # JWT_SECRET: Load from .env or gcloud secret, fallback to dev secret for local testing
+  if [ -z "${JWT_SECRET:-}" ]; then
+    if [ -f "${ENV_FILE}" ]; then
+      JWT_SECRET=$(grep -E '^JWT_SECRET=' "${ENV_FILE}" 2>/dev/null | cut -d'=' -f2- | tr -d '"' || true)
+    fi
+    if [ -z "${JWT_SECRET:-}" ]; then
+      # Try to get from gcloud secret (UAT/Staging)
+      JWT_SECRET=$(gcloud secrets versions access latest --secret="jwt-secret" --project=mymoolah-db 2>/dev/null || true)
+    fi
+    if [ -z "${JWT_SECRET:-}" ]; then
+      # Development fallback (only for local Codespaces testing)
+      JWT_SECRET="codespaces-dev-jwt-secret-32-chars-minimum"
+      warn "Using development JWT_SECRET - do NOT use in production"
+    fi
+    export JWT_SECRET
+  fi
+  
+  log "Environment: NODE_ENV=${NODE_ENV}, PORT=${PORT}, TLS_ENABLED=${TLS_ENABLED}"
+  
   # Start backend (this will block) - pass DATABASE_URL explicitly so npm inherits it
   DATABASE_URL="${DATABASE_URL}" npm run start:cs-ip
 }
