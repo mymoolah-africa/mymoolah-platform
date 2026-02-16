@@ -154,9 +154,24 @@ ensure_gcloud_loaded() {
   return 0
 }
 
+PROXY_CMD=""
+
 ensure_proxy_binary() {
+  # Prefer cloud-sql-proxy from PATH (e.g. brew install cloud-sql-proxy)
+  if command -v cloud-sql-proxy >/dev/null 2>&1; then
+    PROXY_CMD="cloud-sql-proxy"
+    log "✅ Using cloud-sql-proxy from PATH"
+    return 0
+  fi
+
+  # If local binary exists, verify it runs (may be wrong arch from Codespaces/Linux)
   if [ -f "./cloud-sql-proxy" ]; then
-    return
+    if ./cloud-sql-proxy --version >/dev/null 2>&1; then
+      PROXY_CMD="./cloud-sql-proxy"
+      return 0
+    fi
+    log "Removing incompatible cloud-sql-proxy binary (wrong architecture)"
+    rm -f ./cloud-sql-proxy
   fi
 
   local os arch proxy_url
@@ -198,6 +213,7 @@ ensure_proxy_binary() {
   log "Downloading Cloud SQL Auth Proxy for ${os}/${arch}..."
   curl -sSL -o cloud-sql-proxy "${proxy_url}"
   chmod +x ./cloud-sql-proxy
+  PROXY_CMD="./cloud-sql-proxy"
   log "✅ Proxy binary ready"
 }
 
@@ -322,7 +338,7 @@ start_proxy() {
   if [ -n "$access_token" ]; then
     log "Token obtained successfully (${#access_token} chars)"
     export GOOGLE_OAUTH_ACCESS_TOKEN="$access_token"
-    nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
+    nohup ${PROXY_CMD} "${INSTANCE_CONN_NAME}" \
       --port "${PROXY_PORT}" \
       --structured-logs \
       --token "${access_token}" \
@@ -338,7 +354,7 @@ start_proxy() {
     fi
     if [ "$adc_ok" = true ]; then
       log "No gcloud token; starting proxy with ADC (file or GOOGLE_APPLICATION_CREDENTIALS)"
-      nohup ./cloud-sql-proxy "${INSTANCE_CONN_NAME}" \
+      nohup ${PROXY_CMD} "${INSTANCE_CONN_NAME}" \
         --port "${PROXY_PORT}" \
         --structured-logs \
         > "${PROXY_LOG}" 2>&1 &
@@ -433,7 +449,7 @@ start_backend() {
 cleanup() {
   log "Shutting down..."
   local pid
-  pid=$(pgrep -f "cloud-sql-proxy.*${PROXY_PORT}" || true)
+  pid=$(pgrep -f "cloud-sql-proxy.*${PROXY_PORT}" 2>/dev/null || pgrep -f "cloud-sql-proxy" 2>/dev/null || true)
   if [ -n "${pid}" ]; then
     log "Stopping proxy (PID: ${pid})"
     kill "${pid}" 2>/dev/null || true
