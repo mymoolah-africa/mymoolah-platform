@@ -1,12 +1,18 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: February 16, 2026  
-**Version**: 2.11.5 - Codespaces Startup Fix & SSL Cert v4  
+**Last Updated**: February 12, 2026  
+**Version**: 2.11.6 - VAS Best Offers JSONB Fix & Startup Sequence  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
-## 🚀 **LATEST UPDATE: Codespaces Startup Fix & SSL Cert v4 (February 16, 2026)**
+## 🚀 **LATEST UPDATE: VAS Best Offers JSONB Fix & Startup Sequence (February 12, 2026)**
+
+Refresh-vas-best-offers.js: fixed JSONB/denominations type mismatch (Sequelize.literal cast). Startup: "🎉 All background services started successfully" now logs after FloatBalanceMonitoring initial check. See `docs/session_logs/2026-02-12_1400_vas-best-offers-jsonb-startup-sequence.md`.
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Codespaces Startup Fix & SSL Cert v4 (February 16, 2026)**
 
 Codespaces backend startup fixed (env vars, UAT password). Production SSL: cert-production-v4 (api-mm, wallet, www.wallet). Production: https://api-mm.mymoolah.africa, https://wallet.mymoolah.africa. See `docs/session_logs/2026-02-16_0900_codespaces-startup-ssl-cert-v4.md`.
 

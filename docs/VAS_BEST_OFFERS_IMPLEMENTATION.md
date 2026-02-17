@@ -122,3 +122,11 @@ Response shape unchanged: `bestDeals` array. Frontend requires no changes.
 2. Run refresh: `node scripts/refresh-vas-best-offers.js`
 3. Call `GET /api/v1/suppliers/compare/airtime` — should return bestDeals from vas_best_offers
 4. Check `catalog_refresh_audit` for audit trail
+
+---
+
+## Troubleshooting
+
+### JSONB / denominations type mismatch (fixed 2026-02-12)
+
+If refresh fails with `column "denominations" is of type jsonb but expression is of type integer[]`: the script uses `Sequelize.literal(\`'${JSON.stringify(denoms)}'::jsonb\`)` to cast. bulkInsert sends JS arrays as PostgreSQL integer[]; the column is JSONB. See `docs/session_logs/2026-02-12_1400_vas-best-offers-jsonb-startup-sequence.md`.

@@ -1,5 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-12 - 🔄 VAS Best Offers JSONB Fix & Startup Sequence ✅
+
+### **Session Overview**
+Fixed refresh-vas-best-offers.js failing with "column denominations is of type jsonb but expression is of type integer[]". Adjusted startup sequence so "🎉 All background services started successfully" logs after FloatBalanceMonitoring initial check completes.
+
+### **Changes**
+- **scripts/refresh-vas-best-offers.js**: Cast denominations to JSONB via `Sequelize.literal(\`'${JSON.stringify(denoms)}'::jsonb\`)` — bulkInsert sends JS arrays as PostgreSQL integer[]; column is JSONB
+- **services/floatBalanceMonitoringService.js**: `start()` returns promise from `checkAllFloatBalances()` so caller can await
+- **server.js**: Await FloatBalanceMonitoring initial check before boot completes; success message logs last
+
+### **Session Log**
+- `docs/session_logs/2026-02-12_1400_vas-best-offers-jsonb-startup-sequence.md`
+
+---
+
 ## 2026-02-12 - 🔄 VAS Error 1002 Exhaustive Failover ✅
 
 ### **Session Overview**

@@ -1,14 +1,24 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: February 16, 2026  
-**Version**: 2.11.5 - Codespaces Startup Fix & SSL Cert v4  
+**Last Updated**: February 12, 2026  
+**Version**: 2.11.6 - VAS Best Offers JSONB Fix & Startup Sequence  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 9–15, 2026)**: Production deployment live (API, Wallet, SSL, DNS); Production DB migration; SBSA PayShap UAT; NFC Tap to Add Money. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 9–16, 2026)**: VAS best offers JSONB fix (refresh script); startup sequence (success message after FloatBalanceMonitoring); Production deployment live; Codespaces startup fix; SSL cert v4. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: Codespaces Startup Fix & SSL Cert v4 (February 16, 2026)**
+## 🚀 **LATEST UPDATE: VAS Best Offers JSONB Fix & Startup Sequence (February 12, 2026)**
+
+### **🔄 VAS Best Offers & Startup**
+- **Refresh script fix**: Fixed "column denominations is of type jsonb but expression is of type integer[]" — used Sequelize.literal with JSON.stringify to cast. Refresh verified in Codespaces (48 rows).
+- **Startup sequence**: "🎉 All background services started successfully" now prints after FloatBalanceMonitoring initial check completes (await promise from start()).
+
+**Session log**: `docs/session_logs/2026-02-12_1400_vas-best-offers-jsonb-startup-sequence.md`
+
+---
+
+## 🚀 **PREVIOUS UPDATE: Codespaces Startup Fix & SSL Cert v4 (February 16, 2026)**
 
 ### **🌐 Production Live**
 - **API**: https://api-mm.mymoolah.africa
