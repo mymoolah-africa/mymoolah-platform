@@ -1,5 +1,22 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-12 - 🔄 VAS Error 1002 Exhaustive Failover ✅
+
+### **Session Overview**
+Implemented banking-grade exhaustive failover when highest-commission supplier returns Error 1002 ("Cannot source product"). Tries all alternatives in commission order; only fails when every supplier returns 1002. UAT mask: `VAS_FAILOVER_ENABLED=false` in `.env.codespaces` bypasses failover. Staging/Production use GCS Secret Manager (`VAS_FAILOVER_ENABLED=true`).
+
+### **Changes**
+- **routes/overlayServices.js**: Exhaustive failover loop (up to 3 attempts), Flash + MobileMart support, deferred rollback (preserve txn when failover succeeds), audit logging via productAvailabilityLogger
+- **.env.codespaces**: `VAS_FAILOVER_ENABLED=false` (UAT mask)
+- **docs/VAS_FAILOVER_1002_IMPLEMENTATION.md**: Implementation guide
+
+### **Safeguards**
+- Attempt cap: 3 suppliers max
+- Receipt accuracy: VasTransaction metadata stores actual supplier (flashResponse/mobilemartResponse)
+- Idempotency preserved across attempts
+
+---
+
 ## 2026-02-16 - 🔧 Codespaces Startup Fix & SSL Cert v4 ✅
 
 ### **Session Overview**
