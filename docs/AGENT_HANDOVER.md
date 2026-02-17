@@ -1359,7 +1359,7 @@ Previous session implemented comprehensive validation for South African driver's
 - **Architecture**: Serverless NEGs route to Cloud Run services (`mymoolah-backend-staging`, `mymoolah-wallet-staging`).
 - **Ingress IP**: Static global IP `34.8.79.152` referenced by Afrihost `A` records.
 - **Documentation**: `docs/GCP_STAGING_DEPLOYMENT.md`, `docs/changelog.md`, `docs/readme.md` updated with runbook details.
-- **Next**: Replicate pattern for production (`api.mymoolah.africa`, `wallet.mymoolah.africa`) once services and secrets are ready.
+- **Production**: `api-mm.mymoolah.africa` was created (Afrihost 5-char subdomain requirement). Live with `wallet.mymoolah.africa` since Feb 15–16, 2026. SSL cert v4 active.
 
 ### **📋 CURSOR 2.0 RULES IMPLEMENTATION - COMPLETE** ✅
 - **Rules Documentation**: Created `docs/CURSOR_2.0_RULES_FINAL.md` with comprehensive 10-rule system
@@ -1448,7 +1448,7 @@ Previous session implemented comprehensive validation for South African driver's
 - **Architecture**: Serverless NEGs (`moolah-backend-staging-neg`, `neg-staging-wallet`) → backend services (`be-staging-backend`, `be-staging-wallet`) → URL map `urlmap-staging` → HTTPS proxy `https-proxy-staging`.
 - **Ingress IP**: Global static IP `34.8.79.152`; Afrihost `A` records updated accordingly.
 - **Documentation**: `docs/GCP_STAGING_DEPLOYMENT.md`, `docs/readme.md`, `docs/changelog.md` refreshed with the load balancer runbook.
-- **Next Steps**: Mirror setup for production domains (`api.mymoolah.africa`, `wallet.mymoolah.africa`) once production Cloud Run services and secrets are in place.
+- **Production**: `api-mm.mymoolah.africa` was created (Afrihost 5-char subdomain requirement). Production domains live: API `api-mm.mymoolah.africa`, Wallet `wallet.mymoolah.africa`. SSL cert v4 active since Feb 16, 2026.
 
 ### **🏆 PREVIOUS SESSION: ZAPPER UAT TESTING COMPLETE**
 This session successfully completed comprehensive UAT testing of the Zapper QR payment integration. Created comprehensive test suite with 20 tests, achieved 92.3% success rate (12/13 critical tests passed), verified all core payment functionality, and confirmed readiness for production credentials request.
