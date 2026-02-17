@@ -175,6 +175,13 @@ store_valr_credentials() {
   success "VALR API credentials stored"
 }
 
+# Store VAS failover flag (Error 1002 exhaustive failover - Staging/Production only)
+store_vas_failover() {
+  log "Storing VAS failover flag..."
+  create_or_update_secret "vas-failover-enabled" "true" "VAS Error 1002 exhaustive failover (Staging/Production)"
+  success "VAS failover flag stored"
+}
+
 # Store database URL (constructed from password secret)
 # Note: This will need to be constructed at runtime in Cloud Run
 # For now, we'll create a template secret
@@ -215,6 +222,9 @@ main() {
   # Store VALR API credentials (USDC Send)
   store_valr_credentials
   
+  # Store VAS failover flag (Error 1002 exhaustive failover)
+  store_vas_failover
+  
   # Store database URL template
   store_database_url_template
   
@@ -239,6 +249,7 @@ main() {
   echo "  - valr-api-secret-staging (if provided)"
   echo "  - database-url-template-staging"
   echo "  - db-mmtp-pg-staging-password (from database setup)"
+  echo "  - vas-failover-enabled (VAS Error 1002 exhaustive failover)"
   echo ""
   echo "⚠️  BANKING-GRADE SECURITY:"
   echo "   - All secrets stored in Secret Manager"

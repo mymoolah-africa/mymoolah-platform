@@ -54,10 +54,16 @@ When the highest-commission supplier returns **Error 1002** ("Cannot source prod
 
 ## GCS Secret (Staging/Production)
 
-Add to Secret Manager:
+**Secret name**: `vas-failover-enabled`  
+**Value**: `true`
 
-```
-VAS_FAILOVER_ENABLED=true
+Created by `scripts/setup-secrets-staging.sh` or manually:
+
+```bash
+echo -n "true" | gcloud secrets create vas-failover-enabled \
+  --project=mymoolah-db --data-file=- --replication-policy="automatic"
 ```
 
-Staging and Production do not use `.env`; they read from GCS. Ensure this secret is configured for the airtime/data purchase flow.
+**Deploy scripts** (already configured):
+- `scripts/deploy-cloud-run-staging.sh` — includes `VAS_FAILOVER_ENABLED=vas-failover-enabled:latest`
+- `scripts/build-push-deploy-production.sh` — includes `VAS_FAILOVER_ENABLED=vas-failover-enabled:latest`

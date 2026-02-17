@@ -186,6 +186,7 @@ main() {
   echo "Shared prod credentials (from staging setup):"
   echo "  - zapper-prod-org-id, zapper-prod-api-token, zapper-prod-x-api-key, zapper-prod-api-url"
   echo "  - mobilemart-prod-client-id, mobilemart-prod-client-secret, mobilemart-prod-api-url, mobilemart-prod-token-url"
+  echo "  - vas-failover-enabled (VAS Error 1002 exhaustive failover)"
   echo ""
   echo "Next: ./scripts/build-push-deploy-production.sh"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

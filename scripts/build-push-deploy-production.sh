@@ -27,7 +27,7 @@ command -v gcloud >/dev/null || err "gcloud not found"
 
 # Build optional secrets string (only include if secret exists)
 build_secrets_args() {
-  local base="ZAPPER_API_URL=zapper-prod-api-url:latest,ZAPPER_ORG_ID=zapper-prod-org-id:latest,ZAPPER_API_TOKEN=zapper-prod-api-token:latest,ZAPPER_X_API_KEY=zapper-prod-x-api-key:latest,JWT_SECRET=jwt-secret-production:latest,SESSION_SECRET=session-secret-production:latest,DB_PASSWORD=db-mmtp-pg-production-password:latest,MOBILEMART_CLIENT_ID=mobilemart-prod-client-id:latest,MOBILEMART_CLIENT_SECRET=mobilemart-prod-client-secret:latest,MOBILEMART_API_URL=mobilemart-prod-api-url:latest,MOBILEMART_TOKEN_URL=mobilemart-prod-token-url:latest"
+  local base="ZAPPER_API_URL=zapper-prod-api-url:latest,ZAPPER_ORG_ID=zapper-prod-org-id:latest,ZAPPER_API_TOKEN=zapper-prod-api-token:latest,ZAPPER_X_API_KEY=zapper-prod-x-api-key:latest,JWT_SECRET=jwt-secret-production:latest,SESSION_SECRET=session-secret-production:latest,DB_PASSWORD=db-mmtp-pg-production-password:latest,MOBILEMART_CLIENT_ID=mobilemart-prod-client-id:latest,MOBILEMART_CLIENT_SECRET=mobilemart-prod-client-secret:latest,MOBILEMART_API_URL=mobilemart-prod-api-url:latest,MOBILEMART_TOKEN_URL=mobilemart-prod-token-url:latest,VAS_FAILOVER_ENABLED=vas-failover-enabled:latest"
   for name in easypay-api-key-production openai-api-key-production valr-api-key-production valr-api-secret-production; do
     if gcloud secrets describe "${name}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
       case "${name}" in
