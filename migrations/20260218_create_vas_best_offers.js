@@ -177,25 +177,23 @@ module.exports = {
         ['vas_type', 'provider', 'denomination_cents'],
         {
           unique: true,
-          name: 'idx_vas_best_offers_unique'
-        },
-        { transaction }
+          name: 'idx_vas_best_offers_unique',
+          transaction
+        }
       );
 
       // Index for fast lookups by vasType + provider
       await queryInterface.addIndex(
         'vas_best_offers',
         ['vas_type', 'provider'],
-        { name: 'idx_vas_best_offers_lookup' },
-        { transaction }
+        { name: 'idx_vas_best_offers_lookup', transaction }
       );
 
       // Index for catalog version (cache invalidation)
       await queryInterface.addIndex(
         'vas_best_offers',
         ['catalog_version'],
-        { name: 'idx_vas_best_offers_version' },
-        { transaction }
+        { name: 'idx_vas_best_offers_version', transaction }
       );
 
       await transaction.commit();
