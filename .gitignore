@@ -23,6 +23,10 @@ idempotencyKey
 # Node modules
 mymoolah-wallet-frontend/node_modules/
 
+# Vite cache/timestamp files (auto-generated, safe to delete)
+vite.config.*.timestamp-*
+*.timestamp-*.mjs
+
 # Binary files
 cloud-sql-proxy
 bin/cloud-sql-proxy
