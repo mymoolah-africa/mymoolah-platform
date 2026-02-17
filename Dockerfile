@@ -54,4 +54,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
 # Start the application
 # Cloud Run sets PORT automatically, but we default to 8080
 # Using shell script wrapper (can switch to direct node command once confirmed working)
-CMD ["/app/start.sh"] 
+CMD ["/app/start.sh"]
