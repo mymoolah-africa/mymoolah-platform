@@ -62,19 +62,30 @@ git status
 2. Reload VS Code window: `Cmd+Shift+P` → "Reload Window"
 3. Reopen Source Control panel
 
-### **Option 4: Clean git state**
+### **Option 4: Clean git state** ⚠️ **DANGEROUS - READ WARNING**
+
+**⚠️ CRITICAL WARNING:** `git clean -fd` **DELETES ALL UNTRACKED FILES**, including `.env`!
+Your Codespaces `.env` contains UAT keys and secrets. **DO NOT run `git clean -fd`** unless you have a backup.
+
+**If you must run it:**
+1. **First backup .env:** `cp .env .env.backup.$(date +%Y%m%d)`
+2. Then run the commands below
+3. **Restore .env:** `cp .env.backup.* .env`
 
 ```bash
 cd /workspaces/mymoolah-platform
 
+# BACKUP .env FIRST!
+cp .env .env.backup.$(date +%Y%m%d) 2>/dev/null || true
+
 # Ensure clean state
 git fetch origin
 git reset --hard origin/main
-git clean -fd
-
-# Verify
+# git clean -fd  # REMOVED - use only if you understand it deletes .env
 git status
 ```
+
+**Prefer Option 1, 2, or 3** instead of Option 4.
 
 ---
 
