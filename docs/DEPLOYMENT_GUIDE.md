@@ -1,10 +1,29 @@
 # MyMoolah Deployment Guide
 
-## 🚀 Current Deployment Procedures (January 13, 2026 - Reconciliation System Deployment)
+**Last Updated**: February 18, 2026
 
-**Status**: ✅ **VALIDATED** - All deployment procedures tested and working
-**Latest**: Banking-grade reconciliation system deployed to UAT with automated multi-supplier transaction reconciliation.
-**Previous**: Staging and Production Cloud SQL instances created with banking-grade security, Secret Manager integration, and complete environment isolation.
+---
+
+## 📚 **DEPLOYMENT DOCUMENT INDEX**
+
+| Document | Purpose |
+|----------|---------|
+| **This file** | Main deployment procedures, local/cloud setup |
+| [GCP_PRODUCTION_DEPLOYMENT.md](./GCP_PRODUCTION_DEPLOYMENT.md) | Production deployment (api-mm, wallet) |
+| [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) | Pre-deployment checklist |
+| [GCP_DEPLOYMENT_QUICK_START.md](./GCP_DEPLOYMENT_QUICK_START.md) | Quick start for GCP |
+| [FRESH_STAGING_DEPLOYMENT_GUIDE.md](./FRESH_STAGING_DEPLOYMENT_GUIDE.md) | Fresh staging setup |
+| [WALLET_DEPLOYMENT_GUIDE.md](./WALLET_DEPLOYMENT_GUIDE.md) | Wallet-specific deployment |
+| [DEVELOPMENT_DEPLOYMENT_WORKFLOW.md](./DEVELOPMENT_DEPLOYMENT_WORKFLOW.md) | Dev → deploy workflow |
+| [GCP_DEPLOYMENT_STATUS.md](./GCP_DEPLOYMENT_STATUS.md) | Deployment status |
+| [GCP_STAGING_DEPLOYMENT.md](./GCP_STAGING_DEPLOYMENT.md) | Staging deployment |
+| [GCP_STAGING_DEPLOYMENT_STATUS.md](./GCP_STAGING_DEPLOYMENT_STATUS.md) | Staging status |
+
+---
+
+## 🚀 Current Deployment Procedures
+
+**Status**: ✅ **VALIDATED** - Production live at api-mm.mymoolah.africa, wallet.mymoolah.africa
 
 ## 📋 Deployment Overview
 

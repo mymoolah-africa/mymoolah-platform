@@ -6,57 +6,9 @@
 
 ---
 
-## 🚀 **LATEST UPDATE: VAS Best Offers JSONB Fix & Startup Sequence (February 12, 2026)**
+## 🚀 **LATEST UPDATE**
 
-Refresh-vas-best-offers.js: fixed JSONB/denominations type mismatch (Sequelize.literal cast). Startup: "🎉 All background services started successfully" now logs after FloatBalanceMonitoring initial check. See `docs/session_logs/2026-02-12_1400_vas-best-offers-jsonb-startup-sequence.md`.
-
----
-
-## 🚀 **PREVIOUS UPDATE: Codespaces Startup Fix & SSL Cert v4 (February 16, 2026)**
-
-Codespaces backend startup fixed (env vars, UAT password). Production SSL: cert-production-v4 (api-mm, wallet, www.wallet). Production: https://api-mm.mymoolah.africa, https://wallet.mymoolah.africa. See `docs/session_logs/2026-02-16_0900_codespaces-startup-ssl-cert-v4.md`.
-
----
-
-## 🚀 **PREVIOUS UPDATE: NFC Tap to Add Money (February 10, 2026)**
-
-Tap to Add Money: NFC deposit via Halo Dot. Visible on Transact page; quick amounts R50-R8000; description "Tap your card or use Google Pay / Apple Pay"; max R10k. Model fixes (user_id), Halo API amount-as-number, ECONNRESET troubleshooting. **Rule 9A**: MUST sweep scripts/ before creating new scripts. **Last 3 weeks (Jan 20–Feb 10)** also: Transaction Detail + USDC fee UI; USDC send flow; Watch to Earn Staging; USDC feature + sweep; proxy & gcloud auth; Global Airtime; Flash cash_out; ZERO SHORTCUTS POLICY. See `docs/CHANGELOG.md` and `docs/session_logs/2026-02-10_1550_nfc-tap-to-add-money-refinements.md`.
-
----
-
-## 🚀 **PREVIOUS UPDATE: USDC Fixes & Banking-Grade Sweep (February 07, 2026)**
-
-USDC service hardened: beneficiary list fix (model + enrichment + filter), Redis v5 cache, VALR 503 handling, edit flow and overlay banners. All USDC routes use express-validator and DB-only aggregation for limits. See `docs/session_logs/2026-02-07_2230_usdc-fixes-banners-banking-grade-sweep.md`.
-
----
-
-## 🚀 **PREVIOUS UPDATE: Electricity Purchase with MobileMart Integration (February 01, 2026)**
-
-### **⚡ Production-Ready Electricity Purchase**
-Complete end-to-end electricity purchase implementation:
-
-**User Flow**:
-1. Select Electricity service
-2. Create/select meter recipient (8-digit UAT support)
-3. Enter amount (R20-R2000)
-4. Purchase electricity
-5. View transaction in history
-6. Click transaction → see 16-digit electricity PIN/token
-
-**Backend Integration**:
-- ✅ **MobileMart API**: Full prevend → purchase flow
-- ✅ **Environment Aware**: UAT simulation, Staging/Production real API
-- ✅ **Real Tokens**: Extracts authentic electricity tokens from MobileMart
-- ✅ **Wallet Integration**: Automatic debit and transaction history
-- ✅ **Error Handling**: Comprehensive API error handling
-
-**Frontend Features**:
-- ✅ **Transaction Detail Modal**: View electricity PIN/token by clicking transaction
-- ✅ **Copy Token**: One-click token copying
-- ✅ **Zap Icon**: Red lightning bolt for electricity debits
-- ✅ **Receipt View**: Complete purchase details (meter, amount, status)
-
-**Status**: ✅ **UAT Tested**, ✅ **Ready for Staging Deployment**
+**For full change history**, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md).
 
 ---
 

@@ -7,6 +7,22 @@
 
 ---
 
+## PARTNER BRIEF (For EasyPay / External Stakeholders)
+
+**Status**: 95% complete. MyMoolah has completed all development. Remaining 5%: Awaiting EasyPay API credentials and settlement callback implementation.
+
+**3 Services Integrated**: (1) Top-up at EasyPay (R50–R4,000, fee R2.50), (2) Cash-out at EasyPay (R50–R3,000, fee R8.00), (3) Standalone EasyPay Voucher (R50–R3,000, fee R2.50). All use 14-digit PINs starting with '9'.
+
+**MyMoolah Completed**: Backend APIs, frontend, database, float accounts (R50k each), SFTP (34.35.137.166), documentation.
+
+**EasyPay Must Provide**: (1) API keys (UAT/Staging/Production), (2) IP addresses for whitelisting, (3) SSH public key for SFTP reconciliation.
+
+**EasyPay Must Implement**: Settlement API calls to MyMoolah when users redeem PINs (top-up, cash-out, voucher); daily CSV reconciliation file upload.
+
+**Contact**: integrations@mymoolah.africa
+
+---
+
 ## EXECUTIVE SUMMARY
 
 MyMoolah has completed comprehensive EasyPay integration development including three core services:

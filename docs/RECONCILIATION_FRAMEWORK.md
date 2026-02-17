@@ -5,6 +5,8 @@
 **Date**: 2026-01-13  
 **Status**: Production Implementation  
 
+For setup, configuration, and running reconciliation, see [RECONCILIATION_QUICK_START.md](./RECONCILIATION_QUICK_START.md).
+
 ---
 
 ## Executive Summary

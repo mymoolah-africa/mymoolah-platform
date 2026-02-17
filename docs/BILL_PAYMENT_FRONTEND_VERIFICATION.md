@@ -1,8 +1,15 @@
-# Bill Payment Frontend Verification Guide
+# Bill Payment Frontend Guide
 
 **Date**: January 10, 2026  
 **Status**: ✅ Backend Fixed - Frontend Testing Required  
 **Version**: v2.4.46
+
+---
+
+## 🔍 **Problem Analysis** (Original Issue)
+
+**Symptoms**: Bill payment overlay showed categories but no billers/companies.  
+**Root Cause**: MobileMart API does NOT provide category information in product list endpoints. Sync script did not add `metadata.category`, so all products had `metadata.category = null` and billers did not display.
 
 ---
 

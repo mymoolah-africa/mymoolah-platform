@@ -259,12 +259,28 @@ const mockToken = `EZ${Math.random()...}`; // Fake token
 
 ---
 
+## 🔧 **INTEGRATION ARCHITECTURE** (from Flash Integration Report)
+
+**Auth**: OAuth 2.0 Client Credentials. Token endpoint: `https://api.flashswitch.flash-group.com/token`. API base: `https://api.flashswitch.flash-group.com/v4`. Credentials in GCS Secret Manager: FLASH_CONSUMER_KEY, FLASH_CONSUMER_SECRET, FLASH_ACCOUNT_NUMBER, FLASH_API_URL.
+
+**Services**: Cash-Out PIN (Eezi Cash), Prepaid Electricity (meter lookup + token). Environment-aware via `FLASH_LIVE_INTEGRATION` flag.
+
+---
+
+## 🧪 **TESTING** (from Flash Integration Testing Guide)
+
+**Pre-test**: Set `FLASH_LIVE_INTEGRATION=false` (UAT simulation) or `true` (real API). **Cash-out test**: R100 purchase → PIN displayed, wallet debited. **Electricity test**: Meter lookup → purchase → token. See [FLASH_CREDENTIALS_SETUP.md](./FLASH_CREDENTIALS_SETUP.md) for credential setup.
+
+---
+
 ## 📌 **AUDIT STATUS**
 
 **Audit Progress**: 60% complete  
 **Findings**: Flash infrastructure complete, overlay integration missing  
 **Recommendation**: Integrate Flash API into overlay services following MobileMart pattern  
 **Estimated Total Effort**: 4-6 hours
+
+**Related**: [FLASH_CREDENTIALS_SETUP.md](./FLASH_CREDENTIALS_SETUP.md), [integrations/Flash_Reconciliation.md](./integrations/Flash_Reconciliation.md), [integrations/Flash_Products.md](./integrations/Flash_Products.md)
 
 ---
 

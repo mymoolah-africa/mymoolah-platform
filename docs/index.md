@@ -74,7 +74,7 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 
 ### **📱 VAS & Mobile Services**
 - [**FLASH_INTEGRATION_AUDIT_2026-02-01.md**](./FLASH_INTEGRATION_AUDIT_2026-02-01.md) - Flash VAS integration
-- [**MOBILEMART_PRODUCTION_SYNC_FINAL_SUMMARY.md**](./MOBILEMART_PRODUCTION_SYNC_FINAL_SUMMARY.md) - MobileMart integration
+- [**integrations/MobileMart_Integration_Guide.md**](./integrations/MobileMart_Integration_Guide.md) - MobileMart integration (unified guide)
 - [**AIRTIME_DUMMY_DATA_SUMMARY.md**](./AIRTIME_DUMMY_DATA_SUMMARY.md) - VAS testing data
 
 ### **🤖 AI & Support Systems**

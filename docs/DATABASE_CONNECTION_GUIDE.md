@@ -4,6 +4,8 @@
 
 This guide ensures **100% reliable** database connections for UAT, Staging, and Production. **ALWAYS** use the provided scripts and helpers - never write custom connection logic.
 
+**Codespaces quick start**: See [CODESPACES_DB_CONNECTION.md](./CODESPACES_DB_CONNECTION.md) for one-click restart and Cloud SQL proxy setup.
+
 ---
 
 ## 📋 **Standard Configuration**

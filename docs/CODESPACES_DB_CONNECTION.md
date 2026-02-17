@@ -1,5 +1,7 @@
 # Codespaces DB Connection (Cloud SQL)
 
+**Quick reference** for Codespaces. For full database connection guide (UAT, Staging, Production, migrations), see [DATABASE_CONNECTION_GUIDE.md](./DATABASE_CONNECTION_GUIDE.md).
+
 **Recommended**: Use `./scripts/one-click-restart-and-start.sh` — starts Redis, Cloud SQL Auth Proxy, and backend with correct env vars (NODE_ENV, PORT, TLS_ENABLED, JWT_SECRET, DATABASE_URL). UAT password fallback when .env missing.
 
 Two supported methods:

@@ -4,6 +4,8 @@
 **Date**: 2026-01-13  
 **Status**: Production Ready
 
+For architecture, design principles, and framework details, see [RECONCILIATION_FRAMEWORK.md](./RECONCILIATION_FRAMEWORK.md).
+
 ---
 
 ## Overview
