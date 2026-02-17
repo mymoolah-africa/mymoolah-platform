@@ -2,71 +2,31 @@
 
 /**
  * Check Migration Status: Compare executed migrations between UAT and Staging
- * 
+ *
  * Purpose: Identify which migrations have run in each environment
- * 
- * Usage: node scripts/check-migration-status.js
+ * Uses db-connection-helper.js for all database connections
+ *
+ * Usage:
+ *   node scripts/check-migration-status.js           # Full check (UAT + Staging, both proxies required)
+ *   node scripts/check-migration-status.js --uat-only # UAT only (when Staging proxy not running)
+ *   node scripts/check-migration-status.js --debug   # Show sample SequelizeMeta vs file format (for diagnosis)
  */
 
 require('dotenv').config();
-const { Pool } = require('pg');
-const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-// Get password from Secret Manager
-function getPasswordFromSecretManager(secretName) {
-  try {
-    const password = execSync(
-      `gcloud secrets versions access latest --secret="${secretName}" --project=mymoolah-db`,
-      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
-    );
-    return password.replace(/[\r\n\s]+$/g, '').trim();
-  } catch (error) {
-    throw new Error(`Failed to get password from Secret Manager: ${secretName} - ${error.message}`);
-  }
-}
+const {
+  getUATClient,
+  getStagingClient,
+  detectProxyPort,
+  closeAll,
+  CONFIG,
+  getStagingPassword,
+} = require('./db-connection-helper');
 
-// Get UAT password from .env
-function getUATPassword() {
-  if (process.env.DATABASE_URL) {
-    try {
-      const url = new URL(process.env.DATABASE_URL);
-      if (url.password) return decodeURIComponent(url.password);
-    } catch (e) {
-      const urlString = process.env.DATABASE_URL;
-      const hostPattern = '@127.0.0.1:';
-      const hostIndex = urlString.indexOf(hostPattern);
-      if (hostIndex > 0) {
-        const userPassStart = urlString.indexOf('://') + 3;
-        const passwordStart = urlString.indexOf(':', userPassStart) + 1;
-        if (passwordStart > userPassStart && passwordStart < hostIndex) {
-          const password = urlString.substring(passwordStart, hostIndex);
-          try {
-            return decodeURIComponent(password);
-          } catch {
-            return password;
-          }
-        }
-      }
-    }
-  }
-  if (process.env.DB_PASSWORD) return process.env.DB_PASSWORD;
-  throw new Error('UAT password not found. Set DATABASE_URL or DB_PASSWORD in .env file.');
-}
-
-// Detect proxy port
-function detectProxyPort(ports, name) {
-  for (const port of ports) {
-    try {
-      execSync(`lsof -i :${port}`, { stdio: 'ignore' });
-      return port;
-    } catch {
-      continue;
-    }
-  }
-  throw new Error(`${name} proxy not running. Start it on port ${ports[0]} or ${ports[1]}`);
-}
+const UAT_ONLY = process.argv.includes('--uat-only');
+const DEBUG = process.argv.includes('--debug');
 
 // Get executed migrations
 async function getExecutedMigrations(client) {
@@ -91,75 +51,83 @@ function getAllMigrationFiles() {
   return files;
 }
 
+// Check if migration is in executed set (SequelizeMeta may store filename, name, or path)
+function isExecuted(executedSet, m) {
+  if (executedSet.has(m.filename) || executedSet.has(m.name)) return true;
+  // Handle path format: "migrations/20260218_create_vas_best_offers.js" or full path
+  for (const v of executedSet) {
+    const base = v.replace(/^.*[/\\]/, ''); // basename
+    if (base === m.filename || base === m.name) return true;
+  }
+  return false;
+}
+
 async function main() {
+  const title = UAT_ONLY ? 'UAT ONLY' : 'UAT vs STAGING';
   console.log('\n' + '='.repeat(80));
-  console.log('  📋 MIGRATION STATUS CHECK: UAT vs STAGING');
+  console.log(`  📋 MIGRATION STATUS CHECK: ${title}`);
   console.log('='.repeat(80) + '\n');
 
-  // Get passwords
-  const uatPassword = getUATPassword();
-  let stagingPassword;
-  
-  try {
-    stagingPassword = getPasswordFromSecretManager('db-mmtp-pg-staging-password');
-    console.log('✅ Staging password retrieved from Secret Manager\n');
-  } catch (error) {
-    throw new Error(`Failed to retrieve Staging password from Secret Manager: ${error.message}`);
+  // Use db-connection-helper for all DB connections
+  console.log('🔍 Detecting Cloud SQL Auth Proxy ports...\n');
+  const uatProxyPort = detectProxyPort(CONFIG.UAT.PROXY_PORTS, 'UAT');
+  console.log(`✅ UAT proxy running on port ${uatProxyPort}`);
+  if (!UAT_ONLY) {
+    getStagingPassword(); // Pre-fetch to validate Secret Manager access
+    console.log('✅ Staging password retrieved from Secret Manager');
+    const stagingProxyPort = detectProxyPort(CONFIG.STAGING.PROXY_PORTS, 'Staging');
+    console.log(`✅ Staging proxy running on port ${stagingProxyPort}\n`);
+  } else {
+    console.log('   (Staging skipped: --uat-only)\n');
   }
 
-  // Detect proxy ports
-  console.log('🔍 Detecting Cloud SQL Auth Proxy ports...\n');
-  const uatProxyPort = detectProxyPort([6543, 5432], 'UAT');
-  const stagingProxyPort = detectProxyPort([6544, 5432], 'Staging');
-  console.log(`✅ UAT proxy running on port ${uatProxyPort}`);
-  console.log(`✅ Staging proxy running on port ${stagingProxyPort}\n`);
-
-  // Create connection pools
-  const uatConfig = {
-    host: '127.0.0.1',
-    port: uatProxyPort,
-    database: 'mymoolah',
-    user: 'mymoolah_app',
-    password: uatPassword,
-    ssl: false
-  };
-
-  const stagingConfig = {
-    host: '127.0.0.1',
-    port: stagingProxyPort,
-    database: 'mymoolah_staging',
-    user: 'mymoolah_app',
-    password: stagingPassword,
-    ssl: false
-  };
-
-  const uatPool = new Pool(uatConfig);
-  const stagingPool = new Pool(stagingConfig);
+  let uatClient;
+  let stagingClient = null;
 
   try {
-    const uatClient = await uatPool.connect();
-    const stagingClient = await stagingPool.connect();
+    uatClient = await getUATClient();
+    if (!UAT_ONLY) {
+      stagingClient = await getStagingClient();
+    }
 
     try {
       console.log('📋 Fetching executed migrations...\n');
-      
+
       const uatMigrations = await getExecutedMigrations(uatClient);
-      const stagingMigrations = await getExecutedMigrations(stagingClient);
+      const stagingMigrations = stagingClient
+        ? await getExecutedMigrations(stagingClient)
+        : new Set();
       const allMigrations = getAllMigrationFiles();
 
       console.log(`   UAT: ${uatMigrations.size} migrations executed`);
-      console.log(`   Staging: ${stagingMigrations.size} migrations executed`);
+      if (!UAT_ONLY) {
+        console.log(`   Staging: ${stagingMigrations.size} migrations executed`);
+      }
       console.log(`   Total migration files: ${allMigrations.length}\n`);
 
-      // Find migrations in Staging but not in UAT
+      if (DEBUG) {
+        const migrationsDir = path.join(__dirname, '..', 'migrations');
+        const uatSample = [...uatMigrations].sort().slice(0, 5);
+        const fileSample = allMigrations.slice(0, 5).map(m => ({ filename: m.filename, name: m.name }));
+        console.log('🔍 DEBUG - Migrations directory:', migrationsDir);
+        console.log('🔍 DEBUG - Sample from SequelizeMeta (UAT), first 5:');
+        uatSample.forEach((v, i) => console.log(`      [${i}] "${v}" (len=${v.length})`));
+        console.log('🔍 DEBUG - Sample from migration files, first 5:');
+        fileSample.forEach((m, i) => console.log(`      [${i}] filename="${m.filename}" name="${m.name}"`));
+        console.log('🔍 DEBUG - Checking if first file matches:', isExecuted(uatMigrations, fileSample[0]));
+        console.log('');
+      }
+
+      // SequelizeMeta may store filename with or without .js depending on version/config
       const missingInUAT = [...stagingMigrations].filter(m => !uatMigrations.has(m));
       const extraInUAT = [...uatMigrations].filter(m => !stagingMigrations.has(m));
-      const pendingInBoth = allMigrations.filter(m => 
-        !uatMigrations.has(m.name) && !stagingMigrations.has(m.name)
+      const pendingInUAT = allMigrations.filter(m => !isExecuted(uatMigrations, m));
+      const pendingInBoth = allMigrations.filter(m =>
+        !isExecuted(uatMigrations, m) && !isExecuted(stagingMigrations, m)
       );
 
-      // Check for our 6 extra tables' migrations
-      const relevantMigrations = [
+      if (!UAT_ONLY) {
+        const relevantMigrations = [
         '20250814_create_reseller_compliance_tax',
         '20250814_create_mobilemart_tables',
         '20250829075831-add-commission-to-flash-transactions-and-tiers',
@@ -170,20 +138,22 @@ async function main() {
       console.log('  🔍 RELEVANT MIGRATIONS FOR EXTRA TABLES');
       console.log('='.repeat(80) + '\n');
 
-      relevantMigrations.forEach(migrationName => {
-        const inUAT = uatMigrations.has(migrationName);
-        const inStaging = stagingMigrations.has(migrationName);
-        const status = inUAT && inStaging ? '✅ Both' :
-                      inStaging && !inUAT ? '⚠️  Staging only' :
-                      inUAT && !inStaging ? '❌ UAT only' : '❌ Neither';
-        console.log(`   ${status}: ${migrationName}`);
-      });
+        relevantMigrations.forEach(migrationName => {
+          const m = { filename: `${migrationName}.js`, name: migrationName };
+          const inUAT = isExecuted(uatMigrations, m);
+          const inStaging = isExecuted(stagingMigrations, m);
+          const status = inUAT && inStaging ? '✅ Both' :
+            inStaging && !inUAT ? '⚠️  Staging only' :
+              inUAT && !inStaging ? '❌ UAT only' : '❌ Neither';
+          console.log(`   ${status}: ${migrationName}`);
+        });
+      }
 
       console.log('\n' + '='.repeat(80));
-      console.log(`  📊 MIGRATION DIFFERENCES`);
+      console.log(`  📊 ${UAT_ONLY ? 'UAT STATUS' : 'MIGRATION DIFFERENCES'}`);
       console.log('='.repeat(80) + '\n');
 
-      if (missingInUAT.length > 0) {
+      if (!UAT_ONLY && missingInUAT.length > 0) {
         console.log(`⚠️  ${missingInUAT.length} migration(s) in Staging but NOT in UAT:\n`);
         missingInUAT.forEach(m => {
           console.log(`   - ${m}`);
@@ -191,7 +161,7 @@ async function main() {
         console.log();
       }
 
-      if (extraInUAT.length > 0) {
+      if (!UAT_ONLY && extraInUAT.length > 0) {
         console.log(`ℹ️  ${extraInUAT.length} migration(s) in UAT but NOT in Staging:\n`);
         extraInUAT.forEach(m => {
           console.log(`   - ${m}`);
@@ -199,21 +169,24 @@ async function main() {
         console.log();
       }
 
-      if (pendingInBoth.length > 0) {
-        console.log(`📋 ${pendingInBoth.length} migration(s) not executed in either environment:\n`);
-        pendingInBoth.forEach(m => {
+      const pendingToShow = UAT_ONLY ? pendingInUAT : pendingInBoth;
+      if (pendingToShow.length > 0) {
+        console.log(`📋 ${pendingToShow.length} migration(s) ${UAT_ONLY ? 'pending in UAT' : 'not executed in either environment'}:\n`);
+        pendingToShow.forEach(m => {
           console.log(`   - ${m.name}`);
         });
         console.log();
       }
 
-      if (missingInUAT.length === 0 && extraInUAT.length === 0 && pendingInBoth.length === 0) {
+      if (UAT_ONLY && pendingToShow.length === 0) {
+        console.log('✅ All migrations are executed in UAT!\n');
+      } else if (!UAT_ONLY && missingInUAT.length === 0 && extraInUAT.length === 0 && pendingInBoth.length === 0) {
         console.log('✅ All migrations are synchronized!\n');
       }
 
     } finally {
       uatClient.release();
-      stagingClient.release();
+      if (stagingClient) stagingClient.release();
     }
   } catch (error) {
     console.error(`\n❌ Fatal error: ${error.message}`);
@@ -223,8 +196,9 @@ async function main() {
     }
     process.exit(1);
   } finally {
-    await uatPool.end();
-    await stagingPool.end();
+    if (uatClient) uatClient.release();
+    if (stagingClient) stagingClient.release();
+    await closeAll();
   }
 }
 
