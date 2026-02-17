@@ -159,6 +159,15 @@ class CatalogSynchronizationService {
       // Update catalog cache
       await this.updateCatalogCache();
 
+      // Refresh pre-computed best-offers table (banking-grade: one product per denomination, highest commission)
+      try {
+        const { refreshBestOffers } = require('../scripts/refresh-vas-best-offers');
+        const result = await refreshBestOffers();
+        console.log(`📊 vas_best_offers refreshed: ${result.rowsAffected} rows`);
+      } catch (boErr) {
+        console.warn('⚠️ vas_best_offers refresh skipped:', boErr.message);
+      }
+
       // Log sweep results
       const duration = Date.now() - startTime;
       console.log(`✅ Daily catalog sweep completed in ${duration}ms`);

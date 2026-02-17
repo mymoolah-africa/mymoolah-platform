@@ -10,6 +10,7 @@
 
 const { ProductVariant, Product, Supplier } = require('../models');
 const { Op } = require('sequelize');
+const bestOfferService = require('./bestOfferService');
 
 class SupplierComparisonService {
     constructor() {
@@ -45,10 +46,36 @@ class SupplierComparisonService {
                 suppliers: {},
                 bestDeals: [],
                 promotionalOffers: [],
-                recommendations: []
+                recommendations: [],
+                catalogVersion: null
             };
 
-            // Get products from all suppliers using normalized schema
+            // Best-offers filter: ONLY in Staging & Production (highest commission per denomination)
+            // UAT: show ALL products from all suppliers for testing
+            const isStagingOrProduction = process.env.NODE_ENV === 'production' ||
+                process.env.STAGING === 'true';
+            if (isStagingOrProduction) {
+                try {
+                    const bestResult = await bestOfferService.getBestOffers(vasType, provider);
+                    if (bestResult.source === 'vas_best_offers' && bestResult.products.length > 0) {
+                        comparison.bestDeals = bestResult.products;
+                        comparison.catalogVersion = bestResult.catalogVersion;
+                        for (const [code, meta] of Object.entries(this.suppliers)) {
+                            comparison.suppliers[code] = {
+                                name: meta.name || code,
+                                priority: meta.priority ?? 999,
+                                productCount: 0,
+                                products: []
+                            };
+                        }
+                        return comparison;
+                    }
+                } catch (boErr) {
+                    console.warn('⚠️ BestOfferService fallback:', boErr.message);
+                }
+            }
+
+            // UAT / Fallback: runtime comparison - ALL products from all suppliers
             const allProducts = await this.getProductVariants(vasType, amount, provider);
 
             // Group by supplier dynamically (supports new suppliers without code changes)
@@ -84,8 +111,17 @@ class SupplierComparisonService {
                 };
             }
 
-            // Find best deals across all suppliers
-            comparison.bestDeals = this.findBestDeals(Object.values(groupedBySupplier), amount, vasType);
+            // UAT: all products. Staging/Production: best only (highest commission per denomination)
+            if (isStagingOrProduction) {
+                comparison.bestDeals = this.findBestDeals(Object.values(groupedBySupplier), amount, vasType);
+            } else {
+                // UAT: show ALL products from all suppliers (no highest-commission filter)
+                const allFormatted = [];
+                for (const group of Object.values(groupedBySupplier)) {
+                    allFormatted.push(...group.map(p => this.formatProductForResponse(p)));
+                }
+                comparison.bestDeals = allFormatted;
+            }
             
             // Find promotional offers across all suppliers
             comparison.promotionalOffers = this.findPromotionalOffers(Object.values(groupedBySupplier));

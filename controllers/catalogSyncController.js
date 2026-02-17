@@ -178,6 +178,41 @@ class CatalogSyncController {
   }
 
   /**
+   * Refresh vas_best_offers table (pre-computed best product per denomination)
+   * Run after manual catalog sync. Also runs automatically after daily sweep.
+   */
+  async refreshBestOffers(req, res) {
+    try {
+      if (req.user && req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          error: 'Admin privileges required'
+        });
+      }
+
+      const { refreshBestOffers } = require('../scripts/refresh-vas-best-offers');
+      const result = await refreshBestOffers();
+
+      res.json({
+        success: true,
+        message: 'vas_best_offers refreshed successfully',
+        data: {
+          rowsAffected: result.rowsAffected,
+          catalogVersion: result.catalogVersion,
+          refreshedAt: new Date().toISOString()
+        }
+      });
+    } catch (error) {
+      console.error('Error refreshing vas_best_offers:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to refresh vas_best_offers',
+        message: error.message
+      });
+    }
+  }
+
+  /**
    * Get synchronization statistics
    */
   async getSyncStats(req, res) {

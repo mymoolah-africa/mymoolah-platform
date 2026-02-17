@@ -93,6 +93,13 @@ router.post('/start', auth, catalogSyncController.startService.bind(catalogSyncC
  */
 router.post('/stop', auth, catalogSyncController.stopService.bind(catalogSyncController));
 
+/**
+ * @route POST /api/v1/catalog-sync/refresh-best-offers
+ * @desc Refresh vas_best_offers table (one product per denomination, highest commission)
+ * @access Admin only (or public if no auth - for script/cron use)
+ */
+router.post('/refresh-best-offers', auth, catalogSyncController.refreshBestOffers.bind(catalogSyncController));
+
 module.exports = router;
 
 
