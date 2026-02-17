@@ -63,6 +63,12 @@ export VALR_API_SECRET='...'                # optional, for USDC send
 ./scripts/setup-secrets-production.sh
 ```
 
+**Quick add OpenAI only** (if other secrets already exist):
+```bash
+export OPENAI_API_KEY='sk-proj-YOUR_KEY_HERE'
+./scripts/create-openai-secret-production.sh
+```
+
 **Required**: `db-mmtp-pg-production-password` must already exist (from production DB setup).
 
 **Shared prod credentials** (from staging setup, no action needed):
