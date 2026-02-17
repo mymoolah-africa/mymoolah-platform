@@ -117,11 +117,12 @@ async function refreshBestOffers() {
     await sequelize.query('TRUNCATE TABLE vas_best_offers RESTART IDENTITY', { transaction });
 
     if (rows.length > 0) {
-      const { QueryInterface } = require('sequelize');
+      const { Sequelize } = require('sequelize');
       const qi = sequelize.getQueryInterface();
-      await qi.bulkInsert(
-        'vas_best_offers',
-        rows.map((r) => ({
+      const rowsForInsert = rows.map((r) => {
+        const denoms = r.denominations || [r.denominationCents];
+        const jsonStr = JSON.stringify(denoms).replace(/'/g, "''");
+        return {
           vas_type: r.vasType,
           provider: r.provider || '',
           denomination_cents: r.denominationCents,
@@ -133,13 +134,13 @@ async function refreshBestOffers() {
           supplier_product_id: r.supplierProductId || '',
           commission: r.commission,
           fixed_fee: r.fixedFee || 0,
-          denominations: r.denominations || [r.denominationCents],
+          denominations: Sequelize.literal(`'${jsonStr}'::jsonb`),
           min_amount: r.minAmount,
           max_amount: r.maxAmount,
           catalog_version: catalogVersion
-        })),
-        { transaction }
-      );
+        };
+      });
+      await qi.bulkInsert('vas_best_offers', rowsForInsert, { transaction });
     }
 
     // 4. Audit log
