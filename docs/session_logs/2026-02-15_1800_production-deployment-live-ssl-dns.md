@@ -16,7 +16,7 @@ Production deployment completed and live. Fixed database connection (mymoolah_st
 - [x] Fix database connection: DATABASE_URL secret, start.sh, .dockerignore (mymoolah_staging → mymoolah_production)
 - [x] Graceful OpenAI degradation: feedbackService, googleReviewService, codebaseSweepService, aiSupportService, bankingGradeSupportService
 - [x] Ledger account check: changed from fatal to critical warning (allows app start for basic ops)
-- [x] Load balancer SSL cert: cert-production-v2 (api-mm, wallet-mm), cert-production-v3 (api-mm, wallet.mymoolah.africa)
+- [x] Load balancer SSL cert: cert-production-v2 (api-mm, wallet-mm), cert-production-v3 (api-mm, wallet); cert-production-v4 (api-mm, wallet, www.wallet) — 2026-02-16
 - [x] URL map: wallet.mymoolah.africa routes to wallet; wallet-mm removed
 - [x] Production URLs live: api-mm.mymoolah.africa, wallet.mymoolah.africa
 
@@ -62,9 +62,10 @@ Production deployment completed and live. Fixed database connection (mymoolah_st
 
 ## Testing Performed
 - [x] DNS resolution: api-mm, wallet resolve to 34.128.163.17
-- [x] SSL cert cert-production-v3: ACTIVE
+- [x] SSL cert cert-production-v3: ACTIVE (superseded by cert-production-v4 on 2026-02-16)
+- [x] SSL cert cert-production-v4: ACTIVE (api-mm, wallet, www.wallet) — 2026-02-16
 - [ ] curl https://api-mm.mymoolah.africa/health (user to verify)
-- [ ] https://wallet.mymoolah.africa in browser (user to verify)
+- [x] https://wallet.mymoolah.africa in browser — valid cert (2026-02-16)
 
 ---
 
@@ -80,8 +81,14 @@ Production deployment completed and live. Fixed database connection (mymoolah_st
 - **Production API**: https://api-mm.mymoolah.africa (not api.mymoolah.africa due to Afrihost)
 - **Production Wallet**: https://wallet.mymoolah.africa
 - **Static IP**: 34.128.163.17
-- **SSL cert**: cert-production-v3 (api-mm.mymoolah.africa, wallet.mymoolah.africa)
+- **SSL cert**: cert-production-v4 (api-mm, wallet, www.wallet) — v3 had wallet-mm; v4 created 2026-02-16 to fix ERR_CERT_COMMON_NAME_INVALID
 - **Wallet build**: VITE_API_BASE_URL must match API URL (currently api.mymoolah.africa in build script; may need update to api-mm if wallet calls API)
+
+---
+
+## Post-Session Update (2026-02-16)
+- **SSL cert v4**: cert-production-v3 covered wallet-mm.mymoolah.africa; production uses wallet.mymoolah.africa. Created cert-production-v4 with api-mm, wallet, www.wallet; updated https-proxy-production. All domains ACTIVE.
+- **Codespaces startup**: Fixed in `start-codespace-with-proxy.sh` — export NODE_ENV, PORT, TLS_ENABLED, JWT_SECRET; UAT password fallback (B0t3s@Mymoolah). See `docs/session_logs/2026-02-16_0900_codespaces-startup-ssl-cert-v4.md`.
 
 ---
 
