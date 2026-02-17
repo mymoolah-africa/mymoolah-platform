@@ -29,14 +29,14 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 
 ### **🚀 Project Status & Roadmap**
 - [**PROJECT_STATUS.md**](./PROJECT_STATUS.md) - Current project status and achievements
-- [**COMPLETE_OPTIMIZATION_ROADMAP.md**](./COMPLETE_OPTIMIZATION_ROADMAP.md) - Complete optimization roadmap
+- [**AGENT_HANDOVER.md**](./AGENT_HANDOVER.md) - Agent handover, next priorities, operational context
 - [**CHANGELOG.md**](./CHANGELOG.md) - Detailed change history and releases
 
 ### **🏗️ Architecture & Design**
 - [**architecture.md**](./architecture.md) - System architecture overview
 - [**BANKING_GRADE_ARCHITECTURE.md**](./BANKING_GRADE_ARCHITECTURE.md) - Banking-grade architecture details
 - [**DOMAIN_MODEL.md**](./DOMAIN_MODEL.md) - Business domain model
-- [**FIGMA_INTEGRATION_GUIDE.md**](./FIGMA_INTEGRATION_GUIDE.md) - Frontend integration workflow
+- [**FIGMA_INTEGRATION_COMPLETE.md**](./FIGMA_INTEGRATION_COMPLETE.md) - Frontend integration workflow
 
 ### **💳 Cash-Out Services**
 - [**Cash-Out Overlay Services**](./CHANGELOG.md#-version-210---cash-out-services-integration-august-28-2025) - New cash-out overlay services integration
@@ -44,9 +44,8 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 - [**Navigation & Quick Access**](./CHANGELOG.md#-navigation-fixes) - Navigation and Quick Access Services updates
 
 ### **💾 Database & Performance**
-- [**DATABASE_OPTIMIZATION_COMPLETE.md**](./DATABASE_OPTIMIZATION_COMPLETE.md) - Database optimization summary
-- [**OPTIMIZATION_1_2_COMPLETE.md**](./OPTIMIZATION_1_2_COMPLETE.md) - Table partitioning & data archiving
-- [**OPTIMIZATIONS_4_5_6_COMPLETE.md**](./OPTIMIZATIONS_4_5_6_COMPLETE.md) - Performance monitoring, caching & security
+- [**DATABASE_CONNECTION_GUIDE.md**](./DATABASE_CONNECTION_GUIDE.md) - Database connection and migration procedures
+- [**PERFORMANCE_OPTIMIZATION_COMPLETE.md**](./PERFORMANCE_OPTIMIZATION_COMPLETE.md) - Performance optimization summary
 - [**PERFORMANCE.md**](./PERFORMANCE.md) - Performance optimization strategies
 
 ---
@@ -54,8 +53,8 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 ## 🔧 **DEVELOPMENT GUIDES**
 
 ### **👨‍💻 Development & Setup**
-- [**DEVELOPMENT_GUIDE.md**](./DEVELOPMENT_GUIDE.md) - Complete development guide
-- [**SETUP_GUIDE.md**](./SETUP_GUIDE.md) - Environment setup instructions
+- [**DEVELOPMENT_GUIDE.md**](./DEVELOPMENT_GUIDE.md) - Complete development guide (consolidated setup + onboarding)
+- [**CURSOR_2.0_RULES_FINAL.md**](./CURSOR_2.0_RULES_FINAL.md) - Agent rules and workflow (MANDATORY for new agents)
 - [**TESTING_GUIDE.md**](./TESTING_GUIDE.md) - Testing strategies and procedures
 - [**DEPLOYMENT_GUIDE.md**](./DEPLOYMENT_GUIDE.md) - Production deployment guide
 
@@ -69,13 +68,13 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 ## 🌐 **INTEGRATIONS & SERVICES**
 
 ### **💳 Payment Integrations**
-- [**DTMERCURY_INTEGRATION_COMPLETE.md**](./DTMERCURY_INTEGRATION_COMPLETE.md) - Banking integration
-- [**PEACH_PAYMENTS_INTEGRATION_COMPLETE.md**](./PEACH_PAYMENTS_INTEGRATION_COMPLETE.md) - Payment processing
-- [**EASYPAY_INTEGRATION_COMPLETE.md**](./EASYPAY_INTEGRATION_COMPLETE.md) - Bill payments
+- [**INTEGRATIONS_COMPLETE.md**](./INTEGRATIONS_COMPLETE.md) - Integration overview
+- [**integrations/EasyPay_API_Integration_Guide.md**](./integrations/EasyPay_API_Integration_Guide.md) - EasyPay API
+- [**integrations/PeachPayments.md**](./integrations/PeachPayments.md) - Peach Payments (archived)
 
 ### **📱 VAS & Mobile Services**
-- [**FLASH_INTEGRATION_COMPLETE.md**](./FLASH_INTEGRATION_COMPLETE.md) - Flash VAS integration
-- [**MOBILEMART_INTEGRATION_COMPLETE.md**](./MOBILEMART_INTEGRATION_COMPLETE.md) - MobileMart integration
+- [**FLASH_INTEGRATION_AUDIT_2026-02-01.md**](./FLASH_INTEGRATION_AUDIT_2026-02-01.md) - Flash VAS integration
+- [**MOBILEMART_PRODUCTION_SYNC_FINAL_SUMMARY.md**](./MOBILEMART_PRODUCTION_SYNC_FINAL_SUMMARY.md) - MobileMart integration
 - [**AIRTIME_DUMMY_DATA_SUMMARY.md**](./AIRTIME_DUMMY_DATA_SUMMARY.md) - VAS testing data
 
 ### **🤖 AI & Support Systems**
@@ -109,15 +108,15 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 ### **💼 Business Logic**
 - [**VOUCHER_BUSINESS_LOGIC.md**](./VOUCHER_BUSINESS_LOGIC.md) - Voucher system logic
 - [**SETTLEMENTS.md**](./SETTLEMENTS.md) - Settlement processing
-- [**general-wish-list.md**](./general-wish-list.md) - Feature roadmap
+- [**PRIORITIZED_TODO_LIST.md**](./PRIORITIZED_TODO_LIST.md) - Feature roadmap and priorities
 
 ---
 
 ## 🚀 **QUICK START**
 
 ### **For Developers**
-1. Read [**DEVELOPMENT_GUIDE.md**](./DEVELOPMENT_GUIDE.md)
-2. Follow [**SETUP_GUIDE.md**](./SETUP_GUIDE.md)
+1. Read [**CURSOR_2.0_RULES_FINAL.md**](./CURSOR_2.0_RULES_FINAL.md) (new agents: MANDATORY first)
+2. Read [**DEVELOPMENT_GUIDE.md**](./DEVELOPMENT_GUIDE.md)
 3. Review [**API_DOCUMENTATION.md**](./API_DOCUMENTATION.md)
 
 ### **For System Administrators**
@@ -128,14 +127,14 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 ### **For Business Users**
 1. Review [**PROJECT_STATUS.md**](./PROJECT_STATUS.md)
 2. Check [**CHANGELOG.md**](./CHANGELOG.md)
-3. Review [**general-wish-list.md**](./general-wish-list.md)
+3. Review [**PRIORITIZED_TODO_LIST.md**](./PRIORITIZED_TODO_LIST.md)
 
 ---
 
 ## 📝 **DOCUMENTATION MAINTENANCE**
 
 ### **Last Updated**
-- **Main Documentation**: August 25, 2025
+- **Main Documentation**: February 18, 2026
 - **Optimizations**: All 6 optimizations completed
 - **Security**: Banking-grade security implemented
 - **Performance**: Production-ready for millions of transactions

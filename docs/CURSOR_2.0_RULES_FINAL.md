@@ -2,7 +2,29 @@
 
 **IMPORTANT**: This file must always be kept in sync with Cursor Settings rules. Any rules added to Cursor Settings must also be added to this .md file immediately.
 
-**Last Updated**: December 19, 2025
+**Last Updated**: February 12, 2026
+
+---
+
+## 📌 **PROJECT OVERVIEW** (READ FIRST)
+
+**MyMoolah** is a banking-grade Treasury Platform (wallet + general ledger + integrations) for South Africa, built on Mojaloop and ISO 20022 standards. It provides: digital wallet, VAS (airtime, data, vouchers, bill payments, electricity), cash-out, USDC, NFC deposits, referrals, KYC, and multi-supplier reconciliation. **Production**: api-mm.mymoolah.africa, wallet.mymoolah.africa. For project context, current status, and next priorities, read `docs/AGENT_HANDOVER.md`.
+
+---
+
+## 📋 **WHAT TO DO / WHAT NOT TO DO** (QUICK REFERENCE)
+
+| ✅ DO | ❌ DON'T |
+|------|----------|
+| Read rules + handover before any work | Start work without rules confirmation |
+| Sweep `scripts/` before creating new scripts | Create scripts without checking existing |
+| Use `docs/DATABASE_CONNECTION_GUIDE.md` for DB work | Write custom DB connection logic |
+| Test in Codespaces | Test on local machine |
+| Run migrations before seeding | Seed before migrations |
+| Use `./scripts/run-migrations-master.sh [uat\|staging]` | Run `npx sequelize-cli` directly |
+| Create session log when work is done | Wait for session end to document |
+| Update `docs/AGENT_HANDOVER.md` on significant changes | Leave handover stale |
+| Commit AND push to main after changes | Leave push for user |
 
 ---
 
@@ -40,10 +62,10 @@
 - **NEW SESSION REQUIREMENT**: When starting a new chat/session, you are a new agent. You MUST read previous agent work to maintain continuity.
 - **I am a new agent**: Acknowledge this is a new chat/session and I need to read previous agent work
 - **At session start (AFTER RULES CONFIRMATION)**: 
-  1. Read `docs/agent_handover.md` (contains previous session summary, current status, next priorities)
-  2. Read `docs/agent_role_template.md` (operating charter and constraints)
-  3. Read `docs/changelog.md` (recent changes and version history)
-  4. Read `docs/readme.md` (current system status and architecture)
+  1. Read `docs/AGENT_HANDOVER.md` (contains previous session summary, current status, next priorities)
+  2. Read `docs/AGENT_ROLE_TEMPLATE.md` (operating charter and constraints)
+  3. Read `docs/CHANGELOG.md` (recent changes and version history)
+  4. Read `docs/README.md` (current system status and architecture)
   5. Read `docs/DATABASE_CONNECTION_GUIDE.md` (standardized database connection procedures - **CRITICAL for any database/migration work**)
   6. **Read recent session logs** in `docs/session_logs/` - Read the 2-3 most recent session log files to understand chat history and context from previous agents
   7. Review recent git commits: `git log --oneline -10` to understand recent work
@@ -115,7 +137,7 @@ You are an expert AI coding agent specializing in building high-quality software
 - **After work (AI AGENT MUST COMMIT AND PUSH - MANDATORY)**:
   1. AI agent runs `git add . && git commit -m "[descriptive message for all changes]"` (user approves/executes if in terminal)
   2. **AI agent MUST then run `git push origin main`** - do not stop at commit. Push every time.
-  3. AI agent informs user: "✅ Changes committed and pushed to main. Pull in Codespaces (`git pull origin main`) to test."
+  3. AI agent informs user: "✅ Changes committed and pushed to main. **Copy and paste in Codespaces:** `git pull origin main`"
   4. User pulls in Codespaces: `git pull origin main`
   5. User tests in Codespaces
 
@@ -198,7 +220,7 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 
 ### **Rule 9: Documentation (MANDATORY)**
 
-- Update ALL relevant docs in `/mymoolah/docs/` after each change: `agent_handover.md`, `changelog.md`, `readme.md`, `development_guide.md`, `security.md`, `performance.md`, `banking_grade_architecture.md`
+- Update ALL relevant docs in `/mymoolah/docs/` after each change: `AGENT_HANDOVER.md`, `CHANGELOG.md`, `README.md`, `DEVELOPMENT_GUIDE.md`, `SECURITY.md`, `PERFORMANCE.md`, `BANKING_GRADE_ARCHITECTURE.md`
 - Always check project documentation BEFORE creating or modifying anything.
 - **CRITICAL**: Before any database/migration work, read `docs/DATABASE_CONNECTION_GUIDE.md` - contains standardized connection procedures, password management, and master migration scripts. **NEVER write custom connection logic** - always use provided helpers and scripts.
 - **Migrations vs seeding (UAT/Staging)**: Run **migrations first** when you add or change database schema (new tables, columns, constraints). Use `./scripts/run-migrations-master.sh [uat|staging]`. Run **seed scripts only after** the relevant migrations have been run for that environment—migrations create/update the schema, seeders insert data. Order is always: migrations → then seed (if needed). After any schema change, run migrations on the target env before seeding or deploying.
@@ -223,6 +245,13 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 - Structured error responses with consistent format and status codes. Safe user messaging (no sensitive data). Transaction rollback on error. ACID compliance.
 - Validate all inputs at API boundary. Sanitize all user inputs. Type checking, range validation, required fields.
 - Use validation middleware for all endpoints. Standard validation schemas (email, phone, amount). Custom validators for business logic.
+
+### **Rule 12A: Database Connection (MANDATORY for DB work)**
+
+- **NEVER** write custom connection logic
+- **ALWAYS** use `scripts/db-connection-helper.js` and `./scripts/run-migrations-master.sh [uat|staging]`
+- **ALWAYS** read `docs/DATABASE_CONNECTION_GUIDE.md` before any database/migration work
+- Prevents password/SSL/connection issues across UAT, Staging, and Production
 
 ### **Rule 12: Performance & Database (BANKING-GRADE)**
 
@@ -258,7 +287,7 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
   - **Before user indicates they're done** or if conversation is wrapping up
   - **Proactively create it** - don't wait for explicit "session end" signal
   - **AI agent MUST create and fill in** session log file completely with: session summary, tasks completed, key decisions, files modified, issues encountered, next steps, and important context for next agent
-  - **AI agent MUST update** `docs/agent_handover.md` with official handover
+  - **AI agent MUST update** `docs/AGENT_HANDOVER.md` with official handover
   - **AI agent MUST commit AND push**: Run `git add . && git commit -m "[description]"` then **`git push origin main`** - every time after changes. No exceptions.
   - **AI agent MUST inform user**: "✅ Changes committed and pushed to main. Pull in Codespaces (`git pull origin main`) to test."
 - **Integration**: Session logs (detailed chat history) + Agent handover (official status) = Complete continuity
@@ -268,10 +297,10 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 
 - **Create and fill session log**: Create `docs/session_logs/YYYY-MM-DD_HHMM_[description].md` and fill in ALL sections completely (summary, tasks, decisions, files, issues, next steps, context for next agent). **Do this proactively when work is complete, not waiting for user to end session.**
 - Update all relevant documentation
-- Update `docs/agent_handover.md` with official handover
+- Update `docs/AGENT_HANDOVER.md` with official handover
 - Verify zero linter errors
 - **Commit AND push to main (MANDATORY)**: AI agent runs `git add . && git commit -m "[descriptive commit message]"` **then `git push origin main`**. Do not skip the push.
-- **Inform user**: "✅ Changes committed and pushed to main. Run `git pull origin main` in Codespaces to test."
+- **Inform user**: "✅ Changes committed and pushed to main. **Copy and paste in Codespaces:** `git pull origin main`"
 - **Important**: Create session log when work is done, not waiting for session end (user may close chat, lose connection, etc.)
 - **Workflow Reminder**: Local → **Commit + Push (agent)** → Pull in Codespaces (user) → Test in Codespaces (user)
 
@@ -281,9 +310,9 @@ Every task must have: (1) Clean code with zero linter errors, (2) Documentation 
 
 **ZERO TOLERANCE FOR SHORTCUTS**: NEVER use workarounds, quick fixes, or compromises when encountering errors. ALWAYS implement proper banking-grade solutions with migrations, proper enum values, and correct data models. Mojaloop/ISO 20022 compliance is mandatory. Data integrity is non-negotiable. See Rule 6A and docs/ZERO_SHORTCUTS_POLICY.md for details.
 
-GitHub is source of truth. Documentation is mandatory. **Scripts**: ALWAYS sweep `scripts/` first before creating any new script—verify no existing script fulfills the same purpose (Rule 9A). Session logging is required for continuity and MUST be done by AI agent when work is complete (create, fill in, commit locally) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. **WORKFLOW**: AI agent develops locally → **commits AND pushes to main (agent MUST do both every time)** → user pulls in Codespaces → user tests. **Agent must never leave push to the user.** **IMPORTANT**: Any rules added to Cursor Settings must immediately be added to this .md file to keep them in sync.
+GitHub is source of truth. Documentation is mandatory. **Scripts**: ALWAYS sweep `scripts/` first before creating any new script—verify no existing script fulfills the same purpose (Rule 9A). Session logging is required for continuity and MUST be done by AI agent when work is complete (create, fill in, commit and push) - DO NOT wait for session end (user may close chat, lose connection, etc.). Security is non-negotiable. Tests are required. User approval required for destructive actions. No dummy data. Database-first (SQL aggregation, not JavaScript). Figma pages read-only. Small increments. Patient communication. **WORKFLOW**: AI agent develops locally → **commits AND pushes to main (agent MUST do both every time)** → user pulls in Codespaces → user tests. **Agent must never leave push to the user.** **IMPORTANT**: Any rules added to Cursor Settings must immediately be added to this .md file to keep them in sync.
 
-**Current date**: December 22, 2025. Proceed with the user's coding request.
+**Current date**: February 12, 2026. Proceed with the user's coding request.
 
 ---
 
@@ -297,11 +326,11 @@ GitHub is source of truth. Documentation is mandatory. **Scripts**: ALWAYS sweep
   - State: "✅ Rules reading completed - I have read `docs/CURSOR_2.0_RULES_FINAL.md` and will follow all rules"
   - **NO WORK UNTIL THIS IS COMPLETE**
 - **I am a new agent**: Acknowledge this is a new chat/session and I need to read previous agent work
-- Read `docs/agent_handover.md` (previous session summary and current status)
+- Read `docs/AGENT_HANDOVER.md` (previous session summary and current status)
 - **Read recent session logs** in `docs/session_logs/` (read 2-3 most recent files for chat history context)
-- Read `docs/changelog.md` (recent changes)
-- Read `docs/agent_role_template.md` (operating charter)
-- Read `docs/readme.md` (system overview)
+- Read `docs/CHANGELOG.md` (recent changes)
+- Read `docs/AGENT_ROLE_TEMPLATE.md` (operating charter)
+- Read `docs/README.md` (system overview)
 - Read `docs/DATABASE_CONNECTION_GUIDE.md` (**MANDATORY** if working with databases, migrations, or UAT/Staging environments - prevents connection/password issues)
 - **Check git status FIRST**: `git status` (ALWAYS check for uncommitted changes before pulling)
 - **Pull safely based on status**:
@@ -315,5 +344,5 @@ GitHub is source of truth. Documentation is mandatory. **Scripts**: ALWAYS sweep
 
 ---
 
-**Last Updated**: December 19, 2025  
-**Version**: 2.1.0 - Model Selection & Workflow Integration
+**Last Updated**: February 12, 2026  
+**Version**: 2.2.0 - Project Overview, Do/Don't Table, Rule 12A, Filename Fixes

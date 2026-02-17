@@ -1,9 +1,61 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-12 14:00  
-**Latest Feature**: VAS Best Offers JSONB Fix & Startup Sequence  
-**Document Version**: 2.11.6  
+**Last Updated**: 2026-02-18 18:00  
+**Latest Feature**: Documentation Consolidation & Rules/Handover Enhancement  
+**Document Version**: 2.11.7  
+**Session log**: `docs/session_logs/2026-02-18_1800_documentation-consolidation-rules-handover.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
+
+---
+
+## 📌 **WHAT IS MYMOOLAH?**
+
+MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant digital wallet and payment solution. It provides: wallet services, VAS (airtime, data, vouchers, bill payments, electricity), cash-out (EasyPay), USDC, NFC deposits, referrals, KYC, and automated multi-supplier reconciliation. **Production**: api-mm.mymoolah.africa, wallet.mymoolah.africa. Built on Node.js, PostgreSQL, React, GCP. For operating rules, workflow, and constraints, read `docs/CURSOR_2.0_RULES_FINAL.md` first.
+
+---
+
+## 📋 **NEW AGENT ONBOARDING CHECKLIST** (DO IN ORDER)
+
+1. [ ] Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY - provide proof of reading)
+2. [ ] Read this file (`docs/AGENT_HANDOVER.md`)
+3. [ ] Read 2-3 most recent `docs/session_logs/*.md`
+4. [ ] Read `docs/CHANGELOG.md` (last 2 weeks)
+5. [ ] Read `docs/DATABASE_CONNECTION_GUIDE.md` (if DB work planned)
+6. [ ] Run `git status` → commit or stash if needed
+7. [ ] Run `git pull origin main`
+8. [ ] Run `git log --oneline -10`
+9. [ ] Review "Next Development Priorities" below
+10. [ ] Confirm with user: "✅ Onboarding complete. Ready to work on [task]. What would you like me to do?"
+
+---
+
+## 📚 **DOCUMENT MAP** (Which Doc for What)
+
+| Need to… | Read |
+|----------|------|
+| Understand rules & workflow | `docs/CURSOR_2.0_RULES_FINAL.md` |
+| Understand project & status | `docs/AGENT_HANDOVER.md` (this file) |
+| See change history | `docs/CHANGELOG.md` |
+| Run DB migrations | `docs/DATABASE_CONNECTION_GUIDE.md` |
+| Set up dev environment | `docs/DEVELOPMENT_GUIDE.md` |
+| Test in Codespaces | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
+| Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/GCP_PRODUCTION_DEPLOYMENT.md` |
+| API contracts | `docs/API_DOCUMENTATION.md` |
+| Recent chat context | `docs/session_logs/` (2-3 most recent) |
+
+---
+
+## 📋 **WHAT TO DO / WHAT NOT TO DO** (PROJECT-SPECIFIC)
+
+| ✅ DO | ❌ DON'T |
+|------|----------|
+| Adapt backend to Figma designs | Edit `mymoolah-wallet-frontend/pages/*.tsx` |
+| Work in `/mymoolah/` only | Use git worktrees |
+| Test in Codespaces | Test on local |
+| Use real transactions (no dummy data) | Use dummy/test data for production flows |
+| Sweep `scripts/` before creating | Create duplicate scripts |
+| Run migrations before seeding | Seed before migrations |
+| Commit AND push after changes | Leave push for user |
 
 ---
 
@@ -51,20 +103,8 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 12, 2026 - 14:00)**
-**VAS Best Offers JSONB Fix & Startup Sequence** - Fixed refresh-vas-best-offers.js failing with "column denominations is of type jsonb but expression is of type integer[]". Used Sequelize.literal with JSON.stringify to cast. Fixed startup log order: "🎉 All background services started successfully" now prints after FloatBalanceMonitoring initial check (await promise from start()). Session log: `docs/session_logs/2026-02-12_1400_vas-best-offers-jsonb-startup-sequence.md`.
-
-### **Previous Achievement (February 12, 2026)**
-**VAS Error 1002 Exhaustive Failover** - When highest-commission supplier returns 1002, system tries all alternatives in commission order (up to 3). Only fails when every supplier returns 1002. UAT: `VAS_FAILOVER_ENABLED=false` in `.env.codespaces` bypasses. Staging/Production: GCS `VAS_FAILOVER_ENABLED=true`. See `docs/VAS_FAILOVER_1002_IMPLEMENTATION.md`.
-
-### **Previous Achievement (February 18, 2026)**
-**VAS Best Offers Pre-Computed Catalog** - Implemented banking-grade pre-computed best-offer table. One product per (vasType, provider, denomination) with highest commission. Tables: vas_best_offers, catalog_refresh_audit. Refresh: `node scripts/refresh-vas-best-offers.js` or after daily catalog sweep. API: `/suppliers/compare/:vasType` uses pre-computed data when available. See `docs/VAS_BEST_OFFERS_IMPLEMENTATION.md`.
-
-### **Previous Achievement (February 16, 2026 - 09:00)**
-**Codespaces Startup Fix & SSL Cert v4** - Fixed Codespaces backend startup (export NODE_ENV, PORT, TLS_ENABLED, JWT_SECRET; UAT password B0t3s@Mymoolah in fallback). Fixed production SSL (ERR_CERT_COMMON_NAME_INVALID): created cert-production-v4 (api-mm, wallet, www.wallet); updated https-proxy-production. Production wallet loads with valid HTTPS. Session log: `docs/session_logs/2026-02-16_0900_codespaces-startup-ssl-cert-v4.md`.
-
-### **Previous Achievement (February 15, 2026 - 18:00)**
-**Production Deployment Live** - Production platform deployed and live. API: `https://api-mm.mymoolah.africa`, Wallet: `https://wallet.mymoolah.africa`. Fixed database connection (DATABASE_URL secret, start.sh, .dockerignore); graceful OpenAI degradation (5 services); ledger account check as warning; SSL cert cert-production-v3 (api-mm, wallet; v4 created Feb 16 for wallet.mymoolah.africa). Afrihost DNS: api-mm (5-char subdomain requirement). Static IP: 34.128.163.17. Session log: `docs/session_logs/2026-02-15_1800_production-deployment-live-ssl-dns.md`.
+### **Latest Achievement (February 15, 2026 - 18:00)**
+**Production Deployment Live** - Production platform deployed and live. API: `https://api-mm.mymoolah.africa`, Wallet: `https://wallet-mm.mymoolah.africa`. Fixed database connection (DATABASE_URL secret, start.sh, .dockerignore); graceful OpenAI degradation (5 services); ledger account check as warning; SSL cert cert-production-v3 (api-mm, wallet); URL map updated. Afrihost DNS: api-mm (5-char subdomain requirement), wallet.mymoolah.africa. Static IP: 34.128.163.17. Session log: `docs/session_logs/2026-02-15_1800_production-deployment-live-ssl-dns.md`.
 
 ### **Previous Achievement (February 12, 2026 - 17:00)**
 **Production Database Migration Complete** - Full migration from Staging to Production successful. Fixed 5 migration blockers: (1) drop-flash inline migrate when FLASH supplier missing, (2) create vas_transactions table for fresh DBs, (3) flash serviceType ENUM add digital_voucher, (4) vouchers use `type` column not `voucherType`, (5) vas enum existence check before modifying. All 80+ migrations applied to `mymoolah_production` on Cloud SQL `mmtp-pg-production`. MobileMart, Flash, EasyPay, reconciliation, referrals, USDC, NFC, Standard Bank tables all created. Float accounts seeded. Session log: `docs/session_logs/2026-02-12_1700_production-migration-complete.md`.
@@ -81,10 +121,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – February 09–16, 2026)**
-- **Feb 12**: VAS best offers JSONB fix (Sequelize.literal cast for denominations); startup sequence fix (success message after FloatBalanceMonitoring); refresh script verified in Codespaces (48 rows).
-- **Feb 16**: Codespaces startup fix (env vars, UAT password); SSL cert cert-production-v4 (api-mm, wallet, www.wallet); production wallet HTTPS working.
-- **Feb 15**: Production deployment live. API: api-mm.mymoolah.africa, Wallet: wallet.mymoolah.africa. DB connection fix, OpenAI graceful degradation, SSL cert v3 (v4 Feb 16), Afrihost DNS (api-mm 5-char workaround).
+### **Recent Updates (Last 7 Days – February 09–15, 2026)**
+- **Feb 15**: Production deployment live. API: api-mm.mymoolah.africa, Wallet: wallet-mm.mymoolah.africa. DB connection fix, OpenAI graceful degradation, SSL cert v3, Afrihost DNS (api-mm 5-char workaround).
 - **Feb 12**: Production database migration complete (all 80+ migrations applied, 5 fixes for fresh-DB compatibility). SBSA PayShap integration complete (UAT implementation, business model, deposit notification, R4 fee, VAT split). Awaiting OneHub credentials.
 - **Feb 09**: Transaction Detail modal (Reference/Amount/Status only); USDC fee UI (Transaction Fee label, Network fee removed); USDC send flow fixes (VALR quoteId/path/params, ledger balance, UAT simulation, negative amount for sent, success UI guards, beneficiary/wallet resolution, VALR float check + ErrorModal).
 - **Feb 08**: Migrations-before-seeding rule in Cursor rules and handover; Watch to Earn demo videos in Staging (auto-seed when no ads, seed script `--staging`).
@@ -106,7 +144,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 **Complete MobileMart Production Integration** - Full end-to-end implementation of electricity purchase with MobileMart production API (prevend + purchase flow, real 20-digit token extraction). Extended integration to bill payments and digital vouchers. All 5 MobileMart services now environment-aware (UAT simulation, Staging/Production real API). Successfully deployed to staging and tested with production credentials (R20 live electricity transaction confirmed). Transaction detail modal with token display (grouped by 4 digits, MMTP-aligned styling). All services production-ready.
 
 ### **Next Priority**
-**Production Live** - Production deployed. API: https://api-mm.mymoolah.africa, Wallet: https://wallet.mymoolah.africa. SSL cert v4 active. Seed ledger accounts (2200-01-01, 4000-10-01, 2300-10-01); optionally add OPENAI_API_KEY for AI support. Wallet build: ensure VITE_API_BASE_URL=https://api-mm.mymoolah.africa when rebuilding. See `docs/GCP_PRODUCTION_DEPLOYMENT.md`.
+**Production Live** - Production deployed. API: https://api-mm.mymoolah.africa, Wallet: https://wallet-mm.mymoolah.africa. Verify health and wallet; seed ledger accounts (2200-01-01, 4000-10-01, 2300-10-01); optionally add OPENAI_API_KEY for AI support. Wallet build: ensure VITE_API_BASE_URL=https://api-mm.mymoolah.africa when rebuilding. See `docs/GCP_PRODUCTION_DEPLOYMENT.md`.
 
 **SBSA PayShap UAT** - Obtain OneHub credentials from Standard Bank; run migrations; set STANDARDBANK_PAYSHAP_ENABLED=true and SBSA_* env vars; whitelist callback URLs; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
 
@@ -1369,7 +1407,7 @@ Previous session implemented comprehensive validation for South African driver's
 - **Architecture**: Serverless NEGs route to Cloud Run services (`mymoolah-backend-staging`, `mymoolah-wallet-staging`).
 - **Ingress IP**: Static global IP `34.8.79.152` referenced by Afrihost `A` records.
 - **Documentation**: `docs/GCP_STAGING_DEPLOYMENT.md`, `docs/changelog.md`, `docs/readme.md` updated with runbook details.
-- **Production**: `api-mm.mymoolah.africa` was created (Afrihost 5-char subdomain requirement). Live with `wallet.mymoolah.africa` since Feb 15–16, 2026. SSL cert v4 active.
+- **Next**: Replicate pattern for production (`api.mymoolah.africa`, `wallet.mymoolah.africa`) once services and secrets are ready.
 
 ### **📋 CURSOR 2.0 RULES IMPLEMENTATION - COMPLETE** ✅
 - **Rules Documentation**: Created `docs/CURSOR_2.0_RULES_FINAL.md` with comprehensive 10-rule system
@@ -1458,7 +1496,7 @@ Previous session implemented comprehensive validation for South African driver's
 - **Architecture**: Serverless NEGs (`moolah-backend-staging-neg`, `neg-staging-wallet`) → backend services (`be-staging-backend`, `be-staging-wallet`) → URL map `urlmap-staging` → HTTPS proxy `https-proxy-staging`.
 - **Ingress IP**: Global static IP `34.8.79.152`; Afrihost `A` records updated accordingly.
 - **Documentation**: `docs/GCP_STAGING_DEPLOYMENT.md`, `docs/readme.md`, `docs/changelog.md` refreshed with the load balancer runbook.
-- **Production**: `api-mm.mymoolah.africa` was created (Afrihost 5-char subdomain requirement). Production domains live: API `api-mm.mymoolah.africa`, Wallet `wallet.mymoolah.africa`. SSL cert v4 active since Feb 16, 2026.
+- **Next Steps**: Mirror setup for production domains (`api.mymoolah.africa`, `wallet.mymoolah.africa`) once production Cloud Run services and secrets are in place.
 
 ### **🏆 PREVIOUS SESSION: ZAPPER UAT TESTING COMPLETE**
 This session successfully completed comprehensive UAT testing of the Zapper QR payment integration. Created comprehensive test suite with 20 tests, achieved 92.3% success rate (12/13 critical tests passed), verified all core payment functionality, and confirmed readiness for production credentials request.
@@ -2186,51 +2224,17 @@ export function AdminLoginSimple() {
 
 ## 📊 **CURRENT SYSTEM STATUS**
 
-### **🚀 Latest Update: MobileMart Production Sync (January 10, 2026)**
+### **🚀 Latest Update: Production Deployment Live (February 15, 2026)**
 
-#### **✅ MobileMart Integration Complete**
-- **Status**: ✅ Production API fully synced to Staging
-- **Products Synced**: 1,769/1,780 (99.4% success rate)
-- **By Type**:
-  - Airtime: 80/82 products
-  - Data: 332/332 products  
-  - Voucher: 99/108 products
-  - Bill Payment: 1,258/1,258 products ✅
+- **API**: https://api-mm.mymoolah.africa
+- **Wallet**: https://wallet.mymoolah.africa
+- **Static IP**: 34.128.163.17
+- **SSL**: cert-production-v4 (api-mm, wallet, www.wallet)
+- **DNS**: Afrihost (api-mm, wallet → 34.128.163.17)
+- **Production DB**: All 80+ migrations applied to `mymoolah_production` on Cloud SQL `mmtp-pg-production`
+- **Session log**: `docs/session_logs/2026-02-15_1800_production-deployment-live-ssl-dns.md`
 
-#### **✅ Bill Payment Fix Complete (Backend)**
-- **Issue**: Bill payment products not displaying in frontend (only 2 selections in education category)
-- **Root Causes Fixed**:
-  1. ✅ Provider field corrected (company names, not generic categories)
-  2. ✅ Category metadata added (960 products categorized)
-  3. ✅ Backend search logic fixed (prioritizes product names)
-- **Current State**:
-  - 1,293 bill-payment products in Staging
-  - 0 NULL categories (down from 960)
-  - All products have correct provider names
-  - Search working ("pep" returns "Pepkor Trading (Pty) Ltd")
-
-#### **⚠️ Frontend Verification Pending**
-- **Status**: Backend 100% fixed, frontend testing required
-- **Required Actions**:
-  1. Test bill payment overlay in Codespaces
-  2. Verify all 7 categories display correctly
-  3. Debug "only 2 selections" in education category (should show 25)
-  4. Test merchant search function
-  5. Test full payment flow end-to-end
-- **Documentation**: See `docs/BILL_PAYMENT_FRONTEND_VERIFICATION.md` for complete test plan
-
-#### **📁 New Scripts Created**
-1. `scripts/sync-mobilemart-production-to-staging.js` - Main sync script
-2. `scripts/categorize-bill-payment-products.js` - Category inference
-3. `scripts/compare-schemas-with-helper.js` - Schema comparison
-4. `scripts/count-staging-mobilemart-products.js` - Product counts
-5. `scripts/count-mobilemart-production-products.js` - API counts
-6. `scripts/debug-bill-payment-products.js` - Debug tool
-
-#### **📚 New Documentation**
-1. `docs/MOBILEMART_STAGING_SYNC_GUIDE.md` - Sync execution guide
-2. `docs/BILL_PAYMENT_FRONTEND_VERIFICATION.md` - Frontend test plan
-3. `docs/session_logs/2026-01-10_1030_mobilemart-production-sync-complete.md` - Full session log
+**For full change history**, see `docs/CHANGELOG.md`.
 
 ---
 
