@@ -104,8 +104,8 @@ class FloatBalanceMonitoringService {
     this.isRunning = true;
     console.log('[FloatBalanceMonitoring] ✅ Service started successfully');
     
-    // Run initial check
-    this.checkAllFloatBalances();
+    // Run initial check (return promise so caller can await before logging startup complete)
+    return this.checkAllFloatBalances();
   }
 
   /**

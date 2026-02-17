@@ -754,12 +754,17 @@ const initializeBackgroundServices = async () => {
       // Start with default hourly schedule (configurable via FLOAT_BALANCE_CHECK_INTERVAL_MINUTES)
       // Or use custom cron schedule from env: FLOAT_BALANCE_CHECK_SCHEDULE
       const customSchedule = process.env.FLOAT_BALANCE_CHECK_SCHEDULE || null;
-      floatMonitoringService.start(customSchedule);
+      const initialCheckPromise = floatMonitoringService.start(customSchedule);
       
       // Store reference for graceful shutdown
       global.floatBalanceMonitoringService = floatMonitoringService;
       
       console.log('✅ Float Balance Monitoring Service started');
+      
+      // Await initial check so "All background services started" logs after it completes
+      if (initialCheckPromise && typeof initialCheckPromise.then === 'function') {
+        await initialCheckPromise;
+      }
     } catch (error) {
       console.error('❌ Failed to start Float Balance Monitoring Service:', error.message);
       console.error('   Email notifications will be disabled');
