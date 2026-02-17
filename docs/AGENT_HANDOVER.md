@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-16 09:00  
-**Latest Feature**: Codespaces Startup Fix & SSL Cert v4  
-**Document Version**: 2.11.5  
+**Last Updated**: 2026-02-12 14:00  
+**Latest Feature**: VAS Best Offers JSONB Fix & Startup Sequence  
+**Document Version**: 2.11.6  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -51,7 +51,10 @@
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 12, 2026)**
+### **Latest Achievement (February 12, 2026 - 14:00)**
+**VAS Best Offers JSONB Fix & Startup Sequence** - Fixed refresh-vas-best-offers.js failing with "column denominations is of type jsonb but expression is of type integer[]". Used Sequelize.literal with JSON.stringify to cast. Fixed startup log order: "🎉 All background services started successfully" now prints after FloatBalanceMonitoring initial check (await promise from start()). Session log: `docs/session_logs/2026-02-12_1400_vas-best-offers-jsonb-startup-sequence.md`.
+
+### **Previous Achievement (February 12, 2026)**
 **VAS Error 1002 Exhaustive Failover** - When highest-commission supplier returns 1002, system tries all alternatives in commission order (up to 3). Only fails when every supplier returns 1002. UAT: `VAS_FAILOVER_ENABLED=false` in `.env.codespaces` bypasses. Staging/Production: GCS `VAS_FAILOVER_ENABLED=true`. See `docs/VAS_FAILOVER_1002_IMPLEMENTATION.md`.
 
 ### **Previous Achievement (February 18, 2026)**
@@ -79,6 +82,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
 ### **Recent Updates (Last 7 Days – February 09–16, 2026)**
+- **Feb 12**: VAS best offers JSONB fix (Sequelize.literal cast for denominations); startup sequence fix (success message after FloatBalanceMonitoring); refresh script verified in Codespaces (48 rows).
 - **Feb 16**: Codespaces startup fix (env vars, UAT password); SSL cert cert-production-v4 (api-mm, wallet, www.wallet); production wallet HTTPS working.
 - **Feb 15**: Production deployment live. API: api-mm.mymoolah.africa, Wallet: wallet.mymoolah.africa. DB connection fix, OpenAI graceful degradation, SSL cert v3 (v4 Feb 16), Afrihost DNS (api-mm 5-char workaround).
 - **Feb 12**: Production database migration complete (all 80+ migrations applied, 5 fixes for fresh-DB compatibility). SBSA PayShap integration complete (UAT implementation, business model, deposit notification, R4 fee, VAT split). Awaiting OneHub credentials.
