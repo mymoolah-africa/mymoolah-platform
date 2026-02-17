@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform - Production Deployment Guide
 
-**Date**: February 15, 2026  
+**Date**: February 16, 2026  
 **Status**: ✅ **PRODUCTION LIVE**  
 **Architecture**: Banking-Grade, Mojaloop-Compliant, Cost-Optimized
 
@@ -10,7 +10,7 @@
 
 This guide provides step-by-step instructions for deploying the MyMoolah Treasury Platform (MMTP) to **Production**. Production is live at:
 - **API**: `https://api-mm.mymoolah.africa` (Afrihost 5-char subdomain requirement)
-- **Wallet**: `https://wallet-mm.mymoolah.africa`
+- **Wallet**: `https://wallet.mymoolah.africa`
 
 ---
 
@@ -21,7 +21,7 @@ This guide provides step-by-step instructions for deploying the MyMoolah Treasur
 3. **gcloud authenticated**: `gcloud auth login`
 4. **Project set**: `gcloud config set project mymoolah-db`
 5. **Production database** migrated (all migrations applied to `mymoolah_production`)
-6. **DNS access** for `api-mm.mymoolah.africa` and `wallet-mm.mymoolah.africa` (e.g. Afrihost; note: Afrihost requires subdomain ≥5 chars, hence api-mm and wallet-mm)
+6. **DNS access** for `api-mm.mymoolah.africa` and `wallet.mymoolah.africa` (e.g. Afrihost; note: Afrihost requires subdomain ≥5 chars for api, hence api-mm)
 
 ---
 
@@ -85,7 +85,7 @@ Builds Docker image (no cache), pushes to GCR, deploys to `mymoolah-backend-prod
 - **Service**: `mymoolah-backend-production`
 - **Cloud SQL**: `mymoolah-db:africa-south1:mmtp-pg-production`
 - **Database**: `mymoolah_production`
-- **CORS**: `https://wallet-mm.mymoolah.africa` (and api-mm if needed)
+- **CORS**: `https://wallet.mymoolah.africa` (and api-mm if needed)
 - **CPU**: 1 vCPU, **Memory**: 1Gi
 - **Min Instances**: 0, **Max Instances**: 10
 
@@ -129,7 +129,7 @@ Creates global HTTPS load balancer for custom domains. Cloud Run in `africa-sout
 - Static IP: `mymoolah-production-ip`
 - NEGs: `moolah-backend-production-neg`, `neg-production-wallet`
 - Backend services: `be-production-backend`, `be-production-wallet`
-- SSL cert: `cert-production-v2` (api-mm.mymoolah.africa, wallet-mm.mymoolah.africa)
+- SSL cert: `cert-production-v4` (api-mm.mymoolah.africa, wallet.mymoolah.africa, www.wallet.mymoolah.africa)
 - URL map, HTTPS proxy, forwarding rule
 
 **Output**: Script prints the static IP. Use it for DNS.
@@ -143,7 +143,8 @@ Point your domains to the load balancer static IP (34.128.163.17):
 | Record | Type | Value |
 |--------|------|-------|
 | `api-mm.mymoolah.africa` | A | 34.128.163.17 |
-| `wallet-mm.mymoolah.africa` | A | 34.128.163.17 |
+| `wallet.mymoolah.africa` | A | 34.128.163.17 |
+| `www.wallet.mymoolah.africa` | A | 34.128.163.17 |
 
 **Note**: Afrihost requires subdomain names ≥5 characters; use `api-mm` instead of `api`.
 
@@ -160,11 +161,11 @@ Managed TLS certificate may take 15–60 minutes to reach `ACTIVE`.
 
 ```bash
 # Check certificate status
-gcloud compute ssl-certificates describe cert-production-v3 --global --format='value(managed.status)'
+gcloud compute ssl-certificates describe cert-production-v4 --global --format='value(managed.status)'
 
 # Test after DNS propagates
 curl -I https://api-mm.mymoolah.africa/health
-curl -I https://wallet-mm.mymoolah.africa
+curl -I https://wallet.mymoolah.africa
 ```
 
 ---
@@ -180,7 +181,7 @@ curl -I https://wallet-mm.mymoolah.africa
 | Cloud SQL | `mymoolah-db:africa-south1:mmtp-pg-production` |
 | Database | `mymoolah_production` |
 | API URL | `https://api-mm.mymoolah.africa` |
-| Wallet URL | `https://wallet-mm.mymoolah.africa` |
+| Wallet URL | `https://wallet.mymoolah.africa` |
 | Static IP | 34.128.163.17 |
 
 ---
@@ -214,7 +215,7 @@ curl -I https://wallet-mm.mymoolah.africa
 - [ ] All secrets in Secret Manager (no hardcoded credentials)
 - [ ] Production service account with least-privilege IAM
 - [ ] TLS 1.3 enforced (Cloud Run + load balancer)
-- [ ] CORS restricted to `https://wallet-mm.mymoolah.africa`
+- [ ] CORS restricted to `https://wallet.mymoolah.africa`
 - [ ] `STAGING=false` in production backend env
 - [ ] Database: `mymoolah_production` (isolated from staging)
 
@@ -235,5 +236,5 @@ gcloud run services update-traffic mymoolah-backend-production \
 
 ---
 
-**Last Updated**: February 15, 2026  
-**Version**: 1.1.0
+**Last Updated**: February 16, 2026  
+**Version**: 1.2.0

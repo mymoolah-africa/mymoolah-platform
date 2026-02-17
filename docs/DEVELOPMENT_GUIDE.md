@@ -1,14 +1,14 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: February 15, 2026 18:00  
-**Version**: 2.11.4 - Production Deployment Live  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet-mm.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: February 16, 2026  
+**Version**: 2.11.5 - Codespaces Startup Fix & SSL Cert v4  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
-## 🚀 **LATEST UPDATE: Production Deployment Live (February 15, 2026)**
+## 🚀 **LATEST UPDATE: Codespaces Startup Fix & SSL Cert v4 (February 16, 2026)**
 
-Production platform deployed and live. API: https://api-mm.mymoolah.africa, Wallet: https://wallet-mm.mymoolah.africa. SSL cert cert-production-v3, Afrihost DNS (api-mm 5-char workaround). See `docs/session_logs/2026-02-15_1800_production-deployment-live-ssl-dns.md`.
+Codespaces backend startup fixed (env vars, UAT password). Production SSL: cert-production-v4 (api-mm, wallet, www.wallet). Production: https://api-mm.mymoolah.africa, https://wallet.mymoolah.africa. See `docs/session_logs/2026-02-16_0900_codespaces-startup-ssl-cert-v4.md`.
 
 ---
 

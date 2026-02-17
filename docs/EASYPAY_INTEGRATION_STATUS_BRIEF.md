@@ -243,7 +243,7 @@ https://staging.mymoolah.africa/api/v1
 
 **Production (When Live)**:
 ```
-https://api.mymoolah.africa/api/v1
+https://api-mm.mymoolah.africa/api/v1
 ```
 
 ---

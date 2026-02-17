@@ -753,15 +753,15 @@ MyMoolah provides three environments for EasyPay integration:
 
 #### Environment 3: Production
 
-**Base URL**: `https://api.mymoolah.africa` (when available)  
-**API Base**: `https://api.mymoolah.africa/api/v1`  
-**Status**: ⚠️ Planned (not yet deployed)  
+**Base URL**: `https://api-mm.mymoolah.africa`  
+**API Base**: `https://api-mm.mymoolah.africa/api/v1`  
+**Status**: ✅ Active  
 **Purpose**: Live production traffic
 
-**Settlement Endpoints** (when production is live):
-- **Top-up**: `POST https://api.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement`
-- **Cash-out**: `POST https://api.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
-- **Standalone Voucher**: `POST https://api.mymoolah.africa/api/v1/vouchers/easypay/voucher/settlement`
+**Settlement Endpoints**:
+- **Top-up**: `POST https://api-mm.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement`
+- **Cash-out**: `POST https://api-mm.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
+- **Standalone Voucher**: `POST https://api-mm.mymoolah.africa/api/v1/vouchers/easypay/voucher/settlement`
 
 **API Key**: `EASYPAY_API_KEY_PROD` (provided separately via secure channel after UAT sign-off)  
 **Configuration**: Stored in Google Secret Manager (`easypay-api-key-production`)  
@@ -941,12 +941,12 @@ To obtain production credentials, submit the following to `integrations@mymoolah
 
 ### 9.2 Production Environment
 
-**Base URL**: `https://api.mymoolah.africa` (when available)  
-**API Base**: `https://api.mymoolah.africa/api/v1`
+**Base URL**: `https://api-mm.mymoolah.africa`  
+**API Base**: `https://api-mm.mymoolah.africa/api/v1`
 
 **Credentials**: Delivered via secure channel after approval
 
-**Note**: Production environment is planned but not yet deployed. Staging environment should be used for production readiness testing.
+**Note**: Production uses api-mm (Afrihost 5-char subdomain requirement).
 
 ### 9.3 Go-Live Checklist
 

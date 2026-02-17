@@ -32,7 +32,7 @@ The app will dynamically load configuration based on the build environment, leve
 | Environment | Wallet URL | API URL |
 |-------------|------------|---------|
 | **Staging** | `https://stagingwallet.mymoolah.africa/login` | `https://staging.mymoolah.africa` |
-| **Production** | `https://wallet.mymoolah.africa/login` | `https://api.mymoolah.africa` |
+| **Production** | `https://wallet.mymoolah.africa/login` | `https://api-mm.mymoolah.africa` |
 
 ### Implementation
 

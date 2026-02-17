@@ -166,7 +166,7 @@ MyMoolah Treasury Platform has successfully completed comprehensive UAT testing 
 - **Question**: How do we register our webhook URL in production?
 - **Required**:
   - Webhook URL registration process
-  - Production webhook URL: `https://api.mymoolah.africa/api/v1/peach/webhook`
+  - Production webhook URL: `https://api-mm.mymoolah.africa/api/v1/peach/webhook`
   - Webhook URL registration in Peach dashboard or via API
 
 #### **3.2 Webhook Signature Validation**
@@ -380,7 +380,7 @@ MyMoolah Treasury Platform has successfully completed comprehensive UAT testing 
 ### **Integration Details**
 - **Payment Methods**: PayShap RPP, PayShap RTP, Request Money
 - **Supported Flows**: Phone number-based payments (PayShap proxy)
-- **Webhook URL**: `https://api.mymoolah.africa/api/v1/peach/webhook` (to be registered)
+- **Webhook URL**: `https://api-mm.mymoolah.africa/api/v1/peach/webhook` (to be registered)
 - **Environment**: Production-ready code, awaiting production credentials
 
 ---

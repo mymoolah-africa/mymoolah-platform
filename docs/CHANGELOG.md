@@ -1,5 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-16 - 🔧 Codespaces Startup Fix & SSL Cert v4 ✅
+
+### **Session Overview**
+Fixed Codespaces backend startup (missing env vars; wrong UAT password). Fixed production SSL (ERR_CERT_COMMON_NAME_INVALID) by creating cert-production-v4. Production wallet now loads with valid HTTPS.
+
+### **Changes**
+- **Codespaces**: `start-codespace-with-proxy.sh` exports NODE_ENV, PORT, TLS_ENABLED, JWT_SECRET; UAT password fallback uses B0t3s@Mymoolah (not staging secret)
+- **SSL cert**: cert-production-v4 (api-mm, wallet, www.wallet); https-proxy-production updated; deleted cert-production-final, cert-prodwallet
+- **Production**: https://wallet.mymoolah.africa loads with valid certificate
+
+### **Session Log**
+- `docs/session_logs/2026-02-16_0900_codespaces-startup-ssl-cert-v4.md`
+
+---
+
 ## 2026-02-15 - 🚀 Production Deployment Live ✅
 
 ### **Session Overview**
@@ -9,7 +24,7 @@ Production platform deployed and live. API: `https://api-mm.mymoolah.africa`, Wa
 - **Database**: DATABASE_URL secret (database-url-production), start.sh uses DB_NAME, .dockerignore excludes .env
 - **OpenAI**: 5 services (feedback, googleReview, codebaseSweep, aiSupport, bankingGradeSupport) guard OPENAI_API_KEY; disable AI when missing
 - **Ledger**: server.js logs critical warning instead of throwing when ledger accounts missing
-- **Load balancer**: cert-production-v3 (api-mm.mymoolah.africa, wallet.mymoolah.africa); URL map wallet-mm removed
+- **Load balancer**: cert-production-v3 (api-mm, wallet); cert-production-v4 created Feb 16 for wallet.mymoolah.africa; URL map wallet-mm removed
 - **DNS**: Afrihost 5-char subdomain → api-mm; wallet.mymoolah.africa
 
 ### **Production URLs**

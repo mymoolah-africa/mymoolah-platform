@@ -1,6 +1,6 @@
 # MyMoolah API URLs - Official Reference
 
-**Last Updated**: 2026-01-16  
+**Last Updated**: 2026-02-16  
 **Status**: Production Reference  
 **Classification**: Internal - API Configuration
 
@@ -36,19 +36,19 @@ This document provides the official API base URLs for all MyMoolah Treasury Plat
 
 ### Production Environment
 
-**Base URL**: `https://api.mymoolah.africa` (planned)  
-**API Base**: `https://api.mymoolah.africa/api/v1` (planned)  
-**Wallet UI**: `https://wallet.mymoolah.africa` (planned)  
-**Status**: ⚠️ Not yet deployed  
+**Base URL**: `https://api-mm.mymoolah.africa`  
+**API Base**: `https://api-mm.mymoolah.africa/api/v1`  
+**Wallet UI**: `https://wallet.mymoolah.africa`  
+**Status**: ✅ Active  
 **Purpose**: Live production traffic  
-**TLS**: TLS 1.3 enforced  
-**Load Balancer**: Google Cloud HTTPS Load Balancer (planned)
+**TLS**: TLS 1.3 enforced (cert-production-v4)  
+**Load Balancer**: Google Cloud HTTPS Load Balancer
 
-**Note**: Production URLs are planned but not yet active. Staging environment should be used for UAT and production readiness testing.
+**Note**: Production uses `api-mm` (Afrihost 5-char subdomain requirement). Wallet uses `wallet.mymoolah.africa`.
 
-**EasyPay Settlement Endpoints** (when production is live):
-- Top-up: `POST https://api.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement`
-- Cash-out: `POST https://api.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
+**EasyPay Settlement Endpoints**:
+- Top-up: `POST https://api-mm.mymoolah.africa/api/v1/vouchers/easypay/topup/settlement`
+- Cash-out: `POST https://api-mm.mymoolah.africa/api/v1/vouchers/easypay/cashout/settlement`
 
 ---
 
@@ -104,8 +104,8 @@ For EasyPay integration, configure the following environment variables:
 # Staging/UAT
 EASYPAY_API_BASE_URL=https://staging.mymoolah.africa/api/v1
 
-# Production (when available)
-EASYPAY_API_BASE_URL=https://api.mymoolah.africa/api/v1
+# Production
+EASYPAY_API_BASE_URL=https://api-mm.mymoolah.africa/api/v1
 
 # Local Development
 EASYPAY_API_BASE_URL=http://localhost:3001/api/v1
@@ -138,7 +138,7 @@ EASYPAY_API_BASE_URL=http://localhost:3001/api/v1
 All environments provide a health check endpoint:
 
 - **Staging**: `GET https://staging.mymoolah.africa/health`
-- **Production** (planned): `GET https://api.mymoolah.africa/health`
+- **Production**: `GET https://api-mm.mymoolah.africa/health`
 - **Local**: `GET http://localhost:3001/health`
 
 ---

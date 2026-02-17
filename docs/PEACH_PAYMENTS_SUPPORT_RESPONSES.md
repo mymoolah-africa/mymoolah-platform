@@ -49,7 +49,7 @@ Status: CONFIRMED
 Action Required:
 1. Access live Peach dashboard
 2. Navigate to Checkout tab
-3. Add webhook URL: https://api.mymoolah.africa/api/v1/peach/webhook (or production domain)
+3. Add webhook URL: https://api-mm.mymoolah.africa/api/v1/peach/webhook (or production domain)
 
 2.2 Webhook Signature Validation Method
 Response: Please refer to https://developer.peachpayments.com/docs/checkout-webhooks#webhook-security and let us know if you have any further questions.
