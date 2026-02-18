@@ -71,9 +71,10 @@ This documentation follows the structure and quality standards of the **Flash Pa
 
 | Environment | Base URL | Token URL | Purpose |
 |-------------|----------|-----------|---------|
-| **Sandbox (UAT)** | `https://api-uat.mymoolah.africa` | `https://api-uat.mymoolah.africa/api/v1/auth/token` | Integration testing with test credentials |
-| **Staging** | `https://staging.mymoolah.africa` | `https://staging.mymoolah.africa/api/v1/auth/token` | Pre-production validation (restricted) |
+| **Sandbox** | `https://staging.mymoolah.africa` | `https://staging.mymoolah.africa/api/v1/auth/token` | Partner integration testing with test credentials |
 | **Production** | `https://api-mm.mymoolah.africa` | `https://api-mm.mymoolah.africa/api/v1/auth/token` | Live transactions |
+
+> **Note**: The Sandbox environment uses the same infrastructure as staging but with segregated test credentials. Partners receive sandbox credentials (`sk_test_*`) that connect to test float accounts with no real money movement.
 
 ### 3.2 API Version
 - **Current Version**: v1 (`/api/v1/`)
@@ -113,12 +114,14 @@ Similar to Flash, MMTP API credentials consist of:
 ### 4.3 Test Credentials (Published)
 
 ```
-Environment: Sandbox/UAT
-Base URL: https://api-uat.mymoolah.africa
+Environment: Sandbox
+Base URL: https://staging.mymoolah.africa
 Client ID: mmtp_test_client
 Client Secret: sk_test_xxxxxxxxxxxxxxxxxxxx
 Account Number: MMTP-TEST-000001
 ```
+
+> **Important**: Sandbox credentials use isolated test float accounts. No real money is debited or credited. Test transactions are clearly marked in the system.
 
 ### 4.4 Production Credential Delivery
 
@@ -456,7 +459,7 @@ MMTP Partner API Documentation
 
 **Deliverables**:
 - [ ] Redoc deployment at `https://docs.mymoolah.africa/partner-api`
-- [ ] Swagger UI at `https://api-uat.mymoolah.africa/api/v1/docs` (sandbox only)
+- [ ] Swagger UI at `https://staging.mymoolah.africa/api/v1/docs` (sandbox only, requires auth)
 - [ ] Postman collection
 
 ### Phase 5: Partner Onboarding (Ongoing)
@@ -485,7 +488,7 @@ MMTP Partner API Documentation
 | PDF Documentation | PDF | `/docs/partner-api/` | Business, Compliance |
 | Postman Collection | JSON | `/docs/partner-api/postman/` | Developers |
 | Redoc Portal | HTML | `https://docs.mymoolah.africa/partner-api` | All |
-| Swagger UI (Sandbox) | HTML | `https://api-uat.mymoolah.africa/api/v1/docs` | Developers |
+| Swagger UI (Sandbox) | HTML | `https://staging.mymoolah.africa/api/v1/docs` | Developers |
 
 ### 9.2 System Deliverables
 
