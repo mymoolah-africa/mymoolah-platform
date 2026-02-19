@@ -631,10 +631,12 @@ class WalletController {
 
         // Recent Transactions (Dashboard): Combine Flash Eezi Cash and EasyPay cash-out (face + fee) into ONE row showing total
         // Transaction History (limit > 10) is unchanged and continues to show two lines (face + fee)
+        // CRITICAL: Iterate over otherTransactions only - combinedRefunds are already final and must not be re-processed
+        // (re-processing caused EPVOUCHER-REF/EXP duplicates in otherForRecent)
         const flashCashoutGroups = new Map();
         const easypayCashoutGroups = new Map();
         const otherForRecent = [];
-        normalizedRows.forEach((tx) => {
+        otherTransactions.forEach((tx) => {
           const metadata = tx.metadata || {};
           // Flash Eezi Cash: group by vasTransactionId (main has isFlashCashoutAmount, fee has isFlashCashoutFee)
           if (metadata.isFlashCashoutAmount || metadata.isFlashCashoutFee) {
