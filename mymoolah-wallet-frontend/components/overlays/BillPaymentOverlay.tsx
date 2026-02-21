@@ -5,8 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { SearchBar } from './shared/SearchBar';
 import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { AmountInput } from './shared/AmountInput';
@@ -460,53 +458,78 @@ export function BillPaymentOverlay() {
             color: '#6b7280',
             margin: 0
           }}>
-            Search billers or pick a category.
+            Pay your bills in one place.
           </p>
         </div>
       </div>
 
-      {/* Step 1: Search & Categories */}
+      {/* Step 1: Select Biller - single Card layout (match Electricity/Airtime) */}
       {currentStep === 'search' && (
-        <div className="space-y-6">
-          {/* Search Section */}
+        <div>
           <Card style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '12px'
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            marginBottom: '1rem'
           }}>
-            <CardHeader>
+            <CardHeader style={{ paddingBottom: '0.5rem' }}>
               <CardTitle style={{
                 fontFamily: 'Montserrat, sans-serif',
-                fontSize: '16px',
+                fontSize: '18px',
                 fontWeight: '700',
                 color: '#1f2937'
               }}>
-                Search Billers
+                Select Biller
               </CardTitle>
             </CardHeader>
             
-            <CardContent>
-              <SearchBar
-                placeholder="Search by company name..."
-                value={searchQuery}
-                onChange={setSearchQuery}
-                isLoading={isSearching}
-              />
-              
-              {/* Search Results */}
+            <CardContent style={{ padding: '1rem', paddingTop: '0.5rem' }}>
+              {/* Search Input - same style as BeneficiaryList */}
+              <div className="relative mb-4">
+                <Search style={{
+                  position: 'absolute',
+                  left: '12px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  width: '16px',
+                  height: '16px',
+                  color: '#6b7280'
+                }} />
+                <Input
+                  placeholder="Search biller name or browse categories"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    paddingLeft: '40px',
+                    height: '44px',
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    backgroundColor: '#f1f5f9',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px'
+                  }}
+                />
+              </div>
+
+              {/* Search Results - list style like BeneficiaryList */}
               {searchResults.length > 0 && (
-                <div className="mt-4 space-y-3">
+                <div className="space-y-3 mb-4">
                   {searchResults.map((biller) => {
                     const IconComponent = getCategoryIcon(biller.category);
                     return (
                       <div
                         key={biller.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => handleBillerSelect(biller)}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleBillerSelect(biller); } }}
                         style={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
                           padding: '12px',
+                          backgroundColor: '#f8fafc',
                           border: '1px solid #e2e8f0',
                           borderRadius: '12px',
                           cursor: 'pointer',
@@ -514,11 +537,11 @@ export function BillPaymentOverlay() {
                         }}
                         onMouseOver={(e) => {
                           e.currentTarget.style.borderColor = '#86BE41';
-                          e.currentTarget.style.backgroundColor = '#f9fafb';
+                          e.currentTarget.style.backgroundColor = '#f1f5f9';
                         }}
                         onMouseOut={(e) => {
                           e.currentTarget.style.borderColor = '#e2e8f0';
-                          e.currentTarget.style.backgroundColor = '#ffffff';
+                          e.currentTarget.style.backgroundColor = '#f8fafc';
                         }}
                       >
                         <div className="flex items-center gap-3">
@@ -531,157 +554,92 @@ export function BillPaymentOverlay() {
                             alignItems: 'center',
                             justifyContent: 'center'
                           }}>
-                            <IconComponent style={{ 
-                              width: '20px', 
-                              height: '20px', 
-                              color: getCategoryColor(biller.category) 
-                            }} />
+                            <IconComponent style={{ width: '20px', height: '20px', color: getCategoryColor(biller.category) }} />
                           </div>
-                          
                           <div>
-                            <p style={{
-                              fontFamily: 'Montserrat, sans-serif',
-                              fontSize: '14px',
-                              fontWeight: '500',
-                              color: '#1f2937'
-                            }}>
+                            <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                               {biller.name}
                             </p>
-                            <Badge 
-                              variant="secondary"
-                              style={{
-                                fontSize: '10px',
-                                backgroundColor: getCategoryColor(biller.category) + '20',
-                                color: getCategoryColor(biller.category)
-                              }}
-                            >
+                            <Badge variant="secondary" style={{ fontSize: '10px', backgroundColor: getCategoryColor(biller.category) + '20', color: getCategoryColor(biller.category) }}>
                               {biller.category}
                             </Badge>
                           </div>
                         </div>
-                        
-                        <Button size="sm" variant="outline">
-                          Select
-                        </Button>
+                        <Button size="sm" variant="outline" style={{ borderRadius: '12px' }}>Select</Button>
                       </div>
                     );
                   })}
                 </div>
               )}
-              
+
               {/* Empty Search State */}
               {searchQuery.length >= 2 && searchResults.length === 0 && !isSearching && (
-                <div className="mt-4 text-center py-6">
-                  <Search style={{
-                    width: '48px',
-                    height: '48px',
-                    color: '#d1d5db',
-                    margin: '0 auto 12px'
-                  }} />
-                  <p style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    color: '#6b7280',
-                    marginBottom: '8px'
-                  }}>
-                    No billers found
-                  </p>
-                  <p style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '12px',
-                    color: '#6b7280'
-                  }}>
-                    Try browsing categories below
-                  </p>
+                <div className="text-center py-6 mb-4">
+                  <div style={{ width: '48px', height: '48px', backgroundColor: '#f3f4f6', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                    <Search style={{ width: '20px', height: '20px', color: '#6b7280' }} />
+                  </div>
+                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280', marginBottom: '8px' }}>No billers found</p>
+                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>Try a different search or browse categories below</p>
                 </div>
               )}
-            </CardContent>
-          </Card>
 
-          {/* Categories Grid */}
-          <Card style={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px'
-          }}>
-            <CardHeader>
-              <CardTitle style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '16px',
-                fontWeight: '700',
-                color: '#1f2937'
-              }}>
-                Browse Categories
-              </CardTitle>
-            </CardHeader>
-            
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3">
-                {CATEGORIES.map((category) => {
-                  const IconComponent = category.icon;
-                  return (
-                    <div
-                      key={category.id}
-                      onClick={() => handleCategoryClick(category.id)}
-                      style={{
-                        padding: '16px',
-                        backgroundColor: '#f8fafc',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '12px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        textAlign: 'center'
-                      }}
-                      onMouseOver={(e) => {
-                        e.currentTarget.style.borderColor = category.color;
-                        e.currentTarget.style.backgroundColor = category.color + '10';
-                      }}
-                      onMouseOut={(e) => {
-                        e.currentTarget.style.borderColor = '#e2e8f0';
-                        e.currentTarget.style.backgroundColor = '#f8fafc';
-                      }}
-                    >
-                      <div style={{
-                        width: '48px',
-                        height: '48px',
-                        backgroundColor: category.color + '20',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 8px'
-                      }}>
-                        <IconComponent style={{ 
-                          width: '24px', 
-                          height: '24px', 
-                          color: category.color 
-                        }} />
-                      </div>
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        color: '#1f2937'
-                      }}>
-                        {category.name}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+              {/* Categories - show when no search results or no search */}
+              {(searchResults.length === 0 || searchQuery.length < 2) && (
+                <>
+                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginBottom: '12px' }}>Browse by category</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {CATEGORIES.map((category) => {
+                      const IconComponent = category.icon;
+                      return (
+                        <div
+                          key={category.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => handleCategoryClick(category.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleCategoryClick(category.id); } }}
+                          style={{
+                            padding: '12px',
+                            backgroundColor: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '12px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            textAlign: 'center'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.borderColor = category.color;
+                            e.currentTarget.style.backgroundColor = category.color + '10';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.borderColor = '#e2e8f0';
+                            e.currentTarget.style.backgroundColor = '#f8fafc';
+                          }}
+                        >
+                          <div style={{ width: '40px', height: '40px', backgroundColor: category.color + '20', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
+                            <IconComponent style={{ width: '20px', height: '20px', color: category.color }} />
+                          </div>
+                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', fontWeight: '500', color: '#1f2937' }}>{category.name}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* Step 2: Beneficiary Selection */}
+      {/* Step 2: Beneficiary Selection - match Electricity/Airtime layout */}
       {currentStep === 'beneficiary' && selectedBiller && (
-        <div className="space-y-4">
+        <div>
           {/* Selected Biller Summary */}
           <Card style={{
             backgroundColor: '#f8fafe',
             border: '1px solid #86BE41',
-            borderRadius: '12px'
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+            marginBottom: '1rem'
           }}>
             <CardContent style={{ padding: '1rem' }}>
               <div className="flex items-center gap-3">
@@ -720,9 +678,10 @@ export function BillPaymentOverlay() {
             </CardContent>
           </Card>
 
-          {/* Beneficiary List - showFilters=false: no All/Airtime/Data/Electricity/Biller buttons */}
+          {/* Beneficiary List - same Card style as Electricity/Airtime */}
           <BeneficiaryList
             type="biller"
+            title="Select Recipient"
             beneficiaries={billBeneficiaries.filter(b => 
               b.metadata?.billerName === selectedBiller.name
             )}
@@ -737,14 +696,15 @@ export function BillPaymentOverlay() {
         </div>
       )}
 
-      {/* Step 3: Amount Input */}
+      {/* Step 3: Amount Input - match Electricity layout */}
       {currentStep === 'amount' && selectedBeneficiary && selectedBiller && (
         <div className="space-y-4">
           {/* Selected Biller & Account Summary */}
           <Card style={{
             backgroundColor: '#f8fafe',
             border: '1px solid #86BE41',
-            borderRadius: '12px'
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
           }}>
             <CardContent style={{ padding: '1rem' }}>
               <div className="flex items-center gap-3">
@@ -783,7 +743,8 @@ export function BillPaymentOverlay() {
           <Card style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '12px'
+            borderRadius: '12px',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
           }}>
             <CardContent style={{ padding: '1rem' }}>
               <AmountInput
