@@ -202,8 +202,10 @@ class MobileMartAuthService {
      * @returns {Promise<Object>} MobileMart API response
      */
     async makeAuthenticatedRequest(method, endpoint, data = null) {
-        // Construct URL outside try block so it's available in catch block for error logging
-        const url = `${this.apiUrl}${endpoint}`;
+        // v2 endpoints (e.g. /v2/bill-payment/prevend) use baseUrl; v1 uses apiUrl
+        // Otherwise we'd get wrong URL: .../v1/v2/bill-payment/prevend → returns HTML SPA
+        const base = (typeof endpoint === 'string' && endpoint.startsWith('/v2')) ? this.baseUrl : this.apiUrl;
+        const url = `${base}${endpoint}`;
         
         try {
             const headers = await this.generateRequestHeaders();
@@ -277,7 +279,8 @@ class MobileMartAuthService {
                 
                 try {
                     const headers = await this.generateRequestHeaders();
-                    const url = `${this.apiUrl}${endpoint}`;
+                    const retryBase = (typeof endpoint === 'string' && endpoint.startsWith('/v2')) ? this.baseUrl : this.apiUrl;
+                    const url = `${retryBase}${endpoint}`;
                     
                     const config = {
                         method: method.toLowerCase(),

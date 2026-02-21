@@ -2678,14 +2678,24 @@ router.post('/bills/pay', auth, async (req, res) => {
         );
         const products = productsResponse.products || productsResponse || [];
         
-        // Try to find product matching the biller name, or use first available
-        let billProduct = products.find(p => 
-          p.productName?.toLowerCase().includes(billerName.toLowerCase()) ||
-          p.contentCreator?.toLowerCase().includes(billerName.toLowerCase())
-        ) || products[0];
+        // Match product to biller - never use products[0] as fallback (causes wrong product e.g. Ekurhuleni for PEP)
+        const billerLower = billerName.toLowerCase();
+        const firstWord = billerLower.replace(/[^a-z0-9]+.*$/, ''); // e.g. "pepkor" from "Pepkor Trading (Pty) Ltd"
+        const shortName = firstWord.length >= 3 ? firstWord.slice(0, 3) : firstWord; // e.g. "pep" for fuzzy match
+        const matchProduct = (p) => {
+          const pn = (p.productName || p.contentCreator || '').toLowerCase();
+          return pn.includes(billerLower) || billerLower.includes(pn) ||
+            pn.includes(firstWord) || firstWord.includes(pn) ||
+            (shortName.length >= 2 && (pn.includes(shortName) || firstWord.includes(shortName)));
+        };
+        let billProduct = products.find(matchProduct);
 
         if (!billProduct || !billProduct.merchantProductId) {
-          throw new Error('No bill payment products available from MobileMart');
+          throw new Error(
+            products.length === 0
+              ? 'No bill payment products available from MobileMart'
+              : `No MobileMart product found for biller "${billerName}". Available billers may not include this one - try DSTV, Pay@, or check if this biller is supported by Flash instead.`
+          );
         }
         console.log(`✅ Found bill payment product: ${billProduct.productName || billProduct.contentCreator} (${billProduct.merchantProductId})`);
 
@@ -2703,9 +2713,12 @@ router.post('/bills/pay', auth, async (req, res) => {
           'GET',
           `/v2/bill-payment/prevend?${prevendParams.toString()}`
         );
-        console.log('✅ MobileMart Prevend Response:', JSON.stringify(prevendResponse, null, 2));
+        console.log('✅ MobileMart Prevend Response:', typeof prevendResponse === 'string' ? '(truncated)' : JSON.stringify(prevendResponse, null, 2));
 
-        const prevendTransactionId = prevendResponse.transactionId || prevendResponse.prevendTransactionId;
+        if (typeof prevendResponse === 'string' && prevendResponse.trim().startsWith('<')) {
+          throw new Error('MobileMart prevend returned HTML instead of JSON - check API endpoint URL');
+        }
+        const prevendTransactionId = prevendResponse?.transactionId || prevendResponse?.prevendTransactionId;
         if (!prevendTransactionId) {
           throw new Error('MobileMart prevend did not return transactionId');
         }
