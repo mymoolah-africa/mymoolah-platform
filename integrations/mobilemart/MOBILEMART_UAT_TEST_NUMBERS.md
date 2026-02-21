@@ -49,6 +49,13 @@
 1. Test with DSTV account (`135609708` or `135520754`)
 2. Test with Pay@ account (`11347901450000300`) for Oudtshoorn Municipality
 
+### **Seed UAT Bill Payment Beneficiaries:**
+To pre-populate the Bill Payment overlay with these test accounts for all users:
+```bash
+node scripts/seed-uat-biller-beneficiaries.js
+```
+Adds: 2x DSTV, 1x Pay@ Oudtshoorn, 1x Pepkor (PEP) placeholder. Run in Codespaces with DATABASE_URL pointing to UAT.
+
 ---
 
 ## 📝 **Notes**
