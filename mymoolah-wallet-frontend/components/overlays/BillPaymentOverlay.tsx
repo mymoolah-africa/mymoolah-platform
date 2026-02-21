@@ -11,6 +11,7 @@ import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { AmountInput } from './shared/AmountInput';
 import { ConfirmSheet } from './shared/ConfirmSheet';
+import { ErrorModal } from '../../ui/ErrorModal';
 import { 
   beneficiaryService, 
   billPaymentsService, 
@@ -53,7 +54,9 @@ export function BillPaymentOverlay() {
   const [loadingState, setLoadingState] = useState<LoadingState>('idle');
   const [showSuccess, setShowSuccess] = useState(false);
   const [transactionRef, setTransactionRef] = useState<string>('');
-  const [error, setError] = useState<string>('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalTitle, setErrorModalTitle] = useState<string>('Payment Failed');
+  const [errorModalMessage, setErrorModalMessage] = useState<string>('');
   const [showBeneficiaryModal, setShowBeneficiaryModal] = useState(false);
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
 
@@ -75,9 +78,11 @@ export function BillPaymentOverlay() {
       setCategories(categoriesData);
       
       setLoadingState('idle');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load initial data:', err);
-      setError('Failed to load bill payment data');
+      setErrorModalTitle('Failed to load');
+      setErrorModalMessage(err?.response?.data?.message || err?.message || 'Failed to load bill payment data. Please try again.');
+      setShowErrorModal(true);
       setLoadingState('error');
     }
   };
@@ -146,7 +151,6 @@ export function BillPaymentOverlay() {
     
     try {
       setLoadingState('loading');
-      setError('');
       
       const idempotencyKey = generateIdempotencyKey();
       
@@ -162,7 +166,9 @@ export function BillPaymentOverlay() {
       setShowSuccess(true);
     } catch (err: any) {
       console.error('Bill payment failed:', err);
-      setError(err.response?.data?.message || 'Bill payment failed');
+      setErrorModalTitle('Payment Failed');
+      setErrorModalMessage(err?.response?.data?.message || err?.message || 'Bill payment failed. Please try again.');
+      setShowErrorModal(true);
       setLoadingState('error');
     }
   };
@@ -837,6 +843,15 @@ export function BillPaymentOverlay() {
         type="biller"
         initialBillerName={selectedBiller?.name}
         onSuccess={handleBeneficiaryCreated}
+      />
+
+      {/* Error Modal - plain explanation when payment or load fails */}
+      <ErrorModal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title={errorModalTitle}
+        message={errorModalMessage}
+        type="error"
       />
     </div>
   );
