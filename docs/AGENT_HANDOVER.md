@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-02-21  
-**Latest Feature**: Bill Payment Amount Step (Flash/biller recipients)  
-**Document Version**: 2.11.12  
-**Session logs**: `docs/session_logs/2026-02-21_1620_bill-payment-amount-step.md`, `docs/session_logs/2026-02-21_1600_bill-payment-overlay-fixes-production-compliance.md`  
+**Latest Feature**: Bill Payment MobileMart Prevend Fix (v2 URL, product matching)  
+**Document Version**: 2.11.13  
+**Session logs**: `docs/session_logs/2026-02-21_1700_bill-payment-mobilemart-prevend-fix.md`, `docs/session_logs/2026-02-21_1620_bill-payment-amount-step.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -131,6 +131,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
 ### **Recent Updates (Last 7 Days – February 12–21, 2026)**
+- **Feb 21 (17:00)**: Bill payment MobileMart prevend fix — v2 API URL construction (use baseUrl for /v2 paths, was incorrectly .../v1/v2/... returning HTML); improved product matching (no products[0] fallback; fuzzy match; clear error when no match). Fixes "prevend did not return transactionId" and wrong product (Ekurhuleni for PEP).
 - **Feb 21 (16:00)**: Bill payment overlay fixes — removed 5 filter buttons; fixed add beneficiary (initialBillerName, pre-fill, filtered list); production API compliance (billerName from billerServices.accounts[0]).
 - **Feb 21**: NotificationService fix — VAS purchase notifications now use createNotification (not sendToUser); fixes "NotificationService is not a constructor" after airtime/data/electricity/bill purchases.
 - **Feb 19**: EasyPay voucher refund duplicate fix (walletController); MMTP Partner API implementation plan created; sandbox = staging.mymoolah.africa.
