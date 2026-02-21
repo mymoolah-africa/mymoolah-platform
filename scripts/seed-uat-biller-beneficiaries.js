@@ -13,10 +13,17 @@
  *   node scripts/seed-uat-biller-beneficiaries.js
  *
  * Environment:
- *   - Run in Codespaces with DATABASE_URL pointing to UAT DB
+ *   - Uses db-connection-helper.js for UAT connection (DB_PASSWORD + proxy)
+ *   - Start proxy first in Codespaces: ./scripts/one-click-restart-and-start.sh
  *
  * @date 2026-02-21
  */
+
+require('dotenv').config();
+
+// Always use db-connection-helper for DB connection (UAT)
+const { getUATDatabaseURL } = require('./db-connection-helper');
+process.env.DATABASE_URL = getUATDatabaseURL();
 
 const db = require('../models');
 const { User } = db;
