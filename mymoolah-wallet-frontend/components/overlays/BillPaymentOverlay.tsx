@@ -167,7 +167,8 @@ export function BillPaymentOverlay() {
     } catch (err: any) {
       console.error('Bill payment failed:', err);
       setErrorModalTitle('Payment Failed');
-      setErrorModalMessage(err?.response?.data?.message || err?.message || 'Bill payment failed. Please try again.');
+      setErrorModalMessage(err?.response?.message || err?.response?.error || err?.message || 'Bill payment failed. Please try again.');
+      setCurrentStep('amount'); // Close confirm sheet so only error modal is visible (match AirtimeDataOverlay)
       setShowErrorModal(true);
       setLoadingState('error');
     }

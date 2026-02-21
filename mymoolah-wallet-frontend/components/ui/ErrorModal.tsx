@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog';
 import { Button } from './button';
-import { AlertCircle, X } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
+
+const ERROR_MODAL_DESC_ID = 'error-modal-description';
 
 interface ErrorModalProps {
   isOpen: boolean;
@@ -20,21 +22,13 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
   type = 'error',
   showCloseButton = true
 }) => {
-  const descriptionId = React.useId();
-
   // Ensure error modal appears above other modals (ConfirmSheet has z-index 1000)
   useEffect(() => {
     if (isOpen) {
-      // Find and update overlay z-index
       const overlay = document.querySelector('[data-slot="dialog-overlay"]') as HTMLElement;
-      if (overlay) {
-        overlay.style.zIndex = '10000';
-      }
-      // Find and update content z-index
+      if (overlay) overlay.style.zIndex = '10000';
       const content = document.querySelector('[data-slot="dialog-content"]') as HTMLElement;
-      if (content) {
-        content.style.zIndex = '10001';
-      }
+      if (content) content.style.zIndex = '10001';
     }
   }, [isOpen]);
   const getIconColor = () => {
@@ -67,10 +61,9 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className="max-w-sm mx-auto"
-        aria-describedby={descriptionId}
-        data-description-id={descriptionId}
+        aria-describedby={ERROR_MODAL_DESC_ID}
       >
-        <DialogDescription id={descriptionId} className="sr-only">
+        <DialogDescription id={ERROR_MODAL_DESC_ID} className="sr-only">
           {message || 'Error dialog content'}
         </DialogDescription>
         <DialogHeader>
@@ -78,16 +71,6 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
             <AlertCircle className={`w-5 h-5 ${getIconColor()}`} />
             {title}
           </DialogTitle>
-          {showCloseButton && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="absolute right-4 top-4 h-6 w-6 p-0"
-              onClick={onClose}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          )}
         </DialogHeader>
         
         <div className="py-4">
