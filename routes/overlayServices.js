@@ -2678,15 +2678,15 @@ router.post('/bills/pay', auth, async (req, res) => {
         );
         const products = productsResponse.products || productsResponse || [];
         
-        // Match product to biller - never use products[0] as fallback (causes wrong product e.g. Ekurhuleni for PEP)
+        // Match product to biller - PRODUCT name must contain biller identifier (never match on biller-only)
         const billerLower = billerName.toLowerCase();
         const firstWord = billerLower.replace(/[^a-z0-9]+.*$/, ''); // e.g. "pepkor" from "Pepkor Trading (Pty) Ltd"
-        const shortName = firstWord.length >= 3 ? firstWord.slice(0, 3) : firstWord; // e.g. "pep" for fuzzy match
+        const shortName = firstWord.length >= 3 ? firstWord.slice(0, 3) : firstWord; // e.g. "pep"
         const matchProduct = (p) => {
           const pn = (p.productName || p.contentCreator || '').toLowerCase();
           return pn.includes(billerLower) || billerLower.includes(pn) ||
-            pn.includes(firstWord) || firstWord.includes(pn) ||
-            (shortName.length >= 2 && (pn.includes(shortName) || firstWord.includes(shortName)));
+            pn.includes(firstWord) ||
+            (shortName.length >= 3 && pn.includes(shortName)); // product must contain "pep" etc
         };
         let billProduct = products.find(matchProduct);
 
