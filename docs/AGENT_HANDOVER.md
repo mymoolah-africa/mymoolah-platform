@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-02-21  
-**Latest Feature**: Bill Payment Overlay Fixes & Production API Compliance  
-**Document Version**: 2.11.11  
-**Session logs**: `docs/session_logs/2026-02-21_1600_bill-payment-overlay-fixes-production-compliance.md`, `docs/session_logs/2026-02-21_handover-initialization-notificationservice-fix.md`  
+**Latest Feature**: Bill Payment Amount Step (Flash/biller recipients)  
+**Document Version**: 2.11.12  
+**Session logs**: `docs/session_logs/2026-02-21_1620_bill-payment-amount-step.md`, `docs/session_logs/2026-02-21_1600_bill-payment-overlay-fixes-production-compliance.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---

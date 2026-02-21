@@ -9,6 +9,7 @@ import { Label } from '../ui/label';
 import { SearchBar } from './shared/SearchBar';
 import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
+import { AmountInput } from './shared/AmountInput';
 import { ConfirmSheet } from './shared/ConfirmSheet';
 import { 
   beneficiaryService, 
@@ -25,7 +26,7 @@ interface BillBeneficiary extends Beneficiary {
   // Uses accountType from base Beneficiary interface
 }
 
-type Step = 'search' | 'beneficiary' | 'confirm';
+type Step = 'search' | 'beneficiary' | 'amount' | 'confirm';
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
 const CATEGORIES = [
@@ -129,7 +130,15 @@ export function BillPaymentOverlay() {
       id: beneficiary.id != null ? String(beneficiary.id) : ''
     } as Beneficiary;
     setBeneficiary(normalized);
-    setCurrentStep('confirm');
+    setAmount('');
+    setCurrentStep('amount');
+  };
+
+  const handleAmountNext = () => {
+    const num = parseFloat(amount);
+    if (amount && !isNaN(num) && num >= 1) {
+      setCurrentStep('confirm');
+    }
   };
 
   const handleConfirmTransaction = async () => {
@@ -183,7 +192,7 @@ export function BillPaymentOverlay() {
   const getSummaryRows = () => {
     if (!selectedBeneficiary || !amount) return [];
     
-    const numericAmount = parseFloat(amount) || 100; // Default for demo
+    const numericAmount = parseFloat(amount) || 0;
     
     return [
       {
@@ -404,7 +413,12 @@ export function BillPaymentOverlay() {
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.5rem', position: 'relative' }}>
         <Button
           variant="ghost"
-          onClick={() => currentStep === 'search' ? navigate('/transact') : setCurrentStep('search')}
+          onClick={() => {
+            if (currentStep === 'search') navigate('/transact');
+            else if (currentStep === 'beneficiary') setCurrentStep('search');
+            else if (currentStep === 'amount') setCurrentStep('beneficiary');
+            else if (currentStep === 'confirm') setCurrentStep('amount');
+          }}
           style={{
             padding: '8px',
             minWidth: '44px',
@@ -716,8 +730,93 @@ export function BillPaymentOverlay() {
         </div>
       )}
 
-      {/* Step 3: Confirm Sheet */}
-      {currentStep === 'confirm' && selectedBeneficiary && (
+      {/* Step 3: Amount Input */}
+      {currentStep === 'amount' && selectedBeneficiary && selectedBiller && (
+        <div className="space-y-4">
+          {/* Selected Biller & Account Summary */}
+          <Card style={{
+            backgroundColor: '#f8fafe',
+            border: '1px solid #86BE41',
+            borderRadius: '12px'
+          }}>
+            <CardContent style={{ padding: '1rem' }}>
+              <div className="flex items-center gap-3">
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  backgroundColor: '#86BE41',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Building style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                </div>
+                <div>
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#1f2937'
+                  }}>
+                    {selectedBiller.name}
+                  </p>
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '12px',
+                    color: '#6b7280'
+                  }}>
+                    {selectedBeneficiary.name} • {selectedBeneficiary.identifier}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card style={{
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px'
+          }}>
+            <CardContent style={{ padding: '1rem' }}>
+              <AmountInput
+                label="Amount to pay"
+                value={amount}
+                onChange={setAmount}
+                currency="ZAR"
+                currencySymbol="R"
+                min={1}
+                max={100000}
+                suggestedAmounts={[50, 100, 200, 500, 1000]}
+                placeholder="0.00"
+                helperText="Enter the amount you want to pay towards this bill"
+                required
+              />
+              <Button
+                onClick={handleAmountNext}
+                disabled={!amount || parseFloat(amount) < 1 || isNaN(parseFloat(amount))}
+                style={{
+                  width: '100%',
+                  marginTop: '1rem',
+                  background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  minHeight: '44px'
+                }}
+              >
+                Continue
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Step 4: Confirm Sheet */}
+      {currentStep === 'confirm' && selectedBeneficiary && amount && (
         <ConfirmSheet
           title="Confirm Payment"
           summaryRows={getSummaryRows()}
@@ -725,7 +824,7 @@ export function BillPaymentOverlay() {
           primaryButtonText="Pay Now"
           secondaryButtonText="Back"
           onPrimaryAction={handleConfirmTransaction}
-          onSecondaryAction={() => setCurrentStep('beneficiary')}
+          onSecondaryAction={() => setCurrentStep('amount')}
           isLoading={loadingState === 'loading'}
           estimatedTime="24 hours"
         />
