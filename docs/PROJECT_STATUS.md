@@ -1,17 +1,17 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: February 12, 2026  
-**Version**: 2.11.6 - VAS Best Offers JSONB Fix & Startup Sequence  
+**Last Updated**: February 19, 2026  
+**Version**: 2.11.9 - EasyPay Duplicate Fix & Partner API Docs  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA PAYSHAP UAT READY** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. All 80+ migrations applied to Production. VAS best offers JSONB fix and startup sequence complete (Feb 12). SBSA PayShap UAT ready (awaiting OneHub credentials). Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC plan, Watch to Earn, EasyPay Top-up, and 11-language support deployed.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. All 80+ migrations applied to Production. EasyPay voucher refund duplicate fix (Feb 19). MMTP Partner API doc created; sandbox = staging.mymoolah.africa. SBSA PayShap UAT ready (awaiting OneHub credentials). Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC plan, Watch to Earn, EasyPay Top-up, and 11-language support deployed.
 
-### **📋 Latest Achievement: VAS Best Offers JSONB Fix & Startup Sequence (February 12, 2026)** ✅ **COMPLETE**
-Fixed refresh-vas-best-offers.js "column denominations is of type jsonb but expression is of type integer[]" — Sequelize.literal cast. Startup: success message now logs after FloatBalanceMonitoring initial check. Refresh verified in Codespaces (48 rows). Session log: `docs/session_logs/2026-02-12_1400_vas-best-offers-jsonb-startup-sequence.md`.
+### **📋 Latest Achievement: EasyPay Duplicate Fix & Partner API Docs (February 19, 2026)** ✅ **COMPLETE**
+Fixed dashboard transaction list duplicate for EasyPay voucher refunds (EPVOUCHER-REF/EXP). Created `docs/MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md`; sandbox URL = staging.mymoolah.africa. Session log: `docs/session_logs/2026-02-19_1100_easypay-duplicate-fix-partner-api-docs.md`.
 
 ### **📋 Recent: Production Live (Feb 15–16, 2026)**
 API: https://api-mm.mymoolah.africa, Wallet: https://wallet.mymoolah.africa. SSL cert-production-v4. All 80+ migrations on Production. SBSA PayShap UAT ready (awaiting OneHub credentials).

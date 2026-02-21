@@ -1,20 +1,20 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: February 12, 2026  
-**Version**: 2.11.6 - VAS Best Offers JSONB Fix & Startup Sequence  
+**Last Updated**: February 19, 2026  
+**Version**: 2.11.9 - EasyPay Duplicate Fix & Partner API Docs  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 9–16, 2026)**: VAS best offers JSONB fix (refresh script); startup sequence (success message after FloatBalanceMonitoring); Production deployment live; Codespaces startup fix; SSL cert v4. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 12–19, 2026)**: EasyPay voucher refund duplicate fix; MMTP Partner API doc created; sandbox = staging.mymoolah.africa; Documentation consolidation phase 2. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: VAS Best Offers JSONB Fix & Startup Sequence (February 12, 2026)**
+## 🚀 **LATEST UPDATE: EasyPay Duplicate Fix & Partner API Docs (February 19, 2026)**
 
-### **🔄 VAS Best Offers & Startup**
-- **Refresh script fix**: Fixed "column denominations is of type jsonb but expression is of type integer[]" — used Sequelize.literal with JSON.stringify to cast. Refresh verified in Codespaces (48 rows).
-- **Startup sequence**: "🎉 All background services started successfully" now prints after FloatBalanceMonitoring initial check completes (await promise from start()).
+### **🔄 EasyPay & Partner API**
+- **EasyPay duplicate fix**: Dashboard transaction list no longer duplicates EasyPay voucher refund rows (EPVOUCHER-REF/EXP). Second grouping loop now iterates over `otherTransactions` only.
+- **MMTP Partner API doc**: Created `docs/MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md`; sandbox URL set to staging.mymoolah.africa.
 
-**Session log**: `docs/session_logs/2026-02-12_1400_vas-best-offers-jsonb-startup-sequence.md`
+**Session log**: `docs/session_logs/2026-02-19_1100_easypay-duplicate-fix-partner-api-docs.md`
 
 ---
 

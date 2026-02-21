@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: February 12, 2026  
-**Version**: 2.11.6 - VAS Best Offers JSONB Fix & Startup Sequence  
+**Last Updated**: February 19, 2026  
+**Version**: 2.11.9 - EasyPay Duplicate Fix & Partner API Docs  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---

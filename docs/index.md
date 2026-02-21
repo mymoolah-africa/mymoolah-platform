@@ -1,10 +1,10 @@
 # MyMoolah Treasury Platform - Documentation Index
 
-**Last Updated**: February 12, 2026  
+**Last Updated**: February 19, 2026  
 **Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
-**Version**: 2.11.6 - VAS Best Offers JSONB Fix & Startup Sequence  
+**Version**: 2.11.9 - EasyPay Duplicate Fix & Partner API Docs  
 
-For work in the last 7 days (Feb 9–16, 2026), see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md) (Recent Updates).
+For work in the last 7 days (Feb 12–19, 2026), see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md) (Recent Updates).
 
 ---
 
@@ -60,6 +60,7 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 
 ### **🔌 API & Integration**
 - [**API_DOCUMENTATION.md**](./API_DOCUMENTATION.md) - Complete API reference
+- [**MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md**](./MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md) - Partner API plan (sandbox: staging.mymoolah.africa)
 - [**FIGMA_API_WIRING.md**](./FIGMA_API_WIRING.md) - Frontend-backend integration
 - [**mojaloop-integration.md**](./mojaloop-integration.md) - Mojaloop compliance details
 
@@ -134,7 +135,7 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 ## 📝 **DOCUMENTATION MAINTENANCE**
 
 ### **Last Updated**
-- **Main Documentation**: February 18, 2026
+- **Main Documentation**: February 19, 2026
 - **Optimizations**: All 6 optimizations completed
 - **Security**: Banking-grade security implemented
 - **Performance**: Production-ready for millions of transactions

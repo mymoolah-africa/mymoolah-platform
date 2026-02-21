@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-18 19:00  
-**Latest Feature**: Documentation Consolidation Phase 2 (Full)  
-**Document Version**: 2.11.8  
-**Session logs**: `docs/session_logs/2026-02-18_1800_documentation-consolidation-rules-handover.md`, `docs/session_logs/2026-02-18_1900_documentation-consolidation-phase2.md`  
+**Last Updated**: 2026-02-19 11:00  
+**Latest Feature**: EasyPay Duplicate Fix & Partner API Docs  
+**Document Version**: 2.11.9  
+**Session logs**: `docs/session_logs/2026-02-19_1100_easypay-duplicate-fix-partner-api-docs.md`, `docs/session_logs/2026-02-18_1900_documentation-consolidation-phase2.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -103,7 +103,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 15, 2026 - 18:00)**
+### **Latest Achievement (February 19, 2026 - 11:00)**
+**EasyPay Duplicate Fix & Partner API Docs** - Fixed dashboard transaction list duplicate for EasyPay voucher refunds (EPVOUCHER-REF/EXP): second grouping loop now iterates over `otherTransactions` only. Created `docs/MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md`; sandbox URL set to staging.mymoolah.africa. Session log: `docs/session_logs/2026-02-19_1100_easypay-duplicate-fix-partner-api-docs.md`.
+
+### **Previous Achievement (February 15, 2026 - 18:00)**
 **Production Deployment Live** - Production platform deployed and live. API: `https://api-mm.mymoolah.africa`, Wallet: `https://wallet-mm.mymoolah.africa`. Fixed database connection (DATABASE_URL secret, start.sh, .dockerignore); graceful OpenAI degradation (5 services); ledger account check as warning; SSL cert cert-production-v3 (api-mm, wallet); URL map updated. Afrihost DNS: api-mm (5-char subdomain requirement), wallet.mymoolah.africa. Static IP: 34.128.163.17. Session log: `docs/session_logs/2026-02-15_1800_production-deployment-live-ssl-dns.md`.
 
 ### **Previous Achievement (February 12, 2026 - 17:00)**
@@ -121,7 +124,9 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – February 09–15, 2026)**
+### **Recent Updates (Last 7 Days – February 12–19, 2026)**
+- **Feb 19**: EasyPay voucher refund duplicate fix (walletController); MMTP Partner API implementation plan created; sandbox = staging.mymoolah.africa.
+- **Feb 18**: Documentation consolidation phase 2 (cross-links, status cleanup, archive).
 - **Feb 15**: Production deployment live. API: api-mm.mymoolah.africa, Wallet: wallet-mm.mymoolah.africa. DB connection fix, OpenAI graceful degradation, SSL cert v3, Afrihost DNS (api-mm 5-char workaround).
 - **Feb 12**: Production database migration complete (all 80+ migrations applied, 5 fixes for fresh-DB compatibility). SBSA PayShap integration complete (UAT implementation, business model, deposit notification, R4 fee, VAT split). Awaiting OneHub credentials.
 - **Feb 09**: Transaction Detail modal (Reference/Amount/Status only); USDC fee UI (Transaction Fee label, Network fee removed); USDC send flow fixes (VALR quoteId/path/params, ledger balance, UAT simulation, negative amount for sent, success UI guards, beneficiary/wallet resolution, VALR float check + ErrorModal).

@@ -1,5 +1,19 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-19 - 🔧 EasyPay Duplicate Fix & Partner API Docs ✅
+
+### **Session Overview**
+Fixed EasyPay voucher refund duplicate in dashboard transaction list. Created MMTP Partner API doc; sandbox URL set to staging.mymoolah.africa.
+
+### **Changes**
+- **controllers/walletController.js**: Second grouping loop now iterates over `otherTransactions` only (not `normalizedRows`), preventing combined refund rows (EPVOUCHER-REF/EXP) from being re-added via `otherForRecent`. Eliminates `[DUPLICATE DETECTED]` warnings.
+- **docs/MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md**: Created; sandbox = staging.mymoolah.africa (replaced api-uat.mymoolah.africa).
+
+### **Session Log**
+- `docs/session_logs/2026-02-19_1100_easypay-duplicate-fix-partner-api-docs.md`
+
+---
+
 ## 2026-02-12 - 🔄 VAS Best Offers JSONB Fix & Startup Sequence ✅
 
 ### **Session Overview**

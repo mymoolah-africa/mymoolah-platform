@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: February 12, 2026
-**Version**: 2.11.6 - VAS Best Offers JSONB Fix & Startup Sequence
+**Last Updated**: February 19, 2026
+**Version**: 2.11.9 - EasyPay Duplicate Fix & Partner API Docs
 **Status**: ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED**
 
 ---
