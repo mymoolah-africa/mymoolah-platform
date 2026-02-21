@@ -1588,20 +1588,14 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       // Send notification to beneficiary if they are a MyMoolah user
       if (beneficiaryUser) {
         try {
-          const NotificationService = require('../services/notificationService');
-          const notificationService = new NotificationService();
-          
-          await notificationService.sendToUser(beneficiaryUser.id, {
-            type: 'airtime_data_received',
-            title: `${type === 'airtime' ? 'Airtime' : 'Data'} Received`,
-            body: `R${amount} ${type} has been added to your account`,
-            data: {
-              receipt: receiptData,
-              action: 'view_receipt'
-            },
-            priority: 'high'
-          });
-          
+          const notificationService = require('../services/notificationService');
+          await notificationService.createNotification(
+            beneficiaryUser.id,
+            'txn_wallet_credit',
+            `${type === 'airtime' ? 'Airtime' : 'Data'} Received`,
+            `R${amount} ${type} has been added to your account`,
+            { payload: { subtype: 'airtime_data_received', receipt: receiptData, action: 'view_receipt' }, severity: 'info' }
+          );
           console.log(`✅ Notification sent to beneficiary user ${beneficiaryUser.id}`);
         } catch (notifError) {
           console.error('❌ Failed to send notification to beneficiary:', notifError.message);
@@ -1610,20 +1604,14 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
 
       // Always send notification to purchaser
       try {
-        const NotificationService = require('../services/notificationService');
-        const notificationService = new NotificationService();
-        
-        await notificationService.sendToUser(req.user.id, {
-          type: 'airtime_data_purchase',
-          title: `${type === 'airtime' ? 'Airtime' : 'Data'} Purchase Successful`,
-          body: `Your ${type} purchase for ${beneficiary.name} was successful`,
-          data: {
-            receipt: receiptData,
-            action: 'view_receipt'
-          },
-          priority: 'high'
-        });
-        
+        const notificationService = require('../services/notificationService');
+        await notificationService.createNotification(
+          req.user.id,
+          'txn_wallet_credit',
+          `${type === 'airtime' ? 'Airtime' : 'Data'} Purchase Successful`,
+          `Your ${type} purchase for ${beneficiary.name} was successful`,
+          { payload: { subtype: 'airtime_data_purchase', receipt: receiptData, action: 'view_receipt' }, severity: 'info' }
+        );
         console.log(`✅ Notification sent to purchaser ${req.user.id}`);
       } catch (notifError) {
         console.error('❌ Failed to send notification to purchaser:', notifError.message);
@@ -2334,21 +2322,14 @@ router.post('/electricity/purchase', auth, async (req, res) => {
     // Send notification to beneficiary if they are a MyMoolah user
     if (beneficiaryUser) {
       try {
-        const NotificationService = require('../services/notificationService');
-        const notificationService = new NotificationService();
-        
-        await notificationService.sendToUser(beneficiaryUser.id, {
-          type: 'electricity_token_received',
-          title: 'Electricity Token Received',
-          body: `R${amount} electricity token has been purchased for your meter`,
-          data: {
-            receipt: receiptData,
-            token: electricityToken,
-            action: 'view_token'
-          },
-          priority: 'high'
-        });
-        
+        const notificationService = require('../services/notificationService');
+        await notificationService.createNotification(
+          beneficiaryUser.id,
+          'txn_wallet_credit',
+          'Electricity Token Received',
+          `R${amount} electricity token has been purchased for your meter`,
+          { payload: { subtype: 'electricity_token_received', receipt: receiptData, token: electricityToken, action: 'view_token' }, severity: 'info' }
+        );
         console.log(`✅ Electricity token notification sent to beneficiary user ${beneficiaryUser.id}`);
       } catch (notifError) {
         console.error('❌ Failed to send electricity notification to beneficiary:', notifError.message);
@@ -2357,21 +2338,14 @@ router.post('/electricity/purchase', auth, async (req, res) => {
 
     // Always send notification to purchaser
     try {
-      const NotificationService = require('../services/notificationService');
-      const notificationService = new NotificationService();
-      
-      await notificationService.sendToUser(req.user.id, {
-        type: 'electricity_purchase',
-        title: 'Electricity Purchase Successful',
-        body: `Your electricity purchase for ${beneficiary.name} was successful`,
-        data: {
-          receipt: receiptData,
-          token: electricityToken,
-          action: 'view_token'
-        },
-        priority: 'high'
-      });
-      
+      const notificationService = require('../services/notificationService');
+      await notificationService.createNotification(
+        req.user.id,
+        'txn_wallet_credit',
+        'Electricity Purchase Successful',
+        `Your electricity purchase for ${beneficiary.name} was successful`,
+        { payload: { subtype: 'electricity_purchase', receipt: receiptData, token: electricityToken, action: 'view_token' }, severity: 'info' }
+      );
       console.log(`✅ Electricity notification sent to purchaser ${req.user.id}`);
     } catch (notifError) {
       console.error('❌ Failed to send electricity notification to purchaser:', notifError.message);
@@ -2951,20 +2925,14 @@ router.post('/bills/pay', auth, async (req, res) => {
     // Send notification to beneficiary if they are a MyMoolah user
     if (beneficiaryUser) {
       try {
-        const NotificationService = require('../services/notificationService');
-        const notificationService = new NotificationService();
-        
-        await notificationService.sendToUser(beneficiaryUser.id, {
-          type: 'bill_payment_received',
-          title: 'Bill Payment Received',
-          body: `R${amount} bill payment has been made on your behalf`,
-          data: {
-            receipt: receiptData,
-            action: 'view_receipt'
-          },
-          priority: 'high'
-        });
-        
+        const notificationService = require('../services/notificationService');
+        await notificationService.createNotification(
+          beneficiaryUser.id,
+          'txn_wallet_credit',
+          'Bill Payment Received',
+          `R${amount} bill payment has been made on your behalf`,
+          { payload: { subtype: 'bill_payment_received', receipt: receiptData, action: 'view_receipt' }, severity: 'info' }
+        );
         console.log(`✅ Bill payment notification sent to beneficiary user ${beneficiaryUser.id}`);
       } catch (notifError) {
         console.error('❌ Failed to send bill payment notification to beneficiary:', notifError.message);
@@ -2973,20 +2941,14 @@ router.post('/bills/pay', auth, async (req, res) => {
 
     // Always send notification to purchaser
     try {
-      const NotificationService = require('../services/notificationService');
-      const notificationService = new NotificationService();
-      
-      await notificationService.sendToUser(req.user.id, {
-        type: 'bill_payment_success',
-        title: 'Bill Payment Successful',
-        body: `Your bill payment for ${beneficiary.name} was successful`,
-        data: {
-          receipt: receiptData,
-          action: 'view_receipt'
-        },
-        priority: 'high'
-      });
-      
+      const notificationService = require('../services/notificationService');
+      await notificationService.createNotification(
+        req.user.id,
+        'txn_wallet_credit',
+        'Bill Payment Successful',
+        `Your bill payment for ${beneficiary.name} was successful`,
+        { payload: { subtype: 'bill_payment_success', receipt: receiptData, action: 'view_receipt' }, severity: 'info' }
+      );
       console.log(`✅ Bill payment notification sent to purchaser ${req.user.id}`);
     } catch (notifError) {
       console.error('❌ Failed to send bill payment notification to purchaser:', notifError.message);
