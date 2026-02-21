@@ -11,7 +11,7 @@ import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { AmountInput } from './shared/AmountInput';
 import { ConfirmSheet } from './shared/ConfirmSheet';
-import { ErrorModal } from '../../ui/ErrorModal';
+import { ErrorModal } from '../ui/ErrorModal';
 import { 
   beneficiaryService, 
   billPaymentsService, 
