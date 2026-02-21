@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-19 11:00  
-**Latest Feature**: EasyPay Duplicate Fix & Partner API Docs  
-**Document Version**: 2.11.9  
-**Session logs**: `docs/session_logs/2026-02-19_1100_easypay-duplicate-fix-partner-api-docs.md`, `docs/session_logs/2026-02-18_1900_documentation-consolidation-phase2.md`  
+**Last Updated**: 2026-02-21  
+**Latest Feature**: NotificationService Fix (VAS purchase notifications)  
+**Document Version**: 2.11.10  
+**Session logs**: `docs/session_logs/2026-02-21_handover-initialization-notificationservice-fix.md`, `docs/session_logs/2026-02-19_1100_easypay-duplicate-fix-partner-api-docs.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -103,7 +103,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 19, 2026 - 11:00)**
+### **Latest Achievement (February 21, 2026)**
+**NotificationService Fix** - Fixed "NotificationService is not a constructor" after VAS purchases (airtime, data, electricity, bill payment). Replaced `new NotificationService()` + `sendToUser` with `notificationService.createNotification()`. Uses `txn_wallet_credit` type; subtype in payload. File: `routes/overlayServices.js`.
+
+### **Previous Achievement (February 19, 2026 - 11:00)**
 **EasyPay Duplicate Fix & Partner API Docs** - Fixed dashboard transaction list duplicate for EasyPay voucher refunds (EPVOUCHER-REF/EXP): second grouping loop now iterates over `otherTransactions` only. Created `docs/MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md`; sandbox URL set to staging.mymoolah.africa. Session log: `docs/session_logs/2026-02-19_1100_easypay-duplicate-fix-partner-api-docs.md`.
 
 ### **Previous Achievement (February 15, 2026 - 18:00)**
@@ -124,7 +127,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – February 12–19, 2026)**
+### **Recent Updates (Last 7 Days – February 12–21, 2026)**
+- **Feb 21**: NotificationService fix — VAS purchase notifications now use createNotification (not sendToUser); fixes "NotificationService is not a constructor" after airtime/data/electricity/bill purchases.
 - **Feb 19**: EasyPay voucher refund duplicate fix (walletController); MMTP Partner API implementation plan created; sandbox = staging.mymoolah.africa.
 - **Feb 18**: Documentation consolidation phase 2 (cross-links, status cleanup, archive).
 - **Feb 15**: Production deployment live. API: api-mm.mymoolah.africa, Wallet: wallet-mm.mymoolah.africa. DB connection fix, OpenAI graceful degradation, SSL cert v3, Afrihost DNS (api-mm 5-char workaround).
@@ -1005,25 +1009,23 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Date**: 2026-02-09 16:00  
-**Focus**: Transaction Detail Modal & USDC Fee UI
+**Session Status**: ✅ **INITIALIZED** — Ready for new agent  
+**Last Session**: 2026-02-21 — NotificationService fix (VAS purchase notifications)
 
-### **Work Completed**
-1. **Transaction Details modal**: Reverted Blockchain Tx ID display. User confirmed recipient is auto-credited to wallet address on file; per banking/Mojaloop practice only Reference (internal ID), Amount, and Status are shown — no "paste to top up" Tx ID.
+### **Most Recent Work (2026-02-21)**
+- **NotificationService fix**: Fixed "NotificationService is not a constructor" after airtime/data/electricity/bill purchases. Replaced `new NotificationService()` + `sendToUser` with `notificationService.createNotification()`. Uses `txn_wallet_credit` type (enum constraint); subtype in payload.
+- **File**: `routes/overlayServices.js` — 6 blocks updated (airtime/data, electricity, bill payment — beneficiary + purchaser each)
 
-2. **USDC send fee UI**: Renamed "Platform fee" to "Transaction Fee" in quote breakdown and Confirm USDC Send sheet. Removed "Network fee" line from both (was R 0,00; not needed for current flow).
+### **Current State**
+- No active work in progress
+- Production live: api-mm.mymoolah.africa, wallet.mymoolah.africa
+- See **Next Development Priorities** below for recommended tasks
 
-### **Files Changed**
-- `mymoolah-wallet-frontend/components/TransactionDetailModal.tsx` - Reverted to Reference + Amount + Status only
-- `mymoolah-wallet-frontend/components/overlays/BuyUsdcOverlay.tsx` - Transaction Fee label; Network fee removed
-- `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md` - Session log
-
-### **Key Decisions**
-- **No blockchain Tx ID in modal**: Recipient credited automatically; reference is for user records only (banking/Mojaloop aligned).
-- **Single fee label**: "Transaction Fee" (7.5%); Network fee removed from UI unless needed later.
-
-### **Next Steps**
-- Optional: Re-add blockchain Tx ID as "View on block explorer" / support-only if required (no "top up" framing).
+### **Next Agent Actions**
+1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
+2. Read this file and 2–3 recent session logs
+3. Run `git status` → `git pull origin main`
+4. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 - Test USDC send in Codespaces when VALR credentials available.
 
 ---
