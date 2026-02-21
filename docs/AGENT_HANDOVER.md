@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-02-21  
-**Latest Feature**: NotificationService Fix (VAS purchase notifications)  
-**Document Version**: 2.11.10  
-**Session logs**: `docs/session_logs/2026-02-21_handover-initialization-notificationservice-fix.md`, `docs/session_logs/2026-02-19_1100_easypay-duplicate-fix-partner-api-docs.md`  
+**Latest Feature**: Bill Payment Overlay Fixes & Production API Compliance  
+**Document Version**: 2.11.11  
+**Session logs**: `docs/session_logs/2026-02-21_1600_bill-payment-overlay-fixes-production-compliance.md`, `docs/session_logs/2026-02-21_handover-initialization-notificationservice-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -103,7 +103,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 21, 2026)**
+### **Latest Achievement (February 21, 2026 - 16:00)**
+**Bill Payment Overlay Fixes & Production API Compliance** - (1) Removed 5 filter buttons (All, Airtime, Data, Electricity, Biller) from bill-payment-overlay via BeneficiaryList `showFilters={false}`. (2) Fixed create/add beneficiary: BeneficiaryModal `initialBillerName` prop, pre-fill biller name, ensure new recipients appear in filtered list. (3) Production API compliance: backend overlay reads billerName from `billerServices.accounts[0].billerName` (fallback to metadata); frontend overlayService maps billerServices to metadata.billerName; saveBeneficiary return includes metadata.billerName. Files: BillPaymentOverlay.tsx, BeneficiaryModal.tsx, overlayService.ts, overlayServices.js. Session log: `docs/session_logs/2026-02-21_1600_bill-payment-overlay-fixes-production-compliance.md`.
+
+### **Previous Achievement (February 21, 2026)**
 **NotificationService Fix** - Fixed "NotificationService is not a constructor" after VAS purchases (airtime, data, electricity, bill payment). Replaced `new NotificationService()` + `sendToUser` with `notificationService.createNotification()`. Uses `txn_wallet_credit` type; subtype in payload. File: `routes/overlayServices.js`.
 
 ### **Previous Achievement (February 19, 2026 - 11:00)**
@@ -128,6 +131,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
 ### **Recent Updates (Last 7 Days – February 12–21, 2026)**
+- **Feb 21 (16:00)**: Bill payment overlay fixes — removed 5 filter buttons; fixed add beneficiary (initialBillerName, pre-fill, filtered list); production API compliance (billerName from billerServices.accounts[0]).
 - **Feb 21**: NotificationService fix — VAS purchase notifications now use createNotification (not sendToUser); fixes "NotificationService is not a constructor" after airtime/data/electricity/bill purchases.
 - **Feb 19**: EasyPay voucher refund duplicate fix (walletController); MMTP Partner API implementation plan created; sandbox = staging.mymoolah.africa.
 - **Feb 18**: Documentation consolidation phase 2 (cross-links, status cleanup, archive).

@@ -163,8 +163,15 @@ export function BillPaymentOverlay() {
   };
 
   const handleBeneficiaryCreated = (newBeneficiary: Beneficiary) => {
-    // Add the new beneficiary to the list and reload
-    setBillBeneficiaries(prev => [...prev, newBeneficiary as BillBeneficiary]);
+    // Ensure metadata.billerName matches selectedBiller so new recipient appears in filtered list
+    const beneficiaryWithBiller: BillBeneficiary = {
+      ...newBeneficiary,
+      metadata: {
+        ...(newBeneficiary.metadata || {}),
+        billerName: newBeneficiary.metadata?.billerName || selectedBiller?.name || null
+      }
+    } as BillBeneficiary;
+    setBillBeneficiaries(prev => [...prev, beneficiaryWithBiller]);
     setShowBeneficiaryModal(false);
   };
 
@@ -692,7 +699,7 @@ export function BillPaymentOverlay() {
             </CardContent>
           </Card>
 
-          {/* Beneficiary List */}
+          {/* Beneficiary List - showFilters=false: no All/Airtime/Data/Electricity/Biller buttons */}
           <BeneficiaryList
             type="biller"
             beneficiaries={billBeneficiaries.filter(b => 
@@ -704,6 +711,7 @@ export function BillPaymentOverlay() {
             onEdit={handleEditBeneficiary}
             searchPlaceholder="Search account name or number"
             isLoading={loadingState === 'loading'}
+            showFilters={false}
           />
         </div>
       )}
@@ -723,11 +731,12 @@ export function BillPaymentOverlay() {
         />
       )}
 
-      {/* Beneficiary Modal */}
+      {/* Beneficiary Modal - pass selected biller name so new recipient appears in filtered list */}
       <BeneficiaryModal
         isOpen={showBeneficiaryModal}
         onClose={() => setShowBeneficiaryModal(false)}
         type="biller"
+        initialBillerName={selectedBiller?.name}
         onSuccess={handleBeneficiaryCreated}
       />
     </div>

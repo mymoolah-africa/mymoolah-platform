@@ -99,6 +99,31 @@ export interface PurchaseResult {
 // Import centralized beneficiary service
 import { beneficiaryService as centralizedBeneficiaryService } from './beneficiaryService';
 
+/** Map backend beneficiary to overlay format. Production API stores billerName in billerServices.accounts[0].billerName */
+function mapToOverlayBeneficiary(b: any) {
+  const baseMetadata = (b as any).metadata || {};
+  const billerName =
+    baseMetadata.billerName ||
+    (b.billerServices?.accounts?.[0]?.billerName) ||
+    undefined;
+  const metadata = billerName ? { ...baseMetadata, billerName } : baseMetadata;
+  return {
+    id: b.id,
+    name: b.name,
+    identifier: b.identifier,
+    accountType: b.accountType,
+    bankName: (b as any).bankName || undefined,
+    metadata,
+    lastPaidAt: b.lastPaidAt,
+    timesPaid: (b as any).timesPaid || 0,
+    createdAt: b.createdAt,
+    updatedAt: b.updatedAt,
+    accounts: (b as any).accounts || [],
+    vasServices: (b as any).vasServices,
+    serviceAccountRecords: (b as any).serviceAccountRecords
+  };
+}
+
 export const beneficiaryService = {
   // Get all beneficiaries with optional filtering
   async getBeneficiaries(type?: string, search?: string): Promise<Beneficiary[]> {
@@ -119,50 +144,14 @@ export const beneficiaryService = {
     
     // Convert centralized service types to overlay service types
     // CRITICAL: Preserve accounts array and all other fields for network extraction
-    return beneficiaries.map((b: any) => ({
-      id: b.id,
-      name: b.name,
-      identifier: b.identifier,
-      accountType: b.accountType,
-      bankName: (b as any).bankName || undefined,
-      metadata: (b as any).metadata || {},
-      lastPaidAt: b.lastPaidAt,
-      timesPaid: (b as any).timesPaid || 0,
-      createdAt: b.createdAt,
-      updatedAt: b.updatedAt,
-      // Preserve accounts array for network extraction (PINless filtering)
-      accounts: (b as any).accounts || [],
-      // Preserve vasServices for legacy format support
-      vasServices: (b as any).vasServices,
-      // Preserve serviceAccountRecords for new unified format
-      serviceAccountRecords: (b as any).serviceAccountRecords
-    }));
+    // Production API: biller beneficiaries store billerName in billerServices.accounts[0].billerName
+    return beneficiaries.map((b: any) => mapToOverlayBeneficiary(b));
   },
 
   // Search beneficiaries
   async searchBeneficiaries(query: string, type?: string): Promise<Beneficiary[]> {
     const beneficiaries = await centralizedBeneficiaryService.searchBeneficiaries(query, type);
-    
-    // Convert centralized service types to overlay service types
-    // CRITICAL: Preserve accounts array and all other fields for network extraction
-    return beneficiaries.map((b: any) => ({
-      id: b.id,
-      name: b.name,
-      identifier: b.identifier,
-      accountType: b.accountType,
-      bankName: (b as any).bankName || undefined,
-      metadata: (b as any).metadata || {},
-      lastPaidAt: b.lastPaidAt,
-      timesPaid: (b as any).timesPaid || 0,
-      createdAt: b.createdAt,
-      updatedAt: b.updatedAt,
-      // Preserve accounts array for network extraction (PINless filtering)
-      accounts: (b as any).accounts || [],
-      // Preserve vasServices for legacy format support
-      vasServices: (b as any).vasServices,
-      // Preserve serviceAccountRecords for new unified format
-      serviceAccountRecords: (b as any).serviceAccountRecords
-    }));
+    return beneficiaries.map((b: any) => mapToOverlayBeneficiary(b));
   },
 
   // Create or update beneficiary
@@ -222,13 +211,21 @@ export const beneficiaryService = {
     });
     
     // Convert centralized service type to overlay service type
+    // Production API: biller stores in accounts[0].metadata.billerName or billerServices.accounts[0].billerName
+    const baseMeta = (beneficiary as any).metadata || {};
+    const billerName =
+      baseMeta.billerName ||
+      (beneficiary as any).accounts?.[0]?.metadata?.billerName ||
+      (beneficiary as any).billerServices?.accounts?.[0]?.billerName ||
+      (serviceType === 'biller' ? serviceData.billerName : undefined);
+    const metadata = billerName ? { ...baseMeta, billerName } : baseMeta;
     return {
       id: beneficiary.id.toString(),
       name: beneficiary.name,
       identifier: beneficiary.identifier || '',
       accountType: (beneficiary.accountType || 'airtime') as 'mymoolah' | 'bank' | 'airtime' | 'data' | 'electricity' | 'biller',
       bankName: (beneficiary as any).bankName || undefined,
-      metadata: (beneficiary as any).metadata || {},
+      metadata,
       lastPaidAt: beneficiary.lastPaidAt,
       timesPaid: (beneficiary as any).timesPaid || 0,
       createdAt: beneficiary.createdAt,

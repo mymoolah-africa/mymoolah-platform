@@ -16,6 +16,7 @@ interface BeneficiaryModalProps {
   onSave?: () => void;
   editBeneficiary?: Beneficiary | null; // Add support for editing existing beneficiary
   onAddNumber?: () => void; // Callback to open "Add Additional Number" modal
+  initialBillerName?: string; // Pre-fill biller name when adding bill payment recipient
 }
 
 interface BeneficiaryFormData {
@@ -30,7 +31,7 @@ interface BeneficiaryFormData {
   purpose?: string;
 }
 
-export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, editBeneficiary, onAddNumber }: BeneficiaryModalProps) {
+export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, editBeneficiary, onAddNumber, initialBillerName }: BeneficiaryModalProps) {
   const [formData, setFormData] = useState<BeneficiaryFormData>({
     name: '',
     identifier: '',
@@ -72,13 +73,13 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
       // Store the old identifier so we know which service account to update
       setOldIdentifier(type === 'usdc' ? walletAddress : initialIdentifier);
     } else {
-      // Reset form when adding new beneficiary
+      // Reset form when adding new beneficiary - pre-fill biller name when provided
       setFormData({
         name: '',
         identifier: '',
         network: '',
         meterType: '',
-        billerName: '',
+        billerName: initialBillerName || '',
         walletAddress: '',
         country: 'US',
         relationship: 'self',
@@ -86,7 +87,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
       });
       setOldIdentifier('');
     }
-  }, [editBeneficiary, isOpen]);
+  }, [editBeneficiary, isOpen, initialBillerName]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -230,9 +231,11 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
         };
       } else if (type === 'biller') {
         serviceType = 'biller';
+        // Use initialBillerName as fallback so new recipient appears in filtered list
+        const billerName = formData.billerName?.trim() || initialBillerName || null;
         serviceData = {
           accountNumber: formData.identifier,
-          billerName: formData.billerName || null,
+          billerName,
           isDefault: true
         };
       } else if (type === 'usdc') {
@@ -271,6 +274,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
         });
       } else {
         // Create new beneficiary
+        const billerName = formData.billerName?.trim() || initialBillerName || null;
         beneficiary = await beneficiaryService.saveBeneficiary({
           name: formData.name,
           identifier: formData.identifier,
@@ -278,7 +282,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
           network: formData.network,
           metadata: {
             meterType: formData.meterType,
-            billerName: formData.billerName
+            billerName
           }
         });
       }

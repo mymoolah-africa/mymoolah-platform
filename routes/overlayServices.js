@@ -2595,8 +2595,13 @@ router.post('/bills/pay', auth, async (req, res) => {
       });
     }
 
-    // Get biller name from beneficiary metadata
-    const billerName = beneficiary.metadata?.billerName || beneficiary.name || 'Unknown Biller';
+    // Get biller name: production API stores in billerServices.accounts[0].billerName;
+    // legacy/metadata.billerName kept for backward compatibility
+    const billerName =
+      beneficiary.metadata?.billerName ||
+      (beneficiary.billerServices?.accounts?.[0]?.billerName) ||
+      beneficiary.name ||
+      'Unknown Biller';
     
     // Find the best ProductVariant for this biller using supplier comparison
     const { ProductVariant, Product, Supplier } = require('../models');
