@@ -37,6 +37,15 @@ const CATEGORIES = [
   { id: 'retail', name: 'Retail Credit', icon: CreditCard, color: '#dc2626' }
 ];
 
+/** Match biller names - overlay may show "DStv Subscription" while seeded data has "DSTV / Multichoice Bill Payment" */
+function billerMatches(beneficiaryBillerName: string | undefined, selectedBillerName: string): boolean {
+  if (!beneficiaryBillerName) return false;
+  if (beneficiaryBillerName === selectedBillerName) return true;
+  const a = beneficiaryBillerName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const b = selectedBillerName.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return a.includes(b) || b.includes(a) || (a.length >= 4 && b.length >= 4 && (a.includes(b.slice(0, 4)) || b.includes(a.slice(0, 4))));
+}
+
 export function BillPaymentOverlay() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<Step>('search');
@@ -682,9 +691,10 @@ export function BillPaymentOverlay() {
           <BeneficiaryList
             type="biller"
             title="Select Recipient"
-            beneficiaries={billBeneficiaries.filter(b => 
-              b.metadata?.billerName === selectedBiller.name
-            )}
+            beneficiaries={billBeneficiaries.filter(b => {
+              const bn = b.metadata?.billerName || (b as any).billerServices?.accounts?.[0]?.billerName;
+              return billerMatches(bn, selectedBiller.name);
+            })}
             selectedBeneficiary={selectedBeneficiary}
             onSelect={handleBeneficiarySelect}
             onAddNew={handleAddNewBeneficiary}
