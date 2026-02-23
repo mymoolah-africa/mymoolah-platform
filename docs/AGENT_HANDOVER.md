@@ -3,7 +3,7 @@
 **Last Updated**: 2026-02-21  
 **Latest Feature**: Bill Payment MobileMart Prevend Fix (v2 URL, product matching)  
 **Document Version**: 2.11.13  
-**Session logs**: `docs/session_logs/2026-02-21_1800_agent-handover-slimdown.md`, `docs/session_logs/2026-02-21_1700_bill-payment-mobilemart-prevend-fix.md`  
+**Session logs**: `docs/session_logs/2026-02-21_1900_docs-consolidation.md`, `docs/session_logs/2026-02-21_1800_agent-handover-slimdown.md`, `docs/session_logs/2026-02-21_1700_bill-payment-mobilemart-prevend-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -39,7 +39,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Run DB migrations | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | Set up dev environment | `docs/DEVELOPMENT_GUIDE.md` |
 | Test in Codespaces | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
-| Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/GCP_PRODUCTION_DEPLOYMENT.md` |
+| Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
 | API contracts | `docs/API_DOCUMENTATION.md` |
 | Recent chat context | `docs/session_logs/` (2-3 most recent) |
 | Historical updates & integrations | `docs/archive/agent_handover_history.md` |
@@ -146,7 +146,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 **Complete MobileMart Production Integration** - Full end-to-end implementation of electricity purchase with MobileMart production API (prevend + purchase flow, real 20-digit token extraction). Extended integration to bill payments and digital vouchers. All 5 MobileMart services now environment-aware (UAT simulation, Staging/Production real API). Successfully deployed to staging and tested with production credentials (R20 live electricity transaction confirmed). Transaction detail modal with token display (grouped by 4 digits, MMTP-aligned styling). All services production-ready.
 
 ### **Next Priority**
-**Production Live** - Production deployed. API: https://api-mm.mymoolah.africa, Wallet: https://wallet-mm.mymoolah.africa. Verify health and wallet; seed ledger accounts (2200-01-01, 4000-10-01, 2300-10-01); optionally add OPENAI_API_KEY for AI support. Wallet build: ensure VITE_API_BASE_URL=https://api-mm.mymoolah.africa when rebuilding. See `docs/GCP_PRODUCTION_DEPLOYMENT.md`.
+**Production Live** - Production deployed. API: https://api-mm.mymoolah.africa, Wallet: https://wallet-mm.mymoolah.africa. Verify health and wallet; seed ledger accounts (2200-01-01, 4000-10-01, 2300-10-01); optionally add OPENAI_API_KEY for AI support. Wallet build: ensure VITE_API_BASE_URL=https://api-mm.mymoolah.africa when rebuilding. See `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md`.
 
 **SBSA PayShap UAT** - Obtain OneHub credentials from Standard Bank; run migrations; set STANDARDBANK_PAYSHAP_ENABLED=true and SBSA_* env vars; whitelist callback URLs; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
 
@@ -644,7 +644,7 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **Production verification** — Health check, wallet, ledger accounts (2200-01-01, 4000-10-01, 2300-10-01). See `docs/GCP_PRODUCTION_DEPLOYMENT.md`.
+1. **Production verification** — Health check, wallet, ledger accounts (2200-01-01, 4000-10-01, 2300-10-01). See `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md`.
 2. **SBSA PayShap UAT** — Obtain OneHub credentials; run migrations; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
 3. **Flash integration testing** — Test cash-out and electricity in Codespaces with production credentials.
 4. **Bill payment frontend verification** — Test overlay, search, categories, full payment flow. See `docs/BILL_PAYMENT_FRONTEND_VERIFICATION.md`.
