@@ -1,16 +1,24 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: February 19, 2026  
-**Version**: 2.11.9 - EasyPay Duplicate Fix & Partner API Docs  
+**Last Updated**: February 21, 2026  
+**Version**: 2.11.14 - Documentation Consolidation  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 12–19, 2026)**: EasyPay voucher refund duplicate fix; MMTP Partner API doc created; sandbox = staging.mymoolah.africa; Documentation consolidation phase 2. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 12–21, 2026)**: Documentation consolidation (archived ~75 docs, merged Input/2FA/Security, DOCS_CONSOLIDATION_2026); Cursor rules & agent handover slimdown; EasyPay duplicate fix; MMTP Partner API doc; sandbox = staging.mymoolah.africa. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: EasyPay Duplicate Fix & Partner API Docs (February 19, 2026)**
+## 🚀 **LATEST UPDATE: Documentation Consolidation (February 21, 2026)**
 
-### **🔄 EasyPay & Partner API**
+### **📁 Documentation Consolidation**
+- **Archived ~75 docs** to `docs/archive/` (deployment, codespaces, mobilemart, beneficiary, partner-api, referral, easypay, zapper, figma, peach-payments, security)
+- **Merged**: INPUT_FIELD_FIXES, 2FA_IMPLEMENTATION, SECURITY (badge/certificate/token)
+- **Created**: DOCS_CONSOLIDATION_2026.md (archive map)
+- **Updated**: All major docs with Feb 21 dates; session log with git push/pull status
+
+**Session log**: `docs/session_logs/2026-02-21_1900_docs-consolidation.md`
+
+### **🔄 Previous: EasyPay Duplicate Fix & Partner API Docs (February 19, 2026)**
 - **EasyPay duplicate fix**: Dashboard transaction list no longer duplicates EasyPay voucher refund rows (EPVOUCHER-REF/EXP). Second grouping loop now iterates over `otherTransactions` only.
 - **MMTP Partner API doc**: Created `docs/MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md`; sandbox URL set to staging.mymoolah.africa.
 

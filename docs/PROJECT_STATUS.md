@@ -1,16 +1,19 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: February 19, 2026  
-**Version**: 2.11.9 - EasyPay Duplicate Fix & Partner API Docs  
+**Last Updated**: February 21, 2026  
+**Version**: 2.11.14 - Documentation Consolidation  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA PAYSHAP UAT READY** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. All 80+ migrations applied to Production. EasyPay voucher refund duplicate fix (Feb 19). MMTP Partner API doc created; sandbox = staging.mymoolah.africa. SBSA PayShap UAT ready (awaiting OneHub credentials). Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC plan, Watch to Earn, EasyPay Top-up, and 11-language support deployed.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. All 80+ migrations applied to Production. Documentation consolidation (Feb 21): archived ~75 docs to `docs/archive/`, merged Input/2FA/Security, created DOCS_CONSOLIDATION_2026.md. EasyPay voucher refund duplicate fix (Feb 19). MMTP Partner API doc created; sandbox = staging.mymoolah.africa. SBSA PayShap UAT ready (awaiting OneHub credentials). Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC plan, Watch to Earn, EasyPay Top-up, and 11-language support deployed.
 
-### **📋 Latest Achievement: EasyPay Duplicate Fix & Partner API Docs (February 19, 2026)** ✅ **COMPLETE**
+### **📋 Latest Achievement: Documentation Consolidation (February 21, 2026)** ✅ **COMPLETE**
+Archived ~75 docs to `docs/archive/` (deployment, codespaces, mobilemart, beneficiary, partner-api, referral, easypay, zapper, figma, peach-payments, security). Merged INPUT_FIELD_FIXES, 2FA_IMPLEMENTATION, SECURITY (badge/certificate/token). Created DOCS_CONSOLIDATION_2026.md. Session log: `docs/session_logs/2026-02-21_1900_docs-consolidation.md`.
+
+### **📋 Previous: EasyPay Duplicate Fix & Partner API Docs (February 19, 2026)** ✅ **COMPLETE**
 Fixed dashboard transaction list duplicate for EasyPay voucher refunds (EPVOUCHER-REF/EXP). Created `docs/MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md`; sandbox URL = staging.mymoolah.africa. Session log: `docs/session_logs/2026-02-19_1100_easypay-duplicate-fix-partner-api-docs.md`.
 
 ### **📋 Recent: Production Live (Feb 15–16, 2026)**
