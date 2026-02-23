@@ -43,6 +43,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | API contracts | `docs/API_DOCUMENTATION.md` |
 | Recent chat context | `docs/session_logs/` (2-3 most recent) |
 | Historical updates & integrations | `docs/archive/agent_handover_history.md` |
+| Extended rules (model selection, examples) | `docs/archive/CURSOR_RULES_EXTENDED.md` |
 
 ---
 

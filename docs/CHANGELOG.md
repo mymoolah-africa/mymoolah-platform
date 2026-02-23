@@ -1,5 +1,19 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-21 - 📜 Cursor Rules Slimdown ✅
+
+### **Session Overview**
+Slimmed CURSOR_2.0_RULES_FINAL.md from 348 to 108 lines (~69% reduction). Moved verbose content to archive.
+
+### **Changes**
+- **docs/CURSOR_2.0_RULES_FINAL.md**: Condensed to essentials; removed repetition (commit+push stated 10+ times → 1); merged Quick Pre-Work into Session Start; Rule 6A code examples moved to archive
+- **docs/archive/CURSOR_RULES_EXTENDED.md**: Created; contains Rule 6A code examples, full Rule 4 model selection, full Rule 5 git workflow
+
+### **Session Log**
+- `docs/session_logs/2026-02-21_1830_cursor-rules-slimdown.md`
+
+---
+
 ## 2026-02-21 - 📚 Agent Handover Slimdown ✅
 
 ### **Session Overview**
