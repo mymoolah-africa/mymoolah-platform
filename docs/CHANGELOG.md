@@ -1,5 +1,19 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-21 - 📚 Agent Handover Slimdown ✅
+
+### **Session Overview**
+Slimmed agent handover from ~2,600 lines (~40k tokens) to ~670 lines (~15k tokens). Moved historical content to archive.
+
+### **Changes**
+- **docs/agent_handover.md**: Slimmed to essentials; updated TOC, document map, current session summary, recent updates (14 days), reconciliation (brief), next priorities, recommendations
+- **docs/archive/agent_handover_history.md**: Created; contains December 2025 updates, integration details (Peach, Zapper, MMAP, Figma), previous session summaries
+
+### **Session Log**
+- `docs/session_logs/2026-02-21_1800_agent-handover-slimdown.md`
+
+---
+
 ## 2026-02-19 - 🔧 EasyPay Duplicate Fix & Partner API Docs ✅
 
 ### **Session Overview**
