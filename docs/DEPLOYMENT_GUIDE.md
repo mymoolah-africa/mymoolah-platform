@@ -9,15 +9,15 @@
 | Document | Purpose |
 |----------|---------|
 | **This file** | Main deployment procedures, local/cloud setup |
-| [GCP_PRODUCTION_DEPLOYMENT.md](./GCP_PRODUCTION_DEPLOYMENT.md) | Production deployment (api-mm, wallet) |
-| [DEPLOYMENT_CHECKLIST.md](./DEPLOYMENT_CHECKLIST.md) | Pre-deployment checklist |
-| [GCP_DEPLOYMENT_QUICK_START.md](./GCP_DEPLOYMENT_QUICK_START.md) | Quick start for GCP |
-| [FRESH_STAGING_DEPLOYMENT_GUIDE.md](./FRESH_STAGING_DEPLOYMENT_GUIDE.md) | Fresh staging setup |
-| [WALLET_DEPLOYMENT_GUIDE.md](./WALLET_DEPLOYMENT_GUIDE.md) | Wallet-specific deployment |
-| [DEVELOPMENT_DEPLOYMENT_WORKFLOW.md](./DEVELOPMENT_DEPLOYMENT_WORKFLOW.md) | Dev → deploy workflow |
-| [GCP_DEPLOYMENT_STATUS.md](./GCP_DEPLOYMENT_STATUS.md) | Deployment status |
-| [GCP_STAGING_DEPLOYMENT.md](./GCP_STAGING_DEPLOYMENT.md) | Staging deployment |
-| [GCP_STAGING_DEPLOYMENT_STATUS.md](./GCP_STAGING_DEPLOYMENT_STATUS.md) | Staging status |
+| [GCP_PRODUCTION_DEPLOYMENT.md](./archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md) | Production deployment (api-mm, wallet) |
+| [DEPLOYMENT_CHECKLIST.md](./archive/deployment/DEPLOYMENT_CHECKLIST.md) | Pre-deployment checklist |
+| [GCP_DEPLOYMENT_QUICK_START.md](./archive/deployment/GCP_DEPLOYMENT_QUICK_START.md) | Quick start for GCP |
+| [FRESH_STAGING_DEPLOYMENT_GUIDE.md](./archive/deployment/FRESH_STAGING_DEPLOYMENT_GUIDE.md) | Fresh staging setup |
+| [WALLET_DEPLOYMENT_GUIDE.md](./archive/deployment/WALLET_DEPLOYMENT_GUIDE.md) | Wallet-specific deployment |
+| [DEVELOPMENT_DEPLOYMENT_WORKFLOW.md](./archive/DEVELOPMENT_DEPLOYMENT_WORKFLOW.md) | Dev → deploy workflow |
+| [GCP_DEPLOYMENT_STATUS.md](./archive/deployment/GCP_DEPLOYMENT_STATUS.md) | Deployment status |
+| [GCP_STAGING_DEPLOYMENT.md](./archive/deployment/GCP_STAGING_DEPLOYMENT.md) | Staging deployment |
+| [GCP_STAGING_DEPLOYMENT_STATUS.md](./archive/deployment/GCP_STAGING_DEPLOYMENT_STATUS.md) | Staging status |
 
 ---
 

@@ -28,7 +28,7 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Development Environment**: GitHub Codespaces (UAT credentials, test accounts)
 - **Staging Environment**: Google Cloud Services Staging (Production credentials, test accounts) - **Recommended**
 - **Production Environment**: Google Cloud Services Production (Production credentials, real customers)
-- **See:** `DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow documentation
+- **See:** `docs/archive/DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow (environments, schema policy, staging/production phases)
 
 ---
 

@@ -275,9 +275,22 @@ node scripts/test-zapper-credentials.js
 
 ---
 
+## 🚀 **START SERVICES**
+
+**Backend** (auto-starts on open via postStart). Manual: `npm run start:cs-ip` from project root.
+
+**Frontend**: `cd mymoolah-wallet-frontend && npm run dev` (port 3000).
+
+**DB Connection**: Use `./scripts/one-click-restart-and-start.sh` — starts Redis, Cloud SQL Auth Proxy, and backend. See `docs/DATABASE_CONNECTION_GUIDE.md` for full DB procedures.
+
+Set `CORS_ORIGINS` in backend `.env` to your 3000 forwarded URL. Set `VITE_API_BASE_URL` in frontend `.env.local` to your backend forwarded host.
+
+---
+
 ## 📚 **RELATED DOCUMENTATION**
 
-- `docs/GITHUB_CODESPACES_SETUP.md` - Codespaces setup guide
+- `docs/archive/codespaces/GITHUB_CODESPACES_SETUP.md` - Full setup guide
+- `docs/archive/codespaces/CODESPACES_ENV_RECOVERY.md` - Env recovery procedures
 - `docs/agent_handover.md` - Agent handover documentation
 - `docs/ZAPPER_UAT_TEST_REPORT.md` - Zapper UAT test results
 - `scripts/test-zapper-uat-complete.js` - Comprehensive Zapper test suite

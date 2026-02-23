@@ -61,7 +61,7 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 ### **🔌 API & Integration**
 - [**API_DOCUMENTATION.md**](./API_DOCUMENTATION.md) - Complete API reference
 - [**MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md**](./MMTP_PARTNER_API_IMPLEMENTATION_PLAN.md) - Partner API plan (sandbox: staging.mymoolah.africa)
-- [**FIGMA_API_WIRING.md**](./FIGMA_API_WIRING.md) - Frontend-backend integration
+- [**FIGMA_INTEGRATION_COMPLETE.md**](./FIGMA_INTEGRATION_COMPLETE.md) - Frontend integration; [FIGMA_API_WIRING](./archive/figma/FIGMA_API_WIRING.md) in archive
 - [**mojaloop-integration.md**](./mojaloop-integration.md) - Mojaloop compliance details
 
 ---
@@ -88,10 +88,7 @@ MyMoolah is a **full Treasury Platform** (wallet + general ledger + integrations
 ## 🔒 **SECURITY & COMPLIANCE**
 
 ### **🛡️ Security Implementation**
-- [**SECURITY.md**](./SECURITY.md) - Security overview and policies
-- [**SECURE_TOKEN_IMPLEMENTATION.md**](./SECURE_TOKEN_IMPLEMENTATION.md) - Token security details
-- [**SECURITY_BADGE.md**](./SECURITY_BADGE.md) - Security compliance status
-- [**SECURITY_COMPLIANCE_CERTIFICATE.md**](./SECURITY_COMPLIANCE_CERTIFICATE.md) - Compliance certification
+- [**SECURITY.md**](./SECURITY.md) - Security overview, badge, certificate, token (consolidated)
 
 ### **📋 KYC & Compliance**
 - [**KYC_SYSTEM.md**](./KYC_SYSTEM.md) - KYC verification system

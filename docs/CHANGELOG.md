@@ -1,5 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-21 - 📁 Documentation Consolidation ✅
+
+### **Session Overview**
+Consolidated and archived ~75 docs per recommendations. Reduced docs root from ~165 to ~90 files.
+
+### **Changes**
+- **Archived**: Documentation meta, branch/cleanup, Peach (6), deployment (9), Codespaces (5), MobileMart (6), Beneficiary (5), Partner API (2), Referral (5), EasyPay (4), Zapper (5), Figma (2), Security sub-docs (3), Input field originals, 2FA originals
+- **Merged**: INPUT_FIELD_FIXES.md (from FINAL + Audit), 2FA_IMPLEMENTATION.md (from Best Practices + Preservation), SECURITY.md (added badge/certificate/token sections)
+- **Created**: DOCS_CONSOLIDATION_2026.md (archive map)
+- **Updated**: DEPLOYMENT_GUIDE index, CODESPACES_TESTING_REQUIREMENT, index.md, agent_handover paths
+
+### **Session Log**
+- `docs/session_logs/2026-02-21_1900_docs-consolidation.md`
+
+---
+
 ## 2026-02-21 - 📜 Cursor Rules Slimdown ✅
 
 ### **Session Overview**

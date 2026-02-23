@@ -1182,6 +1182,20 @@ node scripts/test-tls.js
 
 ---
 
+## 🏅 **SECURITY BADGE & COMPLIANCE CERTIFICATE**
+
+**Badge**: Mojaloop Security Compliant (Certificate ID: MM-SEC-2025-001). HTML, Markdown, and SVG badge code available in `docs/archive/SECURITY_BADGE.md`.
+
+**Compliance Certificate**: Helmet.js headers, rate limiting, input validation, secure logging, CORS—all implemented and tested. Full certificate details in `docs/archive/SECURITY_COMPLIANCE_CERTIFICATE.md`.
+
+---
+
+## 🔑 **SECURE TOKEN (Mercury Integration)**
+
+HMAC-SHA256 payload integrity for Mercury payment system. Process: remove secureToken from payload → stringify → prepend subscriber key → HMAC-SHA256 hash. Full implementation details in `docs/archive/SECURE_TOKEN_IMPLEMENTATION.md`.
+
+---
+
 ## 📞 **SECURITY CONTACT**
 
 ### **Security Team**
