@@ -72,10 +72,12 @@ function buildPain013(params) {
   const now = new Date();
   const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
-  // Debtor account — direct bank account (PBAC), no proxy
+  // Debtor account for RTP (PBAC — direct bank account).
+  // SBSA Pain.013 DbtrAcct uses Othr.Id for direct account numbers,
+  // matching the same pattern as RPP Pain.001 creditor/debtor accounts.
   const DbtrAcct = {
     Id: {
-      Item: {
+      Othr: {
         Id: payerAccountNumber,
       },
     },
