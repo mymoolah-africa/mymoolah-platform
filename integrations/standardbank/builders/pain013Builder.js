@@ -85,13 +85,22 @@ function buildPain013(params) {
     throw new Error('RTP requires payerMobileNumber (payerProxy) or payerAccountNumber as proxy identifier');
   }
 
-  // Normalise to SBSA mobile format: +27-XXXXXXXXX
+  // Normalise proxy identifier for SBSA
+  // SBSA EDRIL error indicates the proxy Id must be the 10-digit local SA mobile (0XXXXXXXXX)
+  // Postman sample shows "+27-585125485" but that is a 9-digit test number (non-standard)
+  // For real SA mobiles (10 digits with leading 0): send as "0XXXXXXXXX"
+  // For SBSA sandbox test numbers (9 digits): send as-is with +27- prefix
   const digits = proxyValue.replace(/\D/g, '');
   let normalizedProxy;
-  if (digits.length >= 9 && (digits.startsWith('27') || digits.startsWith('0'))) {
-    // Mobile number — format as +27-XXXXXXXXX
-    const local = digits.startsWith('27') ? digits.slice(2) : digits.slice(1);
-    normalizedProxy = `+27-${local}`;
+  if (digits.startsWith('27') && digits.length === 11) {
+    // +27XXXXXXXXX → 0XXXXXXXXX (10-digit local format)
+    normalizedProxy = `0${digits.slice(2)}`;
+  } else if (digits.startsWith('0') && digits.length === 10) {
+    // Already 0XXXXXXXXX
+    normalizedProxy = digits;
+  } else if (digits.startsWith('27') && digits.length === 10) {
+    // 9-digit sandbox number with country code: use +27-XXXXXXXXX format
+    normalizedProxy = `+27-${digits.slice(2)}`;
   } else {
     // Account number or other identifier — use as-is
     normalizedProxy = proxyValue;

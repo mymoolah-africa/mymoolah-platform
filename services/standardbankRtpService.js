@@ -77,7 +77,9 @@ async function initiateRtpRequest(params) {
     payerName: payerName || 'Payer',
     payerAccountNumber: payerAccountNumber || undefined,
     payerProxy: payerMobileNumber || undefined,
-    payerBankCode: payerBankCode || undefined,
+    // DbtrAgt must use 'bankc' (SBSA sandbox placeholder) — real branch codes cause EDRIL rejection
+    // In production this would be the payer's actual bank branch code
+    payerBankCode: process.env.STANDARDBANK_ENVIRONMENT === 'uat' ? 'bankc' : (payerBankCode || 'bankc'),
     remittanceInfo: description || reference || merchantTransactionId,
     expiryMinutes,
   });
