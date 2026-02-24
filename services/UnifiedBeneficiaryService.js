@@ -169,15 +169,28 @@ class UnifiedBeneficiaryService {
       };
 
       switch (serviceType) {
-        case 'payment':
+        case 'payment': {
+          // Build paymentMethods from JSONB first; if empty, fall back to normalized paymentMethodRecords
+          const beneficiaryData = beneficiary.toJSON ? beneficiary.toJSON() : beneficiary;
+          let resolvedPaymentMethods = beneficiaryData.paymentMethods;
+
+          const hasLegacy = resolvedPaymentMethods &&
+            (resolvedPaymentMethods.mymoolah ||
+              (Array.isArray(resolvedPaymentMethods.bankAccounts) && resolvedPaymentMethods.bankAccounts.length > 0));
+
+          if (!hasLegacy && Array.isArray(beneficiaryData.paymentMethodRecords) && beneficiaryData.paymentMethodRecords.length > 0) {
+            resolvedPaymentMethods = this.normalizedToLegacyPaymentMethods(beneficiaryData.paymentMethodRecords);
+          }
+
           return {
             ...base,
-            paymentMethods: beneficiary.paymentMethods,
+            paymentMethods: resolvedPaymentMethods,
             // Legacy compatibility
-            accountType: this.getLegacyAccountType(beneficiary.paymentMethods, beneficiary.accountType),
-            identifier: this.getPrimaryIdentifier(beneficiary.paymentMethods, base),
-            bankName: this.getBankName(beneficiary.paymentMethods, beneficiary.bankName)
+            accountType: this.getLegacyAccountType(resolvedPaymentMethods, beneficiary.accountType),
+            identifier: this.getPrimaryIdentifier(resolvedPaymentMethods, base),
+            bankName: this.getBankName(resolvedPaymentMethods, beneficiary.bankName)
           };
+        }
           
         case 'airtime-data':
           // Transform serviceAccountRecords to accounts array format for frontend
