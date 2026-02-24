@@ -119,13 +119,23 @@ router.post('/:beneficiaryId/services', authenticateToken, async (req, res) => {
       });
     }
 
-    // Use addOrUpdateServiceAccount (normalized table approach) instead of addServiceToBeneficiary
-    // This properly supports multiple service accounts per beneficiary using the BeneficiaryServiceAccount table
-    await unifiedBeneficiaryService.addOrUpdateServiceAccount(userId, {
-      beneficiaryId: parseInt(beneficiaryId),
-      serviceType,
-      serviceData
-    });
+    // Route to correct persistence method based on serviceType:
+    // - mymoolah / bank / mobile_money → BeneficiaryPaymentMethod table
+    // - everything else (airtime, data, electricity, biller, usdc, international, etc.) → BeneficiaryServiceAccount table
+    const paymentMethodTypes = ['mymoolah', 'bank', 'mobile_money'];
+    if (paymentMethodTypes.includes(serviceType)) {
+      await unifiedBeneficiaryService.addOrUpdatePaymentMethod(userId, {
+        beneficiaryId: parseInt(beneficiaryId),
+        serviceType,
+        serviceData
+      });
+    } else {
+      await unifiedBeneficiaryService.addOrUpdateServiceAccount(userId, {
+        beneficiaryId: parseInt(beneficiaryId),
+        serviceType,
+        serviceData
+      });
+    }
 
     res.json({
       success: true,
