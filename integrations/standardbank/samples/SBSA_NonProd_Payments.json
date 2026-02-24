@@ -1,0 +1,288 @@
+{
+  "info": {
+    "name": "MyMoolah - Non-prod Payments",
+    "description": null,
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Initiate Payment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-IBM-Client-Id",
+            "value": "{{ibm_client_id}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-IBM-Client-Secret",
+            "value": "{{ibm_client_secret}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "session-ip",
+            "value": "0.0.0.0",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "x-fapi-interaction-id",
+            "value": "{{$guid}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-Callback-Url",
+            "value": "https://staging.mymoolah.africa/api/v1/standardbank/callback",
+            "disabled": true,
+            "type": "default"
+          },
+          {
+            "key": "X-Realtime-Callback-Url",
+            "value": "https://staging.mymoolah.africa/api/v1/standardbank/realtime-callback",
+            "disabled": true,
+            "type": "default"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": {
+            "key": "token",
+            "value": "{{auth_token}}",
+            "type": "string"
+          }
+        },
+        "description": "",
+        "url": {
+          "raw": "{{base_url}}",
+          "protocol": "",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"grpHdr\": {\n        \"msgId\": \"{{uuidOne}}\",\n        \"creDtTm\": \"2025-01-07T12:22:53.1234+00:00\",\n        \"nbOfTxs\": 1,\n        \"ctrlSum\": 1.00,\n        \"initgPty\": {\n            \"nm\": \"Demo\",\n            \"id\": {\n                \"orgId\": {\n                    \"othr\": [\n                        {\n                            \"id\": \"2019/0519463/07\",\n                            \"issr\": \"CIPC\"\n                        }\n                    ]\n                }\n            }\n        }\n    },\n    \"pmtInf\": [\n        {\n            \"pmntInfId\": \"Demo batch\",\n            \"reqdExctnDt\": {\n                \"dtTm\": \"2024-04-11T14:33:14.8326209+00:00\"\n            },\n            \"dbtr\": {\n\n                    \"id\": {\n                        \"othr\": {\n                            \"id\": \"000602739172\"\n                        }\n                    },\n                    \"nm\": \"Demo\"\n                \n            },\n            \"dbtrAcct\": {\n                \"id\": {\n                    \"othr\": {\n                        \"id\": \"000602739172\"\n                    }\n                },\n                \"nm\": \"Demo\"\n            },\n            \"cdtTrfTxInf\": [\n                {\n                    \"pmtId\": {\n                        \"instrId\": \"string\",\n                        \"endToEndId\": \"{{uuidOne}}\",\n                        \"uetr\": \"{{$guid}}\"\n                    },\n                    \"pmtTpInf\": {\n                        \"lclInstrm\": {\n                            \"prtry\": \"PBAC\"\n                        }\n                    },\n                    \"amt\": {\n                        \"instdAmt\": {\n                            \"value\": 1.00\n                        }\n                    },\n                    \"cdtrAgt\": {\n                        \"finInstnId\": {\n                            \"pstlAdr\": {\n                                \"ctry\": \"ZA\"\n                            }\n                        },\n                        \"brnchId\": {\n                            \"id\": \"051001\"\n                        }\n                    },\n                    \"brnchId\": {\n                        \"id\": \"051001\"\n                    },\n                    \"cdtr\": {\n                        \"nm\": \"test\"\n                    },\n                    \"cdtrAcct\": {\n                        \"id\": {\n                            \"othr\": {\n                                \"id\": \"411111111002\"\n                            }\n                        },\n                        \"nm\": \"test\",\n                        \"prxy\": {\n                            \"tp\": {\n                                \"prtry\": \"MBNO\"\n                            },\n                            \"id\": {\n                                \"id\": \"+27-832502098\"\n                            }\n                        }\n                    },\n                    \"rmtInf\": {\n                        \"strd\": [\n                            {\n                                \"cdtrRefInf\": {\n                                    \"ref\": \"Creditor reference\"\n                                }\n                            }\n                        ]\n                    },\n                    \"splmtryData\": [\n                        {\n                            \"plcAndNm\": \"BatchReference\",\n                            \"envlp\": {\n                                \"any\": \"Demo Test\"\n                            }\n                        },\n                        {\n                            \"plcAndNm\": \"DbtStmNarr\",\n                            \"envlp\": {\n                                \"any\": \"Demo Test\"\n                            }\n                        }\n                    ]\n                }\n            ]\n        }\n    ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              "const generatedGuidOne = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidOne = generatedGuidOne.replace(/-/g, '');",
+              "pm.variables.set(\"uuidOne\", uuidOne);",
+              " ",
+              "const generatedGuidTwo = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidTwo = generatedGuidTwo.replace(/-/g, '');",
+              "pm.variables.set(\"uuidTwo\", uuidTwo);",
+              " ",
+              "const generatedGuidThree = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidThree = generatedGuidThree.replace(/-/g, '');",
+              "pm.variables.set(\"uuidThree\", uuidThree);",
+              " ",
+              "const generatedGuidFour = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidFour = generatedGuidFour.replace(/-/g, '');",
+              "pm.variables.set(\"uuidFour\", uuidFour);",
+              " ",
+              "const generatedGuidFive = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidFive = generatedGuidFive.replace(/-/g, '');",
+              "pm.variables.set(\"uuidFive\", uuidFive);",
+              " ",
+              "const generatedGuidSix = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidSix = generatedGuidSix.replace(/-/g, '');",
+              "pm.variables.set(\"uuidSix\", uuidSix);",
+              " ",
+              "const generatedGuidSeven = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidSeven = generatedGuidSeven.replace(/-/g, '');",
+              "pm.variables.set(\"uuidSeven\", uuidSeven);",
+              " ",
+              "const generatedGuidEight = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidEight = generatedGuidEight.replace(/-/g, '');",
+              "pm.variables.set(\"uuidEight\", uuidEight);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "payment-initiation status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-IBM-Client-Id",
+            "value": "{{ibm_client_id}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-IBM-Client-Secret",
+            "value": "{{ibm_client_secret}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "Session-Ip",
+            "value": "0.0.0.0",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "x-fapi-interaction-id",
+            "value": "{{$guid}}",
+            "disabled": false,
+            "type": "default"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": {
+            "key": "token",
+            "value": "{{auth_token}}",
+            "type": "string"
+          }
+        },
+        "description": "",
+        "url": {
+          "raw": "{{base_url}}/949fc69a776a4057a132a64510dc2911",
+          "protocol": "",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "949fc69a776a4057a132a64510dc2911"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "Ping Auth",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "https://enterprisestssit.standardbank.co.za/as/token.oauth2",
+          "protocol": "https",
+          "host": [
+            "enterprisestssit",
+            "standardbank",
+            "co",
+            "za"
+          ],
+          "path": [
+            "as",
+            "token.oauth2"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "grant_type",
+              "value": "client_credentials",
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "client_id",
+              "value": "{{client_id}}",
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "client_secret",
+              "value": "{{client_secret}}",
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "scope",
+              "value": "rpp.payments.post rpp.payments.get",
+              "disabled": false,
+              "type": "default"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              "pm.variables.set(\"auth_token\", pm.response.json().access_token);"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "client_id",
+      "value": "a5370231-aa5f-4c33-b313-6c8e03271c28",
+      "type": "default"
+    },
+    {
+      "key": "client_secret",
+      "value": "S3cr3t-311de-fd25d",
+      "type": "default"
+    },
+    {
+      "key": "base_url",
+      "value": "https://api-gatewaynp.standardbank.co.za/npextorg/extnonprod/rapid-payments/api/payments/initiation",
+      "type": "default"
+    },
+    {
+      "key": "ibm_client_id",
+      "value": "a98f3c8dd655b4f3b27c1c02ec495b08",
+      "type": "default"
+    },
+    {
+      "key": "ibm_client_secret",
+      "value": "1fbd5009d748e31e08620f9ef29df524",
+      "type": "default"
+    },
+    {
+      "key": "$guid",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "uuidOne",
+      "value": "",
+      "type": "default"
+    }
+  ]
+}

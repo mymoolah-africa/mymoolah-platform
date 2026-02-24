@@ -1,0 +1,240 @@
+{
+  "info": {
+    "name": "MyMoolah - Non-prod Proxy Resolution",
+    "description": null,
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get Proxy Resolution",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-IBM-Client-Id",
+            "value": "{{ibm_client_id}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-IBM-Client-Secret",
+            "value": "{{ibm_client_secret}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "x-fapi-interaction-id",
+            "value": "{{$guid}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "Session-Ip",
+            "value": "127.0.0.1",
+            "disabled": false,
+            "type": "default"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": {
+            "key": "token",
+            "value": "{{auth_token}}",
+            "type": "string"
+          }
+        },
+        "description": "",
+        "url": {
+          "raw": "{{base_url}}/d210940c-45db-426f-bc0b-8f3bfd3d36ec",
+          "protocol": "",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "d210940c-45db-426f-bc0b-8f3bfd3d36ec"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "Ping Auth",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "https://enterprisestssit.standardbank.co.za/as/token.oauth2",
+          "protocol": "https",
+          "host": [
+            "enterprisestssit",
+            "standardbank",
+            "co",
+            "za"
+          ],
+          "path": [
+            "as",
+            "token.oauth2"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "grant_type",
+              "value": "client_credentials",
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "client_id",
+              "value": "{{client_id}}",
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "client_secret",
+              "value": "{{client_secret}}",
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "scope",
+              "value": "rpp.proxy.post rpp.proxy.get",
+              "disabled": false,
+              "type": "default"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              "pm.variables.set(\"auth_token\", pm.response.json().access_token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Proxy Resolution",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-IBM-Client-Id",
+            "value": "{{ibm_client_id}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-IBM-Client-Secret",
+            "value": "{{ibm_client_secret}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "x-fapi-interaction-id",
+            "value": "{{$guid}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-B3-TraceId",
+            "value": "1234567890abcdef1234567890abcded",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-B3-SpanId",
+            "value": "1234567890abcded",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "Session-Ip",
+            "value": "127.0.0.1",
+            "disabled": false,
+            "type": "default"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": {
+            "key": "token",
+            "value": "{{auth_token}}",
+            "type": "string"
+          }
+        },
+        "description": "",
+        "url": {
+          "raw": "{{base_url}}",
+          "protocol": "",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"ProxyHandle\": \"+27-790819115\",\n    \"Domain\": \"standardbnk\",\n    \"ProxyType\": \"CellphoneNumber\",\n    \"CallbackUrl\": \"https://staging.mymoolah.africa/api/v1/standardbank/callback\",\n    \"Uetr\": \"{{$guid}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "client_id",
+      "value": "a5370231-aa5f-4c33-b313-6c8e03271c28",
+      "type": "default"
+    },
+    {
+      "key": "client_secret",
+      "value": "S3cr3t-311de-fd25d",
+      "type": "default"
+    },
+    {
+      "key": "base_url",
+      "value": "https://api-gatewaynp.standardbank.co.za/npextorg/extnonprod/proxy-resolution/api/proxy-resolutions",
+      "type": "default"
+    },
+    {
+      "key": "ibm_client_id",
+      "value": "a98f3c8dd655b4f3b27c1c02ec495b08",
+      "type": "default"
+    },
+    {
+      "key": "ibm_client_secret",
+      "value": "1fbd5009d748e31e08620f9ef29df524",
+      "type": "default"
+    },
+    {
+      "key": "$guid",
+      "value": "",
+      "type": "default"
+    }
+  ]
+}

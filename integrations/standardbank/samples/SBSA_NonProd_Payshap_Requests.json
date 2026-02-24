@@ -1,0 +1,294 @@
+{
+  "info": {
+    "name": "MyMoolah - Non-Prod Payshap Requests",
+    "description": null,
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Initiate Payshap Request",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "X-IBM-Client-Id",
+            "value": "{{ibm_client_id}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-IBM-Client-Secret",
+            "value": "{{ibm_client_secret}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "Session-Ip",
+            "value": "0.0.0.0",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "x-fapi-interaction-id",
+            "value": "{{$guid}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-Callback-Url",
+            "value": "https://staging.mymoolah.africa/api/v1/standardbank/rtp-callback",
+            "disabled": true,
+            "type": "default"
+          },
+          {
+            "key": "X-Realtime-Callback-Url",
+            "value": "https://staging.mymoolah.africa/api/v1/standardbank/rtp-realtime-callback",
+            "disabled": true,
+            "type": "default"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": {
+            "key": "token",
+            "value": "{{auth_token}}",
+            "type": "string"
+          }
+        },
+        "description": "",
+        "url": {
+          "raw": "{{base_url}}",
+          "protocol": "",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"GrpHdr\": {\n        \"MsgId\": \"{{uuidOne}}\",\n        \"CreDtTm\": \"2025-01-14T11:06:26.4093061Z\",\n        \"NbOfTxs\": \"3\",\n        \"InitgPty\": {\n            \"Nm\": \"CIB RPP Channel\",\n            \"Id\": {\n                \"OrgId\": {\n                    \"Othr\": [\n                        {\n                            \"Id\": \"2023/845190/07\"\n                        }\n                    ]\n                }\n            }\n        }\n    },\n    \"SplmtryData\": {\n        \"PlcAndNm\": \"Test\"\n    },\n    \"PmtInf\": [\n        {\n            \"PmtInfId\": \"c775a629568e4d9dab3ab26500b704cc\",\n            \"PmtMtd\": \"TRF\",\n            \"ReqdAdvcTp\": \"\",\n            \"PmtTpInf\": {},\n            \"ReqdExctnDt\": {\n                \"DtTm\": \"2025-01-14T11:06:26.4138706Z\"\n            },\n            \"XpryDt\": {\n                \"DtTm\": \"2026-03-28T10:35:16.7884398\"\n            },\n            \"Dbtr\": {\n                \"Nm\": \"Sample\"\n            },\n            \"DbtrAcct\": {\n                \"Id\": {\n                    \"Item\": {\n                        \"Id\": \"Proxy\"\n                    }\n                },\n                \"Nm\": \"Sample Legal Name\",\n                \"Prxy\": {\n                    \"Tp\": {\n                        \"Item\": \"MOBILE_NUMBER\"\n                    },\n                    \"Id\": \"+27-585125485\"\n                }\n            },\n            \"DbtrAgt\": {\n                \"FinInstnId\": {\n                    \"Othr\": {\n                        \"Id\": \"bankc\"\n                    }\n                }\n            },\n            \"CdtTrfTx\": [\n                {\n                    \"PmtId\": {\n                        \"InstrId\": \"1\",\n                        \"EndToEndId\": \"{{uuidOne}}\",\n                        \"UETR\": \"{{$guid}}\"\n                    },\n                    \"PmtTpInf\": {},\n                    \"PmtCond\": {\n                        \"AmtModAllwd\": true,\n                        \"EarlyPmtAllwd\": false,\n                        \"GrntedPmtReqd\": false\n                    },\n                    \"Amt\": {\n                        \"Item\": {\n                            \"Value\": \"100.00\"\n                        }\n                    },\n                    \"ChrgBr\": \"SLEV\",\n                    \"CdtrAgt\": {\n                        \"FinInstnId\": {\n                            \"Othr\": {\n                                \"Id\": \"051001\"\n                            }\n                        },\n                        \"BrnchId\": {\n                            \"Id\": \"Branch Id\"\n                        }\n                    },\n                    \"Cdtr\": {\n                        \"Nm\": \"Standard Bank\",\n                        \"Id\": {\n                            \"OrgId\": {\n                                \"Othr\": [\n                                    {\n                                        \"Id\": \"000/0000/0002\",\n                                        \"Issr\": \"CIPC\"\n                                    },\n                                    {\n                                        \"Id\": \"000000002\",\n                                        \"Issr\": \"SBSA\"\n                                    }\n                                ]\n                            }\n                        }\n                    },\n                    \"CdtrAcct\": {\n                        \"Id\": {\n                            \"Item\": {\n                                \"Id\": \"000602739172\"\n                            }\n                        },\n                        \"Nm\": \"Standard Bank\"\n                    },\n                    \"RmtInf\": {\n                        \"Strd\": [\n                            {\n                                \"RfrdDocAmt\": {\n                                    \"DuePyblAmt\": {\n                                        \"Value\": \"99.00\"\n                                    }\n                                },\n                                \"CdtrRefInf\": {\n                                    \"Ref\": \"Test 1\"\n                                }\n                            }\n                        ]\n                    }\n                }\n            ]\n        },\n        {\n            \"PmtInfId\": \"c775a629568e4d9dab3ab26500b704cc\",\n            \"PmtMtd\": \"TRF\",\n            \"ReqdAdvcTp\": \"\",\n            \"PmtTpInf\": {},\n            \"ReqdExctnDt\": {\n                \"DtTm\": \"2025-01-14T11:06:26.4138706Z\"\n            },\n            \"XpryDt\": {\n                \"DtTm\": \"2026-03-28T10:35:16.7884398\"\n            },\n            \"Dbtr\": {\n                \"Nm\": \"Sample\"\n            },\n            \"DbtrAcct\": {\n                \"Id\": {\n                    \"Item\": {\n                        \"Id\": \"Proxy\"\n                    }\n                },\n                \"Nm\": \"Sample Legal Name\",\n                \"Prxy\": {\n                    \"Tp\": {\n                        \"Item\": \"MOBILE_NUMBER\"\n                    },\n                    \"Id\": \"+27-585125485\"\n                }\n            },\n            \"DbtrAgt\": {\n                \"FinInstnId\": {\n                    \"Othr\": {\n                        \"Id\": \"bankc\"\n                    }\n                }\n            },\n            \"CdtTrfTx\": [\n                {\n                    \"PmtId\": {\n                        \"InstrId\": \"1\",\n                        \"EndToEndId\": \"{{uuidOne}}\",\n                        \"UETR\": \"{{$guid}}\"\n                    },\n                    \"PmtTpInf\": {},\n                    \"PmtCond\": {\n                        \"AmtModAllwd\": true,\n                        \"EarlyPmtAllwd\": false,\n                        \"GrntedPmtReqd\": false\n                    },\n                    \"Amt\": {\n                        \"Item\": {\n                            \"Value\": \"100.00\"\n                        }\n                    },\n                    \"ChrgBr\": \"SLEV\",\n                    \"CdtrAgt\": {\n                        \"FinInstnId\": {\n                            \"Othr\": {\n                                \"Id\": \"051001\"\n                            }\n                        },\n                        \"BrnchId\": {\n                            \"Id\": \"Branch Id\"\n                        }\n                    },\n                    \"Cdtr\": {\n                        \"Nm\": \"Standard Bank\",\n                        \"Id\": {\n                            \"OrgId\": {\n                                \"Othr\": [\n                                    {\n                                        \"Id\": \"000/0000/0002\",\n                                        \"Issr\": \"CIPC\"\n                                    },\n                                    {\n                                        \"Id\": \"000000002\",\n                                        \"Issr\": \"SBSA\"\n                                    }\n                                ]\n                            }\n                        }\n                    },\n                    \"CdtrAcct\": {\n                        \"Id\": {\n                            \"Item\": {\n                                \"Id\": \"000602739172\"\n                            }\n                        },\n                        \"Nm\": \"Standard Bank\"\n                    },\n                    \"RmtInf\": {\n                        \"Strd\": [\n                            {\n                                \"RfrdDocAmt\": {\n                                    \"DuePyblAmt\": {\n                                        \"Value\": \"99.00\"\n                                    }\n                                },\n                                \"CdtrRefInf\": {\n                                    \"Ref\": \"Test 2\"\n                                }\n                            }\n                        ]\n                    }\n                }\n            ]\n        },\n        {\n            \"PmtInfId\": \"c775a629568e4d9dab3ab26500b704cc\",\n            \"PmtMtd\": \"TRF\",\n            \"ReqdAdvcTp\": \"\",\n            \"PmtTpInf\": {},\n            \"ReqdExctnDt\": {\n                \"DtTm\": \"2025-01-14T11:06:26.4138706Z\"\n            },\n            \"XpryDt\": {\n                \"DtTm\": \"2026-03-28T10:35:16.7884398\"\n            },\n            \"Dbtr\": {\n                \"Nm\": \"Sample\"\n            },\n            \"DbtrAcct\": {\n                \"Id\": {\n                    \"Item\": {\n                        \"Id\": \"Proxy\"\n                    }\n                },\n                \"Nm\": \"Sample Legal Name\",\n                \"Prxy\": {\n                    \"Tp\": {\n                        \"Item\": \"MOBILE_NUMBER\"\n                    },\n                    \"Id\": \"+27-585125485\"\n                }\n            },\n            \"DbtrAgt\": {\n                \"FinInstnId\": {\n                    \"Othr\": {\n                        \"Id\": \"bankc\"\n                    }\n                }\n            },\n            \"CdtTrfTx\": [\n                {\n                    \"PmtId\": {\n                        \"InstrId\": \"1\",\n                        \"EndToEndId\": \"{{uuidOne}}\",\n                        \"UETR\": \"{{$guid}}\"\n                    },\n                    \"PmtTpInf\": {},\n                    \"PmtCond\": {\n                        \"AmtModAllwd\": true,\n                        \"EarlyPmtAllwd\": false,\n                        \"GrntedPmtReqd\": false\n                    },\n                    \"Amt\": {\n                        \"Item\": {\n                            \"Value\": \"100.00\"\n                        }\n                    },\n                    \"ChrgBr\": \"SLEV\",\n                    \"CdtrAgt\": {\n                        \"FinInstnId\": {\n                            \"Othr\": {\n                                \"Id\": \"051001\"\n                            }\n                        },\n                        \"BrnchId\": {\n                            \"Id\": \"Branch Id\"\n                        }\n                    },\n                    \"Cdtr\": {\n                        \"Nm\": \"Standard Bank\",\n                        \"Id\": {\n                            \"OrgId\": {\n                                \"Othr\": [\n                                    {\n                                        \"Id\": \"000/0000/0002\",\n                                        \"Issr\": \"CIPC\"\n                                    },\n                                    {\n                                        \"Id\": \"000000002\",\n                                        \"Issr\": \"SBSA\"\n                                    }\n                                ]\n                            }\n                        }\n                    },\n                    \"CdtrAcct\": {\n                        \"Id\": {\n                            \"Item\": {\n                                \"Id\": \"000602739172\"\n                            }\n                        },\n                        \"Nm\": \"Standard Bank\"\n                    },\n                    \"RmtInf\": {\n                        \"Strd\": [\n                            {\n                                \"RfrdDocAmt\": {\n                                    \"DuePyblAmt\": {\n                                        \"Value\": \"99.00\"\n                                    }\n                                },\n                                \"CdtrRefInf\": {\n                                    \"Ref\": \"Test 3\"\n                                }\n                            }\n                        ]\n                    }\n                }\n            ]\n        }\n    ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              "const generatedGuidOne = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidOne = generatedGuidOne.replace(/-/g, '');",
+              "pm.variables.set(\"uuidOne\", uuidOne);",
+              " ",
+              "const generatedGuidTwo = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidTwo = generatedGuidTwo.replace(/-/g, '');",
+              "pm.variables.set(\"uuidTwo\", uuidTwo);",
+              " ",
+              "const generatedGuidThree = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidThree = generatedGuidThree.replace(/-/g, '');",
+              "pm.variables.set(\"uuidThree\", uuidThree);",
+              " ",
+              "const generatedGuidFour = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidFour = generatedGuidFour.replace(/-/g, '');",
+              "pm.variables.set(\"uuidFour\", uuidFour);",
+              " ",
+              "const generatedGuidFive = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidFive = generatedGuidFive.replace(/-/g, '');",
+              "pm.variables.set(\"uuidFive\", uuidFive);",
+              " ",
+              "const generatedGuidSix = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidSix = generatedGuidSix.replace(/-/g, '');",
+              "pm.variables.set(\"uuidSix\", uuidSix);",
+              " ",
+              "const generatedGuidSeven = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidSeven = generatedGuidSeven.replace(/-/g, '');",
+              "pm.variables.set(\"uuidSeven\", uuidSeven);",
+              " ",
+              "const generatedGuidEight = pm.variables.replaceIn(\"{{$guid}}\");",
+              "const uuidEight = generatedGuidEight.replace(/-/g, '');",
+              "pm.variables.set(\"uuidEight\", uuidEight);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payshap Request Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "X-IBM-Client-Id",
+            "value": "{{ibm_client_id}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-IBM-Client-Secret",
+            "value": "{{ibm_client_secret}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "Session-Ip",
+            "value": "0.0.0.0",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "x-fapi-interaction-id",
+            "value": "{{$guid}}",
+            "disabled": false,
+            "type": "default"
+          },
+          {
+            "key": "X-Callback-Url",
+            "value": "",
+            "disabled": true,
+            "type": "default"
+          }
+        ],
+        "auth": {
+          "type": "bearer",
+          "bearer": {
+            "key": "token",
+            "value": "{{auth_token}}",
+            "type": "string"
+          }
+        },
+        "description": "",
+        "url": {
+          "raw": "{{base_url}}/004ea2565c024862914c54cadef55b96",
+          "protocol": "",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "004ea2565c024862914c54cadef55b96"
+          ],
+          "query": [],
+          "variable": []
+        }
+      }
+    },
+    {
+      "name": "Ping Auth",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "auth": {
+          "type": "noauth"
+        },
+        "description": "",
+        "url": {
+          "raw": "https://enterprisestssit.standardbank.co.za/as/token.oauth2",
+          "protocol": "https",
+          "host": [
+            "enterprisestssit",
+            "standardbank",
+            "co",
+            "za"
+          ],
+          "path": [
+            "as",
+            "token.oauth2"
+          ],
+          "query": [],
+          "variable": []
+        },
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "grant_type",
+              "value": "client_credentials",
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "client_id",
+              "value": "{{client_id}}",
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "client_secret",
+              "value": "{{client_secret}}",
+              "disabled": false,
+              "type": "default"
+            },
+            {
+              "key": "scope",
+              "value": "rpp.requestToPay.post rpp.requestToPay.get",
+              "disabled": false,
+              "type": "default"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {},
+            "exec": [
+              "pm.variables.set(\"auth_token\", pm.response.json().access_token);"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "client_id",
+      "value": "a5370231-aa5f-4c33-b313-6c8e03271c28",
+      "type": "default"
+    },
+    {
+      "key": "client_secret",
+      "value": "S3cr3t-311de-fd25d",
+      "type": "default"
+    },
+    {
+      "key": "base_url",
+      "value": "https://api-gatewaynp.standardbank.co.za/npextorg/extnonprod/request-to-pay/api/requestToPay/initiation",
+      "type": "default"
+    },
+    {
+      "key": "ibm_client_id",
+      "value": "a98f3c8dd655b4f3b27c1c02ec495b08",
+      "type": "default"
+    },
+    {
+      "key": "ibm_client_secret",
+      "value": "1fbd5009d748e31e08620f9ef29df524",
+      "type": "default"
+    },
+    {
+      "key": "$guid",
+      "value": "",
+      "type": "default"
+    },
+    {
+      "key": "uuidOne",
+      "value": "",
+      "type": "default"
+    }
+  ]
+}
