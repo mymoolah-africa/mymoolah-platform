@@ -141,7 +141,7 @@ async function processDepositNotification(payload) {
     try {
       const lockedWallet = await db.Wallet.findOne({
         where: { walletId: wallet.walletId },
-        lock: sequelize.Transaction.LOCK.UPDATE,
+        lock: db.Sequelize.Transaction.LOCK.UPDATE,
         transaction,
       });
       if (!lockedWallet) {

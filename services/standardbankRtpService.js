@@ -167,7 +167,7 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
 
   const wallet = await db.Wallet.findOne({
     where: { walletId },
-    lock: sequelize.Transaction.LOCK.UPDATE,
+    lock: db.Sequelize.Transaction.LOCK.UPDATE,
     transaction: txn,
   });
   if (!wallet) {
