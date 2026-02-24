@@ -288,6 +288,7 @@ async function initiateRppPayment(params) {
       });
     } catch (ledgerErr) {
       console.warn('SBSA RPP ledger posting skipped:', ledgerErr.message);
+      if (ledgerErr.original) console.warn('  DB error:', ledgerErr.original.message);
     }
 
     return {
