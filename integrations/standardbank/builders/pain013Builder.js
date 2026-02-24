@@ -138,9 +138,8 @@ function buildPain013(params) {
       GrntedPmtReqd: false,
     },
     Amt: {
-      InstdAmt: {
-        Value: numAmount,
-        Ccy: currency,
+      Item: {
+        Value: numAmount.toFixed(2),
       },
     },
     ChrgBr: 'SLEV',
@@ -171,8 +170,7 @@ function buildPain013(params) {
         {
           RfrdDocAmt: {
             DuePyblAmt: {
-              Value: numAmount,
-              Ccy: currency,
+              Value: numAmount.toFixed(2),
             },
           },
           CdtrRefInf: {
