@@ -75,37 +75,42 @@ function buildPain013(params) {
   const now = new Date();
   const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
-  // Build debtor account - SBSA uses Id.Item.Id + Prxy structure for proxy
+  // Build debtor account
+  // SBSA RTP always uses the proxy structure (Id.Item.Id = "Proxy" + Prxy block)
+  // matching the Postman sample — direct account number is NOT supported for RTP debtors.
+  // Mobile format per SBSA sample: "+27-XXXXXXXXX" (with hyphen after country code)
   let DbtrAcct;
-  if (payerAccountNumber) {
-    DbtrAcct = {
-      Id: {
-        Item: {
-          Id: payerAccountNumber,
-        },
-      },
-      Nm: (payerName || 'Payer').substring(0, 140),
-    };
-  } else if (payerProxy) {
-    const digits = payerProxy.replace(/\D/g, '');
-    const normalizedProxy = digits.startsWith('27') ? `+${digits}` : `+27${digits.replace(/^0/, '')}`;
-    DbtrAcct = {
-      Id: {
-        Item: {
-          Id: 'Proxy',
-        },
-      },
-      Nm: (payerName || 'Payer').substring(0, 140),
-      Prxy: {
-        Tp: {
-          Item: payerProxyScheme,
-        },
-        Id: normalizedProxy,
-      },
-    };
-  } else {
-    throw new Error('RTP requires payerAccountNumber or payerProxy');
+  const proxyValue = payerProxy || payerAccountNumber;
+  if (!proxyValue) {
+    throw new Error('RTP requires payerMobileNumber (payerProxy) or payerAccountNumber as proxy identifier');
   }
+
+  // Normalise to SBSA mobile format: +27-XXXXXXXXX
+  const digits = proxyValue.replace(/\D/g, '');
+  let normalizedProxy;
+  if (digits.length >= 9 && (digits.startsWith('27') || digits.startsWith('0'))) {
+    // Mobile number — format as +27-XXXXXXXXX
+    const local = digits.startsWith('27') ? digits.slice(2) : digits.slice(1);
+    normalizedProxy = `+27-${local}`;
+  } else {
+    // Account number or other identifier — use as-is
+    normalizedProxy = proxyValue;
+  }
+
+  DbtrAcct = {
+    Id: {
+      Item: {
+        Id: 'Proxy',
+      },
+    },
+    Nm: (payerName || 'Payer').substring(0, 140),
+    Prxy: {
+      Tp: {
+        Item: payerProxyScheme,
+      },
+      Id: normalizedProxy,
+    },
+  };
 
   // Build creditor org ID if available
   const CdtrId = creditorOrgId
@@ -126,7 +131,7 @@ function buildPain013(params) {
     },
     PmtTpInf: {},
     PmtCond: {
-      AmtModAllwd: false,
+      AmtModAllwd: true,
       EarlyPmtAllwd: false,
       GrntedPmtReqd: false,
     },
@@ -215,6 +220,7 @@ function buildPain013(params) {
         DbtrAgt: {
           FinInstnId: {
             Othr: {
+              // 'bankc' is the SBSA sandbox placeholder for unknown/generic debtor bank
               Id: payerBankCode || 'bankc',
             },
           },
