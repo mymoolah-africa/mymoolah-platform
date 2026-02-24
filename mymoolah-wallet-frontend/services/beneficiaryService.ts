@@ -688,10 +688,21 @@ class BeneficiaryService {
       });
     }
     
+    // Resolve the real phone number (MSISDN) for this beneficiary.
+    // For bank-type beneficiaries the legacy.msisdn is a synthetic NON_MSI_ placeholder.
+    // The real phone lives in paymentMethods.mymoolah.walletMsisdn (when the beneficiary
+    // also has a MyMoolah wallet account linked).
+    const realMsisdn =
+      legacy.paymentMethods?.mymoolah?.walletMsisdn ||
+      legacy.paymentMethods?.mymoolah?.walletId ||
+      (typeof legacy.msisdn === 'string' && !legacy.msisdn.startsWith('NON_MSI_') ? legacy.msisdn : null) ||
+      legacy.identifier ||
+      '';
+
     return {
       id: legacy.id,
       name: legacy.name,
-      msisdn: legacy.msisdn || legacy.identifier,
+      msisdn: realMsisdn,
       identifier: legacy.identifier,
       accountType: legacy.accountType,
       accounts,
@@ -736,10 +747,20 @@ class BeneficiaryService {
           (beneficiary as any)?.identifier ||
           '';
 
+    // For bank beneficiaries, find the MyMoolah account's phone as the real MSISDN
+    const mymoolahAccount = paymentAccounts.find(a => a.type === 'mymoolah');
+    const realPhone =
+      mymoolahAccount?.identifier ||
+      mymoolahAccount?.metadata?.walletMsisdn ||
+      (typeof beneficiary.msisdn === 'string' && !beneficiary.msisdn.startsWith('NON_MSI_')
+        ? beneficiary.msisdn
+        : null) ||
+      '';
+
     return {
       id: String(beneficiary.id ?? idx),
       name: beneficiary.name,
-      msisdn: beneficiary.msisdn || primaryAccount?.identifier || (beneficiary as any)?.identifier,
+      msisdn: realPhone || primaryAccount?.identifier || (beneficiary as any)?.identifier,
       identifier,
       accountType,
       bankName: primaryAccount?.metadata?.bankName,
