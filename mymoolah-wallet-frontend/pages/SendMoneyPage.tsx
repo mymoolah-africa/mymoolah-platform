@@ -2181,12 +2181,12 @@ export function SendMoneyPage() {
 
       {/* Payment Modal */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-sm mx-auto">
+        <DialogContent className="max-w-sm mx-auto" aria-describedby="pay-beneficiary-desc">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Pay {selectedBeneficiary?.name}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="pay-beneficiary-desc">
               Make a payment to {selectedBeneficiary?.name}
             </DialogDescription>
           </DialogHeader>
@@ -2640,12 +2640,12 @@ export function SendMoneyPage() {
 
       {/* Post-payment: Add to contacts prompt */}
       <Dialog open={showAddContactPrompt} onOpenChange={setShowAddContactPrompt}>
-        <DialogContent className="max-w-sm mx-auto">
+        <DialogContent className="max-w-sm mx-auto" aria-describedby="add-contact-desc">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Add to Contacts?
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="add-contact-desc">
               Save recipient for future quick access
             </DialogDescription>
           </DialogHeader>
@@ -2696,12 +2696,12 @@ export function SendMoneyPage() {
 
       {/* Edit Beneficiary Modal */}
       <Dialog open={showEditBeneficiaryModal} onOpenChange={setShowEditBeneficiaryModal}>
-        <DialogContent className="max-w-sm mx-auto">
+        <DialogContent className="max-w-sm mx-auto" aria-describedby="edit-beneficiary-desc">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Edit Beneficiary
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="edit-beneficiary-desc">
               Edit beneficiary information
             </DialogDescription>
           </DialogHeader>
