@@ -25,8 +25,7 @@ import {
   AtSign,
   HandCoins,
   Play,
-  Tag,
-  Coins
+  Tag
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -179,16 +178,6 @@ export function TransactPage() {
           available: true,
           badge: 'Live',
           badgeType: 'success'
-        },
-        {
-          id: 'buy-usdc',
-          title: 'Buy USDC',
-          description: 'Send value globally via USDC',
-          icon: <Coins className="w-6 h-6" />,
-          route: '/buy-usdc',
-          available: true,
-          badge: 'New',
-          badgeType: 'info'
         },
         {
           id: 'qr-payments',

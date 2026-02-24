@@ -21,6 +21,7 @@ import {
   Star,
   Loader2,
   Wallet,
+  Globe,
   ChevronRight,
   ChevronDown,
   Edit2,
@@ -257,7 +258,7 @@ export function SendMoneyPage() {
     identifier: string;
     accountType: 'mymoolah' | 'bank';
   } | null>(null);
-  const [selectedAccountType, setSelectedAccountType] = useState<'mymoolah' | 'bank'>('mymoolah');
+  const [selectedAccountType, setSelectedAccountType] = useState<'mymoolah' | 'bank' | 'payshap' | 'eft' | 'moolahmove'>('mymoolah');
   const [newBeneficiary, setNewBeneficiary] = useState({
     name: '',
     msisdn: '', // NEW: Mobile number (MSISDN)
@@ -778,12 +779,13 @@ export function SendMoneyPage() {
     }
 
     try {
+      const legacyAccountType: 'mymoolah' | 'bank' = selectedAccountType === 'payshap' ? 'bank' : selectedAccountType === 'mymoolah' ? 'mymoolah' : 'bank';
       const createdBeneficiary = await beneficiaryService.createPaymentBeneficiary({
         name: newBeneficiary.name.trim(),
         msisdn: newBeneficiary.msisdn.trim(),
-        accountType: selectedAccountType,
-        bankName: selectedAccountType === 'bank' ? newBeneficiary.bankName?.trim() : undefined,
-        accountNumber: selectedAccountType === 'bank' ? newBeneficiary.identifier.trim() : undefined
+        accountType: legacyAccountType,
+        bankName: selectedAccountType === 'payshap' ? newBeneficiary.bankName?.trim() : undefined,
+        accountNumber: selectedAccountType === 'payshap' ? newBeneficiary.identifier.trim() : undefined
       });
 
       setBeneficiaries(prev => [createdBeneficiary, ...prev.filter(b => b.id !== createdBeneficiary.id)]);
@@ -867,9 +869,9 @@ export function SendMoneyPage() {
 
 
 
-    // For bank accounts, also require bank name and account number
-    if (selectedAccountType === 'bank' && (!newBeneficiary.bankName || !newBeneficiary.identifier)) {
-      showError('Validation Error', 'For bank payments, please also select a bank and enter the account number', 'warning');
+    // For PayShap accounts, also require bank name and account number
+    if (selectedAccountType === 'payshap' && (!newBeneficiary.bankName || !newBeneficiary.identifier)) {
+      showError('Validation Error', 'For PayShap payments, please also select a bank and enter the account number', 'warning');
       return;
     }
 
@@ -879,7 +881,7 @@ export function SendMoneyPage() {
       return;
     }
 
-    if (selectedAccountType === 'bank') {
+    if (selectedAccountType === 'payshap') {
       // PayShap RPP (Rapid Payment Programme) — bank account payment via Standard Bank
       setIsProcessing(true);
       try {
@@ -1438,29 +1440,47 @@ export function SendMoneyPage() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                {/* Account Type Selection */}
-                <div className="space-y-3">
-                  <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Account Type</Label>
-                  <div className="grid grid-cols-2 gap-3">
+                {/* Payment Rail Selection — 2×2 grid */}
+                <div className="space-y-2">
+                  <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Payment Method</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* 1. MyMoolah — wallet-to-wallet */}
                     <Button
                       variant={selectedAccountType === 'mymoolah' ? 'default' : 'outline'}
                       onClick={() => setSelectedAccountType('mymoolah')}
-                      className={`h-16 flex-col ${selectedAccountType === 'mymoolah' 
-                        ? 'bg-[#86BE41] text-white border-[#86BE41]' 
-                        : 'border-gray-200'}`}
+                      className={`h-16 flex-col gap-0.5 ${selectedAccountType === 'mymoolah' ? 'bg-[#86BE41] text-white border-[#86BE41]' : 'border-gray-200 text-gray-700'}`}
                     >
-                      <Wallet className="w-5 h-5 mb-1" />
-                      <span style={{ fontSize: 'var(--mobile-font-small)' }}>MyMoolah</span>
+                      <Wallet className="w-5 h-5" />
+                      <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MyMoolah</span>
                     </Button>
+                    {/* 2. EFT — future SBSA EFT, coming soon */}
                     <Button
-                      variant={selectedAccountType === 'bank' ? 'default' : 'outline'}
-                      onClick={() => setSelectedAccountType('bank')}
-                      className={`h-16 flex-col ${selectedAccountType === 'bank' 
-                        ? 'bg-[#2D8CCA] text-white border-[#2D8CCA]' 
-                        : 'border-gray-200'}`}
+                      variant="outline"
+                      disabled
+                      className="h-16 flex-col gap-0.5 border-gray-200 text-gray-400 opacity-60 cursor-not-allowed relative"
                     >
-                      <Building2 className="w-5 h-5 mb-1" />
-                      <span style={{ fontSize: 'var(--mobile-font-small)' }}>Bank</span>
+                      <Building2 className="w-5 h-5" />
+                      <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>EFT</span>
+                      <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#e5e7eb', color: '#6b7280', borderRadius: '4px', padding: '1px 4px', lineHeight: '1.4' }}>Coming Soon</span>
+                    </Button>
+                    {/* 3. PayShap — instant RPP via Standard Bank */}
+                    <Button
+                      variant={selectedAccountType === 'payshap' ? 'default' : 'outline'}
+                      onClick={() => setSelectedAccountType('payshap')}
+                      className={`h-16 flex-col gap-0.5 ${selectedAccountType === 'payshap' ? 'bg-[#2D8CCA] text-white border-[#2D8CCA]' : 'border-gray-200 text-gray-700'}`}
+                    >
+                      <Send className="w-5 h-5" />
+                      <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>PayShap</span>
+                    </Button>
+                    {/* 4. MoolahMove — cross-border VALR + Yellow Card, coming soon */}
+                    <Button
+                      variant="outline"
+                      disabled
+                      className="h-16 flex-col gap-0.5 border-amber-200 text-amber-400 opacity-60 cursor-not-allowed"
+                    >
+                      <Globe className="w-5 h-5" />
+                      <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MoolahMove</span>
+                      <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#fef3c7', color: '#92400e', borderRadius: '4px', padding: '1px 4px', lineHeight: '1.4' }}>Coming Soon</span>
                     </Button>
                   </div>
                 </div>
@@ -1551,7 +1571,7 @@ export function SendMoneyPage() {
                     )}
                   </div>
 
-                  {selectedAccountType === 'bank' && (
+                  {selectedAccountType === 'payshap' && (
                     <>
                       <div>
                         <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
@@ -2340,29 +2360,47 @@ export function SendMoneyPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Account Type Selection */}
-            <div className="space-y-3">
-              <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Account Type</Label>
-              <div className="grid grid-cols-2 gap-3">
+            {/* Payment Rail Selection — 2×2 grid */}
+            <div className="space-y-2">
+              <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Payment Method</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {/* 1. MyMoolah — wallet-to-wallet */}
                 <Button
                   variant={selectedAccountType === 'mymoolah' ? 'default' : 'outline'}
                   onClick={() => setSelectedAccountType('mymoolah')}
-                  className={`h-16 flex-col ${selectedAccountType === 'mymoolah' 
-                    ? 'bg-[#86BE41] text-white border-[#86BE41]' 
-                    : 'border-gray-200'}`}
+                  className={`h-16 flex-col gap-0.5 ${selectedAccountType === 'mymoolah' ? 'bg-[#86BE41] text-white border-[#86BE41]' : 'border-gray-200 text-gray-700'}`}
                 >
-                  <Wallet className="w-5 h-5 mb-1" />
-                  <span style={{ fontSize: 'var(--mobile-font-small)' }}>MyMoolah</span>
+                  <Wallet className="w-5 h-5" />
+                  <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MyMoolah</span>
                 </Button>
+                {/* 2. EFT — future SBSA EFT, coming soon */}
                 <Button
-                  variant={selectedAccountType === 'bank' ? 'default' : 'outline'}
-                  onClick={() => setSelectedAccountType('bank')}
-                  className={`h-16 flex-col ${selectedAccountType === 'bank' 
-                    ? 'bg-[#2D8CCA] text-white border-[#2D8CCA]' 
-                    : 'border-gray-200'}`}
+                  variant="outline"
+                  disabled
+                  className="h-16 flex-col gap-0.5 border-gray-200 text-gray-400 opacity-60 cursor-not-allowed"
                 >
-                  <Building2 className="w-5 h-5 mb-1" />
-                  <span style={{ fontSize: 'var(--mobile-font-small)' }}>Bank</span>
+                  <Building2 className="w-5 h-5" />
+                  <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>EFT</span>
+                  <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#e5e7eb', color: '#6b7280', borderRadius: '4px', padding: '1px 4px', lineHeight: '1.4' }}>Coming Soon</span>
+                </Button>
+                {/* 3. PayShap — instant RPP via Standard Bank */}
+                <Button
+                  variant={selectedAccountType === 'payshap' ? 'default' : 'outline'}
+                  onClick={() => setSelectedAccountType('payshap')}
+                  className={`h-16 flex-col gap-0.5 ${selectedAccountType === 'payshap' ? 'bg-[#2D8CCA] text-white border-[#2D8CCA]' : 'border-gray-200 text-gray-700'}`}
+                >
+                  <Send className="w-5 h-5" />
+                  <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>PayShap</span>
+                </Button>
+                {/* 4. MoolahMove — cross-border VALR + Yellow Card, coming soon */}
+                <Button
+                  variant="outline"
+                  disabled
+                  className="h-16 flex-col gap-0.5 border-amber-200 text-amber-400 opacity-60 cursor-not-allowed"
+                >
+                  <Globe className="w-5 h-5" />
+                  <span style={{ fontSize: '11px', fontFamily: 'Montserrat, sans-serif', fontWeight: 600 }}>MoolahMove</span>
+                  <span style={{ fontSize: '8px', fontFamily: 'Montserrat, sans-serif', background: '#fef3c7', color: '#92400e', borderRadius: '4px', padding: '1px 4px', lineHeight: '1.4' }}>Coming Soon</span>
                 </Button>
               </div>
             </div>
@@ -2381,7 +2419,7 @@ export function SendMoneyPage() {
                 />
               </div>
               
-              {/* Mobile Number Field - For MyMoolah: this IS their account number. For Bank: this is MSISDN for verification */}
+              {/* Mobile Number Field - For MyMoolah: this IS their account number. For PayShap: MSISDN for FICA */}
               <div>
                 <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>
                   {selectedAccountType === 'mymoolah' 
@@ -2393,19 +2431,10 @@ export function SendMoneyPage() {
                   value={selectedAccountType === 'mymoolah' ? (newBeneficiary.identifier || newBeneficiary.msisdn) : newBeneficiary.msisdn}
                   onChange={(e) => {
                     const value = e.target.value;
-                    
-                    // Only allow digits, spaces, and hyphens for mobile numbers
                     const cleanValue = value.replace(/[^\d\s\-]/g, '');
-                    
                     if (selectedAccountType === 'mymoolah') {
-                      // For MyMoolah: update both identifier (account number) and msisdn
-                      setNewBeneficiary(prev => ({ 
-                        ...prev, 
-                        identifier: cleanValue,
-                        msisdn: cleanValue 
-                      }));
+                      setNewBeneficiary(prev => ({ ...prev, identifier: cleanValue, msisdn: cleanValue }));
                     } else {
-                      // For Bank: only update msisdn
                       setNewBeneficiary(prev => ({ ...prev, msisdn: cleanValue }));
                     }
                   }}
@@ -2417,7 +2446,6 @@ export function SendMoneyPage() {
                     ? 'This mobile number is their MyMoolah account number' 
                     : 'Required for FICA compliance and verification'}
                 </p>
-                {/* Real-time validation feedback */}
                 {selectedAccountType === 'mymoolah' && (newBeneficiary.identifier || newBeneficiary.msisdn) && (
                   (() => {
                     const value = newBeneficiary.identifier || newBeneficiary.msisdn;
@@ -2439,7 +2467,7 @@ export function SendMoneyPage() {
                 )}
               </div>
 
-              {selectedAccountType === 'bank' && (
+              {selectedAccountType === 'payshap' && (
                 <>
                   <div>
                     <Label style={{ fontFamily: 'Montserrat, sans-serif' }}>Bank</Label>
@@ -2550,7 +2578,23 @@ export function SendMoneyPage() {
             {/* Action Buttons */}
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={() => setShowPayNow(false)} className="flex-1" disabled={isProcessing}>Cancel</Button>
-              <Button onClick={handlePayNow} disabled={!newBeneficiary.name || !(selectedAccountType === 'mymoolah' ? newBeneficiary.identifier : newBeneficiary.msisdn) || !paymentAmount || parseFloat(paymentAmount) <= 0 || isProcessing} className="flex-1 bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] text-white">
+              <Button
+                onClick={handlePayNow}
+                disabled={
+                  !newBeneficiary.name ||
+                  !(selectedAccountType === 'mymoolah' ? newBeneficiary.identifier : newBeneficiary.msisdn) ||
+                  !paymentAmount ||
+                  parseFloat(paymentAmount) <= 0 ||
+                  isProcessing
+                }
+                className={`flex-1 text-white ${
+                  selectedAccountType === 'mymoolah'
+                    ? 'bg-[#86BE41] hover:bg-[#75aa35]'
+                    : selectedAccountType === 'payshap'
+                    ? 'bg-[#2D8CCA] hover:bg-[#2478b0]'
+                    : 'bg-gradient-to-r from-[#86BE41] to-[#2D8CCA]'
+                }`}
+              >
                 {isProcessing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
