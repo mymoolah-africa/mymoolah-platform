@@ -516,6 +516,7 @@ class WalletController {
         const cashoutRefundGroups = new Map();
         const epVoucherRefundGroups = new Map();
         const usdcSendGroups = new Map();
+        const rppGroups = new Map(); // PayShap RPP: group principal + fee into one combined row
         const otherTransactions = [];
         
         normalizedRows.forEach(tx => {
@@ -666,6 +667,19 @@ class WalletController {
             else if (metadata.lineType === 'usdc_fee') g.feeRow = tx;
             return;
           }
+          // PayShap RPP: group principal + fee into ONE row showing total debit
+          // Principal transactionId: RPP-{merchantTransactionId}, fee transactionId: RPP-FEE-{merchantTransactionId}
+          if (metadata.payshapType === 'rpp') {
+            const rppKey = tx.type === 'fee'
+              ? (tx.transactionId || '').replace(/^RPP-FEE-/, '')
+              : (tx.transactionId || '').replace(/^RPP-/, '');
+            if (!rppKey) { otherForRecent.push(tx); return; }
+            if (!rppGroups.has(rppKey)) rppGroups.set(rppKey, { principal: null, fee: null });
+            const g = rppGroups.get(rppKey);
+            if (tx.type === 'fee') g.fee = tx;
+            else g.principal = tx;
+            return;
+          }
           otherForRecent.push(tx);
         });
         const combinedUsdcRows = [];
@@ -698,8 +712,16 @@ class WalletController {
           } else if (g.main) combinedCashoutRows.push(g.main);
           else if (g.fee) combinedCashoutRows.push(g.fee);
         });
+        const combinedRppRows = [];
+        rppGroups.forEach((g) => {
+          if (g.principal && g.fee) {
+            const totalAmount = parseFloat(g.principal.amount) + parseFloat(g.fee.amount);
+            combinedRppRows.push({ ...g.principal, amount: totalAmount, metadata: { ...(g.principal.metadata || {}), combinedRpp: true, rppFeeAmount: parseFloat(g.fee.amount) } });
+          } else if (g.principal) combinedRppRows.push(g.principal);
+          else if (g.fee) combinedRppRows.push(g.fee);
+        });
         normalizedRows.length = 0;
-        normalizedRows.push(...combinedRefunds, ...combinedCashoutRows, ...combinedUsdcRows, ...otherForRecent);
+        normalizedRows.push(...combinedRefunds, ...combinedCashoutRows, ...combinedUsdcRows, ...combinedRppRows, ...otherForRecent);
         normalizedRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 
@@ -761,14 +783,15 @@ class WalletController {
           return false;
         }
         
-        // Dashboard: Exclude Transaction Fees (for top-up, cash-out, Flash Eezi Cash, and EasyPay voucher transactions)
+        // Dashboard: Exclude Transaction Fees (for top-up, cash-out, Flash Eezi Cash, EasyPay voucher, and PayShap RPP)
         // Also exclude individual fee refunds (they're combined with voucher refund)
         // Transactions page: Keep Transaction Fees (shows two lines: face + fee)
         if (isDashboard && (
           desc === 'transaction fee' ||
           (tx.metadata && (tx.metadata.isTopUpFee || tx.metadata.isCashoutFee || tx.metadata.isFlashCashoutFee || tx.metadata.isEasyPayVoucherFee)) ||
           (tx.metadata && tx.metadata.isCashoutFeeRefund && !tx.metadata.combinedRefund) || // Exclude individual cash-out fee refunds (already combined)
-          (tx.metadata && tx.metadata.isEasyPayVoucherFeeRefund && !tx.metadata.combinedRefund) // Exclude individual EasyPay voucher fee refunds (already combined)
+          (tx.metadata && tx.metadata.isEasyPayVoucherFeeRefund && !tx.metadata.combinedRefund) || // Exclude individual EasyPay voucher fee refunds (already combined)
+          (tx.type === 'fee' && tx.metadata && tx.metadata.payshapType === 'rpp') // RPP fee already combined into principal row
         )) {
           return false;
         }

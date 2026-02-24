@@ -107,9 +107,11 @@ export function TransactionHistoryPage() {
               tx.metadata?.productType === 'voucher' ||
               tx.metadata?.voucher ||
               (tx.description || '').toLowerCase().includes('voucher');
-            const displayDescription = metaProductName
+            const rawDescription = metaProductName
               ? (isVoucherTx ? `Voucher purchase - ${metaProductName}` : metaProductName)
               : tx.description;
+            // Strip "(incl. VAT)" suffix from fee descriptions for cleaner display
+            const displayDescription = (rawDescription || '').replace(/\s*\(incl\.?\s*VAT\)/i, '').trim() || rawDescription;
             
                          return {
                id: tx.id,

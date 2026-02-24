@@ -173,7 +173,7 @@ async function initiateRppPayment(params) {
         amount: -fee.totalUserFeeVatIncl,
         type: 'fee',
         status: 'completed',
-        description: `PayShap Fee (incl. VAT)`,
+        description: `PayShap Fee`,
         currency,
         metadata: {
           standardBankTransactionId: sbt.id,
