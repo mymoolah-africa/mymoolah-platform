@@ -1451,12 +1451,12 @@ export function SendMoneyPage() {
                 Add
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-sm mx-auto">
+            <DialogContent className="max-w-sm mx-auto" aria-describedby="add-beneficiary-desc">
               <DialogHeader>
                 <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
                   Add New Beneficiary
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription id="add-beneficiary-desc">
                   Add a new beneficiary for future payments
                 </DialogDescription>
               </DialogHeader>
@@ -2016,13 +2016,21 @@ export function SendMoneyPage() {
                       const isSelected = selectedAccountIds[beneficiary.id] === account.id || 
                         (!selectedAccountIds[beneficiary.id] && account.isDefault);
                       return (
-                        <button
+                        <div
                           key={account.id}
-                          type="button"
+                          role="button"
+                          tabIndex={0}
                           onClick={(e) => {
                             e.stopPropagation();
                             selectAccount(beneficiary.id, account.id);
                             prefillFromBeneficiary(beneficiary, account.id);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.stopPropagation();
+                              selectAccount(beneficiary.id, account.id);
+                              prefillFromBeneficiary(beneficiary, account.id);
+                            }
                           }}
                           style={{
                             display: 'flex',
@@ -2131,7 +2139,7 @@ export function SendMoneyPage() {
                               </button>
                             )}
                           </div>
-                        </button>
+                        </div>
                       );
                     })}
                     {/* Add another account shortcut */}
@@ -2371,12 +2379,12 @@ export function SendMoneyPage() {
 
       {/* One-time Pay Now Modal (reuses add-beneficiary fields) */}
       <Dialog open={showPayNow} onOpenChange={(v) => { setShowPayNow(v); if (!v) setIsOneTimeMode(false); }}>
-        <DialogContent className="max-w-sm mx-auto">
+        <DialogContent className="max-w-sm mx-auto" aria-describedby="pay-now-desc">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Pay Now
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription id="pay-now-desc">
               Make a one-time payment to a new recipient
             </DialogDescription>
           </DialogHeader>
