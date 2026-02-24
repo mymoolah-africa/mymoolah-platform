@@ -133,6 +133,10 @@ function buildPain001(params) {
         id: creditorBankBranchCode,
       },
     },
+    // Top-level brnchId at cdtTrfTxInf level — required by SBSA (matches Postman sample)
+    brnchId: {
+      id: creditorBankBranchCode,
+    },
     cdtr: {
       nm: (creditorName || 'Beneficiary').substring(0, 140),
     },
@@ -150,7 +154,8 @@ function buildPain001(params) {
       {
         plcAndNm: 'BatchReference',
         envlp: {
-          any: merchantTransactionId.substring(0, 35),
+          // Use cleaned alphanumeric baseId — no hyphens allowed
+          any: baseId.substring(0, 35),
         },
       },
       {
