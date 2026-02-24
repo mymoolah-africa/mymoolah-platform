@@ -73,6 +73,24 @@ const SA_BANKS = [
   { code: 'POSTBANK', name: 'Postbank' }
 ];
 
+// Map bank name to PayShap branch code (used for RPP PBAC payments)
+const getBankBranchCode = (bankName: string): string => {
+  const branchCodes: Record<string, string> = {
+    'ABSA Bank': '632005',
+    'African Bank': '430000',
+    'Bidvest Bank': '462005',
+    'Capitec Bank': '470010',
+    'Discovery Bank': '679000',
+    'First National Bank': '250655',
+    'Investec Bank': '580105',
+    'Nedbank': '198765',
+    'Standard Bank': '051001',
+    'TymeBank': '678910',
+    'Postbank': '460005',
+  };
+  return branchCodes[bankName] || '000000';
+};
+
 // No mock data; pull from backend
 
 // Function to clean up transaction descriptions - remove "Ref:" prefix
@@ -830,41 +848,91 @@ export function SendMoneyPage() {
     }
 
     if (selectedAccountType === 'bank') {
-      // Persist beneficiary if user opted in, even while bank payment flow is not yet enabled
-      if (saveAsBeneficiary && newBeneficiary.name && newBeneficiary.identifier) {
-        try {
-          await apiService.addBeneficiary({
-            name: newBeneficiary.name,
-            identifier: newBeneficiary.identifier,
-            accountType: selectedAccountType,
-            bankName: newBeneficiary.bankName || undefined,
-          });
-          const added: PaymentBeneficiary = {
-            id: `b-${Date.now()}`,
-            name: newBeneficiary.name,
-            msisdn: newBeneficiary.msisdn, // MANDATORY: MSISDN for all beneficiaries
-            identifier: newBeneficiary.identifier, // Bank account number
-            accountType: 'bank',
-            userId: CURRENT_USER_ID,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            timesPaid: 0,
-            bankName: newBeneficiary.bankName || '',
-            lastPaid: undefined,
-            isFavorite: false,
-            totalPaid: 0,
-            paymentCount: 0,
-          };
-          setBeneficiaries(prev => {
-            const dedup = prev.filter(b => !(b.accountType === 'bank' && b.identifier === added.identifier));
-            return [added, ...dedup];
-          });
-          showError('Success', 'Recipient saved. Bank payments will be enabled soon.', 'info');
-        } catch (e: any) {
-          showError('Error', e?.message || 'Failed to save recipient', 'error');
+      // PayShap RPP (Rapid Payment Programme) — bank account payment via Standard Bank
+      setIsProcessing(true);
+      try {
+        const token = getToken();
+        const amount = parseFloat(paymentAmount);
+        const ref = (paymentReference || '').trim().slice(0, 20);
+
+        const rppResp = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/standardbank/payshap/rpp`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            amount,
+            currency: 'ZAR',
+            creditorAccountNumber: newBeneficiary.identifier,
+            creditorBankBranchCode: getBankBranchCode(newBeneficiary.bankName),
+            creditorName: newBeneficiary.name,
+            bankName: newBeneficiary.bankName,
+            description: ref || `Payment to ${newBeneficiary.name}`,
+            reference: ref || undefined,
+          }),
+        });
+
+        const rppData = await rppResp.json();
+
+        if (!rppResp.ok || !rppData?.success) {
+          throw new Error(rppData?.message || 'PayShap payment failed');
         }
-      } else {
-        showError('Info', 'Bank payments will be enabled soon. Please choose MyMoolah account for now.', 'info');
+
+        // Optionally save beneficiary
+        if (saveAsBeneficiary && newBeneficiary.name && newBeneficiary.identifier) {
+          try {
+            await apiService.addBeneficiary({
+              name: newBeneficiary.name,
+              identifier: newBeneficiary.identifier,
+              accountType: 'bank',
+              bankName: newBeneficiary.bankName || undefined,
+            });
+            const added: PaymentBeneficiary = {
+              id: `b-${Date.now()}`,
+              name: newBeneficiary.name,
+              msisdn: newBeneficiary.msisdn,
+              identifier: newBeneficiary.identifier,
+              accountType: 'bank',
+              userId: CURRENT_USER_ID,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              timesPaid: 1,
+              bankName: newBeneficiary.bankName || '',
+              lastPaid: new Date(),
+              isFavorite: false,
+              totalPaid: amount,
+              paymentCount: 1,
+            };
+            setBeneficiaries(prev => {
+              const dedup = prev.filter(b => !(b.accountType === 'bank' && b.identifier === added.identifier));
+              return [added, ...dedup];
+            });
+          } catch (_) {
+            // Non-fatal: beneficiary save failed but payment succeeded
+          }
+        }
+
+        await fetchTransactions();
+        setShowPayNow(false);
+        setNewBeneficiary({ name: '', msisdn: '', identifier: '', bankName: '', accountNumber: '' });
+        setPaymentAmount('');
+        setPaymentDescription('');
+        setPaymentReference('');
+        setIsRecurring(false);
+        setIsOneTimeMode(false);
+
+        const fee = rppData.data?.fee ?? rppData.data?.feeBreakdown?.totalFeeVatIncl ?? 0;
+        showError(
+          'Payment Initiated',
+          `PayShap payment of ${formatCurrency(amount)} to ${newBeneficiary.name} submitted successfully. Fee: ${formatCurrency(fee)}. The recipient will receive funds shortly.`,
+          'info'
+        );
+      } catch (err: any) {
+        logError('SendMoneyPage', 'RPP bank payment failed', err as Error);
+        showError('Payment Failed', err?.message || 'Bank payment failed. Please try again.', 'error');
+      } finally {
+        setIsProcessing(false);
       }
       return;
     }
@@ -1002,15 +1070,56 @@ export function SendMoneyPage() {
     setIsProcessing(true);
     
     try {
-      // Real API call to PostgreSQL database with optional reference (max chars)
       const ref = (paymentReference || '').trim().slice(0, MAX_REFERENCE_LENGTH);
       const desc = (paymentDescription || '').trim();
-      const combinedDescription = [ref ? `Ref:${ref}` : '', desc].filter(Boolean).join(' - ') || undefined;
-      const nameForDesc = selectedBeneficiary.name?.trim();
       const descForBackend = [
         ref ? `Ref:${ref}` : undefined,
         desc || undefined,
       ].filter(Boolean).join(' | ');
+
+      // Route bank beneficiaries through PayShap RPP
+      if (selectedBeneficiary.accountType === 'bank') {
+        const token = getToken();
+        const amount = parseFloat(paymentAmount);
+        const rppResp = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/standardbank/payshap/rpp`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            amount,
+            currency: 'ZAR',
+            creditorAccountNumber: selectedBeneficiary.identifier,
+            creditorBankBranchCode: getBankBranchCode(selectedBeneficiary.bankName || ''),
+            creditorName: selectedBeneficiary.name,
+            bankName: selectedBeneficiary.bankName,
+            description: descForBackend || `Payment to ${selectedBeneficiary.name}`,
+            reference: ref || undefined,
+          }),
+        });
+        const rppData = await rppResp.json();
+        if (!rppResp.ok || !rppData?.success) {
+          throw new Error(rppData?.message || 'PayShap payment failed');
+        }
+        await fetchTransactions();
+        setBeneficiaries(prev => prev.map(b =>
+          b.id === selectedBeneficiary.id
+            ? { ...b, lastPaid: new Date(), totalPaid: ((b as any).totalPaid || 0) + amount, paymentCount: ((b as any).paymentCount || 0) + 1 }
+            : b
+        ));
+        setPaymentAmount('');
+        setPaymentDescription('');
+        setPaymentReference('');
+        setIsRecurring(false);
+        setShowPaymentModal(false);
+        setSelectedBeneficiary(null);
+        const fee = rppData.data?.fee ?? rppData.data?.feeBreakdown?.totalFeeVatIncl ?? 0;
+        showError('Payment Initiated', `PayShap payment of ${formatCurrency(amount)} to ${selectedBeneficiary.name} submitted. Fee: ${formatCurrency(fee)}.`, 'info');
+        return;
+      }
+
+      // MyMoolah wallet-to-wallet
       const data = await apiService.sendWalletToWallet(
         selectedBeneficiary.identifier,
         parseFloat(paymentAmount),
