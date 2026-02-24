@@ -292,6 +292,7 @@ async function initiatePayShapRpp(req, res) {
       reference,
     });
 
+    const fb = result.feeBreakdown || {};
     return res.status(202).json({
       success: true,
       data: {
@@ -300,6 +301,12 @@ async function initiatePayShapRpp(req, res) {
         status: result.status,
         amount: result.amount,
         fee: result.fee,
+        feeBreakdown: {
+          sbsaFeeVatIncl: fb.sbsaFeeVatIncl,
+          mmMarkupVatIncl: fb.mmMarkupVatIncl,
+          totalFeeVatIncl: fb.totalUserFeeVatIncl,
+          vatIncluded: fb.totalOutputVat,
+        },
         totalDebit: result.totalDebit,
         currency: result.currency,
       },
@@ -370,9 +377,7 @@ async function initiatePayShapRtp(req, res) {
       expiryMinutes,
     });
 
-    const feeZar = Number(process.env.PAYSHAP_FEE_MM_ZAR || 4);
-    const netCredit = Number((result.amount - feeZar).toFixed(2));
-
+    const fb = result.feeBreakdown || {};
     return res.status(202).json({
       success: true,
       data: {
@@ -380,8 +385,14 @@ async function initiatePayShapRtp(req, res) {
         originalMessageId: result.originalMessageId,
         status: result.status,
         amount: result.amount,
-        fee: feeZar,
-        netCredit,
+        fee: result.fee,
+        feeBreakdown: {
+          sbsaFeeVatIncl: fb.sbsaFeeVatIncl,
+          totalFeeVatIncl: fb.totalUserFeeVatIncl,
+          vatIncluded: fb.totalOutputVat,
+          mmMarkup: 0,
+        },
+        netCredit: result.netCredit,
         currency: result.currency,
         expiresAt: result.expiresAt,
       },

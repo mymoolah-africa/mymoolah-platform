@@ -2,30 +2,30 @@
 
 /**
  * Standard Bank RPP Service - PayShap Outbound Payments
- * Validates, reserves funds, builds Pain.001, calls SBSA API, commits.
- * Fee: R4.00 VAT incl charged to user; principal only sent to recipient.
+ *
+ * Fee model (volume-based, applied per calendar month):
+ *   User pays: SBSA tiered fee (VAT incl) + R1.00 MM markup (VAT incl)
+ *   e.g. at 0-999 txns/month: R5.75 + R1.00 = R6.75 charged to user
+ *
+ * VAT accounting (all fees VAT inclusive at 15%):
+ *   Output VAT  = VAT on total user charge (R6.75 / 1.15 × 0.15)
+ *   Input VAT   = VAT on SBSA cost (R5.75 / 1.15 × 0.15) — reclaimable
+ *   Net VAT payable to SARS = output VAT - input VAT (= VAT on R1.00 markup only)
+ *   SBSA cost (ex-VAT) → LEDGER_ACCOUNT_PAYSHAP_SBSA_COST (cost of sale)
+ *   MM markup (ex-VAT) → LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE
+ *   Net VAT payable     → LEDGER_ACCOUNT_VAT_CONTROL
  *
  * ACID ordering: lock wallet → validate balance → call SBSA → debit + record → commit
- * If SBSA call fails, no debit occurs. If DB commit fails after SBSA success,
- * transaction is recorded as 'initiated' and reconciled via callback.
  *
  * @author MyMoolah Treasury Platform
- * @date 2026-02-21
+ * @date 2026-02-24
  */
 
 const { v4: uuidv4 } = require('uuid');
 const db = require('../models');
 const { buildPain001 } = require('../integrations/standardbank/builders/pain001Builder');
 const sbClient = require('../integrations/standardbank/client');
-
-const VAT_RATE = Number(process.env.VAT_RATE || 0.15);
-const FEE_MM_ZAR = Number(process.env.PAYSHAP_FEE_MM_ZAR || 4);
-
-function getFeeBreakdown(feeAmount) {
-  const vatAmount = Number(((feeAmount / (1 + VAT_RATE)) * VAT_RATE).toFixed(2));
-  const netRevenue = Number((feeAmount - vatAmount).toFixed(2));
-  return { feeAmount, vatAmount, netRevenue };
-}
+const feeService = require('./payshapFeeService');
 
 async function initiateRppPayment(params) {
   const {
@@ -47,8 +47,11 @@ async function initiateRppPayment(params) {
     throw new Error('Invalid amount');
   }
 
-  const feeBreakdown = getFeeBreakdown(FEE_MM_ZAR);
-  const totalDebit = Number((numAmount + feeBreakdown.feeAmount).toFixed(2));
+  // Get monthly RPP count to determine SBSA pricing tier
+  const monthlyCount = await feeService.getMonthlyRppCount(db, walletId);
+  const fee = feeService.calculateRppFee(monthlyCount);
+
+  const totalDebit = Number((numAmount + fee.totalUserFeeVatIncl).toFixed(2));
 
   const paymentType = creditorProxy ? 'PBPX' : 'PBAC';
   const merchantTransactionId = `MM-RPP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -105,7 +108,7 @@ async function initiateRppPayment(params) {
       throw new Error(`SBSA RPP returned unexpected status ${sbResponse.status}`);
     }
 
-    // Debit wallet
+    // Debit wallet (principal + total fee)
     await wallet.debit(totalDebit, 'debit', { transaction: txn });
 
     // Record SBSA transaction
@@ -130,6 +133,11 @@ async function initiateRppPayment(params) {
         description: description || null,
         rawRequest: pain001,
         rawResponse: sbResponse.data,
+        metadata: {
+          feeBreakdown: fee,
+          monthlyRppCount: monthlyCount,
+          pricingTier: `${monthlyCount}-txns`,
+        },
       },
       { transaction: txn }
     );
@@ -145,33 +153,45 @@ async function initiateRppPayment(params) {
         status: 'completed',
         description: description || `PayShap to ${creditorName || 'beneficiary'}`,
         currency,
-        metadata: { standardBankTransactionId: sbt.id, payshapType: 'rpp', principal: numAmount },
-      },
-      { transaction: txn }
-    );
-
-    // Record fee transaction
-    await db.Transaction.create(
-      {
-        transactionId: `RPP-FEE-${merchantTransactionId}`,
-        userId,
-        walletId,
-        amount: -feeBreakdown.feeAmount,
-        type: 'fee',
-        status: 'completed',
-        description: 'Transaction Fee',
-        currency,
         metadata: {
           standardBankTransactionId: sbt.id,
           payshapType: 'rpp',
-          feeAmount: feeBreakdown.feeAmount,
-          feeVat: feeBreakdown.vatAmount,
+          principal: numAmount,
         },
       },
       { transaction: txn }
     );
 
-    // VAT record
+    // Record fee transaction (total user fee = SBSA fee + MM markup, VAT incl)
+    await db.Transaction.create(
+      {
+        transactionId: `RPP-FEE-${merchantTransactionId}`,
+        userId,
+        walletId,
+        amount: -fee.totalUserFeeVatIncl,
+        type: 'fee',
+        status: 'completed',
+        description: `PayShap Fee (incl. VAT)`,
+        currency,
+        metadata: {
+          standardBankTransactionId: sbt.id,
+          payshapType: 'rpp',
+          sbsaFeeVatIncl: fee.sbsaFeeVatIncl,
+          sbsaFeeExVat: fee.sbsaFeeExVat,
+          sbsaVat: fee.sbsaVat,
+          mmMarkupVatIncl: fee.mmMarkupVatIncl,
+          mmMarkupExVat: fee.mmMarkupExVat,
+          mmMarkupVat: fee.mmMarkupVat,
+          totalUserFeeVatIncl: fee.totalUserFeeVatIncl,
+          totalOutputVat: fee.totalOutputVat,
+          netVatPayable: fee.netVatPayable,
+        },
+      },
+      { transaction: txn }
+    );
+
+    // VAT record — only the net VAT payable (output - input)
+    // Output VAT is on the full user charge; input VAT (SBSA cost) is reclaimable
     const now = new Date();
     const taxPeriod = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     await db.TaxTransaction.create(
@@ -181,10 +201,10 @@ async function initiateRppPayment(params) {
         taxCode: 'VAT_15',
         taxName: 'VAT 15%',
         taxType: 'vat',
-        baseAmount: feeBreakdown.netRevenue,
-        taxAmount: feeBreakdown.vatAmount,
-        totalAmount: feeBreakdown.feeAmount,
-        taxRate: VAT_RATE,
+        baseAmount: fee.mmMarkupExVat,
+        taxAmount: fee.netVatPayable,
+        totalAmount: fee.mmMarkupVatIncl,
+        taxRate: 0.15,
         calculationMethod: 'inclusive',
         businessContext: 'wallet_user',
         transactionType: 'payshap_rpp',
@@ -194,7 +214,15 @@ async function initiateRppPayment(params) {
         taxYear: now.getFullYear(),
         status: 'calculated',
         vat_direction: 'output',
-        metadata: { merchantTransactionId, userId },
+        metadata: {
+          merchantTransactionId,
+          userId,
+          outputVat: fee.totalOutputVat,
+          inputVat: fee.sbsaVat,
+          netVatPayable: fee.netVatPayable,
+          sbsaFeeVatIncl: fee.sbsaFeeVatIncl,
+          mmMarkupVatIncl: fee.mmMarkupVatIncl,
+        },
       },
       { transaction: txn }
     );
@@ -206,17 +234,41 @@ async function initiateRppPayment(params) {
       const ledgerService = require('./ledgerService');
       const clientFloatCode = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
       const bankLedgerCode = process.env.LEDGER_ACCOUNT_BANK || '1100-01-01';
+      const sbsaCostCode = process.env.LEDGER_ACCOUNT_PAYSHAP_SBSA_COST || '5000-10-01';
       const feeRevenueCode = process.env.LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE;
       const vatControlCode = process.env.LEDGER_ACCOUNT_VAT_CONTROL;
 
+      /*
+       * Ledger entries for RPP:
+       *
+       * DR  Client Float     totalDebit           (wallet debit: principal + total fee)
+       * CR  Bank             numAmount            (outbound payment to recipient)
+       * CR  SBSA Cost        sbsaFeeExVat         (cost of sale: SBSA fee ex-VAT)
+       * CR  Fee Revenue      mmMarkupExVat        (MM markup revenue ex-VAT)
+       * CR  VAT Control      netVatPayable        (output VAT - input VAT = VAT on markup only)
+       *
+       * Proof: DR = CR
+       *   totalDebit = numAmount + sbsaFeeVatIncl + mmMarkupVatIncl
+       *              = numAmount + sbsaFeeExVat + sbsaVat + mmMarkupExVat + mmMarkupVat
+       *   CR sum     = numAmount + sbsaFeeExVat + mmMarkupExVat + (totalOutputVat - sbsaVat)
+       *              = numAmount + sbsaFeeExVat + mmMarkupExVat + totalOutputVat - sbsaVat
+       *   totalOutputVat = sbsaVat + mmMarkupVat  ✓
+       *   So CR = numAmount + sbsaFeeExVat + mmMarkupExVat + sbsaVat + mmMarkupVat - sbsaVat
+       *         = numAmount + sbsaFeeExVat + mmMarkupExVat + mmMarkupVat
+       *         = numAmount + sbsaFeeExVat + mmMarkupVatIncl  ✓ (= totalDebit)
+       */
       const lines = [
         { accountCode: clientFloatCode, dc: 'debit', amount: totalDebit, memo: 'Wallet debit (RPP principal + fee)' },
-        { accountCode: bankLedgerCode, dc: 'credit', amount: numAmount, memo: 'Bank outflow (RPP)' },
+        { accountCode: bankLedgerCode, dc: 'credit', amount: numAmount, memo: 'Bank outflow (RPP payment)' },
+        { accountCode: sbsaCostCode, dc: 'credit', amount: fee.sbsaFeeExVat, memo: `SBSA PayShap cost ex-VAT (tier: ${monthlyCount} txns)` },
       ];
-      if (feeRevenueCode && vatControlCode) {
-        lines.push({ accountCode: feeRevenueCode, dc: 'credit', amount: feeBreakdown.netRevenue, memo: 'PayShap fee revenue (net of VAT)' });
-        lines.push({ accountCode: vatControlCode, dc: 'credit', amount: feeBreakdown.vatAmount, memo: 'VAT payable (PayShap fee)' });
+      if (feeRevenueCode) {
+        lines.push({ accountCode: feeRevenueCode, dc: 'credit', amount: fee.mmMarkupExVat, memo: 'MM PayShap markup revenue ex-VAT' });
       }
+      if (vatControlCode) {
+        lines.push({ accountCode: vatControlCode, dc: 'credit', amount: fee.netVatPayable, memo: 'Net VAT payable (output - input on SBSA cost)' });
+      }
+
       await ledgerService.postJournalEntry({
         reference: `SBSA-RPP-${merchantTransactionId}`,
         description: `PayShap RPP outbound: ${merchantTransactionId}`,
@@ -232,12 +284,12 @@ async function initiateRppPayment(params) {
       originalMessageId: msgId,
       status: 'initiated',
       amount: numAmount,
-      fee: feeBreakdown.feeAmount,
+      fee: fee.totalUserFeeVatIncl,
+      feeBreakdown: fee,
       totalDebit,
       currency,
     };
   } catch (err) {
-    // Rollback if transaction still open
     try { await txn.rollback(); } catch (_) { /* already rolled back */ }
     throw err;
   }
