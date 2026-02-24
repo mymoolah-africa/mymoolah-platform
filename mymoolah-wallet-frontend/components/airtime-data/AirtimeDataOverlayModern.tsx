@@ -20,8 +20,8 @@ import { RecentRecipients } from './RecentRecipients';
 import { NetworkFilter, type NetworkType } from './NetworkFilter';
 import { SmartProductGrid, type Product } from './SmartProductGrid';
 import { SmartSuggestions, generateSuggestions, type Suggestion } from './SmartSuggestions';
-import { apiService } from '../../../services/apiService';
-import { airtimeDataService, beneficiaryService, type Beneficiary as OverlayBeneficiary } from '../../../services/overlayService';
+import { apiService } from '../../services/apiService';
+import { airtimeDataService, beneficiaryService, type Beneficiary as OverlayBeneficiary } from '../../services/overlayService';
 import { BeneficiaryModal } from '../shared/BeneficiaryModal';
 
 type ViewMode = 'home' | 'products' | 'confirm' | 'success';

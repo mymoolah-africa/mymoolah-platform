@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Wifi, Smartphone, CheckCircle, Copy, Share, Download, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
-import { ErrorModal } from '../ui/ErrorModal';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { ErrorModal } from './ui/ErrorModal';
 import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { ConfirmationModal } from './shared/ConfirmationModal';
@@ -19,9 +19,9 @@ import {
   type AirtimeDataCatalog,
   type AirtimeDataProduct,
   type PurchaseResult
-} from '../../services/overlayService';
-import { apiService } from '../../services/apiService';
-import { beneficiaryService as centralizedBeneficiaryService } from '../../services/beneficiaryService';
+} from '../services/overlayService';
+import { apiService } from '../services/apiService';
+import { beneficiaryService as centralizedBeneficiaryService } from '../services/beneficiaryService';
 
 interface AirtimeDataBeneficiary extends Beneficiary {
   // Uses accountType from base Beneficiary interface

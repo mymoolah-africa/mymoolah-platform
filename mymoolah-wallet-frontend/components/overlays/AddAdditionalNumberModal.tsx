@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Smartphone } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { validateMobileNumber } from '../../../services/overlayService';
-import { unifiedBeneficiaryService } from '../../../services/unifiedBeneficiaryService';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { validateMobileNumber } from '../../services/overlayService';
+import { unifiedBeneficiaryService } from '../../services/unifiedBeneficiaryService';
 
 interface AddAdditionalNumberModalProps {
   isOpen: boolean;
@@ -219,7 +219,7 @@ export function AddAdditionalNumberModal({
               <Input
                 id="identifier"
                 value={formData.identifier}
-                onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, identifier: e.target.value })}
                 placeholder="Mobile number (e.g., 0821234567)"
                 style={{
                   fontFamily: 'Montserrat, sans-serif',
@@ -246,7 +246,7 @@ export function AddAdditionalNumberModal({
               </Label>
               <Select
                 value={formData.network}
-                onValueChange={(value) => setFormData({ ...formData, network: value })}
+                onValueChange={(value: string) => setFormData({ ...formData, network: value })}
               >
                 <SelectTrigger
                   id="network"

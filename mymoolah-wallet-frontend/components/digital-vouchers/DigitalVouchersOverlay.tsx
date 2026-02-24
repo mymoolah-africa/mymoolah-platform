@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../../../components/ui/button';
+import { Button } from '../ui/button';
 import { ArrowLeft, X, Star } from 'lucide-react';
 import { VoucherCard } from './VoucherCard';
 import { VoucherSearch } from './VoucherSearch';
 import { ProductDetailModal } from './ProductDetailModal';
-import { apiService } from '../../../services/apiService';
-import { useAuth } from '../../../contexts/AuthContext';
+import { apiService } from '../../services/apiService';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Voucher {
   id: string;

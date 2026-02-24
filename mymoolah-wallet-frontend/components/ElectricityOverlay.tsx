@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Zap, CheckCircle, AlertTriangle, Copy, Share, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
 import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { ConfirmationModal } from './shared/ConfirmationModal';
@@ -17,7 +17,7 @@ import {
   type Beneficiary,
   type ElectricityCatalog,
   type PurchaseResult
-} from '../../services/overlayService';
+} from '../services/overlayService';
 
 interface ElectricityBeneficiary extends Beneficiary {
   // Uses accountType from base Beneficiary interface

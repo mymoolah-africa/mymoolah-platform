@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Smartphone, Zap, FileText, Check, AlertTriangle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { beneficiaryService, validateMobileNumber, validateMeterNumber, type Beneficiary } from '../../../services/overlayService';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { beneficiaryService, validateMobileNumber, validateMeterNumber, type Beneficiary } from '../services/overlayService';
 
 interface BeneficiaryModalProps {
   isOpen: boolean;

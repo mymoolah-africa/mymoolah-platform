@@ -451,7 +451,7 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#86BE41', fontWeight: 600 }}>
                               <DollarSign style={{ width: '12px', height: '12px' }} />
-                              <span>Earn R{parseFloat(ad.rewardPerView).toFixed(2)}</span>
+                              <span>Earn R{Number(ad.rewardPerView).toFixed(2)}</span>
                             </div>
                           </div>
                         </div>
@@ -505,7 +505,7 @@ export default function EarnMoolahsModal({ isOpen, onClose }: EarnMoolahsModalPr
                   textAlign: 'center'
                 }}
               >
-                Watch the entire video to earn <strong style={{ color: '#86BE41' }}>R{parseFloat(selectedAd.rewardPerView).toFixed(2)}</strong>
+                Watch the entire video to earn <strong style={{ color: '#86BE41' }}>R{Number(selectedAd.rewardPerView).toFixed(2)}</strong>
               </p>
             </div>
           </div>

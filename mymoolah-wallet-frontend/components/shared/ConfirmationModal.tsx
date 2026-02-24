@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Card, CardContent, CardHeader } from '../../ui/card';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader } from '../ui/card';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -161,11 +161,11 @@ export function ConfirmationModal({
                 backgroundColor: '#ffffff',
                 transition: 'all 0.2s ease'
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.currentTarget.style.borderColor = '#d1d5db';
                 e.currentTarget.style.backgroundColor = '#f9fafb';
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.currentTarget.style.borderColor = '#e2e8f0';
                 e.currentTarget.style.backgroundColor = '#ffffff';
               }}
@@ -191,10 +191,10 @@ export function ConfirmationModal({
                 borderRadius: '12px',
                 transition: 'all 0.2s ease'
               }}
-              onMouseEnter={(e) => {
+              onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.currentTarget.style.backgroundColor = styles.confirmHover;
               }}
-              onMouseLeave={(e) => {
+              onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.currentTarget.style.backgroundColor = styles.confirmBg;
               }}
             >
@@ -223,11 +223,11 @@ export function ConfirmationModal({
           cursor: 'pointer',
           transition: 'all 0.2s ease'
         }}
-        onMouseEnter={(e) => {
+        onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => {
           e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
           e.currentTarget.style.transform = 'scale(1.1)';
         }}
-        onMouseLeave={(e) => {
+        onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => {
           e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
           e.currentTarget.style.transform = 'scale(1)';
         }}

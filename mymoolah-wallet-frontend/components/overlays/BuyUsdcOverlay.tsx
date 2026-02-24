@@ -30,7 +30,11 @@ import { formatCurrency, beneficiaryService } from '../../services/overlayServic
 
 type Step = 'beneficiary' | 'amount' | 'confirm' | 'processing' | 'success';
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
-type Beneficiary = UnifiedBeneficiary;
+type Beneficiary = UnifiedBeneficiary & {
+  walletAddress?: string;
+  country?: string;
+  relationship?: string;
+};
 
 const PURPOSE_OPTIONS = [
   { value: 'support', label: 'Financial Support' },
@@ -192,7 +196,7 @@ export function BuyUsdcOverlay() {
       
       const result = await usdcService.send({
         zarAmount: quote.zarAmount,
-        beneficiaryId: selectedBeneficiary.id,
+        beneficiaryId: Number(selectedBeneficiary.id),
         purpose,
         idempotencyKey: `USDC-${Date.now()}-${Math.random().toString(36).slice(2)}`
       });
@@ -400,16 +404,14 @@ export function BuyUsdcOverlay() {
               <BeneficiaryList
                 beneficiaries={beneficiaries}
                 selectedBeneficiary={selectedBeneficiary}
-                onSelect={handleBeneficiarySelect}
+                onSelect={handleBeneficiarySelect as any}
                 onAddNew={() => {
                   setEditingBeneficiary(null);
                   setShowBeneficiaryModal(true);
                 }}
-                onEdit={handleEditBeneficiary}
-                onRemove={handleRemoveBeneficiary}
-                serviceType="usdc"
+                onEdit={handleEditBeneficiary as any}
+                onRemove={handleRemoveBeneficiary as any}
                 showFilters={false}
-                emptyMessage="No USDC recipients saved yet"
               />
               
               <Button

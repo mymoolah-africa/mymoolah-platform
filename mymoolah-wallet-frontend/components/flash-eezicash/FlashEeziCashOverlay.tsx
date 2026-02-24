@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, CreditCard, CheckCircle, Copy, Share, AlertTriangle, Info } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Separator } from '../../ui/separator';
-import { Alert, AlertDescription } from '../../ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Separator } from '../ui/separator';
+import { Alert, AlertDescription } from '../ui/alert';
 
 interface FlashVoucherData {
   amount: number;
@@ -648,14 +648,14 @@ export function FlashEeziCashOverlay() {
                 inputMode="decimal"
                 placeholder="50"
                 value={amount}
-                onChange={(e) => handleAmountChange(e.target.value)}
-                onKeyDown={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleAmountChange(e.target.value)}
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
                   // Banking-grade: Prevent browser auto-formatting quirks
                   if (['e', 'E', '+', '-'].includes(e.key)) {
                     e.preventDefault();
                   }
                 }}
-                onWheel={(e) => {
+                onWheel={(e: React.WheelEvent<HTMLInputElement>) => {
                   // Banking-grade: Prevent scroll-to-change number input values
                   e.currentTarget.blur();
                 }}
@@ -717,7 +717,7 @@ export function FlashEeziCashOverlay() {
               type="tel"
               placeholder="27 XX XXX XXXX"
               value={recipientPhone}
-              onChange={(e) => handlePhoneChange(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handlePhoneChange(e.target.value)}
               style={{
                 fontFamily: 'Montserrat, sans-serif',
                 fontSize: '14px',

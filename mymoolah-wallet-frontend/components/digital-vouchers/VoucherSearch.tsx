@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Search, X } from 'lucide-react';
-import { Input } from '../../ui/input';
+import { Input } from '../ui/input';
 
 interface VoucherSearchProps {
   searchQuery: string;
@@ -39,7 +39,7 @@ export function VoucherSearch({
           type="text"
           placeholder="Search vouchers..."
           value={searchValue}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleSearchChange(e.target.value)}
           style={{
             paddingLeft: '40px',
             paddingRight: searchValue ? '40px' : '12px',

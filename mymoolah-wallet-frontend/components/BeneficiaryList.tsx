@@ -1,10 +1,10 @@
 import React, { useState, useCallback } from 'react';
 import { Search, Plus, Edit2, Smartphone, Zap, FileText, Check, X, ChevronDown, Wallet, Building2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Input } from '../../ui/input';
-import { Button } from '../../ui/button';
-import { Badge } from '../../ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Input } from './ui/input';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 // Legacy format (backward compatible)
 interface LegacyBeneficiary {

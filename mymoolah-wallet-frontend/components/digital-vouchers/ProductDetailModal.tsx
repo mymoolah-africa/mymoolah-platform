@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { X, Check, Phone, CreditCard, Info, AlertTriangle, Copy } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../ui/dialog';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Card, CardContent } from '../../ui/card';
-import { Checkbox } from '../../ui/checkbox';
-import { Alert, AlertDescription } from '../../ui/alert';
-import { Separator } from '../../ui/separator';
-import { apiService } from '../../../services/apiService';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Card, CardContent } from '../ui/card';
+import { Checkbox } from '../ui/checkbox';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Separator } from '../ui/separator';
+import { apiService } from '../../services/apiService';
 
 interface Voucher {
   id: string;

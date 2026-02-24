@@ -196,7 +196,7 @@ export function FlashEeziCashOverlay() {
       
       // Extract token/PIN from Flash response
       // Response format: { success: true, data: { transaction: { ... } } }
-      const transaction = response.data?.transaction || response.data;
+      const transaction = (response as any).data?.transaction || (response as any).data;
       const token = transaction?.pin || transaction?.token || transaction?.serialNumber || transaction?.reference;
       const ref = transaction?.transactionId || transaction?.reference || systemData.reference;
       

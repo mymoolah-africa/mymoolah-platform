@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
-import { Input } from '../../ui/input';
-import { Button } from '../../ui/button';
+import { Input } from '../ui/input';
+import { Button } from '../ui/button';
 
 interface SearchBarProps {
   placeholder?: string;
@@ -90,11 +90,11 @@ export function SearchBar({
           borderRadius: '12px',
           transition: 'all 0.2s ease'
         }}
-        onFocus={(e) => {
+        onFocus={(e: React.FocusEvent<HTMLInputElement>) => {
           e.currentTarget.style.borderColor = '#86BE41';
           e.currentTarget.style.backgroundColor = '#ffffff';
         }}
-        onBlur={(e) => {
+        onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
           e.currentTarget.style.borderColor = '#e2e8f0';
           e.currentTarget.style.backgroundColor = disabled ? '#f3f4f6' : '#f1f5f9';
         }}

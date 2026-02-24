@@ -1,7 +1,7 @@
 import React from 'react';
 import { AlertTriangle, X } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Card, CardContent, CardHeader } from '../../ui/card';
+import { Button } from './ui/button';
+import { Card, CardContent, CardHeader } from './ui/card';
 
 interface ConfirmationModalProps {
   isOpen: boolean;

@@ -184,12 +184,10 @@ export function WalletSettingsPage() {
             color: service.enabled ? '#ffffff' : '#6b7280',
             bgColor: service.enabled ? '#86BE41' : '#f8fafc'
           }))
-          .sort((a, b) => {
-            // Active services first
+          .sort((a: { comingSoon: boolean; name: string }, b: { comingSoon: boolean; name: string }) => {
             if (a.comingSoon !== b.comingSoon) {
               return a.comingSoon ? 1 : -1;
             }
-            // Then alphabetical by name
             return a.name.localeCompare(b.name);
           });
 

@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Search, Building, Tv, GraduationCap, MapPin, Phone, CreditCard, CheckCircle, Copy, Share } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { Button } from './ui/button';
+import { Badge } from './ui/badge';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 import { SearchBar } from './shared/SearchBar';
 import { BeneficiaryList } from './shared/BeneficiaryList';
 import { BeneficiaryModal } from './shared/BeneficiaryModal';
@@ -19,7 +19,7 @@ import {
   type Biller,
   type BillCategory,
   type PurchaseResult
-} from '../../services/overlayService';
+} from '../services/overlayService';
 
 interface BillBeneficiary extends Beneficiary {
   // Uses accountType from base Beneficiary interface

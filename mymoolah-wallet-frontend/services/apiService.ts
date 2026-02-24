@@ -214,7 +214,7 @@ class ApiService {
     core = core.slice(-9);
     return `+27${core}`; // backend stores with +27 per User model validation
   }
-  private async request<T>(
+  async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {

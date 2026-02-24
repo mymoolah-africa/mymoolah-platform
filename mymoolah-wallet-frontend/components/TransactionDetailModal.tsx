@@ -5,7 +5,8 @@ import { Button } from './ui/button';
 
 interface Transaction {
   id: string;
-  transactionId: string;
+  transactionId?: string;
+  reference?: string;
   amount: number;
   type: string;
   description: string;

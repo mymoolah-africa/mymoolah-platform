@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, X, Loader2 } from 'lucide-react';
-import { Input } from '../../ui/input';
-import { Button } from '../../ui/button';
+import { Input } from './ui/input';
+import { Button } from './ui/button';
 
 interface SearchBarProps {
   placeholder?: string;

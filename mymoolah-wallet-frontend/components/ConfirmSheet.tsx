@@ -1,8 +1,8 @@
 import React from 'react';
 import { AlertTriangle, Clock, Shield, CreditCard } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Alert, AlertDescription } from '../../ui/alert';
-import { Separator } from '../../ui/separator';
+import { Button } from './ui/button';
+import { Alert, AlertDescription } from './ui/alert';
+import { Separator } from './ui/separator';
 
 interface SummaryRow {
   label: string;

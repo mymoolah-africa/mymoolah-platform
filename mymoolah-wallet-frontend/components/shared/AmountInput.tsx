@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { DollarSign, AlertTriangle } from 'lucide-react';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Button } from '../../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Button } from '../ui/button';
 
 interface AmountInputProps {
   label?: string;
@@ -194,13 +194,13 @@ export function AmountInput({
           onChange={handleInputChange}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          onKeyDown={(e) => {
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
             // Banking-grade: Prevent browser auto-formatting quirks
             if (['e', 'E', '+', '-'].includes(e.key)) {
               e.preventDefault();
             }
           }}
-          onWheel={(e) => {
+          onWheel={(e: React.WheelEvent<HTMLInputElement>) => {
             // Banking-grade: Prevent scroll-to-change number input values
             e.currentTarget.blur();
           }}

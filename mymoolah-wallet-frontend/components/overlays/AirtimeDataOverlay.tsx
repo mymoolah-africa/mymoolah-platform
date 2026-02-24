@@ -641,7 +641,7 @@ export function AirtimeDataOverlay() {
           )
         );
         if (match && (match as any).variantId) {
-          productToUse = { ...selectedProduct, ...match, variantId: (match as any).variantId };
+          productToUse = { ...selectedProduct, ...match, variantId: (match as any).variantId } as AirtimeDataProduct;
         } else if (match) {
           productToUse = { ...selectedProduct, ...match };
         }

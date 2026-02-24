@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Smartphone, Zap, FileText, Check, AlertTriangle, Plus } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Label } from '../../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
-import { beneficiaryService, validateMobileNumber, validateMeterNumber, type Beneficiary } from '../../../services/overlayService';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { beneficiaryService, validateMobileNumber, validateMeterNumber, type Beneficiary } from '../../services/overlayService';
 
 interface BeneficiaryModalProps {
   isOpen: boolean;
@@ -294,7 +294,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
               <Input
                 id="name"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="Enter a name for this recipient"
                 style={{
                   fontFamily: 'Montserrat, sans-serif',
@@ -323,7 +323,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
               <Input
                 id="identifier"
                 value={formData.identifier}
-                onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, identifier: e.target.value })}
                 placeholder={getIdentifierPlaceholder()}
                 style={{
                   fontFamily: 'Montserrat, sans-serif',
@@ -848,7 +848,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, editBenefic
                 <Input
                   id="billerName"
                   value={formData.billerName}
-                  onChange={(e) => setFormData({ ...formData, billerName: e.target.value })}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData({ ...formData, billerName: e.target.value })}
                   placeholder="Enter biller name"
                   style={{
                     fontFamily: 'Montserrat, sans-serif',
