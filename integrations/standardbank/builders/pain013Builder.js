@@ -138,8 +138,8 @@ function buildPain013(params) {
       GrntedPmtReqd: false,
     },
     Amt: {
-      Item: {
-        Value: numAmount.toFixed(2),
+      InstdAmt: {
+        Value: numAmount,
         Ccy: currency,
       },
     },
@@ -171,7 +171,7 @@ function buildPain013(params) {
         {
           RfrdDocAmt: {
             DuePyblAmt: {
-              Value: numAmount.toFixed(2),
+              Value: numAmount,
               Ccy: currency,
             },
           },
