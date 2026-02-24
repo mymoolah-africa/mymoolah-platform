@@ -343,8 +343,7 @@ async function initiatePayShapRtp(req, res) {
       amount,
       currency = 'ZAR',
       payerName,
-      payerAccountNumber,
-      payerBankCode,
+      payerMobileNumber,
       payerBankName,
       description,
       reference,
@@ -354,14 +353,12 @@ async function initiatePayShapRtp(req, res) {
     if (!amount) {
       return res.status(400).json({ success: false, message: 'amount is required' });
     }
-    if (!payerAccountNumber) {
-      return res.status(400).json({ success: false, message: 'payerAccountNumber is required' });
+    if (!payerMobileNumber) {
+      return res.status(400).json({ success: false, message: 'payerMobileNumber is required' });
     }
     if (!payerName) {
       return res.status(400).json({ success: false, message: 'payerName is required' });
     }
-
-    const derivedBankCode = payerBankCode || (payerBankName ? getBankCodeFromName(payerBankName) : null);
 
     const rtpService = require('../services/standardbankRtpService');
     const result = await rtpService.initiateRtpRequest({
@@ -370,8 +367,7 @@ async function initiatePayShapRtp(req, res) {
       amount,
       currency,
       payerName,
-      payerAccountNumber,
-      payerBankCode: derivedBankCode,
+      payerMobileNumber,
       payerBankName,
       description,
       reference,

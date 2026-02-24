@@ -35,7 +35,7 @@ async function initiateRtpRequest(params) {
     amount,
     currency = 'ZAR',
     payerName,
-    payerAccountNumber,
+    payerMobileNumber,
     payerBankCode,
     payerBankName,
     description,
@@ -43,8 +43,8 @@ async function initiateRtpRequest(params) {
     expiryMinutes = 60,
   } = params;
 
-  if (!payerAccountNumber) {
-    throw new Error('payerAccountNumber is required for RTP');
+  if (!payerMobileNumber) {
+    throw new Error('payerMobileNumber is required for RTP (SBSA only supports mobile number proxy for RTP debtors)');
   }
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
@@ -83,19 +83,16 @@ async function initiateRtpRequest(params) {
     amount: numAmount,
     currency,
     payerName: payerName || 'Payer',
-    payerAccountNumber,
+    payerMobileNumber,
     payerBankCode: resolvedPayerBankCode,
     remittanceInfo: description || reference || merchantTransactionId,
     expiryMinutes,
   });
 
-  console.log('[SBSA RTP] Pain.013 payload:', JSON.stringify(pain013, null, 2));
-
   let sbResponse;
   try {
     sbResponse = await sbClient.initiateRequestToPay(pain013);
   } catch (err) {
-    if (err.sbsaBody) console.error('[SBSA RTP] Error body:', JSON.stringify(err.sbsaBody, null, 2));
     throw new Error(`SBSA RTP initiation failed: ${err.message}`);
   }
 
@@ -116,7 +113,7 @@ async function initiateRtpRequest(params) {
     currency,
     referenceNumber: reference || null,
     payerName: payerName || null,
-    payerAccountNumber: payerAccountNumber || null,
+    payerMobileNumber: payerMobileNumber || null,
     payerBankCode: payerBankCode || null,
     payerBankName: payerBankName || null,
     description: description || null,

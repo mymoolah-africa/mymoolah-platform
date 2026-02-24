@@ -4,8 +4,13 @@
  * Pain.013 Builder - SBSA RTP PayShap (Request to Pay Initiation)
  * ISO 20022 Pain.013 - JSON format aligned with SBSA API Postman samples
  *
- * Payment method: PBAC (Pay-By-Account) only — no proxy/mobile dependency.
- * Structure: top-level GrpHdr + SplmtryData + PmtInf[] (PascalCase per SBSA spec)
+ * SBSA RTP debtor identification:
+ *   - DbtrAcct.Id.Item.Id MUST be "Proxy" (mandatory discriminator per SBSA schema)
+ *   - Debtor is identified via Prxy.Tp.Item = "MOBILE_NUMBER" + Prxy.Id = mobile number
+ *   - Direct bank account (PBAC) is NOT supported for RTP debtors by SBSA
+ *   - RPP (outbound) uses PBAC for creditor — RTP (request) uses MOBILE_NUMBER for debtor
+ *
+ * Creditor (MMTP) uses direct account number in CdtrAcct.Id.Item.Id.
  *
  * @author MyMoolah Treasury Platform
  */
@@ -21,16 +26,37 @@ function isoNow() {
 }
 
 /**
- * Build Pain.013 for RTP (Request to Pay) initiation (PBAC — bank account only)
- * Creditor = MMTP (requesting money). Debtor = Payer (being asked to pay).
+ * Normalise a South African mobile number for SBSA Prxy.Id field.
+ * SBSA sandbox test numbers (9 digits with +27 prefix): send as "+27-XXXXXXXXX"
+ * Real SA mobiles (10 digits with leading 0): send as "0XXXXXXXXX"
+ * +27XXXXXXXXX (11 digits): convert to "0XXXXXXXXX"
+ */
+function normaliseMobile(raw) {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('27') && digits.length === 11) {
+    return `0${digits.slice(2)}`;
+  }
+  if (digits.startsWith('0') && digits.length === 10) {
+    return digits;
+  }
+  if (digits.startsWith('27') && digits.length === 10) {
+    // 9-digit sandbox number with country code — use +27-XXXXXXXXX format
+    return `+27-${digits.slice(2)}`;
+  }
+  return raw;
+}
+
+/**
+ * Build Pain.013 for RTP (Request to Pay) initiation
+ * Creditor = MMTP (requesting money). Debtor = Payer (identified by mobile number).
  *
  * @param {Object} params
  * @param {string} params.merchantTransactionId - Our internal ID
  * @param {number} params.amount - Amount in ZAR
  * @param {string} [params.currency] - Default ZAR
  * @param {string} params.payerName - Debtor name
- * @param {string} params.payerAccountNumber - Debtor bank account number
- * @param {string} [params.payerBankCode] - Debtor bank branch code
+ * @param {string} params.payerMobileNumber - Debtor mobile number (required by SBSA RTP)
+ * @param {string} [params.payerBankCode] - Debtor bank code (defaults to 'bankc' in UAT)
  * @param {string} [params.creditorAccountNumber] - MMTP receiving account
  * @param {string} [params.creditorName] - MMTP name
  * @param {string} [params.creditorOrgId] - CIPC registration
@@ -44,7 +70,7 @@ function buildPain013(params) {
     amount,
     currency = 'ZAR',
     payerName,
-    payerAccountNumber,
+    payerMobileNumber,
     payerBankCode,
     creditorAccountNumber = process.env.SBSA_CREDITOR_ACCOUNT || process.env.SBSA_DEBTOR_ACCOUNT || '0000000000',
     creditorName = process.env.SBSA_CREDITOR_NAME || process.env.SBSA_DEBTOR_NAME || 'MyMoolah Treasury',
@@ -54,8 +80,8 @@ function buildPain013(params) {
     expiryMinutes = 60,
   } = params;
 
-  if (!payerAccountNumber) {
-    throw new Error('payerAccountNumber is required for RTP (PBAC)');
+  if (!payerMobileNumber) {
+    throw new Error('payerMobileNumber is required for RTP (SBSA only supports mobile number proxy for RTP debtors)');
   }
 
   // SBSA field regex: alphanumeric only, no hyphens/special chars
@@ -72,11 +98,10 @@ function buildPain013(params) {
   const now = new Date();
   const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
-  // SBSA Pain.013 requires DbtrAcct.Id.Item (mandatory polymorphic discriminator).
-  // The Postman sample only shows "Proxy" as the Item type.
-  // For direct bank account, we use Item.Id = "BBAN" with the account number in Prxy.Id,
-  // using proxy scheme "ACCT" (account number proxy type per PayShap spec).
-  // If SBSA rejects BBAN, fallback is to use "Proxy" + ACCT scheme with account number.
+  const normalizedMobile = normaliseMobile(payerMobileNumber);
+
+  // SBSA Pain.013 DbtrAcct: Id.Item.Id = "Proxy" is mandatory discriminator.
+  // Actual debtor identity goes in Prxy block with MOBILE_NUMBER scheme.
   const DbtrAcct = {
     Id: {
       Item: {
@@ -86,9 +111,9 @@ function buildPain013(params) {
     Nm: (payerName || 'Payer').substring(0, 140),
     Prxy: {
       Tp: {
-        Item: 'ACCOUNT_NUMBER',
+        Item: 'MOBILE_NUMBER',
       },
-      Id: payerAccountNumber,
+      Id: normalizedMobile,
     },
   };
 
