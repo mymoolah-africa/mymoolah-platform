@@ -313,9 +313,12 @@ async function initiatePayShapRpp(req, res) {
     });
   } catch (err) {
     console.error('SBSA RPP initiation error:', err.message);
-    return res.status(500).json({
+    // Pass through SBSA business rejection codes (422 = business reject, 400 = validation)
+    const httpStatus = err.sbsaStatus === 422 ? 422 : err.sbsaStatus === 400 ? 400 : 500;
+    return res.status(httpStatus).json({
       success: false,
       message: err.message || 'Failed to initiate PayShap payment',
+      ...(err.sbsaBody ? { sbsaDetail: err.sbsaBody } : {}),
     });
   }
 }
@@ -399,9 +402,12 @@ async function initiatePayShapRtp(req, res) {
     });
   } catch (err) {
     console.error('SBSA RTP initiation error:', err.message);
-    return res.status(500).json({
+    // Pass through SBSA business rejection codes (422 = business reject, 400 = validation)
+    const httpStatus = err.sbsaStatus === 422 ? 422 : err.sbsaStatus === 400 ? 400 : 500;
+    return res.status(httpStatus).json({
       success: false,
       message: err.message || 'Failed to initiate Request to Pay',
+      ...(err.sbsaBody ? { sbsaDetail: err.sbsaBody } : {}),
     });
   }
 }
