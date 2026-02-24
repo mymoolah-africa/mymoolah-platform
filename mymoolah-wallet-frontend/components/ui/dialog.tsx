@@ -86,11 +86,6 @@ const DialogContent = React.forwardRef<
     }
   }, [autoDescId, describedByProp]);
 
-  if (!describedByProp && (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production')) {
-    // Help locate offending dialogs during dev
-    // eslint-disable-next-line no-console
-    console.warn('[A11Y] DialogContent mounted without description. Auto-injecting one.');
-  }
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
