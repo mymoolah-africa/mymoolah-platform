@@ -262,7 +262,7 @@ async function initiatePayShapRpp(req, res) {
       amount,
       currency = 'ZAR',
       creditorAccountNumber,
-      creditorPhone,
+      creditorBankBranchCode,
       creditorName,
       bankCode,
       bankName,
@@ -273,8 +273,8 @@ async function initiatePayShapRpp(req, res) {
     if (!amount) {
       return res.status(400).json({ success: false, message: 'amount is required' });
     }
-    if (!creditorAccountNumber && !creditorPhone) {
-      return res.status(400).json({ success: false, message: 'creditorAccountNumber or creditorPhone required' });
+    if (!creditorAccountNumber) {
+      return res.status(400).json({ success: false, message: 'creditorAccountNumber is required' });
     }
 
     const rppService = require('../services/standardbankRppService');
@@ -283,8 +283,8 @@ async function initiatePayShapRpp(req, res) {
       walletId,
       amount,
       currency,
-      creditorAccountNumber: creditorAccountNumber || undefined,
-      creditorProxy: creditorPhone || undefined,
+      creditorAccountNumber,
+      creditorBankBranchCode: creditorBankBranchCode || undefined,
       creditorName,
       bankCode,
       bankName,
@@ -344,7 +344,6 @@ async function initiatePayShapRtp(req, res) {
       currency = 'ZAR',
       payerName,
       payerAccountNumber,
-      payerMobileNumber,
       payerBankCode,
       payerBankName,
       description,
@@ -355,8 +354,8 @@ async function initiatePayShapRtp(req, res) {
     if (!amount) {
       return res.status(400).json({ success: false, message: 'amount is required' });
     }
-    if (!payerAccountNumber && !payerMobileNumber) {
-      return res.status(400).json({ success: false, message: 'payerAccountNumber or payerMobileNumber required' });
+    if (!payerAccountNumber) {
+      return res.status(400).json({ success: false, message: 'payerAccountNumber is required' });
     }
     if (!payerName) {
       return res.status(400).json({ success: false, message: 'payerName is required' });
@@ -371,8 +370,7 @@ async function initiatePayShapRtp(req, res) {
       amount,
       currency,
       payerName,
-      payerAccountNumber: payerAccountNumber || undefined,
-      payerMobileNumber: payerMobileNumber || undefined,
+      payerAccountNumber,
       payerBankCode: derivedBankCode,
       payerBankName,
       description,

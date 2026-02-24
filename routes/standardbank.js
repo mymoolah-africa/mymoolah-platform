@@ -40,7 +40,7 @@ function handleValidation(req, res, next) {
   next();
 }
 
-// RPP validation rules
+// RPP validation rules — PBAC (bank account) only, no proxy
 const rppValidation = [
   body('amount')
     .isFloat({ gt: 0 })
@@ -50,17 +50,16 @@ const rppValidation = [
     .isIn(['ZAR'])
     .withMessage('currency must be ZAR'),
   body('creditorAccountNumber')
-    .if((value, { req }) => !req.body.creditorPhone)
     .notEmpty()
-    .withMessage('creditorAccountNumber or creditorPhone is required')
-    .if((value) => value !== undefined)
+    .withMessage('creditorAccountNumber is required')
     .isAlphanumeric()
     .isLength({ min: 6, max: 20 })
     .withMessage('creditorAccountNumber must be 6-20 alphanumeric characters'),
-  body('creditorPhone')
+  body('creditorBankBranchCode')
     .optional()
-    .matches(/^(\+27|27|0)[6-8][0-9]{8}$/)
-    .withMessage('creditorPhone must be a valid South African mobile number'),
+    .isAlphanumeric()
+    .isLength({ min: 4, max: 10 })
+    .withMessage('creditorBankBranchCode must be 4-10 alphanumeric characters'),
   body('creditorName')
     .optional()
     .isLength({ max: 140 })
@@ -78,7 +77,7 @@ const rppValidation = [
     .escape(),
 ];
 
-// RTP validation rules
+// RTP validation rules — PBAC (bank account) only, no proxy
 const rtpValidation = [
   body('amount')
     .isFloat({ gt: 0 })
@@ -94,17 +93,16 @@ const rtpValidation = [
     .trim()
     .escape(),
   body('payerAccountNumber')
-    .if((value, { req }) => !req.body.payerMobileNumber)
     .notEmpty()
-    .withMessage('payerAccountNumber or payerMobileNumber is required')
-    .if((value) => value !== undefined)
+    .withMessage('payerAccountNumber is required')
     .isAlphanumeric()
     .isLength({ min: 6, max: 20 })
     .withMessage('payerAccountNumber must be 6-20 alphanumeric characters'),
-  body('payerMobileNumber')
+  body('payerBankCode')
     .optional()
-    .matches(/^(\+27|27|0)[0-9]{8,9}$/)
-    .withMessage('payerMobileNumber must be a valid South African mobile number'),
+    .isAlphanumeric()
+    .isLength({ min: 4, max: 10 })
+    .withMessage('payerBankCode must be 4-10 alphanumeric characters'),
   body('payerBankName')
     .optional()
     .isLength({ max: 100 })

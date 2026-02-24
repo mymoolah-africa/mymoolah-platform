@@ -36,13 +36,16 @@ async function initiateRtpRequest(params) {
     currency = 'ZAR',
     payerName,
     payerAccountNumber,
-    payerMobileNumber,
     payerBankCode,
     payerBankName,
     description,
     reference,
     expiryMinutes = 60,
   } = params;
+
+  if (!payerAccountNumber) {
+    throw new Error('payerAccountNumber is required for RTP');
+  }
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
   if (!Number.isFinite(numAmount) || numAmount <= 0) {
@@ -70,27 +73,26 @@ async function initiateRtpRequest(params) {
 
   const merchantTransactionId = `MM-RTP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+  // DbtrAgt: use 'bankc' in UAT (SBSA sandbox placeholder); in production use actual branch code
+  const resolvedPayerBankCode = process.env.STANDARDBANK_ENVIRONMENT === 'uat'
+    ? 'bankc'
+    : (payerBankCode || 'bankc');
+
   const { pain013, msgId } = buildPain013({
     merchantTransactionId,
     amount: numAmount,
     currency,
     payerName: payerName || 'Payer',
-    payerAccountNumber: payerAccountNumber || undefined,
-    payerProxy: payerMobileNumber || undefined,
-    // DbtrAgt must use 'bankc' (SBSA sandbox placeholder) — real branch codes cause EDRIL rejection
-    // In production this would be the payer's actual bank branch code
-    payerBankCode: process.env.STANDARDBANK_ENVIRONMENT === 'uat' ? 'bankc' : (payerBankCode || 'bankc'),
+    payerAccountNumber,
+    payerBankCode: resolvedPayerBankCode,
     remittanceInfo: description || reference || merchantTransactionId,
     expiryMinutes,
   });
-
-  console.log('[SBSA RTP] Payload:', JSON.stringify(pain013, null, 2));
 
   let sbResponse;
   try {
     sbResponse = await sbClient.initiateRequestToPay(pain013);
   } catch (err) {
-    if (err.sbsaBody) console.error('[SBSA RTP] Error body:', JSON.stringify(err.sbsaBody, null, 2));
     throw new Error(`SBSA RTP initiation failed: ${err.message}`);
   }
 
@@ -111,7 +113,6 @@ async function initiateRtpRequest(params) {
     currency,
     referenceNumber: reference || null,
     payerName: payerName || null,
-    payerMobileNumber: payerMobileNumber || null,
     payerAccountNumber: payerAccountNumber || null,
     payerBankCode: payerBankCode || null,
     payerBankName: payerBankName || null,

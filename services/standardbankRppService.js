@@ -34,13 +34,17 @@ async function initiateRppPayment(params) {
     amount,
     currency = 'ZAR',
     creditorAccountNumber,
-    creditorProxy,
+    creditorBankBranchCode,
     creditorName,
     bankCode,
     bankName,
     description,
     reference,
   } = params;
+
+  if (!creditorAccountNumber) {
+    throw new Error('creditorAccountNumber is required for RPP');
+  }
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
   if (!Number.isFinite(numAmount) || numAmount <= 0) {
@@ -53,7 +57,6 @@ async function initiateRppPayment(params) {
 
   const totalDebit = Number((numAmount + fee.totalUserFeeVatIncl).toFixed(2));
 
-  const paymentType = creditorProxy ? 'PBPX' : 'PBAC';
   const merchantTransactionId = `MM-RPP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   // Build Pain.001 before opening DB transaction (pure computation, no side effects)
@@ -61,9 +64,8 @@ async function initiateRppPayment(params) {
     merchantTransactionId,
     amount: numAmount,
     currency,
-    paymentType,
-    creditorAccountNumber: creditorAccountNumber || undefined,
-    creditorProxy: creditorProxy || undefined,
+    creditorAccountNumber,
+    creditorBankBranchCode: creditorBankBranchCode || undefined,
     creditorName: creditorName || 'Beneficiary',
     remittanceInfo: description || reference || merchantTransactionId,
     statementNarrative: description || reference,
@@ -121,7 +123,7 @@ async function initiateRppPayment(params) {
         direction: 'debit',
         amount: numAmount,
         currency,
-        referenceNumber: creditorProxy || creditorAccountNumber,
+        referenceNumber: creditorAccountNumber,
         accountType: 'wallet',
         accountId: wallet.id,
         userId,

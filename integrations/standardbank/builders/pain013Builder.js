@@ -4,12 +4,10 @@
  * Pain.013 Builder - SBSA RTP PayShap (Request to Pay Initiation)
  * ISO 20022 Pain.013 - JSON format aligned with SBSA API Postman samples
  *
- * Structure: top-level GrpHdr + PmtInf[] (PascalCase per SBSA spec)
- * DbtrAcct uses Id.Item.Id + Prxy structure; CdtrAgt uses Othr.Id (branch code)
- * Amt uses Item.Value; RmtInf uses Strd[]; XpryDt/ReqdExctnDt use DtTm objects
+ * Payment method: PBAC (Pay-By-Account) only — no proxy/mobile dependency.
+ * Structure: top-level GrpHdr + SplmtryData + PmtInf[] (PascalCase per SBSA spec)
  *
  * @author MyMoolah Treasury Platform
- * @date 2026-02-21
  */
 
 const crypto = require('crypto');
@@ -23,24 +21,22 @@ function isoNow() {
 }
 
 /**
- * Build Pain.013 for RTP (Request to Pay) initiation
- * Creditor = MMTP (requestor, receiving money). Debtor = Payer.
+ * Build Pain.013 for RTP (Request to Pay) initiation (PBAC — bank account only)
+ * Creditor = MMTP (requesting money). Debtor = Payer (being asked to pay).
  *
  * @param {Object} params
  * @param {string} params.merchantTransactionId - Our internal ID
  * @param {number} params.amount - Amount in ZAR
- * @param {string} params.currency - Default ZAR
+ * @param {string} [params.currency] - Default ZAR
  * @param {string} params.payerName - Debtor name
- * @param {string} [params.payerAccountNumber] - Debtor account (PBAC)
- * @param {string} [params.payerProxy] - Debtor mobile (PBPX)
- * @param {string} [params.payerProxyScheme] - 'MOBILE_NUMBER' per SBSA spec
+ * @param {string} params.payerAccountNumber - Debtor bank account number
  * @param {string} [params.payerBankCode] - Debtor bank branch code
  * @param {string} [params.creditorAccountNumber] - MMTP receiving account
- * @param {string} [params.creditorName] - MMTP/requestor name
- * @param {string} [params.creditorOrgId] - CIPC registration for creditor
- * @param {string} [params.creditorBankBranchCode] - SBSA branch code (default 051001)
+ * @param {string} [params.creditorName] - MMTP name
+ * @param {string} [params.creditorOrgId] - CIPC registration
+ * @param {string} [params.creditorBankBranchCode] - SBSA branch code
  * @param {string} [params.remittanceInfo] - Payment reference
- * @param {number} [params.expiryMinutes] - RTP expiry in minutes
+ * @param {number} [params.expiryMinutes] - RTP expiry in minutes (default 60)
  */
 function buildPain013(params) {
   const {
@@ -49,8 +45,6 @@ function buildPain013(params) {
     currency = 'ZAR',
     payerName,
     payerAccountNumber,
-    payerProxy,
-    payerProxyScheme = 'MOBILE_NUMBER',
     payerBankCode,
     creditorAccountNumber = process.env.SBSA_CREDITOR_ACCOUNT || process.env.SBSA_DEBTOR_ACCOUNT || '0000000000',
     creditorName = process.env.SBSA_CREDITOR_NAME || process.env.SBSA_DEBTOR_NAME || 'MyMoolah Treasury',
@@ -60,74 +54,38 @@ function buildPain013(params) {
     expiryMinutes = 60,
   } = params;
 
-  // SBSA field regex: ^(?=.*[a-zA-Z0-9])([a-zA-Z0-9\s]){1,35}$ — alphanumeric only, no hyphens/special chars
+  if (!payerAccountNumber) {
+    throw new Error('payerAccountNumber is required for RTP (PBAC)');
+  }
+
+  // SBSA field regex: alphanumeric only, no hyphens/special chars
   const cleanId = (str) => str.replace(/[^a-zA-Z0-9]/g, '');
 
   const uetr = uuidv4();
   const baseId = cleanId(merchantTransactionId);
   const msgId = `MMRTP${baseId}`.substring(0, 35);
-  const pmtInfId = `RTP${baseId}`.substring(0, 30);   // max 30 chars for PmtInfId
+  const pmtInfId = `RTP${baseId}`.substring(0, 30);
   const instrId = `RTPINSTR${Date.now()}`.substring(0, 35);
   const endToEndId = baseId.substring(0, 35);
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
-
   const now = new Date();
   const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
-  // Build debtor account
-  // SBSA RTP always uses the proxy structure (Id.Item.Id = "Proxy" + Prxy block)
-  // matching the Postman sample — direct account number is NOT supported for RTP debtors.
-  // Mobile format per SBSA sample: "+27-XXXXXXXXX" (with hyphen after country code)
-  let DbtrAcct;
-  const proxyValue = payerProxy || payerAccountNumber;
-  if (!proxyValue) {
-    throw new Error('RTP requires payerMobileNumber (payerProxy) or payerAccountNumber as proxy identifier');
-  }
-
-  // Normalise proxy identifier for SBSA
-  // SBSA EDRIL error indicates the proxy Id must be the 10-digit local SA mobile (0XXXXXXXXX)
-  // Postman sample shows "+27-585125485" but that is a 9-digit test number (non-standard)
-  // For real SA mobiles (10 digits with leading 0): send as "0XXXXXXXXX"
-  // For SBSA sandbox test numbers (9 digits): send as-is with +27- prefix
-  const digits = proxyValue.replace(/\D/g, '');
-  let normalizedProxy;
-  if (digits.startsWith('27') && digits.length === 11) {
-    // +27XXXXXXXXX → 0XXXXXXXXX (10-digit local format)
-    normalizedProxy = `0${digits.slice(2)}`;
-  } else if (digits.startsWith('0') && digits.length === 10) {
-    // Already 0XXXXXXXXX
-    normalizedProxy = digits;
-  } else if (digits.startsWith('27') && digits.length === 10) {
-    // 9-digit sandbox number with country code: use +27-XXXXXXXXX format
-    normalizedProxy = `+27-${digits.slice(2)}`;
-  } else {
-    // Account number or other identifier — use as-is
-    normalizedProxy = proxyValue;
-  }
-
-  DbtrAcct = {
+  // Debtor account — direct bank account (PBAC), no proxy
+  const DbtrAcct = {
     Id: {
       Item: {
-        Id: 'Proxy',
+        Id: payerAccountNumber,
       },
     },
     Nm: (payerName || 'Payer').substring(0, 140),
-    Prxy: {
-      Tp: {
-        Item: payerProxyScheme,
-      },
-      Id: normalizedProxy,
-    },
   };
 
-  // Build creditor org ID if available
   const CdtrId = creditorOrgId
     ? {
         OrgId: {
-          Othr: [
-            { Id: creditorOrgId, Issr: 'CIPC' },
-          ],
+          Othr: [{ Id: creditorOrgId, Issr: 'CIPC' }],
         },
       }
     : undefined;
@@ -196,17 +154,10 @@ function buildPain013(params) {
       InitgPty: {
         Nm: creditorName.substring(0, 140),
         ...(creditorOrgId
-          ? {
-              Id: {
-                OrgId: {
-                  Othr: [{ Id: creditorOrgId }],
-                },
-              },
-            }
+          ? { Id: { OrgId: { Othr: [{ Id: creditorOrgId }] } } }
           : {}),
       },
     },
-    // Required top-level field per SBSA Pain.013 spec
     SplmtryData: {
       PlcAndNm: baseId.substring(0, 35),
     },
@@ -229,7 +180,6 @@ function buildPain013(params) {
         DbtrAgt: {
           FinInstnId: {
             Othr: {
-              // 'bankc' is the SBSA sandbox placeholder for unknown/generic debtor bank
               Id: payerBankCode || 'bankc',
             },
           },
@@ -242,6 +192,4 @@ function buildPain013(params) {
   return { pain013, msgId, uetr };
 }
 
-module.exports = {
-  buildPain013,
-};
+module.exports = { buildPain013 };

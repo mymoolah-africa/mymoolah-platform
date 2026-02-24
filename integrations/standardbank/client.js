@@ -3,7 +3,7 @@
 /**
  * SBSA PayShap API Client
  * RPP (Rapid Payments) and RTP (Request to Pay) - ISO 20022 Pain.001/Pain.013
- * Proxy Resolution (PBPX) - resolve mobile number to bank account before payment
+ * PBAC (Pay-By-Account) only — no proxy resolution dependency.
  *
  * @author MyMoolah Treasury Platform
  * @date 2026-02-21
@@ -18,7 +18,6 @@ const SCOPES = {
   RPP_GET: 'rpp.payments.get',
   RTP_POST: 'rpp.requestToPay.post',
   RTP_GET: 'rpp.requestToPay.get',
-  PROXY_GET: 'rpp.proxyResolution.get',
 };
 
 function guid26() {
@@ -37,9 +36,6 @@ function getBaseUrls() {
     rtp: process.env.SBSA_RTP_BASE_URL || (isUat
       ? 'https://api-gatewaynp.standardbank.co.za/npextorg/extnonprod/request-to-pay'
       : 'https://api-gateway.standardbank.co.za/sbsa/ext-prod/request-to-pay'),
-    proxy: process.env.SBSA_PROXY_BASE_URL || (isUat
-      ? 'https://api-gatewaynp.standardbank.co.za/npextorg/extnonprod/proxy-resolution'
-      : 'https://api-gateway.standardbank.co.za/sbsa/ext-prod/proxy-resolution'),
   };
 }
 
