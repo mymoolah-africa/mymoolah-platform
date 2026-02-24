@@ -22,7 +22,9 @@ const SCOPES = {
 };
 
 function guid26() {
-  return crypto.randomUUID().replace(/-/g, '').substring(0, 26);
+  // SBSA requires standard UUID v4 format (xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx)
+  // matching Postman {{$guid}} — do NOT strip hyphens or truncate
+  return crypto.randomUUID();
 }
 
 function getBaseUrls() {
