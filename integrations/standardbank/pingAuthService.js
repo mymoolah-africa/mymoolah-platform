@@ -2,13 +2,18 @@
 
 /**
  * SBSA Ping OAuth 2.0 Authentication Service
- * OneHub Ping Identity - client_credentials grant for RPP/RTP APIs
+ * OneHub Ping Identity - client_credentials grant for RPP/RTP/Proxy APIs
+ *
+ * Token cache is keyed by scope string to correctly support multiple scopes
+ * (RPP, RTP, Proxy Resolution) without cross-contamination.
  *
  * @author MyMoolah Treasury Platform
- * @date 2026-02-12
+ * @date 2026-02-21
  */
 
 const axios = require('axios');
+
+const TOKEN_REFRESH_BUFFER_SECONDS = 300; // refresh 5 minutes before expiry
 
 class PingAuthService {
   constructor() {
@@ -16,14 +21,13 @@ class PingAuthService {
     this.clientId = process.env.SBSA_PING_CLIENT_ID;
     this.clientSecret = process.env.SBSA_PING_CLIENT_SECRET;
 
-    this.accessToken = null;
-    this.tokenExpiry = null;
-    this.tokenRefreshBuffer = 300; // 5 minutes before expiry
+    // Map<scope, { accessToken, tokenExpiry }>
+    this._tokenCache = new Map();
   }
 
   /**
-   * Get valid access token for given scope (request new if needed/cached)
-   * @param {string} scope - OAuth scope (e.g. rpp.payments.post rpp.payments.get)
+   * Get valid access token for given scope (cached per scope, refreshed when near expiry).
+   * @param {string} scope - OAuth scope string
    * @returns {Promise<string>} JWT access token
    */
   async getToken(scope) {
@@ -31,15 +35,18 @@ class PingAuthService {
       throw new Error('SBSA Ping credentials not configured (SBSA_PING_CLIENT_ID, SBSA_PING_CLIENT_SECRET)');
     }
 
-    if (this.isTokenValid() && this.scope === scope) {
-      return this.accessToken;
+    const normalizedScope = (scope || 'rpp.payments.post rpp.payments.get').trim();
+    const cached = this._tokenCache.get(normalizedScope);
+
+    if (cached && cached.tokenExpiry && Date.now() < cached.tokenExpiry) {
+      return cached.accessToken;
     }
 
     const formData = new URLSearchParams();
     formData.append('grant_type', 'client_credentials');
     formData.append('client_id', this.clientId);
     formData.append('client_secret', this.clientSecret);
-    formData.append('scope', scope || 'rpp.payments.post rpp.payments.get');
+    formData.append('scope', normalizedScope);
 
     try {
       const response = await axios.post(this.tokenUrl, formData.toString(), {
@@ -62,15 +69,12 @@ class PingAuthService {
         throw new Error('Invalid Ping token response: no access_token');
       }
 
-      const expiryTime = Date.now() + expiresIn * 1000 - this.tokenRefreshBuffer * 1000;
-      this.accessToken = accessToken;
-      this.tokenExpiry = expiryTime;
-      this.scope = scope;
+      const tokenExpiry = Date.now() + (expiresIn - TOKEN_REFRESH_BUFFER_SECONDS) * 1000;
+      this._tokenCache.set(normalizedScope, { accessToken, tokenExpiry });
 
-      return this.accessToken;
+      return accessToken;
     } catch (err) {
       const status = err.response?.status;
-      const statusText = err.response?.statusText;
       if (status === 401 || status === 403) {
         throw new Error(`SBSA Ping authentication failed (${status}): Invalid credentials or scope`);
       }
@@ -78,14 +82,26 @@ class PingAuthService {
     }
   }
 
-  isTokenValid() {
-    return !!this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry;
+  /**
+   * Invalidate cached token for a specific scope (or all scopes).
+   * @param {string} [scope] - If omitted, clears all cached tokens
+   */
+  clearToken(scope) {
+    if (scope) {
+      this._tokenCache.delete(scope.trim());
+    } else {
+      this._tokenCache.clear();
+    }
   }
 
-  clearToken() {
-    this.accessToken = null;
-    this.tokenExpiry = null;
-    this.scope = null;
+  /**
+   * Check if a valid token exists for the given scope.
+   * @param {string} scope
+   * @returns {boolean}
+   */
+  isTokenValid(scope) {
+    const cached = this._tokenCache.get((scope || '').trim());
+    return !!(cached && cached.tokenExpiry && Date.now() < cached.tokenExpiry);
   }
 }
 
@@ -102,5 +118,6 @@ function getInstance() {
 module.exports = {
   PingAuthService,
   getToken: (scope) => getInstance().getToken(scope),
+  clearToken: (scope) => getInstance().clearToken(scope),
   getInstance,
 };

@@ -66,6 +66,7 @@ async function initiateRtpRequest(params) {
     payerName: payerName || 'Payer',
     payerAccountNumber: payerAccountNumber || undefined,
     payerProxy: payerMobileNumber || undefined,
+    payerBankCode: payerBankCode || undefined,
     remittanceInfo: description || reference || merchantTransactionId,
     expiryMinutes,
   });
@@ -131,16 +132,18 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
     throw new Error(`RTP amount ${principalAmount} too small to cover fee ${feeBreakdown.feeAmount}`);
   }
 
-  const wallet = await db.Wallet.findOne({
-    where: { walletId },
-    lock: db.sequelize.Transaction.LOCK.UPDATE,
-  });
-  if (!wallet) {
-    throw new Error(`Wallet not found: ${walletId}`);
-  }
-
   const sequelize = db.sequelize;
   const txn = await sequelize.transaction();
+
+  const wallet = await db.Wallet.findOne({
+    where: { walletId },
+    lock: sequelize.Transaction.LOCK.UPDATE,
+    transaction: txn,
+  });
+  if (!wallet) {
+    await txn.rollback();
+    throw new Error(`Wallet not found: ${walletId}`);
+  }
 
   try {
     await wallet.credit(netCredit, 'credit', { transaction: txn });
@@ -255,7 +258,7 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
 
     return sbt;
   } catch (err) {
-    await txn.rollback();
+    try { await txn.rollback(); } catch (_) { /* already rolled back */ }
     throw err;
   }
 }

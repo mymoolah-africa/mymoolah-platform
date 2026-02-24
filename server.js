@@ -470,26 +470,20 @@ if (standardbankPayShapEnabled) {
   app.use('/api/v1/standardbank', standardbankRoutes);
 }
 
-// Conditionally load Peach routes
+// Peach Payments integration is archived - no routes loaded
+// Request-to-Pay is handled directly via /api/v1/standardbank/payshap/rtp
 const isPeachArchived = process.env.PEACH_INTEGRATION_ARCHIVED === 'true';
 if (!isPeachArchived && validCredentials.peach) {
   app.use('/api/v1/peach', peachRoutes);
-} else if (isPeachArchived) {
-  console.log('📦 Peach Payments integration ARCHIVED - routes disabled');
-  // When Standard Bank PayShap is enabled, proxy request-money to Standard Bank (frontend calls /api/v1/peach/request-money)
-  if (standardbankPayShapEnabled) {
-    const auth = require('./middleware/auth');
-    const standardbankController = require('./controllers/standardbankController');
-    app.post('/api/v1/peach/request-money', auth, standardbankController.initiatePayShapRtp);
-    console.log('✅ Peach request-money proxied to Standard Bank PayShap');
+} else {
+  if (isPeachArchived) {
+    console.log('📦 Peach Payments integration ARCHIVED - routes disabled');
   }
-  // Provide archived status endpoint
   app.get('/api/v1/peach/status', (req, res) => {
     res.json({
       status: 'archived',
-      reason: 'Integration temporarily canceled due to PayShap provider competition',
+      reason: 'Integration archived - use /api/v1/standardbank/payshap/rtp for Request to Pay',
       archivedDate: '2025-11-26',
-      reactivationProcedure: 'See docs/archive/PEACH_ARCHIVAL_RECORD.md'
     });
   });
 }

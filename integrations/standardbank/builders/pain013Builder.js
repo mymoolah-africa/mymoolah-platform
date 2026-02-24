@@ -2,10 +2,14 @@
 
 /**
  * Pain.013 Builder - SBSA RTP PayShap (Request to Pay Initiation)
- * ISO 20022 Pain.013.001.01 - JSON format for SBSA API
+ * ISO 20022 Pain.013 - JSON format aligned with SBSA API Postman samples
+ *
+ * Structure: top-level GrpHdr + PmtInf[] (PascalCase per SBSA spec)
+ * DbtrAcct uses Id.Item.Id + Prxy structure; CdtrAgt uses Othr.Id (branch code)
+ * Amt uses Item.Value; RmtInf uses Strd[]; XpryDt/ReqdExctnDt use DtTm objects
  *
  * @author MyMoolah Treasury Platform
- * @date 2026-02-12
+ * @date 2026-02-21
  */
 
 const crypto = require('crypto');
@@ -29,9 +33,12 @@ function isoNow() {
  * @param {string} params.payerName - Debtor name
  * @param {string} [params.payerAccountNumber] - Debtor account (PBAC)
  * @param {string} [params.payerProxy] - Debtor mobile (PBPX)
- * @param {string} [params.payerProxyScheme] - 'MBNO' or 'CUST'
+ * @param {string} [params.payerProxyScheme] - 'MOBILE_NUMBER' per SBSA spec
+ * @param {string} [params.payerBankCode] - Debtor bank branch code
  * @param {string} [params.creditorAccountNumber] - MMTP receiving account
  * @param {string} [params.creditorName] - MMTP/requestor name
+ * @param {string} [params.creditorOrgId] - CIPC registration for creditor
+ * @param {string} [params.creditorBankBranchCode] - SBSA branch code (default 051001)
  * @param {string} [params.remittanceInfo] - Payment reference
  * @param {number} [params.expiryMinutes] - RTP expiry in minutes
  */
@@ -43,128 +50,173 @@ function buildPain013(params) {
     payerName,
     payerAccountNumber,
     payerProxy,
-    payerProxyScheme = 'MBNO',
+    payerProxyScheme = 'MOBILE_NUMBER',
+    payerBankCode,
     creditorAccountNumber = process.env.SBSA_CREDITOR_ACCOUNT || process.env.SBSA_DEBTOR_ACCOUNT || '0000000000',
     creditorName = process.env.SBSA_CREDITOR_NAME || process.env.SBSA_DEBTOR_NAME || 'MyMoolah Treasury',
+    creditorOrgId = process.env.SBSA_ORG_ID || '',
+    creditorBankBranchCode = process.env.SBSA_CREDITOR_BANK_BRANCH || '051001',
     remittanceInfo,
     expiryMinutes = 60,
   } = params;
 
+  const uetr = uuidv4();
   const msgId = `MM-RTP-${merchantTransactionId}`.substring(0, 35);
-  const pmtInfId = `RTP-${merchantTransactionId}`.substring(0, 30);
+  const pmtInfId = `RTP-${merchantTransactionId}`.substring(0, 35);
   const instrId = `RTP-INSTR-${Date.now()}`.substring(0, 35);
   const endToEndId = merchantTransactionId.substring(0, 35);
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
-  const ctrlSum = numAmount.toFixed(2);
 
-  const reqdExctnDt = new Date().toISOString().split('T')[0];
-  const expDt = new Date();
-  expDt.setMinutes(expDt.getMinutes() + expiryMinutes);
-  const xpryDt = expDt.toISOString().split('T')[0];
+  const now = new Date();
+  const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
-  const cdtTrfTx = {
-    pmtId: {
-      instrId,
-      endToEndId,
-    },
-    amt: {
-      instdAmt: {
-        value: numAmount.toFixed(2),
-        ccy: currency,
-      },
-    },
-    cdtr: {
-      nm: creditorName.substring(0, 140),
-    },
-    cdtrAcct: {
-      id: {
-        othr: {
-          id: creditorAccountNumber,
-        },
-      },
-    },
-    cdtrAgt: {
-      finInstnId: {
-        bicfi: 'SBZAZAJJ',
-      },
-    },
-    dbtr: {
-      nm: (payerName || 'Payer').substring(0, 140),
-    },
-    dbtrAcct: {},
-    dbtrAgt: {
-      finInstnId: {
-        bicfi: 'SBZAZAJJ',
-      },
-    },
-    chrgBr: 'SLEV',
-    pmtCond: {
-      amtModAllwd: false,
-      prorataRte: false,
-    },
-    rmtInf: {
-      ustrd: (remittanceInfo || merchantTransactionId).substring(0, 140),
-    },
-  };
-
+  // Build debtor account - SBSA uses Id.Item.Id + Prxy structure for proxy
+  let DbtrAcct;
   if (payerAccountNumber) {
-    cdtTrfTx.dbtrAcct = {
-      id: {
-        othr: {
-          id: payerAccountNumber,
+    DbtrAcct = {
+      Id: {
+        Item: {
+          Id: payerAccountNumber,
         },
       },
+      Nm: (payerName || 'Payer').substring(0, 140),
     };
   } else if (payerProxy) {
-    const proxy = payerProxy.replace(/\D/g, '');
-    const normalizedProxy = proxy.startsWith('27') ? proxy : `27${proxy}`;
-    cdtTrfTx.dbtrAcct = {
-      id: {
-        othr: {
-          id: normalizedProxy,
-          schmeNm: {
-            cd: payerProxyScheme,
-          },
+    const digits = payerProxy.replace(/\D/g, '');
+    const normalizedProxy = digits.startsWith('27') ? `+${digits}` : `+27${digits.replace(/^0/, '')}`;
+    DbtrAcct = {
+      Id: {
+        Item: {
+          Id: 'Proxy',
         },
+      },
+      Nm: (payerName || 'Payer').substring(0, 140),
+      Prxy: {
+        Tp: {
+          Item: payerProxyScheme,
+        },
+        Id: normalizedProxy,
       },
     };
   } else {
     throw new Error('RTP requires payerAccountNumber or payerProxy');
   }
 
-  const pain013 = {
-    cstmrPmtReqInitn: {
-      grpHdr: {
-        msgId,
-        creDtTm: isoNow(),
-        nbOfTxs: '1',
-        ctrlSum,
-        initgPty: {
-          nm: creditorName.substring(0, 140),
+  // Build creditor org ID if available
+  const CdtrId = creditorOrgId
+    ? {
+        OrgId: {
+          Othr: [
+            { Id: creditorOrgId, Issr: 'CIPC' },
+          ],
+        },
+      }
+    : undefined;
+
+  const CdtTrfTx = {
+    PmtId: {
+      InstrId: instrId,
+      EndToEndId: endToEndId,
+      UETR: uetr,
+    },
+    PmtTpInf: {},
+    PmtCond: {
+      AmtModAllwd: false,
+      EarlyPmtAllwd: false,
+      GrntedPmtReqd: false,
+    },
+    Amt: {
+      Item: {
+        Value: numAmount.toFixed(2),
+      },
+    },
+    ChrgBr: 'SLEV',
+    CdtrAgt: {
+      FinInstnId: {
+        Othr: {
+          Id: creditorBankBranchCode,
         },
       },
-      pmtInf: {
-        pmtInfId,
-        pmtMtd: 'TRF',
-        reqdExctnDt,
-        xpryDt,
-        dbtr: {
-          nm: (payerName || 'Payer').substring(0, 140),
+      BrnchId: {
+        Id: creditorBankBranchCode,
+      },
+    },
+    Cdtr: {
+      Nm: creditorName.substring(0, 140),
+      ...(CdtrId ? { Id: CdtrId } : {}),
+    },
+    CdtrAcct: {
+      Id: {
+        Item: {
+          Id: creditorAccountNumber,
         },
-        dbtrAcct: cdtTrfTx.dbtrAcct,
-        dbtrAgt: {
-          finInstnId: {
-            bicfi: 'SBZAZAJJ',
+      },
+      Nm: creditorName.substring(0, 140),
+    },
+    RmtInf: {
+      Strd: [
+        {
+          RfrdDocAmt: {
+            DuePyblAmt: {
+              Value: numAmount.toFixed(2),
+            },
+          },
+          CdtrRefInf: {
+            Ref: (remittanceInfo || merchantTransactionId).substring(0, 140),
           },
         },
-        chrgBr: 'SLEV',
-        cdtTrfTx: [cdtTrfTx],
-      },
+      ],
     },
   };
 
-  return { pain013, msgId };
+  const pain013 = {
+    GrpHdr: {
+      MsgId: msgId,
+      CreDtTm: isoNow(),
+      NbOfTxs: '1',
+      InitgPty: {
+        Nm: creditorName.substring(0, 140),
+        ...(creditorOrgId
+          ? {
+              Id: {
+                OrgId: {
+                  Othr: [{ Id: creditorOrgId }],
+                },
+              },
+            }
+          : {}),
+      },
+    },
+    PmtInf: [
+      {
+        PmtInfId: pmtInfId,
+        PmtMtd: 'TRF',
+        ReqdAdvcTp: '',
+        PmtTpInf: {},
+        ReqdExctnDt: {
+          DtTm: now.toISOString(),
+        },
+        XpryDt: {
+          DtTm: expDt.toISOString(),
+        },
+        Dbtr: {
+          Nm: (payerName || 'Payer').substring(0, 140),
+        },
+        DbtrAcct,
+        DbtrAgt: {
+          FinInstnId: {
+            Othr: {
+              Id: payerBankCode || 'bankc',
+            },
+          },
+        },
+        CdtTrfTx: [CdtTrfTx],
+      },
+    ],
+  };
+
+  return { pain013, msgId, uetr };
 }
 
 module.exports = {

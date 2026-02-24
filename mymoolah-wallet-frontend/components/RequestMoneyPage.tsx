@@ -354,13 +354,11 @@ export function RequestMoneyPage() {
         // Reflect backend request id in local success view
         moneyRequest.id = String(payload.data.requestId);
       } else {
-        // 🆕 ENHANCED: Peach Payments bank request (PayShap RTP) with MSISDN reference
-        
-        // Call Peach Payments API for bank payment request with MSISDN reference
+        // Standard Bank PayShap RTP (Request to Pay)
         const token = getToken();
         const api = APP_CONFIG.API.baseUrl;
 
-        const resp = await fetch(`${api}/api/v1/peach/request-money`, {
+        const resp = await fetch(`${api}/api/v1/standardbank/payshap/rtp`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -374,27 +372,17 @@ export function RequestMoneyPage() {
             payerAccountNumber: formData.payerAccountNumber,
             payerBankName: formData.payerBankName,
             description: formData.reference || `Money request from ${user.name}`,
-            businessContext: 'wallet',
-            clientId: user.id
           }),
         });
 
         const payload = await resp.json();
 
-        
         if (!resp.ok || !payload?.success) {
-          const errorMessage = payload?.message || (typeof payload?.details === 'string' ? payload?.details : JSON.stringify(payload?.details)) || payload?.error || 'Failed to submit Peach Payments RTP request';
-          console.error('Peach Payments API error:', errorMessage);
+          const errorMessage = payload?.message || payload?.error || 'Failed to submit PayShap Request to Pay';
           throw new Error(errorMessage);
         }
 
-        // Reflect backend request id in local success view
         moneyRequest.id = String(payload.data?.merchantTransactionId || requestId);
-        
-        // If there's a redirect URL, open it in a new window
-        if (payload.data?.redirectUrl) {
-          window.open(payload.data.redirectUrl, '_blank');
-        }
       }
 
       setCreatedRequest(moneyRequest);

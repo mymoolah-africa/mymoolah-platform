@@ -2,10 +2,13 @@
 
 /**
  * Pain.001 Builder - SBSA RPP PayShap (Customer Credit Transfer Initiation)
- * ISO 20022 Pain.001.001.03 - JSON format for SBSA API
+ * ISO 20022 Pain.001 - JSON format aligned with SBSA API Postman samples
+ *
+ * Structure: top-level grpHdr + pmtInf[] (no cstmrCdtTrfInitn wrapper)
+ * lclInstrm uses prtry (not cd), reqdExctnDt is { dtTm }, rmtInf uses strd[]
  *
  * @author MyMoolah Treasury Platform
- * @date 2026-02-12
+ * @date 2026-02-21
  */
 
 const crypto = require('crypto');
@@ -21,7 +24,7 @@ function isoNow() {
 /**
  * Build Pain.001 for RPP payment initiation
  * @param {Object} params
- * @param {string} params.merchantTransactionId - Our internal ID
+ * @param {string} params.merchantTransactionId - Our internal ID (max 35 chars)
  * @param {number} params.amount - Amount in ZAR (e.g. 100.50)
  * @param {string} params.currency - Default ZAR
  * @param {string} params.paymentType - 'PBAC' (account) or 'PBPX' (proxy)
@@ -29,9 +32,12 @@ function isoNow() {
  * @param {string} [params.creditorName] - Beneficiary name
  * @param {string} [params.creditorProxy] - Mobile number (MBNO) for PBPX
  * @param {string} [params.creditorProxyScheme] - 'MBNO' or 'CUST'
+ * @param {string} [params.creditorBankBranchCode] - Creditor bank branch code (e.g. '051001' for SBSA)
  * @param {string} [params.debtorAccountNumber] - Our TPP account
  * @param {string} [params.debtorName] - Initiating party name
+ * @param {string} [params.debtorOrgId] - CIPC registration number for initgPty.id
  * @param {string} [params.remittanceInfo] - Payment reference
+ * @param {string} [params.statementNarrative] - Debtor statement narrative
  */
 function buildPain001(params) {
   const {
@@ -43,19 +49,58 @@ function buildPain001(params) {
     creditorName = 'Beneficiary',
     creditorProxy,
     creditorProxyScheme = 'MBNO',
+    creditorBankBranchCode = process.env.SBSA_CREDITOR_BANK_BRANCH || '051001',
     debtorAccountNumber = process.env.SBSA_DEBTOR_ACCOUNT || '0000000000',
     debtorName = process.env.SBSA_DEBTOR_NAME || 'MyMoolah Treasury',
+    debtorOrgId = process.env.SBSA_ORG_ID || '',
     remittanceInfo,
+    statementNarrative,
   } = params;
 
   const uetr = uuidv4();
   const msgId = `MM-${merchantTransactionId}`.substring(0, 35);
-  const pmtInfId = `PMT-${merchantTransactionId}`.substring(0, 30);
+  const pmtInfId = `PMT-${merchantTransactionId}`.substring(0, 35);
   const instrId = `INSTR-${Date.now()}`.substring(0, 35);
   const endToEndId = merchantTransactionId.substring(0, 35);
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
-  const ctrlSum = numAmount.toFixed(2);
+  const ctrlSum = numAmount;
+
+  const reqdExctnDtTm = new Date().toISOString();
+
+  // Build creditor account per payment type
+  let cdtrAcct;
+  if (paymentType === 'PBAC' && creditorAccountNumber) {
+    cdtrAcct = {
+      id: {
+        othr: {
+          id: creditorAccountNumber,
+        },
+      },
+      nm: (creditorName || 'Beneficiary').substring(0, 140),
+    };
+  } else if (paymentType === 'PBPX' && creditorProxy) {
+    const digits = creditorProxy.replace(/\D/g, '');
+    const normalizedProxy = digits.startsWith('27') ? `+${digits}` : `+27${digits.replace(/^0/, '')}`;
+    cdtrAcct = {
+      id: {
+        othr: {
+          id: normalizedProxy,
+        },
+      },
+      nm: (creditorName || 'Beneficiary').substring(0, 140),
+      prxy: {
+        tp: {
+          prtry: creditorProxyScheme,
+        },
+        id: {
+          id: normalizedProxy,
+        },
+      },
+    };
+  } else {
+    throw new Error('PBAC requires creditorAccountNumber; PBPX requires creditorProxy');
+  }
 
   const cdtTrfTxInf = {
     pmtId: {
@@ -64,70 +109,84 @@ function buildPain001(params) {
       uetr,
     },
     pmtTpInf: {
-      ctgyPurp: {
-        cd: 'SUPP',
-      },
       lclInstrm: {
-        cd: paymentType,
+        prtry: paymentType,
       },
     },
     amt: {
       instdAmt: {
-        value: numAmount.toFixed(2),
-        ccy: currency,
+        value: numAmount,
+      },
+    },
+    cdtrAgt: {
+      finInstnId: {
+        pstlAdr: {
+          ctry: 'ZA',
+        },
+      },
+      brnchId: {
+        id: creditorBankBranchCode,
       },
     },
     cdtr: {
       nm: (creditorName || 'Beneficiary').substring(0, 140),
     },
-    cdtrAcct: {},
+    cdtrAcct,
     rmtInf: {
-      ustrd: (remittanceInfo || merchantTransactionId).substring(0, 140),
-    },
-  };
-
-  if (paymentType === 'PBAC' && creditorAccountNumber) {
-    cdtTrfTxInf.cdtrAcct = {
-      id: {
-        othr: {
-          id: creditorAccountNumber,
-        },
-      },
-    };
-  } else if (paymentType === 'PBPX' && creditorProxy) {
-    const proxy = creditorProxy.replace(/\D/g, '');
-    const normalizedProxy = proxy.startsWith('27') ? proxy : `27${proxy}`;
-    cdtTrfTxInf.cdtrAcct = {
-      id: {
-        othr: {
-          id: normalizedProxy,
-          schmeNm: {
-            cd: creditorProxyScheme,
+      strd: [
+        {
+          cdtrRefInf: {
+            ref: (remittanceInfo || merchantTransactionId).substring(0, 140),
           },
         },
-      },
-    };
-  } else {
-    throw new Error('PBAC requires creditorAccountNumber; PBPX requires creditorProxy');
-  }
-
-  const reqdExctnDt = new Date().toISOString().split('T')[0];
-
-  const pain001 = {
-    cstmrCdtTrfInitn: {
-      grpHdr: {
-        msgId,
-        creDtTm: isoNow(),
-        nbOfTxs: '1',
-        ctrlSum,
-        initgPty: {
-          nm: debtorName.substring(0, 140),
+      ],
+    },
+    splmtryData: [
+      {
+        plcAndNm: 'BatchReference',
+        envlp: {
+          any: merchantTransactionId.substring(0, 35),
         },
       },
-      pmtInf: {
-        pmtInfId,
-        reqdExctnDt,
+      {
+        plcAndNm: 'DbtStmNarr',
+        envlp: {
+          any: (statementNarrative || remittanceInfo || merchantTransactionId).substring(0, 140),
+        },
+      },
+    ],
+  };
+
+  // Build initgPty with org ID if available (CIPC registration)
+  const initgPty = { nm: debtorName.substring(0, 140) };
+  if (debtorOrgId) {
+    initgPty.id = {
+      orgId: {
+        othr: [{ id: debtorOrgId, issr: 'CIPC' }],
+      },
+    };
+  }
+
+  const pain001 = {
+    grpHdr: {
+      msgId,
+      creDtTm: isoNow(),
+      nbOfTxs: 1,
+      ctrlSum,
+      initgPty,
+    },
+    pmtInf: [
+      {
+        pmntInfId: pmtInfId,
+        reqdExctnDt: {
+          dtTm: reqdExctnDtTm,
+        },
         dbtr: {
+          id: {
+            othr: {
+              id: debtorAccountNumber,
+            },
+          },
           nm: debtorName.substring(0, 140),
         },
         dbtrAcct: {
@@ -136,10 +195,11 @@ function buildPain001(params) {
               id: debtorAccountNumber,
             },
           },
+          nm: debtorName.substring(0, 140),
         },
         cdtTrfTxInf: [cdtTrfTxInf],
       },
-    },
+    ],
   };
 
   return { pain001, uetr, msgId };
