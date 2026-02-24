@@ -257,6 +257,15 @@ async function initiateRppPayment(params) {
        *         = numAmount + sbsaFeeExVat + mmMarkupExVat + mmMarkupVat
        *         = numAmount + sbsaFeeExVat + mmMarkupVatIncl  ✓ (= totalDebit)
        */
+      // Build credits — use exact arithmetic to guarantee DR = CR
+      // totalDebit = numAmount + sbsaFeeVatIncl + mmMarkupVatIncl
+      //            = numAmount + sbsaFeeExVat + sbsaVat + mmMarkupExVat + mmMarkupVat
+      // CR: Bank (numAmount) + SBSA Cost ex-VAT + MM Revenue ex-VAT + VAT Control (net)
+      // Net VAT = totalOutputVat - sbsaVat = mmMarkupVat only
+      // To avoid floating point drift, derive vatControlAmount as the balancing figure
+      const creditsSoFar = Number((numAmount + fee.sbsaFeeExVat + fee.mmMarkupExVat).toFixed(2));
+      const vatControlAmount = Number((totalDebit - creditsSoFar).toFixed(2));
+
       const lines = [
         { accountCode: clientFloatCode, dc: 'debit', amount: totalDebit, memo: 'Wallet debit (RPP principal + fee)' },
         { accountCode: bankLedgerCode, dc: 'credit', amount: numAmount, memo: 'Bank outflow (RPP payment)' },
@@ -266,7 +275,10 @@ async function initiateRppPayment(params) {
         lines.push({ accountCode: feeRevenueCode, dc: 'credit', amount: fee.mmMarkupExVat, memo: 'MM PayShap markup revenue ex-VAT' });
       }
       if (vatControlCode) {
-        lines.push({ accountCode: vatControlCode, dc: 'credit', amount: fee.netVatPayable, memo: 'Net VAT payable (output - input on SBSA cost)' });
+        lines.push({ accountCode: vatControlCode, dc: 'credit', amount: vatControlAmount, memo: 'Net VAT payable (output VAT - input VAT on SBSA cost)' });
+      } else {
+        // No VAT control account — absorb into SBSA cost to keep books balanced
+        lines[2].amount = Number((fee.sbsaFeeExVat + vatControlAmount).toFixed(2));
       }
 
       await ledgerService.postJournalEntry({

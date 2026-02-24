@@ -314,22 +314,28 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
        *   In practice: DR Bank = CR Float + CR SBSA Cost + CR VAT Input (reclaimable)
        *   We record the VAT as a separate input VAT entry if vatControlCode is set.
        */
+      // Derive VAT as balancing figure to guarantee DR = CR regardless of rounding
+      // DR Bank = CR Float + CR SBSA Cost ex-VAT + CR VAT Control (sbsaVat)
+      const creditsSoFar = Number((netCredit + fee.sbsaFeeExVat).toFixed(2));
+      const vatBalancing = Number((principalAmount - creditsSoFar).toFixed(2));
+
+      const vatControlCode = process.env.LEDGER_ACCOUNT_VAT_CONTROL;
       const lines = [
         { accountCode: bankLedgerCode, dc: 'debit', amount: principalAmount, memo: 'Bank inflow (RTP paid)' },
         { accountCode: clientFloatCode, dc: 'credit', amount: netCredit, memo: 'Wallet credit (RTP principal - SBSA fee)' },
         { accountCode: sbsaCostCode, dc: 'credit', amount: fee.sbsaFeeExVat, memo: 'SBSA PayShap cost ex-VAT (pass-through)' },
       ];
 
-      // Record the VAT component as a separate line for audit completeness
-      // This is input VAT (reclaimable) — nets to zero against the output VAT collected
-      const vatControlCode = process.env.LEDGER_ACCOUNT_VAT_CONTROL;
-      if (vatControlCode && fee.sbsaVat > 0) {
+      if (vatControlCode && vatBalancing > 0) {
         lines.push({
           accountCode: vatControlCode,
           dc: 'credit',
-          amount: fee.sbsaVat,
-          memo: 'VAT on SBSA cost (input = output, net zero for RTP)',
+          amount: vatBalancing,
+          memo: 'VAT on SBSA cost (input VAT reclaimable — net zero for RTP pass-through)',
         });
+      } else if (vatBalancing > 0) {
+        // Absorb into SBSA cost to keep books balanced
+        lines[2].amount = Number((fee.sbsaFeeExVat + vatBalancing).toFixed(2));
       }
 
       await ledgerService.postJournalEntry({
