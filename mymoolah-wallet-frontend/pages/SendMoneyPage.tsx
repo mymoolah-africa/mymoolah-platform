@@ -14,6 +14,7 @@ import { getTransactionIcon } from '../utils/transactionIcons.tsx';
 import { 
   Search, 
   Plus, 
+  PlusCircle,
   ArrowLeft,
   Building2,
   Send,
@@ -23,6 +24,7 @@ import {
   ChevronRight,
   ChevronDown,
   Edit2,
+  Trash2,
   X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '../components/ui/card';
@@ -36,6 +38,7 @@ import { Switch } from '../components/ui/switch';
 import { Textarea } from '../components/ui/textarea';
 import { ConfirmationModal } from '../components/overlays/shared/ConfirmationModal';
 import { ErrorModal } from '../components/ui/ErrorModal';
+import { AddAccountModal } from '../components/overlays/shared/AddAccountModal';
 
 // Beneficiary Types - Using centralized service types
 // Note: SendMoneyPage only handles PaymentBeneficiary types (mymoolah and bank)
@@ -280,6 +283,19 @@ export function SendMoneyPage() {
   const [editingBeneficiary, setEditingBeneficiary] = useState<PaymentBeneficiary | null>(null);
   const [showRemoveConfirmationModal, setShowRemoveConfirmationModal] = useState(false);
   const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<PaymentBeneficiary | null>(null);
+
+  // Add Account Modal State
+  const [showAddAccountModal, setShowAddAccountModal] = useState(false);
+  const [addAccountTarget, setAddAccountTarget] = useState<PaymentBeneficiary | null>(null);
+
+  // Remove specific account confirmation
+  const [showRemoveAccountModal, setShowRemoveAccountModal] = useState(false);
+  const [removeAccountTarget, setRemoveAccountTarget] = useState<{
+    beneficiary: PaymentBeneficiary;
+    accountId: number;
+    accountType: 'mymoolah' | 'bank';
+    label: string;
+  } | null>(null);
   
   // Error Modal State
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -822,6 +838,22 @@ export function SendMoneyPage() {
     } catch (error) {
       logError('SendMoneyPage', 'Failed to remove beneficiary', error as Error);
       showError('Error', 'Failed to remove recipient. Please try again.', 'error');
+    }
+  };
+
+  // Handle removing a specific account from a beneficiary
+  const handleConfirmRemoveAccount = async () => {
+    if (!removeAccountTarget) return;
+    const { beneficiary, accountId, accountType } = removeAccountTarget;
+    try {
+      await beneficiaryService.removePaymentAccount(beneficiary.id, accountType, accountId);
+      // Refresh beneficiary list
+      await loadBeneficiaries();
+      setRemoveAccountTarget(null);
+      setShowRemoveAccountModal(false);
+    } catch (err: any) {
+      logError('SendMoneyPage', 'Failed to remove account', err as Error);
+      showError('Error', err?.message || 'Failed to remove account. Please try again.', 'error');
     }
   };
 
@@ -1863,8 +1895,23 @@ export function SendMoneyPage() {
                       Pay
                     </Button>
                     
-                    {/* Edit & Remove Buttons */}
+                    {/* Edit, Add Account & Remove Buttons */}
                     <div className="flex items-center gap-1">
+                      {/* Add Account button */}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="w-8 h-8 p-0 hover:bg-green-50"
+                        title="Add account"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAddAccountTarget(beneficiary);
+                          setShowAddAccountModal(true);
+                        }}
+                        style={{ minWidth: '32px', minHeight: '32px' }}
+                      >
+                        <PlusCircle className="w-3 h-3 text-gray-500 hover:text-[#86BE41]" />
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1989,27 +2036,90 @@ export function SendMoneyPage() {
                               </p>
                             </div>
                           </div>
-                          {isSelected && (
-                            <div style={{
-                              width: '20px',
-                              height: '20px',
-                              borderRadius: '50%',
-                              backgroundColor: '#86BE41',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center'
-                            }}>
+                          <div className="flex items-center gap-1 ml-2">
+                            {isSelected && (
                               <div style={{
-                                width: '8px',
-                                height: '8px',
+                                width: '20px',
+                                height: '20px',
                                 borderRadius: '50%',
-                                backgroundColor: '#ffffff'
-                              }} />
-                            </div>
-                          )}
+                                backgroundColor: '#86BE41',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                <div style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  borderRadius: '50%',
+                                  backgroundColor: '#ffffff'
+                                }} />
+                              </div>
+                            )}
+                            {/* Remove this account (only if beneficiary has >1 account) */}
+                            {(beneficiary.accounts?.length ?? 0) > 1 && (
+                              <button
+                                type="button"
+                                title="Remove this account"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const label = account.type === 'mymoolah'
+                                    ? `MyMoolah Wallet (${account.identifier})`
+                                    : `${account.metadata?.bankName || 'Bank'} ${account.identifier}`;
+                                  setRemoveAccountTarget({
+                                    beneficiary,
+                                    accountId: account.id,
+                                    accountType: account.type as 'mymoolah' | 'bank',
+                                    label,
+                                  });
+                                  setShowRemoveAccountModal(true);
+                                }}
+                                style={{
+                                  width: '20px',
+                                  height: '20px',
+                                  borderRadius: '50%',
+                                  backgroundColor: 'transparent',
+                                  border: 'none',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  padding: 0,
+                                }}
+                              >
+                                <Trash2 className="w-3 h-3 text-gray-400 hover:text-red-500" />
+                              </button>
+                            )}
+                          </div>
                         </button>
                       );
                     })}
+                    {/* Add another account shortcut */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAddAccountTarget(beneficiary);
+                        setShowAddAccountModal(true);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '8px 12px',
+                        borderRadius: '6px',
+                        backgroundColor: 'transparent',
+                        border: '1px dashed #d1d5db',
+                        cursor: 'pointer',
+                        marginTop: '4px',
+                        color: '#6b7280',
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '12px',
+                      }}
+                    >
+                      <PlusCircle className="w-3 h-3" />
+                      Add another account
+                    </button>
                   </div>
                 )}
               </div>
@@ -2724,6 +2834,33 @@ export function SendMoneyPage() {
         cancelText="Cancel"
         type="danger"
         beneficiaryName={beneficiaryToRemove?.name}
+      />
+
+      {/* Add Account Modal */}
+      {addAccountTarget && (
+        <AddAccountModal
+          isOpen={showAddAccountModal}
+          onClose={() => { setShowAddAccountModal(false); setAddAccountTarget(null); }}
+          beneficiaryId={addAccountTarget.id}
+          beneficiaryName={addAccountTarget.name}
+          onSuccess={async () => {
+            await loadBeneficiaries();
+            showError('Success', `Account added to ${addAccountTarget.name} successfully.`, 'info');
+          }}
+        />
+      )}
+
+      {/* Remove Account Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showRemoveAccountModal}
+        onClose={() => { setShowRemoveAccountModal(false); setRemoveAccountTarget(null); }}
+        onConfirm={handleConfirmRemoveAccount}
+        title="Remove Account"
+        message={`Remove ${removeAccountTarget?.label || 'this account'} from`}
+        confirmText="Yes, remove"
+        cancelText="Cancel"
+        type="danger"
+        beneficiaryName={removeAccountTarget?.beneficiary.name}
       />
 
       {/* Error Modal */}

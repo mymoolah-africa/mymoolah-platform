@@ -377,6 +377,21 @@ class BeneficiaryService {
   }
 
   /**
+   * Remove a specific payment account (by account id) from a beneficiary.
+   * Maps to DELETE /api/v1/unified-beneficiaries/:id/services/:type/:accountId
+   */
+  async removePaymentAccount(
+    beneficiaryId: number | string,
+    accountType: 'mymoolah' | 'bank',
+    accountId: number | string
+  ): Promise<void> {
+    await this.request(
+      `/api/v1/unified-beneficiaries/${beneficiaryId}/services/${accountType}/${accountId}`,
+      { method: 'DELETE' }
+    );
+  }
+
+  /**
    * Get all services/accounts for a specific beneficiary
    */
   async getBeneficiaryServices(beneficiaryId: number): Promise<UnifiedBeneficiary> {
