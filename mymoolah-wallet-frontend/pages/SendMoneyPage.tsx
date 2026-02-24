@@ -597,18 +597,24 @@ export function SendMoneyPage() {
       ? b.accounts?.find(a => a.id === accountId)
       : getSelectedAccount(b);
     
-    // Determine account type and details from selected account or legacy format
-    let accountType: 'mymoolah' | 'bank' = b.accountType;
-    let identifier = b.identifier;
+    // Determine payment rail and details from selected account or legacy format
+    // 'bank' type → 'payshap' rail (instant RPP); 'mymoolah' type → 'mymoolah' rail
+    let rawAccountType: 'mymoolah' | 'bank' = b.accountType;
+    let accountNumber = ''; // bank account number (identifier in BeneficiaryPaymentMethod)
     let bankName = b.bankName;
-    
+    let msisdn = b.msisdn || b.identifier || ''; // phone number for FICA / MyMoolah lookup
+
     if (account) {
-      accountType = account.type === 'bank' ? 'bank' : 'mymoolah';
-      identifier = account.identifier;
+      rawAccountType = account.type === 'bank' ? 'bank' : 'mymoolah';
+      accountNumber = account.identifier || ''; // bank account number from normalized table
       bankName = account.metadata?.bankName || b.bankName;
+      // msisdn stays as the beneficiary's phone — NOT the account number
     }
-    
-    setSelectedAccountType(accountType);
+
+    // Map to the new payment rail names used by the Pay Now modal
+    const paymentRail = rawAccountType === 'bank' ? 'payshap' : 'mymoolah';
+    setSelectedAccountType(paymentRail as any);
+
     const toDisplaySA = (num: string): string => {
       const digits = String(num || '').replace(/\D/g, '');
       if (!digits) return '';
@@ -617,23 +623,25 @@ export function SendMoneyPage() {
       if (digits.length === 9) return '27' + digits;
       return digits;
     };
-    if (accountType === 'mymoolah') {
-      setNewBeneficiary(prev => ({ 
-        ...prev, 
-        name: b.name, 
-        identifier: identifier, // Keep original format (078XXXXXXXX)
-        msisdn: identifier, // Also set msisdn for MyMoolah users
-        bankName: '', 
-        accountNumber: '' 
+
+    if (rawAccountType === 'mymoolah') {
+      setNewBeneficiary(prev => ({
+        ...prev,
+        name: b.name,
+        identifier: toDisplaySA(msisdn),
+        msisdn: toDisplaySA(msisdn),
+        bankName: '',
+        accountNumber: ''
       }));
     } else {
-      // Bank account: use identifier and bankName from selected account
-      setNewBeneficiary(prev => ({ 
-        ...prev, 
-        name: b.name, 
-        identifier: identifier, // Use identifier from selected account
-        bankName: bankName || '', 
-        accountNumber: identifier // Account number is the identifier for bank accounts
+      // Bank/PayShap: identifier = bank account number, msisdn = beneficiary phone for FICA
+      setNewBeneficiary(prev => ({
+        ...prev,
+        name: b.name,
+        identifier: accountNumber,      // bank account number
+        msisdn: toDisplaySA(msisdn),    // phone number (FICA / MSISDN)
+        bankName: bankName || '',
+        accountNumber: accountNumber
       }));
     }
     setPaymentAmount('');
@@ -803,7 +811,20 @@ export function SendMoneyPage() {
 
   // Handle Edit Beneficiary
   const handleEditBeneficiary = (beneficiary: PaymentBeneficiary) => {
-    setEditingBeneficiary(beneficiary);
+    // For bank beneficiaries, populate identifier from the normalized accounts[] array
+    // (the legacy beneficiary.identifier holds the phone/NON_MSI_ value, not the account number)
+    let editCopy = { ...beneficiary };
+    if (beneficiary.accountType === 'bank') {
+      const bankAccount = beneficiary.accounts?.find(a => a.type === 'bank') || beneficiary.accounts?.[0];
+      if (bankAccount) {
+        editCopy = {
+          ...editCopy,
+          identifier: bankAccount.identifier || '',       // actual bank account number
+          bankName: bankAccount.metadata?.bankName || beneficiary.bankName || '',
+        };
+      }
+    }
+    setEditingBeneficiary(editCopy);
     setShowEditBeneficiaryModal(true);
   };
 
