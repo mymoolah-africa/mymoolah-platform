@@ -82,10 +82,13 @@ async function initiateRtpRequest(params) {
     expiryMinutes,
   });
 
+  console.log('[SBSA RTP] Payload:', JSON.stringify(pain013, null, 2));
+
   let sbResponse;
   try {
     sbResponse = await sbClient.initiateRequestToPay(pain013);
   } catch (err) {
+    if (err.sbsaBody) console.error('[SBSA RTP] Error body:', JSON.stringify(err.sbsaBody, null, 2));
     throw new Error(`SBSA RTP initiation failed: ${err.message}`);
   }
 
