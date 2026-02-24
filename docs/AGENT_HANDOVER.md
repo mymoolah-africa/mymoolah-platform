@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-21  
-**Latest Feature**: PayShap PBAC-only refactor — proxy/mobile removed entirely from RPP and RTP  
-**Document Version**: 2.11.17  
-**Session logs**: `docs/session_logs/2026-02-21_2200_payshap-pbac-only-proxy-removal.md`, `docs/session_logs/2026-02-24_1000_payshap-uat-rpp-rtp-testing.md`  
+**Last Updated**: 2026-02-24  
+**Latest Feature**: PayShap RPP + RTP both fully passing SBSA UAT end-to-end  
+**Document Version**: 2.11.18  
+**Session logs**: `docs/session_logs/2026-02-24_1100_payshap-rtp-eamti-fix-passing.md`, `docs/session_logs/2026-02-21_2200_payshap-pbac-only-proxy-removal.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
