@@ -99,11 +99,12 @@ const DialogContent = React.forwardRef<
         {...props}
         aria-describedby={describedByProp || autoDescId}
       >
-        {!describedByProp && (
-          <DialogPrimitive.Description id={autoDescId} className="sr-only">
-            Dialog content
-          </DialogPrimitive.Description>
-        )}
+        {/* Always render a Radix Description so Radix's internal descriptionId check passes.
+            When the caller supplies their own DialogDescription with an id, this hidden one
+            is visually invisible (sr-only) and does not duplicate content for screen readers. */}
+        <DialogPrimitive.Description id={autoDescId} className="sr-only">
+          {describedByProp ? '' : 'Dialog content'}
+        </DialogPrimitive.Description>
         {children}
         <DialogPrimitive.Close 
           className={cn(
