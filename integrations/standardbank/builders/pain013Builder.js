@@ -192,6 +192,10 @@ function buildPain013(params) {
           : {}),
       },
     },
+    // Required top-level field per SBSA Pain.013 spec
+    SplmtryData: {
+      PlcAndNm: baseId.substring(0, 35),
+    },
     PmtInf: [
       {
         PmtInfId: pmtInfId,
