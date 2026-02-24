@@ -57,11 +57,16 @@ function buildPain001(params) {
     statementNarrative,
   } = params;
 
+  // SBSA field regex: ^(?=.*[a-zA-Z0-9])([a-zA-Z0-9\s]){1,35}$ — alphanumeric only, no hyphens/special chars
+  // Strip all non-alphanumeric characters before use in SBSA ID fields
+  const cleanId = (str) => str.replace(/[^a-zA-Z0-9]/g, '');
+
   const uetr = uuidv4();
-  const msgId = `MM-${merchantTransactionId}`.substring(0, 35);
-  const pmtInfId = `PMT-${merchantTransactionId}`.substring(0, 35);
-  const instrId = `INSTR-${Date.now()}`.substring(0, 35);
-  const endToEndId = merchantTransactionId.substring(0, 35);
+  const baseId = cleanId(merchantTransactionId);
+  const msgId = `MM${baseId}`.substring(0, 35);
+  const pmtInfId = `PMT${baseId}`.substring(0, 30);   // max 30 chars for PmntInfId
+  const instrId = `INSTR${Date.now()}`.substring(0, 35);
+  const endToEndId = baseId.substring(0, 35);
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
   const ctrlSum = numAmount;

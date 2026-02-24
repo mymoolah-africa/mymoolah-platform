@@ -60,11 +60,15 @@ function buildPain013(params) {
     expiryMinutes = 60,
   } = params;
 
+  // SBSA field regex: ^(?=.*[a-zA-Z0-9])([a-zA-Z0-9\s]){1,35}$ — alphanumeric only, no hyphens/special chars
+  const cleanId = (str) => str.replace(/[^a-zA-Z0-9]/g, '');
+
   const uetr = uuidv4();
-  const msgId = `MM-RTP-${merchantTransactionId}`.substring(0, 35);
-  const pmtInfId = `RTP-${merchantTransactionId}`.substring(0, 35);
-  const instrId = `RTP-INSTR-${Date.now()}`.substring(0, 35);
-  const endToEndId = merchantTransactionId.substring(0, 35);
+  const baseId = cleanId(merchantTransactionId);
+  const msgId = `MMRTP${baseId}`.substring(0, 35);
+  const pmtInfId = `RTP${baseId}`.substring(0, 30);   // max 30 chars for PmtInfId
+  const instrId = `RTPINSTR${Date.now()}`.substring(0, 35);
+  const endToEndId = baseId.substring(0, 35);
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
 
