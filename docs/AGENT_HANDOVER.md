@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-24  
-**Latest Feature**: PayShap RPP + RTP both fully passing SBSA UAT end-to-end  
-**Document Version**: 2.11.18  
-**Session logs**: `docs/session_logs/2026-02-24_1100_payshap-rtp-eamti-fix-passing.md`, `docs/session_logs/2026-02-21_2200_payshap-pbac-only-proxy-removal.md`  
+**Last Updated**: 2026-02-24 20:05 20:05  
+**Latest Feature**: Banking-grade beneficiary schema live on all envs + full production deploy `20260224_v1`  
+**Document Version**: 2.11.19  
+**Session logs**: `docs/session_logs/2026-02-24_2005_schema-fix-deploy-production.md`, `docs/session_logs/2026-02-24_1100_payshap-rtp-eamti-fix-passing.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
