@@ -66,7 +66,12 @@ router.post('/', authenticateToken, async (req, res) => {
     }
 
     // Validate service type
-    const validServiceTypes = ['mymoolah', 'bank', 'airtime', 'data', 'electricity', 'water', 'biller', 'voucher', 'usdc', 'crypto'];
+    const validServiceTypes = [
+      'mymoolah', 'bank',
+      'eft', 'payshap', 'moolahmove', 'international_bank',
+      'mobile_money',
+      'airtime', 'data', 'electricity', 'water', 'biller', 'voucher', 'usdc', 'crypto'
+    ];
     if (!validServiceTypes.includes(serviceType)) {
       return res.status(400).json({
         success: false,
@@ -120,9 +125,12 @@ router.post('/:beneficiaryId/services', authenticateToken, async (req, res) => {
     }
 
     // Route to correct persistence method based on serviceType:
-    // - mymoolah / bank / mobile_money → BeneficiaryPaymentMethod table
-    // - everything else (airtime, data, electricity, biller, usdc, international, etc.) → BeneficiaryServiceAccount table
-    const paymentMethodTypes = ['mymoolah', 'bank', 'mobile_money'];
+    // - mymoolah / bank / eft / payshap / moolahmove / international_bank / mobile_money → BeneficiaryPaymentMethod table
+    // - everything else (airtime, data, electricity, biller, usdc, etc.) → BeneficiaryServiceAccount table
+    const paymentMethodTypes = [
+      'mymoolah', 'bank', 'mobile_money',
+      'eft', 'payshap', 'moolahmove', 'international_bank'
+    ];
     if (paymentMethodTypes.includes(serviceType)) {
       await unifiedBeneficiaryService.addOrUpdatePaymentMethod(userId, {
         beneficiaryId: parseInt(beneficiaryId),

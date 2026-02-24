@@ -33,7 +33,7 @@ class UnifiedBeneficiaryService {
             as: 'paymentMethodRecords', // Association alias (different from JSONB 'paymentMethods')
             required: false,
             where: { isActive: true },
-            attributes: ['id', 'methodType', 'walletMsisdn', 'bankName', 'accountNumber', 'accountType', 'branchCode', 'provider', 'mobileMoneyId', 'isDefault', 'isActive']
+            attributes: ['id', 'methodType', 'paymentRail', 'walletMsisdn', 'bankName', 'accountNumber', 'accountType', 'branchCode', 'swiftBic', 'iban', 'countryCode', 'provider', 'mobileMoneyId', 'isDefault', 'isActive']
           },
           {
             model: BeneficiaryServiceAccount,
@@ -182,9 +182,37 @@ class UnifiedBeneficiaryService {
             resolvedPaymentMethods = this.normalizedToLegacyPaymentMethods(beneficiaryData.paymentMethodRecords);
           }
 
+          // Build a typed accounts array from normalized records so the frontend
+          // knows exactly which paymentRail each account belongs to.
+          const paymentAccounts = Array.isArray(beneficiaryData.paymentMethodRecords)
+            ? beneficiaryData.paymentMethodRecords.map(pm => ({
+                id: pm.id,
+                type: pm.methodType,
+                paymentRail: pm.paymentRail || pm.methodType,
+                identifier: pm.accountNumber || pm.walletMsisdn || pm.mobileMoneyId || null,
+                walletMsisdn: pm.walletMsisdn || null,
+                bankName: pm.bankName || null,
+                accountNumber: pm.accountNumber || null,
+                accountType: pm.accountType || null,
+                branchCode: pm.branchCode || null,
+                swiftBic: pm.swiftBic || null,
+                iban: pm.iban || null,
+                countryCode: pm.countryCode || null,
+                provider: pm.provider || null,
+                mobileMoneyId: pm.mobileMoneyId || null,
+                isDefault: pm.isDefault || false,
+                isActive: pm.isActive !== false,
+                metadata: {
+                  bankName: pm.bankName || null,
+                  paymentRail: pm.paymentRail || pm.methodType
+                }
+              }))
+            : [];
+
           return {
             ...base,
             paymentMethods: resolvedPaymentMethods,
+            accounts: paymentAccounts,
             // Legacy compatibility
             accountType: this.getLegacyAccountType(resolvedPaymentMethods, beneficiary.accountType),
             identifier: this.getPrimaryIdentifier(resolvedPaymentMethods, base),
@@ -294,12 +322,15 @@ class UnifiedBeneficiaryService {
         throw new Error('Beneficiary name is required');
       }
 
-      // For bank accounts, always use NON_MSI_ identifier
+      // For bank/payment-rail accounts, always use NON_MSI_ identifier
       let primaryMsisdn = msisdn;
+
+      const isBankRail = ['bank', 'eft', 'payshap', 'moolahmove', 'international_bank'].includes(serviceType);
       
-      if (serviceType === 'bank') {
-        // Always generate short NON_MSI_ identifier for bank accounts (VARCHAR(15))
-        primaryMsisdn = this.generateNonMsiMsisdn(userId, serviceType, serviceData?.accountNumber, name);
+      if (isBankRail) {
+        // Always generate short NON_MSI_ identifier for bank/rail accounts (VARCHAR(15))
+        const accountIdentifier = serviceData?.accountNumber || serviceData?.iban || serviceData?.mobileMoneyId;
+        primaryMsisdn = this.generateNonMsiMsisdn(userId, serviceType, accountIdentifier, name);
       } else if (serviceType === 'electricity' || serviceType === 'biller') {
         // For electricity/biller, if the msisdn is actually a meter/account number (not a phone),
         // we must use a NON_MSI_ identifier to avoid validation failures
@@ -321,19 +352,21 @@ class UnifiedBeneficiaryService {
           primaryMsisdn = serviceData.mobileNumber;
         }
         
-        // For non-MSI services (electricity, biller), use a placeholder or generate from name
-        if (!primaryMsisdn && (serviceType === 'electricity' || serviceType === 'biller' || serviceType === 'usdc' || serviceType === 'crypto')) {
-          // Generate a short NON_MSI_ identifier for non-MSI services (VARCHAR(15))
+        // For non-MSI services, use a placeholder or generate from name
+        const nonMsiTypes = ['electricity', 'biller', 'usdc', 'crypto', 'mobile_money'];
+        if (!primaryMsisdn && nonMsiTypes.includes(serviceType)) {
           const identifier = serviceType === 'electricity' ? serviceData?.meterNumber : 
                             serviceType === 'biller' ? serviceData?.accountNumber :
-                            serviceType === 'usdc' || serviceType === 'crypto' ? serviceData?.walletAddress : 
+                            serviceType === 'usdc' || serviceType === 'crypto' ? serviceData?.walletAddress :
+                            serviceType === 'mobile_money' ? (serviceData?.mobileMoneyId || serviceData?.msisdn) :
                             null;
           primaryMsisdn = this.generateNonMsiMsisdn(userId, serviceType, identifier, name);
         }
       }
 
       // MSISDN is required for non-bank services (except electricity/biller/usdc which use NON_MSI_)
-      if (!primaryMsisdn && serviceType !== 'electricity' && serviceType !== 'biller' && serviceType !== 'usdc' && serviceType !== 'crypto') {
+      const nonMsiServiceTypes = ['electricity', 'biller', 'usdc', 'crypto', 'bank', 'eft', 'payshap', 'moolahmove', 'international_bank', 'mobile_money'];
+      if (!primaryMsisdn && !nonMsiServiceTypes.includes(serviceType)) {
         throw new Error('MSISDN is required. Provide msisdn or ensure serviceData contains walletMsisdn/msisdn/mobileNumber');
       }
 
@@ -357,7 +390,12 @@ class UnifiedBeneficiaryService {
       });
 
       // 2) Persist the concrete method / service in the new normalized tables
-      if (serviceType === 'mymoolah' || serviceType === 'bank' || serviceType === 'mobile_money') {
+      const isPaymentMethod = [
+        'mymoolah', 'bank', 'mobile_money',
+        'eft', 'payshap', 'moolahmove', 'international_bank'
+      ].includes(serviceType);
+
+      if (isPaymentMethod) {
         await this.addOrUpdatePaymentMethod(userId, {
           beneficiaryId: beneficiary.id,
           serviceType,
@@ -402,10 +440,29 @@ class UnifiedBeneficiaryService {
             accountType: 'mymoolah'
           };
         case 'bank':
+        case 'eft':
+        case 'payshap':
           return {
             identifier: serviceData.accountNumber || primaryMsisdn,
             accountType: 'bank',
             bankName: serviceData.bankName || null
+          };
+        case 'moolahmove':
+          return {
+            identifier: serviceData.accountNumber || primaryMsisdn,
+            accountType: 'moolahmove',
+            bankName: serviceData.bankName || null
+          };
+        case 'international_bank':
+          return {
+            identifier: serviceData.accountNumber || serviceData.iban || primaryMsisdn,
+            accountType: 'international_bank',
+            bankName: serviceData.bankName || null
+          };
+        case 'mobile_money':
+          return {
+            identifier: serviceData.mobileMoneyId || serviceData.msisdn || primaryMsisdn,
+            accountType: 'bank' // closest legacy type
           };
         case 'airtime':
         case 'data':
@@ -727,7 +784,7 @@ class UnifiedBeneficiaryService {
             as: 'paymentMethodRecords',
             required: false,
             where: { isActive: true },
-            attributes: ['id', 'methodType', 'walletMsisdn', 'bankName', 'accountNumber', 'accountType', 'branchCode', 'provider', 'mobileMoneyId', 'isDefault', 'isActive']
+            attributes: ['id', 'methodType', 'paymentRail', 'walletMsisdn', 'bankName', 'accountNumber', 'accountType', 'branchCode', 'swiftBic', 'iban', 'countryCode', 'provider', 'mobileMoneyId', 'isDefault', 'isActive']
           },
           {
             model: BeneficiaryServiceAccount,
@@ -882,8 +939,12 @@ class UnifiedBeneficiaryService {
       throw new Error('beneficiaryId is required to add a payment method');
     }
 
-    const { methodType, walletMsisdn, bankName, accountNumber, accountType, branchCode, provider, mobileMoneyId, isDefault } =
-      this.normalizePaymentServiceData(serviceType, serviceData);
+    const {
+      methodType, paymentRail,
+      walletMsisdn, bankName, accountNumber, accountType, branchCode,
+      swiftBic, iban, countryCode,
+      provider, mobileMoneyId, isDefault
+    } = this.normalizePaymentServiceData(serviceType, serviceData);
 
     const tx = await sequelize.transaction();
     try {
@@ -897,6 +958,25 @@ class UnifiedBeneficiaryService {
         throw new Error('Beneficiary not found for current user');
       }
 
+      // -----------------------------------------------------------------------
+      // One-MyMoolah-wallet-per-beneficiary rule (enforced at service layer
+      // before the DB partial UNIQUE index fires, for a clear error message).
+      // -----------------------------------------------------------------------
+      if (methodType === 'mymoolah') {
+        const existingMymoolah = await BeneficiaryPaymentMethod.findOne({
+          where: { beneficiaryId, methodType: 'mymoolah', isActive: true },
+          transaction: tx
+        });
+        if (existingMymoolah && existingMymoolah.walletMsisdn !== walletMsisdn) {
+          throw new Error(
+            'This beneficiary already has a MyMoolah wallet. ' +
+            'A beneficiary can only have one MyMoolah wallet. ' +
+            'Remove the existing wallet before adding a new one.'
+          );
+        }
+        // If same MSISDN, fall through to upsert (idempotent)
+      }
+
       // If this should become the default, clear existing defaults for same methodType
       if (isDefault) {
         await BeneficiaryPaymentMethod.update(
@@ -908,7 +988,7 @@ class UnifiedBeneficiaryService {
         );
       }
 
-      // Try to find an existing method by (beneficiary, methodType, accountNumber/walletMsisdn/mobileMoneyId)
+      // Try to find an existing method by (beneficiary, methodType, paymentRail, accountNumber/walletMsisdn/mobileMoneyId)
       const primaryKeyValue = accountNumber || walletMsisdn || mobileMoneyId;
       let existing = null;
       if (primaryKeyValue) {
@@ -916,6 +996,7 @@ class UnifiedBeneficiaryService {
           where: {
             beneficiaryId,
             methodType,
+            paymentRail,
             [Op.or]: [
               { accountNumber: primaryKeyValue },
               { walletMsisdn: primaryKeyValue },
@@ -927,17 +1008,25 @@ class UnifiedBeneficiaryService {
         });
       }
 
+      const commonFields = {
+        walletMsisdn,
+        bankName,
+        accountNumber,
+        accountType,
+        branchCode,
+        swiftBic,
+        iban,
+        countryCode,
+        provider,
+        mobileMoneyId,
+        isActive: true
+      };
+
       if (existing) {
         await existing.update(
           {
-            walletMsisdn,
-            bankName,
-            accountNumber,
-            accountType,
-            branchCode,
-            provider,
-            mobileMoneyId,
-            isActive: true,
+            ...commonFields,
+            paymentRail,
             isDefault: isDefault ?? existing.isDefault
           },
           { transaction: tx }
@@ -947,14 +1036,8 @@ class UnifiedBeneficiaryService {
           {
             beneficiaryId,
             methodType,
-            walletMsisdn,
-            bankName,
-            accountNumber,
-            accountType,
-            branchCode,
-            provider,
-            mobileMoneyId,
-            isActive: true,
+            paymentRail,
+            ...commonFields,
             isDefault: !!isDefault
           },
           { transaction: tx }
@@ -1237,17 +1320,64 @@ class UnifiedBeneficiaryService {
   /**
    * Normalize payment method input coming from various flows into the canonical
    * fields on BeneficiaryPaymentMethod.
+   *
+   * serviceType is the incoming value from the API (may be 'eft', 'payshap',
+   * 'moolahmove', 'international_bank', 'bank', 'mymoolah', 'mobile_money').
+   * methodType is the structural DB column (mymoolah | bank | mobile_money | international_bank).
+   * paymentRail is the network column (mymoolah | eft | payshap | moolahmove | mobile_money | international_bank).
    */
   normalizePaymentServiceData(serviceType, serviceData = {}) {
-    const methodType = serviceType; // for now we align names
+    // Map incoming serviceType to the DB methodType and paymentRail columns.
+    let methodType;
+    let paymentRail;
+
+    switch (serviceType) {
+      case 'mymoolah':
+        methodType = 'mymoolah';
+        paymentRail = 'mymoolah';
+        break;
+      case 'eft':
+        methodType = 'bank';
+        paymentRail = 'eft';
+        break;
+      case 'payshap':
+      case 'bank': // legacy callers that pass 'bank' default to payshap rail
+        methodType = 'bank';
+        paymentRail = serviceType === 'eft' ? 'eft' : (serviceData.paymentRail || serviceType === 'bank' ? 'payshap' : serviceType);
+        break;
+      case 'moolahmove':
+        methodType = 'bank'; // domestic MoolahMove uses bank account
+        paymentRail = 'moolahmove';
+        break;
+      case 'international_bank':
+        methodType = 'international_bank';
+        paymentRail = 'moolahmove'; // international bank is always under MoolahMove rail
+        break;
+      case 'mobile_money':
+        methodType = 'mobile_money';
+        paymentRail = 'mobile_money';
+        break;
+      default:
+        methodType = serviceType;
+        paymentRail = serviceData.paymentRail || serviceType;
+    }
+
+    // Allow explicit paymentRail override from serviceData
+    if (serviceData.paymentRail) {
+      paymentRail = serviceData.paymentRail;
+    }
 
     const normalized = {
       methodType,
+      paymentRail,
       walletMsisdn: null,
       bankName: null,
       accountNumber: null,
       accountType: null,
       branchCode: null,
+      swiftBic: null,
+      iban: null,
+      countryCode: null,
       provider: null,
       mobileMoneyId: null,
       isDefault: !!serviceData.isDefault
@@ -1260,9 +1390,17 @@ class UnifiedBeneficiaryService {
       normalized.accountNumber = serviceData.accountNumber || null;
       normalized.accountType = serviceData.accountType || null;
       normalized.branchCode = serviceData.branchCode || null;
+    } else if (methodType === 'international_bank') {
+      normalized.bankName = serviceData.bankName || null;
+      normalized.accountNumber = serviceData.accountNumber || null;
+      normalized.accountType = serviceData.accountType || null;
+      normalized.swiftBic = serviceData.swiftBic || null;
+      normalized.iban = serviceData.iban || null;
+      normalized.countryCode = serviceData.countryCode || null;
     } else if (methodType === 'mobile_money') {
       normalized.provider = serviceData.provider || null;
       normalized.mobileMoneyId = serviceData.mobileMoneyId || serviceData.walletId || serviceData.msisdn || null;
+      normalized.countryCode = serviceData.countryCode || null;
     }
 
     return normalized;
@@ -1674,7 +1812,8 @@ class UnifiedBeneficiaryService {
   }
 
   /**
-   * Convert normalized payment methods to legacy JSONB format
+   * Convert normalized payment methods to legacy JSONB format.
+   * Includes paymentRail so the frontend knows which rail each account belongs to.
    */
   normalizedToLegacyPaymentMethods(paymentMethods) {
     const legacy = {};
@@ -1684,24 +1823,44 @@ class UnifiedBeneficiaryService {
         legacy.mymoolah = {
           walletId: method.walletMsisdn || method.walletId,
           walletMsisdn: method.walletMsisdn,
+          paymentRail: method.paymentRail || 'mymoolah',
           isActive: method.isActive,
           isDefault: method.isDefault
         };
       } else if (method.methodType === 'bank') {
         if (!legacy.bankAccounts) legacy.bankAccounts = [];
         legacy.bankAccounts.push({
+          id: method.id,
           accountNumber: method.accountNumber,
           bankName: method.bankName,
           accountType: method.accountType || 'cheque',
           branchCode: method.branchCode,
+          paymentRail: method.paymentRail || 'payshap',
+          isActive: method.isActive,
+          isDefault: method.isDefault
+        });
+      } else if (method.methodType === 'international_bank') {
+        if (!legacy.internationalBankAccounts) legacy.internationalBankAccounts = [];
+        legacy.internationalBankAccounts.push({
+          id: method.id,
+          accountNumber: method.accountNumber,
+          bankName: method.bankName,
+          accountType: method.accountType || null,
+          swiftBic: method.swiftBic,
+          iban: method.iban,
+          countryCode: method.countryCode,
+          paymentRail: method.paymentRail || 'moolahmove',
           isActive: method.isActive,
           isDefault: method.isDefault
         });
       } else if (method.methodType === 'mobile_money') {
         if (!legacy.mobileMoney) legacy.mobileMoney = [];
         legacy.mobileMoney.push({
+          id: method.id,
           mobileMoneyId: method.mobileMoneyId,
           provider: method.provider,
+          countryCode: method.countryCode,
+          paymentRail: method.paymentRail || 'mobile_money',
           isActive: method.isActive,
           isDefault: method.isDefault
         });

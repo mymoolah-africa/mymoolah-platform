@@ -36,7 +36,22 @@ module.exports = (sequelize, DataTypes) => {
       comment: 'For MyMoolah: same as MSISDN. For Bank: bank account number. For others: service-specific identifier',
     },
     accountType: {
-      type: DataTypes.ENUM('mymoolah', 'bank', 'airtime', 'data', 'electricity', 'biller', 'usdc', 'crypto'),
+      // ENUM extended by migration 20260224_05 to include new payment rails.
+      // eft, payshap, moolahmove, international_bank added alongside legacy values.
+      type: DataTypes.ENUM(
+        'mymoolah',
+        'bank',
+        'eft',
+        'payshap',
+        'moolahmove',
+        'international_bank',
+        'airtime',
+        'data',
+        'electricity',
+        'biller',
+        'usdc',
+        'crypto'
+      ),
       allowNull: false,
     },
     bankName: {
@@ -44,45 +59,60 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'Bank name for bank beneficiaries',
     },
-    // Unified beneficiary system - multiple service types per person
+    // -----------------------------------------------------------------------
+    // @deprecated JSONB fields — kept for backward compatibility with existing rows.
+    // New payment method data is stored in the normalized beneficiary_payment_methods
+    // table (BeneficiaryPaymentMethod model, alias: paymentMethodRecords).
+    // Do NOT write new payment method data to these JSONB fields.
+    // -----------------------------------------------------------------------
     paymentMethods: {
       type: DataTypes.JSONB,
       allowNull: true,
-      comment: 'Payment methods: mymoolah wallet, bank accounts',
-      // Structure: { mymoolah: { walletId: string, isActive: boolean }, bankAccounts: [...] }
+      comment: '@deprecated Use BeneficiaryPaymentMethod records instead. Legacy: { mymoolah: { walletId, isActive }, bankAccounts: [...] }',
     },
     vasServices: {
       type: DataTypes.JSONB,
       allowNull: true,
-      comment: 'VAS services: airtime, data providers',
-      // Structure: { airtime: [{ mobileNumber, network, isActive }], data: [...] }
+      comment: '@deprecated Use BeneficiaryServiceAccount records instead. Legacy: { airtime: [...], data: [...] }',
     },
     utilityServices: {
       type: DataTypes.JSONB,
       allowNull: true,
-      comment: 'Utility services: electricity, water meters',
-      // Structure: { electricity: [{ meterNumber, meterType, provider, isActive }], water: [...] }
+      comment: '@deprecated Use BeneficiaryServiceAccount records instead. Legacy: { electricity: [...], water: [...] }',
     },
     billerServices: {
       type: DataTypes.JSONB,
       allowNull: true,
-      comment: 'Biller services: DSTV, insurance, etc.',
-      // Structure: { accounts: [{ accountNumber, billerName, billerCategory, isActive }] }
+      comment: '@deprecated Use BeneficiaryServiceAccount records instead. Legacy: { accounts: [...] }',
     },
     voucherServices: {
       type: DataTypes.JSONB,
       allowNull: true,
-      comment: 'Voucher services: gaming, streaming platforms',
-      // Structure: { gaming: [{ accountId, platform, isActive }], streaming: [...] }
+      comment: '@deprecated Use BeneficiaryServiceAccount records instead. Legacy: { gaming: [...], streaming: [...] }',
     },
     cryptoServices: {
       type: DataTypes.JSONB,
       allowNull: true,
       field: 'crypto_services',
-      comment: 'Crypto wallet services: { usdc: [{ walletAddress, network, isActive, country, relationship, purpose, totalSends, totalUsdcSent }] }',
+      comment: '@deprecated Use BeneficiaryServiceAccount records instead. Legacy: { usdc: [...] }',
     },
     preferredPaymentMethod: {
-      type: DataTypes.ENUM('mymoolah', 'bank', 'airtime', 'data', 'electricity', 'biller', 'voucher', 'usdc', 'crypto'),
+      // ENUM extended by migration 20260224_05 to include new payment rails.
+      type: DataTypes.ENUM(
+        'mymoolah',
+        'bank',
+        'eft',
+        'payshap',
+        'moolahmove',
+        'international_bank',
+        'airtime',
+        'data',
+        'electricity',
+        'biller',
+        'voucher',
+        'usdc',
+        'crypto'
+      ),
       allowNull: true,
       comment: 'User preferred payment method for this beneficiary',
     },

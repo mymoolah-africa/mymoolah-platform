@@ -10,12 +10,30 @@ import { getToken } from '../utils/authToken';
 
 const API_BASE = APP_CONFIG.API.baseUrl;
 
+export type PaymentRail = 'mymoolah' | 'eft' | 'payshap' | 'moolahmove' | 'mobile_money' | 'international_bank' | 'unspecified';
+
 export interface BeneficiaryAccount {
   id: number;
-  type: 'mymoolah' | 'bank' | 'mobile_money' | 'airtime' | 'data' | 'electricity' | 'biller' | 'voucher';
+  type: 'mymoolah' | 'bank' | 'mobile_money' | 'international_bank' | 'airtime' | 'data' | 'electricity' | 'biller' | 'voucher';
+  /** The payment network used to send money via this account. */
+  paymentRail?: PaymentRail;
   identifier: string; // account number, MSISDN, meter number, etc.
+  walletMsisdn?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountType?: string;
+  branchCode?: string;
+  /** SWIFT/BIC code for international bank transfers (MoolahMove) */
+  swiftBic?: string;
+  /** IBAN for international bank transfers (MoolahMove) */
+  iban?: string;
+  /** ISO 3166-1 alpha-2 country code for international methods (MoolahMove) */
+  countryCode?: string;
+  provider?: string;
+  mobileMoneyId?: string;
   label?: string;
   isDefault: boolean;
+  isActive?: boolean;
   metadata?: {
     bankName?: string;
     accountType?: string;
@@ -24,6 +42,7 @@ export interface BeneficiaryAccount {
     meterType?: string;
     provider?: string;
     billerName?: string;
+    paymentRail?: PaymentRail;
     [key: string]: any;
   };
 }
@@ -68,13 +87,31 @@ export interface PaymentBeneficiary {
 export interface CreateBeneficiaryRequest {
   name: string;
   msisdn?: string;
-  serviceType: 'mymoolah' | 'bank' | 'mobile_money' | 'airtime' | 'data' | 'electricity' | 'biller' | 'voucher';
+  serviceType:
+    | 'mymoolah'
+    | 'bank'
+    | 'eft'
+    | 'payshap'
+    | 'moolahmove'
+    | 'international_bank'
+    | 'mobile_money'
+    | 'airtime'
+    | 'data'
+    | 'electricity'
+    | 'biller'
+    | 'voucher';
   serviceData: {
     walletMsisdn?: string;
     bankName?: string;
     accountNumber?: string;
     accountType?: string;
     branchCode?: string;
+    /** SWIFT/BIC code for international bank transfers (MoolahMove) */
+    swiftBic?: string;
+    /** IBAN for international bank transfers (MoolahMove) */
+    iban?: string;
+    /** ISO 3166-1 alpha-2 country code for international methods (MoolahMove) */
+    countryCode?: string;
     provider?: string;
     mobileMoneyId?: string;
     msisdn?: string;
@@ -84,9 +121,11 @@ export interface CreateBeneficiaryRequest {
     billerName?: string;
     label?: string;
     isDefault?: boolean;
+    /** Explicit payment rail override (optional — inferred from serviceType if omitted) */
+    paymentRail?: PaymentRail;
     [key: string]: any;
   };
-    isFavorite?: boolean;
+  isFavorite?: boolean;
   notes?: string;
 }
 
@@ -517,15 +556,31 @@ class BeneficiaryService {
             });
           }
         } else {
-          // Non-airtime/data accounts or accounts without identifier - add as-is
+          // Non-airtime/data accounts or accounts without identifier - add as-is, preserving all fields
           const key = identifier || `account-${acc.id}`;
           accountMap.set(key, {
             id: acc.id,
             type: acc.type,
+            paymentRail: acc.paymentRail,
             identifier: acc.identifier,
+            walletMsisdn: acc.walletMsisdn,
+            bankName: acc.bankName,
+            accountNumber: acc.accountNumber,
+            accountType: acc.accountType,
+            branchCode: acc.branchCode,
+            swiftBic: acc.swiftBic,
+            iban: acc.iban,
+            countryCode: acc.countryCode,
+            provider: acc.provider,
+            mobileMoneyId: acc.mobileMoneyId,
             label: acc.label,
             isDefault: !!acc.isDefault,
-            metadata: acc.metadata || {}
+            isActive: acc.isActive !== false,
+            metadata: {
+              ...(acc.metadata || {}),
+              bankName: acc.bankName || acc.metadata?.bankName,
+              paymentRail: acc.paymentRail || acc.metadata?.paymentRail
+            }
           });
         }
       });
@@ -554,17 +609,61 @@ class BeneficiaryService {
         if (legacy.paymentMethods.bankAccounts && Array.isArray(legacy.paymentMethods.bankAccounts)) {
           legacy.paymentMethods.bankAccounts.forEach((bank: any, idx: number) => {
             accounts.push({
-              id: legacy.id * 1000 + 10 + idx,
+              id: bank.id || legacy.id * 1000 + 10 + idx,
               type: 'bank',
+              paymentRail: (bank.paymentRail as PaymentRail) || 'payshap',
               identifier: bank.accountNumber,
+              bankName: bank.bankName,
+              accountNumber: bank.accountNumber,
+              accountType: bank.accountType,
+              branchCode: bank.branchCode,
               label: bank.label || `${bank.bankName} ${bank.accountType}`,
               isDefault: legacy.preferredPaymentMethod === 'bank' && idx === 0,
               metadata: {
                 bankName: bank.bankName,
                 accountType: bank.accountType,
                 branchCode: bank.branchCode,
+                paymentRail: bank.paymentRail || 'payshap',
                 ...bank
               }
+            });
+          });
+        }
+
+        // International bank accounts (MoolahMove)
+        if (legacy.paymentMethods.internationalBankAccounts && Array.isArray(legacy.paymentMethods.internationalBankAccounts)) {
+          legacy.paymentMethods.internationalBankAccounts.forEach((bank: any, idx: number) => {
+            accounts.push({
+              id: bank.id || legacy.id * 1000 + 20 + idx,
+              type: 'international_bank',
+              paymentRail: 'moolahmove',
+              identifier: bank.accountNumber || bank.iban || '',
+              bankName: bank.bankName,
+              accountNumber: bank.accountNumber,
+              swiftBic: bank.swiftBic,
+              iban: bank.iban,
+              countryCode: bank.countryCode,
+              label: bank.label || `${bank.bankName || 'International'} (${bank.countryCode || ''})`,
+              isDefault: bank.isDefault || false,
+              metadata: { ...bank, paymentRail: 'moolahmove' }
+            });
+          });
+        }
+
+        // Mobile money accounts (MoolahMove international e-wallets)
+        if (legacy.paymentMethods.mobileMoney && Array.isArray(legacy.paymentMethods.mobileMoney)) {
+          legacy.paymentMethods.mobileMoney.forEach((mm: any, idx: number) => {
+            accounts.push({
+              id: mm.id || legacy.id * 1000 + 30 + idx,
+              type: 'mobile_money',
+              paymentRail: 'mobile_money',
+              identifier: mm.mobileMoneyId || '',
+              provider: mm.provider,
+              mobileMoneyId: mm.mobileMoneyId,
+              countryCode: mm.countryCode,
+              label: mm.label || `${mm.provider || 'Mobile Money'} (${mm.countryCode || ''})`,
+              isDefault: mm.isDefault || false,
+              metadata: { ...mm, paymentRail: 'mobile_money' }
             });
           });
         }
@@ -720,9 +819,13 @@ class BeneficiaryService {
     beneficiary: UnifiedBeneficiary,
     idx: number = 0
   ): PaymentBeneficiary {
-    // Filter to only payment accounts (mymoolah and bank)
+    // Filter to only payment accounts (mymoolah, bank, international_bank, mobile_money)
     const paymentAccounts = (beneficiary.accounts || []).filter(
-      (account) => account.type === 'mymoolah' || account.type === 'bank'
+      (account) =>
+        account.type === 'mymoolah' ||
+        account.type === 'bank' ||
+        account.type === 'international_bank' ||
+        account.type === 'mobile_money'
     );
 
     // Find primary account (default or first)
