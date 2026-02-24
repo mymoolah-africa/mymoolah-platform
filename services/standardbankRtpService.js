@@ -85,6 +85,7 @@ async function initiateRtpRequest(params) {
     payerName: payerName || 'Payer',
     payerMobileNumber,
     payerBankCode: resolvedPayerBankCode,
+    netAmount: netCredit,
     remittanceInfo: description || reference || merchantTransactionId,
     expiryMinutes,
   });

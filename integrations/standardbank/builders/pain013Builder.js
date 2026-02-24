@@ -57,6 +57,7 @@ function normaliseMobile(raw) {
  * @param {string} params.payerName - Debtor name
  * @param {string} params.payerMobileNumber - Debtor mobile number (required by SBSA RTP)
  * @param {string} [params.payerBankCode] - Debtor bank code (defaults to 'bankc' in UAT)
+ * @param {number} [params.netAmount] - Net amount after SBSA fee (for DuePyblAmt); defaults to amount - 5.75
  * @param {string} [params.creditorAccountNumber] - MMTP receiving account
  * @param {string} [params.creditorName] - MMTP name
  * @param {string} [params.creditorOrgId] - CIPC registration
@@ -72,6 +73,7 @@ function buildPain013(params) {
     payerName,
     payerMobileNumber,
     payerBankCode,
+    netAmount,
     creditorAccountNumber = process.env.SBSA_CREDITOR_ACCOUNT || process.env.SBSA_DEBTOR_ACCOUNT || '0000000000',
     creditorName = process.env.SBSA_CREDITOR_NAME || process.env.SBSA_DEBTOR_NAME || 'MyMoolah Treasury',
     creditorOrgId = process.env.SBSA_ORG_ID || '',
@@ -95,6 +97,11 @@ function buildPain013(params) {
   const endToEndId = baseId.substring(0, 35);
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
+  // DuePyblAmt = net amount after SBSA fee (must be < Amt per SBSA validation)
+  // Postman sample: Amt=100.00, DuePyblAmt=99.00 (R1 fee difference)
+  const numNetAmount = netAmount
+    ? (typeof netAmount === 'string' ? parseFloat(netAmount) : Number(netAmount))
+    : Number((numAmount - 5.00).toFixed(2));
   const now = new Date();
   const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
@@ -170,7 +177,7 @@ function buildPain013(params) {
         {
           RfrdDocAmt: {
             DuePyblAmt: {
-              Value: numAmount.toFixed(2),
+              Value: numNetAmount.toFixed(2),
             },
           },
           CdtrRefInf: {
