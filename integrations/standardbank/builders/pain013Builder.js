@@ -72,16 +72,24 @@ function buildPain013(params) {
   const now = new Date();
   const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
-  // Debtor account for RTP (PBAC — direct bank account).
-  // SBSA Pain.013 DbtrAcct uses Othr.Id for direct account numbers,
-  // matching the same pattern as RPP Pain.001 creditor/debtor accounts.
+  // SBSA Pain.013 requires DbtrAcct.Id.Item (mandatory polymorphic discriminator).
+  // The Postman sample only shows "Proxy" as the Item type.
+  // For direct bank account, we use Item.Id = "BBAN" with the account number in Prxy.Id,
+  // using proxy scheme "ACCT" (account number proxy type per PayShap spec).
+  // If SBSA rejects BBAN, fallback is to use "Proxy" + ACCT scheme with account number.
   const DbtrAcct = {
     Id: {
-      Othr: {
-        Id: payerAccountNumber,
+      Item: {
+        Id: 'Proxy',
       },
     },
     Nm: (payerName || 'Payer').substring(0, 140),
+    Prxy: {
+      Tp: {
+        Item: 'ACCOUNT_NUMBER',
+      },
+      Id: payerAccountNumber,
+    },
   };
 
   const CdtrId = creditorOrgId
