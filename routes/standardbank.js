@@ -103,7 +103,7 @@ const rtpValidation = [
     .withMessage('payerAccountNumber must be 6-20 alphanumeric characters'),
   body('payerMobileNumber')
     .optional()
-    .matches(/^(\+27|27|0)[6-8][0-9]{8}$/)
+    .matches(/^(\+27|27|0)[0-9]{8,9}$/)
     .withMessage('payerMobileNumber must be a valid South African mobile number'),
   body('payerBankName')
     .optional()
