@@ -24,37 +24,48 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // -------------------------------------------------------------------------
-    // 1. Add paymentRail column (NOT NULL, default 'unspecified' for safety)
-    // -------------------------------------------------------------------------
-    await queryInterface.addColumn('beneficiary_payment_methods', 'paymentRail', {
-      type: Sequelize.STRING(30),
-      allowNull: false,
-      defaultValue: 'unspecified',
-      comment: 'Payment rail: mymoolah | eft | payshap | moolahmove | mobile_money | unspecified'
-    });
+    const tableDesc = await queryInterface.describeTable('beneficiary_payment_methods');
 
-    // Backfill: existing mymoolah rows → rail='mymoolah', bank rows → rail='bank' (will be
-    // updated to eft/payshap/moolahmove when user re-selects rail in UI)
+    // -------------------------------------------------------------------------
+    // 1. Add paymentRail column (idempotent — skip if already exists)
+    // -------------------------------------------------------------------------
+    if (!tableDesc.paymentRail) {
+      await queryInterface.addColumn('beneficiary_payment_methods', 'paymentRail', {
+        type: Sequelize.STRING(30),
+        allowNull: false,
+        defaultValue: 'unspecified',
+        comment: 'Payment rail: mymoolah | eft | payshap | moolahmove | mobile_money | unspecified'
+      });
+    }
+
+    // Backfill: existing rows where paymentRail is still 'unspecified'
     await queryInterface.sequelize.query(`
       UPDATE beneficiary_payment_methods
       SET "paymentRail" = "methodType"
       WHERE "paymentRail" = 'unspecified';
     `);
 
-    // CHECK constraint on paymentRail values
+    // CHECK constraint on paymentRail values (skip if already exists)
+    await queryInterface.sequelize.query(`
+      ALTER TABLE beneficiary_payment_methods
+        DROP CONSTRAINT IF EXISTS bpm_payment_rail_check;
+    `);
     await queryInterface.sequelize.query(`
       ALTER TABLE beneficiary_payment_methods
         ADD CONSTRAINT bpm_payment_rail_check
         CHECK ("paymentRail" IN (
           'mymoolah', 'eft', 'payshap', 'moolahmove',
-          'mobile_money', 'international_bank', 'unspecified'
+          'mobile_money', 'international_bank', 'unspecified', 'bank'
         ));
     `);
 
     // -------------------------------------------------------------------------
-    // 2. Add CHECK constraint on methodType (was free-text STRING)
+    // 2. Add CHECK constraint on methodType (idempotent)
     // -------------------------------------------------------------------------
+    await queryInterface.sequelize.query(`
+      ALTER TABLE beneficiary_payment_methods
+        DROP CONSTRAINT IF EXISTS bpm_method_type_check;
+    `);
     await queryInterface.sequelize.query(`
       ALTER TABLE beneficiary_payment_methods
         ADD CONSTRAINT bpm_method_type_check
@@ -64,30 +75,38 @@ module.exports = {
     `);
 
     // -------------------------------------------------------------------------
-    // 3. Add international payment fields for MoolahMove
+    // 3. Add international payment fields for MoolahMove (idempotent)
     // -------------------------------------------------------------------------
-    await queryInterface.addColumn('beneficiary_payment_methods', 'swiftBic', {
-      type: Sequelize.STRING(11),
-      allowNull: true,
-      comment: 'SWIFT/BIC code for international bank transfers (MoolahMove)'
-    });
+    if (!tableDesc.swiftBic) {
+      await queryInterface.addColumn('beneficiary_payment_methods', 'swiftBic', {
+        type: Sequelize.STRING(11),
+        allowNull: true,
+        comment: 'SWIFT/BIC code for international bank transfers (MoolahMove)'
+      });
+    }
 
-    await queryInterface.addColumn('beneficiary_payment_methods', 'iban', {
-      type: Sequelize.STRING(34),
-      allowNull: true,
-      comment: 'IBAN for international bank transfers (MoolahMove)'
-    });
+    if (!tableDesc.iban) {
+      await queryInterface.addColumn('beneficiary_payment_methods', 'iban', {
+        type: Sequelize.STRING(34),
+        allowNull: true,
+        comment: 'IBAN for international bank transfers (MoolahMove)'
+      });
+    }
 
-    await queryInterface.addColumn('beneficiary_payment_methods', 'countryCode', {
-      type: Sequelize.CHAR(2),
-      allowNull: true,
-      comment: 'ISO 3166-1 alpha-2 country code for international methods (MoolahMove)'
-    });
+    if (!tableDesc.countryCode) {
+      await queryInterface.addColumn('beneficiary_payment_methods', 'countryCode', {
+        type: Sequelize.CHAR(2),
+        allowNull: true,
+        comment: 'ISO 3166-1 alpha-2 country code for international methods (MoolahMove)'
+      });
+    }
 
     // -------------------------------------------------------------------------
-    // 4. Partial UNIQUE index: one MyMoolah wallet per beneficiary
-    //    (PostgreSQL partial unique index — only applies where methodType='mymoolah')
+    // 4. Partial UNIQUE index: one MyMoolah wallet per beneficiary (idempotent)
     // -------------------------------------------------------------------------
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS bpm_one_mymoolah_per_beneficiary;
+    `);
     await queryInterface.sequelize.query(`
       CREATE UNIQUE INDEX bpm_one_mymoolah_per_beneficiary
         ON beneficiary_payment_methods ("beneficiaryId")
@@ -96,8 +115,10 @@ module.exports = {
 
     // -------------------------------------------------------------------------
     // 5. Partial UNIQUE index: no duplicate bank account per beneficiary per rail
-    //    Prevents the same account number being added twice for the same rail.
     // -------------------------------------------------------------------------
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS bpm_unique_bank_per_rail;
+    `);
     await queryInterface.sequelize.query(`
       CREATE UNIQUE INDEX bpm_unique_bank_per_rail
         ON beneficiary_payment_methods ("beneficiaryId", "paymentRail", "accountNumber")
@@ -109,6 +130,9 @@ module.exports = {
     // -------------------------------------------------------------------------
     // 6. Partial UNIQUE index: no duplicate mobile money wallet per beneficiary per provider
     // -------------------------------------------------------------------------
+    await queryInterface.sequelize.query(`
+      DROP INDEX IF EXISTS bpm_unique_mobile_money_per_provider;
+    `);
     await queryInterface.sequelize.query(`
       CREATE UNIQUE INDEX bpm_unique_mobile_money_per_provider
         ON beneficiary_payment_methods ("beneficiaryId", "provider", "mobileMoneyId")
@@ -125,9 +149,7 @@ module.exports = {
     `);
 
     // -------------------------------------------------------------------------
-    // 8. Drop payShapReference — architecturally wrong to store statically.
-    //    PayShap proxy MSISDN must be resolved dynamically at payment time
-    //    from the Standard Bank directory, not stored on the beneficiary.
+    // 8. Drop payShapReference (IF EXISTS is safe — idempotent)
     // -------------------------------------------------------------------------
     await queryInterface.sequelize.query(`
       ALTER TABLE beneficiary_payment_methods
@@ -136,7 +158,6 @@ module.exports = {
 
     // -------------------------------------------------------------------------
     // 9. Extend beneficiaries.accountType ENUM with new payment rails
-    //    PostgreSQL ADD VALUE IF NOT EXISTS is safe and non-destructive.
     // -------------------------------------------------------------------------
     await queryInterface.sequelize.query(`
       ALTER TYPE "enum_beneficiaries_accountType" ADD VALUE IF NOT EXISTS 'eft';
