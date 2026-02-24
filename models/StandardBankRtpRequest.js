@@ -103,6 +103,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSONB,
       allowNull: true,
     },
+    metadata: {
+      type: DataTypes.JSONB,
+      allowNull: true,
+      comment: 'Fee breakdown, pricing tier, and other RTP request metadata',
+    },
     webhookReceivedAt: {
       type: DataTypes.DATE,
       allowNull: true,
