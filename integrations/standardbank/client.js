@@ -111,10 +111,16 @@ async function initiatePayment(pain001) {
   const scope = `${SCOPES.RPP_POST} ${SCOPES.RPP_GET}`;
   const headers = await buildHeaders(scope, { callbackType: 'rpp' });
 
+  console.log('[SBSA RPP] POST', url);
+  console.log('[SBSA RPP] Payload:', JSON.stringify(pain001, null, 2));
+
   try {
     const response = await axios.post(url, pain001, { headers, timeout: 30000 });
     return { status: response.status, data: response.data };
   } catch (err) {
+    if (err.response) {
+      console.error('[SBSA RPP] Error response body:', JSON.stringify(err.response.data, null, 2));
+    }
     wrapAxiosError(err, 'RPP initiation');
   }
 }
