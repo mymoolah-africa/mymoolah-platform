@@ -120,16 +120,25 @@ class InternationalPaymentService {
   /**
    * Get a MoolahMove send quote
    *
-   * Returns: ZAR face value → USDC amount → local currency amount
-   * Quote is valid for 30 seconds (configurable).
+   * Quote model (USD-denominated):
+   *   - The sender accepts the ZAR → USD rate (controlled by VALR, locked for 30s)
+   *   - The recipient receives USD value; Yellow Card converts to local fiat at their
+   *     prevailing rate at time of disbursement — we do NOT guarantee local currency amount
+   *   - Quoting in USD protects MyMoolah from local currency volatility (MWK, KES, ZWL etc.)
+   *
+   * What the sender sees in the Accept Quote modal:
+   *   "You send:      R525.00  (R500 + R25 fee)"
+   *   "Rate:          R18.44 per USD  (valid 30s)"
+   *   "Recipient gets: ~$27.12 USD"
+   *   "Delivered via: Airtel Money, Malawi"
+   *   "Note: Final local currency amount set by Airtel Money at time of delivery"
    *
    * @param {number} userId - Sender user ID
-   * @param {number} zarFaceValue - ZAR amount to send
+   * @param {number} zarFaceValue - ZAR face value to send (excl. fee)
    * @param {string} channelId - Yellow Card channel ID (e.g., 'mw-airtel-mobile')
    * @returns {Promise<Object>} Quote details
    */
   async getQuote(userId, zarFaceValue, channelId) {
-    // Validate amount
     if (!zarFaceValue || zarFaceValue < 10) {
       throw Object.assign(new Error('Minimum send amount is R10'), { code: 'AMOUNT_TOO_LOW' });
     }
@@ -141,13 +150,11 @@ class InternationalPaymentService {
     }
 
     // Get ZAR/USD rate from VALR (cached 60s)
-    const cacheKey = `moolahmove:rate:USDCZAR`;
+    const cacheKey = 'moolahmove:rate:USDCZAR';
     let valrRate;
     try {
       const cached = await cachingService.get(cacheKey);
-      if (cached) {
-        valrRate = JSON.parse(cached);
-      }
+      if (cached) valrRate = JSON.parse(cached);
     } catch { /* cache miss — fetch fresh */ }
 
     if (!valrRate) {
@@ -158,28 +165,34 @@ class InternationalPaymentService {
     }
 
     const amounts = this.calculateAmounts(zarFaceValue, valrRate.askPrice);
-
-    // TODO (Phase 2): Get Yellow Card rate for local currency amount
-    // const ycRate = await yellowCardService.getRate(channelId, amounts.usdcAmount);
-    // const localAmount = ycRate.localAmount;
-    // const localCurrency = ycRate.localCurrency;
-
     const expiresAt = new Date(Date.now() + this.quoteExpirySeconds * 1000);
 
+    // TODO (Phase 2): Optionally fetch Yellow Card indicative local rate for display only
+    // const ycRate = await yellowCardService.getRate(channelId, amounts.usdcAmount);
+    // indicativeLocalAmount = ycRate.localAmount  ← display as "~MWK 35,420 (indicative)"
+    // We never guarantee this figure — only the USD amount is locked.
+
     return {
+      // What the sender pays
       zarFaceValue,
       zarFee: amounts.zarFee,
+      zarFeeVatInclusive: this.feeVatInclusive,
       zarTotal: amounts.zarTotal,
-      usdcAmount: amounts.usdcAmount,
+      // The rate the sender accepts (ZAR → USD, locked for quoteExpirySeconds)
       zarUsdRate: valrRate.askPrice,
-      // localAmount and localCurrency will be populated in Phase 2
-      localAmount: null,
-      localCurrency: null,
+      // What the recipient receives — quoted in USD (guaranteed value)
+      usdAmount: amounts.usdcAmount,
+      // Local currency is indicative only — set by Yellow Card at disbursement time
+      indicativeLocalAmount: null,   // Populated in Phase 2 from Yellow Card /rates
+      indicativeLocalCurrency: null, // e.g. 'MWK'
+      // Quote validity
       channelId,
       expiresAt: expiresAt.toISOString(),
       quoteExpirySeconds: this.quoteExpirySeconds,
+      // Fee metadata
       feePercent: this.feePercent,
-      feeVatInclusive: this.feeVatInclusive,
+      // Disclosure shown in Accept Quote modal
+      rateDisclosure: `Rate R${valrRate.askPrice.toFixed(2)}/USD · Valid ${this.quoteExpirySeconds}s · Local currency set by recipient's provider`,
     };
   }
 
@@ -318,18 +331,22 @@ class InternationalPaymentService {
       description: `MoolahMove to ${beneficiary.name} (${account.provider}, ${account.country})`,
       metadata: {
         transactionType: 'moolahmove_send',
-        // Financial
+        // What sender paid
         zarFaceValue,
         zarFee: finalAmounts.zarFee,
         zarFeeVatCents: finalAmounts.zarFeeVatCents,
         zarTotal: finalAmounts.zarTotal,
-        usdcAmount: finalAmounts.usdcAmount,
+        // Rate the sender accepted (ZAR → USD, locked at quote time)
         zarUsdRate: valrRate.askPrice,
+        // USD value guaranteed to recipient (what we quote and commit to)
+        usdAmount: finalAmounts.usdcAmount,
+        // Local currency is set by Yellow Card at disbursement — not guaranteed by MMTP
+        localCurrency: account.currency,
+        localAmountIndicative: null,  // Populated from Yellow Card webhook on completion
         // Recipient (Travel Rule)
         recipientName: account.accountName,
         recipientAccount: account.accountNumber,
         recipientCountry: account.country,
-        recipientCurrency: account.currency,
         recipientProvider: account.provider,
         yellowCardChannelId: channelId,
         // Yellow Card (populated in Phase 2)
@@ -360,14 +377,18 @@ class InternationalPaymentService {
     return {
       transactionId,
       status: 'pending',
+      // What sender paid
       zarFaceValue,
       zarFee: finalAmounts.zarFee,
       zarTotal: finalAmounts.zarTotal,
-      usdcAmount: finalAmounts.usdcAmount,
+      zarUsdRate: valrRate.askPrice,
+      // What recipient receives (USD — the committed value)
+      usdAmount: finalAmounts.usdcAmount,
+      // Recipient info
       recipientName: account.accountName,
       recipientProvider: account.provider,
       recipientCountry: account.country,
-      message: 'Payment initiated. Your family will be notified when funds arrive.',
+      message: 'Payment sent. Your family will be notified when funds arrive.',
     };
   }
 

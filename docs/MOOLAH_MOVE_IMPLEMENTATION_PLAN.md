@@ -24,16 +24,40 @@ MoolahMove enables MyMoolah wallet holders in South Africa to send money to fami
 
 2. Enter amount
    → "Send R500"
-   → Quote: "Family receives MWK 35,420 · Fee R25 · Total R525"
-   → Rate valid for 30 seconds [Accept Quote]
 
-3. Confirm
-   → Biometric / PIN confirmation
+3. Accept Quote modal (no PIN / SMS required — just tap Accept)
+   ┌─────────────────────────────────────────┐
+   │  MoolahMove Quote                       │
+   │                                         │
+   │  You send        R525.00                │
+   │  (R500 + R25 fee)                       │
+   │                                         │
+   │  Rate            R18.44 / USD           │
+   │  Recipient gets  ~$27.12 USD            │
+   │  Delivered via   Airtel Money, Malawi   │
+   │                                         │
+   │  ⏱ Rate valid for 28s                  │
+   │                                         │
+   │  ℹ️ Final local currency amount is set  │
+   │     by Airtel Money at delivery time.   │
+   │                                         │
+   │  [Cancel]          [Accept & Send]      │
+   └─────────────────────────────────────────┘
 
 4. Done ✓
-   → "Payment sent — your family will be notified when funds arrive"
+   → "Payment sent ✓"
    → Push notification when Yellow Card confirms delivery
 ```
+
+### Why USD-Denominated Quotes
+
+MyMoolah **does not control** the USD→MWK (or USD→KES, USD→ZWL) exchange rate — that is set by Yellow Card and the recipient's mobile money provider at the moment of disbursement. Quoting in local currency would create a liability if the rate moves between quote and delivery.
+
+**What we lock:** The ZAR→USD rate (via VALR, valid 30 seconds).  
+**What we commit to:** The USD value the recipient receives.  
+**What we disclaim:** The final local currency amount (shown as indicative only).
+
+This is the same model used by Wise, Remitly, and WorldRemit for volatile-currency corridors.
 
 ### What Happens Behind the Scenes (Invisible to Customer)
 
@@ -190,19 +214,22 @@ MoolahMove transactions use the existing `transactions` table with `metadata` JS
 ```javascript
 {
   transactionType: 'moolahmove_send',
-  // Financial
-  zarFaceValue: 500,               // ZAR sent to VALR
+  // What sender paid
+  zarFaceValue: 500,               // ZAR face value (excl. fee)
   zarFee: 25,                      // MyMoolah fee (5% incl. VAT)
   zarTotal: 525,                   // Total debited from user
-  usdcAmount: '27.12',             // USDC purchased
-  exchangeRate: 18.44,             // ZAR/USD rate
+  // Rate the sender accepted (ZAR → USD, locked at quote time)
+  zarUsdRate: 18.44,
+  // What recipient receives — USD is the committed value
+  usdAmount: 27.12,                // USD value guaranteed to recipient
+  // Local currency is indicative only — set by Yellow Card at disbursement
+  localCurrency: 'MWK',
+  localAmountIndicative: null,     // Populated from Yellow Card webhook on completion
   // Recipient
-  recipientCountry: 'MW',
-  recipientCurrency: 'MWK',
-  recipientAmount: 35420,          // Local currency amount
-  recipientProvider: 'Airtel Money',
-  recipientAccount: '+265991234567',
   recipientName: 'Grace Banda',
+  recipientAccount: '+265991234567',
+  recipientCountry: 'MW',
+  recipientProvider: 'Airtel Money',
   // Yellow Card
   yellowCardChannelId: 'mw-airtel-mobile',
   yellowCardDisbursementId: 'YC-123456',
@@ -215,6 +242,12 @@ MoolahMove transactions use the existing `transactions` table with `metadata` JS
   complianceCleared: true
 }
 ```
+
+> **Why USD, not local currency?**  
+> MyMoolah controls the ZAR→USD rate (locked via VALR for 30s). We do NOT control  
+> the USD→MWK rate — that is set by Yellow Card and Airtel Money at disbursement time.  
+> Quoting in local currency would expose MMTP to FX liability on every transaction.  
+> The sender accepts the ZAR→USD rate; the USD amount is our commitment.
 
 ---
 
@@ -300,10 +333,22 @@ Stores `serviceType: 'international'` via `beneficiaryService.addServiceToBenefi
 
 Steps:
 1. **Beneficiary** — Select existing or add new international recipient
-2. **Amount** — Enter ZAR, see live quote (local currency + fee)
-3. **Confirm** — ConfirmSheet with rate expiry countdown
-4. **Processing** — "Sending..." spinner
-5. **Success** — "Payment sent ✓" + expected delivery time
+2. **Amount** — Enter ZAR amount
+3. **Accept Quote modal** — Simple modal (no PIN, no SMS, no biometric):
+   - You send: R525.00 (R500 + R25 fee)
+   - Rate: R18.44 / USD (countdown timer)
+   - Recipient gets: ~$27.12 USD
+   - Delivered via: Airtel Money, Malawi
+   - Disclaimer: "Final local currency set by recipient's provider"
+   - Buttons: [Cancel] [Accept & Send]
+4. **Processing** — "Sending..." spinner (auto, no user action)
+5. **Success** — "Payment sent ✓" + "We'll notify you when your family receives it"
+
+**Key UX decisions:**
+- No SMS PIN — quote acceptance is sufficient authorisation
+- Quote in USD, not local currency — protects MMTP from FX liability
+- Local currency shown as indicative only with clear disclaimer
+- Rate countdown (30s) creates urgency without friction
 
 ### 7.3 `TransactPage.tsx` 🔧 TO BUILD (minor addition)
 
