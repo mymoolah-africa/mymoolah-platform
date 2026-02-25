@@ -170,6 +170,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(100),
       allowNull: true
     },
+    // Pricing type: variable = user enters any amount within min/max; fixed = discrete denominations only
+    priceType: {
+      type: DataTypes.ENUM('variable', 'fixed'),
+      allowNull: false,
+      defaultValue: 'fixed',
+      comment: "variable = user enters amount within min/max range; fixed = discrete denominations only"
+    },
     // Minimum and maximum allowed amount in cents for own-amount products
     minAmount: {
       type: DataTypes.INTEGER,
@@ -352,6 +359,10 @@ module.exports = (sequelize, DataTypes) => {
       {
         fields: ['isPreferred'],
         name: 'idx_product_variants_preferred'
+      },
+      {
+        fields: ['priceType'],
+        name: 'idx_product_variants_price_type'
       }
     ]
   });

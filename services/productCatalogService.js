@@ -287,6 +287,9 @@ class ProductCatalogService {
 
   /**
    * Get common includes for product queries
+   *
+   * Variable-first ordering: priceType='variable' variants surface first.
+   * Only one variant (the best) is returned per product for list views.
    * @private
    */
   _getCommonIncludes() {
@@ -309,7 +312,12 @@ class ProductCatalogService {
           required: true,
           attributes: ['id', 'name', 'code']
         }],
-        order: [['isPreferred', 'DESC'], ['sortOrder', 'ASC']],
+        // Variable-first: variable variants surface before fixed ones
+        order: [
+          [sequelize.literal(`CASE WHEN "variants"."priceType" = 'variable' THEN 0 ELSE 1 END`), 'ASC'],
+          ['isPreferred', 'DESC'],
+          ['sortOrder', 'ASC']
+        ],
         limit: 1
       }
     ];
@@ -327,12 +335,28 @@ class ProductCatalogService {
   }
 
   /**
-   * Transform product for frontend consumption
+   * Transform product for frontend consumption.
+   *
+   * Variable-first strategy:
+   *   - If the best variant is 'variable', returns priceType='variable' with
+   *     minAmount/maxAmount so the UI renders an amount-entry input.
+   *   - If the best variant is 'fixed', returns priceType='fixed' with the
+   *     full denominations array so the UI renders a picker.
    * @private
    */
   _transformProduct(product, includeTimestamps = false) {
-    const bestVariant = product.variants?.[0];
+    const bestVariant  = product.variants?.[0];
     const denominations = bestVariant?.denominations || [];
+    const priceType    = bestVariant?.priceType || 'fixed';
+    const isVariable   = priceType === 'variable';
+
+    // For variable products use explicit min/max; fall back to denomination range
+    const minAmount = isVariable
+      ? (bestVariant?.minAmount || (denominations.length > 0 ? Math.min(...denominations) : null))
+      : null;
+    const maxAmount = isVariable
+      ? (bestVariant?.maxAmount || (denominations.length > 0 ? Math.max(...denominations) : null))
+      : null;
 
     const result = {
       id: product.id,
@@ -350,16 +374,24 @@ class ProductCatalogService {
         name: bestVariant.supplier.name,
         code: bestVariant.supplier.code
       } : null,
-      denominations: denominations,
+      // Pricing strategy fields
+      priceType,
+      // For variable products: enter any amount between minAmount and maxAmount (cents)
+      minAmount,
+      maxAmount,
+      // For fixed products: pick one of these denominations (cents); empty for variable
+      denominations: isVariable ? [] : denominations,
       constraints: bestVariant?.constraints || {},
       metadata: product.metadata,
       description: product.description,
       category: product.category,
       tags: product.tags,
-      priceRange: denominations.length > 0 ? {
-        min: Math.min(...denominations),
-        max: Math.max(...denominations)
-      } : { min: 0, max: 0 }
+      // Convenience display range (always populated regardless of priceType)
+      priceRange: isVariable
+        ? { min: minAmount || 0, max: maxAmount || 0 }
+        : (denominations.length > 0
+            ? { min: Math.min(...denominations), max: Math.max(...denominations) }
+            : { min: 0, max: 0 })
     };
 
     if (includeTimestamps) {
