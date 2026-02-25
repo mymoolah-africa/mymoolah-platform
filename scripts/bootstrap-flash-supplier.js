@@ -130,24 +130,48 @@ async function bootstrapTarget(uatPool, targetPool, targetLabel) {
     log.warn('ledger_accounts table not found — skipping');
   }
 
-  // 3. Supplier floats
+  // 3. Supplier floats — copy row from UAT using actual UAT schema
   log.step('3. supplier_floats row...');
   if (await tableExists(targetPool, 'supplier_floats')) {
-    const sfExists = (await q(targetPool,
-      `SELECT id FROM supplier_floats WHERE "supplierId"=$1 LIMIT 1`, [targetSupplierId]
+    // Check using the string supplierId column (e.g. 'flash') not the integer FK
+    const uatFloat = (await q(uatPool,
+      `SELECT * FROM supplier_floats WHERE "supplierId" ILIKE 'flash' LIMIT 1`
     )).rows[0];
-    if (!sfExists) {
-      const targetLedgerId = (await q(targetPool,
-        `SELECT id FROM ledger_accounts WHERE code='1200-10-04' LIMIT 1`
-      )).rows[0]?.id || null;
-      await q(targetPool,
-        `INSERT INTO supplier_floats ("supplierId", "ledgerAccountId", balance, "createdAt", "updatedAt")
-         VALUES ($1, $2, 0, NOW(), NOW())`,
-        [targetSupplierId, targetLedgerId]
-      );
-      log.ok('supplier_floats row created (zero balance)');
+
+    if (!uatFloat) {
+      log.warn('No supplier_floats row for FLASH in UAT — skipping');
     } else {
-      log.info('supplier_floats row already exists');
+      const sfExists = (await q(targetPool,
+        `SELECT id FROM supplier_floats WHERE "supplierId" ILIKE 'flash' LIMIT 1`
+      )).rows[0];
+
+      if (sfExists) {
+        log.info('supplier_floats row already exists');
+      } else {
+        // Get actual columns in target supplier_floats to build insert safely
+        const colsResult = await q(targetPool,
+          `SELECT column_name FROM information_schema.columns
+           WHERE table_schema='public' AND table_name='supplier_floats'
+           ORDER BY ordinal_position`
+        );
+        const targetCols = colsResult.rows.map(r => r.column_name);
+
+        // Build insert from UAT row using only columns that exist in target
+        const skipCols = ['id', 'createdAt', 'updatedAt'];
+        const insertCols = Object.keys(uatFloat).filter(
+          k => !skipCols.includes(k) && targetCols.includes(k)
+        );
+        const values = insertCols.map(k => uatFloat[k]);
+        const colList = insertCols.map(c => `"${c}"`).join(', ');
+        const placeholders = insertCols.map((_, i) => `$${i + 1}`).join(', ');
+
+        await q(targetPool,
+          `INSERT INTO supplier_floats (${colList}, "createdAt", "updatedAt")
+           VALUES (${placeholders}, NOW(), NOW())`,
+          values
+        );
+        log.ok('supplier_floats row created');
+      }
     }
   } else {
     log.warn('supplier_floats table not found — skipping');
