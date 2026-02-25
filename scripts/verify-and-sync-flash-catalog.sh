@@ -116,8 +116,13 @@ check_env() {
 
   if [[ -z "$SUPPLIER" ]]; then
     fail "FLASH supplier not found in $LABEL database"
-    echo "   SUPPLIER_ID=MISSING"
-    return 1
+    info "Run: node scripts/bootstrap-flash-supplier.js $(echo $LABEL | tr '[:upper:]' '[:lower:]' | sed 's/uat//')"
+    # Set safe defaults so later steps don't crash on unbound vars
+    eval "${LABEL}_SUPPLIER=0"
+    eval "${LABEL}_PRODUCTS=0"
+    eval "${LABEL}_VARIANTS=0"
+    eval "${LABEL}_NO_VARIANT=0"
+    return 0
   fi
   ok "Flash supplier ID: $SUPPLIER"
 
@@ -241,37 +246,45 @@ fi
 # ── STEP 8: auto-sync UAT → Staging ──────────────────────────────────────────
 if [[ "$NEEDS_SYNC" == "true" ]]; then
   hdr "STEP 8 — Auto-syncing Flash catalog UAT → Staging"
-  node scripts/sync-flash-products-uat-to-staging.js
+
+  if [[ "${STAGING_SUPPLIER:-0}" == "0" ]]; then
+    # Supplier missing entirely — run full bootstrap
+    info "FLASH supplier missing in Staging — running full bootstrap..."
+    node scripts/bootstrap-flash-supplier.js --staging
+  else
+    # Supplier exists but products/variants differ — run incremental sync
+    node scripts/sync-flash-products-uat-to-staging.js
+  fi
   ok "Sync complete"
 fi
 
 # ── FINAL: summary table ──────────────────────────────────────────────────────
 hdr "FINAL VERIFICATION SUMMARY"
 
-# Re-query final counts
+# Re-query final counts (use supplier code lookup to avoid id=0 issue)
 FINAL_UAT_P=$(q  "$UAT_HOST" "$UAT_PORT" "$UAT_DB" "$UAT_PASS" \
-  "SELECT COUNT(*) FROM products WHERE \"supplierId\"='${UAT_SUPPLIER}'")
+  "SELECT COUNT(*) FROM products p JOIN suppliers s ON p.\"supplierId\"=s.id WHERE s.code='FLASH'")
 FINAL_UAT_V=$(q  "$UAT_HOST" "$UAT_PORT" "$UAT_DB" "$UAT_PASS" \
-  "SELECT COUNT(*) FROM product_variants WHERE \"supplierId\"='${UAT_SUPPLIER}'")
+  "SELECT COUNT(*) FROM product_variants pv JOIN suppliers s ON pv.\"supplierId\"=s.id WHERE s.code='FLASH'")
 FINAL_STG_P=$(q  "$STG_HOST" "$STG_PORT" "$STG_DB" "$STG_PASS" \
-  "SELECT COUNT(*) FROM products WHERE \"supplierId\"='${STAGING_SUPPLIER}'")
+  "SELECT COUNT(*) FROM products p JOIN suppliers s ON p.\"supplierId\"=s.id WHERE s.code='FLASH'")
 FINAL_STG_V=$(q  "$STG_HOST" "$STG_PORT" "$STG_DB" "$STG_PASS" \
-  "SELECT COUNT(*) FROM product_variants WHERE \"supplierId\"='${STAGING_SUPPLIER}'")
+  "SELECT COUNT(*) FROM product_variants pv JOIN suppliers s ON pv.\"supplierId\"=s.id WHERE s.code='FLASH'")
 
 echo ""
 echo -e "  ${BOLD}Environment     Products   Variants   Status${RESET}"
 echo    "  ──────────────────────────────────────────────────"
 printf  "  %-15s %-10s %-10s %s\n" "UAT"     "${FINAL_UAT_P:-0}" "${FINAL_UAT_V:-0}" "✅ source of truth"
 printf  "  %-15s %-10s %-10s %s\n" "Staging" "${FINAL_STG_P:-0}" "${FINAL_STG_V:-0}" \
-  "$( [[ "${FINAL_UAT_P:-0}" -eq "${FINAL_STG_P:-0}" && "${FINAL_UAT_V:-0}" -eq "${FINAL_STG_V:-0}" ]] && echo '✅ in parity' || echo '⚠️  still differs')"
+  "$( [[ "${FINAL_UAT_P:-0}" -eq "${FINAL_STG_P:-0}" && "${FINAL_UAT_V:-0}" -eq "${FINAL_STG_V:-0}" ]] && echo '✅ in parity' || echo '⚠️  still differs — run: node scripts/bootstrap-flash-supplier.js')"
 
 if [[ "$PRD_AVAILABLE" == "true" ]]; then
   FINAL_PRD_P=$(q "$PRD_HOST" "$PRD_PORT" "$PRD_DB" "$PRD_PASS" \
-    "SELECT COUNT(*) FROM products WHERE \"supplierId\"='${PRODUCTION_SUPPLIER}'")
+    "SELECT COUNT(*) FROM products p JOIN suppliers s ON p.\"supplierId\"=s.id WHERE s.code='FLASH'")
   FINAL_PRD_V=$(q "$PRD_HOST" "$PRD_PORT" "$PRD_DB" "$PRD_PASS" \
-    "SELECT COUNT(*) FROM product_variants WHERE \"supplierId\"='${PRODUCTION_SUPPLIER}'")
+    "SELECT COUNT(*) FROM product_variants pv JOIN suppliers s ON pv.\"supplierId\"=s.id WHERE s.code='FLASH'")
   printf "  %-15s %-10s %-10s %s\n" "Production" "${FINAL_PRD_P:-0}" "${FINAL_PRD_V:-0}" \
-    "$( [[ "${FINAL_UAT_P:-0}" -eq "${FINAL_PRD_P:-0}" && "${FINAL_UAT_V:-0}" -eq "${FINAL_PRD_V:-0}" ]] && echo '✅ in parity' || echo '⚠️  differs from UAT')"
+    "$( [[ "${FINAL_UAT_P:-0}" -eq "${FINAL_PRD_P:-0}" && "${FINAL_UAT_V:-0}" -eq "${FINAL_PRD_V:-0}" ]] && echo '✅ in parity' || echo '⚠️  differs — run: node scripts/bootstrap-flash-supplier.js --production')"
 else
   printf "  %-15s %-10s %-10s %s\n" "Production" "N/A" "N/A" "⚠️  proxy not available"
 fi
