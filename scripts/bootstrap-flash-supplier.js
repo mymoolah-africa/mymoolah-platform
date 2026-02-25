@@ -274,6 +274,7 @@ async function bootstrapTarget(uatPool, targetPool, targetLabel) {
     try {
       const targetBrandId = brandMap[p.brandId];
       if (!targetBrandId) { prodsFail++; continue; }
+      const toJson = (val, fallback = null) => val == null ? fallback : (typeof val === 'string' ? val : JSON.stringify(val));
       const existing = (await q(targetPool,
         `SELECT id FROM products WHERE name=$1 AND "supplierId"=$2 LIMIT 1`,
         [p.name, targetSupplierId]
@@ -284,9 +285,9 @@ async function bootstrapTarget(uatPool, targetPool, targetLabel) {
            denominations=$5::jsonb, constraints=$6::jsonb, metadata=$7::jsonb, "updatedAt"=NOW()
            WHERE id=$8`,
           [p.type, p.status, targetBrandId, p.supplierProductId,
-           JSON.stringify(p.denominations ?? []),
-           p.constraints ? JSON.stringify(p.constraints) : null,
-           p.metadata ? JSON.stringify(p.metadata) : null,
+           toJson(p.denominations, '[]'),
+           toJson(p.constraints),
+           toJson(p.metadata),
            existing.id]
         );
         productMap[p.id] = existing.id;
@@ -298,9 +299,9 @@ async function bootstrapTarget(uatPool, targetPool, targetLabel) {
             denominations, constraints, metadata, "createdAt", "updatedAt")
            VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb,$9::jsonb,NOW(),NOW()) RETURNING id`,
           [p.name, p.type, p.status, targetSupplierId, targetBrandId, p.supplierProductId,
-           JSON.stringify(p.denominations ?? []),
-           p.constraints ? JSON.stringify(p.constraints) : null,
-           p.metadata ? JSON.stringify(p.metadata) : null]
+           toJson(p.denominations, '[]'),
+           toJson(p.constraints),
+           toJson(p.metadata)]
         );
         productMap[p.id] = r.rows[0].id;
         prodsOk++;
@@ -333,16 +334,18 @@ async function bootstrapTarget(uatPool, targetPool, targetLabel) {
         [targetProductId, targetSupplierId, provider]
       )).rows[0];
 
+      // pg driver returns JSONB columns as already-parsed JS objects — must re-stringify
+      const toJson = (val) => val == null ? null : (typeof val === 'string' ? val : JSON.stringify(val));
       const fields = [
         v.supplierProductId, v.vasType, v.transactionType, v.networkType,
-        v.predefinedAmounts ? JSON.stringify(v.predefinedAmounts) : null,
-        v.denominations     ? JSON.stringify(v.denominations)     : null,
-        v.pricing           ? JSON.stringify(v.pricing)           : null,
+        toJson(v.predefinedAmounts),
+        toJson(v.denominations),
+        toJson(v.pricing),
         v.minAmount, v.maxAmount, v.commission, v.fixedFee,
         v.isPromotional, v.promotionalDiscount,
-        v.constraints ? JSON.stringify(v.constraints) : null,
+        toJson(v.constraints),
         v.status, v.isPreferred, v.priority, v.sortOrder,
-        v.metadata ? JSON.stringify(v.metadata) : null,
+        toJson(v.metadata),
       ];
 
       if (existing) {
