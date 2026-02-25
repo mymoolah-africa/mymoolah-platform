@@ -54,7 +54,7 @@ ok "Staging password retrieved"
 # ── proxy check ───────────────────────────────────────────────────────────────
 hdr "STEP 2 — Checking Cloud SQL Auth Proxy ports"
 for PORT in $UAT_PORT $STG_PORT; do
-  if nc -z 127.0.0.1 "$PORT" 2>/dev/null; then
+  if (echo > /dev/tcp/127.0.0.1/$PORT) 2>/dev/null; then
     ok "Port $PORT is listening"
   else
     fail "Port $PORT is NOT listening — run: ./scripts/ensure-proxies-running.sh"
