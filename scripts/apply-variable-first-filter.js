@@ -92,38 +92,60 @@ function isSubscriptionBrand(brandName) {
 
 // ── Variable detection heuristics ─────────────────────────────────────────────
 /**
- * Determine if a product_variants row represents a variable-amount product.
+ * Determine if a product_variants row is a true variable-amount product.
  *
- * Signals (any one is sufficient):
- *   1. Product name contains "variable", "open", "custom", "any amount", "voucher +" etc.
- *   2. denominations array has exactly 1 element (the only entry is a range marker)
- *   3. constraints JSONB has { type: 'range' } or { variable: true }
- *   4. priceType column already set to 'variable' (idempotent)
+ * A product is VARIABLE only when the user is expected to enter any amount
+ * within a range (like "Betway — enter R10 to R1000"). It is NOT variable
+ * just because it has a single fixed denomination (e.g. "OTT R5" = 500c fixed).
+ *
+ * Rules (ALL checks must point the same way — conservatively default to fixed):
+ *
+ *   VARIABLE signals (explicit opt-in required):
+ *     1. Name contains explicit variable keywords ("variable", "open value", etc.)
+ *     2. constraints JSONB has { type: 'range' } or { variable: true }
+ *     3. priceType column already set to 'variable' (idempotent re-run)
+ *     4. minAmount and maxAmount exist AND minAmount < maxAmount
+ *        (this is the canonical signal — a true range product has a span)
+ *
+ *   NEVER classify as variable:
+ *     - minAmount === maxAmount (single fixed price, just stored differently)
+ *     - denominations array contains 2+ entries with distinct values (picker list)
+ *     - Product name contains a price amount in Rands (e.g. "R5", "R100")
+ *       without also containing a variable keyword (fixed branded product)
  */
 function classifyVariant(row) {
-  const name    = (row.productName || row.name || '').toLowerCase();
-  const dens    = Array.isArray(row.denominations) ? row.denominations : [];
-  const constr  = row.constraints || {};
-  const pType   = (row.priceType || '').toLowerCase();
+  const name   = (row.productName || row.name || '').toLowerCase();
+  const dens   = Array.isArray(row.denominations) ? row.denominations : [];
+  const constr = row.constraints || {};
+  const pType  = (row.priceType || '').toLowerCase();
 
-  // Already classified
+  // Idempotent: already explicitly classified as variable
   if (pType === 'variable') return 'variable';
 
-  // Name-based signals
-  const variableKeywords = ['variable', 'open value', 'open amount', 'custom', 'any amount', 'any value', 'flexi', 'flexible', 'voucher +'];
-  if (variableKeywords.some(kw => name.includes(kw))) return 'variable';
+  // Explicit FIXED override: multiple distinct denominations = picker list
+  if (dens.length >= 2) return 'fixed';
 
-  // Denomination array has exactly 1 entry (often a "from" price placeholder)
-  if (dens.length === 1) return 'variable';
+  // Explicit FIXED override: minAmount === maxAmount = one fixed price point
+  if (row.minAmount && row.maxAmount && row.minAmount === row.maxAmount) return 'fixed';
 
-  // Constraints signal
+  // Explicit FIXED override: single denomination that equals minAmount (same price stored twice)
+  if (dens.length === 1 && row.minAmount && dens[0] === row.minAmount &&
+      row.maxAmount && dens[0] === row.maxAmount) return 'fixed';
+
+  // Constraints signal: explicit range marker
   if (constr.type === 'range' || constr.variable === true || constr.isVariable === true) return 'variable';
 
-  // minAmount < maxAmount and only 1–2 denominations (range bracketing)
-  if (row.minAmount && row.maxAmount && row.minAmount < row.maxAmount && dens.length <= 2) {
-    return 'variable';
-  }
+  // Name-based signals: explicit variable keywords
+  const variableKeywords = [
+    'variable', 'open value', 'open amount', 'custom', 'any amount',
+    'any value', 'flexi', 'flexible', 'voucher +'
+  ];
+  if (variableKeywords.some(kw => name.includes(kw))) return 'variable';
 
+  // True range: minAmount strictly less than maxAmount (user enters their own amount)
+  if (row.minAmount && row.maxAmount && row.minAmount < row.maxAmount) return 'variable';
+
+  // Default: fixed
   return 'fixed';
 }
 
@@ -297,7 +319,6 @@ async function applyFilterToEnvironment(pool, envLabel) {
           isPreferred: true
         });
         stats.variantsMarkedVariable++;
-        log.sub(`[${supplierCode}] KEEP  variable: "${v.productName}" (brand: ${brandName}, id: ${v.id}) min=${range.minAmount} max=${range.maxAmount}`);
       }
 
       // Deactivate fixed duplicates for the same brand+type
@@ -311,7 +332,8 @@ async function applyFilterToEnvironment(pool, envLabel) {
           isPreferred: false
         });
         stats.variantsDeactivated++;
-        log.sub(`[${supplierCode}] HIDE  fixed:    "${v.productName}" (brand: ${brandName}, id: ${v.id})`);
+        // Only log deactivations — these are the meaningful changes
+        log.warn(`[${supplierCode}] HIDE fixed: "${v.productName}" (brand: ${brandName}) — variable version exists`);
       }
 
     } else {
