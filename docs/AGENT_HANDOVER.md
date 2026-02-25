@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-24 20:05 20:05  
-**Latest Feature**: Banking-grade beneficiary schema live on all envs + full production deploy `20260224_v1`  
-**Document Version**: 2.11.19  
-**Session logs**: `docs/session_logs/2026-02-24_2005_schema-fix-deploy-production.md`, `docs/session_logs/2026-02-24_1100_payshap-rtp-eamti-fix-passing.md`  
+**Last Updated**: 2026-02-21 21:30  
+**Latest Feature**: Browserslist/caniuse-lite update; SBSA PayShap email response drafted  
+**Document Version**: 2.11.20  
+**Session logs**: `docs/session_logs/2026-02-21_2130_browserslist-update-sbsa-payshap-email.md`, `docs/session_logs/2026-02-24_2005_schema-fix-deploy-production.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -606,6 +606,8 @@ You're part of a **banking-grade software system** where:
 **Last Session**: 2026-02-21 — Bill payment fixes, NotificationService fix
 
 ### **Most Recent Work (2026-02-21)**
+- **Browserslist/caniuse-lite update**: Ran `npx update-browserslist-db@latest` in mymoolah-wallet-frontend; committed package-lock.json. In Codespaces, clean reinstall (`rm -rf node_modules && npm install`) required to clear persistent warning.
+- **SBSA PayShap email response**: Drafted comprehensive reply covering: no polling fallback (request status API); callback URL structure alignment (routes need path params); parameter mapping; Payments Real-Time URL typo clarification.
 - **Bill payment MobileMart prevend fix**: v2 API URL construction (use baseUrl for /v2 paths); improved product matching (no products[0] fallback; fuzzy match; clear error when no match). Fixes "prevend did not return transactionId" and wrong product (Ekurhuleni for PEP).
 - **Bill payment overlay fixes**: Removed 5 filter buttons; fixed add beneficiary (initialBillerName, pre-fill); production API compliance (billerName from billerServices.accounts[0]).
 - **NotificationService fix**: VAS purchase notifications now use createNotification (not sendToUser); fixes "NotificationService is not a constructor" after airtime/data/electricity/bill purchases.
@@ -628,7 +630,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
-| Feb 21 | Bill payment MobileMart prevend fix (v2 URL, product matching); overlay fixes; NotificationService fix; DSTV beneficiary filter |
+| Feb 21 | Browserslist/caniuse-lite update (package-lock); SBSA PayShap email response drafted; Bill payment MobileMart prevend fix; overlay fixes; NotificationService fix; DSTV beneficiary filter |
 | Feb 19 | EasyPay voucher refund duplicate fix; MMTP Partner API implementation plan |
 | Feb 18 | Documentation consolidation phase 2 |
 | Feb 15 | Production deployment live (api-mm, wallet-mm) |
