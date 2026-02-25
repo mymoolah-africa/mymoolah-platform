@@ -15,7 +15,52 @@ const supplierPricing = require('../services/supplierPricingService');
 class FlashController {
     constructor() {
         this.authService = new FlashAuthService();
-    
+        // In-memory cache for discovered eezi-voucher product code
+        this._eeziVoucherProductCode = null;
+    }
+
+    /**
+     * Discover the eezi-voucher product code from the Flash catalog.
+     * Uses FLASH_EEZI_VOUCHER_PRODUCT_CODE env var if set, otherwise queries the API.
+     * Result is cached in memory for the lifetime of the process.
+     */
+    async _resolveEeziVoucherProductCode() {
+        if (this._eeziVoucherProductCode) return this._eeziVoucherProductCode;
+
+        const fromEnv = parseInt(process.env.FLASH_EEZI_VOUCHER_PRODUCT_CODE || '0', 10);
+        if (fromEnv > 0) {
+            this._eeziVoucherProductCode = fromEnv;
+            return fromEnv;
+        }
+
+        // Auto-discover from Flash product catalog
+        const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+        if (!accountNumber) throw new Error('FLASH_ACCOUNT_NUMBER not configured');
+
+        console.log('🔍 Flash: Auto-discovering eezi-voucher product code from catalog...');
+        const response = await this.authService.makeAuthenticatedRequest(
+            'GET',
+            `/accounts/${accountNumber}/products`
+        );
+
+        const products = response.products || response || [];
+        const eeziProduct = products.find(p => {
+            const name = (p.productName || p.name || '').toLowerCase();
+            const cat  = (p.category || '').toLowerCase();
+            return name.includes('eezi') && (name.includes('cash') || name.includes('voucher') || cat.includes('cash'));
+        });
+
+        if (!eeziProduct) {
+            console.error('❌ Flash: Could not find eezi-voucher product in catalog. Products found:', products.length);
+            throw new Error('eezi-voucher product not found in Flash catalog. Set FLASH_EEZI_VOUCHER_PRODUCT_CODE manually.');
+        }
+
+        const code = parseInt(eeziProduct.productCode || eeziProduct.code, 10);
+        if (!code || code <= 0) throw new Error(`Invalid product code from Flash catalog: ${eeziProduct.productCode}`);
+
+        console.log(`✅ Flash: Discovered eezi-voucher product code: ${code} (${eeziProduct.productName || eeziProduct.name})`);
+        this._eeziVoucherProductCode = code;
+        return code;
     }
 
     /**
@@ -1062,13 +1107,37 @@ class FlashController {
      */
     async purchaseEeziVoucher(req, res) {
         try {
-            const { reference, accountNumber, amount, productCode, metadata } = req.body;
-            
+            const { reference, amount, metadata } = req.body;
+
+            // accountNumber and productCode are server-side config — never trust client input
+            const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+
             // Validate required fields
-            if (!reference || !accountNumber || !amount || !productCode) {
+            if (!reference || !amount) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Reference, account number, amount, and product code are required'
+                    error: 'Reference and amount are required'
+                });
+            }
+
+            if (!accountNumber) {
+                console.error('❌ FLASH_ACCOUNT_NUMBER not configured');
+                return res.status(500).json({
+                    success: false,
+                    error: 'Flash account not configured'
+                });
+            }
+
+            // Resolve product code (from env or auto-discovered from Flash catalog)
+            let productCode;
+            try {
+                productCode = await this._resolveEeziVoucherProductCode();
+            } catch (err) {
+                console.error('❌ Failed to resolve eezi-voucher product code:', err.message);
+                return res.status(500).json({
+                    success: false,
+                    error: 'Flash eezi-voucher product code not available',
+                    details: err.message
                 });
             }
 
@@ -1080,24 +1149,10 @@ class FlashController {
                 });
             }
 
-            if (!this.authService.validateAccountNumber(accountNumber)) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Invalid account number format'
-                });
-            }
-
             if (!this.authService.validateAmount(amount)) {
                 return res.status(400).json({
                     success: false,
                     error: 'Amount must be a positive integer in cents'
-                });
-            }
-
-            if (!Number.isInteger(productCode) || productCode <= 0) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Product code must be a positive integer'
                 });
             }
 

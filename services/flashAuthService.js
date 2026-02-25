@@ -276,12 +276,12 @@ class FlashAuthService {
     }
 
     /**
-     * Validate account number (alphanumeric only)
+     * Validate account number (alphanumeric with optional dashes, e.g. 6884-5973-6661-1279)
      * @param {string} accountNumber - Account number to validate
      * @returns {boolean} True if valid
      */
     validateAccountNumber(accountNumber) {
-        const accountPattern = /^[a-zA-Z0-9]+$/;
+        const accountPattern = /^[a-zA-Z0-9\-]+$/;
         return accountPattern.test(accountNumber);
     }
 

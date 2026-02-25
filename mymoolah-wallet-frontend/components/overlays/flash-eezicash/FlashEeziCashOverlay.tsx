@@ -43,11 +43,9 @@ export function FlashEeziCashOverlay() {
   const [voucherToken, setVoucherToken] = useState<string>('');
   const [transactionRef, setTransactionRef] = useState<string>('');
 
-  // System fields (read-only)
+  // System fields (read-only) — accountNumber and productCode are resolved server-side
   const systemData = {
-    reference: `EZ${Date.now().toString().slice(-8).toUpperCase()}`,
-    accountNumber: 'FLASH001234',
-    productCode: 'EEZI_CASH_ZAR'
+    reference: `EZ${Date.now().toString().slice(-8).toUpperCase()}`
   };
 
   // Quick amount options
@@ -175,24 +173,22 @@ export function FlashEeziCashOverlay() {
     setCurrentStep('processing');
     
     try {
-      // Prepare request data for Flash API
+      // Prepare request data — accountNumber and productCode are resolved server-side from env
       const requestData = {
         amount: Math.round(parseFloat(amount) * 100), // Convert to cents
         reference: systemData.reference,
-        accountNumber: systemData.accountNumber,
-        productCode: parseInt(systemData.productCode) || 1, // Product code as integer
         metadata: {
           source: 'FlashEeziCashOverlay',
           timestamp: new Date().toISOString()
         }
       };
       
-      console.log('🚀 Flash Cash-Out: Calling API with data:', requestData);
+      console.log('🚀 Flash eeziCash: Calling API with data:', requestData);
       
-      // Call Flash cash-out API
-      const response = await apiClient.post('/api/v1/flash/cash-out-pin/purchase', requestData);
+      // Call Flash eezi-voucher purchase API
+      const response = await apiClient.post('/api/v1/flash/eezi-voucher/purchase', requestData);
       
-      console.log('✅ Flash Cash-Out: API response:', response);
+      console.log('✅ Flash eeziCash: API response:', response);
       
       // Extract token/PIN from Flash response
       // Response format: { success: true, data: { transaction: { ... } } }
@@ -201,7 +197,7 @@ export function FlashEeziCashOverlay() {
       const ref = transaction?.transactionId || transaction?.reference || systemData.reference;
       
       if (!token) {
-        console.error('❌ Flash Cash-Out: No token in response:', transaction);
+        console.error('❌ Flash eeziCash: No token in response:', transaction);
         throw new Error('No voucher token received from Flash API');
       }
       
@@ -209,10 +205,10 @@ export function FlashEeziCashOverlay() {
       setTransactionRef(ref);
       setCurrentStep('success');
       
-      console.log('🎉 Flash Cash-Out: Success - Token:', token, 'Ref:', ref);
+      console.log('🎉 Flash eeziCash: Success - Token:', token, 'Ref:', ref);
       
     } catch (error: any) {
-      console.error('❌ Flash Cash-Out: Transaction failed:', error);
+      console.error('❌ Flash eeziCash: Transaction failed:', error);
       console.error('Error details:', {
         message: error.message,
         status: error.status,

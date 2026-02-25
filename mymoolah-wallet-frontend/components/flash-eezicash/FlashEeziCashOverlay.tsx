@@ -40,11 +40,9 @@ export function FlashEeziCashOverlay() {
   const [voucherToken, setVoucherToken] = useState<string>('');
   const [transactionRef, setTransactionRef] = useState<string>('');
 
-  // System fields (read-only)
+  // System fields (read-only) — accountNumber and productCode are resolved server-side
   const systemData = {
-    reference: `EZ${Date.now().toString().slice(-8).toUpperCase()}`,
-    accountNumber: 'FLASH001234',
-    productCode: 'EEZI_CASH_ZAR'
+    reference: `EZ${Date.now().toString().slice(-8).toUpperCase()}`
   };
 
   // Quick amount options
