@@ -43,14 +43,9 @@ const log = {
   data: (m) => console.log(`     ${m}`),
 };
 
-// ── safe query helper ─────────────────────────────────────────────────────────
+// ── query helper — uses pool.query() directly (same as sync-flash-products-uat-to-staging.js)
 async function q(pool, sql, params = []) {
-  const client = await pool.connect();
-  try {
-    return await client.query(sql, params);
-  } finally {
-    client.release();
-  }
+  return await pool.query(sql, params);
 }
 
 // ── table existence check ─────────────────────────────────────────────────────
