@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-21 21:30  
-**Latest Feature**: Browserslist/caniuse-lite update; SBSA PayShap email response drafted  
-**Document Version**: 2.11.20  
-**Session logs**: `docs/session_logs/2026-02-21_2130_browserslist-update-sbsa-payshap-email.md`, `docs/session_logs/2026-02-24_2005_schema-fix-deploy-production.md`  
+**Last Updated**: 2026-02-25 22:30  
+**Latest Feature**: Variable-first product catalog filter — deployed to Staging and Production  
+**Document Version**: 2.11.21  
+**Session logs**: `docs/session_logs/2026-02-24_2005_schema-fix-deploy-production.md`, `docs/session_logs/2026-02-25_2230_variable-first-product-catalog-filter.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -602,21 +602,23 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **INITIALIZED** — Ready for new agent  
-**Last Session**: 2026-02-21 — Bill payment fixes, NotificationService fix
+**Session Status**: ✅ **COMPLETE** — Deployed to Staging and Production  
+**Last Session**: 2026-02-25 — Variable-first product catalog filter
 
-### **Most Recent Work (2026-02-21)**
-- **Browserslist/caniuse-lite update**: Ran `npx update-browserslist-db@latest` in mymoolah-wallet-frontend; committed package-lock.json. In Codespaces, clean reinstall (`rm -rf node_modules && npm install`) required to clear persistent warning.
-- **SBSA PayShap email response**: Drafted comprehensive reply covering: no polling fallback (request status API); callback URL structure alignment (routes need path params); parameter mapping; Payments Real-Time URL typo clarification.
-- **Bill payment MobileMart prevend fix**: v2 API URL construction (use baseUrl for /v2 paths); improved product matching (no products[0] fallback; fuzzy match; clear error when no match). Fixes "prevend did not return transactionId" and wrong product (Ekurhuleni for PEP).
-- **Bill payment overlay fixes**: Removed 5 filter buttons; fixed add beneficiary (initialBillerName, pre-fill); production API compliance (billerName from billerServices.accounts[0]).
-- **NotificationService fix**: VAS purchase notifications now use createNotification (not sendToUser); fixes "NotificationService is not a constructor" after airtime/data/electricity/bill purchases.
-- **DSTV beneficiary filter**: Added BILLER_STEMS and billerMatches() so different biller name variants (e.g. "DSTV Now Subscription" vs "DSTV / Multichoice Bill Payment") match correctly.
+### **Most Recent Work (2026-02-25)**
+- **Variable-first product catalog filter**: Implemented across all suppliers and service providers. For each brand, if a variable-amount product exists, fixed-denomination duplicates are deactivated. Users see one clean variable product per brand instead of multiple fixed-denomination entries.
+- **New migration**: `20260221_01_add_price_type_to_product_variants.js` — adds `priceType ENUM('variable','fixed')`, `minAmount`, `maxAmount` to `product_variants`.
+- **New script**: `scripts/apply-variable-first-filter.js` — classifies and applies variable-first strategy across UAT, Staging, Production. Supports `--dry-run`, `--all` flags.
+- **New script**: `scripts/diagnose-variable-products.js` — diagnostic tool to inspect classification before applying.
+- **Model update**: `models/ProductVariant.js` — added `priceType` field.
+- **API update**: `services/productCatalogService.js` — variable-first ordering; returns `priceType`, `minAmount`, `maxAmount` in product responses.
+- **Results**: UAT (230 fixed), Staging (5 variable activated, 107 fixed deactivated), Production (1855 fixed — MobileMart not yet live).
+- **Full deployment**: All 4 Cloud Run services redeployed (Staging backend rev-00190, Staging frontend rev-00041, Production backend rev-00018, Production frontend rev-00005).
 
 ### **Current State**
 - No active work in progress
-- Production live: api-mm.mymoolah.africa, wallet.mymoolah.africa
-- See **Next Development Priorities** below for recommended tasks
+- Production live: api-mm.mymoolah.africa, wallet.mymoolah.africa — latest code deployed
+- **Next priority**: Frontend UI for variable products (amount-entry input with min/max validation)
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
@@ -630,14 +632,14 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
-| Feb 21 | Browserslist/caniuse-lite update (package-lock); SBSA PayShap email response drafted; Bill payment MobileMart prevend fix; overlay fixes; NotificationService fix; DSTV beneficiary filter |
+| Feb 25 | Variable-first product catalog filter — `priceType` schema, classify/deactivate fixed duplicates, API returns variable fields, full deploy to Staging + Production |
+| Feb 21 | Browserslist/caniuse-lite update; SBSA PayShap email; Bill payment MobileMart prevend fix; overlay fixes; NotificationService fix; DSTV beneficiary filter |
 | Feb 19 | EasyPay voucher refund duplicate fix; MMTP Partner API implementation plan |
 | Feb 18 | Documentation consolidation phase 2 |
 | Feb 15 | Production deployment live (api-mm, wallet-mm) |
 | Feb 12 | Production DB migration complete; SBSA PayShap integration complete (UAT ready) |
 | Feb 09 | Transaction Detail modal; USDC fee UI |
 | Feb 08 | Migrations-before-seeding rule; Watch to Earn demo videos |
-| Feb 07 | USDC Send feature; USDC fixes and banking-grade sweep |
 
 ---
 
