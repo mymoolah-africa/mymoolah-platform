@@ -323,10 +323,11 @@ async function bootstrapTarget(uatPool, targetPool, targetLabel) {
       const targetProductId = productMap[v.productId];
       if (!targetProductId) { varsFail++; continue; }
       const provider = v.provider || 'Flash';
+      // Unique constraint is (productId, supplierId) — match on that only
       const existing = (await q(targetPool,
         `SELECT id FROM product_variants
-         WHERE "productId"=$1 AND "supplierId"=$2 AND provider=$3 LIMIT 1`,
-        [targetProductId, targetSupplierId, provider]
+         WHERE "productId"=$1 AND "supplierId"=$2 LIMIT 1`,
+        [targetProductId, targetSupplierId]
       )).rows[0];
 
       // Serialize JSONB fields — exact same pattern as sync-flash-products-uat-to-staging.js
