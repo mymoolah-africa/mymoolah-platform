@@ -329,45 +329,68 @@ async function bootstrapTarget(uatPool, targetPool, targetLabel) {
         [targetProductId, targetSupplierId, provider]
       )).rows[0];
 
-      // pg driver returns JSONB columns as already-parsed JS objects — must re-stringify
-      const toJson = (val) => val == null ? null : (typeof val === 'string' ? val : JSON.stringify(val));
-      const fields = [
-        v.supplierProductId, v.vasType, v.transactionType, v.networkType,
-        toJson(v.predefinedAmounts),
-        toJson(v.denominations),
-        toJson(v.pricing),
-        v.minAmount, v.maxAmount, v.commission, v.fixedFee,
-        v.isPromotional, v.promotionalDiscount,
-        toJson(v.constraints),
-        v.status, v.isPreferred, v.priority, v.sortOrder,
-        toJson(v.metadata),
-      ];
+      // Serialize JSONB fields — exact same pattern as sync-flash-products-uat-to-staging.js
+      const predefinedAmountsJson = v.predefinedAmounts ? JSON.stringify(v.predefinedAmounts) : null;
+      const denominationsJson     = v.denominations     ? JSON.stringify(v.denominations)     : null;
+      const pricingJson           = v.pricing           ? JSON.stringify(v.pricing)           : null;
+      const constraintsJson       = v.constraints       ? JSON.stringify(v.constraints)       : null;
+      const metadataJson          = v.metadata          ? JSON.stringify(v.metadata)          : null;
+      const providerValue         = v.provider || 'Flash';
 
       if (existing) {
-        await q(targetPool,
-          `UPDATE product_variants SET
-           "supplierProductId"=$1,"vasType"=$2,"transactionType"=$3,"networkType"=$4,
-           "predefinedAmounts"=$5::jsonb,denominations=$6::jsonb,pricing=$7::jsonb,
-           "minAmount"=$8,"maxAmount"=$9,commission=$10,"fixedFee"=$11,
-           "isPromotional"=$12,"promotionalDiscount"=$13,constraints=$14::jsonb,
-           status=$15,"isPreferred"=$16,priority=$17,"sortOrder"=$18,
-           metadata=$19::jsonb,"updatedAt"=NOW()
-           WHERE id=$20`,
-          [...fields, existing.id]
-        );
+        await q(targetPool, `
+          UPDATE product_variants SET
+            "supplierProductId" = $1,
+            "vasType" = $2,
+            "transactionType" = $3,
+            "networkType" = $4,
+            "predefinedAmounts" = $5::jsonb,
+            denominations = $6::jsonb,
+            pricing = $7::jsonb,
+            "minAmount" = $8,
+            "maxAmount" = $9,
+            commission = $10,
+            "fixedFee" = $11,
+            "isPromotional" = $12,
+            "promotionalDiscount" = $13,
+            constraints = $14::jsonb,
+            status = $15,
+            "isPreferred" = $16,
+            priority = $17,
+            "sortOrder" = $18,
+            metadata = $19::jsonb,
+            "updatedAt" = NOW()
+          WHERE id = $20
+        `, [
+          v.supplierProductId, v.vasType, v.transactionType, v.networkType,
+          predefinedAmountsJson, denominationsJson, pricingJson,
+          v.minAmount, v.maxAmount, v.commission, v.fixedFee,
+          v.isPromotional, v.promotionalDiscount, constraintsJson,
+          v.status, v.isPreferred, v.priority, v.sortOrder,
+          metadataJson, existing.id
+        ]);
         varsUpdated++;
       } else {
-        await q(targetPool,
-          `INSERT INTO product_variants
-           ("productId","supplierId","supplierProductId","vasType","transactionType",
-            provider,"networkType","predefinedAmounts",denominations,pricing,
-            "minAmount","maxAmount",commission,"fixedFee","isPromotional",
-            "promotionalDiscount",constraints,status,"isPreferred",priority,
-            "sortOrder",metadata,"createdAt","updatedAt")
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10::jsonb,
-                   $11,$12,$13,$14,$15,$16,$17::jsonb,$18,$19,$20,$21,$22::jsonb,NOW(),NOW())`,
-          [targetProductId, targetSupplierId, ...fields.slice(0,6), provider, ...fields.slice(6)]
-        );
+        await q(targetPool, `
+          INSERT INTO product_variants (
+            "productId", "supplierId", "supplierProductId",
+            "vasType", "transactionType", provider, "networkType",
+            "predefinedAmounts", denominations, pricing,
+            "minAmount", "maxAmount", commission, "fixedFee",
+            "isPromotional", "promotionalDiscount", constraints,
+            status, "isPreferred", priority, "sortOrder", metadata,
+            "createdAt", "updatedAt"
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb,
+                    $11, $12, $13, $14, $15, $16, $17::jsonb, $18, $19, $20, $21, $22::jsonb,
+                    NOW(), NOW())
+        `, [
+          targetProductId, targetSupplierId, v.supplierProductId,
+          v.vasType, v.transactionType, providerValue, v.networkType,
+          predefinedAmountsJson, denominationsJson, pricingJson,
+          v.minAmount, v.maxAmount, v.commission, v.fixedFee,
+          v.isPromotional, v.promotionalDiscount, constraintsJson,
+          v.status, v.isPreferred, v.priority, v.sortOrder, metadataJson
+        ]);
         varsOk++;
       }
     } catch (err) {
