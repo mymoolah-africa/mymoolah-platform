@@ -68,6 +68,12 @@ async function buildHeaders(scope, options = {}) {
   };
 
   if (callbackBase) {
+    // We provide only the base path — SBSA appends path parameters:
+    //
+    // RPP batch:    {base}/callback/paymentInitiation/{ClientMessageId}[/paymentInstructions/{id}]
+    // RPP realtime: {base}/realtime-callback/paymentInitiation/{ClientMessageId}/paymentInstructions/{id}/transactions/{uetr}
+    // RTP batch:    {base}/rtp-callback/paymentInitiation/{ClientMessageId}[/paymentInstructions/{id}]
+    // RTP realtime: {base}/rtp-realtime-callback/paymentRequestInitiation/{ClientMessageId}/paymentRequestInstructions/{id}/requests/{uetr}
     if (options.callbackType === 'rtp') {
       headers['X-Callback-Url'] = `${callbackBase}/api/v1/standardbank/rtp-callback`;
       headers['X-Realtime-Callback-Url'] = `${callbackBase}/api/v1/standardbank/rtp-realtime-callback`;

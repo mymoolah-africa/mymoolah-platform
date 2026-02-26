@@ -121,8 +121,14 @@ const rtpValidation = [
 // RPP initiation (Send Money)
 router.post('/payshap/rpp', auth, rppValidation, handleValidation, standardbankController.initiatePayShapRpp);
 
+// RPP status polling fallback (Gustaf: poll every 10s, UETR = transactionIdentifier)
+router.get('/payshap/rpp/:uetr/status', auth, standardbankController.getRppStatus);
+
 // RTP initiation (Request Money)
 router.post('/payshap/rtp', auth, rtpValidation, handleValidation, standardbankController.initiatePayShapRtp);
+
+// RTP status polling fallback
+router.get('/payshap/rtp/:uetr/status', auth, standardbankController.getRtpStatus);
 
 // Deposit notification (when money hits MM SBSA main account; reference = CID = MSISDN)
 router.post(
@@ -135,10 +141,56 @@ router.post(
   standardbankController.handleDepositNotification
 );
 
-// Callbacks (no auth - validated via x-GroupHeader-Hash HMAC-SHA256)
+// ─── RPP Callbacks (no auth — validated via x-GroupHeader-Hash HMAC-SHA256) ───
+//
+// SBSA appends path parameters to our base callback URL.
+// We register both the flat base route AND the parameterised variants so that
+// SBSA callbacks resolve correctly regardless of which path they hit.
+//
+// RPP Batch (Pain.002):
+//   POST /callback
+//   POST /callback/paymentInitiation/:clientMessageId
+//   POST /callback/paymentInitiation/:clientMessageId/paymentInstructions/:paymentInformationId
 router.post('/callback', rawBodyMiddleware, parseJsonBody, standardbankController.handleRppCallback);
+router.post(
+  '/callback/paymentInitiation/:clientMessageId',
+  rawBodyMiddleware, parseJsonBody, standardbankController.handleRppCallbackWithParams
+);
+router.post(
+  '/callback/paymentInitiation/:clientMessageId/paymentInstructions/:paymentInformationId',
+  rawBodyMiddleware, parseJsonBody, standardbankController.handleRppCallbackWithParams
+);
+
+// RPP Realtime (Pain.002 per-transaction):
+//   POST /realtime-callback/paymentInitiation/:clientMessageId/paymentInstructions/:paymentInformationId/transactions/:transactionIdentifier
 router.post('/realtime-callback', rawBodyMiddleware, parseJsonBody, standardbankController.handleRppRealtimeCallback);
+router.post(
+  '/realtime-callback/paymentInitiation/:clientMessageId/paymentInstructions/:paymentInformationId/transactions/:transactionIdentifier',
+  rawBodyMiddleware, parseJsonBody, standardbankController.handleRppRealtimeCallback
+);
+
+// ─── RTP Callbacks ────────────────────────────────────────────────────────────
+//
+// RTP Batch (Pain.014):
+//   POST /rtp-callback
+//   POST /rtp-callback/paymentInitiation/:clientMessageId
+//   POST /rtp-callback/paymentInitiation/:clientMessageId/paymentInstructions/:paymentInformationId
 router.post('/rtp-callback', rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpCallback);
+router.post(
+  '/rtp-callback/paymentInitiation/:clientMessageId',
+  rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpCallbackWithParams
+);
+router.post(
+  '/rtp-callback/paymentInitiation/:clientMessageId/paymentInstructions/:paymentInformationId',
+  rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpCallbackWithParams
+);
+
+// RTP Realtime (Pain.014 per-transaction):
+//   POST /rtp-realtime-callback/paymentRequestInitiation/:clientMessageId/paymentRequestInstructions/:requestToPayInformationId/requests/:transactionIdentifier
 router.post('/rtp-realtime-callback', rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpRealtimeCallback);
+router.post(
+  '/rtp-realtime-callback/paymentRequestInitiation/:clientMessageId/paymentRequestInstructions/:requestToPayInformationId/requests/:transactionIdentifier',
+  rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpRealtimeCallback
+);
 
 module.exports = router;

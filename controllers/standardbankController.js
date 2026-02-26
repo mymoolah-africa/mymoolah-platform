@@ -107,11 +107,34 @@ async function processRppCallback(originalMessageId, transactionIdentifier, stat
 }
 
 /**
- * RPP Realtime Callback - path params
- * GET/POST /api/v1/standardbank/realtime-callback/:originalMessageId/:paymentInformationId/:transactionIdentifier
+ * RPP Batch Callback with path params — Pain.002
+ * POST /api/v1/standardbank/callback/paymentInitiation/:clientMessageId
+ * POST /api/v1/standardbank/callback/paymentInitiation/:clientMessageId/paymentInstructions/:paymentInformationId
+ *
+ * SBSA appends path params to our base callback URL. These routes handle both
+ * the top-level batch and per-instruction variants. Processing is identical to
+ * the flat /callback route — path params are used for idempotency fallback.
+ */
+async function handleRppCallbackWithParams(req, res) {
+  // Merge path params into body context then delegate to flat handler
+  // clientMessageId = GrpHdr.MsgId (our originalMessageId)
+  req._sbsaPathParams = {
+    clientMessageId: req.params.clientMessageId,
+    paymentInformationId: req.params.paymentInformationId,
+  };
+  return handleRppCallback(req, res);
+}
+
+/**
+ * RPP Realtime Callback — SBSA appends full path:
+ * POST /api/v1/standardbank/realtime-callback/paymentInitiation/{ClientMessageId}/paymentInstructions/{paymentInformationId}/transactions/{transactionIdentifier}
+ *
+ * ClientMessageId   = GrpHdr.MsgId (our originalMessageId)
+ * paymentInformationId = pmtInfId from Pain.001
+ * transactionIdentifier = UETR from the initiation request
  */
 async function handleRppRealtimeCallback(req, res) {
-  const { originalMessageId, paymentInformationId, transactionIdentifier } = req.params;
+  const { clientMessageId, paymentInformationId, transactionIdentifier } = req.params;
   const headerHash = req.headers['x-groupheader-hash'] || req.headers['x-GroupHeader-Hash'];
   const secret = process.env.SBSA_CALLBACK_SECRET;
 
@@ -134,8 +157,15 @@ async function handleRppRealtimeCallback(req, res) {
   }
 
   try {
+    // Prefer path param clientMessageId; fall back to body if SBSA omits it
+    const originalMessageId = clientMessageId
+      || body.originalMessageId
+      || body.orgnlMsgId;
+    const txIdentifier = transactionIdentifier
+      || body.transactionIdentifier
+      || body.txId;
     const sts = body.txSts ?? body.sts ?? 'ACSP';
-    await processRppCallback(originalMessageId, transactionIdentifier, sts, body);
+    await processRppCallback(originalMessageId, txIdentifier, sts, body);
     return res.status(200).send();
   } catch (err) {
     console.error('SBSA RPP realtime callback error:', err.message);
@@ -202,10 +232,28 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
 }
 
 /**
- * RTP Realtime Callback
- * POST /api/v1/standardbank/rtp-realtime-callback
+ * RTP Batch Callback with path params — Pain.014
+ * POST /api/v1/standardbank/rtp-callback/paymentInitiation/:clientMessageId
+ * POST /api/v1/standardbank/rtp-callback/paymentInitiation/:clientMessageId/paymentInstructions/:paymentInformationId
+ */
+async function handleRtpCallbackWithParams(req, res) {
+  req._sbsaPathParams = {
+    clientMessageId: req.params.clientMessageId,
+    paymentInformationId: req.params.paymentInformationId,
+  };
+  return handleRtpCallback(req, res);
+}
+
+/**
+ * RTP Realtime Callback — SBSA appends full path:
+ * POST /api/v1/standardbank/rtp-realtime-callback/paymentRequestInitiation/{ClientMessageId}/paymentRequestInstructions/{requestToPayInformationId}/requests/{transactionIdentifier}
+ *
+ * ClientMessageId              = GrpHdr.MsgId (our originalMessageId)
+ * requestToPayInformationId    = PmtInfId from Pain.013
+ * transactionIdentifier        = UETR from the initiation request
  */
 async function handleRtpRealtimeCallback(req, res) {
+  const { clientMessageId, requestToPayInformationId, transactionIdentifier } = req.params;
   const secret = process.env.SBSA_CALLBACK_SECRET;
   const headerHash = req.headers['x-groupheader-hash'] || req.headers['x-GroupHeader-Hash'];
 
@@ -228,8 +276,13 @@ async function handleRtpRealtimeCallback(req, res) {
   }
 
   try {
-    const orgnlMsgId = body.originalMessageId ?? body.orgnlMsgId ?? req.params?.originalMessageId;
-    const txId = body.transactionIdentifier ?? body.txId;
+    // Prefer path param clientMessageId; fall back to body
+    const orgnlMsgId = clientMessageId
+      || body.originalMessageId
+      || body.orgnlMsgId;
+    const txId = transactionIdentifier
+      || body.transactionIdentifier
+      || body.txId;
     const sts = body.txSts ?? body.sts ?? 'ACSP';
     await processRtpCallback(orgnlMsgId, txId, sts, body);
     return res.status(200).send();
@@ -460,12 +513,117 @@ async function handleDepositNotification(req, res) {
   }
 }
 
+/**
+ * GET RPP payment status (polling fallback)
+ * GET /api/v1/standardbank/payshap/rpp/:uetr/status
+ *
+ * :uetr = UETR returned at initiation (stored as transactionId in StandardBankTransaction)
+ * Gustaf confirmed: transactionIdentifier = UETR from initiation request
+ */
+async function getRppStatus(req, res) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const { uetr } = req.params;
+    if (!uetr) {
+      return res.status(400).json({ success: false, message: 'uetr is required' });
+    }
+
+    // Verify this transaction belongs to the requesting user
+    const record = await db.StandardBankTransaction.findOne({
+      where: { transactionId: uetr, userId },
+    });
+    if (!record) {
+      return res.status(404).json({ success: false, message: 'Transaction not found' });
+    }
+
+    const pollingService = require('../services/standardbankPollingService');
+    const result = await pollingService.pollRppStatus(record.originalMessageId, uetr);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        uetr,
+        originalMessageId: record.originalMessageId,
+        status: result.status,
+        terminal: result.terminal,
+        amount: record.amount,
+        currency: record.currency,
+      },
+    });
+  } catch (err) {
+    console.error('SBSA RPP status poll error:', err.message);
+    const httpStatus = err.sbsaStatus || 500;
+    return res.status(httpStatus).json({
+      success: false,
+      message: err.message || 'Failed to retrieve payment status',
+    });
+  }
+}
+
+/**
+ * GET RTP request status (polling fallback)
+ * GET /api/v1/standardbank/payshap/rtp/:uetr/status
+ *
+ * :uetr = UETR returned at initiation (stored as requestId in StandardBankRtpRequest)
+ */
+async function getRtpStatus(req, res) {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+
+    const { uetr } = req.params;
+    if (!uetr) {
+      return res.status(400).json({ success: false, message: 'uetr is required' });
+    }
+
+    const record = await db.StandardBankRtpRequest.findOne({
+      where: { requestId: uetr, userId },
+    });
+    if (!record) {
+      return res.status(404).json({ success: false, message: 'RTP request not found' });
+    }
+
+    const pollingService = require('../services/standardbankPollingService');
+    const result = await pollingService.pollRtpStatus(record.originalMessageId, uetr);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        uetr,
+        originalMessageId: record.originalMessageId,
+        status: result.status,
+        terminal: result.terminal,
+        amount: record.amount,
+        currency: record.currency,
+        expiresAt: record.expiresAt,
+      },
+    });
+  } catch (err) {
+    console.error('SBSA RTP status poll error:', err.message);
+    const httpStatus = err.sbsaStatus || 500;
+    return res.status(httpStatus).json({
+      success: false,
+      message: err.message || 'Failed to retrieve RTP status',
+    });
+  }
+}
+
 module.exports = {
   handleRppCallback,
+  handleRppCallbackWithParams,
   handleRppRealtimeCallback,
   handleRtpCallback,
+  handleRtpCallbackWithParams,
   handleRtpRealtimeCallback,
   handleDepositNotification,
   initiatePayShapRpp,
   initiatePayShapRtp,
+  getRppStatus,
+  getRtpStatus,
 };
