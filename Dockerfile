@@ -10,6 +10,9 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
+# Install build tools needed for native modules (sharp@0.34+, node-gyp)
+RUN apk add --no-cache python3 make g++
+
 # Install production dependencies only
 RUN npm ci --only=production && \
     npm install --os=linux --cpu=x64 sharp && \
