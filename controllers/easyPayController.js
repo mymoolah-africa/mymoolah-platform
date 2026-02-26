@@ -82,7 +82,27 @@ class EasyPayController {
         });
       }
 
-      // Return bill information
+      // Check if bill is expired (status OR dueDate in the past)
+      const isExpiredStatus = bill.status === 'expired' || bill.status === 'cancelled';
+      const isExpiredDate = bill.dueDate && new Date(bill.dueDate) < new Date(new Date().toDateString());
+      if (isExpiredStatus || isExpiredDate) {
+        return res.status(200).json({
+          ResponseCode: '3', // ExpiredPayment
+          correctAmount: bill.amount,
+          minAmount: bill.minAmount || bill.amount,
+          maxAmount: bill.maxAmount || bill.amount,
+          expiryDate: bill.dueDate,
+          fields: {
+            customerName: bill.customerName,
+            accountNumber: bill.accountNumber,
+            billType: bill.billType,
+            description: bill.description
+          },
+          echoData: EchoData
+        });
+      }
+
+      // Return bill information — allow payment
       res.status(200).json({
         ResponseCode: '0', // AllowPayment
         correctAmount: bill.amount,
@@ -143,6 +163,16 @@ class EasyPayController {
       if (bill.status === 'paid') {
         return res.status(200).json({
           ResponseCode: '5', // AlreadyPaid
+          echoData: EchoData
+        });
+      }
+
+      // Check if bill is expired
+      const isExpiredStatus = bill.status === 'expired' || bill.status === 'cancelled';
+      const isExpiredDate = bill.dueDate && new Date(bill.dueDate) < new Date(new Date().toDateString());
+      if (isExpiredStatus || isExpiredDate) {
+        return res.status(200).json({
+          ResponseCode: '3', // ExpiredPayment
           echoData: EchoData
         });
       }
