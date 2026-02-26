@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-26 12:45  
-**Latest Feature**: Flash integration fixes + clean-slate catalog test (Staging & Production verified)  
-**Document Version**: 2.11.22  
-**Session logs**: `docs/session_logs/2026-02-25_2230_variable-first-product-catalog-filter.md`, `docs/session_logs/2026-02-26_1245_flash-integration-fixes-clean-slate-catalog-test.md`  
+**Last Updated**: 2026-02-21 17:00  
+**Latest Feature**: PayShap callbacks + EasyPay Cash-In activation + Flash/MobileMart/Zapper Google Drive docs  
+**Document Version**: 2.11.23  
+**Session logs**: `docs/session_logs/2026-02-26_1245_flash-integration-fixes-clean-slate-catalog-test.md`, `docs/session_logs/2026-02-21_1700_payshap-easypay-zapper-drive-docs.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -98,7 +98,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 26, 2026 - 12:45)**
+### **Latest Achievement (February 21, 2026 - 17:00)**
+**PayShap Callbacks + EasyPay Cash-In + Partner Drive Docs** — (1) PayShap: Added parameterised callback routes for RPP/RTP (batch + realtime) to `standardbankController.js` and `routes/standardbank.js`. Added GET polling routes. Created `services/standardbankPollingService.js` with RPP/RTP status polling, terminal status detection, and stale transaction recovery. Updated `client.js` callback URL comments. (2) EasyPay: Swept full codebase. Confirmed Receiver ID `5063` in `voucherController.js`, 14-digit number format, Receiver architecture (EasyPay calls us). Drafted activation email to Razine for UAT + Production. (3) Google Drive: Documented Flash, MobileMart, Zapper partner Drive folders — created `integrations/mobilemart/MOBILEMART_REFERENCE.md`, `integrations/zapper/ZAPPER_REFERENCE.md`, updated `FLASH_TESTING_REFERENCE.md` and `AGENT_HANDOVER.md` document map. Session log: `docs/session_logs/2026-02-21_1700_payshap-easypay-zapper-drive-docs.md`.
+
+### **Previous Achievement (February 26, 2026 - 12:45)**
 **Flash Integration Fixes & Clean-Slate Catalog Test** — (1) Fixed 3 Flash API transaction endpoint bugs from official v4 PDF review: `gift-vouchers/purchase` → `gift-voucher/purchase` (singular), cellular payload `subAccountNumber` → `accountNumber`, prepaid utilities `transactionID` → `meterNumber` + optional `isFBE`. (2) Fixed denominations validator in `Product.js` and `ProductVariant.js` — extended `VARIABLE_RANGE_TYPES` to include `airtime`, `data`, `voucher`, `cash_out`. (3) Created migration `20260226_01_add_role_to_users.js` — adds `role` ENUM column to `users` table; applied to Staging and Production. (4) Created and ran clean-slate catalog test scripts for Staging (38 Flash + 56 MobileMart) and Production (81 Flash + 1,726 MobileMart). Both environments verified with live API data. Daily 02:00 scheduler proven end-to-end. Session log: `docs/session_logs/2026-02-26_1245_flash-integration-fixes-clean-slate-catalog-test.md`.
 
 ### **Previous Achievement (February 21, 2026 - 16:00)**
@@ -611,23 +614,19 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Deployed to Staging and Production  
-**Last Session**: 2026-02-25 — Variable-first product catalog filter
+**Session Status**: ✅ **COMPLETE** — PayShap callbacks + EasyPay activation + Partner Drive docs  
+**Last Session**: 2026-02-21 — PayShap callbacks, EasyPay Cash-In sweep, Google Drive documentation
 
-### **Most Recent Work (2026-02-25)**
-- **Variable-first product catalog filter**: Implemented across all suppliers and service providers. For each brand, if a variable-amount product exists, fixed-denomination duplicates are deactivated. Users see one clean variable product per brand instead of multiple fixed-denomination entries.
-- **New migration**: `20260221_01_add_price_type_to_product_variants.js` — adds `priceType ENUM('variable','fixed')`, `minAmount`, `maxAmount` to `product_variants`.
-- **New script**: `scripts/apply-variable-first-filter.js` — classifies and applies variable-first strategy across UAT, Staging, Production. Supports `--dry-run`, `--all` flags.
-- **New script**: `scripts/diagnose-variable-products.js` — diagnostic tool to inspect classification before applying.
-- **Model update**: `models/ProductVariant.js` — added `priceType` field.
-- **API update**: `services/productCatalogService.js` — variable-first ordering; returns `priceType`, `minAmount`, `maxAmount` in product responses.
-- **Results**: UAT (230 fixed), Staging (5 variable activated, 107 fixed deactivated), Production (1855 fixed — MobileMart not yet live).
-- **Full deployment**: All 4 Cloud Run services redeployed (Staging backend rev-00190, Staging frontend rev-00041, Production backend rev-00018, Production frontend rev-00005).
+### **Most Recent Work (2026-02-21)**
+- **PayShap callbacks**: Parameterised callback routes for RPP/RTP (batch + realtime) added to `standardbankController.js` and `routes/standardbank.js`. GET polling routes added. New `services/standardbankPollingService.js` with stale transaction recovery.
+- **EasyPay Cash-In**: Full codebase sweep. Confirmed Receiver ID `5063` (already in code), 14-digit number format, Receiver architecture. Drafted activation email to Razine (UAT + Production).
+- **Google Drive docs**: Flash, MobileMart, Zapper partner Drive folders documented in `AGENT_HANDOVER.md` and dedicated reference files created in `integrations/`.
+- **Committed**: `04b9fe4e` — all changes on `main`, ready to push.
 
 ### **Current State**
 - No active work in progress
-- Production live: api-mm.mymoolah.africa, wallet.mymoolah.africa — latest code deployed
-- **Next priority**: Frontend UI for variable products (amount-entry input with min/max validation)
+- Production live: api-mm.mymoolah.africa, wallet.mymoolah.africa
+- Awaiting: EasyPay response from Razine, PayShap UAT test date (2 March), Flash transaction endpoint confirmation from Tia
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
@@ -641,7 +640,9 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
-| Feb 25 | Variable-first product catalog filter — `priceType` schema, classify/deactivate fixed duplicates, API returns variable fields, full deploy to Staging + Production |
+| Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email; Flash/MobileMart/Zapper Google Drive docs |
+| Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration; clean-slate catalog test Staging + Production |
+| Feb 25 | Variable-first product catalog filter — `priceType` schema, classify/deactivate fixed duplicates, API returns variable fields, full deploy Staging + Production |
 | Feb 21 | Browserslist/caniuse-lite update; SBSA PayShap email; Bill payment MobileMart prevend fix; overlay fixes; NotificationService fix; DSTV beneficiary filter |
 | Feb 19 | EasyPay voucher refund duplicate fix; MMTP Partner API implementation plan |
 | Feb 18 | Documentation consolidation phase 2 |
@@ -660,13 +661,12 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **Flash transaction testing in Staging** — Product catalog is ready (81 products). Begin live transaction tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities. All endpoint paths confirmed from official v4 PDF. Required headers: `Authorization: Bearer {token}`, `Content-Type: application/json`, `Accept: application/json`.
-2. **Build and deploy Staging + Production** — `Product.js` and `ProductVariant.js` validator fixes need to be deployed. Run `scripts/build-push-deploy-staging.sh` then `scripts/build-push-deploy-production.sh`.
-3. **Wait for Tia (Flash)** — Confirm Cash Out PIN availability on account `0834-5373-6661-1279`. Deferred until response received.
+1. **EasyPay Cash-In activation** — Await Razine response with: (a) EasyPay UAT system configured with `https://staging.mymoolah.africa/billpayment/v1`, (b) UAT + Production IP addresses for whitelisting, (c) production credentials, (d) SFTP details for SOF reconciliation. Then: set `EASYPAY_RECEIVER_ID=5063` explicitly in Secret Manager, generate SessionToken, share with Razine.
+2. **PayShap UAT testing (2 March)** — André to push to GitHub and deploy to Staging. Test RPP/RTP callbacks with Gustaf on 2 March. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
+3. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths. Then begin live transaction tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities. Endpoint paths confirmed from official v4 PDF.
 4. **Fix `.env.codespaces` MobileMart URL** — `MOBILEMART_API_URL` is currently `https://uat.fulcrumswitch.com` (UAT). Should be `https://fulcrumswitch.com` (Production) for clean-slate tests run from Codespaces.
 5. **Investigate 3 failed MobileMart bill-payment products** — Rest Assured Plan, Matjhabeng Municipality, PayJoy SA failed validation. Minor — investigate separately.
-6. **SBSA PayShap UAT** — Obtain OneHub credentials; run migrations; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
-7. **USDC send** — Test in Codespaces when VALR credentials available.
+6. **USDC send** — Test in Codespaces when VALR credentials available.
 
 ---
 

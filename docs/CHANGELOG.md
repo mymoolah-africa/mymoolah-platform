@@ -1,5 +1,30 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-21 - 🔗 Partner Google Drive Documentation + PayShap Callbacks + EasyPay Activation ✅
+
+### **Session Overview**
+Implemented PayShap parameterised callback routes and polling fallback service. Swept EasyPay codebase and confirmed Cash-In architecture, Receiver ID `5063`, and 14-digit number format. Drafted activation emails to Razine (EasyPay) and Gustaf (PayShap/SBSA). Documented Flash, MobileMart, and Zapper Google Drive folders in codebase reference files and agent handover.
+
+### **Changes**
+- **`controllers/standardbankController.js`**: Added `handleRppCallbackWithParams`, `handleRtpCallbackWithParams`, `getRppStatus`, `getRtpStatus`
+- **`routes/standardbank.js`**: Added parameterised callback routes + GET polling routes for RPP and RTP
+- **`integrations/standardbank/client.js`**: Updated callback URL header comments
+- **`services/standardbankPollingService.js`**: NEW — RPP/RTP polling with terminal status detection and stale transaction recovery
+- **`integrations/flash/FLASH_TESTING_REFERENCE.md`**: Added Flash Google Drive link and document inventory
+- **`integrations/mobilemart/MOBILEMART_REFERENCE.md`**: NEW — MobileMart master reference with Drive link
+- **`integrations/zapper/ZAPPER_REFERENCE.md`**: NEW — Zapper master reference with Drive link
+- **`docs/AGENT_HANDOVER.md`**: Added all 3 Google Drive links to document map
+
+### **Google Drive Links Added**
+- Flash: https://drive.google.com/drive/folders/1KbQ1joMy8h3-B6OoDAG3VigqcWNUBWno?usp=sharing
+- MobileMart: https://drive.google.com/drive/folders/1_qpaRxUBTCr40wlFl54qqSjNZ6HX8xs3?usp=sharing
+- Zapper: https://drive.google.com/drive/folders/1cvXKEACgwbvZsp8A-8KPy8-q0QvWcVgh?usp=sharing
+
+### **Session Log**
+- `docs/session_logs/2026-02-21_1700_payshap-easypay-zapper-drive-docs.md`
+
+---
+
 ## 2026-02-21 - 📝 Session Log & Major Docs Update ✅
 
 ### **Session Overview**
