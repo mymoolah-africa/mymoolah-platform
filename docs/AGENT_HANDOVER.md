@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-25 22:30  
-**Latest Feature**: Variable-first product catalog filter — deployed to Staging and Production  
-**Document Version**: 2.11.21  
-**Session logs**: `docs/session_logs/2026-02-24_2005_schema-fix-deploy-production.md`, `docs/session_logs/2026-02-25_2230_variable-first-product-catalog-filter.md`  
+**Last Updated**: 2026-02-26 12:45  
+**Latest Feature**: Flash integration fixes + clean-slate catalog test (Staging & Production verified)  
+**Document Version**: 2.11.22  
+**Session logs**: `docs/session_logs/2026-02-25_2230_variable-first-product-catalog-filter.md`, `docs/session_logs/2026-02-26_1245_flash-integration-fixes-clean-slate-catalog-test.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -92,7 +92,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 21, 2026 - 16:00)**
+### **Latest Achievement (February 26, 2026 - 12:45)**
+**Flash Integration Fixes & Clean-Slate Catalog Test** — (1) Fixed 3 Flash API transaction endpoint bugs from official v4 PDF review: `gift-vouchers/purchase` → `gift-voucher/purchase` (singular), cellular payload `subAccountNumber` → `accountNumber`, prepaid utilities `transactionID` → `meterNumber` + optional `isFBE`. (2) Fixed denominations validator in `Product.js` and `ProductVariant.js` — extended `VARIABLE_RANGE_TYPES` to include `airtime`, `data`, `voucher`, `cash_out`. (3) Created migration `20260226_01_add_role_to_users.js` — adds `role` ENUM column to `users` table; applied to Staging and Production. (4) Created and ran clean-slate catalog test scripts for Staging (38 Flash + 56 MobileMart) and Production (81 Flash + 1,726 MobileMart). Both environments verified with live API data. Daily 02:00 scheduler proven end-to-end. Session log: `docs/session_logs/2026-02-26_1245_flash-integration-fixes-clean-slate-catalog-test.md`.
+
+### **Previous Achievement (February 21, 2026 - 16:00)**
 **Bill Payment Overlay Fixes & Production API Compliance** - (1) Removed 5 filter buttons (All, Airtime, Data, Electricity, Biller) from bill-payment-overlay via BeneficiaryList `showFilters={false}`. (2) Fixed create/add beneficiary: BeneficiaryModal `initialBillerName` prop, pre-fill biller name, ensure new recipients appear in filtered list. (3) Production API compliance: backend overlay reads billerName from `billerServices.accounts[0].billerName` (fallback to metadata); frontend overlayService maps billerServices to metadata.billerName; saveBeneficiary return includes metadata.billerName. Files: BillPaymentOverlay.tsx, BeneficiaryModal.tsx, overlayService.ts, overlayServices.js. Session log: `docs/session_logs/2026-02-21_1600_bill-payment-overlay-fixes-production-compliance.md`.
 
 ### **Previous Achievement (February 21, 2026)**
@@ -651,11 +654,13 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **Production verification** — Health check, wallet, ledger accounts (2200-01-01, 4000-10-01, 2300-10-01). See `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md`.
-2. **SBSA PayShap UAT** — Obtain OneHub credentials; run migrations; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
-3. **Flash integration testing** — Test cash-out and electricity in Codespaces with production credentials.
-4. **Bill payment frontend verification** — Test overlay, search, categories, full payment flow. See `docs/BILL_PAYMENT_FRONTEND_VERIFICATION.md`.
-5. **USDC send** — Test in Codespaces when VALR credentials available.
+1. **Flash transaction testing in Staging** — Product catalog is ready (81 products). Begin live transaction tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities. All endpoint paths confirmed from official v4 PDF. Required headers: `Authorization: Bearer {token}`, `Content-Type: application/json`, `Accept: application/json`.
+2. **Build and deploy Staging + Production** — `Product.js` and `ProductVariant.js` validator fixes need to be deployed. Run `scripts/build-push-deploy-staging.sh` then `scripts/build-push-deploy-production.sh`.
+3. **Wait for Tia (Flash)** — Confirm Cash Out PIN availability on account `0834-5373-6661-1279`. Deferred until response received.
+4. **Fix `.env.codespaces` MobileMart URL** — `MOBILEMART_API_URL` is currently `https://uat.fulcrumswitch.com` (UAT). Should be `https://fulcrumswitch.com` (Production) for clean-slate tests run from Codespaces.
+5. **Investigate 3 failed MobileMart bill-payment products** — Rest Assured Plan, Matjhabeng Municipality, PayJoy SA failed validation. Minor — investigate separately.
+6. **SBSA PayShap UAT** — Obtain OneHub credentials; run migrations; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
+7. **USDC send** — Test in Codespaces when VALR credentials available.
 
 ---
 
