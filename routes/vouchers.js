@@ -25,24 +25,22 @@ router.post('/easypay/topup/settlement', easypayAuthMiddleware, idempotencyMiddl
   next();
 }, voucherController.processEasyPaySettlement);
 
-// Issue EasyPay Cash-out voucher
-router.post('/easypay/cashout/issue', authMiddleware, voucherController.issueEasyPayCashout);
+// ─────────────────────────────────────────────────────────────────────────────
+// EasyPay Cash-Out routes — DISABLED (2026-02-21)
+// EasyPay Cash-Out is NOT activated. Only Cash-In (Top-Up) is in scope.
+// Routes are commented out to prevent accidental exposure.
+// Controller code is preserved for audit trail and future activation if needed.
+// ─────────────────────────────────────────────────────────────────────────────
+// router.post('/easypay/cashout/issue', authMiddleware, voucherController.issueEasyPayCashout);
+// router.post('/easypay/cashout/settlement', easypayAuthMiddleware, idempotencyMiddleware, voucherController.processEasyPayCashoutSettlement);
+// router.delete('/easypay/cashout/:voucherId', authMiddleware, voucherController.cancelEasyPayCashout);
 
-// Issue EasyPay Standalone Voucher (for use at 3rd party merchants)
-router.post('/easypay/voucher/issue', authMiddleware, voucherController.issueEasyPayStandaloneVoucher);
-
-// Process EasyPay Standalone Voucher settlement callback
-// Authentication: API key required (X-API-Key header)
-// Idempotency: Prevents duplicate processing (X-Idempotency-Key header)
-router.post('/easypay/voucher/settlement', easypayAuthMiddleware, idempotencyMiddleware, voucherController.processEasyPayStandaloneVoucherSettlement);
-
-// Process EasyPay Cash-out settlement callback
-// Authentication: API key required (X-API-Key header)
-// Idempotency: Prevents duplicate processing (X-Idempotency-Key header)
-router.post('/easypay/cashout/settlement', easypayAuthMiddleware, idempotencyMiddleware, voucherController.processEasyPayCashoutSettlement);
-
-// Cancel EasyPay Cash-out voucher
-router.delete('/easypay/cashout/:voucherId', authMiddleware, voucherController.cancelEasyPayCashout);
+// ─────────────────────────────────────────────────────────────────────────────
+// EasyPay Standalone Voucher routes — DISABLED (2026-02-21)
+// Not in scope for current activation. Preserved for future use.
+// ─────────────────────────────────────────────────────────────────────────────
+// router.post('/easypay/voucher/issue', authMiddleware, voucherController.issueEasyPayStandaloneVoucher);
+// router.post('/easypay/voucher/settlement', easypayAuthMiddleware, idempotencyMiddleware, voucherController.processEasyPayStandaloneVoucherSettlement);
 
 // Legacy routes (for backward compatibility)
 router.post('/easypay/issue', authMiddleware, voucherController.issueEasyPayVoucher);
