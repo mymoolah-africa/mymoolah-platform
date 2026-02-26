@@ -143,9 +143,10 @@ module.exports = (sequelize, DataTypes) => {
         isValidDenominations(value) {
           const productType = this.type;
 
-          // Bill payment and electricity products are own-amount (no fixed denominations).
+          // Bill payment, electricity, and variable-price products are own-amount (no fixed denominations).
           // For these, we allow an empty array (or even null) and rely on `constraints.minAmount`/`maxAmount`.
-          if (productType === 'bill_payment' || productType === 'electricity') {
+          const priceType = this.get ? this.get('priceType') : undefined;
+          if (productType === 'bill_payment' || productType === 'electricity' || priceType === 'variable') {
             // Normalise null/undefined to an empty array for downstream code that expects an array.
             if (value == null) {
               this.setDataValue('denominations', []);

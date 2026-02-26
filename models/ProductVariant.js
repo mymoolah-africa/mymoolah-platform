@@ -217,10 +217,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         isValidDenominations(value) {
-          // Bill payment and electricity variants are own-amount only – they are constrained by min/max,
-          // not by a fixed denomination list. Allow empty/null here.
+          // Bill payment, electricity, and variable-price variants are own-amount only – they are
+          // constrained by min/max, not by a fixed denomination list. Allow empty/null here.
           const vasType = this.vasType || (this.get ? this.get('vasType') : undefined);
-          if (vasType === 'bill_payment' || vasType === 'electricity') {
+          const priceType = this.priceType || (this.get ? this.get('priceType') : undefined);
+          if (vasType === 'bill_payment' || vasType === 'electricity' || priceType === 'variable') {
             if (value == null) {
               this.setDataValue('denominations', []);
               return;
