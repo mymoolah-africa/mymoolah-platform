@@ -217,11 +217,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: {
         isValidDenominations(value) {
-          // Bill payment, electricity, and variable-price variants are own-amount only – they are
-          // constrained by min/max, not by a fixed denomination list. Allow empty/null here.
+          // These vasTypes support variable (open) amount ranges — the customer enters any
+          // amount between minAmount and maxAmount. Fixed denominations are not applicable;
+          // an empty array is correct and valid. Constrained by min/max in the constraints field.
           const vasType = this.vasType || (this.get ? this.get('vasType') : undefined);
-          const priceType = this.priceType || (this.get ? this.get('priceType') : undefined);
-          if (vasType === 'bill_payment' || vasType === 'electricity' || priceType === 'variable') {
+          const VARIABLE_RANGE_TYPES = ['bill_payment', 'electricity', 'airtime', 'data', 'voucher', 'topup', 'cash_out'];
+          if (VARIABLE_RANGE_TYPES.includes(vasType)) {
             if (value == null) {
               this.setDataValue('denominations', []);
               return;

@@ -143,10 +143,11 @@ module.exports = (sequelize, DataTypes) => {
         isValidDenominations(value) {
           const productType = this.type;
 
-          // Bill payment, electricity, and variable-price products are own-amount (no fixed denominations).
-          // For these, we allow an empty array (or even null) and rely on `constraints.minAmount`/`maxAmount`.
-          const priceType = this.get ? this.get('priceType') : undefined;
-          if (productType === 'bill_payment' || productType === 'electricity' || priceType === 'variable') {
+          // These product types support variable (open) amount ranges — the customer
+          // enters any amount between constraints.minAmount and constraints.maxAmount.
+          // Fixed denominations are not applicable; an empty array is correct and valid.
+          const VARIABLE_RANGE_TYPES = ['bill_payment', 'electricity', 'airtime', 'data', 'voucher', 'cash_out'];
+          if (VARIABLE_RANGE_TYPES.includes(productType)) {
             // Normalise null/undefined to an empty array for downstream code that expects an array.
             if (value == null) {
               this.setDataValue('denominations', []);
