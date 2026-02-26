@@ -35,12 +35,13 @@ async function testFlashAuth() {
     const credentials = `${consumerKey}:${consumerSecret}`;
     const base64Credentials = Buffer.from(credentials).toString('base64');
     
-    console.log('  Token URL: https://api.flashswitch.flash-group.com/token');
+    const tokenUrl = process.env.FLASH_TOKEN_URL || `${process.env.FLASH_API_URL}/token` || 'https://api.flashswitch.flash-group.com/token';
+    console.log('  Token URL:', tokenUrl);
     console.log('  Authorization: Basic [credentials]');
     console.log();
 
     const response = await axios.post(
-      'https://api.flashswitch.flash-group.com/token',
+      tokenUrl,
       'grant_type=client_credentials',
       {
         headers: {
@@ -61,8 +62,9 @@ async function testFlashAuth() {
     // Test getting products
     console.log('📦 Testing Product List API...\n');
     
-    const accountNumber = process.env.FLASH_ACCOUNT_NUMBER || '6884-5973-6661-1279';
-    const productsUrl = `https://api.flashswitch.flash-group.com/v4/accounts/${accountNumber}/products`;
+    const accountNumber = process.env.FLASH_ACCOUNT_NUMBER || '8444-1533-7896-6119';
+    const apiBase = process.env.FLASH_API_URL || 'https://api-flashswitch-sandbox.flash-group.com';
+    const productsUrl = `${apiBase}/v4/accounts/${accountNumber}/products`;
     
     const productsResponse = await axios.get(productsUrl, {
       headers: {

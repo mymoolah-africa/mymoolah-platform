@@ -61,7 +61,7 @@ Use these tokens to test error scenarios in Production:
 POST /1voucher/redeem
 {
   "reference": "TEST_REDEEM_001",
-  "accountNumber": "6884-5973-6661-1279",
+  "accountNumber": "8444-1533-7896-6119",
   "pin": "<valid_unused_pin>",
   "productCode": 1
 }
@@ -74,7 +74,7 @@ POST /1voucher/redeem
 POST /1voucher/redeem
 {
   "reference": "TEST_USED_001",
-  "accountNumber": "6884-5973-6661-1279",
+  "accountNumber": "8444-1533-7896-6119",
   "pin": "1644561242205522", // Production already-used token
   "productCode": 1
 }
@@ -87,7 +87,7 @@ POST /1voucher/redeem
 POST /1voucher/redeem
 {
   "reference": "TEST_EXPIRED_001",
-  "accountNumber": "6884-5973-6661-1279",
+  "accountNumber": "8444-1533-7896-6119",
   "pin": "1527144039167197", // Production expired token
   "productCode": 1
 }
@@ -100,7 +100,7 @@ POST /1voucher/redeem
 POST /1voucher/redeem
 {
   "reference": "TEST_CANCELLED_001",
-  "accountNumber": "6884-5973-6661-1279",
+  "accountNumber": "8444-1533-7896-6119",
   "pin": "1982069215158100", // Production cancelled token
   "productCode": 1
 }
@@ -113,7 +113,7 @@ POST /1voucher/redeem
 POST /1voucher/redeem
 {
   "reference": "TEST_INVALID_001",
-  "accountNumber": "6884-5973-6661-1279",
+  "accountNumber": "8444-1533-7896-6119",
   "pin": "1807477522497507", // Production invalid token
   "productCode": 1
 }
@@ -201,7 +201,8 @@ FLASH_LIVE_INTEGRATION=true  # Use real API
 FLASH_API_URL=https://api.flashswitch.flash-group.com
 FLASH_CONSUMER_KEY=<from_credentials>
 FLASH_CONSUMER_SECRET=<from_credentials>
-FLASH_ACCOUNT_NUMBER=6884-5973-6661-1279
+FLASH_ACCOUNT_NUMBER=8444-1533-7896-6119  # AVT Sandbox (UAT/Codespaces)
+# FLASH_ACCOUNT_NUMBER=0834-5373-6661-1279  # AVT Production (Staging + Production)
 ```
 
 ---
