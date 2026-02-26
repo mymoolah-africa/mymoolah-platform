@@ -28,7 +28,23 @@
 
 require('dotenv').config({ path: '.env.codespaces' });
 
-const { getStagingClient, getStagingPool, closeAll } = require('./db-connection-helper');
+// ─── Point Sequelize at Staging BEFORE any models are loaded ─────────────────
+// The db-connection-helper knows the Staging proxy port (6544) and fetches the
+// password from Secret Manager. We build the DATABASE_URL here so that when
+// models/index.js initialises Sequelize it connects to mymoolah_staging, not UAT.
+const { execSync } = require('child_process');
+(function overrideDatabaseUrlForStaging() {
+  const stagingPassword = execSync(
+    'gcloud secrets versions access latest --secret="db-mmtp-pg-staging-password" --project=mymoolah-db',
+    { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+  ).trim();
+  const encoded = encodeURIComponent(stagingPassword);
+  process.env.DATABASE_URL = `postgres://mymoolah_app:${encoded}@127.0.0.1:6544/mymoolah_staging?sslmode=disable`;
+  process.env.NODE_ENV = 'staging';
+  console.log('🔧 DATABASE_URL overridden → Staging (port 6544 / mymoolah_staging)');
+})();
+
+const { getStagingClient, closeAll } = require('./db-connection-helper');
 const CatalogSynchronizationService = require('../services/catalogSynchronizationService');
 
 // ─── Colour helpers ──────────────────────────────────────────────────────────
@@ -187,6 +203,10 @@ async function runSync() {
   log.divider();
 
   const service = new CatalogSynchronizationService();
+
+  // Mark service as running — required by the isRunning guard in performDailySweep().
+  // This is exactly what start() / startDailyOnly() does before the cron fires at 02:00.
+  service.isRunning = true;
 
   // performDailySweep() is the exact same function the 02:00 cron calls
   await service.performDailySweep();
