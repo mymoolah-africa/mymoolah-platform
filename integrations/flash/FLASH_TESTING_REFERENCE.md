@@ -183,7 +183,20 @@ console.error('❌ Flash API Error:', {
 - `docs/session_logs/2026-02-01_1800_flash-integration-completion.md` - Flash integration details
 - `controllers/flashController.js` - Flash API controller
 - `services/flashAuthService.js` - Flash authentication service
-- `integrations/flash/Flash Partner API V4 - V2 6.pdf` - Official Flash API documentation
+- `integrations/flash/Flash Partner API v4 - release 3 1.pdf` - Official Flash API documentation (v3.1, April 2025) — **PRIMARY REFERENCE**
+
+### 🔗 **Flash Google Drive (Source of Truth — Official Documents)**
+
+**Shared Drive:** https://drive.google.com/drive/folders/1KbQ1joMy8h3-B6OoDAG3VigqcWNUBWno?usp=sharing
+
+Contents:
+| Item | Description |
+|------|-------------|
+| `Flash API documents/` | Official Flash API documentation folder |
+| `FLASH Legal/` | Legal agreements and contracts |
+| `MyMoolah Flash Deal Sheet Fully Signed.pdf` | Signed commercial agreement (Aug 2024) |
+
+**IMPORTANT for all agents**: Always check this Google Drive first for the latest Flash API documentation before making any assumptions. The drive contains the authoritative versions of all Flash API specs, legal docs, and the signed deal sheet.
 
 ---
 

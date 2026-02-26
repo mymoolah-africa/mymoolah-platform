@@ -45,6 +45,12 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Historical updates & integrations | `docs/archive/agent_handover_history.md` |
 | Extended rules (model selection, examples) | `docs/archive/CURSOR_RULES_EXTENDED.md` |
 | Docs archive map | `docs/DOCS_CONSOLIDATION_2026.md` |
+| **Flash API docs, legal, deal sheet** | **Google Drive: https://drive.google.com/drive/folders/1KbQ1joMy8h3-B6OoDAG3VigqcWNUBWno?usp=sharing** |
+| Flash local API reference & testing | `integrations/flash/FLASH_TESTING_REFERENCE.md` |
+| **MobileMart API docs, legal, product lists** | **Google Drive: https://drive.google.com/drive/folders/1_qpaRxUBTCr40wlFl54qqSjNZ6HX8xs3?usp=sharing** |
+| MobileMart local integration docs | `integrations/mobilemart/MOBILEMART_REFERENCE.md` |
+| **Zapper API docs, SLA, QR test codes** | **Google Drive: https://drive.google.com/drive/folders/1cvXKEACgwbvZsp8A-8KPy8-q0QvWcVgh?usp=sharing** |
+| Zapper local integration docs | `integrations/zapper/ZAPPER_REFERENCE.md` |
 
 ---
 
