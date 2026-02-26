@@ -64,7 +64,7 @@ async function testFlashAuth() {
     
     const accountNumber = process.env.FLASH_ACCOUNT_NUMBER || '8444-1533-7896-6119';
     const apiBase = process.env.FLASH_API_URL || 'https://api-flashswitch-sandbox.flash-group.com';
-    const productsUrl = `${apiBase}/v4/accounts/${accountNumber}/products`;
+    const productsUrl = `${apiBase}/aggregation/4.0/accounts/${accountNumber}/products?includeInstructions=false`;
     
     const productsResponse = await axios.get(productsUrl, {
       headers: {

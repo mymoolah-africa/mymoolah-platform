@@ -115,18 +115,25 @@ function getFixedFeeCents(providerName) {
 }
 
 /**
- * Map Flash product category/type string to our ProductVariant vasType enum.
- * Flash v4 API uses category names; we normalise to our schema values.
+ * Map Flash productGroup string to our ProductVariant vasType enum.
+ * Based on actual Flash API v4 productGroup values observed in live responses:
+ *   "Cellular"          → airtime
+ *   "Prepaid Utilities" → electricity
+ *   "Flash Pay"         → bill_payment
+ *   "Gift Vouchers"     → voucher
+ *   "Eezi Vouchers"     → airtime (eeziAirtime tokens)
+ *   "1Voucher"          → voucher
+ *   "Flash Token"       → voucher
  */
-function mapFlashCategory(category) {
-  if (!category) return 'airtime';
-  const c = category.toLowerCase();
-  if (c.includes('electricity') || c.includes('utility') || c.includes('prepaid')) return 'electricity';
-  if (c.includes('data'))        return 'data';
-  if (c.includes('bill') || c.includes('payment')) return 'bill_payment';
-  if (c.includes('voucher') || c.includes('gaming') || c.includes('streaming') ||
-      c.includes('entertainment') || c.includes('international')) return 'voucher';
-  if (c.includes('airtime'))     return 'airtime';
+function mapFlashCategory(productGroup) {
+  if (!productGroup) return 'airtime';
+  const g = productGroup.toLowerCase();
+  if (g.includes('prepaid util') || g.includes('electricity') || g.includes('utility')) return 'electricity';
+  if (g === 'cellular')           return 'airtime';
+  if (g.includes('flash pay'))    return 'bill_payment';
+  if (g.includes('voucher') || g.includes('gift') || g.includes('flash token')) return 'voucher';
+  if (g.includes('eezi'))         return 'airtime';
+  if (g.includes('data'))         return 'data';
   return 'airtime';
 }
 
@@ -154,27 +161,34 @@ function getPriceType(product) {
 
 /**
  * Normalise a Flash API product into a consistent shape before mapping to DB.
- * The v4 API may return slightly different field names depending on product type.
+ * Field names are based on actual Flash aggregation/4.0 API response:
+ *   productCode, productName, minimumAmount, maximumAmount, status ("Active"),
+ *   vendor (provider name), productGroup (category), barcode, billerCode
  */
 function normaliseFlashProduct(raw) {
-  // Amount fields — Flash API returns amounts in cents already
-  const denominations = Array.isArray(raw.denominations)
-    ? raw.denominations.filter(d => Number.isInteger(d) && d > 0)
-    : (raw.amount ? [raw.amount] : []);
+  // Flash API returns amounts in cents already (minimumAmount / maximumAmount)
+  const minAmount = raw.minimumAmount || raw.minAmount || 500;
+  const maxAmount = raw.maximumAmount || raw.maxAmount || 100000;
 
-  const minAmount = raw.minAmount || raw.minimumAmount || (denominations.length ? Math.min(...denominations) : 500);
-  const maxAmount = raw.maxAmount || raw.maximumAmount || (denominations.length ? Math.max(...denominations) : 100000);
+  // Fixed denomination: when min === max the product has exactly one price point
+  const isFixed = minAmount === maxAmount;
+  const denominations = isFixed ? [minAmount] : [];
 
   return {
-    productCode:    String(raw.productCode || raw.id || raw.code || ''),
-    productName:    raw.productName || raw.name || raw.description || 'Flash Product',
-    category:       raw.category || raw.type || raw.productType || 'airtime',
-    provider:       raw.provider || raw.network || raw.brand || raw.contentCreator || raw.productName || 'Flash',
-    isActive:       raw.isActive !== false && raw.status !== 'inactive',
+    productCode:    String(raw.productCode || raw.id || ''),
+    productName:    raw.productName || raw.name || 'Flash Product',
+    // productGroup is the actual field name in Flash API (not category/type)
+    productGroup:   raw.productGroup || raw.category || raw.type || 'Gift Vouchers',
+    // vendor is the actual field name in Flash API (not provider/network/brand)
+    provider:       raw.vendor || raw.provider || raw.contentCreator || 'Flash',
+    // Flash API returns status as the string "Active" (not boolean)
+    isActive:       raw.status === 'Active' || raw.isActive === true,
     denominations,
     minAmount,
     maxAmount,
-    fixedAmount:    denominations.length > 0,
+    fixedAmount:    isFixed,
+    barcode:        raw.barcode || '',
+    billerCode:     raw.billerCode || '',
     metadata:       raw.metadata || {},
     rawData:        raw,
   };
@@ -236,12 +250,13 @@ function mapFlashToProductVariant(product, vasType, supplierId, productId) {
     metadata: {
       flash_product_code:  product.productCode,
       flash_product_name:  product.productName,
-      flash_category:      product.category,
-      flash_provider:      product.provider,
+      flash_product_group: product.productGroup,
+      flash_vendor:        product.provider,
       flash_fixed_amount:  product.fixedAmount,
+      flash_barcode:       product.barcode || undefined,
+      flash_biller_code:   product.billerCode || undefined,
       synced_at:           new Date().toISOString(),
       synced_from:         'sync-flash-catalog',
-      ...product.metadata,
     },
   };
 }
@@ -284,7 +299,7 @@ async function syncFlashProducts() {
   try {
     const response = await authService.makeAuthenticatedRequest(
       'GET',
-      `/accounts/${accountNumber}/products`
+      `/accounts/${accountNumber}/products?includeInstructions=false`
     );
     rawProducts = response.products || response || [];
   } catch (apiErr) {
@@ -322,7 +337,7 @@ async function syncFlashProducts() {
       continue;
     }
 
-    const vasType = mapFlashCategory(product.category);
+    const vasType = mapFlashCategory(product.productGroup);
 
     if (IS_DRY_RUN) {
       info(`  [DRY RUN] Would sync: ${product.productName} (${product.productCode}) → vasType=${vasType}, priceType=${getPriceType(product)}`);

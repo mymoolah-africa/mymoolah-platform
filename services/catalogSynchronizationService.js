@@ -302,7 +302,7 @@ class CatalogSynchronizationService {
 
       const response = await authService.makeAuthenticatedRequest(
         'GET',
-        `/accounts/${accountNumber}/products`
+        `/accounts/${accountNumber}/products?includeInstructions=false`
       );
       const rawProducts = response.products || response || [];
       console.log(`    Found ${rawProducts.length} products from Flash API`);
@@ -326,40 +326,50 @@ class CatalogSynchronizationService {
   }
 
   /**
-   * Map Flash API category string to our vasType enum value.
+   * Map Flash productGroup string to our vasType enum value.
+   * Based on actual Flash aggregation/4.0 API productGroup values:
+   *   "Cellular", "Eezi Vouchers" → airtime
+   *   "Prepaid Utilities"         → electricity
+   *   "Flash Pay"                 → bill_payment
+   *   "Gift Vouchers", "1Voucher", "Flash Token" → voucher
    */
-  mapFlashCategory(category) {
-    if (!category) return 'airtime';
-    const c = category.toLowerCase();
-    if (c.includes('electricity') || c.includes('utility') || c.includes('prepaid')) return 'electricity';
-    if (c.includes('data'))   return 'data';
-    if (c.includes('bill') || c.includes('payment')) return 'bill_payment';
-    if (c.includes('voucher') || c.includes('gaming') || c.includes('streaming') ||
-        c.includes('entertainment') || c.includes('international')) return 'voucher';
-    if (c.includes('airtime')) return 'airtime';
+  mapFlashCategory(productGroup) {
+    if (!productGroup) return 'airtime';
+    const g = productGroup.toLowerCase();
+    if (g.includes('prepaid util') || g.includes('electricity') || g.includes('utility')) return 'electricity';
+    if (g === 'cellular')           return 'airtime';
+    if (g.includes('flash pay'))    return 'bill_payment';
+    if (g.includes('voucher') || g.includes('gift') || g.includes('flash token')) return 'voucher';
+    if (g.includes('eezi'))         return 'airtime';
+    if (g.includes('data'))         return 'data';
     return 'airtime';
   }
 
   /**
    * Sync a single Flash product (raw API object) to the database.
+   * Field names match actual Flash aggregation/4.0 API response:
+   *   productCode, productName, minimumAmount, maximumAmount,
+   *   status ("Active" string), vendor, productGroup, barcode, billerCode
    */
   async syncFlashProduct(raw, supplier) {
-    const productCode = String(raw.productCode || raw.id || raw.code || '');
+    const productCode = String(raw.productCode || raw.id || '');
     if (!productCode) return;
 
-    const productName = raw.productName || raw.name || raw.description || 'Flash Product';
-    const category    = raw.category || raw.type || raw.productType || 'airtime';
-    const vasType     = this.mapFlashCategory(category);
-    const provider    = raw.provider || raw.network || raw.brand || raw.contentCreator || productName;
-    const isActive    = raw.isActive !== false && raw.status !== 'inactive';
+    const productName = raw.productName || raw.name || 'Flash Product';
+    const productGroup = raw.productGroup || raw.category || raw.type || 'Gift Vouchers';
+    const vasType     = this.mapFlashCategory(productGroup);
+    // Flash API uses "vendor" field (not provider/network/brand)
+    const provider    = raw.vendor || raw.provider || raw.contentCreator || productName;
+    // Flash API returns status as the string "Active" (not boolean)
+    const isActive    = raw.status === 'Active' || raw.isActive === true;
 
-    const denominations = Array.isArray(raw.denominations)
-      ? raw.denominations.filter(d => Number.isInteger(d) && d > 0)
-      : (raw.amount ? [raw.amount] : []);
-
-    const minAmount = raw.minAmount || raw.minimumAmount || (denominations.length ? Math.min(...denominations) : 500);
-    const maxAmount = raw.maxAmount || raw.maximumAmount || (denominations.length ? Math.max(...denominations) : 100000);
-    const priceType = (minAmount > 0 && maxAmount > 0 && minAmount < maxAmount) ? 'variable' : 'fixed';
+    // Flash API uses minimumAmount / maximumAmount (amounts in cents)
+    const minAmount = raw.minimumAmount || raw.minAmount || 500;
+    const maxAmount = raw.maximumAmount || raw.maxAmount || 100000;
+    // Fixed denomination: when min === max the product has exactly one price point
+    const isFixed = minAmount === maxAmount;
+    const denominations = isFixed ? [minAmount] : [];
+    const priceType = isFixed ? 'fixed' : 'variable';
 
     const txType = (vasType === 'bill_payment' || vasType === 'electricity')
       ? 'direct'
@@ -409,9 +419,14 @@ class CatalogSynchronizationService {
         priority: 1, isPreferred: true, sortOrder: 0,
         lastSyncedAt: new Date(),
         metadata: {
-          flash_product_code: productCode, flash_product_name: productName,
-          flash_category: category, flash_provider: provider,
-          synced_at: new Date().toISOString(), synced_from: 'catalog_sync_service',
+          flash_product_code:  productCode,
+          flash_product_name:  productName,
+          flash_product_group: productGroup,
+          flash_vendor:        provider,
+          flash_biller_code:   raw.billerCode || undefined,
+          flash_barcode:       raw.barcode || undefined,
+          synced_at:           new Date().toISOString(),
+          synced_from:         'catalog_sync_service',
         },
       };
 

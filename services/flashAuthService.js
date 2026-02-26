@@ -14,8 +14,8 @@ const crypto = require('crypto');
 class FlashAuthService {
     constructor() {
         this.baseUrl = process.env.FLASH_API_URL || 'https://api.flashswitch.flash-group.com';
-        this.tokenUrl = `${this.baseUrl}/token`;
-        this.apiVersion = 'v4';
+        this.tokenUrl = process.env.FLASH_TOKEN_URL || `${this.baseUrl}/token`;
+        this.apiVersion = 'aggregation/4.0';
         this.apiUrl = `${this.baseUrl}/${this.apiVersion}`;
         
         // Token management
