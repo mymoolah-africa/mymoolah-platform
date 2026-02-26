@@ -212,7 +212,10 @@ class EasyPayController {
       });
     } catch (error) {
       console.error('❌ EasyPay authorization error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      const isStaging = process.env.STAGING === 'true' || process.env.STAGING === '1';
+      const body = { error: 'Internal server error' };
+      if (isStaging) body.debug = error.message;
+      res.status(500).json(body);
     }
   }
 
