@@ -86,12 +86,12 @@ router.post('/1voucher/refund', flashController.refund1Voucher.bind(flashControl
 // ========================================
 
 /**
- * @route   POST /api/v1/flash/gift-vouchers/purchase
+ * @route   POST /api/v1/flash/gift-voucher/purchase
  * @desc    Purchase a Gift Voucher
  * @access  Public
  * @body    { reference, accountNumber, amount, productCode, storeId, terminalId, barcode?, metadata? }
  */
-router.post('/gift-vouchers/purchase', flashController.purchaseGiftVoucher.bind(flashController));
+router.post('/gift-voucher/purchase', flashController.purchaseGiftVoucher.bind(flashController));
 
 // ========================================
 // CASH OUT PIN ENDPOINTS
@@ -153,7 +153,7 @@ router.post('/prepaid-utilities/lookup', flashController.lookupMeter.bind(flashC
  * @route   POST /api/v1/flash/prepaid-utilities/purchase
  * @desc    Purchase a prepaid utility voucher
  * @access  Public
- * @body    { reference, accountNumber, amount, transactionID, metadata? }
+ * @body    { reference, accountNumber, amount, meterNumber, isFBE?, metadata? }
  */
 router.post('/prepaid-utilities/purchase', flashController.purchasePrepaidUtility.bind(flashController));
 

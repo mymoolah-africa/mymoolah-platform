@@ -605,7 +605,7 @@ class FlashController {
 
             const response = await this.authService.makeAuthenticatedRequest(
                 'POST',
-                '/gift-vouchers/purchase',
+                '/gift-voucher/purchase',
                 requestData
             );
 
@@ -1015,13 +1015,13 @@ class FlashController {
      */
     async purchaseCellularRecharge(req, res) {
         try {
-            const { reference, subAccountNumber, amount, productCode, mobileNumber, metadata } = req.body;
+            const { reference, accountNumber, amount, productCode, mobileNumber, metadata } = req.body;
             
             // Validate required fields
-            if (!reference || !subAccountNumber || !amount || !productCode || !mobileNumber) {
+            if (!reference || !accountNumber || !amount || !productCode || !mobileNumber) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Reference, sub account number, amount, product code, and mobile number are required'
+                    error: 'Reference, account number, amount, product code, and mobile number are required'
                 });
             }
 
@@ -1033,10 +1033,10 @@ class FlashController {
                 });
             }
 
-            if (!this.authService.validateAccountNumber(subAccountNumber)) {
+            if (!this.authService.validateAccountNumber(accountNumber)) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Invalid sub account number format'
+                    error: 'Invalid account number format'
                 });
             }
 
@@ -1070,7 +1070,7 @@ class FlashController {
 
             const requestData = {
                 reference,
-                subAccountNumber,
+                accountNumber,
                 amount,
                 productCode,
                 mobileNumber,
@@ -1347,13 +1347,13 @@ class FlashController {
      */
     async purchasePrepaidUtility(req, res) {
         try {
-            const { reference, accountNumber, amount, transactionID, metadata } = req.body;
+            const { reference, accountNumber, amount, meterNumber, isFBE, metadata } = req.body;
             
             // Validate required fields
-            if (!reference || !accountNumber || !amount || !transactionID) {
+            if (!reference || !accountNumber || !amount || !meterNumber) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Reference, account number, amount, and transaction ID are required'
+                    error: 'Reference, account number, amount, and meter number are required'
                 });
             }
 
@@ -1379,10 +1379,17 @@ class FlashController {
                 });
             }
 
-            if (!Number.isInteger(transactionID) || transactionID <= 0) {
+            if (!/^[a-zA-Z0-9]+$/.test(meterNumber)) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Transaction ID must be a positive integer'
+                    error: 'Meter number must be alphanumeric'
+                });
+            }
+
+            if (isFBE !== undefined && typeof isFBE !== 'boolean') {
+                return res.status(400).json({
+                    success: false,
+                    error: 'isFBE must be a boolean value'
                 });
             }
 
@@ -1397,7 +1404,8 @@ class FlashController {
                 reference,
                 accountNumber,
                 amount,
-                transactionID,
+                meterNumber,
+                ...(isFBE !== undefined && { isFBE }),
                 ...(metadata && { metadata })
             };
 
