@@ -434,6 +434,11 @@ app.use('/api/v1/voucher-types', voucherTypeRoutes);
 app.use('/api/v1/merchants', merchantRoutes);
 app.use('/api/v1/service-providers', serviceProviderRoutes);
 app.use('/api/v1/easypay', easyPayRoutes);
+// EasyPay BillPayment Receiver API V5 — mounted at the path EasyPay's switch expects
+// Per EasypayReceiverV5.yaml spec: basePath /billpayment/v1
+// EasyPay calls: /billpayment/v1/ping, /billpayment/v1/infoRequest,
+//                /billpayment/v1/authorisationRequest, /billpayment/v1/paymentNotification
+app.use('/billpayment/v1', easyPayRoutes);
 app.use('/api/v1/dtmercury', dtMercuryRoutes);
 app.use('/api/v1/ledger', ledgerRoutes);
 app.use('/api/v1/settings', settingsRoutes);
