@@ -5,6 +5,7 @@ const { Op } = require('sequelize');
 const supplierPricingService = require('./supplierPricingService');
 const notificationService = require('./notificationService');
 const MobileMartAuthService = require('./mobilemartAuthService');
+const FlashAuthService = require('./flashAuthService');
 
 class CatalogSynchronizationService {
   constructor() {
@@ -272,50 +273,177 @@ class CatalogSynchronizationService {
   }
 
   /**
-   * Sweep Flash catalog for new products, specials, and decommissioned products
+   * Sweep Flash catalog — fetches live product list from Flash Partner API v4
+   * and upserts into products + product_variants tables.
+   * Mirrors sweepMobileMartCatalog() in structure.
    */
   async sweepFlashCatalog(supplier) {
-    // This would integrate with Flash API to get current catalog
-    // For now, simulate the process
-    
     console.log(`🔄 Sweeping Flash catalog...`);
-    
-    // Simulate API call to Flash
-    const flashCatalog = await this.fetchFlashCatalog();
-    
-    // Process new products
-    for (const product of flashCatalog.newProducts) {
-      await this.addOrUpdateProduct(supplier, product);
-      this.syncStats.newProducts++;
+
+    const isLive = process.env.FLASH_LIVE_INTEGRATION === 'true';
+    if (!isLive) {
+      console.log('⚠️  Flash catalog sweep skipped — FLASH_LIVE_INTEGRATION is not "true"');
+      return;
     }
 
-    // Process specials
-    for (const special of flashCatalog.specials) {
-      await this.updateProductSpecial(supplier, special);
-      this.syncStats.updatedProducts++;
+    const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+    if (!accountNumber) {
+      console.error('❌ Flash catalog sweep skipped — FLASH_ACCOUNT_NUMBER not set');
+      this.syncStats.errors++;
+      return;
     }
 
-    // Process decommissioned products
-    for (const decommissioned of flashCatalog.decommissioned) {
-      await this.decommissionProduct(supplier, decommissioned);
-      this.syncStats.decommissionedProducts++;
+    try {
+      const authService = new FlashAuthService();
+      const health = await authService.healthCheck();
+      if (health.status !== 'healthy') {
+        throw new Error(`Flash API unhealthy: ${health.error}`);
+      }
+
+      const response = await authService.makeAuthenticatedRequest(
+        'GET',
+        `/accounts/${accountNumber}/products`
+      );
+      const rawProducts = response.products || response || [];
+      console.log(`    Found ${rawProducts.length} products from Flash API`);
+
+      for (const raw of rawProducts) {
+        try {
+          await this.syncFlashProduct(raw, supplier);
+        } catch (productErr) {
+          const name = raw.productName || raw.name || raw.productCode || 'Unknown';
+          console.error(`    ❌ Failed to sync Flash product "${name}":`, productErr.message);
+          this.syncStats.errors++;
+        }
+      }
+
+      console.log(`✅ Flash catalog sweep complete`);
+    } catch (error) {
+      console.error(`❌ Flash catalog sweep failed:`, error.message);
+      this.syncStats.errors++;
+      throw error;
     }
   }
 
   /**
-   * Update Flash pricing
+   * Map Flash API category string to our vasType enum value.
+   */
+  mapFlashCategory(category) {
+    if (!category) return 'airtime';
+    const c = category.toLowerCase();
+    if (c.includes('electricity') || c.includes('utility') || c.includes('prepaid')) return 'electricity';
+    if (c.includes('data'))   return 'data';
+    if (c.includes('bill') || c.includes('payment')) return 'bill_payment';
+    if (c.includes('voucher') || c.includes('gaming') || c.includes('streaming') ||
+        c.includes('entertainment') || c.includes('international')) return 'voucher';
+    if (c.includes('airtime')) return 'airtime';
+    return 'airtime';
+  }
+
+  /**
+   * Sync a single Flash product (raw API object) to the database.
+   */
+  async syncFlashProduct(raw, supplier) {
+    const productCode = String(raw.productCode || raw.id || raw.code || '');
+    if (!productCode) return;
+
+    const productName = raw.productName || raw.name || raw.description || 'Flash Product';
+    const category    = raw.category || raw.type || raw.productType || 'airtime';
+    const vasType     = this.mapFlashCategory(category);
+    const provider    = raw.provider || raw.network || raw.brand || raw.contentCreator || productName;
+    const isActive    = raw.isActive !== false && raw.status !== 'inactive';
+
+    const denominations = Array.isArray(raw.denominations)
+      ? raw.denominations.filter(d => Number.isInteger(d) && d > 0)
+      : (raw.amount ? [raw.amount] : []);
+
+    const minAmount = raw.minAmount || raw.minimumAmount || (denominations.length ? Math.min(...denominations) : 500);
+    const maxAmount = raw.maxAmount || raw.maximumAmount || (denominations.length ? Math.max(...denominations) : 100000);
+    const priceType = (minAmount > 0 && maxAmount > 0 && minAmount < maxAmount) ? 'variable' : 'fixed';
+
+    const txType = (vasType === 'bill_payment' || vasType === 'electricity')
+      ? 'direct'
+      : (vasType === 'voucher' || denominations.length > 0 ? 'voucher' : 'topup');
+
+    const tx = await sequelize.transaction();
+    try {
+      const brandCategory = vasType === 'voucher' ? 'entertainment' : 'utilities';
+      const [brand] = await ProductBrand.findOrCreate({
+        where: { name: provider },
+        defaults: { name: provider, category: brandCategory, isActive: true, metadata: { source: 'flash' } },
+        transaction: tx,
+      });
+
+      const [baseProduct, productCreated] = await Product.findOrCreate({
+        where: { supplierId: supplier.id, supplierProductId: productCode },
+        defaults: {
+          supplierId: supplier.id, brandId: brand.id, name: productName,
+          type: vasType, supplierProductId: productCode,
+          status: isActive ? 'active' : 'inactive',
+          denominations: denominations.length > 0 ? denominations : [],
+          isFeatured: false, sortOrder: 0,
+          metadata: { source: 'flash', synced: true, synced_from: 'catalog_sync_service' },
+        },
+        transaction: tx,
+      });
+
+      if (!productCreated) {
+        await baseProduct.update({
+          name: productName, type: vasType, brandId: brand.id,
+          status: isActive ? 'active' : 'inactive',
+          denominations: denominations.length > 0 ? denominations : baseProduct.denominations,
+        }, { transaction: tx });
+      }
+
+      const variantData = {
+        productId: baseProduct.id, supplierId: supplier.id, supplierProductId: productCode,
+        vasType, transactionType: txType, networkType: 'local', provider,
+        priceType, minAmount, maxAmount,
+        predefinedAmounts: denominations.length > 0 ? denominations : null,
+        commission: 2.50, fixedFee: 0,
+        isPromotional: false, promotionalDiscount: null,
+        denominations: denominations.length > 0 ? denominations : [],
+        pricing: { defaultCommissionRate: 2.50, fixedAmount: denominations.length > 0 },
+        constraints: { minAmount, maxAmount },
+        status: isActive ? 'active' : 'inactive',
+        priority: 1, isPreferred: true, sortOrder: 0,
+        lastSyncedAt: new Date(),
+        metadata: {
+          flash_product_code: productCode, flash_product_name: productName,
+          flash_category: category, flash_provider: provider,
+          synced_at: new Date().toISOString(), synced_from: 'catalog_sync_service',
+        },
+      };
+
+      const [variant, variantCreated] = await ProductVariant.findOrCreate({
+        where: { productId: baseProduct.id, supplierId: supplier.id, supplierProductId: productCode },
+        defaults: variantData,
+        transaction: tx,
+      });
+
+      if (!variantCreated) {
+        await variant.update(variantData, { transaction: tx });
+        this.syncStats.updatedProducts++;
+      } else {
+        this.syncStats.newProducts++;
+      }
+
+      this.syncStats.totalProducts++;
+      await tx.commit();
+    } catch (error) {
+      await tx.rollback();
+      throw error;
+    }
+  }
+
+  /**
+   * Update Flash pricing — re-syncs commission/fee fields from live API.
+   * Currently delegates to a full catalog sweep since Flash v4 does not expose
+   * a dedicated pricing endpoint separate from the product list.
    */
   async updateFlashPricing(supplier) {
-    // This would integrate with Flash API to get current pricing
-    console.log(`💰 Updating Flash pricing...`);
-    
-    // Simulate API call to Flash
-    const flashPricing = await this.fetchFlashPricing();
-    
-    // Update product pricing
-    for (const pricing of flashPricing) {
-      await this.updateProductPricing(supplier, pricing);
-    }
+    console.log(`💰 Updating Flash pricing (via catalog sweep)...`);
+    await this.sweepFlashCatalog(supplier);
   }
 
   /**
@@ -857,24 +985,6 @@ class CatalogSynchronizationService {
     await this.performFrequentUpdate();
   }
 
-  // Mock methods for demonstration (replace with actual API calls)
-  async fetchFlashCatalog() {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    return {
-      newProducts: [],
-      specials: [],
-      decommissioned: []
-    };
-  }
-
-  async fetchFlashPricing() {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return [];
-  }
 }
 
 module.exports = CatalogSynchronizationService;
