@@ -87,6 +87,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: 'Reference to associated bill'
     },
+    userId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'User who owns the payment (null for EasyPay until credited)'
+    },
+    walletId: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Wallet credited (null for EasyPay until paymentNotification)'
+    },
     metadata: {
       type: DataTypes.JSON,
       allowNull: true,
