@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: February 21, 2026  
-**Version**: 2.11.23 - PayShap Callbacks + EasyPay Activation + Partner Drive Docs  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA PAYSHAP CALLBACKS IMPLEMENTED** ✅ **EASYPAY CASH-IN READY** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: February 26, 2026  
+**Version**: 2.11.24 - EasyPay Cash-In Activation Fixes  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA PAYSHAP CALLBACKS IMPLEMENTED** ✅ **EASYPAY /billpayment/v1 LIVE ON STAGING** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
@@ -10,8 +10,8 @@
 
 Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. All 80+ migrations applied to Production. Documentation consolidation (Feb 21): archived ~75 docs to `docs/archive/`, merged Input/2FA/Security, created DOCS_CONSOLIDATION_2026.md. EasyPay voucher refund duplicate fix (Feb 19). MMTP Partner API doc created; sandbox = staging.mymoolah.africa. SBSA PayShap UAT ready (awaiting OneHub credentials). Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC plan, Watch to Earn, EasyPay Top-up, and 11-language support deployed.
 
-### **📋 Latest Achievement: PayShap Callbacks + EasyPay Activation + Partner Drive Docs (February 21, 2026)** ✅ **COMPLETE**
-(1) PayShap: Implemented parameterised callback routes for RPP/RTP (batch + realtime), GET polling routes, and new `standardbankPollingService.js` with stale transaction recovery. (2) EasyPay Cash-In: Confirmed Receiver ID `5063` in codebase, 14-digit number format, and Receiver architecture. Drafted activation email to Razine for UAT + Production. (3) Google Drive: Documented Flash, MobileMart, and Zapper partner Drive folders in `AGENT_HANDOVER.md` and created reference files in `integrations/`. Session log: `docs/session_logs/2026-02-21_1700_payshap-easypay-zapper-drive-docs.md`.
+### **📋 Latest Achievement: EasyPay Cash-In Activation Fixes (February 26, 2026)** ✅ **IN PROGRESS**
+(1) Mounted EasyPay routes at `/billpayment/v1` (EasypayReceiverV5.yaml basePath). (2) SessionToken auth in `easypayAuth.js`. (3) Disabled Cash-Out and Standalone Voucher routes. (4) Rewrote seed script with 5 test scenarios for Theodore Smith. (5) Fixed expired bill handling (ResponseCode 3). (6) Staging-only debug for authorisationRequest 500. Seeded Staging; infoRequest passes. authorisationRequest 500 for Scenario 4 — debug deploy pending. Session log: `docs/session_logs/2026-02-26_1930_easypay-cashin-activation-fixes.md`.
 
 ### **📋 Previous: Flash Integration Fixes & Clean-Slate Catalog Test (February 26, 2026)** ✅ **COMPLETE**
 Fixed 3 Flash API transaction endpoint bugs, fixed denominations validator for variable-range products, added `role` column migration, ran clean-slate catalog test on Staging (38 Flash + 56 MobileMart) and Production (81 Flash + 1,726 MobileMart). Session log: `docs/session_logs/2026-02-26_1245_flash-integration-fixes-clean-slate-catalog-test.md`.

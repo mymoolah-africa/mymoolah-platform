@@ -1,5 +1,22 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-26 - 💳 EasyPay Cash-In Activation Fixes ✅
+
+### **Session Overview**
+Implemented EasyPay Cash-In activation fixes following Razeen's email: mounted routes at `/billpayment/v1`, SessionToken auth, disabled Cash-Out/Standalone Voucher routes, rewrote seed script with 5 test scenarios, fixed expired bill handling (ResponseCode 3), added staging-only debug for authorisationRequest 500 investigation.
+
+### **Changes**
+- **`server.js`**: Added `app.use('/billpayment/v1', easyPayRoutes)` — EasyPay expects this basePath per EasypayReceiverV5.yaml
+- **`middleware/easypayAuth.js`**: Prioritize `Authorization: SessionToken {token}`; retain X-API-Key and Bearer for UAT
+- **`routes/vouchers.js`**: Commented out EasyPay Cash-Out and Standalone Voucher routes (Cash-In only in scope)
+- **`scripts/seed-easypay-data.js`**: Rewritten — Receiver ID 5063, 5 scenarios (valid unpaid, already paid, expired, open amount, fixed amount), test data sheet for Theodore Smith
+- **`controllers/easyPayController.js`**: Expired bill check (ResponseCode 3) in infoRequest and authorisationRequest; staging-only debug in authorisationRequest catch
+
+### **Session Log**
+- `docs/session_logs/2026-02-26_1930_easypay-cashin-activation-fixes.md`
+
+---
+
 ## 2026-02-21 - 🔗 Partner Google Drive Documentation + PayShap Callbacks + EasyPay Activation ✅
 
 ### **Session Overview**
