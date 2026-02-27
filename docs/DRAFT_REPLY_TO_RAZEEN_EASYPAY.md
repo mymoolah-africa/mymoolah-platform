@@ -16,13 +16,13 @@ Thank you for your response. We have completed our side of the UAT configuration
 
 ### 1. API Key / SessionToken for Theodore Smith
 
-We will share the SessionToken with Theodore Smith via a secure encrypted channel (separate from this email). Please ensure Theodore is ready to receive it. For Production, we will follow the same process with our support engineers when we reach go-live.
+We will share the SessionToken together with the test data (see point 3 below) via a secure encrypted channel. Please ensure Theodore is ready to receive it. For Production, we will follow the same process with our support engineers when we reach go-live.
 
 ---
 
 ### 2. UAT / Staging — Configuration Complete
 
-**Staging base URL**: Our Staging environment is live and configured at:
+**Staging base URL**: Our Staging environment is live and configured. We have verified all 5 test scenarios end-to-end (infoRequest, authorisationRequest, paymentNotification, and idempotency).
 
 - **Base URL**: `https://staging.mymoolah.africa/billpayment/v1`
 - **Endpoints**: `/ping`, `/infoRequest`, `/authorisationRequest`, `/paymentNotification`
@@ -124,7 +124,7 @@ MyMoolah
 
 ## Action Items for André
 
-- [ ] Send SessionToken to Theodore Smith via encrypted email (do **not** include in this reply)
-- [ ] Deploy latest Staging build (expired fix + authorisationRequest debug) before Theo tests
-- [ ] Fix authorisationRequest 500 for Scenario 4 if it persists after deploy
-- [ ] Remove staging debug from 500 response once root cause is fixed
+- [ ] Populate `docs/EASYPAY_THEODORE_SMITH_TEST_DATA.md` with SessionToken: `gcloud secrets versions access latest --secret=easypay-api-key-staging --project=mymoolah-db`
+- [ ] Send Razeen reply (copy-paste email body above)
+- [ ] Send Theodore document (with SessionToken) via encrypted email to Theodore Smith
+- [ ] Run `./scripts/test-easypay-5-scenarios.sh <TOKEN>` to verify all scenarios before Theo tests
