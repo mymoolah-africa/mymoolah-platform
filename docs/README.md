@@ -1,22 +1,28 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: February 21, 2026  
-**Version**: 2.11.14 - Documentation Consolidation  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: February 27, 2026  
+**Version**: 2.11.25 - EasyPay Cash-In Activation Complete  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 12–21, 2026)**: Documentation consolidation (archived ~75 docs, merged Input/2FA/Security, DOCS_CONSOLIDATION_2026); Cursor rules & agent handover slimdown; EasyPay duplicate fix; MMTP Partner API doc; sandbox = staging.mymoolah.africa. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 21–27, 2026)**: EasyPay Cash-In activation complete — fixed authorisationRequest 500 (userId/walletId migration), 5-scenario test script (11/11 pass), Theodore test data + Razeen reply docs. User sent Razeen reply and shared restricted folder with Theodore. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: Documentation Consolidation (February 21, 2026)**
+## 🚀 **LATEST UPDATE: EasyPay Cash-In Activation Complete (February 27, 2026)**
 
-### **📁 Documentation Consolidation**
-- **Archived ~75 docs** to `docs/archive/` (deployment, codespaces, mobilemart, beneficiary, partner-api, referral, easypay, zapper, figma, peach-payments, security)
-- **Merged**: INPUT_FIELD_FIXES, 2FA_IMPLEMENTATION, SECURITY (badge/certificate/token)
-- **Created**: DOCS_CONSOLIDATION_2026.md (archive map)
-- **Updated**: All major docs with Feb 21 dates; session log with git push/pull status
+### **💳 EasyPay Cash-In Activation Complete**
+- **Fixed authorisationRequest 500** — migration adds `userId`/`walletId` to `payments`; Payment model updated
+- **5-scenario test script** — `scripts/test-easypay-5-scenarios.sh` (11/11 tests pass on Staging)
+- **Theodore test data** — `docs/EASYPAY_THEODORE_SMITH_TEST_DATA.md`; Razeen reply draft; copy-paste versions
+- **User actions**: Sent Razeen reply; shared restricted folder with Theodore (test data + SessionToken)
 
-**Session log**: `docs/session_logs/2026-02-21_1900_docs-consolidation.md`
+**Session log**: `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`
+
+### **🔄 Previous: EasyPay Cash-In Activation Fixes (February 26, 2026)**
+- Mounted routes at `/billpayment/v1`, SessionToken auth, disabled Cash-Out/Standalone Voucher routes
+- Rewrote seed script with 5 scenarios; fixed expired bill handling (ResponseCode 3)
+
+**Session log**: `docs/session_logs/2026-02-26_1930_easypay-cashin-activation-fixes.md`
 
 ### **🔄 Previous: EasyPay Duplicate Fix & Partner API Docs (February 19, 2026)**
 - **EasyPay duplicate fix**: Dashboard transaction list no longer duplicates EasyPay voucher refund rows (EPVOUCHER-REF/EXP). Second grouping loop now iterates over `otherTransactions` only.

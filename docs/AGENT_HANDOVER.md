@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-26 19:30  
-**Latest Feature**: EasyPay Cash-In activation fixes (/billpayment/v1, SessionToken, expired fix, seed script)  
-**Document Version**: 2.11.24  
-**Session logs**: `docs/session_logs/2026-02-26_1930_easypay-cashin-activation-fixes.md`, `docs/session_logs/2026-02-26_1245_flash-integration-fixes-clean-slate-catalog-test.md`, `docs/session_logs/2026-02-21_1700_payshap-easypay-zapper-drive-docs.md`  
+**Last Updated**: 2026-02-27 12:00  
+**Latest Feature**: EasyPay Cash-In activation complete (500 fix, test script, Razeen/Theodore docs)  
+**Document Version**: 2.11.25  
+**Session logs**: `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`, `docs/session_logs/2026-02-26_1930_easypay-cashin-activation-fixes.md`, `docs/session_logs/2026-02-26_1245_flash-integration-fixes-clean-slate-catalog-test.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -98,7 +98,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 26, 2026 - 19:30)**
+### **Latest Achievement (February 27, 2026 - 12:00)**
+**EasyPay Cash-In Activation Complete** — (1) Fixed `authorisationRequest` 500 for Scenario 4 (open amount): root cause was missing `userId`/`walletId` on `payments`; migration `20260227_add_userid_walletid_to_payments.js` and `Payment` model updated. (2) Removed staging debug from controller. (3) Created `scripts/test-easypay-5-scenarios.sh` — 11/11 tests pass on Staging. (4) Created Theodore test data doc, Razeen reply draft, and copy-paste versions. User sent Razeen reply and shared restricted folder with Theodore. Session log: `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`.
+
+### **Previous Achievement (February 26, 2026 - 19:30)**
 **EasyPay Cash-In Activation Fixes** — (1) Mounted EasyPay routes at `/billpayment/v1` in `server.js` (per EasypayReceiverV5.yaml basePath). (2) Updated `middleware/easypayAuth.js` to accept `Authorization: SessionToken {token}` (EasyPay V5 spec). (3) Disabled Cash-Out and Standalone Voucher routes (Cash-In only). (4) Rewrote `scripts/seed-easypay-data.js` with Receiver ID 5063 and 5 test scenarios for Theodore Smith. (5) Fixed expired bill handling — return ResponseCode 3 in `infoRequest` and `authorisationRequest`. (6) Added staging-only debug in `authorisationRequest` catch to surface exact error. Seeded Staging; `infoRequest` passes all 5 scenarios. `authorisationRequest` returns 500 for Scenario 4 — debug deploy pending. Session log: `docs/session_logs/2026-02-26_1930_easypay-cashin-activation-fixes.md`.
 
 ### **Previous Achievement (February 26, 2026 - 12:45)**
@@ -131,7 +134,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – February 12–21, 2026)**
+### **Recent Updates (Last 7 Days – February 21–27, 2026)**
+- **Feb 27 (12:00)**: EasyPay Cash-In activation complete — fixed authorisationRequest 500 (userId/walletId migration), removed staging debug, created 5-scenario test script (11/11 pass), Theodore test data + Razeen reply docs, copy-paste versions. User sent Razeen reply and shared restricted folder with Theodore.
 - **Feb 21 (21:00)**: Standard Bank PayShap banking-grade overhaul — removed Peach proxy workaround; aligned Pain.001 (top-level grpHdr/pmtInf[], pmntInfId, reqdExctnDt.dtTm, lclInstrm.prtry, cdtrAgt+brnchId, rmtInf.strd[], splmtryData) and Pain.013 (PascalCase, DbtrAcct.Id.Item.Id+Prxy, CdtrAgt.Othr.Id, Amt.Item.Value, PmtCond, RmtInf.Strd[]) with SBSA Postman samples; fixed RTP callback URLs in client.js; scope-keyed token cache in pingAuthService; ACID transaction ordering in RPP/RTP services; added proxyResolutionClient.js; express-validator on routes.
 - **Feb 21 (19:00)**: Documentation consolidation — archived ~75 docs to `docs/archive/` (deployment, codespaces, mobilemart, beneficiary, partner-api, referral, easypay, zapper, figma, peach-payments, security); merged INPUT_FIELD_FIXES, 2FA_IMPLEMENTATION, SECURITY (badge/certificate/token); created DOCS_CONSOLIDATION_2026.md. Session log updated with git push/pull status. Codespaces synced (82 files, fast-forward).
 - **Feb 21 (17:00)**: Bill payment MobileMart prevend fix — v2 API URL construction (use baseUrl for /v2 paths, was incorrectly .../v1/v2/... returning HTML); improved product matching (no products[0] fallback; fuzzy match; clear error when no match). Fixes "prevend did not return transactionId" and wrong product (Ekurhuleni for PEP).

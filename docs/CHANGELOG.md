@@ -1,5 +1,26 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-27 - 💳 EasyPay Cash-In Activation Complete ✅
+
+### **Session Overview**
+Fixed EasyPay `authorisationRequest` 500 for Scenario 4 (open amount). Root cause: missing `userId`/`walletId` on `payments` table. Added migration, updated Payment model, removed staging debug. Created 5-scenario test script, Theodore test data doc, Razeen reply draft, and copy-paste versions. User sent Razeen reply and shared restricted folder with Theodore. All 11 tests pass on Staging.
+
+### **Changes**
+- **`migrations/20260227_add_userid_walletid_to_payments.js`**: NEW — adds nullable `userId`, `walletId` to `payments`
+- **`models/Payment.js`**: Added `userId`, `walletId` fields
+- **`controllers/easyPayController.js`**: Transaction wrap for Payment.create + bill.update; `billId: bill.id`; stricter type handling; removed staging debug
+- **`scripts/test-easypay-5-scenarios.sh`**: NEW — 5-scenario EasyPay test script (11 tests, all pass)
+- **`docs/DRAFT_REPLY_TO_RAZEEN_EASYPAY.md`**: NEW — draft reply to Razeen with UAT/Production details
+- **`docs/EASYPAY_THEODORE_SMITH_TEST_DATA.md`**: NEW — Theodore test data template (placeholder for SessionToken)
+- **`docs/COPY_PASTE_RAZEEN_EMAIL.txt`**: NEW — plain-text Razeen email body
+- **`docs/COPY_PASTE_THEODORE_EMAIL.txt`**: NEW — copy-paste Theodore content (in .gitignore; contains SessionToken)
+- **`.gitignore`**: Added `docs/COPY_PASTE_THEODORE_EMAIL.txt`
+
+### **Session Log**
+- `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`
+
+---
+
 ## 2026-02-26 - 💳 EasyPay Cash-In Activation Fixes ✅
 
 ### **Session Overview**
