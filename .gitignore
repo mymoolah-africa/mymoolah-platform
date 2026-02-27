@@ -35,3 +35,6 @@ bin/cloud-sql-proxy
 *.pkg
 actions
 chemaname = public
+
+# EasyPay — contains SessionToken, do not commit
+docs/COPY_PASTE_THEODORE_EMAIL.txt

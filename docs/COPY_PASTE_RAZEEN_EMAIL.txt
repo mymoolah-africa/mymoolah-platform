@@ -1,0 +1,127 @@
+Hi Razeen and team,
+
+Thank you for your response. We have completed our side of the UAT configuration and are ready for Theodore to begin testing. Please find our responses to each point below.
+
+---
+
+1. API Key / SessionToken for Theodore Smith
+
+We will share the SessionToken together with the test data (see point 3 below) via a secure encrypted channel. Please ensure Theodore is ready to receive it. For Production, we will follow the same process with our support engineers when we reach go-live.
+
+---
+
+2. UAT / Staging — Configuration Complete
+
+Staging base URL: Our Staging environment is live and configured. We have verified all 5 test scenarios end-to-end (infoRequest, authorisationRequest, paymentNotification, and idempotency).
+
+Base URL: https://staging.mymoolah.africa/billpayment/v1
+Endpoints: /ping, /infoRequest, /authorisationRequest, /paymentNotification
+
+We have confirmed that GET https://staging.mymoolah.africa/billpayment/v1/ping returns {"Ping":"OK"}. EasyPay's UAT system can be configured to route test terminal calls to this URL.
+
+IP whitelisting: We have whitelisted your public IP 20.164.206.68 on our Google Cloud Load Balancer (Cloud Armor policy) for the Staging backend. Test traffic from your switch will be accepted.
+
+Credentials: The SessionToken will be shared with Theodore separately (see point 1 above).
+
+---
+
+3. Test Data for Theodore Smith
+
+Please share the following with Theodore. These EasyPay numbers are seeded in our Staging database and ready for testing:
+
+Scenario 1 — Valid, unpaid (R100.00 fixed)
+  EasyPay Number (formatted): 9 5063 0000 0001 1
+  Raw Number: 95063000000011
+  Expected: Allow payment (ResponseCode: 0). Second attempt must return ResponseCode: 5 (AlreadyPaid) — tests idempotency
+
+Scenario 2 — Already paid (R200.00)
+  EasyPay Number (formatted): 9 5063 0000 0002 9
+  Raw Number: 95063000000029
+  Expected: Reject immediately (ResponseCode: 5 — AlreadyPaid)
+
+Scenario 3 — Expired bill (R50.00)
+  EasyPay Number (formatted): 9 5063 0000 0003 7
+  Raw Number: 95063000000037
+  Expected: Reject (ResponseCode: 3 — Expired)
+
+Scenario 4 — Open amount (R10–R1000)
+  EasyPay Number (formatted): 9 5063 0000 0004 5
+  Raw Number: 95063000000045
+  Expected: Allow any amount between R10.00 and R1000.00. Outside range → ResponseCode: 2
+
+Scenario 5 — Fixed R300.00 (amount validation)
+  EasyPay Number (formatted): 9 5063 0000 0005 2
+  Raw Number: 95063000000052
+  Expected: Only exactly R300.00 accepted. Any other amount → ResponseCode: 2
+
+Important notes for Theo:
+- Amounts in the API are in cents (e.g. R100.00 = 10000)
+- EchoData must be returned exactly as received in all responses
+- Receiver ID: 5063 (MyMoolah's assigned ID)
+
+---
+
+4. Malusi Mbulwana-Barnard / Sprint Assignment
+
+We have noted the request for @Malusi Mbulwana-Barnard to bring the setup and testing into sprint and assign our test resource. We are ready to support once Theo is assigned and has the SessionToken.
+
+---
+
+5. Production — Correction and Confirmation
+
+Production base URL (corrected from our earlier email):
+  Base URL: https://api-mm.mymoolah.africa/billpayment/v1
+
+(Note: Our production API domain is api-mm.mymoolah.africa, not api.mymoolah.africa, due to DNS provider requirements.)
+
+Production configuration will be completed once UAT sign-off has been achieved, as part of our production handover process.
+
+Production IP whitelisting: We will whitelist 20.164.206.68 on our Production infrastructure when we move to go-live (same IP as UAT).
+
+Go-live sign-off: We understand that test sign-off will require:
+- Correct testing outcomes for all scenarios
+- SOF files at the end of each test cycle verified
+- Handover from your test team to production team
+- Implementation scheduled as a change
+
+We are aligned with this process.
+
+---
+
+6. Reconciliation / SOF Files
+
+UAT: We understand that Theo will email the SOF file to us at the end of each test cycle. We are ready to receive and process these.
+
+Production: We have reviewed the EasyPay Bill Payment Output File Specification (PR-E1-0049 v2.8). Please confirm the SFTP details (host, path, credentials) for daily SOF file delivery in Production. The onboarding team may have furnished credentials — if so, please confirm we have the correct set or provide updated details.
+
+---
+
+7. Cash-In Flow (for reference)
+
+Our implementation follows the flow you described:
+
+1. MyMoolah customer selects "Top-up via EasyPay" in the wallet app
+2. App generates a unique 14-digit EasyPay number (Receiver ID 5063)
+3. Customer presents the number at any EasyPay cashier and pays cash
+4. EasyPay terminal calls our /infoRequest — we validate and return amount
+5. EasyPay terminal calls our /authorisationRequest — we confirm acceptance
+6. EasyPay terminal calls our /paymentNotification — we credit the customer's wallet immediately
+7. We return EchoData as required in all responses
+
+We have implemented Cash-In (Top-Up) only at this stage. Cash-Out and Standalone Voucher are not in scope for this activation.
+
+---
+
+Next Steps
+
+1. Theodore: Receive SessionToken from us (secure channel) and begin test transactions
+2. EasyPay: Confirm UAT system is configured with https://staging.mymoolah.africa/billpayment/v1
+3. Theodore: Run test cycles and email SOF files to us at end of each cycle
+4. Both: Verify test outcomes and proceed to UAT sign-off
+5. Production: We will configure Production URL and IP whitelist upon sign-off; EasyPay to provide SFTP details for Production SOF delivery
+
+Please let us know if you need any clarification or additional information.
+
+Best regards,
+André
+MyMoolah
