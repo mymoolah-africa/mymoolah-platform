@@ -1,4 +1,4 @@
-const { Bill, Payment } = require('../models');
+const { Bill, Payment, sequelize } = require('../models');
 const { validateEasyPayNumber, extractReceiverId } = require('../utils/easyPayUtils');
 
 /**
@@ -177,11 +177,17 @@ class EasyPayController {
         });
       }
 
-      // Validate amount
-      const amount = Number(Amount);
-      const minAmount = bill.minAmount || bill.amount;
-      const maxAmount = bill.maxAmount || bill.amount;
-      
+      // Validate amount (ensure integer for DB)
+      const amount = parseInt(Amount, 10);
+      if (isNaN(amount) || amount < 1) {
+        return res.status(200).json({
+          ResponseCode: '2', // InvalidAmount
+          echoData: EchoData
+        });
+      }
+      const minAmount = bill.minAmount ?? bill.amount;
+      const maxAmount = bill.maxAmount ?? bill.amount;
+
       if (amount < minAmount || amount > maxAmount) {
         return res.status(200).json({
           ResponseCode: '2', // InvalidAmount
@@ -189,22 +195,27 @@ class EasyPayController {
         });
       }
 
-      // Create payment record
-      const payment = await Payment.create({
-        reference: Reference,
-        easyPayNumber: EasyPayNumber,
-        accountNumber: AccountNumber,
-        amount: amount,
-        paymentType: 'bill_payment',
-        paymentMethod: 'easypay',
-        status: 'pending',
-        echoData: EchoData
-      });
+      // Create payment record and update bill in a transaction (ACID)
+      const t = await sequelize.transaction();
+      try {
+        await Payment.create({
+          reference: Reference,
+          easyPayNumber: EasyPayNumber,
+          accountNumber: String(AccountNumber || '').slice(0, 13),
+          amount,
+          billId: bill.id,
+          paymentType: 'bill_payment',
+          paymentMethod: 'easypay',
+          status: 'pending',
+          echoData: EchoData != null ? String(EchoData) : null
+        }, { transaction: t });
 
-      // Update bill status
-      await bill.update({ status: 'processing' });
-
-      
+        await bill.update({ status: 'processing' }, { transaction: t });
+        await t.commit();
+      } catch (txError) {
+        await t.rollback();
+        throw txError;
+      }
 
       res.status(200).json({
         ResponseCode: '0', // Authorized
