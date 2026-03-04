@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Wifi, Smartphone, CheckCircle, Copy, Share, Download, Home } from 'lucide-react';
+
+// Supplier border colours — shown in UAT and Staging only
+const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
+const _viteNodeEnv: string = (import.meta as any).env?.VITE_NODE_ENV ?? '';
+const isUatOrStaging = _viteMode !== 'production' || _viteNodeEnv === 'staging';
+const SUPPLIER_BORDER: Record<string, string> = {
+  FLASH:      '2px solid #22c55e',  // green-500
+  MOBILEMART: '2px solid #3b82f6', // blue-500
+};
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
@@ -938,27 +947,20 @@ export function AirtimeDataOverlay() {
 
   const getSummaryRows = () => {
     if (!selectedBeneficiary || !selectedProduct) return [];
-    
+
+    // Build a clean single description line, e.g. "Vodacom Airtime · R2–R999"
+    // Avoid repeating the network name that's already in the product name.
+    const productLabel = selectedProduct.name; // e.g. "Vodacom Airtime"
+    const sizeLabel = selectedProduct.size;    // e.g. "R200" or "R2–R999"
+
     return [
       {
-        label: 'Recipient',
-        value: selectedBeneficiary.name
+        label: 'To',
+        value: `${selectedBeneficiary.name} · ${selectedBeneficiary.identifier}`
       },
       {
-        label: 'Mobile Number',
-        value: selectedBeneficiary.identifier
-      },
-      {
-        label: 'Product',
-        value: selectedProduct.name
-      },
-      {
-        label: 'Size',
-        value: selectedProduct.size
-      },
-      {
-        label: 'Provider',
-        value: selectedProduct.provider
+        label: selectedProduct.type === 'data' ? 'Data Bundle' : 'Airtime',
+        value: `${productLabel} · ${sizeLabel}`
       },
       {
         label: 'Amount',
@@ -1266,7 +1268,10 @@ export function AirtimeDataOverlay() {
                 )}
 
                 {/* Airtime Product List */}
-                {catalog.products.filter(product => product.type === 'airtime').map((product, index) => (
+                {catalog.products.filter(product => product.type === 'airtime').map((product, index) => {
+                  const supplierKey = (product.supplierCode || '').toUpperCase();
+                  const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? '1px solid #e2e8f0') : '1px solid #e2e8f0';
+                  return (
                   <div
                     key={`${product.id}_${index}`}
                     onClick={() => handleProductSelect(product)}
@@ -1275,17 +1280,15 @@ export function AirtimeDataOverlay() {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '12px',
-                      border: '1px solid #e2e8f0',
+                      border: supplierBorder,
                       borderRadius: '12px',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = '#86BE41';
                       e.currentTarget.style.backgroundColor = '#f9fafb';
                     }}
                     onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = '#e2e8f0';
                       e.currentTarget.style.backgroundColor = '#ffffff';
                     }}
                   >
@@ -1301,48 +1304,28 @@ export function AirtimeDataOverlay() {
                       }}>
                         <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
                       </div>
-                      
                       <div>
-                        <p style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          color: '#1f2937'
-                        }}>
+                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                           {product.name}
                         </p>
-                        <p style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '12px',
-                          color: '#6b7280'
-                        }}>
-                          {product.size} • {product.provider}
+                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
+                          {product.size}
                         </p>
                       </div>
                     </div>
-                    
                     <div className="text-right">
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '16px',
-                        fontWeight: '700',
-                        color: '#1f2937'
-                      }}>
+                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937' }}>
                         {formatCurrency(product.price)}
                       </p>
                       {product.isBestDeal && (
-                        <span style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '10px',
-                          color: '#16a34a',
-                          fontWeight: '500'
-                        }}>
+                        <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '10px', color: '#16a34a', fontWeight: '500' }}>
                           Best Deal
                         </span>
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -1488,7 +1471,10 @@ export function AirtimeDataOverlay() {
                   </div>
                 </div>
 
-                {catalog.products.filter(product => product.type === 'data').map((product, index) => (
+                {catalog.products.filter(product => product.type === 'data').map((product, index) => {
+                  const supplierKey = (product.supplierCode || '').toUpperCase();
+                  const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? '1px solid #e2e8f0') : '1px solid #e2e8f0';
+                  return (
                   <div
                     key={`${product.id}_${index}`}
                     onClick={() => handleProductSelect(product)}
@@ -1497,17 +1483,15 @@ export function AirtimeDataOverlay() {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       padding: '12px',
-                      border: '1px solid #e2e8f0',
+                      border: supplierBorder,
                       borderRadius: '12px',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease'
                     }}
                     onMouseOver={(e) => {
-                      e.currentTarget.style.borderColor = '#2D8CCA';
                       e.currentTarget.style.backgroundColor = '#f9fafb';
                     }}
                     onMouseOut={(e) => {
-                      e.currentTarget.style.borderColor = '#e2e8f0';
                       e.currentTarget.style.backgroundColor = '#ffffff';
                     }}
                   >
@@ -1523,48 +1507,28 @@ export function AirtimeDataOverlay() {
                       }}>
                         <Wifi style={{ width: '20px', height: '20px', color: '#ffffff' }} />
                       </div>
-                      
                       <div>
-                        <p style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          color: '#1f2937'
-                        }}>
+                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
                           {product.name}
                         </p>
-                        <p style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '12px',
-                          color: '#6b7280'
-                        }}>
-                          {product.size} • {product.provider}
+                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
+                          {product.size}
                         </p>
                       </div>
                     </div>
-                    
                     <div className="text-right">
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '16px',
-                        fontWeight: '700',
-                        color: '#1f2937'
-                      }}>
+                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937' }}>
                         {formatCurrency(product.price)}
                       </p>
                       {product.isBestDeal && (
-                        <span style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '10px',
-                          color: '#16a34a',
-                          fontWeight: '500'
-                        }}>
+                        <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '10px', color: '#16a34a', fontWeight: '500' }}>
                           Best Deal
                         </span>
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

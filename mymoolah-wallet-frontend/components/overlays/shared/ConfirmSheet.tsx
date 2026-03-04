@@ -87,17 +87,11 @@ export function ConfirmSheet({
 
   return (
     <div style={{
-      position: 'fixed',
-      bottom: '80px', // Above bottom navigation
-      left: '50%',
-      transform: 'translateX(-50%)',
-      width: '375px',
-      maxHeight: '70vh',
       backgroundColor: '#ffffff',
-      borderRadius: '12px 12px 0 0',
-      boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.15)',
-      zIndex: 1000,
-      overflow: 'hidden'
+      borderRadius: '12px',
+      boxShadow: '0 2px 12px rgba(0, 0, 0, 0.08)',
+      overflow: 'hidden',
+      marginTop: '0'
     }}>
       {/* Header */}
       <div style={{
@@ -127,10 +121,8 @@ export function ConfirmSheet({
         )}
       </div>
 
-      {/* Scrollable Content */}
+      {/* Content */}
       <div style={{
-        maxHeight: 'calc(70vh - 140px)', // Account for header and buttons
-        overflowY: 'auto',
         padding: '1rem'
       }}>
         {/* Summary Rows */}
