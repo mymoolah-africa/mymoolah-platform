@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-04 11:17  
-**Latest Feature**: Cursor skills consolidated in .agents/skills/ (8 skills, single parent)  
-**Document Version**: 2.11.27  
-**Session logs**: `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`, `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`  
+**Last Updated**: 2026-03-04 22:30  
+**Latest Feature**: eeziAirtime PIN fixes, migration corrections, Staging/Production migrations applied  
+**Document Version**: 2.11.28  
+**Session logs**: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,8 +100,11 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 4, 2026 - 11:17)**
-**Cursor Skills for Banking-Grade Platform** — Installed 7 skills via `npx skills add`; consolidated all 8 (including frontend-design) into `.agents/skills/`. Single parent directory, industry standard. Skills: api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices, frontend-design. Session logs: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`.
+### **Latest Achievement (March 4, 2026 - 22:30)**
+**eeziAirtime PIN Fixes & Staging/Production Migrations** — (1) Fixed eeziAirtime PIN UI: SMS fallback in apiService.ts replaced with "No PIN returned"; added pinNumber to extraction chain; Copy PIN in Transaction Detail modal for eeziAirtime tokens. (2) Fixed migration `20260304_fix_beneficiary22_eeziairtime_network`: table `service_accounts` → `beneficiary_service_accounts`, column `metadata` → `serviceData`. (3) Staging and Production migrations run successfully in Codespaces. Ledger audit confirmed eeziAirtime purchase flow correct. Session log: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`.
+
+### **Previous Achievement (March 4, 2026 - 11:17)**
+**Cursor Skills for Banking-Grade Platform** — Installed 7 skills via `npx skills add`; consolidated all 8 (including frontend-design) into `.agents/skills/`. Single parent directory, industry standard. Session logs: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`.
 
 ### **Previous Achievement (February 27, 2026 - 14:00)**
 **Figma Restriction Removed — Code as Frontend Source of Truth** — Removed Figma read-only rule. Codebase is now frontend source of truth; agents may edit any UI/frontend including `mymoolah-wallet-frontend/pages/*.tsx`. Figma optional reference. Updated CURSOR_2.0_RULES_FINAL.md, AGENT_HANDOVER.md, AGENT_ROLE_TEMPLATE.md. Enables frontend-design skill on main app pages. Session log: `docs/session_logs/2026-02-27_1400_figma-restriction-removed-code-source-of-truth.md`.
@@ -140,6 +143,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
 ### **Recent Updates (Last 7 Days – February 27–March 4, 2026)**
+- **Mar 4 (22:30)**: eeziAirtime PIN fixes (apiService SMS fallback, Copy PIN in Transaction Detail modal); migration fix (beneficiary22: beneficiary_service_accounts.serviceData); Staging + Production migrations applied in Codespaces.
 - **Mar 4 (11:17)**: Cursor skills consolidated — all 8 skills in `.agents/skills/` (single parent). Moved frontend-design from .cursor/skills/. Best practice structure.
 - **Feb 27 (14:00)**: Figma restriction removed — code is frontend source of truth. Agents may edit any UI/frontend including `pages/*.tsx`. Figma optional reference. Enables frontend-design skill on main app pages.
 - **Feb 21 (21:00)**: Standard Bank PayShap banking-grade overhaul — removed Peach proxy workaround; aligned Pain.001 (top-level grpHdr/pmtInf[], pmntInfId, reqdExctnDt.dtTm, lclInstrm.prtry, cdtrAgt+brnchId, rmtInf.strd[], splmtryData) and Pain.013 (PascalCase, DbtrAcct.Id.Item.Id+Prxy, CdtrAgt.Othr.Id, Amt.Item.Value, PmtCond, RmtInf.Strd[]) with SBSA Postman samples; fixed RTP callback URLs in client.js; scope-keyed token cache in pingAuthService; ACID transaction ordering in RPP/RTP services; added proxyResolutionClient.js; express-validator on routes.
@@ -624,10 +628,15 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — PayShap callbacks + EasyPay activation + Partner Drive docs  
-**Last Session**: 2026-02-21 — PayShap callbacks, EasyPay Cash-In sweep, Google Drive documentation
+**Session Status**: ✅ **COMPLETE** — eeziAirtime PIN fixes, migration corrections, Staging/Production migrations  
+**Last Session**: 2026-03-04 — eeziAirtime PIN UI, beneficiary22 migration fix, migrations applied
 
-### **Most Recent Work (2026-02-21)**
+### **Most Recent Work (2026-03-04)**
+- **eeziAirtime PIN**: apiService fallback "No PIN returned", pinNumber extraction, Copy PIN in Transaction Detail modal
+- **Migration fix**: 20260304_fix_beneficiary22 — beneficiary_service_accounts.serviceData (not service_accounts.metadata)
+- **Migrations**: Staging and Production applied successfully in Codespaces
+
+### **Previous Work (2026-02-21)**
 - **PayShap callbacks**: Parameterised callback routes for RPP/RTP (batch + realtime) added to `standardbankController.js` and `routes/standardbank.js`. GET polling routes added. New `services/standardbankPollingService.js` with stale transaction recovery.
 - **EasyPay Cash-In**: Full codebase sweep. Confirmed Receiver ID `5063` (already in code), 14-digit number format, Receiver architecture. Drafted activation email to Razine (UAT + Production).
 - **Google Drive docs**: Flash, MobileMart, Zapper partner Drive folders documented in `AGENT_HANDOVER.md` and dedicated reference files created in `integrations/`.
