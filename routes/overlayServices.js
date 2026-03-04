@@ -1198,6 +1198,80 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       } else if (supplier === 'MOBILEMART' && process.env.MOBILEMART_LIVE_INTEGRATION !== 'true') {
         console.warn('⚠️ MOBILEMART_LIVE_INTEGRATION is not enabled - purchase will be recorded but NOT fulfilled with MobileMart API');
         // Note: We still create the transaction, but mark it as not fulfilled
+
+      } else if (supplier === 'FLASH' && process.env.FLASH_LIVE_INTEGRATION === 'true') {
+        // ─── Primary Flash purchase path ────────────────────────────────────────
+        // Handles: Vodacom, MTN, CellC, Telkom, eeziAirtime — all via /cellular/pinless/purchase
+        // Flash always uses local format: 0XXXXXXXXX (10 digits starting with 0)
+        try {
+          console.log('📞 Calling Flash API to fulfill purchase (BEFORE creating transaction)...');
+          const FlashAuthService = require('../services/flashAuthService');
+          const flashAuth = new FlashAuthService();
+
+          // Normalize mobile number to Flash local format (0XXXXXXXXX)
+          const rawNumber = String(beneficiary.identifier || '').trim();
+          const digits = rawNumber.replace(/\D/g, '');
+          if (digits.startsWith('27') && digits.length === 11) {
+            normalizedMobileNumber = `0${digits.slice(2)}`; // +27821234567 → 0821234567
+          } else if (digits.startsWith('0') && digits.length === 10) {
+            normalizedMobileNumber = digits; // already local format
+          } else if (digits.length === 9) {
+            normalizedMobileNumber = `0${digits}`; // missing leading 0
+          } else {
+            normalizedMobileNumber = digits; // use as-is, let Flash validate
+          }
+
+          if (!normalizedMobileNumber.match(/^0[6-8]\d{8}$/)) {
+            console.warn(`⚠️ Flash number format warning: ${normalizedMobileNumber} (expected 0XXXXXXXXX)`);
+          }
+
+          const flashProductCode = parseInt(productCode, 10) || productCode;
+          const flashPayload = {
+            reference: idempotencyKey,
+            accountNumber: process.env.FLASH_ACCOUNT_NUMBER,
+            amount: amountInCentsValue,
+            productCode: flashProductCode,
+            mobileNumber: normalizedMobileNumber
+          };
+
+          console.log('📤 Flash request:', {
+            endpoint: '/cellular/pinless/purchase',
+            productCode: flashProductCode,
+            mobileNumber: normalizedMobileNumber,
+            amountCents: amountInCentsValue,
+            supplier,
+            network: beneficiary.metadata?.network || 'unknown'
+          });
+
+          supplierFulfillmentResult = await flashAuth.makeAuthenticatedRequest(
+            'POST',
+            '/cellular/pinless/purchase',
+            flashPayload
+          );
+
+          console.log('✅ Flash API confirmed delivery:', JSON.stringify(supplierFulfillmentResult, null, 2));
+
+        } catch (flashError) {
+          console.error(`❌ Flash API fulfillment failed: ${flashError.message}`);
+          if (transaction && !transaction.finished) await transaction.rollback();
+          return res.status(502).json({
+            success: false,
+            error: flashError.message || 'Flash purchase fulfillment failed',
+            message: 'Top-up could not be processed. Please try again.',
+            errorCode: 'FLASH_FULFILLMENT_FAILED',
+            ...(process.env.NODE_ENV !== 'production' ? {
+              debug: {
+                productCode,
+                mobileNumber: normalizedMobileNumber,
+                network: beneficiary.metadata?.network || null,
+                flashError: flashError.flashError || null
+              }
+            } : {})
+          });
+        }
+
+      } else if (supplier === 'FLASH' && process.env.FLASH_LIVE_INTEGRATION !== 'true') {
+        console.warn('⚠️ FLASH_LIVE_INTEGRATION is not enabled - purchase will be recorded but NOT fulfilled with Flash API');
       }
 
       // Generate transactionId for VasTransaction

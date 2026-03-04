@@ -21,7 +21,7 @@ interface FormData {
   network: string;
 }
 
-const NETWORKS = ['Vodacom', 'MTN', 'CellC', 'Telkom'];
+const NETWORKS = ['Vodacom', 'MTN', 'CellC', 'Telkom', 'eeziAirtime'];
 
 export function AddAdditionalNumberModal({ 
   isOpen, 
