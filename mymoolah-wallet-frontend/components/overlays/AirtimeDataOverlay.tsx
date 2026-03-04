@@ -73,6 +73,7 @@ export function AirtimeDataOverlay() {
   const [showGlobalPinModal, setShowGlobalPinModal] = useState(false);
   const [editingBeneficiary, setEditingBeneficiary] = useState<Beneficiary | null>(null);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
+  const [inlineAmountInput, setInlineAmountInput] = useState<string>('');
   const [showSendToNewRecipient, setShowSendToNewRecipient] = useState(false);
   const [newRecipientPhone, setNewRecipientPhone] = useState<string>('');
   const [newRecipientName, setNewRecipientName] = useState<string>('');
@@ -404,9 +405,21 @@ export function AirtimeDataOverlay() {
   };
 
   const handleProductSelect = (product: AirtimeDataProduct, selectedDenomCents?: number) => {
-    // If the product has multiple fixed denominations and no specific denom was chosen,
-    // expand the inline denomination picker instead of going straight to confirm.
     const denoms: number[] = Array.isArray((product as any).denominations) ? (product as any).denominations : [];
+    const isVariable: boolean = (product as any).isVariable === true;
+
+    // Variable product (own amount) — expand inline input instead of going to confirm
+    if (!selectedDenomCents && isVariable) {
+      if (expandedProductId === product.id) {
+        setExpandedProductId(null);
+      } else {
+        setExpandedProductId(product.id);
+        setInlineAmountInput('');
+      }
+      return;
+    }
+
+    // Multi-denom fixed product — expand denomination picker
     if (!selectedDenomCents && denoms.length > 1) {
       setExpandedProductId(expandedProductId === product.id ? null : product.id);
       return;
@@ -423,8 +436,32 @@ export function AirtimeDataOverlay() {
 
     setSelectedProduct(resolvedProduct);
     setExpandedProductId(null);
+    setInlineAmountInput('');
 
     // If no beneficiary selected, show option to send to new recipient
+    if (!selectedBeneficiary) {
+      setShowSendToNewRecipient(true);
+    } else {
+      setCurrentStep('confirm');
+    }
+  };
+
+  const handleInlineAmountConfirm = (product: AirtimeDataProduct) => {
+    const amount = parseFloat(inlineAmountInput);
+    const minR = ((product as any).minAmount || 0) / 100;
+    const maxR = ((product as any).maxAmount || 9999) / 100;
+    if (!amount || amount < minR || amount > maxR) return;
+
+    const resolvedProduct: AirtimeDataProduct = {
+      ...product,
+      price: amount,
+      size: `R${amount.toFixed(0)}`,
+    };
+
+    setSelectedProduct(resolvedProduct);
+    setExpandedProductId(null);
+    setInlineAmountInput('');
+
     if (!selectedBeneficiary) {
       setShowSendToNewRecipient(true);
     } else {
@@ -1292,8 +1329,13 @@ export function AirtimeDataOverlay() {
                   const supplierKey = (product.supplierCode || '').toUpperCase();
                   const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? '1px solid #e2e8f0') : '1px solid #e2e8f0';
                   const denoms: number[] = Array.isArray((product as any).denominations) ? (product as any).denominations : [];
+                  const isProductVariable: boolean = (product as any).isVariable === true;
                   const isExpanded = expandedProductId === product.id;
                   const hasMultipleDenoms = denoms.length > 1;
+                  const needsPicker = isProductVariable || hasMultipleDenoms;
+                  const minR = ((product as any).minAmount || 0) / 100;
+                  const maxR = ((product as any).maxAmount || 1000) / 100;
+                  const inlineAmountValid = parseFloat(inlineAmountInput) >= minR && parseFloat(inlineAmountInput) <= maxR;
                   return (
                   <div key={`${product.id}_${index}`} style={{ borderRadius: '12px', overflow: 'hidden', border: supplierBorder }}>
                     <div
@@ -1319,12 +1361,16 @@ export function AirtimeDataOverlay() {
                             {product.name}
                           </p>
                           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
-                            {hasMultipleDenoms ? `${denoms.length} amounts available` : product.size}
+                            {isProductVariable
+                              ? `R${minR.toFixed(0)}–R${maxR.toFixed(0)} (enter amount)`
+                              : hasMultipleDenoms
+                                ? `${denoms.length} amounts available`
+                                : product.size}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        {hasMultipleDenoms ? (
+                        {needsPicker ? (
                           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#86BE41' }}>
                             {isExpanded ? 'Close ▲' : 'Select ▼'}
                           </p>
@@ -1338,8 +1384,35 @@ export function AirtimeDataOverlay() {
                         )}
                       </div>
                     </div>
+                    {/* Inline variable amount input */}
+                    {isExpanded && isProductVariable && (
+                      <div style={{ padding: '8px 12px 12px', backgroundColor: '#f0fdf4', borderTop: '1px solid #dcfce7' }}>
+                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                          Enter amount (R{minR.toFixed(0)}–R{maxR.toFixed(0)}):
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder={`R${minR.toFixed(0)}–R${maxR.toFixed(0)}`}
+                            value={inlineAmountInput}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => setInlineAmountInput(e.target.value.replace(/[^\d.]/g, ''))}
+                            style={{ flex: 1, padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#1f2937' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleInlineAmountConfirm(product); }}
+                            disabled={!inlineAmountValid}
+                            style={{ padding: '8px 16px', backgroundColor: inlineAmountValid ? '#86BE41' : '#9ca3af', color: '#ffffff', border: 'none', borderRadius: '8px', fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', cursor: inlineAmountValid ? 'pointer' : 'not-allowed' }}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {/* Inline denomination picker */}
-                    {isExpanded && hasMultipleDenoms && (
+                    {isExpanded && hasMultipleDenoms && !isProductVariable && (
                       <div style={{ padding: '8px 12px 12px', backgroundColor: '#f0fdf4', borderTop: '1px solid #dcfce7' }}>
                         <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Select amount:</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -1348,18 +1421,7 @@ export function AirtimeDataOverlay() {
                               key={denom}
                               type="button"
                               onClick={(e) => { e.stopPropagation(); handleProductSelect(product, denom); }}
-                              style={{
-                                fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                padding: '8px 14px',
-                                borderRadius: '8px',
-                                border: '2px solid #86BE41',
-                                background: '#ffffff',
-                                color: '#1f2937',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                              }}
+                              style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', padding: '8px 14px', borderRadius: '8px', border: '2px solid #86BE41', background: '#ffffff', color: '#1f2937', cursor: 'pointer', transition: 'all 0.15s ease' }}
                               onMouseOver={(e) => { e.currentTarget.style.background = '#86BE41'; e.currentTarget.style.color = '#fff'; }}
                               onMouseOut={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.color = '#1f2937'; }}
                             >
@@ -1521,8 +1583,13 @@ export function AirtimeDataOverlay() {
                   const supplierKey = (product.supplierCode || '').toUpperCase();
                   const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? '1px solid #e2e8f0') : '1px solid #e2e8f0';
                   const denoms: number[] = Array.isArray((product as any).denominations) ? (product as any).denominations : [];
+                  const isProductVariable: boolean = (product as any).isVariable === true;
                   const isExpanded = expandedProductId === product.id;
                   const hasMultipleDenoms = denoms.length > 1;
+                  const needsPicker = isProductVariable || hasMultipleDenoms;
+                  const minR = ((product as any).minAmount || 0) / 100;
+                  const maxR = ((product as any).maxAmount || 1000) / 100;
+                  const inlineAmountValid = parseFloat(inlineAmountInput) >= minR && parseFloat(inlineAmountInput) <= maxR;
                   return (
                   <div key={`${product.id}_${index}`} style={{ borderRadius: '12px', overflow: 'hidden', border: supplierBorder }}>
                     <div
@@ -1548,12 +1615,16 @@ export function AirtimeDataOverlay() {
                             {product.name}
                           </p>
                           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
-                            {hasMultipleDenoms ? `${denoms.length} bundles available` : product.size}
+                            {isProductVariable
+                              ? `R${minR.toFixed(0)}–R${maxR.toFixed(0)} (enter amount)`
+                              : hasMultipleDenoms
+                                ? `${denoms.length} bundles available`
+                                : product.size}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        {hasMultipleDenoms ? (
+                        {needsPicker ? (
                           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#2D8CCA' }}>
                             {isExpanded ? 'Close ▲' : 'Select ▼'}
                           </p>
@@ -1567,8 +1638,35 @@ export function AirtimeDataOverlay() {
                         )}
                       </div>
                     </div>
+                    {/* Inline variable amount input */}
+                    {isExpanded && isProductVariable && (
+                      <div style={{ padding: '8px 12px 12px', backgroundColor: '#eff6ff', borderTop: '1px solid #dbeafe' }}>
+                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                          Enter amount (R{minR.toFixed(0)}–R{maxR.toFixed(0)}):
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            placeholder={`R${minR.toFixed(0)}–R${maxR.toFixed(0)}`}
+                            value={inlineAmountInput}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => setInlineAmountInput(e.target.value.replace(/[^\d.]/g, ''))}
+                            style={{ flex: 1, padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#1f2937' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleInlineAmountConfirm(product); }}
+                            disabled={!inlineAmountValid}
+                            style={{ padding: '8px 16px', backgroundColor: inlineAmountValid ? '#2D8CCA' : '#9ca3af', color: '#ffffff', border: 'none', borderRadius: '8px', fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', cursor: inlineAmountValid ? 'pointer' : 'not-allowed' }}
+                          >
+                            Next
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     {/* Inline denomination picker */}
-                    {isExpanded && hasMultipleDenoms && (
+                    {isExpanded && hasMultipleDenoms && !isProductVariable && (
                       <div style={{ padding: '8px 12px 12px', backgroundColor: '#eff6ff', borderTop: '1px solid #dbeafe' }}>
                         <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Select bundle:</p>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
@@ -1577,18 +1675,7 @@ export function AirtimeDataOverlay() {
                               key={denom}
                               type="button"
                               onClick={(e) => { e.stopPropagation(); handleProductSelect(product, denom); }}
-                              style={{
-                                fontFamily: 'Montserrat, sans-serif',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                padding: '8px 14px',
-                                borderRadius: '8px',
-                                border: '2px solid #2D8CCA',
-                                background: '#ffffff',
-                                color: '#1f2937',
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                              }}
+                              style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', padding: '8px 14px', borderRadius: '8px', border: '2px solid #2D8CCA', background: '#ffffff', color: '#1f2937', cursor: 'pointer', transition: 'all 0.15s ease' }}
                               onMouseOver={(e) => { e.currentTarget.style.background = '#2D8CCA'; e.currentTarget.style.color = '#fff'; }}
                               onMouseOut={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.color = '#1f2937'; }}
                             >
