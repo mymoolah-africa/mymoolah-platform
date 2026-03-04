@@ -20,48 +20,114 @@ class FlashController {
     }
 
     /**
-     * Discover the eezi-voucher product code from the Flash catalog.
-     * Uses FLASH_EEZI_VOUCHER_PRODUCT_CODE env var if set, otherwise queries the API.
-     * Result is cached in memory for the lifetime of the process.
+     * Resolve the eeziAirtime Token product code.
+     *
+     * Resolution order:
+     *   1. In-process cache (fastest — avoids repeated DB hits)
+     *   2. Our own product_variants table (synced from Flash via sync-flash-catalog.js)
+     *      — looks for a FLASH variant whose metadata.flash_product_group contains "eezi"
+     *   3. Live Flash catalog API (fallback if DB has no matching variant yet)
+     *
+     * The Flash catalog API endpoint (/accounts/{id}/products) returns products
+     * filtered to the account's enabled product set, which may not include all
+     * product groups depending on account configuration.  Querying our own DB
+     * first is therefore more reliable and avoids an extra round-trip.
      */
     async _resolveEeziVoucherProductCode() {
         if (this._eeziVoucherProductCode) return this._eeziVoucherProductCode;
 
-        const fromEnv = parseInt(process.env.FLASH_EEZI_VOUCHER_PRODUCT_CODE || '0', 10);
-        if (fromEnv > 0) {
-            this._eeziVoucherProductCode = fromEnv;
-            return fromEnv;
+        // ── 1. Query our own product_variants table (primary source of truth) ──
+        //
+        // sync-flash-catalog.js syncs the Flash catalog into product_variants and
+        // stores:  supplier_product_id = Flash productCode (e.g. "420")
+        //          metadata->>'flash_product_group' = "Eezi Vouchers"
+        //
+        // Querying our DB is more reliable than re-querying the Flash API at
+        // runtime because:
+        //   a) The Flash sandbox account may not have all product groups enabled.
+        //   b) It avoids an extra network round-trip on every first purchase.
+        //   c) The catalog is already validated and normalised by the sync script.
+        try {
+            const { ProductVariant, Supplier } = require('../models');
+            const { Op } = require('sequelize');
+
+            // JSONB filter on metadata->>'flash_product_group'.
+            // sync-flash-catalog.js stores "Eezi Vouchers" here for PIN tokens.
+            // We use sequelize.literal with the actual table name (product_variants)
+            // as Sequelize quotes the table name, not the model name, in generated SQL.
+            const variant = await ProductVariant.findOne({
+                where: {
+                    status: 'active',
+                    supplierProductId: { [Op.ne]: null },
+                    [Op.and]: [
+                        sequelize.literal(`"product_variants"."metadata"->>'flash_product_group' ILIKE '%eezi%'`)
+                    ],
+                },
+                include: [{
+                    model: Supplier,
+                    as: 'supplier',
+                    where: { code: 'FLASH' },
+                    required: true,
+                    attributes: ['id', 'code'],
+                }],
+                attributes: ['id', 'supplierProductId', 'name'],
+            });
+
+            if (variant && variant.supplierProductId) {
+                const code = parseInt(variant.supplierProductId, 10);
+                if (code > 0) {
+                    console.log(`✅ Flash: Resolved eezi-voucher product code from product_variants DB: ${code} (${variant.name})`);
+                    this._eeziVoucherProductCode = code;
+                    return code;
+                }
+            }
+            console.warn('⚠️ Flash: No eezi variant found in product_variants. Falling back to live Flash catalog API.');
+        } catch (dbErr) {
+            console.warn('⚠️ Flash: DB lookup for eezi-voucher product code failed, falling back to API:', dbErr.message);
         }
 
-        // Auto-discover from Flash product catalog
+        // ── 2. Fallback: query the live Flash catalog API ────────────────────
+        //
+        // This path runs only if the DB lookup fails (e.g. catalog not yet synced).
+        // The Flash API v4 endpoint is:
+        //   GET /aggregation/4.0/accounts/{accountNumber}/products?includeInstructions=false
+        // (makeAuthenticatedRequest prepends /aggregation/4.0 automatically)
+        //
+        // The eeziAirtime Token product has:
+        //   productName:  "R2 - R999 eeziAirtime Token"
+        //   productGroup: "Eezi Vouchers"
+        // Match on "eezi" in either field — case-insensitive.
         const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
         if (!accountNumber) throw new Error('FLASH_ACCOUNT_NUMBER not configured');
 
-        console.log('🔍 Flash: Auto-discovering eezi-voucher product code from catalog...');
+        console.log('🔍 Flash: Querying live Flash catalog API for eezi-voucher product code...');
         const response = await this.authService.makeAuthenticatedRequest(
             'GET',
-            `/accounts/${accountNumber}/products`
+            `/accounts/${accountNumber}/products?includeInstructions=false`
         );
 
         const products = response.products || response || [];
-        // Match any product with "eezi" in the name — covers:
-        //   "R2 - R999 eeziAirtime Token", "eeziCash", "Eezi Voucher", etc.
+
         const eeziProduct = products.find(p => {
-            const name = (p.productName || p.name || '').toLowerCase();
-            const cat  = (p.category || p.productGroup || '').toLowerCase();
-            return name.includes('eezi') || cat.includes('eezi');
+            const name  = (p.productName  || p.name          || '').toLowerCase();
+            const group = (p.productGroup || p.category || p.type || '').toLowerCase();
+            return name.includes('eezi') || group.includes('eezi');
         });
 
         if (!eeziProduct) {
-            console.error('❌ Flash: Could not find eezi-voucher product in catalog. Products found:', products.length);
-            console.error('❌ Flash: Available product names:', products.slice(0, 10).map(p => p.productName || p.name));
-            throw new Error('eezi-voucher product not found in Flash catalog. Set FLASH_EEZI_VOUCHER_PRODUCT_CODE manually.');
+            console.error('❌ Flash: eezi-voucher product not found in live catalog.');
+            console.error('❌ Flash: All products returned by Flash API:',
+                products.map(p => `${p.productCode}:${p.productName || p.name}:${p.productGroup || ''}`));
+            throw new Error(
+                'eeziAirtime Token product not found in Flash catalog or product_variants DB. ' +
+                'Run: node scripts/sync-flash-catalog.js to populate the catalog.'
+            );
         }
 
         const code = parseInt(eeziProduct.productCode || eeziProduct.code, 10);
         if (!code || code <= 0) throw new Error(`Invalid product code from Flash catalog: ${eeziProduct.productCode}`);
 
-        console.log(`✅ Flash: Discovered eezi-voucher product code: ${code} (${eeziProduct.productName || eeziProduct.name})`);
+        console.log(`✅ Flash: Resolved eezi-voucher product code from live Flash API: ${code} (${eeziProduct.productName || eeziProduct.name})`);
         this._eeziVoucherProductCode = code;
         return code;
     }
