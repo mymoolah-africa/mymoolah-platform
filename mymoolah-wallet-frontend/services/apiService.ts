@@ -516,7 +516,12 @@ class ApiService {
         const rawName = (product.productName || product.name || '').trim();
         const displayName = rawName
           .replace(/\s+Voucher$/, '')
-          .replace('HollywoodBets', 'Hollywood\nBets');
+          // Strip trailing range patterns like "R2-R3000", "R2 - R3000", "R5-R999" etc.
+          .replace(/\s+R\d+\s*[-–]\s*R\d+\s*$/i, '')
+          // Strip leading range patterns like "R2-R3000 OTT" → "OTT"
+          .replace(/^R\d+\s*[-–]\s*R\d+\s+/i, '')
+          .replace('HollywoodBets', 'Hollywood\nBets')
+          .trim();
 
         const minAmount = product.minAmount ?? product.price ?? product.min ?? 0;
         const maxAmount = product.maxAmount ?? product.price ?? product.max ?? minAmount;
