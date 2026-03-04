@@ -339,8 +339,10 @@ class CatalogSynchronizationService {
     if (g.includes('prepaid util') || g.includes('electricity') || g.includes('utility')) return 'electricity';
     if (g === 'cellular')           return 'airtime';
     if (g.includes('flash pay'))    return 'bill_payment';
-    if (g.includes('voucher') || g.includes('gift') || g.includes('flash token')) return 'voucher';
+    // eezi must be checked BEFORE the generic 'voucher' check because Flash
+    // names this group "Eezi Vouchers" — it is airtime, not a gift voucher.
     if (g.includes('eezi'))         return 'airtime';
+    if (g.includes('voucher') || g.includes('gift') || g.includes('flash token')) return 'voucher';
     if (g.includes('data'))         return 'data';
     return 'airtime';
   }
