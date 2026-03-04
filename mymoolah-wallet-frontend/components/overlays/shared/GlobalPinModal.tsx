@@ -1,0 +1,401 @@
+import React, { useState } from 'react';
+import { X, Smartphone, Copy, Share, CheckCircle, Globe, ChevronRight, Loader2 } from 'lucide-react';
+import { Button } from '../../ui/button';
+import { apiService } from '../../../services/apiService';
+import { generateIdempotencyKey } from '../../../services/overlayService';
+
+// Show supplier borders in UAT/Staging only
+const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
+const _viteNodeEnv: string = (import.meta as any).env?.VITE_NODE_ENV ?? '';
+const isUatOrStaging = _viteMode !== 'production' || _viteNodeEnv === 'staging';
+
+const SUPPLIER_BORDER: Record<string, string> = {
+  FLASH: '2px solid #22c55e',
+  MOBILEMART: '2px solid #3b82f6',
+};
+
+export interface GlobalPinProduct {
+  id: string | number;
+  name: string;
+  price: number;       // in cents
+  supplierCode: string;
+  variantId?: string | number;
+  supplierProductId?: string;
+  denominations?: number[];
+  minAmount?: number;
+  maxAmount?: number;
+}
+
+interface GlobalPinModalProps {
+  products: GlobalPinProduct[];
+  onClose: () => void;
+  selectedAccountId?: number | null;
+}
+
+type Step = 'select' | 'confirm' | 'processing' | 'success' | 'error';
+
+export function GlobalPinModal({ products, onClose, selectedAccountId }: GlobalPinModalProps) {
+  const [step, setStep] = useState<Step>('select');
+  const [selected, setSelected] = useState<GlobalPinProduct | null>(null);
+  const [pin, setPin] = useState<string>('');
+  const [transactionRef, setTransactionRef] = useState<string>('');
+  const [errorMsg, setErrorMsg] = useState<string>('');
+  const [copied, setCopied] = useState(false);
+
+  const handleSelect = (product: GlobalPinProduct) => {
+    setSelected(product);
+    setStep('confirm');
+  };
+
+  const handleConfirm = async () => {
+    if (!selected) return;
+    setStep('processing');
+
+    try {
+      const idempotencyKey = generateIdempotencyKey();
+      const result = await apiService.purchaseVoucher({
+        productId: Number(selected.variantId || selected.id),
+        denomination: selected.price,
+        idempotencyKey,
+      });
+
+      // Extract PIN from result
+      const pinCode =
+        result?.order?.pin ||
+        result?.order?.voucherPin ||
+        result?.order?.code ||
+        result?.order?.serialNumber ||
+        result?.pin ||
+        result?.code ||
+        '— PIN will be sent via SMS —';
+
+      const ref =
+        result?.order?.reference ||
+        result?.order?.transactionId ||
+        result?.message ||
+        idempotencyKey.slice(0, 12).toUpperCase();
+
+      setPin(pinCode);
+      setTransactionRef(ref);
+      setStep('success');
+    } catch (err: any) {
+      setErrorMsg(err?.message || 'Purchase failed. Please try again.');
+      setStep('error');
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!pin) return;
+    try {
+      await navigator.clipboard.writeText(pin);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch {
+      // fallback — silently ignore
+    }
+  };
+
+  const handleShare = async () => {
+    if (!pin || !selected) return;
+    try {
+      await navigator.share({
+        title: `${selected.name} PIN`,
+        text: `Your ${selected.name} PIN: ${pin}\nRef: ${transactionRef}`,
+      });
+    } catch {
+      // share not supported — silently ignore
+    }
+  };
+
+  const formatPrice = (cents: number) => {
+    if (cents <= 0) return '';
+    // Global PIN prices are in USD cents
+    return `$${(cents / 100).toFixed(0)}`;
+  };
+
+  const supplierBorder = (code: string) =>
+    isUatOrStaging ? (SUPPLIER_BORDER[code.toUpperCase()] ?? undefined) : undefined;
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 50,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
+      }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        backgroundColor: '#ffffff',
+        borderRadius: '20px 20px 0 0',
+        width: '100%',
+        maxWidth: '480px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
+        padding: '24px',
+      }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '36px', height: '36px', borderRadius: '10px',
+              backgroundColor: '#86BE41',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <Globe style={{ width: '20px', height: '20px', color: '#fff' }} />
+            </div>
+            <div>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+                International PIN
+              </p>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                Buy · Copy · Use anywhere
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+            <X style={{ width: '20px', height: '20px', color: '#6b7280' }} />
+          </button>
+        </div>
+
+        {/* ── STEP: SELECT ── */}
+        {step === 'select' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {products.length === 0 ? (
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280', textAlign: 'center', padding: '32px 0' }}>
+                No Global PIN products available.
+              </p>
+            ) : (
+              products.map((product) => (
+                <div
+                  key={product.id}
+                  onClick={() => handleSelect(product)}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '14px 16px',
+                    border: supplierBorder(product.supplierCode) ?? '1px solid #e5e7eb',
+                    borderRadius: '12px',
+                    cursor: 'pointer',
+                    backgroundColor: '#ffffff',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                  onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#ffffff'; }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '40px', height: '40px', borderRadius: '10px',
+                      backgroundColor: '#f0fdf4',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <Smartphone style={{ width: '20px', height: '20px', color: '#86BE41' }} />
+                    </div>
+                    <div>
+                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+                        {product.name}
+                      </p>
+                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '11px', color: '#9ca3af', margin: 0 }}>
+                        International PIN · {product.supplierCode}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
+                      {formatPrice(product.price)}
+                    </span>
+                    <ChevronRight style={{ width: '16px', height: '16px', color: '#9ca3af' }} />
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* ── STEP: CONFIRM ── */}
+        {step === 'confirm' && selected && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{
+              padding: '16px', backgroundColor: '#f8fafc',
+              borderRadius: '12px', border: '1px solid #e2e8f0'
+            }}>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: '0 0 4px' }}>
+                You are buying
+              </p>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '18px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
+                {selected.name}
+              </p>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '24px', fontWeight: '700', color: '#10b981', margin: '8px 0 0' }}>
+                {formatPrice(selected.price)}
+              </p>
+            </div>
+
+            <div style={{ padding: '12px', backgroundColor: '#fffbeb', borderRadius: '10px', border: '1px solid #fcd34d' }}>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#92400e', margin: 0 }}>
+                ℹ️ A PIN code will be generated instantly. Copy and use it to top-up any international number.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Button
+                variant="outline"
+                onClick={() => setStep('select')}
+                style={{ flex: 1, borderRadius: '12px', fontFamily: 'Montserrat, sans-serif', minHeight: '48px' }}
+              >
+                Back
+              </Button>
+              <Button
+                onClick={handleConfirm}
+                style={{
+                  flex: 2, borderRadius: '12px', minHeight: '48px',
+                  background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                  color: '#fff', border: 'none',
+                  fontFamily: 'Montserrat, sans-serif', fontSize: '15px', fontWeight: '600'
+                }}
+              >
+                Confirm Purchase
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* ── STEP: PROCESSING ── */}
+        {step === 'processing' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0', gap: '16px' }}>
+            <Loader2 style={{ width: '40px', height: '40px', color: '#86BE41', animation: 'spin 1s linear infinite' }} />
+            <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '15px', color: '#6b7280' }}>
+              Processing your purchase…
+            </p>
+            <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
+
+        {/* ── STEP: SUCCESS ── */}
+        {step === 'success' && selected && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Success header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '14px 16px', backgroundColor: '#dcfce7',
+              borderRadius: '12px', border: '1px solid #16a34a'
+            }}>
+              <CheckCircle style={{ width: '22px', height: '22px', color: '#16a34a', flexShrink: 0 }} />
+              <div>
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#166534', margin: 0 }}>
+                  Purchase Successful
+                </p>
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '11px', color: '#166534', margin: 0, opacity: 0.8 }}>
+                  Ref: {transactionRef}
+                </p>
+              </div>
+            </div>
+
+            {/* PIN display */}
+            <div style={{
+              padding: '20px', backgroundColor: '#f8fafe',
+              borderRadius: '14px', border: '2px dashed #86BE41',
+              textAlign: 'center'
+            }}>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: '0 0 8px' }}>
+                Your PIN Code
+              </p>
+              <p style={{
+                fontFamily: 'Monaco, Consolas, monospace',
+                fontSize: '22px', fontWeight: '700', color: '#1f2937',
+                letterSpacing: '3px', wordBreak: 'break-all', margin: '0 0 16px'
+              }}>
+                {pin}
+              </p>
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                <Button
+                  onClick={handleCopy}
+                  size="sm"
+                  style={{
+                    backgroundColor: copied ? '#16a34a' : '#86BE41',
+                    color: '#fff', border: 'none', borderRadius: '8px',
+                    fontFamily: 'Montserrat, sans-serif', fontSize: '13px', padding: '8px 16px',
+                    transition: 'background-color 0.2s'
+                  }}
+                >
+                  <Copy style={{ width: '14px', height: '14px', marginRight: '6px' }} />
+                  {copied ? 'Copied!' : 'Copy PIN'}
+                </Button>
+                {typeof navigator !== 'undefined' && 'share' in navigator && (
+                  <Button
+                    onClick={handleShare}
+                    size="sm"
+                    variant="outline"
+                    style={{ borderRadius: '8px', fontFamily: 'Montserrat, sans-serif', fontSize: '13px', padding: '8px 16px' }}
+                  >
+                    <Share style={{ width: '14px', height: '14px', marginRight: '6px' }} />
+                    Share
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Details */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {[
+                { label: 'Product', value: selected.name },
+                { label: 'Amount', value: formatPrice(selected.price) },
+                { label: 'Supplier', value: selected.supplierCode },
+              ].map(({ label, value }) => (
+                <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f3f4f6' }}>
+                  <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', color: '#6b7280' }}>{label}</span>
+                  <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '500', color: '#1f2937' }}>{value}</span>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              onClick={onClose}
+              style={{
+                width: '100%', minHeight: '48px', borderRadius: '12px',
+                background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                color: '#fff', border: 'none',
+                fontFamily: 'Montserrat, sans-serif', fontSize: '15px', fontWeight: '600'
+              }}
+            >
+              Done
+            </Button>
+          </div>
+        )}
+
+        {/* ── STEP: ERROR ── */}
+        {step === 'error' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{
+              padding: '14px 16px', backgroundColor: '#fef2f2',
+              borderRadius: '12px', border: '1px solid #fca5a5'
+            }}>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#991b1b', margin: '0 0 4px' }}>
+                Purchase Failed
+              </p>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', color: '#7f1d1d', margin: 0 }}>
+                {errorMsg}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <Button
+                variant="outline"
+                onClick={() => setStep('select')}
+                style={{ flex: 1, borderRadius: '12px', fontFamily: 'Montserrat, sans-serif', minHeight: '48px' }}
+              >
+                Try Again
+              </Button>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                style={{ flex: 1, borderRadius: '12px', fontFamily: 'Montserrat, sans-serif', minHeight: '48px' }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
+}
