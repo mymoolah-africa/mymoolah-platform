@@ -196,6 +196,10 @@ class FlashAuthService {
 
         } catch (error) {
             console.error(`❌ Flash Auth Service: Error making request to ${endpoint}:`, error.message);
+            // Log the full Flash error response body so we can diagnose 400/422 rejections
+            if (error.response) {
+                console.error(`❌ Flash API HTTP ${error.response.status} response body:`, JSON.stringify(error.response.data));
+            }
             
             // If it's an authentication error, try to refresh token and retry once
             if (error.response && (error.response.status === 401 || error.response.status === 403)) {
