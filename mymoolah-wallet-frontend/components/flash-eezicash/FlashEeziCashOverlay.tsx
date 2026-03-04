@@ -42,7 +42,9 @@ export function FlashEeziCashOverlay() {
 
   // System fields (read-only) — accountNumber and productCode are resolved server-side
   const systemData = {
-    reference: `EZ${Date.now().toString().slice(-8).toUpperCase()}`
+    reference: `EZ${Date.now().toString().slice(-8).toUpperCase()}`,
+    accountNumber: '',
+    productCode: ''
   };
 
   // Quick amount options
