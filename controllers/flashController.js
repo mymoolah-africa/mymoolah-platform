@@ -1264,16 +1264,19 @@ class FlashController {
             // Persist transaction (do not expose commission in API response)
             try {
               await FlashTransaction.create({
-                txnReference: reference,
+                transactionId: reference,
                 accountNumber,
                 serviceType: 'eezi_voucher',
                 operation: 'purchase',
-                amount: amountInt,
-                productCode,
+                amount: amountInt / 100,
+                currency: 'ZAR',
+                productId: String(productCode),
                 status: 'completed',
-                metadata: metadata || null,
-                flashResponseCode: String(response?.responseCode ?? '0'),
-                flashResponseMessage: response?.responseMessage || 'OK'
+                flashReference: String(response?.responseCode ?? '0'),
+                faceValueCents: amountInt,
+                generationFeeCents: generationFeeCents || 0,
+                redemptionFeeCents: redemptionFeeCents || 0,
+                vatExclusive: true
               });
             } catch (persistErr) {
               console.error('⚠️ Failed to persist eezi voucher transaction:', persistErr.message);
@@ -1295,15 +1298,16 @@ class FlashController {
               const rawAmt = (req.body || {}).amount;
               const safeAmt = Number.isInteger(rawAmt) ? rawAmt : parseInt(rawAmt, 10) || 0;
               await FlashTransaction.create({
-                txnReference: safeRef,
+                transactionId: safeRef,
                 accountNumber: process.env.FLASH_ACCOUNT_NUMBER || 'unknown',
                 serviceType: 'eezi_voucher',
                 operation: 'purchase',
-                amount: safeAmt,
-                productCode: null,
+                amount: safeAmt / 100,
+                currency: 'ZAR',
+                productId: null,
                 status: 'failed',
                 errorMessage: error.message,
-                metadata: (req.body || {}).metadata || null
+                faceValueCents: safeAmt
               });
             } catch (persistErr) {
               console.error('⚠️ Failed to persist failed eezi voucher transaction:', persistErr.message);
