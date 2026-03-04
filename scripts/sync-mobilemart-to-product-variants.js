@@ -23,8 +23,13 @@ const MobileMartAuthService = require('../services/mobilemartAuthService');
 const VAS_TYPES = ['airtime', 'data', 'utility', 'voucher', 'bill-payment'];
 
 // Normalize product type to match PostgreSQL enum
-function normalizeProductType(vasType) {
+function normalizeProductType(vasType, productName = '') {
   const t = (vasType || '').toLowerCase();
+  const n = (productName || '').toLowerCase();
+  // International PIN products — detected by name, any supplier
+  if (n.includes('global pin') || n.includes('international pin') || n.includes('intl pin')) {
+    return 'international_pin';
+  }
   if (t === 'bill-payment' || t === 'billpayment') return 'bill_payment';
   if (t === 'prepaidutility' || t === 'utility' || t === 'prepaid-utility') return 'electricity';
   return t; // airtime, data, voucher, etc.
@@ -152,6 +157,7 @@ class MobileMartProductSync {
       'utility': 'direct',
       'electricity': 'direct',
       'voucher': 'voucher',
+      'international_pin': 'voucher', // PIN products always generate a voucher code
       'bill-payment': 'direct',
       'bill_payment': 'direct'
     };
@@ -198,8 +204,8 @@ class MobileMartProductSync {
       // Sync each product
       for (const mmProduct of products) {
         try {
-          // Normalize the product type for DB enum
-          const normalizedType = normalizeProductType(vasType);
+          // Normalize the product type for DB enum (name-based detection for international PIN)
+          const normalizedType = normalizeProductType(vasType, mmProduct.productName || mmProduct.name || '');
           
           // Create or find brand
           const brandName = mmProduct.contentCreator || mmProduct.productName || 'MobileMart';

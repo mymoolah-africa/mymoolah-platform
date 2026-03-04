@@ -73,9 +73,15 @@ function mapContentCreatorToProvider(contentCreator) {
 }
 
 /**
- * Map MobileMart VAS type to our vasType enum
+ * Map MobileMart VAS type + product name to our vasType enum.
+ * productName is used to detect international PIN products regardless of supplier.
  */
-function mapVasType(vasType) {
+function mapVasType(vasType, productName = '') {
+    const n = (productName || '').toLowerCase();
+    // International PIN products — detected by name, any supplier
+    if (n.includes('global pin') || n.includes('international pin') || n.includes('intl pin')) {
+        return 'international_pin';
+    }
     const mapping = {
         'airtime': 'airtime',
         'data': 'data',
@@ -167,8 +173,8 @@ async function syncMobileMartProducts() {
                     const isPinned = product.pinned === true;
                     const isFixed = product.fixedAmount === true;
                     const provider = mapContentCreatorToProvider(product.contentCreator);
-                    const vasType = mapVasType(type);
-                    const transactionType = mapTransactionType(isPinned, type);
+                    const vasType = mapVasType(type, product.productName || product.name || '');
+                    const transactionType = vasType === 'international_pin' ? 'voucher' : mapTransactionType(isPinned, type);
                     
                     // Build product data
                     const productData = {
