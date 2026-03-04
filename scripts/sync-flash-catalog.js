@@ -117,13 +117,16 @@ function getFixedFeeCents(providerName) {
 /**
  * Map Flash productGroup string to our ProductVariant vasType enum.
  * Based on actual Flash API v4 productGroup values observed in live responses:
- *   "Cellular"          → airtime
+ *   "Cellular"          → airtime  (pinless top-ups: MTN, Vodacom, CellC, Telkom, eeziAirtime)
  *   "Prepaid Utilities" → electricity
  *   "Flash Pay"         → bill_payment
  *   "Gift Vouchers"     → voucher
- *   "Eezi Vouchers"     → airtime (eeziAirtime tokens — must check BEFORE 'voucher')
+ *   "Eezi Vouchers"     → voucher  (eeziAirtime PIN tokens — NOT pinless, use /eezi-voucher/purchase)
  *   "1Voucher"          → voucher
  *   "Flash Token"       → voucher
+ *
+ * IMPORTANT: "Eezi Vouchers" are PIN-based cash tokens, NOT pinless cellular top-ups.
+ * Pinless eeziAirtime top-ups are in the "Cellular" group (productGroup = "Cellular").
  *
  * Also uses product name to catch Global PIN (airtime) and gaming vouchers.
  */
@@ -135,10 +138,10 @@ function mapFlashCategory(productGroup, productName = '') {
   if (g.includes('prepaid util') || g.includes('electricity') || g.includes('utility')) return 'electricity';
   if (g === 'cellular')           return 'airtime';
   if (g.includes('flash pay'))    return 'bill_payment';
-  // eezi MUST be checked before generic 'voucher' — "Eezi Vouchers" is airtime
-  if (g.includes('eezi'))         return 'airtime';
+  // "Eezi Vouchers" = PIN cash tokens → voucher (NOT pinless airtime)
+  // Pinless eeziAirtime is in "Cellular" group and is already handled above
+  if (g.includes('eezi'))         return 'voucher';
   // Global PIN = international PIN-based top-ups (not pinless airtime, not gift vouchers)
-  // Use dedicated type so they don't appear in the airtime or voucher overlays
   if (n.includes('global pin'))   return 'international_pin';
   if (g.includes('voucher') || g.includes('gift') || g.includes('flash token') || g.includes('1voucher')) return 'voucher';
   if (g.includes('data'))         return 'data';

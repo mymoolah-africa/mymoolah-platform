@@ -1201,55 +1201,97 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
 
       } else if (supplier === 'FLASH' && process.env.FLASH_LIVE_INTEGRATION === 'true') {
         // ─── Primary Flash purchase path ────────────────────────────────────────
-        // Handles: Vodacom, MTN, CellC, Telkom, eeziAirtime — all via /cellular/pinless/purchase
-        // Flash always uses local format: 0XXXXXXXXX (10 digits starting with 0)
+        // Two sub-paths:
+        //   A) Pinless cellular (Vodacom, MTN, CellC, Telkom, eeziAirtime from "Cellular" group)
+        //      → POST /cellular/pinless/purchase
+        //   B) eeziAirtime Token / Eezi Voucher (PIN cash token from "Eezi Vouchers" group)
+        //      → POST /eezi-voucher/purchase
+        //
+        // Detect which path by checking the product variant metadata or product name.
+        // "Eezi Vouchers" products have names containing "Token" or metadata.flash_product_group = "Eezi Vouchers".
         try {
           console.log('📞 Calling Flash API to fulfill purchase (BEFORE creating transaction)...');
           const FlashAuthService = require('../services/flashAuthService');
           const flashAuth = new FlashAuthService();
 
-          // Normalize mobile number to Flash local format (0XXXXXXXXX)
-          const rawNumber = String(beneficiary.identifier || '').trim();
-          const digits = rawNumber.replace(/\D/g, '');
-          if (digits.startsWith('27') && digits.length === 11) {
-            normalizedMobileNumber = `0${digits.slice(2)}`; // +27821234567 → 0821234567
-          } else if (digits.startsWith('0') && digits.length === 10) {
-            normalizedMobileNumber = digits; // already local format
-          } else if (digits.length === 9) {
-            normalizedMobileNumber = `0${digits}`; // missing leading 0
-          } else {
-            normalizedMobileNumber = digits; // use as-is, let Flash validate
-          }
-
-          if (!normalizedMobileNumber.match(/^0[6-8]\d{8}$/)) {
-            console.warn(`⚠️ Flash number format warning: ${normalizedMobileNumber} (expected 0XXXXXXXXX)`);
-          }
+          // Detect if this is an eeziAirtime Token (PIN voucher) vs pinless cellular
+          const variantMeta = productVariant?.metadata || {};
+          const flashProductGroup = (variantMeta.flash_product_group || '').toLowerCase();
+          const productNameLower = (productVariant?.product?.name || vasProduct?.name || '').toLowerCase();
+          const isEeziToken = flashProductGroup.includes('eezi') ||
+                              productNameLower.includes('token') ||
+                              productNameLower.includes('eezi voucher');
 
           const flashProductCode = parseInt(productCode, 10) || productCode;
-          const flashPayload = {
-            reference: idempotencyKey,
-            accountNumber: process.env.FLASH_ACCOUNT_NUMBER,
-            amount: amountInCentsValue,
-            productCode: flashProductCode,
-            mobileNumber: normalizedMobileNumber
-          };
 
-          console.log('📤 Flash request:', {
-            endpoint: '/cellular/pinless/purchase',
-            productCode: flashProductCode,
-            mobileNumber: normalizedMobileNumber,
-            amountCents: amountInCentsValue,
-            supplier,
-            network: beneficiary.metadata?.network || 'unknown'
-          });
+          if (isEeziToken) {
+            // ── Path B: eeziAirtime Token (PIN cash voucher) ──────────────────
+            console.log('📤 Flash request (eeziAirtime Token / eezi-voucher):', {
+              endpoint: '/eezi-voucher/purchase',
+              productCode: flashProductCode,
+              amountCents: amountInCentsValue,
+              supplier
+            });
 
-          supplierFulfillmentResult = await flashAuth.makeAuthenticatedRequest(
-            'POST',
-            '/cellular/pinless/purchase',
-            flashPayload
-          );
+            const eeziPayload = {
+              reference: idempotencyKey,
+              accountNumber: process.env.FLASH_ACCOUNT_NUMBER,
+              amount: amountInCentsValue,
+              productCode: flashProductCode
+            };
 
-          console.log('✅ Flash API confirmed delivery:', JSON.stringify(supplierFulfillmentResult, null, 2));
+            supplierFulfillmentResult = await flashAuth.makeAuthenticatedRequest(
+              'POST',
+              '/eezi-voucher/purchase',
+              eeziPayload
+            );
+
+            console.log('✅ Flash eeziAirtime Token confirmed:', JSON.stringify(supplierFulfillmentResult, null, 2));
+
+          } else {
+            // ── Path A: Pinless cellular top-up ──────────────────────────────
+            // Flash always uses local format: 0XXXXXXXXX (10 digits starting with 0)
+            const rawNumber = String(beneficiary.identifier || '').trim();
+            const digits = rawNumber.replace(/\D/g, '');
+            if (digits.startsWith('27') && digits.length === 11) {
+              normalizedMobileNumber = `0${digits.slice(2)}`; // +27821234567 → 0821234567
+            } else if (digits.startsWith('0') && digits.length === 10) {
+              normalizedMobileNumber = digits; // already local format
+            } else if (digits.length === 9) {
+              normalizedMobileNumber = `0${digits}`; // missing leading 0
+            } else {
+              normalizedMobileNumber = digits; // use as-is, let Flash validate
+            }
+
+            if (!normalizedMobileNumber.match(/^0[6-8]\d{8}$/)) {
+              console.warn(`⚠️ Flash number format warning: ${normalizedMobileNumber} (expected 0XXXXXXXXX)`);
+            }
+
+            const flashPayload = {
+              reference: idempotencyKey,
+              accountNumber: process.env.FLASH_ACCOUNT_NUMBER,
+              amount: amountInCentsValue,
+              productCode: flashProductCode,
+              mobileNumber: normalizedMobileNumber
+            };
+
+            console.log('📤 Flash request (pinless cellular):', {
+              endpoint: '/cellular/pinless/purchase',
+              productCode: flashProductCode,
+              mobileNumber: normalizedMobileNumber,
+              amountCents: amountInCentsValue,
+              supplier,
+              network: beneficiary.metadata?.network || 'unknown'
+            });
+
+            supplierFulfillmentResult = await flashAuth.makeAuthenticatedRequest(
+              'POST',
+              '/cellular/pinless/purchase',
+              flashPayload
+            );
+
+            console.log('✅ Flash API confirmed delivery:', JSON.stringify(supplierFulfillmentResult, null, 2));
+          }
 
         } catch (flashError) {
           console.error(`❌ Flash API fulfillment failed: ${flashError.message}`);
