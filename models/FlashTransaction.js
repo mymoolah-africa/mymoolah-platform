@@ -18,17 +18,17 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(255),
       allowNull: false,
       unique: true,
-      comment: 'Unique transaction reference (matches DB column txnReference)'
+      comment: 'Unique transaction reference — DB column: txn_reference'
     },
     accountNumber: {
       type: DataTypes.STRING(50),
       allowNull: false,
-      comment: 'Flash account number'
+      comment: 'Flash account number — DB column: account_number'
     },
     serviceType: {
       type: DataTypes.ENUM('1voucher', 'gift_voucher', 'cash_out_pin', 'cellular', 'eezi_voucher', 'prepaid_utility'),
       allowNull: false,
-      comment: 'Type of Flash service'
+      comment: 'Type of Flash service — DB column: service_type'
     },
     operation: {
       type: DataTypes.ENUM('purchase', 'disburse', 'redeem', 'refund', 'cancel', 'lookup'),
@@ -43,7 +43,7 @@ module.exports = (sequelize, DataTypes) => {
     productCode: {
       type: DataTypes.INTEGER,
       allowNull: true,
-      comment: 'Flash product code'
+      comment: 'Flash product code — DB column: product_code'
     },
     status: {
       type: DataTypes.ENUM('pending', 'processing', 'completed', 'failed', 'cancelled'),
@@ -53,12 +53,12 @@ module.exports = (sequelize, DataTypes) => {
     flashResponseCode: {
       type: DataTypes.STRING(10),
       allowNull: true,
-      comment: 'Flash API response code'
+      comment: 'Flash API response code — DB column: flash_response_code'
     },
     flashResponseMessage: {
       type: DataTypes.STRING(255),
       allowNull: true,
-      comment: 'Flash API response message'
+      comment: 'Flash API response message — DB column: flash_response_message'
     },
     metadata: {
       type: DataTypes.JSON,
@@ -68,19 +68,20 @@ module.exports = (sequelize, DataTypes) => {
     errorMessage: {
       type: DataTypes.TEXT,
       allowNull: true,
-      comment: 'Error message if failed'
+      comment: 'Error message if failed — DB column: error_message'
     }
   }, {
     sequelize,
     modelName: 'FlashTransaction',
     tableName: 'flash_transactions',
     timestamps: true,
+    underscored: true,
     indexes: [
-      { unique: true, fields: ['txnReference'] },
-      { fields: ['accountNumber'] },
-      { fields: ['serviceType'] },
+      { unique: true, fields: ['txn_reference'] },
+      { fields: ['account_number'] },
+      { fields: ['service_type'] },
       { fields: ['status'] },
-      { fields: ['createdAt'] }
+      { fields: ['created_at'] }
     ]
   });
 
