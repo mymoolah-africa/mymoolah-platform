@@ -131,11 +131,11 @@ router.post('/cellular/pinless/purchase', flashController.purchaseCellularRechar
 
 /**
  * @route   POST /api/v1/flash/eezi-voucher/purchase
- * @desc    Purchase an Eezi Voucher
- * @access  Public
- * @body    { reference, accountNumber, amount, productCode, metadata? }
+ * @desc    Purchase an Eezi Voucher (eeziAirtime PIN cash token)
+ * @access  Private (requires authentication)
+ * @body    { reference, amount, metadata? }
  */
-router.post('/eezi-voucher/purchase', flashController.purchaseEeziVoucher.bind(flashController));
+router.post('/eezi-voucher/purchase', auth, flashController.purchaseEeziVoucher.bind(flashController));
 
 // ========================================
 // PREPAID UTILITIES ENDPOINTS

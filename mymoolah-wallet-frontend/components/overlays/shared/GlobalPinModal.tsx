@@ -38,6 +38,19 @@ interface GlobalPinModalProps {
   currency?: 'USD' | 'ZAR';
   /** Hint text shown on the confirm step */
   confirmHint?: string;
+  /**
+   * When true, replaces the product list with a single "enter amount" input.
+   * minAmountCents / maxAmountCents control the allowed range.
+   */
+  ownAmountMode?: boolean;
+  minAmountCents?: number;
+  maxAmountCents?: number;
+  /**
+   * Custom purchase function. Receives amount in cents + idempotencyKey.
+   * Must return { pin, ref } on success or throw on failure.
+   * If omitted, falls back to apiService.purchaseVoucher (International Airtime path).
+   */
+  onPurchase?: (amountCents: number, idempotencyKey: string) => Promise<{ pin: string; ref: string }>;
 }
 
 type Step = 'select' | 'confirm' | 'processing' | 'success' | 'error';
@@ -50,16 +63,37 @@ export function GlobalPinModal({
   subtitle = 'Buy · Copy · Use anywhere',
   currency = 'USD',
   confirmHint = 'A PIN code will be generated instantly. Copy and use it to top-up any international number.',
+  ownAmountMode = false,
+  minAmountCents = 200,
+  maxAmountCents = 99900,
+  onPurchase,
 }: GlobalPinModalProps) {
   const [step, setStep] = useState<Step>('select');
   const [selected, setSelected] = useState<GlobalPinProduct | null>(null);
+  const [ownAmountInput, setOwnAmountInput] = useState<string>('');
   const [pin, setPin] = useState<string>('');
   const [transactionRef, setTransactionRef] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [copied, setCopied] = useState(false);
 
+  const minR = minAmountCents / 100;
+  const maxR = maxAmountCents / 100;
+
   const handleSelect = (product: GlobalPinProduct) => {
     setSelected(product);
+    setStep('confirm');
+  };
+
+  const handleOwnAmountNext = () => {
+    const amount = parseFloat(ownAmountInput);
+    if (!amount || amount < minR || amount > maxR) return;
+    const amountCents = Math.round(amount * 100);
+    setSelected({
+      id: 'eezi_own',
+      name: `${title} R${amount.toFixed(0)}`,
+      price: amountCents,
+      supplierCode: 'FLASH',
+    });
     setStep('confirm');
   };
 
@@ -69,27 +103,36 @@ export function GlobalPinModal({
 
     try {
       const idempotencyKey = generateIdempotencyKey();
-      const result = await apiService.purchaseVoucher({
-        productId: Number(selected.variantId || selected.id),
-        denomination: selected.price,
-        idempotencyKey,
-      });
 
-      // Extract PIN from result
-      const pinCode =
-        result?.order?.pin ||
-        result?.order?.voucherPin ||
-        result?.order?.code ||
-        result?.order?.serialNumber ||
-        result?.pin ||
-        result?.code ||
-        '— PIN will be sent via SMS —';
+      let pinCode: string;
+      let ref: string;
 
-      const ref =
-        result?.order?.reference ||
-        result?.order?.transactionId ||
-        result?.message ||
-        idempotencyKey.slice(0, 12).toUpperCase();
+      if (onPurchase) {
+        // Custom purchase path (e.g. eeziAirtime token via Flash eezi-voucher endpoint)
+        const result = await onPurchase(selected.price, idempotencyKey);
+        pinCode = result.pin;
+        ref = result.ref;
+      } else {
+        // Default path: International Airtime via generic voucher endpoint
+        const result = await apiService.purchaseVoucher({
+          productId: Number(selected.variantId || selected.id),
+          denomination: selected.price,
+          idempotencyKey,
+        });
+        pinCode =
+          result?.order?.pin ||
+          result?.order?.voucherPin ||
+          result?.order?.code ||
+          result?.order?.serialNumber ||
+          result?.pin ||
+          result?.code ||
+          '— PIN will be sent via SMS —';
+        ref =
+          result?.order?.reference ||
+          result?.order?.transactionId ||
+          result?.message ||
+          idempotencyKey.slice(0, 12).toUpperCase();
+      }
 
       setPin(pinCode);
       setTransactionRef(ref);
@@ -182,7 +225,49 @@ export function GlobalPinModal({
         {/* ── STEP: SELECT ── */}
         {step === 'select' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {products.length === 0 ? (
+            {ownAmountMode ? (
+              /* Own-amount input (eeziAirtime Token) */
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', color: '#6b7280', margin: '0 0 12px' }}>
+                    Enter amount ({currency === 'ZAR' ? `R${minR.toFixed(0)}–R${maxR.toFixed(0)}` : `$${minR.toFixed(0)}–$${maxR.toFixed(0)}`})
+                  </p>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      placeholder={currency === 'ZAR' ? `R${minR.toFixed(0)}` : `$${minR.toFixed(0)}`}
+                      value={ownAmountInput}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/[^\d.]/g, '');
+                        const parts = v.split('.');
+                        setOwnAmountInput(parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : v);
+                      }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleOwnAmountNext(); }}
+                      style={{
+                        flex: 1, padding: '10px 14px',
+                        border: '1px solid #d1d5db', borderRadius: '10px',
+                        fontFamily: 'Montserrat, sans-serif', fontSize: '16px',
+                        fontWeight: '600', color: '#1f2937', outline: 'none',
+                      }}
+                    />
+                    <Button
+                      onClick={handleOwnAmountNext}
+                      disabled={!ownAmountInput || parseFloat(ownAmountInput) < minR || parseFloat(ownAmountInput) > maxR}
+                      style={{
+                        padding: '10px 20px', borderRadius: '10px',
+                        background: 'linear-gradient(135deg, #86BE41 0%, #2D8CCA 100%)',
+                        color: '#fff', border: 'none',
+                        fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600',
+                        cursor: 'pointer', opacity: (!ownAmountInput || parseFloat(ownAmountInput) < minR || parseFloat(ownAmountInput) > maxR) ? 0.5 : 1,
+                      }}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : products.length === 0 ? (
               <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280', textAlign: 'center', padding: '32px 0' }}>
                 No {title} products available.
               </p>

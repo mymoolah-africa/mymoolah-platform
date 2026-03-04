@@ -502,6 +502,32 @@ class ApiService {
     return response.data!
   }
 
+  /**
+   * Purchase an eeziAirtime Token (PIN cash voucher) via Flash eezi-voucher endpoint.
+   * Amount is in cents. Returns { pin, ref }.
+   */
+  async purchaseEeziToken(amountCents: number, idempotencyKey: string): Promise<{ pin: string; ref: string }> {
+    const response = await this.request<any>('/api/v1/flash/eezi-voucher/purchase', {
+      method: 'POST',
+      body: JSON.stringify({ reference: idempotencyKey, amount: amountCents }),
+    });
+    const data = (response as any)?.data?.data ?? (response as any)?.data ?? response;
+    const pin =
+      data?.transaction?.voucherPin ||
+      data?.transaction?.pin ||
+      data?.transaction?.code ||
+      data?.voucherPin ||
+      data?.pin ||
+      data?.code ||
+      '— PIN will be sent via SMS —';
+    const ref =
+      data?.transaction?.reference ||
+      data?.transaction?.transactionId ||
+      data?.reference ||
+      idempotencyKey.slice(0, 12).toUpperCase();
+    return { pin, ref };
+  }
+
   // Voucher API Methods (uses supplier comparison best-deals for deduped variants)
   async getVouchers(): Promise<{ vouchers: any[] }> {
     try {
