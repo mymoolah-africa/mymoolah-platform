@@ -726,6 +726,175 @@ class ApiService {
     }
   }
 
+  // ─── Airtime / Data product enrichment ──────────────────────────────────────
+  // Maps raw product name keywords → human-readable label, description, icon.
+  private enrichAirtimeProduct(rawName: string, vasType: 'airtime' | 'data'): {
+    label: string; description: string; icon: string; network: string;
+  } | null {
+    const n = rawName.toLowerCase();
+
+    // ── Network detection ──────────────────────────────────────────────────
+    const networkMap: Array<{ match: RegExp; network: string; label: string; color: string }> = [
+      { match: /vodacom/i,                  network: 'Vodacom',    label: 'Vodacom',    color: 'red'    },
+      { match: /\bmtn\b/i,                  network: 'MTN',        label: 'MTN',        color: 'yellow' },
+      { match: /cell\s*c\b/i,               network: 'Cell C',     label: 'Cell C',     color: 'blue'   },
+      { match: /telkom/i,                   network: 'Telkom',     label: 'Telkom',     color: 'blue'   },
+      { match: /eezi\s*airtime|eeziairtime/i, network: 'eeziAirtime', label: 'eeziAirtime', color: 'green' },
+    ];
+
+    for (const nm of networkMap) {
+      if (nm.match.test(rawName)) {
+        if (vasType === 'airtime') {
+          return {
+            label: `${nm.label} Airtime`,
+            description: `${nm.label} prepaid airtime — top up any ${nm.label} number instantly`,
+            icon: '📱',
+            network: nm.network,
+          };
+        } else {
+          return {
+            label: `${nm.label} Data`,
+            description: `${nm.label} mobile data bundle — browse, stream and connect`,
+            icon: '📶',
+            network: nm.network,
+          };
+        }
+      }
+    }
+    return null; // no match — caller uses raw name
+  }
+
+  /**
+   * Fetch and normalise airtime + data products from the comparison engine.
+   *
+   * Applies the same business rules as getVouchers():
+   *   - Fixed-denomination variants of the same network+supplier are collapsed
+   *     into a single card with a denominations[] array.
+   *   - If a variable (own-amount) variant exists for the same network+supplier,
+   *     it wins and fixed variants are suppressed.
+   *
+   * Returns two arrays ready for SmartProductGrid.
+   */
+  async getAirtimeDataProducts(): Promise<{
+    airtime: any[];
+    data: any[];
+    globalPin: any[];
+  }> {
+    const [airtimeComparison, dataComparison, pinComparison] = await Promise.all([
+      this.compareSuppliers('airtime'),
+      this.compareSuppliers('data'),
+      this.compareSuppliers('international_pin').catch(() => ({ bestDeals: [] })),
+    ]);
+
+    const transformProducts = (sourceList: any[], vasType: 'airtime' | 'data'): any[] => {
+      // ── Normalise ────────────────────────────────────────────────────────
+      const normalised = sourceList.map((p: any) => {
+        const rawName = (p.productName || p.name || '').trim();
+        const enriched = this.enrichAirtimeProduct(rawName, vasType);
+
+        const minAmount: number = p.minAmount ?? p.price ?? 0;
+        const maxAmount: number = p.maxAmount ?? p.price ?? minAmount;
+        const supplierCode: string = (p.supplierCode || p.supplier?.code || '').toString().toUpperCase();
+
+        const explicitDenominations: number[] =
+          (Array.isArray(p.predefinedAmounts) && p.predefinedAmounts.length > 0 ? p.predefinedAmounts : null) ||
+          (Array.isArray(p.denominations)     && p.denominations.length > 0     ? p.denominations     : null) ||
+          [];
+
+        const isVariable = explicitDenominations.length === 0 && minAmount < maxAmount;
+
+        // Group key: network label + supplier (keeps Flash MTN separate from MobileMart MTN)
+        const networkLabel = enriched ? enriched.label : rawName;
+        const brandKey = `${networkLabel.toLowerCase().trim()}::${supplierCode}`;
+
+        return {
+          id: (p.id || p.variantId || p.supplierProductId || rawName).toString(),
+          productId: p.productId,
+          variantId: p.id || p.variantId,
+          rawName,
+          name: enriched ? enriched.label : rawName,
+          description: enriched ? enriched.description : (p.description || rawName),
+          icon: enriched ? enriched.icon : (vasType === 'airtime' ? '📱' : '📶'),
+          network: enriched ? enriched.network : '',
+          brandKey,
+          supplierCode,
+          minAmount,
+          maxAmount,
+          isVariable,
+          denominations: explicitDenominations,
+          vasType,
+          isBestDeal: p.isBestDeal || false,
+          isPopular: p.isPopular || false,
+          commission: p.commission || 0,
+          supplierProductId: p.supplierProductId,
+        };
+      });
+
+      // ── Group by brandKey ────────────────────────────────────────────────
+      const grouped = new Map<string, typeof normalised>();
+      for (const p of normalised) {
+        if (!grouped.has(p.brandKey)) grouped.set(p.brandKey, []);
+        grouped.get(p.brandKey)!.push(p);
+      }
+
+      // ── Collapse each group ──────────────────────────────────────────────
+      return Array.from(grouped.values()).map((group) => {
+        const variableVariant = group.find(p => p.isVariable);
+        if (variableVariant) {
+          return {
+            ...variableVariant,
+            isVariable: true,
+            denominations: [],
+            price: variableVariant.minAmount,
+            size: `R${(variableVariant.minAmount / 100).toFixed(0)}–R${(variableVariant.maxAmount / 100).toFixed(0)}`,
+            type: vasType,
+            validity: vasType === 'airtime' ? 'Immediate' : '30 days',
+            provider: variableVariant.network || variableVariant.supplierCode,
+          };
+        }
+
+        const base = group[0];
+        const allDenoms = Array.from(
+          new Set(group.flatMap(p => p.denominations.length > 0 ? p.denominations : [p.minAmount]))
+        ).sort((a, b) => a - b);
+
+        return {
+          ...base,
+          isVariable: false,
+          denominations: allDenoms,
+          minAmount: Math.min(...allDenoms),
+          maxAmount: Math.max(...allDenoms),
+          price: allDenoms[0],  // lowest denomination shown as card price
+          size: allDenoms.length === 1
+            ? `R${(allDenoms[0] / 100).toFixed(0)}`
+            : `R${(allDenoms[0] / 100).toFixed(0)}–R${(allDenoms[allDenoms.length - 1] / 100).toFixed(0)}`,
+          type: vasType,
+          validity: vasType === 'airtime' ? 'Immediate' : '30 days',
+          provider: base.network || base.supplierCode,
+        };
+      });
+    };
+
+    const airtime = transformProducts(airtimeComparison?.bestDeals || [], 'airtime');
+    const data    = transformProducts(dataComparison?.bestDeals    || [], 'data');
+
+    // Global PIN — just normalise names, no grouping needed (each is a distinct product)
+    const globalPin = (pinComparison?.bestDeals || []).map((p: any) => ({
+      id: p.id || p.productId || p.variantId,
+      name: (p.productName || p.name || '').replace(/\s+Token$/i, '').trim(),
+      price: p.minAmount || 0,
+      maxPrice: p.maxAmount || p.minAmount || 0,
+      supplierCode: (p.supplierCode || '').toUpperCase(),
+      denominations: p.denominations || p.predefinedAmounts || [],
+      minAmount: p.minAmount,
+      maxAmount: p.maxAmount,
+      variantId: p.id,
+      supplierProductId: p.supplierProductId,
+    }));
+
+    return { airtime, data, globalPin };
+  }
+
   async purchaseVoucher(purchaseData: {
     productId: number;
     denomination: number;

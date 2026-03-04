@@ -328,177 +328,54 @@ export function AirtimeDataOverlay() {
         }
       }
       
-      // Load products using compareSuppliers API (best-deal selection)
-      const [airtimeComparison, dataComparison, globalPinComparison] = await Promise.all([
-        apiService.compareSuppliers('airtime'),
-        apiService.compareSuppliers('data'),
-        apiService.compareSuppliers('international_pin').catch(() => ({ bestDeals: [] }))
-      ]);
+      // Load and normalise all airtime/data products via shared helper
+      const { airtime: allAirtimeProds, data: allDataProds, globalPin: pinProds } =
+        await apiService.getAirtimeDataProducts();
 
-      // Extract and store Global PIN products for the International Services section
-      const rawPinProducts = (globalPinComparison?.bestDeals || []);
-      setGlobalPinProducts(rawPinProducts.map((p: any) => ({
-        id: p.id || p.productId || p.variantId,
-        name: (p.productName || p.name || '').replace(/\s+Token$/, '').trim(),
-        price: p.minAmount || 0,
-        maxPrice: p.maxAmount || p.minAmount || 0,
-        supplierCode: (p.supplierCode || '').toUpperCase(),
-        denominations: p.denominations || p.predefinedAmounts || [],
-        minAmount: p.minAmount,
-        maxAmount: p.maxAmount,
-        variantId: p.id,
-        supplierProductId: p.supplierProductId,
-      })));
-      
-      // Extract products from bestDeals ONLY
-      // The comparison service (findBestDeals) already selects the best product based on:
-      // 1. Highest commission first
-      // 2. Cheapest price if commission is the same
-      // 3. Preferred supplier (Flash) if commission and price are the same
-      // We should ONLY show bestDeals, not all products from all suppliers
-      const extractProducts = (comparison: any) => {
-        // CRITICAL: Only use bestDeals - these are already selected by the comparison service
-        // Do NOT include suppliers.products as that shows ALL products from ALL suppliers
-        if (comparison.bestDeals && comparison.bestDeals.length > 0) {
-          return comparison.bestDeals;
-        }
-        
-        // Fallback: If no bestDeals, return empty array (should not happen)
-        console.warn('⚠️ No bestDeals found in comparison result - this should not happen');
-        return [];
-      };
-      
-      // Helper to extract network from product name (NOT provider - provider is supplier like MOBILEMART/FLASH)
+      setGlobalPinProducts(pinProds);
+
+      // Helper: extract normalised network from a product (uses the enriched .network field)
       const extractProductNetwork = (product: any): string => {
-        // CRITICAL: Check product name FIRST - it contains the network (e.g., "Vodacom Airtime", "MTN Airtime", "Global Airtime")
-        if (product.productName || product.name) {
-          const name = (product.productName || product.name).toLowerCase();
-          if (name.includes('vodacom')) return 'vodacom';
-          if (name.includes('mtn')) return 'mtn';
-          if (name.includes('cellc') || name.includes('cell c')) return 'cellc';
-          if (name.includes('telkom')) return 'telkom';
-          if (name.includes('eeziairtime') || name.includes('eezi airtime')) return 'eeziairtime';
-          if (name.includes('global')) return 'global';
-        }
-        
-        // Fallback: Check if there's a network field directly (some products might have this)
-        if (product.network) {
-          return normalizeNetwork(product.network);
-        }
-        
-        // DO NOT use provider - it's the supplier (MOBILEMART, FLASH), not the network
-        // Provider is only useful for supplier identification, not network filtering
-        
+        if (product.network) return normalizeNetwork(product.network);
+        const name = (product.name || product.rawName || '').toLowerCase();
+        if (name.includes('vodacom'))  return 'vodacom';
+        if (name.includes('mtn'))      return 'mtn';
+        if (name.includes('cell c') || name.includes('cellc')) return 'cellc';
+        if (name.includes('telkom'))   return 'telkom';
+        if (name.includes('eezi'))     return 'eeziairtime';
         return '';
       };
-      
-      // Transform to AirtimeDataCatalog format
-      const airtimeProds = extractProducts(airtimeComparison)
-        .map((p: any, index: number) => {
-          const denominationAmount = (p.denominations && p.denominations.length > 0) 
-            ? p.denominations[0] 
-            : (p.minAmount && p.minAmount === p.maxAmount ? p.minAmount : p.minAmount || 0);
-          
-          return {
-            id: `${p.vasType || 'airtime'}_${p.supplierCode}_${p.supplierProductId}_${denominationAmount}_${index}_${Date.now()}`,
-            name: p.productName || p.name || 'Unknown Product',
-            size: `R${(denominationAmount / 100).toFixed(0)}`,
-            price: denominationAmount / 100, // Convert cents to rands
-            provider: p.provider || p.supplierCode || 'Unknown',
-            type: 'airtime' as const,
-            validity: 'Immediate',
-            isBestDeal: p.isBestDeal || false,
-            supplier: p.supplierCode?.toLowerCase() || 'flash',
-            description: p.description || '',
-            commission: p.commission || 0,
-            fixedFee: p.fixedFee || 0,
-            // Store full data for purchase
-            variantId: p.id,
-            supplierCode: p.supplierCode,
-            supplierProductId: p.supplierProductId,
-            vasType: p.vasType || 'airtime',
-            denominations: p.denominations || p.predefinedAmounts || [],
-            minAmount: p.minAmount,
-            maxAmount: p.maxAmount
-          };
-        })
-        // Filter by network if beneficiary has only one network
+
+      // Filter by beneficiary network when known
+      const airtimeProds = allAirtimeProds
         .filter((p: any) => {
-          if (!beneficiaryNetwork) {
-            console.log('🌐 No network filter - showing all airtime products');
-            return true; // Show all if no network specified
-          }
-          const productNetwork = extractProductNetwork(p);
-          const beneficiaryNetworkNorm = normalizeNetwork(beneficiaryNetwork);
-          const matches = productNetwork === beneficiaryNetworkNorm;
-          console.log(`🔍 Airtime product filter: "${p.name}" (provider: ${p.provider}, extracted: ${productNetwork}) vs beneficiary (${beneficiaryNetworkNorm}) = ${matches}`);
+          if (!beneficiaryNetwork) return true;
+          const matches = extractProductNetwork(p) === normalizeNetwork(beneficiaryNetwork);
+          if (!matches) console.log(`🔍 Airtime filtered: "${p.name}" vs ${beneficiaryNetwork}`);
           return matches;
         })
-        // Global Airtime (Flash) recipient: show only Flash-supplied products
         .filter((p: any) => {
           if (!isGlobalAirtimeBeneficiary) return true;
-          const supplier = (p.supplierCode || p.supplier || '').toString().toUpperCase();
-          const isFlash = supplier === 'FLASH';
-          if (!isFlash) console.log(`🔍 Global Airtime: filtered out non-Flash product "${p.name}" (supplier: ${supplier || 'unknown'})`);
-          return isFlash;
+          return (p.supplierCode || '').toUpperCase() === 'FLASH';
         });
-      
-      const dataProds = extractProducts(dataComparison)
-        .map((p: any, index: number) => {
-          const dataPrice = p.minAmount || 0;
-          return {
-            id: `${p.vasType || 'data'}_${p.supplierCode}_${p.supplierProductId}_${dataPrice}_${index}_${Date.now()}`,
-            name: p.productName || p.name || 'Unknown Product',
-            size: `${(dataPrice / 100).toFixed(0)}MB`,
-            price: dataPrice / 100, // Convert cents to rands
-            provider: p.provider || p.supplierCode || 'Unknown',
-            type: 'data' as const,
-            validity: '30 days',
-            isBestDeal: p.isBestDeal || false,
-            supplier: p.supplierCode?.toLowerCase() || 'flash',
-            description: p.description || '',
-            commission: p.commission || 0,
-            fixedFee: p.fixedFee || 0,
-            // Store full data for purchase
-            variantId: p.id,
-            supplierCode: p.supplierCode,
-            supplierProductId: p.supplierProductId,
-            vasType: p.vasType || 'data',
-            denominations: p.denominations || p.predefinedAmounts || [],
-            minAmount: p.minAmount,
-            maxAmount: p.maxAmount
-          };
-        })
-        // STRICT FILTERING: For PINless top-up, only show products matching beneficiary's network
+
+      const dataProds = allDataProds
         .filter((p: any) => {
-          if (!beneficiaryNetwork) {
-            console.warn('⚠️ No network found for beneficiary - showing ALL data products (this should not happen for PINless)');
-            return true; // Show all if no network specified (shouldn't happen for PINless)
-          }
-          const productNetwork = extractProductNetwork(p);
-          const beneficiaryNetworkNorm = normalizeNetwork(beneficiaryNetwork);
-          const matches = productNetwork === beneficiaryNetworkNorm;
-          if (!matches) {
-            console.log(`❌ Filtered out: "${p.name}" (${productNetwork}) - beneficiary is ${beneficiaryNetworkNorm}`);
-          }
+          if (!beneficiaryNetwork) return true;
+          const matches = extractProductNetwork(p) === normalizeNetwork(beneficiaryNetwork);
+          if (!matches) console.log(`❌ Data filtered: "${p.name}" vs ${beneficiaryNetwork}`);
           return matches;
         })
-        // Global Airtime (Flash) recipient: show only Flash-supplied products
         .filter((p: any) => {
           if (!isGlobalAirtimeBeneficiary) return true;
-          const supplier = (p.supplierCode || p.supplier || '').toString().toUpperCase();
-          const isFlash = supplier === 'FLASH';
-          if (!isFlash) console.log(`🔍 Global Airtime: filtered out non-Flash data product "${p.name}" (supplier: ${supplier || 'unknown'})`);
-          return isFlash;
+          return (p.supplierCode || '').toUpperCase() === 'FLASH';
         });
-      
-      // Create catalog in expected format
+
       const catalogData: AirtimeDataCatalog = {
         beneficiary: {
           id: beneficiary.id.toString(),
           label: beneficiary.name,
           identifier: beneficiary.identifier || '',
-          // network is optional on AirtimeDataCatalog; avoid passing null
           network: beneficiaryNetwork || undefined
         },
         products: [...airtimeProds, ...dataProds],
@@ -1015,105 +892,14 @@ export function AirtimeDataOverlay() {
   const handleBrowseProducts = async () => {
     try {
       setLoadingState('loading');
-      // Load products without requiring a beneficiary
-      const [airtimeComparison, dataComparison, globalPinComparison2] = await Promise.all([
-        apiService.compareSuppliers('airtime'),
-        apiService.compareSuppliers('data'),
-        apiService.compareSuppliers('international_pin').catch(() => ({ bestDeals: [] }))
-      ]);
+      // Load and normalise all airtime/data products via shared helper
+      const { airtime: airtimeProds, data: dataProds, globalPin: pinProds2 } =
+        await apiService.getAirtimeDataProducts();
 
-      // Update Global PIN products
-      const rawPinProducts2 = (globalPinComparison2?.bestDeals || []);
-      setGlobalPinProducts(rawPinProducts2.map((p: any) => ({
-        id: p.id || p.productId || p.variantId,
-        name: (p.productName || p.name || '').replace(/\s+Token$/, '').trim(),
-        price: p.minAmount || 0,
-        maxPrice: p.maxAmount || p.minAmount || 0,
-        supplierCode: (p.supplierCode || '').toUpperCase(),
-        denominations: p.denominations || p.predefinedAmounts || [],
-        minAmount: p.minAmount,
-        maxAmount: p.maxAmount,
-        variantId: p.id,
-        supplierProductId: p.supplierProductId,
-      })));
-      
-      // Extract and transform products (same logic as handleBeneficiarySelect)
-      // Extract products from bestDeals ONLY
-      // The comparison service already selects the best product based on:
-      // 1. Highest commission first
-      // 2. Cheapest price if commission is the same
-      // 3. Preferred supplier (Flash) if commission and price are the same
-      const extractProducts = (comparison: any) => {
-        // CRITICAL: Only use bestDeals - these are already selected by the comparison service
-        // Do NOT include suppliers.products as that shows ALL products from ALL suppliers
-        if (comparison.bestDeals && comparison.bestDeals.length > 0) {
-          return comparison.bestDeals;
-        }
-        
-        // Fallback: If no bestDeals, return empty array (should not happen)
-        console.warn('⚠️ No bestDeals found in comparison result - this should not happen');
-        return [];
-      };
-      
-      const airtimeProds = extractProducts(airtimeComparison).map((p: any) => {
-        const denominationAmount = (p.denominations && p.denominations.length > 0) 
-          ? p.denominations[0] 
-          : (p.minAmount && p.minAmount === p.maxAmount ? p.minAmount : p.minAmount || 0);
-        
-        return {
-          id: `${p.vasType || 'airtime'}_${p.supplierCode}_${p.supplierProductId}_${denominationAmount}`,
-          name: p.productName || p.name || 'Unknown Product',
-          size: `R${(denominationAmount / 100).toFixed(0)}`,
-          price: denominationAmount / 100,
-          provider: p.provider || p.supplierCode || 'Unknown',
-          type: 'airtime' as const,
-          validity: 'Immediate',
-          isBestDeal: p.isBestDeal || false,
-          supplier: p.supplierCode?.toLowerCase() || 'flash',
-          description: p.description || '',
-          commission: p.commission || 0,
-          fixedFee: p.fixedFee || 0,
-          variantId: p.id,
-          supplierCode: p.supplierCode,
-          supplierProductId: p.supplierProductId,
-          vasType: p.vasType || 'airtime',
-          denominations: p.denominations || p.predefinedAmounts || [],
-          minAmount: p.minAmount,
-          maxAmount: p.maxAmount
-        };
-      });
-      
-      const dataProds = extractProducts(dataComparison).map((p: any) => {
-        const dataPrice = p.minAmount || 0;
-        return {
-          id: `${p.vasType || 'data'}_${p.supplierCode}_${p.supplierProductId}_${dataPrice}`,
-          name: p.productName || p.name || 'Unknown Product',
-          size: `${(dataPrice / 100).toFixed(0)}MB`,
-          price: dataPrice / 100,
-          provider: p.provider || p.supplierCode || 'Unknown',
-          type: 'data' as const,
-          validity: '30 days',
-          isBestDeal: p.isBestDeal || false,
-          supplier: p.supplierCode?.toLowerCase() || 'flash',
-          description: p.description || '',
-          commission: p.commission || 0,
-          fixedFee: p.fixedFee || 0,
-          variantId: p.id,
-          supplierCode: p.supplierCode,
-          supplierProductId: p.supplierProductId,
-          vasType: p.vasType || 'data',
-          denominations: p.denominations || p.predefinedAmounts || [],
-          minAmount: p.minAmount,
-          maxAmount: p.maxAmount
-        };
-      });
-      
+      setGlobalPinProducts(pinProds2);
+
       const catalogData: AirtimeDataCatalog = {
-        beneficiary: {
-          id: '',
-          label: '',
-          identifier: ''
-        },
+        beneficiary: { id: '', label: '', identifier: '' },
         products: [...airtimeProds, ...dataProds],
         providers: ['MTN', 'Vodacom', 'CellC', 'Telkom', 'eeziAirtime', 'Global']
       };
