@@ -30,11 +30,27 @@ interface GlobalPinModalProps {
   products: GlobalPinProduct[];
   onClose: () => void;
   selectedAccountId?: number | null;
+  /** Modal title — defaults to "International PIN" */
+  title?: string;
+  /** Modal subtitle — defaults to "Buy · Copy · Use anywhere" */
+  subtitle?: string;
+  /** Currency for price display — 'USD' shows $, 'ZAR' shows R. Defaults to 'USD' */
+  currency?: 'USD' | 'ZAR';
+  /** Hint text shown on the confirm step */
+  confirmHint?: string;
 }
 
 type Step = 'select' | 'confirm' | 'processing' | 'success' | 'error';
 
-export function GlobalPinModal({ products, onClose, selectedAccountId }: GlobalPinModalProps) {
+export function GlobalPinModal({
+  products,
+  onClose,
+  selectedAccountId,
+  title = 'International PIN',
+  subtitle = 'Buy · Copy · Use anywhere',
+  currency = 'USD',
+  confirmHint = 'A PIN code will be generated instantly. Copy and use it to top-up any international number.',
+}: GlobalPinModalProps) {
   const [step, setStep] = useState<Step>('select');
   const [selected, setSelected] = useState<GlobalPinProduct | null>(null);
   const [pin, setPin] = useState<string>('');
@@ -109,8 +125,8 @@ export function GlobalPinModal({ products, onClose, selectedAccountId }: GlobalP
 
   const formatPrice = (cents: number) => {
     if (cents <= 0) return '';
-    // Global PIN prices are in USD cents
-    return `$${(cents / 100).toFixed(0)}`;
+    const amount = (cents / 100).toFixed(0);
+    return currency === 'ZAR' ? `R${amount}` : `$${amount}`;
   };
 
   const supplierBorder = (code: string) =>
@@ -151,10 +167,10 @@ export function GlobalPinModal({ products, onClose, selectedAccountId }: GlobalP
             </div>
             <div>
               <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937', margin: 0 }}>
-                International PIN
+                {title}
               </p>
               <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                Buy · Copy · Use anywhere
+                {subtitle}
               </p>
             </div>
           </div>
@@ -168,7 +184,7 @@ export function GlobalPinModal({ products, onClose, selectedAccountId }: GlobalP
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {products.length === 0 ? (
               <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#6b7280', textAlign: 'center', padding: '32px 0' }}>
-                No Global PIN products available.
+                No {title} products available.
               </p>
             ) : (
               products.map((product) => (
@@ -200,7 +216,7 @@ export function GlobalPinModal({ products, onClose, selectedAccountId }: GlobalP
                         {product.name}
                       </p>
                       <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '11px', color: '#9ca3af', margin: 0 }}>
-                        International PIN · {product.supplierCode}
+                        {title} · {product.supplierCode}
                       </p>
                     </div>
                   </div>
@@ -236,7 +252,7 @@ export function GlobalPinModal({ products, onClose, selectedAccountId }: GlobalP
 
             <div style={{ padding: '12px', backgroundColor: '#fffbeb', borderRadius: '10px', border: '1px solid #fcd34d' }}>
               <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#92400e', margin: 0 }}>
-                ℹ️ A PIN code will be generated instantly. Copy and use it to top-up any international number.
+                ℹ️ {confirmHint}
               </p>
             </div>
 

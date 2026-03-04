@@ -69,6 +69,8 @@ export function AirtimeDataOverlay() {
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
   const [globalPinProducts, setGlobalPinProducts] = useState<any[]>([]);
   const [showGlobalPinModal, setShowGlobalPinModal] = useState(false);
+  const [eeziPinProducts, setEeziPinProducts] = useState<any[]>([]);
+  const [showEeziPinModal, setShowEeziPinModal] = useState(false);
   const [editingBeneficiary, setEditingBeneficiary] = useState<Beneficiary | null>(null);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [inlineAmountInput, setInlineAmountInput] = useState<string>('');
@@ -78,12 +80,39 @@ export function AirtimeDataOverlay() {
   const [showSaveRecipientPrompt, setShowSaveRecipientPrompt] = useState(false);
   const [lastTransactionBeneficiary, setLastTransactionBeneficiary] = useState<{ name: string; phone: string; network?: string } | null>(null);
 
-  // Load beneficiaries and global pin products on mount
+  // Load beneficiaries and PIN products on mount
   useEffect(() => {
     loadBeneficiaries();
-    // Pre-load global pin products so the International Airtime card is visible immediately
+
+    // Pre-load International Airtime (global PIN) products
     apiService.getAirtimeDataProducts()
       .then(({ globalPin }) => setGlobalPinProducts(globalPin))
+      .catch(() => {/* silently ignore */});
+
+    // Pre-load eeziAirtime Token products (voucher type, ZAR PIN cash tokens)
+    apiService.compareSuppliers('voucher')
+      .then((comparison: any) => {
+        const sourceList =
+          (comparison?.bestDeals?.length > 0 ? comparison.bestDeals : null) ||
+          comparison?.products || [];
+        const eeziProducts = sourceList
+          .filter((p: any) => {
+            const name = (p.productName || p.name || '').toLowerCase();
+            const group = (p.flash_product_group || p.metadata?.flash_product_group || '').toLowerCase();
+            return name.includes('eezi') || group.includes('eezi');
+          })
+          .map((p: any) => ({
+            id: p.id || p.variantId || p.supplierProductId,
+            variantId: p.id || p.variantId,
+            name: p.productName || p.name || 'eeziAirtime Token',
+            price: p.minAmount ?? p.price ?? 0,
+            supplierCode: (p.supplierCode || p.supplier?.code || 'FLASH').toUpperCase(),
+            denominations: p.predefinedAmounts || p.denominations || [],
+            minAmount: p.minAmount ?? p.price ?? 0,
+            maxAmount: p.maxAmount ?? p.price ?? 0,
+          }));
+        setEeziPinProducts(eeziProducts);
+      })
       .catch(() => {/* silently ignore */});
   }, []);
 
@@ -1053,6 +1082,43 @@ export function AirtimeDataOverlay() {
             showFilters={false}
           />
 
+          {/* eeziAirtime Token — ZAR PIN cash token, no beneficiary needed */}
+          {eeziPinProducts.length > 0 && (
+            <div
+              onClick={() => setShowEeziPinModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 16px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                backgroundColor: '#ffffff',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.borderColor = '#86BE41'; e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+              onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.backgroundColor = '#ffffff'; }}
+            >
+              <div className="flex items-center gap-3">
+                <div style={{ width: '40px', height: '40px', backgroundColor: '#86BE41', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                </div>
+                <div>
+                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+                    eeziAirtime
+                  </p>
+                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                    {eeziPinProducts.length} PIN {eeziPinProducts.length === 1 ? 'option' : 'options'} · Flash · ZAR
+                  </p>
+                </div>
+              </div>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#86BE41', margin: 0 }}>
+                Buy PIN →
+              </p>
+            </div>
+          )}
+
           {/* International Airtime — PIN-based, no beneficiary needed */}
           {globalPinProducts.length > 0 && (
             <div
@@ -1834,12 +1900,25 @@ export function AirtimeDataOverlay() {
         type={errorModalType}
       />
 
-      {/* Global PIN Modal — standalone, no beneficiary required */}
+      {/* Global PIN Modal — International Airtime, no beneficiary required */}
       {showGlobalPinModal && (
         <GlobalPinModal
           products={globalPinProducts}
           selectedAccountId={selectedAccountId}
           onClose={() => setShowGlobalPinModal(false)}
+        />
+      )}
+
+      {/* eeziAirtime PIN Modal — ZAR cash token, no beneficiary required */}
+      {showEeziPinModal && (
+        <GlobalPinModal
+          products={eeziPinProducts}
+          selectedAccountId={selectedAccountId}
+          onClose={() => setShowEeziPinModal(false)}
+          title="eeziAirtime"
+          subtitle="Buy PIN · Copy · Use on any SA network"
+          currency="ZAR"
+          confirmHint="A PIN cash token will be generated instantly. Copy and dial it on any South African mobile number to load airtime."
         />
       )}
     </div>
