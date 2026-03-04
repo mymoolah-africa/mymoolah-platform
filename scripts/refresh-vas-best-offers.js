@@ -61,7 +61,16 @@ async function refreshBestOffers() {
 
     console.log(`   Found ${variants.length} active variants`);
 
-    // 2. Build (vasType, provider, denomination) -> best variant map
+    // 2. Build best-offer map.
+    //
+    // Key strategy:
+    //   • Fixed-denomination products (minAmount === maxAmount, or explicit
+    //     denominations list): one row per denomination so production can
+    //     select the best supplier for each exact amount.
+    //   • Variable-range products (minAmount !== maxAmount, no explicit
+    //     denominations): ONE row per product, keyed by productName, with
+    //     all denominations aggregated. This prevents "Wallet Code R10",
+    //     "Wallet Code R20", etc. appearing as separate cards in the UI.
     const bestByKey = new Map();
 
     for (const v of variants) {
@@ -71,7 +80,7 @@ async function refreshBestOffers() {
       const provider = normalizeProvider(v.provider) || v.provider || 'Unknown';
       const commission = parseFloat(v.commission) || 0;
 
-      // Get denominations for this variant
+      // Collect explicit denominations
       let denoms = [];
       if (Array.isArray(v.denominations) && v.denominations.length > 0) {
         denoms = v.denominations.filter((n) => typeof n === 'number' && !Number.isNaN(n));
@@ -79,14 +88,46 @@ async function refreshBestOffers() {
       if (Array.isArray(v.predefinedAmounts) && v.predefinedAmounts.length > 0) {
         denoms = [...new Set([...denoms, ...v.predefinedAmounts])];
       }
-      if (denoms.length === 0 && v.minAmount != null && v.maxAmount != null && v.minAmount === v.maxAmount) {
+
+      const hasExplicitDenoms = denoms.length > 0;
+      const isFixedAmount = v.minAmount != null && v.maxAmount != null && v.minAmount === v.maxAmount;
+
+      if (!hasExplicitDenoms && isFixedAmount) {
+        // Single fixed amount — treat as one denomination
         denoms = [v.minAmount];
       }
-      if (denoms.length === 0 && v.minAmount != null) {
-        denoms = [v.minAmount];
+
+      if (!hasExplicitDenoms && !isFixedAmount && v.minAmount != null) {
+        // Variable-range product (e.g. "Wallet Code R2–R999"):
+        // Store as ONE entry keyed by product name to avoid duplicate cards.
+        const key = `${vasType}|${provider}|product:${v.productName}`;
+        const existing = bestByKey.get(key);
+        if (!existing || commission > existing.commission) {
+          bestByKey.set(key, {
+            vasType,
+            provider,
+            // Use minAmount as the canonical denomination for the DB row
+            denominationCents: v.minAmount,
+            productVariantId: v.productVariantId,
+            productId: v.productId,
+            supplierId: v.supplierId,
+            supplierCode: v.supplierCode,
+            productName: v.productName,
+            supplierProductId: v.supplierProductId,
+            commission,
+            fixedFee: v.fixedFee || 0,
+            // Store the full range so the UI can display "R2 – R999"
+            denominations: [],
+            minAmount: v.minAmount,
+            maxAmount: v.maxAmount
+          });
+        }
+        continue;
       }
+
       if (denoms.length === 0) continue;
 
+      // Fixed / explicit-denomination products: one row per denomination
       for (const denom of denoms) {
         const key = `${vasType}|${provider}|${denom}`;
         if (!bestByKey.has(key)) {
