@@ -333,16 +333,19 @@ class CatalogSynchronizationService {
    *   "Flash Pay"                 → bill_payment
    *   "Gift Vouchers", "1Voucher", "Flash Token" → voucher
    */
-  mapFlashCategory(productGroup) {
+  mapFlashCategory(productGroup, productName = '') {
     if (!productGroup) return 'airtime';
     const g = productGroup.toLowerCase();
+    const n = (productName || '').toLowerCase();
     if (g.includes('prepaid util') || g.includes('electricity') || g.includes('utility')) return 'electricity';
     if (g === 'cellular')           return 'airtime';
     if (g.includes('flash pay'))    return 'bill_payment';
     // eezi must be checked BEFORE the generic 'voucher' check because Flash
     // names this group "Eezi Vouchers" — it is airtime, not a gift voucher.
     if (g.includes('eezi'))         return 'airtime';
-    if (g.includes('voucher') || g.includes('gift') || g.includes('flash token')) return 'voucher';
+    // Global PIN products are international airtime top-up PINs, not gift vouchers
+    if (n.includes('global pin'))   return 'airtime';
+    if (g.includes('voucher') || g.includes('gift') || g.includes('flash token') || g.includes('1voucher')) return 'voucher';
     if (g.includes('data'))         return 'data';
     return 'airtime';
   }
@@ -359,7 +362,7 @@ class CatalogSynchronizationService {
 
     const productName = raw.productName || raw.name || 'Flash Product';
     const productGroup = raw.productGroup || raw.category || raw.type || 'Gift Vouchers';
-    const vasType     = this.mapFlashCategory(productGroup);
+    const vasType     = this.mapFlashCategory(productGroup, productName);
     // Flash API uses "vendor" field (not provider/network/brand)
     const provider    = raw.vendor || raw.provider || raw.contentCreator || productName;
     // Flash API returns status as the string "Active" (not boolean)

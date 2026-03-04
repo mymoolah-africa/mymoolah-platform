@@ -121,18 +121,25 @@ function getFixedFeeCents(providerName) {
  *   "Prepaid Utilities" → electricity
  *   "Flash Pay"         → bill_payment
  *   "Gift Vouchers"     → voucher
- *   "Eezi Vouchers"     → airtime (eeziAirtime tokens)
+ *   "Eezi Vouchers"     → airtime (eeziAirtime tokens — must check BEFORE 'voucher')
  *   "1Voucher"          → voucher
  *   "Flash Token"       → voucher
+ *
+ * Also uses product name to catch Global PIN (airtime) and gaming vouchers.
  */
-function mapFlashCategory(productGroup) {
+function mapFlashCategory(productGroup, productName = '') {
   if (!productGroup) return 'airtime';
   const g = productGroup.toLowerCase();
+  const n = (productName || '').toLowerCase();
+
   if (g.includes('prepaid util') || g.includes('electricity') || g.includes('utility')) return 'electricity';
   if (g === 'cellular')           return 'airtime';
   if (g.includes('flash pay'))    return 'bill_payment';
-  if (g.includes('voucher') || g.includes('gift') || g.includes('flash token')) return 'voucher';
+  // eezi MUST be checked before generic 'voucher' — "Eezi Vouchers" is airtime
   if (g.includes('eezi'))         return 'airtime';
+  // Global PIN products are international airtime top-up PINs
+  if (n.includes('global pin'))   return 'airtime';
+  if (g.includes('voucher') || g.includes('gift') || g.includes('flash token') || g.includes('1voucher')) return 'voucher';
   if (g.includes('data'))         return 'data';
   return 'airtime';
 }
@@ -337,7 +344,7 @@ async function syncFlashProducts() {
       continue;
     }
 
-    const vasType = mapFlashCategory(product.productGroup);
+    const vasType = mapFlashCategory(product.productGroup, product.productName);
 
     if (IS_DRY_RUN) {
       info(`  [DRY RUN] Would sync: ${product.productName} (${product.productCode}) → vasType=${vasType}, priceType=${getPriceType(product)}`);
