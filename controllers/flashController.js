@@ -44,14 +44,17 @@ class FlashController {
         );
 
         const products = response.products || response || [];
+        // Match any product with "eezi" in the name — covers:
+        //   "R2 - R999 eeziAirtime Token", "eeziCash", "Eezi Voucher", etc.
         const eeziProduct = products.find(p => {
             const name = (p.productName || p.name || '').toLowerCase();
-            const cat  = (p.category || '').toLowerCase();
-            return name.includes('eezi') && (name.includes('cash') || name.includes('voucher') || cat.includes('cash'));
+            const cat  = (p.category || p.productGroup || '').toLowerCase();
+            return name.includes('eezi') || cat.includes('eezi');
         });
 
         if (!eeziProduct) {
             console.error('❌ Flash: Could not find eezi-voucher product in catalog. Products found:', products.length);
+            console.error('❌ Flash: Available product names:', products.slice(0, 10).map(p => p.productName || p.name));
             throw new Error('eezi-voucher product not found in Flash catalog. Set FLASH_EEZI_VOUCHER_PRODUCT_CODE manually.');
         }
 
