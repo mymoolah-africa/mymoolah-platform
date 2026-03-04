@@ -70,13 +70,13 @@ class FlashController {
                     required: true,
                     attributes: ['id', 'code'],
                 }],
-                attributes: ['id', 'supplierProductId', 'name'],
+                attributes: ['id', 'supplierProductId'],
             });
 
             if (variant && variant.supplierProductId) {
                 const code = parseInt(variant.supplierProductId, 10);
                 if (code > 0) {
-                    console.log(`✅ Flash: Resolved eezi-voucher product code from product_variants DB: ${code} (${variant.name})`);
+                    console.log(`✅ Flash: Resolved eezi-voucher product code from product_variants DB: ${code}`);
                     this._eeziVoucherProductCode = code;
                     return code;
                 }
@@ -1176,7 +1176,11 @@ class FlashController {
      */
     async purchaseEeziVoucher(req, res) {
         try {
-            const { reference, amount, metadata } = req.body;
+            const { reference: rawReference, amount, metadata } = req.body;
+
+            // Flash reference pattern: ^[a-zA-Z0-9\-\.=]+$ (no underscores).
+            // Our idempotency keys use underscores — replace with hyphens.
+            const reference = rawReference ? String(rawReference).replace(/_/g, '-') : rawReference;
 
             // accountNumber and productCode are server-side config — never trust client input
             const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
@@ -1212,13 +1216,18 @@ class FlashController {
 
             // Validate field formats
             if (!this.authService.validateReference(reference)) {
+                console.error('❌ eezi-voucher: Invalid reference format:', reference);
                 return res.status(400).json({
                     success: false,
                     error: 'Invalid reference format'
                 });
             }
 
-            if (!this.authService.validateAmount(amount)) {
+            // amount must be a positive integer (cents). JSON.parse delivers numbers
+            // correctly, but guard against string coercion from some clients.
+            const amountInt = Number.isInteger(amount) ? amount : parseInt(amount, 10);
+            if (!this.authService.validateAmount(amountInt)) {
+                console.error('❌ eezi-voucher: Invalid amount:', amount);
                 return res.status(400).json({
                     success: false,
                     error: 'Amount must be a positive integer in cents'
@@ -1232,10 +1241,12 @@ class FlashController {
                 });
             }
 
+            console.log('📤 eezi-voucher purchase:', { reference, amountInt, productCode });
+
             // Banking-grade: determine current commission tier (volume-based)
             const commissionRatePct = await supplierPricing.getCommissionRatePct('FLASH', 'eezi_voucher');
 
-            const faceValueCents = amount;
+            const faceValueCents = amountInt;
             const commissionCents = supplierPricing.computeCommission(faceValueCents, commissionRatePct);
             const netRevenueCents = commissionCents; // revenue equals commission for eeziCash
 
@@ -1247,7 +1258,7 @@ class FlashController {
             const requestData = {
                 reference,
                 accountNumber,
-                amount,
+                amount: amountInt,
                 productCode,
                 ...(metadata && { metadata })
             };
@@ -1294,22 +1305,25 @@ class FlashController {
         } catch (error) {
             // Persist failed attempt for audit
             try {
-              const { reference, accountNumber, amount, productCode, metadata } = req.body || {};
+              const rawRef = (req.body || {}).reference;
+              const safeRef = rawRef ? String(rawRef).replace(/_/g, '-') : this.authService.generateReference('MM_EEZI_FAIL');
+              const rawAmt = (req.body || {}).amount;
+              const safeAmt = Number.isInteger(rawAmt) ? rawAmt : parseInt(rawAmt, 10) || 0;
               await FlashTransaction.create({
-                reference: reference || this.authService.generateReference('MM_EEZI_FAIL'),
-                accountNumber: accountNumber || 'unknown',
+                reference: safeRef,
+                accountNumber: process.env.FLASH_ACCOUNT_NUMBER || 'unknown',
                 serviceType: 'eezi_voucher',
                 operation: 'purchase',
-                amount: amount || 0,
-                productCode: productCode || null,
+                amount: safeAmt,
+                productCode: null,
                 status: 'failed',
                 errorMessage: error.message,
-                metadata: metadata || null
+                metadata: (req.body || {}).metadata || null
               });
             } catch (persistErr) {
               console.error('⚠️ Failed to persist failed eezi voucher transaction:', persistErr.message);
             }
-            console.error('❌ Flash Controller: Error purchasing Eezi voucher:', error.message);
+            console.error('❌ Flash Controller: Error purchasing Eezi voucher:', error.message, error.flashError || '');
             res.status(500).json({
                 success: false,
                 error: 'Failed to purchase Eezi voucher',
