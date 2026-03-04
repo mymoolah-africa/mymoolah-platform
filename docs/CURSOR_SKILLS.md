@@ -13,13 +13,14 @@ Skills extend Cursor Agent with specialized knowledge for banking-grade, Mojaloo
 | **accessibility-compliance** | wshobson/agents | WCAG 2.2, ARIA patterns, screen readers |
 | **interaction-design** | wshobson/agents | Microinteractions, motion design, UX polish |
 | **security-best-practices** | supercent-io/skills-template | Security patterns for applications |
-| **frontend-design** | .cursor/skills/ (project) | Distinctive UI, typography, aesthetics |
+| **frontend-design** | .agents/skills/ (project) | Distinctive UI, typography, aesthetics |
 
 ## Installation Location
 
-- **CLI-installed**: `.agents/skills/` (managed by `npx skills`)
-- **Project skill**: `.cursor/skills/frontend-design/`
-- **Lock file**: `skills-lock.json` (tracks installed skills)
+- **All skills**: `.agents/skills/` (single parent directory)
+- **CLI-managed**: 7 skills via `npx skills add` (api-design-principles, postgresql-optimization, etc.)
+- **Project skill**: `frontend-design` in `.agents/skills/` (custom, not in registry)
+- **Lock file**: `skills-lock.json` (tracks CLI-installed skills)
 
 ## Update Skills
 
