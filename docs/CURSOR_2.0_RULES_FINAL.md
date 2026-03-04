@@ -1,6 +1,6 @@
 # MyMoolah Agent Rules - Cursor 2.0
 
-**Last Updated**: 2026-02-21  
+**Last Updated**: 2026-02-27  
 **Keep in sync**: Any rules added to Cursor Settings must also be added here.
 
 ---
@@ -58,7 +58,9 @@
 ## 📁 **WORKING DIRECTORY**
 
 - ONLY `/mymoolah/` and subdirectories
-- NEVER git worktrees; NEVER `mymoolah-wallet-frontend/pages/*.tsx` (Figma-managed); NEVER `/Figma/`
+- NEVER git worktrees
+- **Frontend**: Codebase is source of truth. Agents may edit any UI/frontend files including `mymoolah-wallet-frontend/pages/*.tsx`. Figma may hold reference designs; code takes precedence for ongoing development.
+- **Figma**: `/Figma/` sources may exist for reference; backend adapts to frontend needs.
 - Settings: `/portal/` only
 
 ---
@@ -101,7 +103,7 @@
 
 ## ⚠️ **CRITICAL REMINDERS**
 
-No shortcuts. Sweep `scripts/` first. Session log when work done. Commit+push every time. Test in Codespaces only. Migrations before seeding. Figma pages read-only. Database-first (SQL aggregation).
+No shortcuts. Sweep `scripts/` first. Session log when work done. Commit+push every time. Test in Codespaces only. Migrations before seeding. Code is frontend source of truth. Database-first (SQL aggregation).
 
 ---
 

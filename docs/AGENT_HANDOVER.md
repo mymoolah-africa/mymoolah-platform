@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-27 12:00  
-**Latest Feature**: EasyPay Cash-In activation complete (500 fix, test script, Razeen/Theodore docs)  
-**Document Version**: 2.11.25  
-**Session logs**: `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`, `docs/session_logs/2026-02-26_1930_easypay-cashin-activation-fixes.md`, `docs/session_logs/2026-02-26_1245_flash-integration-fixes-clean-slate-catalog-test.md`  
+**Last Updated**: 2026-02-27 14:00  
+**Latest Feature**: Figma restriction removed — code as frontend source of truth  
+**Document Version**: 2.11.26  
+**Session logs**: `docs/session_logs/2026-02-27_1400_figma-restriction-removed-code-source-of-truth.md`, `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -58,9 +58,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 
 | ✅ DO | ❌ DON'T |
 |------|----------|
-| Adapt backend to Figma designs | Edit `mymoolah-wallet-frontend/pages/*.tsx` |
-| Work in `/mymoolah/` only | Use git worktrees |
-| Test in Codespaces | Test on local |
+| Edit any UI/frontend (code is source of truth) | Treat Figma-managed pages as read-only |
+| Adapt backend to support frontend needs | Use git worktrees |
+| Work in `/mymoolah/` only | Test on local |
+| Test in Codespaces | Use dummy/test data for production flows |
 | Use real transactions (no dummy data) | Use dummy/test data for production flows |
 | Sweep `scripts/` before creating | Create duplicate scripts |
 | Run migrations before seeding | Seed before migrations |
@@ -98,11 +99,11 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 27, 2026 - 12:00)**
-**EasyPay Cash-In Activation Complete** — (1) Fixed `authorisationRequest` 500 for Scenario 4 (open amount): root cause was missing `userId`/`walletId` on `payments`; migration `20260227_add_userid_walletid_to_payments.js` and `Payment` model updated. (2) Removed staging debug from controller. (3) Created `scripts/test-easypay-5-scenarios.sh` — 11/11 tests pass on Staging. (4) Created Theodore test data doc, Razeen reply draft, and copy-paste versions. User sent Razeen reply and shared restricted folder with Theodore. Session log: `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`.
+### **Latest Achievement (February 27, 2026 - 14:00)**
+**Figma Restriction Removed — Code as Frontend Source of Truth** — Removed Figma read-only rule. Codebase is now frontend source of truth; agents may edit any UI/frontend including `mymoolah-wallet-frontend/pages/*.tsx`. Figma optional reference. Updated CURSOR_2.0_RULES_FINAL.md, AGENT_HANDOVER.md, AGENT_ROLE_TEMPLATE.md. Enables frontend-design skill on main app pages. Session log: `docs/session_logs/2026-02-27_1400_figma-restriction-removed-code-source-of-truth.md`.
 
-### **Previous Achievement (February 26, 2026 - 19:30)**
-**EasyPay Cash-In Activation Fixes** — (1) Mounted EasyPay routes at `/billpayment/v1` in `server.js` (per EasypayReceiverV5.yaml basePath). (2) Updated `middleware/easypayAuth.js` to accept `Authorization: SessionToken {token}` (EasyPay V5 spec). (3) Disabled Cash-Out and Standalone Voucher routes (Cash-In only). (4) Rewrote `scripts/seed-easypay-data.js` with Receiver ID 5063 and 5 test scenarios for Theodore Smith. (5) Fixed expired bill handling — return ResponseCode 3 in `infoRequest` and `authorisationRequest`. (6) Added staging-only debug in `authorisationRequest` catch to surface exact error. Seeded Staging; `infoRequest` passes all 5 scenarios. `authorisationRequest` returns 500 for Scenario 4 — debug deploy pending. Session log: `docs/session_logs/2026-02-26_1930_easypay-cashin-activation-fixes.md`.
+### **Previous Achievement (February 21, 2026 - 17:00)**
+**PayShap Callbacks + EasyPay Cash-In + Partner Drive Docs** — (1) PayShap: Added parameterised callback routes for RPP/RTP (batch + realtime) to `standardbankController.js` and `routes/standardbank.js`. Added GET polling routes. Created `services/standardbankPollingService.js` with RPP/RTP status polling, terminal status detection, and stale transaction recovery. Updated `client.js` callback URL comments. (2) EasyPay: Swept full codebase. Confirmed Receiver ID `5063` in `voucherController.js`, 14-digit number format, Receiver architecture (EasyPay calls us). Drafted activation email to Razine for UAT + Production. (3) Google Drive: Documented Flash, MobileMart, Zapper partner Drive folders — created `integrations/mobilemart/MOBILEMART_REFERENCE.md`, `integrations/zapper/ZAPPER_REFERENCE.md`, updated `FLASH_TESTING_REFERENCE.md` and `AGENT_HANDOVER.md` document map. Session log: `docs/session_logs/2026-02-21_1700_payshap-easypay-zapper-drive-docs.md`.
 
 ### **Previous Achievement (February 26, 2026 - 12:45)**
 **Flash Integration Fixes & Clean-Slate Catalog Test** — (1) Fixed 3 Flash API transaction endpoint bugs from official v4 PDF review: `gift-vouchers/purchase` → `gift-voucher/purchase` (singular), cellular payload `subAccountNumber` → `accountNumber`, prepaid utilities `transactionID` → `meterNumber` + optional `isFBE`. (2) Fixed denominations validator in `Product.js` and `ProductVariant.js` — extended `VARIABLE_RANGE_TYPES` to include `airtime`, `data`, `voucher`, `cash_out`. (3) Created migration `20260226_01_add_role_to_users.js` — adds `role` ENUM column to `users` table; applied to Staging and Production. (4) Created and ran clean-slate catalog test scripts for Staging (38 Flash + 56 MobileMart) and Production (81 Flash + 1,726 MobileMart). Both environments verified with live API data. Daily 02:00 scheduler proven end-to-end. Session log: `docs/session_logs/2026-02-26_1245_flash-integration-fixes-clean-slate-catalog-test.md`.
@@ -135,7 +136,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
 ### **Recent Updates (Last 7 Days – February 21–27, 2026)**
-- **Feb 27 (12:00)**: EasyPay Cash-In activation complete — fixed authorisationRequest 500 (userId/walletId migration), removed staging debug, created 5-scenario test script (11/11 pass), Theodore test data + Razeen reply docs, copy-paste versions. User sent Razeen reply and shared restricted folder with Theodore.
+- **Feb 27 (14:00)**: Figma restriction removed — code is frontend source of truth. Agents may edit any UI/frontend including `pages/*.tsx`. Figma optional reference. Enables frontend-design skill on main app pages.
 - **Feb 21 (21:00)**: Standard Bank PayShap banking-grade overhaul — removed Peach proxy workaround; aligned Pain.001 (top-level grpHdr/pmtInf[], pmntInfId, reqdExctnDt.dtTm, lclInstrm.prtry, cdtrAgt+brnchId, rmtInf.strd[], splmtryData) and Pain.013 (PascalCase, DbtrAcct.Id.Item.Id+Prxy, CdtrAgt.Othr.Id, Amt.Item.Value, PmtCond, RmtInf.Strd[]) with SBSA Postman samples; fixed RTP callback URLs in client.js; scope-keyed token cache in pingAuthService; ACID transaction ordering in RPP/RTP services; added proxyResolutionClient.js; express-validator on routes.
 - **Feb 21 (19:00)**: Documentation consolidation — archived ~75 docs to `docs/archive/` (deployment, codespaces, mobilemart, beneficiary, partner-api, referral, easypay, zapper, figma, peach-payments, security); merged INPUT_FIELD_FIXES, 2FA_IMPLEMENTATION, SECURITY (badge/certificate/token); created DOCS_CONSOLIDATION_2026.md. Session log updated with git push/pull status. Codespaces synced (82 files, fast-forward).
 - **Feb 21 (17:00)**: Bill payment MobileMart prevend fix — v2 API URL construction (use baseUrl for /v2 paths, was incorrectly .../v1/v2/... returning HTML); improved product matching (no products[0] fallback; fuzzy match; clear error when no match). Fixes "prevend did not return transactionId" and wrong product (Ekurhuleni for PEP).
@@ -618,27 +619,25 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: 🔄 **IN PROGRESS** — EasyPay Cash-In activation fixes deployed; authorisationRequest 500 under investigation  
-**Last Session**: 2026-02-26 — EasyPay /billpayment/v1 mount, SessionToken auth, expired fix, seed script, staging debug
+**Session Status**: ✅ **COMPLETE** — PayShap callbacks + EasyPay activation + Partner Drive docs  
+**Last Session**: 2026-02-21 — PayShap callbacks, EasyPay Cash-In sweep, Google Drive documentation
 
-### **Most Recent Work (2026-02-26)**
-- **EasyPay /billpayment/v1**: Routes mounted at `/billpayment/v1` (EasypayReceiverV5.yaml basePath). Ping returns OK on Staging.
-- **EasyPay auth**: `Authorization: SessionToken {token}` supported in `easypayAuth.js`. Cash-Out and Standalone Voucher routes disabled.
-- **EasyPay seed**: Rewritten with 5 scenarios (valid unpaid, already paid, expired, open amount, fixed amount). Seeded Staging successfully.
-- **Expired fix**: `infoRequest` and `authorisationRequest` return ResponseCode 3 for expired bills. Committed; deploy pending.
-- **authorisationRequest 500**: Scenario 4 (open amount) returns 500. Staging-only debug added — deploy and retry to get exact error.
+### **Most Recent Work (2026-02-21)**
+- **PayShap callbacks**: Parameterised callback routes for RPP/RTP (batch + realtime) added to `standardbankController.js` and `routes/standardbank.js`. GET polling routes added. New `services/standardbankPollingService.js` with stale transaction recovery.
+- **EasyPay Cash-In**: Full codebase sweep. Confirmed Receiver ID `5063` (already in code), 14-digit number format, Receiver architecture. Drafted activation email to Razine (UAT + Production).
+- **Google Drive docs**: Flash, MobileMart, Zapper partner Drive folders documented in `AGENT_HANDOVER.md` and dedicated reference files created in `integrations/`.
+- **Committed**: `04b9fe4e` — all changes on `main`, ready to push.
 
 ### **Current State**
-- EasyPay `infoRequest` passes all 5 scenarios on Staging (Scenario 3 needs redeploy for expired fix)
-- EasyPay `authorisationRequest` returns 500 for Scenario 4 — root cause unknown; debug deploy will surface error
+- No active work in progress
 - Production live: api-mm.mymoolah.africa, wallet.mymoolah.africa
-- Awaiting: Deploy to Staging, fix authorisationRequest 500, send test data to Theodore Smith
+- Awaiting: EasyPay response from Razine, PayShap UAT test date (2 March), Flash transaction endpoint confirmation from Tia
 
 ### **Next Agent Actions**
-1. Deploy to Staging: `bash scripts/build-push-deploy-staging.sh`
-2. Retry `authorisationRequest` Scenario 4 — capture `debug` from response
-3. Fix root cause, remove staging debug, redeploy
-4. Send SessionToken + 5 EasyPay numbers to Theodore Smith (encrypted)
+1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
+2. Read this file and 2–3 recent session logs
+3. Run `git status` → `git pull origin main`
+4. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
 ---
 
@@ -646,9 +645,8 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
-| Feb 26 (19:30) | EasyPay Cash-In activation: /billpayment/v1 mount, SessionToken auth, expired fix (RC:3), seed script (5 scenarios), staging debug for authorisationRequest 500 |
-| Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration; clean-slate catalog test Staging + Production |
 | Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email; Flash/MobileMart/Zapper Google Drive docs |
+| Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration; clean-slate catalog test Staging + Production |
 | Feb 25 | Variable-first product catalog filter — `priceType` schema, classify/deactivate fixed duplicates, API returns variable fields, full deploy Staging + Production |
 | Feb 21 | Browserslist/caniuse-lite update; SBSA PayShap email; Bill payment MobileMart prevend fix; overlay fixes; NotificationService fix; DSTV beneficiary filter |
 | Feb 19 | EasyPay voucher refund duplicate fix; MMTP Partner API implementation plan |
@@ -668,7 +666,7 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **EasyPay Cash-In activation** — `/billpayment/v1` mounted and live on Staging. SessionToken auth, expired fix (RC:3), seed script with 5 scenarios done. **Pending**: (a) Deploy to Staging (expired fix + debug), (b) Fix authorisationRequest 500 for Scenario 4 (open amount) — debug will surface exact error, (c) Send SessionToken + 5 test numbers to Theodore Smith. Razine: UAT configured; await production credentials, IP whitelist, SFTP.
+1. **EasyPay Cash-In activation** — Await Razine response with: (a) EasyPay UAT system configured with `https://staging.mymoolah.africa/billpayment/v1`, (b) UAT + Production IP addresses for whitelisting, (c) production credentials, (d) SFTP details for SOF reconciliation. Then: set `EASYPAY_RECEIVER_ID=5063` explicitly in Secret Manager, generate SessionToken, share with Razine.
 2. **PayShap UAT testing (2 March)** — André to push to GitHub and deploy to Staging. Test RPP/RTP callbacks with Gustaf on 2 March. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
 3. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths. Then begin live transaction tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities. Endpoint paths confirmed from official v4 PDF.
 4. **Fix `.env.codespaces` MobileMart URL** — `MOBILEMART_API_URL` is currently `https://uat.fulcrumswitch.com` (UAT). Should be `https://fulcrumswitch.com` (Production) for clean-slate tests run from Codespaces.

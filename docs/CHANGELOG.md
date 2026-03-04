@@ -1,5 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-02-27 - 📐 Figma Restriction Removed — Code as Frontend Source of Truth ✅
+
+### **Session Overview**
+Removed Figma read-only restriction. Codebase is now frontend source of truth. Agents may edit any UI/frontend files including `mymoolah-wallet-frontend/pages/*.tsx`. Figma may hold reference designs; code takes precedence for ongoing development. Enables faster iteration and full use of frontend-design skill.
+
+### **Changes**
+- **`docs/CURSOR_2.0_RULES_FINAL.md`**: Removed NEVER edit pages/*.tsx; added Frontend/Figma guidance; updated critical reminders
+- **`docs/AGENT_HANDOVER.md`**: DO/DON'T table — Edit any UI/frontend | Treat Figma-managed pages as read-only
+- **`docs/AGENT_ROLE_TEMPLATE.md`**: Persona, Mission, Hard Constraints, Frontend Integration Rule — code as source of truth
+
+### **Session Log**
+- `docs/session_logs/2026-02-27_1400_figma-restriction-removed-code-source-of-truth.md`
+
+---
+
 ## 2026-02-27 - 💳 EasyPay Cash-In Activation Complete ✅
 
 ### **Session Overview**
