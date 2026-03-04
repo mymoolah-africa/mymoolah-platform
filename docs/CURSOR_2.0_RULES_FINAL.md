@@ -17,7 +17,8 @@
 |------|----------|
 | Read rules + handover before work | Start without rules confirmation |
 | Sweep `scripts/` before creating | Create scripts without checking |
-| Use `docs/DATABASE_CONNECTION_GUIDE.md` for DB work | Write custom DB connection logic |
+| Use `scripts/db-connection-helper.js` for ALL DB queries | Write custom DB connection logic (Sequelize, raw pg, etc.) |
+| Use `docs/DATABASE_CONNECTION_GUIDE.md` for DB work | Skip reading the DB guide |
 | Test in Codespaces | Test on local |
 | Migrations before seeding | Seed before migrations |
 | Use `./scripts/run-migrations-master.sh [uat\|staging]` | Run `npx sequelize-cli` directly |
@@ -96,12 +97,35 @@ cd mymoolah-wallet-frontend && npm run build && cd ..
 - ALWAYS proper migrations, correct enums, Mojaloop/ISO 20022
 - See `docs/archive/CURSOR_RULES_EXTENDED.md` for examples; `docs/ZERO_SHORTCUTS_POLICY.md` for policy
 
+### **DATABASE ACCESS (NON-NEGOTIABLE — ALWAYS USE THIS)**
+
+**NEVER write custom DB connection code.** ALWAYS use `scripts/db-connection-helper.js`.
+
+```js
+// ✅ CORRECT — the ONLY way to query the database
+const { getUATClient } = require('./scripts/db-connection-helper');
+const client = await getUATClient();
+const result = await client.query('SELECT ...', [params]);
+client.release();
+```
+
+```js
+// ❌ WRONG — never do this
+const { Sequelize } = require('sequelize');
+const seq = new Sequelize(process.env.DATABASE_URL, ...);
+```
+
+- **UAT**: `getUATClient()` — port 6543, database `mymoolah`
+- **Staging**: `getStagingClient()` — port 6544, reads password from GCP Secret Manager
+- **Production**: `getProductionClient()` — port 6545
+
+Migrations: ALWAYS use `./scripts/run-migrations-master.sh [uat|staging]` — never `npx sequelize-cli` directly.
+
 ### **Rules 7-12 (Summary)**
 - **Done**: Clean code, docs updated, tests, migrations with rollbacks, security review, commit+push
 - **Security**: Input validation, JWT HS512, TLS 1.3, parameterized queries, AES-256-GCM, RBAC
 - **Docs**: Update `docs/` after changes; read `DATABASE_CONNECTION_GUIDE.md` before DB work
 - **Scripts**: Sweep `scripts/` before creating (200+ exist)
-- **DB**: Use `db-connection-helper.js` and `run-migrations-master.sh`; never custom connection logic
 - **Performance**: DB aggregation (not JS sums); API <200ms, DB <50ms
 
 ---
