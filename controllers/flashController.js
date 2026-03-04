@@ -1155,113 +1155,185 @@ class FlashController {
     }
 
     /**
-     * Purchase an Eezi Voucher
+     * Purchase an Eezi Voucher (eeziAirtime Token)
+     *
+     * Full banking-grade flow (mirrors cashOutCreate):
+     *  1. Validate & resolve product code
+     *  2. Calculate commission / fees
+     *  3. Call Flash API
+     *  4. Debit user wallet
+     *  5. Create wallet Transaction record (shows in history)
+     *  6. Post commission / VAT / ledger entries
+     *  7. Persist FlashTransaction audit record
      */
     async purchaseEeziVoucher(req, res) {
         try {
             const { reference: rawReference, amount, metadata } = req.body;
 
-            // Flash reference pattern: ^[a-zA-Z0-9\-\.=]+$ (no underscores).
-            // Our idempotency keys use underscores — replace with hyphens.
             const reference = rawReference ? String(rawReference).replace(/_/g, '-') : rawReference;
 
-            // All server-side config — never trust client input for these
             const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
-            // storeId and terminalId identify the digital channel to Flash.
-            // For a digital-only merchant, these are single fixed values per account.
-            // Flash sandbox accounts may enforce these even though the spec marks them optional.
             const storeId    = process.env.FLASH_STORE_ID    || process.env.FLASH_ACCOUNT_NUMBER?.replace(/-/g, '').slice(0, 12) || 'MYMOOLAHDIGITAL';
             const terminalId = process.env.FLASH_TERMINAL_ID || process.env.FLASH_ACCOUNT_NUMBER?.replace(/-/g, '').slice(0, 12) || 'MYMOOLAHPOS01';
 
-            // Validate required fields
             if (!reference || !amount) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Reference and amount are required'
-                });
+                return res.status(400).json({ success: false, error: 'Reference and amount are required' });
             }
-
             if (!accountNumber) {
-                console.error('❌ FLASH_ACCOUNT_NUMBER not configured');
-                return res.status(500).json({
-                    success: false,
-                    error: 'Flash account not configured'
-                });
+                return res.status(500).json({ success: false, error: 'Flash account not configured' });
             }
 
-            // Resolve product code (from env or auto-discovered from Flash catalog)
             let productCode;
             try {
                 productCode = await this._resolveEeziVoucherProductCode();
             } catch (err) {
                 console.error('❌ Failed to resolve eezi-voucher product code:', err.message);
-                return res.status(500).json({
-                    success: false,
-                    error: 'Flash eezi-voucher product code not available',
-                    details: err.message
-                });
+                return res.status(500).json({ success: false, error: 'Flash eezi-voucher product code not available', details: err.message });
             }
 
-            // Validate field formats
             if (!this.authService.validateReference(reference)) {
-                console.error('❌ eezi-voucher: Invalid reference format:', reference);
-                return res.status(400).json({
-                    success: false,
-                    error: 'Invalid reference format'
-                });
+                return res.status(400).json({ success: false, error: 'Invalid reference format' });
             }
 
-            // amount must be a positive integer (cents). JSON.parse delivers numbers
-            // correctly, but guard against string coercion from some clients.
             const amountInt = Number.isInteger(amount) ? amount : parseInt(amount, 10);
             if (!this.authService.validateAmount(amountInt)) {
-                console.error('❌ eezi-voucher: Invalid amount:', amount);
-                return res.status(400).json({
-                    success: false,
-                    error: 'Amount must be a positive integer in cents'
-                });
+                return res.status(400).json({ success: false, error: 'Amount must be a positive integer in cents' });
             }
-
             if (metadata && !this.authService.validateMetadata(metadata)) {
-                return res.status(400).json({
-                    success: false,
-                    error: 'Invalid metadata format'
-                });
+                return res.status(400).json({ success: false, error: 'Invalid metadata format' });
             }
-
-            console.log('📤 eezi-voucher purchase:', { reference, amountInt, productCode });
-
-            // Banking-grade: determine current commission tier (volume-based)
-            const commissionRatePct = await supplierPricing.getCommissionRatePct('FLASH', 'eezi_voucher');
 
             const faceValueCents = amountInt;
-            const commissionCents = supplierPricing.computeCommission(faceValueCents, commissionRatePct);
-            const netRevenueCents = commissionCents; // revenue equals commission for eeziCash
+            console.log('📤 eezi-voucher purchase:', { reference, amountInt, productCode });
 
-            // Load fees from schedule (VAT exclusive)
+            // ── Commission & fees ──
+            const commissionRatePct = await supplierPricing.getCommissionRatePct('FLASH', 'eezi_voucher');
+            const commissionCents = supplierPricing.computeCommission(faceValueCents, commissionRatePct);
             const { fees } = await supplierPricing.getFees('FLASH', 'eezi_voucher');
             const generationFeeCents = Number(fees['token_generation'] || 0);
             const redemptionFeeCents = Number(fees['token_redemption'] || 0);
 
-            const requestData = {
-                reference,
-                accountNumber,
-                amount: amountInt,
-                productCode,
-                storeId,
-                terminalId,
-                ...(metadata && { metadata })
-            };
+            // ── Wallet: load & check balance ──
+            const { Wallet, Transaction, VasProduct, VasTransaction } = require('../models');
 
+            const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+            if (!wallet) {
+                return res.status(404).json({ success: false, error: 'Wallet not found' });
+            }
+
+            const totalChargeCents = faceValueCents;
+            const balanceCents = Math.round(Number(wallet.balance) * 100);
+            if (balanceCents < totalChargeCents) {
+                return res.status(400).json({ success: false, error: 'Insufficient wallet balance' });
+            }
+
+            // ── Flash API call ──
+            const requestData = { reference, accountNumber, amount: amountInt, productCode, storeId, terminalId, ...(metadata && { metadata }) };
             console.log('📤 eezi-voucher → Flash API payload:', { reference, accountNumber, amount: amountInt, productCode, storeId, terminalId });
 
-            const response = await this.authService.makeAuthenticatedRequest(
-                'POST',
-                '/eezi-voucher/purchase',
-                requestData
-            );
+            const response = await this.authService.makeAuthenticatedRequest('POST', '/eezi-voucher/purchase', requestData);
 
-            // Persist transaction (do not expose commission in API response)
+            const eeziPin = response?.pinNumber || response?.pin || response?.voucherPin || null;
+
+            // ── VAS records ──
+            const [vasProduct] = await VasProduct.findOrCreate({
+                where: { supplierId: 'FLASH', supplierProductId: 'FLASH_EEZI_AIRTIME_TOKEN' },
+                defaults: {
+                    supplierId: 'FLASH',
+                    supplierProductId: 'FLASH_EEZI_AIRTIME_TOKEN',
+                    productName: 'eeziAirtime Token',
+                    vasType: 'airtime',
+                    transactionType: 'voucher',
+                    provider: 'Flash',
+                    networkType: 'local',
+                    predefinedAmounts: null,
+                    minAmount: 200,
+                    maxAmount: 99900,
+                    commission: commissionRatePct || 0,
+                    fixedFee: 0,
+                    isPromotional: false,
+                    isActive: true,
+                    metadata: { productCode }
+                }
+            });
+
+            const vasTransactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            const vasTransaction = await VasTransaction.create({
+                transactionId: vasTransactionId,
+                userId: req.user.id,
+                walletId: wallet.walletId,
+                vasProductId: vasProduct.id,
+                vasType: 'airtime',
+                transactionType: 'voucher',
+                supplierId: 'FLASH',
+                supplierProductId: 'FLASH_EEZI_AIRTIME_TOKEN',
+                amount: faceValueCents,
+                fee: 0,
+                totalAmount: totalChargeCents,
+                mobileNumber: null,
+                status: 'completed',
+                reference: reference,
+                supplierReference: response?.transactionId || response?.reference || reference,
+                metadata: {
+                    productCode,
+                    accountNumber,
+                    pin: eeziPin,
+                    faceValue: faceValueCents,
+                    commissionRatePct,
+                    commissionCents,
+                    flashResponse: response,
+                    processedAt: new Date().toISOString()
+                }
+            });
+
+            // ── Debit wallet ──
+            await wallet.debit(totalChargeCents / 100, 'payment');
+            console.log(`💳 Wallet debited: R${(totalChargeCents / 100).toFixed(2)}`);
+
+            // ── Wallet transaction record (appears in history) ──
+            const mainTransactionId = `FLASH-EEZI-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            await Transaction.create({
+                transactionId: mainTransactionId,
+                userId: req.user.id,
+                walletId: wallet.walletId,
+                amount: -(faceValueCents / 100),
+                type: 'payment',
+                status: 'completed',
+                description: `eeziAirtime R${(faceValueCents / 100).toFixed(0)} Token`,
+                currency: wallet.currency,
+                fee: 0,
+                metadata: {
+                    vasTransactionId: vasTransaction.id,
+                    vasType: 'airtime',
+                    pin: eeziPin,
+                    reference: reference,
+                    supplierCode: 'FLASH',
+                    operationType: 'eezi_airtime_token',
+                    grossAmount: faceValueCents / 100,
+                    isEeziAirtimeToken: true
+                }
+            });
+
+            // ── Commission / VAT / Ledger ──
+            if (commissionCents > 0) {
+                try {
+                    const { postCommissionVatAndLedger } = require('../services/commissionVatService');
+                    await postCommissionVatAndLedger({
+                        commissionCents,
+                        supplierCode: 'FLASH',
+                        serviceType: 'eezi_voucher',
+                        walletTransactionId: mainTransactionId,
+                        sourceTransactionId: vasTransaction.transactionId,
+                        idempotencyKey: reference,
+                        purchaserUserId: req.user.id
+                    });
+                    console.log(`📒 Ledger posted: commission R${(commissionCents / 100).toFixed(2)}`);
+                } catch (ledgerError) {
+                    console.error('⚠️ Commission/Ledger posting failed:', ledgerError.message);
+                }
+            }
+
+            // ── Flash audit record ──
             try {
               await FlashTransaction.create({
                 transactionId: reference,
@@ -1274,6 +1346,9 @@ class FlashController {
                 status: 'completed',
                 flashReference: String(response?.responseCode ?? '0'),
                 faceValueCents: amountInt,
+                commissionRatePct: commissionRatePct || 0,
+                commissionCents: commissionCents || 0,
+                netRevenueCents: commissionCents || 0,
                 generationFeeCents: generationFeeCents || 0,
                 redemptionFeeCents: redemptionFeeCents || 0,
                 vatExclusive: true
@@ -1291,7 +1366,6 @@ class FlashController {
             });
 
         } catch (error) {
-            // Persist failed attempt for audit
             try {
               const rawRef = (req.body || {}).reference;
               const safeRef = rawRef ? String(rawRef).replace(/_/g, '-') : this.authService.generateReference('MM_EEZI_FAIL');

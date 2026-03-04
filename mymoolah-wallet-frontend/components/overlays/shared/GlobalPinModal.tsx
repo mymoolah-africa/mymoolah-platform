@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Smartphone, Copy, Share, CheckCircle, Globe, ChevronRight, Loader2 } from 'lucide-react';
+import { X, Smartphone, Copy, CheckCircle, Globe, ChevronRight, Loader2 } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { apiService } from '../../../services/apiService';
 import { generateIdempotencyKey } from '../../../services/overlayService';
@@ -126,7 +126,7 @@ export function GlobalPinModal({
           result?.order?.serialNumber ||
           result?.pin ||
           result?.code ||
-          '— PIN will be sent via SMS —';
+          'No PIN returned';
         ref =
           result?.order?.reference ||
           result?.order?.transactionId ||
@@ -154,18 +154,6 @@ export function GlobalPinModal({
     }
   };
 
-  const handleShare = async () => {
-    if (!pin || !selected) return;
-    try {
-      await navigator.share({
-        title: `${selected.name} PIN`,
-        text: `Your ${selected.name} PIN: ${pin}\nRef: ${transactionRef}`,
-      });
-    } catch {
-      // share not supported — silently ignore
-    }
-  };
-
   const formatPrice = (cents: number) => {
     if (cents <= 0) return '';
     const amount = (cents / 100).toFixed(0);
@@ -185,15 +173,15 @@ export function GlobalPinModal({
     >
       <div style={{
         position: 'fixed',
-        top: '120px',
+        top: '140px',
         left: '50%',
         transform: 'translateX(-50%)',
         width: '100%',
         maxWidth: '375px',
-        maxHeight: 'calc(100vh - 120px - 60px)',
+        maxHeight: 'calc(100vh - 140px - 60px)',
         overflowY: 'auto',
         backgroundColor: '#ffffff',
-        borderRadius: '0 0 16px 16px',
+        borderRadius: '16px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
         padding: '24px',
       }}>
@@ -425,17 +413,6 @@ export function GlobalPinModal({
                   <Copy style={{ width: '14px', height: '14px', marginRight: '6px' }} />
                   {copied ? 'Copied!' : 'Copy PIN'}
                 </Button>
-                {typeof navigator !== 'undefined' && 'share' in navigator && (
-                  <Button
-                    onClick={handleShare}
-                    size="sm"
-                    variant="outline"
-                    style={{ borderRadius: '8px', fontFamily: 'Montserrat, sans-serif', fontSize: '13px', padding: '8px 16px' }}
-                  >
-                    <Share style={{ width: '14px', height: '14px', marginRight: '6px' }} />
-                    Share
-                  </Button>
-                )}
               </div>
             </div>
 

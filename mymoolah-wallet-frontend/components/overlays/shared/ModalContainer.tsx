@@ -126,14 +126,14 @@ export function ModalContainer({
         tabIndex={-1}
         style={{
           position: 'fixed',
-          top: '120px',
+          top: '140px',
           left: '50%',
           transform: 'translateX(-50%)',
           width: '100%',
           maxWidth: '375px',
-          maxHeight: 'calc(100vh - 120px - 60px)',
+          maxHeight: 'calc(100vh - 140px - 60px)',
           backgroundColor: '#ffffff',
-          borderRadius: '0 0 16px 16px',
+          borderRadius: '16px',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
           zIndex: 201,
           overflow: 'hidden',
@@ -188,7 +188,7 @@ export function ModalContainer({
 
         {/* Content */}
         <div style={{
-          maxHeight: 'calc(100vh - 120px - 60px - 80px)',
+          maxHeight: 'calc(100vh - 140px - 60px - 80px)',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch'
         }}>
