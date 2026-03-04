@@ -257,7 +257,21 @@ export function AddAccountModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-sm mx-auto" aria-describedby="add-account-desc">
+      <DialogContent
+        className=""
+        style={{
+          top: '64px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '100%',
+          maxWidth: '375px',
+          maxHeight: 'calc(100vh - 64px - 60px)',
+          overflowY: 'auto',
+          borderRadius: '0 0 16px 16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+        }}
+        aria-describedby="add-account-desc"
+      >
         <DialogHeader>
           <DialogTitle style={fontStyle}>
             Add Account

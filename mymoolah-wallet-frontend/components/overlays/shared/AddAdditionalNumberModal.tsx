@@ -109,26 +109,23 @@ export function AddAdditionalNumberModal({
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
+      inset: 0,
       backgroundColor: 'rgba(0, 0, 0, 0.5)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '1rem'
+      zIndex: 200,
     }}>
       <Card style={{
-        backgroundColor: '#ffffff',
-        border: '1px solid #e2e8f0',
-        borderRadius: '12px',
-        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-        maxWidth: '400px',
+        position: 'fixed',
+        top: '64px',
+        left: '50%',
+        transform: 'translateX(-50%)',
         width: '100%',
-        maxHeight: '90vh',
-        overflow: 'auto'
+        maxWidth: '375px',
+        maxHeight: 'calc(100vh - 64px - 60px)',
+        overflow: 'auto',
+        backgroundColor: '#ffffff',
+        border: 'none',
+        borderRadius: '0 0 16px 16px',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
       }}>
         <CardHeader style={{
           borderBottom: '1px solid #e2e8f0',

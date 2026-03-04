@@ -119,19 +119,23 @@ export function GlobalPinModal({ products, onClose, selectedAccountId }: GlobalP
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 50,
+        position: 'fixed', inset: 0, zIndex: 200,
         backgroundColor: 'rgba(0,0,0,0.5)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center'
       }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div style={{
-        backgroundColor: '#ffffff',
-        borderRadius: '20px 20px 0 0',
+        position: 'fixed',
+        top: '64px',
+        left: '50%',
+        transform: 'translateX(-50%)',
         width: '100%',
-        maxWidth: '480px',
-        maxHeight: '90vh',
+        maxWidth: '375px',
+        maxHeight: 'calc(100vh - 64px - 60px)',
         overflowY: 'auto',
+        backgroundColor: '#ffffff',
+        borderRadius: '0 0 16px 16px',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
         padding: '24px',
       }}>
 

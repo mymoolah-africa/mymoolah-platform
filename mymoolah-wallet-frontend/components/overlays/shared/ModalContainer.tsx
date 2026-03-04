@@ -108,15 +108,9 @@ export function ModalContainer({
       <div
         style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          inset: 0,
           backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          zIndex: 9998,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          zIndex: 200,
         }}
         onClick={onClose}
         aria-hidden="true"
@@ -132,16 +126,18 @@ export function ModalContainer({
         tabIndex={-1}
         style={{
           position: 'fixed',
-          top: '50%',
+          top: '64px',
           left: '50%',
-          transform: 'translate(-50%, -50%)',
+          transform: 'translateX(-50%)',
+          width: '100%',
+          maxWidth: '375px',
+          maxHeight: 'calc(100vh - 64px - 60px)',
           backgroundColor: '#ffffff',
-          borderRadius: '12px',
-          boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-          zIndex: 9999,
+          borderRadius: '0 0 16px 16px',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
+          zIndex: 201,
           overflow: 'hidden',
           outline: 'none',
-          ...getSizeStyles()
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -192,7 +188,7 @@ export function ModalContainer({
 
         {/* Content */}
         <div style={{
-          maxHeight: 'calc(70vh - 80px)', // Account for header
+          maxHeight: 'calc(100vh - 64px - 60px - 80px)',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch'
         }}>
