@@ -53,6 +53,30 @@
 2. User pulls in Codespaces → `git pull origin main` → User tests
 3. GitHub = source of truth
 
+### **CRITICAL: Codespaces Testing Sequence (MANDATORY — agents must always give this exact sequence)**
+
+After pushing, always tell André to run these commands **in Codespaces**, in this exact order:
+
+```bash
+# 1. Pull latest code
+git pull origin main
+
+# 2. Rebuild frontend (only if frontend files changed)
+cd mymoolah-wallet-frontend && npm run build && cd ..
+
+# 3. Restart backend + proxy + Redis
+./scripts/one-click-restart-and-start.sh
+```
+
+**NEVER suggest any of these — they are WRONG:**
+- ❌ `pm2 restart all`
+- ❌ `pm2 reload all`
+- ❌ `node server.js`
+- ❌ `npm start`
+- ❌ Any direct backend restart that bypasses `one-click-restart-and-start.sh`
+
+`./scripts/one-click-restart-and-start.sh` is the ONLY correct way to restart the backend in Codespaces. It handles the Cloud SQL Auth Proxy, Redis container, GCP credentials, DATABASE_URL construction and backend startup in the correct order. Any other method will result in a broken Cloud SQL connection.
+
 ---
 
 ## 📁 **WORKING DIRECTORY**
