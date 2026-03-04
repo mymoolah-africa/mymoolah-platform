@@ -71,8 +71,6 @@ export function AirtimeDataOverlay() {
   const [ownDataAmount, setOwnDataAmount] = useState<string>('');
   const [globalPinProducts, setGlobalPinProducts] = useState<any[]>([]);
   const [showGlobalPinModal, setShowGlobalPinModal] = useState(false);
-  const [eeziAirtimeProducts, setEeziAirtimeProducts] = useState<any[]>([]);
-  const [eeziDataProducts, setEeziDataProducts] = useState<any[]>([]);
   const [editingBeneficiary, setEditingBeneficiary] = useState<Beneficiary | null>(null);
   const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [inlineAmountInput, setInlineAmountInput] = useState<string>('');
@@ -85,21 +83,10 @@ export function AirtimeDataOverlay() {
   // Load beneficiaries and global pin products on mount
   useEffect(() => {
     loadBeneficiaries();
-    // Pre-load global pin + eezi products so all cards are visible immediately
+    // Pre-load global pin products so the International Airtime card is visible immediately
     apiService.getAirtimeDataProducts()
-      .then(({ airtime, data, globalPin }) => {
-        setGlobalPinProducts(globalPin);
-        // eeziAirtime = Flash airtime products (variable, no network filter needed)
-        setEeziAirtimeProducts(airtime.filter((p: any) =>
-          (p.supplierCode || '').toUpperCase() === 'FLASH' &&
-          (p.name || '').toLowerCase().includes('eezi')
-        ));
-        setEeziDataProducts(data.filter((p: any) =>
-          (p.supplierCode || '').toUpperCase() === 'FLASH' &&
-          (p.name || '').toLowerCase().includes('eezi')
-        ));
-      })
-      .catch(() => {/* silently ignore — cards stay hidden */});
+      .then(({ globalPin }) => setGlobalPinProducts(globalPin))
+      .catch(() => {/* silently ignore */});
   }, []);
 
   const loadBeneficiaries = async (): Promise<Beneficiary[]> => {
@@ -972,32 +959,6 @@ export function AirtimeDataOverlay() {
     }
   };
 
-  const handleEeziSelect = async () => {
-    try {
-      setLoadingState('loading');
-      const { airtime, data, globalPin } = await apiService.getAirtimeDataProducts();
-      setGlobalPinProducts(globalPin);
-      // Filter to only Flash eezi products
-      const eeziAirtime = airtime.filter((p: any) =>
-        (p.supplierCode || '').toUpperCase() === 'FLASH' &&
-        (p.name || '').toLowerCase().includes('eezi')
-      );
-      const eeziData = data.filter((p: any) =>
-        (p.supplierCode || '').toUpperCase() === 'FLASH' &&
-        (p.name || '').toLowerCase().includes('eezi')
-      );
-      setCatalog({
-        beneficiary: { id: '', label: 'eeziAirtime', identifier: '', network: 'eeziairtime' },
-        providers: ['FLASH'],
-        products: [...eeziAirtime, ...eeziData],
-      });
-      setLoadingState('idle');
-      setCurrentStep('catalog');
-    } catch (err) {
-      setLoadingState('error');
-    }
-  };
-
   const handleBrowseProducts = async () => {
     try {
       setLoadingState('loading');
@@ -1154,98 +1115,6 @@ export function AirtimeDataOverlay() {
             isLoading={loadingState === 'loading'}
             showFilters={false}
           />
-
-          {/* eeziAirtime Card — Flash variable airtime, needs a phone number */}
-          {(eeziAirtimeProducts.length > 0 || eeziDataProducts.length > 0) && (
-            <div
-              style={{
-                backgroundColor: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                overflow: 'hidden',
-              }}
-            >
-              {/* Card header */}
-              <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', flexShrink: 0 }} />
-                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#374151', margin: 0 }}>
-                  eeziAirtime · Flash
-                </p>
-              </div>
-              <div style={{ padding: '8px 12px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {eeziAirtimeProducts.map((product: any) => {
-                  const minR = ((product.minAmount || 0) / 100).toFixed(0);
-                  const maxR = ((product.maxAmount || 0) / 100).toFixed(0);
-                  return (
-                    <div
-                      key={product.id}
-                      onClick={handleEeziSelect}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
-                        border: '2px solid #22c55e', backgroundColor: '#f0fdf4',
-                        transition: 'all 0.15s ease',
-                      }}
-                      onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#dcfce7'; }}
-                      onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#f0fdf4'; }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div style={{ width: '36px', height: '36px', backgroundColor: '#86BE41', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Smartphone style={{ width: '18px', height: '18px', color: '#ffffff' }} />
-                        </div>
-                        <div>
-                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-                            {product.name}
-                          </p>
-                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                            R{minR}–R{maxR} · Flash
-                          </p>
-                        </div>
-                      </div>
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', fontWeight: '600', color: '#86BE41', margin: 0 }}>
-                        Top-up →
-                      </p>
-                    </div>
-                  );
-                })}
-                {eeziDataProducts.map((product: any) => {
-                  const minR = ((product.minAmount || 0) / 100).toFixed(0);
-                  const maxR = ((product.maxAmount || 0) / 100).toFixed(0);
-                  return (
-                    <div
-                      key={product.id}
-                      onClick={handleEeziSelect}
-                      style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '10px 12px', borderRadius: '10px', cursor: 'pointer',
-                        border: '2px solid #22c55e', backgroundColor: '#f0fdf4',
-                        transition: 'all 0.15s ease',
-                      }}
-                      onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#dcfce7'; }}
-                      onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#f0fdf4'; }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div style={{ width: '36px', height: '36px', backgroundColor: '#2D8CCA', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Wifi style={{ width: '18px', height: '18px', color: '#ffffff' }} />
-                        </div>
-                        <div>
-                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-                            {product.name}
-                          </p>
-                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                            R{minR}–R{maxR} · Flash
-                          </p>
-                        </div>
-                      </div>
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', fontWeight: '600', color: '#2D8CCA', margin: 0 }}>
-                        Top-up →
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           {/* International Airtime — PIN-based, no beneficiary needed */}
           {globalPinProducts.length > 0 && (
