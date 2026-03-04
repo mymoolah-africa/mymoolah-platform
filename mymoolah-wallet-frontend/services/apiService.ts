@@ -574,6 +574,9 @@ class ApiService {
     supplier?: any;
     product?: any;
     recipient?: any;
+    pin?: string;
+    code?: string;
+    [key: string]: any;
   }> {
     const response = await this.request<any>('/api/v1/products/purchase', {
       method: 'POST',
