@@ -1304,7 +1304,7 @@ class FlashController {
                 operation: 'purchase',
                 amount: safeAmt / 100,
                 currency: 'ZAR',
-                productId: null,
+                productId: 'eezi_voucher_420',
                 status: 'failed',
                 errorMessage: error.message,
                 faceValueCents: safeAmt

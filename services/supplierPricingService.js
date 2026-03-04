@@ -40,8 +40,8 @@ async function getCommissionRatePct(supplierCode, serviceType, productId = null,
     const [countRows] = await sequelize.query(
       `SELECT COUNT(*)::int AS cnt
        FROM flash_transactions
-       WHERE "serviceType"=:serviceType AND operation='purchase' AND status='completed'
-         AND date_trunc(:period, "createdAt") = date_trunc(:period, now())`,
+       WHERE service_type=:serviceType AND operation='purchase' AND status='completed'
+         AND date_trunc(:period, created_at) = date_trunc(:period, now())`,
       { replacements: { serviceType: svcType, period } }
     );
     const volume = countRows?.[0]?.cnt || 0;
