@@ -744,16 +744,20 @@ class ApiService {
 
     for (const nm of networkMap) {
       if (nm.match.test(rawName)) {
+        // Avoid double-suffix: "eeziAirtime" already contains "Airtime", don't append again
+        const alreadyHasSuffix = (suffix: string) =>
+          nm.label.toLowerCase().endsWith(suffix.toLowerCase());
+
         if (vasType === 'airtime') {
           return {
-            label: `${nm.label} Airtime`,
+            label: alreadyHasSuffix('Airtime') ? nm.label : `${nm.label} Airtime`,
             description: `${nm.label} prepaid airtime — top up any ${nm.label} number instantly`,
             icon: '📱',
             network: nm.network,
           };
         } else {
           return {
-            label: `${nm.label} Data`,
+            label: alreadyHasSuffix('Data') ? nm.label : `${nm.label} Data`,
             description: `${nm.label} mobile data bundle — browse, stream and connect`,
             icon: '📶',
             network: nm.network,

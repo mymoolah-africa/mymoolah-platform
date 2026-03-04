@@ -1166,9 +1166,10 @@ export function AirtimeDataOverlay() {
               }}
             >
               {/* Card header */}
-              <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid #f3f4f6' }}>
-                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '700', color: '#6b7280', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  Flash eeziAirtime
+              <div style={{ padding: '12px 16px 8px', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e', flexShrink: 0 }} />
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#374151', margin: 0 }}>
+                  eeziAirtime · Flash
                 </p>
               </div>
               <div style={{ padding: '8px 12px 12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
