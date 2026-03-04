@@ -14,11 +14,11 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
-    reference: {
+    txnReference: {
       type: DataTypes.STRING(255),
       allowNull: false,
       unique: true,
-      comment: 'Unique transaction reference'
+      comment: 'Unique transaction reference (matches DB column txnReference)'
     },
     accountNumber: {
       type: DataTypes.STRING(50),
@@ -76,7 +76,7 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'flash_transactions',
     timestamps: true,
     indexes: [
-      { unique: true, fields: ['reference'] },
+      { unique: true, fields: ['txnReference'] },
       { fields: ['accountNumber'] },
       { fields: ['serviceType'] },
       { fields: ['status'] },

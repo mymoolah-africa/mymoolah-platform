@@ -42,39 +42,22 @@ class FlashController {
         // stores:  supplier_product_id = Flash productCode (e.g. "420")
         //          metadata->>'flash_product_group' = "Eezi Vouchers"
         //
-        // Querying our DB is more reliable than re-querying the Flash API at
-        // runtime because:
-        //   a) The Flash sandbox account may not have all product groups enabled.
-        //   b) It avoids an extra network round-trip on every first purchase.
-        //   c) The catalog is already validated and normalised by the sync script.
+        // We use a raw SQL query to avoid Sequelize alias ambiguity when using
+        // sequelize.literal() alongside JOIN includes.
         try {
-            const { ProductVariant, Supplier } = require('../models');
-            const { Op } = require('sequelize');
+            const [rows] = await sequelize.query(`
+                SELECT pv."supplierProductId"
+                FROM   product_variants pv
+                JOIN   suppliers s ON s.id = pv."supplierId"
+                WHERE  pv.status = 'active'
+                  AND  pv."supplierProductId" IS NOT NULL
+                  AND  s.code = 'FLASH'
+                  AND  pv.metadata->>'flash_product_group' ILIKE '%eezi%'
+                LIMIT 1
+            `);
 
-            // JSONB filter on metadata->>'flash_product_group'.
-            // sync-flash-catalog.js stores "Eezi Vouchers" here for PIN tokens.
-            // We use sequelize.literal with the actual table name (product_variants)
-            // as Sequelize quotes the table name, not the model name, in generated SQL.
-            const variant = await ProductVariant.findOne({
-                where: {
-                    status: 'active',
-                    supplierProductId: { [Op.ne]: null },
-                    [Op.and]: [
-                        sequelize.literal(`"product_variants"."metadata"->>'flash_product_group' ILIKE '%eezi%'`)
-                    ],
-                },
-                include: [{
-                    model: Supplier,
-                    as: 'supplier',
-                    where: { code: 'FLASH' },
-                    required: true,
-                    attributes: ['id', 'code'],
-                }],
-                attributes: ['id', 'supplierProductId'],
-            });
-
-            if (variant && variant.supplierProductId) {
-                const code = parseInt(variant.supplierProductId, 10);
+            if (rows && rows.length > 0 && rows[0].supplierProductId) {
+                const code = parseInt(rows[0].supplierProductId, 10);
                 if (code > 0) {
                     console.log(`✅ Flash: Resolved eezi-voucher product code from product_variants DB: ${code}`);
                     this._eeziVoucherProductCode = code;
@@ -1182,8 +1165,13 @@ class FlashController {
             // Our idempotency keys use underscores — replace with hyphens.
             const reference = rawReference ? String(rawReference).replace(/_/g, '-') : rawReference;
 
-            // accountNumber and productCode are server-side config — never trust client input
+            // All server-side config — never trust client input for these
             const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+            // storeId and terminalId identify the digital channel to Flash.
+            // For a digital-only merchant, these are single fixed values per account.
+            // Flash sandbox accounts may enforce these even though the spec marks them optional.
+            const storeId    = process.env.FLASH_STORE_ID    || process.env.FLASH_ACCOUNT_NUMBER?.replace(/-/g, '').slice(0, 12) || 'MYMOOLAHDIGITAL';
+            const terminalId = process.env.FLASH_TERMINAL_ID || process.env.FLASH_ACCOUNT_NUMBER?.replace(/-/g, '').slice(0, 12) || 'MYMOOLAHPOS01';
 
             // Validate required fields
             if (!reference || !amount) {
@@ -1260,8 +1248,12 @@ class FlashController {
                 accountNumber,
                 amount: amountInt,
                 productCode,
+                storeId,
+                terminalId,
                 ...(metadata && { metadata })
             };
+
+            console.log('📤 eezi-voucher → Flash API payload:', { reference, accountNumber, amount: amountInt, productCode, storeId, terminalId });
 
             const response = await this.authService.makeAuthenticatedRequest(
                 'POST',
@@ -1272,20 +1264,13 @@ class FlashController {
             // Persist transaction (do not expose commission in API response)
             try {
               await FlashTransaction.create({
-                reference,
+                txnReference: reference,
                 accountNumber,
                 serviceType: 'eezi_voucher',
                 operation: 'purchase',
-                amount,
+                amount: amountInt,
                 productCode,
                 status: 'completed',
-                faceValueCents,
-                commissionRatePct,
-                commissionCents,
-                netRevenueCents,
-                generationFeeCents,
-                redemptionFeeCents,
-                vatExclusive: true,
                 metadata: metadata || null,
                 flashResponseCode: String(response?.responseCode ?? '0'),
                 flashResponseMessage: response?.responseMessage || 'OK'
@@ -1310,7 +1295,7 @@ class FlashController {
               const rawAmt = (req.body || {}).amount;
               const safeAmt = Number.isInteger(rawAmt) ? rawAmt : parseInt(rawAmt, 10) || 0;
               await FlashTransaction.create({
-                reference: safeRef,
+                txnReference: safeRef,
                 accountNumber: process.env.FLASH_ACCOUNT_NUMBER || 'unknown',
                 serviceType: 'eezi_voucher',
                 operation: 'purchase',
