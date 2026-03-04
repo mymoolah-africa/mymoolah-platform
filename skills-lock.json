@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "skills": {
+    "accessibility-compliance": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "3936584cc5ff5c958f33b0072ad17ba2bc9ed947dd3ada3c1ce4f4265385aada"
+    },
+    "api-design-principles": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "74d1cdb3f538a1f2758001f65132e6fd634dd0d3c8fdff54e6439a97f72499d9"
+    },
+    "interaction-design": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "05088780c348108baaabdaf55c672a7967c2a82c4843c259343141f91a0da55a"
+    },
+    "postgresql-optimization": {
+      "source": "github/awesome-copilot",
+      "sourceType": "github",
+      "computedHash": "8022448de70ba9a485e3b5bce34c5bbc644f93eb39b68431c9f7dabcf03aeb09"
+    },
+    "security-best-practices": {
+      "source": "supercent-io/skills-template",
+      "sourceType": "github",
+      "computedHash": "4647247fd17c7a3a48605fa5c935915295dcb9a3dcf5c9ba5209194bffbf6993"
+    },
+    "sql-optimization-patterns": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "5d182f85b327275d3b159d4ebc864691baa6f8fdec30a9cce1f04a0cf10dce2b"
+    },
+    "tailwind-design-system": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "computedHash": "d0e4d2ba5a99cdc6e264d3927d1d81e85e79f551c8e246fa0a86123217eaad94"
+    }
+  }
+}

@@ -1,5 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-04 - 🛠 Cursor Skills for Banking-Grade Platform ✅
+
+### **Session Overview**
+Installed 7 Cursor skills via `npx skills add` to support award-winning banking/Mojaloop-standard development: api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices. Skills live in `.agents/skills/`; frontend-design remains in `.cursor/skills/`. Created `docs/CURSOR_SKILLS.md`.
+
+### **Changes**
+- **`.agents/skills/`**: 7 skills installed (api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices)
+- **`skills-lock.json`**: Skills lock file
+- **`docs/CURSOR_SKILLS.md`**: NEW — skills inventory and alignment with MMTP rules
+
+### **Session Log**
+- `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`
+
+---
+
 ## 2026-02-27 - 📐 Figma Restriction Removed — Code as Frontend Source of Truth ✅
 
 ### **Session Overview**
