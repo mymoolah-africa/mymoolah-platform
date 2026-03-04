@@ -637,7 +637,6 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                              { value: 'MTN', label: 'MTN', color: '#ffcc00', letter: 'M', textColor: '#000000' },
                              { value: 'CellC', label: 'CellC', color: '#ff6600', letter: 'C', textColor: '#ffffff' },
                              { value: 'Telkom', label: 'Telkom', color: '#003366', letter: 'T', textColor: '#ffffff' },
-                             { value: 'eeziAirtime', label: 'eeziAirtime (Flash)', color: '#86BE41', letter: 'E', textColor: '#ffffff' }
                            ].map((network) => (
                              <div
                                key={network.value}
@@ -684,68 +683,6 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                         ))}
                       </div>
                       
-                      {/* International Networks Section */}
-                      <div style={{
-                        padding: '8px 0'
-                      }}>
-                        <div style={{
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#64748b',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
-                          marginBottom: '8px',
-                          padding: '0 12px'
-                        }}>
-                          International Networks
-                        </div>
-                        
-                                                 {[
-                           { value: 'global-airtime', label: 'Global Airtime', color: '#3b82f6', icon: '🌍' },
-                           { value: 'global-data', label: 'Global Data', color: '#8b5cf6', icon: '🌍' }
-                         ].map((network) => (
-                           <div
-                             key={network.value}
-                             onClick={() => {
-                               setFormData({ ...formData, network: network.value });
-                               setShowNetworkDropdown(false);
-                             }}
-                             style={{
-                               display: 'flex',
-                               alignItems: 'center',
-                               gap: '12px',
-                               padding: '12px',
-                               borderRadius: '8px',
-                               cursor: 'pointer',
-                               transition: 'all 0.2s ease',
-                               backgroundColor: formData.network === network.value ? '#f1f5f9' : 'transparent'
-                             }}
-                             onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#f8fafc'}
-                             onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = formData.network === network.value ? '#f1f5f9' : 'transparent'}
-                          >
-                            <div style={{
-                              width: '24px',
-                              height: '24px',
-                              backgroundColor: network.color,
-                              borderRadius: '4px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '12px'
-                            }}>
-                              {network.icon}
-                            </div>
-                            <span style={{ 
-                              fontWeight: '500',
-                              color: '#1f2937',
-                              fontFamily: 'Montserrat, sans-serif',
-                              fontSize: '14px'
-                            }}>
-                              {network.label}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   )}
                 </div>

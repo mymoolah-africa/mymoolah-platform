@@ -1082,42 +1082,42 @@ export function AirtimeDataOverlay() {
             showFilters={false}
           />
 
-          {/* eeziAirtime Token — ZAR PIN cash token, no beneficiary needed */}
-          {eeziPinProducts.length > 0 && (
-            <div
-              onClick={() => setShowEeziPinModal(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 16px',
-                border: '1px solid #e2e8f0',
-                borderRadius: '12px',
-                backgroundColor: '#ffffff',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
-              onMouseOver={(e) => { e.currentTarget.style.borderColor = '#86BE41'; e.currentTarget.style.backgroundColor = '#f9fafb'; }}
-              onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.backgroundColor = '#ffffff'; }}
-            >
-              <div className="flex items-center gap-3">
-                <div style={{ width: '40px', height: '40px', backgroundColor: '#86BE41', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
-                </div>
-                <div>
-                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-                    eeziAirtime
-                  </p>
-                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: 0 }}>
-                    {eeziPinProducts.length} PIN {eeziPinProducts.length === 1 ? 'option' : 'options'} · Flash · ZAR
-                  </p>
-                </div>
+          {/* eeziAirtime Token — ZAR PIN cash token, always visible */}
+          <div
+            onClick={() => setShowEeziPinModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 16px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              backgroundColor: '#ffffff',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#86BE41'; e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.backgroundColor = '#ffffff'; }}
+          >
+            <div className="flex items-center gap-3">
+              <div style={{ width: '40px', height: '40px', backgroundColor: '#86BE41', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
               </div>
-              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#86BE41', margin: 0 }}>
-                Buy PIN →
-              </p>
+              <div>
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+                  eeziAirtime
+                </p>
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                  {eeziPinProducts.length > 0
+                    ? `${eeziPinProducts.length} PIN ${eeziPinProducts.length === 1 ? 'option' : 'options'} · Flash · ZAR`
+                    : 'PIN cash token · Flash · ZAR'}
+                </p>
+              </div>
             </div>
-          )}
+            <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#86BE41', margin: 0 }}>
+              Buy PIN →
+            </p>
+          </div>
 
           {/* International Airtime — PIN-based, no beneficiary needed */}
           {globalPinProducts.length > 0 && (
