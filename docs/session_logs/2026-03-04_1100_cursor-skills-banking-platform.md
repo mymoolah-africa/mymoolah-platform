@@ -30,8 +30,8 @@ Installed 7 Cursor skills via `npx skills add` to support MyMoolah as a global a
 
 ## Key Decisions
 
-- **CLI install**: Used `npx skills add` — skills go to `.agents/skills/` (Cursor reads both `.cursor/skills/` and `.agents/skills/`)
-- **frontend-design**: Already in `.cursor/skills/` (project-added); retained
+- **CLI install**: Used `npx skills add` — skills go to `.agents/skills/`
+- **frontend-design**: Moved to `.agents/skills/` in follow-up session (see 2026-03-04_1117) — all skills now in single parent
 - **security**: Added security-best-practices for banking-grade alignment
 
 ---

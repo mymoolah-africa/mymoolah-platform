@@ -1,20 +1,24 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: February 27, 2026  
-**Version**: 2.11.25 - EasyPay Cash-In Activation Complete  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: March 4, 2026  
+**Version**: 2.11.27 - Cursor Skills for Banking-Grade Platform  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 21–27, 2026)**: EasyPay Cash-In activation complete — fixed authorisationRequest 500 (userId/walletId migration), 5-scenario test script (11/11 pass), Theodore test data + Razeen reply docs. User sent Razeen reply and shared restricted folder with Theodore. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 27–Mar 4, 2026)**: Cursor skills for banking-grade platform — 8 skills in `.agents/skills/` (api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices, frontend-design). Consolidated to single parent directory. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: EasyPay Cash-In Activation Complete (February 27, 2026)**
+## 🚀 **LATEST UPDATE: Cursor Skills for Banking-Grade Platform (March 4, 2026)**
 
-### **💳 EasyPay Cash-In Activation Complete**
-- **Fixed authorisationRequest 500** — migration adds `userId`/`walletId` to `payments`; Payment model updated
-- **5-scenario test script** — `scripts/test-easypay-5-scenarios.sh` (11/11 tests pass on Staging)
-- **Theodore test data** — `docs/EASYPAY_THEODORE_SMITH_TEST_DATA.md`; Razeen reply draft; copy-paste versions
-- **User actions**: Sent Razeen reply; shared restricted folder with Theodore (test data + SessionToken)
+### **🛠 Cursor Skills Consolidated**
+- **8 skills in `.agents/skills/`** — api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices, frontend-design
+- **Single parent directory** — best practice; industry standard (Agent Skills spec)
+- **docs/CURSOR_SKILLS.md** — skills inventory and MMTP alignment
+
+**Session logs**: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`
+
+### **🔄 Previous: EasyPay Cash-In Activation Complete (February 27, 2026)**
+- Fixed authorisationRequest 500; 5-scenario test script (11/11 pass); Theodore test data, Razeen reply
 
 **Session log**: `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`
 

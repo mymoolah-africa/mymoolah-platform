@@ -3,15 +3,16 @@
 ## 2026-03-04 - 🛠 Cursor Skills for Banking-Grade Platform ✅
 
 ### **Session Overview**
-Installed 7 Cursor skills via `npx skills add` to support award-winning banking/Mojaloop-standard development: api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices. Skills live in `.agents/skills/`; frontend-design remains in `.cursor/skills/`. Created `docs/CURSOR_SKILLS.md`.
+Installed 7 Cursor skills via `npx skills add` to support award-winning banking/Mojaloop-standard development. Consolidated all 8 skills (including frontend-design) into single parent `.agents/skills/`. Best practice: one directory, industry standard. Created `docs/CURSOR_SKILLS.md`.
 
 ### **Changes**
-- **`.agents/skills/`**: 7 skills installed (api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices)
-- **`skills-lock.json`**: Skills lock file
-- **`docs/CURSOR_SKILLS.md`**: NEW — skills inventory and alignment with MMTP rules
+- **`.agents/skills/`**: 8 skills — api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices, frontend-design (moved from .cursor/skills/)
+- **`skills-lock.json`**: Skills lock file (tracks 7 CLI-installed; frontend-design is custom)
+- **`docs/CURSOR_SKILLS.md`**: Skills inventory, all in .agents/skills/
 
-### **Session Log**
+### **Session Logs**
 - `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`
+- `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`
 
 ---
 

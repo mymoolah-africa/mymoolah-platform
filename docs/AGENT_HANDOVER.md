@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-02-27 14:00  
-**Latest Feature**: Figma restriction removed — code as frontend source of truth  
-**Document Version**: 2.11.26  
-**Session logs**: `docs/session_logs/2026-02-27_1400_figma-restriction-removed-code-source-of-truth.md`, `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`  
+**Last Updated**: 2026-03-04 11:17  
+**Latest Feature**: Cursor skills consolidated in .agents/skills/ (8 skills, single parent)  
+**Document Version**: 2.11.27  
+**Session logs**: `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`, `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (February 27, 2026 - 14:00)**
+### **Latest Achievement (March 4, 2026 - 11:17)**
+**Cursor Skills for Banking-Grade Platform** — Installed 7 skills via `npx skills add`; consolidated all 8 (including frontend-design) into `.agents/skills/`. Single parent directory, industry standard. Skills: api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices, frontend-design. Session logs: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`.
+
+### **Previous Achievement (February 27, 2026 - 14:00)**
 **Figma Restriction Removed — Code as Frontend Source of Truth** — Removed Figma read-only rule. Codebase is now frontend source of truth; agents may edit any UI/frontend including `mymoolah-wallet-frontend/pages/*.tsx`. Figma optional reference. Updated CURSOR_2.0_RULES_FINAL.md, AGENT_HANDOVER.md, AGENT_ROLE_TEMPLATE.md. Enables frontend-design skill on main app pages. Session log: `docs/session_logs/2026-02-27_1400_figma-restriction-removed-code-source-of-truth.md`.
 
 ### **Previous Achievement (February 21, 2026 - 17:00)**
@@ -136,7 +139,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – February 21–27, 2026)**
+### **Recent Updates (Last 7 Days – February 27–March 4, 2026)**
+- **Mar 4 (11:17)**: Cursor skills consolidated — all 8 skills in `.agents/skills/` (single parent). Moved frontend-design from .cursor/skills/. Best practice structure.
 - **Feb 27 (14:00)**: Figma restriction removed — code is frontend source of truth. Agents may edit any UI/frontend including `pages/*.tsx`. Figma optional reference. Enables frontend-design skill on main app pages.
 - **Feb 21 (21:00)**: Standard Bank PayShap banking-grade overhaul — removed Peach proxy workaround; aligned Pain.001 (top-level grpHdr/pmtInf[], pmntInfId, reqdExctnDt.dtTm, lclInstrm.prtry, cdtrAgt+brnchId, rmtInf.strd[], splmtryData) and Pain.013 (PascalCase, DbtrAcct.Id.Item.Id+Prxy, CdtrAgt.Othr.Id, Amt.Item.Value, PmtCond, RmtInf.Strd[]) with SBSA Postman samples; fixed RTP callback URLs in client.js; scope-keyed token cache in pingAuthService; ACID transaction ordering in RPP/RTP services; added proxyResolutionClient.js; express-validator on routes.
 - **Feb 21 (19:00)**: Documentation consolidation — archived ~75 docs to `docs/archive/` (deployment, codespaces, mobilemart, beneficiary, partner-api, referral, easypay, zapper, figma, peach-payments, security); merged INPUT_FIELD_FIXES, 2FA_IMPLEMENTATION, SECURITY (badge/certificate/token); created DOCS_CONSOLIDATION_2026.md. Session log updated with git push/pull status. Codespaces synced (82 files, fast-forward).
