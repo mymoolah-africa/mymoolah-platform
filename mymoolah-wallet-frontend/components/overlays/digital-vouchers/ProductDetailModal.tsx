@@ -19,6 +19,7 @@ interface Voucher {
   category: 'Gaming' | 'Entertainment' | 'Transport' | 'Shopping' | 'MyMoolah';
   minAmount: number;
   maxAmount: number;
+  isVariable?: boolean; // true = free-text amount input; false/absent = denomination buttons
   icon: string;
   description: string;
   available: boolean;
@@ -405,39 +406,77 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
               }}>
                 Select Amount
               </Label>
-              <div className="space-y-2">
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  placeholder={
-                    voucher.minAmount || voucher.maxAmount
-                      ? `Enter amount (min ${voucher.minAmount ? formatCurrency(voucher.minAmount) : ''}${
-                          voucher.maxAmount ? `, max ${formatCurrency(voucher.maxAmount)}` : ''
-                        })`
-                      : 'Enter amount (R)'
-                  }
-                  value={amountInput}
-                  onChange={(e) => handleAmountChange(e.target.value)}
-                  style={{
-                    fontFamily: 'Montserrat, sans-serif',
-                    fontSize: '14px',
-                    borderRadius: '12px',
-                    minHeight: '48px',
-                    borderColor: errors.amount ? '#ef4444' : '#d1d5db'
-                  }}
-                />
-                {errors.amount && (
-                  <p
+
+              {/* Fixed denominations → show tap-to-select buttons */}
+              {!voucher.isVariable && Array.isArray(voucher.denominations) && voucher.denominations.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    {voucher.denominations.map((denom: number) => (
+                      <button
+                        key={denom}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDenomination(denom);
+                          setAmountInput((denom / 100).toFixed(2));
+                          setErrors(prev => ({ ...prev, amount: undefined }));
+                        }}
+                        style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '14px',
+                          fontWeight: '600',
+                          padding: '10px 16px',
+                          borderRadius: '10px',
+                          border: selectedDenomination === denom
+                            ? '2px solid #22c55e'
+                            : '2px solid #d1d5db',
+                          background: selectedDenomination === denom
+                            ? 'linear-gradient(135deg, #22c55e, #3b82f6)'
+                            : '#f9fafb',
+                          color: selectedDenomination === denom ? '#fff' : '#374151',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {formatCurrency(denom)}
+                      </button>
+                    ))}
+                  </div>
+                  {errors.amount && (
+                    <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#ef4444' }}>
+                      {errors.amount}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                /* Variable product → free-text amount input */
+                <div className="space-y-2">
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={
+                      voucher.minAmount || voucher.maxAmount
+                        ? `Enter amount (min ${voucher.minAmount ? formatCurrency(voucher.minAmount) : ''}${
+                            voucher.maxAmount ? `, max ${formatCurrency(voucher.maxAmount)}` : ''
+                          })`
+                        : 'Enter amount (R)'
+                    }
+                    value={amountInput}
+                    onChange={(e) => handleAmountChange(e.target.value)}
                     style={{
                       fontFamily: 'Montserrat, sans-serif',
-                      fontSize: '12px',
-                      color: '#ef4444'
+                      fontSize: '14px',
+                      borderRadius: '12px',
+                      minHeight: '48px',
+                      borderColor: errors.amount ? '#ef4444' : '#d1d5db'
                     }}
-                  >
-                    {errors.amount}
-                  </p>
-                )}
-              </div>
+                  />
+                  {errors.amount && (
+                    <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#ef4444' }}>
+                      {errors.amount}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <Separator />

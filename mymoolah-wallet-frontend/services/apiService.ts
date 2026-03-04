@@ -512,49 +512,148 @@ class ApiService {
           ? comparison.bestDeals
           : (comparison?.products || []);
 
-      const transformedVouchers = sourceList.map((product: any) => {
+      // ── Step 1: Normalise each raw product into a typed shape ──────────────────
+      interface NormalisedProduct {
+        id: string;
+        productId: any;
+        variantId: any;
+        rawName: string;
+        displayName: string;
+        brandKey: string;       // normalised key used for grouping (brand + supplier)
+        supplierCode: string;
+        minAmount: number;
+        maxAmount: number;
+        isVariable: boolean;    // true = own-amount entry field
+        denominations: number[];
+        category: any;
+        icon: string;
+        description: string;
+        featured: boolean;
+      }
+
+      const normalisedList: NormalisedProduct[] = sourceList.map((product: any) => {
         const rawName = (product.productName || product.name || '').trim();
+
+        // Strip range suffixes/prefixes from display name
         const displayName = rawName
-          .replace(/\s+Voucher$/, '')
-          // Strip trailing range patterns like "R2-R3000", "R2 - R3000", "R5-R999" etc.
-          .replace(/\s+R\d+\s*[-–]\s*R\d+\s*$/i, '')
-          // Strip leading range patterns like "R2-R3000 OTT" → "OTT"
-          .replace(/^R\d+\s*[-–]\s*R\d+\s+/i, '')
-          .replace('HollywoodBets', 'Hollywood\nBets')
+          .replace(/\s+Voucher$/i, '')
+          .replace(/\s+R\d+\s*[-–]\s*R\d+\s*$/i, '')   // trailing range "R2-R999"
+          .replace(/^R\d+\s*[-–]\s*R\d+\s+/i, '')        // leading range "R2-R999 OTT"
+          .replace(/\s+R\d+$/i, '')                        // trailing fixed denom "Hollywood Bets R50"
+          .replace(/^R\d+\s+/i, '')                        // leading fixed denom "R50 Something"
+          .replace('HollywoodBets', 'Hollywood Bets')
           .trim();
 
         const minAmount = product.minAmount ?? product.price ?? product.min ?? 0;
         const maxAmount = product.maxAmount ?? product.price ?? product.max ?? minAmount;
         const supplierCode = (product.supplierCode || product.supplier?.code || '').toString().toUpperCase();
 
-        const explicitDenominations =
-          (Array.isArray(product.predefinedAmounts) ? product.predefinedAmounts : null) ||
-          (Array.isArray(product.denominationOptions) ? product.denominationOptions : null) ||
-          (Array.isArray(product.denominations) ? product.denominations : null) ||
-          (Array.isArray(product.priceRange?.denominations) ? product.priceRange.denominations : null);
+        // A product is "variable" when min < max and it has no fixed denominations list
+        const explicitDenominations: number[] =
+          (Array.isArray(product.predefinedAmounts) && product.predefinedAmounts.length > 0
+            ? product.predefinedAmounts
+            : null) ||
+          (Array.isArray(product.denominationOptions) && product.denominationOptions.length > 0
+            ? product.denominationOptions
+            : null) ||
+          (Array.isArray(product.denominations) && product.denominations.length > 0
+            ? product.denominations
+            : null) ||
+          [];
 
-        const denominations = Array.isArray(explicitDenominations) && explicitDenominations.length > 0
-          ? explicitDenominations
-          : this.generateVoucherDenominations(minAmount, maxAmount);
+        // Fixed = has explicit denominations OR min === max (single price point)
+        // Variable = min < max AND no explicit denominations
+        const isVariable = explicitDenominations.length === 0 && minAmount < maxAmount;
 
-        const voucherObj = {
+        // Grouping key: normalised display name + supplier (so Flash R50 and MobileMart R50 stay separate)
+        const brandKey = `${displayName.toLowerCase().replace(/\s+/g, ' ').trim()}::${supplierCode}`;
+
+        return {
           id: (product.variantId || product.id || product.supplierProductId || rawName).toString(),
-          productId: product.productId, // Actual product ID for purchase
-          variantId: product.variantId || product.id, // Variant ID for reference
-          name: displayName,
-          brand: product.brand?.name || product.provider || displayName,
-          category: this.mapCategory(product.category || product.vasType || 'voucher'),
+          productId: product.productId,
+          variantId: product.variantId || product.id,
+          rawName,
+          displayName,
+          brandKey,
+          supplierCode,
           minAmount,
           maxAmount,
+          isVariable,
+          denominations: explicitDenominations,
+          category: this.mapCategory(product.category || product.vasType || 'voucher'),
           icon: this.getVoucherIcon(rawName || displayName),
-          description: product.description || rawName || displayName,
-          supplierCode,
-          available: true, // Show best pick irrespective of supplier; purchase flow can branch as needed
-          featured: product.isPromotional || product.featured || ['MMVoucher', 'Netflix', 'Google Play', 'DStv', 'Betway'].includes(displayName),
-          denominations
+          description: product.description || displayName,
+          featured: product.isPromotional || product.featured ||
+            ['MMVoucher', 'Netflix', 'Google Play', 'DStv', 'Betway'].includes(displayName),
         };
+      });
 
-        return voucherObj;
+      // ── Step 2: Group by brandKey ────────────────────────────────────────────
+      // Collect all variants per brand+supplier combination
+      const grouped = new Map<string, NormalisedProduct[]>();
+      for (const p of normalisedList) {
+        if (!grouped.has(p.brandKey)) grouped.set(p.brandKey, []);
+        grouped.get(p.brandKey)!.push(p);
+      }
+
+      // ── Step 3: Collapse each group into one card ────────────────────────────
+      // Business rule:
+      //   • If the group contains a variable product → show ONLY the variable card
+      //     (suppress all fixed-denomination variants of the same brand/supplier)
+      //   • If no variable exists → merge all fixed denominations into one card
+      const transformedVouchers = Array.from(grouped.values()).map((group) => {
+        const variableVariant = group.find(p => p.isVariable);
+
+        if (variableVariant) {
+          // Use the variable product as the card; ignore fixed siblings
+          return {
+            id: variableVariant.id,
+            productId: variableVariant.productId,
+            variantId: variableVariant.variantId,
+            name: variableVariant.displayName,
+            brand: variableVariant.displayName,
+            category: variableVariant.category,
+            minAmount: variableVariant.minAmount,
+            maxAmount: variableVariant.maxAmount,
+            isVariable: true,
+            icon: variableVariant.icon,
+            description: variableVariant.description,
+            supplierCode: variableVariant.supplierCode,
+            available: true,
+            featured: variableVariant.featured,
+            denominations: [],   // empty → modal shows free-text input
+          };
+        }
+
+        // All fixed: merge denominations from every variant in the group
+        const base = group[0];
+        const allDenoms = Array.from(
+          new Set(
+            group.flatMap(p =>
+              p.denominations.length > 0
+                ? p.denominations
+                : [p.minAmount]   // single-price product → treat its price as a denomination
+            )
+          )
+        ).sort((a, b) => a - b);
+
+        return {
+          id: base.id,
+          productId: base.productId,
+          variantId: base.variantId,
+          name: base.displayName,
+          brand: base.displayName,
+          category: base.category,
+          minAmount: Math.min(...allDenoms),
+          maxAmount: Math.max(...allDenoms),
+          isVariable: false,
+          icon: base.icon,
+          description: base.description,
+          supplierCode: base.supplierCode,
+          available: true,
+          featured: group.some(p => p.featured),
+          denominations: allDenoms,  // populated → modal shows denomination buttons
+        };
       });
 
       return { vouchers: transformedVouchers };
