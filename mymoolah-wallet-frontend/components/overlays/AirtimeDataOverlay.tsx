@@ -89,17 +89,31 @@ export function AirtimeDataOverlay() {
       .then(({ globalPin }) => setGlobalPinProducts(globalPin))
       .catch(() => {/* silently ignore */});
 
-    // Pre-load eeziAirtime Token products (voucher type, ZAR PIN cash tokens)
-    apiService.compareSuppliers('voucher')
-      .then((comparison: any) => {
-        const sourceList =
-          (comparison?.bestDeals?.length > 0 ? comparison.bestDeals : null) ||
-          comparison?.products || [];
-        const eeziProducts = sourceList
+    // Pre-load eeziAirtime Token products.
+    // These are currently stored as vasType='airtime' in the DB (until next catalog sync
+    // reclassifies them as 'voucher'). Search both vasTypes to be resilient.
+    Promise.all([
+      apiService.compareSuppliers('airtime').catch(() => ({ bestDeals: [], products: [] })),
+      apiService.compareSuppliers('voucher').catch(() => ({ bestDeals: [], products: [] })),
+    ]).then(([airtimeComp, voucherComp]: [any, any]) => {
+        const fromAirtime = (airtimeComp?.bestDeals?.length > 0 ? airtimeComp.bestDeals : null) || airtimeComp?.products || [];
+        const fromVoucher = (voucherComp?.bestDeals?.length > 0 ? voucherComp.bestDeals : null) || voucherComp?.products || [];
+        const combined = [...fromAirtime, ...fromVoucher];
+
+        const isEezi = (p: any) => {
+          const name = (p.productName || p.name || '').toLowerCase();
+          const group = (p.flash_product_group || p.metadata?.flash_product_group || '').toLowerCase();
+          return name.includes('eezi') || group.includes('eezi');
+        };
+
+        const seen = new Set<string>();
+        const eeziProducts = combined
+          .filter(isEezi)
           .filter((p: any) => {
-            const name = (p.productName || p.name || '').toLowerCase();
-            const group = (p.flash_product_group || p.metadata?.flash_product_group || '').toLowerCase();
-            return name.includes('eezi') || group.includes('eezi');
+            const key = String(p.id || p.variantId || p.supplierProductId);
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
           })
           .map((p: any) => ({
             id: p.id || p.variantId || p.supplierProductId,
