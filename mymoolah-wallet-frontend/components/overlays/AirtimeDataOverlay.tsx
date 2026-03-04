@@ -67,8 +67,6 @@ export function AirtimeDataOverlay() {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<Beneficiary | null>(null);
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
-  const [ownAirtimeAmount, setOwnAirtimeAmount] = useState<string>('');
-  const [ownDataAmount, setOwnDataAmount] = useState<string>('');
   const [globalPinProducts, setGlobalPinProducts] = useState<any[]>([]);
   const [showGlobalPinModal, setShowGlobalPinModal] = useState(false);
   const [editingBeneficiary, setEditingBeneficiary] = useState<Beneficiary | null>(null);
@@ -473,67 +471,8 @@ export function AirtimeDataOverlay() {
     }
   };
 
-  const handleOwnAirtimeAmount = () => {
-    const amount = parseFloat(ownAirtimeAmount);
-    if (amount && amount > 0 && amount <= 1000) {
-      // Prefer a catalog product with matching amount so we send a valid variantId
-      const match = catalog?.products?.find(
-        (p: any) => p.type === 'airtime' && (
-          Math.abs((p.price ?? 0) - amount) < 0.02 ||
-          (Array.isArray(p.denominations) && p.denominations.includes(Math.round(amount * 100)))
-        )
-      );
-      const product: AirtimeDataProduct = match
-        ? { ...match, name: match.name || `${selectedBeneficiary?.metadata?.network || 'Vodacom'} Airtime R${amount}`, size: `R${amount.toFixed(2)}`, price: amount }
-        : {
-            id: `airtime_own_${Date.now()}`,
-            name: `${selectedBeneficiary?.metadata?.network || 'Vodacom'} Airtime Top-up`,
-            size: `R${amount.toFixed(2)}`,
-            price: amount,
-            provider: selectedBeneficiary?.metadata?.network || 'Vodacom',
-            type: 'airtime',
-            validity: 'Immediate',
-            isBestDeal: false,
-            supplier: 'flash',
-            description: 'Custom airtime amount',
-            commission: 0,
-            fixedFee: 0
-          };
-      setSelectedProduct(product);
-      setCurrentStep('confirm');
-    }
-  };
-
-  const handleOwnDataAmount = () => {
-    const amount = parseFloat(ownDataAmount);
-    if (amount && amount > 0 && amount <= 1000) {
-      // Prefer a catalog product with matching amount so we send a valid variantId
-      const match = catalog?.products?.find(
-        (p: any) => p.type === 'data' && (
-          Math.abs((p.price ?? 0) - amount) < 0.02 ||
-          (p.minAmount != null && Math.abs((p.minAmount / 100) - amount) < 0.02)
-        )
-      );
-      const product: AirtimeDataProduct = match
-        ? { ...match, name: match.name || `${selectedBeneficiary?.metadata?.network || 'Vodacom'} Data ${amount}MB`, size: `${amount.toFixed(0)}MB`, price: amount }
-        : {
-            id: `data_own_${Date.now()}`,
-            name: `${selectedBeneficiary?.metadata?.network || 'Vodacom'} Data Top-up`,
-            size: `${amount.toFixed(0)}MB`,
-            price: amount,
-            provider: selectedBeneficiary?.metadata?.network || 'Vodacom',
-            type: 'data',
-            validity: '30 days',
-            isBestDeal: false,
-            supplier: 'flash',
-            description: 'Custom data amount',
-            commission: 0,
-            fixedFee: 0
-          };
-      setSelectedProduct(product);
-      setCurrentStep('confirm');
-    }
-  };
+  // handleOwnAirtimeAmount / handleOwnDataAmount removed — variable products from the catalog
+  // render their own inline amount input via the expandedProductId mechanism
 
   const handleSendToNewRecipient = async () => {
     if (!newRecipientPhone || !newRecipientName || !selectedProduct) return;
@@ -997,8 +936,6 @@ export function AirtimeDataOverlay() {
     setCatalog(null);
     setCurrentStep('beneficiary');
     setTransactionRef('');
-    setOwnAirtimeAmount('');
-    setOwnDataAmount('');
     setShowSendToNewRecipient(false);
     setNewRecipientPhone('');
     setNewRecipientName('');
@@ -1239,132 +1176,6 @@ export function AirtimeDataOverlay() {
             
             <CardContent>
               <div className="space-y-3">
-                {/* Own Airtime Amount - Show at top */}
-                {selectedBeneficiary && (
-                  <div style={{
-                    padding: '12px',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    backgroundColor: '#f8fafc'
-                  }}>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        backgroundColor: '#86BE41',
-                        borderRadius: '12px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
-                      </div>
-                      <div>
-                        <p style={{
-                          fontFamily: 'Montserrat, sans-serif',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          color: '#1f2937'
-                        }}>
-                          Own Amount
-                      </p>
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '12px',
-                        color: '#6b7280'
-                      }}>
-                        Enter custom airtime amount
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Enter amount (max R1,000)"
-                      value={ownAirtimeAmount}
-                      onChange={(e) => {
-                        // Banking-grade: Preserve exact user input - NO auto-formatting or rounding
-                        let inputValue = e.target.value;
-                        
-                        // Allow empty string, numbers, and single decimal point only
-                        // Remove any currency symbols or spaces that user might type
-                        inputValue = inputValue.replace(/[^\d.]/g, '');
-                        
-                        // Ensure only one decimal point
-                        const parts = inputValue.split('.');
-                        if (parts.length > 2) {
-                          inputValue = parts[0] + '.' + parts.slice(1).join('');
-                        }
-                        
-                        // Limit to 2 decimal places (user can type more, but we'll show only 2)
-                        // However, we preserve the exact input to prevent auto-changes
-                        if (parts.length === 2 && parts[1].length > 2) {
-                          // Only trim if user is typing, but preserve their intent
-                          const decimalPart = parts[1].substring(0, 2);
-                          inputValue = parts[0] + '.' + decimalPart;
-                        }
-                        
-                        // Set exact value - no automatic modification
-                        setOwnAirtimeAmount(inputValue);
-                      }}
-                      onBlur={(e) => {
-                        // Only validate/format on blur, not during typing
-                        const value = e.target.value.trim();
-                        if (value) {
-                          const num = parseFloat(value);
-                          if (!isNaN(num) && num > 0 && num <= 1000) {
-                            // Optional: Format to 2 decimals on blur for display consistency
-                            // But only if user typed a valid number
-                            if (value !== num.toString() && value.includes('.')) {
-                              setOwnAirtimeAmount(num.toFixed(2));
-                            }
-                          }
-                        }
-                      }}
-                      onKeyDown={(e) => {
-                        // Prevent browser auto-formatting with number input
-                        // Block 'e', 'E', '+', '-' which are allowed in number inputs
-                        if (['e', 'E', '+', '-'].includes(e.key)) {
-                          e.preventDefault();
-                        }
-                      }}
-                      onWheel={(e) => {
-                        // Prevent scrolling from changing number input values
-                        e.currentTarget.blur();
-                      }}
-                      style={{
-                        flex: '1',
-                        padding: '8px 12px',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        outline: 'none'
-                      }}
-                    />
-                    <Button
-                      onClick={handleOwnAirtimeAmount}
-                      disabled={!ownAirtimeAmount || parseFloat(ownAirtimeAmount) <= 0 || parseFloat(ownAirtimeAmount) > 1000}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: '#86BE41',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Select
-                    </Button>
-                  </div>
-                </div>
-                )}
-
                 {/* Airtime Product List */}
                 {catalog.products.filter(product => product.type === 'airtime').map((product, index) => {
                   const supplierKey = (product.supplierCode || '').toUpperCase();
@@ -1479,7 +1290,8 @@ export function AirtimeDataOverlay() {
             </CardContent>
           </Card>
 
-          {/* Data Products */}
+          {/* Data Products — only render when there are data products for this beneficiary */}
+          {catalog.products.some(p => p.type === 'data') && (
           <Card style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
@@ -1498,128 +1310,6 @@ export function AirtimeDataOverlay() {
             
             <CardContent>
               <div className="space-y-3">
-                {/* Own Data Amount - moved to top */}
-                <div style={{
-                  padding: '12px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  backgroundColor: '#f8fafc'
-                }}>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      backgroundColor: '#2D8CCA',
-                      borderRadius: '12px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <Wifi style={{ width: '20px', height: '20px', color: '#ffffff' }} />
-                    </div>
-                    <div>
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        color: '#1f2937'
-                      }}>
-                        Own Amount
-                      </p>
-                      <p style={{
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '12px',
-                        color: '#6b7280'
-                      }}>
-                        Enter custom data amount
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="Enter amount (max R1,000)"
-                      value={ownDataAmount}
-                      onChange={(e) => {
-                        // Banking-grade: Preserve exact user input - NO auto-formatting or rounding
-                        let inputValue = e.target.value;
-                        
-                        // Allow empty string, numbers, and single decimal point only
-                        // Remove any currency symbols or spaces that user might type
-                        inputValue = inputValue.replace(/[^\d.]/g, '');
-                        
-                        // Ensure only one decimal point
-                        const parts = inputValue.split('.');
-                        if (parts.length > 2) {
-                          inputValue = parts[0] + '.' + parts.slice(1).join('');
-                        }
-                        
-                        // Limit to 2 decimal places (user can type more, but we'll show only 2)
-                        // However, we preserve the exact input to prevent auto-changes
-                        if (parts.length === 2 && parts[1].length > 2) {
-                          // Only trim if user is typing, but preserve their intent
-                          const decimalPart = parts[1].substring(0, 2);
-                          inputValue = parts[0] + '.' + decimalPart;
-                        }
-                        
-                        // Set exact value - no automatic modification
-                        setOwnDataAmount(inputValue);
-                      }}
-                      onBlur={(e) => {
-                        // Only validate/format on blur, not during typing
-                        const value = e.target.value.trim();
-                        if (value) {
-                          const num = parseFloat(value);
-                          if (!isNaN(num) && num > 0 && num <= 1000) {
-                            // Optional: Format to 2 decimals on blur for display consistency
-                            // But only if user typed a valid number
-                            if (value !== num.toString() && value.includes('.')) {
-                              setOwnDataAmount(num.toFixed(2));
-                            }
-                          } else {
-                            // Invalid amount - clear or show error
-                            setOwnDataAmount('');
-                          }
-                        }
-                      }}
-                      style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '8px',
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        color: '#1f2937'
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        const value = parseFloat(ownDataAmount);
-                        if (!isNaN(value) && value > 0 && value <= 1000) {
-                          handleOwnDataAmount();
-                        }
-                      }}
-                      disabled={!ownDataAmount || parseFloat(ownDataAmount) <= 0 || parseFloat(ownDataAmount) > 1000}
-                      style={{
-                        padding: '8px 16px',
-                        backgroundColor: ownDataAmount && parseFloat(ownDataAmount) > 0 && parseFloat(ownDataAmount) <= 1000 ? '#2D8CCA' : '#9ca3af',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '8px',
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: '14px',
-                        fontWeight: '500',
-                        cursor: ownDataAmount && parseFloat(ownDataAmount) > 0 && parseFloat(ownDataAmount) <= 1000 ? 'pointer' : 'not-allowed',
-                        transition: 'background-color 0.2s ease'
-                      }}
-                    >
-                      Select
-                    </button>
-                  </div>
-                </div>
-
                 {catalog.products.filter(product => product.type === 'data').map((product, index) => {
                   const supplierKey = (product.supplierCode || '').toUpperCase();
                   const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? '1px solid #e2e8f0') : '1px solid #e2e8f0';
@@ -1732,6 +1422,7 @@ export function AirtimeDataOverlay() {
               </div>
             </CardContent>
           </Card>
+          )}
 
           {/* Navigation Buttons */}
           <div className="flex gap-3">
