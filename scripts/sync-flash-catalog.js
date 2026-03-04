@@ -137,8 +137,9 @@ function mapFlashCategory(productGroup, productName = '') {
   if (g.includes('flash pay'))    return 'bill_payment';
   // eezi MUST be checked before generic 'voucher' — "Eezi Vouchers" is airtime
   if (g.includes('eezi'))         return 'airtime';
-  // Global PIN products are international airtime top-up PINs
-  if (n.includes('global pin'))   return 'airtime';
+  // Global PIN = international PIN-based top-ups (not pinless airtime, not gift vouchers)
+  // Use dedicated type so they don't appear in the airtime or voucher overlays
+  if (n.includes('global pin'))   return 'international_pin';
   if (g.includes('voucher') || g.includes('gift') || g.includes('flash token') || g.includes('1voucher')) return 'voucher';
   if (g.includes('data'))         return 'data';
   return 'airtime';

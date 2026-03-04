@@ -1,20 +1,19 @@
 'use strict';
 
 /**
- * Fix Global PIN products — move to dedicated 'international_pin' type.
+ * Fix Global PIN products — set type to 'international_pin'.
  *
- * Global PIN products are international PIN-based top-ups (not pinless airtime,
- * not gift vouchers). They need their own type so they are excluded from both
- * the airtime overlay (pinless only) and the voucher overlay.
- *
- * Also ensures Electricity products are correctly typed (not voucher/airtime).
+ * Previous migration set them to 'airtime' but Global PIN products are
+ * PIN-based (not pinless), so they must not appear in the airtime overlay.
+ * Using a dedicated 'international_pin' type excludes them from both
+ * the airtime overlay and the voucher overlay until a dedicated overlay
+ * is built for them.
  *
  * Run via: ./scripts/run-migrations-master.sh uat
  */
 
 module.exports = {
   async up(queryInterface, Sequelize) {
-    // Fix products table — Global PIN: voucher/airtime → international_pin
     await queryInterface.sequelize.query(
       `UPDATE products
           SET type = 'international_pin',
@@ -23,9 +22,8 @@ module.exports = {
           AND type IN ('voucher', 'airtime')`,
       { type: Sequelize.QueryTypes.UPDATE }
     );
-    console.log('✅ Fixed Global PIN products → international_pin');
+    console.log('✅ Global PIN products → international_pin');
 
-    // Fix product_variants table
     await queryInterface.sequelize.query(
       `UPDATE product_variants pv
           SET "vasType" = 'international_pin',
@@ -36,7 +34,7 @@ module.exports = {
           AND pv."vasType" IN ('voucher', 'airtime')`,
       { type: Sequelize.QueryTypes.UPDATE }
     );
-    console.log('✅ Fixed Global PIN product_variants → international_pin');
+    console.log('✅ Global PIN product_variants → international_pin');
   },
 
   async down(queryInterface, Sequelize) {

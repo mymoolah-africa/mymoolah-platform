@@ -343,8 +343,9 @@ class CatalogSynchronizationService {
     // eezi must be checked BEFORE the generic 'voucher' check because Flash
     // names this group "Eezi Vouchers" — it is airtime, not a gift voucher.
     if (g.includes('eezi'))         return 'airtime';
-    // Global PIN products are international airtime top-up PINs, not gift vouchers
-    if (n.includes('global pin'))   return 'airtime';
+    // Global PIN = international PIN-based top-ups (not pinless airtime, not gift vouchers)
+    // Use dedicated type so they don't appear in the airtime or voucher overlays
+    if (n.includes('global pin'))   return 'international_pin';
     if (g.includes('voucher') || g.includes('gift') || g.includes('flash token') || g.includes('1voucher')) return 'voucher';
     if (g.includes('data'))         return 'data';
     return 'airtime';
