@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Project Status
 
 **Last Updated**: March 4, 2026  
-**Version**: 2.11.27 - Cursor Skills for Banking-Grade Platform  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **SBSA PAYSHAP CALLBACKS IMPLEMENTED** ✅ **EASYPAY /billpayment/v1 LIVE ON STAGING** ✅ **EASYPAY 5-SCENARIO TESTS PASS** ✅ **8 CURSOR SKILLS** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Version**: 2.11.28 - eeziAirtime PIN Fixes & Staging/Production Migrations  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EEZIAIRTIME PIN & COPY** ✅ **SBSA PAYSHAP CALLBACKS** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
@@ -10,8 +10,11 @@
 
 Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. All 80+ migrations applied to Production. Documentation consolidation (Feb 21): archived ~75 docs to `docs/archive/`, merged Input/2FA/Security, created DOCS_CONSOLIDATION_2026.md. EasyPay voucher refund duplicate fix (Feb 19). MMTP Partner API doc created; sandbox = staging.mymoolah.africa. SBSA PayShap UAT ready (awaiting OneHub credentials). Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC plan, Watch to Earn, EasyPay Top-up, and 11-language support deployed.
 
-### **📋 Latest Achievement: Cursor Skills for Banking-Grade Platform (March 4, 2026)** ✅ **COMPLETE**
-Installed 8 Cursor skills in `.agents/skills/` (single parent): api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices, frontend-design. Supports award-winning banking/Mojaloop-standard development. Session logs: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`.
+### **📋 Latest Achievement: eeziAirtime PIN Fixes & Staging/Production Migrations (March 4, 2026)** ✅ **COMPLETE**
+Fixed eeziAirtime PIN UI (apiService fallback "No PIN returned", Copy PIN in Transaction Detail modal). Fixed migration 20260304_fix_beneficiary22 (beneficiary_service_accounts.serviceData). Staging and Production migrations applied in Codespaces. Session log: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`.
+
+### **📋 Previous: Cursor Skills for Banking-Grade Platform (March 4, 2026)** ✅ **COMPLETE**
+8 skills in `.agents/skills/`. Session logs: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`.
 
 ### **📋 Previous: EasyPay Cash-In Activation Complete (February 27, 2026)** ✅ **COMPLETE**
 Fixed authorisationRequest 500; 5-scenario test script (11/11 pass); Theodore test data, Razeen reply; user sent Razeen reply and shared restricted folder. Session log: `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`.

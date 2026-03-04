@@ -2,7 +2,7 @@
 
 **Last Updated**: March 4, 2026  
 **Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
-**Version**: 2.11.27 - Cursor Skills for Banking-Grade Platform  
+**Version**: 2.11.28 - eeziAirtime PIN Fixes & Staging/Production Migrations  
 
 For work in the last 7 days (Feb 27–Mar 4, 2026), see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md) (Recent Updates).
 

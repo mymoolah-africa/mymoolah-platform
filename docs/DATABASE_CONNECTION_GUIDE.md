@@ -34,7 +34,7 @@ This guide ensures **100% reliable** database connections for UAT, Staging, and 
 - **Password Source**: **GCS Secret Manager** (`db-mmtp-pg-production-password`)
 - **Project**: `mymoolah-db`
 - **Instance**: `mmtp-pg-production` (Connection: `mymoolah-db:africa-south1:mmtp-pg-production`)
-- **Migration Status**: ✅ **COMPLETE** (Feb 12, 2026) - All 80+ migrations applied
+- **Migration Status**: ✅ **COMPLETE** (Mar 4, 2026) - All 80+ migrations applied including flash_transactions normalize, international_pin enums, beneficiary22 eeziAirtime fix
 
 ---
 
@@ -64,6 +64,8 @@ This guide ensures **100% reliable** database connections for UAT, Staging, and 
 - ✅ Error handling
 
 **Rule (updated Feb 2026):** Run **migrations first** when you add or change UAT/Staging/Production schema. Run **seed scripts only after** the relevant migrations have been run for that environment. Order is always: migrations → then seed.
+
+**Note (Mar 2026):** The repo's `cloud-sql-proxy` binary is Linux x86-64. On Mac ARM64, it will fail with "cannot execute binary file". **Run migrations in Codespaces** (Linux) for Staging/Production. Local Mac: use UAT with direct connection if configured, or run migrations from Codespaces.
 
 ---
 
@@ -309,5 +311,5 @@ If you encounter connection issues:
 
 ---
 
-**Last Updated**: 2025-12-03  
+**Last Updated**: 2026-03-04  
 **Maintained By**: AI Agent (Standardized Setup)

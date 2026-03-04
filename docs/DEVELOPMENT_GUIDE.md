@@ -1,14 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: February 21, 2026  
-**Version**: 2.11.14 - Documentation Consolidation  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
-
----
-
-## 🚀 **LATEST UPDATE**
-
-**For full change history**, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md).
+**Last Updated**: March 4, 2026  
+**Version**: 2.11.28 - eeziAirtime PIN Fixes & Staging/Production Migrations  
+**Status**: ✅ **EEZIAIRTIME PIN & COPY** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
@@ -28,7 +22,7 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Development Environment**: GitHub Codespaces (UAT credentials, test accounts)
 - **Staging Environment**: Google Cloud Services Staging (Production credentials, test accounts) - **Recommended**
 - **Production Environment**: Google Cloud Services Production (Production credentials, real customers)
-- **See:** `docs/archive/DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow (environments, schema policy, staging/production phases)
+- **See:** `DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow documentation
 
 ---
 
@@ -214,7 +208,8 @@ MOBILEMART_TOKEN_URL=/connect/token  # Optional (default)
 The MyMoolah platform includes a **banking-grade multi-level referral system** designed to create earning opportunities in South Africa. The system is built on Mojaloop and ISO20022 standards with comprehensive fraud prevention.
 
 #### **Commission Structure**
-- **3-Level System**: 5% (1st level), 3% (2nd level), 2% (3rd level) - no caps
+- **4-Level System**: 4% (1st level), 3% (2nd level), 2% (3rd level), 1% (4th level)
+- **Monthly Caps**: R10,000 (1st), R5,000 (2nd), R2,500 (3rd), R1,000 (4th) per user per level
 - **Revenue Source**: 10% of MyMoolah's net earnings from all transactions (VAS commissions, transaction fees)
 - **Activation**: After first transaction (prevents fraud)
 
@@ -225,7 +220,7 @@ The MyMoolah platform includes a **banking-grade multi-level referral system** d
    - Stores referral codes, invitee phone numbers, status
    - Tracks signup bonuses and activation
 
-2. **`referral_chains`**: 3-level network structure
+2. **`referral_chains`**: 4-level network structure
    - Maintains hierarchical relationships
    - Tracks referrer → referree at each level
 

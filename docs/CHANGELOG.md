@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-04 - 💳 eeziAirtime PIN Fixes & Staging/Production Migrations ✅
+
+### **Session Overview**
+Fixed eeziAirtime PIN UI and migration failures. Removed SMS fallback text from apiService, added Copy PIN in Transaction Detail modal for eeziAirtime tokens. Fixed migration `20260304_fix_beneficiary22_eeziairtime_network` (wrong table/column). Staging and Production migrations applied successfully in Codespaces.
+
+### **Changes**
+- **`mymoolah-wallet-frontend/services/apiService.ts`**: PIN fallback "No PIN returned" (was "PIN will be sent via SMS"); pinNumber first in extraction chain
+- **`mymoolah-wallet-frontend/components/TransactionDetailModal.tsx`**: eeziAirtime PIN section with Copy PIN button (green dashed border, metadata.pin)
+- **`migrations/20260304_fix_beneficiary22_eeziairtime_network.js`**: service_accounts → beneficiary_service_accounts, metadata → serviceData
+
+### **Migrations Applied**
+- **Staging**: 20260304_fix_beneficiary22_eeziairtime_network, fix_eezi_airtime_category, fix_global_pin_category, normalize_flash_transactions_columns
+- **Production**: 20260227_add_userid_walletid_to_payments, 20260304_01/02 (international_pin enums), beneficiary22 fix, eezi category, global pin, flash_transactions normalize
+
+### **Session Log**
+- `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`
+
+---
+
 ## 2026-03-04 - 🛠 Cursor Skills for Banking-Grade Platform ✅
 
 ### **Session Overview**

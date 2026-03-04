@@ -1,21 +1,26 @@
 # MyMoolah Treasury Platform
 
 **Last Updated**: March 4, 2026  
-**Version**: 2.11.27 - Cursor Skills for Banking-Grade Platform  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Version**: 2.11.28 - eeziAirtime PIN Fixes & Staging/Production Migrations  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **EEZIAIRTIME PIN & COPY** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 27–Mar 4, 2026)**: Cursor skills for banking-grade platform — 8 skills in `.agents/skills/` (api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices, frontend-design). Consolidated to single parent directory. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 27–Mar 4, 2026)**: eeziAirtime PIN fixes (apiService fallback "No PIN returned", Copy PIN in Transaction Detail modal); migration fix (beneficiary22: beneficiary_service_accounts.serviceData); Staging + Production migrations applied in Codespaces. Cursor skills consolidated in `.agents/skills/`. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: Cursor Skills for Banking-Grade Platform (March 4, 2026)**
+## 🚀 **LATEST UPDATE: eeziAirtime PIN Fixes & Staging/Production Migrations (March 4, 2026)**
 
-### **🛠 Cursor Skills Consolidated**
-- **8 skills in `.agents/skills/`** — api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices, frontend-design
-- **Single parent directory** — best practice; industry standard (Agent Skills spec)
-- **docs/CURSOR_SKILLS.md** — skills inventory and MMTP alignment
+### **💳 eeziAirtime PIN & Transaction Detail**
+- **SMS fallback removed** — apiService.purchaseEeziToken now returns "No PIN returned" (was "PIN will be sent via SMS"); pinNumber added to extraction chain
+- **Copy PIN in Transaction Detail modal** — eeziAirtime token purchases show PIN with Copy button for recovery
+- **Migration fix** — 20260304_fix_beneficiary22: beneficiary_service_accounts.serviceData (not service_accounts.metadata)
+- **Staging + Production migrations** — All pending migrations applied successfully in Codespaces
 
-**Session logs**: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`
+**Session log**: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`
+
+### **🔄 Previous: Cursor Skills Consolidated (March 4, 2026)**
+- **8 skills in `.agents/skills/`** — single parent, industry standard
+- **Session logs**: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`
 
 ### **🔄 Previous: EasyPay Cash-In Activation Complete (February 27, 2026)**
 - Fixed authorisationRequest 500; 5-scenario test script (11/11 pass); Theodore test data, Razeen reply
