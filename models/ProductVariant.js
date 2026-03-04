@@ -111,7 +111,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     // High-level VAS type for the variant (mirrors products.type for convenience)
     vasType: {
-      type: DataTypes.ENUM('airtime', 'data', 'electricity', 'voucher', 'bill_payment', 'gaming', 'streaming', 'cash_out'),
+      type: DataTypes.ENUM('airtime', 'data', 'electricity', 'voucher', 'bill_payment', 'gaming', 'streaming', 'cash_out', 'international_pin'),
       allowNull: true,
       comment: 'Logical VAS type for this variant (e.g., airtime, data, bill_payment)'
     },

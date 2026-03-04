@@ -107,7 +107,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     type: {
-      type: DataTypes.ENUM('airtime', 'data', 'electricity', 'voucher', 'bill_payment', 'cash_out'),
+      type: DataTypes.ENUM('airtime', 'data', 'electricity', 'voucher', 'bill_payment', 'cash_out', 'international_pin'),
       allowNull: false,
       validate: {
         notEmpty: {
