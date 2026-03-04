@@ -50,11 +50,16 @@ class SupplierComparisonService {
                 catalogVersion: null
             };
 
-            // Best-offers filter: ONLY in Staging & Production (highest commission per denomination)
-            // UAT: show ALL products from all suppliers for testing
-            const isStagingOrProduction = process.env.NODE_ENV === 'production' ||
-                process.env.STAGING === 'true';
-            if (isStagingOrProduction) {
+            // Environment flags:
+            //   isProduction  = NODE_ENV=production (live, use best-offers cache)
+            //   isUatOrStaging = STAGING=true OR NODE_ENV=development/test
+            //     → show ALL products from ALL suppliers, sorted for easy testing
+            const isProduction = process.env.NODE_ENV === 'production' &&
+                process.env.STAGING !== 'true';
+            const isUatOrStaging = !isProduction; // development, test, or STAGING=true
+
+            if (isProduction) {
+                // Production only: use pre-computed best-offers cache
                 try {
                     const bestResult = await bestOfferService.getBestOffers(vasType, provider);
                     if (bestResult.source === 'vas_best_offers' && bestResult.products.length > 0) {
@@ -75,7 +80,7 @@ class SupplierComparisonService {
                 }
             }
 
-            // UAT / Fallback: runtime comparison - ALL products from all suppliers
+            // UAT / Staging / Fallback: runtime comparison - ALL products from all suppliers
             const allProducts = await this.getProductVariants(vasType, amount, provider);
 
             // Group by supplier dynamically (supports new suppliers without code changes)
@@ -111,16 +116,25 @@ class SupplierComparisonService {
                 };
             }
 
-            // UAT: all products. Staging/Production: best only (highest commission per denomination)
-            if (isStagingOrProduction) {
+            if (isProduction) {
+                // Production fallback (best-offers cache missed): deduplicate by best commission
                 comparison.bestDeals = this.findBestDeals(Object.values(groupedBySupplier), amount, vasType);
             } else {
-                // UAT: show ALL products from all suppliers (no highest-commission filter)
+                // UAT / Staging: ALL products, sorted Flash-first then MobileMart,
+                // within each supplier: airtime/data by price asc, vouchers A-Z
                 const allFormatted = [];
-                for (const group of Object.values(groupedBySupplier)) {
-                    allFormatted.push(...group.map(p => this.formatProductForResponse(p)));
+                // Iterate suppliers in priority order (Flash=1, MobileMart=2, others last)
+                const sortedSupplierCodes = Object.keys(groupedBySupplier).sort((a, b) => {
+                    const pa = this.suppliers[a]?.priority ?? 999;
+                    const pb = this.suppliers[b]?.priority ?? 999;
+                    return pa - pb;
+                });
+                for (const code of sortedSupplierCodes) {
+                    const group = groupedBySupplier[code];
+                    const formatted = group.map(p => this.formatProductForResponse(p));
+                    allFormatted.push(...formatted);
                 }
-                comparison.bestDeals = allFormatted;
+                comparison.bestDeals = this.sortProductsForUat(allFormatted, vasType);
             }
             
             // Find promotional offers across all suppliers
@@ -218,6 +232,35 @@ class SupplierComparisonService {
             product: product,
             supplier: supplier
         };
+    }
+
+    /**
+     * Sort products for UAT/Staging display:
+     *   - airtime / data: by minAmount ascending (lowest price first)
+     *   - vouchers and everything else: alphabetically by productName
+     * The supplier ordering (Flash → MobileMart) is already applied before this call.
+     * @param {Array} products - Formatted product objects
+     * @param {string} vasType - 'airtime' | 'data' | 'voucher' | etc.
+     * @returns {Array} Sorted products
+     */
+    sortProductsForUat(products, vasType) {
+        if (vasType === 'airtime' || vasType === 'data') {
+            return [...products].sort((a, b) => {
+                // Primary: supplier priority (already grouped, but keep stable)
+                const supA = this.suppliers[(a.supplierCode || '').toLowerCase()]?.priority ?? 999;
+                const supB = this.suppliers[(b.supplierCode || '').toLowerCase()]?.priority ?? 999;
+                if (supA !== supB) return supA - supB;
+                // Secondary: price ascending
+                return (a.minAmount || 0) - (b.minAmount || 0);
+            });
+        }
+        // Vouchers and others: alphabetical by product name within each supplier group
+        return [...products].sort((a, b) => {
+            const supA = this.suppliers[(a.supplierCode || '').toLowerCase()]?.priority ?? 999;
+            const supB = this.suppliers[(b.supplierCode || '').toLowerCase()]?.priority ?? 999;
+            if (supA !== supB) return supA - supB;
+            return (a.productName || '').localeCompare(b.productName || '');
+        });
     }
 
     /**
