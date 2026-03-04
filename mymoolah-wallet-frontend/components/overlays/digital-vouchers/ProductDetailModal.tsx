@@ -811,12 +811,12 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
         className=""
         style={{
           fontFamily: 'Montserrat, sans-serif',
-          top: '64px',
+          top: '120px',
           left: '50%',
           transform: 'translateX(-50%)',
           width: '100%',
           maxWidth: '375px',
-          maxHeight: 'calc(100vh - 64px - 60px)',
+          maxHeight: 'calc(100vh - 120px - 60px)',
           overflowY: 'auto',
           borderRadius: '0 0 16px 16px',
           boxShadow: '0 8px 32px rgba(0,0,0,0.18)',

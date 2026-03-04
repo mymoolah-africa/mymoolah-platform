@@ -44,12 +44,12 @@ export function AccountSelectorModal({
     }}>
       <Card style={{
         position: 'fixed',
-        top: '64px',
+        top: '120px',
         left: '50%',
         transform: 'translateX(-50%)',
         width: '100%',
         maxWidth: '375px',
-        maxHeight: 'calc(100vh - 64px - 60px)',
+        maxHeight: 'calc(100vh - 120px - 60px)',
         overflow: 'auto',
         backgroundColor: '#ffffff',
         border: 'none',
