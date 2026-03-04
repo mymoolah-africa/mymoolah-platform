@@ -11,18 +11,18 @@ module.exports = {
   async up(queryInterface) {
     console.log('🔄 Fixing beneficiary 22 network: CellC → eeziAirtime...');
 
-    // Fix service_accounts (unified beneficiary accounts table)
+    // Fix beneficiary_service_accounts (unified beneficiary accounts table)
     const [saResult] = await queryInterface.sequelize.query(`
-      UPDATE service_accounts
+      UPDATE beneficiary_service_accounts
       SET
-        metadata = jsonb_set(
-          COALESCE(metadata, '{}'),
+        "serviceData" = jsonb_set(
+          COALESCE("serviceData", '{}'),
           '{network}',
           '"eeziAirtime"'
         ),
         "updatedAt" = NOW()
       WHERE "beneficiaryId" = 22
-        AND (metadata->>'network' = 'CellC' OR metadata->>'network' IS NULL)
+        AND ("serviceData"->>'network' = 'CellC' OR "serviceData"->>'network' IS NULL)
     `);
     console.log(`✅ Fixed ${saResult?.rowCount ?? 'unknown'} service_account row(s) for beneficiary 22`);
 
@@ -48,16 +48,16 @@ module.exports = {
     console.log('↩️  Rolling back beneficiary 22 network fix...');
 
     await queryInterface.sequelize.query(`
-      UPDATE service_accounts
+      UPDATE beneficiary_service_accounts
       SET
-        metadata = jsonb_set(
-          COALESCE(metadata, '{}'),
+        "serviceData" = jsonb_set(
+          COALESCE("serviceData", '{}'),
           '{network}',
           '"CellC"'
         ),
         "updatedAt" = NOW()
       WHERE "beneficiaryId" = 22
-        AND metadata->>'network' = 'eeziAirtime'
+        AND "serviceData"->>'network' = 'eeziAirtime'
     `);
 
     await queryInterface.sequelize.query(`
