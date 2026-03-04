@@ -18,11 +18,26 @@ module.exports = {
     );
     console.log("✅ Added 'international_pin' to enum_products_type");
 
-    // Add to enum_product_variants_vasType
-    await queryInterface.sequelize.query(
-      `ALTER TYPE "enum_product_variants_vasType" ADD VALUE IF NOT EXISTS 'international_pin'`
+    // The product_variants vasType enum was created WITHOUT quotes in the
+    // consolidation migration, so PostgreSQL stored it in lowercase:
+    //   enum_product_variants_vastype  (all lowercase)
+    // Look up the real name from pg_type to be safe, then ALTER it.
+    const rows = await queryInterface.sequelize.query(
+      `SELECT typname FROM pg_type
+        WHERE typname ILIKE 'enum_product_variants_vastype'
+        LIMIT 1`,
+      { type: queryInterface.sequelize.QueryTypes.SELECT }
     );
-    console.log("✅ Added 'international_pin' to enum_product_variants_vasType");
+
+    if (rows.length === 0) {
+      console.log("⚠️  enum_product_variants_vasType not found in pg_type — skipping");
+    } else {
+      const typeName = rows[0].typname; // actual stored name
+      await queryInterface.sequelize.query(
+        `ALTER TYPE "${typeName}" ADD VALUE IF NOT EXISTS 'international_pin'`
+      );
+      console.log(`✅ Added 'international_pin' to ${typeName}`);
+    }
   },
 
   async down(queryInterface) {
