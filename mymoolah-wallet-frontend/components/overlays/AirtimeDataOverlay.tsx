@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Wifi, Smartphone, CheckCircle, Copy, Share, Download, Home } from 'lucide-react';
+import { ArrowLeft, Wifi, Smartphone, CheckCircle, Copy, Share, Download, Home, Globe } from 'lucide-react';
 
 // Supplier border colours — shown in UAT and Staging only
 const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
@@ -1097,7 +1097,7 @@ export function AirtimeDataOverlay() {
 
       {/* Step 1: Beneficiary Selection */}
       {currentStep === 'beneficiary' && (
-        <div>
+        <div className="space-y-4">
           <BeneficiaryList
             type="airtime"
             beneficiaries={beneficiaries}
@@ -1111,6 +1111,43 @@ export function AirtimeDataOverlay() {
             isLoading={loadingState === 'loading'}
             showFilters={false}
           />
+
+          {/* International Airtime — no beneficiary needed */}
+          {globalPinProducts.length > 0 && (
+            <div
+              onClick={() => setShowGlobalPinModal(true)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '14px 16px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '12px',
+                backgroundColor: '#ffffff',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseOver={(e) => { e.currentTarget.style.borderColor = '#86BE41'; e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+              onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.backgroundColor = '#ffffff'; }}
+            >
+              <div className="flex items-center gap-3">
+                <div style={{ width: '40px', height: '40px', backgroundColor: '#86BE41', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Globe style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                </div>
+                <div>
+                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+                    International Airtime
+                  </p>
+                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                    {globalPinProducts.length} PIN options · Flash
+                  </p>
+                </div>
+              </div>
+              <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#86BE41', margin: 0 }}>
+                Buy PIN →
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -1688,96 +1725,6 @@ export function AirtimeDataOverlay() {
                   </div>
                   );
                 })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* International Services */}
-          <Card style={{
-            backgroundColor: '#f8fafc',
-            border: '1px solid #e2e8f0',
-            borderRadius: '12px'
-          }}>
-            <CardHeader>
-              <CardTitle style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '16px',
-                fontWeight: '700',
-                color: '#1f2937'
-              }}>
-                International Services
-              </CardTitle>
-            </CardHeader>
-
-            <CardContent>
-              <div className="space-y-3">
-
-                {/* International Airtime — opens GlobalPinModal (no beneficiary needed) */}
-                <div
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '12px', borderRadius: '12px', cursor: globalPinProducts.length > 0 ? 'pointer' : 'default',
-                    transition: 'all 0.2s ease', backgroundColor: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    opacity: globalPinProducts.length === 0 ? 0.6 : 1,
-                  }}
-                  onClick={() => globalPinProducts.length > 0 && setShowGlobalPinModal(true)}
-                  onMouseOver={(e) => { if (globalPinProducts.length > 0) { e.currentTarget.style.borderColor = '#86BE41'; e.currentTarget.style.backgroundColor = '#f9fafb'; } }}
-                  onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.backgroundColor = '#ffffff'; }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div style={{ width: '40px', height: '40px', backgroundColor: '#86BE41', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
-                    </div>
-                    <div>
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
-                        International Airtime
-                      </p>
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
-                        {globalPinProducts.length > 0
-                          ? `${globalPinProducts.length} PIN options · Flash`
-                          : 'Top-up international numbers · Flash'}
-                      </p>
-                    </div>
-                  </div>
-                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', fontWeight: '500', color: globalPinProducts.length > 0 ? '#86BE41' : '#9ca3af' }}>
-                    {globalPinProducts.length > 0 ? 'Buy PIN →' : 'Coming Soon'}
-                  </p>
-                </div>
-
-                {/* International Data — Coming Soon */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: '12px',
-                  backgroundColor: '#ffffff',
-                  opacity: 0.6
-                }}>
-                  <div className="flex items-center gap-3">
-                    <div style={{
-                      width: '40px', height: '40px',
-                      backgroundColor: '#2D8CCA', borderRadius: '12px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      <Wifi style={{ width: '20px', height: '20px', color: '#ffffff' }} />
-                    </div>
-                    <div>
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
-                        International Data
-                      </p>
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
-                        Global data roaming packages · Flash
-                      </p>
-                    </div>
-                  </div>
-                  <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#2D8CCA', fontWeight: '500' }}>
-                    Coming Soon
-                  </p>
-                </div>
-
               </div>
             </CardContent>
           </Card>
