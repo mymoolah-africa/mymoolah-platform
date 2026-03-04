@@ -50,13 +50,15 @@ class SupplierComparisonService {
                 catalogVersion: null
             };
 
-            // Environment flags:
-            //   isProduction  = NODE_ENV=production (live, use best-offers cache)
-            //   isUatOrStaging = STAGING=true OR NODE_ENV=development/test
-            //     → show ALL products from ALL suppliers, sorted for easy testing
-            const isProduction = process.env.NODE_ENV === 'production' &&
-                process.env.STAGING !== 'true';
-            const isUatOrStaging = !isProduction; // development, test, or STAGING=true
+            // Environment detection:
+            //   Production  → NODE_ENV=production  (uses best-offers cache, deduped)
+            //   Staging     → NODE_ENV=staging      (GCP Secret Manager injects this)
+            //   UAT / Dev   → NODE_ENV=development or test
+            //
+            // Staging and UAT both show ALL products from ALL suppliers for testing.
+            // GCP Secret Manager injects NODE_ENV at runtime — no .env file on server.
+            const isProduction = process.env.NODE_ENV === 'production';
+            const isUatOrStaging = !isProduction; // staging, development, test
 
             if (isProduction) {
                 // Production only: use pre-computed best-offers cache

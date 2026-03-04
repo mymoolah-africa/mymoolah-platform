@@ -1,6 +1,18 @@
 import React from 'react';
 import { Star } from 'lucide-react';
 
+// Show supplier borders in development and staging environments only.
+// In GCP Cloud Run/Build, VITE_NODE_ENV=staging is injected at build time
+// from Secret Manager substitutions — no .env file is used on the server.
+const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
+const _viteNodeEnv: string = (import.meta as any).env?.VITE_NODE_ENV ?? '';
+const isUatOrStaging = _viteMode !== 'production' || _viteNodeEnv === 'staging';
+
+const SUPPLIER_BORDER: Record<string, string> = {
+  FLASH: '2px solid #22c55e',      // green-500
+  MOBILEMART: '2px solid #3b82f6', // blue-500
+};
+
 interface Voucher {
   id: string;
   name: string;
@@ -10,6 +22,7 @@ interface Voucher {
   maxAmount: number;
   icon: string;
   description: string;
+  supplierCode?: string;
   available: boolean;
   featured: boolean;
   denominations: number[];
@@ -24,10 +37,15 @@ interface VoucherCardProps {
 }
 
 export function VoucherCard({ voucher, onSelect, showFavoriteStar = false, disabled = false, onToggleFavorite }: VoucherCardProps) {
+  const supplierKey = (voucher.supplierCode || '').toUpperCase();
+  const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? undefined) : undefined;
 
   return (
     <div 
-      className="relative bg-white rounded-lg shadow-sm border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+      className="relative bg-white rounded-lg shadow-sm p-4 cursor-pointer hover:shadow-md transition-shadow"
+      style={{
+        border: supplierBorder ?? '1px solid #e5e7eb',
+      }}
       onClick={onSelect}
     >
                         {/* Favorite Star - Top Right Corner */}

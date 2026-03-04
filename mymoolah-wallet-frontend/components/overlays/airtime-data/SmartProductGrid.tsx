@@ -1,6 +1,18 @@
 import React, { useState, useMemo } from 'react';
 import { Search, TrendingUp, Award, Zap, Wifi, Smartphone } from 'lucide-react';
 
+// Show supplier borders in development and staging environments only.
+// In GCP Cloud Run/Build, VITE_NODE_ENV=staging is injected at build time
+// from Secret Manager substitutions — no .env file is used on the server.
+const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
+const _viteNodeEnv: string = (import.meta as any).env?.VITE_NODE_ENV ?? '';
+const isUatOrStaging = _viteMode !== 'production' || _viteNodeEnv === 'staging';
+
+const SUPPLIER_BORDER_COLOR: Record<string, string> = {
+  FLASH: '#22c55e',      // green-500
+  MOBILEMART: '#3b82f6', // blue-500
+};
+
 export interface Product {
   id: string;
   name: string;
@@ -90,6 +102,13 @@ export function SmartProductGrid({
 
   const renderProductCard = (product: Product) => {
     const networkColor = getNetworkColor(product.provider);
+    const supplierKey = (product.supplierCode || '').toUpperCase();
+    const supplierBorderColor = isUatOrStaging
+      ? (SUPPLIER_BORDER_COLOR[supplierKey] ?? '#E5E7EB')
+      : '#E5E7EB';
+    const defaultBorder = isUatOrStaging && SUPPLIER_BORDER_COLOR[supplierKey]
+      ? `2px solid ${supplierBorderColor}`
+      : '1px solid #E5E7EB';
 
     return (
       <div
@@ -97,7 +116,7 @@ export function SmartProductGrid({
         onClick={() => onProductSelect(product)}
         style={{
           backgroundColor: '#FFFFFF',
-          border: '1px solid #E5E7EB',
+          border: defaultBorder,
           borderRadius: '12px',
           padding: '16px',
           cursor: 'pointer',
@@ -108,12 +127,14 @@ export function SmartProductGrid({
         onMouseOver={(e) => {
           e.currentTarget.style.transform = 'translateY(-2px)';
           e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-          e.currentTarget.style.borderColor = networkColor;
+          e.currentTarget.style.borderColor = isUatOrStaging && SUPPLIER_BORDER_COLOR[supplierKey]
+            ? supplierBorderColor
+            : networkColor;
         }}
         onMouseOut={(e) => {
           e.currentTarget.style.transform = 'translateY(0)';
           e.currentTarget.style.boxShadow = 'none';
-          e.currentTarget.style.borderColor = '#E5E7EB';
+          e.currentTarget.style.borderColor = supplierBorderColor;
         }}
       >
         {/* Top badges */}
