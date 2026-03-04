@@ -39,6 +39,10 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                     transaction.description?.toLowerCase().includes('eezi cash') ||
                     transaction.description?.toLowerCase().includes('cash out');
 
+  const isEeziAirtimeToken = transaction.metadata?.isEeziAirtimeToken === true ||
+                             transaction.metadata?.operationType === 'eezi_airtime_token' ||
+                             transaction.description?.toLowerCase().includes('eeziairtime');
+
   const handleCopyToken = () => {
     const tokenToCopy = transaction.metadata?.electricityToken || transaction.metadata?.pin;
     if (tokenToCopy) {
@@ -353,6 +357,64 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                   </div>
                 </div>
               )}
+            </>
+          )}
+
+          {/* eeziAirtime Token PIN (if available) */}
+          {isEeziAirtimeToken && transaction.metadata?.pin && (
+            <>
+              <div style={{
+                padding: '1rem',
+                backgroundColor: '#f0fdf4',
+                borderRadius: '12px',
+                border: '2px dashed #86BE41'
+              }}>
+                <div style={{ textAlign: 'center' }}>
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '12px',
+                    color: '#6b7280',
+                    marginBottom: '8px'
+                  }}>
+                    Your eeziAirtime PIN
+                  </p>
+                  <p style={{
+                    fontFamily: 'Monaco, Courier, monospace',
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: '#1f2937',
+                    letterSpacing: '3px',
+                    marginBottom: '1rem'
+                  }}>
+                    {transaction.metadata.pin}
+                  </p>
+                  <Button
+                    onClick={handleCopyToken}
+                    data-copy-token
+                    variant="outline"
+                    style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      minHeight: '44px',
+                      borderRadius: '12px',
+                      width: '100%',
+                      backgroundColor: '#ffffff',
+                      border: '2px solid #86BE41',
+                      color: '#16a34a'
+                    }}
+                  >
+                    <Copy style={{ width: '16px', height: '16px', marginRight: '8px' }} />
+                    Copy PIN
+                  </Button>
+                </div>
+              </div>
+
+              <div style={{
+                borderBottom: '1px solid #e5e7eb',
+                marginBottom: '1rem',
+                marginTop: '1rem'
+              }} />
             </>
           )}
 

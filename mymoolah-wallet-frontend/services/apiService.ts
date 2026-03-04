@@ -513,13 +513,15 @@ class ApiService {
     });
     const data = (response as any)?.data?.data ?? (response as any)?.data ?? response;
     const pin =
+      data?.transaction?.pinNumber ||
       data?.transaction?.voucherPin ||
       data?.transaction?.pin ||
       data?.transaction?.code ||
+      data?.pinNumber ||
       data?.voucherPin ||
       data?.pin ||
       data?.code ||
-      '— PIN will be sent via SMS —';
+      'No PIN returned';
     const ref =
       data?.transaction?.reference ||
       data?.transaction?.transactionId ||
