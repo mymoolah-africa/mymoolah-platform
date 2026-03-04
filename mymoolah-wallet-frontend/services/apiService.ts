@@ -845,7 +845,8 @@ class ApiService {
             ...variableVariant,
             isVariable: true,
             denominations: [],
-            price: variableVariant.minAmount,
+            // price in rands (formatCurrency expects rands)
+            price: variableVariant.minAmount / 100,
             size: `R${(variableVariant.minAmount / 100).toFixed(0)}–R${(variableVariant.maxAmount / 100).toFixed(0)}`,
             type: vasType,
             validity: vasType === 'airtime' ? 'Immediate' : '30 days',
@@ -854,6 +855,7 @@ class ApiService {
         }
 
         const base = group[0];
+        // allDenoms stays in cents (used for denomination buttons and purchase API)
         const allDenoms = Array.from(
           new Set(group.flatMap(p => p.denominations.length > 0 ? p.denominations : [p.minAmount]))
         ).sort((a, b) => a - b);
@@ -861,10 +863,11 @@ class ApiService {
         return {
           ...base,
           isVariable: false,
-          denominations: allDenoms,
+          denominations: allDenoms,   // cents — used for denomination picker & purchase
           minAmount: Math.min(...allDenoms),
           maxAmount: Math.max(...allDenoms),
-          price: allDenoms[0],  // lowest denomination shown as card price
+          // price in rands (formatCurrency expects rands); shows lowest denom on card
+          price: allDenoms[0] / 100,
           size: allDenoms.length === 1
             ? `R${(allDenoms[0] / 100).toFixed(0)}`
             : `R${(allDenoms[0] / 100).toFixed(0)}–R${(allDenoms[allDenoms.length - 1] / 100).toFixed(0)}`,
@@ -882,8 +885,9 @@ class ApiService {
     const globalPin = (pinComparison?.bestDeals || []).map((p: any) => ({
       id: p.id || p.productId || p.variantId,
       name: (p.productName || p.name || '').replace(/\s+Token$/i, '').trim(),
-      price: p.minAmount || 0,
-      maxPrice: p.maxAmount || p.minAmount || 0,
+      // price in rands (formatCurrency expects rands); minAmount from DB is in cents
+      price: (p.minAmount || 0) / 100,
+      maxPrice: (p.maxAmount || p.minAmount || 0) / 100,
       supplierCode: (p.supplierCode || '').toUpperCase(),
       denominations: p.denominations || p.predefinedAmounts || [],
       minAmount: p.minAmount,

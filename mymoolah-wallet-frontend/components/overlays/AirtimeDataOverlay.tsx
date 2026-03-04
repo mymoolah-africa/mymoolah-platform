@@ -72,6 +72,7 @@ export function AirtimeDataOverlay() {
   const [globalPinProducts, setGlobalPinProducts] = useState<any[]>([]);
   const [showGlobalPinModal, setShowGlobalPinModal] = useState(false);
   const [editingBeneficiary, setEditingBeneficiary] = useState<Beneficiary | null>(null);
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null);
   const [showSendToNewRecipient, setShowSendToNewRecipient] = useState(false);
   const [newRecipientPhone, setNewRecipientPhone] = useState<string>('');
   const [newRecipientName, setNewRecipientName] = useState<string>('');
@@ -402,8 +403,27 @@ export function AirtimeDataOverlay() {
     })();
   };
 
-  const handleProductSelect = (product: AirtimeDataProduct) => {
-    setSelectedProduct(product);
+  const handleProductSelect = (product: AirtimeDataProduct, selectedDenomCents?: number) => {
+    // If the product has multiple fixed denominations and no specific denom was chosen,
+    // expand the inline denomination picker instead of going straight to confirm.
+    const denoms: number[] = Array.isArray((product as any).denominations) ? (product as any).denominations : [];
+    if (!selectedDenomCents && denoms.length > 1) {
+      setExpandedProductId(expandedProductId === product.id ? null : product.id);
+      return;
+    }
+
+    // Resolve the actual price in rands from the chosen denomination (cents) or the product price
+    const resolvedProduct: AirtimeDataProduct = selectedDenomCents
+      ? {
+          ...product,
+          price: selectedDenomCents / 100,
+          size: `R${(selectedDenomCents / 100).toFixed(0)}`,
+        }
+      : product;
+
+    setSelectedProduct(resolvedProduct);
+    setExpandedProductId(null);
+
     // If no beneficiary selected, show option to send to new recipient
     if (!selectedBeneficiary) {
       setShowSendToNewRecipient(true);
@@ -1271,58 +1291,84 @@ export function AirtimeDataOverlay() {
                 {catalog.products.filter(product => product.type === 'airtime').map((product, index) => {
                   const supplierKey = (product.supplierCode || '').toUpperCase();
                   const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? '1px solid #e2e8f0') : '1px solid #e2e8f0';
+                  const denoms: number[] = Array.isArray((product as any).denominations) ? (product as any).denominations : [];
+                  const isExpanded = expandedProductId === product.id;
+                  const hasMultipleDenoms = denoms.length > 1;
                   return (
-                  <div
-                    key={`${product.id}_${index}`}
-                    onClick={() => handleProductSelect(product)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px',
-                      border: supplierBorder,
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#ffffff';
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        backgroundColor: '#86BE41',
-                        borderRadius: '12px',
+                  <div key={`${product.id}_${index}`} style={{ borderRadius: '12px', overflow: 'hidden', border: supplierBorder }}>
+                    <div
+                      onClick={() => handleProductSelect(product)}
+                      style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                        justifyContent: 'space-between',
+                        padding: '12px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        backgroundColor: isExpanded ? '#f0fdf4' : '#ffffff',
+                      }}
+                      onMouseOver={(e) => { if (!isExpanded) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                      onMouseOut={(e) => { if (!isExpanded) e.currentTarget.style.backgroundColor = '#ffffff'; }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div style={{ width: '40px', height: '40px', backgroundColor: '#86BE41', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                        </div>
+                        <div>
+                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
+                            {product.name}
+                          </p>
+                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
+                            {hasMultipleDenoms ? `${denoms.length} amounts available` : product.size}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
-                          {product.name}
-                        </p>
-                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
-                          {product.size}
-                        </p>
+                      <div className="text-right">
+                        {hasMultipleDenoms ? (
+                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#86BE41' }}>
+                            {isExpanded ? 'Close ▲' : 'Select ▼'}
+                          </p>
+                        ) : (
+                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937' }}>
+                            {formatCurrency(product.price)}
+                          </p>
+                        )}
+                        {product.isBestDeal && (
+                          <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '10px', color: '#16a34a', fontWeight: '500' }}>Best Deal</span>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937' }}>
-                        {formatCurrency(product.price)}
-                      </p>
-                      {product.isBestDeal && (
-                        <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '10px', color: '#16a34a', fontWeight: '500' }}>
-                          Best Deal
-                        </span>
-                      )}
-                    </div>
+                    {/* Inline denomination picker */}
+                    {isExpanded && hasMultipleDenoms && (
+                      <div style={{ padding: '8px 12px 12px', backgroundColor: '#f0fdf4', borderTop: '1px solid #dcfce7' }}>
+                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Select amount:</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {denoms.map((denom: number) => (
+                            <button
+                              key={denom}
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleProductSelect(product, denom); }}
+                              style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                padding: '8px 14px',
+                                borderRadius: '8px',
+                                border: '2px solid #86BE41',
+                                background: '#ffffff',
+                                color: '#1f2937',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                              onMouseOver={(e) => { e.currentTarget.style.background = '#86BE41'; e.currentTarget.style.color = '#fff'; }}
+                              onMouseOut={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.color = '#1f2937'; }}
+                            >
+                              {formatCurrency(denom / 100)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   );
                 })}
@@ -1474,58 +1520,84 @@ export function AirtimeDataOverlay() {
                 {catalog.products.filter(product => product.type === 'data').map((product, index) => {
                   const supplierKey = (product.supplierCode || '').toUpperCase();
                   const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? '1px solid #e2e8f0') : '1px solid #e2e8f0';
+                  const denoms: number[] = Array.isArray((product as any).denominations) ? (product as any).denominations : [];
+                  const isExpanded = expandedProductId === product.id;
+                  const hasMultipleDenoms = denoms.length > 1;
                   return (
-                  <div
-                    key={`${product.id}_${index}`}
-                    onClick={() => handleProductSelect(product)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '12px',
-                      border: supplierBorder,
-                      borderRadius: '12px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseOver={(e) => {
-                      e.currentTarget.style.backgroundColor = '#f9fafb';
-                    }}
-                    onMouseOut={(e) => {
-                      e.currentTarget.style.backgroundColor = '#ffffff';
-                    }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        backgroundColor: '#2D8CCA',
-                        borderRadius: '12px',
+                  <div key={`${product.id}_${index}`} style={{ borderRadius: '12px', overflow: 'hidden', border: supplierBorder }}>
+                    <div
+                      onClick={() => handleProductSelect(product)}
+                      style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        <Wifi style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                        justifyContent: 'space-between',
+                        padding: '12px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        backgroundColor: isExpanded ? '#eff6ff' : '#ffffff',
+                      }}
+                      onMouseOver={(e) => { if (!isExpanded) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
+                      onMouseOut={(e) => { if (!isExpanded) e.currentTarget.style.backgroundColor = '#ffffff'; }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div style={{ width: '40px', height: '40px', backgroundColor: '#2D8CCA', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Wifi style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                        </div>
+                        <div>
+                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
+                            {product.name}
+                          </p>
+                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
+                            {hasMultipleDenoms ? `${denoms.length} bundles available` : product.size}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
-                          {product.name}
-                        </p>
-                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
-                          {product.size}
-                        </p>
+                      <div className="text-right">
+                        {hasMultipleDenoms ? (
+                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#2D8CCA' }}>
+                            {isExpanded ? 'Close ▲' : 'Select ▼'}
+                          </p>
+                        ) : (
+                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937' }}>
+                            {formatCurrency(product.price)}
+                          </p>
+                        )}
+                        {product.isBestDeal && (
+                          <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '10px', color: '#16a34a', fontWeight: '500' }}>Best Deal</span>
+                        )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937' }}>
-                        {formatCurrency(product.price)}
-                      </p>
-                      {product.isBestDeal && (
-                        <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '10px', color: '#16a34a', fontWeight: '500' }}>
-                          Best Deal
-                        </span>
-                      )}
-                    </div>
+                    {/* Inline denomination picker */}
+                    {isExpanded && hasMultipleDenoms && (
+                      <div style={{ padding: '8px 12px 12px', backgroundColor: '#eff6ff', borderTop: '1px solid #dbeafe' }}>
+                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Select bundle:</p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {denoms.map((denom: number) => (
+                            <button
+                              key={denom}
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); handleProductSelect(product, denom); }}
+                              style={{
+                                fontFamily: 'Montserrat, sans-serif',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                padding: '8px 14px',
+                                borderRadius: '8px',
+                                border: '2px solid #2D8CCA',
+                                background: '#ffffff',
+                                color: '#1f2937',
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                              onMouseOver={(e) => { e.currentTarget.style.background = '#2D8CCA'; e.currentTarget.style.color = '#fff'; }}
+                              onMouseOut={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.color = '#1f2937'; }}
+                            >
+                              {formatCurrency(denom / 100)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                   );
                 })}
