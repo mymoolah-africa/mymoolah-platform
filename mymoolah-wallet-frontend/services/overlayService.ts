@@ -42,10 +42,22 @@ export interface AirtimeDataProduct {
   type: 'airtime' | 'data';
   validity?: string;
   isBestDeal: boolean;
+  isPopular?: boolean;
   supplier: string;
+  supplierCode?: string;   // uppercase supplier code e.g. "FLASH" | "MOBILEMART"
   description?: string;
   commission?: number;
   fixedFee?: number;
+  // Purchase fields
+  variantId?: number;
+  productId?: number;
+  supplierProductId?: string;
+  vasType?: string;
+  denominations?: number[];
+  minAmount?: number;
+  maxAmount?: number;
+  isVariable?: boolean;
+  network?: string;
 }
 
 export interface AirtimeDataCatalog {
