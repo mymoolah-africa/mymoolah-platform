@@ -21,7 +21,8 @@ const isStaging = process.argv.includes('--staging');
 process.env.DATABASE_URL = isStaging ? getStagingDatabaseURL() : getUATDatabaseURL();
 
 const ledgerService = require('../services/ledgerService');
-const { LedgerAccount } = require('../models');
+const { LedgerAccount, SupplierFloat } = require('../models');
+const { Op } = require('sequelize');
 
 const FLASH_FLOAT_CODE  = '1200-10-04';
 const UAT_FUNDING_CODE  = '9999-00-01';
@@ -72,7 +73,17 @@ async function main() {
 
   const balance = await ledgerService.getAccountBalanceByCode(FLASH_FLOAT_CODE);
   console.log(`Posted journal entry: ${entry.id}`);
-  console.log(`Flash float (${FLASH_FLOAT_CODE}) balance after load: R${Number(balance).toFixed(2)}`);
+  console.log(`Flash float ledger (${FLASH_FLOAT_CODE}) balance: R${Number(balance).toFixed(2)}`);
+
+  // Sync SupplierFloat.currentBalance so monitoring and checks reflect the same balance
+  const flashFloat = await SupplierFloat.findOne({ where: { supplierId: { [Op.iLike]: 'flash' } } });
+  if (flashFloat) {
+    await flashFloat.updateBalance(AMOUNT_RAND, 'credit');
+    console.log(`SupplierFloat (${flashFloat.floatAccountNumber}) credited R${AMOUNT_RAND}; new balance: R${parseFloat(flashFloat.currentBalance).toFixed(2)}`);
+  } else {
+    console.warn('⚠️  No SupplierFloat row for Flash found — ledger updated only. Run check-all-supplier-float-balances for ledger-only balance.');
+  }
+
   console.log(`\nDone. ${target} can now run Flash VAS tests against the prefunded float.`);
 }
 

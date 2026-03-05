@@ -6,22 +6,24 @@
  * in the system, providing a comprehensive overview of float account status.
  * 
  * Usage:
- *   node scripts/check-all-supplier-float-balances.js
+ *   node scripts/check-all-supplier-float-balances.js         # UAT
+ *   node scripts/check-all-supplier-float-balances.js --staging   # Staging
  */
 
 require('dotenv').config();
 
 // Set DATABASE_URL from db-connection-helper before loading models
-const { getUATDatabaseURL, closeAll } = require('./db-connection-helper');
+const { getUATDatabaseURL, getStagingDatabaseURL, closeAll } = require('./db-connection-helper');
 
-// Set DATABASE_URL for Sequelize models
-process.env.DATABASE_URL = getUATDatabaseURL();
+const isStaging = process.argv.includes('--staging');
+process.env.DATABASE_URL = isStaging ? getStagingDatabaseURL() : getUATDatabaseURL();
 
 const { SupplierFloat } = require('../models');
 
 async function checkAllFloatBalances() {
   try {
-    console.log('🔍 Checking All Supplier Float Account Balances...\n');
+    const target = isStaging ? 'Staging' : 'UAT';
+    console.log(`🔍 Checking All Supplier Float Account Balances (${target})...\n`);
     console.log('='.repeat(80));
 
     // Get all supplier float accounts
