@@ -83,7 +83,7 @@ async function run() {
 
     const limit = pinArg ? 5 : 10;
 
-    const [rows] = await sequelize.query(
+    const rows = await sequelize.query(
       `
       SELECT
         vt.id,
@@ -105,15 +105,16 @@ async function run() {
       }
     );
 
-    if (!rows || rows.length === 0) {
+    const rowList = Array.isArray(rows) ? rows : [];
+    if (rowList.length === 0) {
       console.log(pinArg ? `No Flash eezi transaction found with PIN containing "${pinArg}"` : 'No recent Flash eezi-voucher transactions found.');
       await closeAll();
       process.exit(0);
     }
 
-    console.log(`\n📋 Found ${rows.length} transaction(s)\n`);
+    console.log(`\n📋 Found ${rowList.length} transaction(s)\n`);
 
-    for (const row of rows) {
+    for (const row of rowList) {
       const meta = row.metadata || {};
       const extractedPin = meta.pin;
       const flashResponse = meta.flashResponse || meta.flash_response;
