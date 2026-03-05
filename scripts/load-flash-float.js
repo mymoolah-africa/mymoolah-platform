@@ -2,14 +2,15 @@
 'use strict';
 
 /**
- * Load R1000 into the Flash float account (1200-10-04) for UAT/Staging testing.
- * Posts a double-entry journal: Debit Flash float R1000, Credit UAT funding source R1000.
+ * Load funds into the Flash float account (1200-10-04) for UAT/Staging testing.
+ * Posts a double-entry journal: Debit Flash float, Credit UAT funding source.
  *
  * Uses db-connection-helper.js for database connection.
  *
  * Usage:
- *   node scripts/load-flash-float.js             # UAT
- *   node scripts/load-flash-float.js --staging   # Staging
+ *   node scripts/load-flash-float.js                    # UAT, R1000
+ *   node scripts/load-flash-float.js --staging           # Staging, R1000
+ *   node scripts/load-flash-float.js --staging --amount 1000  # Staging, R1000
  *
  * Requires: .env with DATABASE_URL or DB_PASSWORD; proxy running for UAT/Staging.
  * Flash float ledger account 1200-10-04 must exist (migration 20260115_seed_supplier_float_ledger_accounts).
@@ -18,6 +19,15 @@
 const { getUATDatabaseURL, getStagingDatabaseURL, closeAll } = require('./db-connection-helper');
 
 const isStaging = process.argv.includes('--staging');
+const amountIdx = process.argv.indexOf('--amount');
+let AMOUNT_RAND = amountIdx >= 0 && process.argv[amountIdx + 1]
+  ? parseFloat(process.argv[amountIdx + 1], 10)
+  : 1000;
+if (Number.isNaN(AMOUNT_RAND) || AMOUNT_RAND <= 0) {
+  console.error('Invalid --amount. Use e.g. --amount 1000');
+  process.exit(1);
+}
+
 process.env.DATABASE_URL = isStaging ? getStagingDatabaseURL() : getUATDatabaseURL();
 
 const ledgerService = require('../services/ledgerService');
@@ -27,7 +37,6 @@ const { Op } = require('sequelize');
 const FLASH_FLOAT_CODE  = '1200-10-04';
 const UAT_FUNDING_CODE  = '9999-00-01';
 const UAT_FUNDING_NAME  = 'UAT Float Funding Source';
-const AMOUNT_RAND       = 1000;
 
 async function ensureUatFundingAccount() {
   const existing = await LedgerAccount.findOne({ where: { code: UAT_FUNDING_CODE }, raw: true });
