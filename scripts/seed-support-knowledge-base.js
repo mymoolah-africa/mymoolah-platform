@@ -255,6 +255,44 @@ const initialKnowledgeBase = [
     isActive: true
   },
 
+  // Section 5a – eeziPay / How To (Airtime & Data redemption)
+  {
+    faqId: 'Q5.5',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'How do I redeem my eeziPay voucher?',
+    answer: 'Buy your voucher in Airtime & Data → eeziAirtime. Dial *130*3621*3*YOURPIN# from the phone you want to top up. Replace YOURPIN with your 12-digit PIN. From the on-screen menu, choose airtime or a data bundle. Your network will confirm via SMS. Works on MTN, Vodacom, Cell C, and Telkom.',
+    keywords: 'eeziPay, eezi, voucher, redeem, PIN, USSD, airtime, data',
+    confidenceScore: 0.96,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q5.1,Q5.4'
+  },
+  {
+    faqId: 'Q5.6',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'What is the USSD code for eeziPay vouchers?',
+    answer: 'Dial *130*3621*3*YOURPIN# from the phone you want to top up. Replace YOURPIN with your 12-digit PIN (no spaces when dialling). After dialling, choose airtime or data from the menu.',
+    keywords: 'eeziPay, USSD, code, dial, *130*3621*3*',
+    confidenceScore: 0.95,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q5.5'
+  },
+  {
+    faqId: 'Q5.7',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'My eeziPay PIN says invalid or does not work',
+    answer: 'Dial from the correct phone (the SIM you want to top up). Use the full USSD: *130*3621*3*YOURPIN# with no spaces in the PIN. Each PIN is single-use. If already redeemed, it will show invalid. eeziPay vouchers are valid for 3 years. Ensure you have signal on MTN, Vodacom, Cell C, or Telkom. Contact support with your transaction reference if it still fails.',
+    keywords: 'eeziPay, invalid PIN, not working, redeem failed',
+    confidenceScore: 0.94,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q5.5'
+  },
+
   // Section 6 – Cash-In / Cash-Out
   {
     faqId: 'Q6.3',

@@ -1,29 +1,20 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 4, 2026  
-**Version**: 2.11.28 - eeziAirtime PIN Fixes & Staging/Production Migrations  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **EEZIAIRTIME PIN & COPY** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: February 27, 2026  
+**Version**: 2.11.25 - EasyPay Cash-In Activation Complete  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 27–Mar 4, 2026)**: eeziAirtime PIN fixes (apiService fallback "No PIN returned", Copy PIN in Transaction Detail modal); migration fix (beneficiary22: beneficiary_service_accounts.serviceData); Staging + Production migrations applied in Codespaces. Cursor skills consolidated in `.agents/skills/`. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 21–27, 2026)**: EasyPay Cash-In activation complete — fixed authorisationRequest 500 (userId/walletId migration), 5-scenario test script (11/11 pass), Theodore test data + Razeen reply docs. User sent Razeen reply and shared restricted folder with Theodore. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: eeziAirtime PIN Fixes & Staging/Production Migrations (March 4, 2026)**
+## 🚀 **LATEST UPDATE: EasyPay Cash-In Activation Complete (February 27, 2026)**
 
-### **💳 eeziAirtime PIN & Transaction Detail**
-- **SMS fallback removed** — apiService.purchaseEeziToken now returns "No PIN returned" (was "PIN will be sent via SMS"); pinNumber added to extraction chain
-- **Copy PIN in Transaction Detail modal** — eeziAirtime token purchases show PIN with Copy button for recovery
-- **Migration fix** — 20260304_fix_beneficiary22: beneficiary_service_accounts.serviceData (not service_accounts.metadata)
-- **Staging + Production migrations** — All pending migrations applied successfully in Codespaces
-
-**Session log**: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`
-
-### **🔄 Previous: Cursor Skills Consolidated (March 4, 2026)**
-- **8 skills in `.agents/skills/`** — single parent, industry standard
-- **Session logs**: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`
-
-### **🔄 Previous: EasyPay Cash-In Activation Complete (February 27, 2026)**
-- Fixed authorisationRequest 500; 5-scenario test script (11/11 pass); Theodore test data, Razeen reply
+### **💳 EasyPay Cash-In Activation Complete**
+- **Fixed authorisationRequest 500** — migration adds `userId`/`walletId` to `payments`; Payment model updated
+- **5-scenario test script** — `scripts/test-easypay-5-scenarios.sh` (11/11 tests pass on Staging)
+- **Theodore test data** — `docs/EASYPAY_THEODORE_SMITH_TEST_DATA.md`; Razeen reply draft; copy-paste versions
+- **User actions**: Sent Razeen reply; shared restricted folder with Theodore (test data + SessionToken)
 
 **Session log**: `docs/session_logs/2026-02-27_1200_easypay-500-fix-activation-complete.md`
 
@@ -198,7 +189,7 @@ The platform has been upgraded to use **OpenAI gpt-4o** across all AI services:
 ### **📚 NEW: FAQ Library & Support Safeguards**
 
 - **Comprehensive FAQ**: `docs/FAQ_MASTER.md` now centralises customer, supplier, and API FAQs used by the support assistant.
-- **Knowledge Base Seeding**: Run `node scripts/seed-support-knowledge-base.js` after editing the FAQ to refresh `ai_knowledge_base`.
+- **Knowledge Base Seeding**: Run `node scripts/seed-support-knowledge-base.js` after editing the FAQ to refresh `ai_knowledge_base`. To add eeziPay voucher redemption (How To) knowledge: `node scripts/add-eezipay-redemption-knowledge-to-ai.js`.
 - **AI Usage Limit**: Support calls to gpt-4o are limited to 5 per user per 24 hours; FAQ answers are unlimited and served locally first.
 
 ### **🎓 NEW: Auto-Learning Knowledge Base (2025-12-19)**
