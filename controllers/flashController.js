@@ -1245,10 +1245,30 @@ class FlashController {
             }
 
             // Extract PIN: Flash eezi-voucher returns PIN in response.voucher (pin, pinNumber, code, token, etc.)
+            // UAT/sandbox and Production may use different response structures.
             const voucher = response?.voucher;
             const tx = response?.transaction || response?.data || response?.result || response;
             const vd = (typeof tx === 'object' && tx?.voucherDetails) || response?.voucherDetails;
+
+            // Helper: extract string from obj by any of the known PIN-like keys (case-insensitive)
+            const extractPin = (obj, keys = ['pin', 'pinNumber', 'voucherPin', 'token', 'code', 'serialNumber', 'pinCode', 'voucherCode', 'value', 'PIN']) => {
+                if (!obj || typeof obj !== 'object') return null;
+                for (const k of Object.keys(obj)) {
+                    const lower = k.toLowerCase();
+                    if (keys.some(key => key.toLowerCase() === lower)) {
+                        const v = obj[k];
+                        if (v != null && typeof v === 'string' && v.trim().length > 0) return v.trim();
+                        if (v != null && typeof v === 'number' && !Number.isNaN(v)) return String(v);
+                    }
+                }
+                return null;
+            };
+
             const eeziPin =
+                extractPin(voucher) ||
+                extractPin(tx) ||
+                extractPin(response) ||
+                extractPin(vd) ||
                 (voucher && typeof voucher === 'object' && (voucher.pin || voucher.pinNumber || voucher.voucherPin || voucher.token || voucher.code || voucher.serialNumber || voucher.pinCode || voucher.voucherCode || voucher.value)) ||
                 (typeof tx === 'object' && (tx.pinNumber || tx.pin || tx.voucherPin || tx.token || tx.code || tx.serialNumber)) ||
                 response?.pinNumber || response?.pin || response?.voucherPin || response?.token || response?.code ||
@@ -1256,7 +1276,23 @@ class FlashController {
                 null;
 
             if (!eeziPin) {
-                console.warn('⚠️ No PIN extracted from Flash eezi-voucher response. Run `node scripts/check-all-supplier-float-balances.js` to verify Flash float balance.');
+                // Diagnostic: log full response structure (sanitized) when Staging/production returns no PIN
+                const safeDump = (o, depth = 0) => {
+                    if (depth > 4) return '[max depth]';
+                    if (o == null) return String(o);
+                    if (typeof o !== 'object') return typeof o;
+                    const acc = {};
+                    for (const k of Object.keys(o)) {
+                        const lower = k.toLowerCase();
+                        if (['pin', 'pinnumber', 'token', 'code', 'serialnumber', 'password', 'secret'].some(s => lower.includes(s))) {
+                            acc[k] = '[REDACTED]';
+                        } else {
+                            acc[k] = safeDump(o[k], depth + 1);
+                        }
+                    }
+                    return acc;
+                };
+                console.warn('⚠️ No PIN extracted from Flash eezi-voucher response. Full response structure (sanitized):', JSON.stringify(safeDump(response)));
             }
 
             // ── VAS records ──
