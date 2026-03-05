@@ -28,7 +28,6 @@ const FLASH_FLOAT_CODE  = '1200-10-04';
 const UAT_FUNDING_CODE  = '9999-00-01';
 const UAT_FUNDING_NAME  = 'UAT Float Funding Source';
 const AMOUNT_RAND       = 1000;
-const REFERENCE         = 'UAT-FLASH-FLOAT-LOAD-1000';
 
 async function ensureUatFundingAccount() {
   const existing = await LedgerAccount.findOne({ where: { code: UAT_FUNDING_CODE }, raw: true });
@@ -62,8 +61,9 @@ async function main() {
 
   await ensureUatFundingAccount();
 
+  const reference = `FLASH-FLOAT-LOAD-${AMOUNT_RAND}-${target}-${Date.now()}`;
   const entry = await ledgerService.postJournalEntry({
-    reference: REFERENCE,
+    reference,
     description: `Load R${AMOUNT_RAND} into Flash float (${target})`,
     lines: [
       { accountCode: FLASH_FLOAT_CODE, dc: 'debit',  amount: AMOUNT_RAND, memo: 'Flash float funding' },
@@ -76,13 +76,29 @@ async function main() {
   console.log(`Flash float ledger (${FLASH_FLOAT_CODE}) balance: R${Number(balance).toFixed(2)}`);
 
   // Sync SupplierFloat.currentBalance so monitoring and checks reflect the same balance
-  const flashFloat = await SupplierFloat.findOne({ where: { supplierId: { [Op.iLike]: 'flash' } } });
-  if (flashFloat) {
-    await flashFloat.updateBalance(AMOUNT_RAND, 'credit');
-    console.log(`SupplierFloat (${flashFloat.floatAccountNumber}) credited R${AMOUNT_RAND}; new balance: R${parseFloat(flashFloat.currentBalance).toFixed(2)}`);
-  } else {
-    console.warn('⚠️  No SupplierFloat row for Flash found — ledger updated only. Run check-all-supplier-float-balances for ledger-only balance.');
+  let flashFloat = await SupplierFloat.findOne({ where: { supplierId: { [Op.iLike]: 'flash' } } });
+  if (!flashFloat) {
+    flashFloat = await SupplierFloat.create({
+      supplierId: 'flash',
+      supplierName: 'Flash',
+      floatAccountNumber: 'FLASH_FLOAT_001',
+      floatAccountName: 'Flash VAS Float',
+      ledgerAccountCode: FLASH_FLOAT_CODE,
+      currentBalance: 0,
+      initialBalance: 0,
+      minimumBalance: 1000,
+      maximumBalance: 500000,
+      settlementPeriod: 'real_time',
+      settlementMethod: 'prefunded',
+      status: 'active',
+      isActive: true,
+      metadata: { supplierType: 'vas_provider', createdBy: 'load-flash-float' }
+    });
+    console.log(`Created Flash SupplierFloat (${flashFloat.floatAccountNumber}) — was missing in ${target}.`);
   }
+  await flashFloat.updateBalance(AMOUNT_RAND, 'credit');
+  await flashFloat.reload();
+  console.log(`SupplierFloat (${flashFloat.floatAccountNumber}) credited R${AMOUNT_RAND}; new balance: R${parseFloat(flashFloat.currentBalance).toFixed(2)}`);
 
   console.log(`\nDone. ${target} can now run Flash VAS tests against the prefunded float.`);
 }
@@ -91,5 +107,6 @@ main()
   .then(() => closeAll())
   .catch((err) => {
     console.error('Error:', err.message);
+    if (err.errors) console.error('Details:', JSON.stringify(err.errors, null, 2));
     process.exit(1);
   });
