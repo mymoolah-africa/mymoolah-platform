@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-04 22:30  
-**Latest Feature**: eeziAirtime PIN fixes, migration corrections, Staging/Production migrations applied  
-**Document Version**: 2.11.28  
-**Session logs**: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`  
+**Last Updated**: 2026-03-05 08:00  
+**Latest Feature**: eeziAirtime "No PIN returned" diagnosis – debug logging, broader PIN extraction, float troubleshooting  
+**Document Version**: 2.11.29  
+**Session logs**: `docs/session_logs/2026-03-05_0800_eeziairtime-no-pin-flash-diagnosis.md`, `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 4, 2026 - 22:30)**
+### **Latest Achievement (March 5, 2026 - 08:00)**
+**eeziAirtime "No PIN returned" Diagnosis** — (1) Added Flash response debug logging (sanitized keys-only) in `flashController.purchaseEeziVoucher`. (2) Broadened PIN extraction to all plausible paths: `transaction`, `data`, `result`, `voucherDetails`, `pinNumber`, `pin`, `token`, `code`, `serialNumber`. (3) Backend now returns normalized `data.pin`; frontend prefers `data.pin`. (4) Troubleshooting section in `FLASH_TESTING_REFERENCE.md`: response structure logs, float balance check (`node scripts/check-all-supplier-float-balances.js`). Next UAT run will show actual Flash response keys. Session log: `docs/session_logs/2026-03-05_0800_eeziairtime-no-pin-flash-diagnosis.md`.
+
+### **Previous Achievement (March 4, 2026 - 22:30)**
 **eeziAirtime PIN Fixes & Staging/Production Migrations** — (1) Fixed eeziAirtime PIN UI: SMS fallback in apiService.ts replaced with "No PIN returned"; added pinNumber to extraction chain; Copy PIN in Transaction Detail modal for eeziAirtime tokens. (2) Fixed migration `20260304_fix_beneficiary22_eeziairtime_network`: table `service_accounts` → `beneficiary_service_accounts`, column `metadata` → `serviceData`. (3) Staging and Production migrations run successfully in Codespaces. Ledger audit confirmed eeziAirtime purchase flow correct. Session log: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`.
 
 ### **Previous Achievement (March 4, 2026 - 11:17)**
@@ -142,7 +145,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – February 27–March 4, 2026)**
+### **Recent Updates (Last 7 Days – February 27–March 5, 2026)**
+- **Mar 5 (08:00)**: eeziAirtime "No PIN returned" diagnosis — Flash response debug logging, broader PIN extraction (transaction/data/result/voucherDetails), backend returns data.pin, troubleshooting doc (float balance, API docs).
 - **Mar 4 (22:30)**: eeziAirtime PIN fixes (apiService SMS fallback, Copy PIN in Transaction Detail modal); migration fix (beneficiary22: beneficiary_service_accounts.serviceData); Staging + Production migrations applied in Codespaces.
 - **Mar 4 (11:17)**: Cursor skills consolidated — all 8 skills in `.agents/skills/` (single parent). Moved frontend-design from .cursor/skills/. Best practice structure.
 - **Feb 27 (14:00)**: Figma restriction removed — code is frontend source of truth. Agents may edit any UI/frontend including `pages/*.tsx`. Figma optional reference. Enables frontend-design skill on main app pages.
