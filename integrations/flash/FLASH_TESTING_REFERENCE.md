@@ -254,5 +254,22 @@ If eeziAirtime purchases succeed (wallet debited, 200 OK) but show "No PIN retur
 
 ---
 
+## 🔧 **eeziAirtime "PIN does not exist" on Network (Staging/Production)**
+
+If the frontend shows success and a PIN, but Vodacom/network says "PIN does not exist":
+
+1. **Run the diagnostic script** (in Codespaces, with proxy running):
+   ```bash
+   ./scripts/ensure-proxies-running.sh   # if not already running
+   node scripts/diagnose-eeziairtime-pin.js --staging 113563190017
+   ```
+   This shows what Flash returned vs what we extracted. Compare `flashResponse` keys to extraction paths in `flashController.js`.
+
+2. **Verify store/terminal** – `FLASH_STORE_ID` and `FLASH_TERMINAL_ID` in Secret Manager must match Flash's config for your production account.
+
+3. **Escalate to Flash** – With transaction reference and PIN, Flash can confirm voucher status on their side.
+
+---
+
 **Last Updated**: 2026-03-05  
 **Status**: Ready for testing; eezi-voucher PIN extraction improved with debug logging
