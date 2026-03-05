@@ -1,16 +1,23 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: February 27, 2026  
-**Version**: 2.11.25 - EasyPay Cash-In Activation Complete  
+**Last Updated**: March 5, 2026  
+**Version**: 2.11.30 - eeziAirtime Redemption UI & eeziPay AI Knowledge Base  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 21–27, 2026)**: EasyPay Cash-In activation complete — fixed authorisationRequest 500 (userId/walletId migration), 5-scenario test script (11/11 pass), Theodore test data + Razeen reply docs. User sent Razeen reply and shared restricted folder with Theodore. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 28–Mar 5, 2026)**: eeziAirtime redemption UI — clear instructions, 3×4 PIN format, copy full USSD; eeziPay How To entries added to AI support knowledge base. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: EasyPay Cash-In Activation Complete (February 27, 2026)**
+## 🚀 **LATEST UPDATE: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)**
 
-### **💳 EasyPay Cash-In Activation Complete**
+### **💳 eeziAirtime Redemption & eeziPay AI Support**
+- **eeziAirtime modal**: Redemption instruction "Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle."; PIN as 3×4 digits; Copy copies full USSD string
+- **Transaction Detail**: Same for eeziAirtime PIN display
+- **eeziPay AI Knowledge Base**: 5 How To / troubleshooting entries via `scripts/add-eezipay-redemption-knowledge-to-ai.js`; Q5.5–Q5.7 in seed
+
+**Session log**: `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`
+
+### **🔄 Previous: EasyPay Cash-In Activation Complete (February 27, 2026)**
 - **Fixed authorisationRequest 500** — migration adds `userId`/`walletId` to `payments`; Payment model updated
 - **5-scenario test script** — `scripts/test-easypay-5-scenarios.sh` (11/11 tests pass on Staging)
 - **Theodore test data** — `docs/EASYPAY_THEODORE_SMITH_TEST_DATA.md`; Razeen reply draft; copy-paste versions

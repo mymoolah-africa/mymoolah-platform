@@ -1,12 +1,22 @@
 # 🏦 Banking-Grade Support System
 
-**Last Updated**: December 30, 2025 (18:30 SAST)  
-**Version**: 2.4.40 - Staging Deployment Complete & Referral Tested  
-**Status**: ✅ **SMS WORKING** ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: March 5, 2026  
+**Version**: 2.4.41 - eeziPay Redemption Knowledge Base  
+**Status**: ✅ **SMS WORKING** ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT** ✅ **EEZIPAY HOW TO** ✅ **MOJALOOP COMPLIANT**
 
 ## Overview
 
 The MyMoolah Banking-Grade Support System is a **production-ready, enterprise-level AI support platform** designed for **millions of users** with **Mojaloop & ISO20022 compliance**. This system replaces the previous demo implementation with a **banking-grade architecture** that meets global financial standards.
+
+### **March 5, 2026 - eeziPay Redemption Knowledge Base**
+Added 5 How To / troubleshooting entries for eeziPay (eeziAirtime/eeziData) voucher redemption:
+- How to redeem eeziPay voucher
+- How to use eeziAirtime PIN
+- USSD code for eeziPay vouchers
+- How to load eeziData
+- eeziPay PIN invalid/not working troubleshooting
+
+**Script**: `node scripts/add-eezipay-redemption-knowledge-to-ai.js` (uses embeddings; faqId `KB-EZ-` + 13 chars for VARCHAR 20). Seed entries Q5.5–Q5.7 in `scripts/seed-support-knowledge-base.js`.
 
 ### **December 30, 2025 (18:30) - SMS Integration Fixed**
 SMS integration with MyMobileAPI/SMS South Africa now fully operational:

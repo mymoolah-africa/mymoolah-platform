@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-05 08:00  
-**Latest Feature**: eeziAirtime "No PIN returned" diagnosis – debug logging, broader PIN extraction, float troubleshooting  
-**Document Version**: 2.11.29  
-**Session logs**: `docs/session_logs/2026-03-05_0800_eeziairtime-no-pin-flash-diagnosis.md`, `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`  
+**Last Updated**: 2026-03-05 14:00  
+**Latest Feature**: eeziAirtime redemption UI + eeziPay AI knowledge base  
+**Document Version**: 2.11.30  
+**Session logs**: `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`, `docs/session_logs/2026-03-05_0800_eeziairtime-no-pin-flash-diagnosis.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,8 +100,11 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 5, 2026 - 08:00)**
-**eeziAirtime "No PIN returned" Diagnosis** — (1) Added Flash response debug logging (sanitized keys-only) in `flashController.purchaseEeziVoucher`. (2) Broadened PIN extraction to all plausible paths: `transaction`, `data`, `result`, `voucherDetails`, `pinNumber`, `pin`, `token`, `code`, `serialNumber`. (3) Backend now returns normalized `data.pin`; frontend prefers `data.pin`. (4) Troubleshooting section in `FLASH_TESTING_REFERENCE.md`: response structure logs, float balance check (`node scripts/check-all-supplier-float-balances.js`). Next UAT run will show actual Flash response keys. Session log: `docs/session_logs/2026-03-05_0800_eeziairtime-no-pin-flash-diagnosis.md`.
+### **Latest Achievement (March 5, 2026 - 14:00)**
+**eeziAirtime Redemption UI & eeziPay AI Knowledge Base** — (1) Modal/Transaction Detail: clear redemption instruction "Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle."; PIN displayed as 3×4 digits; Copy copies full USSD string. (2) GlobalPinModal `eeziRedemption` prop for instruction, prefix/suffix, pin group size. (3) eeziPay How To entries added to AI support KB: `scripts/add-eezipay-redemption-knowledge-to-ai.js` (5 entries with embeddings), Q5.5–Q5.7 in seed. (4) Fixed faqId length (VARCHAR 20): `KB-EZ-` + 13 chars. (5) FLASH_TESTING_REFERENCE: single eezi product documented. Session log: `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`.
+
+### **Previous Achievement (March 5, 2026 - 08:00)**
+**eeziAirtime "No PIN returned" Diagnosis** — Added Flash response debug logging, broadened PIN extraction, normalized `data.pin`, troubleshooting section in FLASH_TESTING_REFERENCE. Session log: `docs/session_logs/2026-03-05_0800_eeziairtime-no-pin-flash-diagnosis.md`.
 
 ### **Previous Achievement (March 4, 2026 - 22:30)**
 **eeziAirtime PIN Fixes & Staging/Production Migrations** — (1) Fixed eeziAirtime PIN UI: SMS fallback in apiService.ts replaced with "No PIN returned"; added pinNumber to extraction chain; Copy PIN in Transaction Detail modal for eeziAirtime tokens. (2) Fixed migration `20260304_fix_beneficiary22_eeziairtime_network`: table `service_accounts` → `beneficiary_service_accounts`, column `metadata` → `serviceData`. (3) Staging and Production migrations run successfully in Codespaces. Ledger audit confirmed eeziAirtime purchase flow correct. Session log: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`.

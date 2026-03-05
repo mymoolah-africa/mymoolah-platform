@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform – Comprehensive FAQ Library
 
-_Last updated: 30 December 2025_
+_Last updated: 5 March 2026_
 
 This FAQ consolidates answers from every functional area of MMTP (wallet, KYC, suppliers, APIs, and support) so that customer agents, suppliers, and integration partners share the same source of truth. Use this document before escalating to engineering. Sections are ordered by the scenarios we support most frequently.
 
@@ -95,6 +95,12 @@ A: Yes. Every beneficiary is global—creating one on Airtime/Data or Electricit
 - **Selection**: Automatic supplier selection chooses the best commission per product variant.
 - **Synchronization**: Real-time catalog sync keeps Flash, MobileMart, dtMercury, and Peach catalogs unified.
 
+### eeziPay (eeziAirtime / eeziData) Voucher Redemption
+- **How to redeem**: Dial `*130*3621*3*YOURPIN#` from the phone you want to top up. Replace YOURPIN with your 12-digit PIN. From the on-screen menu, choose airtime or a data bundle.
+- **Single product**: Flash has one eezi-voucher product; the user chooses airtime vs data at USSD redemption (not at purchase).
+- **Networks**: Works on MTN, Vodacom, Cell C, and Telkom.
+- **AI support**: eeziPay How To entries in `ai_knowledge_base`; run `node scripts/add-eezipay-redemption-knowledge-to-ai.js` to add/update.
+
 ### MobileMart (Fulcrum Switch)
 - **Status**: UAT product endpoints for Airtime, Data, Voucher, Bill Pay, and Utility are live (`https://uat.fulcrumswitch.com`).
 - **Purchases**: 4/7 purchase types pass (voucher-based). Pinless products require valid UAT MSISDNs supplied by MobileMart.
@@ -177,7 +183,7 @@ A: The support service first searches the `ai_knowledge_base` table (seeded from
 A: Yes. To control token spend, each user receives up to **5 GPT‑backed answers per 24-hour rolling window**. FAQ responses do not count toward this limit.
 
 **Q: Can we add new FAQ entries?**  
-A: Yes. Update `docs/FAQ_MASTER.md`, then run `node scripts/seed-support-knowledge-base.js` to refresh the DB. The assistant will immediately start using the new entries.
+A: Yes. Update `docs/FAQ_MASTER.md`, then run `node scripts/seed-support-knowledge-base.js` to refresh the DB. For incremental additions (e.g. eeziPay redemption), run `node scripts/add-eezipay-redemption-knowledge-to-ai.js` or `node scripts/add-referral-knowledge-to-ai.js`. The assistant will immediately start using the new entries.
 
 **Q: Where do I report missing or inaccurate answers?**  
 A: Log an issue in `docs/agent_handover.md` under “Next Steps” or create a GitHub issue tagged `support-faq`. Always include the question asked and the expected authoritative answer.

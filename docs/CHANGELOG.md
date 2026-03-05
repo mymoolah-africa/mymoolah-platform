@@ -1,52 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-03-04 - 💳 eeziAirtime PIN Fixes & Staging/Production Migrations ✅
+## 2026-03-05 - 💳 eeziAirtime Redemption UI & eeziPay AI Knowledge Base ✅
 
 ### **Session Overview**
-Fixed eeziAirtime PIN UI and migration failures. Removed SMS fallback text from apiService, added Copy PIN in Transaction Detail modal for eeziAirtime tokens. Fixed migration `20260304_fix_beneficiary22_eeziairtime_network` (wrong table/column). Staging and Production migrations applied successfully in Codespaces.
+Implemented clear eeziAirtime/eeziPay redemption instructions in modals and transaction detail. PIN displayed as 3×4 digits; Copy copies full USSD string. Added eeziPay voucher redemption How To entries to the AI support knowledge base. Fixed faqId length (VARCHAR 20) for KB inserts.
 
 ### **Changes**
-- **`mymoolah-wallet-frontend/services/apiService.ts`**: PIN fallback "No PIN returned" (was "PIN will be sent via SMS"); pinNumber first in extraction chain
-- **`mymoolah-wallet-frontend/components/TransactionDetailModal.tsx`**: eeziAirtime PIN section with Copy PIN button (green dashed border, metadata.pin)
-- **`migrations/20260304_fix_beneficiary22_eeziairtime_network.js`**: service_accounts → beneficiary_service_accounts, metadata → serviceData
-
-### **Migrations Applied**
-- **Staging**: 20260304_fix_beneficiary22_eeziairtime_network, fix_eezi_airtime_category, fix_global_pin_category, normalize_flash_transactions_columns
-- **Production**: 20260227_add_userid_walletid_to_payments, 20260304_01/02 (international_pin enums), beneficiary22 fix, eezi category, global pin, flash_transactions normalize
+- **`mymoolah-wallet-frontend/components/overlays/shared/GlobalPinModal.tsx`**: eeziRedemption prop (instruction, ussdPrefix, ussdSuffix, pinGroupSize); formatEeziPin(); copy full USSD when set
+- **`mymoolah-wallet-frontend/components/overlays/AirtimeDataOverlay.tsx`**: eeziRedemption config — "Dial *130*3621*3*[PIN]# ... From the on-screen menu, choose airtime or a data bundle."
+- **`mymoolah-wallet-frontend/components/TransactionDetailModal.tsx`**: formatEeziPin, instruction, copy full USSD for eeziAirtime
+- **`integrations/flash/FLASH_TESTING_REFERENCE.md`**: eeziAirtime/eeziData single product section (choice at USSD redemption)
+- **`scripts/add-eezipay-redemption-knowledge-to-ai.js`**: NEW — 5 How To / troubleshooting entries with embeddings (faqId `KB-EZ-` + 13 chars)
+- **`scripts/seed-support-knowledge-base.js`**: Q5.5–Q5.7 eeziPay entries in baseline seed
+- **`docs/README.md`**: add-eezipay script reference in knowledge base section
 
 ### **Session Log**
-- `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`
-
----
-
-## 2026-03-04 - 🛠 Cursor Skills for Banking-Grade Platform ✅
-
-### **Session Overview**
-Installed 7 Cursor skills via `npx skills add` to support award-winning banking/Mojaloop-standard development. Consolidated all 8 skills (including frontend-design) into single parent `.agents/skills/`. Best practice: one directory, industry standard. Created `docs/CURSOR_SKILLS.md`.
-
-### **Changes**
-- **`.agents/skills/`**: 8 skills — api-design-principles, postgresql-optimization, sql-optimization-patterns, tailwind-design-system, accessibility-compliance, interaction-design, security-best-practices, frontend-design (moved from .cursor/skills/)
-- **`skills-lock.json`**: Skills lock file (tracks 7 CLI-installed; frontend-design is custom)
-- **`docs/CURSOR_SKILLS.md`**: Skills inventory, all in .agents/skills/
-
-### **Session Logs**
-- `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`
-- `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`
-
----
-
-## 2026-02-27 - 📐 Figma Restriction Removed — Code as Frontend Source of Truth ✅
-
-### **Session Overview**
-Removed Figma read-only restriction. Codebase is now frontend source of truth. Agents may edit any UI/frontend files including `mymoolah-wallet-frontend/pages/*.tsx`. Figma may hold reference designs; code takes precedence for ongoing development. Enables faster iteration and full use of frontend-design skill.
-
-### **Changes**
-- **`docs/CURSOR_2.0_RULES_FINAL.md`**: Removed NEVER edit pages/*.tsx; added Frontend/Figma guidance; updated critical reminders
-- **`docs/AGENT_HANDOVER.md`**: DO/DON'T table — Edit any UI/frontend | Treat Figma-managed pages as read-only
-- **`docs/AGENT_ROLE_TEMPLATE.md`**: Persona, Mission, Hard Constraints, Frontend Integration Rule — code as source of truth
-
-### **Session Log**
-- `docs/session_logs/2026-02-27_1400_figma-restriction-removed-code-source-of-truth.md`
+- `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`
 
 ---
 

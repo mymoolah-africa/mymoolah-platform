@@ -1,17 +1,20 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: March 4, 2026  
-**Version**: 2.11.28 - eeziAirtime PIN Fixes & Staging/Production Migrations  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EEZIAIRTIME PIN & COPY** ✅ **SBSA PAYSHAP CALLBACKS** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: March 5, 2026  
+**Version**: 2.11.30 - eeziAirtime Redemption UI & eeziPay AI Knowledge Base  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **SBSA PAYSHAP CALLBACKS** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. All 80+ migrations applied to Production. Documentation consolidation (Feb 21): archived ~75 docs to `docs/archive/`, merged Input/2FA/Security, created DOCS_CONSOLIDATION_2026.md. EasyPay voucher refund duplicate fix (Feb 19). MMTP Partner API doc created; sandbox = staging.mymoolah.africa. SBSA PayShap UAT ready (awaiting OneHub credentials). Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC plan, Watch to Earn, EasyPay Top-up, and 11-language support deployed.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. All 80+ migrations applied to Production. eeziAirtime redemption UI (Mar 5): clear instructions, 3×4 PIN format, copy full USSD; eeziPay How To entries added to AI support knowledge base. Documentation consolidation (Feb 21): archived ~75 docs to `docs/archive/`. MMTP Partner API doc; sandbox = staging.mymoolah.africa. SBSA PayShap UAT ready. Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC, EasyPay Top-up, 11-language support deployed.
 
-### **📋 Latest Achievement: eeziAirtime PIN Fixes & Staging/Production Migrations (March 4, 2026)** ✅ **COMPLETE**
-Fixed eeziAirtime PIN UI (apiService fallback "No PIN returned", Copy PIN in Transaction Detail modal). Fixed migration 20260304_fix_beneficiary22 (beneficiary_service_accounts.serviceData). Staging and Production migrations applied in Codespaces. Session log: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`.
+### **📋 Latest Achievement: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)** ✅ **COMPLETE**
+eeziAirtime modal and Transaction Detail: redemption instruction, 3×4 PIN format, copy full USSD. eeziPay 5 How To entries in AI KB (`add-eezipay-redemption-knowledge-to-ai.js`); Q5.5–Q5.7 in seed. Session log: `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`.
+
+### **📋 Previous: eeziAirtime PIN Fixes & Staging/Production Migrations (March 4, 2026)** ✅ **COMPLETE**
+Fixed eeziAirtime PIN UI (apiService fallback "No PIN returned", Copy PIN in Transaction Detail modal). Fixed migration 20260304_fix_beneficiary22. Staging and Production migrations applied. Session log: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`.
 
 ### **📋 Previous: Cursor Skills for Banking-Grade Platform (March 4, 2026)** ✅ **COMPLETE**
 8 skills in `.agents/skills/`. Session logs: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`.
