@@ -512,10 +512,12 @@ class ApiService {
       body: JSON.stringify({ reference: idempotencyKey, amount: amountCents }),
     });
     const data = (response as any)?.data?.data ?? (response as any)?.data ?? response;
-    // Backend normalizes PIN to data.pin; also check nested transaction/data/result
+    // Backend normalizes PIN to data.pin; Flash eezi-voucher returns PIN in transaction.voucher
     const t = data?.transaction;
+    const v = t?.voucher;
     const pin =
       data?.pin ||
+      (v && (v.pin || v.pinNumber || v.voucherPin || v.token || v.code || v.serialNumber)) ||
       t?.pinNumber || t?.voucherPin || t?.pin || t?.code || t?.token || t?.serialNumber ||
       data?.pinNumber || data?.voucherPin || data?.pin || data?.code ||
       'No PIN returned';

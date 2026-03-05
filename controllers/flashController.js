@@ -1239,15 +1239,17 @@ class FlashController {
                 return Object.keys(obj).join(', ');
             };
             console.log('📥 Flash eezi-voucher response keys:', safeKeys(response));
-            const nested = response?.transaction || response?.data || response?.result;
+            const nested = response?.transaction || response?.data || response?.result || response?.voucher;
             if (nested && typeof nested === 'object') {
-                console.log('📥 Flash nested (transaction/data/result) keys:', safeKeys(nested));
+                console.log('📥 Flash nested (transaction/data/result/voucher) keys:', safeKeys(nested));
             }
 
-            // Extract PIN from all plausible Flash response structures (cash-out uses transaction.pin; eezi may use different paths)
+            // Extract PIN: Flash eezi-voucher returns PIN in response.voucher (pin, pinNumber, code, token, etc.)
+            const voucher = response?.voucher;
             const tx = response?.transaction || response?.data || response?.result || response;
             const vd = (typeof tx === 'object' && tx?.voucherDetails) || response?.voucherDetails;
             const eeziPin =
+                (voucher && typeof voucher === 'object' && (voucher.pin || voucher.pinNumber || voucher.voucherPin || voucher.token || voucher.code || voucher.serialNumber || voucher.pinCode || voucher.voucherCode || voucher.value)) ||
                 (typeof tx === 'object' && (tx.pinNumber || tx.pin || tx.voucherPin || tx.token || tx.code || tx.serialNumber)) ||
                 response?.pinNumber || response?.pin || response?.voucherPin || response?.token || response?.code ||
                 (vd && (vd.pin || vd.pinNumber || vd.code)) ||
