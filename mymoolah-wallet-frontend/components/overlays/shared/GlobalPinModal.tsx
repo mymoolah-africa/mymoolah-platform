@@ -51,9 +51,30 @@ interface GlobalPinModalProps {
    * If omitted, falls back to apiService.purchaseVoucher (International Airtime path).
    */
   onPurchase?: (amountCents: number, idempotencyKey: string) => Promise<{ pin: string; ref: string }>;
+  /**
+   * When set, shows eeziAirtime redemption instructions, formats PIN as 3×4 digits,
+   * and copies the full USSD string to clipboard.
+   */
+  eeziRedemption?: {
+    instruction: string;
+    ussdPrefix: string;
+    ussdSuffix?: string;
+    pinGroupSize?: number;
+  };
 }
 
 type Step = 'select' | 'confirm' | 'processing' | 'success' | 'error';
+
+/** Format PIN into groups of 4 digits (e.g. 1761 3288 3283) */
+function formatEeziPin(pin: string, groupSize = 4): string {
+  const digits = pin.replace(/\D/g, '');
+  if (!digits) return pin;
+  const groups: string[] = [];
+  for (let i = 0; i < digits.length; i += groupSize) {
+    groups.push(digits.slice(i, i + groupSize));
+  }
+  return groups.join(' ');
+}
 
 export function GlobalPinModal({
   products,
@@ -67,6 +88,7 @@ export function GlobalPinModal({
   minAmountCents = 200,
   maxAmountCents = 99900,
   onPurchase,
+  eeziRedemption,
 }: GlobalPinModalProps) {
   const [step, setStep] = useState<Step>('select');
   const [selected, setSelected] = useState<GlobalPinProduct | null>(null);
@@ -146,7 +168,12 @@ export function GlobalPinModal({
   const handleCopy = async () => {
     if (!pin) return;
     try {
-      await navigator.clipboard.writeText(pin);
+      let textToCopy = pin;
+      if (eeziRedemption) {
+        const rawPin = pin.replace(/\s/g, '');
+        textToCopy = `${eeziRedemption.ussdPrefix}${rawPin}${eeziRedemption.ussdSuffix ?? ''}`;
+      }
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
@@ -397,8 +424,16 @@ export function GlobalPinModal({
                 fontSize: '22px', fontWeight: '700', color: '#1f2937',
                 letterSpacing: '3px', wordBreak: 'break-all', margin: '0 0 16px'
               }}>
-                {pin}
+                {eeziRedemption ? formatEeziPin(pin, eeziRedemption.pinGroupSize ?? 4) : pin}
               </p>
+              {eeziRedemption?.instruction && (
+                <p style={{
+                  fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#4b5563',
+                  margin: '0 0 12px', lineHeight: 1.4
+                }}>
+                  {eeziRedemption.instruction}
+                </p>
+              )}
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                 <Button
                   onClick={handleCopy}

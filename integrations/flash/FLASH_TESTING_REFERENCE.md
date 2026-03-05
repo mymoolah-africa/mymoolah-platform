@@ -220,6 +220,24 @@ FLASH_ACCOUNT_NUMBER=8444-1533-7896-6119  # AVT Sandbox (UAT/Codespaces)
 
 ---
 
+## 📦 **eeziAirtime / eeziData: Single Product**
+
+Flash exposes **one product** for Eezi vouchers (eezi-voucher), not separate eeziAirtime and eeziData products.
+
+- **At purchase**: One PIN is generated via `POST /eezi-voucher/purchase` with a single product code.
+- **At redemption**: The user dials `*130*3621*3*VOUCHERPIN#` from the phone/SIM to top up.
+- **On-screen menu**: After dialling, the network shows a menu to choose **airtime** or **data** (network-specific data bundles).
+
+If the user does not see the airtime/data menu, possible causes:
+
+- Network carrier USSD routing — some networks may differ
+- Dialling from a different device than the target SIM
+- Contact Flash support if the menu never appears on the correct network
+
+Our implementation correctly uses the single eezi-voucher product. Redemption instructions in the app remind users to choose airtime or data from the on-screen menu.
+
+---
+
 ## 🔧 **eeziAirtime "No PIN returned" Troubleshooting**
 
 If eeziAirtime purchases succeed (wallet debited, 200 OK) but show "No PIN returned":

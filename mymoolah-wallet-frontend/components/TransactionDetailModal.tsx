@@ -44,16 +44,20 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                              transaction.description?.toLowerCase().includes('eeziairtime');
 
   const handleCopyToken = () => {
-    const tokenToCopy = transaction.metadata?.electricityToken || transaction.metadata?.pin;
+    let tokenToCopy: string | undefined;
+    if (isEeziAirtimeToken && transaction.metadata?.pin) {
+      tokenToCopy = `*130*3621*3*${transaction.metadata.pin.replace(/\D/g, '')}#`;
+    } else {
+      tokenToCopy = transaction.metadata?.electricityToken || transaction.metadata?.pin;
+    }
     if (tokenToCopy) {
       navigator.clipboard.writeText(tokenToCopy);
-      // Optional: Show copied confirmation
       const button = document.querySelector('[data-copy-token]') as HTMLElement;
       if (button) {
         const originalText = button.textContent;
         button.textContent = 'Copied!';
         setTimeout(() => {
-          button.textContent = originalText || 'Copy Token';
+          button.textContent = originalText || 'Copy PIN';
         }, 2000);
       }
     }
@@ -74,6 +78,15 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
     // Group token by 4 digits with spaces
     if (!token) return '';
     return token.match(/.{1,4}/g)?.join(' ') || token;
+  };
+
+  /** Format eeziAirtime PIN as 3×4 digits (e.g. 1761 3288 3283) */
+  const formatEeziPin = (pin: string): string => {
+    const digits = (pin || '').replace(/\D/g, '');
+    if (!digits) return pin || '';
+    const groups: string[] = [];
+    for (let i = 0; i < digits.length; i += 4) groups.push(digits.slice(i, i + 4));
+    return groups.join(' ');
   };
 
   const formatReference = (ref: string): string => {
@@ -384,9 +397,18 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
                     fontWeight: '700',
                     color: '#1f2937',
                     letterSpacing: '3px',
-                    marginBottom: '1rem'
+                    marginBottom: '0.5rem'
                   }}>
-                    {transaction.metadata.pin}
+                    {formatEeziPin(transaction.metadata.pin)}
+                  </p>
+                  <p style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '12px',
+                    color: '#4b5563',
+                    marginBottom: '1rem',
+                    lineHeight: 1.4
+                  }}>
+                    Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle.
                   </p>
                   <Button
                     onClick={handleCopyToken}

@@ -1932,13 +1932,19 @@ export function AirtimeDataOverlay() {
           title="eeziAirtime"
           subtitle="Buy PIN · Copy · Use on any SA network"
           currency="ZAR"
-          confirmHint="A PIN cash token will be generated instantly. Copy and dial it on any South African mobile number to load airtime."
+          confirmHint="A PIN cash token will be generated instantly. Dial the USSD from the phone you want to top up."
           ownAmountMode={true}
           minAmountCents={200}
           maxAmountCents={99900}
           onPurchase={(amountCents, idempotencyKey) =>
             apiService.purchaseEeziToken(amountCents, idempotencyKey)
           }
+          eeziRedemption={{
+            instruction: 'Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle.',
+            ussdPrefix: '*130*3621*3*',
+            ussdSuffix: '#',
+            pinGroupSize: 4,
+          }}
         />
       )}
     </div>
