@@ -124,7 +124,7 @@ async function addEeziPayRedemptionKnowledge() {
     for (const entry of eeziPayRedemptionEntries) {
       try {
         const hash = crypto.createHash('md5').update(entry.question.toLowerCase()).digest('hex');
-        const faqId = `KB-EEZI-${hash.substring(0, 14)}`;
+        const faqId = `KB-EZ-${hash.substring(0, 13)}`;
 
         const embedding = await embeddingService.generateEmbedding(entry.question);
 
