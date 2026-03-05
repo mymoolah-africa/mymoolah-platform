@@ -100,30 +100,32 @@ async function postCommissionVatAndLedger({
     const vatAmountRand = Number((vatCents / 100).toFixed(2));
     const netAmountRand = Number((netCommissionCents / 100).toFixed(2));
 
+    // Ledger requires every line amount > 0 (zero tolerance). When commission is tiny (e.g. 1c on R2),
+    // vatAmountRand can round to 0. Use 2-line entry (clearing → revenue) when VAT is 0; otherwise 3-line.
+    const lines = [
+      {
+        accountCode: LEDGER_ACCOUNT_MM_COMMISSION_CLEARING,
+        dc: 'debit',
+        amount: commissionAmountRand,
+        memo: 'Commission clearing'
+      }
+    ];
+    if (vatAmountRand > 0) {
+      lines.push(
+        { accountCode: LEDGER_ACCOUNT_VAT_CONTROL, dc: 'credit', amount: vatAmountRand, memo: 'VAT payable on commission' },
+        { accountCode: LEDGER_ACCOUNT_COMMISSION_REVENUE, dc: 'credit', amount: netAmountRand, memo: 'Commission revenue (net of VAT)' }
+      );
+    } else {
+      lines.push(
+        { accountCode: LEDGER_ACCOUNT_COMMISSION_REVENUE, dc: 'credit', amount: commissionAmountRand, memo: 'Commission revenue (no VAT allocation)' }
+      );
+    }
+
     try {
       await ledgerService.postJournalEntry({
         reference: `COMMISSION-${walletTransactionId || sourceTransactionId}`,
         description: `Commission allocation (${(serviceType || 'UNKNOWN').toUpperCase()} - ${normalizedSupplierCode})`,
-        lines: [
-          {
-            accountCode: LEDGER_ACCOUNT_MM_COMMISSION_CLEARING,
-            dc: 'debit',
-            amount: commissionAmountRand,
-            memo: 'Commission clearing'
-          },
-          {
-            accountCode: LEDGER_ACCOUNT_VAT_CONTROL,
-            dc: 'credit',
-            amount: vatAmountRand,
-            memo: 'VAT payable on commission'
-          },
-          {
-            accountCode: LEDGER_ACCOUNT_COMMISSION_REVENUE,
-            dc: 'credit',
-            amount: netAmountRand,
-            memo: 'Commission revenue (net of VAT)'
-          }
-        ]
+        lines
       });
     } catch (ledgerErr) {
       console.error('⚠️ Failed to post commission journal:', ledgerErr.message);

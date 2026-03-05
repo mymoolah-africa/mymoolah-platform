@@ -1214,7 +1214,8 @@ class FlashController {
             const redemptionFeeCents = Number(fees['token_redemption'] || 0);
 
             // ── Wallet: load & check balance ──
-            const { Wallet, Transaction, VasProduct, VasTransaction } = require('../models');
+            const { Wallet, Transaction, VasProduct, VasTransaction, SupplierFloat } = require('../models');
+            const { Op } = require('sequelize');
 
             const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
             if (!wallet) {
@@ -1349,6 +1350,29 @@ class FlashController {
             // ── Debit wallet ──
             await wallet.debit(totalChargeCents / 100, 'payment');
             console.log(`💳 Wallet debited: R${(totalChargeCents / 100).toFixed(2)}`);
+
+            // ── Main VAS ledger entry: user paid → Flash float consumed (zero tolerance reconciliation)
+            const ledgerService = require('../services/ledgerService');
+            const LEDGER_ACCOUNT_CLIENT_FLOAT = process.env.LEDGER_ACCOUNT_CLIENT_FLOAT || '2100-01-01';
+            const LEDGER_ACCOUNT_FLASH_FLOAT = process.env.LEDGER_ACCOUNT_FLASH_FLOAT || '1200-10-04';
+            const faceValueRand = Number((faceValueCents / 100).toFixed(2));
+            try {
+                await ledgerService.postJournalEntry({
+                    reference: `EEZI-${reference}`,
+                    description: `eeziAirtime R${faceValueRand} (Flash eezi-voucher)`,
+                    lines: [
+                        { accountCode: LEDGER_ACCOUNT_CLIENT_FLOAT, dc: 'debit', amount: faceValueRand, memo: 'User wallet debit (eeziAirtime)' },
+                        { accountCode: LEDGER_ACCOUNT_FLASH_FLOAT, dc: 'credit', amount: faceValueRand, memo: 'Flash float consumed (eezi-voucher)' }
+                    ]
+                });
+                // Sync SupplierFloat (operational balance) with ledger
+                const flashFloat = await SupplierFloat.findOne({ where: { supplierId: { [Op.iLike]: 'flash' } } });
+                if (flashFloat) {
+                    await flashFloat.updateBalance(faceValueRand, 'debit');
+                }
+            } catch (ledgerErr) {
+                console.error('⚠️ Failed to post eezi-voucher main ledger entry:', ledgerErr.message);
+            }
 
             // ── Wallet transaction record (appears in history) ──
             const mainTransactionId = `FLASH-EEZI-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
