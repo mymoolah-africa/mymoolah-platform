@@ -1233,7 +1233,29 @@ class FlashController {
 
             const response = await this.authService.makeAuthenticatedRequest('POST', '/eezi-voucher/purchase', requestData);
 
-            const eeziPin = response?.pinNumber || response?.pin || response?.voucherPin || null;
+            // Debug: log Flash response structure (sanitized - no full PIN) to diagnose PIN extraction
+            const safeKeys = (obj) => {
+                if (!obj || typeof obj !== 'object') return 'null';
+                return Object.keys(obj).join(', ');
+            };
+            console.log('📥 Flash eezi-voucher response keys:', safeKeys(response));
+            const nested = response?.transaction || response?.data || response?.result;
+            if (nested && typeof nested === 'object') {
+                console.log('📥 Flash nested (transaction/data/result) keys:', safeKeys(nested));
+            }
+
+            // Extract PIN from all plausible Flash response structures (cash-out uses transaction.pin; eezi may use different paths)
+            const tx = response?.transaction || response?.data || response?.result || response;
+            const vd = (typeof tx === 'object' && tx?.voucherDetails) || response?.voucherDetails;
+            const eeziPin =
+                (typeof tx === 'object' && (tx.pinNumber || tx.pin || tx.voucherPin || tx.token || tx.code || tx.serialNumber)) ||
+                response?.pinNumber || response?.pin || response?.voucherPin || response?.token || response?.code ||
+                (vd && (vd.pin || vd.pinNumber || vd.code)) ||
+                null;
+
+            if (!eeziPin) {
+                console.warn('⚠️ No PIN extracted from Flash eezi-voucher response. Run `node scripts/check-all-supplier-float-balances.js` to verify Flash float balance.');
+            }
 
             // ── VAS records ──
             const [vasProduct] = await VasProduct.findOrCreate({
@@ -1361,6 +1383,7 @@ class FlashController {
                 success: true,
                 data: {
                     transaction: response,
+                    pin: eeziPin,
                     timestamp: new Date().toISOString()
                 }
             });

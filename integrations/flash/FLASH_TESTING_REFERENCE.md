@@ -220,5 +220,21 @@ FLASH_ACCOUNT_NUMBER=8444-1533-7896-6119  # AVT Sandbox (UAT/Codespaces)
 
 ---
 
-**Last Updated**: 2026-02-01  
-**Status**: Ready for testing once Client ID/Secret added
+## 🔧 **eeziAirtime "No PIN returned" Troubleshooting**
+
+If eeziAirtime purchases succeed (wallet debited, 200 OK) but show "No PIN returned":
+
+1. **Check Flash response structure** – Backend logs `📥 Flash eezi-voucher response keys:` on each purchase. Compare logged keys to the extraction paths in `flashController.js` (e.g. `transaction.pin`, `pinNumber`, `voucherPin`, `voucherDetails.pin`).
+
+2. **Verify Flash float balance** – eeziAirtime uses a prefunded account. Low/empty float can cause unusual behavior:
+   ```bash
+   node scripts/check-all-supplier-float-balances.js
+   ```
+   Ensure Flash float is above minimum. Float monitoring runs hourly (see `FloatBalanceMonitoringService`).
+
+3. **Flash API docs** – Consult `Flash Partner API v4 - release 3 1.pdf` for the documented eezi-voucher purchase response schema and PIN field names.
+
+---
+
+**Last Updated**: 2026-03-05  
+**Status**: Ready for testing; eezi-voucher PIN extraction improved with debug logging

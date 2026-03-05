@@ -512,15 +512,12 @@ class ApiService {
       body: JSON.stringify({ reference: idempotencyKey, amount: amountCents }),
     });
     const data = (response as any)?.data?.data ?? (response as any)?.data ?? response;
+    // Backend normalizes PIN to data.pin; also check nested transaction/data/result
+    const t = data?.transaction;
     const pin =
-      data?.transaction?.pinNumber ||
-      data?.transaction?.voucherPin ||
-      data?.transaction?.pin ||
-      data?.transaction?.code ||
-      data?.pinNumber ||
-      data?.voucherPin ||
       data?.pin ||
-      data?.code ||
+      t?.pinNumber || t?.voucherPin || t?.pin || t?.code || t?.token || t?.serialNumber ||
+      data?.pinNumber || data?.voucherPin || data?.pin || data?.code ||
       'No PIN returned';
     const ref =
       data?.transaction?.reference ||
