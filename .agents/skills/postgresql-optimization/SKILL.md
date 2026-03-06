@@ -1,404 +1,339 @@
 ---
 name: postgresql-optimization
-description: 'PostgreSQL-specific development assistant focusing on unique PostgreSQL features, advanced data types, and PostgreSQL-exclusive capabilities. Covers JSONB operations, array types, custom types, range/geometric types, full-text search, window functions, and PostgreSQL extensions ecosystem.'
+description: PostgreSQL-specific development assistant focusing on unique PostgreSQL features, advanced data types, and PostgreSQL-exclusive capabilities. Covers JSONB operations, array types, custom types, range/geometric types, full-text search, window functions, and PostgreSQL extensions ecosystem.
 ---
 
-# PostgreSQL Development Assistant
+# MyMoolah PostgreSQL Optimization
 
-Expert PostgreSQL guidance for ${selection} (or entire project if no selection). Focus on PostgreSQL-specific features, optimization patterns, and advanced capabilities.
+PostgreSQL-specific optimization for MyMoolah's financial database including ledger
+queries, reconciliation aggregates, transaction search, JSONB event data, and
+Sequelize ORM integration. All MyMoolah tables use PostgreSQL with Sequelize.
 
-## � PostgreSQL-Specific Features
+## When This Skill Activates
 
-### JSONB Operations
+- Writing Sequelize queries for financial data
+- Optimizing slow ledger or transaction queries
+- Designing database migrations (migrations/*.js)
+- Working with JSONB columns (discrepancies, ml_anomalies, event_data)
+- Building reconciliation reports or settlement calculations
+- Indexing strategy for financial tables
+
+---
+
+## 1. MyMoolah Critical Table Indexes
+
+### Ledger & Journal Indexes
 ```sql
--- Advanced JSONB queries
-CREATE TABLE events (
-    id SERIAL PRIMARY KEY,
-    data JSONB NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Journal entries: query by date range and reference
+CREATE INDEX idx_journal_entries_posted ON journal_entries(postedAt DESC);
+CREATE UNIQUE INDEX idx_journal_entries_ref ON journal_entries(reference) WHERE reference IS NOT NULL;
 
--- GIN index for JSONB performance
-CREATE INDEX idx_events_data_gin ON events USING gin(data);
+-- Journal lines: balance calculations per account
+CREATE INDEX idx_journal_lines_account_dc ON journal_lines("accountId", dc);
+CREATE INDEX idx_journal_lines_entry ON journal_lines("entryId");
 
--- JSONB containment and path queries
-SELECT * FROM events 
-WHERE data @> '{"type": "login"}'
-  AND data #>> '{user,role}' = 'admin';
-
--- JSONB aggregation
-SELECT jsonb_agg(data) FROM events WHERE data ? 'user_id';
+-- Covering index for trial balance calculation (avoids table lookup)
+CREATE INDEX idx_journal_lines_balance ON journal_lines("accountId", dc, amount)
+  INCLUDE ("entryId");
 ```
 
-### Array Operations
+### Transaction Indexes
 ```sql
--- PostgreSQL arrays
-CREATE TABLE posts (
-    id SERIAL PRIMARY KEY,
-    tags TEXT[],
-    categories INTEGER[]
-);
+-- MyMoolah transactions: user wallet queries with cursor pagination
+CREATE INDEX idx_transactions_wallet_created ON mymoolah_transactions("walletId", "createdAt" DESC, id DESC);
 
--- Array queries and operations
-SELECT * FROM posts WHERE 'postgresql' = ANY(tags);
-SELECT * FROM posts WHERE tags && ARRAY['database', 'sql'];
-SELECT * FROM posts WHERE array_length(tags, 1) > 3;
+-- Transaction status filtering
+CREATE INDEX idx_transactions_status ON mymoolah_transactions(status)
+  WHERE status IN ('pending', 'processing');
 
--- Array aggregation
-SELECT array_agg(DISTINCT category) FROM posts, unnest(categories) as category;
+-- Flash transactions: supplier reconciliation
+CREATE INDEX idx_flash_transactions_recon
+  ON flash_transactions(supplier_reference, "createdAt" DESC);
+
+-- EasyPay deposits: matching by reference
+CREATE UNIQUE INDEX idx_easypay_reference ON easypay_deposits(payment_reference);
 ```
 
-### Window Functions & Analytics
+### Reconciliation Indexes
 ```sql
--- Advanced window functions
-SELECT 
-    product_id,
-    sale_date,
-    amount,
-    -- Running totals
-    SUM(amount) OVER (PARTITION BY product_id ORDER BY sale_date) as running_total,
-    -- Moving averages
-    AVG(amount) OVER (PARTITION BY product_id ORDER BY sale_date ROWS BETWEEN 2 PRECEDING AND CURRENT ROW) as moving_avg,
-    -- Rankings
-    DENSE_RANK() OVER (PARTITION BY EXTRACT(month FROM sale_date) ORDER BY amount DESC) as monthly_rank,
-    -- Lag/Lead for comparisons
-    LAG(amount, 1) OVER (PARTITION BY product_id ORDER BY sale_date) as prev_amount
-FROM sales;
+-- Recon runs: query by supplier and status
+CREATE INDEX idx_recon_runs_supplier_status ON recon_runs(supplier_id, status, completed_at DESC);
+
+-- Transaction matches: query by run
+CREATE INDEX idx_recon_matches_run ON recon_transaction_matches(run_id, match_type);
+
+-- Audit trail: event chain queries
+CREATE INDEX idx_audit_trail_run_time ON recon_audit_trail(run_id, event_timestamp ASC);
+
+-- Audit trail: actor queries for compliance
+CREATE INDEX idx_audit_trail_actor ON recon_audit_trail(actor_id, event_timestamp DESC);
 ```
 
-### Full-Text Search
+---
+
+## 2. Financial Query Patterns
+
+### Trial Balance (Ledger Balance Check)
 ```sql
--- PostgreSQL full-text search
-CREATE TABLE documents (
-    id SERIAL PRIMARY KEY,
-    title TEXT,
-    content TEXT,
-    search_vector tsvector
-);
-
--- Update search vector
-UPDATE documents 
-SET search_vector = to_tsvector('english', title || ' ' || content);
-
--- GIN index for search performance
-CREATE INDEX idx_documents_search ON documents USING gin(search_vector);
-
--- Search queries
-SELECT * FROM documents 
-WHERE search_vector @@ plainto_tsquery('english', 'postgresql database');
-
--- Ranking results
-SELECT *, ts_rank(search_vector, plainto_tsquery('postgresql')) as rank
-FROM documents 
-WHERE search_vector @@ plainto_tsquery('postgresql')
-ORDER BY rank DESC;
+-- Fast trial balance using covering index
+SELECT
+  la.code, la.name, la.type, la."normalSide",
+  COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END), 0) AS debits,
+  COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END), 0) AS credits,
+  CASE WHEN la."normalSide" = 'debit'
+    THEN COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE -jl.amount END), 0)
+    ELSE COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE -jl.amount END), 0)
+  END AS balance
+FROM ledger_accounts la
+LEFT JOIN journal_lines jl ON la.id = jl."accountId"
+WHERE la."isActive" = true
+GROUP BY la.id, la.code, la.name, la.type, la."normalSide"
+ORDER BY la.code;
 ```
 
-## � PostgreSQL Performance Tuning
-
-### Query Optimization
+### User Wallet Balance History (with Window Functions)
 ```sql
--- EXPLAIN ANALYZE for performance analysis
-EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) 
-SELECT u.name, COUNT(o.id) as order_count
-FROM users u
-LEFT JOIN orders o ON u.id = o.user_id
-WHERE u.created_at > '2024-01-01'::date
-GROUP BY u.id, u.name;
-
--- Identify slow queries from pg_stat_statements
-SELECT query, calls, total_time, mean_time, rows,
-       100.0 * shared_blks_hit / nullif(shared_blks_hit + shared_blks_read, 0) AS hit_percent
-FROM pg_stat_statements 
-ORDER BY total_time DESC 
-LIMIT 10;
+SELECT
+  t.id,
+  t.type,
+  t.amount,
+  t."createdAt",
+  SUM(
+    CASE WHEN t.type IN ('deposit', 'receive', 'reward')
+         THEN t.amount
+         ELSE -t.amount
+    END
+  ) OVER (
+    PARTITION BY t."walletId"
+    ORDER BY t."createdAt", t.id
+  ) AS running_balance
+FROM mymoolah_transactions t
+WHERE t."walletId" = :walletId
+  AND t.status = 'completed'
+ORDER BY t."createdAt" DESC, t.id DESC
+LIMIT 50;
 ```
 
-### Index Strategies
+### Daily Transaction Volume & Revenue Report
 ```sql
--- Composite indexes for multi-column queries
-CREATE INDEX idx_orders_user_date ON orders(user_id, order_date);
-
--- Partial indexes for filtered queries
-CREATE INDEX idx_active_users ON users(created_at) WHERE status = 'active';
-
--- Expression indexes for computed values
-CREATE INDEX idx_users_lower_email ON users(lower(email));
-
--- Covering indexes to avoid table lookups
-CREATE INDEX idx_orders_covering ON orders(user_id, status) INCLUDE (total, created_at);
+SELECT
+  DATE(t."createdAt") AS day,
+  t.type,
+  COUNT(*) AS transaction_count,
+  SUM(t.amount) AS total_amount,
+  SUM(t.commission) AS total_commission,
+  AVG(t.amount) AS avg_amount,
+  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY t.amount) AS median_amount
+FROM mymoolah_transactions t
+WHERE t."createdAt" >= NOW() - INTERVAL '30 days'
+  AND t.status = 'completed'
+GROUP BY DATE(t."createdAt"), t.type
+ORDER BY day DESC, t.type;
 ```
 
-### Connection & Memory Management
+### Reconciliation Gap Analysis
 ```sql
--- Check connection usage
-SELECT count(*) as connections, state 
-FROM pg_stat_activity 
-GROUP BY state;
-
--- Monitor memory usage
-SELECT name, setting, unit 
-FROM pg_settings 
-WHERE name IN ('shared_buffers', 'work_mem', 'maintenance_work_mem');
-```
-
-## �️ PostgreSQL Advanced Data Types
-
-### Custom Types & Domains
-```sql
--- Create custom types
-CREATE TYPE address_type AS (
-    street TEXT,
-    city TEXT,
-    postal_code TEXT,
-    country TEXT
-);
-
-CREATE TYPE order_status AS ENUM ('pending', 'processing', 'shipped', 'delivered', 'cancelled');
-
--- Use domains for data validation
-CREATE DOMAIN email_address AS TEXT 
-CHECK (VALUE ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$');
-
--- Table using custom types
-CREATE TABLE customers (
-    id SERIAL PRIMARY KEY,
-    email email_address NOT NULL,
-    address address_type,
-    status order_status DEFAULT 'pending'
-);
-```
-
-### Range Types
-```sql
--- PostgreSQL range types
-CREATE TABLE reservations (
-    id SERIAL PRIMARY KEY,
-    room_id INTEGER,
-    reservation_period tstzrange,
-    price_range numrange
-);
-
--- Range queries
-SELECT * FROM reservations 
-WHERE reservation_period && tstzrange('2024-07-20', '2024-07-25');
-
--- Exclude overlapping ranges
-ALTER TABLE reservations 
-ADD CONSTRAINT no_overlap 
-EXCLUDE USING gist (room_id WITH =, reservation_period WITH &&);
-```
-
-### Geometric Types
-```sql
--- PostgreSQL geometric types
-CREATE TABLE locations (
-    id SERIAL PRIMARY KEY,
-    name TEXT,
-    coordinates POINT,
-    coverage CIRCLE,
-    service_area POLYGON
-);
-
--- Geometric queries
-SELECT name FROM locations 
-WHERE coordinates <-> point(40.7128, -74.0060) < 10; -- Within 10 units
-
--- GiST index for geometric data
-CREATE INDEX idx_locations_coords ON locations USING gist(coordinates);
-```
-
-## 📊 PostgreSQL Extensions & Tools
-
-### Useful Extensions
-```sql
--- Enable commonly used extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";    -- UUID generation
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";     -- Cryptographic functions
-CREATE EXTENSION IF NOT EXISTS "unaccent";     -- Remove accents from text
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";      -- Trigram matching
-CREATE EXTENSION IF NOT EXISTS "btree_gin";    -- GIN indexes for btree types
-
--- Using extensions
-SELECT uuid_generate_v4();                     -- Generate UUIDs
-SELECT crypt('password', gen_salt('bf'));      -- Hash passwords
-SELECT similarity('postgresql', 'postgersql'); -- Fuzzy matching
-```
-
-### Monitoring & Maintenance
-```sql
--- Database size and growth
-SELECT pg_size_pretty(pg_database_size(current_database())) as db_size;
-
--- Table and index sizes
-SELECT schemaname, tablename,
-       pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
-FROM pg_tables 
-ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
-
--- Index usage statistics
-SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read, idx_tup_fetch
-FROM pg_stat_user_indexes 
-WHERE idx_scan = 0;  -- Unused indexes
-```
-
-### PostgreSQL-Specific Optimization Tips
-- **Use EXPLAIN (ANALYZE, BUFFERS)** for detailed query analysis
-- **Configure postgresql.conf** for your workload (OLTP vs OLAP)
-- **Use connection pooling** (pgbouncer) for high-concurrency applications
-- **Regular VACUUM and ANALYZE** for optimal performance
-- **Partition large tables** using PostgreSQL 10+ declarative partitioning
-- **Use pg_stat_statements** for query performance monitoring
-
-## 📊 Monitoring and Maintenance
-
-### Query Performance Monitoring
-```sql
--- Identify slow queries
-SELECT query, calls, total_time, mean_time, rows
-FROM pg_stat_statements 
-ORDER BY total_time DESC 
-LIMIT 10;
-
--- Check index usage
-SELECT schemaname, tablename, indexname, idx_scan, idx_tup_read, idx_tup_fetch
-FROM pg_stat_user_indexes 
-WHERE idx_scan = 0;
-```
-
-### Database Maintenance
-- **VACUUM and ANALYZE**: Regular maintenance for performance
-- **Index Maintenance**: Monitor and rebuild fragmented indexes
-- **Statistics Updates**: Keep query planner statistics current
-- **Log Analysis**: Regular review of PostgreSQL logs
-
-## 🛠️ Common Query Patterns
-
-### Pagination
-```sql
--- ❌ BAD: OFFSET for large datasets
-SELECT * FROM products ORDER BY id OFFSET 10000 LIMIT 20;
-
--- ✅ GOOD: Cursor-based pagination
-SELECT * FROM products 
-WHERE id > $last_id 
-ORDER BY id 
-LIMIT 20;
-```
-
-### Aggregation
-```sql
--- ❌ BAD: Inefficient grouping
-SELECT user_id, COUNT(*) 
-FROM orders 
-WHERE order_date >= '2024-01-01' 
-GROUP BY user_id;
-
--- ✅ GOOD: Optimized with partial index
-CREATE INDEX idx_orders_recent ON orders(user_id) 
-WHERE order_date >= '2024-01-01';
-
-SELECT user_id, COUNT(*) 
-FROM orders 
-WHERE order_date >= '2024-01-01' 
-GROUP BY user_id;
-```
-
-### JSON Queries
-```sql
--- ❌ BAD: Inefficient JSON querying
-SELECT * FROM users WHERE data::text LIKE '%admin%';
-
--- ✅ GOOD: JSONB operators and GIN index
-CREATE INDEX idx_users_data_gin ON users USING gin(data);
-
-SELECT * FROM users WHERE data @> '{"role": "admin"}';
-```
-
-## 📋 Optimization Checklist
-
-### Query Analysis
-- [ ] Run EXPLAIN ANALYZE for expensive queries
-- [ ] Check for sequential scans on large tables
-- [ ] Verify appropriate join algorithms
-- [ ] Review WHERE clause selectivity
-- [ ] Analyze sort and aggregation operations
-
-### Index Strategy
-- [ ] Create indexes for frequently queried columns
-- [ ] Use composite indexes for multi-column searches
-- [ ] Consider partial indexes for filtered queries
-- [ ] Remove unused or duplicate indexes
-- [ ] Monitor index bloat and fragmentation
-
-### Security Review
-- [ ] Use parameterized queries exclusively
-- [ ] Implement proper access controls
-- [ ] Enable row-level security where needed
-- [ ] Audit sensitive data access
-- [ ] Use secure connection methods
-
-### Performance Monitoring
-- [ ] Set up query performance monitoring
-- [ ] Configure appropriate log settings
-- [ ] Monitor connection pool usage
-- [ ] Track database growth and maintenance needs
-- [ ] Set up alerting for performance degradation
-
-## 🎯 Optimization Output Format
-
-### Query Analysis Results
-```
-## Query Performance Analysis
-
-**Original Query**:
-[Original SQL with performance issues]
-
-**Issues Identified**:
-- Sequential scan on large table (Cost: 15000.00)
-- Missing index on frequently queried column
-- Inefficient join order
-
-**Optimized Query**:
-[Improved SQL with explanations]
-
-**Recommended Indexes**:
-```sql
-CREATE INDEX idx_table_column ON table(column);
-```
-
-**Performance Impact**: Expected 80% improvement in execution time
-```
-
-## 🚀 Advanced PostgreSQL Features
-
-### Window Functions
-```sql
--- Running totals and rankings
-SELECT 
-    product_id,
-    order_date,
-    amount,
-    SUM(amount) OVER (PARTITION BY product_id ORDER BY order_date) as running_total,
-    ROW_NUMBER() OVER (PARTITION BY product_id ORDER BY amount DESC) as rank
-FROM sales;
-```
-
-### Common Table Expressions (CTEs)
-```sql
--- Recursive queries for hierarchical data
-WITH RECURSIVE category_tree AS (
-    SELECT id, name, parent_id, 1 as level
-    FROM categories 
-    WHERE parent_id IS NULL
-    
-    UNION ALL
-    
-    SELECT c.id, c.name, c.parent_id, ct.level + 1
-    FROM categories c
-    JOIN category_tree ct ON c.parent_id = ct.id
+-- Find unreconciled transactions older than 24 hours
+WITH unreconciled AS (
+  SELECT
+    ft.id, ft.reference, ft.amount, ft."createdAt",
+    ft.supplier_reference, ft.status,
+    NOW() - ft."createdAt" AS age
+  FROM flash_transactions ft
+  LEFT JOIN recon_transaction_matches rtm ON ft.reference = rtm.mmtp_reference
+  WHERE rtm.id IS NULL
+    AND ft."createdAt" < NOW() - INTERVAL '24 hours'
+    AND ft.status = 'completed'
 )
-SELECT * FROM category_tree ORDER BY level, name;
+SELECT
+  COUNT(*) AS unreconciled_count,
+  SUM(amount) AS unreconciled_amount,
+  MIN(age) AS newest_gap,
+  MAX(age) AS oldest_gap
+FROM unreconciled;
 ```
 
-Focus on providing specific, actionable PostgreSQL optimizations that improve query performance, security, and maintainability while leveraging PostgreSQL's advanced features.
+---
+
+## 3. JSONB Operations (MyMoolah Usage)
+
+### ReconRun Discrepancy Queries
+```sql
+-- Query JSONB discrepancy data from recon runs
+SELECT
+  run_id, status,
+  discrepancies->>'total_count' AS discrepancy_count,
+  discrepancies->>'categories' AS categories,
+  jsonb_array_length(discrepancies->'items') AS item_count
+FROM recon_runs
+WHERE discrepancies IS NOT NULL
+  AND (discrepancies->>'total_count')::int > 0
+ORDER BY completed_at DESC;
+
+-- GIN index for JSONB queries
+CREATE INDEX idx_recon_runs_discrepancies ON recon_runs USING gin(discrepancies);
+```
+
+### Audit Trail Event Data Queries
+```sql
+-- Query specific event types from audit trail
+SELECT
+  event_id, event_type, actor_id,
+  event_data->>'amount' AS amount,
+  event_data->>'currency' AS currency,
+  event_data->>'walletId' AS wallet_id
+FROM recon_audit_trail
+WHERE event_type = 'USER_WALLET_CREDITED'
+  AND event_data @> '{"currency": "ZAR"}'
+  AND event_timestamp >= NOW() - INTERVAL '7 days'
+ORDER BY event_timestamp DESC;
+```
+
+---
+
+## 4. Sequelize ORM Optimization
+
+### Avoid N+1 Queries with Eager Loading
+```javascript
+// ❌ BAD: N+1 queries
+const entries = await JournalEntry.findAll();
+for (const entry of entries) {
+  const lines = await JournalLine.findAll({ where: { entryId: entry.id } });
+}
+
+// ✅ GOOD: Eager loading
+const entries = await JournalEntry.findAll({
+  include: [{
+    model: JournalLine, as: 'lines',
+    include: [{ model: LedgerAccount, as: 'account', attributes: ['code', 'name'] }]
+  }],
+  where: { postedAt: { [Op.gte]: startDate } },
+  order: [['postedAt', 'DESC']],
+  limit: 50
+});
+```
+
+### Use Raw Queries for Complex Aggregations
+```javascript
+// Trial balance is too complex for Sequelize's query builder — use raw SQL
+const [trialBalance] = await sequelize.query(`
+  SELECT la.code, la.name, la.type, la."normalSide",
+    COALESCE(SUM(CASE WHEN jl.dc = 'debit' THEN jl.amount ELSE 0 END), 0) AS debits,
+    COALESCE(SUM(CASE WHEN jl.dc = 'credit' THEN jl.amount ELSE 0 END), 0) AS credits
+  FROM ledger_accounts la
+  LEFT JOIN journal_lines jl ON la.id = jl."accountId"
+  WHERE la."isActive" = true
+  GROUP BY la.id
+  ORDER BY la.code
+`, { type: QueryTypes.SELECT });
+```
+
+### Connection Pooling Configuration
+```javascript
+// config/database.js — MyMoolah production settings
+const sequelize = new Sequelize(process.env.DATABASE_URL, {
+  dialect: 'postgres',
+  pool: {
+    max: 20,        // Max connections (adjust per server)
+    min: 5,         // Keep 5 warm connections
+    acquire: 30000, // Wait 30s for connection before error
+    idle: 10000     // Release idle connections after 10s
+  },
+  dialectOptions: {
+    ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    statement_timeout: 30000,  // Kill queries running > 30s
+    idle_in_transaction_session_timeout: 60000 // Kill idle transactions > 60s
+  },
+  logging: process.env.NODE_ENV === 'production' ? false : console.log
+});
+```
+
+---
+
+## 5. Table Partitioning (Large Tables)
+
+### Partition Transactions by Month
+```sql
+-- For tables exceeding 10M+ rows
+CREATE TABLE mymoolah_transactions (
+  id SERIAL,
+  "walletId" INTEGER NOT NULL,
+  amount DECIMAL(18,2) NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  status VARCHAR(50) NOT NULL,
+  "createdAt" TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (id, "createdAt")
+) PARTITION BY RANGE ("createdAt");
+
+-- Create monthly partitions
+CREATE TABLE transactions_2026_01 PARTITION OF mymoolah_transactions
+  FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
+CREATE TABLE transactions_2026_02 PARTITION OF mymoolah_transactions
+  FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
+
+-- Auto-create future partitions via pg_partman
+CREATE EXTENSION pg_partman;
+SELECT partman.create_parent('public.mymoolah_transactions', 'createdAt', 'native', 'monthly');
+```
+
+---
+
+## 6. Monitoring & Maintenance
+
+### Find Slow Queries
+```sql
+-- Install pg_stat_statements extension
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
+
+-- Top 10 slowest queries
+SELECT query, calls, total_exec_time / calls AS avg_time_ms, rows
+FROM pg_stat_statements
+ORDER BY total_exec_time DESC
+LIMIT 10;
+```
+
+### Table Bloat & Maintenance
+```sql
+-- Check table sizes
+SELECT tablename,
+  pg_size_pretty(pg_total_relation_size('public.' || tablename)) AS total_size,
+  pg_size_pretty(pg_table_size('public.' || tablename)) AS data_size,
+  pg_size_pretty(pg_indexes_size('public.' || tablename)) AS index_size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size('public.' || tablename) DESC
+LIMIT 15;
+
+-- Unused indexes (safe to drop)
+SELECT indexname, idx_scan, pg_size_pretty(pg_relation_size(indexrelid))
+FROM pg_stat_user_indexes
+WHERE idx_scan = 0
+ORDER BY pg_relation_size(indexrelid) DESC;
+```
+
+### Scheduled Maintenance
+```sql
+-- Daily: vacuum analyze high-write tables
+VACUUM ANALYZE mymoolah_transactions;
+VACUUM ANALYZE journal_lines;
+VACUUM ANALYZE flash_transactions;
+VACUUM ANALYZE recon_audit_trail;
+
+-- Weekly: full analyze
+ANALYZE VERBOSE;
+```
+
+---
+
+## 7. Optimization Checklist
+
+- [ ] All financial queries use EXPLAIN ANALYZE before deployment
+- [ ] Ledger/transaction tables have composite indexes for common queries
+- [ ] JSONB columns have GIN indexes if queried with @>, ?, or ?|
+- [ ] Cursor-based pagination used for user-facing transaction lists
+- [ ] Complex aggregations use raw SQL, not Sequelize builders
+- [ ] Connection pool configured for production workload
+- [ ] Statement timeout set to prevent runaway queries
+- [ ] pg_stat_statements enabled for query monitoring
+- [ ] Large tables (>10M rows) partitioned by date
+- [ ] Unused indexes identified and removed quarterly

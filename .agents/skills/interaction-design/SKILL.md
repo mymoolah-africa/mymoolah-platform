@@ -3,325 +3,278 @@ name: interaction-design
 description: Design and implement microinteractions, motion design, transitions, and user feedback patterns. Use when adding polish to UI interactions, implementing loading states, or creating delightful user experiences.
 ---
 
-# Interaction Design
+# MyMoolah Interaction Design
 
-Create engaging, intuitive interactions through motion, feedback, and thoughtful state transitions that enhance usability and delight users.
+Microinteractions, transitions, and feedback patterns for MyMoolah's mobile wallet.
+Focus on financial operation feedback (payments, deposits, transfers) and trust-building
+motion that feels fast and reliable on budget Android devices.
 
-## When to Use This Skill
+## When This Skill Activates
 
-- Adding microinteractions to enhance user feedback
-- Implementing smooth page and component transitions
-- Designing loading states and skeleton screens
-- Creating gesture-based interactions
-- Building notification and toast systems
-- Implementing drag-and-drop interfaces
-- Adding scroll-triggered animations
-- Designing hover and focus states
+- Adding loading/success/error feedback to payment flows
+- Implementing transaction confirmation animations
+- Building pull-to-refresh for transaction lists
+- Creating smooth page transitions between wallet screens
+- Designing skeleton loading for financial data
+- Implementing swipe gestures for mobile navigation
 
-## Core Principles
+---
 
-### 1. Purposeful Motion
+## 1. Financial Interaction Principles
 
-Motion should communicate, not decorate:
+### Speed Rules for Fintech UI
+| Duration | Use Case (MyMoolah) |
+|----------|---------------------|
+| 100-150ms | Button press feedback, toggle switches |
+| 200-300ms | Bottom sheet slide, dropdown expand |
+| 300-500ms | Page transition, modal open/close |
+| 500-800ms | Transaction success celebration |
+| 1-3s | Loading state before switching to skeleton |
 
-- **Feedback**: Confirm user actions occurred
-- **Orientation**: Show where elements come from/go to
-- **Focus**: Direct attention to important changes
-- **Continuity**: Maintain context during transitions
+### Trust Through Motion
+- **Instant acknowledgment**: Button responds on touch, not on server response
+- **Continuous feedback**: Show processing state between request and response
+- **Definitive outcome**: Clear success ✅ or failure ❌ animation
+- **No jank**: Only animate `transform` and `opacity` (GPU-accelerated)
 
-### 2. Timing Guidelines
+---
 
-| Duration  | Use Case                                  |
-| --------- | ----------------------------------------- |
-| 100-150ms | Micro-feedback (hovers, clicks)           |
-| 200-300ms | Small transitions (toggles, dropdowns)    |
-| 300-500ms | Medium transitions (modals, page changes) |
-| 500ms+    | Complex choreographed animations          |
+## 2. Payment Flow Interactions
 
-### 3. Easing Functions
-
-```css
-/* Common easings */
---ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* Decelerate - entering */
---ease-in: cubic-bezier(0.55, 0, 1, 0.45); /* Accelerate - exiting */
---ease-in-out: cubic-bezier(0.65, 0, 0.35, 1); /* Both - moving between */
---spring: cubic-bezier(0.34, 1.56, 0.64, 1); /* Overshoot - playful */
-```
-
-## Quick Start: Button Microinteraction
-
+### Send Money Button with Loading States
 ```tsx
-import { motion } from "framer-motion";
-
-export function InteractiveButton({ children, onClick }) {
+function SendButton({ onSend, isLoading, isSuccess, isError }) {
   return (
     <motion.button
-      onClick={onClick}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 400, damping: 17 }}
-      className="px-4 py-2 bg-blue-600 text-white rounded-lg"
+      onClick={onSend}
+      disabled={isLoading}
+      whileTap={{ scale: 0.97 }}
+      className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold relative overflow-hidden"
     >
-      {children}
+      <AnimatePresence mode="wait">
+        {isLoading ? (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center justify-center gap-2"
+          >
+            <motion.div
+              className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            />
+            <span>Sending...</span>
+          </motion.div>
+        ) : isSuccess ? (
+          <motion.div
+            key="success"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="flex items-center justify-center gap-2 text-white"
+          >
+            <CheckIcon className="w-5 h-5" />
+            <span>Sent!</span>
+          </motion.div>
+        ) : isError ? (
+          <motion.div key="error" initial={{ x: 0 }} animate={{ x: [0, -8, 8, -4, 4, 0] }}>
+            <span>Failed — Tap to Retry</span>
+          </motion.div>
+        ) : (
+          <motion.span key="default">Send Money</motion.span>
+        )}
+      </AnimatePresence>
     </motion.button>
   );
 }
 ```
 
-## Interaction Patterns
-
-### 1. Loading States
-
-**Skeleton Screens**: Preserve layout while loading
-
+### Transaction Success Animation
 ```tsx
-function CardSkeleton() {
+function TransactionSuccess({ amount, recipient, onDone }) {
   return (
-    <div className="animate-pulse">
-      <div className="h-48 bg-gray-200 rounded-lg" />
-      <div className="mt-4 h-4 bg-gray-200 rounded w-3/4" />
-      <div className="mt-2 h-4 bg-gray-200 rounded w-1/2" />
-    </div>
-  );
-}
-```
-
-**Progress Indicators**: Show determinate progress
-
-```tsx
-function ProgressBar({ progress }: { progress: number }) {
-  return (
-    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+    <div className="flex flex-col items-center justify-center py-12">
+      {/* Success checkmark with scale-in */}
       <motion.div
-        className="h-full bg-blue-600"
-        initial={{ width: 0 }}
-        animate={{ width: `${progress}%` }}
-        transition={{ ease: "easeOut" }}
-      />
-    </div>
-  );
-}
-```
-
-### 2. State Transitions
-
-**Toggle with smooth transition**:
-
-```tsx
-function Toggle({ checked, onChange }) {
-  return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`
-        relative w-12 h-6 rounded-full transition-colors duration-200
-        ${checked ? "bg-blue-600" : "bg-gray-300"}
-      `}
-    >
-      <motion.span
-        className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow"
-        animate={{ x: checked ? 24 : 0 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-      />
-    </button>
-  );
-}
-```
-
-### 3. Page Transitions
-
-**Framer Motion layout animations**:
-
-```tsx
-import { AnimatePresence, motion } from "framer-motion";
-
-function PageTransition({ children, key }) {
-  return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={key}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.3 }}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 15, delay: 0.1 }}
+        className="w-20 h-20 rounded-full bg-success/10 flex items-center justify-center mb-6"
       >
-        {children}
+        <motion.div
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 0.4, delay: 0.3 }}
+        >
+          <CheckCircle className="w-10 h-10 text-success" />
+        </motion.div>
       </motion.div>
-    </AnimatePresence>
+
+      {/* Amount with count-up animation */}
+      <motion.h2
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="text-2xl font-bold font-mono tabular-nums"
+      >
+        {formatCurrency(amount)}
+      </motion.h2>
+
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="text-muted-foreground mt-1"
+      >
+        sent to {recipient}
+      </motion.p>
+
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+        <Button onClick={onDone} variant="outline" className="mt-8">Done</Button>
+      </motion.div>
+    </div>
   );
 }
 ```
 
-### 4. Feedback Patterns
+---
 
-**Ripple effect on click**:
+## 3. List & Navigation Interactions
 
+### Pull-to-Refresh for Transactions
 ```tsx
-function RippleButton({ children, onClick }) {
-  const [ripples, setRipples] = useState([]);
-
-  const handleClick = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ripple = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-      id: Date.now(),
-    };
-    setRipples((prev) => [...prev, ripple]);
-    setTimeout(() => {
-      setRipples((prev) => prev.filter((r) => r.id !== ripple.id));
-    }, 600);
-    onClick?.(e);
-  };
+function PullToRefreshList({ onRefresh, children }) {
+  const [pullDistance, setPullDistance] = useState(0);
+  const threshold = 80;
 
   return (
-    <button onClick={handleClick} className="relative overflow-hidden">
-      {children}
-      {ripples.map((ripple) => (
-        <span
-          key={ripple.id}
-          className="absolute bg-white/30 rounded-full animate-ripple"
-          style={{ left: ripple.x, top: ripple.y }}
-        />
-      ))}
-    </button>
-  );
-}
-```
-
-### 5. Gesture Interactions
-
-**Swipe to dismiss**:
-
-```tsx
-function SwipeCard({ children, onDismiss }) {
-  return (
-    <motion.div
-      drag="x"
-      dragConstraints={{ left: 0, right: 0 }}
-      onDragEnd={(_, info) => {
-        if (Math.abs(info.offset.x) > 100) {
-          onDismiss();
-        }
-      }}
-      className="cursor-grab active:cursor-grabbing"
+    <div
+      onTouchMove={handleTouchMove}
+      onTouchEnd={() => pullDistance > threshold ? onRefresh() : setPullDistance(0)}
     >
+      <motion.div
+        style={{ height: Math.min(pullDistance, threshold) }}
+        className="flex items-center justify-center overflow-hidden"
+      >
+        <motion.div
+          animate={{ rotate: pullDistance > threshold ? 360 : (pullDistance / threshold) * 360 }}
+          className="w-6 h-6"
+        >
+          <RefreshIcon />
+        </motion.div>
+      </motion.div>
       {children}
+    </div>
+  );
+}
+```
+
+### Staggered Transaction List Entry
+```tsx
+function TransactionList({ transactions }) {
+  return (
+    <motion.div className="space-y-1">
+      {transactions.map((tx, i) => (
+        <motion.div
+          key={tx.id}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: i * 0.05, duration: 0.2 }}
+        >
+          <TransactionCard transaction={tx} />
+        </motion.div>
+      ))}
     </motion.div>
   );
 }
 ```
 
-## CSS Animation Patterns
+---
 
-### Keyframe Animations
+## 4. Skeleton Loading Patterns
 
-```css
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.5;
-  }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
-}
-.animate-pulse {
-  animation: pulse 2s ease-in-out infinite;
-}
-.animate-spin {
-  animation: spin 1s linear infinite;
-}
-```
-
-### CSS Transitions
-
-```css
-.card {
-  transition:
-    transform 0.2s ease-out,
-    box-shadow 0.2s ease-out;
-}
-
-.card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
-}
-```
-
-## Accessibility Considerations
-
-```css
-/* Respect user motion preferences */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-```
-
+### Always Use Skeletons for Financial Data
 ```tsx
-function AnimatedComponent() {
-  const prefersReducedMotion = window.matchMedia(
-    "(prefers-reduced-motion: reduce)",
-  ).matches;
-
+function WalletDashboardSkeleton() {
   return (
-    <motion.div
-      animate={{ opacity: 1 }}
-      transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
-    />
+    <div className="p-4 space-y-6 animate-pulse">
+      {/* Balance skeleton */}
+      <div className="bg-muted rounded-2xl p-6 space-y-3">
+        <div className="h-3 bg-muted-foreground/10 rounded w-24" />
+        <div className="h-8 bg-muted-foreground/10 rounded w-36" />
+        <div className="flex gap-3 mt-4">
+          <div className="h-10 bg-muted-foreground/10 rounded-lg flex-1" />
+          <div className="h-10 bg-muted-foreground/10 rounded-lg flex-1" />
+          <div className="h-10 bg-muted-foreground/10 rounded-lg flex-1" />
+        </div>
+      </div>
+
+      {/* Quick actions skeleton */}
+      <div className="grid grid-cols-4 gap-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex flex-col items-center gap-2">
+            <div className="w-12 h-12 bg-muted rounded-xl" />
+            <div className="h-3 bg-muted rounded w-14" />
+          </div>
+        ))}
+      </div>
+
+      {/* Transaction list skeleton */}
+      <div className="space-y-3">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-muted rounded-full" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-muted rounded w-3/4" />
+              <div className="h-3 bg-muted rounded w-1/2" />
+            </div>
+            <div className="h-4 bg-muted rounded w-16" />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 ```
 
-## Best Practices
+---
 
-1. **Performance First**: Use `transform` and `opacity` for smooth 60fps
-2. **Reduce Motion Support**: Always respect `prefers-reduced-motion`
-3. **Consistent Timing**: Use a timing scale across the app
-4. **Natural Physics**: Prefer spring animations over linear
-5. **Interruptible**: Allow users to cancel long animations
-6. **Progressive Enhancement**: Work without JS animations
-7. **Test on Devices**: Performance varies significantly
+## 5. Performance Rules
 
-## Common Issues
+### CSS-Only Animations When Possible
+```css
+/* Button press feedback — pure CSS, no JS overhead */
+.btn-press {
+  transition: transform 100ms ease-out;
+}
+.btn-press:active {
+  transform: scale(0.97);
+}
 
-- **Janky Animations**: Avoid animating `width`, `height`, `top`, `left`
-- **Over-animation**: Too much motion causes fatigue
-- **Blocking Interactions**: Never prevent user input during animations
-- **Memory Leaks**: Clean up animation listeners on unmount
-- **Flash of Content**: Use `will-change` sparingly for optimization
+/* Card hover — CSS transition */
+.card-interactive {
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+}
+.card-interactive:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+```
 
-## Resources
+### Reduced Motion (MANDATORY)
+```tsx
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-- [Framer Motion Documentation](https://www.framer.com/motion/)
-- [CSS Animation Guide](https://web.dev/animations-guide/)
-- [Material Design Motion](https://m3.material.io/styles/motion/overview)
-- [GSAP Animation Library](https://greensock.com/gsap/)
+// Use throughout animation config:
+<motion.div
+  animate={{ opacity: 1 }}
+  transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
+/>
+```
+
+### Do NOT Animate On Budget Devices
+- No `box-shadow` animations (causes repaint)
+- No `width`/`height` animations (causes reflow)
+- Keep total page animation count under 10 simultaneous
+- Use `will-change` only on actively animated elements

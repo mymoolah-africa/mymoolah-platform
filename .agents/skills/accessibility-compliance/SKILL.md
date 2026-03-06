@@ -3,418 +3,278 @@ name: accessibility-compliance
 description: Implement WCAG 2.2 compliant interfaces with mobile accessibility, inclusive design patterns, and assistive technology support. Use when auditing accessibility, implementing ARIA patterns, building for screen readers, or ensuring inclusive user experiences.
 ---
 
-# Accessibility Compliance
+# MyMoolah Accessibility Compliance
 
-Master accessibility implementation to create inclusive experiences that work for everyone, including users with disabilities.
+WCAG 2.2 Level AA compliance for MyMoolah's mobile-first digital wallet interface.
+Critical for serving South Africa's diverse user base including users with disabilities,
+low literacy, low vision, and those using budget Android devices with TalkBack.
 
-## When to Use This Skill
+## When This Skill Activates
 
-- Implementing WCAG 2.2 Level AA or AAA compliance
-- Building screen reader accessible interfaces
-- Adding keyboard navigation to interactive components
-- Implementing focus management and focus trapping
-- Creating accessible forms with proper labeling
-- Supporting reduced motion and high contrast preferences
-- Building mobile accessibility features (iOS VoiceOver, Android TalkBack)
-- Conducting accessibility audits and fixing violations
+- Building wallet UI components (mymoolah-wallet-frontend/)
+- Creating payment/transaction flows
+- Implementing forms (KYC, send money, beneficiary management)
+- Building modals (transaction confirmation, OTP dialogs)
+- Designing loading/error states for financial operations
+- Mobile-first responsive components
+- Portal admin interfaces (portal/)
 
-## Core Capabilities
+---
 
-### 1. WCAG 2.2 Guidelines
+## 1. MyMoolah-Specific Accessibility Requirements
 
-- Perceivable: Content must be presentable in different ways
-- Operable: Interface must be navigable with keyboard and assistive tech
-- Understandable: Content and operation must be clear
-- Robust: Content must work with current and future assistive technologies
+### Financial Services A11Y Priorities
+| Priority | Requirement | Reason |
+|----------|-------------|--------|
+| **Critical** | Transaction amounts readable by screen readers | Users must verify amounts before sending |
+| **Critical** | OTP input accessible | Authentication required for financial ops |
+| **Critical** | Error states clearly announced | Failed transactions need immediate feedback |
+| **High** | Balance visible with sufficient contrast | Most-viewed screen element |
+| **High** | Touch targets 44x44px minimum | Budget Android devices, older users |
+| **High** | Forms have proper labels + errors | KYC, send money, top-up flows |
+| **Medium** | Reduced motion support | Prevent vestibular issues |
+| **Medium** | Dark mode with proper contrast | Battery savings on OLED, user preference |
 
-### 2. ARIA Patterns
+### South African Context
+- **Multilingual**: Support for 11 official languages (screen readers read in user's language)
+- **Budget Devices**: Many users on sub-$100 Android phones — minimize DOM complexity
+- **Low Bandwidth**: Skeleton screens over spinners (preserves layout)
+- **Feature Phones**: Progressive enhancement where possible
+- **Low Literacy**: Icons + text labels together, avoid text-only actions
 
-- Roles: Define element purpose (button, dialog, navigation)
-- States: Indicate current condition (expanded, selected, disabled)
-- Properties: Describe relationships and additional info (labelledby, describedby)
-- Live regions: Announce dynamic content changes
+---
 
-### 3. Keyboard Navigation
+## 2. Core Component Patterns
 
-- Focus order and tab sequence
-- Focus indicators and visible focus states
-- Keyboard shortcuts and hotkeys
-- Focus trapping for modals and dialogs
-
-### 4. Screen Reader Support
-
-- Semantic HTML structure
-- Alternative text for images
-- Proper heading hierarchy
-- Skip links and landmarks
-
-### 5. Mobile Accessibility
-
-- Touch target sizing (44x44dp minimum)
-- VoiceOver and TalkBack compatibility
-- Gesture alternatives
-- Dynamic Type support
-
-## Quick Reference
-
-### WCAG 2.2 Success Criteria Checklist
-
-| Level | Criterion | Description                                          |
-| ----- | --------- | ---------------------------------------------------- |
-| A     | 1.1.1     | Non-text content has text alternatives               |
-| A     | 1.3.1     | Info and relationships programmatically determinable |
-| A     | 2.1.1     | All functionality keyboard accessible                |
-| A     | 2.4.1     | Skip to main content mechanism                       |
-| AA    | 1.4.3     | Contrast ratio 4.5:1 (text), 3:1 (large text)        |
-| AA    | 1.4.11    | Non-text contrast 3:1                                |
-| AA    | 2.4.7     | Focus visible                                        |
-| AA    | 2.5.8     | Target size minimum 24x24px (NEW in 2.2)             |
-| AAA   | 1.4.6     | Enhanced contrast 7:1                                |
-| AAA   | 2.5.5     | Target size minimum 44x44px                          |
-
-## Key Patterns
-
-### Pattern 1: Accessible Button
-
+### Accessible Balance Display
 ```tsx
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary";
-  isLoading?: boolean;
-}
-
-function AccessibleButton({
-  children,
-  variant = "primary",
-  isLoading = false,
-  disabled,
-  ...props
-}: ButtonProps) {
-  return (
-    <button
-      // Disable when loading
-      disabled={disabled || isLoading}
-      // Announce loading state to screen readers
-      aria-busy={isLoading}
-      // Describe the button's current state
-      aria-disabled={disabled || isLoading}
-      className={cn(
-        // Visible focus ring
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-        // Minimum touch target size (44x44px)
-        "min-h-[44px] min-w-[44px]",
-        variant === "primary" && "bg-primary text-primary-foreground",
-        (disabled || isLoading) && "opacity-50 cursor-not-allowed",
-      )}
-      {...props}
-    >
-      {isLoading ? (
-        <>
-          <span className="sr-only">Loading</span>
-          <Spinner aria-hidden="true" />
-        </>
-      ) : (
-        children
-      )}
-    </button>
-  );
-}
-```
-
-### Pattern 2: Accessible Modal Dialog
-
-```tsx
-import * as React from "react";
-import { FocusTrap } from "@headlessui/react";
-
-interface DialogProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  children: React.ReactNode;
-}
-
-function AccessibleDialog({ isOpen, onClose, title, children }: DialogProps) {
-  const titleId = React.useId();
-  const descriptionId = React.useId();
-
-  // Close on Escape key
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
-
-  // Prevent body scroll when open
-  React.useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = "hidden";
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+function WalletBalance({ balance, currency = 'ZAR' }) {
+  const formattedBalance = new Intl.NumberFormat('en-ZA', {
+    style: 'currency', currency
+  }).format(balance);
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      aria-describedby={descriptionId}
+      role="status"
+      aria-label={`Wallet balance: ${formattedBalance}`}
+      className="text-3xl font-bold text-foreground"
     >
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/50"
-        aria-hidden="true"
-        onClick={onClose}
-      />
-
-      {/* Focus trap container */}
-      <FocusTrap>
-        <div className="fixed inset-0 flex items-center justify-center p-4">
-          <div className="bg-background rounded-lg shadow-lg max-w-md w-full p-6">
-            <h2 id={titleId} className="text-lg font-semibold">
-              {title}
-            </h2>
-            <div id={descriptionId}>{children}</div>
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4"
-              aria-label="Close dialog"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </FocusTrap>
+      <span aria-hidden="true">{formattedBalance}</span>
     </div>
   );
 }
 ```
 
-### Pattern 3: Accessible Form
-
+### Accessible Transaction Confirmation Modal
 ```tsx
-function AccessibleForm() {
-  const [errors, setErrors] = React.useState<Record<string, string>>({});
+function ConfirmTransactionDialog({ isOpen, onConfirm, onCancel, recipient, amount }) {
+  const titleId = useId();
+  const descId = useId();
 
   return (
-    <form aria-describedby="form-errors" noValidate>
-      {/* Error summary for screen readers */}
-      {Object.keys(errors).length > 0 && (
-        <div
-          id="form-errors"
-          role="alert"
-          aria-live="assertive"
-          className="bg-destructive/10 border border-destructive p-4 rounded-md mb-4"
-        >
-          <h2 className="font-semibold text-destructive">
-            Please fix the following errors:
-          </h2>
-          <ul className="list-disc list-inside mt-2">
-            {Object.entries(errors).map(([field, message]) => (
-              <li key={field}>
-                <a href={`#${field}`} className="underline">
-                  {message}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Required field with error */}
-      <div className="space-y-2">
-        <label htmlFor="email" className="block font-medium">
-          Email address
-          <span aria-hidden="true" className="text-destructive ml-1">
-            *
-          </span>
-          <span className="sr-only">(required)</span>
-        </label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          required
-          aria-required="true"
-          aria-invalid={!!errors.email}
-          aria-describedby={errors.email ? "email-error" : "email-hint"}
-          className={cn(
-            "w-full px-3 py-2 border rounded-md",
-            errors.email && "border-destructive",
-          )}
-        />
-        {errors.email ? (
-          <p id="email-error" className="text-sm text-destructive" role="alert">
-            {errors.email}
-          </p>
-        ) : (
-          <p id="email-hint" className="text-sm text-muted-foreground">
-            We'll never share your email.
-          </p>
-        )}
-      </div>
-
-      <button type="submit" className="mt-4">
-        Submit
-      </button>
-    </form>
-  );
-}
-```
-
-### Pattern 4: Skip Navigation Link
-
-```tsx
-function SkipLink() {
-  return (
-    <a
-      href="#main-content"
-      className={cn(
-        // Hidden by default, visible on focus
-        "sr-only focus:not-sr-only",
-        "focus:absolute focus:top-4 focus:left-4 focus:z-50",
-        "focus:bg-background focus:px-4 focus:py-2 focus:rounded-md",
-        "focus:ring-2 focus:ring-primary",
-      )}
+    <dialog
+      open={isOpen}
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
+      aria-describedby={descId}
     >
-      Skip to main content
-    </a>
-  );
-}
+      <h2 id={titleId}>Confirm Transaction</h2>
+      <p id={descId}>
+        Send {formatCurrency(amount)} to {recipient.name}?
+        This action cannot be undone.
+      </p>
 
-// In layout
-function Layout({ children }) {
-  return (
-    <>
-      <SkipLink />
-      <header>...</header>
-      <nav aria-label="Main navigation">...</nav>
-      <main id="main-content" tabIndex={-1}>
-        {children}
-      </main>
-      <footer>...</footer>
-    </>
+      <div className="flex gap-3 mt-4">
+        <button onClick={onCancel} className="min-h-[44px] min-w-[44px]">
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          className="min-h-[44px] min-w-[44px] bg-primary text-primary-foreground"
+          autoFocus
+        >
+          Confirm Send
+        </button>
+      </div>
+    </dialog>
   );
 }
 ```
 
-### Pattern 5: Live Region for Announcements
-
+### Accessible OTP Input
 ```tsx
-function useAnnounce() {
-  const [message, setMessage] = React.useState("");
+function OtpInput({ length = 6, onComplete }) {
+  const inputs = useRef([]);
+  const [values, setValues] = useState(Array(length).fill(''));
 
-  const announce = React.useCallback(
-    (text: string, priority: "polite" | "assertive" = "polite") => {
-      setMessage(""); // Clear first to ensure re-announcement
-      setTimeout(() => setMessage(text), 100);
-    },
-    [],
+  return (
+    <fieldset>
+      <legend className="text-sm font-medium mb-2">
+        Enter the {length}-digit OTP sent to your phone
+      </legend>
+      <div className="flex gap-2" role="group" aria-label="OTP input">
+        {values.map((val, i) => (
+          <input
+            key={i}
+            ref={el => inputs.current[i] = el}
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]"
+            maxLength={1}
+            value={val}
+            aria-label={`Digit ${i + 1} of ${length}`}
+            className="w-12 h-12 text-center text-xl border rounded-md min-h-[44px]"
+            onChange={(e) => handleChange(i, e.target.value)}
+            onKeyDown={(e) => handleKeyDown(i, e)}
+          />
+        ))}
+      </div>
+    </fieldset>
   );
+}
+```
 
-  const Announcer = () => (
+### Accessible Transaction Status
+```tsx
+function TransactionStatus({ status, amount, recipient }) {
+  const statusConfig = {
+    pending:   { icon: '⏳', label: 'Pending', color: 'text-yellow-600' },
+    completed: { icon: '✅', label: 'Completed', color: 'text-green-600' },
+    failed:    { icon: '❌', label: 'Failed', color: 'text-red-600' }
+  };
+
+  const { icon, label, color } = statusConfig[status];
+
+  return (
     <div
       role="status"
       aria-live="polite"
-      aria-atomic="true"
-      className="sr-only"
+      aria-label={`Transaction to ${recipient}: ${formatCurrency(amount)} — ${label}`}
+      className={`flex items-center gap-2 ${color}`}
     >
-      {message}
+      <span aria-hidden="true">{icon}</span>
+      <span>{label}</span>
+    </div>
+  );
+}
+```
+
+---
+
+## 3. Form Accessibility (Send Money, KYC)
+
+### Standard Form Field Pattern
+```tsx
+function FormField({ id, label, required, error, hint, children }) {
+  const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
+
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={id} className="text-sm font-medium">
+        {label}
+        {required && (
+          <>
+            <span aria-hidden="true" className="text-red-500 ml-1">*</span>
+            <span className="sr-only">(required)</span>
+          </>
+        )}
+      </label>
+
+      {React.cloneElement(children, {
+        id,
+        'aria-required': required,
+        'aria-invalid': !!error,
+        'aria-describedby': [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined
+      })}
+
+      {hint && !error && (
+        <p id={hintId} className="text-xs text-muted-foreground">{hint}</p>
+      )}
+      {error && (
+        <p id={errorId} role="alert" className="text-xs text-red-500">{error}</p>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## 4. Live Region Announcements
+
+### Transaction Result Announcer
+```tsx
+function useTransactionAnnouncer() {
+  const [announcement, setAnnouncement] = useState('');
+
+  const announceSuccess = (amount, recipient) => {
+    setAnnouncement(`Transaction successful. ${formatCurrency(amount)} sent to ${recipient}.`);
+  };
+
+  const announceError = (message) => {
+    setAnnouncement(`Transaction failed: ${message}`);
+  };
+
+  const Announcer = () => (
+    <div aria-live="assertive" aria-atomic="true" className="sr-only">
+      {announcement}
     </div>
   );
 
-  return { announce, Announcer };
-}
-
-// Usage
-function SearchResults({ results, isLoading }) {
-  const { announce, Announcer } = useAnnounce();
-
-  React.useEffect(() => {
-    if (!isLoading && results) {
-      announce(`${results.length} results found`);
-    }
-  }, [results, isLoading, announce]);
-
-  return (
-    <>
-      <Announcer />
-      <ul>{/* results */}</ul>
-    </>
-  );
+  return { announceSuccess, announceError, Announcer };
 }
 ```
 
-## Color Contrast Requirements
+---
 
-```typescript
-// Contrast ratio utilities
-function getContrastRatio(foreground: string, background: string): number {
-  const fgLuminance = getLuminance(foreground);
-  const bgLuminance = getLuminance(background);
-  const lighter = Math.max(fgLuminance, bgLuminance);
-  const darker = Math.min(fgLuminance, bgLuminance);
-  return (lighter + 0.05) / (darker + 0.05);
+## 5. Color Contrast Requirements (MyMoolah Brand)
+
+### Minimum Contrast Ratios
+| Element | Ratio | Level |
+|---------|-------|-------|
+| Balance text on background | 7:1 | AAA |
+| Button text on primary | 4.5:1 | AA |
+| Disabled text | 3:1 | AA (non-text) |
+| Error text on background | 4.5:1 | AA |
+| Placeholder text | 4.5:1 | AA |
+
+### Reduced Motion Support
+```css
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
-
-// WCAG requirements
-const CONTRAST_REQUIREMENTS = {
-  // Normal text (<18pt or <14pt bold)
-  normalText: {
-    AA: 4.5,
-    AAA: 7,
-  },
-  // Large text (>=18pt or >=14pt bold)
-  largeText: {
-    AA: 3,
-    AAA: 4.5,
-  },
-  // UI components and graphics
-  uiComponents: {
-    AA: 3,
-  },
-};
 ```
 
-## Best Practices
+---
 
-1. **Use Semantic HTML**: Prefer native elements over ARIA when possible
-2. **Test with Real Users**: Include people with disabilities in user testing
-3. **Keyboard First**: Design interactions to work without a mouse
-4. **Don't Disable Focus Styles**: Style them, don't remove them
-5. **Provide Text Alternatives**: All non-text content needs descriptions
-6. **Support Zoom**: Content should work at 200% zoom
-7. **Announce Changes**: Use live regions for dynamic content
-8. **Respect Preferences**: Honor prefers-reduced-motion and prefers-contrast
+## 6. Testing Checklist
 
-## Common Issues
+### Automated Testing
+- [ ] Run axe-core or Lighthouse accessibility audit
+- [ ] All images have alt text (product images, brand logos)
+- [ ] All form inputs have associated labels
+- [ ] Color contrast ratios pass WCAG AA
+- [ ] No auto-playing animations without user control
 
-- **Missing alt text**: Images without descriptions
-- **Poor color contrast**: Text hard to read against background
-- **Keyboard traps**: Focus stuck in component
-- **Missing labels**: Form inputs without associated labels
-- **Auto-playing media**: Content that plays without user initiation
-- **Inaccessible custom controls**: Recreating native functionality poorly
-- **Missing skip links**: No way to bypass repetitive content
-- **Focus order issues**: Tab order doesn't match visual order
+### Manual Testing
+- [ ] Navigate entire send-money flow using keyboard only
+- [ ] Complete KYC submission with VoiceOver/TalkBack
+- [ ] Verify transaction amounts are read correctly by screen readers
+- [ ] Test OTP input with screen reader
+- [ ] Verify error announcements on failed transactions
+- [ ] Test at 200% zoom on mobile browser
+- [ ] Verify touch targets on budget Android phone
 
-## Testing Tools
+## References
 
-- **Automated**: axe DevTools, WAVE, Lighthouse
-- **Manual**: VoiceOver (macOS/iOS), NVDA/JAWS (Windows), TalkBack (Android)
-- **Simulators**: NoCoffee (vision), Silktide (various disabilities)
-
-## Resources
-
-- [WCAG 2.2 Guidelines](https://www.w3.org/WAI/WCAG22/quickref/)
+- [WCAG 2.2 Quick Reference](https://www.w3.org/WAI/WCAG22/quickref/)
 - [WAI-ARIA Authoring Practices](https://www.w3.org/WAI/ARIA/apg/)
-- [A11y Project Checklist](https://www.a11yproject.com/checklist/)
-- [Inclusive Components](https://inclusive-components.design/)
-- [Deque University](https://dequeuniversity.com/)
+- [Android TalkBack Guide](https://support.google.com/accessibility/android/)
+- [South African UNCRPD Obligation](https://www.gov.za/documents/convention-rights-persons-disabilities)

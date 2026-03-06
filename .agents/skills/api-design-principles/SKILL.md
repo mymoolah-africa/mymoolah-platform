@@ -3,526 +3,362 @@ name: api-design-principles
 description: Master REST and GraphQL API design principles to build intuitive, scalable, and maintainable APIs that delight developers. Use when designing new APIs, reviewing API specifications, or establishing API design standards.
 ---
 
-# API Design Principles
+# MyMoolah API Design Principles
 
-Master REST and GraphQL API design principles to build intuitive, scalable, and maintainable APIs that delight developers and stand the test of time.
+REST API design standards for MyMoolah's Node.js/Express backend serving the digital
+wallet platform. All APIs must be mobile-first, idempotent for financial operations,
+and compliant with Mojaloop FSPIOP patterns where applicable.
 
-## When to Use This Skill
+## When This Skill Activates
 
-- Designing new REST or GraphQL APIs
-- Refactoring existing APIs for better usability
-- Establishing API design standards for your team
-- Reviewing API specifications before implementation
-- Migrating between API paradigms (REST to GraphQL, etc.)
-- Creating developer-friendly API documentation
-- Optimizing APIs for specific use cases (mobile, third-party integrations)
+- Designing new API routes (routes/*.js)
+- Creating/modifying controllers (controllers/*.js)
+- Integrating payment providers (EasyPay, Flash, Peach, Mercury)
+- Building webhook endpoints for external providers
+- API versioning decisions
+- Pagination and filtering for transaction/product lists
 
-## Core Concepts
+---
 
-### 1. RESTful Design Principles
+## 1. URL Design Standards
 
-**Resource-Oriented Architecture**
-
-- Resources are nouns (users, orders, products), not verbs
-- Use HTTP methods for actions (GET, POST, PUT, PATCH, DELETE)
-- URLs represent resource hierarchies
-- Consistent naming conventions
-
-**HTTP Methods Semantics:**
-
-- `GET`: Retrieve resources (idempotent, safe)
-- `POST`: Create new resources
-- `PUT`: Replace entire resource (idempotent)
-- `PATCH`: Partial resource updates
-- `DELETE`: Remove resources (idempotent)
-
-### 2. GraphQL Design Principles
-
-**Schema-First Development**
-
-- Types define your domain model
-- Queries for reading data
-- Mutations for modifying data
-- Subscriptions for real-time updates
-
-**Query Structure:**
-
-- Clients request exactly what they need
-- Single endpoint, multiple operations
-- Strongly typed schema
-- Introspection built-in
-
-### 3. API Versioning Strategies
-
-**URL Versioning:**
-
+### MyMoolah Resource Hierarchy
 ```
-/api/v1/users
-/api/v2/users
+# Wallet operations
+GET     /api/wallets/:walletId                    # Get wallet details
+GET     /api/wallets/:walletId/transactions       # List transactions
+POST    /api/wallets/:walletId/send               # Send money (P2P)
+POST    /api/wallets/:walletId/deposit             # Initiate deposit
+
+# Products (VAS)
+GET     /api/products                              # List all products
+GET     /api/products/:productId                   # Product details
+GET     /api/products/:productId/variants           # Product variants
+POST    /api/airtime/purchase                       # Purchase airtime
+POST    /api/flash/purchase                         # Purchase Flash product
+
+# User management
+GET     /api/users/me                              # Current user profile
+PATCH   /api/users/me                              # Update profile
+POST    /api/kyc/submit                            # KYC submission
+GET     /api/kyc/status                            # KYC status
+
+# Reconciliation
+GET     /api/reconciliation/runs                   # List recon runs
+GET     /api/reconciliation/runs/:runId            # Recon run details
+POST    /api/reconciliation/runs                   # Trigger recon run
+
+# Ledger (admin)
+GET     /api/ledger/accounts                       # Chart of Accounts
+GET     /api/ledger/trial-balance                  # Trial Balance report
+GET     /api/ledger/entries                        # Journal entries
+
+# Webhooks (inbound from providers)
+POST    /api/webhooks/easypay                      # EasyPay payment notifications
+POST    /api/webhooks/flash                        # Flash transaction callbacks
+POST    /api/webhooks/peach                        # Peach payment callbacks
 ```
 
-**Header Versioning:**
+### Naming Conventions
+- **Plural nouns** for collections: `/api/products`, `/api/users`
+- **Singular action verbs** only for non-CRUD operations: `/api/wallets/:id/send`
+- **kebab-case** for multi-word resources: `/api/payment-requests`
+- **Never expose internal IDs** directly — use UUIDs for public-facing resources
 
-```
-Accept: application/vnd.api+json; version=1
-```
+---
 
-**Query Parameter Versioning:**
+## 2. Request/Response Standards
 
-```
-/api/users?version=1
-```
+### Standard Success Response
+```javascript
+// Single resource
+res.status(200).json({
+  success: true,
+  data: { id: 'uuid', name: 'Product', price: 2500 }
+});
 
-## REST API Design Patterns
+// Collection with pagination
+res.status(200).json({
+  success: true,
+  data: [...items],
+  pagination: {
+    page: 1,
+    pageSize: 20,
+    total: 156,
+    totalPages: 8,
+    hasNext: true,
+    hasPrev: false
+  }
+});
 
-### Pattern 1: Resource Collection Design
-
-```python
-# Good: Resource-oriented endpoints
-GET    /api/users              # List users (with pagination)
-POST   /api/users              # Create user
-GET    /api/users/{id}         # Get specific user
-PUT    /api/users/{id}         # Replace user
-PATCH  /api/users/{id}         # Update user fields
-DELETE /api/users/{id}         # Delete user
-
-# Nested resources
-GET    /api/users/{id}/orders  # Get user's orders
-POST   /api/users/{id}/orders  # Create order for user
-
-# Bad: Action-oriented endpoints (avoid)
-POST   /api/createUser
-POST   /api/getUserById
-POST   /api/deleteUser
-```
-
-### Pattern 2: Pagination and Filtering
-
-```python
-from typing import List, Optional
-from pydantic import BaseModel, Field
-
-class PaginationParams(BaseModel):
-    page: int = Field(1, ge=1, description="Page number")
-    page_size: int = Field(20, ge=1, le=100, description="Items per page")
-
-class FilterParams(BaseModel):
-    status: Optional[str] = None
-    created_after: Optional[str] = None
-    search: Optional[str] = None
-
-class PaginatedResponse(BaseModel):
-    items: List[dict]
-    total: int
-    page: int
-    page_size: int
-    pages: int
-
-    @property
-    def has_next(self) -> bool:
-        return self.page < self.pages
-
-    @property
-    def has_prev(self) -> bool:
-        return self.page > 1
-
-# FastAPI endpoint example
-from fastapi import FastAPI, Query, Depends
-
-app = FastAPI()
-
-@app.get("/api/users", response_model=PaginatedResponse)
-async def list_users(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
-    status: Optional[str] = Query(None),
-    search: Optional[str] = Query(None)
-):
-    # Apply filters
-    query = build_query(status=status, search=search)
-
-    # Count total
-    total = await count_users(query)
-
-    # Fetch page
-    offset = (page - 1) * page_size
-    users = await fetch_users(query, limit=page_size, offset=offset)
-
-    return PaginatedResponse(
-        items=users,
-        total=total,
-        page=page,
-        page_size=page_size,
-        pages=(total + page_size - 1) // page_size
-    )
+// Created resource
+res.status(201).json({
+  success: true,
+  data: { id: 'uuid', ...newResource },
+  message: 'Transaction created successfully'
+});
 ```
 
-### Pattern 3: Error Handling and Status Codes
+### Standard Error Response
+```javascript
+// Validation error (422)
+res.status(422).json({
+  success: false,
+  error: 'VALIDATION_ERROR',
+  message: 'Request validation failed',
+  details: [
+    { field: 'amount', message: 'Amount must be positive' },
+    { field: 'recipientId', message: 'Invalid recipient UUID' }
+  ]
+});
 
-```python
-from fastapi import HTTPException, status
-from pydantic import BaseModel
+// Business logic error (400)
+res.status(400).json({
+  success: false,
+  error: 'INSUFFICIENT_BALANCE',
+  message: 'Wallet balance insufficient for this transaction'
+});
 
-class ErrorResponse(BaseModel):
-    error: str
-    message: str
-    details: Optional[dict] = None
-    timestamp: str
-    path: str
+// Not found (404)
+res.status(404).json({
+  success: false,
+  error: 'NOT_FOUND',
+  message: 'Wallet not found'
+});
 
-class ValidationErrorDetail(BaseModel):
-    field: str
-    message: str
-    value: Any
-
-# Consistent error responses
-STATUS_CODES = {
-    "success": 200,
-    "created": 201,
-    "no_content": 204,
-    "bad_request": 400,
-    "unauthorized": 401,
-    "forbidden": 403,
-    "not_found": 404,
-    "conflict": 409,
-    "unprocessable": 422,
-    "internal_error": 500
-}
-
-def raise_not_found(resource: str, id: str):
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail={
-            "error": "NotFound",
-            "message": f"{resource} not found",
-            "details": {"id": id}
-        }
-    )
-
-def raise_validation_error(errors: List[ValidationErrorDetail]):
-    raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        detail={
-            "error": "ValidationError",
-            "message": "Request validation failed",
-            "details": {"errors": [e.dict() for e in errors]}
-        }
-    )
-
-# Example usage
-@app.get("/api/users/{user_id}")
-async def get_user(user_id: str):
-    user = await fetch_user(user_id)
-    if not user:
-        raise_not_found("User", user_id)
-    return user
+// Server error (500) — NEVER expose stack traces
+res.status(500).json({
+  success: false,
+  error: 'INTERNAL_ERROR',
+  message: 'An unexpected error occurred',
+  requestId: req.headers['x-request-id']
+});
 ```
 
-### Pattern 4: HATEOAS (Hypermedia as the Engine of Application State)
+### HTTP Status Codes
+| Code | Use Case |
+|------|----------|
+| 200 | Successful GET, PATCH, PUT |
+| 201 | Successful POST (resource created) |
+| 204 | Successful DELETE (no content) |
+| 400 | Bad request (business logic violation) |
+| 401 | Missing/invalid authentication |
+| 403 | Forbidden (insufficient permissions) |
+| 404 | Resource not found |
+| 409 | Conflict (idempotency key collision, duplicate) |
+| 422 | Validation error |
+| 429 | Rate limit exceeded |
+| 500 | Internal server error |
 
-```python
-class UserResponse(BaseModel):
-    id: str
-    name: str
-    email: str
-    _links: dict
+---
 
-    @classmethod
-    def from_user(cls, user: User, base_url: str):
-        return cls(
-            id=user.id,
-            name=user.name,
-            email=user.email,
-            _links={
-                "self": {"href": f"{base_url}/api/users/{user.id}"},
-                "orders": {"href": f"{base_url}/api/users/{user.id}/orders"},
-                "update": {
-                    "href": f"{base_url}/api/users/{user.id}",
-                    "method": "PATCH"
-                },
-                "delete": {
-                    "href": f"{base_url}/api/users/{user.id}",
-                    "method": "DELETE"
-                }
-            }
-        )
-```
+## 3. Pagination & Filtering
 
-## GraphQL Design Patterns
+### Cursor-Based Pagination (Preferred for Transactions)
+```javascript
+// GET /api/wallets/:id/transactions?cursor=abc123&limit=20&type=purchase
 
-### Pattern 1: Schema Design
+router.get('/wallets/:walletId/transactions', async (req, res) => {
+  const { cursor, limit = 20, type, startDate, endDate } = req.query;
 
-```graphql
-# schema.graphql
+  const where = { walletId: req.params.walletId };
+  if (type) where.type = type;
+  if (startDate) where.createdAt = { [Op.gte]: new Date(startDate) };
+  if (endDate) where.createdAt = { ...where.createdAt, [Op.lte]: new Date(endDate) };
+  if (cursor) where.id = { [Op.lt]: cursor }; // cursor = last item's ID
 
-# Clear type definitions
-type User {
-  id: ID!
-  email: String!
-  name: String!
-  createdAt: DateTime!
+  const transactions = await MyMoolahTransaction.findAll({
+    where,
+    order: [['createdAt', 'DESC'], ['id', 'DESC']],
+    limit: parseInt(limit) + 1 // Fetch one extra to determine hasNext
+  });
 
-  # Relationships
-  orders(first: Int = 20, after: String, status: OrderStatus): OrderConnection!
+  const hasNext = transactions.length > limit;
+  if (hasNext) transactions.pop();
 
-  profile: UserProfile
-}
-
-type Order {
-  id: ID!
-  status: OrderStatus!
-  total: Money!
-  items: [OrderItem!]!
-  createdAt: DateTime!
-
-  # Back-reference
-  user: User!
-}
-
-# Pagination pattern (Relay-style)
-type OrderConnection {
-  edges: [OrderEdge!]!
-  pageInfo: PageInfo!
-  totalCount: Int!
-}
-
-type OrderEdge {
-  node: Order!
-  cursor: String!
-}
-
-type PageInfo {
-  hasNextPage: Boolean!
-  hasPreviousPage: Boolean!
-  startCursor: String
-  endCursor: String
-}
-
-# Enums for type safety
-enum OrderStatus {
-  PENDING
-  CONFIRMED
-  SHIPPED
-  DELIVERED
-  CANCELLED
-}
-
-# Custom scalars
-scalar DateTime
-scalar Money
-
-# Query root
-type Query {
-  user(id: ID!): User
-  users(first: Int = 20, after: String, search: String): UserConnection!
-
-  order(id: ID!): Order
-}
-
-# Mutation root
-type Mutation {
-  createUser(input: CreateUserInput!): CreateUserPayload!
-  updateUser(input: UpdateUserInput!): UpdateUserPayload!
-  deleteUser(id: ID!): DeleteUserPayload!
-
-  createOrder(input: CreateOrderInput!): CreateOrderPayload!
-}
-
-# Input types for mutations
-input CreateUserInput {
-  email: String!
-  name: String!
-  password: String!
-}
-
-# Payload types for mutations
-type CreateUserPayload {
-  user: User
-  errors: [Error!]
-}
-
-type Error {
-  field: String
-  message: String!
-}
-```
-
-### Pattern 2: Resolver Design
-
-```python
-from typing import Optional, List
-from ariadne import QueryType, MutationType, ObjectType
-from dataclasses import dataclass
-
-query = QueryType()
-mutation = MutationType()
-user_type = ObjectType("User")
-
-@query.field("user")
-async def resolve_user(obj, info, id: str) -> Optional[dict]:
-    """Resolve single user by ID."""
-    return await fetch_user_by_id(id)
-
-@query.field("users")
-async def resolve_users(
-    obj,
-    info,
-    first: int = 20,
-    after: Optional[str] = None,
-    search: Optional[str] = None
-) -> dict:
-    """Resolve paginated user list."""
-    # Decode cursor
-    offset = decode_cursor(after) if after else 0
-
-    # Fetch users
-    users = await fetch_users(
-        limit=first + 1,  # Fetch one extra to check hasNextPage
-        offset=offset,
-        search=search
-    )
-
-    # Pagination
-    has_next = len(users) > first
-    if has_next:
-        users = users[:first]
-
-    edges = [
-        {
-            "node": user,
-            "cursor": encode_cursor(offset + i)
-        }
-        for i, user in enumerate(users)
-    ]
-
-    return {
-        "edges": edges,
-        "pageInfo": {
-            "hasNextPage": has_next,
-            "hasPreviousPage": offset > 0,
-            "startCursor": edges[0]["cursor"] if edges else None,
-            "endCursor": edges[-1]["cursor"] if edges else None
-        },
-        "totalCount": await count_users(search=search)
+  res.json({
+    success: true,
+    data: transactions,
+    pagination: {
+      cursor: transactions.length ? transactions[transactions.length - 1].id : null,
+      hasNext,
+      limit: parseInt(limit)
     }
-
-@user_type.field("orders")
-async def resolve_user_orders(user: dict, info, first: int = 20) -> dict:
-    """Resolve user's orders (N+1 prevention with DataLoader)."""
-    # Use DataLoader to batch requests
-    loader = info.context["loaders"]["orders_by_user"]
-    orders = await loader.load(user["id"])
-
-    return paginate_orders(orders, first)
-
-@mutation.field("createUser")
-async def resolve_create_user(obj, info, input: dict) -> dict:
-    """Create new user."""
-    try:
-        # Validate input
-        validate_user_input(input)
-
-        # Create user
-        user = await create_user(
-            email=input["email"],
-            name=input["name"],
-            password=hash_password(input["password"])
-        )
-
-        return {
-            "user": user,
-            "errors": []
-        }
-    except ValidationError as e:
-        return {
-            "user": None,
-            "errors": [{"field": e.field, "message": e.message}]
-        }
+  });
+});
 ```
 
-### Pattern 3: DataLoader (N+1 Problem Prevention)
+### Offset-Based Pagination (For Admin/Portal)
+```javascript
+// GET /api/reconciliation/runs?page=1&pageSize=20&status=completed
 
-```python
-from aiodataloader import DataLoader
-from typing import List, Optional
+const page = parseInt(req.query.page) || 1;
+const pageSize = Math.min(parseInt(req.query.pageSize) || 20, 100);
+const offset = (page - 1) * pageSize;
 
-class UserLoader(DataLoader):
-    """Batch load users by ID."""
+const { count, rows } = await ReconRun.findAndCountAll({
+  where: filters,
+  order: [['createdAt', 'DESC']],
+  limit: pageSize,
+  offset
+});
 
-    async def batch_load_fn(self, user_ids: List[str]) -> List[Optional[dict]]:
-        """Load multiple users in single query."""
-        users = await fetch_users_by_ids(user_ids)
+res.json({
+  success: true,
+  data: rows,
+  pagination: {
+    page, pageSize, total: count,
+    totalPages: Math.ceil(count / pageSize),
+    hasNext: page * pageSize < count,
+    hasPrev: page > 1
+  }
+});
+```
 
-        # Map results back to input order
-        user_map = {user["id"]: user for user in users}
-        return [user_map.get(user_id) for user_id in user_ids]
+---
 
-class OrdersByUserLoader(DataLoader):
-    """Batch load orders by user ID."""
+## 4. Idempotency for Financial Endpoints
 
-    async def batch_load_fn(self, user_ids: List[str]) -> List[List[dict]]:
-        """Load orders for multiple users in single query."""
-        orders = await fetch_orders_by_user_ids(user_ids)
+### ALL mutating financial operations MUST be idempotent:
+```javascript
+// Client sends: POST /api/wallets/123/send
+// Headers: { 'X-Idempotency-Key': 'uuid-v4-client-generated' }
 
-        # Group orders by user_id
-        orders_by_user = {}
-        for order in orders:
-            user_id = order["user_id"]
-            if user_id not in orders_by_user:
-                orders_by_user[user_id] = []
-            orders_by_user[user_id].append(order)
+// Server checks IdempotencyKey model before processing
+// If key exists + completed → return cached response (200)
+// If key exists + processing → return 409 Conflict
+// If key doesn't exist → process and cache response
+```
 
-        # Return in input order
-        return [orders_by_user.get(user_id, []) for user_id in user_ids]
+### Required Headers for Financial Operations
+```
+X-Idempotency-Key: <uuid>        # Required for POST/PUT/DELETE on financial endpoints
+X-Request-ID: <uuid>             # Correlation ID for distributed tracing
+Authorization: Bearer <jwt>      # JWT access token
+Content-Type: application/json
+```
 
-# Context setup
-def create_context():
-    return {
-        "loaders": {
-            "user": UserLoader(),
-            "orders_by_user": OrdersByUserLoader()
-        }
+---
+
+## 5. Webhook API Design (Inbound)
+
+### Webhook Handler Pattern
+```javascript
+// routes/webhooks/easypay.js
+router.post('/webhooks/easypay',
+  express.raw({ type: 'application/json' }),     // Capture raw body for HMAC
+  verifyWebhookSignature(process.env.EASYPAY_WEBHOOK_SECRET),
+  async (req, res) => {
+    // 1. Acknowledge immediately
+    res.status(200).json({ received: true });
+
+    // 2. Process asynchronously (don't block the response)
+    try {
+      const event = JSON.parse(req.rawBody);
+      await processEasyPayWebhook(event);
+    } catch (error) {
+      logger.error('Webhook processing failed', { error, provider: 'easypay' });
     }
+  }
+);
 ```
 
-## Best Practices
+### Webhook Response Rules
+- Always return 200 immediately (within 5 seconds)
+- Process webhook payload asynchronously
+- Implement idempotent webhook processing (use event ID as key)
+- Log all webhook events for audit trail
+- Handle retries gracefully (providers will retry on non-2xx)
 
-### REST APIs
+---
 
-1. **Consistent Naming**: Use plural nouns for collections (`/users`, not `/user`)
-2. **Stateless**: Each request contains all necessary information
-3. **Use HTTP Status Codes Correctly**: 2xx success, 4xx client errors, 5xx server errors
-4. **Version Your API**: Plan for breaking changes from day one
-5. **Pagination**: Always paginate large collections
-6. **Rate Limiting**: Protect your API with rate limits
-7. **Documentation**: Use OpenAPI/Swagger for interactive docs
+## 6. API Versioning
 
-### GraphQL APIs
+### URL-Based Versioning (MyMoolah Standard)
+```
+/api/v1/wallets          # Current stable API
+/api/v2/wallets          # New version with breaking changes
+```
 
-1. **Schema First**: Design schema before writing resolvers
-2. **Avoid N+1**: Use DataLoaders for efficient data fetching
-3. **Input Validation**: Validate at schema and resolver levels
-4. **Error Handling**: Return structured errors in mutation payloads
-5. **Pagination**: Use cursor-based pagination (Relay spec)
-6. **Deprecation**: Use `@deprecated` directive for gradual migration
-7. **Monitoring**: Track query complexity and execution time
+### Version Lifecycle
+1. **Active**: Current production version
+2. **Deprecated**: Still functional, with `Deprecation` header
+3. **Sunset**: Removed, returns 410 Gone
 
-## Common Pitfalls
+```javascript
+// Deprecation middleware
+const deprecated = (sunsetDate) => (req, res, next) => {
+  res.set('Deprecation', 'true');
+  res.set('Sunset', sunsetDate);
+  res.set('Link', '</api/v2/wallets>; rel="successor-version"');
+  next();
+};
 
-- **Over-fetching/Under-fetching (REST)**: Fixed in GraphQL but requires DataLoaders
-- **Breaking Changes**: Version APIs or use deprecation strategies
-- **Inconsistent Error Formats**: Standardize error responses
-- **Missing Rate Limits**: APIs without limits are vulnerable to abuse
-- **Poor Documentation**: Undocumented APIs frustrate developers
-- **Ignoring HTTP Semantics**: POST for idempotent operations breaks expectations
-- **Tight Coupling**: API structure shouldn't mirror database schema
+router.get('/api/v1/wallets', deprecated('2026-06-01'), v1WalletController.list);
+```
 
-## Resources
+---
 
-- **references/rest-best-practices.md**: Comprehensive REST API design guide
-- **references/graphql-schema-design.md**: GraphQL schema patterns and anti-patterns
-- **references/api-versioning-strategies.md**: Versioning approaches and migration paths
-- **assets/rest-api-template.py**: FastAPI REST API template
-- **assets/graphql-schema-template.graphql**: Complete GraphQL schema example
-- **assets/api-design-checklist.md**: Pre-implementation review checklist
-- **scripts/openapi-generator.py**: Generate OpenAPI specs from code
+## 7. Controller Pattern
+
+### Standard Controller Structure
+```javascript
+// controllers/walletController.js
+const { Wallet, MyMoolahTransaction, JournalEntry, JournalLine } = require('../models');
+
+const walletController = {
+  // GET /api/wallets/:walletId
+  async getWallet(req, res) {
+    try {
+      const wallet = await Wallet.findOne({
+        where: { id: req.params.walletId, userId: req.user.id }
+      });
+      if (!wallet) return res.status(404).json({ success: false, error: 'NOT_FOUND' });
+      res.json({ success: true, data: wallet });
+    } catch (error) {
+      logger.error('Failed to fetch wallet', { error, userId: req.user.id });
+      res.status(500).json({ success: false, error: 'INTERNAL_ERROR' });
+    }
+  },
+
+  // POST /api/wallets/:walletId/send
+  async sendMoney(req, res) {
+    const t = await sequelize.transaction();
+    try {
+      const { recipientId, amount, reference } = req.validatedBody;
+      // ... business logic within transaction ...
+      await t.commit();
+      res.status(201).json({ success: true, data: transaction });
+    } catch (error) {
+      await t.rollback();
+      if (error.message === 'INSUFFICIENT_BALANCE') {
+        return res.status(400).json({ success: false, error: error.message });
+      }
+      logger.error('Send money failed', { error, userId: req.user.id });
+      res.status(500).json({ success: false, error: 'INTERNAL_ERROR' });
+    }
+  }
+};
+```
+
+---
+
+## 8. Code Review Checklist
+
+- [ ] URLs use plural nouns and kebab-case
+- [ ] All responses follow standard `{ success, data, error }` envelope
+- [ ] Financial endpoints have `X-Idempotency-Key` middleware
+- [ ] Pagination implemented for all collection endpoints
+- [ ] Error responses don't leak internal details
+- [ ] Webhooks acknowledge immediately and process asynchronously
+- [ ] Input validation middleware applied before controller logic
+- [ ] Appropriate HTTP status codes used
+- [ ] Authentication/authorization middleware applied
+- [ ] Rate limiting applied to sensitive endpoints
+
+## References
+
+- [REST API Design Best Practices](https://restfulapi.net/)
+- [Mojaloop FSPIOP API](https://docs.mojaloop.io/)
+- [Stripe API Design](https://stripe.com/docs/api) (gold standard for payment APIs)
+- [Express.js Best Practices](https://expressjs.com/en/advanced/best-practice-security.html)
