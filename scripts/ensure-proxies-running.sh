@@ -3,8 +3,9 @@
 ##############################################################################
 # Ensure Cloud SQL Auth Proxies Are Running
 # 
-# Purpose: Check if UAT, Staging, and Production proxies are running, start if needed
-# Usage: ./scripts/ensure-proxies-running.sh
+# Usage: ./scripts/ensure-proxies-running.sh [uat|staging|production]
+#   No argument = start all three proxies
+#   With argument = start only the specified environment's proxy
 ##############################################################################
 
 set -e
@@ -13,6 +14,8 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
+
+TARGET_ENV="${1:-all}"
 
 echo "🔍 Checking Cloud SQL Auth Proxies..."
 echo ""
@@ -23,6 +26,22 @@ if [ -d "/workspaces/mymoolah-platform" ]; then
 else
   REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 fi
+
+# Find cloud-sql-proxy binary: PATH first, then project root
+PROXY_BIN=""
+if command -v cloud-sql-proxy >/dev/null 2>&1; then
+  PROXY_BIN="$(command -v cloud-sql-proxy)"
+elif [ -x "${REPO_ROOT}/cloud-sql-proxy" ]; then
+  PROXY_BIN="${REPO_ROOT}/cloud-sql-proxy"
+elif command -v cloud_sql_proxy >/dev/null 2>&1; then
+  PROXY_BIN="$(command -v cloud_sql_proxy)"
+else
+  echo -e "${RED}❌ cloud-sql-proxy binary not found${NC}"
+  echo "   Install via: brew install cloud-sql-proxy"
+  echo "   Or download: https://cloud.google.com/sql/docs/mysql/sql-proxy#install"
+  exit 1
+fi
+echo "🔧 Using proxy: ${PROXY_BIN}"
 
 # Get access token: try user credentials, then ADC
 ACCESS_TOKEN=""
@@ -39,87 +58,62 @@ fi
 if [ -n "$ACCESS_TOKEN" ]; then
   TOKEN_FLAG="--token ${ACCESS_TOKEN}"
 else
-  # No token: only use ADC if file or env exists
   if [ -f "${HOME}/.config/gcloud/application_default_credentials.json" ] || [ -n "${GOOGLE_APPLICATION_CREDENTIALS:-}" ]; then
     echo "⚠️  No gcloud token - starting proxy with ADC (file or env)"
     TOKEN_FLAG=""
   else
-    echo -e "${RED}❌ No Cloud SQL credentials. Run: gcloud auth login --no-launch-browser${NC}"
+    echo -e "${RED}❌ No Cloud SQL credentials. Run: gcloud auth login${NC}"
     echo "   Or: gcloud auth application-default login"
-    echo "   (Google Workspaces / browser login does NOT provide gcloud credentials.)"
     exit 1
   fi
 fi
 
-# Check UAT proxy (6543)
-UAT_RUNNING=$(lsof -ti:6543 2>/dev/null || echo "")
-if [ -z "$UAT_RUNNING" ]; then
-  echo -e "${YELLOW}⚠️  UAT proxy NOT running on port 6543${NC}"
-  echo "   Starting UAT proxy..."
-  cd "$REPO_ROOT" || exit 1
-  nohup ./cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg \
-    --port 6543 \
-    --structured-logs \
-    $TOKEN_FLAG \
-    > /tmp/uat-proxy-6543.log 2>&1 &
-  sleep 3
-  if lsof -ti:6543 >/dev/null 2>&1; then
-    echo -e "${GREEN}✅ UAT proxy started${NC}"
+start_proxy() {
+  local env_name="$1"
+  local port="$2"
+  local instance="$3"
+
+  local RUNNING=$(lsof -ti:${port} 2>/dev/null || echo "")
+  if [ -z "$RUNNING" ]; then
+    echo -e "${YELLOW}⚠️  ${env_name} proxy NOT running on port ${port}${NC}"
+    echo "   Starting ${env_name} proxy..."
+    nohup "${PROXY_BIN}" "mymoolah-db:africa-south1:${instance}" \
+      --port "${port}" \
+      --structured-logs \
+      ${TOKEN_FLAG} \
+      > "/tmp/${env_name,,}-proxy-${port}.log" 2>&1 &
+    sleep 3
+    if lsof -ti:${port} >/dev/null 2>&1; then
+      echo -e "${GREEN}✅ ${env_name} proxy started on port ${port}${NC}"
+    else
+      echo -e "${RED}❌ ${env_name} proxy failed to start${NC}"
+      echo "   Check logs: cat /tmp/${env_name,,}-proxy-${port}.log"
+      return 1
+    fi
   else
-    echo -e "${RED}❌ UAT proxy failed to start${NC}"
-    echo "   Check logs: cat /tmp/uat-proxy-6543.log"
-    exit 1
+    echo -e "${GREEN}✅ ${env_name} proxy running on port ${port} (PID: $RUNNING)${NC}"
   fi
-else
-  echo -e "${GREEN}✅ UAT proxy running on port 6543 (PID: $UAT_RUNNING)${NC}"
+}
+
+FAILED=0
+
+if [ "$TARGET_ENV" = "all" ] || [ "$TARGET_ENV" = "uat" ]; then
+  start_proxy "UAT" 6543 "mmtp-pg" || FAILED=1
 fi
 
-# Check Staging proxy (6544)
-STAGING_RUNNING=$(lsof -ti:6544 2>/dev/null || echo "")
-if [ -z "$STAGING_RUNNING" ]; then
-  echo -e "${YELLOW}⚠️  Staging proxy NOT running on port 6544${NC}"
-  echo "   Starting Staging proxy..."
-  cd "$REPO_ROOT" || exit 1
-  nohup ./cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-staging \
-    --port 6544 \
-    --structured-logs \
-    $TOKEN_FLAG \
-    > /tmp/staging-proxy-6544.log 2>&1 &
-  sleep 3
-  if lsof -ti:6544 >/dev/null 2>&1; then
-    echo -e "${GREEN}✅ Staging proxy started${NC}"
-  else
-    echo -e "${RED}❌ Staging proxy failed to start${NC}"
-    echo "   Check logs: cat /tmp/staging-proxy-6544.log"
-    exit 1
-  fi
-else
-  echo -e "${GREEN}✅ Staging proxy running on port 6544 (PID: $STAGING_RUNNING)${NC}"
+if [ "$TARGET_ENV" = "all" ] || [ "$TARGET_ENV" = "staging" ]; then
+  start_proxy "Staging" 6544 "mmtp-pg-staging" || FAILED=1
 fi
 
-# Check Production proxy (6545)
-PRODUCTION_RUNNING=$(lsof -ti:6545 2>/dev/null || echo "")
-if [ -z "$PRODUCTION_RUNNING" ]; then
-  echo -e "${YELLOW}⚠️  Production proxy NOT running on port 6545${NC}"
-  echo "   Starting Production proxy..."
-  cd "$REPO_ROOT" || exit 1
-  nohup ./cloud-sql-proxy mymoolah-db:africa-south1:mmtp-pg-production \
-    --port 6545 \
-    --structured-logs \
-    $TOKEN_FLAG \
-    > /tmp/production-proxy-6545.log 2>&1 &
-  sleep 3
-  if lsof -ti:6545 >/dev/null 2>&1; then
-    echo -e "${GREEN}✅ Production proxy started${NC}"
-  else
-    echo -e "${RED}❌ Production proxy failed to start${NC}"
-    echo "   Check logs: cat /tmp/production-proxy-6545.log"
-    exit 1
-  fi
-else
-  echo -e "${GREEN}✅ Production proxy running on port 6545 (PID: $PRODUCTION_RUNNING)${NC}"
+if [ "$TARGET_ENV" = "all" ] || [ "$TARGET_ENV" = "production" ]; then
+  start_proxy "Production" 6545 "mmtp-pg-production" || FAILED=1
 fi
 
 echo ""
-echo -e "${GREEN}✅ All proxies are running!${NC}"
+if [ "$FAILED" -eq 0 ]; then
+  echo -e "${GREEN}✅ Required proxies are running!${NC}"
+else
+  echo -e "${RED}❌ Some proxies failed to start${NC}"
+  exit 1
+fi
 echo ""

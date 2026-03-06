@@ -48,7 +48,8 @@ fi
 log() { echo "📋 [$((SECONDS))s] $*"; }
 err() { echo "❌ $*" >&2; exit 1; }
 
-log "🚀 Build and Deploy Backend -> ${ENVIRONMENT^^}"
+ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
+log "🚀 Build and Deploy Backend -> ${ENV_UPPER}"
 log "Project: ${PROJECT_ID}"
 log "Image:   ${IMAGE_NAME}"
 echo ""
@@ -134,7 +135,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --port 8080 || err "Cloud Run deployment failed"
 
 echo ""
-log "✅ ${ENVIRONMENT^^} backend deployed successfully!"
+log "✅ ${ENV_UPPER} backend deployed successfully!"
 SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" --region "${REGION}" --format='value(status.url)')
 log "Service URL: ${SERVICE_URL}"
 

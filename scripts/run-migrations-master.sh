@@ -80,44 +80,32 @@ if ! command -v npx &> /dev/null; then
   exit 1
 fi
 
-# Ensure proxies are running
+# Ensure the required proxy is running (only starts the one we need)
 check_proxies() {
-  log "Checking Cloud SQL Auth Proxies..."
-  
-  # Check UAT proxy (6543) - required for uat
-  if [ "${ENVIRONMENT}" = "uat" ] && ! lsof -ti:6543 >/dev/null 2>&1; then
-    warning "UAT proxy not running on port 6543"
-    log "Starting proxies..."
-    cd "$(dirname "$0")/.." || exit 1
-    ./scripts/ensure-proxies-running.sh 2>/dev/null || {
-      error "Failed to start proxies. Run manually: ./scripts/ensure-proxies-running.sh"
-      exit 1
-    }
+  log "Checking Cloud SQL Auth Proxy for ${ENVIRONMENT}..."
+
+  local port
+  case "${ENVIRONMENT}" in
+    uat)        port=6543 ;;
+    staging)    port=6544 ;;
+    production) port=6545 ;;
+  esac
+
+  if lsof -ti:${port} >/dev/null 2>&1; then
+    success "Required proxy is running on port ${port}"
+    return 0
   fi
-  
-  # Check Staging proxy (6544) - required for staging
-  if [ "${ENVIRONMENT}" = "staging" ] && ! lsof -ti:6544 >/dev/null 2>&1; then
-    warning "Staging proxy not running on port 6544"
-    log "Starting proxies..."
-    cd "$(dirname "$0")/.." || exit 1
-    ./scripts/ensure-proxies-running.sh 2>/dev/null || {
-      error "Failed to start proxies. Run manually: ./scripts/ensure-proxies-running.sh"
-      exit 1
-    }
-  fi
-  
-  # Check Production proxy (6545) - required for production
-  if [ "${ENVIRONMENT}" = "production" ] && ! lsof -ti:6545 >/dev/null 2>&1; then
-    warning "Production proxy not running on port 6545"
-    log "Starting proxies..."
-    cd "$(dirname "$0")/.." || exit 1
-    ./scripts/ensure-proxies-running.sh 2>/dev/null || {
-      error "Failed to start proxies. Run manually: ./scripts/ensure-proxies-running.sh"
-      exit 1
-    }
-  fi
-  
-  success "Required proxy is running"
+
+  warning "${ENVIRONMENT} proxy not running on port ${port}"
+  log "Starting ${ENVIRONMENT} proxy..."
+  local script_dir
+  script_dir="$(cd "$(dirname "$0")" && pwd)"
+  "${script_dir}/ensure-proxies-running.sh" "${ENVIRONMENT}" || {
+    error "Failed to start proxy. Run manually: ./scripts/ensure-proxies-running.sh ${ENVIRONMENT}"
+    exit 1
+  }
+
+  success "Required proxy is running on port ${port}"
 }
 
 # Run migrations using Node.js helper

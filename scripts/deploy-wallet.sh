@@ -45,7 +45,8 @@ log() { echo "📋 [$((SECONDS))s] $*"; }
 err() { echo "❌ $*" >&2; exit 1; }
 success() { echo "✅ $*"; }
 
-log "🚀 Build and Deploy Wallet Frontend -> ${ENVIRONMENT^^}"
+ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
+log "🚀 Build and Deploy Wallet Frontend -> ${ENV_UPPER}"
 log "Project:     ${PROJECT_ID}"
 log "Image:       ${IMAGE_NAME}"
 log "Backend API: ${BACKEND_URL}"
