@@ -1,8 +1,18 @@
 # Deployment Scripts - Quick Reference
 
+## Where to Run What
+
+| Script | Run From | Why |
+|--------|----------|-----|
+| `deploy-backend.sh` | **Local Mac** | Docker Desktop builds faster, has more capacity |
+| `deploy-wallet.sh` | **Local Mac** | Docker Desktop builds faster, has more capacity |
+| `run-migrations-master.sh` | **Codespaces** | Cloud SQL Auth Proxy already running |
+
+---
+
 ## Core Deployment Scripts
 
-### Backend: `deploy-backend.sh`
+### Backend: `deploy-backend.sh` (Run from Local Mac)
 ```bash
 ./scripts/deploy-backend.sh --staging              # Deploy to staging
 ./scripts/deploy-backend.sh --production           # Deploy to production
@@ -10,21 +20,21 @@
 ```
 Builds (no cache), pushes to GCR, deploys to Cloud Run. Handles all secrets dynamically.
 
-### Wallet Frontend: `deploy-wallet.sh`
+### Wallet Frontend: `deploy-wallet.sh` (Run from Local Mac)
 ```bash
 ./scripts/deploy-wallet.sh --staging               # Deploy to staging
 ./scripts/deploy-wallet.sh --production            # Deploy to production
 ```
 Builds wallet frontend, pushes to GCR, deploys to Cloud Run.
 
-### Database Migrations: `run-migrations-master.sh`
+### Database Migrations: `run-migrations-master.sh` (Run from Codespaces)
 ```bash
 ./scripts/run-migrations-master.sh uat             # All pending UAT migrations
 ./scripts/run-migrations-master.sh staging         # All pending Staging migrations
 ./scripts/run-migrations-master.sh production      # All pending Production migrations
 ./scripts/run-migrations-master.sh uat 20251203_01 # Specific migration
 ```
-Auto-starts Cloud SQL Auth Proxy if needed. Uses `db-connection-helper.js`.
+Requires Cloud SQL Auth Proxy running (auto-starts if needed). Uses `db-connection-helper.js`.
 
 ---
 
@@ -35,6 +45,22 @@ These are the older environment-specific scripts. They work but `deploy-backend.
 ```bash
 ./scripts/build-push-deploy-staging.sh [tag]       # Staging backend (build+push+deploy)
 ./scripts/build-push-deploy-production.sh [tag]    # Production backend (build+push+deploy)
+```
+
+---
+
+## Typical Deployment Workflow
+
+```
+1. Make code changes locally
+2. git add . && git commit -m "description"
+3. git push origin main                              # Push to GitHub
+4. In Codespaces: git pull origin main               # Pull latest
+5. In Codespaces: ./scripts/run-migrations-master.sh staging    # If DB changes
+6. On Local Mac: ./scripts/deploy-backend.sh --staging          # Deploy backend
+7. On Local Mac: ./scripts/deploy-wallet.sh --staging           # Deploy frontend
+8. Test staging
+9. Repeat steps 5-7 with "production" for production release
 ```
 
 ---
@@ -59,10 +85,16 @@ These are the older environment-specific scripts. They work but `deploy-backend.
 
 ## Prerequisites
 
-1. `gcloud auth login`
-2. `gcloud config set project mymoolah-db`
-3. Docker installed and running
-4. Node.js 18+ installed
+### Local Mac (for deployments)
+1. Docker Desktop installed and running
+2. `gcloud auth login`
+3. `gcloud config set project mymoolah-db`
+4. `gcloud auth configure-docker gcr.io`
+
+### Codespaces (for migrations)
+1. Cloud SQL Auth Proxy running (use `./scripts/ensure-proxies-running.sh`)
+2. Node.js 18+ installed
+3. `gcloud auth login --no-launch-browser`
 
 ---
 

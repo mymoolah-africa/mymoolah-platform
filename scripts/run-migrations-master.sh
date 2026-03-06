@@ -9,6 +9,8 @@ set -euo pipefail
 # This is the ONLY script you need for running migrations
 # Handles all connection, password, and proxy management automatically
 #
+# Run from: CODESPACES (Cloud SQL Auth Proxy must be running)
+#
 # Usage:
 #   ./scripts/run-migrations-master.sh [uat|staging|production] [migration-name]
 #

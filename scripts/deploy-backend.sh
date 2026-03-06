@@ -2,6 +2,7 @@
 set -euo pipefail
 
 # Build and Deploy MyMoolah Backend to Cloud Run
+# Run from: LOCAL MAC (Docker + gcloud required)
 # Usage: ./scripts/deploy-backend.sh [--staging | --production] [optional-image-tag]
 
 ENVIRONMENT=""

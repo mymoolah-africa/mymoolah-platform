@@ -7,7 +7,7 @@ Scripts for managing and maintaining the MyMoolah Treasury Platform.
 
 ## Core Scripts (Use These)
 
-### Deployment
+### Deployment (Run from LOCAL MAC)
 | Script | Purpose |
 |--------|---------|
 | `deploy-backend.sh --staging\|--production` | Build + push + deploy backend |
@@ -15,7 +15,7 @@ Scripts for managing and maintaining the MyMoolah Treasury Platform.
 | `build-push-deploy-staging.sh` | Legacy staging backend deploy (still works) |
 | `build-push-deploy-production.sh` | Legacy production backend deploy (still works) |
 
-### Database Migrations
+### Database Migrations (Run from CODESPACES)
 | Script | Purpose |
 |--------|---------|
 | `run-migrations-master.sh uat\|staging\|production` | Run migrations (auto-starts proxy) |

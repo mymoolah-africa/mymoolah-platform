@@ -2,6 +2,7 @@
 set -euo pipefail
 
 # Build and Deploy MyMoolah Wallet Frontend to Cloud Run
+# Run from: LOCAL MAC (Docker + gcloud required)
 # Usage: ./scripts/deploy-wallet.sh [--staging | --production] [optional-image-tag]
 
 ENVIRONMENT=""
