@@ -148,6 +148,7 @@ export function GlobalPinModal({
           result?.order?.voucherPin ||
           result?.order?.code ||
           result?.order?.serialNumber ||
+          result?.voucherCode ||
           result?.pin ||
           result?.code ||
           'No PIN returned';

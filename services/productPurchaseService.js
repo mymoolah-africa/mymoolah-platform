@@ -609,7 +609,9 @@ class ProductPurchaseService {
 
   /**
    * Process purchase with Flash supplier
-   * @param {Object} product - Product object
+   * For international_pin and voucher products: calls Flash gift-voucher/purchase.
+   * Uses same PIN extraction logic as eeziAirtime (flashController) for UAT/Prod compatibility.
+   * @param {Object} product - Product object (must have supplierProductId for Flash productCode)
    * @param {number} denomination - Denomination in cents
    * @param {Object} recipient - Recipient information
    * @param {Object} supplierTransaction - Supplier transaction record
@@ -617,13 +619,100 @@ class ProductPurchaseService {
    * @returns {Promise<Object>} Flash result
    */
   async processWithFlash(product, denomination, recipient, supplierTransaction, transaction) {
-    // This would integrate with the existing Flash controller
-    // For now, simulate a successful response
+    const useFlashAPI = process.env.FLASH_LIVE_INTEGRATION === 'true';
+
+    if (useFlashAPI && product.supplierProductId) {
+      try {
+        const FlashAuthService = require('./flashAuthService');
+        const flashAuth = new FlashAuthService();
+        const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+        if (!accountNumber) {
+          throw new Error('FLASH_ACCOUNT_NUMBER not configured');
+        }
+        const storeId = process.env.FLASH_STORE_ID || accountNumber.replace(/-/g, '').slice(0, 12) || 'MYMOOLAHDIGITAL';
+        const terminalId = process.env.FLASH_TERMINAL_ID || accountNumber.replace(/-/g, '').slice(0, 12) || 'MYMOOLAHPOS01';
+        const productCode = parseInt(String(product.supplierProductId).trim(), 10);
+        if (!productCode || productCode <= 0) {
+          throw new Error(`Invalid Flash product code for ${product.name}: ${product.supplierProductId}`);
+        }
+        const reference = `VOUCH_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+
+        const requestData = {
+          reference,
+          accountNumber,
+          amount: denomination,
+          productCode,
+          storeId,
+          terminalId
+        };
+        console.log('📤 Flash gift-voucher (International PIN):', { reference, productCode, denomination });
+
+        const response = await flashAuth.makeAuthenticatedRequest(
+          'POST',
+          '/gift-voucher/purchase',
+          requestData
+        );
+
+        // Extract PIN using same logic as eeziAirtime (UAT/Prod may use different response structures)
+        const extractPin = (obj, keys = ['pin', 'pinNumber', 'voucherPin', 'token', 'code', 'serialNumber', 'pinCode', 'voucherCode', 'value', 'PIN']) => {
+          if (!obj || typeof obj !== 'object') return null;
+          for (const k of Object.keys(obj)) {
+            const lower = k.toLowerCase();
+            if (keys.some(key => key.toLowerCase() === lower)) {
+              const v = obj[k];
+              if (v != null && typeof v === 'string' && v.trim().length > 0) return v.trim();
+              if (v != null && typeof v === 'number' && !Number.isNaN(v)) return String(v);
+            }
+          }
+          return null;
+        };
+
+        const voucher = response?.voucher;
+        const tx = response?.transaction || response?.data || response?.result || response;
+        const vd = (typeof tx === 'object' && tx?.voucherDetails) || response?.voucherDetails;
+
+        const voucherCode =
+          extractPin(voucher) ||
+          extractPin(tx) ||
+          extractPin(response) ||
+          extractPin(vd) ||
+          (voucher && typeof voucher === 'object' && (voucher.pin || voucher.pinNumber || voucher.voucherPin || voucher.token || voucher.code || voucher.serialNumber)) ||
+          (typeof tx === 'object' && (tx?.pinNumber || tx?.pin || tx?.voucherPin || tx?.token || tx?.code || tx?.serialNumber)) ||
+          response?.pinNumber || response?.pin || response?.voucherPin || response?.token || response?.code ||
+          (vd && (vd.pin || vd.pinNumber || vd.code)) ||
+          null;
+
+        if (!voucherCode) {
+          const safeKeys = (o) => (o && typeof o === 'object' ? Object.keys(o).join(', ') : 'null');
+          console.warn('⚠️ No PIN extracted from Flash gift-voucher response. Keys:', safeKeys(response), 'nested:', safeKeys(tx));
+        }
+
+        const ref = response?.transactionId || response?.reference || reference;
+        console.log('✅ Flash gift-voucher result:', voucherCode ? 'PIN received' : 'No PIN', 'ref:', ref);
+
+        return {
+          success: true,
+          data: {
+            reference: ref,
+            status: 'success',
+            voucherCode: voucherCode || `PENDING_${ref}`,
+            message: 'Voucher purchased successfully'
+          }
+        };
+      } catch (apiError) {
+        console.error('❌ Flash gift-voucher API Error:', apiError.message);
+        console.error('❌ Flash Error Details:', {
+          error: apiError.message,
+          response: apiError.response?.data,
+          status: apiError.response?.status
+        });
+        throw new Error(`Flash voucher purchase failed: ${apiError.message}`);
+      }
+    }
+
+    // UAT/simulation: generate placeholder for UI testing
     const flashReference = `FLASH_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    // Always generate a voucher code so UI can display it even in sandbox
     const voucherCode = `VOUCHER_${flashReference}`;
-    
-    // Simulate processing delay
     await new Promise(resolve => setTimeout(resolve, 100));
 
     return {
