@@ -96,7 +96,15 @@ class ProductPurchaseService {
       // Validate denomination
       const hasDefinedDenoms = product.denominations && Array.isArray(product.denominations) && product.denominations.length > 0;
       if (hasDefinedDenoms) {
-        if (!product.isValidDenomination(denomination)) {
+        let isValid = product.isValidDenomination(denomination);
+        // International PIN (Flash): catalog stores face value in USD; frontend sends charge in ZAR cents.
+        // Accept denomination if it matches converted USD→ZAR (rate ~21).
+        if (!isValid && product.type === 'international_pin' && product.supplier?.code === 'FLASH') {
+          const rate = parseFloat(process.env.USD_TO_ZAR_RATE || '21', 10) || 21;
+          const convertedDenoms = product.denominations.map(d => Math.round(Number(d) * rate));
+          isValid = convertedDenoms.includes(denomination);
+        }
+        if (!isValid) {
           throw new Error('Invalid denomination for this product');
         }
       } else {

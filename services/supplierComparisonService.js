@@ -65,7 +65,7 @@ class SupplierComparisonService {
                 try {
                     const bestResult = await bestOfferService.getBestOffers(vasType, provider);
                     if (bestResult.source === 'vas_best_offers' && bestResult.products.length > 0) {
-                        comparison.bestDeals = bestResult.products;
+                        comparison.bestDeals = this._applyInternationalPinConversion(bestResult.products, vasType);
                         comparison.catalogVersion = bestResult.catalogVersion;
                         for (const [code, meta] of Object.entries(this.suppliers)) {
                             comparison.suppliers[code] = {
@@ -197,6 +197,42 @@ class SupplierComparisonService {
     }
 
     /**
+     * International PIN: Flash catalog stores face value in USD; we charge in ZAR.
+     * Converts USD cents → ZAR cents using rate (env USD_TO_ZAR_RATE or 21).
+     * @param {number} usdCents - Face value in USD cents
+     * @returns {number} Charge in ZAR cents
+     */
+    _internationalPinUsdToZarCents(usdCents) {
+        if (usdCents == null || usdCents <= 0) return usdCents;
+        const rate = parseFloat(process.env.USD_TO_ZAR_RATE || '21', 10) || 21;
+        return Math.round(Number(usdCents) * rate);
+    }
+
+    /**
+     * Apply international_pin USD→ZAR conversion to product list (for production best-offers path).
+     */
+    _applyInternationalPinConversion(products, vasType) {
+        if (vasType !== 'international_pin' || !Array.isArray(products)) return products;
+        return products.map((p) => {
+            const code = (p.supplierCode || p.supplier || '').toString().toUpperCase();
+            if (code !== 'FLASH') return p;
+            const name = (p.productName || p.name || '').toLowerCase();
+            if (!name.includes('global pin') && !name.includes('$')) return p;
+            return {
+                ...p,
+                minAmount: this._internationalPinUsdToZarCents(p.minAmount),
+                maxAmount: this._internationalPinUsdToZarCents(p.maxAmount),
+                denominations: Array.isArray(p.denominations)
+                    ? p.denominations.map(d => this._internationalPinUsdToZarCents(d))
+                    : p.denominations,
+                predefinedAmounts: Array.isArray(p.predefinedAmounts)
+                    ? p.predefinedAmounts.map(d => this._internationalPinUsdToZarCents(d))
+                    : p.predefinedAmounts
+            };
+        });
+    }
+
+    /**
      * Format product variant for API response
      * @param {Object} productVariant - Sequelize ProductVariant instance
      * @returns {Object} Formatted product for response
@@ -209,6 +245,27 @@ class SupplierComparisonService {
         const product = pv.product || (productVariant.product ? (productVariant.product.toJSON ? productVariant.product.toJSON() : productVariant.product) : null);
         const supplier = pv.supplier || (productVariant.supplier ? (productVariant.supplier.toJSON ? productVariant.supplier.toJSON() : productVariant.supplier) : null);
         
+        let minAmount = pv.minAmount;
+        let maxAmount = pv.maxAmount;
+        let predefinedAmounts = pv.predefinedAmounts;
+        let denominations = pv.denominations;
+
+        // International PIN (Global PIN): Flash stores face value in USD; we charge in ZAR.
+        // Convert minAmount/maxAmount/denominations from USD cents to ZAR cents for display and purchase.
+        if (pv.vasType === 'international_pin' && (supplier?.code || pv.supplierCode || '').toUpperCase() === 'FLASH') {
+            const productName = (product?.name || '').toLowerCase();
+            if (productName.includes('global pin') || productName.includes('$')) {
+                minAmount = this._internationalPinUsdToZarCents(minAmount);
+                maxAmount = this._internationalPinUsdToZarCents(maxAmount);
+                if (Array.isArray(denominations) && denominations.length > 0) {
+                    denominations = denominations.map(d => this._internationalPinUsdToZarCents(d));
+                }
+                if (Array.isArray(predefinedAmounts) && predefinedAmounts.length > 0) {
+                    predefinedAmounts = predefinedAmounts.map(d => this._internationalPinUsdToZarCents(d));
+                }
+            }
+        }
+        
         return {
             id: pv.id,
             productId: pv.productId,
@@ -219,10 +276,10 @@ class SupplierComparisonService {
             vasType: pv.vasType,
             transactionType: pv.transactionType,
             provider: pv.provider,
-            minAmount: pv.minAmount,
-            maxAmount: pv.maxAmount,
-            predefinedAmounts: pv.predefinedAmounts,
-            denominations: pv.denominations, // Add denominations from variant
+            minAmount,
+            maxAmount,
+            predefinedAmounts: predefinedAmounts || pv.predefinedAmounts,
+            denominations: denominations != null ? denominations : pv.denominations,
             commission: pv.commission,
             fixedFee: pv.fixedFee,
             isPromotional: pv.isPromotional,
@@ -230,7 +287,6 @@ class SupplierComparisonService {
             priority: pv.priority,
             status: pv.status,
             metadata: pv.metadata,
-            // Preserve product and supplier objects for reference
             product: product,
             supplier: supplier
         };
