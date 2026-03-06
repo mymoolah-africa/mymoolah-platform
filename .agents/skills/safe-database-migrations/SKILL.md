@@ -9,12 +9,28 @@ MyMoolah is a financial application with large ledger tables (`JournalLine`, `My
 Traditional ORM migrations can lock these multi-million row tables for minutes or hours 
 during column additions or index creation, bringing the payment gateway down.
 
+> **Lessons Learned from MyMoolah**:
+> - **Enum order matters**: Adding enum values (`international_pin`, new VAS types)
+>   MUST happen before any migration that references those values. Multiple past
+>   failures were caused by migrations using enum values before they were added.
+> - **Column case sensitivity**: Sequelize models use camelCase (`supplierId`), but
+>   PostgreSQL may store them quoted (`"supplierId"`) or snake_case depending on
+>   how the migration was written. Always verify with `\d table_name` before writing
+>   migrations that reference columns.
+> - **Environment parity**: Migrations must work across UAT (Codespaces), Staging,
+>   and Production. Test locally with Cloud SQL Auth Proxy on the appropriate port
+>   (UAT: 6543, Staging: 6544, Production: 6545).
+> - **Permission issues**: Cloud SQL users may not own all tables. If a migration
+>   fails with `must be owner of table`, use a workaround script that checks if the
+>   change already exists before applying.
+
 ## When This Skill Activates
 
-- Writing a new Sequelize migration script (`migrations/.*\.js`).
+- Writing a new Sequelize migration script (`migrations/*.js`).
 - Adding or removing columns from core financial tables.
 - Adding database indexes to optimize queries.
 - Seeding configuration or lookup data.
+- Adding new enum values to PostgreSQL types.
 
 ---
 
@@ -151,3 +167,7 @@ module.exports = {
 - [ ] Are indexes created natively with `CREATE INDEX CONCURRENTLY`?
 - [ ] Is the migration transaction disabled `{ transaction: null }` for concurrent index builds?
 - [ ] Are seeders fully idempotent using `ON CONFLICT DO UPDATE`?
+- [ ] Are new enum values added BEFORE any migration that references them?
+- [ ] Does the migration use `IF NOT EXISTS` / `IF EXISTS` guards for idempotency?
+- [ ] Has the migration been tested against UAT database via Cloud SQL proxy?
+- [ ] Are column names consistent with model definition (camelCase vs snake_case)?

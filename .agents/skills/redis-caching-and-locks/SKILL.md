@@ -5,17 +5,29 @@ description: Implement robust financial synchronization using Redis. Use this sk
 
 # MyMoolah Redis Caching and Distributed Locks
 
-In a highly concurrent digital wallet like MyMoolah, PostgreSQL transactions alone are 
-sometimes insufficient or too slow to prevent distributed race conditions (e.g., a user 
-double-tapping "Send" causing two Node.js workers to deduct balance simultaneously).
-We use Redis (`ioredis`) for explicit locking, idempotency caching, and rate limiting.
+Redis provides a fast in-memory layer for distributed locking, idempotency caching,
+and rate limiting. It complements PostgreSQL's ACID transactions with sub-millisecond
+key operations.
+
+> **Current State & Risk Calibration**:
+> - MyMoolah's wallet mutations use `sequelize.transaction()` with PostgreSQL
+>   row-level locking. This **prevents double-spends** via database serialization.
+>   The system is safe today under single-instance deployment.
+> - The idempotency middleware (`middleware/idempotency.js`) hits PostgreSQL directly
+>   for every check — Redis would make this dramatically faster.
+> - Redis locks become **mandatory** when running multiple Cloud Run instances
+>   (distributed lock prevents two instances from processing the same wallet
+>   mutation concurrently).
+> - **Priority**: Idempotency caching (high, quick win) > Product catalog caching
+>   (medium) > Wallet mutation locks (important before horizontal scaling).
 
 ## When This Skill Activates
 
 - Writing code that mutates user balances (`wallets`, `transactions`).
-- Processing incoming webhooks from external providers (Peach, Flash).
-- Implementing the backend Idempotency middleware.
+- Processing incoming webhooks from external providers (Peach, Flash, EasyPay).
+- Improving the backend Idempotency middleware (`middleware/idempotency.js`).
 - Caching high-read, low-write data (Flash product catalogs, standard configurations).
+- Preparing for horizontal scaling (multiple Cloud Run instances).
 - **Warning:** NEVER cache PII, PCI data, or plain-text ledger accounts in Redis.
 
 ---

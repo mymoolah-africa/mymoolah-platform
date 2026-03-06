@@ -7,12 +7,22 @@ description: Implement scalable Node.js Machine Learning and OCR pipelines. Use 
 
 Integrating machine learning (fraud detection, NLP) and Optical Character Recognition 
 (OCR for KYC documents) directly into the Node.js backend requires strict adherence to 
-event loop and memory management best practices. Poorly implemented ML models will block 
-the Express server and crash under load.
+event loop and memory management best practices.
+
+> **Current State**: MyMoolah uses `Tesseract.js` as a fallback OCR engine in
+> `services/kycService.js` (the primary OCR is OpenAI Vision). `Tesseract.js` v5+
+> runs OCR in its own **internal WebAssembly worker**, so it does not fully block the
+> Node.js event loop the way synchronous CPU work would. However, it still consumes
+> significant RAM for large images. The `sharp` preprocessing recommendation below
+> is the highest-impact improvement — it reduces memory and speeds up OCR accuracy.
+>
+> `@xenova/transformers` is used for semantic embedding in `SemanticEmbeddingService`
+> (AI support knowledge base). It is already loaded as a singleton.
 
 ## When This Skill Activates
 
 - Writing KYC document processing logic (`Tesseract.js`).
+- Modifying `services/kycService.js` OCR fallback path.
 - Implementing local AI inference (`@xenova/transformers`).
 - Processing large PDFs or image streams (`pdf-parse`, `sharp`).
 - Building ML anomaly detection for the reconciliation engine.
@@ -155,3 +165,30 @@ if (isMainThread) {
 - [ ] Are images downscaled with `sharp` before running through OCR?
 - [ ] Are heavy blocking tasks offloaded to Worker Threads or background queues?
 - [ ] Is input sanitized (PDF/Image virus scanning, mime-type validation) before processing?
+
+## 6. Retrofit Guide for `kycService.js`
+
+The existing `runTesseractOCR(localFilePath)` method passes the raw file path
+directly to `Tesseract.recognize`. To apply this skill:
+
+1. **Add `sharp` preprocessing** before the `Tesseract.recognize` call:
+   ```javascript
+   const sharp = require('sharp');
+
+   async runTesseractOCR(localFilePath) {
+     const optimizedBuffer = await sharp(localFilePath)
+       .resize({ width: 1500, withoutEnlargement: true })
+       .grayscale()
+       .normalize()
+       .toBuffer();
+
+     const { data: { text } } = await Tesseract.recognize(optimizedBuffer, 'eng');
+     return text;
+   }
+   ```
+
+2. **Do NOT wrap in Worker Thread** unless profiling shows > 200ms blocking — 
+   `tesseract.js` already uses internal workers for the OCR computation.
+
+3. **Priority**: Medium. The primary OCR is OpenAI Vision; Tesseract is a fallback
+   for content policy refusals. `sharp` preprocessing improves accuracy when it fires.

@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: Create distinctive, production-grade frontend interfaces with high design quality. Use this skill when the user asks to build web components, pages, or applications. Generates creative, polished code that avoids generic AI aesthetics.
+description: Create distinctive, production-grade frontend interfaces for MyMoolah's digital wallet. Use this skill when building wallet components, product overlays, transaction views, or portal admin screens. Generates premium, mobile-first fintech UI.
 ---
 
 # MyMoolah Frontend Design
@@ -9,13 +9,21 @@ Create premium, mobile-first fintech UI for MyMoolah's digital wallet platform.
 Design should feel trustworthy, fast, and approachable for South African users
 across all income levels. All components built with React + Tailwind CSS.
 
+> **Architecture Constraint**: The wallet frontend uses an **overlay-based flow**
+> pattern. Product purchases, send money, top-up, and cashout all happen inside
+> step-based overlays (e.g., `AirtimeDataOverlay`, `ElectricityOverlay`), not
+> separate pages. Pages in `pages/*.tsx` are Figma-managed and read-only.
+>
+> New UI should be built as **overlay components** in `components/overlays/` or
+> **shared components** in `components/ui/`. Never create standalone page files.
+
 ## When This Skill Activates
 
 - Building wallet dashboard, transaction history, or balance views
-- Creating product purchase flows (airtime, data, electricity)
+- Creating product purchase overlays (airtime, data, electricity, vouchers)
 - Designing portal/admin interfaces
 - Building merchant-facing screens
-- Creating marketing or landing pages
+- Creating new overlay flows in `components/overlays/`
 
 ---
 

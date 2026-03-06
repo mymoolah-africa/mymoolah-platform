@@ -10,12 +10,18 @@ checks, end-of-day EasyPay reconciliations, weekly commission calculations). If 
 scripts run multiple times, crash halfway, or consume the entire Node.js event loop, 
 the main MyMoolah API will fail.
 
+> **Current State**: MyMoolah runs cron schedules directly inside `server.js` (lines
+> ~683, ~722) for monthly tier review and daily referral payouts. These have no
+> distributed lock and no audit table logging. This is acceptable while running a
+> **single Cloud Run instance** but MUST be refactored before horizontal scaling.
+
 ## When This Skill Activates
 
 - Adding a new scheduled task using `node-cron`.
 - Building reconciliation engines (`ReconRun`, `JournalEntry` verification).
 - Generating massive CSV/Excel reports via `exceljs` or `csv-parse`.
 - Backfilling database data across millions of rows.
+- Refactoring existing cron jobs out of `server.js`.
 
 ---
 
@@ -140,9 +146,24 @@ async function runDoubleEntryValidationInChunks(runId) {
 
 ## 4. Cursor Compatibility Checklist
 
-- [ ] Does the `node-cron` schedule specify the correct timezone (e.g., `Africa/Johannesburg`)?
+- [ ] Does the `node-cron` schedule specify the correct timezone (`Africa/Johannesburg`)?
+- [ ] Is the cron job in a **separate file** under `scripts/jobs/`, NOT inside `server.js`?
 - [ ] Are distributed locks implemented if the app is scaled horizontally?
 - [ ] Does the script query the database first to ensure the job hasn't run today (Idempotency)?
 - [ ] Is an Audit record explicitly `created` in `ReconRun` or `JobLog` before work begins?
 - [ ] Does the script use cursor pagination (`id > lastId`) instead of `OFFSET` for huge datasets?
 - [ ] Are errors caught, logged to the DB record, and bubbled up to external monitoring?
+
+## 5. Migration Path for Existing Crons
+
+The two existing crons in `server.js` should be migrated as follows when scaling:
+
+1. **Monthly Tier Review** (`cron.schedule('0 2 1 * *')` in `server.js`):
+   Move to `scripts/jobs/monthlyTierReview.js`, add Redis lock with key
+   `cronlock:tier-review:YYYY-MM`, and create a `CronJobLog` audit record.
+
+2. **Daily Referral Payout** (`cron.schedule('0 2 * * *')` in `server.js`):
+   Move to `scripts/jobs/dailyReferralPayout.js`, add Redis lock with key
+   `cronlock:referral-payout:YYYY-MM-DD`, and create a `CronJobLog` audit record.
+
+**Trigger**: This migration becomes mandatory when deploying > 1 Cloud Run instance.

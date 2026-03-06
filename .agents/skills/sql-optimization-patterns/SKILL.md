@@ -1,6 +1,6 @@
 ---
 name: sql-optimization-patterns
-description: Master SQL query optimization, indexing strategies, and EXPLAIN analysis to dramatically improve database performance and eliminate slow queries. Use when debugging slow queries, designing database schemas, or optimizing application performance.
+description: Master SQL query optimization, indexing strategies, and EXPLAIN analysis for MyMoolah's PostgreSQL database. Use when debugging slow queries, designing database schemas, building financial reports, or optimizing Sequelize ORM usage.
 ---
 
 # MyMoolah SQL Optimization Patterns
@@ -8,6 +8,16 @@ description: Master SQL query optimization, indexing strategies, and EXPLAIN ana
 Practical SQL optimization patterns for MyMoolah's PostgreSQL database with Sequelize
 ORM. Focus on financial transaction queries, ledger aggregations, reconciliation
 reports, and high-throughput wallet operations.
+
+> **Performance Targets** (from project rules):
+> - API response: < 200ms
+> - Database queries: < 50ms
+> - Throughput: > 1,000 req/s
+> - Availability: 99.9%
+>
+> **Critical Rule**: NEVER calculate sums in JavaScript — always use database
+> aggregation (`COUNT`, `SUM`, `AVG`). Use raw SQL for complex aggregations;
+> Sequelize's query builder is insufficient for financial reporting queries.
 
 ## When This Skill Activates
 

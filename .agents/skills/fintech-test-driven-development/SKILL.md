@@ -9,6 +9,19 @@ Strict testing standards for the MyMoolah Node.js/Express backend. Financial sys
 require exhaustive testing to prevent money loss, double spends, and corrupted ledgers.
 We use Jest for unit/integration testing and Supertest for HTTP endpoint testing.
 
+> **Current State — CRITICAL GAP**: The `tests/` directory has only 4 test files:
+> `reconciliation.test.js`, `usdc.test.js`, `tierFeeService.dev.test.js`, and
+> `productPurchaseService.voucher.dev.test.js`. There are no Supertest integration
+> tests for payment flows, no webhook signature tests, and no concurrency tests.
+> This is the #1 priority improvement for MyMoolah's production readiness.
+>
+> **Test Priority Order**:
+> 1. Wallet send money (idempotency + concurrency)
+> 2. Flash/EasyPay webhook handlers (signature verification + ledger entries)
+> 3. Airtime/Electricity purchase flows (end-to-end with mocked Flash API)
+> 4. KYC submission flow
+> 5. Reconciliation engine
+
 ## When This Skill Activates
 
 - Creating or modifying financial endpoints (wallets, sending, depositing)
@@ -16,6 +29,7 @@ We use Jest for unit/integration testing and Supertest for HTTP endpoint testing
 - Testing webhook handlers for external providers (EasyPay, Flash, Peach)
 - Implementing idempotency keys
 - Debugging race conditions or concurrency issues
+- ANY new feature — every feature must ship with tests
 
 ---
 
@@ -211,10 +225,52 @@ describe('EasyPay Webhook Handler', () => {
 
 ---
 
-## 6. Financial Test Checklist
+## 6. MyMoolah-Specific Test Patterns
+
+### Flash API Mock (for Airtime/Voucher Tests)
+```javascript
+const nock = require('nock');
+
+beforeEach(() => {
+  nock('https://api-flashswitch-sandbox.flash-group.com')
+    .post('/api/eezi-voucher/purchase')
+    .reply(200, {
+      status: 'success',
+      pin: '176132883283',
+      serialNumber: 'SN123456789',
+      reference: 'FLASH-REF-001'
+    });
+});
+```
+
+### Double-Entry Ledger Invariant Check
+```javascript
+async function assertLedgerBalanced() {
+  const [result] = await sequelize.query(`
+    SELECT
+      SUM(CASE WHEN dc = 'debit' THEN amount ELSE 0 END) AS total_debits,
+      SUM(CASE WHEN dc = 'credit' THEN amount ELSE 0 END) AS total_credits
+    FROM journal_lines
+  `, { type: QueryTypes.SELECT });
+
+  expect(result.total_debits).toBe(result.total_credits);
+}
+
+// Call after every financial test:
+afterEach(async () => {
+  await assertLedgerBalanced();
+});
+```
+
+---
+
+## 7. Financial Test Checklist
 - [ ] Database is completely truncated/rolled back before `each` test.
 - [ ] Explicitly tested that sending concurrent requests does not bypass balance checks.
 - [ ] Explicitly tested that sending identical requests (same idempotency key) returns cached states.
 - [ ] Webhook tests verify that invalid HMAC signatures are rejected.
-- [ ] Third-party API calls (Standard Bank, EasyPay) are intercepted via `nock`.
+- [ ] Third-party API calls (Flash, EasyPay, Peach) are intercepted via `nock`.
 - [ ] Sequelize DECIMAL fields are asserted against Strings (e.g., `'100.00'`), not floats (`100`).
+- [ ] Ledger invariant (total debits = total credits) asserted after every financial test.
+- [ ] Test data uses realistic ZAR amounts (not $1 or 0.01).
+- [ ] Tests run against a dedicated test database, not UAT/Staging.

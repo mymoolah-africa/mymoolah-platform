@@ -9,6 +9,14 @@ Banking-grade security for the MyMoolah digital wallet platform. This skill enfo
 OWASP Top 10, PCI-DSS, POPIA (South Africa), and fintech-specific security standards
 across all backend (Node.js/Express/Sequelize) and frontend (React) code.
 
+> **Environment Security Architecture**:
+> - **Secrets**: Google Cloud Secret Manager (Staging/Production), `.env.codespaces` (UAT)
+> - **Database**: Cloud SQL with Auth Proxy (ports: UAT 6543, Staging 6544, Prod 6545)
+> - **API Keys**: Flash, EasyPay, Peach, Mercury stored in Secret Manager
+> - **JWT**: HS256 access tokens (15min), refresh tokens (7 days) with rotation
+> - **Idempotency**: `middleware/idempotency.js` with PostgreSQL-backed key storage
+> - **NEVER** store production secrets in `.env` files — always use Secret Manager
+
 ## When This Skill Activates
 
 - Securing API endpoints (routes/*.js)
@@ -18,6 +26,7 @@ across all backend (Node.js/Express/Sequelize) and frontend (React) code.
 - Integrating payment providers (EasyPay, Flash, Peach, Mercury)
 - Webhook handlers for external providers
 - Any code touching PII, credentials, or monetary values
+- Managing environment secrets across UAT/Staging/Production
 
 ---
 

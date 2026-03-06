@@ -1,6 +1,6 @@
 ---
 name: api-design-principles
-description: Master REST and GraphQL API design principles to build intuitive, scalable, and maintainable APIs that delight developers. Use when designing new APIs, reviewing API specifications, or establishing API design standards.
+description: Master REST API design principles for MyMoolah's Node.js/Express backend. Use when designing new APIs, reviewing API specifications, building webhooks, or establishing consistent response patterns.
 ---
 
 # MyMoolah API Design Principles
@@ -8,6 +8,11 @@ description: Master REST and GraphQL API design principles to build intuitive, s
 REST API design standards for MyMoolah's Node.js/Express backend serving the digital
 wallet platform. All APIs must be mobile-first, idempotent for financial operations,
 and compliant with Mojaloop FSPIOP patterns where applicable.
+
+> **Current Architecture**: Express routes in `routes/*.js`, controllers in
+> `controllers/*.js`, validation via Joi middleware. The API serves both the wallet
+> frontend (React/Vite on mobile) and the admin portal. Webhook endpoints receive
+> callbacks from EasyPay, Flash, and Peach payment providers.
 
 ## When This Skill Activates
 

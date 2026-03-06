@@ -1,6 +1,6 @@
 ---
 name: postgresql-optimization
-description: PostgreSQL-specific development assistant focusing on unique PostgreSQL features, advanced data types, and PostgreSQL-exclusive capabilities. Covers JSONB operations, array types, custom types, range/geometric types, full-text search, window functions, and PostgreSQL extensions ecosystem.
+description: PostgreSQL-specific optimization for MyMoolah's financial database. Covers ledger queries, reconciliation aggregates, JSONB operations, Sequelize ORM patterns, indexing strategy, and connection pooling for Cloud SQL.
 ---
 
 # MyMoolah PostgreSQL Optimization
@@ -9,12 +9,22 @@ PostgreSQL-specific optimization for MyMoolah's financial database including led
 queries, reconciliation aggregates, transaction search, JSONB event data, and
 Sequelize ORM integration. All MyMoolah tables use PostgreSQL with Sequelize.
 
+> **Database Infrastructure**:
+> - **Cloud SQL** (PostgreSQL 15) on Google Cloud
+> - **Access**: Cloud SQL Auth Proxy (UAT: 6543, Staging: 6544, Production: 6545)
+> - **ORM**: Sequelize v6 with camelCase model attributes
+> - **Key Tables**: `mymoolah_transactions`, `journal_entries`, `journal_lines`,
+>   `ledger_accounts`, `wallets`, `flash_transactions`, `vas_transactions`,
+>   `recon_runs`, `recon_transaction_matches`, `recon_audit_trail`
+> - **JSONB Usage**: `vas_transactions.metadata` (Flash API responses),
+>   `recon_runs.discrepancies`, `recon_audit_trail.event_data`
+
 ## When This Skill Activates
 
 - Writing Sequelize queries for financial data
 - Optimizing slow ledger or transaction queries
 - Designing database migrations (migrations/*.js)
-- Working with JSONB columns (discrepancies, ml_anomalies, event_data)
+- Working with JSONB columns (metadata, discrepancies, event_data)
 - Building reconciliation reports or settlement calculations
 - Indexing strategy for financial tables
 

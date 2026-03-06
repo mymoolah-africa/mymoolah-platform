@@ -1,6 +1,6 @@
 ---
 name: interaction-design
-description: Design and implement microinteractions, motion design, transitions, and user feedback patterns. Use when adding polish to UI interactions, implementing loading states, or creating delightful user experiences.
+description: Design and implement microinteractions, motion design, transitions, and user feedback patterns for MyMoolah's mobile wallet. Use when adding polish to overlay flows, implementing loading states, or creating financial operation feedback.
 ---
 
 # MyMoolah Interaction Design
@@ -9,12 +9,22 @@ Microinteractions, transitions, and feedback patterns for MyMoolah's mobile wall
 Focus on financial operation feedback (payments, deposits, transfers) and trust-building
 motion that feels fast and reliable on budget Android devices.
 
+> **Performance Context**: MyMoolah's primary users are on sub-$100 Android phones
+> in South Africa with inconsistent network quality. Animations must:
+> - Use only `transform` and `opacity` (GPU-accelerated, no repaints)
+> - Stay under 10 simultaneous animations per screen
+> - Respect `prefers-reduced-motion`
+> - Provide instant button feedback before the API responds
+>
+> The wallet uses `framer-motion` for complex animations and CSS transitions for
+> simple interactions. Prefer CSS transitions where possible for lower bundle impact.
+
 ## When This Skill Activates
 
-- Adding loading/success/error feedback to payment flows
+- Adding loading/success/error feedback to overlay purchase flows
 - Implementing transaction confirmation animations
 - Building pull-to-refresh for transaction lists
-- Creating smooth page transitions between wallet screens
+- Creating smooth transitions between overlay steps
 - Designing skeleton loading for financial data
 - Implementing swipe gestures for mobile navigation
 

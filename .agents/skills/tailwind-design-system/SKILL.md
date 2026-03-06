@@ -1,6 +1,6 @@
 ---
 name: tailwind-design-system
-description: Build scalable design systems with Tailwind CSS v4, design tokens, component libraries, and responsive patterns. Use when creating component libraries, implementing design systems, or standardizing UI patterns.
+description: Build scalable design systems with Tailwind CSS v4, design tokens, component libraries, and responsive patterns for MyMoolah's wallet and portal interfaces. Use when creating component libraries, implementing design systems, or standardizing UI patterns.
 ---
 
 # MyMoolah Tailwind Design System (v4)
@@ -9,16 +9,23 @@ Production design system for MyMoolah's digital wallet platform using Tailwind C
 with CSS-first configuration. Covers design tokens, component variants, dark mode,
 responsive patterns, and MyMoolah brand implementation.
 
+> **Architecture Notes**:
+> - The wallet frontend (`mymoolah-wallet-frontend/`) uses React + Vite + Tailwind.
+> - UI primitives are in `components/ui/` (Button, Card, Dialog, etc.) using CVA.
+> - Figma-managed pages in `pages/*.tsx` are **read-only** — adapt styling via
+>   the design token layer, not by editing page files directly.
+> - The admin portal (`portal/`) shares the same design system.
+>
 > **Note**: This skill targets Tailwind CSS v4. For v3 projects, refer to the
 > [upgrade guide](https://tailwindcss.com/docs/upgrade-guide).
 
 ## When This Skill Activates
 
-- Creating or modifying UI components
+- Creating or modifying UI components in `components/ui/`
 - Implementing MyMoolah brand colors and typography
 - Building responsive wallet/portal layouts
 - Setting up dark mode theming
-- Standardizing component patterns across the app
+- Standardizing component patterns across wallet and portal
 
 ---
 

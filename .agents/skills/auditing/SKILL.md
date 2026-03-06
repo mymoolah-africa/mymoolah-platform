@@ -27,6 +27,12 @@ ledger modification, reconciliation process, and audit trail in the MyMoolah pla
 - Settlement processing or net-position calculations
 - Any model or service touching monetary values
 
+> **MyMoolah Account Code Convention**: The codebase uses hierarchical codes like
+> `2100-01-01` (User Wallet ZAR), `1200-10-04` (Flash Float), `4100-10-01`
+> (Commission Revenue). The 5-digit Mojaloop-aligned codes below (10100, 20100)
+> are reference standards — the actual codes in `ledger_accounts` may differ.
+> Always query the `LedgerAccount` model for real codes before hardcoding.
+
 ---
 
 ## 1. Double-Entry Ledger Architecture

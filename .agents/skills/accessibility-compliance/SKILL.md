@@ -1,6 +1,6 @@
 ---
 name: accessibility-compliance
-description: Implement WCAG 2.2 compliant interfaces with mobile accessibility, inclusive design patterns, and assistive technology support. Use when auditing accessibility, implementing ARIA patterns, building for screen readers, or ensuring inclusive user experiences.
+description: Implement WCAG 2.2 compliant interfaces with mobile accessibility, inclusive design patterns, and assistive technology support for MyMoolah's South African user base. Use when auditing accessibility, implementing ARIA patterns, building for screen readers, or ensuring inclusive user experiences.
 ---
 
 # MyMoolah Accessibility Compliance
@@ -9,12 +9,21 @@ WCAG 2.2 Level AA compliance for MyMoolah's mobile-first digital wallet interfac
 Critical for serving South Africa's diverse user base including users with disabilities,
 low literacy, low vision, and those using budget Android devices with TalkBack.
 
+> **MyMoolah Context**: The primary target device is a sub-$100 Android phone on
+> 3G/4G in South Africa. Many users have low digital literacy. The wallet must work
+> with TalkBack (Android screen reader) for all critical flows: checking balance,
+> sending money, purchasing airtime, and viewing transaction history.
+>
+> **Constraint**: Figma-managed pages (`pages/*.tsx`) are read-only. Accessibility
+> improvements must be made in overlay components, shared UI components, and the
+> design system — not in Figma page files.
+
 ## When This Skill Activates
 
-- Building wallet UI components (mymoolah-wallet-frontend/)
-- Creating payment/transaction flows
+- Building wallet UI components (mymoolah-wallet-frontend/components/)
+- Creating payment/transaction overlay flows
 - Implementing forms (KYC, send money, beneficiary management)
-- Building modals (transaction confirmation, OTP dialogs)
+- Building modals (GlobalPinModal, TransactionDetailModal, OTP dialogs)
 - Designing loading/error states for financial operations
 - Mobile-first responsive components
 - Portal admin interfaces (portal/)
