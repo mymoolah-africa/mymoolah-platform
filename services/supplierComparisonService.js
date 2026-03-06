@@ -197,19 +197,18 @@ class SupplierComparisonService {
     }
 
     /**
-     * International PIN: Flash catalog stores face value in USD; we charge in ZAR.
-     * Converts USD cents → ZAR cents using rate (env USD_TO_ZAR_RATE or 21).
-     * @param {number} usdCents - Face value in USD cents
-     * @returns {number} Charge in ZAR cents
+     * International PIN (Flash): Catalog returns charge in ZAR RANDS (e.g. 21 for R21).
+     * We need cents for display/purchase. Multiply by 100 when value looks like rands (< 100000).
      */
-    _internationalPinUsdToZarCents(usdCents) {
-        if (usdCents == null || usdCents <= 0) return usdCents;
-        const rate = parseFloat(process.env.USD_TO_ZAR_RATE || '21', 10) || 21;
-        return Math.round(Number(usdCents) * rate);
+    _internationalPinToCents(val) {
+        if (val == null || val <= 0) return val;
+        const n = Number(val);
+        if (n >= 100000) return n; // already in cents
+        return Math.round(n * 100); // rands → cents
     }
 
     /**
-     * Apply international_pin USD→ZAR conversion to product list (for production best-offers path).
+     * Apply international_pin conversion to product list (for production best-offers path).
      */
     _applyInternationalPinConversion(products, vasType) {
         if (vasType !== 'international_pin' || !Array.isArray(products)) return products;
@@ -220,13 +219,13 @@ class SupplierComparisonService {
             if (!name.includes('global pin') && !name.includes('$')) return p;
             return {
                 ...p,
-                minAmount: this._internationalPinUsdToZarCents(p.minAmount),
-                maxAmount: this._internationalPinUsdToZarCents(p.maxAmount),
+                minAmount: this._internationalPinToCents(p.minAmount),
+                maxAmount: this._internationalPinToCents(p.maxAmount),
                 denominations: Array.isArray(p.denominations)
-                    ? p.denominations.map(d => this._internationalPinUsdToZarCents(d))
+                    ? p.denominations.map(d => this._internationalPinToCents(d))
                     : p.denominations,
                 predefinedAmounts: Array.isArray(p.predefinedAmounts)
-                    ? p.predefinedAmounts.map(d => this._internationalPinUsdToZarCents(d))
+                    ? p.predefinedAmounts.map(d => this._internationalPinToCents(d))
                     : p.predefinedAmounts
             };
         });
@@ -250,18 +249,17 @@ class SupplierComparisonService {
         let predefinedAmounts = pv.predefinedAmounts;
         let denominations = pv.denominations;
 
-        // International PIN (Global PIN): Flash stores face value in USD; we charge in ZAR.
-        // Convert minAmount/maxAmount/denominations from USD cents to ZAR cents for display and purchase.
+        // International PIN (Flash): Catalog has charge in ZAR rands (e.g. 21 for R21). Convert to cents.
         if (pv.vasType === 'international_pin' && (supplier?.code || pv.supplierCode || '').toUpperCase() === 'FLASH') {
             const productName = (product?.name || '').toLowerCase();
             if (productName.includes('global pin') || productName.includes('$')) {
-                minAmount = this._internationalPinUsdToZarCents(minAmount);
-                maxAmount = this._internationalPinUsdToZarCents(maxAmount);
+                minAmount = this._internationalPinToCents(minAmount);
+                maxAmount = this._internationalPinToCents(maxAmount);
                 if (Array.isArray(denominations) && denominations.length > 0) {
-                    denominations = denominations.map(d => this._internationalPinUsdToZarCents(d));
+                    denominations = denominations.map(d => this._internationalPinToCents(d));
                 }
                 if (Array.isArray(predefinedAmounts) && predefinedAmounts.length > 0) {
-                    predefinedAmounts = predefinedAmounts.map(d => this._internationalPinUsdToZarCents(d));
+                    predefinedAmounts = predefinedAmounts.map(d => this._internationalPinToCents(d));
                 }
             }
         }
