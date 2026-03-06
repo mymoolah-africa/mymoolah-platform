@@ -1915,11 +1915,14 @@ export function AirtimeDataOverlay() {
       />
 
       {/* Global PIN Modal — International Airtime, no beneficiary required */}
+      {/* Flash charges in ZAR (e.g. ~R21 per $1 face value); wallet debits ZAR */}
       {showGlobalPinModal && (
         <GlobalPinModal
           products={globalPinProducts}
           selectedAccountId={selectedAccountId}
           onClose={() => setShowGlobalPinModal(false)}
+          currency="ZAR"
+          confirmHint="You pay in Rands (ZAR). A PIN code will be generated instantly. Copy and use it to top-up any international number."
         />
       )}
 
