@@ -2,9 +2,9 @@
 
 **Last Updated**: March 4, 2026  
 **Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
-**Version**: 2.11.28 - eeziAirtime PIN Fixes & Staging/Production Migrations  
+**Version**: 2.11.31 - International Airtime Pinless Planning  
 
-For work in the last 7 days (Feb 27–Mar 4, 2026), see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md) (Recent Updates).
+For work in the last 7 days (Feb 27–Mar 4, 2026), see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md) (Recent Updates). **Upcoming**: International Airtime pinless flow — migrate from Global PIN to beneficiary modal; implementation tomorrow.
 
 ---
 

@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-06 12:48  
-**Latest Feature**: Staging eeziAirtime CORS fix — removed LB customResponseHeaders override  
-**Document Version**: 2.12.1  
-**Session logs**: `docs/session_logs/2026-03-06_1248_staging-cors-load-balancer-fix.md`, `docs/session_logs/2026-03-04_2300_banking-grade-hardening-tests-redis-idempotency.md`, `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`  
+**Last Updated**: 2026-03-04 23:55  
+**Latest Feature**: International Airtime pinless planning — add to beneficiary modal tomorrow  
+**Document Version**: 2.12.2  
+**Session logs**: `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`, `docs/session_logs/2026-03-06_1248_staging-cors-load-balancer-fix.md`, `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -148,7 +148,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – February 27–March 5, 2026)**
+### **Recent Updates (Last 7 Days – March 4–11, 2026)**
+- **Mar 4 (23:55)**: International Airtime pinless planning — Decision to migrate from PIN-based (Global PIN) to pinless flow; integrate into beneficiary modal. Implementation planned for tomorrow. Session log: `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`.
 - **Mar 5 (08:00)**: eeziAirtime "No PIN returned" diagnosis — Flash response debug logging, broader PIN extraction (transaction/data/result/voucherDetails), backend returns data.pin, troubleshooting doc (float balance, API docs).
 - **Mar 4 (22:30)**: eeziAirtime PIN fixes (apiService SMS fallback, Copy PIN in Transaction Detail modal); migration fix (beneficiary22: beneficiary_service_accounts.serviceData); Staging + Production migrations applied in Codespaces.
 - **Mar 4 (11:17)**: Cursor skills consolidated — all 8 skills in `.agents/skills/` (single parent). Moved frontend-design from .cursor/skills/. Best practice structure.
@@ -670,6 +671,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 4 (23:55) | International Airtime pinless planning — migrate from Global PIN to pinless; integrate into beneficiary modal; implementation tomorrow |
 | Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email; Flash/MobileMart/Zapper Google Drive docs |
 | Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration; clean-slate catalog test Staging + Production |
 | Feb 25 | Variable-first product catalog filter — `priceType` schema, classify/deactivate fixed duplicates, API returns variable fields, full deploy Staging + Production |
@@ -691,12 +693,13 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **EasyPay Cash-In activation** — Await Razine response with: (a) EasyPay UAT system configured with `https://staging.mymoolah.africa/billpayment/v1`, (b) UAT + Production IP addresses for whitelisting, (c) production credentials, (d) SFTP details for SOF reconciliation. Then: set `EASYPAY_RECEIVER_ID=5063` explicitly in Secret Manager, generate SessionToken, share with Razine.
-2. **PayShap UAT testing (2 March)** — André to push to GitHub and deploy to Staging. Test RPP/RTP callbacks with Gustaf on 2 March. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
-3. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths. Then begin live transaction tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities. Endpoint paths confirmed from official v4 PDF.
-4. **Fix `.env.codespaces` MobileMart URL** — `MOBILEMART_API_URL` is currently `https://uat.fulcrumswitch.com` (UAT). Should be `https://fulcrumswitch.com` (Production) for clean-slate tests run from Codespaces.
-5. **Investigate 3 failed MobileMart bill-payment products** — Rest Assured Plan, Matjhabeng Municipality, PayJoy SA failed validation. Minor — investigate separately.
-6. **USDC send** — Test in Codespaces when VALR credentials available.
+1. **International Airtime — Pinless Flow** (Planned for tomorrow) — Migrate International Airtime from PIN-based (Global PIN / gift-voucher) to pinless flow. Flow: create beneficiary with international number (e.g. +263...) → select beneficiary → call pinless international endpoint → recipient topped up directly. Integrate into beneficiary modal (same pattern as domestic airtime). Backend: Flash `cellular/international/lookup` + purchase. Extend BeneficiaryModal for E.164 international numbers. Session log: `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`.
+2. **EasyPay Cash-In activation** — Await Razine response with: (a) EasyPay UAT system configured with `https://staging.mymoolah.africa/billpayment/v1`, (b) UAT + Production IP addresses for whitelisting, (c) production credentials, (d) SFTP details for SOF reconciliation. Then: set `EASYPAY_RECEIVER_ID=5063` explicitly in Secret Manager, generate SessionToken, share with Razine.
+3. **PayShap UAT testing (2 March)** — André to push to GitHub and deploy to Staging. Test RPP/RTP callbacks with Gustaf on 2 March. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
+4. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths. Then begin live transaction tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities. Endpoint paths confirmed from official v4 PDF.
+5. **Fix `.env.codespaces` MobileMart URL** — `MOBILEMART_API_URL` is currently `https://uat.fulcrumswitch.com` (UAT). Should be `https://fulcrumswitch.com` (Production) for clean-slate tests run from Codespaces.
+6. **Investigate 3 failed MobileMart bill-payment products** — Rest Assured Plan, Matjhabeng Municipality, PayJoy SA failed validation. Minor — investigate separately.
+7. **USDC send** — Test in Codespaces when VALR credentials available.
 
 ---
 

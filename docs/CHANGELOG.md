@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-04 - 📱 International Airtime Pinless Planning ✅
+
+### **Session Overview**
+Planning session to migrate International Airtime from PIN-based (Global PIN / gift-voucher) to **pinless** flow. Decision confirmed: add International Airtime to pinless flows tomorrow. Flow: create beneficiary with international number (e.g. +263...) → select beneficiary → call pinless international endpoint → recipient topped up directly. Integrate into beneficiary modal (same pattern as domestic airtime). No code changes — documentation updates only.
+
+### **Changes**
+- **`docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`**: NEW — Session log with technical considerations, Flash API notes, beneficiary/validation requirements
+- **`docs/agent_handover.md`**: International Airtime pinless added as #1 Next Development Priority; Recent Updates
+- **`docs/changelog.md`**: This entry
+- **`docs/readme.md`**: Upcoming International Airtime pinless in work in progress
+- **`docs/PROJECT_STATUS.md`**: Upcoming work
+- **`docs/DEVELOPMENT_GUIDE.md`**: Last Updated
+
+### **Session Log**
+- `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`
+
+---
+
 ## 2026-03-05 - 💳 eeziAirtime Redemption UI & eeziPay AI Knowledge Base ✅
 
 ### **Session Overview**

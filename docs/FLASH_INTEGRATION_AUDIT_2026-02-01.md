@@ -33,7 +33,8 @@ Flash integration is **substantially complete** with comprehensive API coverage 
 | `purchaseGiftVoucher()` | `/gift-vouchers/purchase` | Gift Vouchers | ✅ Implemented |
 | `purchaseCashOutPin()` | `/cash-out-pin/purchase` | Cash Out | ✅ Implemented |
 | `cancelCashOutPin()` | `/cash-out-pin/cancel` | Cash Out | ✅ Implemented |
-| `purchaseCellularRecharge()` | `/cellular/pinless/purchase` | Airtime/Data | ✅ Implemented |
+| `purchaseCellularRecharge()` | `/cellular/pinless/purchase` | Airtime/Data (SA) | ✅ Implemented |
+| *(planned)* | `cellular/international/lookup` + purchase | International Airtime (pinless) | 🔜 Mar 2026 |
 | `purchaseEeziVoucher()` | `/eezi-voucher/purchase` | Eezi Vouchers | ✅ Implemented |
 | `lookupMeter()` | `/prepaid-utilities/lookup` | Electricity | ✅ Implemented |
 | `purchasePrepaidUtility()` | `/prepaid-utilities/purchase` | Electricity | ✅ Implemented |

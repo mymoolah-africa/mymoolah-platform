@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: March 5, 2026  
-**Version**: 2.11.30 - eeziAirtime Redemption UI & eeziPay AI Knowledge Base  
-**Status**: ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: March 4, 2026  
+**Version**: 2.11.31 - International Airtime Pinless Planning  
+**Status**: ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (PLANNED)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 

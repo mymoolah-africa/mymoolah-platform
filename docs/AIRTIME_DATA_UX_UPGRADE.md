@@ -1,5 +1,9 @@
 # Airtime & Data UX Upgrade - Beneficiary-First Design
 
+**Last Updated**: March 4, 2026 — International Airtime pinless planning: same beneficiary-first flow will extend to international numbers (E.164, e.g. +263...). Implementation planned for tomorrow. See `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`.
+
+---
+
 ## Design Philosophy
 
 **User-Centric Flow:** The user comes to buy airtime/data for SOMEONE. That someone (the beneficiary) must be selected FIRST, not the product.

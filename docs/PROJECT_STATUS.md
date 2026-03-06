@@ -1,16 +1,19 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: March 5, 2026  
-**Version**: 2.11.30 - eeziAirtime Redemption UI & eeziPay AI Knowledge Base  
+**Last Updated**: March 4, 2026  
+**Version**: 2.11.31 - International Airtime Pinless Planning  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **SBSA PAYSHAP CALLBACKS** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. All 80+ migrations applied to Production. eeziAirtime redemption UI (Mar 5): clear instructions, 3×4 PIN format, copy full USSD; eeziPay How To entries added to AI support knowledge base. Documentation consolidation (Feb 21): archived ~75 docs to `docs/archive/`. MMTP Partner API doc; sandbox = staging.mymoolah.africa. SBSA PayShap UAT ready. Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC, EasyPay Top-up, 11-language support deployed.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. International Airtime pinless planning (Mar 4): migrate from Global PIN to pinless flow; integrate into beneficiary modal; implementation planned for tomorrow. eeziAirtime redemption UI (Mar 5): clear instructions, 3×4 PIN format, copy full USSD; eeziPay How To entries in AI support knowledge base. Documentation consolidation (Feb 21): archived ~75 docs to `docs/archive/`. MMTP Partner API doc; sandbox = staging.mymoolah.africa. SBSA PayShap UAT ready. Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC, EasyPay Top-up, 11-language support deployed.
 
-### **📋 Latest Achievement: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)** ✅ **COMPLETE**
+### **📋 Latest: International Airtime Pinless Planning (March 4, 2026)** 🔜 **PLANNED FOR TOMORROW**
+Decision to migrate International Airtime from PIN-based (Global PIN) to pinless flow. Flow: create beneficiary with international number → select → pinless purchase → recipient topped up directly. Integrate into beneficiary modal. Session log: `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`.
+
+### **📋 Previous: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)** ✅ **COMPLETE**
 eeziAirtime modal and Transaction Detail: redemption instruction, 3×4 PIN format, copy full USSD. eeziPay 5 How To entries in AI KB (`add-eezipay-redemption-knowledge-to-ai.js`); Q5.5–Q5.7 in seed. Session log: `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`.
 
 ### **📋 Previous: eeziAirtime PIN Fixes & Staging/Production Migrations (March 4, 2026)** ✅ **COMPLETE**

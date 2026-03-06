@@ -1,14 +1,26 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 5, 2026  
-**Version**: 2.11.30 - eeziAirtime Redemption UI & eeziPay AI Knowledge Base  
+**Last Updated**: March 4, 2026  
+**Version**: 2.11.31 - International Airtime Pinless Planning  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 28–Mar 5, 2026)**: eeziAirtime redemption UI — clear instructions, 3×4 PIN format, copy full USSD; eeziPay How To entries added to AI support knowledge base. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 28–Mar 4, 2026)**: International Airtime pinless planning — migrate from Global PIN to pinless flow, integrate into beneficiary modal (implementation tomorrow). eeziAirtime redemption UI; eeziPay How To entries in AI KB. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)**
+## 🚀 **LATEST UPDATE: International Airtime Pinless Planning (March 4, 2026)**
+
+### **📱 International Airtime — Pinless Flow (Planned for Tomorrow)**
+- **Decision**: Migrate International Airtime from PIN-based (Global PIN) to pinless flow
+- **Flow**: Create beneficiary with international number (e.g. +263...) → select → pinless purchase → recipient topped up directly
+- **Integration**: Same pattern as domestic airtime — inside beneficiary modal
+- **Backend**: Flash `cellular/international/lookup` + purchase; extend validation for E.164 international numbers
+
+**Session log**: `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`
+
+---
+
+## 🚀 **PREVIOUS: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)**
 
 ### **💳 eeziAirtime Redemption & eeziPay AI Support**
 - **eeziAirtime modal**: Redemption instruction "Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle."; PIN as 3×4 digits; Copy copies full USSD string
