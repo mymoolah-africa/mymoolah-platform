@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-04 23:00  
-**Latest Feature**: Banking-grade hardening — test suites, Redis idempotency, frontend keys, OCR optimization  
-**Document Version**: 2.12.0  
-**Session logs**: `docs/session_logs/2026-03-04_2300_banking-grade-hardening-tests-redis-idempotency.md`, `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`  
+**Last Updated**: 2026-03-06 12:48  
+**Latest Feature**: Staging eeziAirtime CORS fix — removed LB customResponseHeaders override  
+**Document Version**: 2.12.1  
+**Session logs**: `docs/session_logs/2026-03-06_1248_staging-cors-load-balancer-fix.md`, `docs/session_logs/2026-03-04_2300_banking-grade-hardening-tests-redis-idempotency.md`, `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -635,15 +635,19 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — eeziAirtime PIN fixes, migration corrections, Staging/Production migrations  
-**Last Session**: 2026-03-04 — eeziAirtime PIN UI, beneficiary22 migration fix, migrations applied
+**Session Status**: ✅ **COMPLETE** — Staging eeziAirtime CORS fix (LB customResponseHeaders removed)  
+**Last Session**: 2026-03-06 — Staging LB override fixed; eeziAirtime purchase confirmed working
 
-### **Most Recent Work (2026-03-04)**
+### **Most Recent Work (2026-03-06)**
+- **Staging CORS fix**: Removed `customResponseHeaders` from `be-staging-backend` — LB was overriding Express CORS and blocking `X-Idempotency-Key`. No code changes. eeziAirtime purchase verified working.
+- **Important**: Staging LB must remain without CORS customResponseHeaders; Express handles CORS in `config/security.js`.
+
+### **Previous Work (2026-03-04)**
 - **eeziAirtime PIN**: apiService fallback "No PIN returned", pinNumber extraction, Copy PIN in Transaction Detail modal
 - **Migration fix**: 20260304_fix_beneficiary22 — beneficiary_service_accounts.serviceData (not service_accounts.metadata)
 - **Migrations**: Staging and Production applied successfully in Codespaces
 
-### **Previous Work (2026-02-21)**
+### **Earlier Work (2026-02-21)**
 - **PayShap callbacks**: Parameterised callback routes for RPP/RTP (batch + realtime) added to `standardbankController.js` and `routes/standardbank.js`. GET polling routes added. New `services/standardbankPollingService.js` with stale transaction recovery.
 - **EasyPay Cash-In**: Full codebase sweep. Confirmed Receiver ID `5063` (already in code), 14-digit number format, Receiver architecture. Drafted activation email to Razine (UAT + Production).
 - **Google Drive docs**: Flash, MobileMart, Zapper partner Drive folders documented in `AGENT_HANDOVER.md` and dedicated reference files created in `integrations/`.
