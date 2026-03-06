@@ -391,20 +391,27 @@ class KYCService {
     }
   }
 
-  // Tesseract OCR fallback method
   async runTesseractOCR(localFilePath) {
     try {
       console.log('🔄 Running Tesseract OCR fallback...');
-      
-      const { data: { text } } = await Tesseract.recognize(localFilePath, 'eng', {
+
+      // Pre-process with sharp: downscale, grayscale, and normalize contrast
+      // to reduce memory usage and improve OCR accuracy on large ID photos
+      const optimizedBuffer = await sharp(localFilePath)
+        .resize({ width: 1500, withoutEnlargement: true })
+        .grayscale()
+        .normalize()
+        .toBuffer();
+
+      const { data: { text } } = await Tesseract.recognize(optimizedBuffer, 'eng', {
         logger: m => {
           if (m.status === 'recognizing text') {
             // Suppress verbose logging
           }
         }
       });
-      
-      console.log('✅ Tesseract OCR completed');
+
+      console.log('✅ Tesseract OCR completed (sharp-optimized)');
       return text;
     } catch (error) {
       console.error('❌ Tesseract OCR error:', error.message);

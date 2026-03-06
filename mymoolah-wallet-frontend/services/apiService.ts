@@ -9,6 +9,16 @@ import { getToken } from '../utils/authToken';
 // API Base URL
 const API_BASE = APP_CONFIG.API.baseUrl;
 
+function generateIdempotencyKey(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 // Types
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -277,6 +287,7 @@ class ApiService {
   ): Promise<TransferResult> {
     const response = await this.request<TransferResult>('/api/v1/send-money/transfer', {
       method: 'POST',
+      headers: { 'X-Idempotency-Key': generateIdempotencyKey() },
       body: JSON.stringify({ paymentMethodId, amount, recipient, reference }),
     });
     return response.data!
@@ -380,6 +391,7 @@ class ApiService {
   async initiateQRPayment(qrCode: string, amount: number, walletId: string, reference?: string, tipAmount?: number): Promise<QRPaymentResult> {
     const response = await this.request<{ success: boolean; data: QRPaymentResult }>('/api/v1/qr/payment/initiate', {
       method: 'POST',
+      headers: { 'X-Idempotency-Key': generateIdempotencyKey() },
       body: JSON.stringify({ qrCode, amount, walletId, reference, tipAmount }),
     });
     return response.data?.data || (response.data as unknown as QRPaymentResult);
@@ -388,6 +400,7 @@ class ApiService {
   async confirmQRPayment(paymentId: string, otp?: string): Promise<any> {
     const response = await this.request('/api/v1/qr/payment/confirm', {
       method: 'POST',
+      headers: { 'X-Idempotency-Key': generateIdempotencyKey() },
       body: JSON.stringify({ paymentId, otp }),
     });
     return response.data;
@@ -422,6 +435,7 @@ class ApiService {
     const normalized = this.normalizeSAMobileNumber(receiverPhoneNumber);
     const response = await this.request('/api/v1/wallets/send', {
       method: 'POST',
+      headers: { 'X-Idempotency-Key': generateIdempotencyKey() },
       body: JSON.stringify({ receiverPhoneNumber: normalized, amount, description }),
     });
     return response.data;
@@ -481,6 +495,7 @@ class ApiService {
   async purchaseAirtimeVoucher(networkId: string, amount: number, recipientPhone?: string): Promise<AirtimePurchaseResult> {
     const response = await this.request<AirtimePurchaseResult>('/api/v1/airtime/purchase/voucher', {
       method: 'POST',
+      headers: { 'X-Idempotency-Key': generateIdempotencyKey() },
       body: JSON.stringify({ networkId, amount, recipientPhone }),
     });
     return response.data!
@@ -489,6 +504,7 @@ class ApiService {
   async purchaseAirtimeTopUp(networkId: string, amount: number, recipientPhone: string): Promise<AirtimePurchaseResult> {
     const response = await this.request<AirtimePurchaseResult>('/api/v1/airtime/purchase/topup', {
       method: 'POST',
+      headers: { 'X-Idempotency-Key': generateIdempotencyKey() },
       body: JSON.stringify({ networkId, amount, recipientPhone }),
     });
     return response.data!
@@ -497,6 +513,7 @@ class ApiService {
   async purchaseEeziAirtime(amount: number, recipientPhone: string): Promise<AirtimePurchaseResult> {
     const response = await this.request<AirtimePurchaseResult>('/api/v1/airtime/purchase/eezi', {
       method: 'POST',
+      headers: { 'X-Idempotency-Key': generateIdempotencyKey() },
       body: JSON.stringify({ amount, recipientPhone }),
     });
     return response.data!
@@ -509,6 +526,7 @@ class ApiService {
   async purchaseEeziToken(amountCents: number, idempotencyKey: string): Promise<{ pin: string; ref: string }> {
     const response = await this.request<any>('/api/v1/flash/eezi-voucher/purchase', {
       method: 'POST',
+      headers: { 'X-Idempotency-Key': idempotencyKey },
       body: JSON.stringify({ reference: idempotencyKey, amount: amountCents }),
     });
     const data = (response as any)?.data?.data ?? (response as any)?.data ?? response;
@@ -951,6 +969,7 @@ class ApiService {
   }> {
     const response = await this.request<any>('/api/v1/products/purchase', {
       method: 'POST',
+      headers: { 'X-Idempotency-Key': (purchaseData as any).idempotencyKey || generateIdempotencyKey() },
       body: JSON.stringify(purchaseData),
     });
     // Some endpoints wrap payload under `data`; unwrap if present

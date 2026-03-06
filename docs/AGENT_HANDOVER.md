@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-05 14:00  
-**Latest Feature**: eeziAirtime redemption UI + eeziPay AI knowledge base  
-**Document Version**: 2.11.30  
-**Session logs**: `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`, `docs/session_logs/2026-03-05_0800_eeziairtime-no-pin-flash-diagnosis.md`  
+**Last Updated**: 2026-03-04 23:00  
+**Latest Feature**: Banking-grade hardening — test suites, Redis idempotency, frontend keys, OCR optimization  
+**Document Version**: 2.12.0  
+**Session logs**: `docs/session_logs/2026-03-04_2300_banking-grade-hardening-tests-redis-idempotency.md`, `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---

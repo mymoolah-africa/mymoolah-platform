@@ -1,14 +1,95 @@
 /**
  * Idempotency Middleware
- * Prevents duplicate processing of requests using X-Idempotency-Key header
+ * Prevents duplicate processing of requests using X-Idempotency-Key header.
+ * Uses Redis as a fast L1 cache (sub-ms) with PostgreSQL as durable L2 fallback.
  * 
  * @author MyMoolah Development Team
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 const crypto = require('crypto');
 const { IdempotencyKey } = require('../models');
 const { sendErrorResponse, ERROR_CODES } = require('../utils/errorHandler');
+
+let redisClient = null;
+let redisReady = false;
+
+function initRedisForIdempotency() {
+  if (redisClient) return;
+
+  const hasRedis = (process.env.REDIS_URL || process.env.REDIS_HOST) &&
+    process.env.REDIS_ENABLED !== 'false';
+
+  if (!hasRedis) return;
+
+  try {
+    const redis = require('redis');
+    const config = process.env.REDIS_URL
+      ? { url: process.env.REDIS_URL }
+      : {
+          socket: {
+            host: process.env.REDIS_HOST,
+            port: parseInt(process.env.REDIS_PORT || '6379', 10),
+            connectTimeout: 3000,
+            reconnectStrategy: (retries) => retries > 3 ? false : Math.min(retries * 200, 2000),
+          },
+          password: process.env.REDIS_PASSWORD || undefined,
+          database: parseInt(process.env.REDIS_DB || '0', 10),
+        };
+
+    redisClient = redis.createClient(config);
+    redisClient.on('connect', () => { redisReady = true; });
+    redisClient.on('error', () => { redisReady = false; });
+    redisClient.on('end', () => { redisReady = false; });
+    redisClient.connect().catch(() => { redisReady = false; redisClient = null; });
+  } catch {
+    redisClient = null;
+    redisReady = false;
+  }
+}
+
+const REDIS_IDEMPOTENCY_TTL = 86400; // 24 hours in seconds
+const REDIS_KEY_PREFIX = 'idempotency:';
+
+async function redisGet(key) {
+  if (!redisReady || !redisClient) return null;
+  try {
+    return await redisClient.get(`${REDIS_KEY_PREFIX}${key}`);
+  } catch {
+    return null;
+  }
+}
+
+async function redisSetProcessing(key) {
+  if (!redisReady || !redisClient) return false;
+  try {
+    const result = await redisClient.set(
+      `${REDIS_KEY_PREFIX}${key}`, 'processing', { NX: true, EX: REDIS_IDEMPOTENCY_TTL }
+    );
+    return result === 'OK';
+  } catch {
+    return false;
+  }
+}
+
+async function redisStoreResponse(key, responseData) {
+  if (!redisReady || !redisClient) return;
+  try {
+    await redisClient.set(
+      `${REDIS_KEY_PREFIX}${key}`, JSON.stringify(responseData), { EX: REDIS_IDEMPOTENCY_TTL }
+    );
+  } catch { /* Redis failure is non-fatal */ }
+}
+
+async function redisDelete(key) {
+  if (!redisReady || !redisClient) return;
+  try {
+    await redisClient.del(`${REDIS_KEY_PREFIX}${key}`);
+  } catch { /* Redis failure is non-fatal */ }
+}
+
+// Eagerly attempt Redis connection on module load
+initRedisForIdempotency();
 
 /**
  * Calculate SHA-256 hash of request body
@@ -49,71 +130,102 @@ async function cleanupExpiredKeys(sequelize) {
  * @param {function} next - Express next function
  */
 async function idempotencyMiddleware(req, res, next) {
-  // Only apply to POST/PUT/PATCH requests
   if (!['POST', 'PUT', 'PATCH'].includes(req.method)) {
     return next();
   }
 
-  // Get idempotency key from header
   const idempotencyKey = req.headers['x-idempotency-key'] || req.headers['X-Idempotency-Key'];
-  
-  // If no key provided, continue (idempotency is optional but recommended)
+
   if (!idempotencyKey) {
     return next();
   }
 
-  // Validate key format (should be non-empty string, max 255 chars)
   if (typeof idempotencyKey !== 'string' || idempotencyKey.length === 0 || idempotencyKey.length > 255) {
-    return sendErrorResponse(res, ERROR_CODES.INVALID_FORMAT, 
-      'X-Idempotency-Key must be a non-empty string (max 255 characters)', 
+    return sendErrorResponse(res, ERROR_CODES.INVALID_FORMAT,
+      'X-Idempotency-Key must be a non-empty string (max 255 characters)',
       req.requestId);
   }
 
   try {
-    // Calculate request hash
     const requestHash = hashRequestBody(req.body);
     const endpoint = req.path;
 
-    // Check if key exists
+    // --- L1: Redis fast-path (sub-ms) ---
+    const redisCached = await redisGet(idempotencyKey);
+    if (redisCached) {
+      if (redisCached === 'processing') {
+        return res.status(409).json({
+          success: false,
+          error: 'CONCURRENT_REQUEST',
+          message: 'This request is currently being processed. Please wait.',
+        });
+      }
+      try {
+        const cached = JSON.parse(redisCached);
+        if (cached.requestHash === requestHash && cached.endpoint === endpoint) {
+          console.log(`✅ Idempotency [Redis]: Returning cached response for key: ${idempotencyKey.substring(0, 20)}...`);
+          return res.status(cached.responseStatus).json(cached.responseBody);
+        } else {
+          console.log(`⚠️ Idempotency conflict [Redis]: Key ${idempotencyKey.substring(0, 20)}... used with different request`);
+          return sendErrorResponse(res, ERROR_CODES.DUPLICATE_REQUEST,
+            'Idempotency key already used with a different request. Use a unique key for each request.',
+            req.requestId);
+        }
+      } catch { /* If Redis data is corrupt, fall through to PostgreSQL */ }
+    }
+
+    // --- L2: PostgreSQL durable check ---
     const existingKey = await IdempotencyKey.findOne({
       where: { idempotencyKey: idempotencyKey }
     });
 
     if (existingKey) {
-      // Key exists - check if request is identical
       if (existingKey.requestHash === requestHash && existingKey.endpoint === endpoint) {
-        // Identical request - return cached response
-        console.log(`✅ Idempotency: Returning cached response for key: ${idempotencyKey.substring(0, 20)}...`);
+        console.log(`✅ Idempotency [PG]: Returning cached response for key: ${idempotencyKey.substring(0, 20)}...`);
+        // Backfill Redis so the next duplicate is instant
+        redisStoreResponse(idempotencyKey, {
+          requestHash, endpoint,
+          responseStatus: existingKey.responseStatus,
+          responseBody: existingKey.responseBody,
+        }).catch(() => {});
         return res.status(existingKey.responseStatus).json(existingKey.responseBody);
       } else {
-        // Different request with same key - conflict
-        console.log(`⚠️ Idempotency conflict: Key ${idempotencyKey.substring(0, 20)}... used with different request`);
-        return sendErrorResponse(res, ERROR_CODES.DUPLICATE_REQUEST, 
-          'Idempotency key already used with a different request. Use a unique key for each request.', 
+        console.log(`⚠️ Idempotency conflict [PG]: Key ${idempotencyKey.substring(0, 20)}... used with different request`);
+        return sendErrorResponse(res, ERROR_CODES.DUPLICATE_REQUEST,
+          'Idempotency key already used with a different request. Use a unique key for each request.',
           req.requestId);
       }
     }
 
-    // Key doesn't exist - store it for later (after response)
-    // We'll store the response in a response interceptor
+    // --- New request: mark as "processing" in Redis ---
+    await redisSetProcessing(idempotencyKey);
+
     req.idempotencyKey = idempotencyKey;
     req.idempotencyRequestHash = requestHash;
     req.idempotencyEndpoint = endpoint;
 
-    // Intercept response to store it
     const originalJson = res.json.bind(res);
     res.json = function(data) {
-      // Store idempotency key and response (async, don't block response)
+      // Store in both PostgreSQL and Redis (async, non-blocking)
       storeIdempotencyResponse(idempotencyKey, endpoint, requestHash, res.statusCode, data)
         .catch(err => console.error('❌ Error storing idempotency response:', err));
-      
+
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        redisStoreResponse(idempotencyKey, {
+          requestHash, endpoint,
+          responseStatus: res.statusCode,
+          responseBody: data,
+        }).catch(() => {});
+      } else {
+        redisDelete(idempotencyKey).catch(() => {});
+      }
+
       return originalJson(data);
     };
 
     next();
   } catch (error) {
     console.error('❌ Idempotency middleware error:', error);
-    // Don't block request on idempotency errors - continue processing
     next();
   }
 }
