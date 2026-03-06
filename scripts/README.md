@@ -1,256 +1,111 @@
 # MyMoolah Scripts Directory
 
-This directory contains utility scripts for managing and maintaining the MyMoolah platform.
-
-## Available Scripts
-
-### User Lookup Scripts
-
-#### `lookup-user.js` ⭐ **RECOMMENDED**
-
-**Purpose**: Comprehensive user lookup by phone number, name, or user ID.
-
-**Usage**:
-```bash
-node scripts/lookup-user.js` <phone|name|userId>
-```
-
-**Examples**:
-```bash
-node scripts/lookup-user.js 0686772469
-node scripts/lookup-user.js "Denise Botes"
-node scripts/lookup-user.js 8
-```
-
-**Status**: ✅ **ACTIVE** - Main user lookup script
+Scripts for managing and maintaining the MyMoolah Treasury Platform.
+**160 scripts** after March 2026 cleanup (84 redundant/one-off scripts removed).
 
 ---
 
-### KYC Status Scripts
+## Core Scripts (Use These)
 
-#### `check-kyc-status.js` ⭐ **RECOMMENDED**
+### Deployment
+| Script | Purpose |
+|--------|---------|
+| `deploy-backend.sh --staging\|--production` | Build + push + deploy backend |
+| `deploy-wallet.sh --staging\|--production` | Build + push + deploy wallet frontend |
+| `build-push-deploy-staging.sh` | Legacy staging backend deploy (still works) |
+| `build-push-deploy-production.sh` | Legacy production backend deploy (still works) |
 
-**Purpose**: Comprehensive KYC status check showing user KYC status, wallet verification, and KYC records.
+### Database Migrations
+| Script | Purpose |
+|--------|---------|
+| `run-migrations-master.sh uat\|staging\|production` | Run migrations (auto-starts proxy) |
+| `run-migration.js` | Low-level Sequelize migration runner |
+| `db-connection-helper.js` | Shared DB connection helper (UAT/Staging/Production) |
 
-**Usage**:
-```bash
-node scripts/check-kyc-status.js <identifier>
-```
+### Codespaces Startup
+| Script | Purpose |
+|--------|---------|
+| `one-click-restart-and-start.sh` | Main Codespaces startup |
+| `start-codespace-with-proxy.sh` | Full startup (proxy + Redis + backend) |
+| `start-dual-proxies.sh` | Start UAT + Staging proxies |
+| `ensure-proxies-running.sh` | Verify proxies are running |
+| `start-cs-ip.js` | Start backend with Codespaces IP |
 
-**Examples**:
-```bash
-node scripts/check-kyc-status.js 0686772469
-node scripts/check-kyc-status.js "Denise Botes"
-node scripts/check-kyc-status.js 8
-```
+### User Management
+| Script | Purpose |
+|--------|---------|
+| `lookup-user.js <phone\|name\|userId>` | User lookup |
+| `change-user-password.js <id> <password>` | Change password |
+| `verify-password.js <id> <password>` | Verify password |
+| `check-kyc-status.js <id>` | KYC status check |
+| `reset-kyc-via-api.sh` | Reset KYC via API |
 
-**Status**: ✅ **ACTIVE** - Main KYC status check script
+### Catalog Sync
+| Script | Purpose |
+|--------|---------|
+| `sync-flash-catalog.js` | Flash product catalog sync |
+| `sync-mobilemart-to-product-variants.js` | MobileMart → product variants |
+| `sync-mobilemart-uat-catalog.js` | MobileMart UAT catalog |
+| `sync-mobilemart-production-to-staging.js` | MobileMart prod → staging |
 
----
+### Seed Scripts
+| Script | Purpose |
+|--------|---------|
+| `seed-easypay-data.js` | EasyPay test data |
+| `seed-flash-data.js` | Flash supplier data |
+| `seed-mobilemart-data.js` | MobileMart supplier data |
+| `seed-dtmercury-data.js` | dtMercury supplier data |
+| `seed-complete-float-system.js` | Float accounts |
+| `seed-settlement-system.js` | Settlement system |
+| `seed-support-knowledge-base.js` | AI support KB |
+| `seed-watch-to-earn.js` | Watch to Earn ads |
+| `seed-test-referrals.js` | Test referral data |
+| `seed-product-variants.js` | Product variants |
+| `seed-staging-beneficiaries.js` | Staging beneficiaries |
+| `seed-uat-biller-beneficiaries.js` | UAT biller beneficiaries |
 
-### Password Management Scripts
+### Integration Tests (Active)
+| Script | Purpose |
+|--------|---------|
+| `test-easypay-5-scenarios.sh` | EasyPay 5-scenario test (11 tests) |
+| `test-easypay-api.sh` | EasyPay API test |
+| `test-mobilemart-uat-complete.js` | MobileMart UAT suite |
+| `test-mobilemart-uat-credentials.js` | MobileMart credentials |
+| `test-flash-auth.js` | Flash auth test |
+| `test-zapper-uat-complete.js` | Zapper UAT suite |
+| `test-zapper-credentials.js` | Zapper credentials |
+| `test-valr-integration.js` | VALR integration |
+| `api-smoke-test.js` | API health check |
 
-#### `change-user-password.js`
-
-**Purpose**: Change user password by phone number, name, or user ID.
-
-**Usage**:
-```bash
-node scripts/change-user-password.js <identifier> <newPassword>
-```
-
-**Examples**:
-```bash
-node scripts/change-user-password.js 0686772469 "NewPassword123!"
-node scripts/change-user-password.js "Denise Botes" "NewPassword123!"
-node scripts/change-user-password.js 8 "NewPassword123!"
-```
-
-**Status**: ✅ **ACTIVE**
-
----
-
-#### `verify-password.js`
-
-**Purpose**: Verify if a password matches the stored hash.
-
-**Usage**:
-```bash
-node scripts/verify-password.js <identifier> <password>
-```
-
-**Status**: ✅ **ACTIVE**
-
----
-
-### KYC Reset Scripts
-
-#### `reset-kyc-via-api.sh` ⭐ **RECOMMENDED**
-
-**Purpose**: Reset KYC status for a user via API endpoint (uses existing backend database connection).
-
-**Usage**:
-```bash
-# Reset KYC for user ID 1 (default)
-./scripts/reset-kyc-via-api.sh
-
-# Or use curl directly
-curl -X POST http://localhost:3001/api/v1/kyc/reset/1 \
-  -H "x-admin-key: $ADMIN_API_KEY" \
-  -H "Content-Type: application/json"
-```
-
-**What it does**:
-- Deletes all KYC records for the specified user
-- Resets wallet KYC verification to `false`
-- Resets user KYC status to `not_started`
-
-**Requirements**:
-- Backend server must be running
-- `ADMIN_API_KEY` environment variable set (or any value if not set)
-
-**Example Output**:
-```json
-{"success":true,"message":"KYC reset completed","data":{"userId":1,"deleted":0}}
-```
-
-**Status**: ✅ **ACTIVE** - Recommended method for resetting KYC in Codespaces
-
----
-
-### Start Scripts
-
-#### `one-click-restart-and-start.sh` ⭐ **RECOMMENDED**
-
-**Purpose**: One-command script to restart proxy and backend in Codespaces.
-
-**Usage**:
-```bash
-./scripts/one-click-restart-and-start.sh
-```
-
-**What it does**:
-- Stops existing proxy and backend processes
-- Starts Cloud SQL Auth Proxy
-- Starts Redis (Docker or local)
-- Starts backend server
-
-**Status**: ✅ **ACTIVE** - Main entry point for Codespaces
-
----
-
-#### `start-codespace-with-proxy.sh`
-
-**Purpose**: Comprehensive startup script with proxy, Redis, and backend.
-
-**Usage**:
-```bash
-./scripts/start-codespace-with-proxy.sh
-```
-
-**Status**: ✅ **ACTIVE** - Used by one-click-restart-and-start.sh
-
----
-
-### MobileMart Test Scripts
-
-#### `test-mobilemart-uat-complete.js` ⭐ **RECOMMENDED**
-
-**Purpose**: Comprehensive MobileMart UAT testing script.
-
-**Status**: ✅ **ACTIVE**
-
----
-
-#### `test-mobilemart-uat-credentials.js`
-
-**Purpose**: Test MobileMart UAT credentials.
-
-**Status**: ✅ **ACTIVE**
+### Operational
+| Script | Purpose |
+|--------|---------|
+| `process-referral-payouts.js` | Daily referral payouts |
+| `cleanup-expired-otps.js` | OTP cleanup (cron) |
+| `refresh-vas-best-offers.js` | VAS best offers refresh |
+| `generate-daily-product-availability-report.js` | Daily availability report |
+| `run-voucher-expiry-now.js` | Process expired vouchers |
+| `reconcile-all-wallets.js` | Wallet reconciliation |
+| `check-all-supplier-float-balances.js` | Float balance check |
 
 ---
 
 ## Running Scripts
 
-All scripts should be run from the project root directory:
+All scripts run from the project root:
 
 ```bash
 cd /path/to/mymoolah
 node scripts/[script-name].js [options]
+# or
+./scripts/[script-name].sh [options]
 ```
 
 ## Script Development Guidelines
 
-When adding new scripts to this directory:
-
-1. **Documentation**: Include comprehensive header documentation
-2. **Error Handling**: Implement proper error checking and validation
-3. **User Feedback**: Provide clear, colored output for better UX
-4. **Safety**: Include confirmation prompts for destructive operations
-5. **Validation**: Check prerequisites and validate inputs
-6. **Testing**: Test scripts thoroughly before committing
-7. **Node.js**: Use Node.js for better integration with the project
-8. **Database**: Use PostgreSQL via Sequelize models, not direct SQLite
-
-## File Structure
-
-```
-scripts/
-├── README.md           # This documentation file
-├── lookup-user.js      # User lookup utility
-├── check-kyc-status.js # KYC status check utility
-├── change-user-password.js # Password change utility
-├── verify-password.js  # Password verification utility
-├── reset-kyc-via-api.sh # KYC reset via API
-├── one-click-restart-and-start.sh # Main startup script
-├── start-codespace-with-proxy.sh # Comprehensive startup script
-├── seed-*.js          # Database seeding scripts
-└── test-*.js          # Test scripts
-```
-
-## Troubleshooting
-
-**Common Issues**:
-
-1. **Database Connection**: Ensure PostgreSQL is running and accessible
-   ```bash
-   # Check if Cloud SQL Proxy is running
-   lsof -i :6543
-   ```
-
-2. **Environment Variables**: Ensure .env file is properly configured
-   ```bash
-   # Check DATABASE_URL in .env
-   grep DATABASE_URL .env
-   ```
-
-3. **Node.js Not Found**: Install Node.js
-   ```bash
-   node --version
-   ```
-
-4. **Dependencies**: Install required packages
-   ```bash
-   npm install
-   ```
-
-## Database Operations
-
-For PostgreSQL operations, use the Sequelize models:
-
-```javascript
-const { sequelize, User, Wallet } = require('../models');
-
-// Example: Get user by ID
-const user = await User.findByPk(1);
-console.log(user.toJSON());
-```
-
-## Migration from SQLite
-
-All SQLite-specific scripts have been removed. The platform now uses PostgreSQL exclusively:
-
-- **Database**: PostgreSQL (Google Cloud SQL)
-- **Connection**: Via Cloud SQL Proxy on localhost:6543
-- **Models**: Sequelize ORM with PostgreSQL dialect
-- **Scripts**: Use Sequelize models instead of direct SQLite queries
+1. Include header documentation with usage examples
+2. Use `db-connection-helper.js` for database connections
+3. Use `set -euo pipefail` in bash scripts
+4. Include error handling and colored output
+5. Check prerequisites before running
+6. Sweep `scripts/` before creating new scripts (Rule 9A)

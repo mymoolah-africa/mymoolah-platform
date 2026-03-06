@@ -1,97 +1,68 @@
 # Deployment Scripts - Quick Reference
 
-## Staging Deployment Scripts
+## Core Deployment Scripts
 
-All scripts are in the `scripts/` directory and are executable.
-
-### 1. Database Setup
+### Backend: `deploy-backend.sh`
 ```bash
-./scripts/setup-staging-database.sh
+./scripts/deploy-backend.sh --staging              # Deploy to staging
+./scripts/deploy-backend.sh --production           # Deploy to production
+./scripts/deploy-backend.sh --staging 20260304-1200 # Custom image tag
 ```
-Creates database, user, and stores password in Secret Manager.
+Builds (no cache), pushes to GCR, deploys to Cloud Run. Handles all secrets dynamically.
 
-### 2. Secrets Setup
+### Wallet Frontend: `deploy-wallet.sh`
 ```bash
-./scripts/setup-secrets-staging.sh
+./scripts/deploy-wallet.sh --staging               # Deploy to staging
+./scripts/deploy-wallet.sh --production            # Deploy to production
 ```
-Stores all Zapper and application secrets in Secret Manager.
+Builds wallet frontend, pushes to GCR, deploys to Cloud Run.
 
-### 3. Service Account Setup
+### Database Migrations: `run-migrations-master.sh`
 ```bash
-./scripts/create-cloud-run-service-account.sh
+./scripts/run-migrations-master.sh uat             # All pending UAT migrations
+./scripts/run-migrations-master.sh staging         # All pending Staging migrations
+./scripts/run-migrations-master.sh production      # All pending Production migrations
+./scripts/run-migrations-master.sh uat 20251203_01 # Specific migration
 ```
-Creates service account with necessary IAM permissions.
-
-### 4. Build, Push & Deploy (Recommended - Single Command)
-```bash
-./scripts/build-push-deploy-staging.sh [optional-image-tag]
-```
-**This is the main deployment script** - builds (no cache), pushes to GCR, and deploys to Cloud Run staging in one command.
-- Default tag: `YYYYMMDD-HHMM` (timestamp)
-- Includes all secrets (EasyPay, Zapper, MobileMart, etc.)
-- Includes all environment variables
-- Ready to use immediately
-
-**Alternative (if you need separate steps):**
-```bash
-# Build & Push only
-./scripts/build-and-push-docker.sh [tag]
-
-# Deploy only (deprecated - use build-push-deploy-staging.sh instead)
-./scripts/deploy-cloud-run-staging.sh
-```
-
-### 6. Database Migrations
-```bash
-./scripts/run-migrations-staging.sh
-```
-Runs Sequelize migrations on staging database.
-
-### 7. Service Testing
-```bash
-./scripts/test-staging-service.sh
-```
-Tests deployed service endpoints.
+Auto-starts Cloud SQL Auth Proxy if needed. Uses `db-connection-helper.js`.
 
 ---
 
-## Full Deployment Sequence
+## Legacy Deployment Scripts (Still Working)
 
-Run scripts in this order:
+These are the older environment-specific scripts. They work but `deploy-backend.sh` and `deploy-wallet.sh` consolidate them.
+
+```bash
+./scripts/build-push-deploy-staging.sh [tag]       # Staging backend (build+push+deploy)
+./scripts/build-push-deploy-production.sh [tag]    # Production backend (build+push+deploy)
+```
+
+---
+
+## First-Time Setup (Run Once)
 
 ```bash
 # 1. Database setup
 ./scripts/setup-staging-database.sh
+./scripts/setup-staging-production-databases.sh
 
 # 2. Secrets setup
 ./scripts/setup-secrets-staging.sh
+./scripts/setup-secrets-production.sh
 
-# 3. Service account
-./scripts/create-cloud-run-service-account.sh
-
-# 4. Build and push Docker
-./scripts/build-and-push-docker.sh
-
-# 5. Deploy to Cloud Run
-./scripts/deploy-cloud-run-staging.sh
-
-# 6. Run migrations
-./scripts/run-migrations-staging.sh
-
-# 7. Test service
-./scripts/test-staging-service.sh
+# 3. Service accounts
+./scripts/create-cloud-run-service-account.sh          # Staging
+./scripts/create-cloud-run-service-account-production.sh # Production
 ```
 
 ---
 
 ## Prerequisites
 
-Before running scripts:
 1. `gcloud auth login`
 2. `gcloud config set project mymoolah-db`
 3. Docker installed and running
 4. Node.js 18+ installed
-5. PostgreSQL client (psql) installed
 
 ---
 
@@ -101,24 +72,12 @@ Before running scripts:
 ```bash
 gcloud auth login
 gcloud auth application-default login
-```
-
-### Permission Issues
-```bash
-# Verify project
-gcloud config get-value project
-
-# Verify authentication
-gcloud auth list
-```
-
-### Docker Issues
-```bash
-# Configure Docker for GCR
 gcloud auth configure-docker gcr.io
 ```
 
----
-
-For detailed documentation, see `docs/GCP_STAGING_DEPLOYMENT.md`
-
+### Verify Setup
+```bash
+gcloud config get-value project     # Should show: mymoolah-db
+gcloud auth list                    # Should show active account
+docker info                         # Should show Docker running
+```
