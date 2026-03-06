@@ -20,6 +20,7 @@ export interface GlobalPinProduct {
   price: number;       // in cents
   supplierCode: string;
   variantId?: string | number;
+  productId?: number;  // Product id for /api/v1/products/purchase
   supplierProductId?: string;
   denominations?: number[];
   minAmount?: number;
@@ -136,8 +137,9 @@ export function GlobalPinModal({
         ref = result.ref;
       } else {
         // Default path: International Airtime via generic voucher endpoint
+        // Backend products/purchase expects Product id; fallback to variantId for overlay routes
         const result = await apiService.purchaseVoucher({
-          productId: Number(selected.variantId || selected.id),
+          productId: Number(selected.productId || selected.variantId || selected.id),
           denomination: selected.price,
           idempotencyKey,
         });

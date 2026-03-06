@@ -933,17 +933,18 @@ class ApiService {
     const data    = transformProducts(dataComparison?.bestDeals    || [], 'data');
 
     // Global PIN — just normalise names, no grouping needed (each is a distinct product)
+    // price in CENTS: GlobalPinModal formatPrice() and purchase denomination expect cents
     const globalPin = (pinComparison?.bestDeals || []).map((p: any) => ({
       id: p.id || p.productId || p.variantId,
       name: (p.productName || p.name || '').replace(/\s+Token$/i, '').trim(),
-      // price in rands (formatCurrency expects rands); minAmount from DB is in cents
-      price: (p.minAmount || 0) / 100,
-      maxPrice: (p.maxAmount || p.minAmount || 0) / 100,
+      price: p.minAmount || 0,
+      maxPrice: p.maxAmount || p.minAmount || 0,
       supplierCode: (p.supplierCode || '').toUpperCase(),
       denominations: p.denominations || p.predefinedAmounts || [],
       minAmount: p.minAmount,
       maxAmount: p.maxAmount,
       variantId: p.id,
+      productId: p.productId,
       supplierProductId: p.supplierProductId,
     }));
 
