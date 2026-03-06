@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-04 23:55  
-**Latest Feature**: International Airtime pinless planning — add to beneficiary modal tomorrow  
-**Document Version**: 2.12.2  
-**Session logs**: `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`, `docs/session_logs/2026-03-06_1248_staging-cors-load-balancer-fix.md`, `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`  
+**Last Updated**: 2026-03-06 15:00  
+**Latest Feature**: Deployment scripts cleanup, macOS compatibility, run-location documentation  
+**Document Version**: 2.12.3  
+**Session logs**: `docs/session_logs/2026-03-06_1500_deployment-scripts-cleanup-macos-compat.md`, `docs/session_logs/2026-03-06_1248_staging-cors-load-balancer-fix.md`, `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -39,7 +39,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Run DB migrations | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | Set up dev environment | `docs/DEVELOPMENT_GUIDE.md` |
 | Test in Codespaces | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
-| Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
+| Deploy | `scripts/README_DEPLOYMENT.md`, `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
 | API contracts | `docs/API_DOCUMENTATION.md` |
 | Recent chat context | `docs/session_logs/` (2-3 most recent) |
 | Cursor skills inventory | `docs/CURSOR_SKILLS.md` |
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 5, 2026 - 14:00)**
+### **Latest Achievement (March 6, 2026 - 15:00)**
+**Deployment Scripts Cleanup & macOS Compatibility** — (1) Removed 84 redundant scripts (244 → 160). (2) Fixed deploy-backend.sh and deploy-wallet.sh for macOS (`${VAR^^}` → `tr`). (3) ensure-proxies-running.sh: find cloud-sql-proxy from PATH or project root; accept optional env arg to start only the needed proxy. (4) run-migrations-master.sh: pass env to ensure-proxies. (5) Documented run locations: deployments from **Local Mac**, migrations from **Codespaces**. Session log: `docs/session_logs/2026-03-06_1500_deployment-scripts-cleanup-macos-compat.md`.
+
+### **Previous Achievement (March 5, 2026 - 14:00)**
 **eeziAirtime Redemption UI & eeziPay AI Knowledge Base** — (1) Modal/Transaction Detail: clear redemption instruction "Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle."; PIN displayed as 3×4 digits; Copy copies full USSD string. (2) GlobalPinModal `eeziRedemption` prop for instruction, prefix/suffix, pin group size. (3) eeziPay How To entries added to AI support KB: `scripts/add-eezipay-redemption-knowledge-to-ai.js` (5 entries with embeddings), Q5.5–Q5.7 in seed. (4) Fixed faqId length (VARCHAR 20): `KB-EZ-` + 13 chars. (5) FLASH_TESTING_REFERENCE: single eezi product documented. Session log: `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`.
 
 ### **Previous Achievement (March 5, 2026 - 08:00)**
@@ -576,7 +579,9 @@ Before concluding your session, verify:
 
 | Task | Tool/Script | Documentation |
 |------|-------------|---------------|
-| Run migrations | `./scripts/run-migrations-master.sh [uat\|staging]` | Run **before** seeding; use after any schema change |
+| Run migrations | `./scripts/run-migrations-master.sh [uat\|staging\|production]` | Run from **Codespaces**; run **before** seeding |
+| Deploy backend | `./scripts/deploy-backend.sh --staging\|--production` | Run from **Local Mac** |
+| Deploy wallet | `./scripts/deploy-wallet.sh --staging\|--production` | Run from **Local Mac** |
 | Run seed scripts | `node scripts/seed-*.js` (e.g. `--staging` where supported) | Only **after** migrations for that env |
 | Check schema parity | `node scripts/sync-staging-to-uat-banking-grade.js` | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | Test API | `scripts/test-*.js` | `docs/TESTING_GUIDE.md` |
@@ -636,12 +641,13 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Staging eeziAirtime CORS fix (LB customResponseHeaders removed)  
-**Last Session**: 2026-03-06 — Staging LB override fixed; eeziAirtime purchase confirmed working
+**Session Status**: ✅ **COMPLETE** — Deployment scripts cleanup, macOS compat, run-location docs  
+**Last Session**: 2026-03-06 — Scripts cleanup (84 removed), deploy scripts macOS-fixed, migrations/proxies improved
 
 ### **Most Recent Work (2026-03-06)**
-- **Staging CORS fix**: Removed `customResponseHeaders` from `be-staging-backend` — LB was overriding Express CORS and blocking `X-Idempotency-Key`. No code changes. eeziAirtime purchase verified working.
-- **Important**: Staging LB must remain without CORS customResponseHeaders; Express handles CORS in `config/security.js`.
+- **Deployment scripts**: deploy-backend.sh and deploy-wallet.sh run from Local Mac; run-migrations-master.sh from Codespaces. macOS compatibility fix (tr instead of ${VAR^^}). ensure-proxies-running.sh finds proxy from PATH or project root; starts only the needed proxy.
+- **Scripts cleanup**: 84 redundant scripts removed (244 → 160). README_DEPLOYMENT.md has "Where to Run What" table and typical workflow.
+- **Staging CORS fix** (earlier): Removed `customResponseHeaders` from `be-staging-backend`; eeziAirtime purchase verified working.
 
 ### **Previous Work (2026-03-04)**
 - **eeziAirtime PIN**: apiService fallback "No PIN returned", pinNumber extraction, Copy PIN in Transaction Detail modal
@@ -671,6 +677,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 6 (15:00) | Deployment scripts cleanup (84 removed), macOS compat for deploy scripts, ensure-proxies env-specific start, run-location docs (Local Mac vs Codespaces) |
 | Mar 4 (23:55) | International Airtime pinless planning — migrate from Global PIN to pinless; integrate into beneficiary modal; implementation tomorrow |
 | Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email; Flash/MobileMart/Zapper Google Drive docs |
 | Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration; clean-slate catalog test Staging + Production |

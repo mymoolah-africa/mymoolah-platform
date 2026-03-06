@@ -1,16 +1,19 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: March 4, 2026  
-**Version**: 2.11.31 - International Airtime Pinless Planning  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **SBSA PAYSHAP CALLBACKS** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: March 6, 2026  
+**Version**: 2.12.3 - Deployment Scripts Cleanup & macOS Compatibility  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **DEPLOY SCRIPTS MACOS COMPAT** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **SBSA PAYSHAP CALLBACKS** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. International Airtime pinless planning (Mar 4): migrate from Global PIN to pinless flow; integrate into beneficiary modal; implementation planned for tomorrow. eeziAirtime redemption UI (Mar 5): clear instructions, 3×4 PIN format, copy full USSD; eeziPay How To entries in AI support knowledge base. Documentation consolidation (Feb 21): archived ~75 docs to `docs/archive/`. MMTP Partner API doc; sandbox = staging.mymoolah.africa. SBSA PayShap UAT ready. Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC, EasyPay Top-up, 11-language support deployed.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. Deployment scripts (Mar 6): cleanup (84 scripts removed), macOS compat for deploy-backend/deploy-wallet, run-location docs — deploy from Local Mac, migrate from Codespaces. International Airtime pinless planning (Mar 4): migrate from Global PIN to pinless flow; integrate into beneficiary modal. eeziAirtime redemption UI (Mar 5): clear instructions, 3×4 PIN format, copy full USSD; eeziPay How To entries in AI support knowledge base. SBSA PayShap UAT ready. Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC, EasyPay Top-up, 11-language support deployed.
 
-### **📋 Latest: International Airtime Pinless Planning (March 4, 2026)** 🔜 **PLANNED FOR TOMORROW**
+### **📋 Latest: Deployment Scripts Cleanup & macOS Compatibility (March 6, 2026)** ✅ **COMPLETE**
+Scripts folder cleanup (84 removed), deploy-backend/deploy-wallet macOS fix, ensure-proxies env-specific start, run-location docs. deploy-backend.sh and deploy-wallet.sh run from Local Mac; run-migrations-master.sh from Codespaces. Session log: `docs/session_logs/2026-03-06_1500_deployment-scripts-cleanup-macos-compat.md`.
+
+### **📋 Previous: International Airtime Pinless Planning (March 4, 2026)** 🔜 **PLANNED**
 Decision to migrate International Airtime from PIN-based (Global PIN) to pinless flow. Flow: create beneficiary with international number → select → pinless purchase → recipient topped up directly. Integrate into beneficiary modal. Session log: `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`.
 
 ### **📋 Previous: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)** ✅ **COMPLETE**

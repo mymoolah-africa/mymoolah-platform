@@ -1,5 +1,24 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-06 - 🚀 Deployment Scripts Cleanup & macOS Compatibility ✅
+
+### **Session Overview**
+Scripts folder cleanup (84 redundant scripts removed), macOS compatibility for deploy scripts, Cloud SQL Auth Proxy improvements, and run-location documentation. Deployments run from Local Mac; migrations from Codespaces.
+
+### **Changes**
+- **`scripts/deploy-backend.sh`**: macOS compat (`${VAR^^}` → `tr`), "Run from: LOCAL MAC" header
+- **`scripts/deploy-wallet.sh`**: macOS compat, "Run from: LOCAL MAC" header
+- **`scripts/run-migrations-master.sh`**: Pass env to ensure-proxies (start only needed proxy), "Run from: CODESPACES" header
+- **`scripts/ensure-proxies-running.sh`**: Find cloud-sql-proxy from PATH or project root; accept optional env arg
+- **`scripts/README_DEPLOYMENT.md`**: "Where to Run What" table, typical workflow, prerequisites by env
+- **`scripts/README.md`**: Deployment/migration run-location headers
+- **Deleted 84 scripts**: one-time fixes, password diagnostics, Peach Payments, deprecated deploy, ad-hoc tests, redundant schema checks (244 → 160 scripts)
+
+### **Session Log**
+- `docs/session_logs/2026-03-06_1500_deployment-scripts-cleanup-macos-compat.md`
+
+---
+
 ## 2026-03-04 - 📱 International Airtime Pinless Planning ✅
 
 ### **Session Overview**

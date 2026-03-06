@@ -1,16 +1,29 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 4, 2026  
-**Version**: 2.11.31 - International Airtime Pinless Planning  
+**Last Updated**: March 6, 2026  
+**Version**: 2.12.3 - Deployment Scripts Cleanup & macOS Compatibility  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Feb 28–Mar 4, 2026)**: International Airtime pinless planning — migrate from Global PIN to pinless flow, integrate into beneficiary modal (implementation tomorrow). eeziAirtime redemption UI; eeziPay How To entries in AI KB. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Mar 2–6, 2026)**: Deployment scripts cleanup (84 removed), macOS compat for deploy-backend/deploy-wallet, ensure-proxies env-specific start, run-location docs — deploy from Local Mac, migrate from Codespaces. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: International Airtime Pinless Planning (March 4, 2026)**
+## 🚀 **LATEST UPDATE: Deployment Scripts Cleanup & macOS Compatibility (March 6, 2026)**
 
-### **📱 International Airtime — Pinless Flow (Planned for Tomorrow)**
+### **🚀 Deployments from Local Mac, Migrations from Codespaces**
+- **deploy-backend.sh** / **deploy-wallet.sh**: Run from Local Mac (Docker + gcloud)
+- **run-migrations-master.sh**: Run from Codespaces
+- **Scripts cleanup**: 84 redundant scripts removed (244 → 160)
+- **macOS fix**: `${VAR^^}` replaced with `tr` for bash 3 compatibility
+- **ensure-proxies-running.sh**: Finds cloud-sql-proxy from PATH or project root; accepts optional env
+
+**Session log**: `docs/session_logs/2026-03-06_1500_deployment-scripts-cleanup-macos-compat.md`
+
+---
+
+## 🚀 **PREVIOUS: International Airtime Pinless Planning (March 4, 2026)**
+
+### **📱 International Airtime — Pinless Flow (Planned)**
 - **Decision**: Migrate International Airtime from PIN-based (Global PIN) to pinless flow
 - **Flow**: Create beneficiary with international number (e.g. +263...) → select → pinless purchase → recipient topped up directly
 - **Integration**: Same pattern as domestic airtime — inside beneficiary modal

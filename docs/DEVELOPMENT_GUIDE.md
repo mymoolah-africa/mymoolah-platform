@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: March 4, 2026  
-**Version**: 2.11.31 - International Airtime Pinless Planning  
-**Status**: ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (PLANNED)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: March 6, 2026  
+**Version**: 2.12.3 - Deployment Scripts Cleanup & macOS Compatibility  
+**Status**: ✅ **DEPLOY SCRIPTS MACOS COMPAT** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (PLANNED)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
@@ -22,7 +22,9 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Development Environment**: GitHub Codespaces (UAT credentials, test accounts)
 - **Staging Environment**: Google Cloud Services Staging (Production credentials, test accounts) - **Recommended**
 - **Production Environment**: Google Cloud Services Production (Production credentials, real customers)
-- **See:** `DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow documentation
+- **Deployments**: Run `deploy-backend.sh` and `deploy-wallet.sh` from **Local Mac** (Docker builds faster)
+- **Migrations**: Run `run-migrations-master.sh` from **Codespaces** (Cloud SQL Auth Proxy running)
+- **See:** `scripts/README_DEPLOYMENT.md` for "Where to Run What" and typical workflow; `DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow
 
 ---
 
