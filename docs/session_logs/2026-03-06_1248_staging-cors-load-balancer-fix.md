@@ -8,6 +8,30 @@
 
 ---
 
+## Background / Chain of Events
+
+This CORS fix is a direct consequence of the **Claude IDE codebase review and banking-grade hardening** implemented in the prior session (2026-03-04). That work included:
+
+### Skills (15 files in `.agents/skills/`)
+- All 15 `SKILL.md` files updated with MyMoolah-specific context, actual file locations, and current architectural state
+- `robust-financial-forms`: Full rewrite for overlay-based frontend architecture
+- Skills now reference real codebase patterns instead of generic best practices
+
+### Claude Recommendations — Hardening Items Implemented
+- **Item 1**: Test infrastructure — Jest, Supertest, nock; wallet-send, easypay-webhook, flash-purchase, idempotency-middleware test suites
+- **Item 2**: Redis L1 idempotency cache in `middleware/idempotency.js` (v2.0) — fast path before PostgreSQL L2
+- **Item 3**: Frontend `X-Idempotency-Key` header on all 9 financial mutation methods in `apiService.ts` — **this triggered the CORS preflight**; staging LB had stale headers that did not allow it
+- **Item 4**: Sharp preprocessing in `kycService.js` Tesseract OCR fallback (resize, grayscale, normalize)
+
+### Pending (due 2026-03-11)
+- **Item 5**: Extract cron jobs from `server.js` into dedicated files with Redis locks
+- **Item 6**: Redis locks on wallet mutation controllers  
+See `docs/TODO_SCALING_PREP.md`.
+
+Full details: `docs/session_logs/2026-03-04_2300_banking-grade-hardening-tests-redis-idempotency.md`
+
+---
+
 ## Session Summary
 
 Diagnosed and fixed eeziAirtime failure on staging. Root cause: Google Cloud Load Balancer had hard-coded `customResponseHeaders` on the staging backend service that overrode Express CORS config. Those LB headers were stale and did not include `X-Idempotency-Key`. Fix: removed `customResponseHeaders` from the LB entirely; Express now handles CORS correctly. No code changes — pure GCP infrastructure fix. eeziAirtime confirmed working.
