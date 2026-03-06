@@ -197,14 +197,14 @@ class SupplierComparisonService {
     }
 
     /**
-     * International PIN (Flash): Catalog returns charge in ZAR RANDS (e.g. 21 for R21).
-     * We need cents for display/purchase. Multiply by 100 when value looks like rands (< 100000).
+     * International PIN (Flash): Catalog returns charge in ZAR cents (e.g. 2100 = R21).
+     * Pass through; only convert when value looks like rands (< 100, e.g. 21 for R21).
      */
     _internationalPinToCents(val) {
         if (val == null || val <= 0) return val;
         const n = Number(val);
-        if (n >= 100000) return n; // already in cents
-        return Math.round(n * 100); // rands → cents
+        if (n >= 100) return n; // already in cents (e.g. 2100, 20700)
+        return Math.round(n * 100); // rands → cents (e.g. 21 → 2100)
     }
 
     /**

@@ -97,10 +97,15 @@ class ProductPurchaseService {
       const hasDefinedDenoms = product.denominations && Array.isArray(product.denominations) && product.denominations.length > 0;
       if (hasDefinedDenoms) {
         let isValid = product.isValidDenomination(denomination);
-        // International PIN (Flash): catalog has charge in ZAR rands; frontend sends cents (rands * 100).
+        // International PIN (Flash): catalog may have rands (21) or cents (2100); frontend sends cents.
         if (!isValid && product.type === 'international_pin' && product.supplier?.code === 'FLASH') {
-          const convertedDenoms = product.denominations.map(d => Math.round(Number(d) * 100));
-          isValid = convertedDenoms.includes(denomination);
+          const check = (d) => {
+            const n = Number(d);
+            if (n >= 100) return [n]; // already cents
+            return [n, Math.round(n * 100)]; // rands: accept both
+          };
+          const allValid = product.denominations.flatMap(check);
+          isValid = allValid.includes(denomination);
         }
         if (!isValid) {
           throw new Error('Invalid denomination for this product');
