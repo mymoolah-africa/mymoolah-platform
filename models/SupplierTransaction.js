@@ -216,9 +216,9 @@ module.exports = (sequelize, DataTypes) => {
     ],
     hooks: {
       beforeCreate: (transaction) => {
-        // Sanitize supplier reference
-        if (transaction.supplierReference) {
-          transaction.supplierReference = transaction.supplierReference.trim();
+        // Sanitize supplier reference (Flash may return numeric ref)
+        if (transaction.supplierReference != null) {
+          transaction.supplierReference = String(transaction.supplierReference).trim();
         }
 
         // Set initial retry count
@@ -227,9 +227,9 @@ module.exports = (sequelize, DataTypes) => {
         }
       },
       beforeUpdate: (transaction) => {
-        // Sanitize supplier reference
-        if (transaction.supplierReference) {
-          transaction.supplierReference = transaction.supplierReference.trim();
+        // Sanitize supplier reference (Flash may return numeric ref)
+        if (transaction.supplierReference != null) {
+          transaction.supplierReference = String(transaction.supplierReference).trim();
         }
 
         // Calculate next retry time if status is failed and retry count increased
