@@ -231,14 +231,16 @@ class ApiService {
     try {
       const url = `${API_BASE}${endpoint}`;
       const token = getToken();
-      
+
+      const { headers: callerHeaders, ...restOptions } = options;
+
       const config: RequestInit = {
+        ...restOptions,
         headers: {
           'Content-Type': 'application/json',
           ...(token && { Authorization: `Bearer ${token}` }),
-          ...options.headers,
+          ...(callerHeaders as Record<string, string>),
         },
-        ...options,
       };
 
       const response = await fetch(url, config);
