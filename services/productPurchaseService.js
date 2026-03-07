@@ -739,6 +739,8 @@ class ProductPurchaseService {
 
   /**
    * Process voucher purchase with MobileMart
+   * Uses merchantProductId from catalog (product.supplierProductId or matching variant) when available.
+   * Falls back to API fetch + name match for legacy/placeholder products.
    */
   async processWithMobileMart(product, denomination, recipient, supplierTransaction, transaction) {
     const useMobileMartAPI = process.env.MOBILEMART_LIVE_INTEGRATION === 'true';
@@ -749,29 +751,56 @@ class ProductPurchaseService {
         const MobileMartAuthService = require('./mobilemartAuthService');
         const mobileMartService = new MobileMartAuthService();
 
-        // Get voucher products to find merchantProductId
-        console.log('📞 MobileMart: Getting voucher products...');
-        const productsResponse = await mobileMartService.makeAuthenticatedRequest(
-          'GET',
-          '/voucher/products'
-        );
-        const products = productsResponse.products || productsResponse || [];
-        
-        // Try to find matching product or use first available
-        const voucherProduct = products.find((p) => 
-          p.productName?.toLowerCase().includes(product.name?.toLowerCase()) ||
-          p.contentCreator?.toLowerCase().includes(product.name?.toLowerCase())
-        ) || products[0];
+        // Resolve merchantProductId from catalog first (matches overlay services pattern)
+        let merchantProductId = null;
 
-        if (!voucherProduct || !voucherProduct.merchantProductId) {
-          throw new Error('No voucher products available from MobileMart');
+        // 1. Try matching variant by denomination (variant may have specific supplierProductId)
+        if (product.variants && product.variants.length > 0) {
+          const matchingVariant = product.variants.find((v) =>
+            v.denominations && Array.isArray(v.denominations) && v.denominations.includes(denomination)
+          );
+          if (matchingVariant?.supplierProductId) {
+            const sid = String(matchingVariant.supplierProductId).trim();
+            if (sid && !/^MOBILEMART_/i.test(sid)) {
+              merchantProductId = sid;
+            }
+          }
         }
-        console.log(`✅ Found voucher product: ${voucherProduct.productName} (${voucherProduct.merchantProductId})`);
+
+        // 2. Fall back to product-level supplierProductId
+        if (!merchantProductId && product.supplierProductId) {
+          const sid = String(product.supplierProductId).trim();
+          if (sid && !/^MOBILEMART_/i.test(sid)) {
+            merchantProductId = sid;
+          }
+        }
+
+        // 3. Fallback: fetch from API and match by name (legacy/placeholder products)
+        if (!merchantProductId) {
+          console.log('📞 MobileMart: No catalog merchantProductId, fetching voucher products...');
+          const productsResponse = await mobileMartService.makeAuthenticatedRequest(
+            'GET',
+            '/voucher/products'
+          );
+          const products = productsResponse.products || productsResponse || [];
+          const voucherProduct = products.find((p) =>
+            p.productName?.toLowerCase().includes(product.name?.toLowerCase()) ||
+            p.contentCreator?.toLowerCase().includes(product.name?.toLowerCase())
+          ) || products[0];
+
+          if (!voucherProduct || !voucherProduct.merchantProductId) {
+            throw new Error('No voucher products available from MobileMart');
+          }
+          merchantProductId = String(voucherProduct.merchantProductId).trim();
+          console.log(`✅ Resolved from API: ${voucherProduct.productName} (${merchantProductId})`);
+        } else {
+          console.log(`✅ Using catalog merchantProductId: ${merchantProductId}`);
+        }
 
         // Purchase voucher from MobileMart
         const purchasePayload = {
           requestId: `VOUCH_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
-          merchantProductId: voucherProduct.merchantProductId,
+          merchantProductId,
           tenderType: 'CreditCard',
           amount: denomination / 100 // Convert cents to Rands
         };
