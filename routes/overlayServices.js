@@ -275,8 +275,9 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
           const lookupResponse = await flashAuth.makeAuthenticatedRequest('POST', '/cellular/international/lookup', {
             reference: lookupRef,
             accountNumber: process.env.FLASH_ACCOUNT_NUMBER,
-            mobileNumber: '27000000000',
-            destinationMobileNumber: destNumber
+            mobileNumber: process.env.FLASH_MERCHANT_MOBILE || '27000000001',
+            destinationMobileNumber: destNumber,
+            type: 'airtime'
           });
 
           const flashProducts = lookupResponse.products || [];
@@ -1288,8 +1289,9 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
             const intlPayload = {
               reference: idempotencyKey,
               accountNumber: process.env.FLASH_ACCOUNT_NUMBER,
-              mobileNumber: '27000000000',
+              mobileNumber: process.env.FLASH_MERCHANT_MOBILE || '27000000001',
               destinationMobileNumber: cleanDest,
+              type: 'airtime',
               productCode: flashProductCode,
               ...(amountInCentsValue && { amount: amountInCentsValue })
             };

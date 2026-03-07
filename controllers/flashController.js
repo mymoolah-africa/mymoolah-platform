@@ -1704,8 +1704,9 @@ class FlashController {
             const requestData = {
                 reference,
                 accountNumber,
-                mobileNumber: '27000000000',
+                mobileNumber: process.env.FLASH_MERCHANT_MOBILE || '27000000001',
                 destinationMobileNumber: cleanDest,
+                type: 'airtime',
                 ...(metadata && { metadata })
             };
 
@@ -1783,8 +1784,9 @@ class FlashController {
             const requestData = {
                 reference,
                 accountNumber,
-                mobileNumber: '27000000000',
+                mobileNumber: process.env.FLASH_MERCHANT_MOBILE || '27000000001',
                 destinationMobileNumber: cleanDest,
+                type: 'airtime',
                 productCode: parseInt(productId, 10),
                 ...(amount && { amount: parseInt(amount, 10) }),
                 ...(metadata && { metadata })
