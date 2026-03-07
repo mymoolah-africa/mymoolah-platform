@@ -54,15 +54,41 @@ log "Backend API: ${BACKEND_URL}"
 echo ""
 
 # Checks
-if ! command -v docker &> /dev/null; then err "Docker not found"; fi
-if ! docker info &> /dev/null; then err "Docker daemon is not running"; fi
-if ! command -v gcloud &> /dev/null; then err "gcloud not found"; fi
+command -v docker >/dev/null || err "Docker not found"
+docker info >/dev/null 2>&1 || err "Docker daemon is not running"
+command -v gcloud >/dev/null || err "gcloud not found"
 
-if ! gcloud auth list --filter=status:ACTIVE --format="value(account)" | grep -q .; then
-  err "No active gcloud authentication found. Please run: gcloud auth login"
-fi
+# Authenticate with Google Cloud
+ensure_gcloud_auth() {
+  local active_account
+  active_account=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>/dev/null || true)
 
-gcloud config set project "${PROJECT_ID}" >/dev/null 2>&1 || err "Failed to set project"
+  if [ -n "$active_account" ]; then
+    log "✅ Authenticated as: ${active_account}"
+  else
+    log "⚠️  No active gcloud authentication found"
+    if [ -t 0 ] && [ -t 1 ]; then
+      log "Starting interactive login..."
+      if gcloud auth login --no-launch-browser; then
+        log "✅ Authentication successful"
+      else
+        err "gcloud auth login failed. Please run manually: gcloud auth login"
+      fi
+    else
+      err "No active gcloud auth (non-interactive). Run: gcloud auth login"
+    fi
+  fi
+
+  local current_project
+  current_project=$(gcloud config get-value project 2>/dev/null || true)
+  if [ "$current_project" != "${PROJECT_ID}" ]; then
+    log "Setting project to ${PROJECT_ID}..."
+    gcloud config set project "${PROJECT_ID}" >/dev/null 2>&1 || err "Failed to set project"
+  fi
+  log "✅ Project: ${PROJECT_ID}"
+}
+
+ensure_gcloud_auth
 
 cd mymoolah-wallet-frontend
 
