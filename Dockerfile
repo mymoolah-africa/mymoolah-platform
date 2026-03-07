@@ -1,6 +1,6 @@
 # Multi-stage build for smaller final image
 # Stage 1: Dependencies installation
-FROM node:18-alpine AS deps
+FROM node:20-alpine AS deps
 
 # Disable Husky during Docker build
 ENV HUSKY=0
@@ -14,12 +14,12 @@ COPY package*.json ./
 RUN apk add --no-cache python3 make g++
 
 # Install production dependencies only
-RUN npm ci --only=production && \
+RUN npm ci --omit=dev && \
     npm install --os=linux --cpu=x64 sharp && \
     npm cache clean --force
 
 # Stage 2: Final image
-FROM node:18-alpine
+FROM node:20-alpine
 
 # Banking-Grade Security: Run as non-root user
 RUN addgroup -g 1001 -S nodejs && \

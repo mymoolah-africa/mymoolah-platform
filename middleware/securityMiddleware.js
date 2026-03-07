@@ -12,7 +12,6 @@
 const rateLimit = require('express-rate-limit');
 const helmet = require('helmet');
 const hpp = require('hpp');
-const xss = require('xss-clean');
 const mongoSanitize = require('express-mongo-sanitize');
 const { body, validationResult } = require('express-validator');
 
