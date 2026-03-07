@@ -333,55 +333,23 @@ export function AirtimeDataOverlay() {
         }
       }
       
-      // Global Airtime (Flash): no network filter, but show only Flash products (recipient is Flash)
+      // Global Airtime (Flash): use backend overlay catalog for international products
       const isGlobalAirtimeBeneficiary = (beneficiaryNetwork === 'global');
+      
       if (isGlobalAirtimeBeneficiary) {
-        beneficiaryNetwork = null;
-        console.log('🌐 Global Airtime (Flash) beneficiary - showing Flash products only (no network filter)');
-      }
-      
-      // Debug logging - log the FULL beneficiary object to see structure
-      console.log('🔍 FULL Beneficiary object:', JSON.stringify(beneficiaryAny, null, 2));
-      console.log('🔍 Beneficiary network extraction:', {
-        beneficiaryId: normalized.id,
-        beneficiaryName: normalized.name,
-        accountId: accountId || null,
-        selectedAccountNetwork: accountId ? beneficiaryAny.accounts?.find((acc: any) => acc.id === accountId)?.metadata?.network : null,
-        metadata: normalized.metadata,
-        metadataNetwork: normalized.metadata?.network,
-        vasServices: beneficiaryAny.vasServices,
-        vasServicesAirtime: beneficiaryAny.vasServices?.airtime,
-        vasServicesData: beneficiaryAny.vasServices?.data,
-        serviceAccountRecords: beneficiaryAny.serviceAccountRecords,
-        serviceAccountRecordsLength: beneficiaryAny.serviceAccountRecords?.length,
-        accounts: beneficiaryAny.accounts,
-        accountsLength: beneficiaryAny.accounts?.length,
-        accountsAirtimeData: beneficiaryAny.accounts?.filter((acc: any) => acc.type === 'airtime' || acc.type === 'data'),
-        allNetworksFound: allNetworks,
-        uniqueNetworks: uniqueNetworks,
-        extractedNetwork: beneficiaryNetwork,
-        willFilter: !!beneficiaryNetwork
-      });
-      
-      // If no network found, log a detailed breakdown
-      if (!beneficiaryNetwork && allNetworks.length === 0) {
-        console.error('❌ NO NETWORK FOUND - Detailed breakdown:');
-        console.error('  - metadata?.network:', normalized.metadata?.network);
-        console.error('  - vasServices?.airtime:', beneficiaryAny.vasServices?.airtime);
-        console.error('  - vasServices?.data:', beneficiaryAny.vasServices?.data);
-        console.error('  - serviceAccountRecords:', beneficiaryAny.serviceAccountRecords);
-        console.error('  - accounts:', beneficiaryAny.accounts);
-        if (beneficiaryAny.accounts && Array.isArray(beneficiaryAny.accounts)) {
-          beneficiaryAny.accounts.forEach((acc: any, idx: number) => {
-            console.error(`  - accounts[${idx}]:`, {
-              type: acc.type,
-              identifier: acc.identifier,
-              metadata: acc.metadata,
-              network: acc.network,
-              metadataNetwork: acc.metadata?.network
-            });
-          });
+        console.log('🌐 Global Airtime beneficiary detected — fetching international catalog from backend');
+        try {
+          const rawBeneficiaryId = beneficiaryAny.metadata?._beneficiaryId || normalized.id;
+          const catalogData = await airtimeDataService.getCatalog(String(rawBeneficiaryId));
+          setCatalog(catalogData);
+          setCurrentStep('catalog');
+          setLoadingState('idle');
+        } catch (catalogErr) {
+          console.error('❌ Failed to load international catalog:', catalogErr);
+          setError('Failed to load international airtime products. Please try again.');
+          setLoadingState('error');
         }
+        return;
       }
       
       // Load and normalise all airtime/data products via shared helper
@@ -406,25 +374,13 @@ export function AirtimeDataOverlay() {
       const airtimeProds = allAirtimeProds
         .filter((p: any) => {
           if (!beneficiaryNetwork) return true;
-          const matches = extractProductNetwork(p) === normalizeNetwork(beneficiaryNetwork);
-          if (!matches) console.log(`🔍 Airtime filtered: "${p.name}" vs ${beneficiaryNetwork}`);
-          return matches;
-        })
-        .filter((p: any) => {
-          if (!isGlobalAirtimeBeneficiary) return true;
-          return (p.supplierCode || '').toUpperCase() === 'FLASH';
+          return extractProductNetwork(p) === normalizeNetwork(beneficiaryNetwork);
         });
 
       const dataProds = allDataProds
         .filter((p: any) => {
           if (!beneficiaryNetwork) return true;
-          const matches = extractProductNetwork(p) === normalizeNetwork(beneficiaryNetwork);
-          if (!matches) console.log(`❌ Data filtered: "${p.name}" vs ${beneficiaryNetwork}`);
-          return matches;
-        })
-        .filter((p: any) => {
-          if (!isGlobalAirtimeBeneficiary) return true;
-          return (p.supplierCode || '').toUpperCase() === 'FLASH';
+          return extractProductNetwork(p) === normalizeNetwork(beneficiaryNetwork);
         });
 
       const catalogData: AirtimeDataCatalog = {
