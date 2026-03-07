@@ -51,7 +51,12 @@ function normalizeToE164(input) {
     return input;
   }
 
-  throw new Error('Invalid South African mobile number (expect +27XXXXXXXXX or 0XXXXXXXXX)');
+  // International E.164: starts with + and has 7-15 digits (non-SA country codes)
+  if (input.startsWith('+') && /^\+[1-9]\d{6,14}$/.test(input)) {
+    return input;
+  }
+
+  throw new Error('Invalid mobile number (expect +27XXXXXXXXX, 0XXXXXXXXX, or international +{countryCode}{number})');
 }
 
 /**
@@ -60,7 +65,8 @@ function normalizeToE164(input) {
 function isValidE164(msisdn) {
   if (typeof msisdn !== 'string') return false;
   if (msisdn.startsWith('NON_MSI_')) return true;
-  return E164_REGEX_ZA.test(msisdn);
+  // Accept SA numbers or any valid international E.164 number
+  return E164_REGEX_ZA.test(msisdn) || /^\+[1-9]\d{6,14}$/.test(msisdn);
 }
 
 /**
