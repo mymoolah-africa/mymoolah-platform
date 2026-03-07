@@ -87,6 +87,18 @@ ensure_gcloud_auth() {
   fi
   log "✅ Project: ${PROJECT_ID}"
 
+  # Verify gcloud can generate access tokens (catches expired refresh tokens)
+  if ! gcloud auth print-access-token >/dev/null 2>&1; then
+    log "⚠️  Auth token expired — re-authenticating..."
+    gcloud auth revoke --all --quiet 2>/dev/null || true
+    if [ -t 0 ] && [ -t 1 ]; then
+      gcloud auth login || err "Re-authentication failed"
+      log "✅ Re-authenticated successfully"
+    else
+      err "Auth token expired. Run: gcloud auth revoke --all && gcloud auth login"
+    fi
+  fi
+
   # Configure Docker to use gcloud credentials for GCR
   log "Configuring Docker for GCR authentication..."
   gcloud auth configure-docker gcr.io --quiet 2>/dev/null || true
