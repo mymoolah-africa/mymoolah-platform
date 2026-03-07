@@ -77,17 +77,19 @@ start_proxy() {
   if [ -z "$RUNNING" ]; then
     echo -e "${YELLOW}⚠️  ${env_name} proxy NOT running on port ${port}${NC}"
     echo "   Starting ${env_name} proxy..."
+    local log_name
+    log_name=$(echo "$env_name" | tr '[:upper:]' '[:lower:]')
     nohup "${PROXY_BIN}" "mymoolah-db:africa-south1:${instance}" \
       --port "${port}" \
       --structured-logs \
       ${TOKEN_FLAG} \
-      > "/tmp/${env_name,,}-proxy-${port}.log" 2>&1 &
+      > "/tmp/${log_name}-proxy-${port}.log" 2>&1 &
     sleep 3
     if lsof -ti:${port} >/dev/null 2>&1; then
       echo -e "${GREEN}✅ ${env_name} proxy started on port ${port}${NC}"
     else
       echo -e "${RED}❌ ${env_name} proxy failed to start${NC}"
-      echo "   Check logs: cat /tmp/${env_name,,}-proxy-${port}.log"
+      echo "   Check logs: cat /tmp/${log_name}-proxy-${port}.log"
       return 1
     fi
   else
