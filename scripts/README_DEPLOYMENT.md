@@ -4,8 +4,8 @@
 
 | Script | Run From | Why |
 |--------|----------|-----|
-| `deploy-backend.sh` | **Local Mac** | Docker Desktop builds faster, has more capacity |
-| `deploy-wallet.sh` | **Local Mac** | Docker Desktop builds faster, has more capacity |
+| `deploy-backend.sh` | **Local Mac** | Uses Google Cloud Build — gcloud CLI only, no Docker needed |
+| `deploy-wallet.sh` | **Local Mac** | Uses Google Cloud Build — gcloud CLI only, no Docker needed |
 | `run-migrations-master.sh` | **Codespaces** | Cloud SQL Auth Proxy already running |
 
 ---
@@ -25,7 +25,7 @@ Builds (no cache), pushes to GCR, deploys to Cloud Run. Handles all secrets dyna
 ./scripts/deploy-wallet.sh --staging               # Deploy to staging
 ./scripts/deploy-wallet.sh --production            # Deploy to production
 ```
-Builds wallet frontend, pushes to GCR, deploys to Cloud Run.
+Uses `gcloud builds submit` — builds wallet on Google's servers, pushes to GCR, deploys to Cloud Run. No Docker Desktop required.
 
 ### Database Migrations: `run-migrations-master.sh` (Run from Codespaces)
 ```bash
@@ -86,10 +86,9 @@ These are the older environment-specific scripts. They work but `deploy-backend.
 ## Prerequisites
 
 ### Local Mac (for deployments)
-1. Docker Desktop installed and running
-2. `gcloud auth login`
-3. `gcloud config set project mymoolah-db`
-4. `gcloud auth configure-docker gcr.io`
+1. `gcloud auth login`
+2. `gcloud config set project mymoolah-db`
+3. No Docker Desktop required — builds use Google Cloud Build
 
 ### Codespaces (for migrations)
 1. Cloud SQL Auth Proxy running (use `./scripts/ensure-proxies-running.sh`)
@@ -111,5 +110,4 @@ gcloud auth configure-docker gcr.io
 ```bash
 gcloud config get-value project     # Should show: mymoolah-db
 gcloud auth list                    # Should show active account
-docker info                         # Should show Docker running
 ```

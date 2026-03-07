@@ -1,17 +1,29 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 6, 2026  
-**Version**: 2.12.3 - Deployment Scripts Cleanup & macOS Compatibility  
+**Last Updated**: March 7, 2026  
+**Version**: 2.13.0 - Cloud Build Migration & npm Cleanup  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Mar 2–6, 2026)**: Deployment scripts cleanup (84 removed), macOS compat for deploy-backend/deploy-wallet, ensure-proxies env-specific start, run-location docs — deploy from Local Mac, migrate from Codespaces. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Mar 2–7, 2026)**: Deploy scripts now use Google Cloud Build (no Docker Desktop needed); build times ~6min backend, ~3.5min wallet. npm cleanup: Node 20, removed crypto/xss-clean. International Airtime pinless implemented; awaiting Flash billing setup (Code 2200). See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: Deployment Scripts Cleanup & macOS Compatibility (March 6, 2026)**
+## 🚀 **LATEST UPDATE: Cloud Build Migration & npm Cleanup (March 7, 2026)**
+
+### **🚀 Deployments Use Google Cloud Build — No Docker Desktop**
+- **deploy-backend.sh** / **deploy-wallet.sh**: Use `gcloud builds submit` — builds run on Google's servers
+- **No Docker Desktop required** for deployments — gcloud CLI only
+- **Build times**: Backend ~6min, Wallet ~3.5min (was ~28min locally)
+- **Node 20 LTS**: Both Dockerfiles upgraded from Node 18
+- **npm cleanup**: Removed dead `crypto` and `xss-clean` packages; fixed deprecation warnings
+
+**Session log**: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`
+
+---
+
+## 🚀 **PREVIOUS: Deployment Scripts Cleanup & macOS Compatibility (March 6, 2026)**
 
 ### **🚀 Deployments from Local Mac, Migrations from Codespaces**
-- **deploy-backend.sh** / **deploy-wallet.sh**: Run from Local Mac (Docker + gcloud)
 - **run-migrations-master.sh**: Run from Codespaces
 - **Scripts cleanup**: 84 redundant scripts removed (244 → 160)
 - **macOS fix**: `${VAR^^}` replaced with `tr` for bash 3 compatibility

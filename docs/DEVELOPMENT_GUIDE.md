@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: March 6, 2026  
-**Version**: 2.12.3 - Deployment Scripts Cleanup & macOS Compatibility  
-**Status**: ✅ **DEPLOY SCRIPTS MACOS COMPAT** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (PLANNED)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
+**Last Updated**: March 7, 2026  
+**Version**: 2.13.0 - Cloud Build Migration & npm Cleanup  
+**Status**: ✅ **CLOUD BUILD DEPLOYS** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (AWAITING FLASH)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
 
@@ -22,7 +22,7 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 - **Development Environment**: GitHub Codespaces (UAT credentials, test accounts)
 - **Staging Environment**: Google Cloud Services Staging (Production credentials, test accounts) - **Recommended**
 - **Production Environment**: Google Cloud Services Production (Production credentials, real customers)
-- **Deployments**: Run `deploy-backend.sh` and `deploy-wallet.sh` from **Local Mac** (Docker builds faster)
+- **Deployments**: Run `deploy-backend.sh` and `deploy-wallet.sh` from **Local Mac** (uses Google Cloud Build — no Docker Desktop needed)
 - **Migrations**: Run `run-migrations-master.sh` from **Codespaces** (Cloud SQL Auth Proxy running)
 - **See:** `scripts/README_DEPLOYMENT.md` for "Where to Run What" and typical workflow; `DEVELOPMENT_DEPLOYMENT_WORKFLOW.md` for complete workflow
 

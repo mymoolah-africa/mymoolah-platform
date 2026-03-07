@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
 **Last Updated**: 2026-03-07 18:00  
-**Latest Feature**: Deploy scripts migrated to Google Cloud Build; npm cleanup; Node 20 upgrade  
-**Document Version**: 2.14.0  
-**Session logs**: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`, `docs/session_logs/2026-03-07_1100_international-airtime-pinless-implementation.md`, `docs/session_logs/2026-03-06_1500_deployment-scripts-cleanup-macos-compat.md`  
+**Latest Feature**: Cloud Build migration — deploy scripts use gcloud builds submit (no Docker Desktop)  
+**Document Version**: 2.13.0  
+**Session logs**: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`, `docs/session_logs/2026-03-07_1100_international-airtime-pinless-implementation.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -39,7 +39,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Run DB migrations | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | Set up dev environment | `docs/DEVELOPMENT_GUIDE.md` |
 | Test in Codespaces | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
-| Deploy | `scripts/README_DEPLOYMENT.md`, `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
+| Deploy | `docs/DEPLOYMENT_GUIDE.md`, `docs/archive/deployment/GCP_PRODUCTION_DEPLOYMENT.md` |
 | API contracts | `docs/API_DOCUMENTATION.md` |
 | Recent chat context | `docs/session_logs/` (2-3 most recent) |
 | Cursor skills inventory | `docs/CURSOR_SKILLS.md` |
@@ -100,20 +100,8 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 6, 2026 - 15:00)**
-**Deployment Scripts Cleanup & macOS Compatibility** — (1) Removed 84 redundant scripts (244 → 160). (2) Fixed deploy-backend.sh and deploy-wallet.sh for macOS (`${VAR^^}` → `tr`). (3) ensure-proxies-running.sh: find cloud-sql-proxy from PATH or project root; accept optional env arg to start only the needed proxy. (4) run-migrations-master.sh: pass env to ensure-proxies. (5) Documented run locations: deployments from **Local Mac**, migrations from **Codespaces**. Session log: `docs/session_logs/2026-03-06_1500_deployment-scripts-cleanup-macos-compat.md`.
-
-### **Previous Achievement (March 5, 2026 - 14:00)**
-**eeziAirtime Redemption UI & eeziPay AI Knowledge Base** — (1) Modal/Transaction Detail: clear redemption instruction "Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle."; PIN displayed as 3×4 digits; Copy copies full USSD string. (2) GlobalPinModal `eeziRedemption` prop for instruction, prefix/suffix, pin group size. (3) eeziPay How To entries added to AI support KB: `scripts/add-eezipay-redemption-knowledge-to-ai.js` (5 entries with embeddings), Q5.5–Q5.7 in seed. (4) Fixed faqId length (VARCHAR 20): `KB-EZ-` + 13 chars. (5) FLASH_TESTING_REFERENCE: single eezi product documented. Session log: `docs/session_logs/2026-03-05_1400_eeziairtime-redemption-ui-and-ai-knowledge-base.md`.
-
-### **Previous Achievement (March 5, 2026 - 08:00)**
-**eeziAirtime "No PIN returned" Diagnosis** — Added Flash response debug logging, broadened PIN extraction, normalized `data.pin`, troubleshooting section in FLASH_TESTING_REFERENCE. Session log: `docs/session_logs/2026-03-05_0800_eeziairtime-no-pin-flash-diagnosis.md`.
-
-### **Previous Achievement (March 4, 2026 - 22:30)**
-**eeziAirtime PIN Fixes & Staging/Production Migrations** — (1) Fixed eeziAirtime PIN UI: SMS fallback in apiService.ts replaced with "No PIN returned"; added pinNumber to extraction chain; Copy PIN in Transaction Detail modal for eeziAirtime tokens. (2) Fixed migration `20260304_fix_beneficiary22_eeziairtime_network`: table `service_accounts` → `beneficiary_service_accounts`, column `metadata` → `serviceData`. (3) Staging and Production migrations run successfully in Codespaces. Ledger audit confirmed eeziAirtime purchase flow correct. Session log: `docs/session_logs/2026-03-04_2230_eeziairtime-pin-migration-fixes.md`.
-
-### **Previous Achievement (March 4, 2026 - 11:17)**
-**Cursor Skills for Banking-Grade Platform** — Installed 7 skills via `npx skills add`; consolidated all 8 (including frontend-design) into `.agents/skills/`. Single parent directory, industry standard. Session logs: `docs/session_logs/2026-03-04_1100_cursor-skills-banking-platform.md`, `docs/session_logs/2026-03-04_1117_skills-consolidation-to-agents.md`.
+### **Latest Achievement (March 7, 2026 - 18:00)**
+**Cloud Build Migration & npm Cleanup** — Deploy scripts now use `gcloud builds submit` instead of local Docker. No Docker Desktop needed for deployments. Build times: backend ~6min, wallet ~3.5min (was ~28min). Node 20 LTS in both Dockerfiles. Removed dead crypto/xss-clean packages. International Airtime pinless implemented; staging returns Flash Code 2200 (billing not configured) — awaiting Flash support. Session log: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`.
 
 ### **Previous Achievement (February 27, 2026 - 14:00)**
 **Figma Restriction Removed — Code as Frontend Source of Truth** — Removed Figma read-only rule. Codebase is now frontend source of truth; agents may edit any UI/frontend including `mymoolah-wallet-frontend/pages/*.tsx`. Figma optional reference. Updated CURSOR_2.0_RULES_FINAL.md, AGENT_HANDOVER.md, AGENT_ROLE_TEMPLATE.md. Enables frontend-design skill on main app pages. Session log: `docs/session_logs/2026-02-27_1400_figma-restriction-removed-code-source-of-truth.md`.
@@ -151,10 +139,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – March 4–11, 2026)**
-- **Mar 4 (23:55)**: International Airtime pinless planning — Decision to migrate from PIN-based (Global PIN) to pinless flow; integrate into beneficiary modal. Implementation planned for tomorrow. Session log: `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`.
-- **Mar 5 (08:00)**: eeziAirtime "No PIN returned" diagnosis — Flash response debug logging, broader PIN extraction (transaction/data/result/voucherDetails), backend returns data.pin, troubleshooting doc (float balance, API docs).
-- **Mar 4 (22:30)**: eeziAirtime PIN fixes (apiService SMS fallback, Copy PIN in Transaction Detail modal); migration fix (beneficiary22: beneficiary_service_accounts.serviceData); Staging + Production migrations applied in Codespaces.
+### **Recent Updates (Last 7 Days – February 27–March 4, 2026)**
 - **Mar 4 (11:17)**: Cursor skills consolidated — all 8 skills in `.agents/skills/` (single parent). Moved frontend-design from .cursor/skills/. Best practice structure.
 - **Feb 27 (14:00)**: Figma restriction removed — code is frontend source of truth. Agents may edit any UI/frontend including `pages/*.tsx`. Figma optional reference. Enables frontend-design skill on main app pages.
 - **Feb 21 (21:00)**: Standard Bank PayShap banking-grade overhaul — removed Peach proxy workaround; aligned Pain.001 (top-level grpHdr/pmtInf[], pmntInfId, reqdExctnDt.dtTm, lclInstrm.prtry, cdtrAgt+brnchId, rmtInf.strd[], splmtryData) and Pain.013 (PascalCase, DbtrAcct.Id.Item.Id+Prxy, CdtrAgt.Othr.Id, Amt.Item.Value, PmtCond, RmtInf.Strd[]) with SBSA Postman samples; fixed RTP callback URLs in client.js; scope-keyed token cache in pingAuthService; ACID transaction ordering in RPP/RTP services; added proxyResolutionClient.js; express-validator on routes.
@@ -579,9 +564,7 @@ Before concluding your session, verify:
 
 | Task | Tool/Script | Documentation |
 |------|-------------|---------------|
-| Run migrations | `./scripts/run-migrations-master.sh [uat\|staging\|production]` | Run from **Codespaces**; run **before** seeding |
-| Deploy backend | `./scripts/deploy-backend.sh --staging\|--production` | Run from **Local Mac** |
-| Deploy wallet | `./scripts/deploy-wallet.sh --staging\|--production` | Run from **Local Mac** |
+| Run migrations | `./scripts/run-migrations-master.sh [uat\|staging]` | Run **before** seeding; use after any schema change |
 | Run seed scripts | `node scripts/seed-*.js` (e.g. `--staging` where supported) | Only **after** migrations for that env |
 | Check schema parity | `node scripts/sync-staging-to-uat-banking-grade.js` | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | Test API | `scripts/test-*.js` | `docs/TESTING_GUIDE.md` |
@@ -641,20 +624,10 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Deployment scripts cleanup, macOS compat, run-location docs  
-**Last Session**: 2026-03-06 — Scripts cleanup (84 removed), deploy scripts macOS-fixed, migrations/proxies improved
+**Session Status**: ✅ **COMPLETE** — PayShap callbacks + EasyPay activation + Partner Drive docs  
+**Last Session**: 2026-02-21 — PayShap callbacks, EasyPay Cash-In sweep, Google Drive documentation
 
-### **Most Recent Work (2026-03-06)**
-- **Deployment scripts**: deploy-backend.sh and deploy-wallet.sh run from Local Mac; run-migrations-master.sh from Codespaces. macOS compatibility fix (tr instead of ${VAR^^}). ensure-proxies-running.sh finds proxy from PATH or project root; starts only the needed proxy.
-- **Scripts cleanup**: 84 redundant scripts removed (244 → 160). README_DEPLOYMENT.md has "Where to Run What" table and typical workflow.
-- **Staging CORS fix** (earlier): Removed `customResponseHeaders` from `be-staging-backend`; eeziAirtime purchase verified working.
-
-### **Previous Work (2026-03-04)**
-- **eeziAirtime PIN**: apiService fallback "No PIN returned", pinNumber extraction, Copy PIN in Transaction Detail modal
-- **Migration fix**: 20260304_fix_beneficiary22 — beneficiary_service_accounts.serviceData (not service_accounts.metadata)
-- **Migrations**: Staging and Production applied successfully in Codespaces
-
-### **Earlier Work (2026-02-21)**
+### **Most Recent Work (2026-02-21)**
 - **PayShap callbacks**: Parameterised callback routes for RPP/RTP (batch + realtime) added to `standardbankController.js` and `routes/standardbank.js`. GET polling routes added. New `services/standardbankPollingService.js` with stale transaction recovery.
 - **EasyPay Cash-In**: Full codebase sweep. Confirmed Receiver ID `5063` (already in code), 14-digit number format, Receiver architecture. Drafted activation email to Razine (UAT + Production).
 - **Google Drive docs**: Flash, MobileMart, Zapper partner Drive folders documented in `AGENT_HANDOVER.md` and dedicated reference files created in `integrations/`.
@@ -677,8 +650,6 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
-| Mar 6 (15:00) | Deployment scripts cleanup (84 removed), macOS compat for deploy scripts, ensure-proxies env-specific start, run-location docs (Local Mac vs Codespaces) |
-| Mar 4 (23:55) | International Airtime pinless planning — migrate from Global PIN to pinless; integrate into beneficiary modal; implementation tomorrow |
 | Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email; Flash/MobileMart/Zapper Google Drive docs |
 | Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration; clean-slate catalog test Staging + Production |
 | Feb 25 | Variable-first product catalog filter — `priceType` schema, classify/deactivate fixed duplicates, API returns variable fields, full deploy Staging + Production |
@@ -700,13 +671,12 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **International Airtime — Pinless Flow** (Planned for tomorrow) — Migrate International Airtime from PIN-based (Global PIN / gift-voucher) to pinless flow. Flow: create beneficiary with international number (e.g. +263...) → select beneficiary → call pinless international endpoint → recipient topped up directly. Integrate into beneficiary modal (same pattern as domestic airtime). Backend: Flash `cellular/international/lookup` + purchase. Extend BeneficiaryModal for E.164 international numbers. Session log: `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`.
-2. **EasyPay Cash-In activation** — Await Razine response with: (a) EasyPay UAT system configured with `https://staging.mymoolah.africa/billpayment/v1`, (b) UAT + Production IP addresses for whitelisting, (c) production credentials, (d) SFTP details for SOF reconciliation. Then: set `EASYPAY_RECEIVER_ID=5063` explicitly in Secret Manager, generate SessionToken, share with Razine.
-3. **PayShap UAT testing (2 March)** — André to push to GitHub and deploy to Staging. Test RPP/RTP callbacks with Gustaf on 2 March. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
-4. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths. Then begin live transaction tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities. Endpoint paths confirmed from official v4 PDF.
-5. **Fix `.env.codespaces` MobileMart URL** — `MOBILEMART_API_URL` is currently `https://uat.fulcrumswitch.com` (UAT). Should be `https://fulcrumswitch.com` (Production) for clean-slate tests run from Codespaces.
-6. **Investigate 3 failed MobileMart bill-payment products** — Rest Assured Plan, Matjhabeng Municipality, PayJoy SA failed validation. Minor — investigate separately.
-7. **USDC send** — Test in Codespaces when VALR credentials available.
+1. **EasyPay Cash-In activation** — Await Razine response with: (a) EasyPay UAT system configured with `https://staging.mymoolah.africa/billpayment/v1`, (b) UAT + Production IP addresses for whitelisting, (c) production credentials, (d) SFTP details for SOF reconciliation. Then: set `EASYPAY_RECEIVER_ID=5063` explicitly in Secret Manager, generate SessionToken, share with Razine.
+2. **PayShap UAT testing (2 March)** — André to push to GitHub and deploy to Staging. Test RPP/RTP callbacks with Gustaf on 2 March. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
+3. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths. Then begin live transaction tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities. Endpoint paths confirmed from official v4 PDF.
+4. **Fix `.env.codespaces` MobileMart URL** — `MOBILEMART_API_URL` is currently `https://uat.fulcrumswitch.com` (UAT). Should be `https://fulcrumswitch.com` (Production) for clean-slate tests run from Codespaces.
+5. **Investigate 3 failed MobileMart bill-payment products** — Rest Assured Plan, Matjhabeng Municipality, PayJoy SA failed validation. Minor — investigate separately.
+6. **USDC send** — Test in Codespaces when VALR credentials available.
 
 ---
 

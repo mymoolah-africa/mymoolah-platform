@@ -1,59 +1,20 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-03-07 - 🌍 International Airtime — Pinless Implementation ✅
+## 2026-03-07 - 🚀 Cloud Build Migration & npm Cleanup ✅
 
 ### **Session Overview**
-Implemented International Airtime pinless flow. Users can now create a beneficiary with "Global Airtime" network, enter an international E.164 number, and top up the recipient's phone directly via Flash API — no PIN to copy or share.
+Migrated deploy scripts from local Docker builds to Google Cloud Build — backend build time reduced from ~28min to ~6min, wallet ~3.5min. No Docker Desktop required for deployments. Cleaned up npm deprecation warnings: removed dead `crypto` and `xss-clean` packages, upgraded Dockerfiles to Node 20 LTS, fixed `--only=production` to `--omit=dev`. International Airtime pinless tested on staging — Flash returned Code 2200 (billing), awaiting Flash support.
 
 ### **Changes**
-- **`models/Beneficiary.js`**: Relaxed msisdn validation to accept international E.164 numbers; widened to VARCHAR(20)
-- **`migrations/20260307_widen_msisdn_for_international.js`**: NEW — Widen msisdn column
-- **`controllers/flashController.js`**: Added `internationalLookup()` and `purchaseInternationalAirtime()` for Flash `/cellular/international/lookup`
-- **`routes/flash.js`**: Added `/cellular/international/lookup` and `/cellular/international/purchase` routes
-- **`routes/overlayServices.js`**: Added Path C (international airtime) in Flash purchase flow; live Flash product lookup in catalog endpoint
-- **`BeneficiaryModal.tsx`**: Added "Global Airtime" under "International" section in network dropdown; E.164 validation
-- **`BeneficiaryList.tsx`**: Globe icon for international beneficiaries
-- **`AirtimeDataOverlay.tsx`**: Renamed old card to "International PIN" (kept as fallback); added tip text
+- **`scripts/deploy-backend.sh`**: Replaced `docker buildx build --push` with `gcloud builds submit --tag`; removed Docker dependency checks
+- **`scripts/deploy-wallet.sh`**: Same Cloud Build migration; temp `cloudbuild.yaml` for build args
+- **`package.json`**: Removed `crypto`, `xss-clean` (built-in/dead)
+- **`middleware/securityMiddleware.js`**: Removed dead `xss-clean` import
+- **`Dockerfile`**: Node 18 → Node 20, `--only=production` → `--omit=dev`
+- **`mymoolah-wallet-frontend/Dockerfile`**: Node 18 → Node 20
 
 ### **Session Log**
-- `docs/session_logs/2026-03-07_1100_international-airtime-pinless-implementation.md`
-
----
-
-## 2026-03-06 - 🚀 Deployment Scripts Cleanup & macOS Compatibility ✅
-
-### **Session Overview**
-Scripts folder cleanup (84 redundant scripts removed), macOS compatibility for deploy scripts, Cloud SQL Auth Proxy improvements, and run-location documentation. Deployments run from Local Mac; migrations from Codespaces.
-
-### **Changes**
-- **`scripts/deploy-backend.sh`**: macOS compat (`${VAR^^}` → `tr`), "Run from: LOCAL MAC" header
-- **`scripts/deploy-wallet.sh`**: macOS compat, "Run from: LOCAL MAC" header
-- **`scripts/run-migrations-master.sh`**: Pass env to ensure-proxies (start only needed proxy), "Run from: CODESPACES" header
-- **`scripts/ensure-proxies-running.sh`**: Find cloud-sql-proxy from PATH or project root; accept optional env arg
-- **`scripts/README_DEPLOYMENT.md`**: "Where to Run What" table, typical workflow, prerequisites by env
-- **`scripts/README.md`**: Deployment/migration run-location headers
-- **Deleted 84 scripts**: one-time fixes, password diagnostics, Peach Payments, deprecated deploy, ad-hoc tests, redundant schema checks (244 → 160 scripts)
-
-### **Session Log**
-- `docs/session_logs/2026-03-06_1500_deployment-scripts-cleanup-macos-compat.md`
-
----
-
-## 2026-03-04 - 📱 International Airtime Pinless Planning ✅
-
-### **Session Overview**
-Planning session to migrate International Airtime from PIN-based (Global PIN / gift-voucher) to **pinless** flow. Decision confirmed: add International Airtime to pinless flows tomorrow. Flow: create beneficiary with international number (e.g. +263...) → select beneficiary → call pinless international endpoint → recipient topped up directly. Integrate into beneficiary modal (same pattern as domestic airtime). No code changes — documentation updates only.
-
-### **Changes**
-- **`docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`**: NEW — Session log with technical considerations, Flash API notes, beneficiary/validation requirements
-- **`docs/agent_handover.md`**: International Airtime pinless added as #1 Next Development Priority; Recent Updates
-- **`docs/changelog.md`**: This entry
-- **`docs/readme.md`**: Upcoming International Airtime pinless in work in progress
-- **`docs/PROJECT_STATUS.md`**: Upcoming work
-- **`docs/DEVELOPMENT_GUIDE.md`**: Last Updated
-
-### **Session Log**
-- `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`
+- `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`
 
 ---
 
