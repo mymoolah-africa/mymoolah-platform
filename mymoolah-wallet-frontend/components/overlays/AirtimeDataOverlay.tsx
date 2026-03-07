@@ -1092,7 +1092,7 @@ export function AirtimeDataOverlay() {
             </p>
           </div>
 
-          {/* International Airtime — PIN-based fallback (kept for users who prefer PIN codes) */}
+          {/* TEMPORARILY HIDDEN: International PIN card — re-enable once pinless flow is confirmed with Flash
           {globalPinProducts.length > 0 && (
             <div
               onClick={() => setShowGlobalPinModal(true)}
@@ -1128,6 +1128,7 @@ export function AirtimeDataOverlay() {
               </p>
             </div>
           )}
+          */}
 
           {/* Tip: Add international recipients via + Add New Recipient → Global Airtime */}
           <p style={{
