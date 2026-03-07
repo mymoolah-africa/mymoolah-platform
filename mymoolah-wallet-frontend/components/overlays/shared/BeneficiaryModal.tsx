@@ -750,8 +750,6 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                           </span>
                         </div>
                       </div>
-                      </div>
-                      
                     </div>
                   )}
                 </div>
