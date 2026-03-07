@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Build and Deploy MyMoolah Wallet Frontend to Cloud Run
-# Run from: LOCAL MAC (Docker + gcloud required)
+# Uses Google Cloud Build (no local Docker required)
 # Usage: ./scripts/deploy-wallet.sh [--staging | --production] [optional-image-tag]
 
 ENVIRONMENT=""
@@ -18,7 +18,7 @@ for arg in "$@"; do
       ;;
     *)
       if [[ -z "$ENVIRONMENT" && "$arg" != -* ]]; then
-          ENVIRONMENT="$arg" # fallback
+          ENVIRONMENT="$arg"
       else
           IMAGE_TAG="$arg"
       fi
@@ -38,13 +38,14 @@ IMAGE_NAME="gcr.io/${PROJECT_ID}/mymoolah-wallet-${ENVIRONMENT}:${IMAGE_TAG}"
 
 if [ "$ENVIRONMENT" == "staging" ]; then
   BACKEND_URL="https://staging.mymoolah.africa"
+  BUILD_COMMAND="build:staging"
 else
   BACKEND_URL="https://api-mm.mymoolah.africa"
+  BUILD_COMMAND="build"
 fi
 
 log() { echo "📋 [$((SECONDS))s] $*"; }
 err() { echo "❌ $*" >&2; exit 1; }
-success() { echo "✅ $*"; }
 
 ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
 log "🚀 Build and Deploy Wallet Frontend -> ${ENV_UPPER}"
@@ -53,9 +54,7 @@ log "Image:       ${IMAGE_NAME}"
 log "Backend API: ${BACKEND_URL}"
 echo ""
 
-# Checks
-command -v docker >/dev/null || err "Docker not found"
-docker info >/dev/null 2>&1 || err "Docker daemon is not running"
+# Only gcloud is required (no local Docker needed)
 command -v gcloud >/dev/null || err "gcloud not found"
 
 # Authenticate with Google Cloud
@@ -69,7 +68,7 @@ ensure_gcloud_auth() {
     log "⚠️  No active gcloud authentication found"
     if [ -t 0 ] && [ -t 1 ]; then
       log "Starting interactive login..."
-      if gcloud auth login --no-launch-browser; then
+      if gcloud auth login; then
         log "✅ Authentication successful"
       else
         err "gcloud auth login failed. Please run manually: gcloud auth login"
@@ -87,7 +86,6 @@ ensure_gcloud_auth() {
   fi
   log "✅ Project: ${PROJECT_ID}"
 
-  # Verify gcloud can generate access tokens (catches expired refresh tokens)
   if ! gcloud auth print-access-token >/dev/null 2>&1; then
     log "⚠️  Auth token expired — re-authenticating..."
     gcloud auth revoke --all --quiet 2>/dev/null || true
@@ -98,34 +96,43 @@ ensure_gcloud_auth() {
       err "Auth token expired. Run: gcloud auth revoke --all && gcloud auth login"
     fi
   fi
-
-  # Configure Docker to use gcloud credentials for GCR
-  log "Configuring Docker for GCR authentication..."
-  gcloud auth configure-docker gcr.io --quiet 2>/dev/null || true
-  log "✅ Docker configured for gcr.io"
 }
 
 ensure_gcloud_auth
 
-cd mymoolah-wallet-frontend
+# Step 1: Build with Google Cloud Build (builds on Google's servers, pushes directly to GCR)
+# Uses --config to pass build args (VITE_API_BASE_URL, BUILD_COMMAND) to the Dockerfile
+log "Building wallet image with Google Cloud Build for ${ENVIRONMENT}..."
 
-# Build & Push Docker image
-log "Building Docker image for wallet frontend (${ENVIRONMENT})..."
-docker buildx build \
-  --no-cache \
-  --pull \
-  --platform linux/amd64 \
-  --build-arg VITE_API_BASE_URL="${BACKEND_URL}" \
-  --build-arg BUILD_COMMAND="build:staging" \
-  --tag "${IMAGE_NAME}" \
-  --push \
-  . || { err "Failed to build and push Docker image"; }
+CLOUDBUILD_FILE=$(mktemp)
+cat > "${CLOUDBUILD_FILE}" <<YAML
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '--build-arg'
+      - 'VITE_API_BASE_URL=${BACKEND_URL}'
+      - '--build-arg'
+      - 'BUILD_COMMAND=${BUILD_COMMAND}'
+      - '-t'
+      - '${IMAGE_NAME}'
+      - '.'
+images:
+  - '${IMAGE_NAME}'
+timeout: '1200s'
+YAML
 
-cd ..
-success "Docker image pushed: ${IMAGE_NAME}"
+gcloud builds submit \
+  --config "${CLOUDBUILD_FILE}" \
+  --project "${PROJECT_ID}" \
+  --quiet \
+  mymoolah-wallet-frontend/ || { rm -f "${CLOUDBUILD_FILE}"; err "Cloud Build failed"; }
+
+rm -f "${CLOUDBUILD_FILE}"
+log "✅ Wallet image built and pushed: ${IMAGE_NAME}"
 echo ""
 
-# Deploy to Cloud Run
+# Step 2: Deploy to Cloud Run
 log "Deploying to Cloud Run (${ENVIRONMENT})..."
 gcloud run deploy "${SERVICE_NAME}" \
   --image "${IMAGE_NAME}" \
@@ -138,10 +145,10 @@ gcloud run deploy "${SERVICE_NAME}" \
   --timeout 60 \
   --concurrency 1000 \
   --allow-unauthenticated \
-  --port 80 || { err "Failed to deploy Cloud Run service"; }
+  --port 80 || err "Failed to deploy Cloud Run service"
 
 echo ""
-success "Deployment complete!"
+log "✅ ${ENV_UPPER} wallet deployed successfully!"
 SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" --region "${REGION}" --format="value(status.url)")
 log "Service URL: ${SERVICE_URL}"
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Build and Deploy MyMoolah Backend to Cloud Run
-# Run from: LOCAL MAC (Docker + gcloud required)
+# Uses Google Cloud Build (no local Docker required)
 # Usage: ./scripts/deploy-backend.sh [--staging | --production] [optional-image-tag]
 
 ENVIRONMENT=""
@@ -18,7 +18,7 @@ for arg in "$@"; do
       ;;
     *)
       if [[ -z "$ENVIRONMENT" && "$arg" != -* ]]; then
-          ENVIRONMENT="$arg" # fallback if they didn't use flag
+          ENVIRONMENT="$arg"
       else
           IMAGE_TAG="$arg"
       fi
@@ -55,9 +55,7 @@ log "Project: ${PROJECT_ID}"
 log "Image:   ${IMAGE_NAME}"
 echo ""
 
-# Checks
-command -v docker >/dev/null || err "Docker not found"
-docker info >/dev/null 2>&1 || err "Docker daemon is not running"
+# Only gcloud is required (no local Docker needed)
 command -v gcloud >/dev/null || err "gcloud not found"
 
 # Authenticate with Google Cloud
@@ -71,7 +69,7 @@ ensure_gcloud_auth() {
     log "⚠️  No active gcloud authentication found"
     if [ -t 0 ] && [ -t 1 ]; then
       log "Starting interactive login..."
-      if gcloud auth login --no-launch-browser; then
+      if gcloud auth login; then
         log "✅ Authentication successful"
       else
         err "gcloud auth login failed. Please run manually: gcloud auth login"
@@ -89,7 +87,6 @@ ensure_gcloud_auth() {
   fi
   log "✅ Project: ${PROJECT_ID}"
 
-  # Verify gcloud can generate access tokens (catches expired refresh tokens)
   if ! gcloud auth print-access-token >/dev/null 2>&1; then
     log "⚠️  Auth token expired — re-authenticating..."
     gcloud auth revoke --all --quiet 2>/dev/null || true
@@ -100,16 +97,11 @@ ensure_gcloud_auth() {
       err "Auth token expired. Run: gcloud auth revoke --all && gcloud auth login"
     fi
   fi
-
-  # Configure Docker to use gcloud credentials for GCR
-  log "Configuring Docker for GCR authentication..."
-  gcloud auth configure-docker gcr.io --quiet 2>/dev/null || true
-  log "✅ Docker configured for gcr.io"
 }
 
 ensure_gcloud_auth
 
-# Verify .env in .dockerignore
+# Verify .env in .dockerignore (Cloud Build uses .dockerignore when no .gcloudignore)
 if ! grep -qE "^\.env$" .dockerignore 2>/dev/null; then
   log "⚠️  Adding .env to .dockerignore"
   echo ".env" >> .dockerignore
@@ -126,7 +118,6 @@ build_secrets_args() {
 
   local base="ZAPPER_API_URL=zapper-prod-api-url:latest,ZAPPER_ORG_ID=zapper-prod-org-id:latest,ZAPPER_API_TOKEN=zapper-prod-api-token:latest,ZAPPER_X_API_KEY=zapper-prod-x-api-key:latest,MOBILEMART_CLIENT_ID=mobilemart-prod-client-id:latest,MOBILEMART_CLIENT_SECRET=mobilemart-prod-client-secret:latest,MOBILEMART_API_URL=mobilemart-prod-api-url:latest,MOBILEMART_TOKEN_URL=mobilemart-prod-token-url:latest,FLASH_CONSUMER_KEY=FLASH_CONSUMER_KEY:latest,FLASH_CONSUMER_SECRET=FLASH_CONSUMER_SECRET:latest,FLASH_ACCOUNT_NUMBER=FLASH_ACCOUNT_NUMBER:latest,FLASH_API_URL=FLASH_API_URL:latest,FLASH_TOKEN_URL=FLASH_TOKEN_URL:latest,VAS_FAILOVER_ENABLED=vas-failover-enabled:latest"
   
-  # Environment specific base secrets
   if [ "$ENVIRONMENT" == "production" ]; then
     base="${base},JWT_SECRET=jwt-secret-production:latest,SESSION_SECRET=session-secret-production:latest,DB_PASSWORD=db-mmtp-pg-production-password:latest"
   else
@@ -146,19 +137,18 @@ build_secrets_args() {
   echo "${base}"
 }
 
-# Step 1: Build and push
-log "Building (no cache) and pushing image for ${ENVIRONMENT}..."
-docker buildx build \
-  --no-cache \
-  --platform linux/amd64 \
+# Step 1: Build with Google Cloud Build (builds on Google's servers, pushes directly to GCR)
+log "Building image with Google Cloud Build for ${ENVIRONMENT}..."
+gcloud builds submit \
   --tag "${IMAGE_NAME}" \
-  --file Dockerfile \
-  --push \
-  . || err "Docker build/push failed"
-log "✅ Image pushed: ${IMAGE_NAME}"
+  --project "${PROJECT_ID}" \
+  --timeout=1200s \
+  --quiet \
+  . || err "Cloud Build failed"
+log "✅ Image built and pushed: ${IMAGE_NAME}"
 echo ""
 
-# Step 2: Deploy
+# Step 2: Deploy to Cloud Run
 SECRETS_STR=$(build_secrets_args)
 log "Deploying to Cloud Run (${ENVIRONMENT})..."
 
