@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Wifi, Smartphone, CheckCircle, Copy, Share, Download, Home, Globe } from 'lucide-react';
+import { ArrowLeft, Wifi, Smartphone, CheckCircle, Copy, Share, Download, Home, Globe, Loader2 } from 'lucide-react';
 
 // Supplier border colours — shown in UAT and Staging only
 const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
@@ -40,7 +40,7 @@ interface AirtimeDataBeneficiary extends Beneficiary {
   // Uses accountType from base Beneficiary interface
 }
 
-type Step = 'beneficiary' | 'catalog' | 'confirm';
+type Step = 'beneficiary' | 'loading' | 'catalog' | 'confirm';
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
 export function AirtimeDataOverlay() {
@@ -242,6 +242,7 @@ export function AirtimeDataOverlay() {
     void (async () => {
       try {
         setLoadingState('loading');
+        setCurrentStep('loading');
         setSelectedBeneficiary(normalized);
         setSelectedAccountId(accountId || null);
       
@@ -348,6 +349,7 @@ export function AirtimeDataOverlay() {
           console.error('❌ Failed to load international catalog:', catalogErr);
           setError('Failed to load international airtime products. Please try again.');
           setLoadingState('error');
+          setCurrentStep('beneficiary');
         }
         return;
       }
@@ -401,6 +403,7 @@ export function AirtimeDataOverlay() {
         console.error('Failed to load catalog:', err);
         setError('Failed to load product catalog');
         setLoadingState('error');
+        setCurrentStep('beneficiary');
       }
     })();
   };
@@ -1136,6 +1139,30 @@ export function AirtimeDataOverlay() {
             padding: '0 16px'
           }}>
             💡 To top up an international number directly, add a recipient and select <strong>Global Airtime</strong> as the network.
+          </p>
+        </div>
+      )}
+
+      {/* Loading step — shown while catalog is being fetched after beneficiary selection */}
+      {currentStep === 'loading' && (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '3rem 1rem',
+          gap: '1rem',
+        }}>
+          <Loader2 style={{ width: '32px', height: '32px', color: '#86BE41' }} className="animate-spin" />
+          <p style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#6b7280',
+            margin: 0,
+            textAlign: 'center',
+          }}>
+            Loading products for {selectedBeneficiary?.name || 'recipient'}…
           </p>
         </div>
       )}
