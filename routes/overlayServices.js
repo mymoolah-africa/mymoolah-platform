@@ -653,27 +653,29 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       });
     }
     
-    if (!vasProduct) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/0d46f726-574e-40d9-82c4-c177abd63d66', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sessionId: 'debug-session',
-          runId: 'pre-fix',
-          hypothesisId: 'H2',
-          location: 'routes/overlayServices.js:airtime-data-purchase:vasProduct',
-          message: 'VasProduct not found for airtime/data purchase',
-          data: {
-            supplier,
-            productCode,
-            vasType: type
-          },
-          timestamp: Date.now()
-        })
-      }).catch(() => {});
-      // #endregion agent log
+    // International airtime: bypass VasProduct lookup — use Flash international purchase directly
+    const isInternationalPurchase = (beneficiary.metadata?.network === 'global-airtime') &&
+      (productId.includes('GLOBAL') || productId.includes('INTL'));
 
+    if (!vasProduct && isInternationalPurchase) {
+      console.log('🌐 International airtime purchase — bypassing VasProduct lookup');
+      type = 'airtime';
+      supplier = 'FLASH';
+      vasProduct = {
+        id: 0,
+        supplierId: 'FLASH',
+        supplierProductId: productCode || 'GLOBAL',
+        vasType: 'airtime',
+        transactionType: 'topup',
+        provider: 'Global',
+        isActive: true,
+        isVirtual: true,
+        isInternational: true,
+        metadata: { network: 'global-airtime' }
+      };
+    }
+
+    if (!vasProduct) {
       return res.status(404).json({
         success: false,
         error: 'Product not found in catalog'
