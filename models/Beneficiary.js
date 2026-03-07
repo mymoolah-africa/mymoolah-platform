@@ -16,16 +16,16 @@ module.exports = (sequelize, DataTypes) => {
       comment: 'Beneficiary name (can be same across different users)',
     },
     msisdn: {
-      type: DataTypes.STRING(15),
-      allowNull: true, // Optional for non-mobile beneficiaries (electricity, biller, bank)
-      comment: 'Mobile number (MSISDN) in E.164 (+27XXXXXXXXX). Required for mymoolah/airtime/data; optional otherwise',
+      type: DataTypes.STRING(20),
+      allowNull: true,
+      comment: 'Mobile number in E.164. SA: +27XXXXXXXXX. International: +{countryCode}{number}. Required for mymoolah/airtime/data; optional otherwise',
       validate: {
         isValidMsisdn(value) {
-          if (value == null || value === '') return; // allow null/empty
-          // Allow NON_MSI_* placeholders for non-mobile services
+          if (value == null || value === '') return;
           if (typeof value === 'string' && value.startsWith('NON_MSI_')) return;
-          if (!/^\+27[6-8][0-9]{8}$/.test(value)) {
-            throw new Error('Invalid South African mobile number (E.164 +27XXXXXXXXX required)');
+          // E.164: + followed by 7-15 digits (covers all countries)
+          if (!/^\+[1-9]\d{6,14}$/.test(value)) {
+            throw new Error('Invalid mobile number. Use E.164 format: +{countryCode}{number} (e.g. +27821234567 or +263771234567)');
           }
         }
       }

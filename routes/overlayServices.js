@@ -263,12 +263,55 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
       });
     });
 
-    // If no DB-backed entries for global selections, provide safe fallbacks
+    // For global-airtime beneficiaries, fetch live products from Flash international lookup
+    if (products.length === 0 && beneficiaryNetwork === 'global-airtime' && process.env.FLASH_LIVE_INTEGRATION === 'true') {
+      try {
+        const FlashAuthService = require('../services/flashAuthService');
+        const flashAuth = new FlashAuthService();
+
+        const destNumber = String(beneficiary.identifier || beneficiary.msisdn || '').replace(/\D/g, '');
+        if (destNumber.length >= 7) {
+          const lookupRef = `INTL_CAT_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          const lookupResponse = await flashAuth.makeAuthenticatedRequest('POST', '/cellular/international/lookup', {
+            reference: lookupRef,
+            accountNumber: process.env.FLASH_ACCOUNT_NUMBER,
+            mobileNumber: '27000000000',
+            destinationMobileNumber: destNumber
+          });
+
+          const flashProducts = lookupResponse.products || [];
+          console.log(`✅ Flash international lookup returned ${flashProducts.length} products for ${destNumber}`);
+
+          flashProducts.forEach((fp, idx) => {
+            products.push({
+              id: `airtime_FLASH_INTL_${fp.productId || idx}`,
+              name: fp.productName || `International Airtime`,
+              size: `R${((fp.price || 0) / 100).toFixed(2)}`,
+              price: (fp.price || 0) / 100,
+              provider: 'Global',
+              type: 'airtime',
+              validity: 'Immediate',
+              isBestDeal: idx === 0,
+              supplier: 'FLASH',
+              supplierProductId: String(fp.productId || ''),
+              description: fp.productName || 'International Airtime Top-up',
+              commission: 0,
+              fixedFee: 0,
+              isInternational: true
+            });
+          });
+        }
+      } catch (lookupError) {
+        console.error('❌ Flash international lookup failed for catalog:', lookupError.message);
+      }
+    }
+
+    // Static fallback for global selections when Flash is not live or lookup returned nothing
     if (products.length === 0 && (beneficiaryNetwork === 'global-airtime' || beneficiaryNetwork === 'global-data')) {
-      const globalAmounts = [1000, 2000, 5000, 10000]; // cents: R10, R20, R50, R100
+      const globalAmounts = [1000, 2000, 5000, 10000];
       globalAmounts.forEach((cents) => {
         products.push({
-          id: `${beneficiaryNetwork.startsWith('global-airtime') ? 'airtime' : 'data'}_flash_GLOBAL_${cents}`,
+          id: `${beneficiaryNetwork === 'global-airtime' ? 'airtime' : 'data'}_flash_GLOBAL_${cents}`,
           name: `Global ${beneficiaryNetwork === 'global-airtime' ? 'Airtime' : 'Data'} Top-up`,
           size: `R${(cents / 100).toFixed(2)}`,
           price: cents / 100,
@@ -1201,11 +1244,13 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
 
       } else if (supplier === 'FLASH' && process.env.FLASH_LIVE_INTEGRATION === 'true') {
         // ─── Primary Flash purchase path ────────────────────────────────────────
-        // Two sub-paths:
-        //   A) Pinless cellular (Vodacom, MTN, CellC, Telkom, eeziAirtime from "Cellular" group)
+        // Three sub-paths:
+        //   A) Pinless cellular (Vodacom, MTN, CellC, Telkom from "Cellular" group)
         //      → POST /cellular/pinless/purchase
         //   B) eeziAirtime Token / Eezi Voucher (PIN cash token from "Eezi Vouchers" group)
         //      → POST /eezi-voucher/purchase
+        //   C) International airtime (global-airtime beneficiaries)
+        //      → POST /cellular/international/lookup (with productCode to trigger purchase)
         //
         // Detect which path by checking the product variant metadata or product name.
         // "Eezi Vouchers" products have names containing "Token" or metadata.flash_product_group = "Eezi Vouchers".
@@ -1214,7 +1259,10 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
           const FlashAuthService = require('../services/flashAuthService');
           const flashAuth = new FlashAuthService();
 
-          // Detect if this is an eeziAirtime Token (PIN voucher) vs pinless cellular
+          // Detect beneficiary network and product type to choose path
+          const beneficiaryNetwork = beneficiary.metadata?.network || '';
+          const isInternationalAirtime = beneficiaryNetwork === 'global-airtime';
+
           const variantMeta = productVariant?.metadata || {};
           const flashProductGroup = (variantMeta.flash_product_group || '').toLowerCase();
           const productNameLower = (productVariant?.product?.name || vasProduct?.name || '').toLowerCase();
@@ -1224,7 +1272,43 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
 
           const flashProductCode = parseInt(productCode, 10) || productCode;
 
-          if (isEeziToken) {
+          if (isInternationalAirtime) {
+            // ── Path C: International airtime (pinless) ─────────────────────────
+            const rawDest = String(beneficiary.identifier || beneficiary.msisdn || '').trim();
+            const destDigits = rawDest.replace(/\D/g, '');
+            // Strip leading + but keep country code digits
+            const cleanDest = rawDest.startsWith('+') ? destDigits : destDigits;
+
+            if (cleanDest.length < 7 || cleanDest.length > 15) {
+              throw new Error(`Invalid international number: ${cleanDest} (expected 7-15 digits)`);
+            }
+
+            const intlPayload = {
+              reference: idempotencyKey,
+              accountNumber: process.env.FLASH_ACCOUNT_NUMBER,
+              mobileNumber: '27000000000',
+              destinationMobileNumber: cleanDest,
+              productCode: flashProductCode,
+              ...(amountInCentsValue && { amount: amountInCentsValue })
+            };
+
+            console.log('📤 Flash request (international airtime):', {
+              endpoint: '/cellular/international/lookup',
+              destinationMobileNumber: cleanDest,
+              productCode: flashProductCode,
+              amountCents: amountInCentsValue,
+              supplier
+            });
+
+            supplierFulfillmentResult = await flashAuth.makeAuthenticatedRequest(
+              'POST',
+              '/cellular/international/lookup',
+              intlPayload
+            );
+
+            console.log('✅ Flash international airtime confirmed:', JSON.stringify(supplierFulfillmentResult, null, 2));
+
+          } else if (isEeziToken) {
             // ── Path B: eeziAirtime Token (PIN cash voucher) ──────────────────
             console.log('📤 Flash request (eeziAirtime Token / eezi-voucher):', {
               endpoint: '/eezi-voucher/purchase',

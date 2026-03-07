@@ -1133,7 +1133,7 @@ export function AirtimeDataOverlay() {
             </p>
           </div>
 
-          {/* International Airtime — PIN-based, no beneficiary needed */}
+          {/* International Airtime — PIN-based fallback (kept for users who prefer PIN codes) */}
           {globalPinProducts.length > 0 && (
             <div
               onClick={() => setShowGlobalPinModal(true)}
@@ -1157,7 +1157,7 @@ export function AirtimeDataOverlay() {
                 </div>
                 <div>
                   <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
-                    International Airtime
+                    International PIN
                   </p>
                   <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: 0 }}>
                     {globalPinProducts.length} PIN options · Flash
@@ -1169,6 +1169,18 @@ export function AirtimeDataOverlay() {
               </p>
             </div>
           )}
+
+          {/* Tip: Add international recipients via + Add New Recipient → Global Airtime */}
+          <p style={{
+            fontFamily: 'Montserrat, sans-serif',
+            fontSize: '12px',
+            color: '#6b7280',
+            textAlign: 'center',
+            margin: '4px 0 0',
+            padding: '0 16px'
+          }}>
+            💡 To top up an international number directly, add a recipient and select <strong>Global Airtime</strong> as the network.
+          </p>
         </div>
       )}
 

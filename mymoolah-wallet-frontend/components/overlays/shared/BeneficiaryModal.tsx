@@ -143,6 +143,9 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
     switch (type) {
       case 'airtime':
       case 'data':
+        if (formData.network === 'global-airtime') {
+          return 'International number (e.g., +263771234567)';
+        }
         return 'Mobile number (e.g., 0821234567)';
       case 'electricity':
         return 'Meter number (e.g., 12345678901)';
@@ -169,7 +172,14 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
 
     // Type-specific validation
     if (type === 'airtime' || type === 'data') {
-      if (!validateMobileNumber(formData.identifier)) {
+      if (formData.network === 'global-airtime') {
+        // International: must start with + and have 8-15 digits after country code
+        const intlDigits = formData.identifier.replace(/\D/g, '');
+        if (!formData.identifier.startsWith('+') || intlDigits.length < 7 || intlDigits.length > 15) {
+          setError('Please enter a valid international number starting with + (e.g., +263771234567)');
+          return false;
+        }
+      } else if (!validateMobileNumber(formData.identifier)) {
         setError('Please enter a valid South African mobile number');
         return false;
       }
@@ -591,7 +601,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                     onMouseLeave={(e) => (e.target as HTMLElement).style.borderColor = '#e2e8f0'}
                   >
                     <span style={{ color: formData.network ? '#1f2937' : '#9ca3af' }}>
-                      {formData.network || 'Select network'}
+                      {formData.network === 'global-airtime' ? '🌍 Global Airtime' : (formData.network || 'Select network')}
                     </span>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="m6 9 6 6 6-6"/>
@@ -633,10 +643,10 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                         </div>
                         
                                                    {[
-                             { value: 'Vodacom', label: 'Vodacom', color: '#e60000', letter: 'V', textColor: '#ffffff' },
-                             { value: 'MTN', label: 'MTN', color: '#ffcc00', letter: 'M', textColor: '#000000' },
-                             { value: 'CellC', label: 'CellC', color: '#ff6600', letter: 'C', textColor: '#ffffff' },
-                             { value: 'Telkom', label: 'Telkom', color: '#003366', letter: 'T', textColor: '#ffffff' },
+                           { value: 'Vodacom', label: 'Vodacom', color: '#e60000', letter: 'V', textColor: '#ffffff' },
+                           { value: 'MTN', label: 'MTN', color: '#ffcc00', letter: 'M', textColor: '#000000' },
+                           { value: 'CellC', label: 'CellC', color: '#ff6600', letter: 'C', textColor: '#ffffff' },
+                           { value: 'Telkom', label: 'Telkom', color: '#003366', letter: 'T', textColor: '#ffffff' },
                            ].map((network) => (
                              <div
                                key={network.value}
@@ -681,6 +691,65 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                             </span>
                           </div>
                         ))}
+                      </div>
+
+                      {/* International Section */}
+                      <div style={{
+                        padding: '8px 0'
+                      }}>
+                        <div style={{
+                          fontSize: '12px',
+                          fontWeight: '600',
+                          color: '#64748b',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          marginBottom: '8px',
+                          padding: '0 12px'
+                        }}>
+                          International
+                        </div>
+                        <div
+                          onClick={() => {
+                            setFormData({ ...formData, network: 'global-airtime', identifier: '' });
+                            setShowNetworkDropdown(false);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            backgroundColor: formData.network === 'global-airtime' ? '#f1f5f9' : 'transparent'
+                          }}
+                          onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#f8fafc'}
+                          onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = formData.network === 'global-airtime' ? '#f1f5f9' : 'transparent'}
+                        >
+                          <div style={{
+                            width: '24px',
+                            height: '24px',
+                            backgroundColor: '#16a34a',
+                            borderRadius: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '10px',
+                            fontWeight: 'bold',
+                            color: '#ffffff'
+                          }}>
+                            🌍
+                          </div>
+                          <span style={{
+                            fontWeight: '500',
+                            color: '#1f2937',
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '14px'
+                          }}>
+                            Global Airtime
+                          </span>
+                        </div>
+                      </div>
                       </div>
                       
                     </div>

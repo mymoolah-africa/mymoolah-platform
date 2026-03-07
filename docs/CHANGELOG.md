@@ -1,5 +1,25 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-07 - 🌍 International Airtime — Pinless Implementation ✅
+
+### **Session Overview**
+Implemented International Airtime pinless flow. Users can now create a beneficiary with "Global Airtime" network, enter an international E.164 number, and top up the recipient's phone directly via Flash API — no PIN to copy or share.
+
+### **Changes**
+- **`models/Beneficiary.js`**: Relaxed msisdn validation to accept international E.164 numbers; widened to VARCHAR(20)
+- **`migrations/20260307_widen_msisdn_for_international.js`**: NEW — Widen msisdn column
+- **`controllers/flashController.js`**: Added `internationalLookup()` and `purchaseInternationalAirtime()` for Flash `/cellular/international/lookup`
+- **`routes/flash.js`**: Added `/cellular/international/lookup` and `/cellular/international/purchase` routes
+- **`routes/overlayServices.js`**: Added Path C (international airtime) in Flash purchase flow; live Flash product lookup in catalog endpoint
+- **`BeneficiaryModal.tsx`**: Added "Global Airtime" under "International" section in network dropdown; E.164 validation
+- **`BeneficiaryList.tsx`**: Globe icon for international beneficiaries
+- **`AirtimeDataOverlay.tsx`**: Renamed old card to "International PIN" (kept as fallback); added tip text
+
+### **Session Log**
+- `docs/session_logs/2026-03-07_1100_international-airtime-pinless-implementation.md`
+
+---
+
 ## 2026-03-06 - 🚀 Deployment Scripts Cleanup & macOS Compatibility ✅
 
 ### **Session Overview**

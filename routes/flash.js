@@ -125,6 +125,22 @@ router.post('/cash-out-pin/cancel', flashController.cancelCashOutPin.bind(flashC
  */
 router.post('/cellular/pinless/purchase', flashController.purchaseCellularRecharge.bind(flashController));
 
+/**
+ * @route   POST /api/v1/flash/cellular/international/lookup
+ * @desc    Lookup available international airtime products for a destination number
+ * @access  Private (requires authentication)
+ * @body    { destinationMobileNumber, metadata? }
+ */
+router.post('/cellular/international/lookup', auth, flashController.internationalLookup.bind(flashController));
+
+/**
+ * @route   POST /api/v1/flash/cellular/international/purchase
+ * @desc    Purchase international airtime (pinless) for a destination number
+ * @access  Private (requires authentication)
+ * @body    { destinationMobileNumber, productId, amount?, metadata? }
+ */
+router.post('/cellular/international/purchase', auth, flashController.purchaseInternationalAirtime.bind(flashController));
+
 // ========================================
 // EEZI VOUCHER ENDPOINTS
 // ========================================

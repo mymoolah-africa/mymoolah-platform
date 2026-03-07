@@ -1664,6 +1664,169 @@ class FlashController {
             });
         }
     }
+    /**
+     * Lookup available international airtime products for a destination number.
+     * Flash API: POST /cellular/international/lookup
+     *
+     * Returns a list of products (productId, productName, price in cents ZAR)
+     * specific to the destination country/operator.
+     */
+    async internationalLookup(req, res) {
+        try {
+            const { destinationMobileNumber, metadata } = req.body;
+
+            if (!destinationMobileNumber) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'destinationMobileNumber is required'
+                });
+            }
+
+            // Strip leading + if present — Flash expects digits only (country code + number)
+            const cleanDest = String(destinationMobileNumber).replace(/^\+/, '').replace(/\D/g, '');
+            if (cleanDest.length < 7 || cleanDest.length > 15) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'destinationMobileNumber must be 7-15 digits in international format'
+                });
+            }
+
+            const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+            if (!accountNumber) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'FLASH_ACCOUNT_NUMBER not configured'
+                });
+            }
+
+            const reference = `INTL_LOOKUP_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+            const requestData = {
+                reference,
+                accountNumber,
+                mobileNumber: '27000000000',
+                destinationMobileNumber: cleanDest,
+                ...(metadata && { metadata })
+            };
+
+            console.log('📤 Flash international lookup:', {
+                endpoint: '/cellular/international/lookup',
+                destinationMobileNumber: cleanDest
+            });
+
+            const response = await this.authService.makeAuthenticatedRequest(
+                'POST',
+                '/cellular/international/lookup',
+                requestData
+            );
+
+            console.log('✅ Flash international lookup response:', JSON.stringify(response, null, 2));
+
+            res.json({
+                success: true,
+                data: {
+                    products: response.products || [],
+                    destinationMobileNumber: cleanDest,
+                    timestamp: new Date().toISOString()
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Flash Controller: International lookup failed:', error.message);
+            res.status(error.statusCode || 500).json({
+                success: false,
+                error: 'Failed to lookup international airtime products',
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
+            });
+        }
+    }
+
+    /**
+     * Purchase international airtime (pinless) for a destination number.
+     * Uses the productId returned by internationalLookup.
+     *
+     * Flow:
+     *  1. Call /cellular/international/lookup to get product list
+     *  2. User selects a product
+     *  3. This method purchases it — the recipient's phone is topped up directly
+     */
+    async purchaseInternationalAirtime(req, res) {
+        try {
+            const { destinationMobileNumber, productId, amount, metadata } = req.body;
+
+            if (!destinationMobileNumber || !productId) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'destinationMobileNumber and productId are required'
+                });
+            }
+
+            const cleanDest = String(destinationMobileNumber).replace(/^\+/, '').replace(/\D/g, '');
+            if (cleanDest.length < 7 || cleanDest.length > 15) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'destinationMobileNumber must be 7-15 digits in international format'
+                });
+            }
+
+            const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+            if (!accountNumber) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'FLASH_ACCOUNT_NUMBER not configured'
+                });
+            }
+
+            const reference = `INTL_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+            const requestData = {
+                reference,
+                accountNumber,
+                mobileNumber: '27000000000',
+                destinationMobileNumber: cleanDest,
+                productCode: parseInt(productId, 10),
+                ...(amount && { amount: parseInt(amount, 10) }),
+                ...(metadata && { metadata })
+            };
+
+            console.log('📤 Flash international purchase:', {
+                endpoint: '/cellular/international/lookup',
+                destinationMobileNumber: cleanDest,
+                productId,
+                amount
+            });
+
+            // Flash uses the same lookup endpoint for purchase — the productCode
+            // parameter triggers a purchase rather than a lookup
+            const response = await this.authService.makeAuthenticatedRequest(
+                'POST',
+                '/cellular/international/lookup',
+                requestData
+            );
+
+            console.log('✅ Flash international purchase response:', JSON.stringify(response, null, 2));
+
+            res.json({
+                success: true,
+                data: {
+                    transaction: response,
+                    reference,
+                    destinationMobileNumber: cleanDest,
+                    timestamp: new Date().toISOString()
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Flash Controller: International airtime purchase failed:', error.message);
+            res.status(error.statusCode || 500).json({
+                success: false,
+                error: 'Failed to purchase international airtime',
+                message: error.message,
+                ...(error.flashError && { flash: error.flashError })
+            });
+        }
+    }
 }
 
 module.exports = FlashController; 

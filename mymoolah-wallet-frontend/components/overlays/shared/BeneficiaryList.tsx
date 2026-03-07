@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Search, Plus, Edit2, Smartphone, Zap, FileText, Check, X, ChevronDown, Wallet, Building2 } from 'lucide-react';
+import { Search, Plus, Edit2, Smartphone, Zap, FileText, Check, X, ChevronDown, Wallet, Building2, Globe } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../ui/card';
 import { Input } from '../../ui/input';
 import { Button } from '../../ui/button';
@@ -197,7 +197,10 @@ export function BeneficiaryList({
     return matchesSearch && matchesType;
   });
 
-  const getTypeIcon = (beneficiaryType: string) => {
+  const getTypeIcon = (beneficiaryType: string, metadata?: Record<string, any>) => {
+    if (metadata?.network === 'global-airtime') {
+      return <Globe style={{ width: '16px', height: '16px' }} />;
+    }
     switch (beneficiaryType) {
       case 'airtime':
       case 'data':
@@ -450,7 +453,7 @@ export function BeneficiaryList({
                         alignItems: 'center',
                         justifyContent: 'center'
                       }}>
-                        {displayAccount ? getTypeIcon(displayAccount.type) : getTypeIcon(isUnifiedBeneficiary(beneficiary) ? 'mymoolah' : (beneficiary as LegacyBeneficiary).accountType)}
+                        {displayAccount ? getTypeIcon(displayAccount.type, displayAccount.metadata || (beneficiary as any).metadata) : getTypeIcon(isUnifiedBeneficiary(beneficiary) ? 'mymoolah' : (beneficiary as LegacyBeneficiary).accountType, (beneficiary as any).metadata)}
                       </div>
                       
                       {/* Beneficiary Info */}
