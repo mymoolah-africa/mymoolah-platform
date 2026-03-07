@@ -88,6 +88,11 @@ ensure_gcloud_auth() {
     gcloud config set project "${PROJECT_ID}" >/dev/null 2>&1 || err "Failed to set project"
   fi
   log "✅ Project: ${PROJECT_ID}"
+
+  # Configure Docker to use gcloud credentials for GCR
+  log "Configuring Docker for GCR authentication..."
+  gcloud auth configure-docker gcr.io --quiet 2>/dev/null || true
+  log "✅ Docker configured for gcr.io"
 }
 
 ensure_gcloud_auth
