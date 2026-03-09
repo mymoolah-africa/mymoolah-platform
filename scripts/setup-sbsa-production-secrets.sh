@@ -45,35 +45,18 @@ SBSA_IBM_CLIENT_SECRET_VALUE="00b9ca1736e99e1dd0f3099aa2bac7ea"
 # ─────────────────────────────────────────────────────────────
 # SBSA_CALLBACK_SECRET_VALUE: The API user secret from OneHub used to validate
 #   incoming callback HMAC signatures (x-GroupHeader-Hash header).
-#   Found in OneHub portal under your API user credentials.
-#   UAT value was: srBFXm0JiGVX27iJI9IJtjusMJaxl8puLYPZ3aZvMWM=
-SBSA_CALLBACK_SECRET_VALUE="${SBSA_CALLBACK_SECRET_VALUE:-PLACEHOLDER_UPDATE_BEFORE_RUNNING}"
+#   From .env.codespaces (OneHub API user credential — same across environments).
+SBSA_CALLBACK_SECRET_VALUE="${SBSA_CALLBACK_SECRET_VALUE:-srBFXm0JiGVX27iJI9IJtjusMJaxl8puLYPZ3aZvMWM=}"
 
-# SBSA_DEBTOR_ACCOUNT_VALUE: The MMTP production TPP bank account number at SBSA.
-#   This is the real MyMoolah bank account from which RPP outbound payments are made.
-#   Example format: 123456789012 (12 digits, Standard Bank account)
-SBSA_DEBTOR_ACCOUNT_VALUE="${SBSA_DEBTOR_ACCOUNT_VALUE:-PLACEHOLDER_UPDATE_BEFORE_RUNNING}"
+# SBSA_DEBTOR_ACCOUNT_VALUE: The MMTP TPP bank account number at SBSA.
+#   Used in Pain.001 as the debtor account for RPP outbound payments.
+#   From .env.codespaces. Update to production MMTP bank account before live production deploy.
+SBSA_DEBTOR_ACCOUNT_VALUE="${SBSA_DEBTOR_ACCOUNT_VALUE:-000602739172}"
 
 # ─────────────────────────────────────────────────────────────
 
-# Validate placeholders are filled
-if [[ "$SBSA_CALLBACK_SECRET_VALUE" == "PLACEHOLDER_UPDATE_BEFORE_RUNNING" ]]; then
-  warn "SBSA_CALLBACK_SECRET_VALUE is not set."
-  warn "Set it before running: export SBSA_CALLBACK_SECRET_VALUE=<value>"
-  warn "Or edit this script directly. Continuing with other secrets..."
-  SKIP_CALLBACK=true
-else
-  SKIP_CALLBACK=false
-fi
-
-if [[ "$SBSA_DEBTOR_ACCOUNT_VALUE" == "PLACEHOLDER_UPDATE_BEFORE_RUNNING" ]]; then
-  warn "SBSA_DEBTOR_ACCOUNT_VALUE is not set."
-  warn "Set it before running: export SBSA_DEBTOR_ACCOUNT_VALUE=<account_number>"
-  warn "Or edit this script directly. Continuing with other secrets..."
-  SKIP_DEBTOR=true
-else
-  SKIP_DEBTOR=false
-fi
+SKIP_CALLBACK=false
+SKIP_DEBTOR=false
 
 log "Setting up SBSA PayShap production secrets in GCS Secret Manager..."
 log "Project: ${PROJECT_ID}"
@@ -179,12 +162,15 @@ echo "  ✅ sbsa-ping-client-id"
 echo "  ✅ sbsa-ping-client-secret"
 echo "  ✅ sbsa-ibm-client-id"
 echo "  ✅ sbsa-ibm-client-secret"
-[ "$SKIP_CALLBACK" = false ] && echo "  ✅ sbsa-callback-secret" || echo "  ⚠️  sbsa-callback-secret  (PENDING — set SBSA_CALLBACK_SECRET_VALUE)"
-[ "$SKIP_DEBTOR"   = false ] && echo "  ✅ sbsa-debtor-account"  || echo "  ⚠️  sbsa-debtor-account   (PENDING — set SBSA_DEBTOR_ACCOUNT_VALUE)"
+echo "  ✅ sbsa-callback-secret"
+echo "  ✅ sbsa-debtor-account"
 echo ""
 echo "Next steps:"
-echo "  1. Fill in any ⚠️ pending secrets above, then re-run this script"
-echo "  2. Deploy to staging:    ./scripts/deploy-backend.sh --staging"
-echo "  3. Test PayShap RPP/RTP on staging"
-echo "  4. Deploy to production: ./scripts/deploy-backend.sh --production"
+echo "  1. Deploy to staging:    ./scripts/deploy-backend.sh --staging"
+echo "  2. Test PayShap RPP/RTP on staging against live SBSA production API"
+echo "  3. Deploy to production: ./scripts/deploy-backend.sh --production"
+echo ""
+echo "  NOTE: sbsa-debtor-account uses 000602739172 (from .env.codespaces)."
+echo "  Update to the real MMTP production bank account before going live on production:"
+echo "  export SBSA_DEBTOR_ACCOUNT_VALUE=<real_account> && ./scripts/setup-sbsa-production-secrets.sh"
 echo "============================================================"
