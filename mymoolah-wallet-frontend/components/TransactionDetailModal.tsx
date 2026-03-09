@@ -89,13 +89,21 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
     return groups.join(' ');
   };
 
-  const formatReference = (ref: string): string => {
-    // Shorten long references for display
-    if (!ref) return '';
-    if (ref.length > 30) {
-      return `${ref.substring(0, 15)}...${ref.substring(ref.length - 10)}`;
-    }
-    return ref;
+  const formatTransactionType = (type: string): string => {
+    const typeMap: Record<string, string> = {
+      'money_in': 'Money Received',
+      'money_out': 'Money Sent',
+      'send': 'Money Sent',
+      'receive': 'Money Received',
+      'payment': 'Payment',
+      'deposit': 'Deposit',
+      'withdrawal': 'Withdrawal',
+      'fee': 'Fee',
+      'refund': 'Refund',
+      'sent': 'Money Sent',
+      'received': 'Money Received',
+    };
+    return typeMap[type] || type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ');
   };
 
   return (
@@ -454,34 +462,56 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
               Transaction Details
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {/* Reference */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{
-                  fontFamily: 'Montserrat, sans-serif',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  color: '#6b7280'
-                }}>
-                  Reference
-                </span>
-                <span style={{
-                  fontFamily: 'Monaco, Consolas, monospace',
-                  fontSize: '12px',
-                  fontWeight: '600',
-                  color: '#1f2937',
-                  backgroundColor: '#f3f4f6',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  maxWidth: '250px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap'
-                }}
-                title={transaction.transactionId}
-                >
-                  {formatReference(transaction.transactionId || transaction.reference || 'N/A')}
-                </span>
-              </div>
+              {/* Description */}
+              {transaction.description && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#6b7280'
+                  }}>
+                    Description
+                  </span>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#1f2937',
+                    maxWidth: '250px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'right'
+                  }}
+                  title={transaction.description}
+                  >
+                    {transaction.description}
+                  </span>
+                </div>
+              )}
+
+              {/* Type */}
+              {transaction.type && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    color: '#6b7280'
+                  }}>
+                    Type
+                  </span>
+                  <span style={{
+                    fontFamily: 'Montserrat, sans-serif',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    color: '#1f2937'
+                  }}>
+                    {formatTransactionType(transaction.type)}
+                  </span>
+                </div>
+              )}
 
               {/* Beneficiary Name (if electricity) */}
               {isElectricity && transaction.metadata?.beneficiaryName && (

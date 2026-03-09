@@ -347,6 +347,25 @@ async function initiatePayShapRpp(req, res) {
       reference,
     });
 
+    // Update beneficiary lastPaidAt if this user has a matching bank beneficiary
+    try {
+      const matchingBeneficiary = await db.Beneficiary.findOne({
+        where: {
+          userId,
+          identifier: creditorAccountNumber,
+          accountType: 'bank',
+        },
+      });
+      if (matchingBeneficiary) {
+        await matchingBeneficiary.update({
+          lastPaidAt: new Date(),
+          timesPaid: (matchingBeneficiary.timesPaid || 0) + 1,
+        });
+      }
+    } catch (benErr) {
+      console.warn('Non-fatal: failed to update beneficiary lastPaidAt after RPP:', benErr.message);
+    }
+
     const fb = result.feeBreakdown || {};
     return res.status(202).json({
       success: true,
