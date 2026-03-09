@@ -27,8 +27,15 @@ function isoNow() {
 
 /**
  * Normalise a South African mobile number for SBSA Prxy.Id field.
- * SBSA Postman sample uses "+27-585125485" (9 digits). Interbank proxy directory
- * may expect this format for lookups across participating banks (Discovery, etc.).
+ *
+ * API documentation (BIS Nexus, ISO 20022):
+ * - E.164 specifies digits only; canonical format is +CCNNN... (no hyphens).
+ * - BIS Nexus MBNO proxy pattern: ^\+(\d ?){6,14}\d$; placeholder +6581234567.
+ *
+ * SBSA Postman samples show "+27-585125485" (hyphen), but interbank PayShap
+ * proxy directory (Discovery, FNB, etc.) typically uses pure E.164 for lookup.
+ * Use E.164 (+27825571055) for interbank; override via SBSA_PROXY_ID_FORMAT=sbsa
+ * to force hyphen format if UAT requires it.
  */
 function normaliseMobile(raw) {
   const digits = raw.replace(/\D/g, '');
@@ -44,7 +51,8 @@ function normaliseMobile(raw) {
   } else {
     return raw;
   }
-  return `+27-${nineDigits}`;
+  const format = process.env.SBSA_PROXY_ID_FORMAT || 'e164';
+  return format === 'sbsa' ? `+27-${nineDigits}` : `+27${nineDigits}`;
 }
 
 /**

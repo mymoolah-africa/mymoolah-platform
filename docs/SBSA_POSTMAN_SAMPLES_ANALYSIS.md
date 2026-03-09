@@ -137,6 +137,7 @@
 1. **Case**: Postman uses PascalCase (GrpHdr, PmtInf, CdtTrfTx); we use camelCase. SBSA may accept both – verify.
 2. **CdtrAcct = 000602739172**: This is the MMTP account that receives RTP payments. Set `SBSA_CREDITOR_ACCOUNT=000602739172` for UAT.
 3. **DbtrAcct with Proxy**: When payer is identified by mobile, use `Id: "Proxy"` and `Prxy.Tp.Item: "MOBILE_NUMBER"`. Our builder uses `othr.id` + `schmeNm` – structure may differ.
+4. **Prxy.Id format**: BIS Nexus / ISO 20022 E.164 specifies digits only. Use pure E.164 (`+27825571055`) for interbank proxy directory lookups; SBSA Postman samples show `+27-585125485` (hyphen) for UAT. Override via `SBSA_PROXY_ID_FORMAT=sbsa` to force hyphen if UAT requires it.
 4. **RTP callback headers**: Client uses same callback headers for RPP and RTP. For RTP initiation, SBSA may expect RTP-specific callback URLs in headers – confirm and set if needed.
 5. **PmtInf array**: Postman sends multiple PmtInf (batch); we send single. Our design is one RTP per request.
 

@@ -18,7 +18,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
@@ -1518,11 +1518,14 @@ export function RequestMoneyPage() {
                 Send Request
               </Button>
 
-              <DialogContent aria-describedby="send-request-description" style={{
+              <DialogContent style={{
                 fontFamily: 'Montserrat, sans-serif',
                 maxWidth: '340px',
                 borderRadius: '16px'
               }}>
+                <DialogDescription className="sr-only">
+                  Send a payment request to a contact
+                </DialogDescription>
                 <DialogHeader>
                   <div style={{ 
                     display: 'flex', 
@@ -1538,9 +1541,6 @@ export function RequestMoneyPage() {
                     }}>
                       Send Payment Request
                     </DialogTitle>
-                    <div id="send-request-description" className="sr-only">
-                      Send a payment request to a contact
-                    </div>
                     <button
                       onClick={() => setShowDialog(false)}
                       style={{
