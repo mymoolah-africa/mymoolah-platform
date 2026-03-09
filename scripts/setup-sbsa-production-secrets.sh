@@ -50,8 +50,11 @@ SBSA_CALLBACK_SECRET_VALUE="${SBSA_CALLBACK_SECRET_VALUE:-srBFXm0JiGVX27iJI9IJtj
 
 # SBSA_DEBTOR_ACCOUNT_VALUE: The MMTP TPP bank account number at SBSA.
 #   Used in Pain.001 as the debtor account for RPP outbound payments.
-#   From .env.codespaces. Update to production MMTP bank account before live production deploy.
-SBSA_DEBTOR_ACCOUNT_VALUE="${SBSA_DEBTOR_ACCOUNT_VALUE:-000602739172}"
+#   Production MMTP account: displayed as "0000 272406481 000" on statement.
+#   Spaces and display zeros stripped → core account 272406481.
+#   SBSA API uses 12-digit format (e.g. UAT: 000602739172 = 3-prefix + 9-account).
+#   Using 272406481 here — verify format on first staging test (SBSA will error if wrong).
+SBSA_DEBTOR_ACCOUNT_VALUE="${SBSA_DEBTOR_ACCOUNT_VALUE:-272406481}"
 
 # ─────────────────────────────────────────────────────────────
 
@@ -170,7 +173,7 @@ echo "  1. Deploy to staging:    ./scripts/deploy-backend.sh --staging"
 echo "  2. Test PayShap RPP/RTP on staging against live SBSA production API"
 echo "  3. Deploy to production: ./scripts/deploy-backend.sh --production"
 echo ""
-echo "  NOTE: sbsa-debtor-account uses 000602739172 (from .env.codespaces)."
-echo "  Update to the real MMTP production bank account before going live on production:"
-echo "  export SBSA_DEBTOR_ACCOUNT_VALUE=<real_account> && ./scripts/setup-sbsa-production-secrets.sh"
+  echo "  NOTE: sbsa-debtor-account uses 272406481 (MMTP production account, spaces/display-zeros stripped)."
+  echo "  SBSA may require 12-digit format (000272406481). Verify on first staging RPP test."
+  echo "  If rejected, update: export SBSA_DEBTOR_ACCOUNT_VALUE=000272406481 && ./scripts/setup-sbsa-production-secrets.sh"
 echo "============================================================"
