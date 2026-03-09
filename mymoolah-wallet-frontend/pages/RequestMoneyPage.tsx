@@ -419,7 +419,7 @@ export function RequestMoneyPage() {
 
     } catch (error) {
       console.error('Request money failed:', error);
-      const displayMessage = error?.message || 'Unable to send payment request. Please try again.';
+      const displayMessage = (error instanceof Error ? error.message : null) || 'Unable to send payment request. Please try again.';
       try { alert(displayMessage); } catch (_) {}
       setCurrentStep('form');
       setShowDialog(false);
