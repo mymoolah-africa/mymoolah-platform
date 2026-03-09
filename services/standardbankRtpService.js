@@ -102,6 +102,10 @@ async function initiateRtpRequest(params) {
     const wrapped = new Error(`SBSA RTP initiation failed: ${err.message}`);
     wrapped.sbsaStatus = err.sbsaStatus;
     wrapped.sbsaBody = err.sbsaBody;
+    wrapped.sbsaPayloadSent = {
+      prxyId: pain013?.PmtInf?.[0]?.DbtrAcct?.Prxy?.Id ?? pain013?.pmtInf?.[0]?.dbtrAcct?.prxy?.id,
+      dbtrAgtId: pain013?.PmtInf?.[0]?.DbtrAgt?.FinInstnId?.Othr?.Id ?? pain013?.pmtInf?.[0]?.dbtrAgt?.FinInstnId?.Othr?.Id ?? pain013?.pmtInf?.[0]?.dbtrAgt?.finInstnId?.othr?.id,
+    };
     throw wrapped;
   }
 

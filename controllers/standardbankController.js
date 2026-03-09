@@ -467,6 +467,9 @@ async function initiatePayShapRtp(req, res) {
         userMessage = isUat
           ? 'Payer\'s mobile number is not in PayShap test directory. Use SBSA test number +27585125485 for UAT.'
           : 'Payer\'s mobile number is not registered for PayShap. The payer needs PayShap enabled at their bank.';
+        // Log payload sent for EPDNF diagnosis (production: SBSA proxy directory lookup failed)
+        const sent = err.sbsaPayloadSent || {};
+        console.warn('SBSA RTP EPDNF: Prxy.Id=%s DbtrAgt=%s | SBSA prtry=%s addtlInf=%s | Share with SBSA support.', sent.prxyId || req.body?.payerMobileNumber, sent.dbtrAgtId || '(unknown)', prtry, addtlInf || '(none)');
       } else if (prtry === 'EAMTI' || (addtlInf && addtlInf.toLowerCase().includes('invalid amount'))) {
         userMessage = addtlInf || 'Invalid amount. Minimum bank request is R10.';
       }
