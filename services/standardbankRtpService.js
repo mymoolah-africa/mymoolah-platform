@@ -99,7 +99,10 @@ async function initiateRtpRequest(params) {
   try {
     sbResponse = await sbClient.initiateRequestToPay(pain013);
   } catch (err) {
-    throw new Error(`SBSA RTP initiation failed: ${err.message}`);
+    const wrapped = new Error(`SBSA RTP initiation failed: ${err.message}`);
+    wrapped.sbsaStatus = err.sbsaStatus;
+    wrapped.sbsaBody = err.sbsaBody;
+    throw wrapped;
   }
 
   if (sbResponse.status !== 202) {
