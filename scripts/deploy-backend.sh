@@ -41,9 +41,11 @@ IMAGE_NAME="gcr.io/${PROJECT_ID}/mymoolah-backend:${IMAGE_TAG}"
 if [ "$ENVIRONMENT" == "staging" ]; then
   CORS_ORIGINS="https://stagingwallet.mymoolah.africa"
   STAGING_FLAG="true"
+  SBSA_CALLBACK_BASE_URL="https://staging.mymoolah.africa"
 else
   CORS_ORIGINS="https://wallet.mymoolah.africa"
   STAGING_FLAG="false"
+  SBSA_CALLBACK_BASE_URL="https://api-mm.mymoolah.africa"
 fi
 
 log() { echo "📋 [$((SECONDS))s] $*"; }
@@ -116,7 +118,7 @@ build_secrets_args() {
     ext="-staging"
   fi
 
-  local base="ZAPPER_API_URL=zapper-prod-api-url:latest,ZAPPER_ORG_ID=zapper-prod-org-id:latest,ZAPPER_API_TOKEN=zapper-prod-api-token:latest,ZAPPER_X_API_KEY=zapper-prod-x-api-key:latest,MOBILEMART_CLIENT_ID=mobilemart-prod-client-id:latest,MOBILEMART_CLIENT_SECRET=mobilemart-prod-client-secret:latest,MOBILEMART_API_URL=mobilemart-prod-api-url:latest,MOBILEMART_TOKEN_URL=mobilemart-prod-token-url:latest,FLASH_CONSUMER_KEY=FLASH_CONSUMER_KEY:latest,FLASH_CONSUMER_SECRET=FLASH_CONSUMER_SECRET:latest,FLASH_ACCOUNT_NUMBER=FLASH_ACCOUNT_NUMBER:latest,FLASH_API_URL=FLASH_API_URL:latest,FLASH_TOKEN_URL=FLASH_TOKEN_URL:latest,VAS_FAILOVER_ENABLED=vas-failover-enabled:latest"
+  local base="ZAPPER_API_URL=zapper-prod-api-url:latest,ZAPPER_ORG_ID=zapper-prod-org-id:latest,ZAPPER_API_TOKEN=zapper-prod-api-token:latest,ZAPPER_X_API_KEY=zapper-prod-x-api-key:latest,MOBILEMART_CLIENT_ID=mobilemart-prod-client-id:latest,MOBILEMART_CLIENT_SECRET=mobilemart-prod-client-secret:latest,MOBILEMART_API_URL=mobilemart-prod-api-url:latest,MOBILEMART_TOKEN_URL=mobilemart-prod-token-url:latest,FLASH_CONSUMER_KEY=FLASH_CONSUMER_KEY:latest,FLASH_CONSUMER_SECRET=FLASH_CONSUMER_SECRET:latest,FLASH_ACCOUNT_NUMBER=FLASH_ACCOUNT_NUMBER:latest,FLASH_API_URL=FLASH_API_URL:latest,FLASH_TOKEN_URL=FLASH_TOKEN_URL:latest,VAS_FAILOVER_ENABLED=vas-failover-enabled:latest,SBSA_PING_CLIENT_ID=sbsa-ping-client-id:latest,SBSA_PING_CLIENT_SECRET=sbsa-ping-client-secret:latest,SBSA_IBM_CLIENT_ID=sbsa-ibm-client-id:latest,SBSA_IBM_CLIENT_SECRET=sbsa-ibm-client-secret:latest,SBSA_CALLBACK_SECRET=sbsa-callback-secret:latest,SBSA_DEBTOR_ACCOUNT=sbsa-debtor-account:latest,SBSA_CREDITOR_ACCOUNT=sbsa-debtor-account:latest"
   
   if [ "$ENVIRONMENT" == "production" ]; then
     base="${base},JWT_SECRET=jwt-secret-production:latest,SESSION_SECRET=session-secret-production:latest,DB_PASSWORD=db-mmtp-pg-production-password:latest"
@@ -158,7 +160,7 @@ gcloud run deploy "${SERVICE_NAME}" \
   --region "${REGION}" \
   --service-account "${SERVICE_ACCOUNT}" \
   --add-cloudsql-instances "${CLOUD_SQL_INSTANCE}" \
-  --set-env-vars "NODE_ENV=production,STAGING=${STAGING_FLAG},CLOUD_SQL_INSTANCE=${CLOUD_SQL_INSTANCE},CORS_ORIGINS=${CORS_ORIGINS},DB_SSL=false,DB_HOST=/cloudsql/${CLOUD_SQL_INSTANCE},DB_NAME=mymoolah_${ENVIRONMENT},DB_USER=mymoolah_app,MOBILEMART_LIVE_INTEGRATION=true,MOBILEMART_SCOPE=api,TLS_ENABLED=false,VAT_RATE=0.15,LEDGER_ACCOUNT_MM_COMMISSION_CLEARING=2200-01-01,LEDGER_ACCOUNT_COMMISSION_REVENUE=4000-10-01,LEDGER_ACCOUNT_VAT_CONTROL=2300-10-01,LEDGER_ACCOUNT_CLIENT_FLOAT=2100-01-01,LEDGER_ACCOUNT_CLIENT_CLEARING=2100-02-01,LEDGER_ACCOUNT_SUPPLIER_CLEARING=2200-02-01,LEDGER_ACCOUNT_INTERCHANGE=1200-05-01,LEDGER_ACCOUNT_BANK=1100-01-01,LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE=4000-20-01,FLASH_LIVE_INTEGRATION=true,LEDGER_ACCOUNT_FLASH_FLOAT=1200-10-04,ENABLE_CATALOG_SYNC=true" \
+  --set-env-vars "NODE_ENV=production,STAGING=${STAGING_FLAG},CLOUD_SQL_INSTANCE=${CLOUD_SQL_INSTANCE},CORS_ORIGINS=${CORS_ORIGINS},DB_SSL=false,DB_HOST=/cloudsql/${CLOUD_SQL_INSTANCE},DB_NAME=mymoolah_${ENVIRONMENT},DB_USER=mymoolah_app,MOBILEMART_LIVE_INTEGRATION=true,MOBILEMART_SCOPE=api,TLS_ENABLED=false,VAT_RATE=0.15,LEDGER_ACCOUNT_MM_COMMISSION_CLEARING=2200-01-01,LEDGER_ACCOUNT_COMMISSION_REVENUE=4000-10-01,LEDGER_ACCOUNT_VAT_CONTROL=2300-10-01,LEDGER_ACCOUNT_CLIENT_FLOAT=2100-01-01,LEDGER_ACCOUNT_CLIENT_CLEARING=2100-02-01,LEDGER_ACCOUNT_SUPPLIER_CLEARING=2200-02-01,LEDGER_ACCOUNT_INTERCHANGE=1200-05-01,LEDGER_ACCOUNT_BANK=1100-01-01,LEDGER_ACCOUNT_TRANSACTION_FEE_REVENUE=4000-20-01,FLASH_LIVE_INTEGRATION=true,LEDGER_ACCOUNT_FLASH_FLOAT=1200-10-04,ENABLE_CATALOG_SYNC=true,STANDARDBANK_PAYSHAP_ENABLED=true,PEACH_INTEGRATION_ARCHIVED=true,STANDARDBANK_ENVIRONMENT=production,SBSA_PING_TOKEN_URL=https://enterprisests.standardbank.co.za/as/token.oauth2,SBSA_RPP_BASE_URL=https://api-gateway.standardbank.co.za/sbsa/ext-prod/rapid-payments,SBSA_RTP_BASE_URL=https://api-gateway.standardbank.co.za/sbsa/ext-prod/request-to-pay,SBSA_PROXY_BASE_URL=https://api-gateway.standardbank.co.za/sbsa/ext-prod/proxy-resolution,SBSA_CALLBACK_BASE_URL=${SBSA_CALLBACK_BASE_URL},SBSA_DEBTOR_NAME=MyMoolah Treasury,SBSA_CREDITOR_NAME=MyMoolah Treasury,SBSA_ORG_ID=2019/0519463/07,SBSA_CREDITOR_BANK_BRANCH=051001,PAYSHAP_MM_RPP_MARKUP_ZAR=1.00,PAYSHAP_PROXY_VALIDATION_FEE_ZAR=1.25,LEDGER_ACCOUNT_PAYSHAP_SBSA_COST=5000-10-01" \
   --set-secrets "${SECRETS_STR}" \
   --memory 1Gi \
   --cpu 1 \
