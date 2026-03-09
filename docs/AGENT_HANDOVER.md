@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-07 18:00  
-**Latest Feature**: Cloud Build migration — deploy scripts use gcloud builds submit (no Docker Desktop)  
-**Document Version**: 2.13.0  
-**Session logs**: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`, `docs/session_logs/2026-03-07_1100_international-airtime-pinless-implementation.md`  
+**Last Updated**: 2026-03-04 14:00  
+**Latest Feature**: SBSA PayShap production credentials added to GCS Secret Manager pipeline — deploy script ready for live PayShap testing  
+**Document Version**: 2.14.0  
+**Session logs**: `docs/session_logs/2026-03-04_1400_sbsa-payshap-production-credentials-setup.md`, `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---

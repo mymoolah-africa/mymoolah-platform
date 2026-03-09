@@ -194,3 +194,5 @@ router.post(
 );
 
 module.exports = router;
+module.exports.rtpValidation = rtpValidation;
+module.exports.handleValidation = handleValidation;

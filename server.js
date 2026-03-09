@@ -491,6 +491,14 @@ if (!isPeachArchived && validCredentials.peach) {
       archivedDate: '2025-11-26',
     });
   });
+  // Proxy /api/v1/peach/request-money → Standard Bank RTP when Peach archived
+  if (isPeachArchived && standardbankPayShapEnabled) {
+    const auth = require('./middleware/auth');
+    const { rtpValidation: sbRtpValidation, handleValidation: sbHandleValidation } = require('./routes/standardbank');
+    const standardbankController = require('./controllers/standardbankController');
+    app.post('/api/v1/peach/request-money', auth, sbRtpValidation, sbHandleValidation, standardbankController.initiatePayShapRtp);
+    console.log('✅ /api/v1/peach/request-money proxied to Standard Bank PayShap RTP');
+  }
 }
 
 // Health check endpoint with TLS information
