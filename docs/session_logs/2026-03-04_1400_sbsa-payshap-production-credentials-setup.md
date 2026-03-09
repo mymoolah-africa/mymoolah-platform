@@ -135,16 +135,25 @@ https://staging.mymoolah.africa/api/v1/standardbank/...
 
 ---
 
+## Deployment Status
+
+### ✅ Staging — DEPLOYED 2026-03-09 17:16 SAST
+- All 6 GCS secrets created and IAM-granted
+- Cloud Build: `4m36s` — SUCCESS
+- Cloud Run revision: `mymoolah-backend-staging-00210-7sv`
+- Service URL: `https://mymoolah-backend-staging-4ekgjiko5a-bq.a.run.app`
+- **Ready for live SBSA PayShap testing on staging**
+
+### ⏳ Production — Not yet deployed
+- Pending: first successful staging test
+- Command: `./scripts/deploy-backend.sh --production`
+
 ## Next Steps for André
 
-1. **Confirm Ping token URL**: Check SBSA production credentials pack for the correct OAuth token endpoint
-2. **Get callback secret**: Check OneHub portal or SBSA credentials email for the production callback HMAC secret
-3. **Get debtor account**: Confirm the real MMTP production bank account number at SBSA
-4. **Run the setup script**: `./scripts/setup-sbsa-production-secrets.sh` (will create 4 known secrets immediately; 2 pending)
-5. **Whitelist callback URLs** in OneHub for production domain
-6. **Deploy to staging**: `./scripts/deploy-backend.sh --staging`
-7. **Test RPP and RTP** on staging against live SBSA production API
-8. **Deploy to production**: `./scripts/deploy-backend.sh --production`
+1. **Test RPP on staging** — Send Money to a Standard Bank account. Verify debtor account format (`272406481` or `000272406481`).
+2. **Test RTP on staging** — Request Money from a mobile number.
+3. **Whitelist callback URLs** in OneHub for production domain (`api-mm.mymoolah.africa`)
+4. **Deploy to production** once staging tests pass: `./scripts/deploy-backend.sh --production`
 
 ---
 
