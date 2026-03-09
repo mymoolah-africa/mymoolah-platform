@@ -4,10 +4,10 @@
  * Pain.013 Builder - SBSA RTP PayShap (Request to Pay Initiation)
  * ISO 20022 Pain.013 - JSON format aligned with SBSA API Postman samples
  *
- * SBSA RTP debtor identification:
+ * SBSA RTP debtor identification (per SBSA Postman and UAT testing 2026-02-24):
  *   - DbtrAcct.Id.Item.Id MUST be "Proxy" (mandatory discriminator per SBSA schema)
  *   - Debtor is identified via Prxy.Tp.Item = "MOBILE_NUMBER" + Prxy.Id = mobile number
- *   - Direct bank account (PBAC) is NOT supported for RTP debtors by SBSA
+ *   - SBSA RTP only supports MOBILE_NUMBER proxy for debtors — PBAC (direct account) returns EPRBA
  *   - RPP (outbound) uses PBAC for creditor — RTP (request) uses MOBILE_NUMBER for debtor
  *
  * Creditor (MMTP) uses direct account number in CdtrAcct.Id.Item.Id.
@@ -29,7 +29,6 @@ function isoNow() {
  * Normalise a South African mobile number for SBSA Prxy.Id field.
  * SBSA sandbox test numbers (9 digits with +27 prefix): send as "+27-XXXXXXXXX"
  * Real SA mobiles (10 digits with leading 0): send as "0XXXXXXXXX"
- * +27XXXXXXXXX (11 digits): convert to "0XXXXXXXXX"
  */
 function normaliseMobile(raw) {
   const digits = raw.replace(/\D/g, '');
@@ -40,7 +39,6 @@ function normaliseMobile(raw) {
     return digits;
   }
   if (digits.startsWith('27') && digits.length === 10) {
-    // 9-digit sandbox number with country code — use +27-XXXXXXXXX format
     return `+27-${digits.slice(2)}`;
   }
   return raw;
@@ -48,16 +46,16 @@ function normaliseMobile(raw) {
 
 /**
  * Build Pain.013 for RTP (Request to Pay) initiation
- * Creditor = MMTP (requesting money). Debtor = Payer (identified by mobile number).
+ * Creditor = MMTP (requesting money). Debtor = Payer (identified by mobile number — SBSA RTP requirement).
  *
  * @param {Object} params
  * @param {string} params.merchantTransactionId - Our internal ID
  * @param {number} params.amount - Amount in ZAR
  * @param {string} [params.currency] - Default ZAR
  * @param {string} params.payerName - Debtor name
- * @param {string} params.payerMobileNumber - Debtor mobile number (required by SBSA RTP)
+ * @param {string} params.payerMobileNumber - Debtor mobile number (required — SBSA RTP supports MOBILE_NUMBER proxy only)
  * @param {string} [params.payerBankCode] - Debtor bank code (defaults to 'bankc' in UAT)
- * @param {number} [params.netAmount] - Net amount after SBSA fee (for DuePyblAmt); defaults to amount - 5.75
+ * @param {number} [params.netAmount] - Net amount after SBSA fee (for DuePyblAmt)
  * @param {string} [params.creditorAccountNumber] - MMTP receiving account
  * @param {string} [params.creditorName] - MMTP name
  * @param {string} [params.creditorOrgId] - CIPC registration
@@ -83,7 +81,7 @@ function buildPain013(params) {
   } = params;
 
   if (!payerMobileNumber) {
-    throw new Error('payerMobileNumber is required for RTP (SBSA only supports mobile number proxy for RTP debtors)');
+    throw new Error('payerMobileNumber is required for RTP (SBSA RTP only supports MOBILE_NUMBER proxy for debtors)');
   }
 
   // SBSA field regex: alphanumeric only, no hyphens/special chars
@@ -97,8 +95,6 @@ function buildPain013(params) {
   const endToEndId = baseId.substring(0, 35);
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
-  // DuePyblAmt = net amount after SBSA fee (must be < Amt per SBSA validation)
-  // Postman sample: Amt=100.00, DuePyblAmt=99.00 (R1 fee difference)
   const numNetAmount = netAmount
     ? (typeof netAmount === 'string' ? parseFloat(netAmount) : Number(netAmount))
     : Number((numAmount - 5.00).toFixed(2));
@@ -107,8 +103,7 @@ function buildPain013(params) {
 
   const normalizedMobile = normaliseMobile(payerMobileNumber);
 
-  // SBSA Pain.013 DbtrAcct: Id.Item.Id = "Proxy" is mandatory discriminator.
-  // Actual debtor identity goes in Prxy block with MOBILE_NUMBER scheme.
+  // SBSA Pain.013 DbtrAcct: Id.Item.Id = "Proxy" is mandatory. Prxy.Tp.Item = "MOBILE_NUMBER".
   const DbtrAcct = {
     Id: {
       Item: {

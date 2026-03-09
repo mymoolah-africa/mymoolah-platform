@@ -44,7 +44,7 @@ async function initiateRtpRequest(params) {
   } = params;
 
   if (!payerMobileNumber) {
-    throw new Error('payerMobileNumber is required for RTP (SBSA only supports mobile number proxy for RTP debtors)');
+    throw new Error('payerMobileNumber is required for RTP (SBSA RTP only supports MOBILE_NUMBER proxy for debtors)');
   }
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);

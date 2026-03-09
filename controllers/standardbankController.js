@@ -19,9 +19,11 @@ function getBankCodeFromName(bankName) {
     'Capitec Bank': '470010',
     'Discovery Bank': '679000',
     'First National Bank (FNB)': '250655',
+    'First National Bank': '250655',
     'FNB': '250655',
     'Investec Bank': '580105',
     'Nedbank': '198765',
+    'Postbank': '460005',
     'Standard Bank': '051001',
     'TymeBank': '678910',
   };
@@ -407,11 +409,13 @@ async function initiatePayShapRtp(req, res) {
       return res.status(400).json({ success: false, message: 'amount is required' });
     }
     if (!payerMobileNumber) {
-      return res.status(400).json({ success: false, message: 'payerMobileNumber is required' });
+      return res.status(400).json({ success: false, message: 'payerMobileNumber is required (SBSA RTP uses mobile proxy for debtor)' });
     }
     if (!payerName) {
       return res.status(400).json({ success: false, message: 'payerName is required' });
     }
+
+    const payerBankCode = payerBankName ? getBankCodeFromName(payerBankName) : null;
 
     const rtpService = require('../services/standardbankRtpService');
     const result = await rtpService.initiateRtpRequest({
@@ -421,6 +425,7 @@ async function initiatePayShapRtp(req, res) {
       currency,
       payerName,
       payerMobileNumber,
+      payerBankCode,
       payerBankName,
       description,
       reference,

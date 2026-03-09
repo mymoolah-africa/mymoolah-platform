@@ -77,7 +77,7 @@ const rppValidation = [
     .escape(),
 ];
 
-// RTP validation rules — mobile number (proxy) required; SBSA RTP only supports MOBILE_NUMBER proxy for debtors
+// RTP validation rules — SBSA RTP requires MOBILE_NUMBER proxy for debtor (per Postman + UAT)
 const rtpValidation = [
   body('amount')
     .isFloat({ gt: 0 })
@@ -94,7 +94,7 @@ const rtpValidation = [
     .escape(),
   body('payerMobileNumber')
     .notEmpty()
-    .withMessage('payerMobileNumber is required (SBSA RTP only supports mobile number proxy for debtors)')
+    .withMessage('payerMobileNumber is required (SBSA RTP only supports mobile proxy for debtors)')
     .matches(/^(\+27|27|0)[0-9]{8,9}$/)
     .withMessage('payerMobileNumber must be a valid South African mobile number'),
   body('payerBankName')
