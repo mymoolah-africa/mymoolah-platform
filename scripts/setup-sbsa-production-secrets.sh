@@ -28,6 +28,28 @@ err()  { echo "❌ $*" >&2; exit 1; }
 ok()   { echo "✅ $*"; }
 warn() { echo "⚠️  $*"; }
 
+# Ensure valid gcloud authentication before attempting any secret operations
+ensure_gcloud_auth() {
+  local active_account
+  active_account=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>/dev/null || true)
+
+  if [ -z "$active_account" ]; then
+    log "No active gcloud account — starting login..."
+    gcloud auth login || err "gcloud auth login failed"
+  fi
+
+  if ! gcloud auth print-access-token >/dev/null 2>&1; then
+    log "⚠️  Auth token expired — re-authenticating..."
+    gcloud auth revoke --all --quiet 2>/dev/null || true
+    gcloud auth login || err "Re-authentication failed"
+  fi
+
+  gcloud config set project "${PROJECT_ID}" --quiet >/dev/null 2>&1 || err "Failed to set project ${PROJECT_ID}"
+  ok "Authenticated as: $(gcloud auth list --filter=status:ACTIVE --format='value(account)' 2>/dev/null)"
+}
+
+ensure_gcloud_auth
+
 # ─────────────────────────────────────────────────────────────
 # CREDENTIALS — edit these before running
 # ─────────────────────────────────────────────────────────────
