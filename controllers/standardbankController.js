@@ -449,12 +449,28 @@ async function initiatePayShapRtp(req, res) {
     });
   } catch (err) {
     console.error('SBSA RTP initiation error:', err.message);
-    // Pass through SBSA business rejection codes (422 = business reject, 400 = validation)
+    // Translate known SBSA rejection codes to user-friendly messages
+    let userMessage = err.message || 'Failed to initiate Request to Pay';
+    const body = err.sbsaBody;
+    if (body && typeof body === 'object') {
+      const arr = body.orgnlPmtInfAndSts || body.OrgnlPmtInfAndSts;
+      const stsRsn = Array.isArray(arr) && arr[0]?.stsRsnInf?.[0] || arr?.[0]?.StsRsnInf?.[0];
+      const prtry = stsRsn?.rsn?.prtry || stsRsn?.Rsn?.Prtry;
+      const addtlInf = stsRsn?.addtlInf || stsRsn?.AddtlInf || '';
+      if (prtry === 'EPDNF' || (addtlInf && addtlInf.toLowerCase().includes('proxy domain'))) {
+        const isUat = (process.env.STANDARDBANK_ENVIRONMENT || 'uat') === 'uat';
+        userMessage = isUat
+          ? 'Payer\'s mobile number is not in PayShap test directory. Use SBSA test number +27585125485 for UAT.'
+          : 'Payer\'s mobile number is not registered for PayShap. The payer needs PayShap enabled at their bank.';
+      } else if (prtry === 'EAMTI' || (addtlInf && addtlInf.toLowerCase().includes('invalid amount'))) {
+        userMessage = addtlInf || 'Invalid amount. Minimum bank request is R10.';
+      }
+    }
     const httpStatus = err.sbsaStatus === 422 ? 422 : err.sbsaStatus === 400 ? 400 : 500;
     return res.status(httpStatus).json({
       success: false,
-      message: err.message || 'Failed to initiate Request to Pay',
-      ...(err.sbsaBody ? { sbsaDetail: err.sbsaBody } : {}),
+      message: userMessage,
+      ...(body ? { sbsaDetail: body } : {}),
     });
   }
 }

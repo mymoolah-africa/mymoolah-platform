@@ -246,6 +246,13 @@ export function RequestMoneyPage() {
       const amount = parseFloat(formData.amount);
       if (isNaN(amount) || amount <= 0) {
         newErrors.amount = 'Please enter a valid amount';
+      } else if (formData.accountType === 'bank') {
+        // PayShap RTP: minimum R10
+        if (amount < 10) {
+          newErrors.amount = 'Minimum bank request is R10.00';
+        } else if (amount > 50000) {
+          newErrors.amount = 'Maximum request amount is R50,000.00';
+        }
       } else if (amount < 5) {
         newErrors.amount = 'Minimum request amount is R5.00';
       } else if (amount > 50000) {
@@ -412,8 +419,8 @@ export function RequestMoneyPage() {
 
     } catch (error) {
       console.error('Request money failed:', error);
-      // Reset to form view; optionally surface a simple alert for now
-      try { alert('Unable to send payment request. Please verify the payer number and try again.'); } catch (_) {}
+      const displayMessage = error?.message || 'Unable to send payment request. Please try again.';
+      try { alert(displayMessage); } catch (_) {}
       setCurrentStep('form');
       setShowDialog(false);
       
@@ -1306,6 +1313,16 @@ export function RequestMoneyPage() {
                   margin: '4px 0 0 0'
                 }}>
                   {errors.amount}
+                </p>
+              )}
+              {formData.accountType === 'bank' && !errors.amount && (
+                <p style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '11px',
+                  color: '#6b7280',
+                  margin: '4px 0 0 0'
+                }}>
+                  Minimum R10 for PayShap bank requests
                 </p>
               )}
             </div>

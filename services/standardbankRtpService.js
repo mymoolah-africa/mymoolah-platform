@@ -62,6 +62,11 @@ async function initiateRtpRequest(params) {
       `Amount must exceed SBSA fee (R${fee.totalUserFeeVatIncl}) — minimum request R${(fee.totalUserFeeVatIncl + 0.01).toFixed(2)}`
     );
   }
+  // Business rule: RTP minimum R10 (covers SBSA DuePyblAmt requirement + buffer)
+  const MIN_RTP_REQUEST_ZAR = 10.00;
+  if (numAmount < MIN_RTP_REQUEST_ZAR) {
+    throw new Error(`Minimum bank request amount is R${MIN_RTP_REQUEST_ZAR.toFixed(2)}`);
+  }
 
   const wallet = await db.Wallet.findOne({ where: { walletId } });
   if (!wallet) {
