@@ -27,21 +27,24 @@ function isoNow() {
 
 /**
  * Normalise a South African mobile number for SBSA Prxy.Id field.
- * SBSA sandbox test numbers (9 digits with +27 prefix): send as "+27-XXXXXXXXX"
- * Real SA mobiles (10 digits with leading 0): send as "0XXXXXXXXX"
+ * SBSA Postman sample uses "+27-585125485" (9 digits). Interbank proxy directory
+ * may expect this format for lookups across participating banks (Discovery, etc.).
  */
 function normaliseMobile(raw) {
   const digits = raw.replace(/\D/g, '');
+  let nineDigits;
   if (digits.startsWith('27') && digits.length === 11) {
-    return `0${digits.slice(2)}`;
+    nineDigits = digits.slice(2); // 27825571055 → 825571055
+  } else if (digits.startsWith('0') && digits.length === 10) {
+    nineDigits = digits.slice(1); // 0825571055 → 825571055
+  } else if (digits.startsWith('27') && digits.length === 10) {
+    nineDigits = digits.slice(2); // 27825571055 (typo 10) → 825571055
+  } else if (digits.length === 9 && digits.startsWith('8')) {
+    nineDigits = digits;
+  } else {
+    return raw;
   }
-  if (digits.startsWith('0') && digits.length === 10) {
-    return digits;
-  }
-  if (digits.startsWith('27') && digits.length === 10) {
-    return `+27-${digits.slice(2)}`;
-  }
-  return raw;
+  return `+27-${nineDigits}`;
 }
 
 /**
