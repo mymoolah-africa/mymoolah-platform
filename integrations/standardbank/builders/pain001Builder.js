@@ -88,7 +88,7 @@ function buildPain001(params) {
     },
     amt: {
       instdAmt: {
-        value: numAmount,
+        value: numAmount.toFixed(2),
       },
     },
     cdtrAgt: {
@@ -148,7 +148,7 @@ function buildPain001(params) {
       msgId,
       creDtTm: isoNow(),
       nbOfTxs: 1,
-      ctrlSum: numAmount,
+      ctrlSum: numAmount.toFixed(2),
       initgPty,
     },
     pmtInf: [
