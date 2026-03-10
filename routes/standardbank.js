@@ -17,7 +17,9 @@ const rawBodyMiddleware = express.raw({ type: 'application/json', limit: '10mb' 
 const parseJsonBody = (req, res, next) => {
   if (Buffer.isBuffer(req.body)) {
     try {
-      req.body = JSON.parse(req.body.toString('utf8'));
+      const rawStr = req.body.toString('utf8');
+      req.rawBodyStr = rawStr;
+      req.body = JSON.parse(rawStr);
     } catch (e) {
       return res.status(400).json({ error: 'Invalid JSON' });
     }

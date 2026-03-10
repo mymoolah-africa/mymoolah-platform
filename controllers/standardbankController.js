@@ -8,7 +8,7 @@
  * @date 2026-02-12
  */
 
-const { validateGroupHeaderHash, extractGrpHdr } = require('../integrations/standardbank/callbackValidator');
+const { validateGroupHeaderHash, extractGrpHdr, extractRawGrpHdr } = require('../integrations/standardbank/callbackValidator');
 const db = require('../models');
 
 function getBankCodeFromName(bankName) {
@@ -84,12 +84,14 @@ async function handleRppCallback(req, res) {
     }
   }
 
+  const rawGrpHdr = extractRawGrpHdr(req.rawBodyStr, 'rpp');
   const grpHdr = extractGrpHdr(body, 'rpp');
-  if (!grpHdr) {
+  if (!grpHdr && !rawGrpHdr) {
     return res.status(400).json({ error: 'Missing grpHdr' });
   }
 
-  if (!headerHash || !validateGroupHeaderHash(grpHdr, headerHash, secret)) {
+  const hashInput = rawGrpHdr || grpHdr;
+  if (!headerHash || !validateGroupHeaderHash(hashInput, headerHash, secret)) {
     return res.status(401).json({ error: 'Invalid x-GroupHeader-Hash' });
   }
 
@@ -185,13 +187,13 @@ async function handleRppRealtimeCallback(req, res) {
     }
   }
 
-  const grpHdr = extractGrpHdr(body, 'rpp') || body;
+  const rawGrpHdr = extractRawGrpHdr(req.rawBodyStr, 'rpp');
+  const grpHdr = rawGrpHdr || extractGrpHdr(body, 'rpp') || body;
   if (!validateGroupHeaderHash(grpHdr, headerHash, secret)) {
     return res.status(401).json({ error: 'Invalid hash' });
   }
 
   try {
-    // Prefer path param clientMessageId; fall back to body if SBSA omits it
     const originalMessageId = clientMessageId
       || body.originalMessageId
       || body.orgnlMsgId;
@@ -231,12 +233,16 @@ async function handleRtpCallback(req, res) {
     }
   }
 
+  const rawGrpHdr = extractRawGrpHdr(req.rawBodyStr, 'rtp');
   const grpHdr = extractGrpHdr(body, 'rtp');
-  if (!grpHdr) {
+  if (!grpHdr && !rawGrpHdr) {
     return res.status(400).json({ error: 'Missing grpHdr' });
   }
 
-  if (!headerHash || !validateGroupHeaderHash(grpHdr, headerHash, secret)) {
+  const hashInput = rawGrpHdr || grpHdr;
+  if (!headerHash || !validateGroupHeaderHash(hashInput, headerHash, secret)) {
+    console.warn('[RTP-BATCH-CB] 401: hash mismatch. raw=%s parsed=%s',
+      !!rawGrpHdr, JSON.stringify(grpHdr).substring(0, 300));
     return res.status(401).json({ error: 'Invalid x-GroupHeader-Hash' });
   }
 
@@ -313,10 +319,13 @@ async function handleRtpRealtimeCallback(req, res) {
     }
   }
 
-  const grpHdr = extractGrpHdr(body, 'rtp') || body;
-  console.log('[RTP-RT-CB] grpHdr keys: %s', Object.keys(grpHdr || {}).join(', '));
+  // Try raw grpHdr string first to preserve SBSA's exact serialization for HMAC
+  const rawGrpHdr = extractRawGrpHdr(req.rawBodyStr, 'rtp');
+  const grpHdr = rawGrpHdr || extractGrpHdr(body, 'rtp') || body;
+  console.log('[RTP-RT-CB] grpHdr source: %s, keys/len: %s',
+    rawGrpHdr ? 'raw' : 'parsed', rawGrpHdr ? rawGrpHdr.length : Object.keys(grpHdr || {}).join(', '));
   if (!validateGroupHeaderHash(grpHdr, headerHash, secret)) {
-    console.warn('[RTP-RT-CB] 401: hash mismatch. grpHdr=%s', JSON.stringify(grpHdr).substring(0, 300));
+    console.warn('[RTP-RT-CB] 401: hash mismatch. grpHdr=%s', (typeof grpHdr === 'string' ? grpHdr : JSON.stringify(grpHdr)).substring(0, 300));
     return res.status(401).json({ error: 'Invalid hash' });
   }
 

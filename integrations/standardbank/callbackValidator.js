@@ -50,7 +50,36 @@ function extractGrpHdr(body, type) {
   return null;
 }
 
+/**
+ * Extract raw grpHdr JSON substring from unparsed body text.
+ * Preserves original formatting/whitespace so HMAC matches SBSA's computation.
+ * @param {string} rawBodyStr - Raw JSON body string
+ * @param {string} type - 'rpp' or 'rtp'
+ * @returns {string|null}
+ */
+function extractRawGrpHdr(rawBodyStr, type) {
+  if (!rawBodyStr || typeof rawBodyStr !== 'string') return null;
+
+  const key = '"grpHdr"';
+  const idx = rawBodyStr.indexOf(key);
+  if (idx === -1) return null;
+
+  let start = rawBodyStr.indexOf('{', idx + key.length);
+  if (start === -1) return null;
+
+  let depth = 0;
+  for (let i = start; i < rawBodyStr.length; i++) {
+    if (rawBodyStr[i] === '{') depth++;
+    else if (rawBodyStr[i] === '}') depth--;
+    if (depth === 0) {
+      return rawBodyStr.substring(start, i + 1);
+    }
+  }
+  return null;
+}
+
 module.exports = {
   validateGroupHeaderHash,
   extractGrpHdr,
+  extractRawGrpHdr,
 };
