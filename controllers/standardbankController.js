@@ -215,6 +215,9 @@ async function handleRtpCallback(req, res) {
   const secret = process.env.SBSA_CALLBACK_SECRET;
   const headerHash = req.headers['x-groupheader-hash'] || req.headers['x-GroupHeader-Hash'];
 
+  console.log('[RTP-BATCH-CB] Received. Has secret: %s, Has hash header: %s, path: %s',
+    !!secret, !!headerHash, req.originalUrl);
+
   if (!secret) {
     return res.status(503).json({ error: 'Callback not configured' });
   }
@@ -291,7 +294,13 @@ async function handleRtpRealtimeCallback(req, res) {
   const secret = process.env.SBSA_CALLBACK_SECRET;
   const headerHash = req.headers['x-groupheader-hash'] || req.headers['x-GroupHeader-Hash'];
 
+  console.log('[RTP-RT-CB] Path params: clientMessageId=%s reqToPayInfoId=%s txId=%s',
+    clientMessageId, requestToPayInformationId, transactionIdentifier);
+  console.log('[RTP-RT-CB] Has secret: %s, Has hash header: %s',
+    !!secret, !!headerHash);
+
   if (!secret || !headerHash) {
+    console.warn('[RTP-RT-CB] 401: missing secret=%s headerHash=%s', !secret ? 'YES' : 'no', !headerHash ? 'YES' : 'no');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -305,7 +314,9 @@ async function handleRtpRealtimeCallback(req, res) {
   }
 
   const grpHdr = extractGrpHdr(body, 'rtp') || body;
+  console.log('[RTP-RT-CB] grpHdr keys: %s', Object.keys(grpHdr || {}).join(', '));
   if (!validateGroupHeaderHash(grpHdr, headerHash, secret)) {
+    console.warn('[RTP-RT-CB] 401: hash mismatch. grpHdr=%s', JSON.stringify(grpHdr).substring(0, 300));
     return res.status(401).json({ error: 'Invalid hash' });
   }
 
