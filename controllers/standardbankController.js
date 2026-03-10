@@ -319,13 +319,19 @@ async function handleRtpRealtimeCallback(req, res) {
     }
   }
 
+  // Log the full raw body (truncated) and top-level keys for debugging
+  console.log('[RTP-RT-CB] rawBodyStr present: %s, rawBodyStr preview: %s',
+    !!req.rawBodyStr, (req.rawBodyStr || '').substring(0, 500));
+  console.log('[RTP-RT-CB] body top-level keys: %s', Object.keys(body || {}).join(', '));
+
   // Try raw grpHdr string first to preserve SBSA's exact serialization for HMAC
   const rawGrpHdr = extractRawGrpHdr(req.rawBodyStr, 'rtp');
   const grpHdr = rawGrpHdr || extractGrpHdr(body, 'rtp') || body;
   console.log('[RTP-RT-CB] grpHdr source: %s, keys/len: %s',
     rawGrpHdr ? 'raw' : 'parsed', rawGrpHdr ? rawGrpHdr.length : Object.keys(grpHdr || {}).join(', '));
   if (!validateGroupHeaderHash(grpHdr, headerHash, secret)) {
-    console.warn('[RTP-RT-CB] 401: hash mismatch. grpHdr=%s', (typeof grpHdr === 'string' ? grpHdr : JSON.stringify(grpHdr)).substring(0, 300));
+    console.warn('[RTP-RT-CB] 401: hash mismatch. grpHdr=%s headerHash=%s',
+      (typeof grpHdr === 'string' ? grpHdr : JSON.stringify(grpHdr)).substring(0, 500), headerHash);
     return res.status(401).json({ error: 'Invalid hash' });
   }
 
