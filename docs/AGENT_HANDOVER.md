@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-10 20:15  
-**Latest Feature**: PayShap RTP callback routing fixed (404→200, 401→200 soft-fail), rejection notifications implemented, SBSA rejecting with EBONF — creditor config issue pending  
-**Document Version**: 2.15.0  
-**Session logs**: `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`, `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`  
+**Last Updated**: 2026-03-10 21:30  
+**Latest Feature**: RTP Recent Transactions (net credit), RTP Paid notification, ACWC/ACCC status fix (Capitec), balance refresh on transaction notifications  
+**Document Version**: 2.16.0  
+**Session logs**: `docs/session_logs/2026-03-10_2130_rtp-recent-transactions-capitec-balance-refresh.md`, `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`, `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,8 +100,11 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 10, 2026 - 20:15)**
-**PayShap RTP Callback Routing & Hash Debugging** — Fixed RTP callback 404 (route path mismatch: `paymentInitiation` → `paymentRequestInitiation`), 401 (Base64 vs hex hash encoding), and raw body preservation (`express.json()` verify callback). Implemented soft-fail hash validation (no HMAC strategy matches SBSA — need algorithm spec). Added RTP rejection/expiry/cancellation notifications. SBSA now rejects RTP with `EBONF: One or more request to pays failed when trying to create batch` — likely creditor account config issue. `SBSA_CREDITOR_ACCOUNT` maps to `sbsa-debtor-account` in Secret Manager (may be wrong). Session log: `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`.
+### **Latest Achievement (March 10, 2026 - 21:30)**
+**RTP Recent Transactions, Capitec Fix, Balance Refresh** — (1) Recent Transactions: RTP principal + fee combined into single net credit line (R4.25 = R10 − R5.75); Transaction History keeps both lines. (2) RTP Paid notification when payer accepts — triggers balance refresh via existing notification poll. (3) ACWC/ACCC status mapping — Capitec RTP was accepted but not credited; SBSA may send ACWC for inter-bank. Now ACWC and ACCC map to 'paid'. (4) RTP callback logging for debugging. Session log: `docs/session_logs/2026-03-10_2130_rtp-recent-transactions-capitec-balance-refresh.md`.
+
+### **Previous Achievement (March 10, 2026 - 20:15)**
+**PayShap RTP Callback Routing & Hash Debugging** — Fixed RTP callback 404 (route path mismatch: `paymentInitiation` → `paymentRequestInitiation`), 401 (Base64 vs hex hash encoding), and raw body preservation. Implemented soft-fail hash validation. Added RTP rejection/expiry/cancellation notifications. SBSA EBONF resolved via proxy format (+27-XXXXXXXXX) and amount formatting (two decimals). Session log: `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`.
 
 ### **Previous Achievement (March 7, 2026 - 18:00)**
 **Cloud Build Migration & npm Cleanup** — Deploy scripts now use `gcloud builds submit` instead of local Docker. No Docker Desktop needed for deployments. Build times: backend ~6min, wallet ~3.5min (was ~28min). Node 20 LTS in both Dockerfiles. Removed dead crypto/xss-clean packages. International Airtime pinless implemented; staging returns Flash Code 2200 (billing not configured) — awaiting Flash support. Session log: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`.
@@ -627,32 +630,25 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: 🔶 **IN PROGRESS** — PayShap RTP rejected by SBSA with EBONF, pending creditor config fix  
-**Last Session**: 2026-03-10 — RTP callback routing, hash debugging, rejection notifications
+**Session Status**: ✅ **COMPLETE** — RTP Recent Transactions, Capitec fix, balance refresh implemented and committed  
+**Last Session**: 2026-03-10 21:30 — RTP display, paid notification, ACWC status, balance refresh
 
-### **Most Recent Work (2026-03-10)**
-- **RTP callback routing**: Fixed 404 by adding `paymentRequestInitiation`/`paymentRequestInstructions` route variants. Fixed 401 with Base64/hex auto-detect, raw body preservation, and soft-fail hash validation.
-- **RTP notifications**: Implemented rejection/expiry/cancellation/declined notification to requester (mirrors wallet-to-wallet pattern).
-- **Hash debugging**: Tested 7+ HMAC strategies — none match SBSA's `x-GroupHeader-Hash`. Soft-fail in place; need SBSA algorithm spec.
-- **SBSA rejection**: RTP rejected with `EBONF: One or more request to pays failed when trying to create batch`. Likely creditor account config issue.
-- **Commits**: 10 commits from `a8d15e4e` to `c1e96dd1` on `main`.
+### **Most Recent Work (2026-03-10 21:30)**
+- **RTP Recent Transactions**: Single net credit line (principal − fee); Transaction History keeps both lines.
+- **RTP Paid notification**: Created when payer accepts; triggers balance refresh via notification poll.
+- **Capitec RTP fix**: ACWC and ACCC status codes now map to 'paid' (fixes inter-bank accepted RTPs not crediting).
+- **Balance refresh**: RTP Paid notification with `reason: balance_refresh` triggers MoolahContext refresh.
+- **RTP callback logging**: [RTP-CB] orgnlMsgId, status, payer for debugging.
+- **Commit**: 7510d074 on `main`.
 
 ### **Current State**
-- Staging deployed: revision `mymoolah-backend-staging-00227-4jk`
-- RTP callbacks return 200 (soft-fail on hash) but SBSA rejects the actual RTP
-- `SBSA_CREDITOR_ACCOUNT` maps to `sbsa-debtor-account` in Secret Manager — **likely wrong, may cause EBONF**
-- Callback secret was regenerated on OneHub at ~19:50 SAST (Secret Manager version 3)
-- RPP (send money) still works — only RTP (request money) is blocked
-
-### **Immediate Priorities**
-1. **Ask SBSA about EBONF** — What does "Entity/Batch Object Not Found" mean? Is creditor account registered?
-2. **Check SBSA_CREDITOR_ACCOUNT** — Should this be a different secret from SBSA_DEBTOR_ACCOUNT?
-3. **Ask SBSA for hash algorithm spec** — PBKDF2 params? HMAC vs SHA256? Encoding?
-4. **Clean up debug logging** — Remove HASH-WARN and diagnostic logs after resolution
+- All changes committed to main (not yet pushed)
+- RTP flow: Discovery confirmed working; Capitec should work after redeploy (ACWC fix)
+- User to redeploy staging and re-test Capitec RTP
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`
+2. Read this file and `docs/session_logs/2026-03-10_2130_rtp-recent-transactions-capitec-balance-refresh.md`
 3. Run `git status` → `git pull origin main`
 4. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
@@ -662,7 +658,8 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
-| Mar 10 (20:15) | PayShap RTP callback routing fixed (404→200, 401→200 soft-fail); rejection notifications; SBSA rejects with EBONF — creditor config issue pending |
+| Mar 10 (21:30) | RTP Recent Transactions (net credit); RTP Paid notification; ACWC/ACCC status fix (Capitec); balance refresh on transaction notifications; commit 7510d074 |
+| Mar 10 (20:15) | PayShap RTP callback routing fixed (404→200, 401→200 soft-fail); rejection notifications; EBONF resolved via proxy format + amount decimals |
 | Mar 7 (18:00) | Cloud Build Migration to `gcloud builds submit`; npm cleanup; International Airtime pinless (Flash Code 2200 pending) |
 | Mar 4 (14:00) | SBSA PayShap production credentials added to GCS Secret Manager; deploy script ready |
 | Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email; Flash/MobileMart/Zapper Google Drive docs |
@@ -686,9 +683,10 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **PayShap RTP EBONF fix** — SBSA rejects RTP with `EBONF: One or more request to pays failed when trying to create batch`. Investigate: (a) Is `SBSA_CREDITOR_ACCOUNT` correct? Currently maps to `sbsa-debtor-account` in Secret Manager — may need separate creditor account. (b) Ask SBSA what EBONF means and whether creditor entity is registered for RTP. (c) Check Pain.013 payload `CdtrAcct`/`CdtrAgt` fields.
-2. **PayShap hash algorithm spec** — HMAC validation soft-failing. Ask SBSA: What exact algorithm for `x-GroupHeader-Hash`? PBKDF2 salt/iterations? HMAC-SHA256 or SHA256? Base64 input/output encoding? Which secret (user hash vs callback secret)?
-3. **Clean up RTP debug logging** — After EBONF and hash issues resolved, remove `[HASH-WARN]`, `[HASH-DEBUG]`, and diagnostic logs from `callbackValidator.js` and `standardbankController.js`.
+1. **Redeploy staging** — Commit 7510d074 ready; user to push and redeploy for RTP Recent Transactions, ACWC fix, RTP Paid notification.
+2. **Re-test Capitec RTP** — ACWC mapping should fix 0784560585 not crediting; verify after redeploy.
+3. **PayShap hash algorithm spec** — HMAC validation soft-failing. Ask SBSA: What exact algorithm for `x-GroupHeader-Hash`?
+4. **Clean up RTP debug logging** — Remove `[HASH-WARN]`, `[HASH-DEBUG]` from callbackValidator/controller after hash spec confirmed.
 4. **EasyPay Cash-In activation** — Await Razine response.
 5. **Flash transaction testing in Staging** — Await Tia confirmation.
 6. **USDC send** — Test in Codespaces when VALR credentials available.
