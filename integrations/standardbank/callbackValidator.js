@@ -25,12 +25,27 @@ function validateGroupHeaderHash(grpHdr, headerHash, secret) {
     return false;
   }
   const grpHdrStr = typeof grpHdr === 'string' ? grpHdr : JSON.stringify(grpHdr);
-  const key = crypto.pbkdf2Sync(secret, SALT, PBKDF2_ITERATIONS, 32, 'sha256');
-  const computed = crypto.createHmac('sha256', key).update(grpHdrStr).digest('hex');
-  const computedBuf = Buffer.from(computed, 'hex');
-  const headerBuf = Buffer.from(headerHash, 'hex');
-  if (computedBuf.length !== headerBuf.length) return false;
-  return crypto.timingSafeEqual(computedBuf, headerBuf);
+
+  // SBSA sends hash as hex (RPP) or Base64 (RTP) — detect format
+  const isBase64 = /[+/=]/.test(headerHash) || !/^[0-9a-fA-F]+$/.test(headerHash);
+  const headerBuf = isBase64
+    ? Buffer.from(headerHash, 'base64')
+    : Buffer.from(headerHash, 'hex');
+
+  // Strategy 1: PBKDF2-derived key + HMAC-SHA256 (RPP proven pattern)
+  const pbkdf2Key = crypto.pbkdf2Sync(secret, SALT, PBKDF2_ITERATIONS, 32, 'sha256');
+  const computed1 = crypto.createHmac('sha256', pbkdf2Key).update(grpHdrStr).digest();
+  if (computed1.length === headerBuf.length && crypto.timingSafeEqual(computed1, headerBuf)) {
+    return true;
+  }
+
+  // Strategy 2: Plain HMAC-SHA256 with raw secret (RTP may use this)
+  const computed2 = crypto.createHmac('sha256', secret).update(grpHdrStr).digest();
+  if (computed2.length === headerBuf.length && crypto.timingSafeEqual(computed2, headerBuf)) {
+    return true;
+  }
+
+  return false;
 }
 
 /**

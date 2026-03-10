@@ -399,8 +399,13 @@ const validateRequest = (req, res, next) => {
 const { requestIdMiddleware } = require('./utils/errorHandler');
 app.use(requestIdMiddleware);
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
+// Body parsing middleware — preserve raw body for SBSA callback HMAC validation
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, res, buf) => {
+    req.rawBodyStr = buf.toString('utf8');
+  },
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Security monitoring middleware
