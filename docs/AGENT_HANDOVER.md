@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-04 14:00  
-**Latest Feature**: SBSA PayShap production credentials added to GCS Secret Manager pipeline — deploy script ready for live PayShap testing  
-**Document Version**: 2.14.0  
-**Session logs**: `docs/session_logs/2026-03-04_1400_sbsa-payshap-production-credentials-setup.md`, `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`  
+**Last Updated**: 2026-03-10 20:15  
+**Latest Feature**: PayShap RTP callback routing fixed (404→200, 401→200 soft-fail), rejection notifications implemented, SBSA rejecting with EBONF — creditor config issue pending  
+**Document Version**: 2.15.0  
+**Session logs**: `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`, `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 7, 2026 - 18:00)**
+### **Latest Achievement (March 10, 2026 - 20:15)**
+**PayShap RTP Callback Routing & Hash Debugging** — Fixed RTP callback 404 (route path mismatch: `paymentInitiation` → `paymentRequestInitiation`), 401 (Base64 vs hex hash encoding), and raw body preservation (`express.json()` verify callback). Implemented soft-fail hash validation (no HMAC strategy matches SBSA — need algorithm spec). Added RTP rejection/expiry/cancellation notifications. SBSA now rejects RTP with `EBONF: One or more request to pays failed when trying to create batch` — likely creditor account config issue. `SBSA_CREDITOR_ACCOUNT` maps to `sbsa-debtor-account` in Secret Manager (may be wrong). Session log: `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`.
+
+### **Previous Achievement (March 7, 2026 - 18:00)**
 **Cloud Build Migration & npm Cleanup** — Deploy scripts now use `gcloud builds submit` instead of local Docker. No Docker Desktop needed for deployments. Build times: backend ~6min, wallet ~3.5min (was ~28min). Node 20 LTS in both Dockerfiles. Removed dead crypto/xss-clean packages. International Airtime pinless implemented; staging returns Flash Code 2200 (billing not configured) — awaiting Flash support. Session log: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`.
 
 ### **Previous Achievement (February 27, 2026 - 14:00)**
@@ -624,23 +627,32 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — PayShap callbacks + EasyPay activation + Partner Drive docs  
-**Last Session**: 2026-02-21 — PayShap callbacks, EasyPay Cash-In sweep, Google Drive documentation
+**Session Status**: 🔶 **IN PROGRESS** — PayShap RTP rejected by SBSA with EBONF, pending creditor config fix  
+**Last Session**: 2026-03-10 — RTP callback routing, hash debugging, rejection notifications
 
-### **Most Recent Work (2026-02-21)**
-- **PayShap callbacks**: Parameterised callback routes for RPP/RTP (batch + realtime) added to `standardbankController.js` and `routes/standardbank.js`. GET polling routes added. New `services/standardbankPollingService.js` with stale transaction recovery.
-- **EasyPay Cash-In**: Full codebase sweep. Confirmed Receiver ID `5063` (already in code), 14-digit number format, Receiver architecture. Drafted activation email to Razine (UAT + Production).
-- **Google Drive docs**: Flash, MobileMart, Zapper partner Drive folders documented in `AGENT_HANDOVER.md` and dedicated reference files created in `integrations/`.
-- **Committed**: `04b9fe4e` — all changes on `main`, ready to push.
+### **Most Recent Work (2026-03-10)**
+- **RTP callback routing**: Fixed 404 by adding `paymentRequestInitiation`/`paymentRequestInstructions` route variants. Fixed 401 with Base64/hex auto-detect, raw body preservation, and soft-fail hash validation.
+- **RTP notifications**: Implemented rejection/expiry/cancellation/declined notification to requester (mirrors wallet-to-wallet pattern).
+- **Hash debugging**: Tested 7+ HMAC strategies — none match SBSA's `x-GroupHeader-Hash`. Soft-fail in place; need SBSA algorithm spec.
+- **SBSA rejection**: RTP rejected with `EBONF: One or more request to pays failed when trying to create batch`. Likely creditor account config issue.
+- **Commits**: 10 commits from `a8d15e4e` to `c1e96dd1` on `main`.
 
 ### **Current State**
-- No active work in progress
-- Production live: api-mm.mymoolah.africa, wallet.mymoolah.africa
-- Awaiting: EasyPay response from Razine, PayShap UAT test date (2 March), Flash transaction endpoint confirmation from Tia
+- Staging deployed: revision `mymoolah-backend-staging-00227-4jk`
+- RTP callbacks return 200 (soft-fail on hash) but SBSA rejects the actual RTP
+- `SBSA_CREDITOR_ACCOUNT` maps to `sbsa-debtor-account` in Secret Manager — **likely wrong, may cause EBONF**
+- Callback secret was regenerated on OneHub at ~19:50 SAST (Secret Manager version 3)
+- RPP (send money) still works — only RTP (request money) is blocked
+
+### **Immediate Priorities**
+1. **Ask SBSA about EBONF** — What does "Entity/Batch Object Not Found" mean? Is creditor account registered?
+2. **Check SBSA_CREDITOR_ACCOUNT** — Should this be a different secret from SBSA_DEBTOR_ACCOUNT?
+3. **Ask SBSA for hash algorithm spec** — PBKDF2 params? HMAC vs SHA256? Encoding?
+4. **Clean up debug logging** — Remove HASH-WARN and diagnostic logs after resolution
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and 2–3 recent session logs
+2. Read this file and `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`
 3. Run `git status` → `git pull origin main`
 4. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
@@ -650,6 +662,9 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 10 (20:15) | PayShap RTP callback routing fixed (404→200, 401→200 soft-fail); rejection notifications; SBSA rejects with EBONF — creditor config issue pending |
+| Mar 7 (18:00) | Cloud Build Migration to `gcloud builds submit`; npm cleanup; International Airtime pinless (Flash Code 2200 pending) |
+| Mar 4 (14:00) | SBSA PayShap production credentials added to GCS Secret Manager; deploy script ready |
 | Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email; Flash/MobileMart/Zapper Google Drive docs |
 | Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration; clean-slate catalog test Staging + Production |
 | Feb 25 | Variable-first product catalog filter — `priceType` schema, classify/deactivate fixed duplicates, API returns variable fields, full deploy Staging + Production |
@@ -671,11 +686,11 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **EasyPay Cash-In activation** — Await Razine response with: (a) EasyPay UAT system configured with `https://staging.mymoolah.africa/billpayment/v1`, (b) UAT + Production IP addresses for whitelisting, (c) production credentials, (d) SFTP details for SOF reconciliation. Then: set `EASYPAY_RECEIVER_ID=5063` explicitly in Secret Manager, generate SessionToken, share with Razine.
-2. **PayShap UAT testing (2 March)** — André to push to GitHub and deploy to Staging. Test RPP/RTP callbacks with Gustaf on 2 March. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
-3. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths. Then begin live transaction tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities. Endpoint paths confirmed from official v4 PDF.
-4. **Fix `.env.codespaces` MobileMart URL** — `MOBILEMART_API_URL` is currently `https://uat.fulcrumswitch.com` (UAT). Should be `https://fulcrumswitch.com` (Production) for clean-slate tests run from Codespaces.
-5. **Investigate 3 failed MobileMart bill-payment products** — Rest Assured Plan, Matjhabeng Municipality, PayJoy SA failed validation. Minor — investigate separately.
+1. **PayShap RTP EBONF fix** — SBSA rejects RTP with `EBONF: One or more request to pays failed when trying to create batch`. Investigate: (a) Is `SBSA_CREDITOR_ACCOUNT` correct? Currently maps to `sbsa-debtor-account` in Secret Manager — may need separate creditor account. (b) Ask SBSA what EBONF means and whether creditor entity is registered for RTP. (c) Check Pain.013 payload `CdtrAcct`/`CdtrAgt` fields.
+2. **PayShap hash algorithm spec** — HMAC validation soft-failing. Ask SBSA: What exact algorithm for `x-GroupHeader-Hash`? PBKDF2 salt/iterations? HMAC-SHA256 or SHA256? Base64 input/output encoding? Which secret (user hash vs callback secret)?
+3. **Clean up RTP debug logging** — After EBONF and hash issues resolved, remove `[HASH-WARN]`, `[HASH-DEBUG]`, and diagnostic logs from `callbackValidator.js` and `standardbankController.js`.
+4. **EasyPay Cash-In activation** — Await Razine response.
+5. **Flash transaction testing in Staging** — Await Tia confirmation.
 6. **USDC send** — Test in Codespaces when VALR credentials available.
 
 ---
