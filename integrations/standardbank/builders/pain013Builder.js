@@ -65,7 +65,7 @@ function normaliseMobile(raw) {
  * @param {string} [params.currency] - Default ZAR
  * @param {string} params.payerName - Debtor name
  * @param {string} params.payerMobileNumber - Debtor mobile number (required — SBSA RTP supports MOBILE_NUMBER proxy only)
- * @param {string} [params.payerBankCode] - Debtor bank code (defaults to 'bankc' in UAT)
+ * @param {string} [params.payerBankCode] - Debtor agent ID: proxy domain in production (e.g. 'discoverybank'), 'bankc' in UAT
  * @param {number} [params.netAmount] - Net amount after SBSA fee (for DuePyblAmt)
  * @param {string} [params.creditorAccountNumber] - MMTP receiving account
  * @param {string} [params.creditorName] - MMTP name

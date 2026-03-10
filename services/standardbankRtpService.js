@@ -37,6 +37,7 @@ async function initiateRtpRequest(params) {
     payerName,
     payerMobileNumber,
     payerBankCode,
+    payerProxyDomain,
     payerBankName,
     description,
     reference,
@@ -78,10 +79,11 @@ async function initiateRtpRequest(params) {
 
   const merchantTransactionId = `MM-RTP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  // DbtrAgt: use 'bankc' in UAT (SBSA sandbox placeholder); in production use actual branch code
+  // DbtrAgt: use 'bankc' in UAT (SBSA sandbox placeholder);
+  // in production use proxy domain (for proxy-based RTP) or branch code
   const resolvedPayerBankCode = process.env.STANDARDBANK_ENVIRONMENT === 'uat'
     ? 'bankc'
-    : (payerBankCode || 'bankc');
+    : (payerProxyDomain || payerBankCode || 'bankc');
 
   const { pain013, msgId } = buildPain013({
     merchantTransactionId,
@@ -397,6 +399,50 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
 
   if (internalStatus === 'paid') {
     await creditWalletOnPaid(rtpRequest, rawBody);
+  }
+
+  // Notify requester when RTP is rejected, expired, cancelled, or declined
+  if (['rejected', 'expired', 'cancelled', 'declined'].includes(internalStatus)) {
+    try {
+      const notificationService = require('./notificationService');
+      const amount = parseFloat(rtpRequest.amount);
+      const payerName = rtpRequest.payerName || 'Payer';
+
+      const titleMap = {
+        rejected: 'Payment Request Declined',
+        declined: 'Payment Request Declined',
+        expired: 'Payment Request Expired',
+        cancelled: 'Payment Request Cancelled',
+      };
+      const msgMap = {
+        rejected: `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
+        declined: `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
+        expired: `Your PayShap request for R ${amount.toFixed(2)} to ${payerName} has expired`,
+        cancelled: `Your PayShap request for R ${amount.toFixed(2)} to ${payerName} was cancelled`,
+      };
+
+      await notificationService.createNotification(
+        rtpRequest.userId,
+        'txn_wallet_credit',
+        titleMap[internalStatus],
+        msgMap[internalStatus],
+        {
+          payload: {
+            rtpRequestId: rtpRequest.id,
+            merchantTransactionId: rtpRequest.merchantTransactionId,
+            amount,
+            currency: rtpRequest.currency || 'ZAR',
+            payerName,
+            payerMobileNumber: rtpRequest.payerMobileNumber,
+            subtype: `payshap_rtp_${internalStatus}`,
+          },
+          severity: 'info',
+          category: 'transaction',
+        }
+      );
+    } catch (notifErr) {
+      console.warn('Non-fatal: failed to send RTP status notification:', notifErr.message);
+    }
   }
 }
 

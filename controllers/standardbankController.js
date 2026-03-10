@@ -26,8 +26,40 @@ function getBankCodeFromName(bankName) {
     'Postbank': '460005',
     'Standard Bank': '051001',
     'TymeBank': '678910',
+    'HBZ Bank': '570100',
+    'OM Bank': '352000',
+    'Al Baraka Bank': '800000',
+    'Sasfin Bank': '683000',
   };
   return bankCodes[bankName] || '';
+}
+
+/**
+ * Map bank name to SBSA PayShap proxy domain identifier.
+ * Used for RTP DbtrAgt.FinInstnId.Othr.Id when the debtor is identified by proxy.
+ * Source: SBSA "PROD Branch codes and Domains.xlsx" (March 2026).
+ */
+function getProxyDomainFromName(bankName) {
+  const proxyDomains = {
+    'Standard Bank': 'standardbank',
+    'Capitec Bank': 'capitec',
+    'ABSA Bank': 'absa',
+    'First National Bank (FNB)': 'fnb',
+    'First National Bank': 'fnb',
+    'FNB': 'fnb',
+    'RMB': 'rmb',
+    'Nedbank': 'nedbank',
+    'African Bank': 'africanbank',
+    'TymeBank': 'tymebank',
+    'Discovery Bank': 'discoverybank',
+    'Investec Bank': 'investec',
+    'HBZ Bank': 'hbz',
+    'OM Bank': 'ombank',
+    'Al Baraka Bank': 'albaraka',
+    'Sasfin Bank': 'sasfin',
+    'Bidvest Bank': 'hellopaisa',
+  };
+  return proxyDomains[bankName] || '';
 }
 
 /**
@@ -435,6 +467,7 @@ async function initiatePayShapRtp(req, res) {
     }
 
     const payerBankCode = payerBankName ? getBankCodeFromName(payerBankName) : null;
+    const payerProxyDomain = payerBankName ? getProxyDomainFromName(payerBankName) : null;
 
     const rtpService = require('../services/standardbankRtpService');
     const result = await rtpService.initiateRtpRequest({
@@ -445,6 +478,7 @@ async function initiatePayShapRtp(req, res) {
       payerName,
       payerMobileNumber,
       payerBankCode,
+      payerProxyDomain,
       payerBankName,
       description,
       reference,
