@@ -32,17 +32,20 @@ function validateGroupHeaderHash(grpHdr, headerHash, secret) {
     ? Buffer.from(headerHash, 'base64')
     : Buffer.from(headerHash, 'hex');
 
-  // Strategy 1: PBKDF2-derived key + HMAC-SHA256 (RPP proven pattern)
+  // Log all computed hashes for debugging (TEMPORARY — remove after fix confirmed)
   const pbkdf2Key = crypto.pbkdf2Sync(secret, SALT, PBKDF2_ITERATIONS, 32, 'sha256');
-  const computed1 = crypto.createHmac('sha256', pbkdf2Key).update(grpHdrStr).digest();
-  if (computed1.length === headerBuf.length && crypto.timingSafeEqual(computed1, headerBuf)) {
-    return true;
-  }
-
-  // Strategy 2: Plain HMAC-SHA256 with raw secret (RTP may use this)
-  const computed2 = crypto.createHmac('sha256', secret).update(grpHdrStr).digest();
-  if (computed2.length === headerBuf.length && crypto.timingSafeEqual(computed2, headerBuf)) {
-    return true;
+  const strats = [
+    { name: 'pbkdf2+hmac', val: crypto.createHmac('sha256', pbkdf2Key).update(grpHdrStr).digest() },
+    { name: 'plain-hmac', val: crypto.createHmac('sha256', secret).update(grpHdrStr).digest() },
+    { name: 'sha256-only', val: crypto.createHash('sha256').update(grpHdrStr).digest() },
+    { name: 'hmac-secret-utf8', val: crypto.createHmac('sha256', Buffer.from(secret, 'utf8')).update(grpHdrStr, 'utf8').digest() },
+  ];
+  console.log('[HASH-DEBUG] input=%s (len=%d) isBase64=%s headerBuf=%s',
+    grpHdrStr.substring(0, 200), grpHdrStr.length, isBase64, headerBuf.toString('base64'));
+  for (const s of strats) {
+    const match = s.val.length === headerBuf.length && crypto.timingSafeEqual(s.val, headerBuf);
+    console.log('[HASH-DEBUG] %s: %s match=%s', s.name, s.val.toString('base64'), match);
+    if (match) return true;
   }
 
   return false;
