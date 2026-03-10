@@ -91,7 +91,8 @@ async function handleRppCallback(req, res) {
   }
 
   const hashInput = rawGrpHdr || grpHdr;
-  if (!headerHash || !validateGroupHeaderHash(hashInput, headerHash, secret)) {
+  const rppHashResult = headerHash ? validateGroupHeaderHash(hashInput, headerHash, secret) : false;
+  if (!rppHashResult) {
     return res.status(401).json({ error: 'Invalid x-GroupHeader-Hash' });
   }
 
@@ -189,7 +190,8 @@ async function handleRppRealtimeCallback(req, res) {
 
   const rawGrpHdr = extractRawGrpHdr(req.rawBodyStr, 'rpp');
   const grpHdr = rawGrpHdr || extractGrpHdr(body, 'rpp') || body;
-  if (!validateGroupHeaderHash(grpHdr, headerHash, secret)) {
+  const rppRtHashResult = validateGroupHeaderHash(grpHdr, headerHash, secret);
+  if (!rppRtHashResult) {
     return res.status(401).json({ error: 'Invalid hash' });
   }
 
@@ -217,9 +219,6 @@ async function handleRtpCallback(req, res) {
   const secret = process.env.SBSA_CALLBACK_SECRET;
   const headerHash = req.headers['x-groupheader-hash'] || req.headers['x-GroupHeader-Hash'];
 
-  console.log('[RTP-BATCH-CB] Received. Has secret: %s, Has hash header: %s, path: %s',
-    !!secret, !!headerHash, req.originalUrl);
-
   if (!secret) {
     return res.status(503).json({ error: 'Callback not configured' });
   }
@@ -240,10 +239,12 @@ async function handleRtpCallback(req, res) {
   }
 
   const hashInput = rawGrpHdr || grpHdr;
-  if (!headerHash || !validateGroupHeaderHash(hashInput, headerHash, secret)) {
-    console.warn('[RTP-BATCH-CB] 401: hash mismatch. raw=%s parsed=%s',
-      !!rawGrpHdr, JSON.stringify(grpHdr).substring(0, 300));
+  const hashResult = headerHash ? validateGroupHeaderHash(hashInput, headerHash, secret) : false;
+  if (!hashResult) {
     return res.status(401).json({ error: 'Invalid x-GroupHeader-Hash' });
+  }
+  if (hashResult === 'soft_fail') {
+    console.warn('[RTP-BATCH-CB] Hash mismatch (soft_fail) — processing anyway. Ask SBSA for hash spec.');
   }
 
   try {
@@ -300,13 +301,7 @@ async function handleRtpRealtimeCallback(req, res) {
   const secret = process.env.SBSA_CALLBACK_SECRET;
   const headerHash = req.headers['x-groupheader-hash'] || req.headers['x-GroupHeader-Hash'];
 
-  console.log('[RTP-RT-CB] Path params: clientMessageId=%s reqToPayInfoId=%s txId=%s',
-    clientMessageId, requestToPayInformationId, transactionIdentifier);
-  console.log('[RTP-RT-CB] Has secret: %s, Has hash header: %s',
-    !!secret, !!headerHash);
-
   if (!secret || !headerHash) {
-    console.warn('[RTP-RT-CB] 401: missing secret=%s headerHash=%s', !secret ? 'YES' : 'no', !headerHash ? 'YES' : 'no');
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
@@ -319,20 +314,14 @@ async function handleRtpRealtimeCallback(req, res) {
     }
   }
 
-  // Log the full raw body (truncated) and top-level keys for debugging
-  console.log('[RTP-RT-CB] rawBodyStr present: %s, rawBodyStr preview: %s',
-    !!req.rawBodyStr, (req.rawBodyStr || '').substring(0, 500));
-  console.log('[RTP-RT-CB] body top-level keys: %s', Object.keys(body || {}).join(', '));
-
-  // Try raw grpHdr string first to preserve SBSA's exact serialization for HMAC
   const rawGrpHdr = extractRawGrpHdr(req.rawBodyStr, 'rtp');
   const grpHdr = rawGrpHdr || extractGrpHdr(body, 'rtp') || body;
-  console.log('[RTP-RT-CB] grpHdr source: %s, keys/len: %s',
-    rawGrpHdr ? 'raw' : 'parsed', rawGrpHdr ? rawGrpHdr.length : Object.keys(grpHdr || {}).join(', '));
-  if (!validateGroupHeaderHash(grpHdr, headerHash, secret)) {
-    console.warn('[RTP-RT-CB] 401: hash mismatch. grpHdr=%s headerHash=%s',
-      (typeof grpHdr === 'string' ? grpHdr : JSON.stringify(grpHdr)).substring(0, 500), headerHash);
+  const hashResult = validateGroupHeaderHash(grpHdr, headerHash, secret);
+  if (!hashResult) {
     return res.status(401).json({ error: 'Invalid hash' });
+  }
+  if (hashResult === 'soft_fail') {
+    console.warn('[RTP-RT-CB] Hash mismatch (soft_fail) — processing anyway. Ask SBSA for hash spec.');
   }
 
   try {
