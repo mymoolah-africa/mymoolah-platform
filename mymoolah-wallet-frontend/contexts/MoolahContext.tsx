@@ -303,36 +303,24 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       setUnreadCount(list.length);
       const blocker = list.find(n => n.freezeUntilViewed);
       setBlockingNotification(blocker || null);
-      
 
-      // Event-driven balance refresh after transaction notifications
+      // Event-driven balance refresh: update balance when money arrives (RTP paid, wallet transfer, etc.)
       const hasTransactionNotification = list.some(n => {
-        // Check for transaction notification types
         const isTransactionType = n.type === 'txn_wallet_credit' || n.type === 'txn_bank_credit';
-        
-        // Check for balance refresh reason in payload
         const hasBalanceRefreshReason = n.payload?.reason === 'balance_refresh';
-        
-        // Check for transaction-related titles
         const isTransactionTitle = n.title?.includes('Payment') || 
-                                 n.title?.includes('Received') || 
-                                 n.title?.includes('Sent') ||
-                                 n.title?.includes('Transaction');
-        
+          n.title?.includes('Received') || n.title?.includes('Sent') || n.title?.includes('Transaction');
         return isTransactionType || hasBalanceRefreshReason || isTransactionTitle;
       });
-      
-      // Only refresh if we have transaction notifications AND haven't refreshed recently
+
       if (hasTransactionNotification) {
         const now = Date.now();
         const lastRefreshTime = (window as any).lastBalanceRefreshTime || 0;
         const timeSinceLastRefresh = now - lastRefreshTime;
-        
-        // Debounce: only refresh if it's been more than 2 seconds since last refresh
         if (timeSinceLastRefresh > 2000) {
           (window as any).lastBalanceRefreshTime = now;
           await refreshBalanceAfterAction('money_received');
-          await refreshTransactions(); // NEW: Also refresh transactions
+          await refreshTransactions();
         }
       }
     } catch (_) {}

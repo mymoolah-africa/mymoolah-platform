@@ -379,10 +379,17 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
   const rtpRequest = await db.StandardBankRtpRequest.findOne({
     where: { originalMessageId },
   });
-  if (!rtpRequest) return;
+  if (!rtpRequest) {
+    console.warn('[RTP-CB] No RTP request found for orgnlMsgId=%s status=%s', originalMessageId, status);
+    return;
+  }
+  console.log('[RTP-CB] orgnlMsgId=%s status=%s payer=%s amount=%s',
+    originalMessageId, status, rtpRequest.payerMobileNumber, rtpRequest.amount);
 
   const statusMap = {
     ACSP: 'paid',
+    ACWC: 'paid',   // Accepted With Conditions
+    ACCC: 'paid',   // Accepted Credit Settlement Completed
     ACCP: 'presented',
     RJCT: 'rejected',
     PDNG: 'pending',
@@ -399,6 +406,34 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
 
   if (internalStatus === 'paid') {
     await creditWalletOnPaid(rtpRequest, rawBody);
+    console.log('[RTP-CB] Wallet credited for orgnlMsgId=%s payer=%s', originalMessageId, rtpRequest.payerMobileNumber);
+    // Notify requester that RTP was paid (triggers balance refresh on frontend)
+    try {
+      const notificationService = require('./notificationService');
+      const amount = parseFloat(rtpRequest.amount);
+      const payerName = rtpRequest.payerName || 'Payer';
+      await notificationService.createNotification(
+        rtpRequest.userId,
+        'txn_wallet_credit',
+        'Payment Received',
+        `${payerName} paid your Request to Pay of R ${amount.toFixed(2)}. Your wallet has been credited.`,
+        {
+          payload: {
+            rtpRequestId: rtpRequest.id,
+            merchantTransactionId: rtpRequest.merchantTransactionId,
+            amount,
+            currency: rtpRequest.currency || 'ZAR',
+            payerName,
+            subtype: 'payshap_rtp_paid',
+            reason: 'balance_refresh',
+          },
+          severity: 'info',
+          category: 'transaction',
+        }
+      );
+    } catch (notifErr) {
+      console.warn('Non-fatal: failed to send RTP paid notification:', notifErr.message);
+    }
   }
 
   // Notify requester when RTP is rejected, expired, cancelled, or declined
