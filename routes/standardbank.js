@@ -172,9 +172,8 @@ router.post(
 // ─── RTP Callbacks ────────────────────────────────────────────────────────────
 //
 // RTP Batch (Pain.014):
-//   POST /rtp-callback
-//   POST /rtp-callback/paymentInitiation/:clientMessageId
-//   POST /rtp-callback/paymentInitiation/:clientMessageId/paymentInstructions/:paymentInformationId
+//   SBSA sends: /rtp-callback/paymentRequestInitiation/{MsgId}/paymentRequestInstructions/{PmtInfId}
+//   Also handle legacy paymentInitiation/paymentInstructions paths
 router.post('/rtp-callback', rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpCallback);
 router.post(
   '/rtp-callback/paymentInitiation/:clientMessageId',
@@ -184,10 +183,23 @@ router.post(
   '/rtp-callback/paymentInitiation/:clientMessageId/paymentInstructions/:paymentInformationId',
   rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpCallbackWithParams
 );
+router.post(
+  '/rtp-callback/paymentRequestInitiation/:clientMessageId',
+  rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpCallbackWithParams
+);
+router.post(
+  '/rtp-callback/paymentRequestInitiation/:clientMessageId/paymentRequestInstructions/:paymentInformationId',
+  rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpCallbackWithParams
+);
 
 // RTP Realtime (Pain.014 per-transaction):
-//   POST /rtp-realtime-callback/paymentRequestInitiation/:clientMessageId/paymentRequestInstructions/:requestToPayInformationId/requests/:transactionIdentifier
+//   SBSA sends: /rtp-realtime-callback/paymentRequestInitiation/{MsgId}/paymentRequestInstructions/{PmtInfId}
+//   or with:    /requests/{transactionIdentifier} appended
 router.post('/rtp-realtime-callback', rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpRealtimeCallback);
+router.post(
+  '/rtp-realtime-callback/paymentRequestInitiation/:clientMessageId/paymentRequestInstructions/:requestToPayInformationId',
+  rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpRealtimeCallback
+);
 router.post(
   '/rtp-realtime-callback/paymentRequestInitiation/:clientMessageId/paymentRequestInstructions/:requestToPayInformationId/requests/:transactionIdentifier',
   rawBodyMiddleware, parseJsonBody, standardbankController.handleRtpRealtimeCallback
