@@ -248,18 +248,50 @@ async function handleRtpCallback(req, res) {
   }
 
   try {
-    const orgnlMsgId = grpHdr.OrgnlMsgId?.Id ?? grpHdr.orgnlMsgId?.id ?? null;
-    const pmtInf = body.cstmrPmtReqStsRpt?.orgnlPmtReqInfAndSts ?? body.cstmrPmtReqStsRpt?.pmtInf ?? [];
+    const orgnlMsgId = grpHdr.OrgnlMsgId?.Id ?? grpHdr.orgnlMsgId?.id
+      ?? grpHdr.msgId ?? null;
+
+    // SBSA RTP callbacks may nest under cstmrPmtReqStsRpt or at top level
+    const grpSts = body.orgnlGrpInfAndSts ?? body.cstmrPmtReqStsRpt?.orgnlGrpInfAndSts;
+    if (grpSts) {
+      const grpStatus = grpSts.grpSts || grpSts.GrpSts;
+      const stsRsn = grpSts.stsRsnInf || [];
+      const reasons = (Array.isArray(stsRsn) ? stsRsn : [stsRsn])
+        .map(r => `${r.rsn?.prtry || r.rsn?.Prtry || '?'}: ${r.addtlInf || r.AddtlInf || ''}`);
+      console.log('[RTP-BATCH-CB] Group status: %s, reasons: %s', grpStatus, reasons.join(' | '));
+    }
+
+    const pmtInf = body.orgnlPmtInfAndSts
+      ?? body.cstmrPmtReqStsRpt?.orgnlPmtReqInfAndSts
+      ?? body.cstmrPmtReqStsRpt?.orgnlPmtInfAndSts
+      ?? body.cstmrPmtReqStsRpt?.pmtInf
+      ?? [];
     const infList = Array.isArray(pmtInf) ? pmtInf : [pmtInf];
 
     for (const inf of infList) {
+      const pmtSts = inf.pmtInfSts || inf.PmtInfSts;
+      const pmtRsn = inf.stsRsnInf || [];
+      const pmtReasons = (Array.isArray(pmtRsn) ? pmtRsn : [pmtRsn])
+        .map(r => `${r.rsn?.prtry || r.rsn?.Prtry || '?'}: ${r.addtlInf || r.AddtlInf || ''}`);
+      if (pmtSts) {
+        console.log('[RTP-BATCH-CB] Payment status: %s, reasons: %s, pmtInfId: %s',
+          pmtSts, pmtReasons.join(' | '), inf.orgnlPmtInfId || inf.OrgnlPmtInfId || '?');
+      }
+
       const txInf = inf.txInfAndSts ?? inf.cdtTrfTx ?? [];
       const txList = Array.isArray(txInf) ? txInf : [txInf];
       for (const tx of txList) {
         const txId = tx.txId?.txId ?? tx.txId ?? tx.instrId;
-        const sts = tx.txSts ?? tx.sts ?? 'ACCP';
+        const sts = tx.txSts ?? tx.sts ?? pmtSts ?? 'ACCP';
         await processRtpCallback(orgnlMsgId, txId, sts, body);
       }
+    }
+
+    // If no transaction-level info, use group-level status
+    if (infList.length === 0 && grpSts) {
+      const grpStatus = grpSts.grpSts || grpSts.GrpSts;
+      const orgnlMsgIdFromGrp = grpSts.orgnlMsgId || grpSts.OrgnlMsgId;
+      await processRtpCallback(orgnlMsgIdFromGrp || orgnlMsgId, null, grpStatus, body);
     }
 
     return res.status(200).send();
@@ -325,14 +357,30 @@ async function handleRtpRealtimeCallback(req, res) {
   }
 
   try {
-    // Prefer path param clientMessageId; fall back to body
     const orgnlMsgId = clientMessageId
+      || body.orgnlGrpInfAndSts?.orgnlMsgId
       || body.originalMessageId
       || body.orgnlMsgId;
     const txId = transactionIdentifier
       || body.transactionIdentifier
       || body.txId;
-    const sts = body.txSts ?? body.sts ?? 'ACSP';
+
+    // Extract status from group or payment level
+    const grpSts = body.orgnlGrpInfAndSts?.grpSts;
+    const pmtInfArr = body.orgnlPmtInfAndSts || [];
+    const pmtSts = Array.isArray(pmtInfArr) && pmtInfArr[0]?.pmtInfSts;
+    const sts = body.txSts ?? body.sts ?? pmtSts ?? grpSts ?? 'ACSP';
+
+    // Log rejection details
+    if (grpSts === 'RJCT' || pmtSts === 'RJCT') {
+      const grpReasons = (body.orgnlGrpInfAndSts?.stsRsnInf || [])
+        .map(r => `${r.rsn?.prtry || '?'}: ${r.addtlInf || ''}`);
+      const pmtReasons = pmtInfArr.flatMap(p => (p.stsRsnInf || [])
+        .map(r => `${r.rsn?.prtry || '?'}: ${r.addtlInf || ''}`));
+      console.error('[RTP-RT-CB] REJECTED orgnlMsgId=%s grpReasons=[%s] pmtReasons=[%s]',
+        orgnlMsgId, grpReasons.join(' | '), pmtReasons.join(' | '));
+    }
+
     await processRtpCallback(orgnlMsgId, txId, sts, body);
     return res.status(200).send();
   } catch (err) {
