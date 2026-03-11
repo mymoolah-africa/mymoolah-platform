@@ -81,11 +81,15 @@ async function initiateRtpRequest(params) {
 
   const merchantTransactionId = `MM-RTP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-  // DbtrAgt: use 'bankc' in UAT (SBSA sandbox placeholder);
-  // in production use proxy domain (for proxy-based RTP) or branch code
+  // DbtrAgt differs by mode:
+  //   PBAC: branch code (e.g. '051001') — direct account routing, no proxy lookup
+  //   Proxy: proxy domain (e.g. 'discoverybank') — proxy directory lookup
+  //   UAT: 'bankc' (SBSA sandbox placeholder)
   const resolvedPayerBankCode = process.env.STANDARDBANK_ENVIRONMENT === 'uat'
     ? 'bankc'
-    : (payerProxyDomain || payerBankCode || 'bankc');
+    : Boolean(payerAccountNumber)
+      ? (payerBankCode || payerProxyDomain || 'bankc')
+      : (payerProxyDomain || payerBankCode || 'bankc');
 
   const { pain013, msgId } = buildPain013({
     merchantTransactionId,
