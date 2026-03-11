@@ -79,7 +79,7 @@ const rppValidation = [
     .escape(),
 ];
 
-// RTP validation rules — SBSA RTP requires MOBILE_NUMBER proxy for debtor (per Postman + UAT)
+// RTP validation: either payerMobileNumber (proxy) or payerAccountNumber+payerBankName (PBAC)
 const rtpValidation = [
   body('amount')
     .isFloat({ gt: 0 })
@@ -95,10 +95,14 @@ const rtpValidation = [
     .trim()
     .escape(),
   body('payerMobileNumber')
-    .notEmpty()
-    .withMessage('payerMobileNumber is required (SBSA RTP only supports mobile proxy for debtors)')
+    .optional()
     .matches(/^(\+27|27|0)[0-9]{8,9}$/)
     .withMessage('payerMobileNumber must be a valid South African mobile number'),
+  body('payerAccountNumber')
+    .optional()
+    .isLength({ min: 6, max: 20 })
+    .withMessage('payerAccountNumber must be 6-20 characters')
+    .trim(),
   body('payerBankName')
     .optional()
     .isLength({ max: 100 })
@@ -118,6 +122,12 @@ const rtpValidation = [
     .optional()
     .isInt({ min: 5, max: 1440 })
     .withMessage('expiryMinutes must be between 5 and 1440'),
+  body().custom((value) => {
+    if (!value.payerMobileNumber && !value.payerAccountNumber) {
+      throw new Error('Either payerMobileNumber or payerAccountNumber is required');
+    }
+    return true;
+  }),
 ];
 
 // RPP initiation (Send Money)

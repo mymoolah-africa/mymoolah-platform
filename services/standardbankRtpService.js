@@ -36,6 +36,7 @@ async function initiateRtpRequest(params) {
     currency = 'ZAR',
     payerName,
     payerMobileNumber,
+    payerAccountNumber,
     payerBankCode,
     payerProxyDomain,
     payerBankName,
@@ -45,8 +46,8 @@ async function initiateRtpRequest(params) {
     creditorName: creditorNameOverride,
   } = params;
 
-  if (!payerMobileNumber) {
-    throw new Error('payerMobileNumber is required for RTP (SBSA RTP only supports MOBILE_NUMBER proxy for debtors)');
+  if (!payerMobileNumber && !payerAccountNumber) {
+    throw new Error('Either payerMobileNumber (proxy) or payerAccountNumber (PBAC) is required');
   }
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
@@ -91,13 +92,21 @@ async function initiateRtpRequest(params) {
     amount: numAmount,
     currency,
     payerName: payerName || 'Payer',
-    payerMobileNumber,
+    payerMobileNumber: payerMobileNumber || undefined,
+    payerAccountNumber: payerAccountNumber || undefined,
     payerBankCode: resolvedPayerBankCode,
     netAmount: netCredit,
     remittanceInfo: description || reference || merchantTransactionId,
     expiryMinutes,
     creditorName: creditorNameOverride,
   });
+
+  const isPbac = Boolean(payerAccountNumber);
+  const dbtrAcctId = pain013?.PmtInf?.[0]?.DbtrAcct?.Id?.Item?.Id;
+  const dbtrAgtId = pain013?.PmtInf?.[0]?.DbtrAgt?.FinInstnId?.Othr?.Id;
+  const pmtTpPrtry = pain013?.PmtInf?.[0]?.PmtTpInf?.LclInstrm?.Prtry || '(none)';
+  console.log('[RTP] mode=%s DbtrAcct.Id.Item.Id=%s DbtrAgt=%s PmtTpInf.Prtry=%s msgId=%s',
+    isPbac ? 'PBAC' : 'PROXY', dbtrAcctId, dbtrAgtId, pmtTpPrtry, msgId);
 
   let sbResponse;
   try {
@@ -107,8 +116,10 @@ async function initiateRtpRequest(params) {
     wrapped.sbsaStatus = err.sbsaStatus;
     wrapped.sbsaBody = err.sbsaBody;
     wrapped.sbsaPayloadSent = {
-      prxyId: pain013?.PmtInf?.[0]?.DbtrAcct?.Prxy?.Id ?? pain013?.pmtInf?.[0]?.dbtrAcct?.prxy?.id,
-      dbtrAgtId: pain013?.PmtInf?.[0]?.DbtrAgt?.FinInstnId?.Othr?.Id ?? pain013?.pmtInf?.[0]?.dbtrAgt?.FinInstnId?.Othr?.Id ?? pain013?.pmtInf?.[0]?.dbtrAgt?.finInstnId?.othr?.id,
+      mode: isPbac ? 'PBAC' : 'PROXY',
+      dbtrAcctItemId: dbtrAcctId,
+      dbtrAgtId,
+      pmtTpPrtry,
     };
     throw wrapped;
   }
@@ -131,6 +142,7 @@ async function initiateRtpRequest(params) {
     referenceNumber: reference || null,
     payerName: payerName || null,
     payerMobileNumber: payerMobileNumber || null,
+    payerAccountNumber: payerAccountNumber || null,
     payerBankCode: payerBankCode || null,
     payerBankName: payerBankName || null,
     description: description || null,
@@ -445,15 +457,36 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
       const amount = parseFloat(rtpRequest.amount);
       const payerName = rtpRequest.payerName || 'Payer';
 
+      // Distinguish system rejection (EBONF, EERRR, EPDNF, EPRBA) from payer decline
+      const systemCodes = ['EBONF', 'EERRR', 'EPDNF', 'EPRBA', 'NARR'];
+      let isSystemReject = false;
+      try {
+        const rb = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
+        const arr = rb?.orgnlPmtInfAndSts || rb?.OrgnlPmtInfAndSts || [];
+        const infList = Array.isArray(arr) ? arr : [arr];
+        for (const inf of infList) {
+          const stsArr = inf?.stsRsnInf || inf?.StsRsnInf || [];
+          const stsList = Array.isArray(stsArr) ? stsArr : [stsArr];
+          for (const s of stsList) {
+            const code = s?.rsn?.prtry || s?.Rsn?.Prtry || '';
+            if (systemCodes.includes(code)) isSystemReject = true;
+          }
+        }
+      } catch (_) { /* rawBody parse failure — treat as payer decline */ }
+
       const titleMap = {
-        rejected: 'Payment Request Declined',
-        declined: 'Payment Request Declined',
+        rejected: isSystemReject ? 'Payment Request Could Not Be Delivered' : 'Payment Request Declined',
+        declined: isSystemReject ? 'Payment Request Could Not Be Delivered' : 'Payment Request Declined',
         expired: 'Payment Request Expired',
         cancelled: 'Payment Request Cancelled',
       };
       const msgMap = {
-        rejected: `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
-        declined: `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
+        rejected: isSystemReject
+          ? `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`
+          : `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
+        declined: isSystemReject
+          ? `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`
+          : `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
         expired: `Your PayShap request for R ${amount.toFixed(2)} to ${payerName} has expired`,
         cancelled: `Your PayShap request for R ${amount.toFixed(2)} to ${payerName} was cancelled`,
       };

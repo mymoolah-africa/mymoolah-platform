@@ -4,13 +4,20 @@
  * Pain.013 Builder - SBSA RTP PayShap (Request to Pay Initiation)
  * ISO 20022 Pain.013 - JSON format aligned with SBSA API Postman samples
  *
- * SBSA RTP debtor identification (per SBSA Postman and UAT testing 2026-02-24):
- *   - DbtrAcct.Id.Item.Id MUST be "Proxy" (mandatory discriminator per SBSA schema)
- *   - Debtor is identified via Prxy.Tp.Item = "MOBILE_NUMBER" + Prxy.Id = mobile number
- *   - SBSA RTP only supports MOBILE_NUMBER proxy for debtors — PBAC (direct account) returns EPRBA
- *   - RPP (outbound) uses PBAC for creditor — RTP (request) uses MOBILE_NUMBER for debtor
+ * SBSA RTP debtor identification supports TWO flows (confirmed by SBSA Louis 2026-03):
  *
- * Creditor (MMTP) uses direct account number in CdtrAcct.Id.Item.Id.
+ * 1. PROXY flow (debtor has registered PayShap proxy):
+ *    - DbtrAcct.Id.Item.Id = "Proxy"
+ *    - DbtrAcct.Prxy.Tp.Item = "MOBILE_NUMBER", Prxy.Id = mobile
+ *    - DbtrAgt.FinInstnId.Othr.Id = proxy domain (e.g. 'discoverybank')
+ *
+ * 2. PBAC flow (debtor without PayShap proxy — account only):
+ *    - DbtrAcct.Id.Item.Id = account number
+ *    - No Prxy block
+ *    - PmtTpInf.LclInstrm.Prtry = 'PBAC'
+ *    - DbtrAgt.FinInstnId.Othr.Id = proxy domain
+ *
+ * Creditor (MMTP) always uses direct account in CdtrAcct.Id.Item.Id.
  *
  * @author MyMoolah Treasury Platform
  */
@@ -65,8 +72,9 @@ function normaliseMobile(raw) {
  * @param {number} params.amount - Amount in ZAR
  * @param {string} [params.currency] - Default ZAR
  * @param {string} params.payerName - Debtor name
- * @param {string} params.payerMobileNumber - Debtor mobile number (required — SBSA RTP supports MOBILE_NUMBER proxy only)
- * @param {string} [params.payerBankCode] - Debtor agent ID: proxy domain in production (e.g. 'discoverybank'), 'bankc' in UAT
+ * @param {string} [params.payerMobileNumber] - Debtor mobile (proxy flow)
+ * @param {string} [params.payerAccountNumber] - Debtor account number (PBAC flow — for debtors without PayShap proxy)
+ * @param {string} [params.payerBankCode] - Debtor agent: domain (e.g. 'discoverybank'), 'bankc' in UAT
  * @param {number} [params.netAmount] - Net amount after SBSA fee (for DuePyblAmt)
  * @param {string} [params.creditorAccountNumber] - MMTP receiving account
  * @param {string} [params.creditorName] - Creditor display name (shown to payer on bank screen). When omitted, uses SBSA_CREDITOR_NAME. For RTP, pass e.g. "RTP requested from {walletUser}" so payer sees who requested the payment.
@@ -82,6 +90,7 @@ function buildPain013(params) {
     currency = 'ZAR',
     payerName,
     payerMobileNumber,
+    payerAccountNumber,
     payerBankCode,
     netAmount,
     creditorAccountNumber = process.env.SBSA_CREDITOR_ACCOUNT || process.env.SBSA_DEBTOR_ACCOUNT || '0000000000',
@@ -92,11 +101,14 @@ function buildPain013(params) {
     expiryMinutes = 60,
   } = params;
 
-  if (!payerMobileNumber) {
-    throw new Error('payerMobileNumber is required for RTP (SBSA RTP only supports MOBILE_NUMBER proxy for debtors)');
+  if (!payerMobileNumber && !payerAccountNumber) {
+    throw new Error('Either payerMobileNumber (proxy) or payerAccountNumber (PBAC) is required');
   }
 
-  // SBSA field regex: alphanumeric only, no hyphens/special chars
+  // PBAC when account is provided (debtors without PayShap proxy).
+  // Proxy only when mobile is provided WITHOUT account (MyMoolah wallet requests).
+  const isPbac = Boolean(payerAccountNumber);
+
   const cleanId = (str) => str.replace(/[^a-zA-Z0-9]/g, '');
 
   const uetr = uuidv4();
@@ -113,23 +125,33 @@ function buildPain013(params) {
   const now = new Date();
   const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
-  const normalizedMobile = normaliseMobile(payerMobileNumber);
-
-  // SBSA Pain.013 DbtrAcct: Id.Item.Id = "Proxy" is mandatory. Prxy.Tp.Item = "MOBILE_NUMBER".
-  const DbtrAcct = {
-    Id: {
-      Item: {
-        Id: 'Proxy',
+  let DbtrAcct;
+  if (isPbac) {
+    DbtrAcct = {
+      Id: {
+        Item: {
+          Id: payerAccountNumber,
+        },
       },
-    },
-    Nm: (payerName || 'Payer').substring(0, 140),
-    Prxy: {
-      Tp: {
-        Item: 'MOBILE_NUMBER',
+      Nm: (payerName || 'Payer').substring(0, 140),
+    };
+  } else {
+    const normalizedMobile = normaliseMobile(payerMobileNumber);
+    DbtrAcct = {
+      Id: {
+        Item: {
+          Id: 'Proxy',
+        },
       },
-      Id: normalizedMobile,
-    },
-  };
+      Nm: (payerName || 'Payer').substring(0, 140),
+      Prxy: {
+        Tp: {
+          Item: 'MOBILE_NUMBER',
+        },
+        Id: normalizedMobile,
+      },
+    };
+  }
 
   const CdtrId = creditorOrgId
     ? {
@@ -139,13 +161,15 @@ function buildPain013(params) {
       }
     : undefined;
 
+  const pbacPmtTpInf = isPbac ? { LclInstrm: { Prtry: 'PBAC' } } : {};
+
   const CdtTrfTx = {
     PmtId: {
       InstrId: instrId,
       EndToEndId: endToEndId,
       UETR: uetr,
     },
-    PmtTpInf: {},
+    PmtTpInf: pbacPmtTpInf,
     PmtCond: {
       AmtModAllwd: true,
       EarlyPmtAllwd: false,
@@ -215,7 +239,7 @@ function buildPain013(params) {
         PmtInfId: pmtInfId,
         PmtMtd: 'TRF',
         ReqdAdvcTp: '',
-        PmtTpInf: {},
+        PmtTpInf: pbacPmtTpInf,
         ReqdExctnDt: {
           DtTm: now.toISOString(),
         },

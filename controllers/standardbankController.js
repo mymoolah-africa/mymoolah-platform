@@ -517,6 +517,7 @@ async function initiatePayShapRtp(req, res) {
       currency = 'ZAR',
       payerName,
       payerMobileNumber,
+      payerAccountNumber,
       payerBankName,
       description,
       reference,
@@ -526,11 +527,14 @@ async function initiatePayShapRtp(req, res) {
     if (!amount) {
       return res.status(400).json({ success: false, message: 'amount is required' });
     }
-    if (!payerMobileNumber) {
-      return res.status(400).json({ success: false, message: 'payerMobileNumber is required (SBSA RTP uses mobile proxy for debtor)' });
+    if (!payerMobileNumber && !payerAccountNumber) {
+      return res.status(400).json({ success: false, message: 'Either payerMobileNumber or payerAccountNumber is required' });
     }
     if (!payerName) {
       return res.status(400).json({ success: false, message: 'payerName is required' });
+    }
+    if (payerAccountNumber && !payerMobileNumber && !payerBankName) {
+      return res.status(400).json({ success: false, message: 'payerBankName is required for account-based RTP' });
     }
 
     const payerBankCode = payerBankName ? getBankCodeFromName(payerBankName) : null;
@@ -543,7 +547,8 @@ async function initiatePayShapRtp(req, res) {
       amount,
       currency,
       payerName,
-      payerMobileNumber,
+      payerMobileNumber: payerMobileNumber || null,
+      payerAccountNumber: payerAccountNumber || null,
       payerBankCode,
       payerProxyDomain,
       payerBankName,
@@ -588,9 +593,10 @@ async function initiatePayShapRtp(req, res) {
         userMessage = isUat
           ? 'Payer\'s mobile number is not in PayShap test directory. Use SBSA test number +27585125485 for UAT.'
           : 'Payer\'s mobile number is not registered for PayShap. The payer needs PayShap enabled at their bank.';
-        // Log payload sent for EPDNF diagnosis (production: SBSA proxy directory lookup failed)
         const sent = err.sbsaPayloadSent || {};
         console.warn('SBSA RTP EPDNF: Prxy.Id=%s DbtrAgt=%s | SBSA prtry=%s addtlInf=%s | Share with SBSA support.', sent.prxyId || req.body?.payerMobileNumber, sent.dbtrAgtId || '(unknown)', prtry, addtlInf || '(none)');
+      } else if (prtry === 'EPRBA') {
+        userMessage = 'The payer\'s bank account does not support PayShap Request to Pay. Try using the payer\'s mobile number instead, or contact the payer\'s bank.';
       } else if (prtry === 'EAMTI' || (addtlInf && addtlInf.toLowerCase().includes('invalid amount'))) {
         userMessage = addtlInf || 'Invalid amount. Minimum bank request is R10.';
       }
