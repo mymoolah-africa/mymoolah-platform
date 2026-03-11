@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-10 21:30  
-**Latest Feature**: RTP Recent Transactions (net credit), RTP Paid notification, ACWC/ACCC status fix (Capitec), balance refresh on transaction notifications  
-**Document Version**: 2.16.0  
-**Session logs**: `docs/session_logs/2026-03-10_2130_rtp-recent-transactions-capitec-balance-refresh.md`, `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`, `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`  
+**Last Updated**: 2026-03-04 16:00  
+**Latest Feature**: SBSA PayShap callback URL fix — staging now uses api-mm.mymoolah.africa (production domain) per SBS feedback  
+**Document Version**: 2.16.1  
+**Session logs**: `docs/session_logs/2026-03-04_1600_sbsa-callback-url-staging-fix.md`, `docs/session_logs/2026-03-10_2130_rtp-recent-transactions-capitec-balance-refresh.md`, `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 10, 2026 - 21:30)**
+### **Latest Achievement (March 4, 2026 - 16:00)**
+**SBSA PayShap Callback URL Fix** — Per SBS email: staging was incorrectly using `staging.mymoolah.africa` for RTP callbacks. Staging and production use identical SBSA config (production credentials, callback domain); only users and database differ. Fixed `deploy-backend.sh` so both environments set `SBSA_CALLBACK_BASE_URL=https://api-mm.mymoolah.africa`. **Redeploy staging required**: `./scripts/deploy-backend.sh --staging`. Session log: `docs/session_logs/2026-03-04_1600_sbsa-callback-url-staging-fix.md`.
+
+### **Previous Achievement (March 10, 2026 - 21:30)**
 **RTP Recent Transactions, Capitec Fix, Balance Refresh** — (1) Recent Transactions: RTP principal + fee combined into single net credit line (R4.25 = R10 − R5.75); Transaction History keeps both lines. (2) RTP Paid notification when payer accepts — triggers balance refresh via existing notification poll. (3) ACWC/ACCC status mapping — Capitec RTP was accepted but not credited; SBSA may send ACWC for inter-bank. Now ACWC and ACCC map to 'paid'. (4) RTP callback logging for debugging. Session log: `docs/session_logs/2026-03-10_2130_rtp-recent-transactions-capitec-balance-refresh.md`.
 
 ### **Previous Achievement (March 10, 2026 - 20:15)**
@@ -147,6 +150,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 
 ### **Recent Updates (Last 7 Days – February 27–March 4, 2026)**
 - **Mar 4 (11:17)**: Cursor skills consolidated — all 8 skills in `.agents/skills/` (single parent). Moved frontend-design from .cursor/skills/. Best practice structure.
+- **Mar 4 (16:00)**: SBSA PayShap callback URL fix — staging now uses `api-mm.mymoolah.africa` for SBSA callbacks (was `staging.mymoolah.africa`). Per SBS feedback and project docs: staging and production use identical SBSA config. Redeploy staging to apply: `./scripts/deploy-backend.sh --staging`.
 - **Feb 27 (14:00)**: Figma restriction removed — code is frontend source of truth. Agents may edit any UI/frontend including `pages/*.tsx`. Figma optional reference. Enables frontend-design skill on main app pages.
 - **Feb 21 (21:00)**: Standard Bank PayShap banking-grade overhaul — removed Peach proxy workaround; aligned Pain.001 (top-level grpHdr/pmtInf[], pmntInfId, reqdExctnDt.dtTm, lclInstrm.prtry, cdtrAgt+brnchId, rmtInf.strd[], splmtryData) and Pain.013 (PascalCase, DbtrAcct.Id.Item.Id+Prxy, CdtrAgt.Othr.Id, Amt.Item.Value, PmtCond, RmtInf.Strd[]) with SBSA Postman samples; fixed RTP callback URLs in client.js; scope-keyed token cache in pingAuthService; ACID transaction ordering in RPP/RTP services; added proxyResolutionClient.js; express-validator on routes.
 - **Feb 21 (19:00)**: Documentation consolidation — archived ~75 docs to `docs/archive/` (deployment, codespaces, mobilemart, beneficiary, partner-api, referral, easypay, zapper, figma, peach-payments, security); merged INPUT_FIELD_FIXES, 2FA_IMPLEMENTATION, SECURITY (badge/certificate/token); created DOCS_CONSOLIDATION_2026.md. Session log updated with git push/pull status. Codespaces synced (82 files, fast-forward).
@@ -661,6 +665,7 @@ You're part of a **banking-grade software system** where:
 | Mar 10 (21:30) | RTP Recent Transactions (net credit); RTP Paid notification; ACWC/ACCC status fix (Capitec); balance refresh on transaction notifications; commit 7510d074 |
 | Mar 10 (20:15) | PayShap RTP callback routing fixed (404→200, 401→200 soft-fail); rejection notifications; EBONF resolved via proxy format + amount decimals |
 | Mar 7 (18:00) | Cloud Build Migration to `gcloud builds submit`; npm cleanup; International Airtime pinless (Flash Code 2200 pending) |
+| Mar 4 (16:00) | SBSA PayShap callback URL fix — staging uses api-mm for callbacks (deploy-backend.sh) |
 | Mar 4 (14:00) | SBSA PayShap production credentials added to GCS Secret Manager; deploy script ready |
 | Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email; Flash/MobileMart/Zapper Google Drive docs |
 | Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration; clean-slate catalog test Staging + Production |
