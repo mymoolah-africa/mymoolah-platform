@@ -69,7 +69,7 @@ function normaliseMobile(raw) {
  * @param {string} [params.payerBankCode] - Debtor agent ID: proxy domain in production (e.g. 'discoverybank'), 'bankc' in UAT
  * @param {number} [params.netAmount] - Net amount after SBSA fee (for DuePyblAmt)
  * @param {string} [params.creditorAccountNumber] - MMTP receiving account
- * @param {string} [params.creditorName] - MMTP name
+ * @param {string} [params.creditorName] - Creditor display name (shown to payer on bank screen). When omitted, uses SBSA_CREDITOR_NAME. For RTP, pass e.g. "RTP requested from {walletUser}" so payer sees who requested the payment.
  * @param {string} [params.creditorOrgId] - CIPC registration
  * @param {string} [params.creditorBankBranchCode] - SBSA branch code
  * @param {string} [params.remittanceInfo] - Payment reference

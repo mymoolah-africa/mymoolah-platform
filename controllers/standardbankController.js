@@ -503,10 +503,14 @@ async function initiatePayShapRtp(req, res) {
       return res.status(401).json({ success: false, message: 'Authentication required' });
     }
 
-    const wallet = await db.Wallet.findOne({ where: { userId } });
+    const [wallet, user] = await Promise.all([
+      db.Wallet.findOne({ where: { userId } }),
+      db.User.findByPk(userId, { attributes: ['firstName', 'lastName'] }),
+    ]);
     if (!wallet || String(wallet.userId) !== String(userId)) {
       return res.status(404).json({ success: false, message: 'Wallet not found' });
     }
+    const walletUserDisplayName = user ? `${user.firstName} ${user.lastName}`.trim() : null;
 
     const {
       amount,
@@ -546,6 +550,7 @@ async function initiatePayShapRtp(req, res) {
       description,
       reference,
       expiryMinutes,
+      creditorName: walletUserDisplayName ? `RTP requested from ${walletUserDisplayName}` : undefined,
     });
 
     const fb = result.feeBreakdown || {};

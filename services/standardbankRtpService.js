@@ -42,6 +42,7 @@ async function initiateRtpRequest(params) {
     description,
     reference,
     expiryMinutes = 60,
+    creditorName: creditorNameOverride,
   } = params;
 
   if (!payerMobileNumber) {
@@ -95,6 +96,7 @@ async function initiateRtpRequest(params) {
     netAmount: netCredit,
     remittanceInfo: description || reference || merchantTransactionId,
     expiryMinutes,
+    creditorName: creditorNameOverride,
   });
 
   let sbResponse;
