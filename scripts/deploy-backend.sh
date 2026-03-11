@@ -41,8 +41,8 @@ IMAGE_NAME="gcr.io/${PROJECT_ID}/mymoolah-backend:${IMAGE_TAG}"
 if [ "$ENVIRONMENT" == "staging" ]; then
   CORS_ORIGINS="https://stagingwallet.mymoolah.africa"
   STAGING_FLAG="true"
-  # SBSA: Staging uses production callback domain (same credentials; only users/DB differ per env)
-  SBSA_CALLBACK_BASE_URL="https://api-mm.mymoolah.africa"
+  # SBSA: Callbacks must hit same backend that created the RTP (staging DB ≠ production DB)
+  SBSA_CALLBACK_BASE_URL="https://staging.mymoolah.africa"
 else
   CORS_ORIGINS="https://wallet.mymoolah.africa"
   STAGING_FLAG="false"

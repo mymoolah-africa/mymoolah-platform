@@ -1,6 +1,6 @@
 # Session Log - SBSA PayShap Callback URL Staging Fix
 
-**Session Date**: 2026-03-04 ~16:00  
+**Session Date**: 2026-03-04 ~16:00 (Updated 2026-03-11 - reverted staging callback to staging URL)  
 **Agent**: Cursor AI Agent (Claude)  
 **User**: André  
 **Session Duration**: ~30 min
@@ -9,15 +9,15 @@
 
 ## Session Summary
 
-Fixed SBSA PayShap callback URL misconfiguration per SBS email. Staging deployment was incorrectly using `staging.mymoolah.africa` for SBSA callbacks. Per project documentation, staging and production use identical SBSA config (production credentials and callback details); only users (test vs real) and database differ. Updated `deploy-backend.sh` so both environments use `api-mm.mymoolah.africa` for SBSA callbacks.
+Initial fix attempted to use `api-mm.mymoolah.africa` for staging callbacks per SBS email. **Reverted 2026-03-11**: Staging-initiated RTP creates records in staging DB. If callbacks go to api-mm (production backend), production DB has no RTP → callback finds nothing → wallet not credited. Staging must use `staging.mymoolah.africa` so callbacks hit the same backend/DB that created the RTP. Production continues to use `api-mm.mymoolah.africa`. SBS may need to whitelist both URLs.
 
 ---
 
 ## Tasks Completed
 
-- [x] Fixed `scripts/deploy-backend.sh` — staging now sets `SBSA_CALLBACK_BASE_URL="https://api-mm.mymoolah.africa"` (was `staging.mymoolah.africa`)
-- [x] Added inline comment documenting why both envs use production callback domain
-- [x] Session log and agent handover updated
+- [x] Initial fix: staging set to api-mm (Mar 4)
+- [x] **Revert (Mar 11)**: staging back to `SBSA_CALLBACK_BASE_URL="https://staging.mymoolah.africa"` — callbacks must hit same backend/DB as RTP initiator
+- [x] Added inline comment: "Callbacks must hit same backend that created the RTP (staging DB ≠ production DB)"
 
 ---
 
@@ -71,9 +71,9 @@ Fixed SBSA PayShap callback URL misconfiguration per SBS email. Staging deployme
 
 ## Important Context for Next Agent
 
-- **SBSA staging/production parity**: Staging and production use identical SBSA config — production credentials, production API URLs, production callback domain (`api-mm.mymoolah.africa`). Only difference: test users vs real users, staging DB vs production DB.
-- **env.template / CODESPACES_TESTING_REQUIREMENT**: Those files show `SBSA_CALLBACK_BASE_URL=https://staging.mymoolah.africa` for **UAT** (Codespaces). That is correct — UAT uses UAT credentials and staging/ngrok for callbacks. Do not change those.
-- **Callback target**: When staging backend initiates RTP, SBSA callbacks go to `api-mm` (production backend). For SBSA testing with test users, use production deployment (api-mm) with test users in production DB, not staging deployment.
+- **Callback URL = same backend as RTP initiator**: RTP records live in the DB of the backend that created them. processRtpCallback looks up by originalMessageId. If callbacks hit a different backend (e.g. api-mm when RTP was created on staging), the lookup fails → no wallet credit. Therefore: staging uses staging.mymoolah.africa, production uses api-mm.mymoolah.africa.
+- **SBS whitelist**: SBS may need to whitelist both staging.mymoolah.africa and api-mm.mymoolah.africa for production API (we test from staging).
+- **401 Invalid hash**: If callbacks fail with 401, confirm production callback secret in GCS matches SBS's expected secret for x-GroupHeader-Hash. We have soft-fail when no HMAC strategy matches.
 
 ---
 

@@ -1,15 +1,16 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-03-04 - 🔗 SBSA PayShap Callback URL Staging Fix ✅
+## 2026-03-11 - 🔗 SBSA RTP Callback Fix (Revert Staging URL) ✅
 
 ### **Session Overview**
-Fixed SBSA PayShap callback URL misconfiguration per SBS email. Staging deployment was incorrectly using `staging.mymoolah.africa` for SBSA callbacks, causing 401 Invalid hash and wrong domain. Per project docs, staging and production use identical SBSA config (production credentials, callback domain); only users and database differ. Updated `deploy-backend.sh` so both environments use `api-mm.mymoolah.africa` for SBSA callbacks.
+RTP to Discovery Bank was paid at the bank but wallet not credited. Root cause: Mar 4 change made staging use `api-mm.mymoolah.africa` for callbacks. Callbacks then hit production backend, which has no RTP in production DB (RTP was created in staging DB). Reverted: staging uses `staging.mymoolah.africa`, production uses `api-mm.mymoolah.africa`. Callbacks must hit the same backend that created the RTP.
 
 ### **Changes**
-- **`scripts/deploy-backend.sh`**: Staging now sets `SBSA_CALLBACK_BASE_URL="https://api-mm.mymoolah.africa"` (was `staging.mymoolah.africa`); added inline comment documenting SBSA staging/production parity
+- **`scripts/deploy-backend.sh`**: Staging reverted to `SBSA_CALLBACK_BASE_URL="https://staging.mymoolah.africa"`; comment: "Callbacks must hit same backend that created the RTP (staging DB ≠ production DB)"
+- **`docs/session_logs/2026-03-04_1600_sbsa-callback-url-staging-fix.md`**: Updated with revert rationale
 
 ### **Session Log**
-- `docs/session_logs/2026-03-04_1600_sbsa-callback-url-staging-fix.md`
+- `docs/session_logs/2026-03-04_1600_sbsa-callback-url-staging-fix.md` (updated)
 
 ---
 
