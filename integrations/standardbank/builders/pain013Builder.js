@@ -6,16 +6,20 @@
  *
  * SBSA RTP debtor identification supports TWO flows (confirmed by SBSA Louis 2026-03):
  *
- * 1. PROXY flow (debtor has registered PayShap proxy):
+ * 1. PROXY flow (preferred — debtor identified by mobile number):
  *    - DbtrAcct.Id.Item.Id = "Proxy"
  *    - DbtrAcct.Prxy.Tp.Item = "MOBILE_NUMBER", Prxy.Id = mobile
  *    - DbtrAgt.FinInstnId.Othr.Id = proxy domain (e.g. 'discoverybank')
+ *    - PmtTpInf = {} (empty — per SBSA Postman sample)
  *
- * 2. PBAC flow (debtor without PayShap proxy — account only):
+ * 2. PBAC flow (fallback — debtor identified by account number only):
  *    - DbtrAcct.Id.Item.Id = account number
  *    - No Prxy block
- *    - PmtTpInf.LclInstrm.Prtry = 'PBAC'
- *    - DbtrAgt.FinInstnId.Othr.Id = proxy domain
+ *    - DbtrAgt.FinInstnId.Othr.Id = branch code (e.g. '470010')
+ *    - PmtTpInf = {} (empty — PBAC flag is for RPP Pain.001, NOT RTP Pain.013)
+ *
+ * Proxy mode is ALWAYS preferred when mobile number is available.
+ * PBAC is only used when mobile number is absent.
  *
  * Creditor (MMTP) always uses direct account in CdtrAcct.Id.Item.Id.
  *
@@ -105,9 +109,9 @@ function buildPain013(params) {
     throw new Error('Either payerMobileNumber (proxy) or payerAccountNumber (PBAC) is required');
   }
 
-  // PBAC when account is provided (debtors without PayShap proxy).
-  // Proxy only when mobile is provided WITHOUT account (MyMoolah wallet requests).
-  const isPbac = Boolean(payerAccountNumber);
+  // Proxy mode preferred when mobile number is available (SBSA default RTP flow).
+  // PBAC only when mobile is absent and account number is the sole identifier.
+  const isPbac = !payerMobileNumber && Boolean(payerAccountNumber);
 
   const cleanId = (str) => str.replace(/[^a-zA-Z0-9]/g, '');
 
@@ -161,7 +165,10 @@ function buildPain013(params) {
       }
     : undefined;
 
-  const pbacPmtTpInf = isPbac ? { LclInstrm: { Prtry: 'PBAC' } } : {};
+  // SBSA RTP Postman sample uses PmtTpInf: {} for all RTP modes.
+  // The 'PBAC' local instrument code is for RPP (Pain.001), NOT RTP (Pain.013).
+  // Debtor identification mode is conveyed via DbtrAcct structure, not PmtTpInf.
+  const pbacPmtTpInf = {};
 
   const CdtTrfTx = {
     PmtId: {

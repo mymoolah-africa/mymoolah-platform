@@ -82,12 +82,13 @@ async function initiateRtpRequest(params) {
   const merchantTransactionId = `MM-RTP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   // DbtrAgt differs by mode:
-  //   PBAC: branch code (e.g. '051001') — direct account routing, no proxy lookup
-  //   Proxy: proxy domain (e.g. 'discoverybank') — proxy directory lookup
+  //   Proxy: proxy domain (e.g. 'discoverybank') — proxy directory lookup (preferred)
+  //   PBAC: branch code (e.g. '470010') — direct account routing, no proxy lookup
   //   UAT: 'bankc' (SBSA sandbox placeholder)
+  const isPbacMode = !payerMobileNumber && Boolean(payerAccountNumber);
   const resolvedPayerBankCode = process.env.STANDARDBANK_ENVIRONMENT === 'uat'
     ? 'bankc'
-    : Boolean(payerAccountNumber)
+    : isPbacMode
       ? (payerBankCode || payerProxyDomain || 'bankc')
       : (payerProxyDomain || payerBankCode || 'bankc');
 
@@ -105,12 +106,11 @@ async function initiateRtpRequest(params) {
     creditorName: creditorNameOverride,
   });
 
-  const isPbac = Boolean(payerAccountNumber);
   const dbtrAcctId = pain013?.PmtInf?.[0]?.DbtrAcct?.Id?.Item?.Id;
   const dbtrAgtId = pain013?.PmtInf?.[0]?.DbtrAgt?.FinInstnId?.Othr?.Id;
-  const pmtTpPrtry = pain013?.PmtInf?.[0]?.PmtTpInf?.LclInstrm?.Prtry || '(none)';
-  console.log('[RTP] mode=%s DbtrAcct.Id.Item.Id=%s DbtrAgt=%s PmtTpInf.Prtry=%s msgId=%s',
-    isPbac ? 'PBAC' : 'PROXY', dbtrAcctId, dbtrAgtId, pmtTpPrtry, msgId);
+  const hasProxy = Boolean(pain013?.PmtInf?.[0]?.DbtrAcct?.Prxy);
+  console.log('[RTP] mode=%s DbtrAcct.Id.Item.Id=%s DbtrAgt=%s hasProxy=%s msgId=%s',
+    isPbacMode ? 'PBAC' : 'PROXY', dbtrAcctId, dbtrAgtId, hasProxy, msgId);
 
   let sbResponse;
   try {
@@ -120,10 +120,10 @@ async function initiateRtpRequest(params) {
     wrapped.sbsaStatus = err.sbsaStatus;
     wrapped.sbsaBody = err.sbsaBody;
     wrapped.sbsaPayloadSent = {
-      mode: isPbac ? 'PBAC' : 'PROXY',
+      mode: isPbacMode ? 'PBAC' : 'PROXY',
       dbtrAcctItemId: dbtrAcctId,
       dbtrAgtId,
-      pmtTpPrtry,
+      hasProxy,
     };
     throw wrapped;
   }
@@ -393,6 +393,112 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
   }
 }
 
+/**
+ * Extract system rejection codes from SBSA callback raw body.
+ * Returns { isSystemReject, codes[] }.
+ */
+function extractRejectionCodes(rawBody) {
+  const systemCodes = ['EBONF', 'EERRR', 'EPDNF', 'EPRBA', 'NARR'];
+  const found = [];
+  try {
+    const rb = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
+    const arr = rb?.orgnlPmtInfAndSts || rb?.OrgnlPmtInfAndSts || [];
+    const infList = Array.isArray(arr) ? arr : [arr];
+    for (const inf of infList) {
+      const stsArr = inf?.stsRsnInf || inf?.StsRsnInf || [];
+      const stsList = Array.isArray(stsArr) ? stsArr : [stsArr];
+      for (const s of stsList) {
+        const code = s?.rsn?.prtry || s?.Rsn?.Prtry || '';
+        if (systemCodes.includes(code)) found.push(code);
+      }
+    }
+  } catch (_) { /* parse failure */ }
+  return { isSystemReject: found.length > 0, codes: found };
+}
+
+/**
+ * Retry a failed proxy-based RTP as PBAC (account-only).
+ * Builds a new Pain.013 using the payer's bank account number directly,
+ * sends to SBSA, and creates a linked retry record.
+ */
+async function retryRtpAsPbac(originalRtp) {
+  const { userId, walletId, payerAccountNumber, payerBankCode, payerBankName, payerName } = originalRtp;
+  const amount = parseFloat(originalRtp.amount);
+
+  const resolvedBankCode = process.env.STANDARDBANK_ENVIRONMENT === 'uat'
+    ? 'bankc'
+    : (payerBankCode || 'bankc');
+
+  const retryMerchantTxId = `${originalRtp.merchantTransactionId}-PBAC`;
+
+  const fee = originalRtp.metadata?.feeBreakdown || feeService.calculateRtpFee(0);
+  const netCredit = Number((amount - fee.totalUserFeeVatIncl).toFixed(2));
+
+  const { pain013, msgId } = buildPain013({
+    merchantTransactionId: retryMerchantTxId,
+    amount,
+    currency: originalRtp.currency || 'ZAR',
+    payerName: payerName || 'Payer',
+    payerMobileNumber: undefined,
+    payerAccountNumber,
+    payerBankCode: resolvedBankCode,
+    netAmount: netCredit,
+    remittanceInfo: originalRtp.description || originalRtp.referenceNumber || retryMerchantTxId,
+    expiryMinutes: 60,
+  });
+
+  console.log('[RTP-RETRY-PBAC] Retrying orgnlMsgId=%s as PBAC → DbtrAcct=%s DbtrAgt=%s newMsgId=%s',
+    originalRtp.originalMessageId, payerAccountNumber, resolvedBankCode, msgId);
+
+  let sbResponse;
+  try {
+    sbResponse = await sbClient.initiateRequestToPay(pain013);
+  } catch (err) {
+    console.error('[RTP-RETRY-PBAC] SBSA call failed: %s', err.message);
+    return null;
+  }
+
+  if (sbResponse.status !== 202) {
+    console.error('[RTP-RETRY-PBAC] SBSA returned %s', sbResponse.status);
+    return null;
+  }
+
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 60);
+
+  const retryRtp = await db.StandardBankRtpRequest.create({
+    requestId: msgId,
+    merchantTransactionId: retryMerchantTxId,
+    originalMessageId: msgId,
+    userId,
+    walletId,
+    amount,
+    currency: originalRtp.currency || 'ZAR',
+    referenceNumber: originalRtp.referenceNumber,
+    payerName,
+    payerMobileNumber: originalRtp.payerMobileNumber,
+    payerAccountNumber,
+    payerBankCode: payerBankCode || null,
+    payerBankName: payerBankName || null,
+    description: originalRtp.description,
+    status: 'initiated',
+    rawRequest: pain013,
+    rawResponse: sbResponse.data,
+    expiresAt,
+    metadata: {
+      ...(originalRtp.metadata || {}),
+      retryOf: originalRtp.originalMessageId,
+      retryMode: 'PBAC',
+      retryAttempt: 1,
+      originalProxyMsgId: originalRtp.originalMessageId,
+    },
+  });
+
+  console.log('[RTP-RETRY-PBAC] Retry record created: newMsgId=%s retryOf=%s',
+    msgId, originalRtp.originalMessageId);
+  return retryRtp;
+}
+
 async function processRtpCallback(originalMessageId, transactionIdentifier, status, rawBody) {
   const rtpRequest = await db.StandardBankRtpRequest.findOne({
     where: { originalMessageId },
@@ -406,8 +512,8 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
 
   const statusMap = {
     ACSP: 'paid',
-    ACWC: 'paid',   // Accepted With Conditions
-    ACCC: 'paid',   // Accepted Credit Settlement Completed
+    ACWC: 'paid',
+    ACCC: 'paid',
     ACCP: 'presented',
     RJCT: 'rejected',
     PDNG: 'pending',
@@ -422,10 +528,10 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     processedAt: internalStatus === 'paid' || internalStatus === 'rejected' ? new Date() : null,
   });
 
+  // ── Paid ──────────────────────────────────────────────────────────────
   if (internalStatus === 'paid') {
     await creditWalletOnPaid(rtpRequest, rawBody);
     console.log('[RTP-CB] Wallet credited for orgnlMsgId=%s payer=%s', originalMessageId, rtpRequest.payerMobileNumber);
-    // Notify requester that RTP was paid (triggers balance refresh on frontend)
     try {
       const notificationService = require('./notificationService');
       const amount = parseFloat(rtpRequest.amount);
@@ -452,71 +558,106 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     } catch (notifErr) {
       console.warn('Non-fatal: failed to send RTP paid notification:', notifErr.message);
     }
+    return;
   }
 
-  // Notify requester when RTP is rejected, expired, cancelled, or declined
-  if (['rejected', 'expired', 'cancelled', 'declined'].includes(internalStatus)) {
+  // ── Rejection / decline / expiry / cancel ─────────────────────────────
+  if (!['rejected', 'expired', 'cancelled', 'declined'].includes(internalStatus)) return;
+
+  const { isSystemReject, codes } = extractRejectionCodes(rawBody);
+  const alreadyRetried = Boolean(rtpRequest.metadata?.retryMode);
+  const isRetryTarget = Boolean(rtpRequest.metadata?.retryOf);
+
+  // Attempt PBAC fallback when:
+  //  1. System-level rejection (proxy not found / batch error)
+  //  2. Original was proxy-based (has mobile number)
+  //  3. We have an account number to fall back on
+  //  4. This request is NOT itself a retry (prevent infinite loop)
+  //  5. We haven't already spawned a retry for this request
+  const canRetryPbac = isSystemReject
+    && rtpRequest.payerMobileNumber
+    && rtpRequest.payerAccountNumber
+    && !isRetryTarget
+    && !alreadyRetried;
+
+  if (canRetryPbac) {
+    console.log('[RTP-CB] Proxy rejected (%s) — attempting PBAC fallback for orgnlMsgId=%s acct=%s',
+      codes.join(','), originalMessageId, rtpRequest.payerAccountNumber);
+
+    await rtpRequest.update({
+      status: 'retry_pbac',
+      metadata: { ...(rtpRequest.metadata || {}), proxyRejectCodes: codes, retryMode: 'PBAC_PENDING' },
+    });
+
     try {
-      const notificationService = require('./notificationService');
-      const amount = parseFloat(rtpRequest.amount);
-      const payerName = rtpRequest.payerName || 'Payer';
-
-      // Distinguish system rejection (EBONF, EERRR, EPDNF, EPRBA) from payer decline
-      const systemCodes = ['EBONF', 'EERRR', 'EPDNF', 'EPRBA', 'NARR'];
-      let isSystemReject = false;
-      try {
-        const rb = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
-        const arr = rb?.orgnlPmtInfAndSts || rb?.OrgnlPmtInfAndSts || [];
-        const infList = Array.isArray(arr) ? arr : [arr];
-        for (const inf of infList) {
-          const stsArr = inf?.stsRsnInf || inf?.StsRsnInf || [];
-          const stsList = Array.isArray(stsArr) ? stsArr : [stsArr];
-          for (const s of stsList) {
-            const code = s?.rsn?.prtry || s?.Rsn?.Prtry || '';
-            if (systemCodes.includes(code)) isSystemReject = true;
-          }
-        }
-      } catch (_) { /* rawBody parse failure — treat as payer decline */ }
-
-      const titleMap = {
-        rejected: isSystemReject ? 'Payment Request Could Not Be Delivered' : 'Payment Request Declined',
-        declined: isSystemReject ? 'Payment Request Could Not Be Delivered' : 'Payment Request Declined',
-        expired: 'Payment Request Expired',
-        cancelled: 'Payment Request Cancelled',
-      };
-      const msgMap = {
-        rejected: isSystemReject
-          ? `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`
-          : `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
-        declined: isSystemReject
-          ? `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`
-          : `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
-        expired: `Your PayShap request for R ${amount.toFixed(2)} to ${payerName} has expired`,
-        cancelled: `Your PayShap request for R ${amount.toFixed(2)} to ${payerName} was cancelled`,
-      };
-
-      await notificationService.createNotification(
-        rtpRequest.userId,
-        'txn_wallet_credit',
-        titleMap[internalStatus],
-        msgMap[internalStatus],
-        {
-          payload: {
-            rtpRequestId: rtpRequest.id,
-            merchantTransactionId: rtpRequest.merchantTransactionId,
-            amount,
-            currency: rtpRequest.currency || 'ZAR',
-            payerName,
-            payerMobileNumber: rtpRequest.payerMobileNumber,
-            subtype: `payshap_rtp_${internalStatus}`,
+      const retryResult = await retryRtpAsPbac(rtpRequest);
+      if (retryResult) {
+        await rtpRequest.update({
+          metadata: {
+            ...(rtpRequest.metadata || {}),
+            retryMode: 'PBAC_SENT',
+            retryMsgId: retryResult.originalMessageId,
+            retryAt: new Date().toISOString(),
           },
-          severity: 'info',
-          category: 'transaction',
-        }
-      );
-    } catch (notifErr) {
-      console.warn('Non-fatal: failed to send RTP status notification:', notifErr.message);
+        });
+        return;
+      }
+    } catch (retryErr) {
+      console.error('[RTP-CB] PBAC fallback failed: %s', retryErr.message);
     }
+
+    await rtpRequest.update({
+      status: 'rejected',
+      metadata: { ...(rtpRequest.metadata || {}), retryMode: 'PBAC_FAILED' },
+    });
+  }
+
+  // Send notification to user (only reaches here if no retry or retry failed)
+  try {
+    const notificationService = require('./notificationService');
+    const amount = parseFloat(rtpRequest.amount);
+    const payerName = rtpRequest.payerName || 'Payer';
+
+    const isFinalSystemReject = isSystemReject || isRetryTarget;
+
+    const titleMap = {
+      rejected: isFinalSystemReject ? 'Payment Request Could Not Be Delivered' : 'Payment Request Declined',
+      declined: isFinalSystemReject ? 'Payment Request Could Not Be Delivered' : 'Payment Request Declined',
+      expired: 'Payment Request Expired',
+      cancelled: 'Payment Request Cancelled',
+    };
+    const msgMap = {
+      rejected: isFinalSystemReject
+        ? `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`
+        : `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
+      declined: isFinalSystemReject
+        ? `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`
+        : `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
+      expired: `Your PayShap request for R ${amount.toFixed(2)} to ${payerName} has expired`,
+      cancelled: `Your PayShap request for R ${amount.toFixed(2)} to ${payerName} was cancelled`,
+    };
+
+    await notificationService.createNotification(
+      rtpRequest.userId,
+      'txn_wallet_credit',
+      titleMap[internalStatus],
+      msgMap[internalStatus],
+      {
+        payload: {
+          rtpRequestId: rtpRequest.id,
+          merchantTransactionId: rtpRequest.merchantTransactionId,
+          amount,
+          currency: rtpRequest.currency || 'ZAR',
+          payerName,
+          payerMobileNumber: rtpRequest.payerMobileNumber,
+          subtype: `payshap_rtp_${internalStatus}`,
+        },
+        severity: 'info',
+        category: 'transaction',
+      }
+    );
+  } catch (notifErr) {
+    console.warn('Non-fatal: failed to send RTP status notification:', notifErr.message);
   }
 }
 
@@ -524,4 +665,5 @@ module.exports = {
   initiateRtpRequest,
   creditWalletOnPaid,
   processRtpCallback,
+  retryRtpAsPbac,
 };
