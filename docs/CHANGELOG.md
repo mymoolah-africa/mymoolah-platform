@@ -1,16 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-03-11 - 🔗 SBSA RTP Callback Fix (Revert Staging URL) ✅
+## 2026-03-11 - 🔧 PayShap RTP Proxy-First Mode + Auto PBAC Fallback ✅
 
 ### **Session Overview**
-RTP to Discovery Bank was paid at the bank but wallet not credited. Root cause: Mar 4 change made staging use `api-mm.mymoolah.africa` for callbacks. Callbacks then hit production backend, which has no RTP in production DB (RTP was created in staging DB). Reverted: staging uses `staging.mymoolah.africa`, production uses `api-mm.mymoolah.africa`. Callbacks must hit the same backend that created the RTP.
+Fixed a critical bug where every PayShap RTP (Request to Pay) was being sent in PBAC (account-only) mode regardless of whether a mobile number was provided — because the frontend always sends both fields and the old `isPbac = Boolean(payerAccountNumber)` was always `true`. Changed to proxy-first: mobile number takes priority; account-only PBAC only when no mobile is present. Also removed an erroneous `PBAC` local instrument code from the Pain.013 payload (it belongs in Pain.001 RPP, not Pain.013 RTP). Added automatic PBAC fallback retry in the callback handler: if proxy lookup fails (EPDNF/EBONF/EERRR), a new account-based RTP is automatically sent. User is only notified of failure after both attempts fail. Confirmed working — RTPs to 0720213994 and 0798569159 returned PDNG on staging.
 
 ### **Changes**
-- **`scripts/deploy-backend.sh`**: Staging reverted to `SBSA_CALLBACK_BASE_URL="https://staging.mymoolah.africa"`; comment: "Callbacks must hit same backend that created the RTP (staging DB ≠ production DB)"
-- **`docs/session_logs/2026-03-04_1600_sbsa-callback-url-staging-fix.md`**: Updated with revert rationale
+- **`integrations/standardbank/builders/pain013Builder.js`**: `isPbac = !payerMobileNumber && Boolean(payerAccountNumber)` (was `Boolean(payerAccountNumber)`); `pbacPmtTpInf = {}` always (removed PBAC local instrument from Pain.013)
+- **`services/standardbankRtpService.js`**: Aligned `isPbacMode` logic; added `extractRejectionCodes()` to identify system rejections vs payer declines; added `retryRtpAsPbac()` for automatic account-based retry; updated `processRtpCallback()` to trigger PBAC retry on system rejections, only notify user after both attempts fail; retry tracked in `metadata` JSONB field
+
+### **Commits**
+- `9bb2a98d` — fix(rtp): prefer proxy mode + auto PBAC fallback for payers without PayShap ID
+- `da3416db` — fix(rtp): use branch code for PBAC DbtrAgt instead of proxy domain
+- `0d9b915e` — feat(rtp): add PBAC account-based RTP + fix false 'declined' notifications
 
 ### **Session Log**
-- `docs/session_logs/2026-03-04_1600_sbsa-callback-url-staging-fix.md` (updated)
+- `docs/session_logs/2026-03-11_2015_rtp-proxy-first-pbac-fallback.md`
 
 ---
 

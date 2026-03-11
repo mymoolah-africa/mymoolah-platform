@@ -1,7 +1,7 @@
 # SBSA PayShap UAT Guide
 
-**Date**: 2026-02-12  
-**Status**: Implementation complete – awaiting OneHub credentials for UAT  
+**Date**: 2026-02-12 (updated 2026-03-11)  
+**Status**: ✅ **Production live on Staging** — proxy-first RTP + PBAC fallback deployed  
 
 ---
 
@@ -151,6 +151,32 @@ When Peach is archived and `STANDARDBANK_PAYSHAP_ENABLED=true`, the frontend's c
 - [ ] RTP: Request created; Paid callback credits wallet (principal − fee)
 - [ ] RPP: Wallet debited principal + fee; ledger postings correct
 - [ ] Sandbox scenarios tested (fail, success, Presented, etc.)
+
+---
+
+## RTP Mode Logic (Updated 2026-03-11)
+
+### Debtor Identification — Proxy vs PBAC
+
+| Condition | Mode | Pain.013 structure |
+|-----------|------|--------------------|
+| `payerMobileNumber` present | **Proxy** | `DbtrAcct.Id.Item.Id = "Proxy"`, `Prxy.Id = 27XXXXXXXXX`, `DbtrAgt = proxy domain (e.g. capitec)` |
+| `payerMobileNumber` absent + `payerAccountNumber` present | **PBAC** | `DbtrAcct.Id.Item.Id = accountNumber`, no `Prxy` block, `DbtrAgt = branch code (e.g. 470010)` |
+
+**Key rules:**
+- `PmtTpInf` must always be `{}` (empty) in Pain.013 RTP — the `PBAC` local instrument code belongs in Pain.001 RPP only.
+- Frontend always sends both mobile + account — backend applies proxy-first logic.
+- If proxy is rejected (EPDNF/EBONF/EERRR), backend automatically retries as PBAC.
+- Retry state stored in `standard_bank_rtp_requests.metadata` (`retryOf`, `retryMode`, `retryAttempt`).
+
+### Fallback Flow
+```
+1. RTP sent → Proxy mode (mobile number, payer bank domain in DbtrAgt)
+2. SBSA callback: RJCT with EPDNF/EBONF/EERRR (system rejection, not payer decline)
+3. retryRtpAsPbac() triggered automatically
+4. RTP resent → PBAC mode (account number, branch code in DbtrAgt)
+5. If PBAC also rejected → user notified "could not be delivered"
+```
 
 ---
 

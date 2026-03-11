@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-04 16:00  
-**Latest Feature**: SBSA PayShap callback URL fix — staging now uses api-mm.mymoolah.africa (production domain) per SBS feedback  
-**Document Version**: 2.16.1  
-**Session logs**: `docs/session_logs/2026-03-04_1600_sbsa-callback-url-staging-fix.md`, `docs/session_logs/2026-03-10_2130_rtp-recent-transactions-capitec-balance-refresh.md`, `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`  
+**Last Updated**: 2026-03-11 20:15  
+**Latest Feature**: PayShap RTP proxy-first mode + automatic PBAC fallback for payers without ShapID  
+**Document Version**: 2.14.0  
+**Session logs**: `docs/session_logs/2026-03-11_2015_rtp-proxy-first-pbac-fallback.md`, `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,16 +100,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 11, 2026)**
-**SBSA RTP Callback Fix — Revert staging URL** — Staging RTP to Discovery Bank was paid but wallet not credited. Root cause: we had changed staging to use api-mm for callbacks; callbacks then hit production backend which has no RTP in production DB. Reverted: staging uses `staging.mymoolah.africa`, production uses `api-mm.mymoolah.africa`. Callbacks must hit the same backend that created the RTP. **Redeploy staging required**: `./scripts/deploy-backend.sh --staging`. Session log: `docs/session_logs/2026-03-04_1600_sbsa-callback-url-staging-fix.md`.
-
-### **Previous Achievement (March 10, 2026 - 21:30)**
-**RTP Recent Transactions, Capitec Fix, Balance Refresh** — (1) Recent Transactions: RTP principal + fee combined into single net credit line (R4.25 = R10 − R5.75); Transaction History keeps both lines. (2) RTP Paid notification when payer accepts — triggers balance refresh via existing notification poll. (3) ACWC/ACCC status mapping — Capitec RTP was accepted but not credited; SBSA may send ACWC for inter-bank. Now ACWC and ACCC map to 'paid'. (4) RTP callback logging for debugging. Session log: `docs/session_logs/2026-03-10_2130_rtp-recent-transactions-capitec-balance-refresh.md`.
-
-### **Previous Achievement (March 10, 2026 - 20:15)**
-**PayShap RTP Callback Routing & Hash Debugging** — Fixed RTP callback 404 (route path mismatch: `paymentInitiation` → `paymentRequestInitiation`), 401 (Base64 vs hex hash encoding), and raw body preservation. Implemented soft-fail hash validation. Added RTP rejection/expiry/cancellation notifications. SBSA EBONF resolved via proxy format (+27-XXXXXXXXX) and amount formatting (two decimals). Session log: `docs/session_logs/2026-03-10_1830_rtp-callback-routing-hash-debugging.md`.
-
-### **Previous Achievement (March 7, 2026 - 18:00)**
+### **Latest Achievement (March 7, 2026 - 18:00)**
 **Cloud Build Migration & npm Cleanup** — Deploy scripts now use `gcloud builds submit` instead of local Docker. No Docker Desktop needed for deployments. Build times: backend ~6min, wallet ~3.5min (was ~28min). Node 20 LTS in both Dockerfiles. Removed dead crypto/xss-clean packages. International Airtime pinless implemented; staging returns Flash Code 2200 (billing not configured) — awaiting Flash support. Session log: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`.
 
 ### **Previous Achievement (February 27, 2026 - 14:00)**
@@ -150,7 +141,6 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 
 ### **Recent Updates (Last 7 Days – February 27–March 4, 2026)**
 - **Mar 4 (11:17)**: Cursor skills consolidated — all 8 skills in `.agents/skills/` (single parent). Moved frontend-design from .cursor/skills/. Best practice structure.
-- **Mar 11**: SBSA RTP revert — staging back to `staging.mymoolah.africa` for callbacks. Staging-initiated RTP creates records in staging DB; callbacks must hit staging backend (not api-mm) or lookup fails. Redeploy staging: `./scripts/deploy-backend.sh --staging`.
 - **Feb 27 (14:00)**: Figma restriction removed — code is frontend source of truth. Agents may edit any UI/frontend including `pages/*.tsx`. Figma optional reference. Enables frontend-design skill on main app pages.
 - **Feb 21 (21:00)**: Standard Bank PayShap banking-grade overhaul — removed Peach proxy workaround; aligned Pain.001 (top-level grpHdr/pmtInf[], pmntInfId, reqdExctnDt.dtTm, lclInstrm.prtry, cdtrAgt+brnchId, rmtInf.strd[], splmtryData) and Pain.013 (PascalCase, DbtrAcct.Id.Item.Id+Prxy, CdtrAgt.Othr.Id, Amt.Item.Value, PmtCond, RmtInf.Strd[]) with SBSA Postman samples; fixed RTP callback URLs in client.js; scope-keyed token cache in pingAuthService; ACID transaction ordering in RPP/RTP services; added proxyResolutionClient.js; express-validator on routes.
 - **Feb 21 (19:00)**: Documentation consolidation — archived ~75 docs to `docs/archive/` (deployment, codespaces, mobilemart, beneficiary, partner-api, referral, easypay, zapper, figma, peach-payments, security); merged INPUT_FIELD_FIXES, 2FA_IMPLEMENTATION, SECURITY (badge/certificate/token); created DOCS_CONSOLIDATION_2026.md. Session log updated with git push/pull status. Codespaces synced (82 files, fast-forward).
@@ -634,25 +624,25 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — RTP Recent Transactions, Capitec fix, balance refresh implemented and committed  
-**Last Session**: 2026-03-10 21:30 — RTP display, paid notification, ACWC status, balance refresh
+**Session Status**: ✅ **COMPLETE** — PayShap RTP proxy-first + PBAC automatic fallback  
+**Last Session**: 2026-03-11 — Fixed RTP delivery bug; proxy-first; PBAC auto-retry; confirmed PDNG on staging
 
-### **Most Recent Work (2026-03-10 21:30)**
-- **RTP Recent Transactions**: Single net credit line (principal − fee); Transaction History keeps both lines.
-- **RTP Paid notification**: Created when payer accepts; triggers balance refresh via notification poll.
-- **Capitec RTP fix**: ACWC and ACCC status codes now map to 'paid' (fixes inter-bank accepted RTPs not crediting).
-- **Balance refresh**: RTP Paid notification with `reason: balance_refresh` triggers MoolahContext refresh.
-- **RTP callback logging**: [RTP-CB] orgnlMsgId, status, payer for debugging.
-- **Commit**: 7510d074 on `main`.
+### **Most Recent Work (2026-03-11)**
+- **Root cause fixed**: `isPbac = Boolean(payerAccountNumber)` was always `true` (frontend always sends both fields) — every RTP was sent as PBAC, ignoring mobile number/proxy entirely.
+- **Pain.013 corrected**: Removed `PmtTpInf.LclInstrm.Prtry = 'PBAC'` — this code is for Pain.001 (RPP Send Money) only. Pain.013 (RTP) must use empty `{}`. Confirmed against SBSA's own Postman sample.
+- **Proxy-first logic**: Now `isPbac = !payerMobileNumber && Boolean(payerAccountNumber)`. Mobile present → proxy mode. Account-only → PBAC mode.
+- **PBAC auto-fallback**: If proxy fails (EPDNF/EBONF/EERRR), `retryRtpAsPbac()` automatically resends as account-only. Retry tracked in `metadata` JSONB column.
+- **Deployed**: staging revision `mymoolah-backend-staging-00241-w2l` (commit `9bb2a98d`)
+- **Confirmed**: RTPs to 0720213994 (Capitec) and 0798569159 both returned PDNG ✅
 
 ### **Current State**
-- All changes committed to main (not yet pushed)
-- RTP flow: Discovery confirmed working; Capitec should work after redeploy (ACWC fix)
-- User to redeploy staging and re-test Capitec RTP
+- Staging v12 deployed with all RTP proxy/PBAC fixes
+- Production live: api-mm.mymoolah.africa, wallet.mymoolah.africa
+- Awaiting: email reply from SBSA (Gustaf/Louis) on PBAC Pain.013 specs and bank support matrix
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and `docs/session_logs/2026-03-10_2130_rtp-recent-transactions-capitec-balance-refresh.md`
+2. Read this file and 2–3 recent session logs (especially `2026-03-11_2015_rtp-proxy-first-pbac-fallback.md`)
 3. Run `git status` → `git pull origin main`
 4. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
@@ -662,21 +652,17 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
-| Mar 10 (21:30) | RTP Recent Transactions (net credit); RTP Paid notification; ACWC/ACCC status fix (Capitec); balance refresh on transaction notifications; commit 7510d074 |
-| Mar 10 (20:15) | PayShap RTP callback routing fixed (404→200, 401→200 soft-fail); rejection notifications; EBONF resolved via proxy format + amount decimals |
-| Mar 7 (18:00) | Cloud Build Migration to `gcloud builds submit`; npm cleanup; International Airtime pinless (Flash Code 2200 pending) |
-| Mar 4 (16:00) | SBSA PayShap callback URL fix — staging uses api-mm for callbacks (deploy-backend.sh) |
-| Mar 4 (14:00) | SBSA PayShap production credentials added to GCS Secret Manager; deploy script ready |
+| Mar 11 (20:15) | **PayShap RTP fix**: proxy-first mode + auto PBAC fallback; removed PBAC flag from Pain.013; PDNG confirmed staging |
+| Mar 07 (18:00) | Cloud Build migration (no Docker Desktop); npm cleanup (remove crypto/xss-clean); Node 20 Dockerfiles |
+| Mar 07 (11:00) | International Airtime pinless implementation; Flash Code 2200 billing issue escalated |
+| Mar 05 | eeziAirtime redemption UI + eeziPay AI knowledge base entries |
+| Feb 27 | EasyPay Cash-In 500 fix; 5-scenario test script; Theodore test data |
 | Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email; Flash/MobileMart/Zapper Google Drive docs |
-| Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration; clean-slate catalog test Staging + Production |
-| Feb 25 | Variable-first product catalog filter — `priceType` schema, classify/deactivate fixed duplicates, API returns variable fields, full deploy Staging + Production |
-| Feb 21 | Browserslist/caniuse-lite update; SBSA PayShap email; Bill payment MobileMart prevend fix; overlay fixes; NotificationService fix; DSTV beneficiary filter |
-| Feb 19 | EasyPay voucher refund duplicate fix; MMTP Partner API implementation plan |
-| Feb 18 | Documentation consolidation phase 2 |
+| Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration |
+| Feb 25 | Variable-first product catalog filter — `priceType` schema, classify/deactivate fixed duplicates |
+| Feb 21 | Browserslist/caniuse-lite update; SBSA PayShap email; Bill payment MobileMart prevend fix |
 | Feb 15 | Production deployment live (api-mm, wallet-mm) |
 | Feb 12 | Production DB migration complete; SBSA PayShap integration complete (UAT ready) |
-| Feb 09 | Transaction Detail modal; USDC fee UI |
-| Feb 08 | Migrations-before-seeding rule; Watch to Earn demo videos |
 
 ---
 
@@ -688,12 +674,11 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **Redeploy staging** — Commit 7510d074 ready; user to push and redeploy for RTP Recent Transactions, ACWC fix, RTP Paid notification.
-2. **Re-test Capitec RTP** — ACWC mapping should fix 0784560585 not crediting; verify after redeploy.
-3. **PayShap hash algorithm spec** — HMAC validation soft-failing. Ask SBSA: What exact algorithm for `x-GroupHeader-Hash`?
-4. **Clean up RTP debug logging** — Remove `[HASH-WARN]`, `[HASH-DEBUG]` from callbackValidator/controller after hash spec confirmed.
-4. **EasyPay Cash-In activation** — Await Razine response.
-5. **Flash transaction testing in Staging** — Await Tia confirmation.
+1. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` rejection and verify `[RTP-RETRY-PBAC]` logs appear and account-based retry succeeds. Monitor 0720213994 (Capitec) — PDNG delivered but payer has not confirmed payment yet (likely Capitec app notification issue).
+2. **Email to SBSA** — Draft ready to send to Gustaf/Louis asking for: PBAC Pain.013 sample payload, bank support matrix, and confirmation that RTP works without Prxy block. Send when ready.
+3. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager, generate SessionToken, share with Razine.
+4. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths. Then live tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities.
+5. **Fix `.env.codespaces` MobileMart URL** — `MOBILEMART_API_URL` currently points to UAT (`uat.fulcrumswitch.com`). Should be production.
 6. **USDC send** — Test in Codespaces when VALR credentials available.
 
 ---
