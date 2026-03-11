@@ -1,5 +1,18 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-04 - 🔗 SBSA PayShap Callback URL Staging Fix ✅
+
+### **Session Overview**
+Fixed SBSA PayShap callback URL misconfiguration per SBS email. Staging deployment was incorrectly using `staging.mymoolah.africa` for SBSA callbacks, causing 401 Invalid hash and wrong domain. Per project docs, staging and production use identical SBSA config (production credentials, callback domain); only users and database differ. Updated `deploy-backend.sh` so both environments use `api-mm.mymoolah.africa` for SBSA callbacks.
+
+### **Changes**
+- **`scripts/deploy-backend.sh`**: Staging now sets `SBSA_CALLBACK_BASE_URL="https://api-mm.mymoolah.africa"` (was `staging.mymoolah.africa`); added inline comment documenting SBSA staging/production parity
+
+### **Session Log**
+- `docs/session_logs/2026-03-04_1600_sbsa-callback-url-staging-fix.md`
+
+---
+
 ## 2026-03-07 - 🚀 Cloud Build Migration & npm Cleanup ✅
 
 ### **Session Overview**
