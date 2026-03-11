@@ -15,7 +15,57 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
+PROJECT_ID="mymoolah-db"
 TARGET_ENV="${1:-all}"
+
+log() { echo "📋 $*"; }
+err() { echo -e "${RED}❌ $*${NC}" >&2; exit 1; }
+
+# Ensure gcloud is available
+command -v gcloud >/dev/null 2>&1 || err "gcloud not found. Install: https://cloud.google.com/sdk/docs/install"
+
+# Authenticate with Google Cloud (same as deploy-backend.sh)
+ensure_gcloud_auth() {
+  local active_account
+  active_account=$(gcloud auth list --filter=status:ACTIVE --format="value(account)" 2>/dev/null || true)
+
+  if [ -n "$active_account" ]; then
+    log "✅ Authenticated as: ${active_account}"
+  else
+    log "⚠️  No active gcloud authentication found"
+    if [ -t 0 ] && [ -t 1 ]; then
+      log "Starting interactive login..."
+      if gcloud auth login; then
+        log "✅ Authentication successful"
+      else
+        err "gcloud auth login failed. Please run manually: gcloud auth login"
+      fi
+    else
+      err "No active gcloud auth (non-interactive). Run: gcloud auth login"
+    fi
+  fi
+
+  local current_project
+  current_project=$(gcloud config get-value project 2>/dev/null || true)
+  if [ "$current_project" != "${PROJECT_ID}" ]; then
+    log "Setting project to ${PROJECT_ID}..."
+    gcloud config set project "${PROJECT_ID}" >/dev/null 2>&1 || err "Failed to set project"
+  fi
+  log "✅ Project: ${PROJECT_ID}"
+
+  if ! gcloud auth print-access-token >/dev/null 2>&1; then
+    log "⚠️  Auth token expired — re-authenticating..."
+    gcloud auth revoke --all --quiet 2>/dev/null || true
+    if [ -t 0 ] && [ -t 1 ]; then
+      gcloud auth login || err "Re-authentication failed"
+      log "✅ Re-authenticated successfully"
+    else
+      err "Auth token expired. Run: gcloud auth revoke --all && gcloud auth login"
+    fi
+  fi
+}
+
+ensure_gcloud_auth
 
 echo "🔍 Checking Cloud SQL Auth Proxies..."
 echo ""
