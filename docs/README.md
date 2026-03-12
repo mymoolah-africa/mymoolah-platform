@@ -1,51 +1,14 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 7, 2026  
-**Version**: 2.13.0 - Cloud Build Migration & npm Cleanup  
+**Last Updated**: March 5, 2026  
+**Version**: 2.11.30 - eeziAirtime Redemption UI & eeziPay AI Knowledge Base  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
-**Work in the last 7 days (Mar 2–7, 2026)**: Deploy scripts now use Google Cloud Build (no Docker Desktop needed); build times ~6min backend, ~3.5min wallet. npm cleanup: Node 20, removed crypto/xss-clean. International Airtime pinless implemented; awaiting Flash billing setup (Code 2200). See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Feb 28–Mar 5, 2026)**: eeziAirtime redemption UI — clear instructions, 3×4 PIN format, copy full USSD; eeziPay How To entries added to AI support knowledge base. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: Cloud Build Migration & npm Cleanup (March 7, 2026)**
-
-### **🚀 Deployments Use Google Cloud Build — No Docker Desktop**
-- **deploy-backend.sh** / **deploy-wallet.sh**: Use `gcloud builds submit` — builds run on Google's servers
-- **No Docker Desktop required** for deployments — gcloud CLI only
-- **Build times**: Backend ~6min, Wallet ~3.5min (was ~28min locally)
-- **Node 20 LTS**: Both Dockerfiles upgraded from Node 18
-- **npm cleanup**: Removed dead `crypto` and `xss-clean` packages; fixed deprecation warnings
-
-**Session log**: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`
-
----
-
-## 🚀 **PREVIOUS: Deployment Scripts Cleanup & macOS Compatibility (March 6, 2026)**
-
-### **🚀 Deployments from Local Mac, Migrations from Codespaces**
-- **run-migrations-master.sh**: Run from Codespaces
-- **Scripts cleanup**: 84 redundant scripts removed (244 → 160)
-- **macOS fix**: `${VAR^^}` replaced with `tr` for bash 3 compatibility
-- **ensure-proxies-running.sh**: Finds cloud-sql-proxy from PATH or project root; accepts optional env
-
-**Session log**: `docs/session_logs/2026-03-06_1500_deployment-scripts-cleanup-macos-compat.md`
-
----
-
-## 🚀 **PREVIOUS: International Airtime Pinless Planning (March 4, 2026)**
-
-### **📱 International Airtime — Pinless Flow (Planned)**
-- **Decision**: Migrate International Airtime from PIN-based (Global PIN) to pinless flow
-- **Flow**: Create beneficiary with international number (e.g. +263...) → select → pinless purchase → recipient topped up directly
-- **Integration**: Same pattern as domestic airtime — inside beneficiary modal
-- **Backend**: Flash `cellular/international/lookup` + purchase; extend validation for E.164 international numbers
-
-**Session log**: `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md`
-
----
-
-## 🚀 **PREVIOUS: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)**
+## 🚀 **LATEST UPDATE: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)**
 
 ### **💳 eeziAirtime Redemption & eeziPay AI Support**
 - **eeziAirtime modal**: Redemption instruction "Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle."; PIN as 3×4 digits; Copy copies full USSD string
