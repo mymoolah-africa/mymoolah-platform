@@ -102,6 +102,21 @@ async function initiateRtpRequest(params) {
     throw new Error('Wallet does not belong to user');
   }
 
+  // Resolve creditor name for Pain.013 (shown to debtor as requester). Prefer override, else User lookup.
+  let resolvedCreditorName = (typeof creditorNameOverride === 'string' && creditorNameOverride.trim())
+    ? creditorNameOverride.trim()
+    : null;
+  if (!resolvedCreditorName && userId) {
+    try {
+      const user = await db.User.findByPk(userId, { attributes: ['firstName', 'lastName'] });
+      if (user && (user.firstName || user.lastName)) {
+        resolvedCreditorName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      }
+    } catch (userErr) {
+      console.warn('[RTP] Could not resolve creditor name from User:', userErr.message);
+    }
+  }
+
   const merchantTransactionId = `MM-RTP-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   // DbtrAgt differs by mode:
@@ -126,7 +141,7 @@ async function initiateRtpRequest(params) {
     netAmount: netCredit,
     remittanceInfo: description || reference || merchantTransactionId,
     expiryMinutes,
-    creditorName: creditorNameOverride,
+    creditorName: resolvedCreditorName || undefined,
   });
 
   const dbtrAcctId = pain013?.PmtInf?.[0]?.DbtrAcct?.Id?.Item?.Id;
@@ -181,6 +196,7 @@ async function initiateRtpRequest(params) {
       feeBreakdown: fee,
       monthlyRtpCount: monthlyCount,
       pricingTier: `${monthlyCount}-txns`,
+      creditorName: resolvedCreditorName || undefined,
     },
   });
 
@@ -505,6 +521,15 @@ async function retryRtpAsPbac(originalRtp) {
   const fee = originalRtp.metadata?.feeBreakdown || feeService.calculateRtpFee(0);
   const netCredit = Number((amount - fee.totalUserFeeVatIncl).toFixed(2));
 
+  // Creditor name for PBAC retry: from metadata (stored on initial RTP) or User lookup
+  let creditorName = originalRtp.metadata?.creditorName;
+  if (!creditorName && userId) {
+    try {
+      const user = await db.User.findByPk(userId, { attributes: ['firstName', 'lastName'] });
+      if (user) creditorName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+    } catch (_) { /* non-fatal */ }
+  }
+
   const { pain013, msgId } = buildPain013({
     merchantTransactionId: retryMerchantTxId,
     amount,
@@ -516,6 +541,7 @@ async function retryRtpAsPbac(originalRtp) {
     netAmount: netCredit,
     remittanceInfo: originalRtp.description || originalRtp.referenceNumber || retryMerchantTxId,
     expiryMinutes: 60,
+    creditorName: creditorName || undefined,
   });
 
   console.log('[RTP-RETRY-PBAC] Retrying orgnlMsgId=%s as PBAC → DbtrAcct=%s DbtrAgt=%s bank=%s newMsgId=%s',

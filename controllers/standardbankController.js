@@ -553,7 +553,7 @@ async function initiatePayShapRtp(req, res) {
       description,
       reference,
       expiryMinutes,
-      creditorName: walletUserDisplayName ? `RTP requested from ${walletUserDisplayName}` : undefined,
+      creditorName: walletUserDisplayName || undefined,
     });
 
     const fb = result.feeBreakdown || {};
