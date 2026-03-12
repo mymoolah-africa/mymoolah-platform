@@ -28,6 +28,29 @@ const { buildPain013 } = require('../integrations/standardbank/builders/pain013B
 const sbClient = require('../integrations/standardbank/client');
 const feeService = require('./payshapFeeService');
 
+const BANK_BRANCH_CODES = {
+  'Standard Bank': '051001', 'Standard Bank of SA': '051001',
+  'ABSA Bank': '632005', 'Absa Bank Limited': '632005',
+  'Capitec Bank': '470010', 'Capitec Bank Limited': '470010',
+  'First National Bank (FNB)': '250655', 'First National Bank': '250655', 'FNB': '250655',
+  'Nedbank': '198765', 'Nedbank Limited': '198765',
+  'African Bank': '430000', 'African Bank Limited': '430000',
+  'Discovery Bank': '679000', 'Discovery Bank Limited': '679000',
+  'Investec Bank': '580105', 'Investec Bank Limited': '580105',
+  'TymeBank': '678910', 'Tyme Bank Limited': '678910',
+  'HBZ Bank': '570100', 'HBZ Bank Limited': '570100',
+  'OM Bank': '352000', 'OM Bank Limited': '352000',
+  'Al Baraka Bank': '800000',
+  'Bidvest Bank': '462005',
+  'Sasfin Bank': '683000',
+  'Postbank': '460005',
+  'eNL Mutual Bank': '353000',
+};
+
+function getBankCodeFromName(bankName) {
+  return BANK_BRANCH_CODES[bankName] || '';
+}
+
 async function initiateRtpRequest(params) {
   const {
     userId,
@@ -395,6 +418,7 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
 
 /**
  * Extract system rejection codes from SBSA callback raw body.
+ * Searches all known nesting patterns: top-level, cstmrPmtReqStsRpt, orgnlGrpInfAndSts.
  * Returns { isSystemReject, codes[] }.
  */
 function extractRejectionCodes(rawBody) {
@@ -402,15 +426,48 @@ function extractRejectionCodes(rawBody) {
   const found = [];
   try {
     const rb = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
-    const arr = rb?.orgnlPmtInfAndSts || rb?.OrgnlPmtInfAndSts || [];
-    const infList = Array.isArray(arr) ? arr : [arr];
-    for (const inf of infList) {
-      const stsArr = inf?.stsRsnInf || inf?.StsRsnInf || [];
+
+    const sources = [
+      rb?.orgnlPmtInfAndSts,
+      rb?.OrgnlPmtInfAndSts,
+      rb?.cstmrPmtReqStsRpt?.orgnlPmtReqInfAndSts,
+      rb?.cstmrPmtReqStsRpt?.orgnlPmtInfAndSts,
+    ].filter(Boolean);
+
+    const grpSources = [
+      rb?.orgnlGrpInfAndSts?.stsRsnInf,
+      rb?.cstmrPmtReqStsRpt?.orgnlGrpInfAndSts?.stsRsnInf,
+    ].filter(Boolean);
+
+    for (const arr of sources) {
+      const infList = Array.isArray(arr) ? arr : [arr];
+      for (const inf of infList) {
+        const stsArr = inf?.stsRsnInf || inf?.StsRsnInf || [];
+        const stsList = Array.isArray(stsArr) ? stsArr : [stsArr];
+        for (const s of stsList) {
+          const code = s?.rsn?.prtry || s?.Rsn?.Prtry || '';
+          if (code && systemCodes.includes(code) && !found.includes(code)) found.push(code);
+        }
+      }
+    }
+
+    for (const stsArr of grpSources) {
       const stsList = Array.isArray(stsArr) ? stsArr : [stsArr];
       for (const s of stsList) {
         const code = s?.rsn?.prtry || s?.Rsn?.Prtry || '';
-        if (systemCodes.includes(code)) found.push(code);
+        if (code && systemCodes.includes(code) && !found.includes(code)) found.push(code);
       }
+    }
+
+    if (found.length === 0 && rb && typeof rb === 'object') {
+      try {
+        const bodyStr = typeof JSON.stringify(rb) === 'string' ? JSON.stringify(rb) : '';
+        if (bodyStr && bodyStr.length <= 500000) {
+          for (const code of systemCodes) {
+            if (bodyStr.includes(code) && !found.includes(code)) found.push(code);
+          }
+        }
+      } catch (_) { /* stringify can throw on circular refs */ }
     }
   } catch (_) { /* parse failure */ }
   return { isSystemReject: found.length > 0, codes: found };
@@ -425,9 +482,23 @@ async function retryRtpAsPbac(originalRtp) {
   const { userId, walletId, payerAccountNumber, payerBankCode, payerBankName, payerName } = originalRtp;
   const amount = parseFloat(originalRtp.amount);
 
-  const resolvedBankCode = process.env.STANDARDBANK_ENVIRONMENT === 'uat'
-    ? 'bankc'
-    : (payerBankCode || 'bankc');
+  if (!payerAccountNumber) {
+    console.warn('[RTP-RETRY-PBAC] Cannot retry — no payerAccountNumber on record');
+    return null;
+  }
+
+  // For PBAC, DbtrAgt must be the branch code (e.g. '470010'), NOT the proxy domain ('capitec').
+  // The original RTP used proxy domain for DbtrAgt; for PBAC retry we need the branch code.
+  let resolvedBankCode;
+  if (process.env.STANDARDBANK_ENVIRONMENT === 'uat') {
+    resolvedBankCode = 'bankc';
+  } else {
+    const branchCodeFromName = payerBankName ? getBankCodeFromName(payerBankName) : '';
+    const looksLikeBranchCode = payerBankCode && /^\d{4,6}$/.test(payerBankCode);
+    resolvedBankCode = looksLikeBranchCode
+      ? payerBankCode
+      : (branchCodeFromName || payerBankCode || 'bankc');
+  }
 
   const retryMerchantTxId = `${originalRtp.merchantTransactionId}-PBAC`;
 
@@ -447,8 +518,8 @@ async function retryRtpAsPbac(originalRtp) {
     expiryMinutes: 60,
   });
 
-  console.log('[RTP-RETRY-PBAC] Retrying orgnlMsgId=%s as PBAC → DbtrAcct=%s DbtrAgt=%s newMsgId=%s',
-    originalRtp.originalMessageId, payerAccountNumber, resolvedBankCode, msgId);
+  console.log('[RTP-RETRY-PBAC] Retrying orgnlMsgId=%s as PBAC → DbtrAcct=%s DbtrAgt=%s bank=%s newMsgId=%s',
+    originalRtp.originalMessageId, payerAccountNumber, resolvedBankCode, payerBankName || 'unknown', msgId);
 
   let sbResponse;
   try {
@@ -568,12 +639,11 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
   const alreadyRetried = Boolean(rtpRequest.metadata?.retryMode);
   const isRetryTarget = Boolean(rtpRequest.metadata?.retryOf);
 
-  // Attempt PBAC fallback when:
-  //  1. System-level rejection (proxy not found / batch error)
-  //  2. Original was proxy-based (has mobile number)
-  //  3. We have an account number to fall back on
-  //  4. This request is NOT itself a retry (prevent infinite loop)
-  //  5. We haven't already spawned a retry for this request
+  console.log('[RTP-CB-REJECT] orgnlMsgId=%s status=%s isSystemReject=%s codes=[%s] hasMobile=%s hasAccount=%s isRetryTarget=%s alreadyRetried=%s',
+    originalMessageId, internalStatus, isSystemReject, codes.join(','),
+    Boolean(rtpRequest.payerMobileNumber), Boolean(rtpRequest.payerAccountNumber),
+    isRetryTarget, alreadyRetried);
+
   const canRetryPbac = isSystemReject
     && rtpRequest.payerMobileNumber
     && rtpRequest.payerAccountNumber
@@ -581,35 +651,95 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     && !alreadyRetried;
 
   if (canRetryPbac) {
-    console.log('[RTP-CB] Proxy rejected (%s) — attempting PBAC fallback for orgnlMsgId=%s acct=%s',
-      codes.join(','), originalMessageId, rtpRequest.payerAccountNumber);
+    console.log('[RTP-CB] Proxy rejected (%s) — attempting PBAC fallback for orgnlMsgId=%s acct=%s bank=%s',
+      codes.join(','), originalMessageId, rtpRequest.payerAccountNumber, rtpRequest.payerBankName || 'unknown');
 
     await rtpRequest.update({
       status: 'retry_pbac',
       metadata: { ...(rtpRequest.metadata || {}), proxyRejectCodes: codes, retryMode: 'PBAC_PENDING' },
     });
 
-    try {
-      const retryResult = await retryRtpAsPbac(rtpRequest);
-      if (retryResult) {
-        await rtpRequest.update({
-          metadata: {
-            ...(rtpRequest.metadata || {}),
-            retryMode: 'PBAC_SENT',
-            retryMsgId: retryResult.originalMessageId,
-            retryAt: new Date().toISOString(),
-          },
-        });
+    // Run PBAC retry in background to avoid blocking callback response (SBSA expects quick 200).
+    // Timeout 25s prevents indefinite hang; on failure we update record and notify user.
+    // Reload by id to avoid stale Sequelize instance across async boundary.
+    const PBAC_RETRY_TIMEOUT_MS = 25000;
+    const rtpId = rtpRequest.id;
+
+    const runRetryWithTimeout = async () => {
+      let originalRtp;
+      try {
+        originalRtp = await db.StandardBankRtpRequest.findByPk(rtpId);
+      } catch (e) {
+        console.error('[RTP-CB] Failed to reload RTP for PBAC retry: %s', e.message);
         return;
       }
-    } catch (retryErr) {
-      console.error('[RTP-CB] PBAC fallback failed: %s', retryErr.message);
-    }
+      if (!originalRtp) {
+        console.warn('[RTP-CB] RTP %s not found for PBAC retry', rtpId);
+        return;
+      }
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('PBAC retry timed out after 25s')), PBAC_RETRY_TIMEOUT_MS));
+      try {
+        const retryResult = await Promise.race([
+          retryRtpAsPbac(originalRtp),
+          timeoutPromise,
+        ]);
+        if (retryResult) {
+          const r = await db.StandardBankRtpRequest.findByPk(rtpId);
+          if (r) {
+            await r.update({
+              metadata: {
+                ...(r.metadata || {}),
+                retryMode: 'PBAC_SENT',
+                retryMsgId: retryResult.originalMessageId,
+                retryAt: new Date().toISOString(),
+              },
+            });
+          }
+          return;
+        }
+      } catch (retryErr) {
+        console.error('[RTP-CB] PBAC fallback failed: %s', retryErr.message);
+      }
+      const r = await db.StandardBankRtpRequest.findByPk(rtpId);
+      if (r) {
+        await r.update({
+          status: 'rejected',
+          metadata: { ...(r.metadata || {}), retryMode: 'PBAC_FAILED' },
+        });
+        try {
+          const notificationService = require('./notificationService');
+          const amount = parseFloat(r.amount);
+          const payerName = r.payerName || 'Payer';
+          await notificationService.createNotification(
+            r.userId,
+            'txn_wallet_credit',
+            'Payment Request Could Not Be Delivered',
+            `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`,
+            {
+              payload: {
+                rtpRequestId: r.id,
+                merchantTransactionId: r.merchantTransactionId,
+                amount,
+                currency: r.currency || 'ZAR',
+                payerName,
+                subtype: 'payshap_rtp_rejected',
+              },
+              severity: 'info',
+              category: 'transaction',
+            }
+          );
+        } catch (notifErr) {
+          console.warn('Non-fatal: failed to send PBAC-failure notification:', notifErr.message);
+        }
+      }
+    };
 
-    await rtpRequest.update({
-      status: 'rejected',
-      metadata: { ...(rtpRequest.metadata || {}), retryMode: 'PBAC_FAILED' },
+    setImmediate(() => {
+      runRetryWithTimeout().catch((err) =>
+        console.error('[RTP-CB] Background PBAC retry error: %s', err.message));
     });
+    return;
   }
 
   // Send notification to user (only reaches here if no retry or retry failed)
