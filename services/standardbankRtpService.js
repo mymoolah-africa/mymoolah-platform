@@ -748,9 +748,9 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     const amount = parseFloat(rtpRequest.amount);
     const payerName = rtpRequest.payerName || 'Payer';
 
-    // Only use "could not be delivered" for system/delivery failures (EPDNF, EERRR, etc.).
-    // Retry rejections can be payer declines (delivered, then declined) — show "declined" instead.
-    const isFinalSystemReject = isSystemReject;
+    // Only use "could not be delivered" for system/delivery failures (EPDNF, EBONF, etc.).
+    // PBAC retries (isRetryTarget) were delivered to the account — rejection = debtor declined; show "Declined".
+    const isFinalSystemReject = isSystemReject && !isRetryTarget;
 
     const titleMap = {
       rejected: isFinalSystemReject ? 'Payment Request Could Not Be Delivered' : 'Payment Request Declined',
