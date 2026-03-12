@@ -17,11 +17,17 @@
  *    - No Prxy block
  *    - DbtrAgt.FinInstnId.Othr.Id = branch code (e.g. '470010')
  *    - PmtTpInf = {} (empty — PBAC flag is for RPP Pain.001, NOT RTP Pain.013)
+ *    - CdtrAgt.FinInstnId.PstlAdr.Ctry = "ZA" (per SBSA PBAC sample)
+ *    - Amt.Item.value = amount (camelCase per sample)
+ *    - GrpHdr.CtrlSum = total amount
  *
  * Proxy mode is ALWAYS preferred when mobile number is available.
  * PBAC is only used when mobile number is absent.
  *
  * Creditor (MMTP) always uses direct account in CdtrAcct.Id.Item.Id.
+ *
+ * PBAC payload aligned with official SBSA sample (Gustaf 2026-03): CdtrAgt.PstlAdr.ctry "ZA",
+ * Amt.Item.value (camelCase), GrpHdr.CtrlSum. Reference: integrations/standardbank/samples/SBSA_PBAC_RTP_SAMPLE.json
  *
  * @author MyMoolah Treasury Platform
  */
@@ -184,12 +190,13 @@ function buildPain013(params) {
     },
     Amt: {
       Item: {
-        Value: numAmount.toFixed(2),
+        value: numAmount.toFixed(2),
       },
     },
     ChrgBr: 'SLEV',
     CdtrAgt: {
       FinInstnId: {
+        PstlAdr: { Ctry: 'ZA' },
         Othr: {
           Id: creditorBankBranchCode,
         },
@@ -231,6 +238,7 @@ function buildPain013(params) {
       MsgId: msgId,
       CreDtTm: isoNow(),
       NbOfTxs: '1',
+      CtrlSum: numAmount.toFixed(2),
       InitgPty: {
         Nm: creditorName.substring(0, 140),
         ...(creditorOrgId

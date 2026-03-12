@@ -1,0 +1,130 @@
+{
+  "_comment": "Official SBSA PBAC (Pay-By-Account) Pain.013 sample - Gustaf 2026-03. Reference for RTP without proxy.",
+  "grpHdr": {
+    "msgId": "8454195260612906255432562307722544",
+    "creDtTm": "2026-03-12T06:23:31.791773+00:00",
+    "nbOfTxs": 1,
+    "ctrlSum": "1.00",
+    "initgPty": {
+      "nm": "Entelect",
+      "id": {
+        "orgId": {
+          "othr": [
+            {
+              "id": "1994/1234567/12",
+              "issr": "string"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "pmtInf": [
+    {
+      "PmtInfId": "c775a629568e4d9dab3ab26500b704cc",
+      "PmtMtd": "TRF",
+      "ReqdAdvcTp": "",
+      "PmtTpInf": {},
+      "ReqdExctnDt": {
+        "DtTm": "2026-03-12T08:23:31.791773"
+      },
+      "XpryDt": {
+        "DtTm": "2026-04-25T08:23:31.791773"
+      },
+      "Dbtr": {
+        "Nm": "Sample"
+      },
+      "DbtrAcct": {
+        "Id": {
+          "Item": {
+            "Id": "10101043544"
+          }
+        },
+        "Nm": "Sample Legal Name"
+      },
+      "DbtrAgt": {
+        "FinInstnId": {
+          "Othr": {
+            "Id": "470010"
+          }
+        }
+      },
+      "CdtTrfTx": [
+        {
+          "pmtId": {
+            "instrId": "1-2",
+            "endToEndId": "Kf3EPlTozCH4l6xLTYH6vkCyxU8Uexk7Jsp",
+            "uetr": "416d86fd-13ae-471d-893e-9a82313a0b0f"
+          },
+          "pmtTpInf": {},
+          "amt": {
+            "Item": {
+              "value": "50.00"
+            }
+          },
+          "PmtCond": {
+            "AmtModAllwd": true,
+            "EarlyPmtAllwd": false,
+            "GrntedPmtReqd": false
+          },
+          "ChrgBr": "SLEV",
+          "cdtrAgt": {
+            "finInstnId": {
+              "pstlAdr": {
+                "ctry": "ZA"
+              },
+              "othr": {
+                "id": "051001"
+              }
+            },
+            "brnchId": {
+              "id": "Branch id"
+            }
+          },
+          "cdtr": {
+            "Nm": "Standard Bank",
+            "Id": {
+              "OrgId": {
+                "Othr": [
+                  {
+                    "Id": "000/0000/0002",
+                    "Issr": "CIPC"
+                  },
+                  {
+                    "Id": "000000002",
+                    "Issr": "SBSA"
+                  }
+                ]
+              }
+            }
+          },
+          "cdtrAcct": {
+            "Id": {
+              "Item": {
+                "Id": "000493814686"
+              }
+            },
+            "Nm": "Standard Bank"
+          },
+          "rmtInf": {
+            "Strd": [
+              {
+                "RfrdDocAmt": {
+                  "DuePyblAmt": {
+                    "Value": "49.00"
+                  }
+                },
+                "CdtrRefInf": {
+                  "Ref": "Test 1"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "SplmtryData": {
+    "PlcAndNm": "Auto Perf Test 5"
+  }
+}

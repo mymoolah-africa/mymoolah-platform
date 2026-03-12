@@ -1,5 +1,16 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-12 - 🔧 PayShap PBAC Pain.013 Aligned with SBSA Sample ✅
+
+### **Session Overview**
+Aligned Pain.013 builder with official SBSA PBAC sample (Gustaf): added `CdtrAgt.FinInstnId.PstlAdr.Ctry: "ZA"`, `GrpHdr.CtrlSum`, and `Amt.Item.value` (camelCase per sample).
+
+### **Changes**
+- **`integrations/standardbank/builders/pain013Builder.js`**: CdtrAgt includes PstlAdr.ctry "ZA"; Amt.Item uses lowercase `value`; GrpHdr includes CtrlSum
+- **`integrations/standardbank/samples/`**: Added `SBSA_PBAC_RTP_SAMPLE.json` (official PBAC Pain.013 reference)
+
+---
+
 ## 2026-03-11 - 🔧 PayShap RTP Proxy-First Mode + Auto PBAC Fallback ✅
 
 ### **Session Overview**
