@@ -5,6 +5,7 @@ const { Sequelize } = require('sequelize');
 const { Op } = Sequelize;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { blindIndex } = require('../utils/fieldEncryption');
 
 // Use canonical MSISDN utilities
 const { normalizeToE164, maskMsisdn } = require('../utils/msisdn');
@@ -43,8 +44,9 @@ class AuthController {
         return res.status(409).json({ success: false, message: 'User with this mobile number already exists' });
       }
       
-      // Check for existing user by ID number
-      const existingId = await User.findOne({ where: { idNumber } });
+      // Check for existing user by ID number using the blind index hash
+      // (idNumber column stores AES-256-GCM ciphertext — not directly queryable)
+      const existingId = await User.findOne({ where: { idNumberHash: blindIndex(idNumber) } });
       if (existingId) {
         return res.status(409).json({ success: false, message: 'User with this ID number already exists' });
       }

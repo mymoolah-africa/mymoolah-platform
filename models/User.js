@@ -1,5 +1,19 @@
 // mymoolah/models/User.js
 
+const { encrypt, decrypt, blindIndex, isEncrypted } = require('../utils/fieldEncryption');
+
+/**
+ * Encrypt PII fields on a User instance and set blind index hashes.
+ * Called from beforeCreate and beforeUpdate hooks.
+ * Only encrypts if the value is currently plaintext (idempotent).
+ */
+function _encryptUserFields(user) {
+  if (user.idNumber && !isEncrypted(user.idNumber)) {
+    user.idNumberHash = blindIndex(user.idNumber);
+    user.idNumber = encrypt(user.idNumber);
+  }
+}
+
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define('User', {
     id: {
@@ -54,13 +68,20 @@ module.exports = (sequelize, DataTypes) => {
       unique: true,
     },
     idNumber: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(512), // Encrypted ciphertext is longer than plaintext
       allowNull: false,
-      unique: true,
       validate: {
         notEmpty: true,
-        len: [5, 20], // Reasonable length for ID numbers
+        // Validates the PLAINTEXT before beforeCreate/beforeUpdate encrypts it.
+        // afterFind decrypts on load, so this always sees plaintext at validate time.
+        len: [5, 20],
       },
+    },
+    idNumberHash: {
+      // HMAC-SHA256 blind index — used for WHERE lookups and unique constraint
+      // instead of the idNumber column (which holds non-deterministic ciphertext).
+      type: DataTypes.STRING(64),
+      allowNull: true, // Null until backfill runs for legacy rows
     },
     idType: {
       type: DataTypes.STRING,
@@ -143,8 +164,12 @@ module.exports = (sequelize, DataTypes) => {
         fields: ['accountNumber'],
       },
       {
+        // Unique constraint lives on the hash column, not the encrypted column.
+        // The hash is deterministic (same plaintext → same hash) so uniqueness
+        // is enforced correctly even though the ciphertext varies per encryption.
         unique: true,
-        fields: ['idNumber'],
+        fields: ['idNumberHash'],
+        name: 'users_id_number_hash_unique',
       },
       {
         fields: ['phoneNumber'],
@@ -157,16 +182,28 @@ module.exports = (sequelize, DataTypes) => {
       },
     ],
     hooks: {
+      // Runs AFTER Sequelize validation, BEFORE DB write.
+      // At this point idNumber is still plaintext (validation passed on plaintext).
       beforeCreate: (user) => {
-        // Generate account number if not provided
         if (!user.accountNumber && user.phoneNumber) {
           user.accountNumber = user.phoneNumber;
         }
+        _encryptUserFields(user);
       },
       beforeUpdate: (user) => {
-        // Update kycVerifiedAt when KYC status changes to verified
         if (user.changed('kycStatus') && user.kycStatus === 'verified') {
           user.kycVerifiedAt = new Date();
+        }
+        _encryptUserFields(user);
+      },
+      // Decrypt on every load so the rest of the app always sees plaintext.
+      afterFind: (result) => {
+        if (!result) return;
+        const instances = Array.isArray(result) ? result : [result];
+        for (const user of instances) {
+          if (user && user.idNumber) {
+            user.idNumber = decrypt(user.idNumber);
+          }
         }
       },
     },
