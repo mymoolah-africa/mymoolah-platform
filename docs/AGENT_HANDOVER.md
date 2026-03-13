@@ -649,6 +649,8 @@ You're part of a **banking-grade software system** where:
 - H2H: PG15 + SSH key submitted to Colette (SBSA) on 2026-03-13 ✅ — awaiting connectivity confirmation
 - Capitec RTP: ✅ Confirmed working 2026-03-13
 - **Field encryption**: ✅ `idNumber` encrypted at rest in all 3 databases (UAT, Staging, Production)
+- **Cloud Run Staging**: `mymoolah-backend-staging-00249-n2c` — 100% traffic, encryption keys configured
+- **Cloud Run Production**: `mymoolah-backend-production-00029-sdk` — 100% traffic, encryption keys configured, live at `api-mm.mymoolah.africa`
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)

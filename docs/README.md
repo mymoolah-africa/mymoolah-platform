@@ -1,16 +1,33 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 5, 2026  
-**Version**: 2.11.30 - eeziAirtime Redemption UI & eeziPay AI Knowledge Base  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: March 13, 2026  
+**Version**: 2.16.0 - Field-Level AES-256-GCM Encryption (POPIA Compliance)  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION**
 
-**Work in the last 7 days (Feb 28–Mar 5, 2026)**: eeziAirtime redemption UI — clear instructions, 3×4 PIN format, copy full USSD; eeziPay How To entries added to AI support knowledge base. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Mar 7–13, 2026)**: Field-level AES-256-GCM encryption for `idNumber` deployed to UAT, Staging, and Production. SBSA H2H Credit Notifications setup — SFTP Gateway recreated, PG15 submitted to Colette. Capitec RTP confirmed working. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)**
+## 🚀 **LATEST UPDATE: Field-Level AES-256-GCM Encryption — POPIA Compliance (March 13, 2026)**
 
-### **💳 eeziAirtime Redemption & eeziPay AI Support**
+### **🔒 ID Number Encryption at Rest**
+- **`utils/fieldEncryption.js`**: AES-256-GCM encrypt/decrypt + HMAC-SHA256 blind index. Format: `enc:v1:<iv>:<tag>:<ciphertext>`.
+- **`models/User.js`**: Transparent encryption via Sequelize hooks — beforeCreate/beforeUpdate encrypt, afterFind decrypts. App never sees ciphertext.
+- **`controllers/authController.js`**: Duplicate ID check uses `idNumberHash` (HMAC blind index) for WHERE lookups.
+- **Two-phase migration**: Migration 01 adds nullable `idNumberHash` → backfill encrypts existing rows → Migration 02 adds UNIQUE + NOT NULL.
+- **Deployed to all 3 environments**: UAT ✅, Staging ✅, Production ✅
+- **Cloud Run deployments**: Staging `00249-n2c` + Production `00029-sdk` — both live with encryption keys set.
+
+**Session log**: `docs/session_logs/2026-03-13_2200_field-level-encryption-popia.md`
+
+### **🏦 Previous: SBSA H2H Credit Notifications + SFTP Gateway (March 13, 2026)**
+- SFTP Gateway VM recreated; SSH-RSA 2048 key generated; GCP firewall rules created; SFTP users configured
+- PG15 technical form completed and emailed to Colette (SBSA Implementation Manager)
+- Capitec RTP ✅ confirmed working — EBONF on Mar 12 was daily limit, not code issue
+
+**Session log**: `docs/session_logs/2026-03-13_1600_sbsa-h2h-sftp-setup-credit-notifications.md`
+
+### **🔄 Previous: eeziAirtime Redemption UI & eeziPay AI Knowledge Base (March 5, 2026)**
 - **eeziAirtime modal**: Redemption instruction "Dial *130*3621*3*[PIN]# from the phone you want to top up. From the on-screen menu, choose airtime or a data bundle."; PIN as 3×4 digits; Copy copies full USSD string
 - **Transaction Detail**: Same for eeziAirtime PIN display
 - **eeziPay AI Knowledge Base**: 5 How To / troubleshooting entries via `scripts/add-eezipay-redemption-knowledge-to-ai.js`; Q5.5–Q5.7 in seed

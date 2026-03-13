@@ -1,9 +1,9 @@
 # Session Log - 2026-03-13 - Field-Level AES-256-GCM Encryption (POPIA Compliance)
 
-**Session Date**: 2026-03-13 21:00–23:00  
+**Session Date**: 2026-03-13 21:00–23:30  
 **Agent**: Cursor AI Agent (Claude Opus)  
 **User**: André  
-**Session Duration**: ~2 hours
+**Session Duration**: ~2.5 hours
 
 ---
 
@@ -13,6 +13,10 @@ Implemented application-level field encryption for SA ID numbers across all thre
 ---
 
 ## Tasks Completed
+- [x] Added `FIELD_ENCRYPTION_KEY` + `FIELD_HMAC_KEY` to `mymoolah-backend-staging` Cloud Run env vars
+- [x] Deployed backend code to Staging — revision `mymoolah-backend-staging-00249-n2c`, 100% traffic
+- [x] Added `FIELD_ENCRYPTION_KEY` + `FIELD_HMAC_KEY` to `mymoolah-backend-production` Cloud Run env vars
+- [x] Deployed backend code to Production — revision `mymoolah-backend-production-00029-sdk`, 100% traffic, live at `api-mm.mymoolah.africa`
 - [x] Created `utils/fieldEncryption.js` — AES-256-GCM encrypt/decrypt + HMAC-SHA256 blind index utility
 - [x] Updated `models/User.js` — beforeCreate/beforeUpdate hooks encrypt; afterFind decrypts transparently
 - [x] Updated `controllers/authController.js` — duplicate ID check uses `idNumberHash` instead of plaintext
@@ -86,12 +90,13 @@ Implemented application-level field encryption for SA ID numbers across all thre
 ---
 
 ## Next Steps
-- [ ] Add FIELD_ENCRYPTION_KEY and FIELD_HMAC_KEY to Cloud Run service env vars (production deployment)
+- [x] Add FIELD_ENCRYPTION_KEY and FIELD_HMAC_KEY to Cloud Run Staging + Production env vars ✅
+- [x] Deploy backend code to Staging (`mymoolah-backend-staging-00249-n2c`) ✅
+- [x] Deploy backend code to Production (`mymoolah-backend-production-00029-sdk`) ✅ live at `api-mm.mymoolah.africa`
 - [ ] End-to-end test: register new user, login, verify encrypted idNumber in DB
 - [ ] Write unit tests for `utils/fieldEncryption.js` (encrypt/decrypt/blindIndex round-trip)
 - [ ] Consider encrypting `phoneNumber` field (same pattern, add `phoneNumberHash`)
 - [ ] Consider encrypting beneficiary bank account numbers
-- [ ] Stop production Cloud SQL instance if not needed: `gcloud sql instances patch mmtp-pg-production --activation-policy=NEVER --project=mymoolah-db`
 
 ---
 
@@ -110,7 +115,7 @@ Implemented application-level field encryption for SA ID numbers across all thre
 ## Questions/Unresolved Items
 - Should `phoneNumber` also be encrypted at rest? Same pattern applies — add `phoneNumberHash`.
 - Should beneficiary bank account numbers (`identifier` field) be encrypted?
-- Cloud Run env vars need FIELD_ENCRYPTION_KEY and FIELD_HMAC_KEY added for production deployment.
+- Cloud Run env vars for FIELD_ENCRYPTION_KEY and FIELD_HMAC_KEY have been added to both Staging and Production. ✅
 
 ---
 

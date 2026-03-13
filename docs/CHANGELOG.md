@@ -19,9 +19,9 @@ Implemented application-level field encryption for South African ID numbers (`id
 
 ### **Status**
 - UAT: ✅ Both migrations + backfill complete. All 6 users encrypted.
-- Staging: ✅ Both migrations + backfill complete. All 6 users encrypted.
-- Production: ✅ Both migrations complete.
-- TODO: Add `FIELD_ENCRYPTION_KEY` + `FIELD_HMAC_KEY` to Cloud Run service env vars.
+- Staging: ✅ Both migrations + backfill complete. All 6 users encrypted. Deployed revision `mymoolah-backend-staging-00249-n2c`.
+- Production: ✅ Both migrations complete. Deployed revision `mymoolah-backend-production-00029-sdk`. Live at `api-mm.mymoolah.africa`.
+- Cloud Run env vars: ✅ `FIELD_ENCRYPTION_KEY` + `FIELD_HMAC_KEY` set on both Staging and Production services.
 
 ### **Session Log**
 - `docs/session_logs/2026-03-13_2200_field-level-encryption-popia.md`
