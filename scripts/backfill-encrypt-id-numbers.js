@@ -68,74 +68,104 @@ async function run() {
   // Load DB models after env validation
   const db = require('../models');
 
-  // Count rows to process
-  const total = await db.User.count({
+  // Count rows to process: plaintext OR encrypted-but-missing-hash
+  const plaintextCount = await db.User.count({
     where: db.Sequelize.literal(`"idNumber" NOT LIKE 'enc:v1:%'`),
   });
+  const missingHashCount = await db.User.count({
+    where: db.Sequelize.literal(`"idNumberHash" IS NULL AND "idNumber" LIKE 'enc:v1:%'`),
+  });
+  const total = plaintextCount + missingHashCount;
 
-  console.log(`📊 Users with plaintext idNumber: ${total}`);
+  console.log(`📊 Users with plaintext idNumber: ${plaintextCount}`);
+  console.log(`📊 Users with encrypted idNumber but missing hash: ${missingHashCount}`);
 
   if (total === 0) {
-    console.log('✅ Nothing to do — all idNumber values are already encrypted.');
+    console.log('✅ Nothing to do — all idNumber values are encrypted and hashed.');
     await db.sequelize.close();
     return;
   }
 
-  console.log(`   Processing in batches of ${BATCH_SIZE}...`);
+  console.log(`   Processing ${total} rows in batches of ${BATCH_SIZE}...`);
   console.log('');
 
-  let offset = 0;
   let processed = 0;
   let errors = 0;
 
-  while (offset < total) {
-    const users = await db.User.findAll({
-      attributes: ['id', 'idNumber'],
-      where: db.Sequelize.literal(`"idNumber" NOT LIKE 'enc:v1:%'`),
-      limit: BATCH_SIZE,
-      offset,
-      raw: true, // raw: true so we get plain objects — no afterFind decrypt hook
-    });
+  // Phase 1: Encrypt plaintext rows
+  if (plaintextCount > 0) {
+    let offset = 0;
+    while (true) {
+      const users = await db.User.findAll({
+        attributes: ['id', 'idNumber'],
+        where: db.Sequelize.literal(`"idNumber" NOT LIKE 'enc:v1:%'`),
+        limit: BATCH_SIZE,
+        offset,
+        raw: true,
+      });
+      if (users.length === 0) break;
 
-    if (users.length === 0) break;
-
-    for (const user of users) {
-      try {
-        if (isEncrypted(user.idNumber)) {
-          // Already encrypted by the time we fetched (race condition) — skip
-          continue;
+      for (const user of users) {
+        try {
+          if (isEncrypted(user.idNumber)) continue;
+          const encryptedIdNumber = encrypt(user.idNumber);
+          const hash = blindIndex(user.idNumber);
+          if (isDryRun) {
+            console.log(`  [DRY RUN] User ${user.id}: would encrypt idNumber → ${encryptedIdNumber.substring(0, 30)}... hash=${hash.substring(0, 16)}...`);
+          } else {
+            await db.sequelize.query(
+              `UPDATE users SET "idNumber" = :encrypted, "idNumberHash" = :hash WHERE id = :id`,
+              { replacements: { encrypted: encryptedIdNumber, hash, id: user.id }, type: db.Sequelize.QueryTypes.UPDATE }
+            );
+          }
+          processed++;
+        } catch (err) {
+          console.error(`❌ Error processing user ${user.id}: ${err.message}`);
+          errors++;
         }
-
-        const encryptedIdNumber = encrypt(user.idNumber);
-        const hash = blindIndex(user.idNumber);
-
-        if (isDryRun) {
-          console.log(`  [DRY RUN] User ${user.id}: would encrypt idNumber → ${encryptedIdNumber.substring(0, 30)}... hash=${hash.substring(0, 16)}...`);
-        } else {
-          // Direct DB update using raw query to bypass model hooks
-          // (hooks would try to re-encrypt an already-encrypted value)
-          await db.sequelize.query(
-            `UPDATE users SET "idNumber" = :encrypted, "idNumberHash" = :hash WHERE id = :id`,
-            {
-              replacements: {
-                encrypted: encryptedIdNumber,
-                hash: hash,
-                id: user.id,
-              },
-              type: db.Sequelize.QueryTypes.UPDATE,
-            }
-          );
-        }
-        processed++;
-      } catch (err) {
-        console.error(`❌ Error processing user ${user.id}: ${err.message}`);
-        errors++;
       }
+      offset += BATCH_SIZE;
+      console.log(`   Phase 1 (encrypt): ${processed}/${plaintextCount} — ${errors} errors`);
     }
+  }
 
-    offset += BATCH_SIZE;
-    const pct = Math.min(100, Math.round((processed / total) * 100));
-    console.log(`   Processed ${processed}/${total} (${pct}%) — ${errors} errors`);
+  // Phase 2: Backfill hash for already-encrypted rows (e.g. synced from another env)
+  if (missingHashCount > 0) {
+    const { decrypt: dec } = require('../utils/fieldEncryption');
+    let offset = 0;
+    let phase2 = 0;
+    while (true) {
+      const users = await db.User.findAll({
+        attributes: ['id', 'idNumber'],
+        where: db.Sequelize.literal(`"idNumberHash" IS NULL AND "idNumber" LIKE 'enc:v1:%'`),
+        limit: BATCH_SIZE,
+        offset,
+        raw: true,
+      });
+      if (users.length === 0) break;
+
+      for (const user of users) {
+        try {
+          const plaintext = dec(user.idNumber);
+          const hash = blindIndex(plaintext);
+          if (isDryRun) {
+            console.log(`  [DRY RUN] User ${user.id}: would set hash=${hash.substring(0, 16)}... (already encrypted)`);
+          } else {
+            await db.sequelize.query(
+              `UPDATE users SET "idNumberHash" = :hash WHERE id = :id`,
+              { replacements: { hash, id: user.id }, type: db.Sequelize.QueryTypes.UPDATE }
+            );
+          }
+          phase2++;
+          processed++;
+        } catch (err) {
+          console.error(`❌ Error processing user ${user.id}: ${err.message}`);
+          errors++;
+        }
+      }
+      offset += BATCH_SIZE;
+      console.log(`   Phase 2 (hash): ${phase2}/${missingHashCount} — ${errors} errors`);
+    }
   }
 
   console.log('');
