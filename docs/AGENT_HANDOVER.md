@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-11 20:15  
-**Latest Feature**: PayShap RTP proxy-first mode + automatic PBAC fallback for payers without ShapID  
-**Document Version**: 2.14.0  
-**Session logs**: `docs/session_logs/2026-03-11_2015_rtp-proxy-first-pbac-fallback.md`, `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`  
+**Last Updated**: 2026-03-13 16:00  
+**Latest Feature**: SBSA Host-to-Host (H2H) setup — Credit Notifications + SFTP Gateway configured  
+**Document Version**: 2.15.0  
+**Session logs**: `docs/session_logs/2026-03-13_1600_sbsa-h2h-sftp-setup-credit-notifications.md`, `docs/session_logs/2026-03-11_2015_rtp-proxy-first-pbac-fallback.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -624,25 +624,34 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — PayShap RTP proxy-first + PBAC automatic fallback  
-**Last Session**: 2026-03-11 — Fixed RTP delivery bug; proxy-first; PBAC auto-retry; confirmed PDNG on staging
+**Session Status**: ✅ **COMPLETE** — SBSA H2H Credit Notifications + SFTP Gateway fully configured  
+**Last Session**: 2026-03-13 — H2H setup; SFTP Gateway recreated; SSH keys generated; firewall rules created; PG15 completed; email to Colette drafted
 
-### **Most Recent Work (2026-03-11)**
-- **Root cause fixed**: `isPbac = Boolean(payerAccountNumber)` was always `true` (frontend always sends both fields) — every RTP was sent as PBAC, ignoring mobile number/proxy entirely.
-- **Pain.013 corrected**: Removed `PmtTpInf.LclInstrm.Prtry = 'PBAC'` — this code is for Pain.001 (RPP Send Money) only. Pain.013 (RTP) must use empty `{}`. Confirmed against SBSA's own Postman sample.
-- **Proxy-first logic**: Now `isPbac = !payerMobileNumber && Boolean(payerAccountNumber)`. Mobile present → proxy mode. Account-only → PBAC mode.
-- **PBAC auto-fallback**: If proxy fails (EPDNF/EBONF/EERRR), `retryRtpAsPbac()` automatically resends as account-only. Retry tracked in `metadata` JSONB column.
-- **Deployed**: staging revision `mymoolah-backend-staging-00241-w2l` (commit `9bb2a98d`)
-- **Confirmed**: RTPs to 0720213994 (Capitec) and 0798569159 both returned PDNG ✅
+### **Most Recent Work (2026-03-13)**
+- **SBSA H2H initiated**: Colette (SBSA Implementation Manager) assigned. Services: Credit Notifications via Webserver + H2H SFTP (Statements + Payments).
+- **Two IPs identified**: `34.128.163.17` (load balancer — webhook inbound) and `34.35.137.166` (SFTP Gateway — file transfer)
+- **SSH-RSA 2048 key generated**: `~/.ssh/sbsa_sftp_key` (private) and `~/.ssh/sbsa_sftp_key.pub` (send to SBSA)
+- **GCP firewall rules created**: `allow-sbsa-sftp-test` (196.8.85.62) and `allow-sbsa-sftp-prod` (196.8.86.53)
+- **SFTP Gateway VM recreated**: Fresh install of `sftp-1-vm` (password was lost). Admin: `admin` / `MyMoolah@2026!` at `https://34.35.137.166`
+- **GCS folders created**: `standardbank/inbox/statements/`, `standardbank/inbox/payments/`, `standardbank/outbox/`, `mobilemart/`, `flash/`
+- **SFTP users created**: `standardbank` (SSH key added), `mobilemart`, `flash`
+- **PG15 form completed**: All fields ready — awaiting SBSA account number + branch number from André
+- **Email drafted**: Ready to send to Colette with all connectivity details + SSH public key attachment
+- **New doc created**: `docs/SBSA_H2H_SETUP_GUIDE.md`
+
+### **Previous Work (2026-03-12)**
+- Capitec RTP EBONF failures investigated — root cause: Capitec daily PayShap transaction limit hit during testing (not a code issue). Discovery RTP confirmed working. Retest Capitec tomorrow.
+- Rolled back local code to `b6cad770` (13:08 SAST) as requested by user after multiple test failures.
 
 ### **Current State**
-- Staging v12 deployed with all RTP proxy/PBAC fixes
-- Production live: api-mm.mymoolah.africa, wallet.mymoolah.africa
-- Awaiting: email reply from SBSA (Gustaf/Louis) on PBAC Pain.013 specs and bank support matrix
+- Staging v12 deployed with all RTP proxy/PBAC fixes (commit `b6cad770`)
+- Production live: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa`
+- SFTP Gateway running: `34.35.137.166` — admin panel `https://34.35.137.166`
+- H2H connectivity process started with SBSA — awaiting Colette's confirmation
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and 2–3 recent session logs (especially `2026-03-11_2015_rtp-proxy-first-pbac-fallback.md`)
+2. Read this file and 2–3 recent session logs (especially `2026-03-13_1600_sbsa-h2h-sftp-setup-credit-notifications.md`)
 3. Run `git status` → `git pull origin main`
 4. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
@@ -652,15 +661,15 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 13 (16:00) | **SBSA H2H setup**: SFTP Gateway recreated; SSH key generated; firewall rules created; SFTP users set up; PG15 completed; email to Colette drafted |
+| Mar 12 | **RTP debugging**: Capitec EBONF → daily limit hypothesis; Discovery RTP confirmed working; rolled back to `b6cad770` |
 | Mar 11 (20:15) | **PayShap RTP fix**: proxy-first mode + auto PBAC fallback; removed PBAC flag from Pain.013; PDNG confirmed staging |
 | Mar 07 (18:00) | Cloud Build migration (no Docker Desktop); npm cleanup (remove crypto/xss-clean); Node 20 Dockerfiles |
 | Mar 07 (11:00) | International Airtime pinless implementation; Flash Code 2200 billing issue escalated |
 | Mar 05 | eeziAirtime redemption UI + eeziPay AI knowledge base entries |
 | Feb 27 | EasyPay Cash-In 500 fix; 5-scenario test script; Theodore test data |
-| Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email; Flash/MobileMart/Zapper Google Drive docs |
+| Feb 21 (17:00) | PayShap parameterised callbacks + polling service; EasyPay Cash-In sweep + activation email |
 | Feb 26 (12:45) | Flash integration fixes (3 endpoint bugs); denominations validator; `role` column migration |
-| Feb 25 | Variable-first product catalog filter — `priceType` schema, classify/deactivate fixed duplicates |
-| Feb 21 | Browserslist/caniuse-lite update; SBSA PayShap email; Bill payment MobileMart prevend fix |
 | Feb 15 | Production deployment live (api-mm, wallet-mm) |
 | Feb 12 | Production DB migration complete; SBSA PayShap integration complete (UAT ready) |
 
@@ -674,12 +683,16 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` rejection and verify `[RTP-RETRY-PBAC]` logs appear and account-based retry succeeds. Monitor 0720213994 (Capitec) — PDNG delivered but payer has not confirmed payment yet (likely Capitec app notification issue).
-2. **Email to SBSA** — Draft ready to send to Gustaf/Louis asking for: PBAC Pain.013 sample payload, bank support matrix, and confirmation that RTP works without Prxy block. Send when ready.
-3. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager, generate SessionToken, share with Razine.
-4. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths. Then live tests: 1Voucher, Gift Voucher, Cellular Airtime Pinless, Eezi Voucher, Prepaid Utilities.
-5. **Fix `.env.codespaces` MobileMart URL** — `MOBILEMART_API_URL` currently points to UAT (`uat.fulcrumswitch.com`). Should be production.
-6. **USDC send** — Test in Codespaces when VALR credentials available.
+1. **SBSA H2H — Send email to Colette** — André needs to: (a) add SBSA account number + branch number to PG15 form, (b) attach `~/.ssh/sbsa_sftp_key.pub`, (c) send drafted email. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
+2. **Retest Capitec RTP** — Daily PayShap limit was likely hit on Mar 12. Retest with a fresh RTP to a Capitec number. If EBONF persists, investigate Pain.013 payload differences vs Discovery.
+3. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` and verify `[RTP-RETRY-PBAC]` logs + account-based retry succeeds.
+4. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` callback validation (currently soft_fail).
+5. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager.
+6. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths.
+7. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles.
+8. **H2H Statements/Payments** — Await Melissa sign-on; decide statement format (MT940/MT942) and delivery schedule.
+9. **USDC send** — Test in Codespaces when VALR credentials available.
+10. **SFTP Gateway admin IP** — Dynamic ISP IP (`169.0.184.203`). If André's IP changes, update `sftp-1-tcp-22` and `sftp-1-tcp-443` firewall rules.
 
 ---
 

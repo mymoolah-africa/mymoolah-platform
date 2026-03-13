@@ -1,7 +1,7 @@
 # SBSA Host-to-Host (H2H) Setup Guide
 
 **Date**: 2026-03-13  
-**Status**: 🔧 In Progress — SFTP VM running, SSH key generated  
+**Status**: ✅ Infrastructure complete — awaiting André to send PG15 + SSH key to Colette (SBSA)  
 **Implementation Manager**: SBSA (assigned contact)  
 **Services**: Credit Notifications via Webserver + H2H SFTP (Statements + Payments)
 

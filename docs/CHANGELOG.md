@@ -1,5 +1,40 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-13 - 🏦 SBSA Host-to-Host (H2H) Setup — Credit Notifications + SFTP Gateway ✅
+
+### **Session Overview**
+SBSA assigned Colette as Implementation Manager for MyMoolah's H2H integration. Set up the full connectivity infrastructure required for Credit Notifications via Webserver (deposit notifications) and H2H SFTP (statements + payments). SFTP Gateway VM recreated fresh (lost admin password from Dec 2025 setup). SSH key pair generated. GCP firewall rules created. SFTP users configured. PG15 technical form completed. Reply email to Colette drafted.
+
+### **Changes**
+- **`docs/SBSA_H2H_SETUP_GUIDE.md`**: NEW — complete H2H setup reference with all IPs, SSH key, firewall rules, SFTP user setup, PG15 fields, and submission checklist
+- **GCP `sftp-1-vm`**: Recreated fresh from `sftpgw-standard-3-7-4` image; same static IP `34.35.137.166`; admin `admin` / `MyMoolah@2026!`
+- **GCP firewall `allow-sbsa-sftp-test`**: NEW — allows `196.8.85.62/32 → tcp:22` on `sftp-1-deployment` tag
+- **GCP firewall `allow-sbsa-sftp-prod`**: NEW — allows `196.8.86.53/32 → tcp:22` on `sftp-1-deployment` tag
+- **GCP firewall `sftp-1-tcp-22` + `sftp-1-tcp-443`**: Updated to current admin IP `169.0.184.203`
+- **GCS `gs://mymoolah-sftp-inbound`**: Folders created — `standardbank/inbox/statements/`, `standardbank/inbox/payments/`, `standardbank/outbox/`, `mobilemart/`, `flash/`
+- **SFTP Gateway**: Folders registered (`standardbank`, `mobilemart`, `flash`); SFTP users created (`standardbank` with SSH key, `mobilemart`, `flash`)
+- **`~/.ssh/sbsa_sftp_key`**: NEW — SSH-RSA 2048 key pair for SBSA SFTP authentication (private key local only)
+
+### **Infrastructure**
+| Item | Value |
+|------|-------|
+| Webhook IP (Credit Notifications) | `34.128.163.17` |
+| Webhook URL | `https://api-mm.mymoolah.africa/api/v1/standardbank/notification` |
+| SFTP IP | `34.35.137.166` |
+| SFTP Port | `22` |
+| SFTP Username | `standardbank` |
+| SFTP Admin | `https://34.35.137.166` — `admin` / `MyMoolah@2026!` |
+
+### **Pending**
+- André to add SBSA account number + branch number to PG15, then send email to Colette with SSH public key attached
+- MobileMart and Flash to provide their SSH public keys for their SFTP user profiles
+- H2H Statements/Payments: await Melissa sign-on
+
+### **Session Log**
+- `docs/session_logs/2026-03-13_1600_sbsa-h2h-sftp-setup-credit-notifications.md`
+
+---
+
 ## 2026-03-12 - 🔧 PayShap PBAC Pain.013 Aligned with SBSA Sample ✅
 
 ### **Session Overview**
