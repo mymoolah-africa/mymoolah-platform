@@ -106,7 +106,7 @@ SBSA assigned Colette as Implementation Manager for MyMoolah's H2H integration. 
 - [ ] **MobileMart SSH key**: Awaiting their public key to add to `mobilemart` SFTP user
 - [ ] **Flash SSH key**: Awaiting their public key to add to `flash` SFTP user
 - [ ] **H2H Statements/Payments**: Await Melissa sign-on; statement format and schedule to be decided (MT940/MT942, daily, what time)
-- [ ] **Retest Capitec RTP**: Daily transaction limit likely hit yesterday — retest today/tomorrow
+- [x] **Capitec RTP confirmed working** — tested 2026-03-13, worked 100% ✅. EBONF on Mar 12 was Capitec daily limit, not a code issue.
 - [ ] **SBSA hash algorithm**: Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash`
 
 ---

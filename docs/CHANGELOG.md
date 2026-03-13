@@ -25,9 +25,10 @@ SBSA assigned Colette as Implementation Manager for MyMoolah's H2H integration. 
 | SFTP Username | `standardbank` |
 | SFTP Admin | `https://34.35.137.166` — `admin` / `MyMoolah@2026!` |
 
-### **Pending**
-- André to add SBSA account number + branch number to PG15, then send email to Colette with SSH public key attached
-- MobileMart and Flash to provide their SSH public keys for their SFTP user profiles
+### **Status**
+- PG15 + SSH key emailed to Colette (SBSA) on 2026-03-13 ✅
+- Capitec RTP confirmed working 2026-03-13 ✅ — EBONF on Mar 12 was daily limit, not code
+- MobileMart and Flash to provide their SSH public keys for SFTP user profiles
 - H2H Statements/Payments: await Melissa sign-on
 
 ### **Session Log**
