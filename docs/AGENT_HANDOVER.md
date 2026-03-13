@@ -647,7 +647,7 @@ You're part of a **banking-grade software system** where:
 - Staging v12 deployed with all RTP proxy/PBAC fixes (commit `b6cad770`)
 - Production live: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa`
 - SFTP Gateway running: `34.35.137.166` — admin panel `https://34.35.137.166`
-- H2H connectivity process started with SBSA — awaiting Colette's confirmation
+- H2H: PG15 + SSH key submitted to Colette (SBSA) on 2026-03-13 ✅ — awaiting connectivity confirmation
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
@@ -683,7 +683,7 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **SBSA H2H — Send email to Colette** — André needs to: (a) add SBSA account number + branch number to PG15 form, (b) attach `~/.ssh/sbsa_sftp_key.pub`, (c) send drafted email. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
+1. **SBSA H2H — Await Colette's response** — PG15 + SSH public key emailed to Colette on 2026-03-13 ✅. Awaiting SBSA connectivity confirmation and TEST environment details. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
 2. **Retest Capitec RTP** — Daily PayShap limit was likely hit on Mar 12. Retest with a fresh RTP to a Capitec number. If EBONF persists, investigate Pain.013 payload differences vs Discovery.
 3. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` and verify `[RTP-RETRY-PBAC]` logs + account-based retry succeeds.
 4. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` callback validation (currently soft_fail).

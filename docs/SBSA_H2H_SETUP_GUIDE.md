@@ -1,7 +1,7 @@
 # SBSA Host-to-Host (H2H) Setup Guide
 
 **Date**: 2026-03-13  
-**Status**: ✅ Infrastructure complete — awaiting André to send PG15 + SSH key to Colette (SBSA)  
+**Status**: ✅ PG15 submitted to Colette (SBSA) on 2026-03-13 — awaiting SBSA connectivity confirmation  
 **Implementation Manager**: SBSA (assigned contact)  
 **Services**: Credit Notifications via Webserver + H2H SFTP (Statements + Payments)
 
@@ -153,9 +153,8 @@ Recommended signing: **SHA256**
 - [x] SSL Common Name: `api-mm.mymoolah.africa`
 - [x] SSL Organization: `MyMoolah`
 - [x] Connection type: Webservice over Open Internet
-- [ ] SBSA Treasury account number (the account to receive notifications on)
-- [ ] Notification preference: Credit only (CR) or both DR + CR
-- [ ] Technical contact name + phone + email
+- [x] **PG15 completed and emailed to Colette — 2026-03-13** ✅
+- [x] SSH public key (`sbsa_sftp_key.pub`) attached and sent ✅
 
 ### For SFTP H2H (once Melissa signs):
 - [x] SFTP IP: `34.35.137.166`
@@ -192,7 +191,7 @@ Recommended signing: **SHA256**
 |----------|---------|--------|
 | `mobilemart` | MobileMart daily recon files | Configured |
 | `flash` | Flash daily recon files | Configured |
-| `standardbank` | SBSA H2H statements + payments | **To be created** |
+| `standardbank` | SBSA H2H statements + payments | ✅ Created (SSH key added) |
 
 ---
 
