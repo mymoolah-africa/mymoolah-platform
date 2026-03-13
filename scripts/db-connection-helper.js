@@ -44,6 +44,16 @@ const CONFIG = {
     SECRET_NAME: 'db-mmtp-pg-production-password',
     PROJECT_ID: 'mymoolah-db',
   },
+  // Admin (postgres) user — used exclusively for DDL migrations.
+  // mymoolah_app is a data user (SELECT/INSERT/UPDATE/DELETE) and cannot ALTER TABLE.
+  // postgres is the Cloud SQL superuser that owns all tables.
+  ADMIN: {
+    USER: 'postgres',
+    UAT_PASSWORD_SOURCE: 'env',           // DB_ADMIN_PASSWORD in .env
+    STAGING_SECRET_NAME: 'db-mmtp-pg-admin-password',
+    PRODUCTION_SECRET_NAME: 'db-mmtp-pg-admin-password',
+    PROJECT_ID: 'mymoolah-db',
+  },
   HOST: '127.0.0.1', // Always use localhost (proxy handles routing)
   SSL: false, // Proxy handles SSL/TLS
 };
@@ -329,22 +339,129 @@ function getProductionDatabaseURL() {
   return `postgres://${config.user}:${encodedPassword}@${config.host}:${config.port}/${config.database}?sslmode=disable`;
 }
 
+// ============================================================================
+// ADMIN (POSTGRES) CONNECTIONS — DDL / MIGRATIONS ONLY
+// ============================================================================
+
+let uatAdminPool = null;
+let stagingAdminPool = null;
+let productionAdminPool = null;
+
+/**
+ * Get the postgres admin password for the given environment.
+ * UAT:               DB_ADMIN_PASSWORD in .env
+ * Staging/Production: db-mmtp-pg-admin-password in Secret Manager
+ */
+function getAdminPassword(environment) {
+  if (environment === 'uat') {
+    const pwd = process.env.DB_ADMIN_PASSWORD;
+    if (!pwd) throw new Error('DB_ADMIN_PASSWORD not set in .env (needed for UAT DDL migrations)');
+    return pwd;
+  }
+
+  const secretName = CONFIG.ADMIN.STAGING_SECRET_NAME; // same secret for staging + production
+  try {
+    const password = execSync(
+      `gcloud secrets versions access latest --secret="${secretName}" --project=${CONFIG.ADMIN.PROJECT_ID}`,
+      { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }
+    );
+    return password.replace(/[\r\n\s]+$/g, '').trim();
+  } catch (error) {
+    throw new Error(`Failed to get admin password from Secret Manager: ${secretName} — ${error.message}`);
+  }
+}
+
+function getUATAdminPool() {
+  if (uatAdminPool) return uatAdminPool;
+  const proxyPort = detectProxyPort(CONFIG.UAT.PROXY_PORTS, 'UAT');
+  uatAdminPool = new Pool({
+    host: CONFIG.HOST,
+    port: proxyPort,
+    database: CONFIG.UAT.DATABASE,
+    user: CONFIG.ADMIN.USER,
+    password: getAdminPassword('uat'),
+    ssl: CONFIG.SSL,
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
+  return uatAdminPool;
+}
+
+function getStagingAdminPool() {
+  if (stagingAdminPool) return stagingAdminPool;
+  const proxyPort = detectProxyPort(CONFIG.STAGING.PROXY_PORTS, 'Staging');
+  stagingAdminPool = new Pool({
+    host: CONFIG.HOST,
+    port: proxyPort,
+    database: CONFIG.STAGING.DATABASE,
+    user: CONFIG.ADMIN.USER,
+    password: getAdminPassword('staging'),
+    ssl: CONFIG.SSL,
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
+  return stagingAdminPool;
+}
+
+function getProductionAdminPool() {
+  if (productionAdminPool) return productionAdminPool;
+  const proxyPort = detectProxyPort(CONFIG.PRODUCTION.PROXY_PORTS, 'Production');
+  productionAdminPool = new Pool({
+    host: CONFIG.HOST,
+    port: proxyPort,
+    database: CONFIG.PRODUCTION.DATABASE,
+    user: CONFIG.ADMIN.USER,
+    password: getAdminPassword('production'),
+    ssl: CONFIG.SSL,
+    max: 5,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
+  return productionAdminPool;
+}
+
+async function getUATAdminClient() {
+  return await getUATAdminPool().connect();
+}
+
+async function getStagingAdminClient() {
+  return await getStagingAdminPool().connect();
+}
+
+async function getProductionAdminClient() {
+  return await getProductionAdminPool().connect();
+}
+
+function getUATAdminDatabaseURL() {
+  const proxyPort = detectProxyPort(CONFIG.UAT.PROXY_PORTS, 'UAT');
+  const pwd = encodeURIComponent(getAdminPassword('uat'));
+  return `postgres://${CONFIG.ADMIN.USER}:${pwd}@${CONFIG.HOST}:${proxyPort}/${CONFIG.UAT.DATABASE}?sslmode=disable`;
+}
+
+function getStagingAdminDatabaseURL() {
+  const proxyPort = detectProxyPort(CONFIG.STAGING.PROXY_PORTS, 'Staging');
+  const pwd = encodeURIComponent(getAdminPassword('staging'));
+  return `postgres://${CONFIG.ADMIN.USER}:${pwd}@${CONFIG.HOST}:${proxyPort}/${CONFIG.STAGING.DATABASE}?sslmode=disable`;
+}
+
+function getProductionAdminDatabaseURL() {
+  const proxyPort = detectProxyPort(CONFIG.PRODUCTION.PROXY_PORTS, 'Production');
+  const pwd = encodeURIComponent(getAdminPassword('production'));
+  return `postgres://${CONFIG.ADMIN.USER}:${pwd}@${CONFIG.HOST}:${proxyPort}/${CONFIG.PRODUCTION.DATABASE}?sslmode=disable`;
+}
+
 /**
  * Close all connection pools (cleanup)
  */
 async function closeAll() {
-  if (uatPool) {
-    await uatPool.end();
-    uatPool = null;
-  }
-  if (stagingPool) {
-    await stagingPool.end();
-    stagingPool = null;
-  }
-  if (productionPool) {
-    await productionPool.end();
-    productionPool = null;
-  }
+  if (uatPool) { await uatPool.end(); uatPool = null; }
+  if (stagingPool) { await stagingPool.end(); stagingPool = null; }
+  if (productionPool) { await productionPool.end(); productionPool = null; }
+  if (uatAdminPool) { await uatAdminPool.end(); uatAdminPool = null; }
+  if (stagingAdminPool) { await stagingAdminPool.end(); stagingAdminPool = null; }
+  if (productionAdminPool) { await productionAdminPool.end(); productionAdminPool = null; }
 }
 
 // ============================================================================
@@ -352,33 +469,49 @@ async function closeAll() {
 // ============================================================================
 
 module.exports = {
-  // Connection pools
+  // App user pools (SELECT/INSERT/UPDATE/DELETE — runtime operations)
   getUATPool,
   getStagingPool,
   getProductionPool,
-  
-  // Single clients (remember to release!)
+
+  // App user clients (remember to release!)
   getUATClient,
   getStagingClient,
   getProductionClient,
-  
+
   // Raw configs (for pg_dump, etc.)
   getUATConfig,
   getStagingConfig,
   getProductionConfig,
-  
-  // DATABASE_URL for Sequelize CLI
+
+  // App user DATABASE_URL for Sequelize CLI (runtime)
   getUATDatabaseURL,
   getStagingDatabaseURL,
   getProductionDatabaseURL,
-  
+
+  // Admin (postgres) pools — DDL / migrations only
+  getUATAdminPool,
+  getStagingAdminPool,
+  getProductionAdminPool,
+
+  // Admin clients (remember to release!)
+  getUATAdminClient,
+  getStagingAdminClient,
+  getProductionAdminClient,
+
+  // Admin DATABASE_URL for Sequelize CLI (migrations)
+  getUATAdminDatabaseURL,
+  getStagingAdminDatabaseURL,
+  getProductionAdminDatabaseURL,
+
   // Utilities
   detectProxyPort,
   getUATPassword,
   getStagingPassword,
   getProductionPassword,
+  getAdminPassword,
   closeAll,
-  
+
   // Constants
   CONFIG,
 };
