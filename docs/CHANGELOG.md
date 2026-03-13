@@ -1,5 +1,33 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-13 - 🔒 Field-Level AES-256-GCM Encryption — POPIA Compliance ✅
+
+### **Session Overview**
+Implemented application-level field encryption for South African ID numbers (`idNumber`) in the `users` table. All values encrypted with AES-256-GCM before storage, with HMAC-SHA256 blind index (`idNumberHash`) enabling searchable uniqueness. Deployed to all three environments: UAT, Staging, and Production.
+
+### **Changes**
+- **`utils/fieldEncryption.js`**: NEW — AES-256-GCM `encrypt`/`decrypt` + HMAC-SHA256 `blindIndex`. Format: `enc:v1:<iv>:<tag>:<ciphertext>`. Graceful degradation if keys missing.
+- **`models/User.js`**: Added `idNumberHash` field, `beforeCreate`/`beforeUpdate` hooks (encrypt + hash), `afterFind` hook (decrypt). Transparent to rest of codebase.
+- **`controllers/authController.js`**: Registration duplicate check now uses `idNumberHash` instead of plaintext `idNumber`.
+- **`migrations/20260313_01_add_idnumberhash_column.js`**: NEW — adds nullable `idNumberHash` column.
+- **`migrations/20260313_02_idnumberhash_unique_notnull.js`**: NEW — adds UNIQUE index, NOT NULL, drops old plaintext unique.
+- **`scripts/backfill-encrypt-id-numbers.js`**: NEW — Phase 1 encrypts plaintext; Phase 2 computes hash for pre-encrypted rows. Supports `--dry-run`.
+- **`scripts/db-connection-helper.js`**: Added admin (postgres) pool/client/URL functions for DDL operations.
+- **`scripts/grant-migration-privileges.js`**: NEW — one-time DDL privilege grant to `mymoolah_app`.
+- **GCP Secret Manager**: `FIELD_ENCRYPTION_KEY`, `FIELD_HMAC_KEY`, `db-mmtp-pg-admin-password` stored.
+- **Database**: UAT table ownership transferred from `mymoolah_user` to `mymoolah_app`. Duplicate test user IDs fixed.
+
+### **Status**
+- UAT: ✅ Both migrations + backfill complete. All 6 users encrypted.
+- Staging: ✅ Both migrations + backfill complete. All 6 users encrypted.
+- Production: ✅ Both migrations complete.
+- TODO: Add `FIELD_ENCRYPTION_KEY` + `FIELD_HMAC_KEY` to Cloud Run service env vars.
+
+### **Session Log**
+- `docs/session_logs/2026-03-13_2200_field-level-encryption-popia.md`
+
+---
+
 ## 2026-03-13 - 🏦 SBSA Host-to-Host (H2H) Setup — Credit Notifications + SFTP Gateway ✅
 
 ### **Session Overview**

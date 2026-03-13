@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-13 16:00  
-**Latest Feature**: SBSA Host-to-Host (H2H) setup — Credit Notifications + SFTP Gateway configured  
-**Document Version**: 2.15.0  
-**Session logs**: `docs/session_logs/2026-03-13_1600_sbsa-h2h-sftp-setup-credit-notifications.md`, `docs/session_logs/2026-03-11_2015_rtp-proxy-first-pbac-fallback.md`  
+**Last Updated**: 2026-03-13 22:00  
+**Latest Feature**: Field-level AES-256-GCM encryption for idNumber (POPIA compliance)  
+**Document Version**: 2.16.0  
+**Session logs**: `docs/session_logs/2026-03-13_2200_field-level-encryption-popia.md`, `docs/session_logs/2026-03-13_1600_sbsa-h2h-sftp-setup-credit-notifications.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -624,37 +624,38 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — SBSA H2H Credit Notifications + SFTP Gateway fully configured  
-**Last Session**: 2026-03-13 — H2H setup; SFTP Gateway recreated; SSH keys generated; firewall rules created; PG15 completed; email to Colette drafted
+**Session Status**: ✅ **COMPLETE** — Field-level AES-256-GCM encryption for `idNumber` deployed to UAT, Staging, and Production  
+**Last Session**: 2026-03-13 — POPIA-compliant field encryption with HMAC blind index for searchable uniqueness
 
-### **Most Recent Work (2026-03-13)**
-- **SBSA H2H initiated**: Colette (SBSA Implementation Manager) assigned. Services: Credit Notifications via Webserver + H2H SFTP (Statements + Payments).
-- **Two IPs identified**: `34.128.163.17` (load balancer — webhook inbound) and `34.35.137.166` (SFTP Gateway — file transfer)
-- **SSH-RSA 2048 key generated**: `~/.ssh/sbsa_sftp_key` (private) and `~/.ssh/sbsa_sftp_key.pub` (send to SBSA)
-- **GCP firewall rules created**: `allow-sbsa-sftp-test` (196.8.85.62) and `allow-sbsa-sftp-prod` (196.8.86.53)
-- **SFTP Gateway VM recreated**: Fresh install of `sftp-1-vm` (password was lost). Admin: `admin` / `MyMoolah@2026!` at `https://34.35.137.166`
-- **GCS folders created**: `standardbank/inbox/statements/`, `standardbank/inbox/payments/`, `standardbank/outbox/`, `mobilemart/`, `flash/`
-- **SFTP users created**: `standardbank` (SSH key added), `mobilemart`, `flash`
-- **PG15 form completed**: All fields ready — awaiting SBSA account number + branch number from André
-- **Email drafted**: Ready to send to Colette with all connectivity details + SSH public key attachment
-- **New doc created**: `docs/SBSA_H2H_SETUP_GUIDE.md`
+### **Most Recent Work (2026-03-13 evening)**
+- **Field-level encryption implemented**: `idNumber` in `users` table now encrypted with AES-256-GCM at the application layer (transparent via Sequelize hooks)
+- **HMAC-SHA256 blind index**: `idNumberHash` column enables WHERE lookups and UNIQUE constraints on encrypted data
+- **New utility**: `utils/fieldEncryption.js` — encrypt, decrypt, blindIndex, isEncrypted, checkConfiguration
+- **Two-phase migration**: Migration 01 adds nullable column → backfill encrypts → Migration 02 adds UNIQUE + NOT NULL
+- **All 3 environments done**: UAT ✅, Staging ✅, Production ✅
+- **Keys stored**: FIELD_ENCRYPTION_KEY and FIELD_HMAC_KEY in `.env`, `.env.codespaces`, and GCP Secret Manager
+- **postgres password set**: On all 3 Cloud SQL instances; stored in Secret Manager as `db-mmtp-pg-admin-password`
+- **Admin DB connections**: Added to `db-connection-helper.js` for future DDL migrations
+- **Duplicate test user IDs fixed**: User 2 (Leonie) → `6610200168086`, User 4 (HD Botes) → `9201165024087`
 
-### **Previous Work (2026-03-12)**
-- Capitec RTP EBONF failures investigated — root cause: Capitec daily PayShap transaction limit hit during testing (not a code issue). Discovery RTP confirmed working. Retest Capitec tomorrow.
-- Rolled back local code to `b6cad770` (13:08 SAST) as requested by user after multiple test failures.
+### **Previous Work (2026-03-13 afternoon)**
+- SBSA H2H initiated: Colette assigned as Implementation Manager. SFTP Gateway recreated. SSH keys generated. PG15 completed and emailed.
+- Capitec RTP ✅ confirmed working — EBONF on Mar 12 was daily limit, not code.
 
 ### **Current State**
 - Staging v12 deployed with all RTP proxy/PBAC fixes (commit `b6cad770`)
 - Production live: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa`
 - SFTP Gateway running: `34.35.137.166` — admin panel `https://34.35.137.166`
 - H2H: PG15 + SSH key submitted to Colette (SBSA) on 2026-03-13 ✅ — awaiting connectivity confirmation
-- Capitec RTP: ✅ Confirmed working 2026-03-13 — EBONF on Mar 12 was daily limit, not code
+- Capitec RTP: ✅ Confirmed working 2026-03-13
+- **Field encryption**: ✅ `idNumber` encrypted at rest in all 3 databases (UAT, Staging, Production)
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and 2–3 recent session logs (especially `2026-03-13_1600_sbsa-h2h-sftp-setup-credit-notifications.md`)
+2. Read this file and 2–3 recent session logs (especially `2026-03-13_2200_field-level-encryption-popia.md`)
 3. Run `git status` → `git pull origin main`
-4. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
+4. Add FIELD_ENCRYPTION_KEY + FIELD_HMAC_KEY to Cloud Run service env vars (for production deployment)
+5. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
 ---
 
@@ -662,6 +663,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 13 (22:00) | **Field-level encryption (POPIA)**: AES-256-GCM encryption for `idNumber` + HMAC blind index — deployed to UAT, Staging, Production |
 | Mar 13 (16:00) | **SBSA H2H setup**: SFTP Gateway recreated; SSH key generated; firewall rules created; SFTP users set up; PG15 completed; email to Colette drafted |
 | Mar 12 | **RTP debugging**: Capitec EBONF → daily limit hypothesis; Discovery RTP confirmed working; rolled back to `b6cad770` |
 | Mar 11 (20:15) | **PayShap RTP fix**: proxy-first mode + auto PBAC fallback; removed PBAC flag from Pain.013; PDNG confirmed staging |
@@ -684,16 +686,20 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **SBSA H2H — Await Colette's response** — PG15 + SSH public key emailed to Colette on 2026-03-13 ✅. Awaiting SBSA connectivity confirmation and TEST environment details. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
-2. **Capitec RTP** — ✅ Confirmed working 2026-03-13. EBONF failures on Mar 12 were due to Capitec daily PayShap transaction limit being hit during testing — NOT a code issue. Code is solid.
-3. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` and verify `[RTP-RETRY-PBAC]` logs + account-based retry succeeds.
-4. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` callback validation (currently soft_fail).
-5. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager.
-6. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths.
-7. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles.
-8. **H2H Statements/Payments** — Await Melissa sign-on; decide statement format (MT940/MT942) and delivery schedule.
-9. **USDC send** — Test in Codespaces when VALR credentials available.
-10. **SFTP Gateway admin IP** — Dynamic ISP IP (`169.0.184.203`). If André's IP changes, update `sftp-1-tcp-22` and `sftp-1-tcp-443` firewall rules.
+1. **Field encryption: Cloud Run env vars** — Add `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` to Cloud Run service env vars for production deployment. Without these, production app will store plaintext with warnings.
+2. **Field encryption: E2E test** — Register a new user, login, verify `idNumber` is encrypted in DB and returns decrypted via API.
+3. **Field encryption: Unit tests** — Write tests for `utils/fieldEncryption.js` (encrypt/decrypt round-trip, blindIndex determinism, isEncrypted detection).
+4. **Field encryption: Extend to phoneNumber** — Same AES-256-GCM + blind index pattern. Add `phoneNumberHash` column, update WHERE clauses.
+5. **SBSA H2H — Await Colette's response** — PG15 + SSH public key emailed to Colette on 2026-03-13 ✅. Awaiting SBSA connectivity confirmation and TEST environment details. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
+6. **Capitec RTP** — ✅ Confirmed working 2026-03-13. EBONF failures on Mar 12 were due to Capitec daily PayShap transaction limit being hit during testing — NOT a code issue. Code is solid.
+7. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` and verify `[RTP-RETRY-PBAC]` logs + account-based retry succeeds.
+8. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` callback validation (currently soft_fail).
+9. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager.
+10. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths.
+11. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles.
+12. **H2H Statements/Payments** — Await Melissa sign-on; decide statement format (MT940/MT942) and delivery schedule.
+13. **USDC send** — Test in Codespaces when VALR credentials available.
+14. **SFTP Gateway admin IP** — Dynamic ISP IP (`169.0.184.203`). If André's IP changes, update `sftp-1-tcp-22` and `sftp-1-tcp-443` firewall rules.
 
 ---
 
