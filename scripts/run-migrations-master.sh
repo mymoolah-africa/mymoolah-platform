@@ -131,9 +131,7 @@ if (!rootDir) {
 require('dotenv').config({ path: path.join(rootDir, '.env') });
 
 // Load connection helper from project root
-  const {
-    getUATAdminDatabaseURL, getStagingAdminDatabaseURL, getProductionAdminDatabaseURL,
-  } = require(path.join(rootDir, 'scripts', 'db-connection-helper'));
+  const { getUATDatabaseURL, getStagingDatabaseURL, getProductionDatabaseURL } = require(path.join(rootDir, 'scripts', 'db-connection-helper'));
 
 const environment = process.env.MIGRATION_ENV;
 const migrationName = process.env.MIGRATION_NAME;
@@ -141,14 +139,14 @@ const migrationName = process.env.MIGRATION_NAME;
 try {
   let databaseURL;
   if (environment === 'uat') {
-    databaseURL = getUATAdminDatabaseURL();
-    console.log('✅ Using UAT admin connection (postgres) for DDL migration');
+    databaseURL = getUATDatabaseURL();
+    console.log('✅ Using UAT database connection');
   } else if (environment === 'staging') {
-    databaseURL = getStagingAdminDatabaseURL();
-    console.log('✅ Using Staging admin connection (postgres) for DDL migration');
+    databaseURL = getStagingDatabaseURL();
+    console.log('✅ Using Staging database connection');
   } else if (environment === 'production') {
-    databaseURL = getProductionAdminDatabaseURL();
-    console.log('✅ Using Production admin connection (postgres) for DDL migration');
+    databaseURL = getProductionDatabaseURL();
+    console.log('✅ Using Production database connection');
   } else {
     throw new Error(`Invalid environment: ${environment}`);
   }
