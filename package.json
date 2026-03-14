@@ -41,6 +41,8 @@
     "seed:support": "node scripts/seed-support-knowledge-base.js",
     "setup:support": "npm run migrate:support && npm run seed:support",
     "embed:kb": "node scripts/embed-knowledge-base.js",
+    "embed:kb:staging": "node scripts/embed-knowledge-base.js --env=staging",
+    "embed:kb:production": "node scripts/embed-knowledge-base.js --env=production",
     "embed:kb:dry": "node scripts/embed-knowledge-base.js --dry-run",
     "start:cs-ip": "node scripts/start-cs-ip.js"
   },
