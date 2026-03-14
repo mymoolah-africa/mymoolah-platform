@@ -1,16 +1,22 @@
 /**
- * MyMoolah AI Support — LangChain RAG (v2)
+ * MyMoolah AI Support — LangChain RAG (v3 — Phase 2: Transactional AI)
  *
- * Cost-optimised RAG service with four layers:
- *   1. Redis/memory response cache    — free for repeated questions
+ * Four-layer cost architecture:
+ *   1. Redis/memory response cache    — free for repeated generic questions
  *   2. Direct KB answer (score ≥ 0.92) — free, no LLM call
  *   3. GPT-4o-mini with KB context    — 17x cheaper than GPT-4o
  *   4. Self-learning KB               — GPT answers saved for admin review
  *
- * Estimated cost at 3M users: ~$150–$360/month (vs $30k with GPT-4o, no cache)
+ * Phase 2 — Transactional AI:
+ *   - Detects personal questions (balance, transactions, wallet, payments)
+ *   - Fetches live user data from DB (wallet balance + last 10 transactions)
+ *   - Injects into LLM context — personalised answers without extra auth
+ *   - Personal responses are NEVER cached (POPIA compliance)
+ *
+ * Estimated cost at 3M users: ~$150–$360/month
  *
  * @author MyMoolah Treasury Platform
- * @version 2.0.0
+ * @version 3.0.0
  */
 
 require('dotenv').config();
@@ -39,7 +45,24 @@ const AUTO_LEARN_THRESHOLD = 0.40; // Below this = question not in KB → auto-l
 const AUTO_LEARN_MIN_LENGTH = 60;  // Min chars for a response worth saving to KB
 const CACHE_TTL = 86400;           // 24 hours in seconds
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Transactional Intent Detection ─────────────────────────────────────────
+// Questions that require live user data from the database
+
+const TRANSACTIONAL_PATTERNS = [
+  /\bbalance\b|\bhow much\b|\bwhat.*have\b|\bmy funds\b|\bmy money\b/i,
+  /\blast.*(transaction|payment|transfer)|\brecent.*(transaction|payment)|\btransaction.*histor/i,
+  /\bmy.*(transaction|payment|transfer|wallet|account)\b/i,
+  /\bdid.*payment|\bpayment.*go through|\btransfer.*status|\bsend.*status\b/i,
+  /\bwallet.*(number|id|balance|status)|\bwallet id\b/i,
+  /\blist.*(transaction|payment)|\bshow.*(transaction|payment)\b/i,
+  /\blast \d+\s*(transaction|payment)/i,
+];
+
+function isTransactionalQuery(message) {
+  return TRANSACTIONAL_PATTERNS.some((p) => p.test(message));
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function cosineSimilarity(a, b) {
   if (!a || !b || a.length !== b.length) return 0;
@@ -61,6 +84,16 @@ function hashQuestion(question) {
     .slice(0, 16);
 }
 
+function formatCurrency(amount, currency = 'ZAR') {
+  return `${currency} ${parseFloat(amount).toFixed(2)}`;
+}
+
+function formatDate(date) {
+  return new Date(date).toLocaleDateString('en-ZA', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
+}
+
 // ─── Service ─────────────────────────────────────────────────────────────────
 
 class RagService {
@@ -70,13 +103,14 @@ class RagService {
     this.llm = null;
     this.kbEntries = [];
     this.kbLoadedAt = 0;
-    this.KB_CACHE_TTL = 5 * 60 * 1000; // 5 min in-process KB refresh
+    this.KB_CACHE_TTL = 5 * 60 * 1000;
 
     this.metrics = {
       totalQueries: 0,
       cacheHits: 0,
       kbDirectHits: 0,
       llmCalls: 0,
+      transactionalQueries: 0,
       autoLearned: 0,
       errors: 0,
     };
@@ -87,7 +121,6 @@ class RagService {
         openAIApiKey: process.env.OPENAI_API_KEY,
       });
 
-      // Default to gpt-4o-mini (17x cheaper than gpt-4o, sufficient for support)
       const model = process.env.SUPPORT_AI_MODEL || 'gpt-4o-mini';
       this.llm = new ChatOpenAI({
         modelName: model,
@@ -145,6 +178,67 @@ class RagService {
     return matches.map((m, i) => `[${i + 1}] Q: ${m.question}\nA: ${m.answer}`).join('\n\n');
   }
 
+  // ── Transactional Data Fetching ────────────────────────────────────────────
+
+  /**
+   * Fetch live user wallet and recent transactions from the database.
+   * Only called when transactional intent is detected.
+   */
+  async fetchUserContext(userId) {
+    try {
+      const { Wallet, Transaction } = models;
+
+      const [wallet, transactions] = await Promise.all([
+        Wallet.findOne({
+          where: { userId },
+          attributes: ['walletId', 'balance', 'currency', 'status'],
+          raw: true,
+        }),
+        Transaction.findAll({
+          where: { userId },
+          attributes: ['transactionId', 'amount', 'type', 'status', 'description', 'currency', 'createdAt', 'fee'],
+          order: [['createdAt', 'DESC']],
+          limit: 10,
+          raw: true,
+        }),
+      ]);
+
+      return { wallet, transactions };
+    } catch (err) {
+      console.error('❌ Failed to fetch user context:', err.message);
+      return { wallet: null, transactions: [] };
+    }
+  }
+
+  /**
+   * Format user wallet and transaction data into a readable context block for the LLM.
+   */
+  buildUserContext(wallet, transactions) {
+    if (!wallet) return '';
+
+    const lines = [
+      '## Your Account',
+      `Wallet ID: ${wallet.walletId}`,
+      `Balance: ${formatCurrency(wallet.balance, wallet.currency)}`,
+      `Status: ${wallet.status}`,
+      '',
+      `## Your Last ${transactions.length} Transaction${transactions.length !== 1 ? 's' : ''}`,
+    ];
+
+    if (transactions.length === 0) {
+      lines.push('No transactions found.');
+    } else {
+      transactions.forEach((t, i) => {
+        const fee = parseFloat(t.fee) > 0 ? ` (fee: ${formatCurrency(t.fee, t.currency)})` : '';
+        lines.push(
+          `${i + 1}. ${t.type.toUpperCase()} | ${formatCurrency(t.amount, t.currency)}${fee} | ${t.status.toUpperCase()} | ${t.description || 'No description'} | ${formatDate(t.createdAt)}`
+        );
+      });
+    }
+
+    return lines.join('\n');
+  }
+
   // ── Conversation History ───────────────────────────────────────────────────
 
   getHistory(userId) {
@@ -198,7 +292,7 @@ class RagService {
         question,
         answer,
         language,
-        isActive: false, // Pending admin review — set to true in portal to activate
+        isActive: false, // Pending admin review
         embedding,
         confidenceScore: 0.70,
       });
@@ -228,16 +322,22 @@ class RagService {
     }
 
     try {
-      // ── Layer 1: Response cache (Redis / in-memory) ──────────────────────
-      const cached = await this.getCachedResponse(message);
-      if (cached) {
-        this.metrics.cacheHits++;
-        return {
-          ...cached,
-          queryId: `rag_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-          performance: { responseTime: Date.now() - startTime, source: 'cache' },
-          data: { type: 'cache' },
-        };
+      // ── Detect transactional intent ──────────────────────────────────────
+      const isPersonal = isTransactionalQuery(message);
+
+      // ── Layer 1: Response cache — ONLY for non-personal queries ──────────
+      // Personal queries are NEVER cached (each user has different data)
+      if (!isPersonal) {
+        const cached = await this.getCachedResponse(message);
+        if (cached) {
+          this.metrics.cacheHits++;
+          return {
+            ...cached,
+            queryId: `rag_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+            performance: { responseTime: Date.now() - startTime, source: 'cache' },
+            data: { type: 'cache' },
+          };
+        }
       }
 
       // ── Layer 2: Semantic KB search ──────────────────────────────────────
@@ -248,8 +348,9 @@ class RagService {
       let responseText;
       let responseType;
 
-      // ── Layer 3: Direct KB answer (no LLM call) ──────────────────────────
-      if (topScore >= KB_DIRECT_THRESHOLD) {
+      // ── Layer 3: Direct KB answer — only for non-personal queries ────────
+      // (personal queries always go through LLM with live data)
+      if (!isPersonal && topScore >= KB_DIRECT_THRESHOLD) {
         responseText = topMatch.answer;
         responseType = 'kb_direct';
         this.metrics.kbDirectHits++;
@@ -258,22 +359,37 @@ class RagService {
         // ── Layer 4: LLM call (GPT-4o-mini) ──────────────────────────────
         this.metrics.llmCalls++;
         const goodMatches = matches.filter((m) => m.score >= KB_MATCH_THRESHOLD);
-        const contextText = this.buildContext(goodMatches);
+        const kbContextText = this.buildContext(goodMatches);
         const history = this.getHistory(userId);
         const isNewQuestion = topScore < AUTO_LEARN_THRESHOLD;
 
+        // Fetch live user data if this is a personal/transactional question
+        let userContextText = '';
+        if (isPersonal && userId) {
+          this.metrics.transactionalQueries++;
+          const { wallet, transactions } = await this.fetchUserContext(userId);
+          userContextText = this.buildUserContext(wallet, transactions);
+        }
+
         const systemPrompt = `You are a friendly MyMoolah support assistant for a South African digital wallet and treasury platform.
-${contextText
-    ? 'Answer based on the knowledge base context below. If the answer is not in the context, use your general knowledge about digital wallets and South African banking.'
-    : 'Use your general knowledge about digital wallets and South African banking to answer helpfully.'
+${userContextText
+    ? 'The user\'s live account data is provided below. Use it to answer personal questions accurately. Address the user directly.'
+    : kbContextText
+      ? 'Answer based on the knowledge base context below.'
+      : 'Use your general knowledge about digital wallets and South African banking to answer helpfully.'
 }
-Keep answers helpful, concise (under 100 words when possible), and warm.
+Keep answers helpful, concise (under 150 words when possible), and warm.
 Respond in the user's language (language code: ${language}). For 'en' use English. For 'af' use Afrikaans. For 'zu' use isiZulu. For 'xh' use isiXhosa. For 'st' use Sesotho. For other codes, use English.
-Never invent specific fees, account numbers, or regulatory facts.`;
+Never invent specific fees, account numbers, or regulatory facts.
+Never reveal sensitive data beyond what is in the context provided.`;
+
+        const contextParts = [];
+        if (userContextText) contextParts.push(userContextText);
+        if (kbContextText) contextParts.push(`## Knowledge Base\n${kbContextText}`);
 
         const messages = [
           new SystemMessage(
-            systemPrompt + (contextText ? `\n\n## Knowledge base context\n${contextText}` : '')
+            systemPrompt + (contextParts.length > 0 ? '\n\n' + contextParts.join('\n\n') : '')
           ),
           ...history,
           new HumanMessage(message),
@@ -281,11 +397,11 @@ Never invent specific fees, account numbers, or regulatory facts.`;
 
         const response = await this.llm.invoke(messages);
         responseText = response.content?.toString?.() || response.content || '';
-        responseType = goodMatches.length > 0 ? 'rag' : 'llm_general';
+        responseType = isPersonal ? 'transactional' : (goodMatches.length > 0 ? 'rag' : 'llm_general');
 
-        // Self-learning: save to KB (isActive=false) if question was not in KB
-        // and the answer is substantive (not a generic fallback)
+        // Auto-learn only for non-personal, non-KB questions
         if (
+          !isPersonal &&
           isNewQuestion &&
           responseText.length >= AUTO_LEARN_MIN_LENGTH &&
           !responseText.toLowerCase().includes('contact our support')
@@ -299,8 +415,10 @@ Never invent specific fees, account numbers, or regulatory facts.`;
 
       const result = this.formatResult(responseText, startTime, userId, false, responseType, topScore);
 
-      // Cache for next user asking the same question
-      await this.cacheResponse(message, result);
+      // Cache only non-personal responses
+      if (!isPersonal) {
+        await this.cacheResponse(message, result);
+      }
 
       return result;
 
@@ -337,17 +455,19 @@ Never invent specific fees, account numbers, or regulatory facts.`;
       aiEnabled: this.aiEnabled,
       model: process.env.SUPPORT_AI_MODEL || 'gpt-4o-mini',
       kbEntries: this.kbEntries.length,
+      phase2Transactional: true,
       timestamp: new Date().toISOString(),
     };
   }
 
   getPerformanceMetrics() {
-    const { totalQueries, cacheHits, kbDirectHits, llmCalls, autoLearned, errors } = this.metrics;
+    const { totalQueries, cacheHits, kbDirectHits, llmCalls, transactionalQueries, autoLearned, errors } = this.metrics;
     return {
       totalQueries,
       cacheHits,
       kbDirectHits,
       llmCalls,
+      transactionalQueries,
       autoLearned,
       errors,
       cacheHitRate: totalQueries > 0 ? `${Math.round((cacheHits / totalQueries) * 100)}%` : '0%',
