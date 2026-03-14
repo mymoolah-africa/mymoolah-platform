@@ -49,6 +49,7 @@ const CACHE_TTL = 86400;           // 24 hours in seconds
 // Questions that require live user data from the database
 
 const TRANSACTIONAL_PATTERNS = [
+  // English
   /\bbalance\b|\bhow much\b|\bwhat.*have\b|\bmy funds\b|\bmy money\b/i,
   /\blast.*(transaction|payment|transfer)|\brecent.*(transaction|payment)|\btransaction.*histor/i,
   /\bmy.*(transaction|payment|transfer|wallet|account)\b/i,
@@ -56,6 +57,27 @@ const TRANSACTIONAL_PATTERNS = [
   /\bwallet.*(number|id|balance|status)|\bwallet id\b/i,
   /\blist.*(transaction|payment)|\bshow.*(transaction|payment)\b/i,
   /\blast \d+\s*(transaction|payment)/i,
+
+  // Afrikaans
+  /\bbalans\b|\bhoeveel\b|\bwat het ek\b|\bmy geld\b|\bmy fondse\b/i,
+  /\blaaste.*(transaksie|betaling|oordrag)|\bonlangse.*(transaksie|betaling)/i,
+  /\bmy.*(transaksie|betaling|oordrag|beursie|rekening)\b/i,
+  /\bwys.*transaksie|\bwys.*betaling|\blys.*transaksie/i,
+  /\bbeursie.*(nommer|id|balans|status)\b/i,
+  /\blaaste \d+\s*(transaksie|betaling)/i,
+
+  // isiZulu
+  /\ibhalansi\b|\bmalini\b|\bimali yami\b/i,
+  /\bezokugcina.*(ukuxhumana|inkokhelo)|\bezokugcina \d+/i,
+  /\bkhombisa.*(ukuxhumana|inkokhelo)\b/i,
+
+  // isiXhosa
+  /\bbhalansi\b|\imali yam\b/i,
+  /\yokugqibela.*(intlawulo|uguqulelo)/i,
+
+  // Sesotho
+  /\btekanyo\b|\btshelete yaka\b|\btjhelete\b/i,
+  /\bts[ae]bo.*(tefo|phetiso)/i,
 ];
 
 function isTransactionalQuery(message) {
