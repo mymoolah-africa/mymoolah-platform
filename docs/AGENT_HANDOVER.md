@@ -624,10 +624,17 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Field-level AES-256-GCM encryption for `idNumber` deployed to UAT, Staging, and Production  
-**Last Session**: 2026-03-13 — POPIA-compliant field encryption with HMAC blind index for searchable uniqueness
+**Session Status**: ✅ **COMPLETE** — LangChain RAG AI support rebuild + Field-level encryption  
+**Last Session**: 2026-03-14 — AI support simplified (4,000+ → ~250 lines)
 
-### **Most Recent Work (2026-03-13 evening)**
+### **Most Recent Work (2026-03-14)**
+- **LangChain RAG rebuild**: Replaced `bankingGradeSupportService` (2,276 lines) + `aiSupportService` (2,100 lines) with `ragService.js` (~250 lines)
+- **Semantic search**: OpenAI text-embedding-3-small + cosine similarity over knowledge base
+- **GPT-4o**: Natural responses, 11 SA languages, conversational memory (last 10 messages per user)
+- **First-time setup**: Run `npm run embed:kb` in Codespaces (with UAT proxy) to generate OpenAI embeddings before first use
+- **Controller**: `supportController.js` now uses `ragService` directly. Same API contract.
+
+### **Previous Work (2026-03-13 evening)**
 - **Field-level encryption implemented**: `idNumber` in `users` table now encrypted with AES-256-GCM at the application layer (transparent via Sequelize hooks)
 - **HMAC-SHA256 blind index**: `idNumberHash` column enables WHERE lookups and UNIQUE constraints on encrypted data
 - **New utility**: `utils/fieldEncryption.js` — encrypt, decrypt, blindIndex, isEncrypted, checkConfiguration
@@ -665,6 +672,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 14 (00:00) | **AI Support — LangChain RAG**: Replaced 4,000+ line pattern-matching stack with ~250-line ragService. Run `npm run embed:kb` in Codespaces before first use |
 | Mar 13 (22:00) | **Field-level encryption (POPIA)**: AES-256-GCM encryption for `idNumber` + HMAC blind index — deployed to UAT, Staging, Production |
 | Mar 13 (16:00) | **SBSA H2H setup**: SFTP Gateway recreated; SSH key generated; firewall rules created; SFTP users set up; PG15 completed; email to Colette drafted |
 | Mar 12 | **RTP debugging**: Capitec EBONF → daily limit hypothesis; Discovery RTP confirmed working; rolled back to `b6cad770` |
