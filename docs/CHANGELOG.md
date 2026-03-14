@@ -22,8 +22,16 @@ Full rebuild and upgrade of AI support system. Phase 1: LangChain RAG with seman
 - ✅ "What's my balance?" → exact balance ZAR 33,222.00
 - ✅ Codebase sweep ran on gpt-4o-mini successfully
 
-### **Pending**
-- Run `npm run embed:kb` on Staging and Production DBs
+### **Additional (same day)**
+- **`scripts/embed-knowledge-base.js`**: Rewritten to use `db-connection-helper.js` — `--env=uat|staging|production`. No manual passwords.
+- **`package.json`**: Added `embed:kb:staging`, `embed:kb:production` scripts.
+- **`docs/CURSOR_2.0_RULES_FINAL.md`**: Added AI model selection table + Tech Debt & Architectural Concerns section.
+- **Staging**: 1 entry embedded. **Production**: 0 entries (KB not yet seeded).
+
+### **Pending (before go-live)**
+- Review UAT KB for accuracy (Tap to Add Money, bulk payouts, remittance entries)
+- Seed KB to Staging and Production databases
+- Run `embed:kb:staging` and `embed:kb:production`
 - Deploy to Staging and Production
 - Admin UI to review/approve `isActive=false` auto-learned KB entries
 - Archive legacy services (bankingGradeSupportService.js, aiSupportService.js)

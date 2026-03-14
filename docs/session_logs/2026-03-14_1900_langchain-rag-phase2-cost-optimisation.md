@@ -54,6 +54,19 @@ Switched from `gpt-4o` to `gpt-4o-mini` in:
 - Added `## 🔧 TECH DEBT & ARCHITECTURAL CONCERNS` section with active debt table and architectural decisions log
 - Updated Last Updated date to 2026-03-14
 
+### 6. embed-knowledge-base.js rewrite (db-connection-helper.js)
+- Rewrote `scripts/embed-knowledge-base.js` to use `db-connection-helper.js` for all DB connections
+- Added `--env=uat|staging|production` flag — passwords fetched automatically from GCP Secret Manager
+- Raw SQL replaces Sequelize model dependency
+- Added npm scripts: `embed:kb:staging`, `embed:kb:production`
+- Ran `npm run embed:kb:staging` — 1 entry embedded (Staging has only 1 KB entry)
+- Ran `npm run embed:kb:production` — 0 entries (Production has no KB data yet)
+
+### 7. KB Accuracy Review
+- Identified KB entries describing features not yet live (Tap to Add Money: Q3.2, Q3.2a, Q3.2b)
+- Flagged entries for non-live features: bulk payouts, cross-border, API, white-label
+- **Decision**: Review and clean up UAT KB before seeding to Staging/Production (scheduled before go-live)
+
 ---
 
 ## 📁 Files Modified
@@ -61,18 +74,18 @@ Switched from `gpt-4o` to `gpt-4o-mini` in:
 | File | Change |
 |---|---|
 | `services/ragService.js` | NEW → v1 → v2 → v3 (Phase 1 + cost opt + Phase 2) |
-| `scripts/embed-knowledge-base.js` | NEW — embeds KB entries with OpenAI |
+| `scripts/embed-knowledge-base.js` | NEW then rewritten to use db-connection-helper.js |
 | `controllers/supportController.js` | Switch to ragService singleton |
-| `package.json` | Add langchain deps + embed:kb scripts |
+| `package.json` | Add langchain deps + embed:kb + embed:kb:staging + embed:kb:production |
 | `package-lock.json` | Auto-updated |
 | `services/feedbackService.js` | gpt-4o → gpt-4o-mini (4 calls) |
 | `services/googleReviewService.js` | gpt-4o → gpt-4o-mini (5 calls) |
 | `services/codebaseSweepService.js` | gpt-4o → gpt-4o-mini (1 call) |
 | `controllers/feedbackController.js` | gpt-4o → gpt-4o-mini (1 DB label) |
-| `docs/CURSOR_2.0_RULES_FINAL.md` | Added AI model table + Tech Debt section |
-| `docs/AGENT_HANDOVER.md` | Updated current session summary |
-| `docs/CHANGELOG.md` | Added LangChain RAG entry |
-| `docs/README.md` | Updated status + latest update |
+| `docs/CURSOR_2.0_RULES_FINAL.md` | Added AI model table + Tech Debt + Architectural Decisions |
+| `docs/AGENT_HANDOVER.md` | Updated to v2.17.0 |
+| `docs/CHANGELOG.md` | Added LangChain RAG v3 entry |
+| `docs/README.md` | Updated to v2.17.0 |
 
 ---
 
@@ -92,17 +105,21 @@ Switched from `gpt-4o` to `gpt-4o-mini` in:
 |---|---|
 | Codespaces backend crashed after git pull — `MODULE_NOT_FOUND @langchain/openai` | User ran `npm install` in Codespaces to install new deps |
 | `.env.codespaces` is gitignored — `SUPPORT_AI_MODEL=gpt-4o-mini` change didn't push | Change is in `ragService.js` default (env var overrides if needed) |
+| embed-knowledge-base.js used Sequelize models + manual DATABASE_URL | Rewrote to use `db-connection-helper.js` with `--env` flag |
+| Staging embed failed with password auth error | User used literal "PASSWORD" — fixed script to auto-fetch from GCP Secret Manager |
+| KB contains entries for features not live (Tap to Add Money) | Flagged for review before seeding to Staging/Production |
 
 ---
 
 ## 🔄 Next Steps
 
-### Immediate
-1. Push to GitHub: `git push origin main`
-2. Pull in Codespaces: `git pull origin main` + restart backend
-3. Run `npm run embed:kb` on Staging DB (connect staging proxy first)
-4. Deploy to Staging: `./scripts/deploy-backend.sh --staging`
-5. Deploy to Production: `./scripts/deploy-backend.sh --production`
+### Before Go-Live (within 2 weeks)
+1. **Review and clean UAT KB** — deactivate entries for features not yet live (Tap to Add Money Q3.2a/Q3.2b, update Q3.2)
+2. **Seed KB to Staging and Production** — update `seed-support-knowledge-base.js` to use `db-connection-helper.js` with `--env` support
+3. **Run embed:kb on Staging/Production** — `npm run embed:kb:staging`, `npm run embed:kb:production`
+4. **Deploy to Staging** — `./scripts/deploy-backend.sh --staging`
+5. **Deploy to Production** — `./scripts/deploy-backend.sh --production`
+6. **Archive legacy scripts** — `run-sweep-patterns-migration.sh` (old AI system)
 
 ### Phase 3 (Future)
 - Redis conversation memory (currently in-memory, lost on restart)
@@ -116,6 +133,8 @@ Switched from `gpt-4o` to `gpt-4o-mini` in:
 
 - `ragService.js` is the ONLY active AI support service. `bankingGradeSupportService.js` and `aiSupportService.js` still exist but are NOT in the request path.
 - `kycService.js` intentionally uses `gpt-4o` — do NOT change this.
-- `npm run embed:kb` must be run on EACH database environment (UAT done, Staging and Production pending).
+- **KB seeding to Staging/Production is BLOCKED** until UAT KB is reviewed for accuracy (Tap to Add Money and other non-live features must be deactivated first).
+- `npm run embed:kb:staging` and `npm run embed:kb:production` use `db-connection-helper.js` — no manual passwords needed.
 - Self-learned KB entries appear in `ai_knowledge_base` table with `isActive=false` and `faqId` starting with `AUTO-`. These need admin review before being activated.
 - Conversation history is in-memory only — lost on backend restart. Redis migration is Phase 3.
+- `seed-support-knowledge-base.js` still uses Sequelize models + `DATABASE_URL` — needs same `db-connection-helper.js` fix before use on Staging/Production.
