@@ -129,6 +129,17 @@ Switched from `gpt-4o` to `gpt-4o-mini` in:
 
 ---
 
+## 🚀 Deployments (March 14, 2026 — evening)
+
+| Environment | Revision | Changes included |
+|---|---|---|
+| Staging | `mymoolah-backend-staging-00252-pqc` | All RAG v3 changes + multilingual fix + sweep disabled |
+| Production | `mymoolah-backend-production-00032-qs6` | Same — confirmed working |
+
+**Production test**: "uh wat is my wallet saldo" (mixed Afrikaans/English) → "Jou wallet saldo is ZAR 49,324.29" in 4 seconds ✅
+
+---
+
 ## ⚠️ Important Context for Next Agent
 
 - `ragService.js` is the ONLY active AI support service. `bankingGradeSupportService.js` and `aiSupportService.js` still exist but are NOT in the request path.
