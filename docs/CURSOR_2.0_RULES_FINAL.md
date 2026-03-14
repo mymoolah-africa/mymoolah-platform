@@ -1,6 +1,6 @@
 # MyMoolah Agent Rules - Cursor 2.0
 
-**Last Updated**: 2026-02-27  
+**Last Updated**: 2026-03-14  
 **Keep in sync**: Any rules added to Cursor Settings must also be added here.
 
 ---
@@ -149,9 +149,57 @@ Migrations: ALWAYS use `./scripts/run-migrations-master.sh [uat|staging]` — ne
 
 ---
 
+## 🤖 **AI & OPENAI MODEL SELECTION**
+
+| Service | Model | Reason |
+|---|---|---|
+| `ragService.js` (support chat) | `gpt-4o-mini` | High volume — cost critical |
+| `feedbackService.js` | `gpt-4o-mini` | Sentiment analysis — mini sufficient |
+| `googleReviewService.js` | `gpt-4o-mini` | Review generation — mini sufficient |
+| `codebaseSweepService.js` | `gpt-4o-mini` | Background job — mini sufficient |
+| `kycService.js` | `gpt-4o` | Identity verification — **accuracy critical, do NOT downgrade** |
+
+**AI Support System (LangChain RAG v3):**
+- `services/ragService.js` — 481-line replacement for 4,649-line legacy system
+- Phase 1: Semantic KB search (64 embedded entries)
+- Phase 2: Transactional AI (live balance + last 10 transactions per user)
+- Cost layers: Redis cache → Direct KB (≥92% confidence) → GPT-4o-mini → Self-learning
+- Personal responses NEVER cached (POPIA compliance)
+- Self-learning: unknown questions auto-saved to KB as `isActive=false` for admin review
+- Embed KB: `npm run embed:kb` (run after adding new KB entries)
+
+---
+
+## 🔧 **TECH DEBT & ARCHITECTURAL CONCERNS**
+
+This section must be maintained by every agent. Flag issues here so future agents don't inherit silent problems.
+
+### **Active Tech Debt**
+| Item | File(s) | Risk | Suggested Action |
+|---|---|---|---|
+| Legacy AI services (4,649 lines, unused) | `services/bankingGradeSupportService.js`, `services/aiSupportService.js`, `services/semanticEmbeddingService.js` | Low — not in request path | Archive after confirming ragService stable in production |
+| `aiSupportService.js` references `gpt-5` | `services/aiSupportService.js:1187,1558` | Medium — will crash if called | Archive the file |
+| Conversation history in-memory only | `services/ragService.js` | Medium — lost on restart, not scalable | Migrate to Redis for horizontal scaling (Phase 3) |
+| npm audit: 25 vulnerabilities (2 critical) | `package.json` | Medium | Run `npm audit fix` when stable |
+
+### **Architectural Decisions Log**
+| Decision | Date | Reason |
+|---|---|---|
+| LangChain RAG replaces pattern-matching AI | Mar 2026 | 4,649 → 481 lines; semantic search; self-learning |
+| `gpt-4o-mini` for all non-KYC OpenAI calls | Mar 2026 | Cost: ~$30k/month → ~$150-360/month at 3M users |
+| KYC stays on `gpt-4o` | Mar 2026 | POPIA accuracy requirement |
+| Figma restriction removed | Feb 2026 | Code is source of truth; agents edit `.tsx` freely |
+| Agent commits AND pushes to main | Feb 2026 | Streamlined workflow |
+| Cloud Build for deployments (not local Docker) | Mar 2026 | No Docker Desktop needed; faster build times |
+
+### **Rule: Flag Tech Debt**
+When you identify complexity, duplication, or architectural risk — add it to the table above. Do NOT leave it undocumented for the next agent.
+
+---
+
 ## ⚠️ **CRITICAL REMINDERS**
 
-No shortcuts. Sweep `scripts/` first. Session log when work done. Commit+push every time. Test in Codespaces only. Migrations before seeding. Code is frontend source of truth. Database-first (SQL aggregation).
+No shortcuts. Sweep `scripts/` first. Session log when work done. Commit+push every time. Test in Codespaces only. Migrations before seeding. Code is frontend source of truth. Database-first (SQL aggregation). Flag tech debt in this file.
 
 ---
 

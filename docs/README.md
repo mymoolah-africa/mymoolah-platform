@@ -1,22 +1,39 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 13, 2026  
-**Version**: 2.16.0 - Field-Level AES-256-GCM Encryption (POPIA Compliance)  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION**
+**Last Updated**: March 14, 2026  
+**Version**: 2.17.0 - LangChain RAG AI Support v3 (Phase 1 + Phase 2 + Cost Optimisation)  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI**
 
-**Work in the last 7 days (Mar 7–13, 2026)**: Field-level AES-256-GCM encryption for `idNumber` deployed to UAT, Staging, and Production. SBSA H2H Credit Notifications setup — SFTP Gateway recreated, PG15 submitted to Colette. Capitec RTP confirmed working. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Mar 7–14, 2026)**: LangChain RAG AI support v3 — Phase 1 (KB semantic search) + Phase 2 (transactional AI: balance, transactions). Cost optimised: gpt-4o-mini across all non-KYC services, Redis cache, direct KB hits, self-learning. 4,649 lines → 481 lines. Field-level AES-256-GCM encryption deployed. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: Field-Level AES-256-GCM Encryption — POPIA Compliance (March 13, 2026)**
+## 🚀 **LATEST UPDATE: LangChain RAG AI Support v3 (March 14, 2026)**
 
-### **🔒 ID Number Encryption at Rest**
-- **`utils/fieldEncryption.js`**: AES-256-GCM encrypt/decrypt + HMAC-SHA256 blind index. Format: `enc:v1:<iv>:<tag>:<ciphertext>`.
-- **`models/User.js`**: Transparent encryption via Sequelize hooks — beforeCreate/beforeUpdate encrypt, afterFind decrypts. App never sees ciphertext.
-- **`controllers/authController.js`**: Duplicate ID check uses `idNumberHash` (HMAC blind index) for WHERE lookups.
-- **Two-phase migration**: Migration 01 adds nullable `idNumberHash` → backfill encrypts existing rows → Migration 02 adds UNIQUE + NOT NULL.
-- **Deployed to all 3 environments**: UAT ✅, Staging ✅, Production ✅
-- **Cloud Run deployments**: Staging `00249-n2c` + Production `00029-sdk` — both live with encryption keys set.
+### **🤖 Phase 1 — Knowledge Base Semantic Search**
+- `services/ragService.js` — 481 lines replaces 4,649 lines across 3 legacy files
+- 64 KB entries embedded with OpenAI `text-embedding-3-small`
+- Semantic search finds relevant answers; GPT-4o-mini formulates response
+- Run `npm run embed:kb` to embed/re-embed the knowledge base
+
+### **💳 Phase 2 — Transactional AI (Personalised)**
+- Detects personal questions: balance, transactions, wallet ID, payment status
+- Fetches live user wallet balance + last 10 transactions from DB per query
+- Returns real account data: "Your balance is ZAR 33,222.00" ✅
+- Personal responses NEVER cached (POPIA compliance)
+
+### **💰 Cost Optimisation (4 Layers)**
+- Layer 1: Redis/memory cache — same question answered free (24h TTL)
+- Layer 2: Direct KB answer ≥92% confidence — no LLM call
+- Layer 3: GPT-4o-mini (was gpt-4o) — 17x cheaper
+- Layer 4: Self-learning — unknown questions saved to KB as `isActive=false`
+- Projected: ~$150–360/month at 3M users vs ~$30,000 without optimisations
+
+**Session log**: `docs/session_logs/2026-03-14_1900_langchain-rag-phase2-cost-optimisation.md`
+
+### **🔒 Previous: Field-Level AES-256-GCM Encryption — POPIA Compliance (March 13, 2026)**
+- `utils/fieldEncryption.js`: AES-256-GCM + HMAC-SHA256 blind index for `idNumber`
+- Deployed to UAT, Staging, Production. Cloud Run: Staging `00249-n2c`, Production `00029-sdk`
 
 **Session log**: `docs/session_logs/2026-03-13_2200_field-level-encryption-popia.md`
 

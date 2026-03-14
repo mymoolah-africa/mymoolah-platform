@@ -1,28 +1,35 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-03-14 - 🤖 AI Support — LangChain RAG Rebuild ✅
+## 2026-03-14 - 🤖 AI Support — LangChain RAG v3 + Phase 2 Transactional AI + Cost Optimisation ✅
 
 ### **Session Overview**
-Replaced the legacy 4,000+ line AI support stack (bankingGradeSupportService + aiSupportService) with a clean ~250-line LangChain RAG service. Semantic search over knowledge base, GPT-4o for responses, conversational memory.
+Full rebuild and upgrade of AI support system. Phase 1: LangChain RAG with semantic KB search. Phase 2: Transactional AI with live user data. Cost optimisation: 4-layer system reduces cost from ~$30k/month to ~$150–360/month at 3M users. Model sweep: all non-KYC OpenAI calls switched to `gpt-4o-mini`.
 
 ### **Changes**
-- **`services/ragService.js`**: NEW — LangChain RAG. OpenAI text-embedding-3-small for semantic search, GPT-4o for answers, in-memory history (last 10 messages per user).
-- **`scripts/embed-knowledge-base.js`**: NEW — One-time script to generate OpenAI embeddings for `ai_knowledge_base`. Run `npm run embed:kb` in Codespaces (with UAT proxy) before first use.
-- **`controllers/supportController.js`**: Switched from BankingGradeSupportService to ragService. Same API contract (processSupportQuery, healthCheck, getPerformanceMetrics).
-- **`package.json`**: Added `embed:kb` and `embed:kb:dry` scripts.
-- **`docs/AI_SUPPORT_SYSTEM.md`**: Updated to v3.0 — LangChain RAG architecture.
+- **`services/ragService.js`** v3: 4-layer cost system (Redis cache → direct KB ≥92% → GPT-4o-mini → self-learning). Phase 2 transactional AI: detects personal questions, fetches live wallet + transactions from DB. Self-learning: unknown questions auto-saved to KB as `isActive=false`. 481 lines replaces 4,649.
+- **`scripts/embed-knowledge-base.js`**: NEW — runs `npm run embed:kb` to embed all KB entries.
+- **`controllers/supportController.js`**: Uses ragService singleton.
+- **`package.json`**: Added langchain, @langchain/openai, @langchain/core.
+- **`services/feedbackService.js`**: gpt-4o → gpt-4o-mini (4 calls).
+- **`services/googleReviewService.js`**: gpt-4o → gpt-4o-mini (5 calls).
+- **`services/codebaseSweepService.js`**: gpt-4o → gpt-4o-mini (1 call).
+- **`controllers/feedbackController.js`**: gpt-4o → gpt-4o-mini (1 DB label).
+- **`docs/CURSOR_2.0_RULES_FINAL.md`**: Added AI model selection table + Tech Debt & Architectural Concerns section.
 
-### **First-Time Setup (Codespaces)**
-1. Ensure Cloud SQL proxy running: `./scripts/ensure-proxies-running.sh uat`
-2. Run `npm run embed:kb` to populate OpenAI embeddings (replaces old MiniLM embeddings)
-3. Test support chat at `/support`
+### **UAT Test Results**
+- ✅ "How do I load money?" → KB answer, 3,985ms, confidence 0.95
+- ✅ "List my last 4 transactions" → real transactions from DB
+- ✅ "What's my balance?" → exact balance ZAR 33,222.00
+- ✅ Codebase sweep ran on gpt-4o-mini successfully
 
-### **Status**
-- Legacy `bankingGradeSupportService.js` and `aiSupportService.js` remain in codebase (not used by support routes). Can be archived later.
-- RAG service verified loading locally with OPENAI_API_KEY.
+### **Pending**
+- Run `npm run embed:kb` on Staging and Production DBs
+- Deploy to Staging and Production
+- Admin UI to review/approve `isActive=false` auto-learned KB entries
+- Archive legacy services (bankingGradeSupportService.js, aiSupportService.js)
 
 ### **Session Log**
-- `docs/session_logs/2026-03-14_0000_langchain-rag-ai-support-rebuild.md`
+- `docs/session_logs/2026-03-14_1900_langchain-rag-phase2-cost-optimisation.md`
 
 ---
 

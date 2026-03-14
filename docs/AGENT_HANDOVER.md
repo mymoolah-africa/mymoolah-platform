@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-13 22:00  
-**Latest Feature**: Field-level AES-256-GCM encryption for idNumber (POPIA compliance)  
-**Document Version**: 2.16.0  
-**Session logs**: `docs/session_logs/2026-03-13_2200_field-level-encryption-popia.md`, `docs/session_logs/2026-03-13_1600_sbsa-h2h-sftp-setup-credit-notifications.md`  
+**Last Updated**: 2026-03-14 19:00  
+**Latest Feature**: LangChain RAG AI Support v3 — Phase 1 (KB semantic search) + Phase 2 (transactional AI)  
+**Document Version**: 2.17.0  
+**Session logs**: `docs/session_logs/2026-03-14_1900_langchain-rag-phase2-cost-optimisation.md`, `docs/session_logs/2026-03-13_2200_field-level-encryption-popia.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 7, 2026 - 18:00)**
+### **Latest Achievement (March 14, 2026 - 19:00)**
+**LangChain RAG AI Support v3 — Phase 1 + Phase 2 + Cost Optimisation** — Replaced 4,649 lines of pattern-matching AI support code with a clean 481-line LangChain RAG service. Phase 1: Semantic KB search (64 embedded entries, OpenAI `text-embedding-3-small`). Phase 2: Transactional AI — detects personal questions (balance, transactions), fetches live user data from DB, injects into LLM context. Cost optimisation: 4-layer system (Redis cache → direct KB hit ≥92% → GPT-4o-mini → self-learning). Self-learning saves unknown questions to KB as `isActive=false` for admin review. Projected cost at 3M users: ~$150–360/month vs $30k without optimisations. Switched `gpt-4o` → `gpt-4o-mini` across feedbackService, googleReviewService, codebaseSweepService, feedbackController. KYC stays on `gpt-4o`. Tested in UAT — transactions, balance, and KB queries all working. Added Tech Debt & Architectural Concerns section to CURSOR_2.0_RULES_FINAL.md. Session log: `docs/session_logs/2026-03-14_1900_langchain-rag-phase2-cost-optimisation.md`.
+
+### **Previous Achievement (March 7, 2026 - 18:00)**
 **Cloud Build Migration & npm Cleanup** — Deploy scripts now use `gcloud builds submit` instead of local Docker. No Docker Desktop needed for deployments. Build times: backend ~6min, wallet ~3.5min (was ~28min). Node 20 LTS in both Dockerfiles. Removed dead crypto/xss-clean packages. International Airtime pinless implemented; staging returns Flash Code 2200 (billing not configured) — awaiting Flash support. Session log: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`.
 
 ### **Previous Achievement (February 27, 2026 - 14:00)**
