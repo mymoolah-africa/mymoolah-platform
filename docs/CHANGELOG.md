@@ -1,5 +1,31 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-14 - 🤖 AI Support — LangChain RAG Rebuild ✅
+
+### **Session Overview**
+Replaced the legacy 4,000+ line AI support stack (bankingGradeSupportService + aiSupportService) with a clean ~250-line LangChain RAG service. Semantic search over knowledge base, GPT-4o for responses, conversational memory.
+
+### **Changes**
+- **`services/ragService.js`**: NEW — LangChain RAG. OpenAI text-embedding-3-small for semantic search, GPT-4o for answers, in-memory history (last 10 messages per user).
+- **`scripts/embed-knowledge-base.js`**: NEW — One-time script to generate OpenAI embeddings for `ai_knowledge_base`. Run `npm run embed:kb` in Codespaces (with UAT proxy) before first use.
+- **`controllers/supportController.js`**: Switched from BankingGradeSupportService to ragService. Same API contract (processSupportQuery, healthCheck, getPerformanceMetrics).
+- **`package.json`**: Added `embed:kb` and `embed:kb:dry` scripts.
+- **`docs/AI_SUPPORT_SYSTEM.md`**: Updated to v3.0 — LangChain RAG architecture.
+
+### **First-Time Setup (Codespaces)**
+1. Ensure Cloud SQL proxy running: `./scripts/ensure-proxies-running.sh uat`
+2. Run `npm run embed:kb` to populate OpenAI embeddings (replaces old MiniLM embeddings)
+3. Test support chat at `/support`
+
+### **Status**
+- Legacy `bankingGradeSupportService.js` and `aiSupportService.js` remain in codebase (not used by support routes). Can be archived later.
+- RAG service verified loading locally with OPENAI_API_KEY.
+
+### **Session Log**
+- `docs/session_logs/2026-03-14_0000_langchain-rag-ai-support-rebuild.md`
+
+---
+
 ## 2026-03-13 - 🔒 Field-Level AES-256-GCM Encryption — POPIA Compliance ✅
 
 ### **Session Overview**

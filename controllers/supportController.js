@@ -1,24 +1,12 @@
-const BankingGradeSupportService = require('../services/bankingGradeSupportService');
+const ragService = require('../services/ragService');
 
+/**
+ * Support Controller — LangChain RAG
+ * Clean, lightweight. Replaces legacy 4,000+ line banking-grade service.
+ */
 class SupportController {
-  constructor() {
-    this._supportService = null;
-  }
-
-  /**
-   * Lazy initialization of the support service
-   */
   get supportService() {
-    if (!this._supportService) {
-      try {
-        // Revert to proven banking-grade support service for stability
-        this._supportService = new BankingGradeSupportService();
-      } catch (error) {
-        console.error('❌ Failed to initialize BankingGradeSupportService:', error);
-        throw error;
-      }
-    }
-    return this._supportService;
+    return ragService;
   }
 
   /**

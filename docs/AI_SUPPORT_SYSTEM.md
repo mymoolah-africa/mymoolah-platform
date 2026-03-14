@@ -1,12 +1,19 @@
 # MyMoolah AI Support System
 
-**Last Updated**: December 30, 2025 (18:30 SAST)  
-**Version**: 2.4.40 - Staging Deployment Complete & Referral Tested  
-**Status**: ✅ **PRODUCTION READY** ✅ **SMS WORKING** ✅ **KB UPDATED** ✅ **OTP SUPPORT** ✅ **REFERRAL SUPPORT**
+**Last Updated**: 2026-03-14  
+**Version**: 3.0.0 - LangChain RAG (Simplified)  
+**Status**: ✅ **LIVE** — Clean ~250-line RAG service replaces legacy 4,000+ line pattern-matching stack
 
 ## 🚀 Overview
 
-The MyMoolah AI Support System is a **world-class, award-winning** multi-language support platform that provides instant, intelligent assistance to B2C users. Built with OpenAI GPT-4o integration, it offers context-aware responses, continuous learning, and a seamless user experience through an in-app chat interface.
+The MyMoolah AI Support System uses **LangChain RAG** (Retrieval-Augmented Generation) for semantic search over the knowledge base, powered by GPT-4o. Multi-language (11 SA languages), conversational memory, and no pattern matching — answers come from your knowledge base via semantic similarity.
+
+### **2026-03-14 — LangChain RAG Rebuild**
+- Replaced `bankingGradeSupportService.js` (2,276 lines) + `aiSupportService.js` (2,100 lines) with `ragService.js` (~250 lines)
+- Semantic search: OpenAI text-embedding-3-small + cosine similarity
+- GPT-4o for natural responses
+- In-memory conversation history (last 10 messages per user)
+- **First-time setup**: Run `npm run embed:kb` in Codespaces (with UAT proxy) to generate OpenAI embeddings for the knowledge base
 
 ### **December 30, 2025 (18:30) - SMS Integration Fixed**
 - ✅ SMS endpoint corrected to `/bulkmessages`
@@ -77,20 +84,20 @@ mymoolah-wallet-frontend/
     └── authToken.ts                # Authentication utilities
 ```
 
-### **Backend Services**
+### **Backend Services (LangChain RAG — v3.0)**
 ```
 services/
-├── supportService.js               # Unified orchestrator (entrypoint)
-├── bankingGradeSupportService.js   # Banking-grade layer (rate limiting, KB, metrics)
-├── aiSupportService.js             # AI + pattern engine (pattern + GPT‑5)
+├── ragService.js                   # LangChain RAG — semantic search + GPT-4o (~250 lines)
 ├── controllers/
-│   └── supportController.js        # API endpoints (uses SupportService)
+│   └── supportController.js        # API endpoints (uses ragService)
 ├── routes/
 │   └── support.js                  # Route definitions
-└── models/
-    ├── SupportInteraction.js       # Chat interactions
-    ├── SupportFeedback.js          # User feedback
-    └── AiKnowledgeBase.js          # Knowledge base
+├── models/
+│   ├── SupportInteraction.js       # Chat interactions
+│   ├── SupportFeedback.js          # User feedback
+│   └── AiKnowledgeBase.js          # Knowledge base (embedding column)
+└── scripts/
+    └── embed-knowledge-base.js     # Generate OpenAI embeddings (run once: npm run embed:kb)
 ```
 
 ### **Database Schema**
