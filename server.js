@@ -651,7 +651,6 @@ const startServer = async () => {
 let server;
 
 // Start background services after server initialization
-const CodebaseSweepService = require('./services/codebaseSweepService');
 const databasePerformanceMonitor = require('./services/databasePerformanceMonitor');
 
 // Initialize and start background services
@@ -659,23 +658,10 @@ const initializeBackgroundServices = async () => {
   try {
     console.log('🔄 Starting background services...');
     
-    // Start Codebase Sweep Service
-    console.log('🔄 Checking Codebase Sweep Service...');
-    if (process.env.OPENAI_API_KEY && process.env.ENABLE_CODEBASE_SWEEP !== 'false') {
-      console.log('🔄 Initializing Codebase Sweep Service...');
-      const codebaseSweepService = new CodebaseSweepService();
-      console.log('🔄 Starting Codebase Sweep Service scheduler...');
-      await codebaseSweepService.startScheduler();
-      console.log('✅ Codebase Sweep Service started');
-    } else {
-      if (!process.env.OPENAI_API_KEY) {
-        console.log('⚠️  Codebase Sweep Service skipped - OPENAI_API_KEY not configured');
-      } else {
-        console.log('⚠️  Codebase Sweep Service disabled - ENABLE_CODEBASE_SWEEP=false (disabled for development)');
-      }
-    }
-    
-    console.log('🔄 Codebase Sweep Service section completed, moving to Database Monitor...');
+    // Codebase Sweep Service — permanently disabled (legacy, replaced by LangChain RAG)
+    // The sweep scanned 798 files daily to generate KB questions, but the RAG system
+    // uses a curated knowledge base + self-learning instead. No value gained from sweeping.
+    console.log('ℹ️  Codebase Sweep Service permanently disabled (replaced by LangChain RAG)');
     
     // Start Database Performance Monitor
     console.log('🔄 Attempting to start Database Performance Monitor...');
@@ -811,9 +797,7 @@ const boot = async () => {
 
   // Success message will be logged after codebase sweep completes (if enabled)
   // or after all services start (if sweep is disabled)
-  if (!process.env.OPENAI_API_KEY || process.env.ENABLE_CODEBASE_SWEEP === 'false') {
-    console.log('🎉 All background services started successfully');
-  }
+  console.log('🎉 All background services started successfully');
 };
 
 boot().catch((error) => {
