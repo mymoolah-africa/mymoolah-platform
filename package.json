@@ -47,6 +47,7 @@
     "generate:kb": "node scripts/generate-knowledge-base.js",
     "generate:kb:dry": "node scripts/generate-knowledge-base.js --dry-run",
     "generate:kb:clear": "node scripts/generate-knowledge-base.js --clear",
+    "generate:kb:force": "node scripts/generate-knowledge-base.js --force",
     "start:cs-ip": "node scripts/start-cs-ip.js"
   },
   "dependencies": {

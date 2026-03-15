@@ -31,6 +31,7 @@ const FAQ_MASTER_PATH = path.join(__dirname, '../docs/FAQ_MASTER.md');
 
 const dryRun = process.argv.includes('--dry-run');
 const clearExisting = process.argv.includes('--clear');
+const forceReinsert = process.argv.includes('--force'); // Skip duplicate check, re-insert all
 
 // ─── Category mapping ─────────────────────────────────────────────────────────
 
@@ -204,11 +205,13 @@ Generate 8 realistic customer support Q&A pairs about this topic. Cover:
 - Fees or limits if applicable
 - Coming soon / pending activation status where relevant
 
-Format as JSON array:
-[
-  {"question": "...", "answer": "..."},
-  ...
-]
+You MUST respond with ONLY a JSON object in this exact format (no other text):
+{
+  "qa_pairs": [
+    {"question": "...", "answer": "..."},
+    {"question": "...", "answer": "..."}
+  ]
+}
 
 Rules:
 - Keep answers under 150 words
@@ -224,7 +227,9 @@ Rules:
       });
 
       const parsed = JSON.parse(res.choices[0].message.content);
-      const entries = Array.isArray(parsed) ? parsed : parsed.entries || parsed.questions || [];
+      // Handle any top-level key the model may use
+      const entries = parsed.qa_pairs || parsed.questions || parsed.entries || parsed.items ||
+        (Array.isArray(parsed) ? parsed : Object.values(parsed).find(Array.isArray) || []);
 
       entries.forEach(e => {
         if (e.question && e.answer) {
@@ -274,22 +279,26 @@ async function saveToDb(client, entries) {
   for (const entry of entries) {
     const { question, answer, category, audience, embedding } = entry;
     try {
-      // Skip if question already exists (case-insensitive)
-      const exists = await client.query(
-        `SELECT id FROM ai_knowledge_base WHERE LOWER(question) = LOWER($1) LIMIT 1`,
-        [question]
-      );
-      if (exists.rows.length > 0) {
-        skipped++;
-        continue;
+      // Skip if question already exists (case-insensitive), unless --force flag used
+      if (!forceReinsert) {
+        const exists = await client.query(
+          `SELECT id FROM ai_knowledge_base WHERE LOWER(question) = LOWER($1) LIMIT 1`,
+          [question]
+        );
+        if (exists.rows.length > 0) {
+          skipped++;
+          continue;
+        }
       }
 
+      // faqId must fit VARCHAR(20): GEN- (4) + base36 ts (8) + - (1) + rand (4) = 17 chars
+      const faqId = `GEN-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
       await client.query(
         `INSERT INTO ai_knowledge_base
           ("faqId", audience, category, question, answer, language, "isActive", embedding, "confidenceScore", "createdAt", "updatedAt")
          VALUES ($1, $2, $3, $4, $5, 'en', false, $6, 0.80, NOW(), NOW())`,
         [
-          `GEN-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          faqId,
           audience || 'end-user',
           category,
           question,
