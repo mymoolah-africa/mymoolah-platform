@@ -4,26 +4,29 @@
  *
  * Sources (in priority order):
  *   1. docs/FAQ_MASTER.md          — parsed directly, no GPT cost
- *   2. seed-support-knowledge-base  — existing 64 entries as baseline
- *   3. GPT-4o generation            — fills gaps for features not in FAQ_MASTER
+ *   2. GPT-4o generation            — fills gaps for features not in FAQ_MASTER
  *
- * All entries saved as isActive=false for André's review before activation.
+ * UAT:     entries saved as isActive=false for review before activation
+ * Staging/Production: entries saved as isActive=true (already reviewed in UAT)
  *
  * Usage:
- *   node scripts/generate-knowledge-base.js              # UAT (default)
- *   node scripts/generate-knowledge-base.js --dry-run    # Preview only, no DB writes
- *   node scripts/generate-knowledge-base.js --clear      # Clear existing auto-generated entries first
+ *   node scripts/generate-knowledge-base.js                      # UAT (default)
+ *   node scripts/generate-knowledge-base.js --env=staging        # Staging
+ *   node scripts/generate-knowledge-base.js --env=production     # Production
+ *   node scripts/generate-knowledge-base.js --dry-run            # Preview only
+ *   node scripts/generate-knowledge-base.js --clear              # Clear GEN- entries first
+ *   node scripts/generate-knowledge-base.js --force              # Skip duplicate check
  *
  * Pre-requisites:
- *   - UAT proxy running: ./scripts/ensure-proxies-running.sh uat
  *   - OPENAI_API_KEY set in .env
+ *   - For staging/production: GCP Secret Manager access via db-connection-helper
  */
 
 require('dotenv').config();
 const fs = require('fs').promises;
 const path = require('path');
 const { OpenAI } = require('openai');
-const { getUATClient } = require('./db-connection-helper');
+const { getUATClient, getStagingClient, getProductionClient } = require('./db-connection-helper');
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const GPT_MODEL = 'gpt-4o'; // Quality matters for KB generation
@@ -32,6 +35,11 @@ const FAQ_MASTER_PATH = path.join(__dirname, '../docs/FAQ_MASTER.md');
 const dryRun = process.argv.includes('--dry-run');
 const clearExisting = process.argv.includes('--clear');
 const forceReinsert = process.argv.includes('--force'); // Skip duplicate check, re-insert all
+const envArg = (process.argv.find(a => a.startsWith('--env=')) || '--env=uat').replace('--env=', '').toLowerCase();
+const validEnvs = ['uat', 'staging', 'production'];
+if (!validEnvs.includes(envArg)) { console.error(`❌ Invalid --env value: "${envArg}". Use: uat, staging, production`); process.exit(1); }
+// For staging/production, entries are pre-approved (reviewed in UAT) → activate immediately
+const isActiveOnInsert = envArg !== 'uat';
 
 // ─── Category mapping ─────────────────────────────────────────────────────────
 
@@ -272,7 +280,9 @@ async function embedBatch(openai, entries) {
 // ─── Save to DB ───────────────────────────────────────────────────────────────
 
 async function saveToDb(client, entries) {
-  console.log(`\n💾 Saving ${entries.length} entries to UAT database (isActive=false)...`);
+  const envLabel = envArg.toUpperCase();
+  const activeLabel = isActiveOnInsert ? 'isActive=true (pre-approved)' : 'isActive=false (pending review)';
+  console.log(`\n💾 Saving ${entries.length} entries to ${envLabel} database (${activeLabel})...`);
   let inserted = 0;
   let skipped = 0;
 
@@ -296,13 +306,14 @@ async function saveToDb(client, entries) {
       await client.query(
         `INSERT INTO ai_knowledge_base
           ("faqId", audience, category, question, answer, language, "isActive", embedding, "confidenceScore", "createdAt", "updatedAt")
-         VALUES ($1, $2, $3, $4, $5, 'en', false, $6, 0.80, NOW(), NOW())`,
+         VALUES ($1, $2, $3, $4, $5, 'en', $6, $7, 0.80, NOW(), NOW())`,
         [
           faqId,
           audience || 'end-user',
           category,
           question,
           answer,
+          isActiveOnInsert,  // true for staging/production, false for uat
           embedding ? JSON.stringify(embedding) : null,
         ]
       );
@@ -317,16 +328,27 @@ async function saveToDb(client, entries) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+async function getClient() {
+  switch (envArg) {
+    case 'staging':    return getStagingClient();
+    case 'production': return getProductionClient();
+    default:           return getUATClient();
+  }
+}
+
 async function main() {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) { console.error('❌ OPENAI_API_KEY not set'); process.exit(1); }
 
+  const envLabel = envArg.toUpperCase();
   console.log('\n🚀 MyMoolah Knowledge Base Generator');
-  console.log(`📋 Mode: ${dryRun ? 'DRY RUN (no writes)' : 'LIVE — will write to UAT DB'}`);
+  console.log(`🌍 Environment: ${envLabel}`);
+  console.log(`📋 Mode: ${dryRun ? 'DRY RUN (no writes)' : `LIVE — will write to ${envLabel} DB`}`);
+  if (isActiveOnInsert) console.log('✅ Entries will be activated immediately (pre-approved from UAT)');
   if (clearExisting) console.log('🗑️  --clear flag: will delete existing GEN- entries first');
 
   const openai = new OpenAI({ apiKey });
-  const client = dryRun ? null : await getUATClient();
+  const client = dryRun ? null : await getClient();
 
   try {
     if (clearExisting && !dryRun) {
@@ -390,11 +412,17 @@ async function main() {
     console.log(`💰 Estimated cost:    ~$${estimatedCost}`);
     console.log('');
     console.log('📋 Next steps:');
-    console.log('   1. Review entries in UAT database (isActive=false)');
-    console.log('   2. Set isActive=true for entries you approve');
-    console.log('   3. Run: npm run embed:kb (to re-embed active entries)');
-    console.log('   4. Test support bot in UAT');
-    console.log('   5. Seed to Staging/Production when satisfied');
+    if (envArg === 'uat') {
+      console.log('   1. Review entries in UAT database (isActive=false)');
+      console.log('   2. Run: npm run activate:kb to activate all GEN- entries');
+      console.log('   3. Run: npm run embed:kb (to re-embed active entries)');
+      console.log('   4. Test support bot in UAT');
+      console.log('   5. Run: npm run generate:kb:staging && npm run generate:kb:production');
+    } else {
+      console.log(`   1. Run: npm run embed:kb:${envArg} (entries already active)`);
+      console.log('   2. Deploy code: ./scripts/deploy-backend.sh --' + envArg);
+      console.log('   3. Test the deployed support bot');
+    }
     console.log('─'.repeat(60));
 
   } finally {
