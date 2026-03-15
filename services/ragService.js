@@ -1,7 +1,8 @@
 /**
- * MyMoolah AI Support — LangChain RAG (v3 — Phase 2: Transactional AI)
+ * MyMoolah AI Support — LangChain RAG (v3.1 — Topic Filtering + Comprehensive KB)
  *
- * Four-layer cost architecture:
+ * Five-layer cost & safety architecture:
+ *   0. Topic gate (score < 0.20)      — immediate refusal, zero LLM cost
  *   1. Redis/memory response cache    — free for repeated generic questions
  *   2. Direct KB answer (score ≥ 0.92) — free, no LLM call
  *   3. GPT-4o-mini with KB context    — 17x cheaper than GPT-4o
@@ -13,10 +14,15 @@
  *   - Injects into LLM context — personalised answers without extra auth
  *   - Personal responses are NEVER cached (POPIA compliance)
  *
- * Estimated cost at 3M users: ~$150–$360/month
+ * Topic filtering (v3.1):
+ *   - Layer 0: KB relevance gate — off-topic questions refused before any LLM call
+ *   - Layer 2 (prompt): System prompt explicitly restricts to MMTP topics only
+ *   - Transactional queries always pass the gate (they are inherently MMTP-related)
+ *
+ * Estimated cost at 3M users: ~$90–$200/month (topic filtering blocks ~40% of off-topic calls)
  *
  * @author MyMoolah Treasury Platform
- * @version 3.0.0
+ * @version 3.1.0
  */
 
 require('dotenv').config();
@@ -39,11 +45,20 @@ const conversationHistory = new Map();
 const MAX_HISTORY = 10;
 
 // Thresholds
+const KB_TOPIC_THRESHOLD  = 0.20;  // Layer 0: Below this = off-topic, refuse immediately (no LLM call)
 const KB_DIRECT_THRESHOLD = 0.92;  // Return KB answer directly, skip LLM
-const KB_MATCH_THRESHOLD = 0.50;   // Minimum score to include in LLM context
+const KB_MATCH_THRESHOLD  = 0.50;  // Minimum score to include in LLM context
 const AUTO_LEARN_THRESHOLD = 0.40; // Below this = question not in KB → auto-learn candidate
 const AUTO_LEARN_MIN_LENGTH = 60;  // Min chars for a response worth saving to KB
 const CACHE_TTL = 86400;           // 24 hours in seconds
+
+// Canned off-topic refusal message (rotated for naturalness)
+const OFF_TOPIC_RESPONSES = [
+  "I can only help with MyMoolah wallet questions — things like your balance, payments, airtime, vouchers, KYC, and account settings. For other topics, please use a general search engine.",
+  "That's outside my area! I'm the MyMoolah support assistant and I can only help with your wallet, payments, VAS purchases, KYC, and account queries. Is there something MyMoolah-related I can help with?",
+  "I'm specialised for MyMoolah support only — wallet top-ups, sending money, airtime & data, vouchers, KYC, fees, and account help. I can't assist with topics outside the MyMoolah platform.",
+  "My knowledge is strictly about MyMoolah's digital wallet and treasury services. For general questions, please search online. What MyMoolah service can I help you with today?",
+];
 
 // ─── Transactional Intent Detection ─────────────────────────────────────────
 // Questions that require live user data from the database
@@ -134,6 +149,7 @@ class RagService {
       llmCalls: 0,
       transactionalQueries: 0,
       autoLearned: 0,
+      offTopicRefusals: 0,
       errors: 0,
     };
 
@@ -362,13 +378,23 @@ class RagService {
         }
       }
 
-      // ── Layer 2: Semantic KB search ──────────────────────────────────────
+      // ── Semantic KB search (used for both gate and context) ──────────────
       const matches = await this.searchKnowledgeBase(message);
       const topMatch = matches[0];
       const topScore = topMatch?.score || 0;
 
       let responseText;
       let responseType;
+
+      // ── Layer 0: Topic Gate — refuse off-topic queries (no LLM cost) ─────
+      // Transactional queries are always MMTP-related (my balance, my payments)
+      // so they bypass this gate. All other queries with very low KB similarity
+      // are almost certainly off-topic (cars, weather, general knowledge, etc.)
+      if (!isPersonal && topScore < KB_TOPIC_THRESHOLD) {
+        this.metrics.offTopicRefusals++;
+        const refusal = OFF_TOPIC_RESPONSES[this.metrics.offTopicRefusals % OFF_TOPIC_RESPONSES.length];
+        return this.formatResult(refusal, startTime, userId, false, 'off_topic', topScore);
+      }
 
       // ── Layer 3: Direct KB answer — only for non-personal queries ────────
       // (personal queries always go through LLM with live data)
@@ -393,17 +419,27 @@ class RagService {
           userContextText = this.buildUserContext(wallet, transactions);
         }
 
-        const systemPrompt = `You are a friendly MyMoolah support assistant for a South African digital wallet and treasury platform.
+        // ── Layer 2 (Prompt): Explicit topic restriction ──────────────────
+        // System prompt enforces MMTP-only responses as a second safety net.
+        // Even if a borderline question passes the topic gate, the LLM is
+        // instructed to refuse anything not related to MyMoolah services.
+        const systemPrompt = `You are the MyMoolah support assistant — a friendly, knowledgeable helper for South Africa's MyMoolah digital wallet and treasury platform.
+
+STRICT SCOPE RULE: You ONLY answer questions about MyMoolah services and features. These include: wallet registration, KYC/identity verification, wallet balance and transactions, sending and receiving money, airtime/data/electricity purchases, vouchers, EasyPay cash-out, referral program, fees, PayShap, USDC, account security, and MyMoolah APIs/integrations.
+
+If a question is NOT related to MyMoolah (e.g. general knowledge, sports, cars, weather, cooking, politics, other companies, etc.), politely decline and redirect the user to ask about their MyMoolah wallet.
+
 ${userContextText
-    ? 'The user\'s live account data is provided below. Use it to answer personal questions accurately. Address the user directly.'
-    : kbContextText
-      ? 'Answer based on the knowledge base context below.'
-      : 'Use your general knowledge about digital wallets and South African banking to answer helpfully.'
+  ? 'The user\'s live account data is provided below. Use it to answer personal questions accurately. Address the user directly. Do not reveal this data to other users.'
+  : kbContextText
+    ? 'Answer using the knowledge base context provided below. If the context does not fully answer the question, provide a helpful general response about MyMoolah.'
+    : 'Use your knowledge of MyMoolah\'s features to answer. If the question is not about MyMoolah, decline and ask what MyMoolah service you can help with.'
 }
+
 Keep answers helpful, concise (under 150 words when possible), and warm.
-Respond in the user's language (language code: ${language}). For 'en' use English. For 'af' use Afrikaans. For 'zu' use isiZulu. For 'xh' use isiXhosa. For 'st' use Sesotho. For other codes, use English.
-Never invent specific fees, account numbers, or regulatory facts.
-Never reveal sensitive data beyond what is in the context provided.`;
+Respond in the user's language (language code: ${language}). For 'en' use English. For 'af' use Afrikaans. For 'zu' use isiZulu. For 'xh' use isiXhosa. For 'st' use Sesotho.
+Never invent specific fees, account numbers, or regulatory facts not in your context.
+Never reveal sensitive personal data beyond what is in the user context provided.`;
 
         const contextParts = [];
         if (userContextText) contextParts.push(userContextText);
@@ -474,16 +510,22 @@ Never reveal sensitive data beyond what is in the context provided.`;
   async healthCheck() {
     return {
       status: this.aiEnabled ? 'healthy' : 'degraded',
+      version: '3.1.0',
       aiEnabled: this.aiEnabled,
       model: process.env.SUPPORT_AI_MODEL || 'gpt-4o-mini',
       kbEntries: this.kbEntries.length,
+      topicFiltering: {
+        enabled: true,
+        threshold: KB_TOPIC_THRESHOLD,
+        description: 'Off-topic queries refused before LLM call',
+      },
       phase2Transactional: true,
       timestamp: new Date().toISOString(),
     };
   }
 
   getPerformanceMetrics() {
-    const { totalQueries, cacheHits, kbDirectHits, llmCalls, transactionalQueries, autoLearned, errors } = this.metrics;
+    const { totalQueries, cacheHits, kbDirectHits, llmCalls, transactionalQueries, autoLearned, offTopicRefusals, errors } = this.metrics;
     return {
       totalQueries,
       cacheHits,
@@ -491,10 +533,12 @@ Never reveal sensitive data beyond what is in the context provided.`;
       llmCalls,
       transactionalQueries,
       autoLearned,
+      offTopicRefusals,
       errors,
       cacheHitRate: totalQueries > 0 ? `${Math.round((cacheHits / totalQueries) * 100)}%` : '0%',
       kbDirectRate: totalQueries > 0 ? `${Math.round((kbDirectHits / totalQueries) * 100)}%` : '0%',
-      estimatedSavings: `${cacheHits + kbDirectHits} LLM calls avoided`,
+      offTopicRate: totalQueries > 0 ? `${Math.round((offTopicRefusals / totalQueries) * 100)}%` : '0%',
+      estimatedSavings: `${cacheHits + kbDirectHits + offTopicRefusals} LLM calls avoided`,
       timestamp: new Date().toISOString(),
     };
   }
