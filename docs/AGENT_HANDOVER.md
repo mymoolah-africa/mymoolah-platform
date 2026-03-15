@@ -1,16 +1,16 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-14 19:00  
-**Latest Feature**: LangChain RAG AI Support v3 — Phase 1 (KB semantic search) + Phase 2 (transactional AI)  
-**Document Version**: 2.17.0  
-**Session logs**: `docs/session_logs/2026-03-14_1900_langchain-rag-phase2-cost-optimisation.md`, `docs/session_logs/2026-03-13_2200_field-level-encryption-popia.md`  
+**Last Updated**: 2026-03-15 18:00  
+**Latest Feature**: AI Support v3.1 — Comprehensive KB (240 entries) + Topic Filtering (Layer 0 gate + Layer 2 prompt)  
+**Document Version**: 2.18.0  
+**Session logs**: `docs/session_logs/2026-03-15_1800_comprehensive-kb-topic-filtering.md`, `docs/session_logs/2026-03-14_1900_langchain-rag-phase2-cost-optimisation.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
 
 ## 📌 **WHAT IS MYMOOLAH?**
 
-MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant digital wallet and payment solution. It provides: wallet services, VAS (airtime, data, vouchers, bill payments, electricity), cash-out (EasyPay), USDC, NFC deposits, referrals, KYC, and automated multi-supplier reconciliation. **Production**: api-mm.mymoolah.africa, wallet.mymoolah.africa. Built on Node.js, PostgreSQL, React, GCP. For operating rules, workflow, and constraints, read `docs/CURSOR_2.0_RULES_FINAL.md` first.
+MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant digital wallet and payment solution. It provides: wallet services, VAS (airtime, data, vouchers, bill payments, electricity), cash-out (EasyPay), referrals, KYC, and automated multi-supplier reconciliation. AI support powered by LangChain RAG v3.1 with 240-entry KB and topic filtering. **Production**: api-mm.mymoolah.africa, wallet.mymoolah.africa. Built on Node.js, PostgreSQL, React, GCP. For operating rules, workflow, and constraints, read `docs/CURSOR_2.0_RULES_FINAL.md` first.
 
 ---
 
@@ -142,7 +142,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – March 7–14, 2026)**
+### **Recent Updates (Last 7 Days – March 7–15, 2026)**
+- **Mar 15 (18:00)**: AI Support v3.1 — Comprehensive KB (240 entries) + Topic Filtering. FAQ_MASTER.md rewritten (removed USDC/white-label/NFC/developer FAQs, added referrals/fees/tiers/eeziPay/EasyPay). generate-knowledge-base.js: parses FAQ_MASTER (96 Q&A) + GPT-4o gap fill (80 Q&A) = 176 new GEN- entries. Topic filtering: Layer 0 (score < 0.20 → instant refusal, 0 LLM cost), Layer 2 (system prompt STRICT SCOPE RULE). UAT tested: referral program, Bronze fee, eeziPay USSD steps, off-topic blocked, live balance — all passed. Session log: `docs/session_logs/2026-03-15_1800_comprehensive-kb-topic-filtering.md`.
 - **Mar 14 (22:00)**: Deployed to Staging (`00252-pqc`) and Production (`00032-qs6`). Production confirmed working — mixed Afrikaans/English query "uh wat is my wallet saldo" returned "Jou wallet saldo is ZAR 49,324.29" in 4s. Codebase sweep permanently disabled. Multilingual transactional intent added (Afrikaans, isiZulu, isiXhosa, Sesotho).
 - **Mar 14 (19:00)**: LangChain RAG AI Support v3 — Phase 1 (KB semantic search, 64 entries embedded) + Phase 2 (transactional AI: live balance + transactions) + cost optimisation (4 layers: cache → direct KB → gpt-4o-mini → self-learning). All non-KYC OpenAI calls switched to gpt-4o-mini. embed-knowledge-base.js rewritten to use db-connection-helper.js. Rules updated with Tech Debt section. KB accuracy review flagged for Tap to Add Money entries.
 - **Mar 13 (22:00)**: Field-level AES-256-GCM encryption for idNumber (POPIA compliance). Deployed to UAT, Staging, Production.
@@ -179,11 +180,12 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 
 ### **Next Priority**
 **Go-Live Preparation (within 2 weeks)**:
-1. Review and clean UAT KB — deactivate Tap to Add Money (Q3.2a, Q3.2b), update Q3.2, review bulk payout/remittance/API entries
-2. Update `seed-support-knowledge-base.js` to use `db-connection-helper.js` with `--env` support
-3. Seed KB to Staging and Production — then run `npm run embed:kb:staging` and `npm run embed:kb:production`
-4. Deploy to Staging and Production — `./scripts/deploy-backend.sh --staging` / `--production`
-5. Archive legacy AI services and `run-sweep-patterns-migration.sh`
+1. ✅ KB generated and tested in UAT (240 active entries, topic filtering working)
+2. **NEXT**: Seed KB to Staging — `npm run generate:kb:staging` then `npm run embed:kb:staging`
+3. **NEXT**: Seed KB to Production — `npm run generate:kb:production` then `npm run embed:kb:production`
+4. **NEXT**: Deploy code (ragService v3.1 + topic filtering) — `./scripts/deploy-backend.sh --staging` then `--production`
+5. Archive legacy AI services (`bankingGradeSupportService.js`, `aiSupportService.js`, `semanticEmbeddingService.js`) and `scripts/run-sweep-patterns-migration.sh`
+6. Phase 3 (Future): Redis conversation memory, Admin portal for KB review screen
 
 **SBSA PayShap UAT** - Obtain OneHub credentials from Standard Bank; run migrations; set STANDARDBANK_PAYSHAP_ENABLED=true and SBSA_* env vars; whitelist callback URLs; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
 
