@@ -133,49 +133,54 @@ async function parseFaqMaster() {
 
 const GAP_TOPICS = [
   {
-    category: 'nfc',
-    topic: 'Tap to Add Money (NFC deposit feature)',
-    context: `MyMoolah has a "Tap to Add Money" feature (planned/in development) that lets users add money to their wallet by tapping a bank card or using Google Pay/Apple Pay on a Halo.Go NFC device. This feature is in the Transact section. Amounts range from R50 to R10,000. The wallet is credited once the payment completes. This feature may not be available yet in all environments.`,
-  },
-  {
-    category: 'usdc',
-    topic: 'USDC / Buy Digital Currency (Cross-border via VALR)',
-    context: `MyMoolah supports "Buy USDC" — a cross-border value transfer feature using VALR (FSCA-licensed CASP, FSP 53308). Users can send value internationally by converting ZAR to USDC. Travel Rule applies. Blocked countries: North Korea, Iran, Cuba, Venezuela, Syria, Russia, Belarus, Myanmar. Limits: R5,000/transaction, R15,000/day, R50,000/month. Solana addresses only. This requires VALR credentials and RMCP approval — may be pending activation.`,
+    category: 'registration',
+    topic: 'MyMoolah registration, login, and getting started',
+    context: `MyMoolah is a South African digital wallet. To register: open the app, provide SA mobile number, email, full name, date of birth, SA ID (green book, smart card, or temp cert) or passport (6-9 chars), and a secure password (8+ chars with letter, number, special char). Wallet ID starts with WAL-. Login uses mobile number + password. Session auto-expires after 15 minutes for security. Session tokens are in sessionStorage only (cleared when browser/tab closes).`,
   },
   {
     category: 'referral_program',
     topic: 'Referral Program — 3-level commission structure',
-    context: `MyMoolah has a 3-level referral program: 5% commission on Level 1 (direct referrals), 3% on Level 2, 2% on Level 3. No monthly caps. Referral code is in the app. Earnings activate when the referred user completes their first transaction. Payouts are daily at midnight to wallet. Example: 10 direct referrals spending R1,000/month = R500 (5% of R10,000).`,
+    context: `MyMoolah has a 3-level referral program: 5% commission on Level 1 (direct referrals), 3% on Level 2, 2% on Level 3. No monthly caps on earnings. Referral code shown in the Referral section of the app. Earnings activate when the referred user completes their first qualifying transaction. Payouts are daily at midnight directly to the referrer's wallet. Users can send SMS invites directly from the app. Dashboard shows total earnings, active referrals, and recent commissions.`,
+  },
+  {
+    category: 'fees',
+    topic: 'Wallet tiers and fee structure (Bronze, Silver, Gold)',
+    context: `MyMoolah uses a 3-tier fee system. Bronze (default): Zapper payment fee 1.265% VAT-inclusive. Silver (10+ transactions, R5,000+ volume): 1.15%. Gold (25+ transactions, R15,000+ volume): 0.92%. All fees are VAT-inclusive and shown on every confirmation screen before payment. No monthly account fee for personal wallets. Cash-out fees apply per EasyPay transaction. Fees vary by channel and transaction type.`,
   },
   {
     category: 'payments',
-    topic: 'Standard Bank PayShap Request-to-Pay (RTP and RPP)',
-    context: `MyMoolah integrates with Standard Bank PayShap for Request-to-Pay (RTP) and Request Payment (RPP) flows. This uses ISO 20022 Pain.001 and Pain.013 message formats. Fee is R4 per transaction. VAS breakdown: principal + fee for RPP, principal minus fee for RTP. Reference must equal recipient's MSISDN for AML compliance. Requires OneHub/Standard Bank credentials. T-PPP (Third Party Payment Provider) registered.`,
-  },
-  {
-    category: 'treasury',
-    topic: 'White Label and Treasury Platform for Businesses',
-    context: `MyMoolah offers white-label digital wallet solutions for businesses, NGOs, and government programmes. Features: branded wallet app, bulk payouts, voucher issuance, API access, reconciliation reports, float management, and multi-supplier VAS. Enterprise clients can configure custom limits, KYC tiers, and branding. MyMoolah is a T-PPP registered payment provider in South Africa.`,
+    topic: 'PayShap Request-to-Pay, Send Money, and payment flows',
+    context: `MyMoolah supports: P2P wallet-to-wallet transfers (instant), Send Money to bank accounts (EFT), PayShap Request-to-Pay using Standard Bank integration (mobile number as reference, AML requirement), QR payments via Zapper (92.3% test pass rate), and Bill Payments. PayShap uses Standard Bank as T-PPP. Failed payments release reserved funds within minutes. Wrong payments cannot be auto-reversed — contact support. Recurring payments can be scheduled where enabled.`,
   },
   {
     category: 'security',
-    topic: 'POPIA, AES-256-GCM Encryption, and Data Security',
-    context: `MyMoolah is POPIA compliant. ID numbers are encrypted at rest using AES-256-GCM with HMAC-SHA256 blind indexes. TLS 1.3 enforced for all API calls. JWT HS512 with short expiry. Multi-tier rate limiting. Parameterized queries prevent SQL injection. Funds are held in segregated safeguarded accounts. ISO 27001 ready architecture.`,
+    topic: 'Account security, fraud prevention, and POPIA compliance',
+    context: `MyMoolah security: TLS 1.3 for all connections, AES-256-GCM encryption for ID numbers at rest, JWT HS512 short-lived tokens, 15-minute session timeout, multi-tier rate limiting. Support will NEVER ask for your PIN or OTP. If you suspect fraud: change password immediately, contact support to freeze wallet, notify mobile operator. POPIA compliant — data not sold to third parties. Funds held in segregated safeguarded accounts at licensed institutions.`,
   },
   {
-    category: 'reconciliation',
-    topic: 'Automated Reconciliation and Float Management',
-    context: `MyMoolah runs automated N-way reconciliation between wallet ledgers, supplier transaction logs, and bank statements. Float accounts are monitored with configurable thresholds (warning at 15%, critical at 5% above minimum). The system runs hourly checks and sends email alerts. Ledger follows double-entry accounting (DEBITS = CREDITS). All transactions are immutably logged for audit trails.`,
+    category: 'eezipay',
+    topic: 'eeziPay voucher redemption via USSD',
+    context: `eeziPay is a voucher-based airtime and data product available in the MyMoolah VAS catalog. Purchase an eeziPay voucher in the app and receive a 12-digit PIN. To redeem: dial *130*3621*3*[YOURPIN]# from the phone you want to top up. Select 1 for airtime or 2 for data from the USSD menu. Works on MTN, Vodacom, Cell C, and Telkom. One eeziPay voucher covers both airtime and data — the user chooses at USSD redemption, not at purchase. If PIN doesn't work: ensure dialling from correct number, no spaces in PIN, voucher not already redeemed.`,
+  },
+  {
+    category: 'cash_out',
+    topic: 'EasyPay cash-out at retail stores',
+    context: `EasyPay cash-out lets users withdraw cash at participating retail stores: Shoprite, Checkers, Pick n Pay, Boxer, and thousands of other EasyPay-enabled outlets. In-app flow: select Cash Out, enter amount, receive a unique reference code. Present the code to the cashier. Fee is shown before confirmation. Limits apply per transaction, day, and month based on KYC level. If token fails at store: check it hasn't expired or been used, verify store accepts EasyPay, note store name/time/error and contact support.`,
   },
   {
     category: 'vas',
-    topic: 'Airtime, Data, Electricity, and Bill Payments via VAS suppliers',
-    context: `MyMoolah VAS (Value-Added Services) includes: Airtime and Data (Flash, MobileMart, eeziAirtime), Prepaid Electricity (MobileMart with real 20-digit token extraction), Bill Payments (municipal utilities, insurance, school fees), Gaming Vouchers, and Digital Vouchers. Suppliers: Flash (167 commercial products), MobileMart (Fulcrum Switch), dtMercury. Best offer selection automatically chooses the highest commission supplier per product.`,
+    topic: 'Airtime, Data, Electricity and Bill Payments (VAS)',
+    context: `MyMoolah VAS includes: Airtime and Data on MTN, Vodacom, Cell C, Telkom (via Flash and MobileMart/Fulcrum Switch); Prepaid Electricity with 20-digit token sent by SMS and shown in-app; Bill Payments (municipal utilities, insurance, school fees, other billers); Gaming and Digital Vouchers via Flash and dtMercury. Best offer automatically selected from multiple suppliers. If electricity token not received: check SMS and in-app history, wait 5 minutes, then contact support with transaction reference.`,
   },
   {
-    category: 'wallet',
-    topic: 'Wallet tiers, limits, and KYC requirements',
-    context: `MyMoolah wallets have transaction and balance limits based on KYC tier. Unverified wallets have very low limits. Verified (KYC complete) wallets have standard limits. Higher limits may require proof of address and income. KYC status 'verified' is required for debit transactions. Wallet IDs are formatted as WAL-xxxx. Each user has one wallet by default.`,
+    category: 'otp_help',
+    topic: 'OTP issues, password reset, and login problems',
+    context: `OTPs for login and verification are 6-digit codes sent via SMS. They expire after 10 minutes. Rate limit: 3 attempts before 1-hour lockout. If OTP not received: check signal, wait 60 seconds, request new one. Forgot password: tap "Forgot Password?" on login screen, enter mobile number, receive OTP, set new password (8+ chars with letter, number, special char). If mobile number is no longer accessible: contact support@mymoolah.africa with ID documents for manual re-binding. Account locks after multiple failed logins — wait 30 minutes or contact support.`,
+  },
+  {
+    category: 'platform_overview',
+    topic: 'What MyMoolah is and how it works',
+    context: `MyMoolah is a South African digital wallet and treasury platform. Not a bank — funds held in segregated accounts at licensed institutions. Services: e-wallet storage, instant P2P payments, PayShap, Zapper QR payments, VAS (airtime/data/electricity/bills), EasyPay cash-out, voucher issuance and redemption, bulk employer payouts, referral program (5%/3%/2% 3-level commissions), cross-border transfers via Moolah Move (contact support to activate). Headquartered in Pretoria, South Africa. T-PPP registered. FICA/AML, POPIA, SARB/PASA compliant.`,
   },
 ];
 

@@ -1,366 +1,362 @@
 # MyMoolah Treasury Platform – Comprehensive FAQ Library
 
-_Last updated: 5 March 2026_
+_Last updated: 12 March 2026_
 
-This FAQ consolidates answers from every functional area of MMTP (wallet, KYC, suppliers, APIs, and support) so that customer agents, suppliers, and integration partners share the same source of truth. Use this document before escalating to engineering. Sections are ordered by the scenarios we support most frequently.
-
----
-
-## 1. Wallet & Account Experience
-
-**Q: How do I register a new MyMoolah wallet?**  
-A: Use the registration screen in the wallet app. Provide your South African mobile number (13-digit SA ID or 6‑9 character passport number accepted), email, and a banking-grade password (min 8 chars with letter + number + special). Successful registration instantly provisions a wallet (`WAL-xxxx`) and ledger account.
-
-**Q: Why does the wallet log me out when I minimise the tab or lock my phone?**  
-A: Tokens are stored in `sessionStorage` only. When the browser suspends the tab, the session token is cleared to prevent hijacking. Re-authentication is mandatory whenever the session is reactivated.
-
-**Q: What is the inactivity timeout?**  
-A: 15 minutes. Any inactive session beyond 15 minutes is revoked automatically to align with banking security practice.
-
-**Q: How do I reset my password?**  
-A: On the login screen tap **"Forgot Password?"**, enter your registered mobile number, and a 6-digit OTP will be sent via SMS. Enter the OTP and your new password (min 8 chars with letter + number + special). OTPs expire after 10 minutes and you have 3 attempts. If SMS is not received, wait 1 hour for rate limit reset. If you no longer control that number, support must re-bind the account after KYC verification.
-
-**Q: How do I change my phone number?**  
-A: Go to Profile → Edit Profile → tap "Change" next to phone number. Enter your new SA mobile number and an OTP will be sent to the NEW number. Enter the OTP to confirm ownership. The new number cannot already be registered to another account. OTPs expire after 10 minutes.
-
-**Q: Why do demo tokens fail against the backend?**  
-A: Demo tokens (prefixed `demo-token-`) are filtered out before every request. Obtain a real JWT by logging in via `/api/v1/auth/login`.
-
-**Q: Why is my balance not reflecting instantly?**  
-A: Balance refresh occurs whenever the dashboard loads or when `/api/v1/wallets/balance` completes (average 130–150 ms). If you still see stale data, hit refresh—if the transaction is pending it will appear once the supplier confirms settlement.
+This FAQ is the single source of truth for customer support, covering all live and developed features of the MyMoolah digital wallet. Sections are ordered by the most common customer enquiries. Update this document and regenerate the knowledge base whenever a new feature goes live.
 
 ---
 
-## 2. Identity, KYC & Compliance
+## 1. Platform Overview
 
-**Q: Which documents are accepted for KYC?**  
-A: SA ID card, SA green ID book, SA passport, SA driver’s licence, Temporary ID certificate, International passport, and Proof of Address (utility bill, bank statement, municipal account, insurance policy) younger than 3 months.
+**Q: What is MyMoolah?**
+A: MyMoolah is a South African digital wallet and treasury platform. It lets you store money, send and receive instant payments, buy airtime, data, electricity and other services, issue and redeem vouchers, cash out at retail partners, and earn referral commissions — all from your mobile phone or browser.
 
-**Q: How does SA driver’s licence validation work?**  
-A: The OCR engine supports both `02/##########` formats and the `AB123456CD` licence number. It extracts initials + surname (caps), validates that the “Valid To” date has not expired, and only relies on the expiry date (not the “Valid From” date).
+**Q: Is MyMoolah a bank?**
+A: No. MyMoolah is a registered payment platform, not a bank. Your wallet balance is held in safeguarded, segregated accounts at licensed South African financial institutions. MyMoolah handles the technology, compliance, and user experience — it does not take deposits or offer credit.
 
-**Q: Can I use an international passport only?**  
-A: Yes. Passport numbers must be 6–9 alphanumeric characters. For user ID 1 (test harness) the ID/passport match is skipped only when testing passports; all other users must match their registered ID.
+**Q: Where is MyMoolah based?**
+A: Block A, Erasmus Forum, 434 Rigel Ave South, Erasmusrand, Pretoria, 0181, South Africa.
 
-**Q: What happens if OpenAI refuses to read my ID?**  
-A: The KYC service automatically falls back to Tesseract OCR. OpenAI refusal patterns (“I’m sorry…”) now trigger the fallback before JSON parsing, so there is no downtime even if the model declines the document.
+**Q: Who can use MyMoolah?**
+A: Any South African resident 18 years or older with a valid SA ID or passport. Employers, NGOs, and programme operators can also use the platform to pay staff or distribute funds in bulk.
 
-**Q: How many OCR retries do I get?**  
-A: Two automated retries (OpenAI + fallback). On the third failure the record is queued for manual review and support receives an alert (`KYC_MANUAL_REVIEW`).
+**Q: Is MyMoolah free to use?**
+A: Registration is free. Certain transactions carry a fee (e.g. Zapper payments, cash-outs) which is always shown clearly before you confirm. Your fee tier depends on your wallet level — Bronze, Silver, or Gold.
 
-**Q: What KYC status blocks debit transactions?**  
-A: Any wallet where `kycVerified=false` cannot perform debit transactions. The middleware returns `KYC_VERIFICATION_REQUIRED`.
-
----
-
-## 3. Payments, Transfers & Fees
-
-**Q: How are transaction fees displayed?**  
-A: Every UI and API now uses the neutral label **“Transaction Fee”** regardless of supplier. Zapper, PayShap, vouchers, and internal ledger entries all surface the same wording for consistency.
-
-**Q: How does PayShap “Request Money” work?**  
-A: The Request Money flow uses Peach Payments’ PayShap integration. We send a Standard Bank-compliant payload that includes the requester’s MSISDN (auto-populated and read-only) plus a user-provided description. Standard Bank returns the MSISDN in the success payload so MMTP can credit the correct wallet.
-
-**Q: Can I send money to both wallets and bank accounts from one beneficiary?**  
-A: Yes. The unified beneficiary architecture lets one contact store multiple payment methods (MyMoolah wallet, bank account, mobile money) plus service accounts (airtime, data, electricity, billers). When multiple accounts exist, the UI shows an account selector and remembers the default.
-
-**Q: What if a Zapper QR payment fails?**  
-A: The QR page shows supplier-side errors immediately. If the code cannot be decoded or the Zapper token expired, we surface the Zapper error payload. For repeat failures capture the QR screenshot and run `scripts/test-zapper-uat-complete.js` to confirm the integration status.
-
-**Q: Why are the “Transaction Fee” entries hidden from my history?**  
-A: Internal ledger movements (VAT, revenue, float credits) are filtered server-side so customers only see customer-facing entries. All records still exist in the database for reconciliation.
+**Q: How is MyMoolah different from a bank account?**
+A: It is an e-wallet built for instant transfers, VAS purchases, vouchers, and retail cash-outs. There are no cheque books, overdrafts, or branch services. Everything is done digitally on your phone.
 
 ---
 
-## 4. Beneficiaries & Contacts
+## 2. Registration & Getting Started
 
-**Q: Why did we redesign beneficiaries?**  
-A: Banking-grade compliance requires a single beneficiary per person/entity with multiple linked accounts. The new model enforces `(userId + msisdn)` uniqueness, stores each payment method or service account in normalized tables, and mirrors legacy JSONB fields for backward compatibility.
+**Q: How do I register a new MyMoolah wallet?**
+A: Open the MyMoolah wallet app and tap "Register". Enter your South African mobile number, email address, full name, date of birth, SA ID or passport number, and create a secure password (minimum 8 characters with at least one letter, number, and special character). Once registered, your wallet (WAL-xxxx) is created instantly.
 
-**Q: How do I add multiple bank accounts for the same person?**  
-A: Edit the beneficiary → “Add Account” → choose **Bank**. Provide bank name, account number (8–12 digits), account type, branch code, and toggle “Default” if desired. Repeat for each account; the dropdown will show them all.
+**Q: Who can register?**
+A: Anyone 18 or older with a valid SA ID (green book, smart card, or temporary certificate) or a valid passport (6–9 character passport number).
 
-**Q: Why must PayShap references equal the recipient’s mobile number?**  
-A: Peach/Standard Bank require the recipient MSISDN as the immutable reference for wallet deposits to satisfy AML tracing. The UI enforces this and bypasses arbitrary references for PayShap payouts.
+**Q: What information is required to register?**
+A: Full name, date of birth, SA ID or passport number, South African mobile number, email address, and a secure password. Proof of address may be required for higher transaction limits.
 
-**Q: Can beneficiaries created on Airtime/Data show inside Send Money?**  
-A: Yes. Every beneficiary is global—creating one on Airtime/Data or Electricity automatically exposes it under Send Money and Request Money once the relevant account types exist.
+**Q: Can I register with a foreign passport?**
+A: Yes. A valid foreign passport is accepted. Passport numbers must be 6–9 alphanumeric characters.
 
----
+**Q: How do I log in?**
+A: Open the app and log in with your registered South African mobile number and password. If you forget your password, use the "Forgot Password?" option on the login screen.
 
-## 5. Value-Added Services & Supplier Integrations
-
-### Flash & Product Catalog
-- **Scope**: All 167 Flash Commercial products are modelled with exact commission tiers.
-- **Selection**: Automatic supplier selection chooses the best commission per product variant.
-- **Synchronization**: Real-time catalog sync keeps Flash, MobileMart, dtMercury, and Peach catalogs unified.
-
-### eeziPay (eeziAirtime / eeziData) Voucher Redemption
-- **How to redeem**: Dial `*130*3621*3*YOURPIN#` from the phone you want to top up. Replace YOURPIN with your 12-digit PIN. From the on-screen menu, choose airtime or a data bundle.
-- **Single product**: Flash has one eezi-voucher product; the user chooses airtime vs data at USSD redemption (not at purchase).
-- **Networks**: Works on MTN, Vodacom, Cell C, and Telkom.
-- **AI support**: eeziPay How To entries in `ai_knowledge_base`; run `node scripts/add-eezipay-redemption-knowledge-to-ai.js` to add/update.
-
-### MobileMart (Fulcrum Switch)
-- **Status**: UAT product endpoints for Airtime, Data, Voucher, Bill Pay, and Utility are live (`https://uat.fulcrumswitch.com`).
-- **Purchases**: 4/7 purchase types pass (voucher-based). Pinless products require valid UAT MSISDNs supplied by MobileMart.
-- **Auth**: OAuth via `/connect/token`. API path pattern `/v1/{vasType}/products`.
-
-### Peach Payments
-- **Coverage**: OAuth 2.0 authentication, PayShap Request-to-Pay (RTP) and Request Payment (RPP), Request Money, and error handling.
-- **Status**: Sandbox is 100% passing; production rollout pending float account setup.
-- **Compliance**: PCI DSS aligned and ready for production once float funding is finalised.
-
-### Zapper
-- **Coverage**: Complete UAT suite (92.3% pass) covering authentication, QR decoding, payment history, and end-to-end payment execution.
-- **Frontend**: QR page is live; modal labels use the standard “Transaction Fee.”
-- **Documentation**: See `docs/ZAPPER_UAT_TEST_REPORT.md` for the detailed plan.
-
-### dtMercury & Vouchers
-- **Usage**: Additional supplier for voucher inventory. Catalog metadata flows through the same unified product architecture used by Flash/MobileMart.
+**Q: Why does the app log me out automatically?**
+A: For your security, any inactive session is automatically closed after 15 minutes. Your session also ends when you close the browser tab or lock your phone screen.
 
 ---
 
-## 6. API & Developer FAQ
+## 3. KYC & Identity Verification
 
-**Q: What is the base API URL?**  
-A: Development: `http://localhost:3001/api/v1`. Staging/Cloud Run exposes the same `/api/v1` prefix behind HTTPS.
+**Q: What is KYC and why is it required?**
+A: KYC (Know Your Customer) is an identity verification process required by South African law (FICA/AML). It confirms who you are and protects the platform from fraud and money laundering.
 
-**Q: Where is the OpenAPI spec?**  
-A: Visit `/api/v1/docs` on any environment.
+**Q: Which documents are accepted for KYC?**
+A: SA green ID book, SA smart ID card, SA passport, SA driver's licence, temporary ID certificate, and valid foreign passport. Proof of address (utility bill, bank statement, municipal account, or insurance policy less than 3 months old) is required for higher limits.
 
-**Q: What authentication is required?**  
-A: JWT (HS512) short-lived tokens. Obtain via `POST /api/v1/auth/login` with the user’s mobile number and password.
+**Q: How long does KYC take?**
+A: Usually a few minutes. Our system uses automated OCR to read your document. If the image is blurry, expired, or details don't match, it may go to manual review and take longer.
 
-**Q: What are the API rate limits?**  
-A: 1,000 requests/hour per user, <200 ms average response target, max 10 MB payload, pagination capped at 100 items/page.
+**Q: My KYC was rejected — what do I do?**
+A: Check the reason shown in the app. Re-upload a clear, un-cropped photo of a valid, unexpired document. Make sure your name and ID number exactly match what you registered with. If still rejected, contact support with high-resolution scans for manual review.
 
-**Q: What does the standard error payload look like?**  
-A:
-```json
-{
-  "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Invalid input parameters",
-    "details": [
-      {
-        "field": "phone_number",
-        "message": "Phone number must be valid South African format"
-      }
-    ]
-  }
-}
-```
+**Q: Can I change my personal details after registration?**
+A: Email, phone number, and address can be updated in your profile. Changing your ID number, legal name, or date of birth requires official supporting documents and triggers full re-verification.
 
-**Q: Which health endpoints are available?**  
-A: `GET /api/v1/health`, `GET /api/v1/status`, plus supplier-specific checks (Peach, Zapper, MobileMart) exposed through their respective service scripts.
+**Q: What happens if my KYC is not verified?**
+A: Unverified wallets can receive funds but cannot make payments or transfers. Complete KYC to unlock full wallet functionality.
 
-**Q: Where do I find the admin portal (MMAP)?**  
-A: Portal backend listens on port 3002 and frontend on 3003. It ships with its own authentication and mimics the wallet design system.
+**Q: Will my ID documents be stored securely?**
+A: Yes. ID numbers are encrypted at rest using AES-256-GCM encryption. Documents are processed according to POPIA requirements and not shared with third parties without your consent.
 
 ---
 
-## 7. Supplier & Merchant Support
+## 4. Wallet, Balance & Loading Funds
 
-**Q: How do suppliers onboard to MobileMart Fulcrum?**  
-A: Provide OAuth credentials, configure the base URL (`https://uat.fulcrumswitch.com` for UAT), and share UAT MSISDNs for pinless tests. Our catalog sync script ingests their product feed automatically once credentials are active.
+**Q: What is my wallet ID?**
+A: Your wallet ID starts with "WAL-" and is shown on your dashboard. It is also available in your profile settings.
 
-**Q: How can merchants reconcile Zapper transactions?**  
-A: Use the organization payment history endpoint exposed by ZapperService or run `scripts/test-zapper-uat-complete.js` to pull the latest settlement batch. History includes org-level and customer-level lookups.
+**Q: How do I check my balance?**
+A: Your current balance is displayed on the dashboard whenever you log in. Tap "Refresh" if you need the latest figure after a recent transaction.
 
-**Q: What data privacy commitments exist for suppliers?**  
-A: All supplier integrations run through HTTPS with TLS 1.3, JWT-based service authentication (where supported), and audit logs tagged per supplier. Sensitive credentials are stored in Google Secret Manager for staging/production.
+**Q: How do I load money into my wallet?**
+A: You can load funds via EFT (bank transfer) to your linked account, or by receiving an EasyPay voucher payment, or from another wallet user sending you money. The available load methods and instructions are shown in the "Transact" or "Top Up" section of the app.
 
----
+**Q: Why is my balance not updating?**
+A: Balance updates happen when the dashboard loads. If a transaction is still pending, the balance reflects once the payment is confirmed. Pull down to refresh. If money was paid but still not showing after 15 minutes, contact support with your transaction reference.
 
-## 8. Support & AI Assistant
+**Q: Why is some of my balance on hold?**
+A: Funds can be reserved for pending transactions, disputes, or compliance reviews. Contact support if a hold is unexpected — though for security reasons, not every hold trigger can be disclosed.
 
-**Q: How does the new FAQ-powered assistant work?**  
-A: The support service first searches the `ai_knowledge_base` table (seeded from this FAQ). Only if no match exists does it invoke GPT‑5.
+**Q: Do I earn interest on my wallet balance?**
+A: No. MyMoolah is a transactional e-wallet, not a savings product. No interest is earned on wallet balances.
 
-**Q: Is there a limit on AI responses?**  
-A: Yes. To control token spend, each user receives up to **5 GPT‑backed answers per 24-hour rolling window**. FAQ responses do not count toward this limit.
-
-**Q: Can we add new FAQ entries?**  
-A: Yes. Update `docs/FAQ_MASTER.md`, then run `node scripts/seed-support-knowledge-base.js` to refresh the DB. For incremental additions (e.g. eeziPay redemption), run `node scripts/add-eezipay-redemption-knowledge-to-ai.js` or `node scripts/add-referral-knowledge-to-ai.js`. The assistant will immediately start using the new entries.
-
-**Q: Where do I report missing or inaccurate answers?**  
-A: Log an issue in `docs/agent_handover.md` under “Next Steps” or create a GitHub issue tagged `support-faq`. Always include the question asked and the expected authoritative answer.
+**Q: Are there limits on how much I can hold or transact?**
+A: Yes. Limits depend on your KYC tier, wallet level (Bronze/Silver/Gold), and transaction type. Limits are shown in the app and increase as you complete KYC and build transaction history.
 
 ---
 
-## Extended Programme & Integration FAQ (Q1 – Q16)
+## 5. Sending & Receiving Money
 
-The following sections mirror the structure requested in the MMTP FAQ playbook (Q1–Q16). Each answer has been aligned with the current MyMoolah architecture, suppliers, and regulatory posture.
+**Q: How do I send money to another person?**
+A: Tap "Send Money" in the app, search for the recipient by name or phone number, enter the amount, review the fee, and confirm. Funds arrive instantly for MyMoolah-to-MyMoolah transfers.
 
-### Section 1 – Platform Overview
-- **Q1.1 What is MyMoolah?**  
-  MyMoolah is a South African digital wallet and treasury platform for storing value, sending/receiving instant payments, buying value-added services, issuing/redeming vouchers, paying bills, and performing controlled cash-outs. Individuals, merchants, NGOs, and enterprises can all consume the same secure rails.
-- **Q1.2 Is MyMoolah a bank?**  
-  No. MyMoolah partners with licensed sponsor banks and regulated payment providers for settlement. Wallet balances are safeguarded in segregated accounts; MyMoolah orchestrates treasury, compliance, and user experience but is not a deposit-taking bank.
-- **Q1.3 Where is MyMoolah based?**  
-  Headquarters: Block A, Erasmus Forum, 434 Rigel Ave South, Erasmusrand, Pretoria, 0181, South Africa.
-- **Q1.4 What services does MyMoolah provide?**  
-  E-wallet storage, instant payments, voucher issuance/redemption, cash-in/out via national retail networks, salary/wage disbursements, VAS sales (airtime, data, electricity, gaming, vouchers), bill payments, and cross-border remittances via partners.
-- **Q1.5 Who uses MyMoolah?**  
-  Everyday consumers, employers paying staff or gig workers, fintechs/retailers/insurers needing white-label wallets or vouchers, NGOs/government programmes managing stipends, and remittance operators needing payout rails.
-- **Q1.6 How is this different from a bank account?**  
-  It is an e-wallet optimised for instant transfers, vouchers, and retail cash-outs. There are no cheque books, overdraft, or branch services; onboarding is 100% digital and focused on mobile/web flows.
+**Q: Can I send money to a bank account?**
+A: Yes. You can send to a saved beneficiary's bank account. Select or add the bank account details (bank name, account number, branch code) when creating the beneficiary.
 
-### Section 2 – Registration, Onboarding & KYC
-- **Q2.1 Who can register?**  
-  Anyone 18+ with a valid SA ID or passport who accepts the Terms & Privacy Policy. Programme-specific rules may allow limited wallets for foreign nationals or minors subject to compliance approval.
-- **Q2.2 What information is required?**  
-  Full name, date of birth, SA ID/passport number, mobile, email, residential address, and proof of address when higher limits apply.
-- **Q2.3 Why do you collect IDs?**  
-  FICA/AML regulations require identity verification, sanctions screening, and fraud checks to keep the ecosystem safe.
-- **Q2.4 How long does verification take?**  
-  Usually minutes when OCR and data sources align. Blurry/expired docs or mismatched data trigger manual review and may take longer.
-- **Q2.5 My KYC was rejected; now what?**  
-  Inspect the in-app reason, re-upload clear/valid docs, ensure details match official records. If still blocked, contact support with high-resolution scans for manual review.
-- **Q2.6 Can I change my personal details later?**  
-  Email, MSISDN, and address can be self-serviced. ID number, names, or birth date require official supporting documents and may trigger full re-verification.
+**Q: How do I request money from someone?**
+A: Use the "Request Money" or "PayShap" feature. Enter the sender's mobile number and amount. They receive a notification to pay you.
 
-### Section 3 – Wallet Accounts, Balances & Limits
-- **Q3.1 What balances exist?**  
-  Main wallet, reserved/locked balances (pending payouts, escrow), voucher pots, and merchant settlement balances depending on role.
-- **Q3.2 How do I load funds?**  
-  Instant Pay (proxy-linked account), EFT, voucher redemption, and cash-in tokens at retail partners. Active methods and fees are shown in-app.
-- **Q3.3 Are there limits?**  
-  Yes—per transaction, per day, per month, and overall balances. Limits depend on KYC tier, regulatory rules, and programme risk profiles.
-- **Q3.4 Do I earn interest?**  
-  No. Wallet value is for payments/transactions and is not marketed as an interest-bearing savings product.
-- **Q3.5 Why is my balance on hold?**  
-  Causes include pending transactions, disputes/chargebacks, or risk/compliance reviews. Support can advise, but not every trigger is disclosed for security reasons.
+**Q: What is PayShap?**
+A: PayShap is a South African real-time payment system linked to Standard Bank. It lets you request or send money instantly using a mobile number as the payment reference. A small fee applies per transaction.
 
-### Section 4 – Payments & Transfers
-- **Q4.1 Which payment types are supported?**  
-  P2P, P2B/B2B instant payments, EFTs, QR/token merchant payments, salary/bulk payouts, bill payments, and supported cross-border corridors.
-- **Q4.2 What is an instant payment?**  
-  A real-time rail where funds reflect within seconds (once approved) instead of batched EFT timelines.
-- **Q4.3 EFT vs instant payment?**  
-  EFT uses traditional bank settlement with cut-off times; instant uses real-time rails and typically costs more but reflects immediately.
-- **Q4.4 Can I schedule/recurring?**  
-  Where enabled, beneficiaries can be saved and recurring schedules configured via dashboard/API (e.g., monthly bills, payroll).
-- **Q4.5 Why is my instant payment pending?**  
-  Could be network delays, destination unresponsive, or risk review. It will finish as success or fail/refund once resolved.
-- **Q4.6 I paid the wrong account; can I reverse it?**  
-  Once successful, funds can’t be clawed back automatically. Contact the recipient and lodge a dispute; success depends on cooperation and banking rules.
-- **Q4.7 Payment failed—what now?**  
-  The app shows a failure. No funds are deducted (reserved funds release shortly). If deduction without record occurs, send support the reference for investigation.
+**Q: Can I send money to someone who is not on MyMoolah?**
+A: Yes. You can send to a bank account using the beneficiary flow (EFT) or via PayShap to any South African mobile number linked to a PayShap-enabled bank.
 
-### Section 5 – Digital Vouchers
-- **Q5.1 What are MyMoolah vouchers?**  
-  Secure tokens representing cash or specific products, deliverable via SMS/email/in-app and redeemable at participating outlets or within the wallet.
-- **Q5.2 How are vouchers issued?**  
-  Via dashboard (single) or API/bulk uploads for campaigns. Delivery methods include SMS/email, in-app allocation, or exported lists.
-- **Q5.3 Where can I redeem?**  
-  Inside the wallet, at listed national retailers/spaza networks, or specific VAS/billers per voucher type. The voucher terms list allowed merchants.
-- **Q5.4 Do vouchers expire?**  
-  Yes—expiry is defined by the issuer/programme. After expiry, remaining value typically reverts to the issuer (subject to consumer law).
-- **Q5.5 Lost my voucher?**  
-  If unused, support can search by phone/email/ID and resend. If redeemed, it cannot be reissued.
+**Q: I sent money to the wrong person — can I reverse it?**
+A: Once a successful payment is confirmed, funds cannot be automatically reversed. Contact support immediately. We will attempt to facilitate a resolution but cannot guarantee recovery.
 
-### Section 6 – Cash-In / Cash-Out & Retail Networks
-- **Q6.1 How do cash-outs work?**  
-  Generate a token/QR in the app, visit a partner store, present the code (and ID if required), and receive cash once the POS validates the token.
-- **Q6.2 Where can I withdraw?**  
-  At participating national retailers and informal merchant networks listed under “Trusted Service Providers” in the app.
-- **Q6.3 Are there fees?**  
-  Yes—fees depend on amount, partner, and programme rules. Fees are shown before confirmation.
-- **Q6.4 Token failing at store?**  
-  Ensure it hasn’t expired or been used, verify the store is authorised, and amounts match. If it still fails, note the token number, store, time, and POS error and contact support.
+**Q: My payment failed — was I charged?**
+A: No. If a payment fails, no funds are deducted. Any reserved amount is released shortly. If you see a deduction without a matching transaction record, contact support with the reference.
 
-### Section 7 – Value-Added Services (VAS) & Bill Payments
-- **Q7.1 What can I buy?**  
-  Airtime/data, prepaid electricity/water, gaming vouchers, streaming credits, and other digital products shown in the catalog.
-- **Q7.2 Didn’t receive my electricity token?**  
-  Check SMS/email/in-app history. If still missing, capture the transaction reference and contact support; once a valid token is issued it cannot be reversed.
-- **Q7.3 Which bills can I pay?**  
-  Municipal utilities, insurance, school fees, and other billers exposed in the bill-pay list. Availability varies per programme.
-- **Q7.4 Can I schedule bill payments?**  
-  If enabled, you can set recurring payments or reminders. If the option isn’t visible, it isn’t yet enabled for your profile.
+**Q: Why is my payment pending?**
+A: This can happen due to network delays, the destination being temporarily unavailable, or a risk review. The payment will complete or be refunded once resolved.
 
-### Section 8 – Wages, Salary Remittances & Bulk Payouts
-- **Q8.1 Employer payouts?**  
-  Employers can upload payroll files or use APIs to push funds into wallets/bank accounts, or issue vouchers for incentives/relief.
-- **Q8.2 Paying unbanked staff?**  
-  Yes—funds settle into wallets which staff can spend on VAS/bills, cash-out at retailers, or transfer via remittance partners.
-- **Q8.3 How do I reconcile bulk runs?**  
-  Use dashboard/API reports showing per-beneficiary status, totals per batch/channel, and detailed error logs for failures.
-
-### Section 9 – Cross-Border Remittances
-- **Q9.1 Supported countries?**  
-  Depends on active partner corridors. The app lists current send/receive countries and payout options (wallet, bank, foreign agents).
-- **Q9.2 FX rates and fees?**  
-  Displayed prior to confirmation, based on market FX plus a margin. Rates vary per corridor/amount/payout method.
-- **Q9.3 How long do transfers take?**  
-  Near real-time for many corridors; others can take a few hours up to a business day subject to AML checks and destination systems.
-
-### Section 10 – Security, Fraud & Privacy
-- **Q10.1 How is my money protected?**  
-  Multi-factor auth, encrypted data, fraud monitoring, segregated client funds, and strict access controls. POPIA compliance enforced.
-- **Q10.2 Suspect fraud or lost phone?**  
-  Change your PIN/password, log out remotely, contact support to block the wallet, notify your mobile network, and file a case if needed.
-- **Q10.3 Will support ever ask for my PIN/OTP?**  
-  Never. Any request for PIN, OTP, or full card details is fraudulent; report it immediately.
-- **Q10.4 Privacy commitments?**  
-  Governed by Terms & Privacy Policy in line with POPIA and contractual obligations. Data is only used as permitted.
-
-### Section 11 – Fees & Pricing
-- **Q11.1 How do I see fees?**  
-  Every transaction confirmation screen shows the live fee. A tariff sheet or Fees section is available per programme.
-- **Q11.2 Monthly account fees?**  
-  Depends on programme—some have zero monthly costs, others levy subscriptions or sponsor-paid fees. Refer to your onboarding pack.
-- **Q11.3 Why is my fee higher than expected?**  
-  Fees vary by channel, destination, partner, and promotional period. Always review the live fee before approving.
-
-### Section 12 – Regulatory, Legal & Governance
-- **Q12.1 Which laws apply?**  
-  FICA/AML rules, POPIA, SARB/PASA payment directives, and consumer/contract law as specified in the Terms & Conditions.
-- **Q12.2 Where are the Terms & Privacy Policy?**  
-  Accessible via the website and inside the app under Help/Legal.
-- **Q12.3 How are disputes handled?**  
-  Log a complaint via in-app/email/call centre; MMTP investigates per SLA. If unresolved, escalate as described in the Terms (e.g., ombud/regulator for relevant products).
-
-### Section 13 – Developer & Integration FAQs
-- **Q13.1 Are APIs available?**  
-  Yes, for wallet creation, payments, voucher issuance, VAS/bill-pay, and reporting. Base URLs/auth are documented in `docs/API_DOCUMENTATION.md`.
-- **Q13.2 How do developers authenticate?**  
-  Via issued API keys or tokens tied to each environment. Keep credentials secret and follow the authentication section of the docs.
-- **Q13.3 Is there a sandbox?**  
-  Yes—use the Codespaces/dev environment or dedicated sandbox endpoints for automated testing.
-- **Q13.4 Webhooks/callbacks?**  
-  Asynchronous events (payout completion, voucher redemption, bill-pay status) post to HTTPS endpoints you configure; verify signatures/shared secrets.
-- **Q13.5 Rate limits & performance?**  
-  Limits depend on product tier but default to 1,000 requests/hour per user with 99.9% uptime targets. SLAs specify maintenance and incident processes.
-- **Q13.6 Error handling & idempotency?**  
-  All APIs return structured error codes. Use idempotency keys on financial operations and implement safe retries with exponential backoff.
-
-### Section 14 – Treasury, Settlement & Reconciliation
-- **Q14.1 How does settlement work?**  
-  Merchant/programme accounts accumulate value and settle on agreed cycles (T+0/T+1/T+2) into nominated bank accounts or master wallets, accompanied by detailed settlement files.
-- **Q14.2 How are client funds safeguarded?**  
-  Funds sit in segregated sponsor-bank accounts, reconciled daily between ledger, bank, and partner networks, and audited regularly.
-- **Q14.3 Reconciling with GL/ERP?**  
-  Pull transaction/settlement reports via dashboard or API, map transaction codes to GL accounts, and investigate breaks using event logs and bank statements.
-
-### Section 15 – White-Labelling & Programme Configuration
-- **Q15.1 Can MMTP be white-labelled?**  
-  Yes—MyMoolah can run as a MyMoolah-branded wallet, a white-label backend, or a treasury hub behind another front end.
-- **Q15.2 What can be configured?**  
-  Onboarding flows, KYC tiers, limits, rails, voucher types, VAS catalog, fee structures, settlement rules, and UX/branding per programme.
-
-### Section 16 – Support Channels & Operational FAQs
-- **Q16.1 Contacting support?**  
-  Use in-app chat, email support@mymoolah.africa, call +27 21 140 7030, or submit the website form. Hours/SLAs are published in-app.
-- **Q16.2 What info should a ticket include?**  
-  Full name, registered MSISDN, transaction references/dates/amounts, screenshots or till slips, and a clear description of the issue.
-- **Q16.3 How long do resolutions take?**  
-  Depends on complexity, partner involvement, and regulatory reviews. Support acknowledges promptly and updates according to internal SLAs.
+**Q: Can I pay with a QR code?**
+A: Yes. MyMoolah supports Zapper QR payments. Scan a Zapper QR code at a participating merchant to pay from your wallet.
 
 ---
 
-This FAQ will continue to expand as new suppliers, features, and regulatory requirements go live. Update this file and re-seed the knowledge base whenever a new category or answer is introduced.
+## 6. Beneficiaries & Contacts
 
+**Q: What is a beneficiary?**
+A: A beneficiary is a saved contact you send money to. Each beneficiary can have multiple linked accounts — a MyMoolah wallet, bank account, or service account (airtime, electricity, etc.).
+
+**Q: How do I add a beneficiary?**
+A: Go to Beneficiaries → Add New → enter the person's name and mobile number. Then add the account type (wallet, bank account, airtime, electricity, etc.).
+
+**Q: Can I save multiple bank accounts for the same person?**
+A: Yes. Edit the beneficiary → "Add Account" → choose Bank. Add as many accounts as needed. Set one as the default for quick payments.
+
+**Q: If I add someone under Airtime/Data, will they appear in Send Money too?**
+A: Yes. Beneficiaries are shared across the app. A contact added under Airtime automatically appears in Send Money, Request Money, and other flows.
+
+---
+
+## 7. Airtime, Data & Value-Added Services (VAS)
+
+**Q: Can I buy airtime for myself or someone else?**
+A: Yes. Go to "Buy Airtime" in the app, select the network (MTN, Vodacom, Cell C, Telkom), enter the amount or select a bundle, and confirm. Airtime can be sent to any South African number.
+
+**Q: Can I buy data bundles?**
+A: Yes. The same flow as airtime — select "Buy Data," choose the network and bundle size, and confirm. Data is delivered directly to the phone number.
+
+**Q: Can I buy prepaid electricity?**
+A: Yes. Enter your meter number, select the amount, confirm, and a 20-digit electricity token is generated and sent to you via SMS and shown in the app.
+
+**Q: I bought electricity but didn't receive the token — what do I do?**
+A: Check your SMS and in-app transaction history. If the token is missing after 5 minutes, take note of your transaction reference and contact support. A valid token cannot be reversed once issued.
+
+**Q: Can I pay bills through MyMoolah?**
+A: Yes. Municipal utilities, insurance, school fees, and other listed billers are available in the Bill Payments section. Availability depends on your programme and region.
+
+**Q: What networks are supported for airtime and data?**
+A: MTN, Vodacom, Cell C, and Telkom.
+
+**Q: What is eeziPay / eeziAirtime?**
+A: eeziPay is a voucher-based airtime and data product. You purchase an eeziPay voucher in the app and receive a 12-digit PIN. To redeem it, dial `*130*3621*3*[YOURPIN]#` from the phone you want to top up and follow the menu to choose airtime or a data bundle. Works on MTN, Vodacom, Cell C, and Telkom.
+
+**Q: How do I redeem my eeziPay voucher?**
+A: Dial `*130*3621*3*[YOUR 12-DIGIT PIN]#` from the mobile number you want to top up. Select 1 for airtime or 2 for data from the USSD menu that appears.
+
+**Q: Why isn't my eeziPay PIN working?**
+A: Check that you are dialling from the correct number, that the PIN is entered exactly as shown (12 digits, no spaces), and that the voucher has not already been redeemed. If still failing, contact support with your transaction reference.
+
+---
+
+## 8. Vouchers
+
+**Q: What types of vouchers does MyMoolah support?**
+A: MyMoolah supports two main types: MMVouchers (16-digit MyMoolah digital vouchers) and EasyPay vouchers (redeemable via the EasyPay retail network at stores like Pick n Pay, Shoprite, Checkers, and others).
+
+**Q: How do I get a voucher?**
+A: Vouchers are issued to you by an employer, programme operator, or via the app if your programme supports it. You will receive them via SMS, email, or in-app notification.
+
+**Q: Where can I use my voucher?**
+A: MMVouchers can be redeemed within the wallet. EasyPay vouchers can be redeemed at any EasyPay-enabled store (Shoprite, Checkers, Pick n Pay, Boxer, and thousands of other outlets nationwide).
+
+**Q: Do vouchers expire?**
+A: Yes. MMVouchers expire after 12 months. EasyPay vouchers have their own expiry. The expiry date is shown on the voucher. Expired vouchers cannot be refunded.
+
+**Q: I lost my voucher — can I get it back?**
+A: If unused, support may be able to resend it. If it has already been redeemed, it cannot be re-issued. Contact support with your registered phone number and the approximate issue date.
+
+**Q: Why does my voucher say "pending"?**
+A: EasyPay vouchers show as "pending" until the retail payment is confirmed. MMVouchers activate immediately on issue.
+
+**Q: Can a voucher be converted to wallet balance?**
+A: Some voucher types allow in-wallet redemption which credits your balance. Check the voucher terms — not all vouchers support this.
+
+---
+
+## 9. EasyPay Cash-Out
+
+**Q: How do I cash out from my wallet?**
+A: EasyPay cash-out lets you withdraw cash at participating retail stores. In the app, go to "Cash Out" or "EasyPay," enter the amount, and receive a unique reference code. Take this code to a participating store (Shoprite, Checkers, Pick n Pay, Boxer, etc.) and ask the cashier to process an EasyPay payment.
+
+**Q: Which stores can I cash out at?**
+A: Any store that accepts EasyPay — including Shoprite, Checkers, Pick n Pay, Boxer, and thousands of other outlets across South Africa. Look for the EasyPay logo.
+
+**Q: Is there a fee for cashing out?**
+A: Yes. A cash-out fee is charged per transaction. The fee is shown before you confirm.
+
+**Q: My EasyPay token failed at the store — what do I do?**
+A: First check that the token has not expired or already been used. Confirm the store accepts EasyPay. If it still fails, note the token number, store name, date and time, and the error message shown by the cashier, and contact support.
+
+**Q: Is there a limit on how much I can cash out?**
+A: Yes. Per-transaction, daily, and monthly limits apply. These are shown in the app and depend on your KYC level.
+
+---
+
+## 10. Referral Program
+
+**Q: Does MyMoolah have a referral program?**
+A: Yes. When someone registers using your referral code and completes their first transaction, you start earning commissions from their activity.
+
+**Q: How do I find my referral code?**
+A: Your unique referral code is in the "Referral" section of the app. You can share it via WhatsApp, SMS, or copy it to send anywhere.
+
+**Q: How much can I earn from referrals?**
+A: MyMoolah uses a 3-level referral structure: 5% commission on your direct referrals (Level 1), 3% on people your referrals bring in (Level 2), and 2% on Level 3. There are no monthly caps on earnings.
+
+**Q: When does my referral commission activate?**
+A: Once your referred contact registers with your code and completes their first qualifying transaction, commission tracking begins.
+
+**Q: How are referral earnings paid out?**
+A: Earnings are paid daily at midnight directly into your MyMoolah wallet.
+
+**Q: Where can I track my referral earnings?**
+A: Go to the "Referral" section in the app → Dashboard. You can see your referral code, total earnings, active referrals, and recent commissions.
+
+**Q: Can I invite friends by SMS directly from the app?**
+A: Yes. In the Referral section, enter a South African mobile number and tap "Send Invite." An SMS with your referral code is sent automatically.
+
+---
+
+## 11. Security & Fraud Prevention
+
+**Q: How is my money protected?**
+A: Your wallet is protected by multi-factor authentication, a secure password, and session timeouts. All data is encrypted in transit (TLS 1.3) and at rest (AES-256-GCM). Funds are held in segregated, safeguarded accounts at licensed institutions.
+
+**Q: Will MyMoolah ever ask for my PIN or OTP?**
+A: Never. MyMoolah support will never ask for your password, PIN, or OTP. Anyone asking for these details is committing fraud — report it immediately.
+
+**Q: What should I do if I suspect fraud or lose my phone?**
+A: Immediately change your password, contact support to freeze your wallet, notify your mobile network operator to suspend your SIM, and report the incident to the South African Police Service (SAPS) if funds were stolen.
+
+**Q: What is a session timeout?**
+A: After 15 minutes of inactivity, your session closes automatically. You will need to log in again to continue.
+
+**Q: What is POPIA?**
+A: The Protection of Personal Information Act (POPIA) is South African law governing how your personal data is collected, stored, and used. MyMoolah is fully POPIA compliant.
+
+**Q: Are my personal details and ID information safe?**
+A: Yes. ID numbers and sensitive personal information are encrypted using AES-256-GCM. Your data is never sold to third parties and is only used as described in our Privacy Policy.
+
+---
+
+## 12. Fees & Wallet Tiers
+
+**Q: How do fees work on MyMoolah?**
+A: Transaction fees are shown on every confirmation screen before you approve. Fees vary by transaction type, amount, supplier, and your wallet tier.
+
+**Q: What are the wallet tiers?**
+A: MyMoolah has three tiers: Bronze (default), Silver, and Gold. Higher tiers earn lower fees. Tier upgrades are based on your transaction volume and history.
+
+**Q: What is the transaction fee for Zapper payments?**
+A: Bronze tier: 1.265% (VAT-inclusive). Silver tier: 1.15%. Gold tier: 0.92%. The fee is always shown before you confirm.
+
+**Q: Are there monthly account fees?**
+A: No monthly account fee for standard personal wallets. Fees only apply to individual transactions where specified.
+
+**Q: Why is my fee higher than expected?**
+A: Fees depend on your tier, the transaction channel, amount, and any active promotions. Always check the live fee shown on the confirmation screen before approving.
+
+**Q: Where can I see a full list of fees?**
+A: The current fee schedule is available in the app under "Help / Fees" and on the MyMoolah website. Fees may change — always confirm on the confirmation screen.
+
+---
+
+## 13. OTP & Login Help
+
+**Q: I did not receive my OTP — what do I do?**
+A: First check your signal and that your number is active. OTPs can take up to 60 seconds to arrive. If not received, wait 1 minute and request a new one. After 3 failed attempts, you must wait 1 hour before requesting again.
+
+**Q: My OTP expired — can I get a new one?**
+A: OTPs expire after 10 minutes. Tap "Resend OTP" to request a new one.
+
+**Q: I forgot my password — how do I reset it?**
+A: On the login screen, tap "Forgot Password?" Enter your registered mobile number. A 6-digit OTP will be sent to your number. Enter the OTP and create a new password (minimum 8 characters with letter, number, and special character).
+
+**Q: I can no longer access my registered phone number — what do I do?**
+A: Contact support at support@mymoolah.africa. We will verify your identity through KYC documents before re-binding your account to a new number.
+
+**Q: Why was my account locked?**
+A: Accounts are temporarily locked after multiple failed login attempts. Wait 30 minutes and try again, or contact support.
+
+---
+
+## 14. Cross-Border Transfers (Moolah Move)
+
+**Q: Can I send money internationally through MyMoolah?**
+A: Yes. MyMoolah supports cross-border transfers to selected countries via a partner corridor. This service is called Moolah Move. Contact support to activate this feature for your account.
+
+**Q: Which countries can I send money to?**
+A: Supported corridors depend on active partner agreements. Contact support at support@mymoolah.africa for current country availability.
+
+**Q: How long do cross-border transfers take?**
+A: Processing times vary by corridor — near real-time to a few hours for most, or up to one business day for some destinations subject to AML checks.
+
+**Q: Are there limits on international transfers?**
+A: Yes. Limits are set per transaction, day, and month in accordance with SARB exchange control regulations. Contact support for current limits.
+
+---
+
+## 15. Contacting Support
+
+**Q: How do I contact MyMoolah support?**
+A: You can reach us through:
+- **In-app chat**: Tap the chat icon in the app
+- **Email**: support@mymoolah.africa
+- **Phone**: +27 21 140 7030
+- **Website**: Submit a form at www.mymoolah.africa
+
+**Q: What information should I include in a support request?**
+A: Your full name, registered mobile number, the transaction reference or date/amount, a screenshot if available, and a clear description of the problem. This helps us resolve your issue faster.
+
+**Q: How long does it take to resolve a support query?**
+A: Simple queries are usually resolved within a few hours. Complex cases involving third-party suppliers or regulatory reviews may take 1–3 business days. Support will keep you updated.
+
+**Q: Does MyMoolah have a call centre?**
+A: You can reach us by phone at +27 21 140 7030. Our AI support assistant in the app handles common questions instantly, 24/7.
+
+---
+
+## 16. Regulatory & Legal
+
+**Q: What laws apply to MyMoolah?**
+A: MyMoolah operates in compliance with FICA/AML rules, POPIA, SARB/PASA payment directives, and consumer protection law. Full details are in the Terms & Conditions.
+
+**Q: Where can I find the Terms & Privacy Policy?**
+A: In the app under Help → Legal, and on the MyMoolah website at www.mymoolah.africa.
+
+**Q: How are disputes handled?**
+A: Log a complaint via in-app chat, email, or phone. MyMoolah investigates per its internal SLA. If unresolved, you may escalate to the relevant ombud or regulator as described in the Terms.
+
+---
+
+_This FAQ is updated as new features go live. Regenerate the knowledge base after every update using `npm run generate:kb` followed by `npm run embed:kb`._
