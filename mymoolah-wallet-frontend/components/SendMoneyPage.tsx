@@ -1287,7 +1287,7 @@ export function SendMoneyPage() {
                 Add
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-sm mx-auto">
+            <DialogContent className="max-w-[340px] mx-auto">
               <DialogHeader>
                 <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
                   Add New Beneficiary
@@ -1913,7 +1913,7 @@ export function SendMoneyPage() {
 
       {/* Payment Modal */}
       <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-        <DialogContent className="max-w-sm mx-auto">
+        <DialogContent className="max-w-[340px] mx-auto">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Pay {selectedBeneficiary?.name}
@@ -2111,7 +2111,7 @@ export function SendMoneyPage() {
 
       {/* One-time Pay Now Modal (reuses add-beneficiary fields) */}
       <Dialog open={showPayNow} onOpenChange={(v) => { setShowPayNow(v); if (!v) setIsOneTimeMode(false); }}>
-        <DialogContent className="max-w-sm mx-auto">
+        <DialogContent className="max-w-[340px] mx-auto">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Pay Now
@@ -2348,7 +2348,7 @@ export function SendMoneyPage() {
 
       {/* Post-payment: Add to contacts prompt */}
       <Dialog open={showAddContactPrompt} onOpenChange={setShowAddContactPrompt}>
-        <DialogContent className="max-w-sm mx-auto">
+        <DialogContent className="max-w-[340px] mx-auto">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Add to Contacts?
@@ -2404,7 +2404,7 @@ export function SendMoneyPage() {
 
       {/* Edit Beneficiary Modal */}
       <Dialog open={showEditBeneficiaryModal} onOpenChange={setShowEditBeneficiaryModal}>
-        <DialogContent className="max-w-sm mx-auto">
+        <DialogContent className="max-w-[340px] mx-auto">
           <DialogHeader>
             <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
               Edit Beneficiary

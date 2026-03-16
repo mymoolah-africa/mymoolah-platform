@@ -545,7 +545,7 @@ export function LoginPage() {
                     </span>
                   </button>
                 </DialogTrigger>
-                <DialogContent className="mobile-container" aria-describedby="login-terms-description">
+                <DialogContent className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] max-h-[85vh] overflow-y-auto rounded-2xl" aria-describedby="login-terms-description">
                   <DialogHeader>
                     <DialogTitle
                       style={{
@@ -602,7 +602,7 @@ export function LoginPage() {
                     </span>
                   </button>
                 </DialogTrigger>
-                <DialogContent className="mobile-container" aria-describedby="login-security-description">
+                <DialogContent className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] max-h-[85vh] overflow-y-auto rounded-2xl" aria-describedby="login-security-description">
                   <DialogHeader>
                     <DialogTitle
                       style={{
@@ -659,7 +659,7 @@ export function LoginPage() {
                     </span>
                   </button>
                 </DialogTrigger>
-                <DialogContent className="mobile-container" aria-describedby="login-faq-description">
+                <DialogContent className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] max-h-[85vh] overflow-y-auto rounded-2xl" aria-describedby="login-faq-description">
                   <DialogHeader>
                     <DialogTitle
                       style={{

@@ -1850,8 +1850,8 @@ export function QRPaymentPage() {
       <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
         <DialogContent 
           style={{
-            maxWidth: '400px',
-            width: '90vw',
+            maxWidth: '340px',
+            width: 'calc(100vw - 32px)',
             backgroundColor: '#ffffff',
             borderRadius: '16px',
             padding: '24px',
@@ -2242,8 +2242,8 @@ export function QRPaymentPage() {
       }}>
         <DialogContent 
           style={{
-            maxWidth: '400px',
-            width: '90vw',
+            maxWidth: '340px',
+            width: 'calc(100vw - 32px)',
             backgroundColor: '#ffffff',
             borderRadius: '16px',
             padding: '0',

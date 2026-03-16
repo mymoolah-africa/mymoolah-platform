@@ -618,7 +618,7 @@ export function KYCDocumentsPage() {
       {/* Camera Capture Modal (Placeholder) */}
       {showCamera && (
         <Dialog open={showCamera} onOpenChange={setShowCamera}>
-          <DialogContent className="max-w-sm mx-auto" aria-describedby="kyc-camera-description">
+          <DialogContent className="max-w-[340px] mx-auto" aria-describedby="kyc-camera-description">
             <DialogHeader>
               <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
                 Camera Capture

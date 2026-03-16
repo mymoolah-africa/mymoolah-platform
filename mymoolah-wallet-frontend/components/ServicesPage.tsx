@@ -681,7 +681,7 @@ export function ServicesPage() {
 
       {/* Purchase Dialog */}
       <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
-        <DialogContent className="sm:max-w-md" aria-describedby="purchase-complete-description">
+        <DialogContent className="sm:max-w-[340px]" aria-describedby="purchase-complete-description">
           <DialogHeader>
             <DialogTitle>Purchase Complete</DialogTitle>
             <div id="purchase-complete-description" className="sr-only">

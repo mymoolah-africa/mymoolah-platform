@@ -1081,7 +1081,7 @@ export function RegisterPage() {
                     </span>
                   </button>
                 </DialogTrigger>
-                <DialogContent className="mobile-container" aria-describedby="terms-conditions-description">
+                <DialogContent className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] max-h-[85vh] overflow-y-auto rounded-2xl" aria-describedby="terms-conditions-description">
                   <DialogHeader>
                     <DialogTitle
                       style={{
@@ -1138,7 +1138,7 @@ export function RegisterPage() {
                     </span>
                   </button>
                 </DialogTrigger>
-                <DialogContent className="mobile-container" aria-describedby="security-description">
+                <DialogContent className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] max-h-[85vh] overflow-y-auto rounded-2xl" aria-describedby="security-description">
                   <DialogHeader>
                     <DialogTitle
                       style={{
@@ -1195,7 +1195,7 @@ export function RegisterPage() {
                     </span>
                   </button>
                 </DialogTrigger>
-                <DialogContent className="mobile-container" aria-describedby="faq-description">
+                <DialogContent className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] max-h-[85vh] overflow-y-auto rounded-2xl" aria-describedby="faq-description">
                   <DialogHeader>
                     <DialogTitle
                       style={{

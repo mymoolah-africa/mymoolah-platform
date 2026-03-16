@@ -40,7 +40,7 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
         {badgeContent}
       </DialogTrigger>
       <DialogContent
-        className="mobile-container bg-white rounded-2xl border-0 shadow-2xl"
+        className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] bg-white rounded-2xl border-0 shadow-2xl"
         closeButtonClassName="universal-close-btn-overlay"
         aria-describedby="security-badge-description"
       >
