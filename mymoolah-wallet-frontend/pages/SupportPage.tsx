@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, Send, Bot, Globe, Paperclip, Mic, MessageCircle, Wallet, Copy, Check } from 'lucide-react';
 import VoiceInput from '../components/VoiceInput';
 import MicrophoneTest from '../components/MicrophoneTest';
@@ -277,6 +278,17 @@ export const SupportPage = () => {
   };
 
   // Copy to clipboard function
+  // Normalise AI response text so inline numbered lists become proper markdown.
+  // The backend often returns "1. item 2. item" as a flat string with no newlines.
+  const normaliseMarkdown = (text: string): string => {
+    return text
+      // Insert newline before every "N. " pattern that follows non-newline content
+      .replace(/(?<!\n)(\s)(\d+)\.\s/g, '\n$2. ')
+      // Collapse 3+ consecutive newlines to 2
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  };
+
   const copyToClipboard = async (text: string, messageId: string) => {
     try {
       // Try modern clipboard API first
@@ -499,7 +511,13 @@ export const SupportPage = () => {
                     position: 'relative'
                   }}
                 >
-                  <p style={{ margin: '0 0 4px 0' }}>{message.content}</p>
+                  {message.type === 'bot' ? (
+                    <div className="chat-markdown" style={{ marginBottom: '4px' }}>
+                      <ReactMarkdown>{normaliseMarkdown(message.content)}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p style={{ margin: '0 0 4px 0' }}>{message.content}</p>
+                  )}
                   <p style={{ 
                     fontSize: '12px', 
                     opacity: 0.7, 
