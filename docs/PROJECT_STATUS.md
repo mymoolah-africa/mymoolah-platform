@@ -1,16 +1,19 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: March 7, 2026  
-**Version**: 2.13.0 - Cloud Build Migration & npm Cleanup  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CLOUD BUILD DEPLOYS** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **SBSA PAYSHAP CALLBACKS** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **8 CURSOR SKILLS** ✅ **USDC SEND** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: March 16, 2026  
+**Version**: 2.20.0 - UI Polish: PASA Badge, Universal Modals, AI Markdown Chat  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **UNIVERSAL MODALS** ✅ **PAYSHAP RTP** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. Deploy scripts (Mar 7): now use Google Cloud Build — no Docker Desktop needed; builds ~6min backend, ~3.5min wallet. International Airtime pinless implemented (Mar 7); awaiting Flash billing setup (Code 2200). eeziAirtime redemption UI (Mar 5): clear instructions, 3×4 PIN format, copy full USSD; eeziPay How To entries in AI support knowledge base. SBSA PayShap UAT ready. Multi-supplier reconciliation (MobileMart + Flash), USDC, NFC, EasyPay Top-up, 11-language support deployed.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. UI polish session (Mar 16): PASA T-PPP SecurityBadge with real cert data, universal modal close button system, global 340px modal width, AI chat markdown rendering via `react-markdown` + `normaliseMarkdown()` pre-processor. PayShap RTP rolled back to working commit `277bbf1f`; Capitec RTP shows `EBONF` (SBSA routing issue), Standard Bank RTP ✅ working. FE notification refresh race fixed with ID-based dedup.
 
-### **📋 Latest: Cloud Build Migration & npm Cleanup (March 7, 2026)** ✅ **COMPLETE**
+### **📋 Latest: UI Polish — Security Badge, Modals, AI Chat Markdown (March 16, 2026)** ✅ **COMPLETE**
+Real PASA T-PPP certificate data in SecurityBadge (signed 12 Mar 2026). Universal close button CSS classes. DialogContent max-w-[340px] globally. AI support chat uses `react-markdown` with inline list normaliser — numbered responses display correctly. Session log: `docs/session_logs/2026-03-16_1940_ui-polish-markdown-chat.md`.
+
+### **📋 Previous: Cloud Build Migration & npm Cleanup (March 7, 2026)** ✅ **COMPLETE**
 Deploy scripts use `gcloud builds submit` — builds run on Google's servers, no Docker Desktop required. Backend ~6min, wallet ~3.5min. Node 20 LTS in both Dockerfiles. Removed dead crypto/xss-clean packages. Session log: `docs/session_logs/2026-03-07_1800_cloud-build-migration-npm-cleanup.md`.
 
 ### **📋 Latest: International Airtime Pinless (March 7, 2026)** ⏳ **AWAITING FLASH**

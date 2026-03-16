@@ -1,5 +1,51 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-16 - 🎨 UI Polish — Security Badge, Universal Modals, AI Chat Markdown Rendering ✅
+
+### **Session Overview**
+Three UI polish fixes: SecurityBadge close button clipping resolved, Radix accessibility warning cleared, universal modal close button system rolled out across all overlays, and AI support chat responses now render as proper markdown (numbered lists, bold, paragraphs) instead of flat text.
+
+### **Changes**
+
+#### SecurityBadge — Close Button & Accessibility (`22cc74b9`)
+- **`mymoolah-wallet-frontend/components/SecurityBadge.tsx`**: Moved close button *inside* the gradient header div (bounded by `relative rounded-t-2xl`) to prevent `overflow-hidden` clipping at the modal corner. Default `DialogPrimitive.Close` hidden via `closeButtonClassName="hidden"`. Added `<DialogDescription className="sr-only">` to clear Radix console warning `Missing Description or aria-describedby for {DialogContent}`.
+
+#### Universal Modal Close Button System (`91f02e5e`)
+- **`mymoolah-wallet-frontend/styles/globals.css`**: Added `.universal-close-btn` (light backgrounds) and `.universal-close-btn-overlay` (dark/gradient backgrounds) — 32×32px circular, `top: 1rem; right: 1rem`, consistent across all modal and overlay components.
+- Applied to: `components/ui/dialog.tsx`, `sheet.tsx`, `drawer.tsx`, `ModalContainer.tsx` (×3 locations), `ConfirmationModal.tsx` (×3), `BeneficiaryModal.tsx` (×3), `TransactionDetailModal.tsx`, `GlobalPinModal.tsx`, `AddAdditionalNumberModal.tsx` (×2), `AccountSelectorModal.tsx`.
+
+#### Global Modal Width Fix (`18861a85`)
+- **`components/ui/dialog.tsx`**: Base `DialogContent` max-width changed from `sm:max-w-lg` (384px+) to `w-[calc(100%-2rem)] max-w-[340px]` — fits within 375px mobile container.
+- **`components/ui/sheet.tsx`** / **`drawer.tsx`**: `sm:max-w-sm` → `sm:max-w-[340px]`.
+- Updated `DialogContent` in `LoginPage.tsx`, `RegisterPage.tsx`, `SendMoneyPage.tsx`, `QRPaymentPage.tsx`, `KYCDocumentsPage.tsx`, `ServicesPage.tsx` to match; long-content modals got `max-h-[85vh] overflow-y-auto`.
+
+#### AI Chat Markdown Rendering (`9587d433`, `f4f33fd8`)
+- **`mymoolah-wallet-frontend/pages/SupportPage.tsx`**: Installed `react-markdown`. Bot messages now rendered via `<ReactMarkdown>` instead of plain `<p>` tag. Added `normaliseMarkdown()` pre-processor that inserts `\n` before inline numbered list items (`"1. item 2. item"` → proper markdown list) since the backend returns flat strings.
+- **`mymoolah-wallet-frontend/styles/globals.css`**: Added `.chat-markdown` styles — Montserrat 14px, 1.6 line-height, proper `ol/ul/li` indentation, bold/em/code formatting.
+- **`mymoolah-wallet-frontend/package.json`**: Added `react-markdown` dependency.
+- **Note**: Router uses `pages/SupportPage.tsx`; `components/SupportPage.tsx` is an unrouted duplicate — consider cleanup.
+
+### **UAT Test Results**
+- ✅ SecurityBadge close button fully inside rounded header, no clipping
+- ✅ No Radix `DialogDescription` warning in console
+- ✅ KYC document list renders as clean numbered list
+- ✅ Transaction list renders with **bold** labels and numbered lines
+
+### **Session Log**
+- `docs/session_logs/2026-03-16_1940_ui-polish-markdown-chat.md`
+
+---
+
+## 2026-03-15 - 🔒 Knowledge Base Topic Filtering & AI Support Enhancements ✅
+
+### **Session Overview**
+Enhanced AI support system with comprehensive topic filtering for all 240 KB entries. Added topic-based routing to ensure users receive relevant, contextually appropriate answers.
+
+### **Session Log**
+- `docs/session_logs/2026-03-15_1800_comprehensive-kb-topic-filtering.md`
+
+---
+
 ## 2026-03-14 - 🤖 AI Support — LangChain RAG v3 + Phase 2 Transactional AI + Cost Optimisation ✅
 
 ### **Session Overview**

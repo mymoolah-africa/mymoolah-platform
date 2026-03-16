@@ -1,14 +1,36 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 14, 2026  
-**Version**: 2.17.0 - LangChain RAG AI Support v3 (Phase 1 + Phase 2 + Cost Optimisation)  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI**
+**Last Updated**: March 16, 2026  
+**Version**: 2.20.0 - UI Polish: Security Badge, Universal Modals, AI Chat Markdown  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT**
 
-**Work in the last 7 days (Mar 7–14, 2026)**: LangChain RAG AI support v3 — Phase 1 (KB semantic search) + Phase 2 (transactional AI: balance, transactions). Cost optimised: gpt-4o-mini across all non-KYC services, Redis cache, direct KB hits, self-learning. 4,649 lines → 481 lines. Field-level AES-256-GCM encryption deployed. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Mar 10–16, 2026)**: PASA T-PPP SecurityBadge with real certification data. Universal modal close button system across all overlays. Global modal width fix (340px mobile). AI chat markdown rendering — `react-markdown` + inline list normaliser so AI responses display as proper numbered lists and paragraphs. FE transaction refresh race condition fixed (ID-based dedup). PayShap RTP rollback to commit `277bbf1f`. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: LangChain RAG AI Support v3 (March 14, 2026)**
+## 🚀 **LATEST UPDATE: UI Polish (March 16, 2026)**
+
+### **🎨 AI Chat Markdown Rendering**
+- `pages/SupportPage.tsx` — `react-markdown` renders bot responses with proper numbered lists, bold labels, paragraphs
+- `normaliseMarkdown()` pre-processor inserts `\n` before inline list items from flat backend strings
+- `.chat-markdown` CSS class for consistent Montserrat 14px typography with list indentation
+
+### **🛡️ PASA T-PPP Security Badge**
+- Real certification data from 2026 T-PPP Certificate (signed 12 Mar 2026, expires 28 Feb 2027)
+- Reg: 2024/315592/07 · Sponsor: Standard Bank SA · Three payment rails: EFT Credit, RTC, PayShap
+- ISO 20022 Pain.013/Pain.001, AES-256-GCM + TLS 1.3 dual-layer encryption displayed
+- Positioned on LoginPage and RegisterPage
+
+### **🔲 Universal Modal System**
+- `.universal-close-btn` / `.universal-close-btn-overlay` CSS classes in `globals.css`
+- All modals/overlays use 32×32px circular close button at `top: 1rem; right: 1rem`
+- Base `DialogContent` capped at `max-w-[340px]` to fit 375px mobile container
+
+**Session log**: `docs/session_logs/2026-03-16_1940_ui-polish-markdown-chat.md`
+
+---
+
+## **PREVIOUS: LangChain RAG AI Support v3 (March 14, 2026)**
 
 ### **🤖 Phase 1 — Knowledge Base Semantic Search**
 - `services/ragService.js` — 481 lines replaces 4,649 lines across 3 legacy files
