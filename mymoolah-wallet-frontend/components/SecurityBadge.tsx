@@ -40,17 +40,17 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
         {badgeContent}
       </DialogTrigger>
       <DialogContent
-        className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] bg-white rounded-2xl border-0 shadow-2xl"
+        className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] bg-white rounded-2xl border-0 shadow-2xl p-0 overflow-hidden"
         closeButtonClassName="universal-close-btn-overlay"
         aria-describedby="security-badge-description"
       >
-        <DialogHeader>
+        <DialogHeader className="p-0 m-0">
           <div id="security-badge-description" className="sr-only">
             PASA T-PPP registration details and security compliance information for MyMoolah
           </div>
-          <DialogTitle className="text-center">
+          <DialogTitle className="text-center m-0 p-0">
             {/* Header banner */}
-            <div className="bg-gradient-to-r from-[#1a3a6b] to-[#2D8CCA] -mx-6 -mt-6 px-6 pt-6 pb-4 rounded-t-2xl mb-4">
+            <div className="bg-gradient-to-r from-[#1a3a6b] to-[#2D8CCA] px-6 pt-6 pb-4 m-0">
               <div className="flex items-center justify-center mb-1">
                 <Shield className="w-7 h-7 text-white mr-2" />
                 <span className="text-white font-bold text-lg">Registered T-PPP</span>
@@ -62,7 +62,7 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3 text-sm text-gray-700 -mt-2">
+        <div className="space-y-3 text-sm text-gray-700 p-4 pt-2">
 
           {/* Row 1: PASA + Standard Bank */}
           <div className="grid grid-cols-2 gap-2">
