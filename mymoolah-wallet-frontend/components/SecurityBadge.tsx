@@ -1,5 +1,5 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Shield, CheckCircle, Lock, Globe, Database, Zap, Building2, CreditCard } from 'lucide-react';
+import { Dialog, DialogContent, DialogClose, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+import { Shield, CheckCircle, Lock, Globe, Database, Zap, Building2, CreditCard, X } from 'lucide-react';
 
 interface SecurityBadgeProps {
   size?: 'sm' | 'md' | 'lg';
@@ -41,19 +41,23 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
       </DialogTrigger>
       <DialogContent
         className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] bg-white rounded-2xl border-0 shadow-2xl p-0 overflow-hidden"
-        closeButtonClassName="universal-close-btn-overlay"
-        aria-describedby="security-badge-description"
+        closeButtonClassName="hidden"
       >
+        {/* Accessible description for Radix */}
+        <DialogDescription className="sr-only">
+          PASA T-PPP registration details and security compliance information for MyMoolah
+        </DialogDescription>
+
         <DialogHeader className="p-0 m-0">
-          <div id="security-badge-description" className="sr-only">
-            PASA T-PPP registration details and security compliance information for MyMoolah
-          </div>
           <DialogTitle className="text-center m-0 p-0">
-            {/* Header banner */}
-            <div className="bg-gradient-to-r from-[#1a3a6b] to-[#2D8CCA] px-6 pt-6 pb-4 m-0">
-              <div className="flex items-center justify-center mb-1">
-                <Shield className="w-7 h-7 text-white mr-2" />
-                <span className="text-white font-bold text-lg">Registered T-PPP</span>
+            {/* Header banner — close button lives here to avoid overflow-hidden clipping */}
+            <div className="bg-gradient-to-r from-[#1a3a6b] to-[#2D8CCA] px-6 pt-5 pb-4 relative rounded-t-2xl">
+              <DialogClose className="universal-close-btn-overlay" aria-label="Close">
+                <X className="w-4 h-4" />
+              </DialogClose>
+              <div className="flex items-center justify-center mb-1 pr-8">
+                <Shield className="w-6 h-6 text-white mr-2 flex-shrink-0" />
+                <span className="text-white font-bold text-base leading-tight">Registered T-PPP</span>
               </div>
               <p className="text-white/80 text-xs text-center font-normal">
                 National Payment System Act, 1998 · Valid to 28 Feb 2027
@@ -62,7 +66,7 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-3 text-sm text-gray-700 p-4 pt-2">
+        <div className="space-y-3 text-sm text-gray-700 p-4 pt-3">
 
           {/* Row 1: PASA + Standard Bank */}
           <div className="grid grid-cols-2 gap-2">
