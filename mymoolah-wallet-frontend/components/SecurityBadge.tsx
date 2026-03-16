@@ -20,7 +20,7 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
     <div className={`inline-block bg-gradient-to-br from-[#1a3a6b] to-[#2D8CCA] text-white rounded-lg font-montserrat shadow-md border border-white/20 relative text-center ${compactClasses} ${clickable ? 'cursor-pointer hover:shadow-lg transition-all duration-300 hover:scale-105' : ''}`}>
       <div className="flex items-center justify-center mb-0.5">
         <Shield className="w-2.5 h-2.5 mr-1 text-white" />
-        <span className="font-bold text-white text-xs leading-none">PASA Registered</span>
+        <span className="font-bold text-white text-xs leading-none">Registered T-PPP</span>
       </div>
       <div className="text-xs font-medium text-white/95 leading-none mb-0.5">NPS Act 1998</div>
       <div className="text-xs text-white/80 leading-none">ISO 20022 · AES-256</div>
@@ -39,17 +39,17 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
       <DialogTrigger asChild>
         {badgeContent}
       </DialogTrigger>
-      <DialogContent className="max-w-sm mx-auto bg-white rounded-2xl border-0 shadow-2xl" aria-describedby="security-badge-description">
+      <DialogContent className="mobile-container bg-white rounded-2xl border-0 shadow-2xl" aria-describedby="security-badge-description">
         <DialogHeader>
           <div id="security-badge-description" className="sr-only">
-            PASA authorisation details and security compliance information for MyMoolah
+            PASA T-PPP registration details and security compliance information for MyMoolah
           </div>
           <DialogTitle className="text-center">
             {/* Header banner */}
             <div className="bg-gradient-to-r from-[#1a3a6b] to-[#2D8CCA] -mx-6 -mt-6 px-6 pt-6 pb-4 rounded-t-2xl mb-4">
               <div className="flex items-center justify-center mb-1">
                 <Shield className="w-7 h-7 text-white mr-2" />
-                <span className="text-white font-bold text-lg">PASA Authorised</span>
+                <span className="text-white font-bold text-lg">Registered T-PPP</span>
               </div>
               <p className="text-white/80 text-xs text-center font-normal">
                 National Payment System Act, 1998 · Valid to 28 Feb 2027
@@ -65,10 +65,10 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
               <div className="flex items-center mb-1.5">
                 <CheckCircle className="w-4 h-4 text-[#2D8CCA] mr-1.5 flex-shrink-0" />
-                <p className="font-semibold text-gray-900 text-xs">PASA Registered</p>
+                <p className="font-semibold text-gray-900 text-xs">PASA Registered T-PPP</p>
               </div>
               <p className="text-xs text-gray-600 leading-snug">
-                Registered by PASA under SARB Directive 1 of 2007. Reg: 2024/315592/07
+                Registered as a Third Party Payment Provider (T-PPP) by PASA under SARB Directive 1 of 2007. Reg: 2024/315592/07
               </p>
             </div>
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
@@ -133,7 +133,7 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <CreditCard className="w-3.5 h-3.5 text-gray-400 mr-1.5" />
-                <span className="text-xs text-gray-500 font-medium">PASA Certificate</span>
+                <span className="text-xs text-gray-500 font-medium">T-PPP Registration · PASA</span>
               </div>
               <span className="text-xs text-[#86BE41] font-semibold">✓ Valid</span>
             </div>
