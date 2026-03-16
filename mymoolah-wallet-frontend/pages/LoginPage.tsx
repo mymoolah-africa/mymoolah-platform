@@ -29,12 +29,12 @@ import {
   X,
   AlertTriangle,
   FileText,
-  Shield,
   HelpCircle,
 } from "lucide-react";
 
 // Import logo from assets/
 import logo2 from "../assets/logo2.svg";
+import { SecurityBadge } from "../components/SecurityBadge";
 
 // SA Mobile Number validation with all supported formats
 const validateSAMobileNumber = (phoneNumber: string): { isValid: boolean; message?: string } => {
@@ -560,62 +560,10 @@ export function LoginPage() {
                 </DialogContent>
               </Dialog>
 
-              {/* Security Badge - 10% Larger */}
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button
-                    className="flex flex-col items-center space-y-1 hover:bg-white/20 p-2 rounded-lg transition-all transform scale-110"
-                    style={{
-                      minHeight: "var(--mobile-touch-target)",
-                      fontFamily: "Montserrat, sans-serif",
-                    }}
-                  >
-                    <div className="bg-white/30 backdrop-blur-sm rounded-xl w-12 h-12 flex items-center justify-center">
-                      <Shield className="w-6 h-6 text-white" />
-                    </div>
-                    <span
-                      className="text-white/80"
-                      style={{
-                        fontFamily: "Montserrat, sans-serif",
-                        fontSize: "var(--mobile-font-small)",
-                      }}
-                    >
-                      Security
-                    </span>
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="mobile-container" aria-describedby="login-security-description">
-                  <DialogHeader>
-                    <DialogTitle
-                      style={{
-                        fontFamily: "Montserrat, sans-serif",
-                        fontSize: "clamp(1rem, 2.5vw, 1.125rem)",
-                        fontWeight: "var(--font-weight-bold)",
-                      }}
-                    >
-                      Bank-Grade Security
-                    </DialogTitle>
-                    <div id="login-security-description" className="sr-only">
-                      Information about MyMoolah's bank-grade security and encryption
-                    </div>
-                  </DialogHeader>
-                  <div
-                    style={{
-                      fontFamily: "Montserrat, sans-serif",
-                      fontSize: "var(--mobile-font-base)",
-                      lineHeight: "1.6",
-                    }}
-                  >
-                    <p>
-                      MyMoolah uses enterprise-grade encryption
-                      and Mojaloop compliance to protect your
-                      financial data. Your SA mobile number
-                      provides secure account access with the
-                      same security standards as major banks.
-                    </p>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              {/* Security Badge */}
+              <div className="flex flex-col items-center space-y-1 transform scale-110">
+                <SecurityBadge size="sm" clickable={true} compact={false} />
+              </div>
 
               {/* FAQ Icon */}
               <Dialog>

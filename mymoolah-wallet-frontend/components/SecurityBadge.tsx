@@ -23,7 +23,7 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
         <Shield className="w-2 h-2 mr-1 text-white" />
         <span className="font-bold text-white text-xs leading-none">Security Certified</span>
       </div>
-      <div className="text-xs font-medium text-white/95 leading-none mb-0.5">MM-SEC-2025</div>
+      <div className="text-xs font-medium text-white/95 leading-none mb-0.5">MM-SEC-2026</div>
       <div className="text-xs text-white/80 leading-none">ISO 20022</div>
       <div className="absolute top-0.5 right-0.5 text-xs text-white/70">
         <CheckCircle className="w-1.5 h-1.5" />
@@ -79,8 +79,8 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
             <div className="flex items-start space-x-3">
               <Users className="w-5 h-5 text-[#86BE41] mt-0.5 flex-shrink-0" />
               <div>
-                <p className="font-medium text-gray-900">Trusted by Thousands</p>
-                <p className="text-xs text-gray-600">Used by financial institutions across multiple countries safely.</p>
+                <p className="font-medium text-gray-900">Trusted by South Africans</p>
+                <p className="text-xs text-gray-600">Used by South African users for instant digital payments and financial services.</p>
               </div>
             </div>
             
@@ -95,7 +95,7 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
           
           <div className="text-center pt-2 border-t border-gray-200">
             <p className="text-xs text-gray-500">
-              Certificate ID: MM-SEC-2025-001 | Valid through 2025
+              Certificate ID: MM-SEC-2026-001 | Valid through July 2026
             </p>
           </div>
         </div>
