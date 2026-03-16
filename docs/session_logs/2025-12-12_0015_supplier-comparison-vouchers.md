@@ -8,7 +8,7 @@
 ## Changes Made
 - `services/supplierComparisonService.js`: include voucher mapping, dynamic supplier grouping, and new tie-break sort (commission desc, price asc, preferred supplier).
 - `services/productComparisonService.js`: per-product best-variant now uses the same tie-break sequence (commission desc, price asc, prefer Flash).
-- Docs: `docs/changelog.md`, `docs/agent_handover.md` updated with comparison changes; SBSA integration doc already updated earlier this session.
+- Docs: `docs/changelog.md`, `docs/AGENT_HANDOVER.md` updated with comparison changes; SBSA integration doc already updated earlier this session.
 
 ## Tests
 - Not run (logic-only changes; no automated test suite for comparison service in repo).
@@ -24,6 +24,6 @@
 - `services/supplierComparisonService.js`
 - `services/productComparisonService.js`
 - `docs/changelog.md`
-- `docs/agent_handover.md`
+- `docs/AGENT_HANDOVER.md`
 - `docs/integrations/StandardBankPayShap.md` (earlier doc update this session)
 

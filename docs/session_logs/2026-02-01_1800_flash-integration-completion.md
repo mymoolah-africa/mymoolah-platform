@@ -156,7 +156,7 @@ token = response.token || response.tokenNumber ||
   - Transaction metadata enhanced
 
 ### **Documentation Files** (To be updated)
-- `docs/agent_handover.md` - Update latest achievement
+- `docs/AGENT_HANDOVER.md` - Update latest achievement
 - `docs/CHANGELOG.md` - Add v2.8.1 entry
 - `docs/FLASH_INTEGRATION_AUDIT_2026-02-01.md` - Mark as complete
 - `docs/session_logs/2026-02-01_1800_flash-integration-completion.md` - This file

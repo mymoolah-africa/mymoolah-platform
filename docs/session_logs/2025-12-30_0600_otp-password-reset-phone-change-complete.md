@@ -128,7 +128,7 @@ Completed full implementation of OTP-based password reset and phone number chang
 ### Documentation Updated
 - `docs/API_DOCUMENTATION.md` - Added OTP endpoints
 - `docs/CHANGELOG.md` - Added session entry
-- `docs/agent_handover.md` - Updated with implementation details
+- `docs/AGENT_HANDOVER.md` - Updated with implementation details
 
 ---
 

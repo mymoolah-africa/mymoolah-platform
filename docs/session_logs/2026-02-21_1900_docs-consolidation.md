@@ -40,7 +40,7 @@ Executed documentation consolidation per recommendations. Archived ~75 docs, mer
 - `docs/DEPLOYMENT_GUIDE.md` - Updated document index to archive paths
 - `docs/CODESPACES_TESTING_REQUIREMENT.md` - Added Start Services, DB connection; updated related docs
 - `docs/index.md` - Updated security, Figma links
-- `docs/agent_handover.md` - Updated GCP_PRODUCTION_DEPLOYMENT path
+- `docs/AGENT_HANDOVER.md` - Updated GCP_PRODUCTION_DEPLOYMENT path
 - `docs/DOCS_CONSOLIDATION_2026.md` - Created
 
 ---

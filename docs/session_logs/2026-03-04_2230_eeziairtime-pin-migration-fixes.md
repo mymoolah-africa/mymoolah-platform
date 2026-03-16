@@ -99,6 +99,6 @@ All records correctly created: VasProduct (findOrCreate), VasTransaction, Wallet
 
 ## Related Documentation
 
-- `docs/agent_handover.md`
+- `docs/AGENT_HANDOVER.md`
 - `docs/DATABASE_CONNECTION_GUIDE.md`
 - `scripts/run-migrations-master.sh`

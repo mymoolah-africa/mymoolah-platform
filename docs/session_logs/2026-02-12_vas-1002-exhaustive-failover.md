@@ -35,7 +35,7 @@ Implemented banking-grade exhaustive failover when the highest-commission suppli
 - `.env.codespaces` - VAS_FAILOVER_ENABLED=false
 - `docs/VAS_FAILOVER_1002_IMPLEMENTATION.md` - New implementation guide
 - `docs/CHANGELOG.md` - Entry for 2026-02-12
-- `docs/agent_handover.md` - Latest achievement
+- `docs/AGENT_HANDOVER.md` - Latest achievement
 
 ---
 

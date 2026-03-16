@@ -34,7 +34,7 @@ Refined MobileMart error message for code 1013 to remove redundant network name 
 
 - `routes/overlayServices.js` - Simplified MobileMart error 1013 message, removed redundant network repetition
 - `docs/session_logs/2026-01-02_1612_mobilemart-error-message-refinement.md` - This session log (NEW)
-- `docs/agent_handover.md` - Updated with latest session summary
+- `docs/AGENT_HANDOVER.md` - Updated with latest session summary
 
 ---
 

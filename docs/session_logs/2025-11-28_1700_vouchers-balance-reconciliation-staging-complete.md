@@ -282,7 +282,7 @@ skip: (req) => req.method === 'OPTIONS' ||
 ## 📚 Documentation Updates Required
 
 ### Files to Update
-1. ✅ `docs/agent_handover.md` - Update with session summary
+1. ✅ `docs/AGENT_HANDOVER.md` - Update with session summary
 2. ✅ `docs/changelog.md` - Add v2.4.12 entry
 3. ✅ `docs/readme.md` - Update system status
 4. ✅ `docs/session_logs/` - This session log

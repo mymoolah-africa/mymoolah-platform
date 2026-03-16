@@ -16,7 +16,7 @@ Fixed Global airtime purchase failure when using the "own amount" flow (custom a
 - [x] Resolve "own airtime" / "own data" to catalog product with variantId in AirtimeDataOverlay
 - [x] Fallback in handleConfirmTransaction to resolve own product from catalog by type + amount
 - [x] Clear error when no matching catalog product: "No matching product for this amount. Please choose a product from the list."
-- [x] Create session log and update agent_handover.md
+- [x] Create session log and update AGENT_HANDOVER.md
 - [x] Commit session log + handover; commit code changes (user to push, then pull in CS)
 
 ---
@@ -30,7 +30,7 @@ Fixed Global airtime purchase failure when using the "own amount" flow (custom a
 ## Files Modified
 - `mymoolah-wallet-frontend/components/overlays/AirtimeDataOverlay.tsx` - Own airtime/data now resolve to catalog product (variantId) when possible; confirm step resolves own product from catalog or shows clear error
 - `docs/session_logs/2026-02-02_1200_global-airtime-own-product-variantid-fix.md` - New session log
-- `docs/agent_handover.md` - Updated current session summary, next steps, recent updates
+- `docs/AGENT_HANDOVER.md` - Updated current session summary, next steps, recent updates
 
 ---
 
@@ -72,4 +72,4 @@ Fixed Global airtime purchase failure when using the "own amount" flow (custom a
 ---
 
 ## Related Documentation
-- docs/agent_handover.md, docs/CURSOR_2.0_RULES_FINAL.md (git workflow: commit locally, user pushes, pull in CS)
+- docs/AGENT_HANDOVER.md, docs/CURSOR_2.0_RULES_FINAL.md (git workflow: commit locally, user pushes, pull in CS)

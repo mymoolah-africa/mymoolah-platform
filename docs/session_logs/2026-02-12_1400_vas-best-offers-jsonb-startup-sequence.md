@@ -31,7 +31,7 @@ Fixed refresh-vas-best-offers script failing with "column denominations is of ty
 - `services/floatBalanceMonitoringService.js` - Return initial check promise from start()
 - `server.js` - Await FloatBalanceMonitoring initial check before boot completes
 - `docs/session_logs/2026-02-12_1400_vas-best-offers-jsonb-startup-sequence.md` - This log
-- `docs/agent_handover.md` - Handover update
+- `docs/AGENT_HANDOVER.md` - Handover update
 
 ---
 

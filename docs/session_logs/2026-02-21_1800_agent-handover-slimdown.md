@@ -14,7 +14,7 @@ Completed the agent handover slimdown per prior recommendations. Moved ~2,000 li
 
 ## Tasks Completed
 - [x] Create `docs/archive/agent_handover_history.md` with archived content
-- [x] Slim `docs/agent_handover.md` to essentials (~500-800 lines)
+- [x] Slim `docs/AGENT_HANDOVER.md` to essentials (~500-800 lines)
 - [x] Verify links and update document map
 - [x] Standardize references (AGENT_HANDOVER → agent_handover)
 
@@ -28,7 +28,7 @@ Completed the agent handover slimdown per prior recommendations. Moved ~2,000 li
 ---
 
 ## Files Modified
-- `docs/agent_handover.md` - Slimmed from ~2,600 to 669 lines; updated TOC, document map, current session summary, recent updates table, reconciliation (brief), next priorities, recommendations; added archive link
+- `docs/AGENT_HANDOVER.md` - Slimmed from ~2,600 to 669 lines; updated TOC, document map, current session summary, recent updates table, reconciliation (brief), next priorities, recommendations; added archive link
 - `docs/archive/agent_handover_history.md` - **Created** - Contains all archived content (Update 2025-12-29 onwards, integration sections, previous session summaries)
 
 ---
@@ -50,7 +50,7 @@ Completed the agent handover slimdown per prior recommendations. Moved ~2,000 li
 - [x] Verified handover line count (669)
 - [x] Verified archive file created and populated
 - [x] Verified document map includes archive link
-- [x] Verified all internal links use agent_handover.md consistently
+- [x] Verified all internal links use AGENT_HANDOVER.md consistently
 
 ---
 
@@ -69,6 +69,6 @@ Completed the agent handover slimdown per prior recommendations. Moved ~2,000 li
 ---
 
 ## Related Documentation
-- `docs/agent_handover.md` - Main handover (slim)
+- `docs/AGENT_HANDOVER.md` - Main handover (slim)
 - `docs/archive/agent_handover_history.md` - Archived content
 - Prior session: Bill payment fixes, NotificationService fix

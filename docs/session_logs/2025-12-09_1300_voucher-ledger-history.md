@@ -16,7 +16,7 @@
 - `mymoolah-wallet-frontend/components/overlays/digital-vouchers/ProductDetailModal.tsx`: copy-to-clipboard for voucher code.
 - `mymoolah-wallet-frontend/pages/TransactionHistoryPage.tsx`: display masked voucher code in history list.
 - `tests/productPurchaseService.voucher.dev.test.js`: unit tests for masking/envelope.
-- `docs/changelog.md`, `docs/agent_handover.md`: documented updates.
+- `docs/changelog.md`, `docs/AGENT_HANDOVER.md`: documented updates.
 
 ### Tests
 - ✅ `node --test tests/productPurchaseService.voucher.dev.test.js` (DATABASE_URL stubbed; Node test runner).

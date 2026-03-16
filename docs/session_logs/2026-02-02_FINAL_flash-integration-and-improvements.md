@@ -251,7 +251,7 @@ Major achievements: Flash integration 100% complete, cash_out enum properly adde
 
 **Enforcement:**
 - Added to CURSOR_2.0_RULES_FINAL.md as Rule 6A
-- Added to agent_handover.md anti-patterns
+- Added to AGENT_HANDOVER.md anti-patterns
 - Made CRITICAL priority (before all other rules)
 - All future agents must read and confirm understanding
 

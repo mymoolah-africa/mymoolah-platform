@@ -92,5 +92,5 @@ This session implemented EasyPay Cash-In activation fixes following Razeen's ema
 ## Related Documentation
 
 - `integrations/easypay/` (if exists), `EasypayReceiverV5.yaml`
-- `docs/agent_handover.md` — EasyPay Cash-In activation priorities
+- `docs/AGENT_HANDOVER.md` — EasyPay Cash-In activation priorities
 - Session log: `docs/session_logs/2026-02-21_1700_payshap-easypay-zapper-drive-docs.md` (activation email draft)

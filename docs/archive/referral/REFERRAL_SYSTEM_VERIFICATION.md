@@ -117,7 +117,7 @@ REFERRAL_SIGNUP_URL=https://bit.ly/3YhGGlq
 4. ✅ `controllers/qrPaymentController.js` - Added referral earnings hook
 5. ✅ `controllers/authController.js` - Added referral code processing
 6. ✅ `server.js` - Registered referral routes
-7. ✅ `docs/agent_handover.md` - Updated with referral system status
+7. ✅ `docs/AGENT_HANDOVER.md` - Updated with referral system status
 
 ---
 

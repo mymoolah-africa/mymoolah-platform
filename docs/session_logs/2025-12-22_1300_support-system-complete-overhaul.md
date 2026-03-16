@@ -223,8 +223,8 @@ voucher_summary: `Your vouchers balance is R${params.activeBalance}. You have ${
 - **Result**: ✅ Matches dashboard UX exactly
 
 ### **Issue 7: Documentation Files Reverted**
-- **Problem**: User accidentally ran undo, reverted docs (agent_handover.md, changelog.md)
-- **Cause**: Files were lowercase (agent_handover.md) but git tracks UPPERCASE (AGENT_HANDOVER.md)
+- **Problem**: User accidentally ran undo, reverted docs (AGENT_HANDOVER.md, changelog.md)
+- **Cause**: Files were lowercase (AGENT_HANDOVER.md) but git tracks UPPERCASE (AGENT_HANDOVER.md)
 - **Solution**: Updated correct UPPERCASE files
 - **Result**: ✅ Documentation restored and updated
 

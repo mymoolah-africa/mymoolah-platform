@@ -7,7 +7,7 @@
 
 ## 📌 **PROJECT OVERVIEW**
 
-**MyMoolah** is a banking-grade Treasury Platform for South Africa (wallet, ledger, VAS, USDC, NFC, KYC, reconciliation). **Production**: api-mm.mymoolah.africa, wallet.mymoolah.africa. For status and priorities, read `docs/agent_handover.md`.
+**MyMoolah** is a banking-grade Treasury Platform for South Africa (wallet, ledger, VAS, USDC, NFC, KYC, reconciliation). **Production**: api-mm.mymoolah.africa, wallet.mymoolah.africa. For status and priorities, read `docs/AGENT_HANDOVER.md`.
 
 ---
 
@@ -34,7 +34,7 @@
 - Summarize 3-5 key rules; state: "✅ Rules reading completed - I have read `docs/CURSOR_2.0_RULES_FINAL.md` and will follow all rules"
 
 ### **Rule 2: Context Reading**
-- Read `docs/agent_handover.md` (onboarding checklist, status, priorities)
+- Read `docs/AGENT_HANDOVER.md` (onboarding checklist, status, priorities)
 - Read 2-3 most recent `docs/session_logs/*.md`
 - Read `docs/DATABASE_CONNECTION_GUIDE.md` if DB work planned
 - `git status` → commit or stash if needed → `git pull origin main`
@@ -143,7 +143,7 @@ Migrations: ALWAYS use `./scripts/run-migrations-master.sh [uat|staging]` — ne
 
 **When work is complete** (don't wait for session end):
 1. Create session log: `docs/session_logs/YYYY-MM-DD_HHMM_[description].md`
-2. Update `docs/agent_handover.md`
+2. Update `docs/AGENT_HANDOVER.md`
 3. `git add . && git commit -m "[description]"` **then `git push origin main`**
 4. Inform user: "✅ Changes committed and pushed. Pull in Codespaces: `git pull origin main`"
 

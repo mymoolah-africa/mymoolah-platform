@@ -31,7 +31,7 @@ Fixed UAT electricity recipient creation and removal failures by correcting fron
 - `mymoolah-wallet-frontend/services/overlayService.ts` - Map electricity/biller serviceData to meter/account identifiers
 - `services/UnifiedBeneficiaryService.js` - Guard accountType update, tighten electricity filter
 - `docs/changelog.md` - Added fix entry
-- `docs/agent_handover.md` - Updated header for latest fix
+- `docs/AGENT_HANDOVER.md` - Updated header for latest fix
 
 ---
 
@@ -76,5 +76,5 @@ Fixed UAT electricity recipient creation and removal failures by correcting fron
 
 ## Related Documentation
 - `docs/changelog.md`
-- `docs/agent_handover.md`
+- `docs/AGENT_HANDOVER.md`
 

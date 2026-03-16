@@ -54,7 +54,7 @@ Planning session to migrate International Airtime from PIN-based (Global PIN / g
 ## Files Modified
 
 - `docs/session_logs/2026-03-04_2355_international-airtime-pinless-planning.md` - NEW: This session log
-- `docs/agent_handover.md` - Added International Airtime pinless to Next Development Priorities
+- `docs/AGENT_HANDOVER.md` - Added International Airtime pinless to Next Development Priorities
 - `docs/changelog.md` - Added entry for planning session
 - `docs/readme.md` - Added upcoming International Airtime pinless to work in progress
 - `docs/PROJECT_STATUS.md` - Added International Airtime pinless to upcoming work
@@ -111,7 +111,7 @@ None. Planning session only.
 
 ## Related Documentation
 
-- `docs/agent_handover.md` — Next Development Priorities
+- `docs/AGENT_HANDOVER.md` — Next Development Priorities
 - `docs/FLASH_INTEGRATION_AUDIT_2026-02-01.md` — Flash API overview
 - `integrations/flash/FLASH_TESTING_REFERENCE.md` — Flash testing
 - `mymoolah-wallet-frontend/components/overlays/AirtimeDataOverlay.tsx` — Current International Airtime UI

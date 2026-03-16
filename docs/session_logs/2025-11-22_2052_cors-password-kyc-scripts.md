@@ -37,7 +37,7 @@ Fixed CORS configuration for Codespaces, created password change and KYC status 
 - `config/security.js` - Updated CORS regex pattern and added debug logging
 - `scripts/change-user-password.js` - Created password change script with phone number matching
 - `scripts/check-kyc-status.js` - Created KYC status check script
-- `docs/agent_handover.md` - Updated with session summary
+- `docs/AGENT_HANDOVER.md` - Updated with session summary
 - `docs/changelog.md` - Updated with session changes
 
 ---

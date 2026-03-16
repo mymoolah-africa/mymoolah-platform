@@ -56,7 +56,7 @@ Implemented the International Airtime pinless flow, migrating from PIN-based Glo
 
 ### Documentation
 - `docs/session_logs/2026-03-07_1100_international-airtime-pinless-implementation.md` — NEW: This session log
-- `docs/agent_handover.md` — Updated with international airtime status
+- `docs/AGENT_HANDOVER.md` — Updated with international airtime status
 
 ---
 

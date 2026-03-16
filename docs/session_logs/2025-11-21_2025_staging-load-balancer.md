@@ -36,7 +36,7 @@
 - `docs/GCP_STAGING_DEPLOYMENT.md`
 - `docs/changelog.md`
 - `docs/readme.md`
-- `docs/agent_handover.md`
+- `docs/AGENT_HANDOVER.md`
 
 ---
 

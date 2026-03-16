@@ -171,7 +171,7 @@ Successfully implemented **Phase 1 of MSISDN/phoneNumber standardization** to E.
 ### Immediate Actions (This Session - Continuing)
 
 - [x] Create session log documenting Phase 1 completion
-- [ ] Update `docs/agent_handover.md` with Phase 1 completion status
+- [ ] Update `docs/AGENT_HANDOVER.md` with Phase 1 completion status
 - [ ] Test beneficiary functionality (airtime, data, beneficiary search)
 - [ ] Create Phase 2 encryption planning documentation
 
@@ -253,7 +253,7 @@ Successfully implemented **Phase 1 of MSISDN/phoneNumber standardization** to E.
 
 ### Architecture Documents
 
-- `docs/agent_handover.md` - Main handover doc (needs update with Phase 1 completion)
+- `docs/AGENT_HANDOVER.md` - Main handover doc (needs update with Phase 1 completion)
 - `docs/SECURITY.md` - Security documentation (needs update with MSISDN encryption plan)
 - `docs/CHANGELOG.md` - Project changelog (needs update)
 

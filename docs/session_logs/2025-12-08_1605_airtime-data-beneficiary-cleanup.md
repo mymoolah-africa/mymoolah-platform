@@ -17,7 +17,7 @@
 
 ## Files Modified
 - `mymoolah-wallet-frontend/services/beneficiaryService.ts`
-- Docs: `docs/changelog.md` (entry added), `docs/agent_handover.md` (handover updated)
+- Docs: `docs/changelog.md` (entry added), `docs/AGENT_HANDOVER.md` (handover updated)
 
 ## Tests
 - Manual UI: add airtime beneficiary, then remove; list clears (Codespaces wallet UI).

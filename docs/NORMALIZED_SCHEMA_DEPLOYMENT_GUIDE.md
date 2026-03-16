@@ -408,7 +408,7 @@ const mapper = new FlashProductMapper();
 - [Schema Comparison Guide](./SCHEMA_COMPARISON_GUIDE.md)
 - [Product Mappers README](../services/productMappers/README.md)
 - [GCP Staging Deployment](./GCP_STAGING_DEPLOYMENT.md)
-- [Agent Handover](./agent_handover.md)
+- [Agent Handover](./AGENT_HANDOVER.md)
 
 ---
 

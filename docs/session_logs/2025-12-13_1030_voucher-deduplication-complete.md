@@ -129,7 +129,7 @@ Successfully implemented and debugged **universal voucher deduplication** for th
    - Successfully created 12 missing Flash ProductVariants
 
 ### Documentation
-5. **`docs/agent_handover.md`**
+5. **`docs/AGENT_HANDOVER.md`**
    - Updated to version 2.4.22
    - Added voucher deduplication completion update
    - Documented normalization approach and grouping strategy

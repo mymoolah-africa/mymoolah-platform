@@ -41,7 +41,7 @@ Implemented banking-grade pre-computed best-offer table for multi-supplier VAS. 
 - `routes/catalogSync.js` - POST /refresh-best-offers route
 - `docs/VAS_BEST_OFFERS_IMPLEMENTATION.md` - New doc
 - `docs/changelog.md` - Entry
-- `docs/agent_handover.md` - Latest achievement
+- `docs/AGENT_HANDOVER.md` - Latest achievement
 
 ---
 

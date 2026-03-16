@@ -97,7 +97,7 @@ Fixed USDC beneficiary list not showing (model + enrichment + filter), quote 500
 ## Related Documentation
 - `docs/USDC_SEND_IMPLEMENTATION_PLAN_CORRECTED.md` - Banking-grade sweep section added
 - `docs/session_logs/2026-02-07_1500_usdc-send-feature-implementation.md` - Original USDC implementation
-- `docs/agent_handover.md` - Updated with this session summary
+- `docs/AGENT_HANDOVER.md` - Updated with this session summary
 
 ---
 

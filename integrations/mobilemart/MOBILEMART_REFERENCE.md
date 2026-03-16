@@ -84,6 +84,6 @@ MOBILEMART_API_URL=https://api.mobilemart.co.za
 
 ## 📚 **Related Documentation**
 
-- `docs/agent_handover.md` — current project status
+- `docs/AGENT_HANDOVER.md` — current project status
 - `integrations/mobilemart/MOBILEMART_INTEGRATION_FINAL_REPORT.md` — full integration history
 - Google Drive (above) — official documents and product lists

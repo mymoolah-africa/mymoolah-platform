@@ -19,7 +19,7 @@ Successfully established UAT → Staging → Production deployment workflow, cre
 
 ### 1. ✅ New Session Setup & Rules Confirmation
 - **Rules Reading**: Read `docs/CURSOR_2.0_RULES_FINAL.md` and confirmed understanding
-- **Handover Review**: Read `docs/agent_handover.md` and recent session logs
+- **Handover Review**: Read `docs/AGENT_HANDOVER.md` and recent session logs
 - **Context Gathered**: Reviewed deployment documentation and GCS staging setup
 
 **Key Rules Confirmed**:
@@ -251,7 +251,7 @@ origins.push(
 
 ### Files Updated
 1. ✅ `docs/session_logs/2025-12-01_0920_uat-staging-deployment-process.md` - This session log
-2. ⏳ `docs/agent_handover.md` - Will update with deployment process
+2. ⏳ `docs/AGENT_HANDOVER.md` - Will update with deployment process
 3. ⏳ `docs/changelog.md` - Will update with CORS fix and tools
 4. ⏳ `docs/readme.md` - Will update system status
 

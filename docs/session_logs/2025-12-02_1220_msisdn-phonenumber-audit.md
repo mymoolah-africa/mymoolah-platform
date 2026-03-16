@@ -315,7 +315,7 @@ After implementing the fix, all payment flows must be tested:
 
 - Created this session log with comprehensive audit findings
 - Need to update `docs/CHANGELOG.md` with audit entry
-- Need to update `docs/agent_handover.md` with critical findings
+- Need to update `docs/AGENT_HANDOVER.md` with critical findings
 - Need to update `docs/SECURITY.md` with PII exposure risks
 - Need to create `docs/MSISDN_PHONENUMBER_REMEDIATION_PLAN.md` with detailed fix plan
 

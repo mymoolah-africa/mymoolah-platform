@@ -291,7 +291,7 @@ Set `CORS_ORIGINS` in backend `.env` to your 3000 forwarded URL. Set `VITE_API_B
 
 - `docs/archive/codespaces/GITHUB_CODESPACES_SETUP.md` - Full setup guide
 - `docs/archive/codespaces/CODESPACES_ENV_RECOVERY.md` - Env recovery procedures
-- `docs/agent_handover.md` - Agent handover documentation
+- `docs/AGENT_HANDOVER.md` - Agent handover documentation
 - `docs/ZAPPER_UAT_TEST_REPORT.md` - Zapper UAT test results
 - `scripts/test-zapper-uat-complete.js` - Comprehensive Zapper test suite
 - `scripts/test-zapper-credentials.js` - Basic Zapper credential test

@@ -17,7 +17,7 @@ Extended database connection helper, proxy management, and migration scripts for
 - [x] Extend ensure-proxies-running.sh for Production (port 6545, mmtp-pg-production)
 - [x] Extend run-migrations-master.sh for Production (production environment, getProductionDatabaseURL)
 - [x] Update DATABASE_CONNECTION_GUIDE.md with Production config and usage
-- [x] Update changelog.md and agent_handover.md
+- [x] Update changelog.md and AGENT_HANDOVER.md
 
 ---
 
@@ -34,7 +34,7 @@ Extended database connection helper, proxy management, and migration scripts for
 - `scripts/run-migrations-master.sh` - Production environment support (already present)
 - `docs/DATABASE_CONNECTION_GUIDE.md` - Added Production section, updated examples
 - `docs/changelog.md` - Added Phase 2 entry
-- `docs/agent_handover.md` - Added Production Phase 2 completion note
+- `docs/AGENT_HANDOVER.md` - Added Production Phase 2 completion note
 
 ---
 

@@ -64,6 +64,6 @@ Zapper is a QR-code-based payment acceptance integration. Customers scan a Zappe
 
 ## 📚 **Related Documentation**
 
-- `docs/agent_handover.md` — current project status
+- `docs/AGENT_HANDOVER.md` — current project status
 - `docs/archive/ZAPPER_INTEGRATION_AUDIT_REPORT.md` — full integration audit history
 - Google Drive (above) — official API docs, SLA, and QR test codes

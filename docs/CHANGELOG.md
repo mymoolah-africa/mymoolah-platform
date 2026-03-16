@@ -243,7 +243,7 @@ Updated session log with git push/pull status and latest changes. Updated all ma
 ### **Changes**
 - **docs/session_logs/2026-02-21_1900_docs-consolidation.md**: Added git status, push/pull details, issues encountered (SSH transient), completed next steps
 - **docs/index.md**, **docs/readme.md**, **docs/PROJECT_STATUS.md**, **docs/DEVELOPMENT_GUIDE.md**: Last Updated Feb 21, Version 2.11.14, docs consolidation in recent work
-- **docs/agent_handover.md**: Feb 21 (19:00) docs consolidation in Recent Updates
+- **docs/AGENT_HANDOVER.md**: Feb 21 (19:00) docs consolidation in Recent Updates
 
 ---
 
@@ -283,7 +283,7 @@ Slimmed CURSOR_2.0_RULES_FINAL.md from 348 to 108 lines (~69% reduction). Moved 
 Slimmed agent handover from ~2,600 lines (~40k tokens) to ~670 lines (~15k tokens). Moved historical content to archive.
 
 ### **Changes**
-- **docs/agent_handover.md**: Slimmed to essentials; updated TOC, document map, current session summary, recent updates (14 days), reconciliation (brief), next priorities, recommendations
+- **docs/AGENT_HANDOVER.md**: Slimmed to essentials; updated TOC, document map, current session summary, recent updates (14 days), reconciliation (brief), next priorities, recommendations
 - **docs/archive/agent_handover_history.md**: Created; contains December 2025 updates, integration details (Peach, Zapper, MMAP, Figma), previous session summaries
 
 ### **Session Log**
@@ -575,7 +575,7 @@ Post-implementation fixes and banking-grade hardening of the USDC service: benef
 ### **Files Modified**
 - `models/Beneficiary.js`, `services/UnifiedBeneficiaryService.js`, `services/cachingService.js`, `controllers/usdcController.js`, `services/usdcTransactionService.js`, `services/valrService.js`, `routes/usdc.js`
 - `mymoolah-wallet-frontend`: BuyUsdcOverlay.tsx, BeneficiaryModal.tsx, App.tsx, BottomNavigation.tsx
-- `docs/USDC_SEND_IMPLEMENTATION_PLAN_CORRECTED.md`, `docs/session_logs/2026-02-07_1500_usdc-send-feature-implementation.md`, `docs/agent_handover.md`
+- `docs/USDC_SEND_IMPLEMENTATION_PLAN_CORRECTED.md`, `docs/session_logs/2026-02-07_1500_usdc-send-feature-implementation.md`, `docs/AGENT_HANDOVER.md`
 
 ### **Session Log**
 - `docs/session_logs/2026-02-07_2230_usdc-fixes-banners-banking-grade-sweep.md`
@@ -1915,7 +1915,7 @@ Complete overhaul of banking-grade support system (RAG) with 9 critical bug fixe
 - `services/productPurchaseService.js` - Denomination validation debugging
 - `mymoolah-wallet-frontend/components/overlays/digital-vouchers/ProductDetailModal.tsx` - Modal scrolling and padding
 - `scripts/create-missing-flash-product-variants.js` (NEW) - Script to create missing Flash ProductVariants
-- `docs/agent_handover.md` - Updated to v2.4.22
+- `docs/AGENT_HANDOVER.md` - Updated to v2.4.22
 - `docs/session_logs/2025-12-13_1030_voucher-deduplication-complete.md` (NEW) - Session documentation
 
 ### **Session Extension: Beneficiary System Audit + Airtime/Data UX Design**
@@ -2136,7 +2136,7 @@ Complete overhaul of banking-grade support system (RAG) with 9 critical bug fixe
 
 **Documentation Created**:
 - `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` - Comprehensive audit report
-- `docs/agent_handover.md` - Updated with critical findings and remediation plan
+- `docs/AGENT_HANDOVER.md` - Updated with critical findings and remediation plan
 - `docs/CHANGELOG.md` - This entry
 
 **Status**: ⚠️ Audit complete, remediation plan documented, awaiting user approval of timeline and priorities
@@ -2182,7 +2182,7 @@ Complete overhaul of banking-grade support system (RAG) with 9 critical bug fixe
 - `docs/archive/PEACH_ARCHIVAL_RECORD.md` - Created comprehensive archival record
 - `docs/integrations/PeachPayments.md` - Added archived notice at top
 - `docs/changelog.md` - Added archival entry
-- `docs/agent_handover.md` - Updated with archival status
+- `docs/AGENT_HANDOVER.md` - Updated with archival status
 
 ## 2025-11-22
 - **CORS Fix, Password & KYC Scripts**: Fixed CORS configuration for Codespaces, created password change and KYC status check utility scripts, verified user password change and KYC verification.
@@ -2200,7 +2200,7 @@ Complete overhaul of banking-grade support system (RAG) with 9 critical bug fixe
 - `config/security.js` - Updated CORS regex pattern and added debug logging
 - `scripts/change-user-password.js` - Created password change utility script
 - `scripts/check-kyc-status.js` - Created KYC status check utility script
-- `docs/agent_handover.md` - Updated with session summary
+- `docs/AGENT_HANDOVER.md` - Updated with session summary
 - `docs/changelog.md` - Updated with session changes
 
 ## 2025-11-21

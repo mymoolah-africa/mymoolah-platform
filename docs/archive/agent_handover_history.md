@@ -1,10 +1,10 @@
 # Agent Handover History Archive
 
 **Archived**: 2026-02-21  
-**Source**: docs/agent_handover.md (slimmed down)  
+**Source**: docs/AGENT_HANDOVER.md (slimmed down)  
 **Purpose**: Historical updates, integration details, and previous session summaries moved here to reduce main handover size (~40k tokens → ~15k tokens).
 
-For current status, next priorities, and operating principles, see **docs/agent_handover.md**.
+For current status, next priorities, and operating principles, see **docs/AGENT_HANDOVER.md**.
 
 ---
 
@@ -619,7 +619,7 @@ Fixed 9 critical bugs in the banking-grade support system (RAG) through comprehe
 - **Code Preservation**: All Peach integration code preserved for easy reactivation if business relationship resumes
 - **Zero Resource Consumption**: Routes disabled, no API calls made, zero resource usage
 - **Banking-Grade Archival**: Follows banking best practices for deprecated integrations and Mojaloop service lifecycle management
-- **Files Modified**: `config/security.js`, `server.js`, `docs/archive/PEACH_ARCHIVAL_RECORD.md`, `docs/integrations/PeachPayments.md`, `docs/changelog.md`, `docs/agent_handover.md`
+- **Files Modified**: `config/security.js`, `server.js`, `docs/archive/PEACH_ARCHIVAL_RECORD.md`, `docs/integrations/PeachPayments.md`, `docs/changelog.md`, `docs/AGENT_HANDOVER.md`
 - **Status**: ✅ Integration archived, ✅ Routes disabled, ✅ Zero resource consumption, ✅ Code and data preserved, ✅ Reactivation procedure documented
 
 ### **🔧 CORS FIX, PASSWORD & KYC SCRIPTS - COMPLETE (2025-11-22)** ✅

@@ -20,7 +20,7 @@ The session logging system is **fully automated by the AI agent**. You don't nee
   - Important context for next agent
 
 ### Step 2: Update Agent Handover
-- Agent updates `docs/agent_handover.md` with:
+- Agent updates `docs/AGENT_HANDOVER.md` with:
   - Task summary
   - Files changed
   - API/data model changes
@@ -30,7 +30,7 @@ The session logging system is **fully automated by the AI agent**. You don't nee
   - Next steps
 
 ### Step 3: Commit to Git (Automated)
-- Agent runs: `git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/agent_handover.md`
+- Agent runs: `git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/AGENT_HANDOVER.md`
 - Agent commits: `git commit -m "docs: session log and handover update - [description]"`
 - Agent stages and commits all other changes: `git add . && git commit -m "[code changes message]"`
 - **Agent does NOT push** - you will push when ready
@@ -60,7 +60,7 @@ You just push when ready.
 ## At Next Session Start (New Agent)
 
 The new agent will automatically:
-1. Read `docs/agent_handover.md` (official status)
+1. Read `docs/AGENT_HANDOVER.md` (official status)
 2. Read 2-3 most recent session logs (chat history)
 3. Read other documentation
 4. Review git commits
@@ -97,7 +97,7 @@ You: [Review commits if needed, then] git push origin main
 ```
 New AI Agent: "I'm a new agent. Let me read the previous session context..."
 
-[Agent reads agent_handover.md]
+[Agent reads AGENT_HANDOVER.md]
 [Agent reads recent session logs]
 [Agent reads other docs]
 [Agent reviews git commits]

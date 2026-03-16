@@ -61,11 +61,11 @@ Example: `2025-11-14_1430_ocr-kyc-simplification.md`
 ### At Session Start
 1. Check for recent session logs in this directory
 2. Read the most recent session log(s) to understand context
-3. Review `agent_handover.md` for official handover
+3. Review `AGENT_HANDOVER.md` for official handover
 
 ### At Session End
 1. Create a new session log file using the template above
-2. Update `agent_handover.md` with official handover
+2. Update `AGENT_HANDOVER.md` with official handover
 3. Commit both files to git
 
 ## Integration with Agent Handover

@@ -104,7 +104,7 @@ Fixed critical ENUM constraint issues preventing airtime/data purchases from wor
 ---
 
 ## Related Documentation
-- `docs/agent_handover.md` - Updated with session summary
+- `docs/AGENT_HANDOVER.md` - Updated with session summary
 - `migrations/20250116_fix_vas_products_supplier_id_enum.js` - Migration file
 - `migrations/20250116_fix_vas_transactions_supplier_id_enum.js` - Migration file
 - `migrations/20250116_fix_vas_transactions_supplier_id_enum_manual.sql` - Manual SQL script

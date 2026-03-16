@@ -17,7 +17,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ## 📋 **NEW AGENT ONBOARDING CHECKLIST** (DO IN ORDER)
 
 1. [ ] Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY - provide proof of reading)
-2. [ ] Read this file (`docs/agent_handover.md`)
+2. [ ] Read this file (`docs/AGENT_HANDOVER.md`)
 3. [ ] Read 2-3 most recent `docs/session_logs/*.md`
 4. [ ] Read `docs/CHANGELOG.md` (last 2 weeks)
 5. [ ] Read `docs/DATABASE_CONNECTION_GUIDE.md` (if DB work planned)
@@ -34,7 +34,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Need to… | Read |
 |----------|------|
 | Understand rules & workflow | `docs/CURSOR_2.0_RULES_FINAL.md` |
-| Understand project & status | `docs/agent_handover.md` (this file) |
+| Understand project & status | `docs/AGENT_HANDOVER.md` (this file) |
 | See change history | `docs/CHANGELOG.md` |
 | Run DB migrations | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | Set up dev environment | `docs/DEVELOPMENT_GUIDE.md` |
@@ -255,7 +255,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Critical Reading Requirements**
 1. **`docs/CURSOR_2.0_RULES_FINAL.md`** - MANDATORY reading before any work
 2. **`docs/DATABASE_CONNECTION_GUIDE.md`** - MANDATORY for database operations
-3. **This document (agent_handover.md)** - Complete operational context
+3. **This document (AGENT_HANDOVER.md)** - Complete operational context
 
 ---
 
@@ -449,7 +449,7 @@ Before proceeding with ANY change, pass these 4 gates:
 #### **Gate 4: Documentation Update** ✅
 - [ ] Update relevant `docs/` files
 - [ ] Create session log with detailed context
-- [ ] Update `agent_handover.md` if significant change
+- [ ] Update `AGENT_HANDOVER.md` if significant change
 - [ ] Commit with descriptive message
 
 **Why**: Undocumented changes = lost knowledge when you're gone.
@@ -592,7 +592,7 @@ Before concluding your session, verify:
 | Test in Codespaces | See testing workflow | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
 | Find patterns | Search `scripts/`, `services/` | Grep or IDE search |
 | Read recent context | `docs/session_logs/` (sort by date) | Most recent 2-3 logs |
-| Understand current status | `docs/agent_handover.md` | This file |
+| Understand current status | `docs/AGENT_HANDOVER.md` | This file |
 | Check API contracts | `docs/API_DOCUMENTATION.md` | API docs |
 
 ---
@@ -601,7 +601,7 @@ Before concluding your session, verify:
 
 **Before starting work** (5 minutes):
 - [ ] Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-- [ ] Read `docs/agent_handover.md` (this file)
+- [ ] Read `docs/AGENT_HANDOVER.md` (this file)
 - [ ] Read 2-3 most recent `docs/session_logs/*.md`
 - [ ] Read relevant docs for your task
 - [ ] `git status` → Check for uncommitted changes

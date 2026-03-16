@@ -62,7 +62,7 @@ Standardized every customer-facing fee label to the neutral wording “Transacti
 - [ ] Run `scripts/perf-test-api-latencies.js` after major backend changes and log results for trend tracking.
 - [ ] Implement caching / query tuning for `/settings`, `/suppliers/*`, and voucher-heavy endpoints highlighted by the sampler.
 - [ ] Consider adding a `TRANSACTION_FEE_LABEL` constant to avoid regressions in future changes.
-- [ ] Remove temporary PayShap reference column (per reminder in `agent_handover.md`) when safe.
+- [ ] Remove temporary PayShap reference column (per reminder in `AGENT_HANDOVER.md`) when safe.
 
 ---
 
