@@ -527,6 +527,61 @@ html {
   }
 }
 
+/* ─── AI Chat Markdown Renderer ───────────────────────────────────────────── */
+/* Styles for ReactMarkdown output inside bot chat bubbles.                    */
+.chat-markdown {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.chat-markdown p {
+  margin: 0 0 0.5rem 0;
+}
+
+.chat-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-markdown ol {
+  margin: 0.25rem 0 0.5rem 0;
+  padding-left: 1.25rem;
+  list-style-type: decimal;
+}
+
+.chat-markdown ul {
+  margin: 0.25rem 0 0.5rem 0;
+  padding-left: 1.25rem;
+  list-style-type: disc;
+}
+
+.chat-markdown li {
+  margin-bottom: 0.2rem;
+  line-height: 1.5;
+}
+
+.chat-markdown li:last-child {
+  margin-bottom: 0;
+}
+
+.chat-markdown strong {
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.chat-markdown em {
+  font-style: italic;
+}
+
+.chat-markdown code {
+  font-size: 12px;
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 0.1rem 0.3rem;
+  font-family: monospace;
+}
+
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   .mymoolah-card {

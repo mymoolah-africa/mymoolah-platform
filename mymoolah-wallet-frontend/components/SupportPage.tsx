@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { ArrowLeft, Send, Bot, Globe, Paperclip, Mic, MessageCircle, Wallet, Copy, Check } from 'lucide-react';
 import VoiceInput from '../components/VoiceInput';
 import MicrophoneTest from '../components/MicrophoneTest';
@@ -499,7 +500,13 @@ export const SupportPage = () => {
                     position: 'relative'
                   }}
                 >
-                  <p style={{ margin: '0 0 4px 0' }}>{message.content}</p>
+                  {message.type === 'bot' ? (
+                    <div className="chat-markdown" style={{ marginBottom: '4px' }}>
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <p style={{ margin: '0 0 4px 0' }}>{message.content}</p>
+                  )}
                   <p style={{ 
                     fontSize: '12px', 
                     opacity: 0.7, 
