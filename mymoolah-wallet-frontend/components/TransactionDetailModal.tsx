@@ -121,6 +121,7 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
       padding: '1rem'
     }}>
       <Card style={{
+        position: 'relative',
         backgroundColor: '#ffffff',
         border: '1px solid #e2e8f0',
         borderRadius: '12px',
@@ -135,7 +136,7 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
           padding: '1rem',
           backgroundColor: '#f9fafb'
         }}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pr-10">
             <div className="flex items-center gap-3">
               {isElectricity && (
                 <div style={{
@@ -172,22 +173,10 @@ export function TransactionDetailModal({ isOpen, onClose, transaction }: Transac
             </div>
             <button
               onClick={onClose}
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                border: 'none',
-                backgroundColor: '#f3f4f6',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#e5e7eb')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#f3f4f6')}
+              className="universal-close-btn"
+              aria-label="Close modal"
             >
-              <X style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+              <X className="w-5 h-5" />
             </button>
           </div>
         </CardHeader>

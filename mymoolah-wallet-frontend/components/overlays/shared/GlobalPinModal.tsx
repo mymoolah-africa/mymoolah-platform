@@ -217,7 +217,7 @@ export function GlobalPinModal({
       }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', paddingRight: '40px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               width: '36px', height: '36px', borderRadius: '10px',
@@ -235,8 +235,8 @@ export function GlobalPinModal({
               </p>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
-            <X style={{ width: '20px', height: '20px', color: '#6b7280' }} />
+          <button onClick={onClose} className="universal-close-btn" aria-label="Close modal">
+            <X className="w-5 h-5" />
           </button>
         </div>
 

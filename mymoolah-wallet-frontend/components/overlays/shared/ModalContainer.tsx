@@ -149,7 +149,7 @@ export function ModalContainer({
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
-          <div>
+          <div style={{ paddingRight: '40px' }}>
             <h2 
               id={`${title.toLowerCase().replace(/\s+/g, '-')}-title`}
               style={{
@@ -171,18 +171,13 @@ export function ModalContainer({
           </div>
 
           {showCloseButton && (
-            <Button
-              variant="ghost"
+            <button
               onClick={onClose}
-              style={{
-                padding: '8px',
-                minWidth: '32px',
-                minHeight: '32px'
-              }}
+              className="universal-close-btn"
               aria-label="Close modal"
             >
               <X style={{ width: '16px', height: '16px' }} />
-            </Button>
+            </button>
           )}
         </div>
 

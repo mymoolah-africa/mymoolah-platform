@@ -39,7 +39,11 @@ export function SecurityBadge({ size = 'md', clickable = true, compact = false }
       <DialogTrigger asChild>
         {badgeContent}
       </DialogTrigger>
-      <DialogContent className="mobile-container bg-white rounded-2xl border-0 shadow-2xl" aria-describedby="security-badge-description">
+      <DialogContent
+        className="mobile-container bg-white rounded-2xl border-0 shadow-2xl"
+        closeButtonClassName="universal-close-btn-overlay"
+        aria-describedby="security-badge-description"
+      >
         <DialogHeader>
           <div id="security-badge-description" className="sr-only">
             PASA T-PPP registration details and security compliance information for MyMoolah

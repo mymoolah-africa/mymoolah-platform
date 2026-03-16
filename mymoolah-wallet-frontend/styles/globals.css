@@ -275,6 +275,69 @@
     color: white;
   }
   
+  /* Universal Close Button System */
+  .universal-close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--muted-foreground);
+    border: none;
+    transition: all 0.2s ease;
+    z-index: 50;
+    cursor: pointer;
+  }
+  
+  .universal-close-btn:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    color: var(--foreground);
+  }
+  
+  .universal-close-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+  }
+  
+  .dark .universal-close-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+  }
+  
+  .dark .universal-close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+  }
+  
+  /* Universal Close Button for Dark/Gradient Backgrounds (like SecurityBadge) */
+  .universal-close-btn-overlay {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.2s ease;
+    z-index: 50;
+    cursor: pointer;
+  }
+  
+  .universal-close-btn-overlay:hover {
+    background-color: rgba(255, 255, 255, 0.4);
+    color: #ffffff;
+  }
+  
   /* Touch Target Minimum Size for Accessibility */
   button, 
   [role="button"], 

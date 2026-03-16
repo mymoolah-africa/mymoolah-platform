@@ -74,6 +74,7 @@ export function ConfirmationModal({
       padding: '1rem'
     }}>
       <Card style={{
+        position: 'relative',
         backgroundColor: '#ffffff',
         border: `1px solid ${styles.borderColor}`,
         borderRadius: '16px',
@@ -82,6 +83,15 @@ export function ConfirmationModal({
         width: '100%',
         animation: 'slideIn 0.2s ease-out'
       }}>
+        {/* Close button (X) in top-right corner */}
+        <button
+          onClick={onClose}
+          className="universal-close-btn"
+          aria-label="Close modal"
+        >
+          <X className="w-5 h-5" />
+        </button>
+        
         <CardHeader style={{
           padding: '1.5rem 1.5rem 0.5rem 1.5rem',
           textAlign: 'center'
@@ -203,37 +213,6 @@ export function ConfirmationModal({
           </div>
         </CardContent>
       </Card>
-      
-      {/* Close button (X) in top-right corner */}
-      <Button
-        variant="ghost"
-        onClick={onClose}
-        style={{
-          position: 'absolute',
-          top: '1rem',
-          right: '1rem',
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          backgroundColor: 'rgba(255, 255, 255, 0.9)',
-          border: 'none',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 1)';
-          e.currentTarget.style.transform = 'scale(1.1)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
-          e.currentTarget.style.transform = 'scale(1)';
-        }}
-      >
-        <X style={{ width: '20px', height: '20px', color: '#6b7280' }} />
-      </Button>
     </div>
   );
 }

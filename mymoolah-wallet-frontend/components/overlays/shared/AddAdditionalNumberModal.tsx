@@ -131,7 +131,7 @@ export function AddAdditionalNumberModal({
           borderBottom: '1px solid #e2e8f0',
           padding: '1rem'
         }}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pr-10">
             <div className="flex items-center gap-3">
               <div style={{
                 width: '40px',
@@ -155,17 +155,13 @@ export function AddAdditionalNumberModal({
                 </CardTitle>
               </div>
             </div>
-            <Button
-              variant="ghost"
+            <button
               onClick={onClose}
-              style={{
-                minWidth: '44px',
-                minHeight: '44px',
-                padding: '0'
-              }}
+              className="universal-close-btn"
+              aria-label="Close modal"
             >
-              <X style={{ width: '20px', height: '20px' }} />
-            </Button>
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </CardHeader>
 
