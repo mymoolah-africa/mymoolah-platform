@@ -130,7 +130,7 @@ async function initiateRtpRequest(params) {
       ? (payerBankCode || payerProxyDomain || 'bankc')
       : (payerProxyDomain || payerBankCode || 'bankc');
 
-  const { pain013, msgId } = buildPain013({
+  const { pain013, msgId, uetr } = buildPain013({
     merchantTransactionId,
     amount: numAmount,
     currency,
@@ -174,9 +174,9 @@ async function initiateRtpRequest(params) {
   expiresAt.setMinutes(expiresAt.getMinutes() + expiryMinutes);
 
   const rtpRequest = await db.StandardBankRtpRequest.create({
-    requestId: msgId,
+    requestId: uetr,           // UETR (UUID) — SBSA uses this in batch callbacks
     merchantTransactionId,
-    originalMessageId: msgId,
+    originalMessageId: msgId,  // MMRTP... — SBSA uses this in realtime callbacks
     userId,
     walletId,
     amount: numAmount,
@@ -530,7 +530,7 @@ async function retryRtpAsPbac(originalRtp) {
     } catch (_) { /* non-fatal */ }
   }
 
-  const { pain013, msgId } = buildPain013({
+  const { pain013, msgId, uetr: retryUetr } = buildPain013({
     merchantTransactionId: retryMerchantTxId,
     amount,
     currency: originalRtp.currency || 'ZAR',
@@ -564,9 +564,9 @@ async function retryRtpAsPbac(originalRtp) {
   expiresAt.setMinutes(expiresAt.getMinutes() + 60);
 
   const retryRtp = await db.StandardBankRtpRequest.create({
-    requestId: msgId,
+    requestId: retryUetr,      // UETR (UUID) — SBSA uses this in batch callbacks
     merchantTransactionId: retryMerchantTxId,
-    originalMessageId: msgId,
+    originalMessageId: msgId,  // MMRTP... — SBSA uses this in realtime callbacks
     userId,
     walletId,
     amount,
@@ -597,9 +597,21 @@ async function retryRtpAsPbac(originalRtp) {
 }
 
 async function processRtpCallback(originalMessageId, transactionIdentifier, status, rawBody) {
-  const rtpRequest = await db.StandardBankRtpRequest.findOne({
+  // Primary lookup: originalMessageId (MMRTP format — used by realtime callbacks)
+  let rtpRequest = await db.StandardBankRtpRequest.findOne({
     where: { originalMessageId },
   });
+
+  // Fallback: SBSA batch callbacks may use the UETR (UUID) as orgnlMsgId
+  if (!rtpRequest && originalMessageId) {
+    rtpRequest = await db.StandardBankRtpRequest.findOne({
+      where: { requestId: originalMessageId },
+    });
+    if (rtpRequest) {
+      console.log('[RTP-CB] Matched by requestId (UETR) fallback: orgnlMsgId=%s', originalMessageId);
+    }
+  }
+
   if (!rtpRequest) {
     console.warn('[RTP-CB] No RTP request found for orgnlMsgId=%s status=%s', originalMessageId, status);
     return;
