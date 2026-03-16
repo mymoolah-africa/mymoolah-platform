@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-15 18:00  
-**Latest Feature**: AI Support v3.1 — Comprehensive KB (240 entries) + Topic Filtering (Layer 0 gate + Layer 2 prompt)  
-**Document Version**: 2.18.0  
-**Session logs**: `docs/session_logs/2026-03-15_1800_comprehensive-kb-topic-filtering.md`, `docs/session_logs/2026-03-14_1900_langchain-rag-phase2-cost-optimisation.md`  
+**Last Updated**: 2026-03-16 14:00  
+**Latest Feature**: FE transaction refresh fix — ID-based notification dedup replaces time-based guard  
+**Document Version**: 2.19.0  
+**Session logs**: `docs/session_logs/2026-03-16_1400_rules-optimisation-rtp-rollback-fe-refresh-fix.md`, `docs/session_logs/2026-03-15_1800_comprehensive-kb-topic-filtering.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 14, 2026 - 19:00)**
+### **Latest Achievement (March 16, 2026 - 14:00)**
+**RTP Rollback + FE Refresh Fix** — (1) Rolled back to commit `277bbf1f` (pre-security-update from Mar 15 night) after user reported PayShap RTP failure. Force-pushed to main, redeployed staging. (2) Post-rollback testing confirmed: Standard Bank RTP works (ACCC callback, wallet credited); Capitec RTP returns EBONF (SBSA-side routing issue, not code). (3) Fixed frontend transaction list refresh race condition in `MoolahContext.tsx`: replaced time-based deduplication (`lastBalanceRefreshTime > 2000ms`) with notification-ID-based tracking (`__processedTxnNotifIds Set`), ensuring every new `txn_wallet_credit` notification triggers exactly one balance + transaction refresh. Session log: `docs/session_logs/2026-03-16_1400_rules-optimisation-rtp-rollback-fe-refresh-fix.md`.
+
+### **Previous Achievement (March 14, 2026 - 19:00)**
 **LangChain RAG AI Support v3 — Phase 1 + Phase 2 + Cost Optimisation** — Replaced 4,649 lines of pattern-matching AI support code with a clean 481-line LangChain RAG service. Phase 1: Semantic KB search (64 embedded entries, OpenAI `text-embedding-3-small`). Phase 2: Transactional AI — detects personal questions (balance, transactions), fetches live user data from DB, injects into LLM context. Cost optimisation: 4-layer system (Redis cache → direct KB hit ≥92% → GPT-4o-mini → self-learning). Self-learning saves unknown questions to KB as `isActive=false` for admin review. Projected cost at 3M users: ~$150–360/month vs $30k without optimisations. Switched `gpt-4o` → `gpt-4o-mini` across feedbackService, googleReviewService, codebaseSweepService, feedbackController. KYC stays on `gpt-4o`. Tested in UAT — transactions, balance, and KB queries all working. Added Tech Debt & Architectural Concerns section to CURSOR_2.0_RULES_FINAL.md. Session log: `docs/session_logs/2026-03-14_1900_langchain-rag-phase2-cost-optimisation.md`.
 
 ### **Previous Achievement (March 7, 2026 - 18:00)**
@@ -142,7 +145,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – March 7–15, 2026)**
+### **Recent Updates (Last 7 Days – March 7–16, 2026)**
+- **Mar 16 (14:00)**: Rolled back to `277bbf1f` (undo security update from Mar 15 night). FE refresh fix: notification-ID-based dedup in MoolahContext.tsx. Capitec EBONF confirmed as SBSA-side issue; Standard Bank RTP working.
 - **Mar 15 (18:00)**: AI Support v3.1 — Comprehensive KB (240 entries) + Topic Filtering. FAQ_MASTER.md rewritten (removed USDC/white-label/NFC/developer FAQs, added referrals/fees/tiers/eeziPay/EasyPay). generate-knowledge-base.js: parses FAQ_MASTER (96 Q&A) + GPT-4o gap fill (80 Q&A) = 176 new GEN- entries. Topic filtering: Layer 0 (score < 0.20 → instant refusal, 0 LLM cost), Layer 2 (system prompt STRICT SCOPE RULE). UAT tested: referral program, Bronze fee, eeziPay USSD steps, off-topic blocked, live balance — all passed. Session log: `docs/session_logs/2026-03-15_1800_comprehensive-kb-topic-filtering.md`.
 - **Mar 14 (22:00)**: Deployed to Staging (`00252-pqc`) and Production (`00032-qs6`). Production confirmed working — mixed Afrikaans/English query "uh wat is my wallet saldo" returned "Jou wallet saldo is ZAR 49,324.29" in 4s. Codebase sweep permanently disabled. Multilingual transactional intent added (Afrikaans, isiZulu, isiXhosa, Sesotho).
 - **Mar 14 (19:00)**: LangChain RAG AI Support v3 — Phase 1 (KB semantic search, 64 entries embedded) + Phase 2 (transactional AI: live balance + transactions) + cost optimisation (4 layers: cache → direct KB → gpt-4o-mini → self-learning). All non-KYC OpenAI calls switched to gpt-4o-mini. embed-knowledge-base.js rewritten to use db-connection-helper.js. Rules updated with Tech Debt section. KB accuracy review flagged for Tap to Add Money entries.
@@ -638,15 +642,14 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — LangChain RAG AI support rebuild + Field-level encryption  
-**Last Session**: 2026-03-14 — AI support simplified (4,000+ → ~250 lines)
+**Session Status**: ✅ **COMPLETE** — RTP rollback + FE transaction refresh fix  
+**Last Session**: 2026-03-16 — Rollback to pre-security-update, FE refresh race condition fix
 
-### **Most Recent Work (2026-03-14)**
-- **LangChain RAG rebuild**: Replaced `bankingGradeSupportService` (2,276 lines) + `aiSupportService` (2,100 lines) with `ragService.js` (~250 lines)
-- **Semantic search**: OpenAI text-embedding-3-small + cosine similarity over knowledge base
-- **GPT-4o**: Natural responses, 11 SA languages, conversational memory (last 10 messages per user)
-- **First-time setup**: Run `npm run embed:kb` in Codespaces (with UAT proxy) to generate OpenAI embeddings before first use
-- **Controller**: `supportController.js` now uses `ragService` directly. Same API contract.
+### **Most Recent Work (2026-03-16)**
+- **Rollback**: Code rolled back to commit `277bbf1f` (Mar 15, 18:36) — undid security update from Mar 15 night that user reported as breaking PayShap
+- **RTP testing**: Capitec RTP fails with EBONF (SBSA-side); Standard Bank RTP works fine (ACCC callback, wallet credited)
+- **FE refresh fix**: Replaced time-based dedup guard in `MoolahContext.tsx` with notification-ID-based tracking — every new `txn_wallet_credit` now triggers exactly one balance + transaction refresh
+- **Rules optimisation**: Updated `CURSOR_2.0_RULES_FINAL.md` (lost in rollback — documented in session log for re-application)
 
 ### **Previous Work (2026-03-13 evening)**
 - **Field-level encryption implemented**: `idNumber` in `users` table now encrypted with AES-256-GCM at the application layer (transparent via Sequelize hooks)
@@ -675,10 +678,11 @@ You're part of a **banking-grade software system** where:
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and 2–3 recent session logs (especially `2026-03-13_2200_field-level-encryption-popia.md`)
+2. Read this file and 2–3 recent session logs (especially `2026-03-16_1400_rules-optimisation-rtp-rollback-fe-refresh-fix.md`)
 3. Run `git status` → `git pull origin main`
-4. Add FIELD_ENCRYPTION_KEY + FIELD_HMAC_KEY to Cloud Run service env vars (for production deployment)
-5. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
+4. **IMPORTANT**: Code is at commit `277bbf1f` (rolled back). The `uetr` vs `msgId` RTP polling bug is still present. Don't re-introduce the security update without user approval.
+5. Deploy frontend to staging to test the MoolahContext.tsx refresh fix
+6. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
 ---
 

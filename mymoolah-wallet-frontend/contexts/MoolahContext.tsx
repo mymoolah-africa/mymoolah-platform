@@ -305,23 +305,23 @@ export function MoolahProvider({ children }: { children: ReactNode }) {
       setBlockingNotification(blocker || null);
 
       // Event-driven balance refresh: update balance when money arrives (RTP paid, wallet transfer, etc.)
-      const hasTransactionNotification = list.some(n => {
+      // Track which notification IDs already triggered a refresh to avoid stale-data races
+      // while still ensuring every NEW transaction notification triggers a refresh.
+      const processedIds: Set<number> = (window as any).__processedTxnNotifIds || new Set();
+      const newTxnNotifications = list.filter(n => {
+        if (processedIds.has(n.id)) return false;
         const isTransactionType = n.type === 'txn_wallet_credit' || n.type === 'txn_bank_credit';
         const hasBalanceRefreshReason = n.payload?.reason === 'balance_refresh';
-        const isTransactionTitle = n.title?.includes('Payment') || 
+        const isTransactionTitle = n.title?.includes('Payment') ||
           n.title?.includes('Received') || n.title?.includes('Sent') || n.title?.includes('Transaction');
         return isTransactionType || hasBalanceRefreshReason || isTransactionTitle;
       });
 
-      if (hasTransactionNotification) {
-        const now = Date.now();
-        const lastRefreshTime = (window as any).lastBalanceRefreshTime || 0;
-        const timeSinceLastRefresh = now - lastRefreshTime;
-        if (timeSinceLastRefresh > 2000) {
-          (window as any).lastBalanceRefreshTime = now;
-          await refreshBalanceAfterAction('money_received');
-          await refreshTransactions();
-        }
+      if (newTxnNotifications.length > 0) {
+        newTxnNotifications.forEach(n => processedIds.add(n.id));
+        (window as any).__processedTxnNotifIds = processedIds;
+        await refreshBalanceAfterAction('money_received');
+        await refreshTransactions();
       }
     } catch (_) {}
   };
