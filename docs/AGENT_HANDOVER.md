@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-16 14:00  
-**Latest Feature**: FE transaction refresh fix — ID-based notification dedup replaces time-based guard  
-**Document Version**: 2.19.0  
-**Session logs**: `docs/session_logs/2026-03-16_1400_rules-optimisation-rtp-rollback-fe-refresh-fix.md`, `docs/session_logs/2026-03-15_1800_comprehensive-kb-topic-filtering.md`  
+**Last Updated**: 2026-03-16 19:40  
+**Latest Feature**: AI chat markdown rendering — proper lists, bold, paragraphs in Support page  
+**Document Version**: 2.20.0  
+**Session logs**: `docs/session_logs/2026-03-16_1940_ui-polish-markdown-chat.md`, `docs/session_logs/2026-03-16_1400_rules-optimisation-rtp-rollback-fe-refresh-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
