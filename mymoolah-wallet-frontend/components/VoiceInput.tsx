@@ -256,7 +256,9 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
       
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      audioContextRef.current = new AudioContext();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      audioContextRef.current = new AudioContextClass();
       analyserRef.current = audioContextRef.current.createAnalyser();
       microphoneRef.current = audioContextRef.current.createMediaStreamSource(stream);
       

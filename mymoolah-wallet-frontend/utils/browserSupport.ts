@@ -26,8 +26,13 @@ export function detectBrowserSupport(): BrowserSupport {
   let isSupported = false;
   
   // Detect browser and version
-  // IMPORTANT: Check Opera Mini FIRST (before Chrome) as Opera Mini user agent contains "Chrome"
-  if (userAgent.includes('Opera Mini') || userAgent.includes('Opera/9.80')) {
+  // IMPORTANT: Check specific browsers FIRST since many include "Chrome" in their UA
+  if (userAgent.includes('SamsungBrowser')) {
+    browser = 'Samsung Internet';
+    const match = userAgent.match(/SamsungBrowser\/(\d+)/);
+    version = match ? match[1] : 'Unknown';
+    isSupported = parseInt(version) >= 14; // Samsung Internet 14+ has full Web Speech API
+  } else if (userAgent.includes('Opera Mini') || userAgent.includes('Opera/9.80')) {
     browser = 'Opera Mini';
     const match = userAgent.match(/Opera Mini\/(\d+)/) || userAgent.match(/Version\/(\d+\.\d+)/);
     version = match ? match[1] : 'Unknown';
@@ -71,7 +76,9 @@ export function detectBrowserSupport(): BrowserSupport {
   const recommendations: string[] = [];
   
   if (!isSupported) {
-    if (browser === 'Opera Mini') {
+    if (browser === 'Samsung Internet') {
+      recommendations.push('Update Samsung Internet to version 14 or higher for voice input support.');
+    } else if (browser === 'Opera Mini') {
       recommendations.push('Opera Mini does not support camera access. Please use the "Upload QR Code" option instead, or switch to Chrome, Safari, or Opera browser.');
     } else if (browser === 'Opera') {
       recommendations.push('Update Opera to version 75 or higher, or use Chrome, Edge, or Safari for full functionality.');

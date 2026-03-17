@@ -53,7 +53,15 @@ export const MicrophoneTest: React.FC = () => {
 
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       
-      const audioContext = new AudioContext();
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) {
+        // No AudioContext support — but stream opened successfully, so mic works
+        stream.getTracks().forEach(track => track.stop());
+        setTestResult('success');
+        setPermissionStatus('granted');
+        return;
+      }
+      const audioContext = new AudioContextClass();
       const source = audioContext.createMediaStreamSource(stream);
       const analyser = audioContext.createAnalyser();
       analyser.fftSize = 256;
