@@ -1,23 +1,23 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-17 09:35  
-**Latest Feature**: RTP fully operational — Capitec + Standard Bank ACCC → wallet credit confirmed  
-**Document Version**: 2.21.0  
-**Session logs**: `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`, `docs/session_logs/2026-03-16_1940_ui-polish-markdown-chat.md`  
+**Last Updated**: 2026-03-17 11:00  
+**Latest Feature**: SFTP Gateway port corrected to 5022 (SBSA H2H requirement); EBONF daily-limit PayShap notification added; RTP UETR fallback fix confirmed working for both Standard Bank and Capitec  
+**Document Version**: 2.22.0  
+**Session logs**: `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`, `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`, `docs/session_logs/2026-03-16_1940_ui-polish-markdown-chat.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
 
 ## 📌 **WHAT IS MYMOOLAH?**
 
-MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant digital wallet and payment solution. It provides: wallet services, VAS (airtime, data, vouchers, bill payments, electricity), cash-out (EasyPay), referrals, KYC, and automated multi-supplier reconciliation. AI support powered by LangChain RAG v3.1 with 240-entry KB and topic filtering. **Production**: api-mm.mymoolah.africa, wallet.mymoolah.africa. Built on Node.js, PostgreSQL, React, GCP. For operating rules, workflow, and constraints, read `docs/CURSOR_2.0_RULES_FINAL.md` first.
+MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant digital wallet and payment solution. It provides: wallet services, VAS (airtime, data, vouchers, bill payments, electricity), cash-out (EasyPay), referrals, KYC, and automated multi-supplier reconciliation. AI support powered by LangChain RAG v3.1 with 240-entry KB and topic filtering. Self-hosted security layer: Redis-backed distributed rate limiting, bot scoring, PoW CAPTCHA, AI cost gateway, GCP Cloud Armor WAF + Cloud CDN — no SaaS dependencies. **Production**: api-mm.mymoolah.africa, wallet.mymoolah.africa. Built on Node.js, PostgreSQL, React, GCP. For operating rules, workflow, and constraints, read `docs/CURSOR_2.0_RULES_FINAL.md` first.
 
 ---
 
 ## 📋 **NEW AGENT ONBOARDING CHECKLIST** (DO IN ORDER)
 
 1. [ ] Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY - provide proof of reading)
-2. [ ] Read this file (`docs/AGENT_HANDOVER.md`)
+2. [ ] Read this file (`docs/agent_handover.md`)
 3. [ ] Read 2-3 most recent `docs/session_logs/*.md`
 4. [ ] Read `docs/CHANGELOG.md` (last 2 weeks)
 5. [ ] Read `docs/DATABASE_CONNECTION_GUIDE.md` (if DB work planned)
@@ -34,7 +34,7 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 | Need to… | Read |
 |----------|------|
 | Understand rules & workflow | `docs/CURSOR_2.0_RULES_FINAL.md` |
-| Understand project & status | `docs/AGENT_HANDOVER.md` (this file) |
+| Understand project & status | `docs/agent_handover.md` (this file) |
 | See change history | `docs/CHANGELOG.md` |
 | Run DB migrations | `docs/DATABASE_CONNECTION_GUIDE.md` |
 | Set up dev environment | `docs/DEVELOPMENT_GUIDE.md` |
@@ -100,8 +100,14 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 16, 2026 - 14:00)**
-**RTP Rollback + FE Refresh Fix** — (1) Rolled back to commit `277bbf1f` (pre-security-update from Mar 15 night) after user reported PayShap RTP failure. Force-pushed to main, redeployed staging. (2) Post-rollback testing confirmed: Standard Bank RTP works (ACCC callback, wallet credited); Capitec RTP returns EBONF (SBSA-side routing issue, not code). (3) Fixed frontend transaction list refresh race condition in `MoolahContext.tsx`: replaced time-based deduplication (`lastBalanceRefreshTime > 2000ms`) with notification-ID-based tracking (`__processedTxnNotifIds Set`), ensuring every new `txn_wallet_credit` notification triggers exactly one balance + transaction refresh. Session log: `docs/session_logs/2026-03-16_1400_rules-optimisation-rtp-rollback-fe-refresh-fix.md`.
+### **Latest Achievement (March 12, 2026 - 23:30)**
+**Self-Hosted Security Layer — Full Debug & All Environments Stable** — Resolved a cascade of issues that emerged from the new security layer across Codespaces (UAT), Staging, and Cloud Run. **8 fixes**: (1) `botScoring.js` blocked Azure IPs (Codespaces) → log-only in dev; (2) JWT 401s — all `jwt.sign` calls updated to `HS512`, verifier accepts both HS512+HS256 during 24h transition; (3) Staging 403/CORS — GCP IAP was incorrectly enabled on `be-staging-wallet` → disabled via gcloud; (4) Cloud Armor quota exceeded → removed inappropriate OWASP CRS body-scanning rules (SQLi/XSS/LFI/RCE/Scanner — wrong for REST JSON API); (5) `ioredis ECONNREFUSED` in Cloud Run → all security modules now only connect to Redis if `REDIS_URL` env var is set; (6) AI support disabled in Codespaces → `OPENAI_API_KEY` now explicitly exported by `start-codespace-with-proxy.sh`; (7) 429s on dashboard polling → added `walletReadLimiter` (120/min) for GET wallet routes, retained `financialLimiter` (10/min) for writes; (8) Staging treated as production by rate limiters → `STAGING=true` now triggers `devMax` limits. Session log: `docs/session_logs/2026-03-12_2300_security-layer-debug-all-envs-resolved.md`.
+
+### **Previous Achievement (March 12, 2026 - 18:00)**
+**Banking-Grade Self-Hosted Security Layer (No SaaS Dependency)** — Comprehensive security hardening across all MMTP environments. Fixed 6 critical middleware gaps: JWT algorithm pinning (`HS512`), JWT_SECRET hardcoded fallback removed, `hpp` + `mongoSanitize` now properly wired, `requireAdminKey` fails-closed when env var unset, rate-limiter staging bypass replaced with lenient dev multipliers. Built 5 new modules: `middleware/distributedRateLimiter.js` (Redis-backed, 13 route groups, per-user keying), `middleware/botScoring.js` (passive bot detection — UA/headers/velocity/datacenter IP), `middleware/requestGuard.js` (consolidated auth guards), `services/powChallenge.js` (self-hosted SHA-256 hashcash PoW CAPTCHA, no third-party), `services/aiGateway.js` (OpenAI cost proxy — semantic cache, per-user $0.50/day budget, global $10/day alert, prompt injection detection). Created `scripts/enable-gcp-security.sh` for GCP Cloud Armor (OWASP CRS, geo-restriction ZA, edge rate limiting, SBSA IP allowlist) + Cloud CDN (wallet frontend). Deployed to both staging (`mmtp-waf-staging` → `be-staging-backend`) and production (`mmtp-waf-production` → `be-production-backend`, CDN on `be-production-wallet`). Session log: `docs/session_logs/2026-03-12_1800_banking-grade-security-layer.md`.
+
+### **Previous Achievement (March 15, 2026 - 18:00)**
+**AI Support v3.1 — Comprehensive KB (240 entries) + Topic Filtering** — FAQ_MASTER.md rewritten (accurate, no USDC/white-label/developer FAQs). generate-knowledge-base.js generates 176 new GEN- entries (96 FAQ + 80 GPT-4o gap fill). Topic filtering: Layer 0 (score < 0.20 → instant refusal, 0 LLM cost) + Layer 2 (system prompt STRICT SCOPE RULE). UAT confirmed: referral, fees, eeziPay steps, off-topic blocked, live balance. Session log: `docs/session_logs/2026-03-15_1800_comprehensive-kb-topic-filtering.md`.
 
 ### **Previous Achievement (March 14, 2026 - 19:00)**
 **LangChain RAG AI Support v3 — Phase 1 + Phase 2 + Cost Optimisation** — Replaced 4,649 lines of pattern-matching AI support code with a clean 481-line LangChain RAG service. Phase 1: Semantic KB search (64 embedded entries, OpenAI `text-embedding-3-small`). Phase 2: Transactional AI — detects personal questions (balance, transactions), fetches live user data from DB, injects into LLM context. Cost optimisation: 4-layer system (Redis cache → direct KB hit ≥92% → GPT-4o-mini → self-learning). Self-learning saves unknown questions to KB as `isActive=false` for admin review. Projected cost at 3M users: ~$150–360/month vs $30k without optimisations. Switched `gpt-4o` → `gpt-4o-mini` across feedbackService, googleReviewService, codebaseSweepService, feedbackController. KYC stays on `gpt-4o`. Tested in UAT — transactions, balance, and KB queries all working. Added Tech Debt & Architectural Concerns section to CURSOR_2.0_RULES_FINAL.md. Session log: `docs/session_logs/2026-03-14_1900_langchain-rag-phase2-cost-optimisation.md`.
@@ -145,9 +151,11 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – March 7–16, 2026)**
-- **Mar 16 (14:00)**: Rolled back to `277bbf1f` (undo security update from Mar 15 night). FE refresh fix: notification-ID-based dedup in MoolahContext.tsx. Capitec EBONF confirmed as SBSA-side issue; Standard Bank RTP working.
+### **Recent Updates (Last 7 Days – March 7–15, 2026)**
+- **Mar 12 (23:30)**: Security layer full debug — 8 fixes across Codespaces/Staging/Cloud Run: botScoring Azure IP fix, JWT HS512 migration + transition window, GCP IAP disabled on be-staging-wallet, OWASP CRS rules removed from Cloud Armor WAF, Redis ECONNREFUSED fix (guard with REDIS_URL), OPENAI_API_KEY startup export, walletReadLimiter for dashboard GET polling, STAGING=true uses devMax. All environments confirmed stable. Session log: `docs/session_logs/2026-03-12_2300_security-layer-debug-all-envs-resolved.md`.
 - **Mar 15 (18:00)**: AI Support v3.1 — Comprehensive KB (240 entries) + Topic Filtering. FAQ_MASTER.md rewritten (removed USDC/white-label/NFC/developer FAQs, added referrals/fees/tiers/eeziPay/EasyPay). generate-knowledge-base.js: parses FAQ_MASTER (96 Q&A) + GPT-4o gap fill (80 Q&A) = 176 new GEN- entries. Topic filtering: Layer 0 (score < 0.20 → instant refusal, 0 LLM cost), Layer 2 (system prompt STRICT SCOPE RULE). UAT tested: referral program, Bronze fee, eeziPay USSD steps, off-topic blocked, live balance — all passed. Session log: `docs/session_logs/2026-03-15_1800_comprehensive-kb-topic-filtering.md`.
+- **Mar 12 (23:00)**: Session docs updated (security layer session log created, BANKING_GRADE_ARCHITECTURE.md v2.12.0). Codespaces transaction history debug — Cloud SQL proxy not running caused `ECONNREFUSED 127.0.0.1:6543` and empty dashboard. Fix: always use `bash scripts/start-codespace-with-proxy.sh` (not `npm start`). Cloudflare vs self-hosted comparison conducted — MMTP covers ~75% of Cloudflare capabilities; remaining gaps (TLS fingerprinting, L3/L4 volumetric DDoS) not relevant at current scale. User confirmed satisfaction with self-hosted approach. Session log: `docs/session_logs/2026-03-12_2300_security-review-transaction-debug-cloudflare.md`.
+- **Mar 12 (18:00)**: Banking-Grade Self-Hosted Security Layer — 6 critical fixes (JWT HS512 pinning, JWT_SECRET hardcoded fallback removed, hpp/mongoSanitize wired, adminKey fails-closed, staging rate-limit bypass removed). 5 new modules: distributedRateLimiter.js (Redis, 13 routes), botScoring.js, requestGuard.js, powChallenge.js (self-hosted PoW), aiGateway.js (OpenAI cost proxy). GCP Cloud Armor + CDN deployed staging + production. Session log: `docs/session_logs/2026-03-12_1800_banking-grade-security-layer.md`.
 - **Mar 14 (22:00)**: Deployed to Staging (`00252-pqc`) and Production (`00032-qs6`). Production confirmed working — mixed Afrikaans/English query "uh wat is my wallet saldo" returned "Jou wallet saldo is ZAR 49,324.29" in 4s. Codebase sweep permanently disabled. Multilingual transactional intent added (Afrikaans, isiZulu, isiXhosa, Sesotho).
 - **Mar 14 (19:00)**: LangChain RAG AI Support v3 — Phase 1 (KB semantic search, 64 entries embedded) + Phase 2 (transactional AI: live balance + transactions) + cost optimisation (4 layers: cache → direct KB → gpt-4o-mini → self-learning). All non-KYC OpenAI calls switched to gpt-4o-mini. embed-knowledge-base.js rewritten to use db-connection-helper.js. Rules updated with Tech Debt section. KB accuracy review flagged for Tap to Add Money entries.
 - **Mar 13 (22:00)**: Field-level AES-256-GCM encryption for idNumber (POPIA compliance). Deployed to UAT, Staging, Production.
@@ -189,7 +197,14 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 3. **NEXT**: Seed KB to Production — `npm run generate:kb:production` then `npm run embed:kb:production`
 4. **NEXT**: Deploy code (ragService v3.1 + topic filtering) — `./scripts/deploy-backend.sh --staging` then `--production`
 5. Archive legacy AI services (`bankingGradeSupportService.js`, `aiSupportService.js`, `semanticEmbeddingService.js`) and `scripts/run-sweep-patterns-migration.sh`
-6. Phase 3 (Future): Redis conversation memory, Admin portal for KB review screen
+6. **Phase 3 — Admin Portal: KB Review Screen** (Wishlist — see `docs/PRIORITIZED_TODO_LIST.md`)
+   - View/approve/edit/reject `isActive=false` KB entries (auto-learned + GEN-)
+   - Table: question, answer, date, category, source | Actions: Approve / Edit / Reject / Bulk approve
+   - After approval → trigger `embed:kb` automatically
+   - Location: portal admin area (authenticated route)
+7. Phase 3 (Future): Redis conversation memory across sessions
+
+**⚠️ CODESPACES STARTUP — CRITICAL REMINDER**: ALWAYS use `bash scripts/start-codespace-with-proxy.sh` (NOT `npm start`). The backend requires the Cloud SQL Auth Proxy on port 6543. If you get `ECONNREFUSED 127.0.0.1:6543`, the proxy is not running — run the startup script. If you get `EADDRINUSE: 0.0.0.0:3001`, run `fuser -k 3001/tcp` first.
 
 **SBSA PayShap UAT** - Obtain OneHub credentials from Standard Bank; run migrations; set STANDARDBANK_PAYSHAP_ENABLED=true and SBSA_* env vars; whitelist callback URLs; test RPP/RTP flows. See `docs/SBSA_PAYSHAP_UAT_GUIDE.md`.
 
@@ -255,7 +270,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Critical Reading Requirements**
 1. **`docs/CURSOR_2.0_RULES_FINAL.md`** - MANDATORY reading before any work
 2. **`docs/DATABASE_CONNECTION_GUIDE.md`** - MANDATORY for database operations
-3. **This document (AGENT_HANDOVER.md)** - Complete operational context
+3. **This document (agent_handover.md)** - Complete operational context
 
 ---
 
@@ -449,7 +464,7 @@ Before proceeding with ANY change, pass these 4 gates:
 #### **Gate 4: Documentation Update** ✅
 - [ ] Update relevant `docs/` files
 - [ ] Create session log with detailed context
-- [ ] Update `AGENT_HANDOVER.md` if significant change
+- [ ] Update `agent_handover.md` if significant change
 - [ ] Commit with descriptive message
 
 **Why**: Undocumented changes = lost knowledge when you're gone.
@@ -592,7 +607,7 @@ Before concluding your session, verify:
 | Test in Codespaces | See testing workflow | `docs/CODESPACES_TESTING_REQUIREMENT.md` |
 | Find patterns | Search `scripts/`, `services/` | Grep or IDE search |
 | Read recent context | `docs/session_logs/` (sort by date) | Most recent 2-3 logs |
-| Understand current status | `docs/AGENT_HANDOVER.md` | This file |
+| Understand current status | `docs/agent_handover.md` | This file |
 | Check API contracts | `docs/API_DOCUMENTATION.md` | API docs |
 
 ---
@@ -601,7 +616,7 @@ Before concluding your session, verify:
 
 **Before starting work** (5 minutes):
 - [ ] Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-- [ ] Read `docs/AGENT_HANDOVER.md` (this file)
+- [ ] Read `docs/agent_handover.md` (this file)
 - [ ] Read 2-3 most recent `docs/session_logs/*.md`
 - [ ] Read relevant docs for your task
 - [ ] `git status` → Check for uncommitted changes
@@ -642,47 +657,32 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — RTP rollback + FE transaction refresh fix  
-**Last Session**: 2026-03-16 — Rollback to pre-security-update, FE refresh race condition fix
+**Session Status**: ✅ **COMPLETE** — SFTP Port 5022 + EBONF Daily-Limit Notification  
+**Last Session**: 2026-03-17 — SFTP Gateway port corrected to 5022; EBONF PayShap notification added
 
-### **Most Recent Work (2026-03-16)**
-- **Rollback**: Code rolled back to commit `277bbf1f` (Mar 15, 18:36) — undid security update from Mar 15 night that user reported as breaking PayShap
-- **RTP testing**: Capitec RTP fails with EBONF (SBSA-side); Standard Bank RTP works fine (ACCC callback, wallet credited)
-- **FE refresh fix**: Replaced time-based dedup guard in `MoolahContext.tsx` with notification-ID-based tracking — every new `txn_wallet_credit` now triggers exactly one balance + transaction refresh
-- **Rules optimisation**: Updated `CURSOR_2.0_RULES_FINAL.md` (lost in rollback — documented in session log for re-application)
+### **Most Recent Work (2026-03-17)**
+- **SFTP Gateway port 5022**: Colette (SBSA Implementation Manager) confirmed SBSA H2H Push/Pull requires port 5022 not 22. Fixed by detaching `sftp-1-vm` boot disk, mounting on temp Ubuntu VM, editing `/opt/sftpgw/application.properties` (`sftp.port=22` → `sftp.port=5022`), reattaching, restarting. Port 5022 OPEN confirmed. Port 22 CLOSED.
+- **GCP Firewall rules**: `allow-sbsa-sftp-test` and `allow-sbsa-sftp-prod` recreated on `tcp:5022`
+- **EBONF notification**: `services/standardbankRtpService.js` — when EBONF code detected, show "PayShap Daily Limit Reached" with bank name + "Please resend your request tomorrow." Both direct-rejection and PBAC-failure paths covered.
+- **SFTP Gateway API access discovered**: OAuth2 token via `POST /backend/login` with `Authorization: Basic <base64(clientid:clientsecret)>` from `/webconfig.js`. Useful for future admin automation.
 
-### **Previous Work (2026-03-13 evening)**
-- **Field-level encryption implemented**: `idNumber` in `users` table now encrypted with AES-256-GCM at the application layer (transparent via Sequelize hooks)
-- **HMAC-SHA256 blind index**: `idNumberHash` column enables WHERE lookups and UNIQUE constraints on encrypted data
-- **New utility**: `utils/fieldEncryption.js` — encrypt, decrypt, blindIndex, isEncrypted, checkConfiguration
-- **Two-phase migration**: Migration 01 adds nullable column → backfill encrypts → Migration 02 adds UNIQUE + NOT NULL
-- **All 3 environments done**: UAT ✅, Staging ✅, Production ✅
-- **Keys stored**: FIELD_ENCRYPTION_KEY and FIELD_HMAC_KEY in `.env`, `.env.codespaces`, and GCP Secret Manager
-- **postgres password set**: On all 3 Cloud SQL instances; stored in Secret Manager as `db-mmtp-pg-admin-password`
-- **Admin DB connections**: Added to `db-connection-helper.js` for future DDL migrations
-- **Duplicate test user IDs fixed**: User 2 (Leonie) → `6610200168086`, User 4 (HD Botes) → `9201165024087`
-
-### **Previous Work (2026-03-13 afternoon)**
-- SBSA H2H initiated: Colette assigned as Implementation Manager. SFTP Gateway recreated. SSH keys generated. PG15 completed and emailed.
-- Capitec RTP ✅ confirmed working — EBONF on Mar 12 was daily limit, not code.
+### **Previous Work (2026-03-16)**
+- **RTP UETR fallback fix**: UETR stored in `requestId`; fallback lookup in `processRtpCallback` catches SBSA batch callbacks. Standard Bank RTP ✅ 73ms. Capitec RTP ✅ 97ms.
+- **UI Polish**: SecurityBadge close button, universal modal close buttons, AI chat `react-markdown` rendering.
 
 ### **Current State**
-- Staging v12 deployed with all RTP proxy/PBAC fixes (commit `b6cad770`)
-- Production live: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa`
-- SFTP Gateway running: `34.35.137.166` — admin panel `https://34.35.137.166`
-- H2H: PG15 + SSH key submitted to Colette (SBSA) on 2026-03-13 ✅ — awaiting connectivity confirmation
-- Capitec RTP: ✅ Confirmed working 2026-03-13
-- **Field encryption**: ✅ `idNumber` encrypted at rest in all 3 databases (UAT, Staging, Production)
-- **Cloud Run Staging**: `mymoolah-backend-staging-00249-n2c` — 100% traffic, encryption keys configured
-- **Cloud Run Production**: `mymoolah-backend-production-00029-sdk` — 100% traffic, encryption keys configured, live at `api-mm.mymoolah.africa`
+- SFTP Gateway: `34.35.137.166`, **port 5022**, admin `https://34.35.137.166` — ✅ Running
+- SBSA H2H: PG15 + SSH key submitted to Colette ✅. **Port now corrected to 5022 — await Colette's connectivity test**
+- PayShap RTP: Standard Bank ✅ Capitec ✅ both confirmed end-to-end
+- Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
+- **Backend redeploy required** to activate EBONF message in production
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and 2–3 recent session logs (especially `2026-03-16_1400_rules-optimisation-rtp-rollback-fe-refresh-fix.md`)
-3. Run `git status` → `git pull origin main`
-4. **IMPORTANT**: Code is at commit `277bbf1f` (rolled back). The `uetr` vs `msgId` RTP polling bug is still present. Don't re-introduce the security update without user approval.
-5. Deploy frontend to staging to test the MoolahContext.tsx refresh fix
-6. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
+2. Read this file and 2–3 recent session logs
+3. Run `git status` → `git push origin main` → redeploy backend to staging + production
+4. Reply to Colette (SBSA) confirming port 5022 ready — see email draft in session log
+5. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
 ---
 
@@ -690,6 +690,9 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 17 (10:00) | **SFTP port 5022 + EBONF message**: Port corrected per Colette (SBSA H2H). EBONF now shows professional daily-limit notification. Temp VM disk-edit approach |
+| Mar 16 (21:32) | **RTP UETR fallback fix**: UETR stored in `requestId`; dual-lookup in `processRtpCallback`. Standard Bank ✅ 73ms. Capitec ✅ 97ms |
+| Mar 16 (19:40) | **UI Polish**: SecurityBadge close button; universal modal close buttons; AI chat `react-markdown` rendering with `normaliseMarkdown()` |
 | Mar 14 (00:00) | **AI Support — LangChain RAG**: Replaced 4,000+ line pattern-matching stack with ~250-line ragService. Run `npm run embed:kb` in Codespaces before first use |
 | Mar 13 (22:00) | **Field-level encryption (POPIA)**: AES-256-GCM encryption for `idNumber` + HMAC blind index — deployed to UAT, Staging, Production |
 | Mar 13 (16:00) | **SBSA H2H setup**: SFTP Gateway recreated; SSH key generated; firewall rules created; SFTP users set up; PG15 completed; email to Colette drafted |
@@ -714,12 +717,13 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **Field encryption: Cloud Run env vars** — Add `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` to Cloud Run service env vars for production deployment. Without these, production app will store plaintext with warnings.
-2. **Field encryption: E2E test** — Register a new user, login, verify `idNumber` is encrypted in DB and returns decrypted via API.
-3. **Field encryption: Unit tests** — Write tests for `utils/fieldEncryption.js` (encrypt/decrypt round-trip, blindIndex determinism, isEncrypted detection).
-4. **Field encryption: Extend to phoneNumber** — Same AES-256-GCM + blind index pattern. Add `phoneNumberHash` column, update WHERE clauses.
-5. **SBSA H2H — Await Colette's response** — PG15 + SSH public key emailed to Colette on 2026-03-13 ✅. Awaiting SBSA connectivity confirmation and TEST environment details. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
-6. **Capitec RTP** — ✅ Confirmed working 2026-03-13. EBONF failures on Mar 12 were due to Capitec daily PayShap transaction limit being hit during testing — NOT a code issue. Code is solid.
+1. **Backend redeploy to production** — Push `git push origin main` then redeploy backend to staging and production to activate the EBONF daily-limit notification message.
+2. **Reply to Colette (SBSA)** — Confirm port 5022 is ready. Await SBSA TEST server (`196.8.85.62`) connectivity test. See `docs/SBSA_H2H_SETUP_GUIDE.md` for full details.
+3. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` mismatch warning (soft_fail, non-blocking).
+4. **H2H Statements/Payments** — Awaiting Melissa's sign-on confirmation before SBSA proceeds with statement delivery config.
+5. **Field encryption: Cloud Run env vars** — Confirm `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` are set in Cloud Run service env vars for both Staging and Production.
+6. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles (`mobilemart` and `flash` users).
+7. **Capitec RTP EBONF** — ✅ Now handled with professional daily-limit message. EBONF failures are SBSA-side routing issue (daily limit), not a code bug.
 7. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` and verify `[RTP-RETRY-PBAC]` logs + account-based retry succeeds.
 8. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` callback validation (currently soft_fail).
 9. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager.
@@ -727,7 +731,8 @@ You're part of a **banking-grade software system** where:
 11. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles.
 12. **H2H Statements/Payments** — Await Melissa sign-on; decide statement format (MT940/MT942) and delivery schedule.
 13. **USDC send** — Test in Codespaces when VALR credentials available.
-14. **SFTP Gateway admin IP** — Dynamic ISP IP (`169.0.184.203`). If André's IP changes, update `sftp-1-tcp-22` and `sftp-1-tcp-443` firewall rules.
+14. **SFTP Gateway admin IP** — Dynamic ISP IP (last known: `169.0.73.54` on 2026-03-17). If admin UI becomes inaccessible, update `sftp-1-tcp-22` and `sftp-1-tcp-443` firewall rules with new IP.
+15. **SFTP Gateway port is 5022** — Updated 2026-03-17 per Colette (SBSA). Config: `/opt/sftpgw/application.properties`. To SSH into VM for config changes, you MUST use the disk detach/mount approach (SFTP Gateway intercepts port 22 — IAP SSH is blocked).
 
 ---
 

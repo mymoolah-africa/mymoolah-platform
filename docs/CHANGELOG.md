@@ -1,5 +1,34 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-17 - 🔧 SFTP Port 5022 + EBONF Daily-Limit User Notification ✅
+
+### **Session Overview**
+Two changes: (1) SBSA Implementation Manager Colette confirmed SFTP H2H Push/Pull requires port **5022**, not 22. All three required changes implemented: docs updated, GCP firewall rules recreated on tcp:5022, SFTP Gateway VM port changed (disk detach/edit/reattach method — startup scripts blocked by `/tmp noexec` on Ubuntu 24.04 image). Port 5022 confirmed OPEN, port 22 confirmed CLOSED. (2) PayShap EBONF rejection code now triggers a professional banking-grade daily-limit message instead of the generic system-error message.
+
+### **Changes**
+
+#### EBONF Daily-Limit Notification (`96a00127`)
+- **`services/standardbankRtpService.js`**:
+  - Direct rejection path: detect `codes.includes('EBONF')` → title "PayShap Daily Limit Reached", message uses `payerBankName` + "has reached its daily PayShap transaction limit. Please resend your request tomorrow."
+  - PBAC-failure path: detect `r.metadata?.proxyRejectCodes.includes('EBONF')` → same professional message
+  - All other rejection codes (EPDNF, user-declined, expired, cancelled) unchanged
+
+#### SFTP Gateway Port 22 → 5022 (`758c2e2b`)
+- **`docs/SBSA_H2H_SETUP_GUIDE.md`**: Port updated from `22` → `5022` in connectivity table, firewall rule examples, and checklist
+- **GCP Firewall**: `allow-sbsa-sftp-test` and `allow-sbsa-sftp-prod` deleted and recreated on `tcp:5022`
+- **VM `sftp-1-vm`**: `/opt/sftpgw/application.properties` — `sftp.port=22` → `sftp.port=5022` (changed via disk detach/mount on temp VM)
+
+### **Verified State**
+- ✅ Port 5022 OPEN on `34.35.137.166`
+- ✅ Port 22 CLOSED (SFTP Gateway no longer intercepts)
+- ✅ Admin UI (port 443) UP
+- ✅ SBSA TEST + PROD firewall rules active on tcp:5022
+
+### **Session Log**
+- `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`
+
+---
+
 ## 2026-03-16 - 🔧 RTP Callback UETR Fallback Fix — Batch Callback Matching ✅
 
 ### **Session Overview**

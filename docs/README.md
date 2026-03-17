@@ -1,20 +1,35 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 16, 2026  
-**Version**: 2.21.0 - RTP Callback UETR Fallback Fix  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **RTP UETR FIX**
+**Last Updated**: March 17, 2026  
+**Version**: 2.22.0 - SFTP Port 5022 + EBONF Daily-Limit Message  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE**
 
-**Work in the last 7 days (Mar 10–16, 2026)**: RTP callback UETR fallback fix — SBSA batch callbacks now matched correctly (UETR stored in `requestId`, dual-lookup added). Standard Bank RTP end-to-end confirmed. PASA T-PPP SecurityBadge. Universal modal close buttons. AI chat markdown rendering. FE notification refresh race fix. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Mar 10–17, 2026)**: SFTP Gateway port corrected to 5022 (Colette/SBSA H2H requirement). EBONF daily-limit user notification added. RTP callback UETR fallback fix. Standard Bank + Capitec RTP end-to-end confirmed. PASA T-PPP SecurityBadge. Universal modal close buttons. AI chat markdown rendering. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: RTP Callback UETR Fallback Fix (March 16, 2026)**
+## 🚀 **LATEST UPDATE: SFTP Port 5022 + EBONF Daily-Limit Message (March 17, 2026)**
+
+### **📡 SFTP Gateway Port Corrected to 5022**
+- SBSA Implementation Manager Colette confirmed SBSA's H2H Push/Pull method requires port **5022**
+- GCP firewall rules `allow-sbsa-sftp-test` and `allow-sbsa-sftp-prod` recreated on `tcp:5022`
+- `sftp.port=5022` set in `/opt/sftpgw/application.properties` on `sftp-1-vm` via disk detach/edit method
+- Port 5022 OPEN, port 22 CLOSED — ready for SBSA connectivity test
+
+### **💬 EBONF Daily-Limit User Notification**
+- `services/standardbankRtpService.js` — EBONF rejection now shows: **"PayShap Daily Limit Reached"** with message: *"{Bank} has reached its daily PayShap transaction limit. Please resend your request tomorrow."*
+- Applies to both direct-rejection and PBAC-failure paths
+
+**Session log**: `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`
+
+---
+
+## **PREVIOUS: RTP Callback UETR Fallback Fix (March 16, 2026)**
 
 ### **🔧 RTP Batch Callback Matching Fixed**
 - `services/standardbankRtpService.js` — UETR now stored in `requestId` (was being discarded)
 - Fallback lookup: if `originalMessageId` doesn't match, try `requestId` (catches SBSA batch callbacks)
-- Realtime callback path completely unchanged — existing flow unaffected
-- Standard Bank RTP ✅ and Capitec RTP ✅ both end-to-end confirmed — ACCC → wallet credited in &lt;100ms, frontend auto-refreshes
+- Standard Bank RTP ✅ and Capitec RTP ✅ both end-to-end confirmed — ACCC → wallet credited in &lt;100ms
 
 **Session log**: `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`
 

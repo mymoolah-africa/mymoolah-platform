@@ -1,16 +1,19 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: March 16, 2026  
-**Version**: 2.21.0 - RTP Callback UETR Fallback Fix  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **UNIVERSAL MODALS** ✅ **PAYSHAP RTP** ✅ **RTP UETR FIX** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Last Updated**: March 17, 2026  
+**Version**: 2.22.0 - SFTP Port 5022 + EBONF Daily-Limit Message  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **UNIVERSAL MODALS** ✅ **PAYSHAP RTP** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. UI polish session (Mar 16): PASA T-PPP SecurityBadge with real cert data, universal modal close button system, global 340px modal width, AI chat markdown rendering via `react-markdown` + `normaliseMarkdown()` pre-processor. PayShap RTP rolled back to working commit `277bbf1f`; Capitec RTP shows `EBONF` (SBSA routing issue), Standard Bank RTP ✅ working. FE notification refresh race fixed with ID-based dedup.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. SFTP Gateway corrected to port 5022 (SBSA H2H requirement — Colette confirmed). EBONF rejection now shows professional daily-limit message. RTP UETR fallback fix confirmed working — both Standard Bank and Capitec RTP end-to-end. UI polish: SecurityBadge, universal modals, AI chat markdown. Backend redeploy required to activate EBONF message in production.
 
-### **📋 Latest: RTP Callback UETR Fallback Fix (March 16, 2026)** ✅ **COMPLETE**
+### **📋 Latest: SFTP Port 5022 + EBONF Message (March 17, 2026)** ✅ **COMPLETE**
+SFTP Gateway `sftp-1-vm` reconfigured to port 5022 (was 22). GCP firewall rules recreated on tcp:5022. EBONF rejection code now shows "PayShap Daily Limit Reached" with bank name and retry-tomorrow instruction. Session log: `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`.
+
+### **📋 Previous: RTP Callback UETR Fallback Fix (March 16, 2026)** ✅ **COMPLETE**
 SBSA batch callbacks now matched correctly. UETR stored in `requestId`; fallback lookup added in `processRtpCallback`. Standard Bank RTP ✅ confirmed 73ms. Capitec RTP ✅ confirmed 97ms (17 Mar 2026 09:33) — wallet auto-credited, frontend refreshed within 2s. Session log: `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`.
 
 ### **📋 Previous: UI Polish — Security Badge, Modals, AI Chat Markdown (March 16, 2026)** ✅ **COMPLETE**
