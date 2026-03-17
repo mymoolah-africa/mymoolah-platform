@@ -344,14 +344,20 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
           return;
         }
         
-        // Request microphone access explicitly
+        // Pre-request mic access so the permission prompt fires before
+        // SpeechRecognition.start(). On iOS Chrome the first prompt can
+        // reload the WebView if speech recognition triggers it instead.
         try {
           if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             setError('Microphone access not supported in this browser. Please use a modern browser.');
             return;
           }
           
-          await navigator.mediaDevices.getUserMedia({ audio: true });
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          // Release the stream immediately — we only needed to trigger the prompt.
+          // Holding it open while SpeechRecognition also opens a stream can
+          // cause conflicts on iOS.
+          stream.getTracks().forEach(track => track.stop());
         } catch (mediaError: any) {
           console.error('Microphone access denied:', mediaError);
           
