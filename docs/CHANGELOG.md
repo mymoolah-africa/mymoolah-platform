@@ -1,5 +1,34 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-17 19:00 - 🎨 EFT Overlay Polish + 🎤 VoiceInput On-Demand Rewrite ✅
+
+### **Session Overview**
+Two major areas: (1) Full polish of the "Top-up via EFT" overlay — correct bank details, PayShap section, global design system styling, and fixed missing top/bottom banners. (2) Root-cause fix for the voice input mic button doing nothing — complete rewrite of `VoiceInput.tsx` using on-demand SpeechRecognition instead of a lifecycle-managed approach. User confirmed mic now works.
+
+### **Changes**
+
+#### EFT Overlay (`042b391c` → `88431a91`)
+- **`mymoolah-wallet-frontend/pages/TransactPage.tsx`**: Added `hidden?: boolean` to Service interface; added "Top-up via EFT" tile; set `hidden: true` on "Tap to Add Money" and "ATM Cash Send"
+- **`mymoolah-wallet-frontend/components/overlays/AddMoneyEftOverlay.tsx`**: Full styling overhaul — white header, Montserrat, CSS variables, brand green; Account Holder "MyMoolah Treasury", Account Number "272406481"; corrected How it works steps; PayShap section (24/7/365, not business hours); inline Done button
+- **`mymoolah-wallet-frontend/.env.local`**: `VITE_MM_BANK_ACCOUNT=272406481`, `VITE_MM_ACCOUNT_HOLDER=MyMoolah Treasury`
+- **`mymoolah-wallet-frontend/App.tsx`**: Added `/add-money-eft` to `pagesWithTopBanner` — fixes missing TopBanner
+- **`mymoolah-wallet-frontend/components/BottomNavigation.tsx`**: Added `/add-money-eft` to both `shouldShowNav` and `showBottomNav` allowlists — fixes missing BottomNavigation
+
+#### VoiceInput Rewrite (`2ea6e08c`)
+- **`mymoolah-wallet-frontend/components/VoiceInput.tsx`**: Complete rewrite (~625 → ~170 lines). On-demand SpeechRecognition: create on start(), destroy on result/stop/error. No useEffect. `continuous: false`. Self-contained `isSupported()` check. Red pulsing mic while listening, spinner while starting, error inline
+- **`mymoolah-wallet-frontend/pages/SupportPage.tsx`**: Simplified — removed `isVoiceInputActive`, `showMicrophoneTest`, all toggle buttons. Mic button sits directly in input row. Voice transcript appends to input (does not auto-send). Removed unused imports (Badge, MicrophoneTest, MessageCircle, Wallet, Paperclip)
+
+#### Disbursement Auth Fix (`17422e9a`)
+- **`routes/disbursement.js`**: Fixed `const { authenticateToken }` → `const authenticateToken = require('../middleware/auth')` — resolved server startup failure
+
+### **Root Cause — Mic Bug**
+`VoiceInput` managed `SpeechRecognition` in a `useEffect` with `[currentLanguage, onTranscript, onError]` as dependencies. On every SupportPage re-render, `onTranscript`/`onError` callback references changed (even with `useCallback`), triggering `useEffect` cleanup which called `recognition.stop()` and destroyed the instance — milliseconds after it was created, before `onstart` fired. Button appeared to do nothing because it was: create → immediately destroy → recreate in a loop.
+
+### **Session Log**
+- `docs/session_logs/2026-03-17_1900_eft-overlay-voice-input-fix.md`
+
+---
+
 ## 2026-03-17 - 🔧 SFTP Port 5022 + EBONF Daily-Limit User Notification ✅
 
 ### **Session Overview**
