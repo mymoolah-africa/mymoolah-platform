@@ -33,7 +33,7 @@ import { Alert, AlertDescription } from '../ui/alert';
 
 // ---- Bank details (Vite env vars with safe fallbacks) ---------------------
 const MM_BANK_NAME      = (import.meta as any).env?.VITE_MM_BANK_NAME         ?? 'Standard Bank';
-const MM_BANK_ACCOUNT   = (import.meta as any).env?.VITE_MM_BANK_ACCOUNT      ?? '272406481';
+const MM_BANK_ACCOUNT   = (import.meta as any).env?.VITE_MM_BANK_ACCOUNT       ?? '272406481';
 const MM_BANK_BRANCH    = (import.meta as any).env?.VITE_MM_BANK_BRANCH_CODE  ?? '051001';
 const MM_ACCOUNT_TYPE   = (import.meta as any).env?.VITE_MM_BANK_ACCOUNT_TYPE ?? 'Current Account';
 const MM_ACCOUNT_HOLDER = (import.meta as any).env?.VITE_MM_ACCOUNT_HOLDER    ?? 'MyMoolah Treasury';
@@ -397,7 +397,7 @@ export function AddMoneyEftOverlay() {
               lineHeight: 1.5,
             }}>
               Use your mobile number (<strong>{userMobile || 'e.g. 0821234567'}</strong>) as
-              the reference. PayShap payments are processed in seconds during banking hours.
+              the reference. PayShap payments are processed in seconds, 24/7/365.
             </p>
           </CardContent>
         </Card>
