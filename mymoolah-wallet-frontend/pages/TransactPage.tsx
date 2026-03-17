@@ -42,6 +42,7 @@ interface Service {
   badge?: string;
   badgeType?: 'success' | 'warning' | 'info';
   comingSoon?: boolean;
+  hidden?: boolean; // hides tile from UI without removing config
 }
 
 // Service categories
@@ -161,7 +162,7 @@ export function TransactPage() {
         },
         {
           id: 'add-money-eft',
-          title: 'Add Money via EFT',
+          title: 'Top-up via EFT',
           description: 'Bank transfer using your mobile number as reference — auto-allocated to your wallet',
           icon: <Banknote className="w-6 h-6" />,
           route: '/add-money-eft',
@@ -175,9 +176,8 @@ export function TransactPage() {
           description: 'Tap your card or use Google Pay / Apple Pay to add money to your wallet',
           icon: <CreditCard className="w-6 h-6" />,
           route: '/tap-to-add-money',
-          available: true,
-          badge: 'New',
-          badgeType: 'info'
+          available: false,
+          hidden: true,
         },
         {
           id: 'send-money',
@@ -237,9 +237,7 @@ export function TransactPage() {
           icon: <AtSign className="w-6 h-6" />,
           route: '/atm-cashsend-overlay',
           available: false,
-          badge: 'Coming Soon',
-          badgeType: 'info',
-          comingSoon: true
+          hidden: true,
         }
       ]
     },
@@ -473,7 +471,7 @@ export function TransactPage() {
 
               {/* Service Banner */}
               <div className="grid grid-cols-1 gap-4">
-                {section.services.map((service) => (
+                {section.services.filter(s => !s.hidden).map((service) => (
                   <Card
                     key={service.id}
                     className={`cursor-pointer transition-all duration-200 border hover:shadow-md ${

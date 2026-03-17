@@ -1,18 +1,13 @@
 /**
- * Add Money via EFT / Bank Transfer Overlay
+ * Top-up via EFT / Bank Transfer Overlay
  *
- * Shows the MyMoolah SBSA treasury account details so the user can do an
- * EFT from their bank.  The user's mobile number is pre-filled as the
- * mandatory payment reference and can be copied to clipboard.
+ * Shows MyMoolah Treasury bank details for an EFT from the user's bank.
+ * The user's mobile number is pre-filled as the mandatory payment reference
+ * and can be copied to clipboard.
  *
- * IMPORTANT: The reference MUST be the user's registered mobile number
- * (e.g. 0825571055) so the system can auto-allocate the deposit.
+ * Also shows PayShap as an instant alternative (mymoolah@standardbank).
  *
- * Styling follows the global MyMoolah design system:
- *  - Montserrat font via CSS variables (--font-weight-bold, --mobile-font-small)
- *  - White background, no gradient header (matches TopupEasyPayOverlay)
- *  - Brand green #86BE41 for CTAs and accents
- *  - Minimum 44px touch targets
+ * Styling: Montserrat / CSS variables / white background — matches global design system.
  *
  * @author MyMoolah Treasury Platform
  */
@@ -28,6 +23,7 @@ import {
   User,
   Phone,
   Info,
+  Zap,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
@@ -35,18 +31,20 @@ import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Alert, AlertDescription } from '../ui/alert';
 
-// ---- Bank details (configured via Vite env vars, with safe fallbacks) -----
-const MM_BANK_NAME      = (import.meta as any).env?.VITE_MM_BANK_NAME        ?? 'Standard Bank';
-const MM_BANK_ACCOUNT   = (import.meta as any).env?.VITE_MM_BANK_ACCOUNT     ?? 'Contact Support';
-const MM_BANK_BRANCH    = (import.meta as any).env?.VITE_MM_BANK_BRANCH_CODE ?? '051001';
+// ---- Bank details (Vite env vars with safe fallbacks) ---------------------
+const MM_BANK_NAME      = (import.meta as any).env?.VITE_MM_BANK_NAME         ?? 'Standard Bank';
+const MM_BANK_ACCOUNT   = (import.meta as any).env?.VITE_MM_BANK_ACCOUNT      ?? '272406481';
+const MM_BANK_BRANCH    = (import.meta as any).env?.VITE_MM_BANK_BRANCH_CODE  ?? '051001';
 const MM_ACCOUNT_TYPE   = (import.meta as any).env?.VITE_MM_BANK_ACCOUNT_TYPE ?? 'Current Account';
-const MM_ACCOUNT_HOLDER = (import.meta as any).env?.VITE_MM_ACCOUNT_HOLDER   ?? 'MyMoolah (Pty) Ltd';
+const MM_ACCOUNT_HOLDER = (import.meta as any).env?.VITE_MM_ACCOUNT_HOLDER    ?? 'MyMoolah Treasury';
+const MM_PAYSHAP_ID     = (import.meta as any).env?.VITE_MM_PAYSHAP_ID        ?? 'mymoolah@standardbank';
 
 // ---- Types -----------------------------------------------------------------
 interface CopyState {
   accountNumber: boolean;
   branchCode:    boolean;
   reference:     boolean;
+  payshap:       boolean;
 }
 
 // ---- Helper ----------------------------------------------------------------
@@ -65,6 +63,7 @@ export function AddMoneyEftOverlay() {
     accountNumber: false,
     branchCode:    false,
     reference:     false,
+    payshap:       false,
   });
 
   const userMobile = user?.phoneNumber ? normaliseMsisdn(user.phoneNumber) : '';
@@ -95,7 +94,7 @@ export function AddMoneyEftOverlay() {
       padding: 'var(--mobile-padding)',
     }}>
 
-      {/* ── Header — matches TopupEasyPayOverlay pattern ─────────────────── */}
+      {/* ── Header — matches global overlay pattern ──────────────────────── */}
       <div className="flex items-center gap-4 mb-6">
         <button
           onClick={() => navigate(-1)}
@@ -112,7 +111,7 @@ export function AddMoneyEftOverlay() {
             fontWeight: 'var(--font-weight-bold)',
             color: '#1f2937',
           }}>
-            Add Money via EFT
+            Top-up via EFT
           </h1>
           <p style={{
             fontFamily: 'Montserrat, sans-serif',
@@ -128,7 +127,7 @@ export function AddMoneyEftOverlay() {
 
       <div className="space-y-4 max-w-lg mx-auto w-full">
 
-        {/* ── Critical warning ───────────────────────────────────────────── */}
+        {/* ── Warning ────────────────────────────────────────────────────── */}
         <Alert className="border-amber-400 bg-amber-50">
           <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
           <AlertDescription style={{
@@ -137,9 +136,9 @@ export function AddMoneyEftOverlay() {
             color: '#92400e',
             lineHeight: '1.5',
           }}>
-            <strong>Important — use your mobile number as the reference.</strong>
-            {' '}If you use any other reference your deposit cannot be automatically
-            allocated and will require manual processing (1–3 business days).
+            <strong>Use your mobile number as the payment reference.</strong>
+            {' '}Any other reference means your deposit cannot be auto-allocated
+            and will require manual processing (1–3 business days).
           </AlertDescription>
         </Alert>
 
@@ -157,7 +156,7 @@ export function AddMoneyEftOverlay() {
               marginBottom: 4,
             }}>
               <Building2 size={18} color="#86BE41" />
-              MyMoolah Bank Account
+              MyMoolah Treasury Bank Account
             </h2>
 
             <BankDetailRow
@@ -255,9 +254,8 @@ export function AddMoneyEftOverlay() {
                   color: '#1d4ed8',
                   lineHeight: 1.5,
                 }}>
-                  This is your registered mobile number. Enter it <strong>exactly</strong> as
-                  shown in the <em>Payment Reference</em> or <em>Beneficiary Reference</em> field
-                  of your bank's app — <strong>no spaces, no dashes</strong>.
+                  Enter this <strong>exactly</strong> in the <em>Payment Reference</em> or{' '}
+                  <em>Beneficiary Reference</em> field — <strong>no spaces, no dashes</strong>.
                 </p>
               </>
             ) : (
@@ -266,8 +264,8 @@ export function AddMoneyEftOverlay() {
                 fontSize: 'var(--mobile-font-small)',
                 color: '#1d4ed8',
               }}>
-                Your mobile number could not be loaded. Please use your registered
-                mobile number (e.g.&nbsp;<strong>0821234567</strong>) as the payment reference.
+                Use your registered mobile number (e.g.&nbsp;<strong>0821234567</strong>) as
+                the payment reference.
               </p>
             )}
           </CardContent>
@@ -288,10 +286,10 @@ export function AddMoneyEftOverlay() {
             <ol className="space-y-3 list-none">
               {[
                 'Log in to your internet banking or banking app.',
-                `Add MyMoolah (${MM_ACCOUNT_HOLDER}) as a beneficiary using the details above.`,
-                `Enter your mobile number (${userMobile || 'e.g. 0821234567'}) as the payment reference.`,
-                'Make the EFT payment for any amount.',
-                'Your wallet will be credited automatically, usually within a few minutes.',
+                `Add MyMoolah Treasury as a beneficiary using the account details above.`,
+                `Copy and paste your mobile number (${userMobile || 'e.g. 0821234567'}) into the Payment Reference field — exactly as shown, no spaces.`,
+                'Make the EFT for any amount.',
+                'Your wallet is credited automatically, usually within minutes.',
               ].map((step, i) => (
                 <li key={i} className="flex items-start gap-3">
                   <span
@@ -327,6 +325,83 @@ export function AddMoneyEftOverlay() {
           </CardContent>
         </Card>
 
+        {/* ── PayShap instant alternative ────────────────────────────────── */}
+        <Card className="shadow-sm border border-green-200 bg-green-50">
+          <CardContent className="pt-5 pb-5">
+            <h2 style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontWeight: 'var(--font-weight-bold)',
+              fontSize: 'var(--mobile-font-base)',
+              color: '#166534',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 10,
+            }}>
+              <Zap size={18} color="#16a34a" />
+              Prefer instant? Use PayShap
+            </h2>
+            <p style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: 'var(--mobile-font-small)',
+              color: '#166534',
+              lineHeight: 1.5,
+              marginBottom: 12,
+            }}>
+              In your banking app, select <strong>PayShap</strong> and send to:
+            </p>
+
+            {/* PayShap ID row */}
+            <div className="flex items-center justify-between bg-white rounded-xl border border-green-200 px-4 py-3 mb-3">
+              <span style={{
+                fontFamily: 'JetBrains Mono, Fira Code, monospace',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                color: '#1f2937',
+                userSelect: 'all',
+              }}>
+                {MM_PAYSHAP_ID}
+              </span>
+              <button
+                onClick={() => copyToClipboard(MM_PAYSHAP_ID, 'payshap')}
+                aria-label="Copy PayShap ID"
+                style={{
+                  marginLeft: 12,
+                  minWidth: 44,
+                  minHeight: 44,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: 'var(--mobile-font-small)',
+                  fontWeight: 'var(--font-weight-medium)',
+                  transition: 'background 0.2s',
+                  background: copied.payshap ? '#86BE41' : '#dcfce7',
+                  color:      copied.payshap ? '#fff'    : '#166534',
+                }}
+              >
+                {copied.payshap
+                  ? <><CheckCircle2 size={15} /> Copied!</>
+                  : <><Copy size={15} /> Copy</>}
+              </button>
+            </div>
+
+            <p style={{
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: 'var(--mobile-font-small)',
+              color: '#166534',
+              lineHeight: 1.5,
+            }}>
+              Use your mobile number (<strong>{userMobile || 'e.g. 0821234567'}</strong>) as
+              the reference. PayShap payments are processed in seconds during banking hours.
+            </p>
+          </CardContent>
+        </Card>
+
         {/* ── Disclaimer ─────────────────────────────────────────────────── */}
         <p style={{
           fontFamily: 'Montserrat, sans-serif',
@@ -336,37 +411,29 @@ export function AddMoneyEftOverlay() {
           paddingBottom: 8,
           lineHeight: 1.5,
         }}>
-          Processing times depend on your bank. Standard EFT: 1–2 business days.
-          RTC (Real-Time Clearing): within minutes during banking hours.
-          Weekend/public holiday payments may take longer.
+          Standard EFT: 1–2 business days. RTC / PayShap: within minutes during banking hours.
+          Weekend &amp; public holiday payments may take longer.
         </p>
 
-      </div>
+        {/* ── Done button — inline, matches other overlays ──────────────── */}
+        <div style={{ paddingTop: 4, paddingBottom: 8 }}>
+          <Button
+            onClick={() => navigate(-1)}
+            style={{
+              width: '100%',
+              minHeight: 48,
+              fontFamily: 'Montserrat, sans-serif',
+              fontSize: 'var(--mobile-font-base)',
+              fontWeight: 'var(--font-weight-bold)',
+              background: '#86BE41',
+              color: '#fff',
+              border: 'none',
+            }}
+          >
+            Done
+          </Button>
+        </div>
 
-      {/* ── Bottom action ─────────────────────────────────────────────────── */}
-      <div style={{
-        position: 'sticky',
-        bottom: 0,
-        background: '#fff',
-        borderTop: '1px solid #f3f4f6',
-        padding: '12px var(--mobile-padding)',
-        marginTop: 8,
-      }}>
-        <Button
-          onClick={() => navigate(-1)}
-          style={{
-            width: '100%',
-            minHeight: 48,
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: 'var(--mobile-font-base)',
-            fontWeight: 'var(--font-weight-bold)',
-            background: '#86BE41',
-            color: '#fff',
-            border: 'none',
-          }}
-        >
-          Done
-        </Button>
       </div>
     </div>
   );
