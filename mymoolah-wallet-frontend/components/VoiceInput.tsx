@@ -64,6 +64,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
   const analyserRef = useRef<AnalyserNode | null>(null);
   const microphoneRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const animationFrameRef = useRef<number>();
+  const isListeningRef = useRef(false);
 
   // Check microphone permissions
   const checkMicrophonePermissions = useCallback(async () => {
@@ -145,13 +146,16 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
 
     // Event handlers
     recognition.onstart = () => {
+      isListeningRef.current = true;
       setIsListening(true);
       setIsPaused(false);
+      setIsProcessing(false);
       setError(null);
       startAudioVisualization();
     };
 
     recognition.onend = () => {
+      isListeningRef.current = false;
       setIsListening(false);
       setIsPaused(false);
       stopAudioVisualization();
@@ -269,7 +273,7 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
       const dataArray = new Uint8Array(bufferLength);
       
       const updateAudioLevel = () => {
-        if (analyserRef.current && isListening && audioContextRef.current && audioContextRef.current.state !== 'closed') {
+        if (analyserRef.current && isListeningRef.current && audioContextRef.current && audioContextRef.current.state !== 'closed') {
           try {
             analyserRef.current.getByteFrequencyData(dataArray);
             const average = dataArray.reduce((a, b) => a + b) / bufferLength;
@@ -290,10 +294,9 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
       updateAudioLevel();
     } catch (err) {
       console.warn('Audio visualization not available:', err);
-      // Disable audio visualization if it fails
       setAudioLevel(0);
     }
-  }, [isListening]);
+  }, []);
 
   const stopAudioVisualization = useCallback(() => {
     if (animationFrameRef.current) {
