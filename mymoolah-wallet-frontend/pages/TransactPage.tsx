@@ -160,6 +160,16 @@ export function TransactPage() {
           badgeType: 'warning'
         },
         {
+          id: 'add-money-eft',
+          title: 'Add Money via EFT',
+          description: 'Bank transfer using your mobile number as reference — auto-allocated to your wallet',
+          icon: <Banknote className="w-6 h-6" />,
+          route: '/add-money-eft',
+          available: true,
+          badge: 'Live',
+          badgeType: 'success'
+        },
+        {
           id: 'tap-to-add-money',
           title: 'Tap to Add Money',
           description: 'Tap your card or use Google Pay / Apple Pay to add money to your wallet',
