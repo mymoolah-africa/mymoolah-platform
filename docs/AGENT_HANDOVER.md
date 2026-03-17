@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-17 18:00  
-**Latest Feature**: Unallocated deposits suspense + ops alert; fuzzy MSISDN matching; Add Money via EFT wallet overlay; Admin portal Unallocated Deposits screen; Full SBSA H2H Wage/Salary Disbursement (Pain.001/Pain.002, maker/checker, portal UI)  
-**Document Version**: 2.23.0  
-**Session logs**: `docs/session_logs/2026-03-17_1800_unallocated-deposits-disbursement.md`, `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`, `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`  
+**Last Updated**: 2026-03-17 19:00  
+**Latest Feature**: Top-up via EFT overlay (bank details, PayShap, styling); VoiceInput on-demand rewrite (mic now works); Disbursement routes auth fix  
+**Document Version**: 2.24.0  
+**Session logs**: `docs/session_logs/2026-03-17_1900_eft-overlay-voice-input-fix.md`, `docs/session_logs/2026-03-17_1800_unallocated-deposits-disbursement.md`, `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 12, 2026 - 23:30)**
+### **Latest Achievement (March 17, 2026 - 19:00)**
+**EFT Overlay Polish + VoiceInput On-Demand Rewrite** — (1) "Top-up via EFT" overlay fully aligned with global design system: Account Holder "MyMoolah Treasury", Account Number "272406481", corrected "How it works" steps, PayShap instant-payment section (24/7/365), "Tap to Add Money" and "ATM Cash Send" tiles hidden. Fixed missing TopBanner (`/add-money-eft` added to `pagesWithTopBanner`) and missing BottomNavigation (added to both `shouldShowNav` and `showBottomNav` allowlists). Updated `mymoolah-wallet-frontend/.env.local` with correct Vite vars. (2) VoiceInput complete rewrite — old implementation created `SpeechRecognition` in a `useEffect` with `onTranscript`/`onError` deps; every parent re-render destroyed and recreated the instance before `onstart` fired. New on-demand approach creates/tears down instance per button tap; `continuous: false`; fully self-contained. SupportPage simplified — mic button lives directly in input row (no two-step toggle). User confirmed: "works much better now". (3) Fixed disbursement routes auth import. Session log: `docs/session_logs/2026-03-17_1900_eft-overlay-voice-input-fix.md`.
+
+### **Previous Achievement (March 12, 2026 - 23:30)**
 **Self-Hosted Security Layer — Full Debug & All Environments Stable** — Resolved a cascade of issues that emerged from the new security layer across Codespaces (UAT), Staging, and Cloud Run. **8 fixes**: (1) `botScoring.js` blocked Azure IPs (Codespaces) → log-only in dev; (2) JWT 401s — all `jwt.sign` calls updated to `HS512`, verifier accepts both HS512+HS256 during 24h transition; (3) Staging 403/CORS — GCP IAP was incorrectly enabled on `be-staging-wallet` → disabled via gcloud; (4) Cloud Armor quota exceeded → removed inappropriate OWASP CRS body-scanning rules (SQLi/XSS/LFI/RCE/Scanner — wrong for REST JSON API); (5) `ioredis ECONNREFUSED` in Cloud Run → all security modules now only connect to Redis if `REDIS_URL` env var is set; (6) AI support disabled in Codespaces → `OPENAI_API_KEY` now explicitly exported by `start-codespace-with-proxy.sh`; (7) 429s on dashboard polling → added `walletReadLimiter` (120/min) for GET wallet routes, retained `financialLimiter` (10/min) for writes; (8) Staging treated as production by rate limiters → `STAGING=true` now triggers `devMax` limits. Session log: `docs/session_logs/2026-03-12_2300_security-layer-debug-all-envs-resolved.md`.
 
 ### **Previous Achievement (March 12, 2026 - 18:00)**
@@ -151,7 +154,11 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – March 7–15, 2026)**
+### **Recent Updates (Last 7 Days – March 11–17, 2026)**
+- **Mar 17 (19:00)**: EFT overlay polish + VoiceInput on-demand rewrite — mic button now works on Chrome/Android; SupportPage mic integrated directly into input row. Disbursement auth import fixed. Session log: `docs/session_logs/2026-03-17_1900_eft-overlay-voice-input-fix.md`.
+- **Mar 17 (18:00)**: Unallocated deposits suspense + ops alert; fuzzy MSISDN matching; SBSA H2H Wage/Salary Disbursement (Pain.001/Pain.002, maker/checker, portal UI). Session log: `docs/session_logs/2026-03-17_1800_unallocated-deposits-disbursement.md`.
+- **Mar 17 (10:00)**: SFTP port 22 → 5022 (SBSA confirmed); EBONF rejection code → professional daily-limit message. Session log: `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`.
+- **Mar 16 (21:32)**: RTP callback UETR fallback fix — batch callback matching; Standard Bank + Capitec RTP end-to-end confirmed. Session log: `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`.
 - **Mar 12 (23:30)**: Security layer full debug — 8 fixes across Codespaces/Staging/Cloud Run: botScoring Azure IP fix, JWT HS512 migration + transition window, GCP IAP disabled on be-staging-wallet, OWASP CRS rules removed from Cloud Armor WAF, Redis ECONNREFUSED fix (guard with REDIS_URL), OPENAI_API_KEY startup export, walletReadLimiter for dashboard GET polling, STAGING=true uses devMax. All environments confirmed stable. Session log: `docs/session_logs/2026-03-12_2300_security-layer-debug-all-envs-resolved.md`.
 - **Mar 15 (18:00)**: AI Support v3.1 — Comprehensive KB (240 entries) + Topic Filtering. FAQ_MASTER.md rewritten (removed USDC/white-label/NFC/developer FAQs, added referrals/fees/tiers/eeziPay/EasyPay). generate-knowledge-base.js: parses FAQ_MASTER (96 Q&A) + GPT-4o gap fill (80 Q&A) = 176 new GEN- entries. Topic filtering: Layer 0 (score < 0.20 → instant refusal, 0 LLM cost), Layer 2 (system prompt STRICT SCOPE RULE). UAT tested: referral program, Bronze fee, eeziPay USSD steps, off-topic blocked, live balance — all passed. Session log: `docs/session_logs/2026-03-15_1800_comprehensive-kb-topic-filtering.md`.
 - **Mar 12 (23:00)**: Session docs updated (security layer session log created, BANKING_GRADE_ARCHITECTURE.md v2.12.0). Codespaces transaction history debug — Cloud SQL proxy not running caused `ECONNREFUSED 127.0.0.1:6543` and empty dashboard. Fix: always use `bash scripts/start-codespace-with-proxy.sh` (not `npm start`). Cloudflare vs self-hosted comparison conducted — MMTP covers ~75% of Cloudflare capabilities; remaining gaps (TLS fingerprinting, L3/L4 volumetric DDoS) not relevant at current scale. User confirmed satisfaction with self-hosted approach. Session log: `docs/session_logs/2026-03-12_2300_security-review-transaction-debug-cloudflare.md`.
