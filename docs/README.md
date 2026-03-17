@@ -1,14 +1,26 @@
 # MyMoolah Treasury Platform
 
 **Last Updated**: March 16, 2026  
-**Version**: 2.20.0 - UI Polish: Security Badge, Universal Modals, AI Chat Markdown  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT**
+**Version**: 2.21.0 - RTP Callback UETR Fallback Fix  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **RTP UETR FIX**
 
-**Work in the last 7 days (Mar 10–16, 2026)**: PASA T-PPP SecurityBadge with real certification data. Universal modal close button system across all overlays. Global modal width fix (340px mobile). AI chat markdown rendering — `react-markdown` + inline list normaliser so AI responses display as proper numbered lists and paragraphs. FE transaction refresh race condition fixed (ID-based dedup). PayShap RTP rollback to commit `277bbf1f`. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Mar 10–16, 2026)**: RTP callback UETR fallback fix — SBSA batch callbacks now matched correctly (UETR stored in `requestId`, dual-lookup added). Standard Bank RTP end-to-end confirmed. PASA T-PPP SecurityBadge. Universal modal close buttons. AI chat markdown rendering. FE notification refresh race fix. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: UI Polish (March 16, 2026)**
+## 🚀 **LATEST UPDATE: RTP Callback UETR Fallback Fix (March 16, 2026)**
+
+### **🔧 RTP Batch Callback Matching Fixed**
+- `services/standardbankRtpService.js` — UETR now stored in `requestId` (was being discarded)
+- Fallback lookup: if `originalMessageId` doesn't match, try `requestId` (catches SBSA batch callbacks)
+- Realtime callback path completely unchanged — existing flow unaffected
+- Standard Bank RTP end-to-end: PDNG → ACCC → wallet credited R4.25 in 73ms ✅
+
+**Session log**: `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`
+
+---
+
+## **PREVIOUS: UI Polish (March 16, 2026)**
 
 ### **🎨 AI Chat Markdown Rendering**
 - `pages/SupportPage.tsx` — `react-markdown` renders bot responses with proper numbered lists, bold labels, paragraphs

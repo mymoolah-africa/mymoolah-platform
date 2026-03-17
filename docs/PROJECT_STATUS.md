@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Project Status
 
 **Last Updated**: March 16, 2026  
-**Version**: 2.20.0 - UI Polish: PASA Badge, Universal Modals, AI Markdown Chat  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **UNIVERSAL MODALS** ✅ **PAYSHAP RTP** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
+**Version**: 2.21.0 - RTP Callback UETR Fallback Fix  
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **UNIVERSAL MODALS** ✅ **PAYSHAP RTP** ✅ **RTP UETR FIX** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
@@ -10,7 +10,10 @@
 
 Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. UI polish session (Mar 16): PASA T-PPP SecurityBadge with real cert data, universal modal close button system, global 340px modal width, AI chat markdown rendering via `react-markdown` + `normaliseMarkdown()` pre-processor. PayShap RTP rolled back to working commit `277bbf1f`; Capitec RTP shows `EBONF` (SBSA routing issue), Standard Bank RTP ✅ working. FE notification refresh race fixed with ID-based dedup.
 
-### **📋 Latest: UI Polish — Security Badge, Modals, AI Chat Markdown (March 16, 2026)** ✅ **COMPLETE**
+### **📋 Latest: RTP Callback UETR Fallback Fix (March 16, 2026)** ✅ **COMPLETE**
+SBSA batch callbacks now matched correctly. UETR stored in `requestId`; fallback lookup added in `processRtpCallback`. Standard Bank RTP ACCC → wallet credit confirmed in 73ms. Capitec RTP EBONF (daily limit — test tomorrow). Session log: `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`.
+
+### **📋 Previous: UI Polish — Security Badge, Modals, AI Chat Markdown (March 16, 2026)** ✅ **COMPLETE**
 Real PASA T-PPP certificate data in SecurityBadge (signed 12 Mar 2026). Universal close button CSS classes. DialogContent max-w-[340px] globally. AI support chat uses `react-markdown` with inline list normaliser — numbered responses display correctly. Session log: `docs/session_logs/2026-03-16_1940_ui-polish-markdown-chat.md`.
 
 ### **📋 Previous: Cloud Build Migration & npm Cleanup (March 7, 2026)** ✅ **COMPLETE**
