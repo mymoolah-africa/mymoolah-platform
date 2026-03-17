@@ -40,6 +40,7 @@ import { TopupEasyPayOverlay } from './components/overlays/topup-easypay/TopupEa
 import { CashoutEasyPayPage } from './pages/CashoutEasyPayPage';
 import { DigitalVouchersOverlay } from './components/overlays/digital-vouchers/DigitalVouchersOverlay';
 import { TapToAddMoneyOverlay } from './components/overlays/TapToAddMoneyOverlay';
+import { AddMoneyEftOverlay } from './components/overlays/AddMoneyEftOverlay';
 
 // KYC Pages
 import { KYCDocumentsPage } from './pages/KYCDocumentsPage';
@@ -134,6 +135,7 @@ function AppContent() {
             <Route path="/cashout-easypay" element={<ProtectedRoute><CashoutEasyPayPage /></ProtectedRoute>} />
             <Route path="/vouchers-overlay" element={<ProtectedRoute><DigitalVouchersOverlay /></ProtectedRoute>} />
             <Route path="/tap-to-add-money" element={<ProtectedRoute><TapToAddMoneyOverlay /></ProtectedRoute>} />
+            <Route path="/add-money-eft" element={<ProtectedRoute><AddMoneyEftOverlay /></ProtectedRoute>} />
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -546,6 +546,133 @@ class AdminController {
       });
     }
   }
+  // =========================================================================
+  // UNALLOCATED DEPOSITS
+  // =========================================================================
+
+  /**
+   * GET /api/v1/admin/unallocated-deposits
+   * List StandardBankTransaction records with accountType = 'unallocated'.
+   * Supports pagination, date range, and status filters.
+   */
+  async getUnallocatedDeposits(req, res) {
+    try {
+      const { Sequelize } = require('sequelize');
+      // Require models from root project (portal shares the same DB)
+      const db = require('../../../models');
+
+      const page     = Math.max(1, parseInt(req.query.page  || '1',  10));
+      const limit    = Math.min(100, parseInt(req.query.limit || '20', 10));
+      const offset   = (page - 1) * limit;
+      const status   = req.query.status || 'pending';   // pending | resolved | all
+      const dateFrom = req.query.dateFrom ? new Date(req.query.dateFrom) : null;
+      const dateTo   = req.query.dateTo   ? new Date(req.query.dateTo)   : null;
+
+      const where = { accountType: 'unallocated' };
+      if (status !== 'all') where.status = status;
+      if (dateFrom || dateTo) {
+        where.webhookReceivedAt = {};
+        if (dateFrom) where.webhookReceivedAt[Sequelize.Op.gte] = dateFrom;
+        if (dateTo)   where.webhookReceivedAt[Sequelize.Op.lte] = dateTo;
+      }
+
+      const { count, rows } = await db.StandardBankTransaction.findAndCountAll({
+        where,
+        order: [['webhookReceivedAt', 'DESC']],
+        limit,
+        offset,
+        attributes: [
+          'id', 'transactionId', 'referenceNumber', 'amount', 'currency',
+          'status', 'webhookReceivedAt', 'processedAt', 'notes',
+        ],
+      });
+
+      // Aggregate total unallocated amount still pending
+      const totalPendingAmount = await db.StandardBankTransaction.sum('amount', {
+        where: { accountType: 'unallocated', status: 'pending' },
+      }) || 0;
+
+      res.json({
+        success: true,
+        data: {
+          deposits: rows,
+          pagination: {
+            total: count,
+            page,
+            limit,
+            totalPages: Math.ceil(count / limit),
+          },
+          summary: {
+            totalPendingAmount: parseFloat(totalPendingAmount).toFixed(2),
+            currency: 'ZAR',
+          },
+        },
+      });
+    } catch (error) {
+      console.error('[AdminController] getUnallocatedDeposits error:', error);
+      res.status(500).json({ success: false, error: 'Failed to fetch unallocated deposits' });
+    }
+  }
+
+  /**
+   * POST /api/v1/admin/unallocated-deposits/:id/allocate
+   * Manually match an unallocated deposit to a wallet (by mobile number).
+   * Moves funds from suspense ledger to the wallet and credits the wallet.
+   */
+  async allocateDeposit(req, res) {
+    const { id } = req.params;
+    const { mobileNumber, notes } = req.body;
+
+    if (!mobileNumber || typeof mobileNumber !== 'string') {
+      return res.status(400).json({ success: false, error: 'mobileNumber is required' });
+    }
+
+    try {
+      const db = require('../../../models');
+      const { processDepositNotification } = require('../../../services/standardbankDepositNotificationService');
+
+      const record = await db.StandardBankTransaction.findOne({
+        where: { id, accountType: 'unallocated', status: 'pending' },
+      });
+      if (!record) {
+        return res.status(404).json({ success: false, error: 'Unallocated deposit not found or already resolved' });
+      }
+
+      // Re-use the processDepositNotification path but with the corrected mobile number
+      // Build a synthetic payload so it runs through the full ledger + wallet credit logic
+      const syntheticPayload = {
+        transactionId:  `MANUAL-${record.transactionId}`,   // new ID to bypass idempotency
+        referenceNumber: mobileNumber.trim(),
+        amount:          record.amount,
+        currency:        record.currency || 'ZAR',
+        description:    `Manual allocation from admin by ${req.user?.email || 'unknown'} — original ref: ${record.referenceNumber}`,
+      };
+
+      const result = await processDepositNotification(syntheticPayload);
+      if (!result.success || result.credited === 'suspense') {
+        return res.status(400).json({
+          success: false,
+          error: `Could not resolve mobile number "${mobileNumber}" to a wallet. Verify the number is correct.`,
+        });
+      }
+
+      // Mark original record as resolved
+      await record.update({
+        status: 'completed',
+        processedAt: new Date(),
+        notes: notes ? `${notes} | Manually allocated by ${req.user?.email}` : `Manually allocated by ${req.user?.email}`,
+      });
+
+      res.json({
+        success: true,
+        message: `Deposit of ${record.currency} ${Number(record.amount).toFixed(2)} successfully allocated to wallet for ${mobileNumber}`,
+        data: { originalTransactionId: record.transactionId, allocatedTo: mobileNumber },
+      });
+    } catch (error) {
+      console.error('[AdminController] allocateDeposit error:', error);
+      res.status(500).json({ success: false, error: 'Allocation failed — please try again or escalate to engineering' });
+    }
+  }
 }
 
 module.exports = AdminController;

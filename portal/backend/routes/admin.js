@@ -150,6 +150,46 @@ router.post('/users',
   adminController.createPortalUser.bind(adminController)
 );
 
+// ============================================================================
+// UNALLOCATED DEPOSITS
+// ============================================================================
+
+/**
+ * @route GET /api/v1/admin/unallocated-deposits
+ * @desc List deposits parked in suspense (wrong/missing reference number)
+ * @access Private (Admin only)
+ */
+router.get('/unallocated-deposits',
+  portalAuth('admin'),
+  standardLimit,
+  [
+    query('page').optional().isInt({ min: 1 }).withMessage('page must be a positive integer'),
+    query('limit').optional().isInt({ min: 1, max: 100 }).withMessage('limit must be 1–100'),
+    query('status').optional().isIn(['pending', 'completed', 'all']).withMessage('status must be pending, completed, or all'),
+    query('dateFrom').optional().isISO8601().withMessage('dateFrom must be ISO8601'),
+    query('dateTo').optional().isISO8601().withMessage('dateTo must be ISO8601'),
+  ],
+  adminController.getUnallocatedDeposits.bind(adminController)
+);
+
+/**
+ * @route POST /api/v1/admin/unallocated-deposits/:id/allocate
+ * @desc Manually allocate an unresolved deposit to a wallet by mobile number
+ * @access Private (Admin only)
+ */
+router.post('/unallocated-deposits/:id/allocate',
+  portalAuth('admin'),
+  strictLimit,
+  [
+    param('id').isInt({ min: 1 }).withMessage('id must be a positive integer'),
+    body('mobileNumber')
+      .notEmpty().withMessage('mobileNumber is required')
+      .matches(/^(\+27|0)[6-8][0-9]{8}$/).withMessage('mobileNumber must be a valid SA mobile number (e.g. 0821234567 or +27821234567)'),
+    body('notes').optional().isString().isLength({ max: 500 }).withMessage('notes must be a string up to 500 characters'),
+  ],
+  adminController.allocateDeposit.bind(adminController)
+);
+
 // Error handling middleware
 router.use((error, req, res, next) => {
   console.error('Admin route error:', error);

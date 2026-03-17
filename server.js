@@ -480,6 +480,10 @@ if (standardbankPayShapEnabled) {
   app.use('/api/v1/standardbank', standardbankRoutes);
 }
 
+// Disbursement (SBSA H2H Wage/Salary) — admin portal only
+const disbursementRoutes = require('./routes/disbursement');
+app.use('/api/v1/disbursements', disbursementRoutes);
+
 // Peach Payments integration is archived - no routes loaded
 // Request-to-Pay is handled directly via /api/v1/standardbank/payshap/rtp
 const isPeachArchived = process.env.PEACH_INTEGRATION_ARCHIVED === 'true';

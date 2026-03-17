@@ -1,4 +1,5 @@
 // Export all overlay components for easy importing
+export { AddMoneyEftOverlay } from './AddMoneyEftOverlay';
 export { AirtimeDataOverlay } from './AirtimeDataOverlay';
 export { ElectricityOverlay } from './ElectricityOverlay';
 export { BillPaymentOverlay } from './BillPaymentOverlay';

@@ -116,17 +116,21 @@ export const AppLayoutWrapper: React.FC<AppLayoutWrapperProps> = ({ children }) 
 
             {/* Portal Navigation */}
             <div className="flex items-center mymoolah-spacing-sm">
-              <button className="admin-text-small text-gray-600 hover:text-mymoolah-blue transition-colors">
+              <a href="/admin/dashboard" className="admin-text-small text-gray-600 hover:text-mymoolah-blue transition-colors">
                 Dashboard
-              </button>
+              </a>
               <span className="text-gray-300 mx-2">|</span>
-              <button className="admin-text-small text-gray-600 hover:text-mymoolah-blue transition-colors">
+              <a href="/admin/unallocated-deposits" className="admin-text-small text-gray-600 hover:text-mymoolah-blue transition-colors font-medium">
+                ⚠ Unallocated
+              </a>
+              <span className="text-gray-300 mx-2">|</span>
+              <a href="/admin/disbursements" className="admin-text-small text-gray-600 hover:text-mymoolah-blue transition-colors">
+                Disbursements
+              </a>
+              <span className="text-gray-300 mx-2">|</span>
+              <a href="/admin/system" className="admin-text-small text-gray-600 hover:text-mymoolah-blue transition-colors">
                 Settings
-              </button>
-              <span className="text-gray-300 mx-2">|</span>
-              <button className="admin-text-small text-gray-600 hover:text-mymoolah-blue transition-colors">
-                Help
-              </button>
+              </a>
             </div>
           </div>
         </div>

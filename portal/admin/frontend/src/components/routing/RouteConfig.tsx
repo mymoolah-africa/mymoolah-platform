@@ -16,6 +16,10 @@ import { ReportingAnalyticsOverlay } from '../admin-overlays/ReportingAnalyticsO
 import { SystemConfigurationOverlay } from '../admin-overlays/SystemConfigurationOverlay';
 import { SecurityAuditOverlay } from '../admin-overlays/SecurityAuditOverlay';
 import { PartnerOnboardingOverlay } from '../admin-overlays/PartnerOnboardingOverlay';
+import { UnallocatedDepositsOverlay } from '../admin-overlays/UnallocatedDepositsOverlay';
+import { DisbursementRunsOverlay } from '../admin-overlays/DisbursementRunsOverlay';
+import { CreateDisbursementRunOverlay } from '../admin-overlays/CreateDisbursementRunOverlay';
+import { DisbursementRunDetailOverlay } from '../admin-overlays/DisbursementRunDetailOverlay';
 
 // Protected Route Component
 interface ProtectedRouteProps {
@@ -131,6 +135,42 @@ export const RouteConfig: React.FC = () => {
         <ProtectedRoute>
           <AppLayoutWrapper>
             <ReportingAnalyticsOverlay />
+          </AppLayoutWrapper>
+        </ProtectedRoute>
+      } />
+      
+      {/* ========================================================================
+          TREASURY OPERATIONS ROUTES - Protected Access
+          ======================================================================== */}
+      <Route path="/admin/unallocated-deposits" element={
+        <ProtectedRoute>
+          <AppLayoutWrapper>
+            <UnallocatedDepositsOverlay />
+          </AppLayoutWrapper>
+        </ProtectedRoute>
+      } />
+      
+      {/* ========================================================================
+          DISBURSEMENT ROUTES - Wage/Salary Disbursements via SBSA H2H
+          ======================================================================== */}
+      <Route path="/admin/disbursements" element={
+        <ProtectedRoute>
+          <AppLayoutWrapper>
+            <DisbursementRunsOverlay />
+          </AppLayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/disbursements/create" element={
+        <ProtectedRoute>
+          <AppLayoutWrapper>
+            <CreateDisbursementRunOverlay />
+          </AppLayoutWrapper>
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/disbursements/:id" element={
+        <ProtectedRoute>
+          <AppLayoutWrapper>
+            <DisbursementRunDetailOverlay />
           </AppLayoutWrapper>
         </ProtectedRoute>
       } />
