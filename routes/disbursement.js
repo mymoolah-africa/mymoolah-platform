@@ -13,7 +13,7 @@ const express    = require('express');
 const router     = express.Router();
 const { body, query, param } = require('express-validator');
 const controller = require('../controllers/disbursementController');
-const { authenticateToken } = require('../middleware/auth');
+const authenticateToken = require('../middleware/auth');
 const rateLimit  = require('express-rate-limit');
 
 const standardLimit = rateLimit({
