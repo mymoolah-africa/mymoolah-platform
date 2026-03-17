@@ -1,7 +1,7 @@
 # SBSA Host-to-Host (H2H) Setup Guide
 
 **Date**: 2026-03-13  
-**Status**: ✅ PG15 submitted to Colette (SBSA) on 2026-03-13 — awaiting SBSA connectivity confirmation  
+**Status**: ✅ PG15 submitted to Colette (SBSA) on 2026-03-13 — Port corrected to 5022 on 2026-03-17 per Colette's instruction  
 **Implementation Manager**: SBSA (assigned contact)  
 **Services**: Credit Notifications via Webserver + H2H SFTP (Statements + Payments)
 
@@ -27,7 +27,7 @@
 | Field | Value |
 |-------|-------|
 | **Public SFTP IP** | `34.35.137.166` (static, reserved: `sftp-gateway-static-ip`) |
-| **Port** | `22` |
+| **Port** | `5022` |
 | **Auth type** | SSH-RSA 2048 key only (no password) |
 | **SFTP Username** | `standardbank` (to be created — see Step 3 below) |
 | **VM** | `sftp-1-vm` (GCP Compute Engine, africa-south1-a) |
@@ -87,18 +87,18 @@ Run these commands in your terminal (requires `gcloud auth login` first):
 # Allow SBSA TEST server to connect to our SFTP
 gcloud compute firewall-rules create allow-sbsa-sftp-test \
   --project=mymoolah-db \
-  --allow=tcp:22 \
+  --allow=tcp:5022 \
   --source-ranges=196.8.85.62/32 \
   --target-tags=sftp-1-deployment \
-  --description="SBSA H2H SFTP TEST server access"
+  --description="SBSA H2H SFTP TEST server access (port 5022)"
 
 # Allow SBSA PROD server to connect to our SFTP
 gcloud compute firewall-rules create allow-sbsa-sftp-prod \
   --project=mymoolah-db \
-  --allow=tcp:22 \
+  --allow=tcp:5022 \
   --source-ranges=196.8.86.53/32 \
   --target-tags=sftp-1-deployment \
-  --description="SBSA H2H SFTP PROD server access"
+  --description="SBSA H2H SFTP PROD server access (port 5022)"
 ```
 
 **Verify rules were created:**
@@ -158,7 +158,7 @@ Recommended signing: **SHA256**
 
 ### For SFTP H2H (once Melissa signs):
 - [x] SFTP IP: `34.35.137.166`
-- [x] SFTP Port: `22`
+- [x] SFTP Port: `5022`
 - [x] SSH Public Key (Section 2 above)
 - [x] SFTP Username: `standardbank`
 - [ ] Folder structure preference (see Section 3)
