@@ -749,11 +749,19 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
           const notificationService = require('./notificationService');
           const amount = parseFloat(r.amount);
           const payerName = r.payerName || 'Payer';
+          const pbacRejectCodes = r.metadata?.proxyRejectCodes || [];
+          const isEbonf = pbacRejectCodes.includes('EBONF');
+          const pbacTitle = isEbonf
+            ? 'PayShap Daily Limit Reached'
+            : 'Payment Request Could Not Be Delivered';
+          const pbacMsg = isEbonf
+            ? `Your PayShap Request to Pay of R ${amount.toFixed(2)} to ${payerName} could not be processed. ${r.payerBankName || 'The payer\'s bank'} has reached its daily PayShap transaction limit. Please resend your request tomorrow.`
+            : `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`;
           await notificationService.createNotification(
             r.userId,
             'txn_wallet_credit',
-            'Payment Request Could Not Be Delivered',
-            `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`,
+            pbacTitle,
+            pbacMsg,
             {
               payload: {
                 rtpRequestId: r.id,
@@ -789,20 +797,38 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     // Only use "could not be delivered" for system/delivery failures (EPDNF, EBONF, etc.).
     // PBAC retries (isRetryTarget) were delivered to the account — rejection = debtor declined; show "Declined".
     const isFinalSystemReject = isSystemReject && !isRetryTarget;
+    const isEbonfReject = codes.includes('EBONF');
+    const payerBankLabel = rtpRequest.payerBankName || 'The payer\'s bank';
+
+    // Resolve the notification title for this rejection
+    const resolveTitle = () => {
+      if (isEbonfReject) return 'PayShap Daily Limit Reached';
+      if (isFinalSystemReject) return 'Payment Request Could Not Be Delivered';
+      return 'Payment Request Declined';
+    };
+
+    // Resolve the notification body for this rejection
+    const resolveMessage = () => {
+      if (isEbonfReject) {
+        return `Your PayShap Request to Pay of R ${amount.toFixed(2)} to ${payerName} could not be processed. ` +
+          `${payerBankLabel} has reached its daily PayShap transaction limit. ` +
+          `Please resend your request tomorrow.`;
+      }
+      if (isFinalSystemReject) {
+        return `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`;
+      }
+      return `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`;
+    };
 
     const titleMap = {
-      rejected: isFinalSystemReject ? 'Payment Request Could Not Be Delivered' : 'Payment Request Declined',
-      declined: isFinalSystemReject ? 'Payment Request Could Not Be Delivered' : 'Payment Request Declined',
+      rejected: resolveTitle(),
+      declined: resolveTitle(),
       expired: 'Payment Request Expired',
       cancelled: 'Payment Request Cancelled',
     };
     const msgMap = {
-      rejected: isFinalSystemReject
-        ? `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`
-        : `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
-      declined: isFinalSystemReject
-        ? `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`
-        : `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`,
+      rejected: resolveMessage(),
+      declined: resolveMessage(),
       expired: `Your PayShap request for R ${amount.toFixed(2)} to ${payerName} has expired`,
       cancelled: `Your PayShap request for R ${amount.toFixed(2)} to ${payerName} was cancelled`,
     };
