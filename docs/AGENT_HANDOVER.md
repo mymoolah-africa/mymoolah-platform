@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-16 21:32  
-**Latest Feature**: RTP callback UETR fallback fix — batch callbacks now match correctly  
+**Last Updated**: 2026-03-17 09:35  
+**Latest Feature**: RTP fully operational — Capitec + Standard Bank ACCC → wallet credit confirmed  
 **Document Version**: 2.21.0  
 **Session logs**: `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`, `docs/session_logs/2026-03-16_1940_ui-polish-markdown-chat.md`  
 **Classification**: Internal - Banking-Grade Operations Manual

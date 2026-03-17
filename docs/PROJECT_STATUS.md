@@ -11,7 +11,7 @@
 Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. UI polish session (Mar 16): PASA T-PPP SecurityBadge with real cert data, universal modal close button system, global 340px modal width, AI chat markdown rendering via `react-markdown` + `normaliseMarkdown()` pre-processor. PayShap RTP rolled back to working commit `277bbf1f`; Capitec RTP shows `EBONF` (SBSA routing issue), Standard Bank RTP ✅ working. FE notification refresh race fixed with ID-based dedup.
 
 ### **📋 Latest: RTP Callback UETR Fallback Fix (March 16, 2026)** ✅ **COMPLETE**
-SBSA batch callbacks now matched correctly. UETR stored in `requestId`; fallback lookup added in `processRtpCallback`. Standard Bank RTP ACCC → wallet credit confirmed in 73ms. Capitec RTP EBONF (daily limit — test tomorrow). Session log: `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`.
+SBSA batch callbacks now matched correctly. UETR stored in `requestId`; fallback lookup added in `processRtpCallback`. Standard Bank RTP ✅ confirmed 73ms. Capitec RTP ✅ confirmed 97ms (17 Mar 2026 09:33) — wallet auto-credited, frontend refreshed within 2s. Session log: `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`.
 
 ### **📋 Previous: UI Polish — Security Badge, Modals, AI Chat Markdown (March 16, 2026)** ✅ **COMPLETE**
 Real PASA T-PPP certificate data in SecurityBadge (signed 12 Mar 2026). Universal close button CSS classes. DialogContent max-w-[340px] globally. AI support chat uses `react-markdown` with inline list normaliser — numbered responses display correctly. Session log: `docs/session_logs/2026-03-16_1940_ui-polish-markdown-chat.md`.

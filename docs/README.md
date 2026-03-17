@@ -14,7 +14,7 @@
 - `services/standardbankRtpService.js` — UETR now stored in `requestId` (was being discarded)
 - Fallback lookup: if `originalMessageId` doesn't match, try `requestId` (catches SBSA batch callbacks)
 - Realtime callback path completely unchanged — existing flow unaffected
-- Standard Bank RTP end-to-end: PDNG → ACCC → wallet credited R4.25 in 73ms ✅
+- Standard Bank RTP ✅ and Capitec RTP ✅ both end-to-end confirmed — ACCC → wallet credited in &lt;100ms, frontend auto-refreshes
 
 **Session log**: `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`
 

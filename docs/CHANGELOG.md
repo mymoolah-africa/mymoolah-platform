@@ -15,7 +15,7 @@ Discovered that Capitec RTP paid at 09:39 (R10.00 debited from Capitec) was neve
 
 ### **Test Results**
 - ✅ Standard Bank RTP: PDNG → ACCC → wallet credited (R10.00 received, R5.75 fee, net R4.25) in 73ms
-- ❌ Capitec RTP: EBONF (daily limit — test again tomorrow)
+- ✅ Capitec RTP (17 Mar 2026, 09:33): ACCC → wallet credited R4.25 in 97ms — frontend auto-refreshed within 2 seconds
 
 ### **Session Log**
 - `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`

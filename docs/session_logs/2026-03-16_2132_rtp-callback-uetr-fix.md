@@ -96,8 +96,16 @@ Capitec is rejecting with `EBONF: One or more request to pays failed when trying
 
 ---
 
+## Capitec RTP Confirmed ✅ (17 Mar 2026, 09:33 SAST)
+Tested fresh the next morning after daily limit reset:
+```
+[RTP-CB] orgnlMsgId=MMRTPMMRTP17737327157292tjquw status=ACCC payer=27825571055 amount=10.00
+[RTP-CB] Wallet credited for orgnlMsgId=MMRTPMMRTP17737327157292tjquw payer=27825571055
+```
+- R10.00 received, SBSA fee deducted, R4.25 net credited — 97ms total
+- Frontend auto-refreshed (balance + transactions) within 2 seconds of ACCC callback
+- Both Standard Bank and Capitec RTP now fully operational
+
 ## Next Agent Actions
-1. **Test Capitec RTP tomorrow** after daily limit resets
-2. **Watch for** `[RTP-CB] Matched by requestId (UETR) fallback` log on successful Capitec ACCC
-3. **Escalate to SBSA** if Capitec still fails — request increase to Capitec daily limit for UAT
-4. **Hash spec** — `[HASH-WARN] x-GroupHeader-Hash mismatch` appears on all callbacks (soft_fail, not blocking). Ask SBSA for the correct hash computation spec.
+1. **Hash spec** — `[HASH-WARN] x-GroupHeader-Hash mismatch` appears on all callbacks (soft_fail, not blocking). Ask SBSA for the correct hash computation spec to eliminate the warning.
+2. **Production deployment** — deploy backend fix (`8a5e9cfe`) to production if not already done.
