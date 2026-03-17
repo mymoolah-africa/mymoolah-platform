@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-17 11:00  
-**Latest Feature**: SFTP Gateway port corrected to 5022 (SBSA H2H requirement); EBONF daily-limit PayShap notification added; RTP UETR fallback fix confirmed working for both Standard Bank and Capitec  
-**Document Version**: 2.22.0  
-**Session logs**: `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`, `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`, `docs/session_logs/2026-03-16_1940_ui-polish-markdown-chat.md`  
+**Last Updated**: 2026-03-17 18:00  
+**Latest Feature**: Unallocated deposits suspense + ops alert; fuzzy MSISDN matching; Add Money via EFT wallet overlay; Admin portal Unallocated Deposits screen; Full SBSA H2H Wage/Salary Disbursement (Pain.001/Pain.002, maker/checker, portal UI)  
+**Document Version**: 2.23.0  
+**Session logs**: `docs/session_logs/2026-03-17_1800_unallocated-deposits-disbursement.md`, `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`, `docs/session_logs/2026-03-16_2132_rtp-callback-uetr-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
