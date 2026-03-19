@@ -2,6 +2,16 @@
 
 Skills extend Cursor Agent with specialized knowledge for banking-grade, Mojaloop-standard platform development. Installed via `npx skills add`.
 
+## Rules vs skills (how agents should use both)
+
+| Layer | Location | When it applies |
+|-------|----------|------------------|
+| **Rules** | `.cursor/rules/*.mdc` | Every session — workflow, git, DB standards, security, comms |
+| **Skills** | `.agents/skills/**/SKILL.md` | On demand — read when the task matches the skill (e.g. migrations, recon, Redis) |
+| **Canonical doc** | `docs/CURSOR_2.0_RULES_FINAL.md` | Full rule set; keep in sync with `.mdc` summaries |
+
+**Note:** Skills are not a substitute for rules. Critical non‑negotiables (e.g. `db-connection-helper.js` only, parameterized SQL) must stay in rules so they are never skipped.
+
 ## Installed Skills
 
 | Skill | Source | Purpose |

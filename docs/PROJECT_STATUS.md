@@ -1,16 +1,22 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: March 17, 2026  
-**Version**: 2.22.0 - SFTP Port 5022 + EBONF Daily-Limit Message  
+**Last Updated**: March 19, 2026  
+**Version**: 2.26.0 - Documentation + agent tooling + VAS catalog context  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **UNIVERSAL MODALS** ✅ **PAYSHAP RTP** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. SFTP Gateway corrected to port 5022 (SBSA H2H requirement — Colette confirmed). EBONF rejection now shows professional daily-limit message. RTP UETR fallback fix confirmed working — both Standard Bank and Capitec RTP end-to-end. UI polish: SecurityBadge, universal modals, AI chat markdown. Backend redeploy required to activate EBONF message in production.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. **March 19 PM:** Major documentation refresh — Cursor rules vs `.agents/skills`, VAS catalog context (Flash + MobileMart, `vas_best_offers`). **March 19 AM:** SBSA H2H MT940/MT942 session logged. Prior: SFTP 5022 + EBONF (Mar 17), RTP UETR + UI polish (Mar 16).
 
-### **📋 Latest: SFTP Port 5022 + EBONF Message (March 17, 2026)** ✅ **COMPLETE**
+### **📋 Latest: Documentation + agent tooling + VAS context (March 19, 2026)** ✅ **COMPLETE**
+Canonical `docs/` updated for rules/skills alignment and VAS catalog notes. Session log: `docs/session_logs/2026-03-19_1830_cursor-rules-skills-flash-catalog-docs.md`. **Next (engineering):** simplify cross-supplier product equivalence; keep materialized best-offers for production.
+
+### **📋 Previous: SBSA H2H MT940/MT942 (March 19, 2026 AM)** ✅ **LOGGED**
+`docs/session_logs/2026-03-19_1200_sbsa-h2h-mt940-statement-processing.md`.
+
+### **📋 Previous: SFTP Port 5022 + EBONF Message (March 17, 2026)** ✅ **COMPLETE**
 SFTP Gateway `sftp-1-vm` reconfigured to port 5022 (was 22). GCP firewall rules recreated on tcp:5022. EBONF rejection code now shows "PayShap Daily Limit Reached" with bank name and retry-tomorrow instruction. Session log: `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`.
 
 ### **📋 Previous: RTP Callback UETR Fallback Fix (March 16, 2026)** ✅ **COMPLETE**

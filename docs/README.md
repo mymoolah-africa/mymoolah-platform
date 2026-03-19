@@ -1,14 +1,25 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 17, 2026  
-**Version**: 2.22.0 - SFTP Port 5022 + EBONF Daily-Limit Message  
+**Last Updated**: March 19, 2026  
+**Version**: 2.26.0 - Documentation + agent tooling (rules/skills) + VAS catalog context  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE**
 
-**Work in the last 7 days (Mar 10–17, 2026)**: SFTP Gateway port corrected to 5022 (Colette/SBSA H2H requirement). EBONF daily-limit user notification added. RTP callback UETR fallback fix. Standard Bank + Capitec RTP end-to-end confirmed. PASA T-PPP SecurityBadge. Universal modal close buttons. AI chat markdown rendering. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Mar 13–19, 2026)**: Documentation refresh — Cursor `.cursor/rules` vs `.agents/skills` alignment; VAS multi-supplier catalog notes for next sprint; major `docs/` sync. SBSA H2H MT940/MT942 session (Mar 19 AM). SFTP 5022 + EBONF (Mar 17). RTP UETR fix + UI polish (Mar 16). See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: SFTP Port 5022 + EBONF Daily-Limit Message (March 17, 2026)**
+## 🚀 **LATEST UPDATE: Documentation + agent tooling + VAS context (March 19, 2026)**
+
+### **📚 Docs sync**
+- Canonical docs updated: `agent_handover.md`, `CHANGELOG.md`, `PROJECT_STATUS.md`, `DEVELOPMENT_GUIDE.md`, `CURSOR_2.0_RULES_FINAL.md`, `CURSOR_SKILLS.md`, `AGENT_ROLE_TEMPLATE.md`
+- **Rules vs skills**: `.cursor/rules/*.mdc` = always-on; `.agents/skills/**/SKILL.md` = deep procedures read when the task fits
+- **VAS**: Production uses precomputed `vas_best_offers` + fallback comparison; non-production lists all supplier variants — see `services/supplierComparisonService.js` / `services/bestOfferService.js`
+
+**Session log**: `docs/session_logs/2026-03-19_1830_cursor-rules-skills-flash-catalog-docs.md`
+
+---
+
+## **PREVIOUS: SFTP Port 5022 + EBONF Daily-Limit Message (March 17, 2026)**
 
 ### **📡 SFTP Gateway Port Corrected to 5022**
 - SBSA Implementation Manager Colette confirmed SBSA's H2H Push/Pull method requires port **5022**

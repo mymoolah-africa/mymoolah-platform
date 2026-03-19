@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Security Documentation
 
-**Last Updated**: March 5, 2026
-**Version**: 2.11.30 - eeziAirtime Redemption UI & eeziPay AI Knowledge Base
+**Last Updated**: March 19, 2026
+**Version**: 2.11.31 - Documentation cross-links (Cursor rules vs skills); no security control changes
 **Status**: ✅ **USDC API VALIDATION AT BOUNDARY** ✅ **USDC IDEMPOTENCY & VALR GUARDS** ✅ **EASYPAY STANDALONE VOUCHER UI SECURE** ✅ **RECONCILIATION SECURITY IMPLEMENTED** ⚠️ **CRITICAL PII EXPOSURE IDENTIFIED** 🔴 **ENCRYPTION AT REST REQUIRED** ✅ **STAGING/PRODUCTION DATABASES SECURED** ✅ **REFERRAL SYSTEM FRAUD PREVENTION ACTIVE** ✅ **RULE 12A DOCUMENTED** ✅ **DB CONNECTION HELPER PATTERN ESTABLISHED**
 
 ---
@@ -13,6 +13,9 @@ The MyMoolah Treasury Platform implements **banking-grade security** with **TLS 
 Notes for Codespaces development:
 - TLS is disabled for the dev HTTP server; DB connections use runtime TLS overrides only for development convenience
 - Recommended for teams: Cloud SQL Auth Proxy for verified TLS. See `docs/CODESPACES_DB_CONNECTION.md`
+
+Notes for AI-assisted development:
+- **Workspace rules** (`.cursor/rules/*.mdc`) and **skills** (`.agents/skills/`) are documented in `docs/CURSOR_2.0_RULES_FINAL.md` and `docs/CURSOR_SKILLS.md`. They do not replace this security profile; agents must still follow parameterized queries, secrets handling, and POPIA logging rules defined here and in project rules.
 
 ### **🔴 CRITICAL SECURITY ISSUES - PRODUCTION BLOCKERS**
 

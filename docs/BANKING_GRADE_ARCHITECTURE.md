@@ -1,7 +1,7 @@
 # 🏦 Banking-Grade Architecture for MyMoolah
 
-**Last Updated**: March 4, 2026
-**Version**: 2.11.28 - eeziAirtime PIN Fixes & Staging/Production Migrations
+**Last Updated**: March 19, 2026
+**Version**: 2.11.29 - Documentation: Cursor rules/skills layering + VAS catalog context (`supplierComparisonService`, `vas_best_offers`); no architecture change
 **Status**: ✅ **PRODUCTION DB MIGRATED** ✅ **USDC DB-AGGREGATION ONLY (NO JS SUM)** ✅ **FLOAT MONITORING LIVE** ✅ **LEDGER INTEGRATION COMPLETE** ✅ **RECONCILIATION LIVE** ✅ **FLASH + MOBILEMART** ✅ **PEACH PAYMENTS INTEGRATED** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
 
 ## Overview

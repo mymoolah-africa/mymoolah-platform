@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Performance Documentation
 
-**Last Updated**: March 5, 2026
-**Version**: 2.11.30 - eeziAirtime Redemption UI & eeziPay AI Knowledge Base
+**Last Updated**: March 19, 2026
+**Version**: 2.11.31 - Docs sync; production VAS still served from `vas_best_offers` where populated (see `services/bestOfferService.js`)
 **Status**: ✅ **USDC LIMIT CHECKS DB-AGGREGATION ONLY** ✅ **EASYPAY STANDALONE VOUCHER UI OPTIMIZED** ✅ **RECONCILIATION OPTIMIZED** ✅ **FLASH + MOBILEMART** ✅ **REFERRAL SYSTEM OPTIMIZED** ✅ **PEACH PAYMENTS COMPLETE** ✅ **ZAPPER REVIEWED** ✅ **PRODUCTION READY**
 
 ---

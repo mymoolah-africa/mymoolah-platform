@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: March 7, 2026  
-**Version**: 2.13.0 - Cloud Build Migration & npm Cleanup  
+**Last Updated**: March 19, 2026  
+**Version**: 2.14.0 - Agent tooling (rules/skills) documentation  
 **Status**: ✅ **CLOUD BUILD DEPLOYS** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (AWAITING FLASH)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
@@ -9,6 +9,11 @@
 ## 🚀 **DEVELOPMENT OVERVIEW**
 
 Welcome to the MyMoolah Treasury Platform development guide! This platform is built on **banking-grade standards** and **Mojaloop compliance**, designed to handle **millions of transactions** with enterprise-grade security and performance.
+
+### **AI agents (Cursor) — rules vs skills**
+- **Workspace rules**: `.cursor/rules/*.mdc` — always applied; non‑negotiables (workflow, git, DB helper, security).
+- **Skills**: `.agents/skills/**/SKILL.md` — read when the task matches (migrations, recon, Redis, UI patterns). See `docs/CURSOR_SKILLS.md`.
+- **Continuity**: `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/agent_handover.md`, `docs/session_logs/`.
 
 ### **Platform Architecture**
 - **Multi-Supplier Integration**: Unified product catalog across Flash, MobileMart, dtMercury, and Peach

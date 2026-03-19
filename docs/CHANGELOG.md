@@ -1,5 +1,23 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-19 18:30 - 📚 Agent tooling docs + VAS catalog context + major docs sync ✅
+
+### **Session Overview**
+Documentation-only session: aligned **Cursor workspace rules** (`.cursor/rules/*.mdc`) with **agent skills** (`.agents/skills/**/SKILL.md`) in canonical docs; captured **multi-supplier VAS catalog** behaviour (`supplierComparisonService.js`, `bestOfferService.js`, `vas_best_offers`) for upcoming simplification work; refreshed major `docs/` entry points. No application code changes.
+
+### **Highlights**
+- **Rules vs skills**: Always-on `.mdc` for non‑negotiables; skills loaded on demand when the task matches—optional future one-liner in rules to mandate skill reads for migration/recon/Redis-class tasks.
+- **VAS**: Non-production `NODE_ENV` → all Flash + MobileMart variants visible; production → `vas_best_offers` first, `findBestDeals` fallback. Partner PDFs are not hardcoded into SKU tables.
+- **Files updated**: `docs/agent_handover.md`, `docs/README.md`, `docs/PROJECT_STATUS.md`, `docs/DEVELOPMENT_GUIDE.md`, `docs/CURSOR_2.0_RULES_FINAL.md`, `docs/CURSOR_SKILLS.md`, `docs/AGENT_ROLE_TEMPLATE.md`, `docs/CHANGELOG.md` (this entry).
+
+### **Session Log**
+- `docs/session_logs/2026-03-19_1830_cursor-rules-skills-flash-catalog-docs.md`
+
+### **Related**
+- Flash product list PDF `integrations/flash/Flash MyMoolah Product list 20260319.pdf` committed earlier (`docs(integrations): add Flash MyMoolah product list 2026-03-19 PDF`).
+
+---
+
 ## 2026-03-17 19:00 - 🎨 EFT Overlay Polish + 🎤 VoiceInput On-Demand Rewrite ✅
 
 ### **Session Overview**

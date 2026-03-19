@@ -1,6 +1,6 @@
 # MyMoolah Agent Rules - Cursor 2.0
 
-**Last Updated**: 2026-03-14  
+**Last Updated**: 2026-03-19  
 **Keep in sync**: Any rules added to Cursor Settings must also be added here.
 
 ---
@@ -8,6 +8,11 @@
 ## 📌 **PROJECT OVERVIEW**
 
 **MyMoolah** is a banking-grade Treasury Platform for South Africa (wallet, ledger, VAS, USDC, NFC, KYC, reconciliation). **Production**: api-mm.mymoolah.africa, wallet.mymoolah.africa. For status and priorities, read `docs/AGENT_HANDOVER.md`.
+
+### **Cursor rules vs agent skills**
+- **Rules** (`.cursor/rules/*.mdc`): Short, always-on project law — loaded every agent turn.
+- **Skills** (`.agents/skills/**/SKILL.md`): Longer procedures; agents should **read the file when the user task matches** the skill (not all skills load every turn). Inventory: `docs/CURSOR_SKILLS.md`.
+- **Reliability pattern**: Keep *must-never-break* requirements in rules; use skills for depth. Optionally add one line to `development-standards.mdc` mandating a skill read before migrations / ledger / distributed locks if you want stronger coupling.
 
 ---
 
