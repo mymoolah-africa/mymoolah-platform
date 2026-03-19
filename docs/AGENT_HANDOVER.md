@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-17 19:00  
-**Latest Feature**: Top-up via EFT overlay (bank details, PayShap, styling); VoiceInput on-demand rewrite (mic now works); Disbursement routes auth fix  
-**Document Version**: 2.24.0  
-**Session logs**: `docs/session_logs/2026-03-17_1900_eft-overlay-voice-input-fix.md`, `docs/session_logs/2026-03-17_1800_unallocated-deposits-disbursement.md`, `docs/session_logs/2026-03-17_1000_sftp-port-5022-ebonf-message.md`  
+**Last Updated**: 2026-03-19 12:00  
+**Latest Feature**: SBSA H2H MT940/MT942 statement processing pipeline — parser, service, cron poller, migrations deployed to UAT+Staging+Production  
+**Document Version**: 2.25.0  
+**Session logs**: `docs/session_logs/2026-03-19_1200_sbsa-h2h-mt940-statement-processing.md`, `docs/session_logs/2026-03-17_1900_eft-overlay-voice-input-fix.md`, `docs/session_logs/2026-03-17_1800_unallocated-deposits-disbursement.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
