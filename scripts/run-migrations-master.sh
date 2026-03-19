@@ -131,22 +131,29 @@ if (!rootDir) {
 require('dotenv').config({ path: path.join(rootDir, '.env') });
 
 // Load connection helper from project root
-  const { getUATDatabaseURL, getStagingDatabaseURL, getProductionDatabaseURL } = require(path.join(rootDir, 'scripts', 'db-connection-helper'));
+  const {
+    getUATAdminDatabaseURL,
+    getStagingAdminDatabaseURL,
+    getProductionAdminDatabaseURL,
+  } = require(path.join(rootDir, 'scripts', 'db-connection-helper'));
 
 const environment = process.env.MIGRATION_ENV;
 const migrationName = process.env.MIGRATION_NAME;
 
-try {
+  try {
   let databaseURL;
   if (environment === 'uat') {
-    databaseURL = getUATDatabaseURL();
-    console.log('✅ Using UAT database connection');
+    // UAT: use admin URL for DDL migrations (mymoolah_app cannot ALTER TABLE)
+    databaseURL = getUATAdminDatabaseURL();
+    console.log('✅ Using UAT admin database connection (postgres user)');
   } else if (environment === 'staging') {
-    databaseURL = getStagingDatabaseURL();
-    console.log('✅ Using Staging database connection');
+    // Staging: admin user required — mymoolah_app is SELECT/INSERT/UPDATE/DELETE only
+    databaseURL = getStagingAdminDatabaseURL();
+    console.log('✅ Using Staging admin database connection (postgres user)');
   } else if (environment === 'production') {
-    databaseURL = getProductionDatabaseURL();
-    console.log('✅ Using Production database connection');
+    // Production: admin user required — mymoolah_app is SELECT/INSERT/UPDATE/DELETE only
+    databaseURL = getProductionAdminDatabaseURL();
+    console.log('✅ Using Production admin database connection (postgres user)');
   } else {
     throw new Error(`Invalid environment: ${environment}`);
   }
