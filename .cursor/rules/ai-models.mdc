@@ -1,0 +1,36 @@
+---
+description: AI model selection for MyMoolah services and RAG system architecture
+alwaysApply: false
+globs: ["**/services/**/*.js", "**/ragService.js", "**/kycService.js"]
+---
+
+# AI Model Selection
+
+## OpenAI Model Assignments
+
+| Service | Model | Reason |
+|---------|-------|--------|
+| `ragService.js` (support chat) | `gpt-4o-mini` | High volume — cost critical |
+| `feedbackService.js` | `gpt-4o-mini` | Sentiment analysis — mini sufficient |
+| `googleReviewService.js` | `gpt-4o-mini` | Review generation — mini sufficient |
+| `codebaseSweepService.js` | `gpt-4o-mini` | Background job — mini sufficient |
+| `kycService.js` | `gpt-4o` | Identity verification — **accuracy critical, do NOT downgrade** |
+
+**Do NOT change model assignments without explicit approval from André.**
+
+## AI Support System (LangChain RAG v3)
+
+- **File**: `services/ragService.js` — 481-line replacement for 4,649-line legacy system
+- **Phase 1**: Semantic KB search (64 embedded entries via `npm run embed:kb`)
+- **Phase 2**: Transactional AI (live balance + last 10 transactions per user)
+- **Cost layers**: Redis cache → Direct KB (≥92% confidence) → GPT-4o-mini → Self-learning
+- **POPIA**: Personal responses NEVER cached
+- **Self-learning**: Unknown questions auto-saved to KB as `isActive=false` for admin review
+- **Embed KB**: Run `npm run embed:kb` after adding new KB entries
+
+## Legacy AI Services (DO NOT USE)
+
+These files exist but are NOT in the request path — do not call or modify:
+- `services/bankingGradeSupportService.js` (4,649 lines — archived)
+- `services/aiSupportService.js` (references `gpt-5` — will crash if called)
+- `services/semanticEmbeddingService.js`

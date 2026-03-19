@@ -1,0 +1,40 @@
+---
+description: Active tech debt register and architectural decisions log — every agent must maintain this
+alwaysApply: true
+---
+
+# Tech Debt Register
+
+**Every agent must flag issues here.** Do NOT leave architectural concerns undocumented for the next agent.
+
+## Active Tech Debt
+
+| Item | File(s) | Risk | Suggested Action |
+|------|---------|------|-----------------|
+| Legacy AI services (4,649 lines, unused) | `services/bankingGradeSupportService.js`, `services/aiSupportService.js`, `services/semanticEmbeddingService.js` | Low — not in request path | Archive after confirming ragService stable in production |
+| `aiSupportService.js` references `gpt-5` | `services/aiSupportService.js:1187,1558` | Medium — will crash if called | Archive the file |
+| Conversation history in-memory only | `services/ragService.js` | Medium — lost on restart, not scalable | Migrate to Redis for horizontal scaling (Phase 3) |
+| npm audit: 25 vulnerabilities (2 critical) | `package.json` | Medium | Run `npm audit fix` when stable |
+| `check-proxies-cs.sh` missing | `scripts/ensure-proxies-running.sh` | Low — bash error only, proxies work | Either create the script or remove the call |
+
+## Architectural Decisions Log
+
+| Decision | Date | Reason |
+|----------|------|--------|
+| LangChain RAG replaces pattern-matching AI | Mar 2026 | 4,649 → 481 lines; semantic search; self-learning |
+| `gpt-4o-mini` for all non-KYC OpenAI calls | Mar 2026 | Cost: ~$30k/month → ~$150-360/month at 3M users |
+| KYC stays on `gpt-4o` | Mar 2026 | POPIA accuracy requirement |
+| Figma restriction removed | Feb 2026 | Code is source of truth; agents edit `.tsx` freely |
+| Agent commits AND pushes to main | Feb 2026 | Streamlined workflow |
+| Cloud Build for deployments (not local Docker) | Mar 2026 | No Docker Desktop needed; faster build times |
+| MT940+MT942 for SBSA H2H statements | Mar 2026 | SWIFT ISO standard — banking/Mojaloop grade |
+| Sub-folders in GCS for SBSA files | Mar 2026 | statements/ and payments/ separation prevents file mixing |
+| Admin user for all DDL migrations | Mar 2026 | mymoolah_app is DML only; postgres superuser required for ALTER/CREATE |
+
+## Rule: When to Add Here
+
+Add an entry whenever you:
+- Identify code complexity or duplication that should be refactored
+- Make an architectural decision that future agents should understand
+- Find a bug you can't fix in the current session
+- Notice a pattern that differs from the project standards

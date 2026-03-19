@@ -1,0 +1,82 @@
+---
+description: Git workflow, Codespaces testing sequence, and the ONLY correct restart command
+alwaysApply: true
+---
+
+# Git Workflow
+
+## Standard Flow
+
+```
+Local development → commit → push to main → User pulls in Codespaces → Test in Codespaces
+```
+
+1. Make changes locally
+2. `git add . && git commit -m "[description]"` 
+3. `git push origin main`  ← Agent does this every time
+4. User runs `git pull origin main` in Codespaces
+5. GitHub = source of truth for all environments
+
+**Agent MUST commit AND push after every session. Never leave push for the user.**
+
+## Safe Pull Procedure
+
+Always check status before pulling:
+
+```bash
+git status
+```
+
+| State | Action |
+|-------|--------|
+| Uncommitted changes exist | Commit or stash first, then pull |
+| Local commits not pushed | Push first, then pull |
+| Clean and up to date | Safe to pull |
+| Ahead of origin | Push first |
+
+---
+
+## Codespaces Testing Sequence (MANDATORY — always give André this exact sequence)
+
+After pushing, tell André to run these **in Codespaces** in this exact order:
+
+```bash
+# 1. Pull latest code
+git pull origin main
+
+# 2. Rebuild frontend (only if frontend files changed)
+cd mymoolah-wallet-frontend && npm run build && cd ..
+
+# 3. Restart backend + proxy + Redis
+./scripts/one-click-restart-and-start.sh
+```
+
+## ⚠️ CRITICAL: The ONLY correct restart command
+
+`./scripts/one-click-restart-and-start.sh` is the **ONLY** correct way to restart the backend in Codespaces.
+
+It handles in the correct order:
+- Cloud SQL Auth Proxy startup
+- Redis container
+- GCP credentials
+- DATABASE_URL construction
+- Backend startup
+
+**NEVER suggest these — they will break the Cloud SQL connection:**
+- ❌ `pm2 restart all`
+- ❌ `pm2 reload all`
+- ❌ `node server.js`
+- ❌ `npm start`
+- ❌ Any direct backend restart that bypasses `one-click-restart-and-start.sh`
+
+## Migration Proxy Prerequisite
+
+Before running migrations in a new CS session, stale proxies cause ECONNRESET. Fix:
+
+```bash
+kill $(lsof -ti:6543) $(lsof -ti:6544) $(lsof -ti:6545)
+sleep 2
+./scripts/ensure-proxies-running.sh
+```
+
+Then run migrations safely.

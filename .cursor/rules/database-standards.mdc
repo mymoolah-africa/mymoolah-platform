@@ -1,0 +1,79 @@
+---
+description: Database connection standards, migration commands, and query patterns — NON-NEGOTIABLE
+alwaysApply: true
+---
+
+# Database Standards — NON-NEGOTIABLE
+
+## The Golden Rule: ALWAYS use db-connection-helper.js
+
+**NEVER write custom DB connection code.** Every query must go through `scripts/db-connection-helper.js`.
+
+```js
+// ✅ CORRECT — the ONLY way to query the database
+const { getUATClient } = require('./scripts/db-connection-helper');
+const client = await getUATClient();
+const result = await client.query('SELECT ...', [params]);
+client.release();
+```
+
+```js
+// ❌ WRONG — never do this
+const { Sequelize } = require('sequelize');
+const seq = new Sequelize(process.env.DATABASE_URL, ...);
+
+// ❌ ALSO WRONG
+const { Pool } = require('pg');
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+```
+
+## Connection Ports by Environment
+
+| Environment | Function | Port | Password Source |
+|------------|---------|------|----------------|
+| UAT | `getUATClient()` / `getUATAdminClient()` | 6543 | `.env` DB_PASSWORD / DB_ADMIN_PASSWORD |
+| Staging | `getStagingClient()` / `getStagingAdminClient()` | 6544 | GCP Secret Manager |
+| Production | `getProductionClient()` / `getProductionAdminClient()` | 6545 | GCP Secret Manager |
+
+**Admin vs App user:**
+- `getUATClient()` / `getStagingClient()` / `getProductionClient()` → `mymoolah_app` (SELECT/INSERT/UPDATE/DELETE only)
+- `getUATAdminClient()` / `getStagingAdminClient()` / `getProductionAdminClient()` → `postgres` superuser (required for DDL: CREATE TABLE, ALTER TABLE)
+- **Migrations always use admin client**
+
+## Running Migrations
+
+```bash
+# ALWAYS use the master script — never npx sequelize-cli directly
+./scripts/run-migrations-master.sh uat
+./scripts/run-migrations-master.sh staging
+./scripts/run-migrations-master.sh production
+```
+
+Migration naming: `YYYYMMDD_NN_description.js` (e.g. `20260319_create_sbsa_statement_runs.js`)
+
+Every migration must have both `up()` and `down()` (rollback).
+
+## Query Patterns
+
+```js
+// ✅ Parameterized queries — mandatory for all user input
+await client.query('SELECT * FROM users WHERE id = $1', [userId]);
+
+// ✅ Database aggregation — NEVER sum in JavaScript
+await client.query('SELECT SUM(amount) as total FROM transactions WHERE user_id = $1', [userId]);
+
+// ❌ NEVER calculate sums in JavaScript
+const total = transactions.reduce((sum, t) => sum + t.amount, 0);
+```
+
+## Performance Targets
+
+- API responses: < 200ms
+- DB queries: < 50ms
+- Use indexes on all foreign keys and frequently-queried columns
+- Use database views for complex aggregations
+- Connection pooling is handled by `db-connection-helper.js` — do not create additional pools
+
+## Read Before DB Work
+
+Always read `docs/DATABASE_CONNECTION_GUIDE.md` before any database work. It contains the full guide for Cloud SQL Auth Proxy, Sequelize config, and environment-specific connection details.

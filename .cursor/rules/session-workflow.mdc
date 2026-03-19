@@ -1,0 +1,52 @@
+---
+description: Mandatory session start and session end checklist for every agent
+alwaysApply: true
+---
+
+# Session Workflow — Start and End
+
+## SESSION START (DO IN THIS ORDER — NO WORK UNTIL COMPLETE)
+
+### Step 1: Rules Confirmation (MANDATORY)
+- Use `read_file` tool to actually read `docs/CURSOR_2.0_RULES_FINAL.md`
+- Summarize 3–5 key rules as proof of reading
+- State: "✅ Rules reading completed — I have read `docs/CURSOR_2.0_RULES_FINAL.md` and will follow all rules"
+- **NO WORK UNTIL THIS IS CONFIRMED**
+
+### Step 2: Context Reading
+1. Read `docs/agent_handover.md` — onboarding checklist, current status, next priorities
+2. Read 2–3 most recent `docs/session_logs/*.md` — chat history continuity
+3. Read `docs/CHANGELOG.md` last 2 weeks — recent changes
+4. Read `docs/DATABASE_CONNECTION_GUIDE.md` — if any DB work is planned
+5. Run `git log --oneline -10` — review recent commits
+
+### Step 3: Git Status Check
+```bash
+git status   # ALWAYS check first
+```
+- Uncommitted changes → commit or stash, then pull
+- Local commits not pushed → push first, then pull
+- Clean and up to date → safe to pull: `git pull origin main`
+
+---
+
+## SESSION END — When Work Is Complete (DO PROACTIVELY, don't wait for user to close chat)
+
+1. **Create session log**: `docs/session_logs/YYYY-MM-DD_HHMM_[description].md`
+   - Fill in ALL sections: summary, tasks, decisions, files modified, issues, next steps, context for next agent
+   - Use template: `docs/session_logs/TEMPLATE.md`
+
+2. **Update `docs/agent_handover.md`**: Latest feature, version bump, session log reference
+
+3. **Commit and push**:
+```bash
+git add docs/session_logs/YYYY-MM-DD_HHMM_*.md docs/agent_handover.md
+git commit -m "docs: session log and handover update - [description]"
+git add .
+git commit -m "[descriptive message for code changes]"
+git push origin main
+```
+
+4. **Inform user**: "✅ Changes committed and pushed. Pull in Codespaces: `git pull origin main`"
+
+> Session logs are mandatory — each new chat is a new agent with no memory. Session logs are the only continuity mechanism.

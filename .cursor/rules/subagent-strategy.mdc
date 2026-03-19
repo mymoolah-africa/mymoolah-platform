@@ -1,0 +1,83 @@
+---
+description: Subagent strategy for maximising context efficiency on large tasks — Priority 2 optimisation
+alwaysApply: true
+---
+
+# Subagent Strategy — Context Optimisation
+
+Context exhaustion is the primary risk on large MyMoolah tasks. Use this strategy to keep every agent's context window small and focused.
+
+## Core Principle
+
+**One agent = one focused concern.**  
+Never let a single agent context accumulate: exploration + planning + implementation + testing + documentation.  
+Split into parallel or sequential subagents, each with a minimal prompt and a clear output contract.
+
+## Pattern 1 — Parallel Independent Subtasks
+
+When a feature has independent parts, spawn them in parallel:
+
+```
+Main agent orchestrates:
+  ├── Subagent A: "Read services/standardbank/mt940Parser.js only. Build X. Write result to file."
+  ├── Subagent B: "Read models/DisbursementPayment.js only. Build Y. Write result to file."
+  └── Subagent C: "Read migrations/ last 3 files. Write migration for Z."
+Main agent: assembles results, commits.
+```
+
+Each subagent gets 3–5 files maximum in its context. Main agent stays clean.
+
+## Pattern 2 — Explore → Plan → Execute
+
+For large features, never explore and implement in the same context:
+
+1. **Explore subagent**: "Read these 5 files. Return a 1-paragraph summary of each and the key interfaces." (readonly)
+2. **Main agent**: Uses the summary to form a plan. Spawns implementation subagents.
+3. **Implementation subagents**: Each implements one module using only what they need.
+4. **Review subagent**: "Read the new files only. Check for consistency and linter errors."
+
+## Pattern 3 — Files as Shared Memory
+
+Subagents don't share memory — they share **files**:
+
+- Subagent writes findings to a temp file or a new service file
+- Main agent reads the file and passes relevant excerpts to the next subagent
+- Results accumulate in the codebase, not in a growing context window
+- Session logs serve as cross-session shared memory
+
+## What to Pass to Each Subagent
+
+**Be explicit and minimal:**
+
+```
+✅ "Read services/standardbank/mt940Parser.js and models/SBSAStatementRun.js only.
+    Your task is to build sbsaStatementService.js. 
+    It must: [3 bullet requirements].
+    Return: the complete file content."
+
+❌ "Understand the full MyMoolah codebase and build the statement service."
+```
+
+Never say "understand the whole project" in a subagent prompt — that forces the subagent to load massive context unnecessarily.
+
+## MyMoolah-Specific Guidance
+
+| Task Type | Strategy |
+|-----------|----------|
+| New backend service | Explore subagent (read similar service) → Implementation subagent |
+| New frontend overlay | Explore subagent (read similar overlay) → UI subagent → Integration subagent |
+| Migration + model | Parallel: migration subagent + model subagent → main agent wires them |
+| Large reconciliation feature | 4 parallel subagents: parser / service / model / watcher |
+| Debugging | Debug subagent reads only the failing file + its direct dependencies |
+
+## When to Use Claude Code Instead
+
+If the task requires more than 6–8 subagent calls, or if context keeps blowing out even with parallelism, switch to **Claude Code in the terminal**:
+
+```bash
+claude   # in Cursor's integrated terminal
+```
+
+Claude Code has `/compact` (mid-session context compression) and the Superpowers plugin (`/superpowers:write-plan`, `/superpowers:execute-plan`) which handles very large tasks better than Cursor's agent framework.
+
+Use Cursor agent for daily IDE work. Use Claude Code for marathon autonomous tasks.

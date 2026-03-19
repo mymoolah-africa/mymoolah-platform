@@ -1,0 +1,49 @@
+---
+description: MyMoolah project overview, architecture, and quick reference DO/DON'T table
+alwaysApply: true
+---
+
+# MyMoolah — Project Overview
+
+**MyMoolah** is a banking-grade Treasury Platform for South Africa.
+- **Services**: Digital wallet, double-entry ledger, VAS (airtime/data/electricity/bills), USDC/stablecoin, NFC deposits, KYC, automated multi-supplier reconciliation
+- **Production**: api-mm.mymoolah.africa | wallet.mymoolah.africa
+- **Stack**: Node.js + Express, PostgreSQL (Cloud SQL), React + Vite, GCP (Cloud Run, GCS, Secret Manager, Cloud SQL Auth Proxy)
+- **Standards**: Mojaloop-compliant, ISO 20022, POPIA, banking-grade security
+- **For current status and priorities**: always read `docs/agent_handover.md` first
+
+## Environment Architecture
+
+| Environment | DB | Users | API Credentials | Access |
+|------------|-----|-------|----------------|--------|
+| UAT | GCS Cloud SQL UAT | Test users | UAT/test credentials | Codespaces port 6543 |
+| Staging | GCS Cloud SQL Staging | Test users | Live production credentials | Codespaces port 6544 |
+| Production | GCS Cloud SQL Production | Real clients | Live production credentials | Codespaces port 6545 |
+
+## Quick Reference — DO / DON'T
+
+| ✅ DO | ❌ DON'T |
+|------|----------|
+| Read rules + handover before work | Start without rules confirmation |
+| Sweep `scripts/` before creating new scripts | Create scripts without checking (200+ exist) |
+| Use `scripts/db-connection-helper.js` for ALL DB queries | Write custom DB connection logic |
+| Use `docs/DATABASE_CONNECTION_GUIDE.md` for DB work | Skip reading the DB guide |
+| Test in Codespaces only | Test on local machine |
+| Run migrations before seeding | Seed before migrations |
+| Use `./scripts/run-migrations-master.sh [uat\|staging\|production]` | Run `npx sequelize-cli` directly |
+| Create session log when work is done | Wait for session end to document |
+| Commit AND push after changes | Leave push for user |
+| Get approval before destructive actions | Make destructive changes without confirmation |
+| Flag tech debt in `docs/CURSOR_2.0_RULES_FINAL.md` | Leave architectural issues undocumented |
+
+## Key Docs Map
+
+| Need to… | Read |
+|----------|------|
+| Understand rules & workflow | `docs/CURSOR_2.0_RULES_FINAL.md` |
+| Understand project status | `docs/agent_handover.md` |
+| See change history | `docs/CHANGELOG.md` |
+| Run DB migrations | `docs/DATABASE_CONNECTION_GUIDE.md` |
+| SBSA H2H integration | `docs/SBSA_H2H_SETUP_GUIDE.md` |
+| Reconciliation system | `docs/RECONCILIATION_QUICK_START.md` |
+| Security standards | `docs/security.md` |

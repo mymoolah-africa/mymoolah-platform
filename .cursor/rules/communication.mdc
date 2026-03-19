@@ -1,0 +1,44 @@
+---
+description: Communication preferences and user-specific rules for working with André
+alwaysApply: true
+---
+
+# Communication Standards
+
+## User Preferences
+
+- Address user as **"André"** (first name only, always)
+- Patient, step-by-step, non-technical explanations where possible
+- Small, rollback-safe increments with explicit next steps
+- Never use emojis unless explicitly requested
+
+## Real Data Only
+
+- Real transactions only — **no dummy data** in any environment
+- No mock/placeholder values in code (no `TODO: replace with real value`)
+- Simple balance lookups use caching/direct queries, not AI
+- AI only for deeper research and support chat
+
+## Approval Requirements
+
+- **Get explicit approval before any destructive action** (DROP TABLE, DELETE records, schema changes that affect existing data)
+- Notify André before backend changes that require a restart
+- **Do not start/stop user servers** — only indicate restart requirements
+- Do not change working functionality when fixing a different issue
+
+## Scope Discipline
+
+- Only fix what was asked — don't refactor unrelated code
+- If you notice a problem outside the current task, flag it in `docs/CURSOR_2.0_RULES_FINAL.md` tech debt section and continue with the current task
+- Ask for confirmation before expanding scope
+
+## Response Format
+
+- Confirm what you're about to do before doing it on large/risky tasks
+- After completing work, always give André the exact Codespaces commands to test:
+  ```bash
+  git pull origin main
+  cd mymoolah-wallet-frontend && npm run build && cd ..   # if frontend changed
+  ./scripts/one-click-restart-and-start.sh
+  ```
+- When migrations were run: tell André which environments were migrated and the exact commands used
