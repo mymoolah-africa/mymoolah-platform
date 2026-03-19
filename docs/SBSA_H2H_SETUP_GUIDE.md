@@ -1,7 +1,7 @@
 # SBSA Host-to-Host (H2H) Setup Guide
 
 **Date**: 2026-03-13  
-**Status**: ✅ PG15 submitted to Colette (SBSA) on 2026-03-13 — Port corrected to 5022 on 2026-03-17 per Colette's instruction  
+**Status**: ✅ PG15 submitted to Colette (SBSA) on 2026-03-13 — Port corrected to 5022 on 2026-03-17 per Colette's instruction — Statement format + delivery schedule confirmed 2026-03-19  
 **Implementation Manager**: SBSA (assigned contact)  
 **Services**: Credit Notifications via Webserver + H2H SFTP (Statements + Payments)
 
@@ -160,11 +160,14 @@ Recommended signing: **SHA256**
 - [x] SFTP IP: `34.35.137.166`
 - [x] SFTP Port: `5022`
 - [x] SSH Public Key (Section 2 above)
-- [x] SFTP Username: `standardbank`
-- [ ] Folder structure preference (see Section 3)
-- [ ] Statement format: MT940 / MT942 / SAP Multicash / SBSA proprietary
-- [ ] Statement delivery schedule (which days, what time)
+- [x] SFTP Username: `standardbank` (SBSA to confirm exact username once their setup is complete)
+- [x] **Folder structure**: Inbox / Outbox is sufficient from SBSA side. MyMoolah uses sub-folders internally in GCS for separation: `standardbank/inbox/statements/` (MT940/MT942) and `standardbank/inbox/payments/` (Pain.002). SBSA delivers all files to our flat SFTP Inbox — we route internally. ✅ (Confirmed with Colette 2026-03-17)
+- [x] **Statement format: MT940 (end-of-day) + MT942 (intraday)** — SWIFT ISO standard. MyMoolah confirmed this choice. ✅ (Confirmed with Colette 2026-03-17)
+- [x] **Delivery schedule: Both intraday and end-of-day** — Colette confirmed both options available. ✅ (Confirmed 2026-03-17)
 - [ ] PGP public key (if encryption required — generate per Section 6)
+- [ ] **SBSA to confirm**: Exact SFTP username for our account
+- [ ] **SBSA to confirm**: Exact MT940/MT942 filename pattern they will use
+- [ ] **SBSA to confirm**: Intraday statement frequency (e.g., every 2h, every 4h, or on-demand)
 
 ---
 
@@ -192,6 +195,46 @@ Recommended signing: **SHA256**
 | `mobilemart` | MobileMart daily recon files | Configured |
 | `flash` | Flash daily recon files | Configured |
 | `standardbank` | SBSA H2H statements + payments | ✅ Created (SSH key added) |
+
+---
+
+## 10. Statement Processing Architecture
+
+### Confirmed Decisions (2026-03-19)
+
+| Parameter | Decision | Rationale |
+|-----------|----------|-----------|
+| **SFTP Method** | Push/Pull | MyMoolah pushes Pain.001 to SBSA Outbox; pulls MT940/MT942/Pain.002 from SBSA Inbox |
+| **Statement format** | MT940 + MT942 | SWIFT ISO standard — banking-grade, Mojaloop-compatible, well-documented |
+| **Delivery schedule** | Intraday + End-of-day | Both confirmed available by Colette |
+| **Folder structure (SBSA side)** | Flat Inbox/Outbox | SBSA uses standard folders |
+| **Folder structure (our GCS side)** | Sub-folders by type | `standardbank/inbox/statements/` and `standardbank/inbox/payments/` |
+
+### File Types Expected in SFTP Inbox
+
+| File | Format | Frequency | GCS Destination |
+|------|--------|-----------|-----------------|
+| Bank statement | MT940 | End-of-day | `standardbank/inbox/statements/` |
+| Intraday statement | MT942 | Intraday (TBD freq.) | `standardbank/inbox/statements/` |
+| Payment status report | Pain.002 | After Pain.001 processing | `standardbank/inbox/payments/` |
+
+### Statement Processing Code
+
+- **Parser**: `services/standardbank/mt940Parser.js` — Parses MT940/MT942 SWIFT files into structured transactions
+- **Service**: `services/standardbank/sbsaStatementService.js` — Orchestrates: pull from GCS → parse → reconcile against ledger → create unallocated deposit records → archive
+
+### MT940 Field Reference
+
+```
+:20:  Transaction Reference (our identifier)
+:25:  Account (SBSA account number)
+:28C: Statement number / sequence
+:60F: Opening balance  (F=final/end-of-day, M=midday/intraday)
+:61:  Statement line   (one per transaction — YYMMDD, CR/DR, amount, type, reference)
+:86:  Narrative        (free text description per :61:)
+:62F: Closing balance
+:64:  Available balance (optional)
+```
 
 ---
 

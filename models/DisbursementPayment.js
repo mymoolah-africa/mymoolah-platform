@@ -74,6 +74,16 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true,
     },
+    bank_confirmed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      comment: 'Date SBSA MT940 statement confirmed funds left the account',
+    },
+    bank_confirmed_amount_cents: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: 'MT940-confirmed amount in cents',
+    },
   }, {
     tableName: 'disbursement_payments',
     underscored: true,

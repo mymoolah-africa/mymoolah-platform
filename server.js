@@ -781,7 +781,27 @@ const initializeBackgroundServices = async () => {
     } catch (error) {
       console.error('❌ Failed to start idempotency cleanup scheduler:', error.message);
     }
-    
+
+    // ── SBSA H2H Statement Poller (MT940/MT942) ────────────────
+    try {
+      const cron = require('node-cron');
+      const sbsaStatementService = require('./services/standardbank/sbsaStatementService');
+
+      // Poll every 5 minutes for intraday statements + end-of-day
+      // Intraday MT942 files arrive throughout the day; MT940 arrives after banking close
+      cron.schedule(process.env.SBSA_STATEMENT_POLL_SCHEDULE || '*/5 * * * *', async () => {
+        try {
+          await sbsaStatementService.pollAndProcess();
+        } catch (err) {
+          console.error('❌ SBSA statement poll error:', err.message);
+        }
+      });
+
+      console.log('✅ SBSA H2H statement poller started (MT940/MT942, every 5 minutes)');
+    } catch (error) {
+      console.error('❌ Failed to start SBSA statement poller:', error.message);
+    }
+
   } catch (error) {
     console.error('❌ Error starting background services:', error.message);
     console.error('❌ Full error details:', error);
