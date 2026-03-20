@@ -75,9 +75,15 @@ async function refreshBestOffers() {
 
     for (const v of variants) {
       const vasType = (v.vasType || '').toString().toLowerCase();
-      if (!['airtime', 'data', 'voucher'].includes(vasType)) continue;
+      if (!['airtime', 'data', 'voucher', 'electricity', 'bill_payment'].includes(vasType)) continue;
 
-      const provider = normalizeProvider(v.provider) || v.provider || 'Unknown';
+      let provider = normalizeProvider(v.provider) || v.provider || 'Unknown';
+      if (vasType === 'bill_payment') {
+        provider = (v.productName || v.provider || 'Unknown').toString().trim();
+      } else if (vasType === 'electricity') {
+        provider = (normalizeProvider(v.provider) || v.provider || 'Unknown').toString().trim();
+      }
+      if (provider.length > 100) provider = provider.slice(0, 100);
       const commission = parseFloat(v.commission) || 0;
 
       // Collect explicit denominations

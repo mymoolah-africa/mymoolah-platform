@@ -11,6 +11,7 @@
 const { ProductVariant, Product, Supplier } = require('../models');
 const { Op } = require('sequelize');
 const bestOfferService = require('./bestOfferService');
+const { useBestOffersCatalogDisplay } = require('./catalogDisplayPolicy');
 
 class SupplierComparisonService {
     constructor() {
@@ -50,17 +51,11 @@ class SupplierComparisonService {
                 catalogVersion: null
             };
 
-            // Environment detection:
-            //   Production  → NODE_ENV=production  (uses best-offers cache, deduped)
-            //   Staging     → NODE_ENV=staging      (GCP Secret Manager injects this)
-            //   UAT / Dev   → NODE_ENV=development or test
-            //
-            // Staging and UAT both show ALL products from ALL suppliers for testing.
-            // GCP Secret Manager injects NODE_ENV at runtime — no .env file on server.
-            const isProduction = process.env.NODE_ENV === 'production';
-            const isUatOrStaging = !isProduction; // staging, development, test
+            // Catalog display: optional MM_DEPLOYMENT_ENV overrides NODE_ENV for listing only.
+            // Unset MM_DEPLOYMENT_ENV → legacy: NODE_ENV === 'production' uses vas_best_offers.
+            const catalogUseBestOffers = useBestOffersCatalogDisplay();
 
-            if (isProduction) {
+            if (catalogUseBestOffers) {
                 // Production only: use pre-computed best-offers cache
                 try {
                     const bestResult = await bestOfferService.getBestOffers(vasType, provider);
@@ -118,11 +113,11 @@ class SupplierComparisonService {
                 };
             }
 
-            if (isProduction) {
-                // Production fallback (best-offers cache missed): deduplicate by best commission
+            if (catalogUseBestOffers) {
+                // Best-offers mode fallback (cache empty or partial): deduplicate by best commission
                 comparison.bestDeals = this.findBestDeals(Object.values(groupedBySupplier), amount, vasType);
             } else {
-                // UAT / Staging: ALL products, sorted Flash-first then MobileMart,
+                // Full catalog: ALL products, sorted Flash-first then MobileMart,
                 // within each supplier: airtime/data by price asc, vouchers A-Z
                 const allFormatted = [];
                 // Iterate suppliers in priority order (Flash=1, MobileMart=2, others last)
