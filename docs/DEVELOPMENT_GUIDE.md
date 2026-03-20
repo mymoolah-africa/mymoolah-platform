@@ -1,7 +1,7 @@
 # MyMoolah Treasury Platform - Development Guide
 
-**Last Updated**: March 19, 2026  
-**Version**: 2.14.0 - Agent tooling (rules/skills) documentation  
+**Last Updated**: March 20, 2026  
+**Version**: 2.15.0 - VAS catalog display policy (`MM_DEPLOYMENT_ENV`) + docs  
 **Status**: ✅ **CLOUD BUILD DEPLOYS** ✅ **EEZIAIRTIME REDEMPTION UI** ✅ **EEZIPAY KB** ✅ **INTERNATIONAL AIRTIME PINLESS (AWAITING FLASH)** ✅ **EASYPAY STANDALONE VOUCHER** ✅ **RECONCILIATION LIVE** ✅ **REFERRAL SYSTEM LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **PRODUCTION READY**
 
 ---
@@ -34,6 +34,22 @@ Welcome to the MyMoolah Treasury Platform development guide! This platform is bu
 ---
 
 ## 🏗️ **PRODUCT CATALOG ARCHITECTURE**
+
+### **VAS / voucher catalog display (listing only)**
+
+Wallet and overlay **list** endpoints decide whether to show **every active supplier variant** or **pre-computed best rows** from `vas_best_offers` (highest commission per slot; duplicate SKUs collapsed).
+
+| Signal | Behaviour |
+|--------|-----------|
+| **`MM_DEPLOYMENT_ENV` unset** | Legacy: `NODE_ENV === 'production'` → best-offers mode; otherwise full catalog. **No GCP change required** — existing deployments behave as before. |
+| **`MM_DEPLOYMENT_ENV=production`** | Best-offers mode (even if `NODE_ENV` is not production). |
+| **`MM_DEPLOYMENT_ENV=staging`** (or `uat`, `development`, `dev`, `test`) | Full multi-supplier catalog for QA. |
+
+**Code:** `services/catalogDisplayPolicy.js` — consumed by `supplierComparisonService.js` (vouchers, airtime, data, international pin via compare API), `routes/overlayServices.js` (airtime/data `VasProduct` dedupe, electricity catalog, bill search/categories).
+
+**After changing variants**, production still runs `scripts/refresh-vas-best-offers.js` (also triggered after catalog sweep) so `vas_best_offers` includes `electricity` and `bill_payment` rows where applicable.
+
+This does **not** change supplier credentials, auth, or purchase APIs — **display policy only**.
 
 ### **Core System Design**
 

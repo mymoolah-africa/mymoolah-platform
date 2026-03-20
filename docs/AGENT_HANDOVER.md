@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-19 18:30  
-**Latest Feature**: Documentation refresh — Cursor rules vs `.agents/skills/` alignment, VAS catalog context (Flash + MobileMart) for upcoming simplification work; major `docs/` sync  
-**Document Version**: 2.26.0  
-**Session logs**: `docs/session_logs/2026-03-19_1830_cursor-rules-skills-flash-catalog-docs.md`, `docs/session_logs/2026-03-19_1200_sbsa-h2h-mt940-statement-processing.md`, `docs/session_logs/2026-03-17_1900_eft-overlay-voice-input-fix.md`  
+**Last Updated**: 2026-03-20 12:00  
+**Latest Feature**: VAS / voucher **catalog listing policy** — optional `MM_DEPLOYMENT_ENV` (`services/catalogDisplayPolicy.js`) so staging/UAT can show full multi-supplier catalogs while production uses `vas_best_offers`; overlay routes aligned (airtime/data, electricity, bills); `refresh-vas-best-offers` now includes `electricity` + `bill_payment`. No credential or auth changes.  
+**Document Version**: 2.27.0  
+**Session logs**: `docs/session_logs/2026-03-20_1200_vas-catalog-display-policy.md`, `docs/session_logs/2026-03-19_1830_cursor-rules-skills-flash-catalog-docs.md`, `docs/session_logs/2026-03-19_1200_sbsa-h2h-mt940-statement-processing.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---

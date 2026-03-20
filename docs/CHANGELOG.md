@@ -1,5 +1,17 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-20 - VAS catalog display policy (MM_DEPLOYMENT_ENV) + electricity/bills in best-offers refresh ✅
+
+### **Session Overview**
+- **New** `services/catalogDisplayPolicy.js`: optional `MM_DEPLOYMENT_ENV` overrides whether listing endpoints use `vas_best_offers` vs full `product_variants`. **Unset** → same behaviour as before (`NODE_ENV === 'production'` gate).
+- **`supplierComparisonService`**: uses catalog display policy instead of raw `NODE_ENV` only.
+- **`routes/overlayServices.js`**: airtime/data overlay dedupes by amount only in best-offers mode; electricity catalog prefers `vas_best_offers` when in that mode (fallback to full variants); bill search/categories dedupe duplicate billers by best commission in best-offers mode, or show per-supplier entries in full mode.
+- **`scripts/refresh-vas-best-offers.js`**: includes `electricity` and `bill_payment` variant types in the materialized table.
+- **Tests**: `tests/catalogDisplayPolicy.test.js` (`node --test tests/catalogDisplayPolicy.test.js`).
+- **Docs**: `docs/DEVELOPMENT_GUIDE.md` (this behaviour). No changes to secrets, GCP Secret Manager, or supplier credential loading.
+
+---
+
 ## 2026-03-19 18:30 - 📚 Agent tooling docs + VAS catalog context + major docs sync ✅
 
 ### **Session Overview**
