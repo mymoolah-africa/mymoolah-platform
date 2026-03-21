@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-21 11:15  
-**Latest Feature**: Universal **dialog scroll fix** — added `max-h-[85vh] overflow-y-auto` to shared `DialogContent` component (`components/ui/dialog.tsx`) so all Radix dialogs scroll when content exceeds viewport. Fixes Pay Now modal on Send Money page. Touch-scroll CSS added to `globals.css`. No API or backend changes.  
-**Document Version**: 2.27.1  
-**Session logs**: `docs/session_logs/2026-03-21_1115_dialog-scroll-fix.md`, `docs/session_logs/2026-03-20_1200_vas-catalog-display-policy.md`, `docs/session_logs/2026-03-19_1830_cursor-rules-skills-flash-catalog-docs.md`  
+**Last Updated**: 2026-03-21 17:45  
+**Latest Feature**: **PayShap RTP fix + Peach decommission** — Fixed critical bug where frontend called decommissioned Peach Payments instead of Standard Bank for PayShap RTP. Creditor name now shows wallet holder's name (e.g. "Andre Botes") instead of "MyMoolah Treasury". Peach PayShap fully decommissioned (code preserved, routes disabled). Tested end-to-end in UAT + staging.  
+**Document Version**: 2.28.0  
+**Session logs**: `docs/session_logs/2026-03-21_1730_payshap-rtp-peach-to-sbsa-fix-decommission.md`, `docs/session_logs/2026-03-21_1115_dialog-scroll-fix.md`, `docs/session_logs/2026-03-20_1200_vas-catalog-display-policy.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -664,32 +664,34 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — SFTP Port 5022 + EBONF Daily-Limit Notification  
-**Last Session**: 2026-03-17 — SFTP Gateway port corrected to 5022; EBONF PayShap notification added
+**Session Status**: ✅ **COMPLETE** — PayShap RTP Peach→SBSA Fix + Peach Decommission  
+**Last Session**: 2026-03-21 — Fixed critical wrong-integration bug; decommissioned Peach PayShap
 
-### **Most Recent Work (2026-03-17)**
-- **SFTP Gateway port 5022**: Colette (SBSA Implementation Manager) confirmed SBSA H2H Push/Pull requires port 5022 not 22. Fixed by detaching `sftp-1-vm` boot disk, mounting on temp Ubuntu VM, editing `/opt/sftpgw/application.properties` (`sftp.port=22` → `sftp.port=5022`), reattaching, restarting. Port 5022 OPEN confirmed. Port 22 CLOSED.
-- **GCP Firewall rules**: `allow-sbsa-sftp-test` and `allow-sbsa-sftp-prod` recreated on `tcp:5022`
-- **EBONF notification**: `services/standardbankRtpService.js` — when EBONF code detected, show "PayShap Daily Limit Reached" with bank name + "Please resend your request tomorrow." Both direct-rejection and PBAC-failure paths covered.
-- **SFTP Gateway API access discovered**: OAuth2 token via `POST /backend/login` with `Authorization: Basic <base64(clientid:clientsecret)>` from `/webconfig.js`. Useful for future admin automation.
+### **Most Recent Work (2026-03-21)**
+- **PayShap RTP fix**: Frontend `pages/RequestMoneyPage.tsx` was calling decommissioned Peach endpoint `/api/v1/peach/request-money`. Switched to Standard Bank `/api/v1/standardbank/payshap/rtp`. Single-line fix.
+- **Creditor name resolved**: SBSA controller resolves wallet holder's `firstName`/`lastName` from DB. Debtor notifications now show "Request to Pay from Andre Botes" instead of "MyMoolah Treasury".
+- **UAT test passed**: HTTP 202 from SBSA sandbox with test account `000602739172`.
+- **Staging test passed (production credentials)**: Full end-to-end — PDNG → ACCC → wallet credited R10.00.
+- **Peach PayShap decommissioned**: All routes commented out in `routes/peach.js`; proxy route removed from `server.js`; archived headers on controller and client; `credentials.peach = false` hardcoded. Code preserved for potential reactivation.
+- **Earlier in session**: Dialog scroll fix, microphone mobile fix, Transact page UI updates (Coming Soon badges, Top-up with Voucher card), EFT copy button, fee text removal.
 
-### **Previous Work (2026-03-16)**
-- **RTP UETR fallback fix**: UETR stored in `requestId`; fallback lookup in `processRtpCallback` catches SBSA batch callbacks. Standard Bank RTP ✅ 73ms. Capitec RTP ✅ 97ms.
-- **UI Polish**: SecurityBadge close button, universal modal close buttons, AI chat `react-markdown` rendering.
+### **Previous Work (2026-03-17)**
+- **SFTP Gateway port 5022**: Fixed for SBSA H2H Push/Pull.
+- **EBONF notification**: PayShap Daily Limit Reached message.
 
 ### **Current State**
 - SFTP Gateway: `34.35.137.166`, **port 5022**, admin `https://34.35.137.166` — ✅ Running
-- SBSA H2H: PG15 + SSH key submitted to Colette ✅. **Port now corrected to 5022 — await Colette's connectivity test**
-- PayShap RTP: Standard Bank ✅ Capitec ✅ both confirmed end-to-end
+- SBSA H2H: PG15 + SSH key submitted to Colette ✅
+- PayShap RTP: Standard Bank ✅ (Peach DECOMMISSIONED). Creditor name shows wallet holder name ✅
+- Peach Payments: ARCHIVED (2026-03-21). See `routes/peach.js` for reactivation steps.
 - Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
-- **Backend redeploy required** to activate EBONF message in production
+- **Production redeploy required** — frontend rebuild + backend restart to activate RTP fix and Peach decommission
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
 2. Read this file and 2–3 recent session logs
-3. Run `git status` → `git push origin main` → redeploy backend to staging + production
-4. Reply to Colette (SBSA) confirming port 5022 ready — see email draft in session log
-5. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
+3. Do NOT reactivate Peach Payments without explicit approval from Andre
+4. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
 ---
 
