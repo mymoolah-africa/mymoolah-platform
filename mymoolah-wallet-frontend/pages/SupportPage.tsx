@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { ArrowLeft, Send, Bot, Globe, Mic, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Send, Bot, Globe, Mic, MicOff, Copy, Check, Keyboard, X } from 'lucide-react';
 import VoiceInput from '../components/VoiceInput';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,7 +32,76 @@ export const SupportPage = () => {
   const [walletBalance, setWalletBalance] = useState<string>('R0.00');
   const [usageStats, setUsageStats] = useState<{[key: string]: number}>({});
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [voiceToast, setVoiceToast] = useState<{ message: string; icon: 'mic' | 'keyboard' } | null>(null);
+  const voiceToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const voiceErrorMessages: Record<string, Record<string, { message: string; icon: 'mic' | 'keyboard' }>> = {
+    'language-not-supported': {
+      en: { message: 'Voice is not available for this language. Please type your message.', icon: 'keyboard' },
+      af: { message: 'Stem is nie beskikbaar vir hierdie taal nie. Tik asseblief jou boodskap.', icon: 'keyboard' },
+      zu: { message: 'Izwi alitholakali ngalolu limi. Sicela ubhale umlayezo wakho.', icon: 'keyboard' },
+      xh: { message: 'Ilizwi alufumaneki ngolu lwimi. Nceda uchwetheze umyalezo wakho.', icon: 'keyboard' },
+      st: { message: 'Lentswe ha le fumanehe ka puo ena. Ka kopo ngola molaetsa wa hao.', icon: 'keyboard' },
+    },
+    'mic-denied': {
+      en: { message: 'Microphone blocked. Allow mic access in browser settings.', icon: 'mic' },
+      af: { message: 'Mikrofoon geblokkeer. Laat mikrofoon toe in blaaier-instellings.', icon: 'mic' },
+      zu: { message: 'Imakrofoni ivinjiwe. Vumela ukufinyelela kwemakrofoni ezilungiselelweni.', icon: 'mic' },
+      xh: { message: 'Imakrofoni ivaliwe. Vumela ukufikelela kwimakrofoni kwizicwangciso.', icon: 'mic' },
+      st: { message: 'Maekerofone e thibetsoe. Lumella maekerofone litsetseng tsa browser.', icon: 'mic' },
+    },
+    'mic-not-found': {
+      en: { message: 'No microphone found. Please type your message.', icon: 'keyboard' },
+      af: { message: 'Geen mikrofoon gevind nie. Tik asseblief jou boodskap.', icon: 'keyboard' },
+      zu: { message: 'Ayikho imakrofoni etholakele. Sicela ubhale umlayezo wakho.', icon: 'keyboard' },
+      xh: { message: 'Ayifumanekanga imakrofoni. Nceda uchwetheze umyalezo wakho.', icon: 'keyboard' },
+      st: { message: 'Ha ho maekerofone e fumanoeng. Ka kopo ngola molaetsa wa hao.', icon: 'keyboard' },
+    },
+    'no-speech': {
+      en: { message: 'No voice heard. Tap the mic and speak.', icon: 'mic' },
+      af: { message: 'Geen stem gehoor nie. Tik die mikrofoon en praat.', icon: 'mic' },
+      zu: { message: 'Akukho zwi elizwakele. Thepha imakrofoni bese ukhuluma.', icon: 'mic' },
+      xh: { message: 'Akukho lizwi livakeleyo. Cofa imakrofoni uze uthethe.', icon: 'mic' },
+      st: { message: 'Ha ho lentswe le utloahetsoeng. Tobetsa maekerofone o bue.', icon: 'mic' },
+    },
+    'network': {
+      en: { message: 'No internet for voice. Please type your message.', icon: 'keyboard' },
+      af: { message: 'Geen internet vir stem nie. Tik asseblief jou boodskap.', icon: 'keyboard' },
+      zu: { message: 'Ayikho i-inthanethi yezwi. Sicela ubhale umlayezo wakho.', icon: 'keyboard' },
+      xh: { message: 'Akukho intanethi yelizwi. Nceda uchwetheze umyalezo wakho.', icon: 'keyboard' },
+      st: { message: 'Ha ho inthanete ea lentswe. Ka kopo ngola molaetsa wa hao.', icon: 'keyboard' },
+    },
+    'unsupported': {
+      en: { message: 'Voice not supported on this browser. Please type your message.', icon: 'keyboard' },
+      af: { message: 'Stem word nie ondersteun op hierdie blaaier nie. Tik asseblief jou boodskap.', icon: 'keyboard' },
+      zu: { message: 'Izwi alisetshenziswa kule bhrawuza. Sicela ubhale umlayezo wakho.', icon: 'keyboard' },
+      xh: { message: 'Ilizwi alixhaswanga kule bhrawuza. Nceda uchwetheze umyalezo wakho.', icon: 'keyboard' },
+      st: { message: 'Lentswe ha le tshehetsoe ho browser ena. Ka kopo ngola molaetsa wa hao.', icon: 'keyboard' },
+    },
+    'mic-error': {
+      en: { message: 'Microphone error. Please type your message.', icon: 'keyboard' },
+      af: { message: 'Mikrofoon fout. Tik asseblief jou boodskap.', icon: 'keyboard' },
+      zu: { message: 'Iphutha lemakrofoni. Sicela ubhale umlayezo wakho.', icon: 'keyboard' },
+      xh: { message: 'Impazamo yemakrofoni. Nceda uchwetheze umyalezo wakho.', icon: 'keyboard' },
+      st: { message: 'Phoso ea maekerofone. Ka kopo ngola molaetsa wa hao.', icon: 'keyboard' },
+    },
+    'generic': {
+      en: { message: 'Voice error. Please type your message.', icon: 'keyboard' },
+      af: { message: 'Stem fout. Tik asseblief jou boodskap.', icon: 'keyboard' },
+      zu: { message: 'Iphutha lezwi. Sicela ubhale umlayezo wakho.', icon: 'keyboard' },
+      xh: { message: 'Impazamo yelizwi. Nceda uchwetheze umyalezo wakho.', icon: 'keyboard' },
+      st: { message: 'Phoso ea lentswe. Ka kopo ngola molaetsa wa hao.', icon: 'keyboard' },
+    },
+  };
+
+  const showVoiceToast = useCallback((errorCode: string) => {
+    const msgs = voiceErrorMessages[errorCode] || voiceErrorMessages['generic'];
+    const langMsg = msgs[selectedLanguage] || msgs['en'];
+    if (voiceToastTimer.current) clearTimeout(voiceToastTimer.current);
+    setVoiceToast(langMsg);
+    voiceToastTimer.current = setTimeout(() => setVoiceToast(null), 5000);
+  }, [selectedLanguage]);
 
   const languages = [
     { code: 'en', name: 'English', flag: '🇿🇦' },
@@ -206,9 +275,9 @@ export const SupportPage = () => {
     setInputValue(prev => (prev ? prev + ' ' + transcript : transcript));
   }, []);
 
-  const handleVoiceError = useCallback((error: string) => {
-    console.error('Voice input error:', error);
-  }, []);
+  const handleVoiceError = useCallback((errorCode: string) => {
+    showVoiceToast(errorCode);
+  }, [showVoiceToast]);
 
   const normaliseMarkdown = (text: string): string => {
     return text
@@ -618,6 +687,82 @@ export const SupportPage = () => {
           </div>
         )}
       </div>
+
+      {/* Voice Error Toast */}
+      {voiceToast && (
+        <div
+          role="alert"
+          style={{
+            position: 'fixed',
+            bottom: '100px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'calc(100% - 32px)',
+            maxWidth: '360px',
+            backgroundColor: '#1f2937',
+            color: '#ffffff',
+            borderRadius: '12px',
+            padding: '14px 16px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+            zIndex: 9999,
+            fontFamily: 'Montserrat, sans-serif',
+            animation: 'voiceToastIn 0.3s ease-out',
+          }}
+        >
+          <div style={{
+            width: '36px',
+            height: '36px',
+            borderRadius: '50%',
+            backgroundColor: voiceToast.icon === 'mic' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            {voiceToast.icon === 'mic' ? (
+              <MicOff style={{ width: '18px', height: '18px', color: '#ef4444' }} />
+            ) : (
+              <Keyboard style={{ width: '18px', height: '18px', color: '#60a5fa' }} />
+            )}
+          </div>
+          <p style={{
+            margin: 0,
+            fontSize: '13px',
+            fontWeight: 500,
+            lineHeight: 1.4,
+            flex: 1,
+          }}>
+            {voiceToast.message}
+          </p>
+          <button
+            type="button"
+            onClick={() => { setVoiceToast(null); if (voiceToastTimer.current) clearTimeout(voiceToastTimer.current); }}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'rgba(255,255,255,0.6)',
+              cursor: 'pointer',
+              padding: '4px',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X style={{ width: '16px', height: '16px' }} />
+          </button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes voiceToastIn {
+          from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+          to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+      `}</style>
     </div>
   );
 };

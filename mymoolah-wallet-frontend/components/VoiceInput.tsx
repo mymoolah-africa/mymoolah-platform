@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Mic, MicOff, Loader2, AlertCircle } from 'lucide-react';
+import { Mic, MicOff, Loader2 } from 'lucide-react';
 
 interface VoiceInputProps {
   onTranscript: (text: string) => void;
@@ -9,14 +9,8 @@ interface VoiceInputProps {
   className?: string;
 }
 
-/**
- * Simplified voice-to-text button.
- *
- * Creates a SpeechRecognition session on demand (when the user taps the mic
- * button) and tears it down once a final result arrives or the user stops it.
- * This avoids all useEffect-lifecycle bugs that plagued the previous
- * implementation.
- */
+const VOICE_SUPPORTED_LANGS = new Set(['en-ZA', 'af-ZA', 'zu-ZA']);
+
 export const VoiceInput: React.FC<VoiceInputProps> = ({
   onTranscript,
   onError,
@@ -25,9 +19,10 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
   className = ''
 }) => {
   const [status, setStatus] = useState<'idle' | 'starting' | 'listening' | 'unsupported'>('idle');
-  const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  const langSupported = VOICE_SUPPORTED_LANGS.has(language);
 
   const isSupported = useCallback(() => {
     if (typeof window === 'undefined') return false;
@@ -57,12 +52,14 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
   }, [cleanup]);
 
   const start = useCallback(async () => {
-    setError(null);
-
     if (!isSupported()) {
       setStatus('unsupported');
-      setError('Voice input is not supported on this browser. Please type your message instead.');
-      onError?.('Voice input not supported');
+      onError?.('unsupported');
+      return;
+    }
+
+    if (!langSupported) {
+      onError?.('language-not-supported');
       return;
     }
 
@@ -73,13 +70,13 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
       streamRef.current = stream;
     } catch (err: any) {
       setStatus('idle');
-      const msg = err.name === 'NotAllowedError'
-        ? 'Microphone access denied. Please allow mic access in your browser settings.'
-        : err.name === 'NotFoundError'
-          ? 'No microphone found. Please connect one and try again.'
-          : `Mic error: ${err.message || 'Unknown'}`;
-      setError(msg);
-      onError?.(msg);
+      if (err.name === 'NotAllowedError') {
+        onError?.('mic-denied');
+      } else if (err.name === 'NotFoundError') {
+        onError?.('mic-not-found');
+      } else {
+        onError?.('mic-error');
+      }
       return;
     }
 
@@ -106,32 +103,27 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        let msg = 'Voice input error.';
         switch (event.error) {
           case 'no-speech':
-            msg = 'No speech detected. Tap the mic and try again.';
+            onError?.('no-speech');
             break;
           case 'audio-capture':
           case 'not-allowed':
-            msg = 'Microphone access blocked. Check your browser settings.';
+            onError?.('mic-denied');
             break;
           case 'network':
-            msg = 'Network error. Check your connection.';
+            onError?.('network');
             break;
           case 'service-not-allowed':
           case 'language-not-supported':
-            msg = language !== 'en-ZA'
-              ? `Voice not available for this language on your device. Try English.`
-              : 'Voice service unavailable. Please type your message instead.';
+            onError?.('language-not-supported');
             break;
           case 'aborted':
             stop();
             return;
           default:
-            msg = `Voice error: ${event.error}`;
+            onError?.('generic');
         }
-        setError(msg);
-        onError?.(msg);
         stop();
       };
 
@@ -143,11 +135,10 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
       recognition.start();
     } catch (err) {
       console.error('Failed to start speech recognition:', err);
-      setError('Could not start voice input. Please try again.');
-      onError?.('Failed to start recognition');
+      onError?.('generic');
       stop();
     }
-  }, [language, isSupported, onTranscript, onError, stop, cleanup]);
+  }, [language, langSupported, isSupported, onTranscript, onError, stop, cleanup]);
 
   const toggle = useCallback(() => {
     if (status === 'listening' || status === 'starting') {
@@ -158,43 +149,49 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
   }, [status, start, stop]);
 
   const isActive = status === 'listening' || status === 'starting';
+  const isDisabled = disabled || status === 'unsupported';
 
   return (
     <div className={`flex items-center gap-1 ${className}`}>
       <button
         type="button"
         onClick={toggle}
-        disabled={disabled || status === 'unsupported'}
-        title={isActive ? 'Stop listening' : 'Voice input'}
+        disabled={isDisabled}
+        title={isActive ? 'Stop listening' : langSupported ? 'Voice input' : 'Voice not available'}
         style={{
-          width: '32px',
-          height: '32px',
+          width: '36px',
+          height: '36px',
           borderRadius: '50%',
           border: 'none',
-          cursor: disabled || status === 'unsupported' ? 'not-allowed' : 'pointer',
+          cursor: isDisabled ? 'not-allowed' : 'pointer',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
           transition: 'all 0.2s ease',
-          backgroundColor: isActive ? '#ef4444' : '#f3f4f6',
-          color: isActive ? '#ffffff' : '#6b7280',
-          animation: status === 'listening' ? 'pulse 1.5s infinite' : 'none',
-          opacity: disabled || status === 'unsupported' ? 0.4 : 1,
+          backgroundColor: isActive ? '#ef4444'
+            : !langSupported ? '#f3f4f6'
+            : '#f3f4f6',
+          color: isActive ? '#ffffff'
+            : !langSupported ? '#d1d5db'
+            : '#6b7280',
+          animation: status === 'listening' ? 'voicePulse 1.5s infinite' : 'none',
+          opacity: isDisabled ? 0.4 : !langSupported ? 0.5 : 1,
+          position: 'relative',
         }}
       >
         {status === 'starting' ? (
-          <Loader2 style={{ width: '16px', height: '16px' }} className="animate-spin" />
+          <Loader2 style={{ width: '18px', height: '18px' }} className="animate-spin" />
         ) : isActive ? (
-          <MicOff style={{ width: '16px', height: '16px' }} />
+          <MicOff style={{ width: '18px', height: '18px' }} />
         ) : (
-          <Mic style={{ width: '16px', height: '16px' }} />
+          <Mic style={{ width: '18px', height: '18px' }} />
         )}
       </button>
 
       {status === 'listening' && (
         <span style={{
-          fontSize: '11px',
+          fontSize: '12px',
           color: '#ef4444',
           fontFamily: 'Montserrat, sans-serif',
           fontWeight: 600,
@@ -204,32 +201,8 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
         </span>
       )}
 
-      {error && !isActive && (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
-          fontSize: '11px',
-          color: '#dc2626',
-          fontFamily: 'Montserrat, sans-serif',
-          maxWidth: '200px',
-        }}>
-          <AlertCircle style={{ width: '12px', height: '12px', flexShrink: 0 }} />
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {error}
-          </span>
-          <button
-            type="button"
-            onClick={() => setError(null)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', padding: 0, fontSize: '14px' }}
-          >
-            ×
-          </button>
-        </div>
-      )}
-
       <style>{`
-        @keyframes pulse {
+        @keyframes voicePulse {
           0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
           50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
         }
