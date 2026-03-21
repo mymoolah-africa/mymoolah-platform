@@ -132,6 +132,9 @@ export function TransactPage() {
     }
   };
 
+  const _viteMode: string = (import.meta as any).env?.MODE ?? 'production';
+  const isUAT = _viteMode !== 'production';
+
   // Define 4 main service sections
   const serviceSections: ServiceSection[] = [
     {
@@ -151,17 +154,6 @@ export function TransactPage() {
           badgeType: 'success'
         },
         {
-          id: 'topup-easypay',
-          title: 'Top-up at EasyPay',
-          description: 'Create top-up request, pay at EasyPay, get money in wallet',
-          icon: <Wallet className="w-6 h-6" />,
-          route: '/topup-easypay',
-          available: false,
-          badge: 'Coming Soon',
-          badgeType: 'info',
-          comingSoon: true
-        },
-        {
           id: 'add-money-eft',
           title: 'Top-up via EFT',
           description: 'Bank transfer using your mobile number as reference — auto-allocated to your wallet',
@@ -170,15 +162,6 @@ export function TransactPage() {
           available: true,
           badge: 'Live',
           badgeType: 'success'
-        },
-        {
-          id: 'tap-to-add-money',
-          title: 'Tap to Add Money',
-          description: 'Tap your card or use Google Pay / Apple Pay to add money to your wallet',
-          icon: <CreditCard className="w-6 h-6" />,
-          route: '/tap-to-add-money',
-          available: false,
-          hidden: true,
         },
         {
           id: 'send-money',
@@ -211,14 +194,44 @@ export function TransactPage() {
           badgeType: 'warning'
         },
         {
+          id: 'tap-to-add-money',
+          title: 'Tap to Add Money',
+          description: 'Tap your card or use Google Pay / Apple Pay to add money to your wallet',
+          icon: <CreditCard className="w-6 h-6" />,
+          route: '/tap-to-add-money',
+          available: false,
+          hidden: true,
+        },
+        {
+          id: 'atm-cashsend',
+          title: 'ATM Cash Send',
+          description: 'Send cash vouchers for ATM withdrawal',
+          icon: <AtSign className="w-6 h-6" />,
+          route: '/atm-cashsend-overlay',
+          available: false,
+          hidden: true,
+        },
+        {
+          id: 'topup-easypay',
+          title: 'Top-up at EasyPay',
+          description: 'Create top-up request, pay at EasyPay, get money in wallet',
+          icon: <Wallet className="w-6 h-6" />,
+          route: '/topup-easypay',
+          available: false,
+          badge: 'Coming Soon',
+          badgeType: 'info',
+          comingSoon: true
+        },
+        {
           id: 'cashout-easypay',
           title: 'Cash-out at EasyPay',
           description: 'Cash-out vouchers for EasyPay store withdrawal',
           icon: <DollarSign className="w-6 h-6" />,
           route: '/cashout-easypay',
-          available: true,
-          badge: 'New',
-          badgeType: 'warning'
+          available: false,
+          badge: 'Coming Soon',
+          badgeType: 'info',
+          comingSoon: true
         },
         {
           id: 'mmcash-retail',
@@ -230,15 +243,6 @@ export function TransactPage() {
           badge: 'Coming Soon',
           badgeType: 'info',
           comingSoon: true
-        },
-        {
-          id: 'atm-cashsend',
-          title: 'ATM Cash Send',
-          description: 'Send cash vouchers for ATM withdrawal',
-          icon: <AtSign className="w-6 h-6" />,
-          route: '/atm-cashsend-overlay',
-          available: false,
-          hidden: true,
         }
       ]
     },
@@ -309,11 +313,11 @@ export function TransactPage() {
           title: 'Watch to Earn',
           description: 'Watch videos and earn R2-R3 per ad',
           icon: <Play className="w-6 h-6" />,
-          route: '#watch-to-earn', // Special: opens modal instead of navigating
-          available: true,
-          badge: 'New',
-          badgeType: 'success',
-          comingSoon: false
+          route: '#watch-to-earn',
+          available: isUAT,
+          badge: isUAT ? 'New' : 'Coming Soon',
+          badgeType: isUAT ? 'success' : 'info',
+          comingSoon: !isUAT
         },
         {
           id: 'rewards-program',
