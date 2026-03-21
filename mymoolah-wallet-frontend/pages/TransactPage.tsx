@@ -25,7 +25,8 @@ import {
   AtSign,
   HandCoins,
   Play,
-  Tag
+  Tag,
+  Ticket
 } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -162,6 +163,17 @@ export function TransactPage() {
           available: true,
           badge: 'Live',
           badgeType: 'success'
+        },
+        {
+          id: 'topup-voucher',
+          title: 'Top-up with Voucher',
+          description: 'Use a 1Voucher, Flash Pay, or FNB voucher to add money to your wallet',
+          icon: <Ticket className="w-6 h-6" />,
+          route: '/topup-voucher',
+          available: false,
+          badge: 'Coming Soon',
+          badgeType: 'info',
+          comingSoon: true
         },
         {
           id: 'send-money',
