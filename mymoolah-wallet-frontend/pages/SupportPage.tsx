@@ -688,79 +688,83 @@ export const SupportPage = () => {
         )}
       </div>
 
-      {/* Voice Error Toast */}
+      {/* Voice Error Notification */}
       {voiceToast && (
         <div
           role="alert"
           style={{
             position: 'fixed',
-            bottom: '100px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 'calc(100% - 32px)',
-            maxWidth: '360px',
-            backgroundColor: '#1f2937',
-            color: '#ffffff',
-            borderRadius: '12px',
-            padding: '14px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+            top: '0',
+            left: '0',
+            right: '0',
             zIndex: 9999,
-            fontFamily: 'Montserrat, sans-serif',
-            animation: 'voiceToastIn 0.3s ease-out',
+            animation: 'voiceNotifSlide 0.35s ease-out',
           }}
         >
           <div style={{
-            width: '36px',
-            height: '36px',
-            borderRadius: '50%',
-            backgroundColor: voiceToast.icon === 'mic' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(59, 130, 246, 0.2)',
+            backgroundColor: '#ffffff',
+            margin: '12px 16px',
+            borderRadius: '16px',
+            padding: '16px 20px',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
+            alignItems: 'flex-start',
+            gap: '14px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04)',
+            fontFamily: 'Montserrat, sans-serif',
           }}>
-            {voiceToast.icon === 'mic' ? (
-              <MicOff style={{ width: '18px', height: '18px', color: '#ef4444' }} />
-            ) : (
-              <Keyboard style={{ width: '18px', height: '18px', color: '#60a5fa' }} />
-            )}
-          </div>
-          <p style={{
-            margin: 0,
-            fontSize: '13px',
-            fontWeight: 500,
-            lineHeight: 1.4,
-            flex: 1,
-          }}>
-            {voiceToast.message}
-          </p>
-          <button
-            type="button"
-            onClick={() => { setVoiceToast(null); if (voiceToastTimer.current) clearTimeout(voiceToastTimer.current); }}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'rgba(255,255,255,0.6)',
-              cursor: 'pointer',
-              padding: '4px',
-              flexShrink: 0,
+            <div style={{
+              width: '44px',
+              height: '44px',
+              borderRadius: '12px',
+              backgroundColor: voiceToast.icon === 'mic' ? '#fef2f2' : '#eff6ff',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-            }}
-          >
-            <X style={{ width: '16px', height: '16px' }} />
-          </button>
+              flexShrink: 0,
+            }}>
+              {voiceToast.icon === 'mic' ? (
+                <MicOff style={{ width: '22px', height: '22px', color: '#dc2626' }} />
+              ) : (
+                <Keyboard style={{ width: '22px', height: '22px', color: '#2563eb' }} />
+              )}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{
+                margin: 0,
+                fontSize: '15px',
+                fontWeight: 600,
+                lineHeight: 1.5,
+                color: '#1f2937',
+              }}>
+                {voiceToast.message}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setVoiceToast(null); if (voiceToastTimer.current) clearTimeout(voiceToastTimer.current); }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#9ca3af',
+                cursor: 'pointer',
+                padding: '4px',
+                flexShrink: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: '2px',
+              }}
+            >
+              <X style={{ width: '18px', height: '18px' }} />
+            </button>
+          </div>
         </div>
       )}
 
       <style>{`
-        @keyframes voiceToastIn {
-          from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-          to { opacity: 1; transform: translateX(-50%) translateY(0); }
+        @keyframes voiceNotifSlide {
+          from { opacity: 0; transform: translateY(-100%); }
+          to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
     </div>
