@@ -338,6 +338,12 @@
     color: #ffffff;
   }
   
+  /* Dialog scroll — smooth touch scrolling on all dialog content */
+  [data-slot="dialog-content"] {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
   /* Touch Target Minimum Size for Accessibility */
   button, 
   [role="button"], 
