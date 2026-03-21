@@ -484,31 +484,12 @@ if (standardbankPayShapEnabled) {
 const disbursementRoutes = require('./routes/disbursement');
 app.use('/api/v1/disbursements', disbursementRoutes);
 
-// Peach Payments integration is archived - no routes loaded
-// Request-to-Pay is handled directly via /api/v1/standardbank/payshap/rtp
-const isPeachArchived = process.env.PEACH_INTEGRATION_ARCHIVED === 'true';
-if (!isPeachArchived && validCredentials.peach) {
-  app.use('/api/v1/peach', peachRoutes);
-} else {
-  if (isPeachArchived) {
-    console.log('📦 Peach Payments integration ARCHIVED - routes disabled');
-  }
-  app.get('/api/v1/peach/status', (req, res) => {
-    res.json({
-      status: 'archived',
-      reason: 'Integration archived - use /api/v1/standardbank/payshap/rtp for Request to Pay',
-      archivedDate: '2025-11-26',
-    });
-  });
-  // Proxy /api/v1/peach/request-money → Standard Bank RTP when Peach archived
-  if (isPeachArchived && standardbankPayShapEnabled) {
-    const auth = require('./middleware/auth');
-    const { rtpValidation: sbRtpValidation, handleValidation: sbHandleValidation } = require('./routes/standardbank');
-    const standardbankController = require('./controllers/standardbankController');
-    app.post('/api/v1/peach/request-money', auth, sbRtpValidation, sbHandleValidation, standardbankController.initiatePayShapRtp);
-    console.log('✅ /api/v1/peach/request-money proxied to Standard Bank PayShap RTP');
-  }
-}
+// Peach Payments — ARCHIVED (2026-03-21). Agreement cancelled.
+// PayShap RTP handled directly via /api/v1/standardbank/payshap/rtp
+// Routes mounted only for /status endpoint (returns archived notice).
+// See routes/peach.js for reactivation instructions.
+app.use('/api/v1/peach', peachRoutes);
+console.log('📦 Peach Payments integration ARCHIVED - only /status endpoint active');
 
 // Health check endpoint with TLS information
 app.get('/health', (req, res) => {
@@ -525,7 +506,7 @@ app.get('/health', (req, res) => {
       flash: flashRoutesLoaded,
       mobilemart: mobilemartRoutesLoaded,
       standardbankPayShap: standardbankPayShapEnabled,
-      peach: process.env.PEACH_INTEGRATION_ARCHIVED === 'true' ? 'archived' : validCredentials.peach
+      peach: 'archived (2026-03-21)'
     },
     uptime: process.uptime(),
     memory: process.memoryUsage()

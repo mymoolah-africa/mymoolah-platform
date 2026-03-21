@@ -1,11 +1,21 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════════╗
+ * ║  PEACH PAYMENTS CONTROLLER — ARCHIVED (2026-03-21)                 ║
+ * ║                                                                      ║
+ * ║  All PayShap RPP/RTP functions in this file are DECOMMISSIONED.     ║
+ * ║  PayShap Request-to-Pay now uses Standard Bank directly:            ║
+ * ║    Controller: controllers/standardbankController.js                 ║
+ * ║    Route: POST /api/v1/standardbank/payshap/rtp                     ║
+ * ║                                                                      ║
+ * ║  Code preserved for potential future reactivation.                   ║
+ * ║  Routes are commented out in routes/peach.js.                       ║
+ * ║  No functions in this file are called at runtime.                   ║
+ * ╚══════════════════════════════════════════════════════════════════════╝
+ */
+
 const db = require('../models');
 const PeachPayment = db.PeachPayment;
 const peachClient = require('../integrations/peach/client');
-
-/**
- * Peach Payments Controller
- * Supports multiple payment methods including PayShap, cards, and other payment services
- */
 
 /**
  * Health check for Peach Payments integration

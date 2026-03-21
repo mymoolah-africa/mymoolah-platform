@@ -366,14 +366,9 @@ class SecurityConfig {
       credentials.dtmercury = true;
     }
 
-    // Check Peach Payments credentials
-    const isPeachArchived = process.env.PEACH_INTEGRATION_ARCHIVED === 'true';
-    if (isPeachArchived) {
-      credentials.peach = false; // Force disabled even if credentials exist
-      console.log('⚠️  Peach Payments integration is ARCHIVED (competition conflict)');
-    } else if (process.env.PEACH_CLIENT_ID && process.env.PEACH_CLIENT_SECRET && process.env.PEACH_MERCHANT_ID && process.env.PEACH_ENTITY_ID_PSH) {
-      credentials.peach = true;
-    }
+    // Peach Payments — ARCHIVED (2026-03-21). Agreement cancelled.
+    // PayShap RTP uses Standard Bank directly. See routes/peach.js for reactivation.
+    credentials.peach = false;
 
     return credentials;
   }

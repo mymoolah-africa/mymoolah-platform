@@ -1,81 +1,58 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middleware/auth');
-const peachController = require('../controllers/peachController');
 
 /**
- * Middleware to capture raw body for webhook signature validation
- * Webhook signature validation requires the raw request body (not parsed JSON)
+ * ╔══════════════════════════════════════════════════════════════════════╗
+ * ║  PEACH PAYMENTS — ARCHIVED (2026-03-21)                            ║
+ * ║                                                                      ║
+ * ║  All PayShap RPP/RTP routes are DECOMMISSIONED.                     ║
+ * ║  PayShap Request-to-Pay now uses Standard Bank directly:            ║
+ * ║    POST /api/v1/standardbank/payshap/rtp                            ║
+ * ║                                                                      ║
+ * ║  The Peach agreement was cancelled. Code is preserved below         ║
+ * ║  (commented out) for potential future reactivation.                  ║
+ * ║                                                                      ║
+ * ║  TO REACTIVATE:                                                      ║
+ * ║  1. Obtain new Peach Payments credentials                           ║
+ * ║  2. Set PEACH_INTEGRATION_ARCHIVED=false in env                     ║
+ * ║  3. Set PEACH_* env vars (see .env.codespaces for names)            ║
+ * ║  4. Uncomment routes below                                          ║
+ * ║  5. Update frontend RequestMoneyPage.tsx endpoint if needed         ║
+ * ║  6. Test in UAT before enabling in production                       ║
+ * ╚══════════════════════════════════════════════════════════════════════╝
  */
-const rawBodyMiddleware = express.raw({ type: 'application/json', limit: '10mb' });
 
-/**
- * Peach Payments API Routes
- * 
- * Peach Payments offers multiple payment services:
- * - PayShap (RPP & RTP) - South Africa's real-time payment system
- * - Credit/Debit Cards - Visa, Mastercard, American Express
- * - Electronic Funds Transfer (EFT)
- * - Payment Links - Shareable payment URLs
- * - Checkout V2 - Embedded payment forms
- * 
- * Priority: PayShap takes priority as primary payment method
- * dtMercury: PayShap only
- * Peach Payments: Multiple payment services + PayShap
- */
+router.get('/status', (req, res) => {
+  res.json({
+    status: 'archived',
+    reason: 'Peach Payments agreement cancelled. PayShap RTP uses Standard Bank directly via /api/v1/standardbank/payshap/rtp',
+    archivedDate: '2026-03-21',
+    reactivation: 'See routes/peach.js header comments for reactivation steps',
+  });
+});
 
-// Health check and service status
-router.get('/health', peachController.healthCheck);
+// ──────────────────────────────────────────────────────────────────────
+// ALL ROUTES BELOW ARE ARCHIVED — DO NOT UNCOMMENT WITHOUT APPROVAL
+// ──────────────────────────────────────────────────────────────────────
 
-// Get available payment methods
-router.get('/methods', peachController.getPaymentMethods);
-
-// Get PayShap test scenarios and phone numbers
-router.get('/payshap/test-scenarios', peachController.getPayShapTestScenarios);
-
-// PayShap RPP (Rapid Payments Programme - outbound)
-router.post('/payshap/rpp', auth, peachController.initiatePayShapRpp);
-
-// PayShap RTP (Request to Pay - inbound)
-router.post('/payshap/rtp', auth, peachController.initiatePayShapRtp);
-
-// 🆕 NEW: Request Money via PayShap RTP with MSISDN reference
-router.post('/request-money', auth, peachController.requestMoneyViaPayShap);
-
-// 🧪 TEST ROUTES (No authentication required for testing)
-router.post('/test/rpp', peachController.initiatePayShapRpp);
-router.post('/test/rtp', peachController.initiatePayShapRtp);
-router.post('/test/request-money', peachController.requestMoneyViaPayShap);
-
-// Client integration payments (for employee payments) - TODO: Implement
-// router.post('/client/payments', auth, peachController.initiateClientPayment);
-
-// Payment status and management
-router.get('/payments/:merchantTransactionId', auth, peachController.getPaymentStatus);
-router.delete('/payments/:merchantTransactionId', auth, peachController.cancelPayment);
-
-// User payment history
-router.get('/users/:userId/payments', auth, peachController.getUserPayments);
-
-// 🆕 Webhook endpoint (no auth required - Peach will call this)
-// Uses raw body middleware for signature validation
-router.post('/webhook', rawBodyMiddleware, (req, res, next) => {
-  // Store raw body for signature validation
-  req.rawBody = req.body.toString('utf8');
-  // Parse JSON body for processing
-  try {
-    req.body = JSON.parse(req.rawBody);
-  } catch (error) {
-    return res.status(400).json({
-      success: false,
-      message: 'Invalid JSON payload'
-    });
-  }
-  next();
-}, peachController.handleWebhook);
-
-// 🆕 UAT: Payment status polling
-router.post('/poll-status', peachController.pollPaymentStatus);
+// const auth = require('../middleware/auth');
+// const peachController = require('../controllers/peachController');
+// const rawBodyMiddleware = express.raw({ type: 'application/json', limit: '10mb' });
+//
+// router.get('/health', peachController.healthCheck);
+// router.get('/methods', peachController.getPaymentMethods);
+// router.get('/payshap/test-scenarios', peachController.getPayShapTestScenarios);
+// router.post('/payshap/rpp', auth, peachController.initiatePayShapRpp);
+// router.post('/payshap/rtp', auth, peachController.initiatePayShapRtp);
+// router.post('/request-money', auth, peachController.requestMoneyViaPayShap);
+// router.post('/test/rpp', peachController.initiatePayShapRpp);
+// router.post('/test/rtp', peachController.initiatePayShapRtp);
+// router.post('/test/request-money', peachController.requestMoneyViaPayShap);
+// router.get('/payments/:merchantTransactionId', auth, peachController.getPaymentStatus);
+// router.delete('/payments/:merchantTransactionId', auth, peachController.cancelPayment);
+// router.get('/users/:userId/payments', auth, peachController.getUserPayments);
+// router.post('/webhook', rawBodyMiddleware, peachController.handleWebhook);
+// router.post('/poll-status', peachController.pollPaymentStatus);
 
 module.exports = router;
 

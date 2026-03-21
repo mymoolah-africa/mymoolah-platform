@@ -1,3 +1,13 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════════╗
+ * ║  PEACH PAYMENTS API CLIENT — ARCHIVED (2026-03-21)                 ║
+ * ║                                                                      ║
+ * ║  Agreement cancelled. No functions in this file are called at       ║
+ * ║  runtime. Code preserved for potential future reactivation.         ║
+ * ║  See routes/peach.js for reactivation steps.                        ║
+ * ╚══════════════════════════════════════════════════════════════════════╝
+ */
+
 const axios = require('axios');
 
 /**
