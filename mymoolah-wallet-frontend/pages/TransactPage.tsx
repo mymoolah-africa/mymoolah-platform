@@ -156,9 +156,10 @@ export function TransactPage() {
           description: 'Create top-up request, pay at EasyPay, get money in wallet',
           icon: <Wallet className="w-6 h-6" />,
           route: '/topup-easypay',
-          available: true,
-          badge: 'New',
-          badgeType: 'warning'
+          available: false,
+          badge: 'Coming Soon',
+          badgeType: 'info',
+          comingSoon: true
         },
         {
           id: 'add-money-eft',

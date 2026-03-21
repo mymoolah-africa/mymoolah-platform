@@ -232,7 +232,7 @@ export function TopupEasyPayOverlay() {
               fontSize: 'var(--mobile-font-small)',
               color: '#1e40af'
             }}>
-              <strong>How it works:</strong> Create a top-up request, pay at any EasyPay store, and your wallet will be credited automatically (minus R2.50 fee).
+              <strong>How it works:</strong> Create a top-up request, pay at any EasyPay store, and your wallet will be credited automatically.
             </AlertDescription>
           </Alert>
 

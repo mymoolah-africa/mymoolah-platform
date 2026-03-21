@@ -41,6 +41,7 @@ const MM_PAYSHAP_ID     = (import.meta as any).env?.VITE_MM_PAYSHAP_ID        ??
 
 // ---- Types -----------------------------------------------------------------
 interface CopyState {
+  accountHolder: boolean;
   accountNumber: boolean;
   branchCode:    boolean;
   reference:     boolean;
@@ -60,6 +61,7 @@ export function AddMoneyEftOverlay() {
   const navigate  = useNavigate();
   const { user }  = useAuth();
   const [copied, setCopied] = useState<CopyState>({
+    accountHolder: false,
     accountNumber: false,
     branchCode:    false,
     reference:     false,
@@ -168,6 +170,8 @@ export function AddMoneyEftOverlay() {
               icon={<User size={16} color="#9ca3af" />}
               label="Account Holder"
               value={MM_ACCOUNT_HOLDER}
+              onCopy={() => copyToClipboard(MM_ACCOUNT_HOLDER, 'accountHolder')}
+              copied={copied.accountHolder}
             />
             <BankDetailRow
               icon={<Hash size={16} color="#9ca3af" />}
