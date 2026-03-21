@@ -1,5 +1,39 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-21 - PayShap RTP fix (Peach→Standard Bank) + Peach decommission + UI updates ✅
+
+### **Session Overview**
+Critical fix: frontend was calling decommissioned Peach Payments endpoint for PayShap Request-to-Pay instead of Standard Bank. Switched to SBSA endpoint, fixing both the integration and the creditor name display. Peach PayShap fully decommissioned (code preserved). Multiple UI improvements across the wallet.
+
+### **Changes**
+
+#### PayShap RTP Fix (`e697a8a8`)
+- **`mymoolah-wallet-frontend/pages/RequestMoneyPage.tsx`**: Changed API call from `/api/v1/peach/request-money` to `/api/v1/standardbank/payshap/rtp`. Removed Peach-specific fields. Creditor name now resolved from User table — debtors see "Andre Botes" instead of "MyMoolah Treasury".
+
+#### Peach Decommission (`4159344a`)
+- **`routes/peach.js`**: All PayShap routes commented out; only `/status` endpoint active. Reactivation instructions in header.
+- **`server.js`**: Removed proxy route and conditional `isPeachArchived` logic.
+- **`controllers/peachController.js`**: ARCHIVED header added. Code preserved.
+- **`integrations/peach/client.js`**: ARCHIVED header added. Code preserved.
+- **`config/security.js`**: `credentials.peach` hardcoded to `false`.
+
+#### UI Updates (earlier in session)
+- **Dialog scroll fix**: `max-h-[85vh] overflow-y-auto` on shared `DialogContent`
+- **Microphone mobile fix**: Permissions-Policy updated; voice error toasts redesigned
+- **Transact page**: Top-up at EasyPay, Cash-out at EasyPay fogged with "Coming Soon"; Watch to Earn conditional (UAT only); Top-up with Voucher card added
+- **EFT overlay**: Copy button added for Account Holder field
+- **Fee text removed**: From TopupEasyPay, FlashEeziCash, CashoutEasyPay overlays
+
+### **Testing**
+- UAT: SBSA sandbox HTTP 202 ✅
+- Staging (production creds): Full end-to-end PDNG→ACCC→wallet credited ✅
+- Creditor name: "Request to Pay from Andre Botes" confirmed ✅
+
+### **Session Log**
+- `docs/session_logs/2026-03-21_1730_payshap-rtp-peach-to-sbsa-fix-decommission.md`
+
+---
+
 ## 2026-03-20 - VAS catalog display policy (MM_DEPLOYMENT_ENV) + electricity/bills in best-offers refresh ✅
 
 ### **Session Overview**
