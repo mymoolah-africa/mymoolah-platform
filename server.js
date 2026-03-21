@@ -231,8 +231,8 @@ app.use(helmet({
   permissionsPolicy: {
     features: {
       geolocation: [],
-      microphone: [],
-      camera: [],
+      microphone: ["'self'"],
+      camera: ["'self'"],
       payment: [],
       usb: [],
       magnetometer: [],

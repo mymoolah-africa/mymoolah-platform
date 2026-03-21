@@ -98,7 +98,7 @@ class SecurityConfig {
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       
       // Permissions Policy
-      'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=()',
+      'Permissions-Policy': 'geolocation=(), microphone=(self), camera=(self), payment=(), usb=(), magnetometer=(), gyroscope=()',
       
       // Cross-Origin Embedder Policy
       'Cross-Origin-Embedder-Policy': 'require-corp',

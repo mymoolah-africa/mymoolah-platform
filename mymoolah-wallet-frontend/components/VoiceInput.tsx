@@ -118,6 +118,12 @@ export const VoiceInput: React.FC<VoiceInputProps> = ({
           case 'network':
             msg = 'Network error. Check your connection.';
             break;
+          case 'service-not-allowed':
+          case 'language-not-supported':
+            msg = language !== 'en-ZA'
+              ? `Voice not available for this language on your device. Try English.`
+              : 'Voice service unavailable. Please type your message instead.';
+            break;
           case 'aborted':
             stop();
             return;
