@@ -273,7 +273,7 @@ export function CashoutEasyPayOverlay() {
               fontSize: 'var(--mobile-font-small)',
               color: '#1e40af'
             }}>
-              <strong>How it works:</strong> Create a cash-out voucher, visit any EasyPay store, show the PIN, and receive cash. Transaction fee: R8.00.
+              <strong>How it works:</strong> Create a cash-out voucher, visit any EasyPay store, show the PIN, and receive cash.
             </AlertDescription>
           </Alert>
 
