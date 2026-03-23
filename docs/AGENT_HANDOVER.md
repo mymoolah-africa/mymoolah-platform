@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-21 17:45  
-**Latest Feature**: **PayShap RTP fix + Peach decommission** — Fixed critical bug where frontend called decommissioned Peach Payments instead of Standard Bank for PayShap RTP. Creditor name now shows wallet holder's name (e.g. "Andre Botes") instead of "MyMoolah Treasury". Peach PayShap fully decommissioned (code preserved, routes disabled). Tested end-to-end in UAT + staging.  
-**Document Version**: 2.28.0  
-**Session logs**: `docs/session_logs/2026-03-21_1730_payshap-rtp-peach-to-sbsa-fix-decommission.md`, `docs/session_logs/2026-03-21_1115_dialog-scroll-fix.md`, `docs/session_logs/2026-03-20_1200_vas-catalog-display-policy.md`  
+**Last Updated**: 2026-03-23 17:30  
+**Latest Feature**: **H2H Statement Pipeline Fix + VALR/TCIB Drafts** — Fixed critical bug in MT940/MT942 statement-to-wallet crediting pipeline (missing transactionId, wrong amount units). Updated poller to 2-min cycle for fastest wallet crediting. Added SBSA filename pattern recognition. Drafted AML/CTF RMCP for VALR, VALR corporate account response, and TCIB pre-reading email for PayInc.  
+**Document Version**: 2.29.0  
+**Session logs**: `docs/session_logs/2026-03-23_1730_h2h-statement-pipeline-fix-valr-rmcp-tcib.md`, `docs/session_logs/2026-03-21_1730_payshap-rtp-peach-to-sbsa-fix-decommission.md`, `docs/session_logs/2026-03-21_1115_dialog-scroll-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
