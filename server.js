@@ -764,21 +764,28 @@ const initializeBackgroundServices = async () => {
     }
 
     // ── SBSA H2H Statement Poller (MT940/MT942) ────────────────
+    // MT942 intraday statements arrive every 15 minutes (SBSA info sheet, 2026-03-23)
+    // MT940 end-of-day arrives once daily at ~06:00
+    // Poll every 2 minutes to detect new files quickly → fastest wallet crediting
     try {
-      const cron = require('node-cron');
-      const sbsaStatementService = require('./services/standardbank/sbsaStatementService');
+      const pollerEnabled = process.env.SBSA_STATEMENT_POLLER_ENABLED !== 'false';
+      if (!pollerEnabled) {
+        console.log('ℹ️  SBSA H2H statement poller DISABLED (SBSA_STATEMENT_POLLER_ENABLED=false)');
+      } else {
+        const cron = require('node-cron');
+        const sbsaStatementService = require('./services/standardbank/sbsaStatementService');
+        const pollSchedule = process.env.SBSA_STATEMENT_POLL_SCHEDULE || '*/2 * * * *';
 
-      // Poll every 5 minutes for intraday statements + end-of-day
-      // Intraday MT942 files arrive throughout the day; MT940 arrives after banking close
-      cron.schedule(process.env.SBSA_STATEMENT_POLL_SCHEDULE || '*/5 * * * *', async () => {
-        try {
-          await sbsaStatementService.pollAndProcess();
-        } catch (err) {
-          console.error('❌ SBSA statement poll error:', err.message);
-        }
-      });
+        cron.schedule(pollSchedule, async () => {
+          try {
+            await sbsaStatementService.pollAndProcess();
+          } catch (err) {
+            console.error('❌ SBSA statement poll error:', err.message);
+          }
+        });
 
-      console.log('✅ SBSA H2H statement poller started (MT940/MT942, every 5 minutes)');
+        console.log(`✅ SBSA H2H statement poller started (MT940/MT942, schedule: ${pollSchedule})`);
+      }
     } catch (error) {
       console.error('❌ Failed to start SBSA statement poller:', error.message);
     }

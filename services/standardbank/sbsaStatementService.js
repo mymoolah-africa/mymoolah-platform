@@ -59,6 +59,12 @@ const STATEMENTS_PREFIX = 'standardbank/inbox/statements/';
 const PROCESSED_PREFIX  = 'processed/standardbank/statements/';
 const FAILED_PREFIX     = 'failed/standardbank/statements/';
 
+// SBSA H2H filename patterns (confirmed in SBSA info sheet 2026-03-23)
+// MT940 end-of-day:  MYMOOLAH_OWN11_FINSTMT_YYYYMMDD_HHMMSS
+// MT942 intraday:    MYMOOLAH_OWN11_PROVSTMT_YYYYMMDD_HHMMSS
+const FINSTMT_PATTERN  = /^MYMOOLAH_OWN11_FINSTMT_\d{8}_\d{6}/i;
+const PROVSTMT_PATTERN = /^MYMOOLAH_OWN11_PROVSTMT_\d{8}_\d{6}/i;
+
 // Ledger accounts
 const SBSA_MAIN_ACCOUNT_CODE = process.env.SBSA_MAIN_ACCOUNT_CODE || '1100-02-01'; // SBSA Main Bank Account asset
 
@@ -74,7 +80,7 @@ class SBSAStatementService {
 
   /**
    * Poll GCS statements folder and process all new MT940/MT942 files.
-   * Called by the SFTP watcher cron (every 5 minutes or on GCS event trigger).
+   * Called by the statement poller cron (every 2 minutes by default).
    *
    * @returns {Promise<{processed: number, skipped: number, failed: number}>}
    */
@@ -82,7 +88,16 @@ class SBSAStatementService {
     logger.info('Polling for new SBSA statement files', { prefix: STATEMENTS_PREFIX });
 
     const [files] = await this.bucket.getFiles({ prefix: STATEMENTS_PREFIX });
-    const statementFiles = files.filter(f => !f.name.endsWith('/'));
+    const statementFiles = files.filter(f => {
+      if (f.name.endsWith('/')) return false;
+      const basename = f.name.split('/').pop();
+      // Accept known SBSA patterns; also accept any file in the folder for flexibility
+      const isFinstmt  = FINSTMT_PATTERN.test(basename);
+      const isProvstmt = PROVSTMT_PATTERN.test(basename);
+      if (isFinstmt)  logger.info('Found MT940 end-of-day statement', { file: basename });
+      if (isProvstmt) logger.info('Found MT942 intraday statement', { file: basename });
+      return true;
+    });
 
     let processed = 0, skipped = 0, failed = 0;
 
@@ -314,16 +329,39 @@ class SBSAStatementService {
     // ── Delegate to deposit notification service ───────────────
     // This handles MSISDN reference → wallet credit, or suspense parking
     // Same logic as the live SBSA webhook notification endpoint
+    //
+    // Contract alignment:
+    //   - processDepositNotification expects `amount` in RANDS (not cents)
+    //   - requires `transactionId` for idempotency
+    //   - requires `referenceNumber` for MSISDN/float lookup
+    const syntheticTxnId = `STMT-${runId}-${txn.seq}-${txn.valueDate}-${txn.amountCents}`;
+    const amountRands = txn.amountCents / 100;
+
     try {
-      await depositNotificationService.processDepositNotification({
-        amount: txn.amountCents,           // in cents
-        reference: ref,                    // customer used as payment reference
-        bankReference: txn.bankReference,
-        narrative: txn.narrative?.narrative || txn.rawNarrative || '',
-        valueDate: txn.valueDate,
-        source: `MT940_STATEMENT_RUN_${runId}`,
+      const result = await depositNotificationService.processDepositNotification({
+        transactionId: syntheticTxnId,
+        referenceNumber: ref,
+        amount: amountRands,
         currency: statement.currency,
+        description: txn.narrative?.narrative || txn.rawNarrative || '',
+        source: `${statement.statementType || 'MT940'}_STATEMENT_RUN_${runId}`,
       });
+
+      if (result.success) {
+        logger.info('Statement credit processed via deposit service', {
+          ref,
+          amountRands,
+          credited: result.credited,
+          syntheticTxnId,
+        });
+      } else {
+        logger.warn('Deposit service returned failure for statement credit', {
+          ref,
+          amountRands,
+          error: result.error,
+          syntheticTxnId,
+        });
+      }
     } catch (err) {
       logger.warn('Deposit notification service could not resolve credit — parked in suspense', {
         ref,

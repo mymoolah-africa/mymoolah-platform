@@ -200,28 +200,70 @@ Recommended signing: **SHA256**
 
 ## 10. Statement Processing Architecture
 
-### Confirmed Decisions (2026-03-19)
+### Confirmed Decisions (updated 2026-03-23 from SBSA info sheet)
 
 | Parameter | Decision | Rationale |
 |-----------|----------|-----------|
 | **SFTP Method** | Push/Pull | MyMoolah pushes Pain.001 to SBSA Outbox; pulls MT940/MT942/Pain.002 from SBSA Inbox |
 | **Statement format** | MT940 + MT942 | SWIFT ISO standard — banking-grade, Mojaloop-compatible, well-documented |
-| **Delivery schedule** | Intraday + End-of-day | Both confirmed available by Colette |
+| **MT940 delivery** | Once daily, Mon–Sat, 06:00 | End-of-day final statement, early morning for reconciliation |
+| **MT942 delivery** | Every 15 minutes, Mon–Sat | Intraday provisional — near-real-time deposit detection |
+| **MT942 polling** | Every 2 minutes | Catches new files within 2 min of SFTP delivery → fastest wallet crediting |
 | **Folder structure (SBSA side)** | Flat Inbox/Outbox | SBSA uses standard folders |
 | **Folder structure (our GCS side)** | Sub-folders by type | `standardbank/inbox/statements/` and `standardbank/inbox/payments/` |
+| **Encryption** | Not Required (PGP available later) | Confirmed on info sheet |
+| **Compression** | Not Required | MT940/MT942 files are small text |
+| **H2H User ID** | OWN11 | Assigned by SBSA |
+| **Authorisation** | Zero Release | All payments require authorisation |
+
+### SBSA Filename Patterns (from info sheet)
+
+| File Type | Pattern | Example |
+|-----------|---------|---------|
+| MT940 (end-of-day) | `MYMOOLAH_OWN11_FINSTMT_YYYYMMDD_HHMMSS` | `MYMOOLAH_OWN11_FINSTMT_20260323_060000` |
+| MT942 (intraday) | `MYMOOLAH_OWN11_PROVSTMT_YYYYMMDD_HHMMSS` | `MYMOOLAH_OWN11_PROVSTMT_20260323_141500` |
+| Pain.001 (outbound payment) | `CLNT_USERID_Pain001v3_CountryCode_TST/PRD_yyyymmddhhmmssSSS.xml` | Per SBSA spec |
+| ACK response | `MYMOOLAH_OWN11_ACK_TST/PRD_yyyymmddhhmmssSSS.xml` | Confirmation of file receipt |
+| NACK response | `MYMOOLAH_OWN11_NACK_TST/PRD_yyyymmddhhmmssSSS.xml` | Rejection notification |
+| Interim Audit | `MYMOOLAH_OWN11_INTAUD_TST/PRD_yyyymmddhhmmssSSS.xml` | Mid-batch processing status |
+| Final Audit | `MYMOOLAH_OWN11_FINAUD_TST/PRD_yyyymmddhhmmssSSS.xml` | Final processing outcome |
+| VET Data | `MYMOOLAH_OWN11_VET_DATA_TST/PRD_yyyymmddhhmmssSSS.xml` | Validation results |
+| Unpaid Data | `MYMOOLAH_OWN11_UNP_DATA_TST/PRD_yyyymmddhhmmssSSS.xml` | Failed/returned payments |
 
 ### File Types Expected in SFTP Inbox
 
 | File | Format | Frequency | GCS Destination |
 |------|--------|-----------|-----------------|
-| Bank statement | MT940 | End-of-day | `standardbank/inbox/statements/` |
-| Intraday statement | MT942 | Intraday (TBD freq.) | `standardbank/inbox/statements/` |
+| Bank statement | MT940 | Once daily at 06:00 (Mon–Sat) | `standardbank/inbox/statements/` |
+| Intraday statement | MT942 | Every 15 minutes (Mon–Sat) | `standardbank/inbox/statements/` |
 | Payment status report | Pain.002 | After Pain.001 processing | `standardbank/inbox/payments/` |
+| ACK/NACK/Audit/VET/Unpaid | ISO 20022 XML | Event-driven | `standardbank/inbox/payments/` |
 
-### Statement Processing Code
+### Statement Processing Pipeline
 
-- **Parser**: `services/standardbank/mt940Parser.js` — Parses MT940/MT942 SWIFT files into structured transactions
-- **Service**: `services/standardbank/sbsaStatementService.js` — Orchestrates: pull from GCS → parse → reconcile against ledger → create unallocated deposit records → archive
+- **Parser**: `services/standardbank/mt940Parser.js` — Parses MT940/MT942 SWIFT files into structured transactions (576 lines, production-quality)
+- **Service**: `services/standardbank/sbsaStatementService.js` — Orchestrates: poll GCS → parse → match known references → credit wallets via deposit notification service → archive
+- **Poller cron**: `server.js` — Runs every 2 minutes (configurable via `SBSA_STATEMENT_POLL_SCHEDULE`)
+- **Deposit crediting**: `services/standardbankDepositNotificationService.js` — Resolves MSISDN reference → wallet credit, or parks in suspense for ops review
+- **Idempotency**: Files tracked by MD5 hash in `SBSAStatementRun` table; deposits tracked by synthetic transaction ID in `StandardBankTransaction` table
+
+### Wallet Crediting Flow (MT942 → wallet credit in < 5 minutes)
+
+```
+SBSA delivers MT942 to our SFTP (every 15 min)
+  → SFTP Gateway syncs to GCS bucket (immediate)
+    → Statement poller detects new file (within 2 min)
+      → MT940 parser extracts credit transactions
+        → For each credit:
+          1. Try match against pending Transaction (by reference)
+          2. If no match → depositNotificationService:
+             a. Resolve reference (MSISDN → wallet, float prefix, fuzzy match)
+             b. Credit wallet (locked row + ledger journal entry)
+             c. Or park in suspense (ops alert email)
+        → Archive file to processed/ folder
+```
+
+**Maximum latency**: MT942 arrives every 15 min + 2 min poll cycle = **17 minutes worst case** from bank deposit to wallet credit. Average: ~9 minutes.
 
 ### MT940 Field Reference
 
