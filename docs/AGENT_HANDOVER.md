@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-24 17:45  
-**Latest Feature**: **EasyPay TPPP / NPS legal positioning** — Draft email for Nkululeko (EasyPay) explaining funds flow: EasyPay as collection channel to MyMoolah as single creditor; post-settlement wallet/VAS under PASA TPPP + Standard Bank sponsor oversight; Phase 1 cash-in vs Phase 2 cash-out. Documentation synced (EasyPay guide §1.4, CHANGELOG, PROJECT_STATUS, README). No code changes.  
-**Document Version**: 2.30.0  
+**Last Updated**: 2026-03-24 19:00  
+**Latest Feature**: **SBSA H2H documentation sync** — Updated all SBSA H2H docs with confirmed status: Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min, SOAP handler live. Added SBSA SOAP handler CHANGELOG entry. Session log and H2H guide updated with all resolved items. EasyPay TPPP legal email drafted.  
+**Document Version**: 2.31.0  
 **Session logs**: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`, `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md`, `docs/session_logs/2026-03-23_1730_h2h-statement-pipeline-fix-valr-rmcp-tcib.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
@@ -681,11 +681,11 @@ You're part of a **banking-grade software system** where:
 
 ### **Current State**
 - SFTP Gateway: `34.35.137.166`, **port 5022**, admin `https://34.35.137.166` — ✅ Running
-- SBSA H2H: PG15 + SSH key submitted to Colette ✅
+- SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | VPN resolved (Open Internet) ✅ | PGP not required ✅ | File names confirmed ✅ | Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)
 - PayShap RTP: Standard Bank ✅ (Peach DECOMMISSIONED). Creditor name shows wallet holder name ✅
 - Peach Payments: ARCHIVED (2026-03-21). See `routes/peach.js` for reactivation steps.
 - Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
-- **Production redeploy required** — frontend rebuild + backend restart to activate RTP fix and Peach decommission
+- **Production redeploy required** — frontend rebuild + backend restart to activate SBSA SOAP handler, RTP fix, and Peach decommission
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
@@ -699,7 +699,11 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 24 (19:00) | **SBSA H2H documentation sync**: Updated all docs with confirmed status — Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min. Added SBSA SOAP CHANGELOG entry. Cleaned up duplicate priorities. |
 | Mar 24 (15:30) | **EasyPay TPPP / NPS legal draft**: Email for Nkululeko clarifying single-creditor collection model vs multi-layer aggregation concern; sponsor bank + downstream scope. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md` |
+| Mar 24 (09:00) | **SBSA SOAP credit notification handler**: Built `sbsaSoapParser.js`, refactored notification webhook for SOAP XML + JSON. Added `fast-xml-parser`. Tested with SBSA sample. Confirmed with Colette: Open Internet, PGP not required, file names accepted. Session log: `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md` |
+| Mar 23 (17:30) | **H2H statement pipeline fix + VALR RMCP + TCIB draft**: Fixed MT940/MT942 wallet crediting pipeline (amount, transactionId), environment isolation (GCS paths per env), polling 2-min. VALR RMCP drafted. TCIB reply drafted. Session log: `docs/session_logs/2026-03-23_1730_h2h-statement-pipeline-fix-valr-rmcp-tcib.md` |
+| Mar 21 | **PayShap RTP fix (Peach to SBSA) + Peach decommission + UI updates**: Critical fix — frontend calling Peach instead of Standard Bank for RTP. Peach fully decommissioned. Multiple UI improvements. |
 | Mar 17 (10:00) | **SFTP port 5022 + EBONF message**: Port corrected per Colette (SBSA H2H). EBONF now shows professional daily-limit notification. Temp VM disk-edit approach |
 | Mar 16 (21:32) | **RTP UETR fallback fix**: UETR stored in `requestId`; dual-lookup in `processRtpCallback`. Standard Bank ✅ 73ms. Capitec ✅ 97ms |
 | Mar 16 (19:40) | **UI Polish**: SecurityBadge close button; universal modal close buttons; AI chat `react-markdown` rendering with `normaliseMarkdown()` |
@@ -727,23 +731,20 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Offer Standard Bank sponsor letter or PASA application pack if requested. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
-2. **Backend redeploy to production** — Push `git push origin main` then redeploy backend to staging and production to activate the EBONF daily-limit notification message.
-3. **Reply to Colette (SBSA)** — Confirm port 5022 is ready. Await SBSA TEST server (`196.8.85.62`) connectivity test. See `docs/SBSA_H2H_SETUP_GUIDE.md` for full details.
+1. **SBSA H2H — Await test traffic before freeze (Thu Mar 27)** — Confirmation email sent to Colette 2026-03-24. VPN resolved (Open Internet), PGP resolved (Not Required), file names confirmed. SOAP handler live. Awaiting SBSA to send test SOAP credit notification + test SFTP MT940/MT942 file to UAT. SBSA freeze: Thu Mar 27 → Apr 8. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
+2. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Offer Standard Bank sponsor letter or PASA application pack if requested. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
+3. **Backend redeploy to production** — Push `git push origin main` then redeploy backend to staging and production to activate SBSA SOAP handler + EBONF daily-limit notification message.
 4. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` mismatch warning (soft_fail, non-blocking).
-5. **H2H Statements/Payments** — Awaiting Melissa's sign-on confirmation before SBSA proceeds with statement delivery config.
+5. **H2H Statements/Payments** — Statement format (MT940 + MT942) and delivery schedule confirmed. Awaiting Melissa sign-on and SBSA connectivity test.
 6. **Field encryption: Cloud Run env vars** — Confirm `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` are set in Cloud Run service env vars for both Staging and Production.
 7. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles (`mobilemart` and `flash` users).
-8. **Capitec RTP EBONF** — ✅ Now handled with professional daily-limit message. EBONF failures are SBSA-side routing issue (daily limit), not a code bug.
+8. ~~**Capitec RTP EBONF**~~ — ✅ DONE. Handled with professional daily-limit message. EBONF failures are SBSA-side routing issue (daily limit), not a code bug.
 9. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` and verify `[RTP-RETRY-PBAC]` logs + account-based retry succeeds.
-10. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` callback validation (currently soft_fail).
-11. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager. Parallel track: EasyPay legal/NPS (item 1 above).
-12. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths.
-13. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles.
-14. **H2H Statements/Payments** — Await Melissa sign-on; decide statement format (MT940/MT942) and delivery schedule.
-15. **USDC send** — Test in Codespaces when VALR credentials available.
-16. **SFTP Gateway admin IP** — Dynamic ISP IP (last known: `169.0.73.54` on 2026-03-17). If admin UI becomes inaccessible, update `sftp-1-tcp-22` and `sftp-1-tcp-443` firewall rules with new IP.
-17. **SFTP Gateway port is 5022** — Updated 2026-03-17 per Colette (SBSA). Config: `/opt/sftpgw/application.properties`. To SSH into VM for config changes, you MUST use the disk detach/mount approach (SFTP Gateway intercepts port 22 — IAP SSH is blocked).
+10. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager. Parallel track: EasyPay legal/NPS (item 2 above).
+11. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths.
+12. **USDC send** — Test in Codespaces when VALR credentials available. Corporate account registration with VALR in progress (RMCP drafted 2026-03-22).
+13. **SFTP Gateway admin IP** — Dynamic ISP IP (last known: `169.0.73.54` on 2026-03-17). If admin UI becomes inaccessible, update `sftp-1-tcp-22` and `sftp-1-tcp-443` firewall rules with new IP.
+14. **SFTP Gateway port is 5022** — Updated 2026-03-17 per Colette (SBSA). Config: `/opt/sftpgw/application.properties`. To SSH into VM for config changes, you MUST use the disk detach/mount approach (SFTP Gateway intercepts port 22 — IAP SSH is blocked).
 
 ---
 

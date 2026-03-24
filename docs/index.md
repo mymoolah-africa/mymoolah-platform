@@ -2,9 +2,9 @@
 
 **Last Updated**: March 24, 2026  
 **Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
-**Version**: 2.27.0 - EasyPay TPPP/NPS legal documentation  
+**Version**: 2.28.0 - SBSA SOAP handler + H2H documentation sync  
 
-For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Mar 24, 2026**: EasyPay NPS/TPPP positioning in [EasyPay_API_Integration_Guide.md](./integrations/EasyPay_API_Integration_Guide.md) §1.4; session log [2026-03-24_1530_easypay-tppp-legal-response-draft.md](./session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md).
+For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Mar 24, 2026**: SBSA SOAP credit notification handler built; H2H clarifications resolved (Open Internet, PGP not required, file names confirmed). EasyPay NPS/TPPP positioning in [EasyPay_API_Integration_Guide.md](./integrations/EasyPay_API_Integration_Guide.md) §1.4. See session logs: [SBSA SOAP handler](./session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md), [EasyPay legal](./session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md).
 
 ---
 

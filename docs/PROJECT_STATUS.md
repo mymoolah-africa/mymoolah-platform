@@ -1,16 +1,19 @@
 # MyMoolah Treasury Platform - Project Status
 
 **Last Updated**: March 24, 2026  
-**Version**: 2.27.0 - EasyPay TPPP/NPS legal documentation  
+**Version**: 2.28.0 - SBSA SOAP handler + H2H documentation sync  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **UNIVERSAL MODALS** ✅ **PAYSHAP RTP** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. **March 24:** EasyPay NPS/TPPP legal positioning documented; email draft for Nkululeko (single-creditor collection model); `EasyPay_API_Integration_Guide.md` §1.4; session log `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`. **March 19 PM:** Major documentation refresh — Cursor rules vs `.agents/skills`, VAS catalog context. **March 19 AM:** SBSA H2H MT940/MT942 session logged.
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. **March 24:** SBSA SOAP credit notification handler built + H2H clarifications resolved (Open Internet, PGP not required, file names confirmed). EasyPay NPS/TPPP legal positioning documented. **March 23:** H2H statement pipeline fixes, environment isolation, VALR RMCP drafted. **March 19 PM:** Major documentation refresh — Cursor rules vs `.agents/skills`, VAS catalog context.
 
-### **📋 Latest: EasyPay TPPP / NPS legal documentation (March 24, 2026)** ✅ **COMPLETE**
+### **📋 Latest: SBSA SOAP handler + H2H documentation sync (March 24, 2026)** ✅ **COMPLETE**
+Built SOAP XML parser (`sbsaSoapParser.js`) for SBSA real-time credit notifications. Webhook accepts both SOAP XML and JSON. Clarified with Colette: Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min. All documentation updated. Awaiting SBSA test traffic before freeze (Thu Mar 27). Session logs: `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md`, `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
+
+### **📋 Previous: EasyPay TPPP / NPS legal documentation (March 24, 2026)** ✅ **COMPLETE**
 Commercial/regulatory narrative for EasyPay legal concern (multi-layer aggregation): MyMoolah as single creditor in collection leg; post-settlement under sponsor bank + TPPP. No code changes. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
 
 ### **📋 Previous: Documentation + agent tooling + VAS context (March 19, 2026)** ✅ **COMPLETE**

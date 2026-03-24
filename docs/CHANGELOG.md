@@ -1,6 +1,6 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-03-24 - EasyPay TPPP / NPS legal positioning (documentation) ✅
+## 2026-03-24 PM - EasyPay TPPP / NPS legal positioning (documentation) ✅
 
 ### Session overview
 EasyPay legal (19 Mar 2026) raised NPS/TPPP concern: multi-layered aggregation. Prepared commercial email for Nkululeko clarifying **single-creditor collection** model (EasyPay → MyMoolah settlement only); post-settlement wallet/VAS/remittance under **PASA TPPP** and **Standard Bank sponsor** oversight; Phase 1 cash-in vs Phase 2 cash-out. **No application code changes.**
@@ -10,6 +10,36 @@ EasyPay legal (19 Mar 2026) raised NPS/TPPP concern: multi-layered aggregation. 
 - **`docs/AGENT_HANDOVER.md`**, **`docs/agent_handover.md`** — v2.30.0; EasyPay legal follow-up in priorities; recent-updates row
 - **`docs/integrations/EasyPay_API_Integration_Guide.md`** — §1.4 Regulatory & commercial positioning (NPS/TPPP scope)
 - **`docs/INTEGRATIONS_COMPLETE.md`**, **`docs/PROJECT_STATUS.md`**, **`docs/README.md`**, **`docs/index.md`** — Status pointers and last-updated
+
+---
+
+## 2026-03-24 AM - SBSA SOAP credit notification handler + H2H clarifications ✅
+
+### Session overview
+Built SOAP XML parser for SBSA H2H real-time credit notifications. Notification endpoint (`POST /api/v1/standardbank/notification`) now accepts both SOAP XML and JSON (backward compatible). Later in the session: confirmed **Open Internet** (not VPN) with Colette, confirmed **PGP not required**, confirmed **file names and directories** accepted. Drafted follow-up email requesting test traffic before SBSA's Thursday freeze.
+
+### Changes
+
+#### SOAP Credit Notification Handler (`92a9368e`)
+- **`services/standardbank/sbsaSoapParser.js`** (NEW): Parses SBSA `SendTransactionNotificationAsync` SOAP XML using `fast-xml-parser`. Extracts `AcctTrnId`, `ReferenceNumber`, `Amt` (15-char zero-padded cents → rands), `DebitCreditInd`, `CurCodeValue`, `FullAcctNumber`, `RqUID`, dates, balance, FI data. Generates idempotency key `SBSA-SOAP-{AcctTrnId}`.
+- **`controllers/standardbankController.js`**: Refactored `handleDepositNotification()` into `handleSoapNotification()` + `handleJsonNotification()`. SOAP path: parse XML → filter CR only → `processDepositNotification()` → HTTP 200 SOAP ack. JSON path: preserved with HMAC X-Signature validation.
+- **`routes/standardbank.js`**: Added `rawBodySoapMiddleware` accepting `text/xml`, `application/xml`, `application/soap+xml`, `application/json`. Updated `/notification` route to capture raw body without JSON parsing.
+- **`package.json`**: Added `fast-xml-parser` dependency.
+
+#### H2H Clarifications (confirmed with Colette via email)
+- **VPN → Open Internet**: Confirmed NOT VPN. SBSA IP whitelisted. No VPN configuration required.
+- **PGP → Not Required**: Confirmed. SSH key auth on SFTP is sufficient transport security.
+- **File names/directories**: Confirmed and accepted as per SBSA info sheet.
+- **`docs/SBSA_H2H_SETUP_GUIDE.md`**: Updated connection type, auth, status line, PGP/username/filename checklist items all marked resolved.
+
+### Testing
+- SOAP parser tested with SBSA's actual sample message — all fields extracted correctly
+- `isSoapXml()`, `parseAmount()`, `parseSoapNotification()` all verified
+- Linter: zero errors on all modified files
+- Platform started cleanly in Codespaces (startup logs reviewed)
+
+### Session Log
+- `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md`
 
 ---
 

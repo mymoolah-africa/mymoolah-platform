@@ -1,21 +1,26 @@
 # MyMoolah Treasury Platform
 
 **Last Updated**: March 24, 2026  
-**Version**: 2.27.0 - EasyPay TPPP/NPS legal documentation  
+**Version**: 2.28.0 - SBSA SOAP handler + H2H documentation sync  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE**
 
-**Work in the last 7 days (Mar 18–24, 2026)**: **Mar 24** — EasyPay NPS/TPPP legal positioning documented (`integrations/EasyPay_API_Integration_Guide.md` §1.4); session log `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`. **Mar 19** — Cursor rules vs `.agents/skills`; VAS catalog notes; SBSA H2H MT940/MT942 session. **Mar 17** — SFTP 5022 + EBONF. **Mar 16** — RTP UETR fix + UI polish. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Mar 18–24, 2026)**: **Mar 24** — SBSA SOAP credit notification handler built; H2H clarifications resolved (Open Internet, PGP not required, file names confirmed); EasyPay NPS/TPPP legal positioning documented. **Mar 23** — H2H statement pipeline fixes, environment isolation, VALR RMCP, TCIB draft. **Mar 21** — PayShap RTP fix (Peach to SBSA), Peach decommission, UI updates. **Mar 19** — Cursor rules vs `.agents/skills`; VAS catalog notes; SBSA H2H MT940/MT942 session. **Mar 17** — SFTP 5022 + EBONF. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
-## 🚀 **LATEST UPDATE: EasyPay TPPP / NPS legal documentation (March 24, 2026)**
+## 🚀 **LATEST UPDATE: SBSA SOAP handler + H2H documentation sync (March 24, 2026)**
 
-### **📋 Regulatory narrative for EasyPay**
+### **📋 SBSA H2H Credit Notification Handler**
+- **Built**: `services/standardbank/sbsaSoapParser.js` — parses SBSA SOAP XML `SendTransactionNotificationAsync` messages
+- **Refactored**: Notification webhook (`POST /api/v1/standardbank/notification`) now accepts both SOAP XML and JSON (backward compatible)
+- **Clarified with Colette**: Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min
+- **Status**: Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)
+- **Session log**: `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md`
+
+### **📋 EasyPay TPPP / NPS legal positioning**
 - **Concern**: EasyPay legal (Mar 19) — multi-layered aggregation under NPS/TPPP rules.
 - **Response (documented)**: Single-creditor collection model (EasyPay → MyMoolah); post-settlement wallet/VAS under PASA TPPP + Standard Bank sponsor; Phase 1 cash-in vs Phase 2 cash-out.
 - **Where**: `docs/integrations/EasyPay_API_Integration_Guide.md` §1.4; `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`; `docs/CHANGELOG.md`.
-
-**No application code changes** in this update.
 
 ---
 

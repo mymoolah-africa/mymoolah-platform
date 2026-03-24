@@ -25,7 +25,7 @@ Built a SOAP XML parser and updated the deposit notification webhook (`POST /api
 
 ## Key Decisions
 - **SOAP XML as primary, JSON as backward-compatible fallback**: SBSA's WSDL defines SOAP XML as the notification format. JSON handler preserved for future use.
-- **IP whitelisting for SOAP auth, HMAC for JSON**: SBSA SOAP notifications come via VPN — IP whitelisting is the primary security. JSON path retains X-Signature HMAC validation.
+- **IP whitelisting for SOAP auth, HMAC for JSON**: SBSA SOAP notifications come via Open Internet (confirmed with Colette 2026-03-24, NOT VPN) — IP whitelisting is the primary security. JSON path retains X-Signature HMAC validation.
 - **One-way async per WSDL**: SBSA expects HTTP 200 with SOAP acknowledgement. We always return 200 (even on processing failure) to prevent SBSA retries — errors are logged and handled internally.
 - **Amount parsing**: SBSA encodes amounts as 15-char zero-padded CENTS (e.g., `000000000300000` = R3,000.00). Parser handles both cent-encoded and decimal formats.
 - **Debit filtering**: Only CR (credit) notifications are processed. DR (debit) notifications are acknowledged but ignored.
@@ -65,16 +65,21 @@ Built a SOAP XML parser and updated the deposit notification webhook (`POST /api
 ---
 
 ## Next Steps
-- [ ] SBSA VPN configuration — Colette mentioned VPN setup required (currently blocked by monthly freeze until April 8)
-- [ ] PGP key exchange — SBSA asked for our PGP keys. Need to generate and share.
+- [x] ~~SBSA VPN configuration~~ — **RESOLVED**: Confirmed Open Internet with Colette 2026-03-24. No VPN needed.
+- [x] ~~PGP key exchange~~ — **RESOLVED**: Confirmed Not Required with Colette 2026-03-24.
+- [x] ~~File names and directories~~ — **RESOLVED**: Confirmed and accepted as per info sheet (2026-03-24).
 - [ ] SBSA to send test credit notification via SOAP — verify end-to-end flow in UAT
-- [ ] Consider adding IP whitelist middleware for the `/notification` endpoint (SBSA VPN IPs)
+- [ ] SBSA to send test SFTP connection + sample MT940/MT942 file
+- [ ] Consider adding IP whitelist middleware for the `/notification` endpoint (SBSA whitelisted IPs)
 - [ ] `ledgerService.recordBankStatementBalance` for closing balance audit (tech debt)
 
 ---
 
 ## Important Context for Next Agent
-- SBSA is in their monthly freeze from Thursday March 27 until April 8. VPN configuration and test notifications will happen after the freeze lifts.
+- SBSA monthly freeze starts Thursday March 27 until April 8. Andre has emailed Colette requesting test traffic before the freeze.
+- **VPN is NOT required** — confirmed Open Internet with Colette 2026-03-24. IP already whitelisted by SBSA.
+- **PGP is NOT required** — confirmed with Colette 2026-03-24.
+- **File names/directories confirmed** — accepted as per SBSA info sheet 2026-03-24.
 - The SOAP handler always returns HTTP 200 to SBSA — this is intentional per the one-way async WSDL contract. Processing failures are logged internally, not returned to SBSA.
 - The JSON notification path is preserved for backward compatibility but SBSA will use SOAP XML going forward.
 - SBSA's SOAP XML uses complex namespaces (NS1, NS2, NS3...NS10). The parser strips all namespace prefixes for reliable field extraction.
@@ -83,9 +88,9 @@ Built a SOAP XML parser and updated the deposit notification webhook (`POST /api
 ---
 
 ## Questions/Unresolved Items
-- PGP encryption: Colette asked if PGP applies to all files (input + response). Need to clarify and generate keys.
-- VPN vs Open Internet: Colette's email says VPN. Our PG15 said Open Internet. VPN configuration needs IT involvement on both sides.
-- SBSA test notification schedule: When will they start sending test SOAP messages?
+- ~~PGP encryption~~ — **RESOLVED**: Not required. Confirmed with Colette 2026-03-24.
+- ~~VPN vs Open Internet~~ — **RESOLVED**: Open Internet confirmed with Colette 2026-03-24. Info sheet updated.
+- SBSA test notification schedule: Follow-up email sent 2026-03-24 requesting test SOAP + SFTP before Thursday freeze. Awaiting response.
 
 ---
 

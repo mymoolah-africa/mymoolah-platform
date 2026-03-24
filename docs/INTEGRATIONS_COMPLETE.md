@@ -45,8 +45,15 @@
 - **Scope**: RPP (Send Money), RTP (Request Money), Deposit notification
 - **Business model**: SBSA sponsor bank; MM SBSA main account (no prefunded float)
 - **Fees**: R4.00 VAT incl user fee; R3.00 SBSA cost (recorded when settled)
-- **Request Money proxy**: When Peach archived, `/api/v1/peach/request-money` delegates to Standard Bank
+- **Request Money proxy**: ✅ Fixed (2026-03-21) — frontend now calls Standard Bank directly (Peach decommissioned)
 - **Docs**: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`, `docs/integrations/StandardBankPayShap.md`
+
+**3b. STANDARD BANK H2H (SFTP + SOAP)** ✅ **IMPLEMENTATION COMPLETE** (2026-03-24)
+- **Status**: SOAP handler live, MT940/MT942 parser live, environment isolation implemented. Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)
+- **SOAP handler (Mar 24)**: `sbsaSoapParser.js` parses `SendTransactionNotificationAsync` SOAP XML. Webhook accepts SOAP XML + JSON (backward compatible). Near real-time wallet crediting.
+- **Statement pipeline (Mar 23)**: MT940/MT942 parser + poller (every 2 min). GCS environment isolation (UAT/staging/production separate folders). Maximum latency: ~17 min from bank deposit to wallet credit.
+- **Clarifications (Mar 24)**: Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min Mon-Sat
+- **Docs**: `docs/SBSA_H2H_SETUP_GUIDE.md`
 
 **4. PEACH PAYMENTS INTEGRATION** 📦 **ARCHIVED** (2025-11-26)
 - **Status**: Integration archived due to PayShap provider competition conflict

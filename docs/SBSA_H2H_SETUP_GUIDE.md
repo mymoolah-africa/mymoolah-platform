@@ -1,7 +1,7 @@
 # SBSA Host-to-Host (H2H) Setup Guide
 
 **Date**: 2026-03-13  
-**Status**: ✅ PG15 submitted to Colette (SBSA) on 2026-03-13 — Port corrected to 5022 on 2026-03-17 per Colette's instruction — Statement format + delivery schedule confirmed 2026-03-19  
+**Status**: ✅ PG15 submitted to Colette (SBSA) on 2026-03-13 — Port corrected to 5022 on 2026-03-17 per Colette's instruction — Statement format + delivery schedule confirmed 2026-03-19 — **SOAP credit notification handler built 2026-03-24** — VPN clarified as Open Internet (confirmed with Colette 2026-03-24) — PGP confirmed Not Required (2026-03-24) — File names/directories confirmed (2026-03-24) — Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)  
 **Implementation Manager**: SBSA (assigned contact)  
 **Services**: Credit Notifications via Webserver + H2H SFTP (Statements + Payments)
 
@@ -16,7 +16,7 @@
 | **Public IP** | `34.128.163.17` (GCP Load Balancer — static) |
 | **Webhook URL** | `https://api-mm.mymoolah.africa/api/v1/standardbank/notification` |
 | **Protocol** | HTTPS (TLS 1.3) |
-| **Connection type** | Webservice over VPN (SBSA private network) |
+| **Connection type** | Webservice over Open Internet (confirmed with Colette 2026-03-24 — NOT VPN) |
 | **Content-Type** | `text/xml` or `application/soap+xml` |
 | **SOAP Action** | `SendTransactionNotificationAsync` |
 | **WSDL** | `PaymentNotificationBaseV1_0.wsdl` (SBSA-provided, one-way async) |
@@ -24,7 +24,7 @@
 | **SSL Organization** | MyMoolah |
 | **SSL CA** | Google Trust Services (GCP-managed certificate) |
 | **Response** | HTTP 200 with SOAP acknowledgement (async processing) |
-| **Auth** | IP whitelisting (SBSA VPN) — no HMAC signature for SOAP |
+| **Auth** | IP whitelisting (SBSA has whitelisted our IP) — no HMAC signature for SOAP |
 
 ### H2H SFTP (Statements + Payments)
 
@@ -131,9 +131,11 @@ sftp -i ~/.ssh/sbsa_sftp_key standardbank@34.35.137.166
 
 ---
 
-## 6. PGP Encryption (Optional — for file encryption)
+## 6. PGP Encryption (NOT REQUIRED — confirmed with Colette 2026-03-24)
 
-If SBSA will encrypt files they send us, we need to generate a PGP key pair and send them our public key.
+> **Status**: PGP is NOT required for the SBSA H2H integration. Confirmed with Colette on 2026-03-24. SFTP SSH key auth provides sufficient transport security. Retained below for reference only if requirements change in the future.
+
+If SBSA ever requires file encryption, generate a PGP key pair and send them our public key:
 
 ```bash
 # Generate PGP key pair
@@ -168,10 +170,12 @@ Recommended signing: **SHA256**
 - [x] **Folder structure**: Inbox / Outbox is sufficient from SBSA side. MyMoolah uses sub-folders internally in GCS for separation: `standardbank/inbox/statements/` (MT940/MT942) and `standardbank/inbox/payments/` (Pain.002). SBSA delivers all files to our flat SFTP Inbox — we route internally. ✅ (Confirmed with Colette 2026-03-17)
 - [x] **Statement format: MT940 (end-of-day) + MT942 (intraday)** — SWIFT ISO standard. MyMoolah confirmed this choice. ✅ (Confirmed with Colette 2026-03-17)
 - [x] **Delivery schedule: Both intraday and end-of-day** — Colette confirmed both options available. ✅ (Confirmed 2026-03-17)
-- [ ] PGP public key (if encryption required — generate per Section 6)
-- [ ] **SBSA to confirm**: Exact SFTP username for our account
-- [ ] **SBSA to confirm**: Exact MT940/MT942 filename pattern they will use
-- [ ] **SBSA to confirm**: Intraday statement frequency (e.g., every 2h, every 4h, or on-demand)
+- [x] **PGP**: Not required — confirmed with Colette 2026-03-24. SFTP SSH key auth provides sufficient transport security. ✅
+- [x] **SFTP username**: `OWN11` — confirmed on SBSA info sheet ✅
+- [x] **MT940/MT942 filename pattern**: `MYMOOLAH_OWN11_FINSTMT_...` / `MYMOOLAH_OWN11_PROVSTMT_...` — confirmed on SBSA info sheet ✅
+- [x] **Intraday statement frequency**: Every 15 minutes (Mon–Sat) — confirmed on SBSA info sheet ✅
+- [x] **File names and directories**: Confirmed and accepted as per info sheet (2026-03-24) ✅
+- [x] **Connection type**: Open Internet (NOT VPN) — confirmed with Colette 2026-03-24 ✅
 
 ---
 
