@@ -784,7 +784,8 @@ const initializeBackgroundServices = async () => {
           }
         });
 
-        console.log(`✅ SBSA H2H statement poller started (MT940/MT942, schedule: ${pollSchedule})`);
+        const sbsaEnv = process.env.STANDARDBANK_ENVIRONMENT || 'production';
+        console.log(`✅ SBSA H2H statement poller started (MT940/MT942, schedule: ${pollSchedule}, env: ${sbsaEnv})`);
       }
     } catch (error) {
       console.error('❌ Failed to start SBSA statement poller:', error.message);

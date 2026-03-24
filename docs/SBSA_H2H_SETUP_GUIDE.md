@@ -265,6 +265,32 @@ SBSA delivers MT942 to our SFTP (every 15 min)
 
 **Maximum latency**: MT942 arrives every 15 min + 2 min poll cycle = **17 minutes worst case** from bank deposit to wallet credit. Average: ~9 minutes.
 
+### Environment Isolation (Banking-Grade)
+
+Each environment processes statements from its own isolated GCS folder. This prevents test files from accidentally crediting production wallets and vice versa.
+
+| Environment | `STANDARDBANK_ENVIRONMENT` | GCS Statements Path | Database |
+|-------------|---------------------------|---------------------|----------|
+| UAT | `uat` | `standardbank/uat/inbox/statements/` | UAT (test users, test APIs) |
+| Staging | `staging` | `standardbank/staging/inbox/statements/` | Staging (test users, live APIs) |
+| Production | `production` | `standardbank/inbox/statements/` | Production (real users, live APIs) |
+
+**How it works:**
+- SBSA delivers files to our SFTP flat `/Inbox`
+- An SFTP trigger script (or manual placement for testing) routes files to the correct environment sub-folder in GCS
+- Each environment's poller only reads from its own path
+- Archived files go to `processed/standardbank/{env}/statements/`
+
+**For UAT testing:**
+- Drop sample MT940/MT942 files into `gs://mymoolah-sftp-inbound/standardbank/uat/inbox/statements/`
+- Enable poller: `SBSA_STATEMENT_POLLER_ENABLED=true` in UAT `.env`
+- UAT poller picks up the file and credits the UAT wallet
+
+**For production:**
+- SBSA delivers real files to SFTP `/Inbox`
+- Route to `standardbank/inbox/statements/` (no env prefix for production — backward compatible)
+- Production poller credits real wallets
+
 ### MT940 Field Reference
 
 ```

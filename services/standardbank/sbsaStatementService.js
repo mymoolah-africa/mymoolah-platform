@@ -25,8 +25,11 @@
  *
  * Statement format:  MT940 (end-of-day), MT942 (intraday)
  * Delivery schedule: Both intraday and end-of-day (confirmed by Colette, SBSA, 2026-03-17)
- * GCS path:          gs://mymoolah-sftp-inbound/standardbank/inbox/statements/
- * Archive path:      gs://mymoolah-sftp-inbound/processed/standardbank/statements/
+ *
+ * Environment isolation (set via STANDARDBANK_ENVIRONMENT):
+ *   UAT:        gs://mymoolah-sftp-inbound/standardbank/uat/inbox/statements/
+ *   Staging:    gs://mymoolah-sftp-inbound/standardbank/staging/inbox/statements/
+ *   Production: gs://mymoolah-sftp-inbound/standardbank/inbox/statements/
  *
  * @module services/standardbank/sbsaStatementService
  */
@@ -53,11 +56,18 @@ const logger = {
   error: (...a) => console.error('[SBSAStatementService]', ...a),
 };
 
+// Environment isolation — each environment processes its own statement folder
+// UAT:        standardbank/uat/inbox/statements/
+// Staging:    standardbank/staging/inbox/statements/
+// Production: standardbank/inbox/statements/  (default — backward compatible)
+const SBSA_ENV = process.env.STANDARDBANK_ENVIRONMENT || 'production';
+const ENV_PREFIX = SBSA_ENV === 'production' ? '' : `${SBSA_ENV}/`;
+
 // GCS paths
 const BUCKET_NAME       = process.env.SFTP_BUCKET_NAME     || 'mymoolah-sftp-inbound';
-const STATEMENTS_PREFIX = 'standardbank/inbox/statements/';
-const PROCESSED_PREFIX  = 'processed/standardbank/statements/';
-const FAILED_PREFIX     = 'failed/standardbank/statements/';
+const STATEMENTS_PREFIX = `standardbank/${ENV_PREFIX}inbox/statements/`;
+const PROCESSED_PREFIX  = `processed/standardbank/${ENV_PREFIX}statements/`;
+const FAILED_PREFIX     = `failed/standardbank/${ENV_PREFIX}statements/`;
 
 // SBSA H2H filename patterns (confirmed in SBSA info sheet 2026-03-23)
 // MT940 end-of-day:  MYMOOLAH_OWN11_FINSTMT_YYYYMMDD_HHMMSS
@@ -72,6 +82,12 @@ class SBSAStatementService {
   constructor() {
     this.storage = new Storage();
     this.bucket  = this.storage.bucket(BUCKET_NAME);
+    logger.info('Initialised', {
+      environment: SBSA_ENV,
+      bucket: BUCKET_NAME,
+      statementsPath: `gs://${BUCKET_NAME}/${STATEMENTS_PREFIX}`,
+      processedPath: `gs://${BUCKET_NAME}/${PROCESSED_PREFIX}`,
+    });
   }
 
   // ─────────────────────────────────────────────────────────────
