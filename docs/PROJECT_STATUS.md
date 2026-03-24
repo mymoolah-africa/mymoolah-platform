@@ -1,16 +1,19 @@
 # MyMoolah Treasury Platform - Project Status
 
-**Last Updated**: March 19, 2026  
-**Version**: 2.26.0 - Documentation + agent tooling + VAS catalog context  
+**Last Updated**: March 24, 2026  
+**Version**: 2.27.0 - EasyPay TPPP/NPS legal documentation  
 **Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **CLOUD BUILD DEPLOYS** ✅ **LANGCHAIN RAG AI** ✅ **POPIA ENCRYPTION** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **UNIVERSAL MODALS** ✅ **PAYSHAP RTP** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT**
 
 ---
 
 ## 🎯 **CURRENT STATUS OVERVIEW**
 
-Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. **March 19 PM:** Major documentation refresh — Cursor rules vs `.agents/skills`, VAS catalog context (Flash + MobileMart, `vas_best_offers`). **March 19 AM:** SBSA H2H MT940/MT942 session logged. Prior: SFTP 5022 + EBONF (Mar 17), RTP UETR + UI polish (Mar 16).
+Production live at api-mm.mymoolah.africa and wallet.mymoolah.africa. **March 24:** EasyPay NPS/TPPP legal positioning documented; email draft for Nkululeko (single-creditor collection model); `EasyPay_API_Integration_Guide.md` §1.4; session log `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`. **March 19 PM:** Major documentation refresh — Cursor rules vs `.agents/skills`, VAS catalog context. **March 19 AM:** SBSA H2H MT940/MT942 session logged.
 
-### **📋 Latest: Documentation + agent tooling + VAS context (March 19, 2026)** ✅ **COMPLETE**
+### **📋 Latest: EasyPay TPPP / NPS legal documentation (March 24, 2026)** ✅ **COMPLETE**
+Commercial/regulatory narrative for EasyPay legal concern (multi-layer aggregation): MyMoolah as single creditor in collection leg; post-settlement under sponsor bank + TPPP. No code changes. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
+
+### **📋 Previous: Documentation + agent tooling + VAS context (March 19, 2026)** ✅ **COMPLETE**
 Canonical `docs/` updated for rules/skills alignment and VAS catalog notes. Session log: `docs/session_logs/2026-03-19_1830_cursor-rules-skills-flash-catalog-docs.md`. **Next (engineering):** simplify cross-supplier product equivalence; keep materialized best-offers for production.
 
 ### **📋 Previous: SBSA H2H MT940/MT942 (March 19, 2026 AM)** ✅ **LOGGED**

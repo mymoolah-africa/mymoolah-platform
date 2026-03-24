@@ -1,9 +1,9 @@
 # 🌐 INTEGRATIONS COMPLETE - MyMoolah Treasury Platform
 
-**Date**: January 17, 2026 (Updated)
-**Version**: 2.6.4 - EasyPay Standalone Voucher UI Improvements
-**Status**: ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **SMS/MYMOBILEAPI WORKING** ✅ **MOBILEMART FULCRUM** ✅ **FLASH RECONCILIATION** ✅ **PEACH PAYMENTS ARCHIVED** ✅ **ZAPPER INTEGRATION REVIEWED**
-**Achievement**: Complete integration with all major financial service providers plus EasyPay standalone voucher UI improvements, PDF converter, and EasyPay simulation fixes. SMS Integration with MyMobileAPI verified working 2025-12-30. Flash reconciliation system integrated January 14, 2026. PDF converter and EasyPay simulation fixes January 16, 2026. EasyPay standalone voucher UI improvements January 17, 2026.  
+**Date**: March 24, 2026 (Updated)
+**Version**: 2.6.5 - EasyPay NPS/TPPP legal positioning documented
+**Status**: ✅ **EASYPAY REGULATORY NARRATIVE (MAR 2026)** ✅ **EASYPAY STANDALONE VOUCHER UI ENHANCED** ✅ **PDF CONVERTER AVAILABLE** ✅ **EASYPAY SIMULATION FIXED** ✅ **SMS/MYMOBILEAPI WORKING** ✅ **MOBILEMART FULCRUM** ✅ **FLASH RECONCILIATION** ✅ **PEACH PAYMENTS ARCHIVED** ✅ **ZAPPER INTEGRATION REVIEWED**
+**Achievement**: Complete integration with all major financial service providers plus EasyPay standalone voucher UI improvements, PDF converter, and EasyPay simulation fixes. SMS Integration with MyMobileAPI verified working 2025-12-30. Flash reconciliation system integrated January 14, 2026. PDF converter and EasyPay simulation fixes January 16, 2026. EasyPay standalone voucher UI improvements January 17, 2026. **March 24, 2026**: Documented EasyPay **NPS/TPPP** positioning (single-creditor collection vs post-settlement wallet) in `integrations/EasyPay_API_Integration_Guide.md` §1.4; session log `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.  
 
 ---
 
@@ -81,7 +81,8 @@
 - **Settlement**: Network merchant settlement with callback support
 - **Voucher Management**: Complete lifecycle management (create, cancel, expiry, settlement)
 - **UI Enhancements**: Business-focused messaging, EPVoucher badge, redemption validation, UAT simulate button
-- **Status**: Fully tested and integrated (January 17, 2026 UI improvements)
+- **Regulatory / commercial (Mar 2026)**: NPS/TPPP narrative for EasyPay legal — single-creditor collection leg; post-settlement under PASA TPPP + Standard Bank sponsor. See `integrations/EasyPay_API_Integration_Guide.md` §1.4 and session log `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
+- **Status**: Fully tested and integrated (January 17, 2026 UI improvements); commercial sign-off with EasyPay pending legal response
 
 **7. DTMERCURY INTEGRATION** ✅ **COMPLETE**
 - **PayShap Integration**: External bank transfers

@@ -1,5 +1,18 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-24 - EasyPay TPPP / NPS legal positioning (documentation) ✅
+
+### Session overview
+EasyPay legal (19 Mar 2026) raised NPS/TPPP concern: multi-layered aggregation. Prepared commercial email for Nkululeko clarifying **single-creditor collection** model (EasyPay → MyMoolah settlement only); post-settlement wallet/VAS/remittance under **PASA TPPP** and **Standard Bank sponsor** oversight; Phase 1 cash-in vs Phase 2 cash-out. **No application code changes.**
+
+### Documentation
+- **`docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`** — Session log
+- **`docs/AGENT_HANDOVER.md`**, **`docs/agent_handover.md`** — v2.30.0; EasyPay legal follow-up in priorities; recent-updates row
+- **`docs/integrations/EasyPay_API_Integration_Guide.md`** — §1.4 Regulatory & commercial positioning (NPS/TPPP scope)
+- **`docs/INTEGRATIONS_COMPLETE.md`**, **`docs/PROJECT_STATUS.md`**, **`docs/README.md`**, **`docs/index.md`** — Status pointers and last-updated
+
+---
+
 ## 2026-03-21 - PayShap RTP fix (Peach→Standard Bank) + Peach decommission + UI updates ✅
 
 ### **Session Overview**

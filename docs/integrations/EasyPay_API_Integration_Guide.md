@@ -1,7 +1,7 @@
 # EasyPay API Integration Guide
 
-**Version**: 1.0.3  
-**Last Updated**: January 17, 2026  
+**Version**: 1.0.4  
+**Last Updated**: March 24, 2026  
 **API Provider**: MyMoolah Treasury Platform  
 **Integration Partner**: EasyPay South Africa  
 **Status**: ✅ Production Ready
@@ -67,6 +67,24 @@ sequenceDiagram
 - **Idempotent Operations**: Safe retry mechanisms for network failures
 - **Mojaloop Compliance**: Aligned with ISO 20022 and Mojaloop specifications
 - **Structured Error Responses**: Banking-grade error format with codes, request IDs, and timestamps
+
+### 1.4 Regulatory & commercial positioning (NPS / TPPP)
+
+For **EasyPay legal and PASA/NPS** discussions, the intended model is:
+
+1. **Collection leg (Phase 1 — Top-up @ EasyPay)**  
+   EasyPay acts as a **regulated TPPP collection channel**. The end-user pays cash at a retail terminal against a **MyMoolah-issued PIN**. EasyPay **settles to MyMoolah as the single named creditor**. There is no onward settlement to multiple sub-creditors within this leg.
+
+2. **Post-settlement**  
+   After settlement, funds are accounted for under **MyMoolah’s PASA Third-Party Payment Provider (TPPP) programme**, **sponsored by Standard Bank**, with a **TPPP Creditor Account** at Standard Bank. Wallet crediting, VAS, and other product legs are **outside EasyPay’s collection mandate** and are subject to sponsor-bank oversight and MyMoolah’s own FICA/AML controls.
+
+3. **Phase 2 (Cash-out @ EasyPay)**  
+   Treated as a **separate** product (future): user instruction to disburse cash at terminal; not part of Phase 1 legal scoping unless explicitly agreed.
+
+4. **Technical reference**  
+   Sponsor brief: `docs/STANDARD_BANK_TPPP_BRIEF.md`. PASA-style checklist: `docs/STANDARD_BANK_TPPP_APPLICATION_CHECKLIST_RESPONSE_FORMAL.txt`. Session log for legal email draft: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
+
+**Disclaimer**: This section summarises the platform’s **intended** structure for partner discussions. It is **not** legal advice; final positions belong to counsel and regulators.
 
 ---
 

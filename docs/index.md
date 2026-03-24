@@ -1,10 +1,10 @@
 # MyMoolah Treasury Platform - Documentation Index
 
-**Last Updated**: March 4, 2026  
+**Last Updated**: March 24, 2026  
 **Project Status**: 🚀 **PRODUCTION LIVE - api-mm.mymoolah.africa, wallet.mymoolah.africa**  
-**Version**: 2.11.31 - International Airtime Pinless Planning  
+**Version**: 2.27.0 - EasyPay TPPP/NPS legal documentation  
 
-For work in the last 7 days (Feb 27–Mar 4, 2026), see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md) (Recent Updates). **Upcoming**: International Airtime pinless flow — migrate from Global PIN to beneficiary modal; implementation tomorrow.
+For recent work, see [CHANGELOG.md](./CHANGELOG.md) and [AGENT_HANDOVER.md](./AGENT_HANDOVER.md). **Mar 24, 2026**: EasyPay NPS/TPPP positioning in [EasyPay_API_Integration_Guide.md](./integrations/EasyPay_API_Integration_Guide.md) §1.4; session log [2026-03-24_1530_easypay-tppp-legal-response-draft.md](./session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md).
 
 ---
 
