@@ -612,8 +612,91 @@ async function initiatePayShapRtp(req, res) {
  * Deposit Notification - when money hits MM SBSA main account
  * Reference (CID) = MSISDN → wallet to credit, or float account identifier
  * POST /api/v1/standardbank/notification
+ *
+ * Accepts TWO formats:
+ *   1. SOAP XML  — SBSA H2H standard (SendTransactionNotificationAsync)
+ *   2. JSON      — Legacy/future webhook format
+ *
+ * SOAP is one-way async per WSDL — SBSA expects HTTP 200/202.
+ * For JSON, HMAC X-Signature verification is enforced.
+ * For SOAP XML, IP whitelisting is the primary auth (SBSA VPN).
  */
 async function handleDepositNotification(req, res) {
+  const rawBody = typeof req.rawBody === 'string' ? req.rawBody : '';
+  const { isSoapXml } = require('../services/standardbank/sbsaSoapParser');
+
+  if (isSoapXml(rawBody)) {
+    return handleSoapNotification(rawBody, req, res);
+  }
+
+  return handleJsonNotification(rawBody, req, res);
+}
+
+async function handleSoapNotification(rawBody, req, res) {
+  const logPrefix = '[SBSA-SOAP-Notification]';
+
+  let parsed;
+  try {
+    const { parseSoapNotification } = require('../services/standardbank/sbsaSoapParser');
+    parsed = parseSoapNotification(rawBody);
+  } catch (parseErr) {
+    console.error(`${logPrefix} XML parse error:`, parseErr.message);
+    return res.status(400).send(
+      '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">' +
+      '<soap:Body><soap:Fault><faultcode>soap:Client</faultcode>' +
+      '<faultstring>Malformed XML</faultstring></soap:Fault></soap:Body></soap:Envelope>'
+    );
+  }
+
+  console.log(`${logPrefix} Received: AcctTrnId=${parsed.transactionId} ref=${parsed.referenceNumber} ` +
+    `amount=${parsed.amount} ${parsed.currency} debitCredit=${parsed.debitCreditInd} ` +
+    `account=${parsed.fullAcctNumber} rqUID=${parsed.rqUID}`);
+
+  if (parsed.debitCreditInd && parsed.debitCreditInd.toUpperCase() !== 'CR') {
+    console.log(`${logPrefix} Ignoring non-credit notification (${parsed.debitCreditInd})`);
+    return res.status(200).send('<?xml version="1.0" encoding="UTF-8"?>' +
+      '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">' +
+      '<soap:Body><Ack>OK</Ack></soap:Body></soap:Envelope>');
+  }
+
+  if (parsed.amount <= 0) {
+    console.warn(`${logPrefix} Zero/negative amount — ignoring`);
+    return res.status(200).send('<?xml version="1.0" encoding="UTF-8"?>' +
+      '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">' +
+      '<soap:Body><Ack>OK</Ack></soap:Body></soap:Envelope>');
+  }
+
+  try {
+    const depositService = require('../services/standardbankDepositNotificationService');
+    const result = await depositService.processDepositNotification({
+      transactionId: parsed.transactionId,
+      referenceNumber: parsed.referenceNumber,
+      amount: parsed.amount,
+      currency: parsed.currency,
+      description: parsed.description,
+      source: parsed.source,
+    });
+
+    if (!result.success) {
+      console.error(`${logPrefix} Processing failed:`, result.error);
+    } else {
+      console.log(`${logPrefix} Processed: credited=${result.credited} txnId=${parsed.transactionId}`);
+    }
+  } catch (err) {
+    console.error(`${logPrefix} Processing error:`, err.message);
+  }
+
+  return res.status(200)
+    .set('Content-Type', 'text/xml; charset=utf-8')
+    .send(
+      '<?xml version="1.0" encoding="UTF-8"?>' +
+      '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">' +
+      '<soap:Body><Ack>OK</Ack></soap:Body></soap:Envelope>'
+    );
+}
+
+async function handleJsonNotification(rawBody, req, res) {
   const secret = process.env.SBSA_CALLBACK_SECRET;
   const signature = req.headers['x-signature'] || req.headers['X-Signature'];
 
@@ -623,21 +706,27 @@ async function handleDepositNotification(req, res) {
   }
 
   let body = req.body;
-  if (Buffer.isBuffer(req.body)) {
+  if (Buffer.isBuffer(body)) {
     try {
-      body = JSON.parse(req.body.toString('utf8'));
+      body = JSON.parse(body.toString('utf8'));
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid JSON' });
+    }
+  } else if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
     } catch (e) {
       return res.status(400).json({ error: 'Invalid JSON' });
     }
   }
 
   const crypto = require('crypto');
-  const rawBody = typeof req.rawBody === 'string' ? req.rawBody : JSON.stringify(body);
+  const rawForSig = rawBody || JSON.stringify(body);
   if (!signature) {
     return res.status(401).json({ error: 'Missing X-Signature' });
   }
   try {
-    const computed = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
+    const computed = crypto.createHmac('sha256', secret).update(rawForSig).digest('hex');
     const computedBuf = Buffer.from(computed, 'hex');
     const sigBuf = Buffer.from(signature, 'hex');
     if (computedBuf.length !== sigBuf.length || !crypto.timingSafeEqual(computedBuf, sigBuf)) {

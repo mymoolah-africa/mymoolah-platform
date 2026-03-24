@@ -14,6 +14,12 @@ const standardbankController = require('../controllers/standardbankController');
 
 const rawBodyMiddleware = express.raw({ type: 'application/json', limit: '10mb' });
 
+// Accept SOAP XML content types for SBSA credit notifications
+const rawBodySoapMiddleware = express.raw({
+  type: ['application/json', 'text/xml', 'application/xml', 'application/soap+xml'],
+  limit: '10mb',
+});
+
 const parseJsonBody = (req, res, next) => {
   if (Buffer.isBuffer(req.body)) {
     try {
@@ -143,12 +149,19 @@ router.post('/payshap/rtp', auth, rtpValidation, handleValidation, standardbankC
 router.get('/payshap/rtp/:uetr/status', auth, standardbankController.getRtpStatus);
 
 // Deposit notification (when money hits MM SBSA main account; reference = CID = MSISDN)
+// Accepts both SOAP XML (SBSA H2H standard) and JSON (legacy/future)
 router.post(
   '/notification',
-  rawBodyMiddleware,
+  rawBodySoapMiddleware,
   (req, res, next) => {
-    req.rawBody = req.body.toString('utf8');
-    parseJsonBody(req, res, next);
+    if (Buffer.isBuffer(req.body)) {
+      req.rawBody = req.body.toString('utf8');
+    } else if (typeof req.body === 'string') {
+      req.rawBody = req.body;
+    } else {
+      req.rawBody = JSON.stringify(req.body);
+    }
+    next();
   },
   standardbankController.handleDepositNotification
 );

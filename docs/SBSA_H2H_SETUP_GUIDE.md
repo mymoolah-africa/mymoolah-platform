@@ -9,18 +9,22 @@
 
 ## 1. Our Infrastructure Details (Submit to SBSA)
 
-### Credit Notifications via Webserver
+### Credit Notifications via Webserver (SOAP XML)
 
 | Field | Value |
 |-------|-------|
 | **Public IP** | `34.128.163.17` (GCP Load Balancer — static) |
 | **Webhook URL** | `https://api-mm.mymoolah.africa/api/v1/standardbank/notification` |
 | **Protocol** | HTTPS (TLS 1.3) |
-| **Connection type** | Webservice over Open Internet (no VPN) |
+| **Connection type** | Webservice over VPN (SBSA private network) |
+| **Content-Type** | `text/xml` or `application/soap+xml` |
+| **SOAP Action** | `SendTransactionNotificationAsync` |
+| **WSDL** | `PaymentNotificationBaseV1_0.wsdl` (SBSA-provided, one-way async) |
 | **SSL Common Name** | `api-mm.mymoolah.africa` |
 | **SSL Organization** | MyMoolah |
 | **SSL CA** | Google Trust Services (GCP-managed certificate) |
-| **Response** | HTTP 200 acknowledgement only (async processing) |
+| **Response** | HTTP 200 with SOAP acknowledgement (async processing) |
+| **Auth** | IP whitelisting (SBSA VPN) — no HMAC signature for SOAP |
 
 ### H2H SFTP (Statements + Payments)
 
@@ -303,6 +307,55 @@ Each environment processes statements from its own isolated GCS folder. This pre
 :62F: Closing balance
 :64:  Available balance (optional)
 ```
+
+### Credit Notification Webservice (SOAP XML)
+
+SBSA sends real-time credit notifications via SOAP XML when deposits hit our account.
+This is the fastest crediting path — near real-time vs. MT942 (up to 17 min).
+
+**WSDL**: `PaymentNotificationBaseV1_0.wsdl` (one-way async — no response message in WSDL)
+**Operation**: `SendTransactionNotificationAsync`
+
+**SOAP XML Field Mapping:**
+
+| SOAP XML Path | Our Field | Description |
+|---------------|-----------|-------------|
+| `TrnNotificationInfo/TrnData/AcctTrnId` | `transactionId` | Unique SBSA transaction ID (idempotency key) |
+| `TrnNotificationInfo/ReferenceNumber` | `referenceNumber` | Payment reference (MSISDN for wallet credit) |
+| `TrnNotificationInfo/TrnData/TrnAmt/Amt` | `amount` | Amount in CENTS (15-char zero-padded, e.g. `000000000300000` = R3,000) |
+| `TrnNotificationInfo/TrnData/TrnAmt/CurCode/CurCodeValue` | `currency` | Currency code (default: ZAR) |
+| `TrnNotificationInfo/DebitCreditInd` | `debitCreditInd` | `CR` = credit, `DR` = debit (we only process CR) |
+| `TrnNotificationInfo/FullAcctNumber` | `fullAcctNumber` | Our SBSA account number |
+| `TrnNotificationInfo/TrnData/TrnDt` | `trnDate` | Transaction date (YYYY-MM-DD) |
+| `TrnNotificationInfo/TrnData/TrnTime` | `trnTime` | Transaction time (HH:MM:SS) |
+| `TrnNotificationInfo/TrnData/BalAmt/Amt` | `balanceAmount` | Account balance after transaction |
+| `TrnNotificationInfo/FIData/Name` | `fiName` | Originating bank name |
+| `TrnNotificationInfo/FIData/BranchIdent` | `branchIdent` | Branch code |
+| `RqUID` | `rqUID` | SBSA's unique request UUID (for tracing) |
+
+**Implementation:**
+
+- **Parser**: `services/standardbank/sbsaSoapParser.js` — Parses SOAP XML, extracts all fields, converts SBSA cent-encoded amounts to rands
+- **Controller**: `controllers/standardbankController.js` → `handleDepositNotification()` — Detects SOAP vs JSON, routes accordingly
+- **Route**: `routes/standardbank.js` → `POST /notification` — Accepts `text/xml`, `application/xml`, `application/soap+xml`, and `application/json`
+- **Deposit service**: `services/standardbankDepositNotificationService.js` — Same service used by both SOAP and MT942 statement processing
+
+**Crediting flow (SOAP):**
+
+```
+SBSA sends SOAP XML to /api/v1/standardbank/notification
+  → Route middleware captures raw body
+    → Controller detects XML (vs JSON)
+      → sbsaSoapParser parses SOAP envelope
+        → Filters: only CR (credit), amount > 0
+          → processDepositNotification:
+            1. Idempotency check (transactionId = SBSA-SOAP-{AcctTrnId})
+            2. Resolve reference (MSISDN → wallet, or suspense)
+            3. Credit wallet + ledger journal entry
+          → HTTP 200 SOAP acknowledgement
+```
+
+**Latency**: Near real-time — SBSA pushes notification immediately on deposit. Wallet credited within seconds.
 
 ---
 
