@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-24 09:30  
-**Latest Feature**: **SBSA SOAP Credit Notification Handler** — Built SOAP XML parser for SBSA H2H real-time credit notifications (SendTransactionNotificationAsync). Notification endpoint now accepts both SOAP XML and JSON. Parser handles SBSA's 15-char zero-padded cent amounts, namespace-heavy SOAP envelopes, and debit/credit filtering. Backward compatible — JSON path preserved with HMAC validation.  
-**Document Version**: 2.29.0  
-**Session logs**: `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md`, `docs/session_logs/2026-03-23_1730_h2h-statement-pipeline-fix-valr-rmcp-tcib.md`, `docs/session_logs/2026-03-21_1730_payshap-rtp-peach-to-sbsa-fix-decommission.md`  
+**Last Updated**: 2026-03-24 17:45  
+**Latest Feature**: **EasyPay TPPP / NPS legal positioning** — Draft email for Nkululeko (EasyPay) explaining funds flow: EasyPay as collection channel to MyMoolah as single creditor; post-settlement wallet/VAS under PASA TPPP + Standard Bank sponsor oversight; Phase 1 cash-in vs Phase 2 cash-out. Documentation synced (EasyPay guide §1.4, CHANGELOG, PROJECT_STATUS, README). No code changes.  
+**Document Version**: 2.30.0  
+**Session logs**: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`, `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md`, `docs/session_logs/2026-03-23_1730_h2h-statement-pipeline-fix-valr-rmcp-tcib.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -699,6 +699,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 24 (15:30) | **EasyPay TPPP / NPS legal draft**: Email for Nkululeko clarifying single-creditor collection model vs multi-layer aggregation concern; sponsor bank + downstream scope. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md` |
 | Mar 17 (10:00) | **SFTP port 5022 + EBONF message**: Port corrected per Colette (SBSA H2H). EBONF now shows professional daily-limit notification. Temp VM disk-edit approach |
 | Mar 16 (21:32) | **RTP UETR fallback fix**: UETR stored in `requestId`; dual-lookup in `processRtpCallback`. Standard Bank ✅ 73ms. Capitec ✅ 97ms |
 | Mar 16 (19:40) | **UI Polish**: SecurityBadge close button; universal modal close buttons; AI chat `react-markdown` rendering with `normaliseMarkdown()` |
@@ -726,22 +727,23 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **Backend redeploy to production** — Push `git push origin main` then redeploy backend to staging and production to activate the EBONF daily-limit notification message.
-2. **Reply to Colette (SBSA)** — Confirm port 5022 is ready. Await SBSA TEST server (`196.8.85.62`) connectivity test. See `docs/SBSA_H2H_SETUP_GUIDE.md` for full details.
-3. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` mismatch warning (soft_fail, non-blocking).
-4. **H2H Statements/Payments** — Awaiting Melissa's sign-on confirmation before SBSA proceeds with statement delivery config.
-5. **Field encryption: Cloud Run env vars** — Confirm `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` are set in Cloud Run service env vars for both Staging and Production.
-6. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles (`mobilemart` and `flash` users).
-7. **Capitec RTP EBONF** — ✅ Now handled with professional daily-limit message. EBONF failures are SBSA-side routing issue (daily limit), not a code bug.
-7. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` and verify `[RTP-RETRY-PBAC]` logs + account-based retry succeeds.
-8. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` callback validation (currently soft_fail).
-9. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager.
-10. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths.
-11. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles.
-12. **H2H Statements/Payments** — Await Melissa sign-on; decide statement format (MT940/MT942) and delivery schedule.
-13. **USDC send** — Test in Codespaces when VALR credentials available.
-14. **SFTP Gateway admin IP** — Dynamic ISP IP (last known: `169.0.73.54` on 2026-03-17). If admin UI becomes inaccessible, update `sftp-1-tcp-22` and `sftp-1-tcp-443` firewall rules with new IP.
-15. **SFTP Gateway port is 5022** — Updated 2026-03-17 per Colette (SBSA). Config: `/opt/sftpgw/application.properties`. To SSH into VM for config changes, you MUST use the disk detach/mount approach (SFTP Gateway intercepts port 22 — IAP SSH is blocked).
+1. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Offer Standard Bank sponsor letter or PASA application pack if requested. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
+2. **Backend redeploy to production** — Push `git push origin main` then redeploy backend to staging and production to activate the EBONF daily-limit notification message.
+3. **Reply to Colette (SBSA)** — Confirm port 5022 is ready. Await SBSA TEST server (`196.8.85.62`) connectivity test. See `docs/SBSA_H2H_SETUP_GUIDE.md` for full details.
+4. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` mismatch warning (soft_fail, non-blocking).
+5. **H2H Statements/Payments** — Awaiting Melissa's sign-on confirmation before SBSA proceeds with statement delivery config.
+6. **Field encryption: Cloud Run env vars** — Confirm `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` are set in Cloud Run service env vars for both Staging and Production.
+7. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles (`mobilemart` and `flash` users).
+8. **Capitec RTP EBONF** — ✅ Now handled with professional daily-limit message. EBONF failures are SBSA-side routing issue (daily limit), not a code bug.
+9. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` and verify `[RTP-RETRY-PBAC]` logs + account-based retry succeeds.
+10. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` callback validation (currently soft_fail).
+11. **EasyPay Cash-In activation** — Await Razine response. Set `EASYPAY_RECEIVER_ID=5063` in Secret Manager. Parallel track: EasyPay legal/NPS (item 1 above).
+12. **Flash transaction testing in Staging** — Await Tia confirmation of transaction endpoint paths.
+13. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles.
+14. **H2H Statements/Payments** — Await Melissa sign-on; decide statement format (MT940/MT942) and delivery schedule.
+15. **USDC send** — Test in Codespaces when VALR credentials available.
+16. **SFTP Gateway admin IP** — Dynamic ISP IP (last known: `169.0.73.54` on 2026-03-17). If admin UI becomes inaccessible, update `sftp-1-tcp-22` and `sftp-1-tcp-443` firewall rules with new IP.
+17. **SFTP Gateway port is 5022** — Updated 2026-03-17 per Colette (SBSA). Config: `/opt/sftpgw/application.properties`. To SSH into VM for config changes, you MUST use the disk detach/mount approach (SFTP Gateway intercepts port 22 — IAP SSH is blocked).
 
 ---
 
