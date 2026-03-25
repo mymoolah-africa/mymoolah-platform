@@ -138,7 +138,7 @@ async function initiateRtpRequest(params) {
     payerMobileNumber: payerMobileNumber || undefined,
     payerAccountNumber: payerAccountNumber || undefined,
     payerBankCode: resolvedPayerBankCode,
-    netAmount: netCredit,
+    netAmount: undefined,
     remittanceInfo: resolvedCreditorName
       ? `${resolvedCreditorName}: ${description || reference || merchantTransactionId}`.substring(0, 35)
       : (description || reference || merchantTransactionId),
@@ -524,9 +524,6 @@ async function retryRtpAsPbac(originalRtp) {
 
   const retryMerchantTxId = `${originalRtp.merchantTransactionId}-PBAC`;
 
-  const fee = originalRtp.metadata?.feeBreakdown || feeService.calculateRtpFee(0);
-  const netCredit = Number((amount - fee.totalUserFeeVatIncl).toFixed(2));
-
   // Creditor name for PBAC retry: from metadata (stored on initial RTP) or User lookup
   let creditorName = originalRtp.metadata?.creditorName;
   if (!creditorName && userId) {
@@ -544,7 +541,7 @@ async function retryRtpAsPbac(originalRtp) {
     payerMobileNumber: undefined,
     payerAccountNumber,
     payerBankCode: resolvedBankCode,
-    netAmount: netCredit,
+    netAmount: undefined,
     remittanceInfo: creditorName
       ? `${creditorName}: ${originalRtp.description || originalRtp.referenceNumber || retryMerchantTxId}`.substring(0, 35)
       : (originalRtp.description || originalRtp.referenceNumber || retryMerchantTxId),
@@ -701,7 +698,9 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     Boolean(rtpRequest.payerMobileNumber), Boolean(rtpRequest.payerAccountNumber),
     isRetryTarget, alreadyRetried);
 
+  const isPayerDecline = codes.includes('PADCL');
   const canRetryPbac = isSystemReject
+    && !isPayerDecline
     && rtpRequest.payerMobileNumber
     && rtpRequest.payerAccountNumber
     && !isRetryTarget
@@ -813,9 +812,6 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     const amount = parseFloat(rtpRequest.amount);
     const payerName = rtpRequest.payerName || 'Payer';
 
-    // PADCL = payer actively declined. Always takes priority over system codes
-    // like EBONF which may appear at group level alongside PADCL at payment level.
-    const isPayerDecline = codes.includes('PADCL');
     const isFinalSystemReject = isSystemReject && !isRetryTarget && !isPayerDecline;
     const isEbonfReject = codes.includes('EBONF') && !isPayerDecline;
     const payerBankLabel = rtpRequest.payerBankName || 'The payer\'s bank';

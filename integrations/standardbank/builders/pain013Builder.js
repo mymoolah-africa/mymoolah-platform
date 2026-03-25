@@ -85,7 +85,7 @@ function normaliseMobile(raw) {
  * @param {string} [params.payerMobileNumber] - Debtor mobile (proxy flow)
  * @param {string} [params.payerAccountNumber] - Debtor account number (PBAC flow — for debtors without PayShap proxy)
  * @param {string} [params.payerBankCode] - Debtor agent: domain (e.g. 'discoverybank'), 'bankc' in UAT
- * @param {number} [params.netAmount] - Net amount after SBSA fee (for DuePyblAmt)
+ * @param {number} [params.netAmount] - DEPRECATED: DuePyblAmt removed from Pain.013 (payer minimum enforced in wallet app)
  * @param {string} [params.creditorAccountNumber] - MMTP receiving account
  * @param {string} [params.creditorName] - Creditor display name (shown to payer on bank screen). When omitted, uses SBSA_CREDITOR_NAME. For RTP, pass e.g. "RTP requested from {walletUser}" so payer sees who requested the payment.
  * @param {string} [params.creditorOrgId] - CIPC registration
@@ -129,9 +129,6 @@ function buildPain013(params) {
   const endToEndId = baseId.substring(0, 35);
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
-  const numNetAmount = netAmount
-    ? (typeof netAmount === 'string' ? parseFloat(netAmount) : Number(netAmount))
-    : Number((numAmount - 5.00).toFixed(2));
   const now = new Date();
   const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
@@ -220,11 +217,6 @@ function buildPain013(params) {
     RmtInf: {
       Strd: [
         {
-          RfrdDocAmt: {
-            DuePyblAmt: {
-              Value: numNetAmount.toFixed(2),
-            },
-          },
           CdtrRefInf: {
             Ref: (remittanceInfo || merchantTransactionId).substring(0, 35),
           },
