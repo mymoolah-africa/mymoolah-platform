@@ -1,6 +1,37 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-03-25 - PayShap RTP fixes + Creditor name visibility + PASA TPPP withdrawal response ✅
+## 2026-03-25 PM - Yellowcard AML Policy + Corporate Policy Framework + RTP DuePyblAmt & PBAC fixes ✅
+
+### Session Overview
+Created 19 banking-grade corporate policies for Yellowcard onboarding DDQ. Built consolidated AML Policy combining sanctions screening, customer onboarding, and transaction monitoring. Fixed FNB RTP issues: removed DuePyblAmt from Pain.013 and blocked PBAC retry on payer decline.
+
+### Changes
+
+#### Corporate Policy Framework (20 new files)
+- **`docs/policies/`** (NEW directory): 19 comprehensive policies + master INDEX.md
+- Policies cover: AML/CFT, KYC/CDD, Sanctions Screening, Transaction Monitoring, Fraud Prevention, Data Protection (POPIA), Data Retention, Law Enforcement Response, Anti-Bribery & Corruption, Whistleblowing, Code of Ethics, Conflict of Interest, Information Security (ISO 27001), Incident Response, Business Continuity, Third-Party Risk, Compliance Training, Compliance Review, Enterprise Risk Management
+- **`docs/policies/INDEX.md`**: Master index with Yellowcard DDQ mapping, governance structure, regulatory alignment matrix
+- All policies reference SA law (FICA, POPIA, PRECCA, NPS Act, Companies Act) and international standards (FATF, ISO 27001/22301/31000, Basel, King IV, Mojaloop)
+
+#### Consolidated AML Policy for Yellowcard
+- **`docs/drafts/2026-03-25_yellowcard-aml-policy.md`**: Single 719-line document combining AML/CFT, Sanctions Screening (OFAC, UN, EU, SA FIC, UK OFSI), Customer Onboarding (KYC tiers, CDD levels, PEP screening), and Transaction Monitoring (real-time + batch, typologies, alerting). Plain text format for Word copy-paste.
+
+#### PayShap RTP Fixes
+- **`integrations/standardbank/builders/pain013Builder.js`**: Removed `RfrdDocAmt.DuePyblAmt` block entirely — was showing confusing "Min amount" (R4.25 net-of-fee) on FNB payer banking app. Deprecated `netAmount` parameter. (`9db8cbfa`)
+- **`services/standardbankRtpService.js`**: Added `!isPayerDecline` to PBAC retry guard — payer explicit decline (PADCL) no longer triggers account-number retry. Removed redundant `isPayerDecline` declaration. Removed fee/netCredit calculation from PBAC retry path. (`9db8cbfa`)
+
+### Testing
+- FNB RTP logs reviewed — identified DuePyblAmt and PBAC retry issues ✅
+- All policy files verified for completeness and regulatory accuracy ✅
+- Zero linter errors on all modified files ✅
+
+### Session Logs
+- `docs/session_logs/2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`
+- `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md`
+
+---
+
+## 2026-03-25 AM - PayShap RTP fixes + Creditor name visibility + PASA TPPP withdrawal response ✅
 
 ### Session Overview
 Major PayShap RTP debugging session fixing multiple SBSA Pain.013 rejections, resolving the creditor name display on the payer's banking app, and drafting PASA TPPP withdrawal functionality response for Shree.
