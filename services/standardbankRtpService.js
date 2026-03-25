@@ -809,21 +809,24 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     const amount = parseFloat(rtpRequest.amount);
     const payerName = rtpRequest.payerName || 'Payer';
 
-    // Only use "could not be delivered" for system/delivery failures (EPDNF, EBONF, etc.).
-    // PBAC retries (isRetryTarget) were delivered to the account — rejection = debtor declined; show "Declined".
-    const isFinalSystemReject = isSystemReject && !isRetryTarget;
-    const isEbonfReject = codes.includes('EBONF');
+    // PADCL = payer actively declined. Always takes priority over system codes
+    // like EBONF which may appear at group level alongside PADCL at payment level.
+    const isPayerDecline = codes.includes('PADCL');
+    const isFinalSystemReject = isSystemReject && !isRetryTarget && !isPayerDecline;
+    const isEbonfReject = codes.includes('EBONF') && !isPayerDecline;
     const payerBankLabel = rtpRequest.payerBankName || 'The payer\'s bank';
 
-    // Resolve the notification title for this rejection
     const resolveTitle = () => {
+      if (isPayerDecline) return 'Payment Request Declined';
       if (isEbonfReject) return 'PayShap Daily Limit Reached';
       if (isFinalSystemReject) return 'Payment Request Could Not Be Delivered';
       return 'Payment Request Declined';
     };
 
-    // Resolve the notification body for this rejection
     const resolveMessage = () => {
+      if (isPayerDecline) {
+        return `${payerName} declined your PayShap request for R ${amount.toFixed(2)}.`;
+      }
       if (isEbonfReject) {
         return `Your PayShap Request to Pay of R ${amount.toFixed(2)} to ${payerName} could not be processed. ` +
           `${payerBankLabel} has reached its daily PayShap transaction limit. ` +
@@ -832,7 +835,7 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
       if (isFinalSystemReject) {
         return `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`;
       }
-      return `${payerName} declined your PayShap request for R ${amount.toFixed(2)}`;
+      return `${payerName} declined your PayShap request for R ${amount.toFixed(2)}.`;
     };
 
     const titleMap = {
