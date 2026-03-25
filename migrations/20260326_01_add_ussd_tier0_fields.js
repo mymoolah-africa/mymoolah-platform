@@ -48,11 +48,18 @@ module.exports = {
       comment: 'Preferred language code for USSD menus (en, zu, af, st, etc.)',
     });
 
-    // Extend kycStatus enum to include ussd_basic
-    // PostgreSQL requires ALTER TYPE to add a new value to an existing enum
-    await queryInterface.sequelize.query(
-      `ALTER TYPE "enum_users_kycStatus" ADD VALUE IF NOT EXISTS 'ussd_basic';`
+    // Extend kycStatus enum to include ussd_basic (only if column uses an enum type)
+    const [colInfo] = await queryInterface.sequelize.query(
+      `SELECT data_type, udt_name FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'kycStatus'`
     );
+    if (colInfo[0] && colInfo[0].data_type === 'USER-DEFINED') {
+      await queryInterface.sequelize.query(
+        `ALTER TYPE "${colInfo[0].udt_name}" ADD VALUE IF NOT EXISTS 'ussd_basic';`
+      );
+      console.log(`✅ Added ussd_basic to enum ${colInfo[0].udt_name}`);
+    } else {
+      console.log('ℹ️  kycStatus is VARCHAR — no enum to alter (ussd_basic accepted as-is)');
+    }
 
     await queryInterface.addIndex('users', ['registration_channel'], {
       name: 'idx_users_registration_channel',
