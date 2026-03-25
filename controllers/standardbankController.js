@@ -34,6 +34,67 @@ function getBankCodeFromName(bankName) {
 }
 
 /**
+ * Per-bank maximum account number lengths (SA banks).
+ * Leading zeros are significant for most banks. We only strip leading zeros
+ * when the entered number EXCEEDS the bank's maximum valid length — this
+ * catches the common user error of copying a zero-padded number from a
+ * bank statement or EFT file (e.g. ABSA 01052660676 → 1052660676).
+ *
+ * Sources: Netcash account validation rules, SBSA PayShap spec, bank docs.
+ */
+const BANK_ACCOUNT_MAX_LENGTHS = {
+  'ABSA Bank': 10, 'Absa Bank Limited': 10,
+  'Standard Bank': 11, 'Standard Bank of SA': 11,
+  'Capitec Bank': 10, 'Capitec Bank Limited': 10, 'Capitec Business': 10,
+  'First National Bank (FNB)': 11, 'First National Bank': 11, 'FNB': 11,
+  'Nedbank': 10, 'Nedbank Limited': 10,
+  'Discovery Bank': 11, 'Discovery Bank Limited': 11,
+  'TymeBank': 11, 'Tyme Bank Limited': 11,
+  'African Bank': 11, 'African Bank Limited': 11,
+  'Investec Bank': 11, 'Investec Bank Limited': 11,
+  'Postbank': 11,
+  'Bidvest Bank': 11, 'Bidvest Bank Limited': 11, 'Bidvest Bank Alliances': 11,
+  'HBZ Bank': 11, 'HBZ Bank Limited': 11,
+  'OM Bank': 11, 'OM Bank Limited': 11,
+  'Al Baraka Bank': 11,
+  'Sasfin Bank': 11, 'Sasfin Bank Limited': 11,
+  'eNL Mutual Bank': 11,
+};
+
+/**
+ * Normalize a bank account number by stripping leading zeros when the number
+ * exceeds the bank's maximum valid length. Safe for all SA banks — never
+ * strips zeros that are part of a valid-length account number.
+ *
+ * @param {string} accountNumber - Raw account number (digits only expected)
+ * @param {string} [bankName] - Bank name for per-bank length lookup
+ * @returns {string} Normalized account number
+ */
+function normalizeAccountNumber(accountNumber, bankName) {
+  if (!accountNumber) return accountNumber;
+
+  const digits = accountNumber.replace(/\D/g, '');
+  if (!digits) return accountNumber;
+
+  const maxLen = (bankName && BANK_ACCOUNT_MAX_LENGTHS[bankName]) || 11;
+
+  if (digits.length > maxLen && digits.startsWith('0')) {
+    const stripped = digits.replace(/^0+/, '');
+    const normalized = stripped.length < maxLen
+      ? digits.slice(digits.length - maxLen)
+      : stripped;
+
+    if (normalized !== digits) {
+      console.log('[RTP] Account number normalized: %s → %s (bank=%s, maxLen=%d)',
+        digits, normalized, bankName || 'unknown', maxLen);
+    }
+    return normalized;
+  }
+
+  return digits;
+}
+
+/**
  * Map bank name to SBSA PayShap proxy domain identifier.
  * Used for RTP DbtrAgt.FinInstnId.Othr.Id when the debtor is identified by proxy.
  * Source: SBSA "PROD Branch codes and Domains.xlsx" (March 2026).
@@ -535,6 +596,10 @@ async function initiatePayShapRtp(req, res) {
       return res.status(400).json({ success: false, message: 'payerBankName is required for account-based RTP' });
     }
 
+    const normalizedAccountNumber = payerAccountNumber
+      ? normalizeAccountNumber(payerAccountNumber, payerBankName)
+      : null;
+
     const payerBankCode = payerBankName ? getBankCodeFromName(payerBankName) : null;
     const payerProxyDomain = payerBankName ? getProxyDomainFromName(payerBankName) : null;
 
@@ -546,7 +611,7 @@ async function initiatePayShapRtp(req, res) {
       currency,
       payerName,
       payerMobileNumber: payerMobileNumber || null,
-      payerAccountNumber: payerAccountNumber || null,
+      payerAccountNumber: normalizedAccountNumber,
       payerBankCode,
       payerProxyDomain,
       payerBankName,
@@ -864,4 +929,5 @@ module.exports = {
   initiatePayShapRtp,
   getRppStatus,
   getRtpStatus,
+  normalizeAccountNumber,
 };

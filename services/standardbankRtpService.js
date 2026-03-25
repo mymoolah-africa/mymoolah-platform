@@ -495,8 +495,11 @@ function extractRejectionCodes(rawBody) {
  * sends to SBSA, and creates a linked retry record.
  */
 async function retryRtpAsPbac(originalRtp) {
-  const { userId, walletId, payerAccountNumber, payerBankCode, payerBankName, payerName } = originalRtp;
+  const { userId, walletId, payerBankCode, payerBankName, payerName } = originalRtp;
   const amount = parseFloat(originalRtp.amount);
+
+  const { normalizeAccountNumber } = require('../controllers/standardbankController');
+  const payerAccountNumber = normalizeAccountNumber(originalRtp.payerAccountNumber, payerBankName);
 
   if (!payerAccountNumber) {
     console.warn('[RTP-RETRY-PBAC] Cannot retry — no payerAccountNumber on record');

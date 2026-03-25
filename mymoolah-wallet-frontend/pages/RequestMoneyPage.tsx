@@ -104,6 +104,30 @@ const getBankCode = (bankName: string): string => {
   return bankCodes[bankName] || '';
 };
 
+const BANK_ACCOUNT_MAX_LENGTHS: { [key: string]: number } = {
+  'ABSA Bank': 10,
+  'Standard Bank': 11,
+  'Capitec Bank': 10,
+  'First National Bank (FNB)': 11,
+  'Nedbank': 10,
+  'Discovery Bank': 11,
+  'TymeBank': 11,
+  'African Bank': 11,
+  'Investec Bank': 11,
+  'Bidvest Bank': 11,
+};
+
+const normalizeAccountNumber = (acctNum: string, bankName?: string): string => {
+  const digits = acctNum.replace(/\D/g, '');
+  if (!digits) return acctNum;
+  const maxLen = (bankName && BANK_ACCOUNT_MAX_LENGTHS[bankName]) || 11;
+  if (digits.length > maxLen && digits.startsWith('0')) {
+    const stripped = digits.replace(/^0+/, '');
+    return stripped.length < maxLen ? digits.slice(digits.length - maxLen) : stripped;
+  }
+  return digits;
+};
+
 export function RequestMoneyPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -231,8 +255,14 @@ export function RequestMoneyPage() {
     if (formData.accountType === 'bank') {
       if (!formData.payerAccountNumber?.trim()) {
         newErrors.payerAccountNumber = 'Payer account number is required';
-      } else if (!/^[0-9]{8,12}$/.test(formData.payerAccountNumber)) {
-        newErrors.payerAccountNumber = 'Account number must be 8-12 digits';
+      } else {
+        const normalized = normalizeAccountNumber(formData.payerAccountNumber, formData.payerBankName);
+        const maxLen = (formData.payerBankName && BANK_ACCOUNT_MAX_LENGTHS[formData.payerBankName]) || 11;
+        if (!/^[0-9]+$/.test(normalized)) {
+          newErrors.payerAccountNumber = 'Account number must contain only digits';
+        } else if (normalized.length < 7 || normalized.length > maxLen) {
+          newErrors.payerAccountNumber = `Account number must be 7-${maxLen} digits for ${formData.payerBankName || 'this bank'}`;
+        }
       }
 
       if (!formData.payerBankName?.trim()) {
@@ -376,7 +406,7 @@ export function RequestMoneyPage() {
             currency: 'ZAR',
             payerName: formData.payerName,
             payerMobileNumber: normalizeSAMobile(formData.payerMobileNumber),
-            payerAccountNumber: formData.payerAccountNumber,
+            payerAccountNumber: normalizeAccountNumber(formData.payerAccountNumber || '', formData.payerBankName),
             payerBankName: formData.payerBankName,
             description: formData.reference || `Money request from ${user.name}`,
           }),
