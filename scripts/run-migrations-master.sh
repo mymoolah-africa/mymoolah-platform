@@ -137,18 +137,16 @@ const migrationName = process.env.MIGRATION_NAME;
 (async () => {
   try {
     let databaseURL;
-    let getAdminClient;
     if (environment === 'uat') {
-      databaseURL = helper.getUATAdminDatabaseURL();
-      getAdminClient = helper.getUATAdminClient;
-      console.log('✅ Using UAT admin database connection (postgres user)');
+      // UAT: use mymoolah_app (table owner) — Cloud SQL's postgres
+      // (cloudsqlsuperuser) cannot ALTER tables owned by mymoolah_app
+      databaseURL = helper.getUATDatabaseURL();
+      console.log('✅ Using UAT database connection (mymoolah_app — table owner)');
     } else if (environment === 'staging') {
       databaseURL = helper.getStagingAdminDatabaseURL();
-      getAdminClient = helper.getStagingAdminClient;
       console.log('✅ Using Staging admin database connection (postgres user)');
     } else if (environment === 'production') {
       databaseURL = helper.getProductionAdminDatabaseURL();
-      getAdminClient = helper.getProductionAdminClient;
       console.log('✅ Using Production admin database connection (postgres user)');
     } else {
       throw new Error(`Invalid environment: ${environment}`);
@@ -156,52 +154,6 @@ const migrationName = process.env.MIGRATION_NAME;
 
     process.env.DATABASE_URL = databaseURL;
     process.env.NODE_ENV = environment === 'uat' ? 'development' : (environment === 'staging' ? 'staging' : 'production-proxy');
-
-    // Fix SequelizeMeta permissions before running migrations.
-    // In Cloud SQL, postgres (cloudsqlsuperuser) cannot access tables created
-    // by mymoolah_app. We connect as mymoolah_app (table owner) to grant
-    // access, then connect as postgres (admin) to transfer ownership.
-    let appClient;
-    try {
-      const getAppClient = environment === 'uat' ? helper.getUATClient
-        : environment === 'staging' ? helper.getStagingClient
-        : helper.getProductionClient;
-      appClient = await getAppClient();
-      await appClient.query(`
-        DO $$
-        BEGIN
-          IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'SequelizeMeta') THEN
-            EXECUTE 'GRANT ALL ON TABLE "SequelizeMeta" TO postgres';
-            RAISE NOTICE 'SequelizeMeta: granted ALL to postgres';
-          END IF;
-        END $$;
-      `);
-      console.log('✅ SequelizeMeta permissions granted to postgres (via app user)');
-    } catch (permErr) {
-      console.warn('⚠️  Could not fix SequelizeMeta permissions (non-fatal):', permErr.message);
-    } finally {
-      if (appClient) appClient.release();
-    }
-
-    // Now as admin, take ownership so future sequelize-cli runs work
-    let adminClient;
-    try {
-      adminClient = await getAdminClient();
-      await adminClient.query(`
-        DO $$
-        BEGIN
-          IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'SequelizeMeta') THEN
-            EXECUTE 'ALTER TABLE "SequelizeMeta" OWNER TO postgres';
-            RAISE NOTICE 'SequelizeMeta: ownership transferred to postgres';
-          END IF;
-        END $$;
-      `);
-      console.log('✅ SequelizeMeta ownership transferred to postgres');
-    } catch (ownerErr) {
-      console.warn('⚠️  Could not transfer SequelizeMeta ownership (non-fatal):', ownerErr.message);
-    } finally {
-      if (adminClient) adminClient.release();
-    }
 
     const { execSync } = require('child_process');
     const cmd = migrationName
