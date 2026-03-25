@@ -130,13 +130,6 @@ async function initiateRtpRequest(params) {
       ? (payerBankCode || payerProxyDomain || 'bankc')
       : (payerProxyDomain || payerBankCode || 'bankc');
 
-  // Build remittance info — prefix with requester name so the payer can see
-  // who is requesting even if SBSA overrides Cdtr.Nm with the entity name.
-  const baseRemittance = description || reference || merchantTransactionId;
-  const remittanceInfo = resolvedCreditorName
-    ? `RTP from ${resolvedCreditorName} - ${baseRemittance}`
-    : baseRemittance;
-
   const { pain013, msgId, uetr } = buildPain013({
     merchantTransactionId,
     amount: numAmount,
@@ -146,7 +139,10 @@ async function initiateRtpRequest(params) {
     payerAccountNumber: payerAccountNumber || undefined,
     payerBankCode: resolvedPayerBankCode,
     netAmount: netCredit,
-    remittanceInfo,
+    remittanceInfo: description || reference || merchantTransactionId,
+    unstructuredInfo: resolvedCreditorName
+      ? `RTP from ${resolvedCreditorName}`
+      : undefined,
     expiryMinutes,
     creditorName: resolvedCreditorName || undefined,
   });

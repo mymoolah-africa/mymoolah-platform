@@ -90,7 +90,8 @@ function normaliseMobile(raw) {
  * @param {string} [params.creditorName] - Creditor display name (shown to payer on bank screen). When omitted, uses SBSA_CREDITOR_NAME. For RTP, pass e.g. "RTP requested from {walletUser}" so payer sees who requested the payment.
  * @param {string} [params.creditorOrgId] - CIPC registration
  * @param {string} [params.creditorBankBranchCode] - SBSA branch code
- * @param {string} [params.remittanceInfo] - Payment reference
+ * @param {string} [params.remittanceInfo] - Payment reference (max 35 chars per ISO 20022 CdtrRefInf.Ref)
+ * @param {string} [params.unstructuredInfo] - Free-text info shown to payer (max 140 chars, goes into RmtInf.Ustrd)
  * @param {number} [params.expiryMinutes] - RTP expiry in minutes (default 60)
  */
 function buildPain013(params) {
@@ -108,6 +109,7 @@ function buildPain013(params) {
     creditorOrgId = process.env.SBSA_ORG_ID || '',
     creditorBankBranchCode = process.env.SBSA_CREDITOR_BANK_BRANCH || '051001',
     remittanceInfo,
+    unstructuredInfo,
     expiryMinutes = 60,
   } = params;
 
@@ -219,6 +221,7 @@ function buildPain013(params) {
       Nm: creditorName.substring(0, 140),
     },
     RmtInf: {
+      Ustrd: (unstructuredInfo || '').substring(0, 140),
       Strd: [
         {
           RfrdDocAmt: {
@@ -227,7 +230,7 @@ function buildPain013(params) {
             },
           },
           CdtrRefInf: {
-            Ref: (remittanceInfo || merchantTransactionId).substring(0, 140),
+            Ref: (remittanceInfo || merchantTransactionId).substring(0, 35),
           },
         },
       ],
