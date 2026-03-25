@@ -1,5 +1,34 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-25 - PayShap RTP fixes + Creditor name visibility + PASA TPPP withdrawal response ✅
+
+### Session Overview
+Major PayShap RTP debugging session fixing multiple SBSA Pain.013 rejections, resolving the creditor name display on the payer's banking app, and drafting PASA TPPP withdrawal functionality response for Shree.
+
+### Changes
+
+#### PayShap RTP Fixes (multiple commits)
+- **`services/standardbankRtpService.js`**: Wallet holder name prepended to `remittanceInfo` so payer sees "Andre Botes: description" in payment reference (`7450cced`). Removed `unstructuredInfo` parameter (SBSA rejects `Ustrd`).
+- **`integrations/standardbank/builders/pain013Builder.js`**: Removed `RmtInf.Ustrd` — SBSA only accepts `Strd` (`71d72951`). `CdtrRefInf.Ref` already truncated to 35 chars (`a5133c49`).
+- **`controllers/standardbankController.js`**: Per-bank account normalization (`62e13b11`); PADCL decline priority over EBONF (`6a1a8f30`).
+- **`mymoolah-wallet-frontend/pages/RequestMoneyPage.tsx`**: Frontend per-bank account validation with digit count hints (`043f9111`).
+- **Pain.013 DuePyblAmt**: Reverted to net amount — SBSA rejects when `DuePyblAmt == Amt` (`b3ca459e`).
+
+#### PASA TPPP Withdrawal Response (`51fdda88`)
+- **`docs/drafts/2026-03-25_shree-pasa-tppp-withdrawal-reply.md`**: Draft reply to Shree — cash-out = Flash eeziCash voucher resale (VAS), not banking withdrawal; no additional Standard Bank sponsorship required.
+- **`docs/drafts/2026-03-25_pasa-tppp-withdrawal-flow-diagrams.*`**: Supporting flow diagrams (MD, HTML, PDF) covering Flash eeziCash cash-out, EasyPay deposit, MobileMart bill payment, and integrated retail network.
+
+### Testing
+- Staging (production creds): RTP accepted (HTTP 202), PDNG callbacks received ✅
+- Capitec banking app: Payment reference shows "Andre Botes: MyMoolah RTP Test" ✅
+- Capitec transaction history: "Andre Botes: MyMoolah RTP T..." (name visible) ✅
+- Compared to March 21: Previously showed generic "MyMoolah RTP Test" — now shows wallet holder name ✅
+
+### Session Log
+- `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md`
+
+---
+
 ## 2026-03-24 PM - EasyPay TPPP / NPS legal positioning (documentation) ✅
 
 ### Session overview

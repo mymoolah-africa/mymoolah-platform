@@ -664,34 +664,34 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — PayShap RTP Peach→SBSA Fix + Peach Decommission  
-**Last Session**: 2026-03-21 — Fixed critical wrong-integration bug; decommissioned Peach PayShap
+**Session Status**: ✅ **COMPLETE** — PayShap RTP Fixes + Creditor Name + PASA TPPP Withdrawal  
+**Last Session**: 2026-03-25 — Multiple RTP Pain.013 fixes; creditor name in payment reference; PASA response for Shree
 
-### **Most Recent Work (2026-03-21)**
-- **PayShap RTP fix**: Frontend `pages/RequestMoneyPage.tsx` was calling decommissioned Peach endpoint `/api/v1/peach/request-money`. Switched to Standard Bank `/api/v1/standardbank/payshap/rtp`. Single-line fix.
-- **Creditor name resolved**: SBSA controller resolves wallet holder's `firstName`/`lastName` from DB. Debtor notifications now show "Request to Pay from Andre Botes" instead of "MyMoolah Treasury".
-- **UAT test passed**: HTTP 202 from SBSA sandbox with test account `000602739172`.
-- **Staging test passed (production credentials)**: Full end-to-end — PDNG → ACCC → wallet credited R10.00.
-- **Peach PayShap decommissioned**: All routes commented out in `routes/peach.js`; proxy route removed from `server.js`; archived headers on controller and client; `credentials.peach = false` hardcoded. Code preserved for potential reactivation.
-- **Earlier in session**: Dialog scroll fix, microphone mobile fix, Transact page UI updates (Coming Soon badges, Top-up with Voucher card), EFT copy button, fee text removal.
+### **Most Recent Work (2026-03-25)**
+- **PayShap RTP Pain.013 fixes**: Fixed EDRIL rejection (CdtrRefInf.Ref 35-char limit), Ustrd rejection (removed — SBSA only accepts Strd), DuePyblAmt (must be net amount, not equal to Amt), PADCL decline notification priority over EBONF.
+- **Creditor name visibility (CONFIRMED)**: SBSA PayShap directory overrides `Cdtr.Nm` with "MYMOOLAH (PTY) LTD". Fix: wallet holder name prepended to `CdtrRefInf.Ref` (payment reference). Capitec now shows "Andre Botes: MyMoolah RTP Test" — confirmed via Capitec banking app screenshot.
+- **Per-bank account normalization**: Leading zeros stripped when exceeding bank's max length (ABSA/Capitec: 10 digits, SBSA/FNB: 11). Applied in controller, service, and frontend.
+- **PASA TPPP withdrawal response**: Drafted email for Shree + supporting flow diagrams (MD, HTML, PDF). Cash-out = Flash eeziCash voucher resale (VAS), not banking withdrawal.
 
-### **Previous Work (2026-03-17)**
-- **SFTP Gateway port 5022**: Fixed for SBSA H2H Push/Pull.
-- **EBONF notification**: PayShap Daily Limit Reached message.
+### **Previous Work (2026-03-24)**
+- **SBSA SOAP credit notification handler**: XML parser for H2H real-time deposits.
+- **EasyPay TPPP legal draft**: Email for Nkululeko clarifying single-creditor model.
 
 ### **Current State**
 - SFTP Gateway: `34.35.137.166`, **port 5022**, admin `https://34.35.137.166` — ✅ Running
 - SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | VPN resolved (Open Internet) ✅ | PGP not required ✅ | File names confirmed ✅ | Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)
-- PayShap RTP: Standard Bank ✅ (Peach DECOMMISSIONED). Creditor name shows wallet holder name ✅
+- PayShap RTP: Standard Bank ✅ (Peach DECOMMISSIONED). Creditor name in payment reference ✅ (Capitec confirmed)
 - Peach Payments: ARCHIVED (2026-03-21). See `routes/peach.js` for reactivation steps.
 - Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
-- **Production redeploy required** — frontend rebuild + backend restart to activate SBSA SOAP handler, RTP fix, and Peach decommission
+- **Production redeploy required** — all RTP fixes, SOAP handler, account normalization, Peach decommission
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
 2. Read this file and 2–3 recent session logs
 3. Do NOT reactivate Peach Payments without explicit approval from Andre
-4. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
+4. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+5. `DuePyblAmt` must always be less than `Amt` — SBSA rejects equal values
+6. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
 ---
 
@@ -699,6 +699,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 25 (14:00) | **PayShap RTP fixes + creditor name + PASA TPPP withdrawal**: Fixed EDRIL, Ustrd, DuePyblAmt, PADCL priority. Creditor name in CdtrRefInf.Ref — Capitec confirms "Andre Botes: MyMoolah RTP Test". Per-bank account normalization. PASA withdrawal response for Shree (email + flow diagrams). Session log: `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md` |
 | Mar 24 (19:00) | **SBSA H2H documentation sync**: Updated all docs with confirmed status — Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min. Added SBSA SOAP CHANGELOG entry. Cleaned up duplicate priorities. |
 | Mar 24 (15:30) | **EasyPay TPPP / NPS legal draft**: Email for Nkululeko clarifying single-creditor collection model vs multi-layer aggregation concern; sponsor bank + downstream scope. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md` |
 | Mar 24 (09:00) | **SBSA SOAP credit notification handler**: Built `sbsaSoapParser.js`, refactored notification webhook for SOAP XML + JSON. Added `fast-xml-parser`. Tested with SBSA sample. Confirmed with Colette: Open Internet, PGP not required, file names accepted. Session log: `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md` |
