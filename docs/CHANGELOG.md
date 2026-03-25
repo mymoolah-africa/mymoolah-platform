@@ -1,5 +1,59 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-25 Evening - USSD Channel (Cellfind) Phase 1 MVP ✅
+
+### Session Overview
+Implemented the full USSD channel for MyMoolah via the Cellfind gateway (Phase 1 MVP): database migration for Tier 0 USSD fields, Redis-backed sessions, PIN authentication with progressive lockout, 22-state menu engine, Express routes with IP whitelist and per-MSISDN rate limiting, SMS confirmation templates, integration documentation, and automated tests. UAT end-to-end verified in Codespaces.
+
+### Changes
+
+#### Database
+- **`migrations/20260326_01_add_ussd_tier0_fields.js`**: Adds `ussd_pin`, `ussd_pin_attempts`, `ussd_locked_until`, `registration_channel`, `preferred_language` to `users`; extends `kycStatus` enum with `ussd_basic`.
+
+#### Services & Controller
+- **`services/ussdSessionService.js`**: Redis session CRUD with 180s TTL (`createSession`, `getSession`, `updateSession`, `destroySession`).
+- **`services/ussdAuthService.js`**: MSISDN lookup; PIN verify/set; progressive lockout (30min / 2hr / 24hr); Tier 0 registration (SA ID Luhn + passport regex); wallet creation.
+- **`services/ussdMenuService.js`**: State machine with 22 menu states (welcome, registration, PIN, balance, airtime, data, eeziCash cash-out, mini statement, change PIN, referral, help); Tier 0 limits R500/day, R3000/month.
+- **`controllers/ussdController.js`**: Cellfind request parsing, session orchestration, XML response builder with escaping; MSISDN masking in logs.
+
+#### Routes, Middleware, Server, Model
+- **`routes/ussd.js`**, **`middleware/ussdIpWhitelist.js`**: GET/POST `/api/v1/ussd` with Cellfind IP allowlist.
+- **`server.js`**: `USSD_ENABLED` feature flag; USSD rate limiter (60/hour per MSISDN); health check updated.
+- **`models/User.js`**: USSD columns and `ussd_basic` on `kycStatus`.
+
+#### SMS & Security
+- **`services/smsService.js`**: Six USSD SMS templates (registration, airtime, data, cash out, send money, receive money).
+- **`middleware/securityMiddleware.js`**: Exempt `/api/v1/ussd` from XSS pattern that false-positived on Cellfind `networkid=1`.
+
+#### Scripts & Migrations Runner
+- **`scripts/run-ussd-migration.js`**: Alternative UAT migration runner using `getUATClient()` from `db-connection-helper.js`.
+- **`scripts/run-migrations-master.sh`**: UAT migrations use app user (`mymoolah_app`) so `ALTER` succeeds on Cloud SQL tables owned by app (not `postgres` superuser).
+
+#### Documentation
+- **`docs/USSD_INTEGRATION_GUIDE.md`**: Operator and technical integration guide.
+- **`integrations/cellfind/CELLFIND_REFERENCE.md`**: Cellfind gateway reference.
+
+#### Tests
+- **`tests/ussd.test.js`**: 39 unit and integration tests (menu state machine, XML response format, auth validators, IP whitelist).
+
+#### Environment
+- **`.env.codespaces`**: USSD environment variables section (file gitignored; variables documented in USSD integration guide).
+
+#### Redis
+- Removed `enableOfflineQueue: false` from USSD Redis client configuration so commands are not rejected before connection establishment.
+
+### Testing
+- UAT E2E in Codespaces: existing user — set PIN, main menu, balance (e.g. R33,134.00); new user — registration menu; response times ~146ms (within 20s USSD constraint); PII masking in logs (`2782***4567`) ✅
+- `tests/ussd.test.js` — 39 cases ✅
+
+### Session Log
+- `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`
+
+### Agent Handover
+- **`docs/agent_handover.md`**: v2.33.0; latest feature USSD; priorities and document map updated.
+
+---
+
 ## 2026-03-25 PM - Yellowcard AML Policy + Corporate Policy Framework + RTP DuePyblAmt & PBAC fixes ✅
 
 ### Session Overview
