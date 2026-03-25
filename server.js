@@ -159,6 +159,13 @@ const reconciliationRoutes = require('./routes/reconciliation.js');
 const adRoutes = require('./routes/ads.js'); // Watch to Earn
 const usdcRoutes = require('./routes/usdc.js'); // USDC Send
 const nfcRoutes = require('./routes/nfc.js'); // NFC Deposit
+let ussdRoutes;
+let ussdEnabled = false;
+if (process.env.USSD_ENABLED === 'true') {
+  ussdRoutes = require('./routes/ussd.js');
+  ussdEnabled = true;
+  console.log('✅ USSD routes loaded (Cellfind gateway)');
+}
 const { LedgerAccount, sequelize } = require('./models');
 
 // Validate external service credentials
@@ -375,6 +382,23 @@ const financialLimiter = rateLimit({
   }
 });
 
+const ussdLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  validate: { trustProxy: false },
+  keyGenerator: (req) => (req.query.msisdn || getClientIP(req)) + '-ussd',
+  skip: (req) => req.method === 'OPTIONS' ||
+    (process.env.NODE_ENV && process.env.NODE_ENV !== 'production') ||
+    process.env.STAGING === 'true',
+  handler: (req, res) => {
+    res.status(429).type('text/xml').send(
+      '<?xml version="1.0"?><msg><response type="3">Too many requests. Try again later.</response></msg>'
+    );
+  }
+});
+
 // Apply rate limiting to all routes
 app.use(limiter);
 
@@ -465,6 +489,13 @@ app.use('/api/v1/reconciliation', reconciliationRoutes);
 app.use('/api/v1/usdc', usdcRoutes); // USDC Send
 app.use('/api/v1/nfc', nfcRoutes); // NFC Deposit
 
+// USSD Channel (Cellfind gateway)
+if (ussdEnabled) {
+  app.use('/api/v1/ussd', ussdLimiter);
+  app.use('/api/v1/ussd', ussdRoutes);
+  console.log('✅ USSD endpoint mounted at /api/v1/ussd');
+}
+
 // Conditionally load Flash routes
 if (flashRoutesLoaded) {
   app.use('/api/v1/flash', flashRoutes);
@@ -506,6 +537,7 @@ app.get('/health', (req, res) => {
       flash: flashRoutesLoaded,
       mobilemart: mobilemartRoutesLoaded,
       standardbankPayShap: standardbankPayShapEnabled,
+      ussd: ussdEnabled,
       peach: 'archived (2026-03-21)'
     },
     uptime: process.uptime(),

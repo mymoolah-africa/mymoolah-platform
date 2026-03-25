@@ -110,7 +110,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'active',
     },
     kycStatus: {
-      type: DataTypes.ENUM('not_started', 'pending', 'verified', 'rejected'),
+      type: DataTypes.ENUM('not_started', 'pending', 'verified', 'rejected', 'ussd_basic'),
       allowNull: false,
       defaultValue: 'not_started',
     },
@@ -138,6 +138,29 @@ module.exports = (sequelize, DataTypes) => {
     lockedUntil: {
       type: DataTypes.DATE,
       allowNull: true,
+    },
+    ussd_pin: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    ussd_pin_attempts: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    ussd_locked_until: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    registration_channel: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'app',
+    },
+    preferred_language: {
+      type: DataTypes.STRING(5),
+      allowNull: false,
+      defaultValue: 'en',
     },
     createdAt: {
       type: DataTypes.DATE,
