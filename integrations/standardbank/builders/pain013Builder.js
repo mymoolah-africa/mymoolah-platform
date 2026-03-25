@@ -217,6 +217,11 @@ function buildPain013(params) {
     RmtInf: {
       Strd: [
         {
+          RfrdDocAmt: {
+            DuePyblAmt: {
+              Value: numAmount.toFixed(2),
+            },
+          },
           CdtrRefInf: {
             Ref: (remittanceInfo || merchantTransactionId).substring(0, 35),
           },
