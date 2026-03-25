@@ -140,9 +140,6 @@ async function initiateRtpRequest(params) {
     payerBankCode: resolvedPayerBankCode,
     netAmount: netCredit,
     remittanceInfo: description || reference || merchantTransactionId,
-    unstructuredInfo: resolvedCreditorName
-      ? `RTP from ${resolvedCreditorName}`
-      : undefined,
     expiryMinutes,
     creditorName: resolvedCreditorName || undefined,
   });

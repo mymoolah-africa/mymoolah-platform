@@ -91,7 +91,6 @@ function normaliseMobile(raw) {
  * @param {string} [params.creditorOrgId] - CIPC registration
  * @param {string} [params.creditorBankBranchCode] - SBSA branch code
  * @param {string} [params.remittanceInfo] - Payment reference (max 35 chars per ISO 20022 CdtrRefInf.Ref)
- * @param {string} [params.unstructuredInfo] - Free-text info shown to payer (max 140 chars, goes into RmtInf.Ustrd)
  * @param {number} [params.expiryMinutes] - RTP expiry in minutes (default 60)
  */
 function buildPain013(params) {
@@ -109,7 +108,6 @@ function buildPain013(params) {
     creditorOrgId = process.env.SBSA_ORG_ID || '',
     creditorBankBranchCode = process.env.SBSA_CREDITOR_BANK_BRANCH || '051001',
     remittanceInfo,
-    unstructuredInfo,
     expiryMinutes = 60,
   } = params;
 
@@ -221,7 +219,6 @@ function buildPain013(params) {
       Nm: creditorName.substring(0, 140),
     },
     RmtInf: {
-      Ustrd: (unstructuredInfo || '').substring(0, 140),
       Strd: [
         {
           RfrdDocAmt: {
