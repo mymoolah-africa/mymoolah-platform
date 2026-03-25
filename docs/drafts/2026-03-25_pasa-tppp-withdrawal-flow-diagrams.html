@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026-03-25_pasa-tppp-withdrawal-flow-diagrams - MyMoolah Treasury Platform</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+        }
+        
+        h1 {
+            color: #1a73e8;
+            border-bottom: 3px solid #1a73e8;
+            padding-bottom: 10px;
+            margin-top: 30px;
+            page-break-after: avoid;
+        }
+        
+        h2 {
+            color: #34a853;
+            border-bottom: 2px solid #e8eaed;
+            padding-bottom: 8px;
+            margin-top: 25px;
+            page-break-after: avoid;
+        }
+        
+        h3 {
+            color: #ea4335;
+            margin-top: 20px;
+            page-break-after: avoid;
+        }
+        
+        h4 {
+            color: #fbbc04;
+            margin-top: 15px;
+            page-break-after: avoid;
+        }
+        
+        h5, h6 {
+            color: #5f6368;
+            margin-top: 15px;
+            page-break-after: avoid;
+        }
+        
+        code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        pre {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            overflow-x: auto;
+            page-break-inside: avoid;
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.9em;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            page-break-inside: avoid;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        th {
+            background: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        blockquote {
+            border-left: 4px solid #1a73e8;
+            padding-left: 15px;
+            margin: 15px 0;
+            color: #666;
+            font-style: italic;
+        }
+        
+        a {
+            color: #1a73e8;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        hr {
+            border: none;
+            border-top: 2px solid #e8eaed;
+            margin: 30px 0;
+        }
+        
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+        }
+        
+        li {
+            margin: 5px 0;
+        }
+        
+        img {
+            max-width: 100%;
+            height: auto;
+            page-break-inside: avoid;
+        }
+        
+        .toc {
+            background: #f8f9fa;
+            border: 1px solid #e8eaed;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+        
+        .toc ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .toc li {
+            margin: 5px 0;
+        }
+        
+        .toc a {
+            color: #1a73e8;
+        }
+        
+        @media print {
+            body {
+                padding: 0;
+            }
+            
+            h1, h2, h3, h4, h5, h6 {
+                page-break-after: avoid;
+            }
+            
+            pre, table, blockquote, img {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+<h1>MyMoolah Treasury Platform — TPPP Withdrawal Functionality</h1>
+<p><strong>Prepared for</strong>: PASA (via APSA / Standard Bank Sponsorship)
+<strong>Date</strong>: 25 March 2026
+<strong>Document Reference</strong>: MMTP-TPPP-WITHDRAWAL-001
+<strong>Prepared by</strong>: MyMoolah (Pty) Ltd</p>
+<hr>
+<h2>1. Executive Summary</h2>
+<p>This document addresses PASA&#39;s query regarding the withdrawal functionality within the MyMoolah wallet service, specifically the <strong>Cash-Out Network</strong> and <strong>Integrated Retail Network</strong> referenced in our TPPP business case.</p>
+<p><strong>Key clarification</strong>: MyMoolah does <strong>not</strong> operate its own cash-out or withdrawal infrastructure. The &quot;Cash-Out Network&quot; and &quot;Integrated Retail Network&quot; referenced in our business case describe <strong>third-party VAS product resale</strong> and <strong>partner integrations</strong> — not proprietary withdrawal mechanisms that would require additional Standard Bank sponsorship beyond the existing TPPP scope.</p>
+<hr>
+<h2>2. Cash-Out Network — Flash eeziCash Voucher (Resale Model)</h2>
+<h3>2.1 What It Is</h3>
+<p>The &quot;Cash-Out Network&quot; referenced in our business case describes the <strong>resale of Flash eeziCash voucher PINs</strong>. MyMoolah is a <strong>registered reseller</strong> of Flash&#39;s prepaid voucher products via the <strong>Flash Partner API v4</strong>.</p>
+<ul>
+<li><strong>Flash</strong> (Pty) Ltd is itself a <strong>registered TPPP</strong> and holds the necessary licences and agreements with its retail agent network.</li>
+<li>MyMoolah purchases the eeziCash voucher product from Flash on behalf of the wallet user.</li>
+<li><strong>Flash generates the PIN</strong> — MyMoolah does not generate, manage, or settle the cash redemption.</li>
+<li>The user redeems the PIN at any of Flash&#39;s <strong>~240,000 retail agent locations</strong> (Spar, Shoprite, PEP, independent traders, spaza shops, and freelance Flash agents) across South Africa.</li>
+<li>The cash dispensation is between the <strong>end-user and Flash&#39;s retail network</strong> — MyMoolah is not a party to the cash settlement.</li>
+</ul>
+<h3>2.2 Why Additional Sponsorship Is Not Required</h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Nature of transaction</strong></td>
+<td>VAS product purchase (prepaid voucher), not a banking withdrawal or payment instruction</td>
+</tr>
+<tr>
+<td><strong>PIN issuer</strong></td>
+<td>Flash (Pty) Ltd — not MyMoolah</td>
+</tr>
+<tr>
+<td><strong>Cash settlement</strong></td>
+<td>Between end-user and Flash retail agent — outside MyMoolah&#39;s clearing obligations</td>
+</tr>
+<tr>
+<td><strong>Funds flow</strong></td>
+<td>User&#39;s wallet → MyMoolah Flash float account → Flash (supplier settlement)</td>
+</tr>
+<tr>
+<td><strong>Flash&#39;s own status</strong></td>
+<td>Flash is a registered TPPP with its own PASA registration</td>
+</tr>
+<tr>
+<td><strong>MyMoolah&#39;s role</strong></td>
+<td>Reseller/distributor of Flash&#39;s voucher product</td>
+</tr>
+<tr>
+<td><strong>Clearing system involvement</strong></td>
+<td>None — no payment instruction enters the banking clearing system</td>
+</tr>
+</tbody></table>
+<h3>2.3 Flow Diagram — Flash eeziCash Cash-Out</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────────┐
+│                   FLASH eeziCASH VOUCHER FLOW                       │
+│                   (VAS Product Resale — Not a Banking Withdrawal)    │
+└─────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────┐         ┌──────────────┐         ┌─────────────┐
+    │ MyMoolah │         │   MyMoolah   │         │  Flash API  │
+    │   User   │         │   Backend    │         │ Partner v4  │
+    │  (App)   │         │   (MMTP)     │         │             │
+    └────┬─────┘         └──────┬───────┘         └──────┬──────┘
+         │                      │                        │
+    ① User selects              │                        │
+      &quot;Cash Out&quot; and            │                        │
+      enters amount             │                        │
+      (e.g. R200)               │                        │
+         │                      │                        │
+         │──── POST ───────────&gt;│                        │
+         │  /api/v1/flash/      │                        │
+         │  eezi-voucher/       │                        │
+         │  purchase            │                        │
+         │                      │                        │
+         │               ② Validate wallet              │
+         │                  balance                      │
+         │                  (R200 + R8 fee)              │
+         │                      │                        │
+         │               ③ Debit user wallet             │
+         │                  (R208 total)                 │
+         │                  Double-entry ledger           │
+         │                  journal posted               │
+         │                      │                        │
+         │                      │── POST ───────────────&gt;│
+         │                      │  /eezi-voucher/        │
+         │                      │  purchase              │
+         │                      │  (Flash Partner API)   │
+         │                      │                        │
+         │                      │       ④ FLASH GENERATES│
+         │                      │          THE PIN       │
+         │                      │          (e.g. EZ-     │
+         │                      │          1234-5678-    │
+         │                      │          9012)         │
+         │                      │                        │
+         │                      │&lt;── PIN returned ───────│
+         │                      │                        │
+         │&lt;── PIN displayed ────│                        │
+         │    to user           │                        │
+         │                      │                        │
+    ⑤ User takes PIN            │                        │
+      to ANY of Flash&#39;s         │                        │
+      ~240,000 retail           │                        │
+      agent locations           │                        │
+         │                      │                        │
+         │     ┌────────────────────────────┐            │
+         │     │   FLASH RETAIL NETWORK     │            │
+         │     │   (~240,000 locations)     │            │
+         │     │                            │            │
+         │     │  • Spar stores             │            │
+         │     │  • Shoprite / Checkers     │            │
+         │     │  • PEP stores              │            │
+         │     │  • Independent traders     │            │
+         │     │  • Spaza shops             │            │
+         │     │  • Freelance Flash agents  │            │
+         │     └────────────┬───────────────┘            │
+         │                  │                            │
+    ⑥ User presents PIN     │                            │
+      at retail agent       │                            │
+         │──────────────────&gt;                            │
+         │                  │                            │
+    ⑦ Retail agent verifies │                            │
+      PIN with Flash and    │────── PIN verification ───&gt;│
+      dispenses cash        │&lt;──── Confirmed ────────────│
+         │                  │                            │
+         │&lt;── Cash received │                            │
+         │    (R200)        │                            │
+         │                  │                            │
+    ┌────┴──────────────────┴────────────────────────────┴──────┐
+    │  NOTE: The cash dispensation (Steps ⑥–⑦) occurs between  │
+    │  the end-user and Flash&#39;s retail agent network.           │
+    │  MyMoolah is NOT a party to the cash settlement.          │
+    │  No payment instruction enters the banking clearing       │
+    │  system. This is a VAS product purchase and redemption.   │
+    └──────────────────────────────────────────────────────────┘
+</code></pre>
+<h3>2.4 Ledger Treatment</h3>
+<p>The wallet debit is recorded as a <strong>VAS purchase</strong> in MyMoolah&#39;s double-entry ledger:</p>
+<pre><code>DEBIT:   User Wallet (Liability)           R200.00
+DEBIT:   User Wallet (Liability)           R  8.00  (service fee)
+CREDIT:  Flash Supplier Float (Asset)      R200.00
+CREDIT:  Commission Revenue (Revenue)      R  6.96  (fee net of VAT)
+CREDIT:  VAT Control (Liability)           R  1.04  (15% VAT on fee)
+</code></pre>
+<p>The supplier float is settled with Flash via their standard B2B settlement process (prepaid float, topped up periodically by MyMoolah).</p>
+<hr>
+<h2>3. Integrated Retail Network — Partner Integrations</h2>
+<h3>3.1 What It Is</h3>
+<p>The &quot;Integrated Retail Network&quot; referenced in our business case describes MyMoolah&#39;s API integrations with multiple <strong>third-party service providers</strong> that enable:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Provider</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Voucher redemption</strong></td>
+<td>Flash (eeziCash, 1Voucher)</td>
+<td>Users purchase voucher PINs redeemable at Flash&#39;s retail network</td>
+</tr>
+<tr>
+<td><strong>Cash deposits</strong></td>
+<td>EasyPay</td>
+<td>Users deposit cash at EasyPay merchant terminals to top up their wallets</td>
+</tr>
+<tr>
+<td><strong>Bill payments</strong></td>
+<td>MobileMart (Fulcrum API)</td>
+<td>Users pay electricity, municipal, and other bills from their wallets</td>
+</tr>
+<tr>
+<td><strong>Airtime &amp; data</strong></td>
+<td>Flash + MobileMart</td>
+<td>Users purchase prepaid airtime and data bundles</td>
+</tr>
+<tr>
+<td><strong>QR payments</strong></td>
+<td>Zapper</td>
+<td>Users pay at 25,000+ Zapper-enabled merchants</td>
+</tr>
+</tbody></table>
+<h3>3.2 Flow Diagram — EasyPay Cash Deposit (Wallet Top-Up)</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────────┐
+│            EASYPAY CASH DEPOSIT (WALLET TOP-UP) FLOW                │
+│            (Cash-In via EasyPay Retail Network)                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────┐         ┌──────────────┐         ┌─────────────┐
+    │ MyMoolah │         │   MyMoolah   │         │   EasyPay   │
+    │   User   │         │   Backend    │         │   Backend   │
+    │  (App)   │         │   (MMTP)     │         │             │
+    └────┬─────┘         └──────┬───────┘         └──────┬──────┘
+         │                      │                        │
+    ① User selects              │                        │
+      &quot;Top-up via EasyPay&quot;      │                        │
+      and enters amount         │                        │
+      (e.g. R500)               │                        │
+         │                      │                        │
+         │── POST ─────────────&gt;│                        │
+         │  /api/v1/vouchers/   │                        │
+         │  easypay/topup/issue │                        │
+         │                      │                        │
+         │               ② Generate 14-digit             │
+         │                  EasyPay PIN                   │
+         │                  (Receiver ID: 5063)           │
+         │                  Format: 9-5063-XXXXXXXX-C     │
+         │                  No wallet debit yet           │
+         │                      │                        │
+         │&lt;── PIN displayed ────│                        │
+         │    &quot;9 5063 1234 5678 X&quot;                       │
+         │                      │                        │
+    ③ User visits ANY           │                        │
+      EasyPay merchant          │                        │
+      (Pick n Pay, Shoprite,    │                        │
+      Checkers, Spar, etc.)     │                        │
+         │                      │                        │
+    ④ User presents PIN         │                        │
+      and pays R500 cash        │                        │
+      at terminal               │                        │
+         │                      │                        │
+         │          ┌───────────────────────┐             │
+         │          │  EASYPAY RETAIL       │             │
+         │          │  TERMINAL NETWORK     │             │
+         │          │  (Pick n Pay, Spar,   │             │
+         │          │  Shoprite, Checkers,  │             │
+         │          │  etc.)                │             │
+         │          └───────────┬───────────┘             │
+         │                      │                        │
+         │               ⑤ EasyPay terminal              │
+         │                  processes payment             │
+         │                  and settles to                │
+         │                  MyMoolah (Receiver            │
+         │                  ID 5063)                      │
+         │                      │                        │
+         │                      │&lt;── POST ───────────────│
+         │                      │  /vouchers/easypay/    │
+         │                      │  topup/settlement      │
+         │                      │  (settlement callback) │
+         │                      │                        │
+         │               ⑥ Credit user wallet            │
+         │                  (R500 minus fees)             │
+         │                  Double-entry ledger           │
+         │                  journal posted                │
+         │                      │                        │
+         │                      │── 200 OK ─────────────&gt;│
+         │                      │   (Settled)            │
+         │                      │                        │
+         │&lt;── Push notification─│                        │
+         │    &quot;Wallet credited  │                        │
+         │     R485.00&quot;         │                        │
+         │                      │                        │
+    ┌────┴──────────────────────┴────────────────────────┴──────┐
+    │  NOTE: MyMoolah is the single named creditor              │
+    │  (Receiver ID 5063). EasyPay settles directly to          │
+    │  MyMoolah — no onward settlement to sub-creditors.        │
+    │  This falls under MyMoolah&#39;s existing TPPP scope.         │
+    └──────────────────────────────────────────────────────────┘
+</code></pre>
+<h3>3.3 Flow Diagram — Bill Payments via MobileMart</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────────┐
+│               BILL PAYMENT FLOW (via MobileMart)                    │
+│               (VAS Purchase — Wallet Debit)                         │
+└─────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────┐         ┌──────────────┐         ┌─────────────┐
+    │ MyMoolah │         │   MyMoolah   │         │  MobileMart │
+    │   User   │         │   Backend    │         │ Fulcrum API │
+    │  (App)   │         │   (MMTP)     │         │             │
+    └────┬─────┘         └──────┬───────┘         └──────┬──────┘
+         │                      │                        │
+    ① User selects bill         │                        │
+      payment (electricity,     │                        │
+      municipality, etc.)       │                        │
+      and enters details        │                        │
+         │                      │                        │
+         │── GET ──────────────&gt;│                        │
+         │  /api/v1/mobilemart/ │                        │
+         │  prevend/bill-payment│                        │
+         │  (meter lookup)      │                        │
+         │                      │── prevend request ────&gt;│
+         │                      │&lt;── meter/account ──────│
+         │                      │    details confirmed   │
+         │&lt;── Details shown ────│                        │
+         │                      │                        │
+    ② User confirms amount      │                        │
+      and authorises payment    │                        │
+         │                      │                        │
+         │── POST ─────────────&gt;│                        │
+         │  /api/v1/overlay/    │                        │
+         │  bill-payment/pay    │                        │
+         │                      │                        │
+         │               ③ Validate wallet               │
+         │                  balance                      │
+         │                  Debit user wallet             │
+         │                  (atomic transaction)         │
+         │                      │                        │
+         │                      │── POST purchase ──────&gt;│
+         │                      │   (amount, meter,      │
+         │                      │    product details)    │
+         │                      │                        │
+         │                      │&lt;── Token/receipt ──────│
+         │                      │    returned            │
+         │                      │                        │
+         │               ④ Record transaction            │
+         │                  Post ledger journal           │
+         │                  (Wallet ↓, Supplier Float ↓, │
+         │                   Commission + VAT recorded)  │
+         │                      │                        │
+         │&lt;── Token/receipt ────│                        │
+         │    displayed         │                        │
+         │                      │                        │
+    ┌────┴──────────────────────┴────────────────────────┴──────┐
+    │  NOTE: Bill payments are VAS purchases — wallet debits.   │
+    │  MobileMart settles with the biller.                      │
+    │  150+ billers available (municipal, utility, insurance).  │
+    │  1,700+ products in the MobileMart catalogue.             │
+    └──────────────────────────────────────────────────────────┘
+</code></pre>
+<h3>3.4 Summary of Retail Network Partners</h3>
+<pre><code>┌─────────────────────────────────────────────────────────────────────┐
+│              MyMoolah INTEGRATED RETAIL NETWORK                     │
+│              (Third-Party Partner Integrations)                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+                        ┌──────────────┐
+                        │   MyMoolah   │
+                        │   Treasury   │
+                        │   Platform   │
+                        └──────┬───────┘
+                               │
+              ┌────────────────┼────────────────┐
+              │                │                │
+     ┌────────┴───────┐ ┌─────┴──────┐  ┌──────┴───────┐
+     │     FLASH      │ │  EASYPAY   │  │  MOBILEMART  │
+     │  Partner API   │ │  Receiver  │  │  Fulcrum API │
+     │     v4         │ │  ID: 5063  │  │     v1/v2    │
+     └────────┬───────┘ └─────┬──────┘  └──────┬───────┘
+              │               │                │
+     Products:         Products:         Products:
+     • eeziCash        • Cash deposit    • Bill payments
+       (cash-out         (wallet           (150+ billers)
+       voucher PIN)      top-up)         • Electricity
+     • Airtime         • Standalone        (prepaid)
+     • Data              voucher         • Airtime
+     • 1Voucher                          • Data
+       (gaming,                          • Digital
+       retail)                             vouchers
+              │               │                │
+     Retail Points:    Retail Points:    Settlement:
+     ~240,000 agents   Pick n Pay,      Direct to
+     Spar, Shoprite,   Shoprite, Spar,  billers/
+     PEP, spaza       Checkers, etc.    utilities
+     shops, traders
+              │               │                │
+     Direction:        Direction:        Direction:
+     WALLET → CASH     CASH → WALLET    WALLET → BILLER
+     (VAS purchase)    (deposit/top-up)  (VAS purchase)
+</code></pre>
+<hr>
+<h2>4. Standard Bank Sponsorship — Position</h2>
+<h3>4.1 Answer to PASA Query</h3>
+<p><strong>Is additional Standard Bank sponsorship required for the withdrawal functionality?</strong></p>
+<p><strong>No.</strong> The &quot;withdrawal&quot; functionality described in the business case is the <strong>resale of Flash eeziCash voucher PINs</strong>, which is a <strong>Value-Added Service (VAS) product purchase</strong>, not a banking withdrawal or payment instruction through the clearing system. Specifically:</p>
+<ol>
+<li><p><strong>No payment instruction enters the banking clearing system</strong> — the wallet debit and Flash float settlement are internal ledger operations between MyMoolah and its VAS supplier (Flash).</p>
+</li>
+<li><p><strong>Flash generates and manages the PIN</strong> — MyMoolah is a reseller/distributor. The PIN redemption and cash dispensation occur within Flash&#39;s own retail agent network.</p>
+</li>
+<li><p><strong>Flash is a registered TPPP</strong> — Flash holds its own PASA registration and manages its retail agent network under its own regulatory framework.</p>
+</li>
+<li><p><strong>The existing TPPP scope covers this</strong> — MyMoolah&#39;s TPPP registration with Standard Bank as sponsor covers wallet management and VAS product distribution. The eeziCash voucher is one of many VAS products (alongside airtime, data, electricity, bill payments) distributed through the same platform.</p>
+</li>
+<li><p><strong>Funds flow is B2B supplier settlement</strong> — MyMoolah pre-funds a float account with Flash. When a user purchases an eeziCash voucher, the wallet is debited and the Flash float is decremented. Periodic settlement between MyMoolah and Flash replenishes the float. This is standard B2B supplier settlement, not a consumer payment instruction.</p>
+</li>
+</ol>
+<h3>4.2 TPPP Application Document References</h3>
+<p>The following sections in our TPPP application documents are relevant:</p>
+<table>
+<thead>
+<tr>
+<th>Document</th>
+<th>Section</th>
+<th>Content</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Annexure A</strong> (Business Model)</td>
+<td>Section 2.3 — VAS Marketplace</td>
+<td>Lists Flash and EasyPay as VAS integration partners for digital vouchers</td>
+</tr>
+<tr>
+<td><strong>Annexure A</strong> (Business Model)</td>
+<td>Section 2.2 — Digital Wallet</td>
+<td>Describes wallet as platform for VAS purchases and bill payments</td>
+</tr>
+<tr>
+<td><strong>PASA Checklist Response</strong></td>
+<td>Section 3.1.2 — VAS Services</td>
+<td>Lists airtime, data, electricity, digital vouchers, bill payments</td>
+</tr>
+<tr>
+<td><strong>PASA Checklist Response</strong></td>
+<td>Section 3.2 — Integration Partners</td>
+<td>Lists Flash Partner API v4, MobileMart Fulcrum API, EasyPay, Zapper</td>
+</tr>
+<tr>
+<td><strong>PASA Checklist Response</strong></td>
+<td>Section 4.1.1 — BSP Agreements</td>
+<td>Notes Flash Partner Agreement (agent of Flash for VAS services)</td>
+</tr>
+<tr>
+<td><strong>Standard Bank T-PPP Sponsor Brief</strong></td>
+<td>VAS Purchase Flow</td>
+<td>Describes atomic VAS purchase with ledger treatment</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>5. Conclusion</h2>
+<p>The MyMoolah &quot;Cash-Out Network&quot; and &quot;Integrated Retail Network&quot; are <strong>third-party VAS product integrations</strong>, not proprietary banking withdrawal infrastructure. The existing Standard Bank TPPP sponsorship scope adequately covers these functions as they are VAS product distribution activities, not payment instructions through the banking clearing system.</p>
+<p>MyMoolah&#39;s role is that of a <strong>digital wallet operator and VAS reseller</strong>, with all cash-out/voucher products being issued and managed by registered third-party providers (Flash, EasyPay, MobileMart) under their own regulatory frameworks.</p>
+<hr>
+<p><strong>Document prepared by</strong>: MyMoolah (Pty) Ltd
+<strong>Date</strong>: 25 March 2026
+<strong>For</strong>: PASA TPPP Review — via APSA / Standard Bank Sponsorship</p>
+<p><em>END OF DOCUMENT</em></p>
+
+</body>
+</html>
