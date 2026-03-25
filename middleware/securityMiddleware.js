@@ -294,6 +294,10 @@ const parseSize = (size) => {
  * Security monitoring middleware
  */
 const securityMonitor = (req, res, next) => {
+  // USSD endpoint is server-to-server (Cellfind) with its own IP whitelist —
+  // skip XSS/SQLi pattern check since params like "networkid=1" false-positive
+  if (req.path.startsWith('/api/v1/ussd')) return next();
+
   const suspiciousPatterns = [
     /<script/i,
     /javascript:/i,
