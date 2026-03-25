@@ -11,9 +11,9 @@ function getRedis() {
   if (redis) return redis;
   if (!process.env.REDIS_URL) return null;
   redis = new Redis(process.env.REDIS_URL, {
-    maxRetriesPerRequest: 2,
-    retryStrategy: (times) => (times > 3 ? null : Math.min(times * 200, 2000)),
-    enableOfflineQueue: false,
+    maxRetriesPerRequest: 3,
+    retryStrategy: (times) => (times > 5 ? null : Math.min(times * 200, 3000)),
+    lazyConnect: false,
   });
   redis.on('error', (err) => console.error('[USSD-SESSION] Redis error:', err.message));
   return redis;
