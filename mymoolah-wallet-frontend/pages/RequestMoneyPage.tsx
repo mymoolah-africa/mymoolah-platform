@@ -104,18 +104,22 @@ const getBankCode = (bankName: string): string => {
   return bankCodes[bankName] || '';
 };
 
-const BANK_ACCOUNT_MAX_LENGTHS: { [key: string]: number } = {
-  'ABSA Bank': 10,
-  'Standard Bank': 11,
-  'Capitec Bank': 10,
-  'First National Bank (FNB)': 11,
-  'Nedbank': 10,
-  'Discovery Bank': 11,
-  'TymeBank': 11,
-  'African Bank': 11,
-  'Investec Bank': 11,
-  'Bidvest Bank': 11,
+const BANK_ACCOUNT_RULES: { [key: string]: { min: number; max: number; label: string } } = {
+  'ABSA Bank':                    { min: 9,  max: 10, label: '9 or 10' },
+  'Standard Bank':                { min: 9,  max: 11, label: '9 or 11' },
+  'Capitec Bank':                 { min: 10, max: 10, label: '10' },
+  'First National Bank (FNB)':    { min: 11, max: 11, label: '11' },
+  'Nedbank':                      { min: 10, max: 10, label: '10' },
+  'Discovery Bank':               { min: 10, max: 11, label: '10 or 11' },
+  'TymeBank':                     { min: 10, max: 11, label: '10 or 11' },
+  'African Bank':                 { min: 10, max: 11, label: '10 or 11' },
+  'Investec Bank':                { min: 11, max: 11, label: '11' },
+  'Bidvest Bank':                 { min: 10, max: 11, label: '10 or 11' },
 };
+
+const BANK_ACCOUNT_MAX_LENGTHS: { [key: string]: number } = Object.fromEntries(
+  Object.entries(BANK_ACCOUNT_RULES).map(([k, v]) => [k, v.max])
+);
 
 const normalizeAccountNumber = (acctNum: string, bankName?: string): string => {
   const digits = acctNum.replace(/\D/g, '');
@@ -253,20 +257,32 @@ export function RequestMoneyPage() {
     }
 
     if (formData.accountType === 'bank') {
-      if (!formData.payerAccountNumber?.trim()) {
-        newErrors.payerAccountNumber = 'Payer account number is required';
-      } else {
-        const normalized = normalizeAccountNumber(formData.payerAccountNumber, formData.payerBankName);
-        const maxLen = (formData.payerBankName && BANK_ACCOUNT_MAX_LENGTHS[formData.payerBankName]) || 11;
-        if (!/^[0-9]+$/.test(normalized)) {
-          newErrors.payerAccountNumber = 'Account number must contain only digits';
-        } else if (normalized.length < 7 || normalized.length > maxLen) {
-          newErrors.payerAccountNumber = `Account number must be 7-${maxLen} digits for ${formData.payerBankName || 'this bank'}`;
-        }
+      if (!formData.payerBankName?.trim()) {
+        newErrors.payerBankName = 'Please select the payer\'s bank';
       }
 
-      if (!formData.payerBankName?.trim()) {
-        newErrors.payerBankName = 'Payer bank name is required';
+      if (!formData.payerAccountNumber?.trim()) {
+        newErrors.payerAccountNumber = 'Please enter the account number';
+      } else {
+        const normalized = normalizeAccountNumber(formData.payerAccountNumber, formData.payerBankName);
+        if (!/^[0-9]+$/.test(normalized)) {
+          newErrors.payerAccountNumber = 'Account number must contain only numbers';
+        } else if (formData.payerBankName) {
+          const rules = BANK_ACCOUNT_RULES[formData.payerBankName];
+          if (rules) {
+            if (normalized.length < rules.min) {
+              newErrors.payerAccountNumber =
+                `Too few digits. ${formData.payerBankName} accounts have ${rules.label} digits. You entered ${normalized.length}.`;
+            } else if (normalized.length > rules.max) {
+              newErrors.payerAccountNumber =
+                `Too many digits. ${formData.payerBankName} accounts have ${rules.label} digits. You entered ${normalized.length}.`;
+            }
+          } else if (normalized.length < 7 || normalized.length > 11) {
+            newErrors.payerAccountNumber = 'Account number must be between 7 and 11 digits';
+          }
+        } else if (normalized.length < 7 || normalized.length > 11) {
+          newErrors.payerAccountNumber = 'Account number must be between 7 and 11 digits';
+        }
       }
     }
 
@@ -1218,9 +1234,14 @@ export function RequestMoneyPage() {
                   <Input
                     id="payerAccountNumber"
                     type="text"
-                    placeholder="Payer's bank account number"
+                    inputMode="numeric"
+                    placeholder={
+                      formData.payerBankName && BANK_ACCOUNT_RULES[formData.payerBankName]
+                        ? `Enter ${BANK_ACCOUNT_RULES[formData.payerBankName].label} digit account number`
+                        : "Payer's bank account number"
+                    }
                     value={formData.payerAccountNumber || ''}
-                    onChange={(e) => handleInputChange('payerAccountNumber', e.target.value)}
+                    onChange={(e) => handleInputChange('payerAccountNumber', e.target.value.replace(/\D/g, ''))}
                     style={{
                       height: '44px',
                       fontFamily: 'Montserrat, sans-serif',
@@ -1231,6 +1252,17 @@ export function RequestMoneyPage() {
                       backgroundColor: '#f9fafb'
                     }}
                   />
+                  {formData.payerBankName && BANK_ACCOUNT_RULES[formData.payerBankName] && !errors.payerAccountNumber && (
+                    <p style={{
+                      fontFamily: 'Montserrat, sans-serif',
+                      fontSize: '11px',
+                      color: '#6b7280',
+                      margin: '4px 0 0 0'
+                    }}>
+                      {formData.payerBankName} accounts have {BANK_ACCOUNT_RULES[formData.payerBankName].label} digits
+                      {formData.payerAccountNumber ? ` — you entered ${formData.payerAccountNumber.replace(/\D/g, '').length}` : ''}
+                    </p>
+                  )}
                   {errors.payerAccountNumber && (
                     <p style={{
                       fontFamily: 'Montserrat, sans-serif',
