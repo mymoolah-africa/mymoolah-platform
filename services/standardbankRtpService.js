@@ -138,7 +138,6 @@ async function initiateRtpRequest(params) {
     payerMobileNumber: payerMobileNumber || undefined,
     payerAccountNumber: payerAccountNumber || undefined,
     payerBankCode: resolvedPayerBankCode,
-    netAmount: undefined,
     remittanceInfo: resolvedCreditorName
       ? `${resolvedCreditorName}: ${description || reference || merchantTransactionId}`.substring(0, 35)
       : (description || reference || merchantTransactionId),
@@ -541,7 +540,6 @@ async function retryRtpAsPbac(originalRtp) {
     payerMobileNumber: undefined,
     payerAccountNumber,
     payerBankCode: resolvedBankCode,
-    netAmount: undefined,
     remittanceInfo: creditorName
       ? `${creditorName}: ${originalRtp.description || originalRtp.referenceNumber || retryMerchantTxId}`.substring(0, 35)
       : (originalRtp.description || originalRtp.referenceNumber || retryMerchantTxId),

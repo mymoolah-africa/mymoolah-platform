@@ -129,6 +129,9 @@ function buildPain013(params) {
   const endToEndId = baseId.substring(0, 35);
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
+  // SBSA requires DuePyblAmt < Amt (rejects EAMTI if equal).
+  // Subtract 1 cent — payer sees the full amount, min is not displayed by most banks.
+  const numDuePyblAmt = Number((numAmount - 0.01).toFixed(2));
   const now = new Date();
   const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
@@ -219,7 +222,7 @@ function buildPain013(params) {
         {
           RfrdDocAmt: {
             DuePyblAmt: {
-              Value: numAmount.toFixed(2),
+              Value: numDuePyblAmt.toFixed(2),
             },
           },
           CdtrRefInf: {
