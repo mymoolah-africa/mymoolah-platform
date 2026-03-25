@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-24 19:00  
-**Latest Feature**: **SBSA H2H documentation sync** — Updated all SBSA H2H docs with confirmed status: Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min, SOAP handler live. Added SBSA SOAP handler CHANGELOG entry. Session log and H2H guide updated with all resolved items. EasyPay TPPP legal email drafted.  
-**Document Version**: 2.31.0  
-**Session logs**: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`, `docs/session_logs/2026-03-24_0900_sbsa-soap-credit-notification-handler.md`, `docs/session_logs/2026-03-23_1730_h2h-statement-pipeline-fix-valr-rmcp-tcib.md`  
+**Last Updated**: 2026-03-25 18:00  
+**Latest Feature**: **Yellowcard AML Policy + Corporate Policy Framework** — Created 19 banking-grade corporate policies in `docs/policies/` covering AML/CFT, KYC/CDD, Sanctions, Transaction Monitoring, Fraud Prevention, POPIA, Anti-Bribery, Whistleblowing, InfoSec (ISO 27001), Incident Response, Business Continuity, Third-Party Risk, and more. Consolidated AML Policy (sanctions + onboarding + monitoring) in plain text for Yellowcard DDQ submission. PayShap RTP fixes: removed DuePyblAmt from Pain.013; blocked PBAC retry on payer decline (PADCL).  
+**Document Version**: 2.32.0  
+**Session logs**: `docs/session_logs/2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`, `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -100,7 +100,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 17, 2026 - 19:00)**
+### **Latest Achievement (March 25, 2026 - 18:00)**
+**Yellowcard AML Policy + Corporate Policy Framework + RTP Fixes** — (1) Created 19 comprehensive banking-grade corporate policies in `docs/policies/` covering all Yellowcard DDQ requirements and beyond: AML/CFT, KYC/CDD, Sanctions, Transaction Monitoring, Fraud Prevention, POPIA/Privacy, Data Retention, Law Enforcement Response, Anti-Bribery & Corruption, Whistleblowing, Code of Ethics, Conflict of Interest, Information Security (ISO 27001), Incident Response, Business Continuity, Third-Party Risk, Compliance Training, Compliance Review, and Enterprise Risk Management. Master index with DDQ mapping and regulatory alignment matrix. (2) Created consolidated AML Policy for Yellowcard (`docs/drafts/2026-03-25_yellowcard-aml-policy.md`) combining sanctions screening, customer onboarding, and transaction monitoring in plain text format for Word copy-paste. (3) PayShap RTP fixes: removed DuePyblAmt entirely from Pain.013 builder (was showing confusing "Min amount" on payer banking apps); blocked PBAC retry when payer explicitly declines (PADCL). Session logs: `docs/session_logs/2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`, `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md`.
+
+### **Previous Achievement (March 17, 2026 - 19:00)**
 **EFT Overlay Polish + VoiceInput On-Demand Rewrite** — (1) "Top-up via EFT" overlay fully aligned with global design system: Account Holder "MyMoolah Treasury", Account Number "272406481", corrected "How it works" steps, PayShap instant-payment section (24/7/365), "Tap to Add Money" and "ATM Cash Send" tiles hidden. Fixed missing TopBanner (`/add-money-eft` added to `pagesWithTopBanner`) and missing BottomNavigation (added to both `shouldShowNav` and `showBottomNav` allowlists). Updated `mymoolah-wallet-frontend/.env.local` with correct Vite vars. (2) VoiceInput complete rewrite — old implementation created `SpeechRecognition` in a `useEffect` with `onTranscript`/`onError` deps; every parent re-render destroyed and recreated the instance before `onstart` fired. New on-demand approach creates/tears down instance per button tap; `continuous: false`; fully self-contained. SupportPage simplified — mic button lives directly in input row (no two-step toggle). User confirmed: "works much better now". (3) Fixed disbursement routes auth import. Session log: `docs/session_logs/2026-03-17_1900_eft-overlay-voice-input-fix.md`.
 
 ### **Previous Achievement (March 12, 2026 - 23:30)**
@@ -664,10 +667,16 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — PayShap RTP Fixes + Creditor Name + PASA TPPP Withdrawal  
-**Last Session**: 2026-03-25 — Multiple RTP Pain.013 fixes; creditor name in payment reference; PASA response for Shree
+**Session Status**: ✅ **COMPLETE** — Yellowcard AML Policy + Corporate Policy Framework + RTP Fixes  
+**Last Session**: 2026-03-25 — 19 corporate policies; consolidated AML for Yellowcard; DuePyblAmt removal; PBAC retry guard
 
-### **Most Recent Work (2026-03-25)**
+### **Most Recent Work (2026-03-25 PM)**
+- **19 corporate policies created**: Full suite in `docs/policies/` covering AML/CFT, KYC/CDD, Sanctions, Transaction Monitoring, Fraud Prevention, POPIA, Data Retention, Law Enforcement, Anti-Bribery, Whistleblowing, Code of Ethics, Conflict of Interest, InfoSec (ISO 27001), Incident Response, Business Continuity, Third-Party Risk, Compliance Training, Compliance Review, Enterprise Risk Management. Master INDEX.md with Yellowcard DDQ mapping.
+- **Consolidated AML Policy for Yellowcard**: Single document combining sanctions screening, customer onboarding (KYC/CDD), and transaction monitoring. Plain text format for Word copy-paste. Located at `docs/drafts/2026-03-25_yellowcard-aml-policy.md`.
+- **DuePyblAmt removed from Pain.013**: Was showing confusing "Min amount" (R4.25 net-of-fee) on FNB payer's banking app. Removed entirely — wallet enforces R10.00 minimum.
+- **PBAC retry blocked on PADCL**: Payer explicit decline no longer triggers account-number retry. Added `!isPayerDecline` guard.
+
+### **Earlier Work (2026-03-25 AM)**
 - **PayShap RTP Pain.013 fixes**: Fixed EDRIL rejection (CdtrRefInf.Ref 35-char limit), Ustrd rejection (removed — SBSA only accepts Strd), DuePyblAmt (must be net amount, not equal to Amt), PADCL decline notification priority over EBONF.
 - **Creditor name visibility (CONFIRMED)**: SBSA PayShap directory overrides `Cdtr.Nm` with "MYMOOLAH (PTY) LTD". Fix: wallet holder name prepended to `CdtrRefInf.Ref` (payment reference). Capitec now shows "Andre Botes: MyMoolah RTP Test" — confirmed via Capitec banking app screenshot.
 - **Per-bank account normalization**: Leading zeros stripped when exceeding bank's max length (ABSA/Capitec: 10 digits, SBSA/FNB: 11). Applied in controller, service, and frontend.
@@ -690,8 +699,10 @@ You're part of a **banking-grade software system** where:
 2. Read this file and 2–3 recent session logs
 3. Do NOT reactivate Peach Payments without explicit approval from Andre
 4. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-5. `DuePyblAmt` must always be less than `Amt` — SBSA rejects equal values
-6. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
+5. `DuePyblAmt` has been REMOVED from Pain.013 — do NOT add it back
+6. PBAC retry is blocked when PADCL is present — do NOT remove the `!isPayerDecline` guard
+7. 19 corporate policies exist in `docs/policies/` — reference INDEX.md for mapping
+8. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
 ---
 
@@ -699,6 +710,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 25 (18:00) | **Yellowcard AML Policy + 19 corporate policies**: Created comprehensive corporate policy framework in `docs/policies/` (AML/CFT, KYC/CDD, Sanctions, Transaction Monitoring, Fraud, POPIA, Anti-Bribery, Whistleblowing, InfoSec, Incident Response, Business Continuity, Third-Party Risk, + more). Consolidated AML Policy for Yellowcard DDQ in `docs/drafts/`. DuePyblAmt removed from Pain.013. PBAC retry blocked on PADCL. Session logs: `2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`, `2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md` |
 | Mar 25 (14:00) | **PayShap RTP fixes + creditor name + PASA TPPP withdrawal**: Fixed EDRIL, Ustrd, DuePyblAmt, PADCL priority. Creditor name in CdtrRefInf.Ref — Capitec confirms "Andre Botes: MyMoolah RTP Test". Per-bank account normalization. PASA withdrawal response for Shree (email + flow diagrams). Session log: `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md` |
 | Mar 24 (19:00) | **SBSA H2H documentation sync**: Updated all docs with confirmed status — Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min. Added SBSA SOAP CHANGELOG entry. Cleaned up duplicate priorities. |
 | Mar 24 (15:30) | **EasyPay TPPP / NPS legal draft**: Email for Nkululeko clarifying single-creditor collection model vs multi-layer aggregation concern; sponsor bank + downstream scope. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md` |
