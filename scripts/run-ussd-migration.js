@@ -3,18 +3,30 @@
 
 /**
  * Run USSD Tier 0 migration using mymoolah_app (table owner).
- * Usage: node scripts/run-ussd-migration.js
+ * Usage: node scripts/run-ussd-migration.js [uat|staging|production]
  */
 
 require('dotenv').config();
 const path = require('path');
 const helper = require(path.join(__dirname, 'db-connection-helper'));
 
+const env = (process.argv[2] || 'uat').toLowerCase();
+const clientFns = {
+  uat: helper.getUATClient,
+  staging: helper.getStagingClient,
+  production: helper.getProductionClient,
+};
+
+if (!clientFns[env]) {
+  console.error('Usage: node scripts/run-ussd-migration.js [uat|staging|production]');
+  process.exit(1);
+}
+
 (async () => {
   let client;
   try {
-    client = await helper.getUATClient();
-    console.log('✅ Connected to UAT as mymoolah_app');
+    client = await clientFns[env]();
+    console.log(`✅ Connected to ${env} as mymoolah_app`);
 
     // 1. Add ussd_basic to kycStatus enum
     await client.query(`ALTER TYPE "enum_users_kycStatus" ADD VALUE IF NOT EXISTS 'ussd_basic';`);
