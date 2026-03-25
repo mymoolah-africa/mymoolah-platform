@@ -1,17 +1,21 @@
 # MyMoolah Treasury Platform - Changelog
 
-## 2026-03-25 Evening - USSD Channel (Cellfind) Phase 1 MVP ✅
+## 2026-03-25 Evening - USSD Channel (Cellfind) Phase 1 MVP + follow-up hardening & RTP Pain.013 ✅
 
 ### Session Overview
-Implemented the full USSD channel for MyMoolah via the Cellfind gateway (Phase 1 MVP): database migration for Tier 0 USSD fields, Redis-backed sessions, PIN authentication with progressive lockout, 22-state menu engine, Express routes with IP whitelist and per-MSISDN rate limiting, SMS confirmation templates, integration documentation, and automated tests. UAT end-to-end verified in Codespaces.
+Implemented the full USSD channel for MyMoolah via the Cellfind gateway (Phase 1 MVP): database migration for Tier 0 USSD fields, Redis-backed sessions, PIN authentication with progressive lockout, 22-state menu engine, Express routes with IP whitelist and per-MSISDN rate limiting, SMS confirmation templates, integration documentation, and automated tests. **Follow-up the same evening** addressed UAT/staging/production migration ownership, production `kycStatus` type variance (VARCHAR vs enum), partial migration reconciliation, USSD security/Redis edge cases, **Standard Bank PayShap RTP Pain.013** (`RfrdDocAmt` / `DuePyblAmt` restoration and **EAMTI** validation — `DuePyblAmt` must be **strictly less than** `Amt`, implemented as **Amt minus one cent**), `standardbankRtpService` cleanup, staging deployment **`20260325_v10`**, and live RTP verification with Discovery Bank.
+
+### Key lessons
+- **SBSA Pain.013**: The bank requires **`RfrdDocAmt` with `DuePyblAmt` in the `Strd` block**; removing it breaks acceptance. **`DuePyblAmt` must be &lt; `Amt`** — equal values trigger **EAMTI** rejection; the **1 cent** delta satisfies SBSA while keeping payer UX aligned with the requested amount.
+- **Migrations before deploys**: Run migrations on **staging and production** (or confirm schema parity) **before** deploying application code that depends on new columns or enum values, to avoid partial states and manual `SequelizeMeta` fixes.
 
 ### Changes
 
 #### Database
-- **`migrations/20260326_01_add_ussd_tier0_fields.js`**: Adds `ussd_pin`, `ussd_pin_attempts`, `ussd_locked_until`, `registration_channel`, `preferred_language` to `users`; extends `kycStatus` enum with `ussd_basic`.
+- **`migrations/20260326_01_add_ussd_tier0_fields.js`**: Adds `ussd_pin`, `ussd_pin_attempts`, `ussd_locked_until`, `registration_channel`, `preferred_language` to `users`; extends `kycStatus` with `ussd_basic` where the column is a PostgreSQL enum. **Follow-up**: detects when `kycStatus` is **VARCHAR** (production) and skips invalid `ALTER TYPE ... ADD VALUE` operations.
 
 #### Services & Controller
-- **`services/ussdSessionService.js`**: Redis session CRUD with 180s TTL (`createSession`, `getSession`, `updateSession`, `destroySession`).
+- **`services/ussdSessionService.js`**: Redis session CRUD with 180s TTL (`createSession`, `getSession`, `updateSession`, `destroySession`). **Follow-up**: removed `enableOfflineQueue: false` so Redis commands queue until the connection is ready.
 - **`services/ussdAuthService.js`**: MSISDN lookup; PIN verify/set; progressive lockout (30min / 2hr / 24hr); Tier 0 registration (SA ID Luhn + passport regex); wallet creation.
 - **`services/ussdMenuService.js`**: State machine with 22 menu states (welcome, registration, PIN, balance, airtime, data, eeziCash cash-out, mini statement, change PIN, referral, help); Tier 0 limits R500/day, R3000/month.
 - **`controllers/ussdController.js`**: Cellfind request parsing, session orchestration, XML response builder with escaping; MSISDN masking in logs.
@@ -23,11 +27,15 @@ Implemented the full USSD channel for MyMoolah via the Cellfind gateway (Phase 1
 
 #### SMS & Security
 - **`services/smsService.js`**: Six USSD SMS templates (registration, airtime, data, cash out, send money, receive money).
-- **`middleware/securityMiddleware.js`**: Exempt `/api/v1/ussd` from XSS pattern that false-positived on Cellfind `networkid=1`.
+- **`middleware/securityMiddleware.js`**: Exempt `/api/v1/ussd` from **securityMonitor** XSS-style pattern that false-positived on Cellfind query param **`networkid=1`** (matched `on\w+\s*=`).
 
 #### Scripts & Migrations Runner
-- **`scripts/run-ussd-migration.js`**: Alternative UAT migration runner using `getUATClient()` from `db-connection-helper.js`.
-- **`scripts/run-migrations-master.sh`**: UAT migrations use app user (`mymoolah_app`) so `ALTER` succeeds on Cloud SQL tables owned by app (not `postgres` superuser).
+- **`scripts/run-ussd-migration.js`**: Targeted USSD migration runner using `getUATClient()` / `getStagingClient()` / `getProductionClient()` from `db-connection-helper.js` — usage: `node scripts/run-ussd-migration.js [uat|staging|production]`.
+- **`scripts/run-migrations-master.sh`**: **All environments** use the **app** database user (`mymoolah_app` / `getUATDatabaseURL()` pattern) for Sequelize migrations so `ALTER` succeeds on Cloud SQL tables **owned by the app user** (the `postgres` / cloudsqlsuperuser cannot alter those objects).
+
+#### PayShap RTP (Pain.013) — follow-up
+- **`integrations/standardbank/builders/pain013Builder.js`**: Restored **`RfrdDocAmt`** with **`DuePyblAmt`** alongside **`DuePyblAmt`** set to **instructed amount minus R0.01** so **`DuePyblAmt` &lt; `Amt`** (SBSA **EAMTI** rejection when equal). Aligns with ISO 20022 structure expected by SBSA.
+- **`services/standardbankRtpService.js`**: Removed **`netAmount: undefined`** from builder invocation.
 
 #### Documentation
 - **`docs/USSD_INTEGRATION_GUIDE.md`**: Operator and technical integration guide.
@@ -39,18 +47,24 @@ Implemented the full USSD channel for MyMoolah via the Cellfind gateway (Phase 1
 #### Environment
 - **`.env.codespaces`**: USSD environment variables section (file gitignored; variables documented in USSD integration guide).
 
-#### Redis
-- Removed `enableOfflineQueue: false` from USSD Redis client configuration so commands are not rejected before connection establishment.
+#### Deployment (follow-up)
+- **Staging**: `./scripts/deploy-backend.sh --staging 20260325_v10` — RTP fixes and USSD-related backend updates.
+
+### Migrations run (follow-up)
+- **UAT**: `node scripts/run-ussd-migration.js uat`
+- **Staging**: `./scripts/run-migrations-master.sh staging`
+- **Production**: USSD columns **already present** in target instance; migration marked complete in **`SequelizeMeta`** manually after verification (operational reconciliation).
 
 ### Testing
-- UAT E2E in Codespaces: existing user — set PIN, main menu, balance (e.g. R33,134.00); new user — registration menu; response times ~146ms (within 20s USSD constraint); PII masking in logs (`2782***4567`) ✅
-- `tests/ussd.test.js` — 39 cases ✅
+- **USSD (UAT)**: New user — Welcome → Register; existing user `27825571055` — PIN setup → auth → main menu → balance **R33,134.00**; response times **~146ms**; PII masking in logs (`2782***4567`) ✅
+- **`tests/ussd.test.js`** — 39 cases ✅
+- **RTP (Staging, Discovery Bank)**: R10.00 Request to Pay — **PDNG** callbacks, **ACCC**, wallet credited; notification *"Andre Botes paid your Request to Pay of R 10.00"* ✅
 
 ### Session Log
 - `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`
 
 ### Agent Handover
-- **`docs/agent_handover.md`**: v2.33.0; latest feature USSD; priorities and document map updated.
+- **`docs/agent_handover.md`**: v2.34.0; USSD + cross-env migrations + RTP Pain.013 `DuePyblAmt` rule; priorities and “Next Agent Actions” updated (supersedes earlier “remove DuePyblAmt” note from the Mar 25 PM changelog entry).
 
 ---
 
@@ -73,6 +87,7 @@ Created 19 banking-grade corporate policies for Yellowcard onboarding DDQ. Built
 #### PayShap RTP Fixes
 - **`integrations/standardbank/builders/pain013Builder.js`**: Removed `RfrdDocAmt.DuePyblAmt` block entirely — was showing confusing "Min amount" (R4.25 net-of-fee) on FNB payer banking app. Deprecated `netAmount` parameter. (`9db8cbfa`)
 - **`services/standardbankRtpService.js`**: Added `!isPayerDecline` to PBAC retry guard — payer explicit decline (PADCL) no longer triggers account-number retry. Removed redundant `isPayerDecline` declaration. Removed fee/netCredit calculation from PBAC retry path. (`9db8cbfa`)
+- **Superseded 2026-03-25 evening (same day)**: SBSA requires `RfrdDocAmt`/`DuePyblAmt` in Strd; **`DuePyblAmt` must be &lt; `Amt`** (see **2026-03-25 Evening** changelog + `pain013Builder.js` — Amt minus 1 cent).
 
 ### Testing
 - FNB RTP logs reviewed — identified DuePyblAmt and PBAC retry issues ✅

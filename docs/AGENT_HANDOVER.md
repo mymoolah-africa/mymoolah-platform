@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-25 21:00  
-**Latest Feature**: **USSD Channel (Cellfind) — Phase 1 MVP** — Full USSD stack: migration `20260326_01_add_ussd_tier0_fields.js` (Tier 0 fields + `kycStatus` `ussd_basic`), Redis sessions (180s TTL), `ussdAuthService` / `ussdMenuService` (22 states), GET+POST `/api/v1/ussd`, Cellfind IP whitelist, `USSD_ENABLED` flag, 60/hr per-MSISDN limiter, SMS templates in `smsService`, 39 tests in `tests/ussd.test.js`. Integration docs: `docs/USSD_INTEGRATION_GUIDE.md`, `integrations/cellfind/CELLFIND_REFERENCE.md`. UAT tested E2E in Codespaces (~146ms). UAT migrations use app user (`mymoolah_app`) via `run-migrations-master.sh`; optional `scripts/run-ussd-migration.js`.  
-**Document Version**: 2.33.0  
+**Last Updated**: 2026-03-25 23:30  
+**Latest Feature**: **USSD Phase 1 MVP + cross-env migration hardening + RTP Pain.013 SBSA compliance** — USSD: Tier 0 migration applied UAT (via `node scripts/run-ussd-migration.js uat`), staging (`./scripts/run-migrations-master.sh staging`); production columns verified with `SequelizeMeta` completed manually where partially applied. `run-migrations-master.sh` uses **app user** for all envs (Cloud SQL ownership). `run-ussd-migration.js` supports `uat|staging|production`. Fixes: `securityMiddleware` USSD XSS exemption (Cellfind `networkid=1`), Redis offline queue removed in `ussdSessionService`, migration handles production **VARCHAR** `kycStatus`. RTP: restored **`RfrdDocAmt` / `DuePyblAmt`** in Pain.013 Strd (SBSA requires); **`DuePyblAmt` must be &lt; `Amt`** — implemented as **Amt minus 1 cent** (EAMTI rejection when equal); `standardbankRtpService` — removed `netAmount: undefined`. Staging deploy `./scripts/deploy-backend.sh --staging 20260325_v10`; Discovery Bank RTP R10.00 — PDNG, ACCC, wallet credited, payer notification confirmed. Docs: `docs/USSD_INTEGRATION_GUIDE.md`, `integrations/cellfind/CELLFIND_REFERENCE.md`. Session log: `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`.  
+**Document Version**: 2.34.0  
 **Session logs**: `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`, `docs/session_logs/2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`, `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
@@ -101,11 +101,11 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 25, 2026 - 21:00)**
-**USSD Channel (Cellfind) — Phase 1 MVP** — Implemented banking-grade USSD for Tier 0 users: DB migration for `ussd_pin`, `ussd_pin_attempts`, `ussd_locked_until`, `registration_channel`, `preferred_language`, and `ussd_basic` KYC tier; Redis-backed sessions (`ussdSessionService`, 180s TTL); `ussdAuthService` (MSISDN, 5-digit PIN, progressive lockout 30min/2hr/24hr, SA ID Luhn + passport validation, wallet creation); `ussdMenuService` with 22 states (welcome, registration, PIN, balance, airtime, data, eeziCash cash-out, mini statement, change PIN, referral, help) and Tier 0 limits (R500/day, R3000/month); `ussdController` + Cellfind XML responses with escaping and masked MSISDN logging; `routes/ussd.js` + `ussdIpWhitelist`; `server.js` mounts USSD with `USSD_ENABLED` and 60 requests/hour per MSISDN; health check extended; `smsService` USSD SMS templates; `tests/ussd.test.js` (39 tests). Fixed: security XSS false positive on `networkid=1` (exempt `/api/v1/ussd`); Redis offline queue option removed; UAT migrations run as `mymoolah_app` (Cloud SQL table ownership); added `scripts/run-ussd-migration.js`. Session log: `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`.
+### **Latest Achievement (March 25, 2026 - 21:00 through late evening)**
+**USSD Channel (Cellfind) — Phase 1 MVP + production path hardening + RTP Pain.013** — Full USSD stack as shipped: DB migration `20260326_01_add_ussd_tier0_fields.js` (Tier 0 fields + `ussd_basic`; **VARCHAR-safe** `kycStatus` handling for production); Redis sessions; PIN + 22-state menu; `/api/v1/ussd` + IP whitelist + `USSD_ENABLED` + 60/hr MSISDN limiter; SMS templates; 39 tests; integration docs. **Follow-up same day**: `securityMiddleware` exempt USSD from XSS false positive (`networkid=1`); `ussdSessionService` allow Redis command queuing; **`run-migrations-master.sh` uses `mymoolah_app` for UAT, staging, and production** (postgres cannot ALTER app-owned tables on Cloud SQL); **`run-ussd-migration.js`** supports `uat|staging|production`; migrations run UAT + staging; production partial state resolved with manual `SequelizeMeta` after column verification. **RTP**: SBSA requires **`RfrdDocAmt`/`DuePyblAmt` in Strd**; bank rejects **EAMTI** when `DuePyblAmt == Amt` — **set `DuePyblAmt` to Amt − R0.01**; `standardbankRtpService` cleaned (`netAmount: undefined` removed). **Staging** `./scripts/deploy-backend.sh --staging 20260325_v10` — Discovery Bank RTP R10.00 end-to-end (PDNG, ACCC, wallet credit, notification). Session log: `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`.
 
 ### **Previous Achievement (March 25, 2026 - 18:00)**
-**Yellowcard AML Policy + Corporate Policy Framework + RTP Fixes** — (1) Created 19 comprehensive banking-grade corporate policies in `docs/policies/` covering all Yellowcard DDQ requirements and beyond: AML/CFT, KYC/CDD, Sanctions, Transaction Monitoring, Fraud Prevention, POPIA/Privacy, Data Retention, Law Enforcement Response, Anti-Bribery & Corruption, Whistleblowing, Code of Ethics, Conflict of Interest, Information Security (ISO 27001), Incident Response, Business Continuity, Third-Party Risk, Compliance Training, Compliance Review, and Enterprise Risk Management. Master index with DDQ mapping and regulatory alignment matrix. (2) Created consolidated AML Policy for Yellowcard (`docs/drafts/2026-03-25_yellowcard-aml-policy.md`) combining sanctions screening, customer onboarding, and transaction monitoring in plain text format for Word copy-paste. (3) PayShap RTP fixes: removed DuePyblAmt entirely from Pain.013 builder (was showing confusing "Min amount" on payer banking apps); blocked PBAC retry when payer explicitly declines (PADCL). Session logs: `docs/session_logs/2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`, `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md`.
+**Yellowcard AML Policy + Corporate Policy Framework + RTP Fixes** — (1) Created 19 comprehensive banking-grade corporate policies in `docs/policies/` covering all Yellowcard DDQ requirements and beyond: AML/CFT, KYC/CDD, Sanctions, Transaction Monitoring, Fraud Prevention, POPIA/Privacy, Data Retention, Law Enforcement Response, Anti-Bribery & Corruption, Whistleblowing, Code of Ethics, Conflict of Interest, Information Security (ISO 27001), Incident Response, Business Continuity, Third-Party Risk, Compliance Training, Compliance Review, and Enterprise Risk Management. Master index with DDQ mapping and regulatory alignment matrix. (2) Created consolidated AML Policy for Yellowcard (`docs/drafts/2026-03-25_yellowcard-aml-policy.md`) combining sanctions screening, customer onboarding, and transaction monitoring in plain text format for Word copy-paste. (3) PayShap RTP fixes (that session): Pain.013 `DuePyblAmt` removed to address FNB "Min amount" UX; blocked PBAC retry when payer explicitly declines (PADCL). **Superseded same evening (21:00+ session)**: SBSA requires `RfrdDocAmt`/`DuePyblAmt` in Strd; **`DuePyblAmt` must be strictly less than `Amt`** — see Pain.013 builder (Amt − 1c). Session logs: `docs/session_logs/2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`, `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md`.
 
 ### **Previous Achievement (March 17, 2026 - 19:00)**
 **EFT Overlay Polish + VoiceInput On-Demand Rewrite** — (1) "Top-up via EFT" overlay fully aligned with global design system: Account Holder "MyMoolah Treasury", Account Number "272406481", corrected "How it works" steps, PayShap instant-payment section (24/7/365), "Tap to Add Money" and "ATM Cash Send" tiles hidden. Fixed missing TopBanner (`/add-money-eft` added to `pagesWithTopBanner`) and missing BottomNavigation (added to both `shouldShowNav` and `showBottomNav` allowlists). Updated `mymoolah-wallet-frontend/.env.local` with correct Vite vars. (2) VoiceInput complete rewrite — old implementation created `SpeechRecognition` in a `useEffect` with `onTranscript`/`onError` deps; every parent re-render destroyed and recreated the instance before `onstart` fired. New on-demand approach creates/tears down instance per button tap; `continuous: false`; fully self-contained. SupportPage simplified — mic button lives directly in input row (no two-step toggle). User confirmed: "works much better now". (3) Fixed disbursement routes auth import. Session log: `docs/session_logs/2026-03-17_1900_eft-overlay-voice-input-fix.md`.
@@ -258,7 +258,7 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 **Banking-Grade Automated Reconciliation System** - Complete multi-supplier transaction reconciliation framework with self-healing capabilities (80% auto-resolution), immutable audit trails, and <200ms performance per transaction.
 
 ### **Core Capabilities**
-- ✅ **USSD (Cellfind)**: Phase 1 MVP — Tier 0 registration, 5-digit PIN, balance, airtime, data, eeziCash cash-out, mini statement, change PIN, referral, help; `/api/v1/ussd` + IP whitelist + `USSD_ENABLED`; UAT verified — see `docs/USSD_INTEGRATION_GUIDE.md`
+- ✅ **USSD (Cellfind)**: Phase 1 MVP — Tier 0 registration, 5-digit PIN, balance, airtime, data, eeziCash cash-out, mini statement, change PIN, referral, help; `/api/v1/ussd` + IP whitelist + `USSD_ENABLED`; **UAT + staging migration applied**; production schema reconciled — see `docs/USSD_INTEGRATION_GUIDE.md` and session log `2026-03-25_2100_ussd-channel-implementation.md`
 - ✅ **Multi-Supplier Payments**: MobileMart (1,769 products), Zapper QR, Peach Payments (archived)
 - ✅ **PayShap (Standard Bank)**: RPP/RTP integration UAT ready; replaces archived Peach when enabled
 - ✅ **Advanced Features**: 5-tier referral system, KYC/FICA compliance, real-time notifications
@@ -672,16 +672,19 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — USSD Channel (Cellfind) Phase 1 MVP  
-**Last Session**: 2026-03-25 21:00 — Full USSD implementation, UAT E2E verified, docs + tests
+**Session Status**: ✅ **COMPLETE** — USSD Phase 1 MVP + migration hardening + RTP Pain.013 SBSA validation fix  
+**Last Session**: 2026-03-25 21:00–23:30 — USSD implementation, cross-env migrations, staging deploy `20260325_v10`, Discovery RTP verified
 
-### **Most Recent Work (2026-03-25 evening)**
+### **Most Recent Work (2026-03-25 evening through late night)**
 - **USSD Phase 1 (Cellfind)**: Migration, Redis sessions, PIN auth with lockout, 22-state menu, `/api/v1/ussd`, IP whitelist, `USSD_ENABLED`, rate limit 60/hr/MSISDN, SMS templates, 39 tests. Guides: `docs/USSD_INTEGRATION_GUIDE.md`, `integrations/cellfind/CELLFIND_REFERENCE.md`.
-- **UAT E2E**: Existing user flow (set PIN → main menu → balance); new user → registration menu; ~146ms responses; log masking `2782***4567`.
-- **Infra fixes**: `securityMiddleware` exempts USSD route (Cellfind `networkid` XSS false positive); Redis client option cleanup; UAT DDL as app user; `scripts/run-ussd-migration.js`.
+- **UAT + staging E2E**: New user Welcome → Register; existing user `27825571055` PIN → main menu → balance **R33,134.00**; ~146ms; log masking `2782***4567`.
+- **Migrations**: UAT `node scripts/run-ussd-migration.js uat`; staging `./scripts/run-migrations-master.sh staging`; production columns existed — `SequelizeMeta` completed manually after verification. **`run-migrations-master.sh`**: app user for **all** environments (Cloud SQL ownership).
+- **Infra fixes**: `securityMiddleware` exempts USSD (Cellfind `networkid` XSS false positive); `ussdSessionService` Redis queuing; `run-ussd-migration.js` `uat|staging|production`; migration VARCHAR `kycStatus` handling.
+- **RTP Pain.013**: Restored `RfrdDocAmt`/`DuePyblAmt`; **`DuePyblAmt < Amt`** via **Amt − 1c** (EAMTI when equal); `standardbankRtpService` — no `netAmount: undefined`.
+- **Staging deploy**: `./scripts/deploy-backend.sh --staging 20260325_v10` — Discovery Bank RTP R10.00 PDNG → ACCC, wallet credited, notification *"Andre Botes paid your Request to Pay of R 10.00"*.
 
 ### **Earlier Work (2026-03-25 PM — Yellowcard + RTP)**
-- **19 corporate policies** in `docs/policies/`; consolidated AML `docs/drafts/2026-03-25_yellowcard-aml-policy.md`; DuePyblAmt removed from Pain.013; PBAC retry blocked on PADCL. Session log: `docs/session_logs/2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`.
+- **19 corporate policies** in `docs/policies/`; consolidated AML `docs/drafts/2026-03-25_yellowcard-aml-policy.md`; Pain.013 `DuePyblAmt` experimentally removed (later **restored** with 1c rule — see latest achievement); PBAC retry blocked on PADCL. Session log: `docs/session_logs/2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`.
 
 ### **Earlier Work (2026-03-25 AM)**
 - **PayShap RTP Pain.013 fixes**: Fixed EDRIL rejection (CdtrRefInf.Ref 35-char limit), Ustrd rejection (removed — SBSA only accepts Strd), DuePyblAmt (must be net amount, not equal to Amt), PADCL decline notification priority over EBONF.
@@ -694,13 +697,13 @@ You're part of a **banking-grade software system** where:
 - **EasyPay TPPP legal draft**: Email for Nkululeko clarifying single-creditor model.
 
 ### **Current State**
-- **USSD (Cellfind)**: Phase 1 code complete; UAT tested. **Staging/Production**: run migration when approved; configure Cellfind shortcode + IP allowlist; enable `USSD_ENABLED` only after ops sign-off. See `docs/USSD_INTEGRATION_GUIDE.md`.
+- **USSD (Cellfind)**: Phase 1 code complete; **UAT + staging migrated**; **production** columns verified / `SequelizeMeta` aligned where partially applied. Configure Cellfind production shortcode + IP allowlist; enable `USSD_ENABLED` in production only after ops sign-off. See `docs/USSD_INTEGRATION_GUIDE.md`.
 - SFTP Gateway: `34.35.137.166`, **port 5022**, admin `https://34.35.137.166` — ✅ Running
 - SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | VPN resolved (Open Internet) ✅ | PGP not required ✅ | File names confirmed ✅ | Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)
-- PayShap RTP: Standard Bank ✅ (Peach DECOMMISSIONED). Creditor name in payment reference ✅ (Capitec confirmed)
+- PayShap RTP: Standard Bank ✅ (Peach DECOMMISSIONED). Creditor name in payment reference ✅ (Capitec confirmed). Pain.013 **`DuePyblAmt` in Strd, strictly &lt; `Amt`** (Amt − 1c) ✅ — Discovery staging Mar 25 post-`20260325_v10`
 - Peach Payments: ARCHIVED (2026-03-21). See `routes/peach.js` for reactivation steps.
 - Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
-- **Production redeploy required** — all RTP fixes, SOAP handler, account normalization, Peach decommission, **and USSD when enabled**
+- **Production redeploy** — confirm Cloud Run image includes Pain.013 1c rule + USSD fixes; enable USSD in prod only after Cellfind cutover
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
@@ -708,10 +711,11 @@ You're part of a **banking-grade software system** where:
 3. **USSD**: Do not remove `/api/v1/ussd` security exemption without validating Cellfind payloads; Phase 2 = electricity, send money, buy for others, multi-language
 4. Do NOT reactivate Peach Payments without explicit approval from Andre
 5. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-6. `DuePyblAmt` has been REMOVED from Pain.013 — do NOT add it back
+6. **Pain.013 `RfrdDocAmt` / `DuePyblAmt`**: SBSA expects these in the **Strd** block. **`DuePyblAmt` must be strictly less than `Amt`** (EAMTI when equal). Current implementation: **`DuePyblAmt` = Amt − R0.01**. Do not remove or set equal to `Amt` without SBSA written confirmation.
 7. PBAC retry is blocked when PADCL is present — do NOT remove the `!isPayerDecline` guard
 8. 19 corporate policies exist in `docs/policies/` — reference INDEX.md for mapping
-9. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
+9. **Migrations**: Run `./scripts/run-migrations-master.sh` on staging/production **before** deploying code that depends on new schema; avoid partial production state and manual `SequelizeMeta` reconciliation.
+10. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
 ---
 
@@ -719,7 +723,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
-| Mar 25 (21:00) | **USSD Channel (Cellfind) Phase 1 MVP**: Migration Tier 0 fields + `ussd_basic`; Redis sessions; PIN + lockout; 22-state menu; `/api/v1/ussd` + IP whitelist + `USSD_ENABLED` + 60/hr MSISDN limiter; SMS templates; 39 tests; `USSD_INTEGRATION_GUIDE.md` + `CELLFIND_REFERENCE.md`; security/Redis/migration fixes. Session log: `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md` |
+| Mar 25 (21:00–23:30) | **USSD Phase 1 + migrations all envs + RTP Pain.013**: USSD MVP as shipped; UAT `run-ussd-migration.js`, staging `run-migrations-master.sh`; prod schema/`SequelizeMeta` reconciled; **app user migrations for all envs**; VARCHAR `kycStatus`; security/Redis fixes. **RTP**: restore `RfrdDocAmt`/`DuePyblAmt`; **DuePyblAmt = Amt − 1c** (EAMTI); `standardbankRtpService` cleanup. Staging deploy `20260325_v10`; Discovery RTP R10 confirmed. Session log: `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md` |
 | Mar 25 (18:00) | **Yellowcard AML Policy + 19 corporate policies**: Created comprehensive corporate policy framework in `docs/policies/` (AML/CFT, KYC/CDD, Sanctions, Transaction Monitoring, Fraud, POPIA, Anti-Bribery, Whistleblowing, InfoSec, Incident Response, Business Continuity, Third-Party Risk, + more). Consolidated AML Policy for Yellowcard DDQ in `docs/drafts/`. DuePyblAmt removed from Pain.013. PBAC retry blocked on PADCL. Session logs: `2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`, `2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md` |
 | Mar 25 (14:00) | **PayShap RTP fixes + creditor name + PASA TPPP withdrawal**: Fixed EDRIL, Ustrd, DuePyblAmt, PADCL priority. Creditor name in CdtrRefInf.Ref — Capitec confirms "Andre Botes: MyMoolah RTP Test". Per-bank account normalization. PASA withdrawal response for Shree (email + flow diagrams). Session log: `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md` |
 | Mar 24 (19:00) | **SBSA H2H documentation sync**: Updated all docs with confirmed status — Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min. Added SBSA SOAP CHANGELOG entry. Cleaned up duplicate priorities. |
@@ -754,7 +758,7 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **USSD Phase 2 + rollout** — (a) Features: electricity, send money, buy for others; multi-language (isiZulu, Afrikaans, Sesotho). (b) Run `20260326_01_add_ussd_tier0_fields.js` on **staging** then **production** when approved (`./scripts/run-migrations-master.sh`). (c) Configure Cellfind production shortcode, callback URL, and IP allowlist; set `USSD_ENABLED=true` after sign-off. (d) Load test ~100 concurrent USSD sessions. Reference: `docs/USSD_INTEGRATION_GUIDE.md`, session log `2026-03-25_2100_ussd-channel-implementation.md`.
+1. **USSD Phase 2 + production rollout** — (a) Features: electricity, send money, buy for others; multi-language (isiZulu, Afrikaans, Sesotho). (b) **Staging migration done** Mar 25; **production** — confirm schema parity; if any column missing, run `./scripts/run-migrations-master.sh production` (app user) or targeted `node scripts/run-ussd-migration.js production`. (c) Configure Cellfind production shortcode, callback URL, and IP allowlist; set `USSD_ENABLED=true` after sign-off. (d) Load test ~100 concurrent USSD sessions. Reference: `docs/USSD_INTEGRATION_GUIDE.md`, session log `2026-03-25_2100_ussd-channel-implementation.md`.
 2. **SBSA H2H — Await test traffic before freeze (Thu Mar 27)** — Confirmation email sent to Colette 2026-03-24. VPN resolved (Open Internet), PGP resolved (Not Required), file names confirmed. SOAP handler live. Awaiting SBSA to send test SOAP credit notification + test SFTP MT940/MT942 file to UAT. SBSA freeze: Thu Mar 27 → Apr 8. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
 3. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Offer Standard Bank sponsor letter or PASA application pack if requested. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
 4. **Backend redeploy to production** — Push `git push origin main` then redeploy backend to staging and production to activate SBSA SOAP handler + EBONF daily-limit notification message.
