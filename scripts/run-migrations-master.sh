@@ -137,20 +137,18 @@ const migrationName = process.env.MIGRATION_NAME;
 (async () => {
   try {
     let databaseURL;
+    // Use mymoolah_app (table owner) for all environments — Cloud SQL's
+    // postgres (cloudsqlsuperuser) cannot ALTER tables owned by mymoolah_app
     if (environment === 'uat') {
-      // UAT: use mymoolah_app (table owner) — Cloud SQL's postgres
-      // (cloudsqlsuperuser) cannot ALTER tables owned by mymoolah_app
       databaseURL = helper.getUATDatabaseURL();
-      console.log('✅ Using UAT database connection (mymoolah_app — table owner)');
     } else if (environment === 'staging') {
-      databaseURL = helper.getStagingAdminDatabaseURL();
-      console.log('✅ Using Staging admin database connection (postgres user)');
+      databaseURL = helper.getStagingDatabaseURL();
     } else if (environment === 'production') {
-      databaseURL = helper.getProductionAdminDatabaseURL();
-      console.log('✅ Using Production admin database connection (postgres user)');
+      databaseURL = helper.getProductionDatabaseURL();
     } else {
       throw new Error(`Invalid environment: ${environment}`);
     }
+    console.log(`✅ Using ${environment} database connection (mymoolah_app — table owner)`);
 
     process.env.DATABASE_URL = databaseURL;
     process.env.NODE_ENV = environment === 'uat' ? 'development' : (environment === 'staging' ? 'staging' : 'production-proxy');
