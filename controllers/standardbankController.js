@@ -307,8 +307,13 @@ async function handleRtpCallback(req, res) {
   }
 
   try {
-    const orgnlMsgId = grpHdr.OrgnlMsgId?.Id ?? grpHdr.orgnlMsgId?.id
+    // Prefer our clientMessageId from URL path params (matches our MMRTP... record)
+    // over SBSA's body orgnlMsgId (which is SBSA's internal ID that won't match).
+    // This is critical for decline/reject callbacks where SBSA uses their own IDs.
+    const pathClientMsgId = req._sbsaPathParams?.clientMessageId || null;
+    const bodyOrgnlMsgId = grpHdr.OrgnlMsgId?.Id ?? grpHdr.orgnlMsgId?.id
       ?? grpHdr.msgId ?? null;
+    const orgnlMsgId = pathClientMsgId || bodyOrgnlMsgId;
 
     // SBSA RTP callbacks may nest under cstmrPmtReqStsRpt or at top level
     const grpSts = body.orgnlGrpInfAndSts ?? body.cstmrPmtReqStsRpt?.orgnlGrpInfAndSts;
@@ -350,7 +355,7 @@ async function handleRtpCallback(req, res) {
     if (infList.length === 0 && grpSts) {
       const grpStatus = grpSts.grpSts || grpSts.GrpSts;
       const orgnlMsgIdFromGrp = grpSts.orgnlMsgId || grpSts.OrgnlMsgId;
-      await processRtpCallback(orgnlMsgIdFromGrp || orgnlMsgId, null, grpStatus, body);
+      await processRtpCallback(pathClientMsgId || orgnlMsgIdFromGrp || bodyOrgnlMsgId, null, grpStatus, body);
     }
 
     return res.status(200).send();

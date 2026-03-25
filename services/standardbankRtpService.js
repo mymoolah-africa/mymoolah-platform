@@ -130,6 +130,13 @@ async function initiateRtpRequest(params) {
       ? (payerBankCode || payerProxyDomain || 'bankc')
       : (payerProxyDomain || payerBankCode || 'bankc');
 
+  // Build remittance info — prefix with requester name so the payer can see
+  // who is requesting even if SBSA overrides Cdtr.Nm with the entity name.
+  const baseRemittance = description || reference || merchantTransactionId;
+  const remittanceInfo = resolvedCreditorName
+    ? `RTP from ${resolvedCreditorName} - ${baseRemittance}`
+    : baseRemittance;
+
   const { pain013, msgId, uetr } = buildPain013({
     merchantTransactionId,
     amount: numAmount,
@@ -139,7 +146,7 @@ async function initiateRtpRequest(params) {
     payerAccountNumber: payerAccountNumber || undefined,
     payerBankCode: resolvedPayerBankCode,
     netAmount: netCredit,
-    remittanceInfo: description || reference || merchantTransactionId,
+    remittanceInfo,
     expiryMinutes,
     creditorName: resolvedCreditorName || undefined,
   });
@@ -433,9 +440,9 @@ async function creditWalletOnPaid(rtpRequest, rawBody) {
 }
 
 /**
- * Extract system rejection codes from SBSA callback raw body.
+ * Extract rejection codes from SBSA callback raw body.
  * Searches all known nesting patterns: top-level, cstmrPmtReqStsRpt, orgnlGrpInfAndSts.
- * Returns { isSystemReject, codes[] }.
+ * Returns { isSystemReject, codes[] (all codes found) }.
  */
 function extractRejectionCodes(rawBody) {
   const systemCodes = ['EBONF', 'EERRR', 'EPDNF', 'EPRBA', 'NARR'];
@@ -462,7 +469,7 @@ function extractRejectionCodes(rawBody) {
         const stsList = Array.isArray(stsArr) ? stsArr : [stsArr];
         for (const s of stsList) {
           const code = s?.rsn?.prtry || s?.Rsn?.Prtry || '';
-          if (code && systemCodes.includes(code) && !found.includes(code)) found.push(code);
+          if (code && !found.includes(code)) found.push(code);
         }
       }
     }
@@ -471,7 +478,7 @@ function extractRejectionCodes(rawBody) {
       const stsList = Array.isArray(stsArr) ? stsArr : [stsArr];
       for (const s of stsList) {
         const code = s?.rsn?.prtry || s?.Rsn?.Prtry || '';
-        if (code && systemCodes.includes(code) && !found.includes(code)) found.push(code);
+        if (code && !found.includes(code)) found.push(code);
       }
     }
 
@@ -479,14 +486,15 @@ function extractRejectionCodes(rawBody) {
       try {
         const bodyStr = typeof JSON.stringify(rb) === 'string' ? JSON.stringify(rb) : '';
         if (bodyStr && bodyStr.length <= 500000) {
-          for (const code of systemCodes) {
+          for (const code of [...systemCodes, 'PADCL', 'CNCL', 'EXPR']) {
             if (bodyStr.includes(code) && !found.includes(code)) found.push(code);
           }
         }
       } catch (_) { /* stringify can throw on circular refs */ }
     }
   } catch (_) { /* parse failure */ }
-  return { isSystemReject: found.length > 0, codes: found };
+  const isSystemReject = found.some(c => systemCodes.includes(c));
+  return { isSystemReject, codes: found };
 }
 
 /**
@@ -605,13 +613,24 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     where: { originalMessageId },
   });
 
-  // Fallback: SBSA batch callbacks may use the UETR (UUID) as orgnlMsgId
+  // Fallback 1: SBSA batch callbacks may use the UETR (UUID) as orgnlMsgId
   if (!rtpRequest && originalMessageId) {
     rtpRequest = await db.StandardBankRtpRequest.findOne({
       where: { requestId: originalMessageId },
     });
     if (rtpRequest) {
       console.log('[RTP-CB] Matched by requestId (UETR) fallback: orgnlMsgId=%s', originalMessageId);
+    }
+  }
+
+  // Fallback 2: try matching by merchantTransactionId (for callbacks where
+  // SBSA uses their own internal message IDs)
+  if (!rtpRequest && transactionIdentifier) {
+    rtpRequest = await db.StandardBankRtpRequest.findOne({
+      where: { requestId: transactionIdentifier },
+    });
+    if (rtpRequest) {
+      console.log('[RTP-CB] Matched by transactionIdentifier (UETR) fallback: txId=%s', transactionIdentifier);
     }
   }
 

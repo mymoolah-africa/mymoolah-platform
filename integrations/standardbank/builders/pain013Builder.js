@@ -129,9 +129,10 @@ function buildPain013(params) {
   const endToEndId = baseId.substring(0, 35);
 
   const numAmount = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
-  const numNetAmount = netAmount
-    ? (typeof netAmount === 'string' ? parseFloat(netAmount) : Number(netAmount))
-    : Number((numAmount - 5.00).toFixed(2));
+  // DuePyblAmt must equal the full requested amount — fee deduction is internal.
+  // Previously this showed the net amount, causing ABSA to display a confusing
+  // "R4.25 - R10.00" range to the payer.
+  const numNetAmount = numAmount;
   const now = new Date();
   const expDt = new Date(now.getTime() + expiryMinutes * 60 * 1000);
 
