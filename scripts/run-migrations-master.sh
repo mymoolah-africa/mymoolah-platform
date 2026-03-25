@@ -127,52 +127,70 @@ if (!rootDir) {
   process.exit(1);
 }
 
-// Load .env from project root
 require('dotenv').config({ path: path.join(rootDir, '.env') });
 
-// Load connection helper from project root
-  const {
-    getUATAdminDatabaseURL,
-    getStagingAdminDatabaseURL,
-    getProductionAdminDatabaseURL,
-  } = require(path.join(rootDir, 'scripts', 'db-connection-helper'));
+const helper = require(path.join(rootDir, 'scripts', 'db-connection-helper'));
 
 const environment = process.env.MIGRATION_ENV;
 const migrationName = process.env.MIGRATION_NAME;
 
+(async () => {
   try {
-  let databaseURL;
-  if (environment === 'uat') {
-    // UAT: use admin URL for DDL migrations (mymoolah_app cannot ALTER TABLE)
-    databaseURL = getUATAdminDatabaseURL();
-    console.log('✅ Using UAT admin database connection (postgres user)');
-  } else if (environment === 'staging') {
-    // Staging: admin user required — mymoolah_app is SELECT/INSERT/UPDATE/DELETE only
-    databaseURL = getStagingAdminDatabaseURL();
-    console.log('✅ Using Staging admin database connection (postgres user)');
-  } else if (environment === 'production') {
-    // Production: admin user required — mymoolah_app is SELECT/INSERT/UPDATE/DELETE only
-    databaseURL = getProductionAdminDatabaseURL();
-    console.log('✅ Using Production admin database connection (postgres user)');
-  } else {
-    throw new Error(`Invalid environment: ${environment}`);
+    let databaseURL;
+    let getAdminClient;
+    if (environment === 'uat') {
+      databaseURL = helper.getUATAdminDatabaseURL();
+      getAdminClient = helper.getUATAdminClient;
+      console.log('✅ Using UAT admin database connection (postgres user)');
+    } else if (environment === 'staging') {
+      databaseURL = helper.getStagingAdminDatabaseURL();
+      getAdminClient = helper.getStagingAdminClient;
+      console.log('✅ Using Staging admin database connection (postgres user)');
+    } else if (environment === 'production') {
+      databaseURL = helper.getProductionAdminDatabaseURL();
+      getAdminClient = helper.getProductionAdminClient;
+      console.log('✅ Using Production admin database connection (postgres user)');
+    } else {
+      throw new Error(`Invalid environment: ${environment}`);
+    }
+
+    process.env.DATABASE_URL = databaseURL;
+    process.env.NODE_ENV = environment === 'uat' ? 'development' : (environment === 'staging' ? 'staging' : 'production-proxy');
+
+    // Fix SequelizeMeta ownership before running migrations.
+    // In Cloud SQL the postgres user is cloudsqlsuperuser but cannot access
+    // tables created by mymoolah_app unless ownership is transferred.
+    let fixClient;
+    try {
+      fixClient = await getAdminClient();
+      await fixClient.query(`
+        DO $$
+        BEGIN
+          IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'SequelizeMeta') THEN
+            EXECUTE 'ALTER TABLE "SequelizeMeta" OWNER TO postgres';
+            EXECUTE 'GRANT ALL ON TABLE "SequelizeMeta" TO postgres';
+            RAISE NOTICE 'SequelizeMeta ownership transferred to postgres';
+          END IF;
+        END $$;
+      `);
+      console.log('✅ SequelizeMeta permissions verified');
+    } catch (permErr) {
+      console.warn('⚠️  Could not fix SequelizeMeta permissions (non-fatal):', permErr.message);
+    } finally {
+      if (fixClient) fixClient.release();
+    }
+
+    const { execSync } = require('child_process');
+    const cmd = migrationName
+      ? `npx sequelize-cli db:migrate --name ${migrationName} --migrations-path migrations`
+      : 'npx sequelize-cli db:migrate --migrations-path migrations';
+
+    execSync(cmd, { stdio: 'inherit', env: process.env });
+  } catch (error) {
+    console.error('❌ Migration failed:', error.message);
+    process.exit(1);
   }
-
-  process.env.DATABASE_URL = databaseURL;
-  // Use production-proxy (no SSL) for Production migrations via Cloud SQL Proxy (localhost)
-  // production config requires SSL for direct Cloud Run connections
-  process.env.NODE_ENV = environment === 'uat' ? 'development' : (environment === 'staging' ? 'staging' : 'production-proxy');
-
-  const { execSync } = require('child_process');
-  const cmd = migrationName 
-    ? `npx sequelize-cli db:migrate --name ${migrationName} --migrations-path migrations`
-    : 'npx sequelize-cli db:migrate --migrations-path migrations';
-  
-  execSync(cmd, { stdio: 'inherit', env: process.env });
-} catch (error) {
-  console.error('❌ Migration failed:', error.message);
-  process.exit(1);
-}
+})();
 EOF
 
   export MIGRATION_ENV="${ENVIRONMENT}"
