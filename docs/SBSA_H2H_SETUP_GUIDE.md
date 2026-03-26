@@ -33,7 +33,8 @@
 | **Public SFTP IP** | `34.35.137.166` (static, reserved: `sftp-gateway-static-ip`) |
 | **Port** | `5022` |
 | **Auth type** | SSH-RSA 2048 key only (no password) |
-| **SFTP Username** | `standardbank` (to be created — see Step 3 below) |
+| **SFTP Username (our server)** | `standardbank` (created — SSH key added) |
+| **SFTP Username (SBSA server)** | `mymoolahuser` (confirmed by Colette 2026-03-26) |
 | **VM** | `sftp-1-vm` (GCP Compute Engine, africa-south1-a) |
 | **GCS Bucket** | `mymoolah-sftp-inbound` |
 
@@ -117,17 +118,29 @@ gcloud compute firewall-rules list \
 
 ## 5. Test SFTP Connectivity (After Firewall Rules Applied)
 
-Test that our server can connect to SBSA's SFTP (TEST environment):
+### Connect to SBSA's SFTP (TEST environment):
 ```bash
-sftp -i ~/.ssh/sbsa_sftp_key -P 5022 standardbank@196.8.85.62
+sftp -i ~/.ssh/sbsa_sftp_key -P 5022 mymoolahuser@196.8.85.62
 ```
 > Note: SBSA uses port **5022** (not 22) on their side.
+> **Username**: `mymoolahuser` — confirmed by Colette on 2026-03-26 (SBSA created this user after importing our SSH key).
 
-Test that SBSA can connect to our SFTP (once they have our public key):
+### Connect to SBSA's SFTP (PRODUCTION):
 ```bash
-# From any machine — SBSA will test this from their side
-sftp -i ~/.ssh/sbsa_sftp_key standardbank@34.35.137.166
+sftp -i ~/.ssh/sbsa_sftp_key -P 5022 mymoolahuser@196.8.86.53
 ```
+
+### SBSA connects to our SFTP:
+```bash
+# SBSA will test this from their side using their credentials
+# Our SFTP: 34.35.137.166:5022
+```
+
+### SFTP Analyst Contact
+- **Melanie Block** — assigned by Colette (2026-03-26) to assist with testing once SFTP connectivity is confirmed.
+
+### Important: Statements Have No Test Environment
+Colette confirmed (2026-03-26): **"Statements does not have a test environment, once development has been completed, we can move to Production, for statements only."** MT940/MT942 files will only flow in Production.
 
 ---
 
@@ -360,6 +373,47 @@ SBSA sends SOAP XML to /api/v1/standardbank/notification
 ```
 
 **Latency**: Near real-time — SBSA pushes notification immediately on deposit. Wallet credited within seconds.
+
+---
+
+## 11. Cloud Armor WAF Exception (CRITICAL)
+
+GCP Cloud Armor WAF blocks SOAP XML payloads by default (OWASP CRS rules flag XML namespaces as XSS/injection). A path exception is **required** for the notification endpoint on both staging and production.
+
+**Fix script**: `scripts/fix-cloud-armor-soap-exception.sh`
+
+```bash
+# Dry run first to see current rules:
+bash scripts/fix-cloud-armor-soap-exception.sh --dry-run
+
+# Apply the fix:
+bash scripts/fix-cloud-armor-soap-exception.sh
+```
+
+This adds an ALLOW rule at priority 50 for `request.path.matches('/api/v1/standardbank/notification')` on both `mmtp-waf-staging` and `mmtp-waf-production` policies. Does NOT modify or remove any existing rules.
+
+**Verification** (after fix):
+```bash
+curl -v -X POST https://staging.mymoolah.africa/api/v1/standardbank/notification \
+  -H "Content-Type: text/xml" -d @/tmp/sbsa-test-notification.xml
+```
+
+Should return HTTP 200 with SOAP `<Ack>OK</Ack>`.
+
+**Without this fix**: SBSA notifications receive `403 Forbidden` from Cloud Armor before reaching the application.
+
+---
+
+## 12. Cloud Run Service URLs (Direct — Bypasses WAF)
+
+Use these to test the application directly when Cloud Armor is blocking:
+
+| Service | URL |
+|---------|-----|
+| Staging backend | `https://mymoolah-backend-staging-4ekgjiko5a-bq.a.run.app` |
+| Production backend | `https://mymoolah-backend-production-4ekgjiko5a-bq.a.run.app` |
+| Staging wallet | `https://mymoolah-wallet-staging-4ekgjiko5a-bq.a.run.app` |
+| Production wallet | `https://mymoolah-wallet-production-4ekgjiko5a-bq.a.run.app` |
 
 ---
 
