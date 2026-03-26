@@ -12,13 +12,19 @@ function ussdIpWhitelist(req, res, next) {
     .map((ip) => ip.trim())
     .filter(Boolean);
 
+  const isRealProduction = process.env.NODE_ENV === 'production' && process.env.STAGING !== 'true';
+
   if (!allowedIps.length) {
-    if (process.env.NODE_ENV === 'production') {
+    if (isRealProduction) {
       console.error('[USSD-SECURITY] CELLFIND_ALLOWED_IPS not configured in production — blocking request');
       return res.status(403).type('text/xml').send(
         '<?xml version="1.0"?><msg><response type="3">Service unavailable.</response></msg>'
       );
     }
+    return next();
+  }
+
+  if (!isRealProduction) {
     return next();
   }
 
