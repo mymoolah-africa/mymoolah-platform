@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-26 12:00  
-**Latest Feature**: **SBSA H2H Cloud Armor WAF fix + SOAP spec verification** — Cloud Armor WAF was blocking SBSA SOAP credit notifications (403 Forbidden) on both staging and production. Added priority 50 ALLOW rules for `/api/v1/standardbank/notification` on `mmtp-waf-staging` and `mmtp-waf-production`. Verified our `sbsaSoapParser.js` is 100% aligned with SBSA Payment Notification SDD V1.3 spec (WSDLs, XSDs, sample message all confirmed). SFTP username confirmed as `mymoolahuser` by Colette. Testing analyst: Melanie Block. Statements have no test env — go direct to Production. SFTP connectivity to SBSA TEST server timed out — needs IP whitelisting from SBSA. Production backend needs redeployment for SOAP handler code. Script: `scripts/fix-cloud-armor-soap-exception.sh`. Docs updated: `docs/SBSA_H2H_SETUP_GUIDE.md` (sections 11, 12 added). Session log: `docs/session_logs/2026-03-26_1200_sbsa-h2h-soap-cloud-armor-fix.md`.  
-**Document Version**: 2.35.0  
-**Session logs**: `docs/session_logs/2026-03-26_1200_sbsa-h2h-soap-cloud-armor-fix.md`, `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`, `docs/session_logs/2026-03-25_1800_yellowcard-aml-policy-corporate-policies.md`  
+**Last Updated**: 2026-03-26 15:00  
+**Latest Feature**: **USSD Go-Live Preparation — Cellfind `*120*5616#`** — Cellfind (Marcella) confirmed shortcode `*120*5616#`, production callback URL `https://api-mm.mymoolah.africa/api/v1/ussd`, and permanent egress IPs `102.69.237.30` + `102.69.236.30`. Created Cloud Armor WAF exception script (priority 51 for `/api/v1/ussd`). Updated `deploy-backend.sh` with all USSD env vars (`USSD_ENABLED=true`, `CELLFIND_ALLOWED_IPS`, shortcode, limits). Replaced all `*120*XXXX#` placeholder shortcodes in SMS templates, docs, and references. **Next**: André must run Cloud Armor script + deploy to production in Codespaces, then confirm to Marcella. Session log: `docs/session_logs/2026-03-26_1500_ussd-golive-cellfind-shortcode-cloud-armor.md`.  
+**Document Version**: 2.36.0  
+**Session logs**: `docs/session_logs/2026-03-26_1500_ussd-golive-cellfind-shortcode-cloud-armor.md`, `docs/session_logs/2026-03-26_1200_sbsa-h2h-soap-cloud-armor-fix.md`, `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -101,7 +101,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 25, 2026 - 21:00 through late evening)**
+### **Latest Achievement (March 26, 2026 - 15:00)**
+**USSD Go-Live Preparation — Cellfind `*120*5616#`** — Cellfind confirmed allocated shortcode, production callback URL, and permanent IPs (`102.69.237.30`, `102.69.236.30`). Created `scripts/fix-cloud-armor-ussd-exception.sh` (priority 51 ALLOW rule for `/api/v1/ussd`). Updated `scripts/deploy-backend.sh` with USSD env vars (USSD_ENABLED, CELLFIND_ALLOWED_IPS via `^@^` alternate delimiter, shortcode, limits). Replaced all `*120*XXXX#` placeholders in SMS templates and docs. **Pending**: André to run Cloud Armor script + deploy in Codespaces, then confirm to Marcella. Session log: `docs/session_logs/2026-03-26_1500_ussd-golive-cellfind-shortcode-cloud-armor.md`.
+
+### **Previous Achievement (March 25, 2026 - 21:00 through late evening)**
 **USSD Channel (Cellfind) — Phase 1 MVP + production path hardening + RTP Pain.013** — Full USSD stack as shipped: DB migration `20260326_01_add_ussd_tier0_fields.js` (Tier 0 fields + `ussd_basic`; **VARCHAR-safe** `kycStatus` handling for production); Redis sessions; PIN + 22-state menu; `/api/v1/ussd` + IP whitelist + `USSD_ENABLED` + 60/hr MSISDN limiter; SMS templates; 39 tests; integration docs. **Follow-up same day**: `securityMiddleware` exempt USSD from XSS false positive (`networkid=1`); `ussdSessionService` allow Redis command queuing; **`run-migrations-master.sh` uses `mymoolah_app` for UAT, staging, and production** (postgres cannot ALTER app-owned tables on Cloud SQL); **`run-ussd-migration.js`** supports `uat|staging|production`; migrations run UAT + staging; production partial state resolved with manual `SequelizeMeta` after column verification. **RTP**: SBSA requires **`RfrdDocAmt`/`DuePyblAmt` in Strd**; bank rejects **EAMTI** when `DuePyblAmt == Amt` — **set `DuePyblAmt` to Amt − R0.01**; `standardbankRtpService` cleaned (`netAmount: undefined` removed). **Staging** `./scripts/deploy-backend.sh --staging 20260325_v10` — Discovery Bank RTP R10.00 end-to-end (PDNG, ACCC, wallet credit, notification). Session log: `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`.
 
 ### **Previous Achievement (March 25, 2026 - 18:00)**
@@ -697,7 +700,7 @@ You're part of a **banking-grade software system** where:
 - **EasyPay TPPP legal draft**: Email for Nkululeko clarifying single-creditor model.
 
 ### **Current State**
-- **USSD (Cellfind)**: Phase 1 code complete; **UAT + staging migrated**; **production** columns verified / `SequelizeMeta` aligned where partially applied. Configure Cellfind production shortcode + IP allowlist; enable `USSD_ENABLED` in production only after ops sign-off. See `docs/USSD_INTEGRATION_GUIDE.md`.
+- **USSD (Cellfind)**: Phase 1 code complete; **UAT + staging migrated**; production schema verified. **Shortcode `*120*5616#` allocated** (Marcella, Cellfind, 2026-03-26). **IPs `102.69.237.30`, `102.69.236.30` confirmed permanent**. Cloud Armor script + deploy script ready. **Pending**: run `bash scripts/fix-cloud-armor-ussd-exception.sh` + `./scripts/deploy-backend.sh --production` in Codespaces. See `docs/USSD_INTEGRATION_GUIDE.md`.
 - SFTP Gateway: `34.35.137.166`, **port 5022**, admin `https://34.35.137.166` — ✅ Running
 - SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | VPN resolved (Open Internet) ✅ | PGP not required ✅ | File names confirmed ✅ | Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)
 - PayShap RTP: Standard Bank ✅ (Peach DECOMMISSIONED). Creditor name in payment reference ✅ (Capitec confirmed). Pain.013 **`DuePyblAmt` in Strd, strictly &lt; `Amt`** (Amt − 1c) ✅ — Discovery staging Mar 25 post-`20260325_v10`
