@@ -1,0 +1,30 @@
+=== SBSA SFTP Connection Test Report ===
+Date: 2026-03-26 13:16:36 SAST
+Source: Local machine (macOS)
+Source IP: 2c0f:f4c0:a147:4d32:b06e:ab4e:c115:4dbd
+SFTP Gateway IP: 34.35.137.166
+
+Target: 196.8.85.62:5022 (SBSA TEST)
+Username: mymoolahuser
+Auth: SSH key (sbsa_sftp_key, generated 2026-03-13)
+
+--- Connection Output ---
+debug1: OpenSSH_10.2p1, LibreSSL 3.3.6
+debug1: Reading configuration data /etc/ssh/ssh_config
+debug1: /etc/ssh/ssh_config line 21: include /etc/ssh/ssh_config.d/* matched no files
+debug1: /etc/ssh/ssh_config line 54: Applying options for *
+debug1: Authenticator provider $SSH_SK_PROVIDER did not resolve; disabling
+debug1: Connecting to 196.8.85.62 [196.8.85.62] port 5022.
+debug1: connect to address 196.8.85.62 port 5022: Operation timed out
+ssh: connect to host 196.8.85.62 port 5022: Operation timed out
+Connection closed.  
+Connection closed
+
+--- Result ---
+Connection timed out after 15 seconds.
+The TCP connection to 196.8.85.62:5022 is not reachable from our network.
+This suggests our IP is not whitelisted on SBSA's SFTP firewall.
+
+--- Requested Action ---
+Please whitelist the following IPs on SBSA TEST SFTP firewall (196.8.85.62:5022):
+  1. 34.35.137.166 (MyMoolah SFTP Gateway - GCP Compute Engine)
