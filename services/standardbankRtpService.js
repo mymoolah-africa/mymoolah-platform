@@ -630,8 +630,17 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     console.warn('[RTP-CB] No RTP request found for orgnlMsgId=%s status=%s', originalMessageId, status);
     return;
   }
-  console.log('[RTP-CB] orgnlMsgId=%s status=%s payer=%s amount=%s',
-    originalMessageId, status, rtpRequest.payerMobileNumber, rtpRequest.amount);
+  console.log('[RTP-CB] orgnlMsgId=%s status=%s payer=%s amount=%s currentDbStatus=%s',
+    originalMessageId, status, rtpRequest.payerMobileNumber, rtpRequest.amount, rtpRequest.status);
+
+  // SBSA sends 3 callbacks per RTP (2 batch + 1 realtime). Only the first
+  // to reach a terminal state should generate notifications / retries.
+  const terminalStates = ['rejected', 'paid', 'retry_pbac'];
+  if (terminalStates.includes(rtpRequest.status) && rtpRequest.processedAt) {
+    console.log('[RTP-CB] Skipping duplicate callback — already %s (processedAt=%s) for orgnlMsgId=%s',
+      rtpRequest.status, rtpRequest.processedAt.toISOString(), originalMessageId);
+    return;
+  }
 
   const statusMap = {
     ACSP: 'paid',
@@ -697,8 +706,10 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     isRetryTarget, alreadyRetried);
 
   const isPayerDecline = codes.includes('PADCL');
+  const hasExpired = rtpRequest.expiresAt && new Date() > new Date(rtpRequest.expiresAt);
   const canRetryPbac = isSystemReject
     && !isPayerDecline
+    && !hasExpired
     && rtpRequest.payerMobileNumber
     && rtpRequest.payerAccountNumber
     && !isRetryTarget
@@ -765,14 +776,13 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
           const notificationService = require('./notificationService');
           const amount = parseFloat(r.amount);
           const payerName = r.payerName || 'Payer';
-          const pbacRejectCodes = r.metadata?.proxyRejectCodes || [];
-          const isEbonf = pbacRejectCodes.includes('EBONF');
-          const pbacTitle = isEbonf
-            ? 'PayShap Daily Limit Reached'
+          const pbacExpired = r.expiresAt && new Date() > new Date(r.expiresAt);
+          const pbacTitle = pbacExpired
+            ? 'Payment Request Expired'
             : 'Payment Request Could Not Be Delivered';
-          const pbacMsg = isEbonf
-            ? `Your PayShap Request to Pay of R ${amount.toFixed(2)} to ${payerName} could not be processed. ${r.payerBankName || 'The payer\'s bank'} has reached its daily PayShap transaction limit. Please resend your request tomorrow.`
-            : `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`;
+          const pbacMsg = pbacExpired
+            ? `Your PayShap Request to Pay of R ${amount.toFixed(2)} to ${payerName} has expired. The payer did not respond in time.`
+            : `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled or the request could not be processed. Please try again.`;
           await notificationService.createNotification(
             r.userId,
             'txn_wallet_credit',
@@ -811,12 +821,12 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
     const payerName = rtpRequest.payerName || 'Payer';
 
     const isFinalSystemReject = isSystemReject && !isRetryTarget && !isPayerDecline;
-    const isEbonfReject = codes.includes('EBONF') && !isPayerDecline;
-    const payerBankLabel = rtpRequest.payerBankName || 'The payer\'s bank';
+    const isEbonfReject = codes.includes('EBONF') && !isPayerDecline && !hasExpired;
 
     const resolveTitle = () => {
       if (isPayerDecline) return 'Payment Request Declined';
-      if (isEbonfReject) return 'PayShap Daily Limit Reached';
+      if (hasExpired) return 'Payment Request Expired';
+      if (isEbonfReject) return 'Payment Request Could Not Be Processed';
       if (isFinalSystemReject) return 'Payment Request Could Not Be Delivered';
       return 'Payment Request Declined';
     };
@@ -825,10 +835,11 @@ async function processRtpCallback(originalMessageId, transactionIdentifier, stat
       if (isPayerDecline) {
         return `${payerName} declined your PayShap request for R ${amount.toFixed(2)}.`;
       }
+      if (hasExpired) {
+        return `Your PayShap Request to Pay of R ${amount.toFixed(2)} to ${payerName} has expired. The payer did not respond in time.`;
+      }
       if (isEbonfReject) {
-        return `Your PayShap Request to Pay of R ${amount.toFixed(2)} to ${payerName} could not be processed. ` +
-          `${payerBankLabel} has reached its daily PayShap transaction limit. ` +
-          `Please resend your request tomorrow.`;
+        return `Your PayShap Request to Pay of R ${amount.toFixed(2)} to ${payerName} could not be processed. Please try again later.`;
       }
       if (isFinalSystemReject) {
         return `Your PayShap request for R ${amount.toFixed(2)} could not be delivered to ${payerName}. The payer may not have PayShap enabled.`;
