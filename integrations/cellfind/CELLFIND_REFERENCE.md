@@ -15,7 +15,7 @@ MyMoolah exposes an HTTP **GET** callback for Cellfind USSD Manager:
 | Method | `GET` |
 | Production URL | `https://api-mm.mymoolah.africa/api/v1/ussd` (confirmed by Cellfind 2026-03-26) |
 | Short code | **`*120*5616#`** (allocated by Cellfind 2026-03-26) |
-| Cellfind IPs | `102.69.237.30`, `102.69.236.30` (permanent — whitelisted in `CELLFIND_ALLOWED_IPS`) |
+| Cellfind IPs | `102.69.237.30`, `102.69.236.30`, `102.69.236.148` (permanent — whitelisted in `CELLFIND_ALLOWED_IPS`) |
 
 All inbound traffic from Cellfind uses query parameters on this GET endpoint.
 

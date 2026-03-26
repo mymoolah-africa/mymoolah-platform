@@ -230,7 +230,7 @@ More
 | Variable | Purpose | Default / notes |
 |----------|---------|-----------------|
 | `USSD_ENABLED` | Master switch; must be **`true`** to mount `/api/v1/ussd`. | **`false`** (omit or any value other than `true` disables). |
-| `CELLFIND_ALLOWED_IPS` | Comma-separated list of **Cellfind** egress IPs. In **production**, if empty, the whitelist middleware **blocks** all USSD traffic. Non-production may allow all when unset (see middleware). | **Production**: `102.69.237.30,102.69.236.30` (confirmed by Cellfind 2026-03-26; permanent). |
+| `CELLFIND_ALLOWED_IPS` | Comma-separated list of **Cellfind** egress IPs. In **production**, if empty, the whitelist middleware **blocks** all USSD traffic. Non-production may allow all when unset (see middleware). | **Production**: `102.69.237.30,102.69.236.30,102.69.236.148` (confirmed by Cellfind 2026-03-26; `102.69.236.148` observed in production logs). |
 | `USSD_SHORTCODE` | Operational short code — **`*120*5616#`** (allocated by Cellfind 2026-03-26). | **`*120*5616#`** — set for runbooks, dashboards, and partner alignment. |
 | `USSD_SESSION_TTL` | Redis session TTL in **seconds**. | **180** |
 | `USSD_PIN_MAX_ATTEMPTS` | Failed PIN attempts before lockout tier applies. | **3** |

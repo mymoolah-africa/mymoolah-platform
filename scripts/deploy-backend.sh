@@ -181,7 +181,7 @@ log "Service URL: ${SERVICE_URL}"
 log "Setting CELLFIND_ALLOWED_IPS (comma-separated value requires alternate gcloud delimiter)..."
 gcloud run services update "${SERVICE_NAME}" \
   --region "${REGION}" \
-  --update-env-vars "^@^CELLFIND_ALLOWED_IPS=102.69.237.30,102.69.236.30" \
+  --update-env-vars "^@^CELLFIND_ALLOWED_IPS=102.69.237.30,102.69.236.30,102.69.236.148" \
   --quiet 2>&1 || log "⚠️  Failed to set CELLFIND_ALLOWED_IPS — set manually via GCP console"
 log "✅ CELLFIND_ALLOWED_IPS set"
 
