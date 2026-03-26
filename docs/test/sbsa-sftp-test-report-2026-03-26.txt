@@ -1,30 +1,36 @@
-=== SBSA SFTP Connection Test Report ===
-Date: 2026-03-26 13:16:36 SAST
-Source: Local machine (macOS)
-Source IP: 2c0f:f4c0:a147:4d32:b06e:ab4e:c115:4dbd
-SFTP Gateway IP: 34.35.137.166
+=== SBSA SFTP Connection Test Report (Updated) ===
+Date: 2026-03-26 15:00 SAST
+Source: MyMoolah SFTP Gateway VM (sftp-1-vm, GCP Compute Engine)
+Source IP: 34.35.137.166 (CONFIRMED - this is the whitelisted IP)
 
-Target: 196.8.85.62:5022 (SBSA TEST)
+--- Test 1: SBSA TEST Server ---
+Target: 196.8.85.62:5022
 Username: mymoolahuser
 Auth: SSH key (sbsa_sftp_key, generated 2026-03-13)
+Result: Connection timed out after 10 seconds
 
---- Connection Output ---
-debug1: OpenSSH_10.2p1, LibreSSL 3.3.6
-debug1: Reading configuration data /etc/ssh/ssh_config
-debug1: /etc/ssh/ssh_config line 21: include /etc/ssh/ssh_config.d/* matched no files
-debug1: /etc/ssh/ssh_config line 54: Applying options for *
-debug1: Authenticator provider $SSH_SK_PROVIDER did not resolve; disabling
+--- Test 2: SBSA PRODUCTION Server ---
+Target: 196.8.86.53:5022
+Username: mymoolahuser
+Auth: SSH key (sbsa_sftp_key, generated 2026-03-13)
+Result: Connection timed out after 10 seconds
+
+--- Verbose Output (TEST) ---
 debug1: Connecting to 196.8.85.62 [196.8.85.62] port 5022.
-debug1: connect to address 196.8.85.62 port 5022: Operation timed out
-ssh: connect to host 196.8.85.62 port 5022: Operation timed out
-Connection closed.  
+debug1: connect to address 196.8.85.62 port 5022: Connection timed out
+ssh: connect to host 196.8.85.62 port 5022: Connection timed out
 Connection closed
 
---- Result ---
-Connection timed out after 15 seconds.
-The TCP connection to 196.8.85.62:5022 is not reachable from our network.
-This suggests our IP is not whitelisted on SBSA's SFTP firewall.
+--- Conclusion ---
+Both SBSA TEST and PRODUCTION SFTP servers are unreachable on port 5022
+from our whitelisted IP (34.35.137.166). The TCP connection cannot be
+established, which indicates a firewall or routing issue on SBSA's side.
+
+This test was run DIRECTLY from the SFTP Gateway VM (34.35.137.166),
+which is the IP Colette confirmed as whitelisted on 2026-03-26.
 
 --- Requested Action ---
-Please whitelist the following IPs on SBSA TEST SFTP firewall (196.8.85.62:5022):
-  1. 34.35.137.166 (MyMoolah SFTP Gateway - GCP Compute Engine)
+Please verify:
+1. That IP 34.35.137.166 is whitelisted on BOTH TEST (196.8.85.62) and PROD (196.8.86.53) SFTP firewalls
+2. That the SFTP service is running and listening on port 5022 on both servers
+3. That there are no intermediate firewalls or routing rules blocking the connection
