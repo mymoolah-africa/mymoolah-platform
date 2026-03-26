@@ -38,3 +38,7 @@ chemaname = public
 
 # EasyPay — contains SessionToken, do not commit
 docs/COPY_PASTE_THEODORE_EMAIL.txt
+
+# Docker container ID artifacts (created by redis/proxy startup)
+Running
+[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]
