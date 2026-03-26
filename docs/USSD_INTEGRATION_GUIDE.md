@@ -34,7 +34,7 @@ USSD Tier 0 is designed for **limited-KYC** access with **transaction caps** app
 
 ### High-level flow
 
-1. Subscriber dials the configured **short code** on the mobile network.  
+1. Subscriber dials **`*120*5616#`** on the mobile network.  
 2. **Cellfind** opens a USSD session and assigns a **session identifier**.  
 3. For each network event (new session, user input, release, timeout), Cellfind issues an **HTTP** call to MyMoolah.  
 4. MyMoolah’s **Express** application handles the request on a dedicated route, validates source IP, applies rate limits, and delegates to the **USSD controller** and **menu state machine**.  
@@ -230,8 +230,8 @@ More
 | Variable | Purpose | Default / notes |
 |----------|---------|-----------------|
 | `USSD_ENABLED` | Master switch; must be **`true`** to mount `/api/v1/ussd`. | **`false`** (omit or any value other than `true` disables). |
-| `CELLFIND_ALLOWED_IPS` | Comma-separated list of **Cellfind** egress IPs. In **production**, if empty, the whitelist middleware **blocks** all USSD traffic. Non-production may allow all when unset (see middleware). | No default — **required in production**. |
-| `USSD_SHORTCODE` | Operational short code for documentation, monitoring dashboards, and partner alignment. | Not consumed by application code today; set for **runbooks and Cellfind provisioning**. |
+| `CELLFIND_ALLOWED_IPS` | Comma-separated list of **Cellfind** egress IPs. In **production**, if empty, the whitelist middleware **blocks** all USSD traffic. Non-production may allow all when unset (see middleware). | **Production**: `102.69.237.30,102.69.236.30` (confirmed by Cellfind 2026-03-26; permanent). |
+| `USSD_SHORTCODE` | Operational short code — **`*120*5616#`** (allocated by Cellfind 2026-03-26). | **`*120*5616#`** — set for runbooks, dashboards, and partner alignment. |
 | `USSD_SESSION_TTL` | Redis session TTL in **seconds**. | **180** |
 | `USSD_PIN_MAX_ATTEMPTS` | Failed PIN attempts before lockout tier applies. | **3** |
 | `USSD_PIN_LOCKOUT_MINUTES` | Documented **first-tier** expectation (30 min). | **30** (align code if single-tier override is required). |

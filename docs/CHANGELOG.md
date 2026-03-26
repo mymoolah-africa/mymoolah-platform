@@ -1,5 +1,19 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-26 - USSD Go-Live Preparation: Cellfind shortcode *120*5616# + Cloud Armor + deploy config
+
+Cellfind (Marcella) confirmed: **shortcode `*120*5616#`** allocated, production callback URL `https://api-mm.mymoolah.africa/api/v1/ussd` registered, **IPs `102.69.237.30` and `102.69.236.30`** are permanent production egress IPs.
+
+### Changes
+- **`scripts/fix-cloud-armor-ussd-exception.sh`**: Cloud Armor WAF ALLOW rule at priority 51 for `/api/v1/ussd` path (prevents OWASP CRS blocking Cellfind callbacks). Applies to both `mmtp-waf-staging` and `mmtp-waf-production`.
+- **`scripts/deploy-backend.sh`**: Added USSD production env vars (`USSD_ENABLED=true`, `USSD_SHORTCODE=*120*5616#`, session/PIN/limit defaults). `CELLFIND_ALLOWED_IPS=102.69.237.30,102.69.236.30` set via post-deploy `--update-env-vars` with alternate gcloud delimiter (commas in value conflict with default delimiter).
+- **`services/smsService.js`**: Updated all 5 USSD SMS templates from `*120*XXXX#` to `*120*5616#`.
+- **`docs/USSD_INTEGRATION_GUIDE.md`**: Updated shortcode, Cellfind IPs (permanent), and env var defaults with confirmed production values.
+- **`integrations/cellfind/CELLFIND_REFERENCE.md`**: Added production URL, shortcode, and IPs to endpoint table; updated dial string references.
+- **`.env.codespaces`**: Added Cellfind production IP reference comment.
+
+---
+
 ## 2026-03-25 Evening - USSD Channel (Cellfind) Phase 1 MVP + follow-up hardening & RTP Pain.013 ✅
 
 ### Session Overview

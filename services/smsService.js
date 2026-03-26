@@ -281,17 +281,17 @@ class SmsService {
   // ─── USSD Transaction Confirmations ────────────────────────────────────────
 
   async sendUssdRegistrationSms(phoneNumber) {
-    const msg = 'Welcome to MyMoolah! Your USSD wallet is ready. Dial *120*XXXX# to transact. Download the app for full features: mymoolah.africa';
+    const msg = 'Welcome to MyMoolah! Your USSD wallet is ready. Dial *120*5616# to transact. Download the app for full features: mymoolah.africa';
     return this.sendSms(phoneNumber, msg, { type: 'ussd', reference: `USSD-REG-${Date.now()}` });
   }
 
   async sendUssdAirtimeSms(phoneNumber, amount, recipient) {
-    const msg = `MyMoolah: Airtime R${amount} sent to ${recipient}. Dial *120*XXXX# for more.`;
+    const msg = `MyMoolah: Airtime R${amount} sent to ${recipient}. Dial *120*5616# for more.`;
     return this.sendSms(phoneNumber, msg, { type: 'ussd', reference: `USSD-AIR-${Date.now()}` });
   }
 
   async sendUssdDataSms(phoneNumber, amount, recipient) {
-    const msg = `MyMoolah: Data R${amount} sent to ${recipient}. Dial *120*XXXX# for more.`;
+    const msg = `MyMoolah: Data R${amount} sent to ${recipient}. Dial *120*5616# for more.`;
     return this.sendSms(phoneNumber, msg, { type: 'ussd', reference: `USSD-DAT-${Date.now()}` });
   }
 
@@ -301,12 +301,12 @@ class SmsService {
   }
 
   async sendUssdSendMoneySms(phoneNumber, amount, recipientName) {
-    const msg = `MyMoolah: R${amount} sent to ${recipientName}. Dial *120*XXXX# for balance.`;
+    const msg = `MyMoolah: R${amount} sent to ${recipientName}. Dial *120*5616# for balance.`;
     return this.sendSms(phoneNumber, msg, { type: 'ussd', reference: `USSD-SEND-${Date.now()}` });
   }
 
   async sendUssdReceiveMoneySms(phoneNumber, amount, senderName) {
-    const msg = `MyMoolah: You received R${amount} from ${senderName}. Dial *120*XXXX# for balance.`;
+    const msg = `MyMoolah: You received R${amount} from ${senderName}. Dial *120*5616# for balance.`;
     return this.sendSms(phoneNumber, msg, { type: 'ussd', reference: `USSD-RECV-${Date.now()}` });
   }
 

@@ -13,7 +13,9 @@ MyMoolah exposes an HTTP **GET** callback for Cellfind USSD Manager:
 |------|--------|
 | Path | `/api/v1/ussd` |
 | Method | `GET` |
-| Usage | Register this URL with Cellfind as the application callback (full base URL + path as deployed, e.g. `https://api-mm.mymoolah.africa/api/v1/ussd`). |
+| Production URL | `https://api-mm.mymoolah.africa/api/v1/ussd` (confirmed by Cellfind 2026-03-26) |
+| Short code | **`*120*5616#`** (allocated by Cellfind 2026-03-26) |
+| Cellfind IPs | `102.69.237.30`, `102.69.236.30` (permanent — whitelisted in `CELLFIND_ALLOWED_IPS`) |
 
 All inbound traffic from Cellfind uses query parameters on this GET endpoint.
 
@@ -29,7 +31,7 @@ Cellfind sends parameters as **HTTP GET query strings** (no request body).
 | `sessionid` | Unique session identifier assigned by Cellfind; must be echoed in the XML response. |
 | `phase` | Always **`2`** for production USSD. |
 | `type` | Interaction type: **`1`** = REQUEST (new session / initial dial), **`2`** = RESPONSE (user reply), **`3`** = RELEASE (user cancelled), **`4`** = TIMEOUT. |
-| `request` | For `type=1`: the dial string (e.g. `*120*XXXX#`). For `type=2`: the user’s input text. Empty or absent for `type=3` and `type=4`. |
+| `request` | For `type=1`: the dial string (e.g. `*120*5616#`). For `type=2`: the user’s input text. Empty or absent for `type=3` and `type=4`. |
 | `networkid` | Mobile network operator identifier: **`1`** = Vodacom, **`2`** = MTN, **`3`** = Cell C, **`4`** = Telkom, **`5`** = Rain. |
 
 ---
@@ -68,7 +70,7 @@ The `{sessionid}` value in the XML should match the `sessionid` from the incomin
 
 ## Session lifecycle
 
-1. User dials `*120*XXXX#` on the handset.
+1. User dials `*120*5616#` on the handset.
 2. MNO routes the session to Cellfind.
 3. Cellfind calls MyMoolah with **`type=1`** (REQUEST), including dial string in `request`.
 4. MyMoolah returns XML with **`response type="2"`** (continue) and menu text.
@@ -94,7 +96,7 @@ Replace host and port with your local server (example: `8080`). URL-encode `#` a
 **New session (initial REQUEST):**
 
 ```bash
-curl "http://localhost:8080/api/v1/ussd?msisdn=27821234567&sessionid=TEST001&type=1&phase=2&request=*120*XXXX%23&networkid=1"
+curl "http://localhost:8080/api/v1/ussd?msisdn=27821234567&sessionid=TEST001&type=1&phase=2&request=*120*5616%23&networkid=1"
 ```
 
 **User input (e.g. option 1):**
