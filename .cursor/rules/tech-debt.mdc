@@ -16,6 +16,7 @@ alwaysApply: true
 | Conversation history in-memory only | `services/ragService.js` | Medium — lost on restart, not scalable | Migrate to Redis for horizontal scaling (Phase 3) |
 | npm audit: 25 vulnerabilities (2 critical) | `package.json` | Medium | Run `npm audit fix` when stable |
 | `check-proxies-cs.sh` missing | `scripts/ensure-proxies-running.sh` | Low — bash error only, proxies work | Either create the script or remove the call |
+| USSD sessions use in-memory fallback on Cloud Run (no Redis) | `services/ussdSessionService.js` | Medium — sessions not shared across instances; lost on cold-start | Provision GCP Memorystore (managed Redis ~$30/month) and set `REDIS_URL` on Cloud Run |
 
 ## Architectural Decisions Log
 
@@ -30,6 +31,7 @@ alwaysApply: true
 | MT940+MT942 for SBSA H2H statements | Mar 2026 | SWIFT ISO standard — banking/Mojaloop grade |
 | Sub-folders in GCS for SBSA files | Mar 2026 | statements/ and payments/ separation prevents file mixing |
 | Admin user for all DDL migrations | Mar 2026 | mymoolah_app is DML only; postgres superuser required for ALTER/CREATE |
+| USSD eeziCash fixed to use Wallet.debit() + SELECT FOR UPDATE | Mar 2026 | Previous impl bypassed double-entry ledger with direct SQL; now uses Wallet model with row-level locking |
 
 ## Rule: When to Add Here
 

@@ -1,8 +1,7 @@
 'use strict';
 
-const { sequelize } = require('../models');
+const { sequelize, Wallet, Transaction } = require('../models');
 const ussdAuthService = require('./ussdAuthService');
-const crypto = require('crypto');
 
 const TIER0_DAILY_LIMIT = parseInt(process.env.USSD_TIER0_DAILY_LIMIT || '500', 10);
 const TIER0_MONTHLY_LIMIT = parseInt(process.env.USSD_TIER0_MONTHLY_LIMIT || '3000', 10);
@@ -527,29 +526,39 @@ async function purchaseVAS(userId, msisdn, productType, amountRand, sessionId) {
 }
 
 async function purchaseEeziVoucher(userId, amountRand, sessionId) {
+  const t = await sequelize.transaction();
   try {
+    const wallet = await Wallet.findOne({
+      where: { userId },
+      lock: t.LOCK.UPDATE,
+      transaction: t,
+    });
+    if (!wallet) {
+      await t.rollback();
+      return { success: false, error: 'Wallet not found.' };
+    }
+
+    const canDebit = wallet.canDebit(amountRand);
+    if (!canDebit.allowed) {
+      await t.rollback();
+      return { success: false, error: canDebit.reason === 'Insufficient balance' ? 'Insufficient balance.' : canDebit.reason };
+    }
+
+    const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+    if (!accountNumber) {
+      await t.rollback();
+      return { success: false, error: 'Cash out not configured.' };
+    }
+
+    const amountCents = amountRand * 100;
+    const reference = `USSD-EEZI-${sessionId}-${Date.now()}`.replace(/_/g, '-');
+    const storeId = process.env.FLASH_STORE_ID || accountNumber.replace(/-/g, '').slice(0, 12);
+    const terminalId = process.env.FLASH_TERMINAL_ID || accountNumber.replace(/-/g, '').slice(0, 12);
+
     const FlashAuthService = require('./flashAuthService');
     const flashAuth = FlashAuthService.getInstance
       ? FlashAuthService.getInstance()
       : new FlashAuthService();
-
-    const [walletRows] = await sequelize.query(
-      'SELECT id, balance, "walletId" FROM wallets WHERE "userId" = $1 LIMIT 1',
-      { bind: [userId] }
-    );
-    if (!walletRows.length) return { success: false, error: 'Wallet not found.' };
-
-    const wallet = walletRows[0];
-    const balance = parseFloat(wallet.balance);
-    if (balance < amountRand) return { success: false, error: 'Insufficient balance.' };
-
-    const amountCents = amountRand * 100;
-    const reference = `USSD-EEZI-${sessionId}-${Date.now()}`.replace(/_/g, '-');
-    const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
-    if (!accountNumber) return { success: false, error: 'Cash out not configured.' };
-
-    const storeId = process.env.FLASH_STORE_ID || accountNumber.replace(/-/g, '').slice(0, 12);
-    const terminalId = process.env.FLASH_TERMINAL_ID || accountNumber.replace(/-/g, '').slice(0, 12);
 
     const response = await flashAuth.makeAuthenticatedRequest('POST', '/eezi-voucher/purchase', {
       reference,
@@ -561,29 +570,29 @@ async function purchaseEeziVoucher(userId, amountRand, sessionId) {
 
     const eeziPin = response?.voucherPin || response?.pin || response?.data?.pin || response?.token || null;
     if (!eeziPin) {
+      await t.rollback();
       return { success: false, error: 'Voucher error. Try again.' };
     }
 
-    const newBalance = balance - amountRand;
-    await sequelize.query('UPDATE wallets SET balance = $1, "updatedAt" = NOW() WHERE "userId" = $2', {
-      bind: [newBalance, userId],
-    });
+    await wallet.debit(amountRand, 'withdraw', { transaction: t });
 
     const txnId = `TXN-USSD-${Date.now()}-CASHOUT`;
-    await sequelize.query(
-      `INSERT INTO transactions ("transactionId", "userId", "walletId", amount, type, status, description, metadata, currency, "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, 'withdraw', 'completed', $5, $6, 'ZAR', NOW(), NOW())`,
-      {
-        bind: [
-          txnId, userId, wallet.walletId, amountRand,
-          `eeziCash R${amountRand}`,
-          JSON.stringify({ channel: 'ussd', reference, eeziPin: '***' }),
-        ],
-      }
-    );
+    await Transaction.create({
+      transactionId: txnId,
+      userId,
+      walletId: wallet.walletId,
+      amount: amountRand,
+      type: 'withdraw',
+      status: 'completed',
+      description: `eeziCash R${amountRand}`,
+      metadata: { channel: 'ussd', reference, eeziPin: '***' },
+      currency: 'ZAR',
+    }, { transaction: t });
 
+    await t.commit();
     return { success: true, pin: eeziPin };
   } catch (err) {
+    await t.rollback();
     console.error('[USSD] eeziCash purchase error:', err.message);
     return { success: false, error: 'Cash out failed. Try again.' };
   }
