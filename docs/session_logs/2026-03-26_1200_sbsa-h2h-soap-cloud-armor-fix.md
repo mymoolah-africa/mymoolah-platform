@@ -22,8 +22,13 @@ Studied Colette's email + SBSA WSDL/XSD/SDD zip file (7 files). Verified our SOA
 - [x] Applied Cloud Armor fix to both `mmtp-waf-staging` and `mmtp-waf-production`
 - [x] Confirmed SOAP notification works via staging load balancer after fix (HTTP 200)
 - [x] Updated `docs/SBSA_H2H_SETUP_GUIDE.md` with mymoolahuser, Melanie Block, WAF section, Cloud Run URLs
-- [ ] SFTP to SBSA TEST server — connection timed out (IP not whitelisted)
-- [ ] Production backend redeploy (SOAP handler code not in production image yet)
+- [x] Deployed production backend (revision 00038-9jh) — SOAP handler now live in production
+- [x] Tested production SOAP endpoint via load balancer — HTTP 200 + SOAP Ack confirmed
+- [x] Redeployed wallet staging — fixed container start failure, all 4 Cloud Run services green
+- [x] Created sample Pain.001 XML file (`docs/samples/MYMOOLAH_OWN11_Pain001v3_ZA_TST_*.xml`)
+- [x] Created `scripts/generate-sbsa-test-notification.sh` — SDD V1.3 compliant test script
+- [x] Drafted and Andre sent reply to Colette with Pain.001 sample attached
+- [ ] SFTP to SBSA TEST server — connection timed out (IP not whitelisted, awaiting Colette)
 
 ---
 
@@ -37,6 +42,8 @@ Studied Colette's email + SBSA WSDL/XSD/SDD zip file (7 files). Verified our SOA
 
 ## Files Modified
 - `scripts/fix-cloud-armor-soap-exception.sh` — NEW: Cloud Armor path exception script for SOAP XML
+- `scripts/generate-sbsa-test-notification.sh` — NEW: SDD V1.3 compliant test XML generator + production tester
+- `docs/samples/MYMOOLAH_OWN11_Pain001v3_ZA_TST_20260326120000000.xml` — NEW: sample Pain.001 for SBSA unit testing
 - `docs/SBSA_H2H_SETUP_GUIDE.md` — Updated: mymoolahuser username, Melanie Block contact, no test env for statements, Cloud Armor WAF section (11), Cloud Run URLs (12)
 
 ---
@@ -61,7 +68,11 @@ Studied Colette's email + SBSA WSDL/XSD/SDD zip file (7 files). Verified our SOA
 - [x] SOAP handler tested on staging Cloud Run directly (bypassing WAF) — HTTP 200 + SOAP Ack
 - [x] SOAP handler tested via staging load balancer after Cloud Armor fix — HTTP 200 + SOAP Ack
 - [x] Verified SOAP parser alignment against SBSA SDD V1.3 data dictionary (all fields match)
-- [ ] Production endpoint test — pending production redeploy
+- [x] Production backend deployed (revision mymoolah-backend-production-00038-9jh, 100% traffic)
+- [x] Production endpoint test via load balancer — HTTP 200 + SOAP Ack (api-mm.mymoolah.africa)
+- [x] Wallet staging redeployed — green, serving correctly
+- [x] Sample Pain.001 XML file created and emailed to Colette + Melanie Block
+- [x] Test notification script created (`scripts/generate-sbsa-test-notification.sh`) — SDD V1.3 compliant
 - [ ] SFTP connectivity to SBSA — pending IP whitelisting
 - [ ] End-to-end deposit crediting — pending SBSA sending real test notifications
 
