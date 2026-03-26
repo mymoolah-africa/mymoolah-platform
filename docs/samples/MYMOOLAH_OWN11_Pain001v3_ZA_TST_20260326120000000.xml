@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>MM-BULK-SAMPLE-TST-20260326</MsgId>
+      <CreDtTm>2026-03-26T12:00:00.000Z</CreDtTm>
+      <NbOfTxs>3</NbOfTxs>
+      <CtrlSum>3.00</CtrlSum>
+      <InitgPty>
+        <Nm>MyMoolah Treasury</Nm>
+      </InitgPty>
+    </GrpHdr>
+    <PmtInf>
+      <PmtInfId>PMT-MM-BULK-SAMPLE-TST-20260326</PmtInfId>
+      <PmtMtd>TRF</PmtMtd>
+      <NbOfTxs>3</NbOfTxs>
+      <CtrlSum>3.00</CtrlSum>
+      <PmtTpInf>
+        <SvcLvl><Cd>NURG</Cd></SvcLvl>
+        <LclInstrm><Cd>PRPT</Cd></LclInstrm>
+      </PmtTpInf>
+      <ReqdExctnDt>
+        <Dt>2026-03-26</Dt>
+      </ReqdExctnDt>
+      <Dbtr>
+        <Nm>MyMoolah Treasury</Nm>
+      </Dbtr>
+      <DbtrAcct>
+        <Id><Othr><Id>000602739172</Id></Othr></Id>
+      </DbtrAcct>
+      <DbtrAgt>
+        <FinInstnId>
+          <ClrSysMmbId>
+            <ClrSysId><Cd>ZANCC</Cd></ClrSysId>
+            <MmbId>051001</MmbId>
+          </ClrSysMmbId>
+        </FinInstnId>
+      </DbtrAgt>
+      <CdtTrfTxInf>
+        <PmtId>
+          <InstrId>INSTR-TST-001</InstrId>
+          <EndToEndId>E2E-TST-001</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="ZAR">1.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <ClrSysMmbId>
+              <ClrSysId><Cd>ZANCC</Cd></ClrSysId>
+              <MmbId>051001</MmbId>
+            </ClrSysMmbId>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Test Beneficiary One</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id><Othr><Id>000000000001</Id></Othr></Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>MYMOOLAH TEST PAYMENT 001</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+      <CdtTrfTxInf>
+        <PmtId>
+          <InstrId>INSTR-TST-002</InstrId>
+          <EndToEndId>E2E-TST-002</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="ZAR">1.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <ClrSysMmbId>
+              <ClrSysId><Cd>ZANCC</Cd></ClrSysId>
+              <MmbId>250655</MmbId>
+            </ClrSysMmbId>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Test Beneficiary Two</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id><Othr><Id>000000000002</Id></Othr></Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>MYMOOLAH TEST PAYMENT 002</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+      <CdtTrfTxInf>
+        <PmtId>
+          <InstrId>INSTR-TST-003</InstrId>
+          <EndToEndId>E2E-TST-003</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="ZAR">1.00</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <ClrSysMmbId>
+              <ClrSysId><Cd>ZANCC</Cd></ClrSysId>
+              <MmbId>632005</MmbId>
+            </ClrSysMmbId>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>Test Beneficiary Three</Nm>
+        </Cdtr>
+        <CdtrAcct>
+          <Id><Othr><Id>000000000003</Id></Othr></Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>MYMOOLAH TEST PAYMENT 003</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>
