@@ -12,7 +12,7 @@
 # Usage: Run from Codespaces (requires gcloud auth)
 #   bash scripts/fix-cloud-armor-soap-exception.sh [--dry-run]
 
-set -euo pipefail
+set -uo pipefail
 
 PROJECT="mymoolah-db"
 PRIORITY=50
@@ -43,11 +43,10 @@ for POLICY_NAME in mmtp-waf-staging mmtp-waf-production; do
     continue
   fi
 
-  echo "  Policy exists. Listing current rules:"
-  gcloud compute security-policies rules list \
-    --security-policy="$POLICY_NAME" \
+  echo "  Policy exists. Current rules:"
+  gcloud compute security-policies describe "$POLICY_NAME" \
     --project="$PROJECT" \
-    --format="table(priority,action,description)" 2>&1
+    --format="table(rules.priority,rules.action,rules.description)" 2>&1 || true
   echo ""
 
   RULE_EXISTS=$(gcloud compute security-policies rules describe "$PRIORITY" \
