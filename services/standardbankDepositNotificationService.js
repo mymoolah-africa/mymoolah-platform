@@ -87,6 +87,62 @@ function buildFuzzyMsisdnVariants(ref, canonicalE164) {
 }
 
 /**
+ * Extract valid SA mobile numbers from a reference that may contain extra digits.
+ * Banks (especially PayShap) often prepend/append batch IDs, reference codes, or
+ * zero-padding around the payer's MSISDN proxy. This scans the digit sequence
+ * using a sliding window to find all valid SA mobile patterns.
+ *
+ * Priority: 10-digit local (0[6-8]...) → 11-digit intl (27[6-8]...) → 9-digit
+ * without leading zero ([6-8]...). Returns E.164 candidates, longest match first.
+ *
+ * @param {string} ref - Raw reference from PayShap/deposit notification
+ * @param {string|null} alreadyTried - E.164 already attempted (excluded from output)
+ * @returns {string[]} Array of unique E.164 candidates found within the reference
+ */
+function extractMsisdnFromReference(ref, alreadyTried) {
+  if (!ref || typeof ref !== 'string') return [];
+
+  const digits = ref.replace(/\D/g, '');
+  if (digits.length < 9) return [];
+
+  const seen = new Set(alreadyTried ? [alreadyTried] : []);
+  const candidates = [];
+
+  const addCandidate = (e164) => {
+    if (e164 && !seen.has(e164)) { seen.add(e164); candidates.push(e164); }
+  };
+
+  // 11-digit international 27[6-8]XXXXXXXX — highest confidence
+  for (let i = 0; i <= digits.length - 11; i++) {
+    const chunk = digits.substring(i, i + 11);
+    if (/^27[6-8]\d{8}$/.test(chunk)) {
+      addCandidate(`+${chunk}`);
+    }
+  }
+
+  // 10-digit local 0[6-8]XXXXXXXX
+  for (let i = 0; i <= digits.length - 10; i++) {
+    const chunk = digits.substring(i, i + 10);
+    if (/^0[6-8]\d{8}$/.test(chunk)) {
+      addCandidate(`+27${chunk.slice(1)}`);
+    }
+  }
+
+  // 9-digit without leading zero [6-8]XXXXXXXX — only when total digits ≤ 12
+  // (avoids false positives in very long numeric references)
+  if (digits.length <= 12) {
+    for (let i = 0; i <= digits.length - 9; i++) {
+      const chunk = digits.substring(i, i + 9);
+      if (/^[6-8]\d{8}$/.test(chunk)) {
+        addCandidate(`+27${chunk}`);
+      }
+    }
+  }
+
+  return candidates;
+}
+
+/**
  * Look up a wallet by E.164 phone number.
  * @param {string} e164
  * @returns {Promise<{ type: 'wallet', wallet: Object, userId: number, walletId: string }|null>}
@@ -126,6 +182,20 @@ async function resolveReference(referenceNumber) {
   if (e164) {
     const result = await lookupWalletByE164(e164);
     if (result) return result;
+  }
+
+  // Phase 1.5: Extract MSISDN from reference with extra digits (bank prefixes/suffixes)
+  const extractedCandidates = extractMsisdnFromReference(ref, e164);
+  for (const candidate of extractedCandidates) {
+    const result = await lookupWalletByE164(candidate);
+    if (result) {
+      logger.info('MSISDN extracted from padded reference', {
+        originalRef: ref,
+        extractedE164: candidate,
+        userId: result.userId,
+      });
+      return { ...result, extractedFromRef: true, originalRef: ref };
+    }
   }
 
   // Phase 2: Float account prefixes (SUP-, CLI-, SP-, RES-)
@@ -298,12 +368,37 @@ async function processDepositNotification(payload) {
     return { success: false, error: 'Invalid amount' };
   }
 
-  // Idempotency
+  // Idempotency — primary: exact transactionId match
   const existing = await db.StandardBankTransaction.findOne({
     where: { transactionId, type: 'deposit' },
   });
   if (existing) {
     return { success: true, credited: 'already_processed', message: 'Duplicate' };
+  }
+
+  // Idempotency — cross-channel: PayShap and H2H SOAP may notify for the same
+  // deposit with different transactionId prefixes (PAYSHAP-IN-* vs SBSA-SOAP-*).
+  // Guard against double-credit by checking for same reference + amount within 90s.
+  const { Op } = require('sequelize');
+  const crossChannelCutoff = new Date(Date.now() - 90_000);
+  const crossMatch = await db.StandardBankTransaction.findOne({
+    where: {
+      type: 'deposit',
+      referenceNumber,
+      amount,
+      status: 'completed',
+      processedAt: { [Op.gte]: crossChannelCutoff },
+      transactionId: { [Op.ne]: transactionId },
+    },
+  });
+  if (crossMatch) {
+    logger.info('Cross-channel duplicate detected', {
+      newTxId: transactionId,
+      existingTxId: crossMatch.transactionId,
+      referenceNumber,
+      amount,
+    });
+    return { success: true, credited: 'already_processed', message: 'Cross-channel duplicate' };
   }
 
   const resolved = await resolveReference(referenceNumber);
@@ -446,4 +541,5 @@ module.exports = {
   resolveReference,
   processDepositNotification,
   parkInSuspense,
+  extractMsisdnFromReference,
 };

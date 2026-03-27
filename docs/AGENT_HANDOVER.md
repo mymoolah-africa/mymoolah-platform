@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-26 15:00  
-**Latest Feature**: **USSD Go-Live Preparation — Cellfind `*120*5616#`** — Cellfind (Marcella) confirmed shortcode `*120*5616#`, production callback URL `https://api-mm.mymoolah.africa/api/v1/ussd`, and permanent egress IPs `102.69.237.30` + `102.69.236.30`. Created Cloud Armor WAF exception script (priority 51 for `/api/v1/ussd`). Updated `deploy-backend.sh` with all USSD env vars (`USSD_ENABLED=true`, `CELLFIND_ALLOWED_IPS`, shortcode, limits). Replaced all `*120*XXXX#` placeholder shortcodes in SMS templates, docs, and references. **Next**: André must run Cloud Armor script + deploy to production in Codespaces, then confirm to Marcella. Session log: `docs/session_logs/2026-03-26_1500_ussd-golive-cellfind-shortcode-cloud-armor.md`.  
-**Document Version**: 2.36.0  
-**Session logs**: `docs/session_logs/2026-03-26_1500_ussd-golive-cellfind-shortcode-cloud-armor.md`, `docs/session_logs/2026-03-26_1200_sbsa-h2h-soap-cloud-armor-fix.md`, `docs/session_logs/2026-03-25_2100_ussd-channel-implementation.md`  
+**Last Updated**: 2026-03-26 18:00  
+**Latest Feature**: **PayShap Inbound Credit Handler** — Built dedicated handler for third-party PayShap deposits to treasury account (separate from H2H SOAP). New endpoint `POST /payshap/inbound-credit`. Enhanced MSISDN extraction from padded bank references (sliding window). Cross-channel idempotency (90s window) prevents double-crediting when both PayShap and H2H notify. RPP callback fallback routes unmatched ACCC/ACSP as inbound credits. **Next**: André must email Gustaf (SBSA PayShap team) to confirm callback URL, payload format, and proxy registration requirements. Session log: `docs/session_logs/2026-03-26_1800_payshap-inbound-credit-handler.md`.  
+**Document Version**: 2.37.0  
+**Session logs**: `docs/session_logs/2026-03-26_1800_payshap-inbound-credit-handler.md`, `docs/session_logs/2026-03-26_1500_ussd-golive-cellfind-shortcode-cloud-armor.md`, `docs/session_logs/2026-03-26_1200_sbsa-h2h-soap-cloud-armor-fix.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---

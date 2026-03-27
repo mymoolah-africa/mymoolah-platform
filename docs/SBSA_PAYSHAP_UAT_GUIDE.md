@@ -113,20 +113,33 @@ Creditor account last digit drives outcome:
 
 | Endpoint | Method | Auth | Description |
 |----------|--------|------|-------------|
-| `/api/v1/standardbank/notification` | POST | X-Signature (HMAC) | Deposit notification (reference = CID = MSISDN) |
+| `/api/v1/standardbank/notification` | POST | X-Signature (HMAC) | Deposit notification — H2H SOAP/JSON (reference = CID = MSISDN) |
 | `/api/v1/standardbank/payshap/rpp` | POST | JWT | Initiate PayShap payment (Send Money) |
 | `/api/v1/standardbank/payshap/rtp` | POST | JWT | Initiate Request to Pay |
+| `/api/v1/standardbank/payshap/inbound-credit` | POST | x-GroupHeader-Hash / X-Signature | **Inbound PayShap credit** — third-party deposits via PayShap rails |
 | `/api/v1/standardbank/callback` | POST | x-GroupHeader-Hash | RPP batch callback |
 | `/api/v1/standardbank/realtime-callback` | POST | x-GroupHeader-Hash | RPP realtime callback |
 | `/api/v1/standardbank/rtp-callback` | POST | x-GroupHeader-Hash | RTP callback |
 | `/api/v1/standardbank/rtp-realtime-callback` | POST | x-GroupHeader-Hash | RTP realtime callback |
 
-### Deposit Notification
+### Deposit Notification (H2H — Colette's Team)
 
 When a deposit hits the MM SBSA main account, SBSA POSTs to `/notification`. The payload must include:
 - `transactionId` - for idempotency
 - `referenceNumber` (or `reference`, `cid`) - CID = MSISDN (wallet to credit) or float identifier (SUP-, CLI-, SP-, RES-)
 - `amount` - amount to credit
+
+### PayShap Inbound Credit (PayShap Team — Gustaf)
+
+When a third-party PayShap payment is received on the treasury account (NOT initiated by MyMoolah), the PayShap system sends a real-time notification. This is **separate** from the H2H SOAP notification:
+- **Endpoint**: `/api/v1/standardbank/payshap/inbound-credit`
+- **Auth**: `x-GroupHeader-Hash` (HMAC-SHA256) or `X-Signature` (HMAC-SHA256)
+- **Payload**: JSON with `transactionId`, `reference`/`proxy` (MSISDN), `amount`, `currency`
+- **MSISDN extraction**: Handles extra digits banks may prepend/append to the phone number reference
+- **Cross-channel idempotency**: Detects if the same deposit was already processed via H2H SOAP (within 90s window)
+- **Fallback**: Unmatched RPP callbacks (existing `/callback` routes) with ACCC/ACSP status are also routed to this handler
+
+**TBC with Gustaf**: Exact callback URL, payload format, and auth method for inbound PayShap credits.
 
 ---
 

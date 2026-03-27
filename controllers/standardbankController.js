@@ -183,7 +183,45 @@ async function processRppCallback(originalMessageId, transactionIdentifier, stat
   const existing = await db.StandardBankTransaction.findOne({
     where: { originalMessageId },
   });
-  if (!existing) return;
+
+  if (!existing) {
+    // No matching MM-initiated transaction — this may be an inbound PayShap credit
+    // from a third party. Route through the deposit notification service.
+    if (status === 'ACCC' || status === 'ACSP') {
+      const reference = rawBody?.cdtrAcct?.id?.item?.id
+        || rawBody?.prxy?.id
+        || rawBody?.rmtInf?.ustrd
+        || rawBody?.dbtrRef
+        || rawBody?.reference
+        || rawBody?.referenceNumber;
+      const rawAmt = rawBody?.intrBkSttlmAmt?.value
+        || rawBody?.instdAmt?.value
+        || rawBody?.amount;
+      const amount = rawAmt ? parseFloat(rawAmt) : 0;
+
+      if (reference && amount > 0) {
+        console.log('[RPP-CB-INBOUND] Unmatched callback with ACCC/ACSP — routing as inbound PayShap credit. msgId=%s ref=%s amt=%s',
+          originalMessageId, reference, amount);
+        try {
+          const depositService = require('../services/standardbankDepositNotificationService');
+          await depositService.processDepositNotification({
+            transactionId: `PAYSHAP-IN-${transactionIdentifier || originalMessageId}`,
+            referenceNumber: reference,
+            amount,
+            currency: rawBody?.intrBkSttlmAmt?.ccy || rawBody?.currency || 'ZAR',
+            description: `PayShap inbound (via RPP callback): ${originalMessageId}`,
+            source: 'payshap_inbound_rpp_fallback',
+          });
+        } catch (depErr) {
+          console.error('[RPP-CB-INBOUND] Deposit processing failed:', depErr.message);
+        }
+      } else {
+        console.log('[RPP-CB-INBOUND] Unmatched callback — no reference or amount. msgId=%s status=%s',
+          originalMessageId, status);
+      }
+    }
+    return;
+  }
 
   const statusMap = {
     ACSP: 'completed',
@@ -822,6 +860,117 @@ async function handleJsonNotification(rawBody, req, res) {
 }
 
 /**
+ * Inbound PayShap Credit — third-party PayShap payment received on treasury account.
+ * Separate from SBSA H2H SOAP notifications: this handles real-time callbacks from
+ * the SBSA PayShap (Rapid Payments) team for credits NOT initiated by MyMoolah.
+ *
+ * POST /api/v1/standardbank/payshap/inbound-credit
+ *
+ * Expected payload (JSON — exact format TBC with Gustaf/SBSA PayShap team):
+ *   { transactionId, reference/proxy, amount, currency, payerName?, payerBank?, ... }
+ *
+ * Also acts as a catch-all for RPP/RTP callbacks that don't match any MM-initiated
+ * transaction (i.e., unsolicited inbound credits routed via existing callback URLs).
+ */
+async function handlePayshapInboundCredit(req, res) {
+  const secret = process.env.SBSA_CALLBACK_SECRET;
+  const headerHash = req.headers['x-groupheader-hash'] || req.headers['x-GroupHeader-Hash'];
+  const signature = req.headers['x-signature'] || req.headers['X-Signature'];
+
+  if (!secret) {
+    console.error('[PayShap-Inbound] SBSA_CALLBACK_SECRET not configured');
+    return res.status(503).json({ error: 'Callback not configured' });
+  }
+
+  let body = req.body;
+  if (Buffer.isBuffer(body)) {
+    try {
+      body = JSON.parse(body.toString('utf8'));
+    } catch (e) {
+      return res.status(400).json({ error: 'Invalid JSON' });
+    }
+  }
+
+  // Auth: accept either x-GroupHeader-Hash (PayShap callbacks) or X-Signature (HMAC)
+  if (headerHash) {
+    const rawGrpHdr = extractRawGrpHdr(req.rawBodyStr, 'rpp');
+    const grpHdr = rawGrpHdr || extractGrpHdr(body, 'rpp') || body;
+    const hashResult = validateGroupHeaderHash(grpHdr, headerHash, secret);
+    if (!hashResult) {
+      return res.status(401).json({ error: 'Invalid x-GroupHeader-Hash' });
+    }
+  } else if (signature) {
+    const crypto = require('crypto');
+    const rawForSig = req.rawBodyStr || JSON.stringify(body);
+    try {
+      const computed = crypto.createHmac('sha256', secret).update(rawForSig).digest('hex');
+      const computedBuf = Buffer.from(computed, 'hex');
+      const sigBuf = Buffer.from(signature, 'hex');
+      if (computedBuf.length !== sigBuf.length || !crypto.timingSafeEqual(computedBuf, sigBuf)) {
+        return res.status(401).json({ error: 'Invalid X-Signature' });
+      }
+    } catch (sigErr) {
+      return res.status(401).json({ error: 'Invalid signature format' });
+    }
+  } else {
+    return res.status(401).json({ error: 'Missing authentication header' });
+  }
+
+  try {
+    // Flexible field extraction — accommodate multiple SBSA payload structures
+    const txId = body.transactionId || body.txId || body.endToEndId
+      || body.AcctTrnId || body.uetr
+      || body.orgnlEndToEndId || body.instrId;
+    const reference = body.reference || body.referenceNumber || body.proxy
+      || body.cdtrAcct?.id?.item?.id || body.prxy?.id
+      || body.dbtrRef || body.rmtInf?.ustrd || body.cid;
+    const rawAmount = body.amount || body.intrBkSttlmAmt?.value || body.instdAmt?.value || 0;
+    const amount = typeof rawAmount === 'string' ? parseFloat(rawAmount) : Number(rawAmount);
+    const currency = body.currency || body.intrBkSttlmAmt?.ccy
+      || body.instdAmt?.ccy || 'ZAR';
+    const payerName = body.payerName || body.dbtrNm || body.dbtr?.nm || null;
+    const payerBank = body.payerBank || body.dbtrAgt?.finInstnId?.nm || null;
+
+    if (!txId) {
+      console.warn('[PayShap-Inbound] Missing transactionId in payload:', JSON.stringify(body).slice(0, 500));
+      return res.status(400).json({ error: 'Missing transactionId' });
+    }
+    if (!reference) {
+      console.warn('[PayShap-Inbound] Missing reference/proxy in payload:', JSON.stringify(body).slice(0, 500));
+      return res.status(400).json({ error: 'Missing reference or proxy' });
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ error: 'Invalid or missing amount' });
+    }
+
+    console.log('[PayShap-Inbound] Received: txId=%s ref=%s amount=%s %s payer=%s bank=%s',
+      txId, reference, amount, currency, payerName || '(unknown)', payerBank || '(unknown)');
+
+    const depositService = require('../services/standardbankDepositNotificationService');
+    const result = await depositService.processDepositNotification({
+      transactionId: `PAYSHAP-IN-${txId}`,
+      referenceNumber: reference,
+      amount,
+      currency,
+      description: `PayShap inbound from ${payerName || 'unknown'} via ${payerBank || 'unknown bank'}`,
+      source: 'payshap_inbound',
+    });
+
+    if (!result.success) {
+      console.error('[PayShap-Inbound] Processing failed:', result.error);
+      return res.status(200).json({ ack: true, processed: false, error: result.error });
+    }
+
+    console.log('[PayShap-Inbound] Processed: credited=%s txId=%s ref=%s',
+      result.credited, txId, reference);
+    return res.status(200).json({ ack: true, processed: true, credited: result.credited });
+  } catch (err) {
+    console.error('[PayShap-Inbound] Error:', err.message);
+    return res.status(200).json({ ack: true, processed: false, error: 'Internal processing error' });
+  }
+}
+
+/**
  * GET RPP payment status (polling fallback)
  * GET /api/v1/standardbank/payshap/rpp/:uetr/status
  *
@@ -930,6 +1079,7 @@ module.exports = {
   handleRtpCallbackWithParams,
   handleRtpRealtimeCallback,
   handleDepositNotification,
+  handlePayshapInboundCredit,
   initiatePayShapRpp,
   initiatePayShapRtp,
   getRppStatus,

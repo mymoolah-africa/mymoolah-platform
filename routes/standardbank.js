@@ -148,6 +148,10 @@ router.post('/payshap/rtp', auth, rtpValidation, handleValidation, standardbankC
 // RTP status polling fallback
 router.get('/payshap/rtp/:uetr/status', auth, standardbankController.getRtpStatus);
 
+// PayShap inbound credit — third-party PayShap deposits to treasury account
+// Authenticated via x-GroupHeader-Hash or X-Signature (no JWT — bank-to-bank callback)
+router.post('/payshap/inbound-credit', rawBodyMiddleware, parseJsonBody, standardbankController.handlePayshapInboundCredit);
+
 // Deposit notification (when money hits MM SBSA main account; reference = CID = MSISDN)
 // Accepts both SOAP XML (SBSA H2H standard) and JSON (legacy/future)
 router.post(
