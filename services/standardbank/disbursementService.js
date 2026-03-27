@@ -17,7 +17,7 @@
  */
 
 const db = require('../../models');
-const { buildPain001Bulk } = require('./pain001BulkBuilder');
+const { buildPain001Bulk, generatePain001Filename } = require('./pain001BulkBuilder');
 const crypto = require('crypto');
 
 const logger = {
@@ -173,7 +173,7 @@ async function approveRun(runId, checkerUserId) {
     payments:     paymentLines,
   });
 
-  const filename = `pain001-${run.run_reference}-${Date.now()}.xml`;
+  const filename = generatePain001Filename();
 
   // Upload to SBSA SFTP — if SbsaSftpClientService is available (SFTP H2H phase must be live)
   let gcsPath = null;

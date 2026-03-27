@@ -3,14 +3,18 @@
 /**
  * Pain.001 Bulk Builder — SBSA H2H Wage/Salary Disbursement
  *
- * Builds an ISO 20022 CustomerCreditTransferInitiation (Pain.001.001.09) XML
- * document for bulk EFT/RTC submissions via SBSA's Host-to-Host SFTP channel.
+ * Builds an ISO 20022 CustomerCreditTransferInitiation (pain.001.001.03) XML
+ * document for bulk EFT submissions via SBSA's Host-to-Host SFTP channel
+ * (B2BI / SSVS processing).
+ *
+ * Schema: pain.001.001.03 — required by SBSA's SSVS-XML validator.
+ * Structure validated against SBSA's working sample (LEGACY_PAIN1V3_SSVS_INPUT_SAMPLE3.xml).
  *
  * One Pain.001 document per DisbursementRun. Each beneficiary (employee) is
  * one <CdtTrfTxInf> within a single <PmtInf> block.
  *
  * @author MyMoolah Treasury Platform
- * @date 2026-03-17
+ * @date 2026-03-27
  */
 
 const crypto = require('crypto');
@@ -42,15 +46,37 @@ function mapRejectionCode(code) {
 }
 
 /**
- * Build a full ISO 20022 Pain.001.001.09 XML string for a disbursement run.
+ * Generate the SBSA-compliant filename for a Pain.001 file.
+ * Format: MYMOOLAH_OWN11_Pain001v3_ZAR_TST_yyyymmddhhmmssSSS.xml
+ *
+ * @returns {string}
+ */
+function generatePain001Filename() {
+  const companyCode = process.env.SBSA_COMPANY_CODE || 'MYMOOLAH';
+  const bolUserId   = process.env.SBSA_BOL_USER_ID  || 'OWN11';
+  const env         = process.env.SBSA_FILE_ENV     || 'TST';
+  const now = new Date();
+  const ts = now.getFullYear().toString()
+    + String(now.getMonth() + 1).padStart(2, '0')
+    + String(now.getDate()).padStart(2, '0')
+    + String(now.getHours()).padStart(2, '0')
+    + String(now.getMinutes()).padStart(2, '0')
+    + String(now.getSeconds()).padStart(2, '0')
+    + String(now.getMilliseconds()).padStart(3, '0');
+  return `${companyCode}_${bolUserId}_Pain001v3_ZAR_${env}_${ts}.xml`;
+}
+
+/**
+ * Build a full ISO 20022 pain.001.001.03 XML string for a disbursement run.
  *
  * @param {Object} params
  * @param {string} params.runReference       - DisbursementRun.run_reference
- * @param {string} params.rail               - 'eft' | 'rtc'
+ * @param {string} params.rail               - 'eft' | 'rtc' (stored for tracking; does not alter XML structure)
  * @param {string} [params.paymentDate]      - ISO date YYYY-MM-DD (defaults to today)
  * @param {string} [params.debtorName]       - Account holder name (MyMoolah)
  * @param {string} [params.debtorAccount]    - SBSA treasury account number
  * @param {string} [params.debtorBranchCode] - SBSA branch code
+ * @param {string} [params.bolUserId]        - SBSA BOL User ID (e.g. OWN11)
  * @param {Array}  params.payments           - Array of payment objects
  * @param {string} params.payments[].endToEndId
  * @param {string} params.payments[].beneficiaryName
@@ -63,11 +89,11 @@ function mapRejectionCode(code) {
 function buildPain001Bulk(params) {
   const {
     runReference,
-    rail = 'eft',
     paymentDate = new Date().toISOString().slice(0, 10),
-    debtorName    = process.env.SBSA_DEBTOR_NAME    || 'MyMoolah (Pty) Ltd',
-    debtorAccount = process.env.SBSA_DEBTOR_ACCOUNT || '000000000',
-    debtorBranchCode = process.env.SBSA_DEBTOR_BRANCH || '051001',
+    debtorName       = process.env.SBSA_DEBTOR_NAME    || 'MyMoolah (Pty) Ltd',
+    debtorAccount    = process.env.SBSA_DEBTOR_ACCOUNT || '000000000',
+    debtorBranchCode = process.env.SBSA_DEBTOR_BRANCH  || '051001',
+    bolUserId        = process.env.SBSA_BOL_USER_ID    || 'OWN11',
     payments,
   } = params;
 
@@ -75,85 +101,105 @@ function buildPain001Bulk(params) {
     throw new Error('payments array is required and must not be empty');
   }
 
-  const now = new Date().toISOString();
+  const creDtTm = new Date().toISOString();
   const cleanRef = (s) => String(s).replace(/[^a-zA-Z0-9 \-\/\.,\(\)\?\+]/g, '').substring(0, 35);
-  const msgId = `MM-BULK-${runReference.replace(/[^a-zA-Z0-9]/g, '').substring(0, 25)}-${Date.now().toString(36).toUpperCase()}`.substring(0, 35);
+  const msgId = `MM-${runReference.replace(/[^a-zA-Z0-9]/g, '').substring(0, 25)}-${Date.now().toString(36).toUpperCase()}`.substring(0, 35);
   const pmtInfId = `PMT-${msgId}`.substring(0, 35);
 
   const totalAmount = payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
-
-  // Local instrument code: EFT → PRPT, RTC → RTGS (SBSA convention)
-  const lclInstrm = rail === 'rtc' ? 'RTGS' : 'PRPT';
 
   const creditLines = payments.map((p) => {
     const instrId = `I${crypto.randomBytes(8).toString('hex').toUpperCase()}`.substring(0, 35);
     const narrative = cleanRef(p.reference || `PAYROLL ${runReference}`);
     return `
-        <CdtTrfTxInf>
-          <PmtId>
-            <InstrId>${instrId}</InstrId>
-            <EndToEndId>${cleanRef(p.endToEndId)}</EndToEndId>
-          </PmtId>
-          <Amt>
-            <InstdAmt Ccy="ZAR">${Number(p.amount).toFixed(2)}</InstdAmt>
-          </Amt>
-          <CdtrAgt>
-            <FinInstnId>
-              <ClrSysMmbId>
-                <ClrSysId><Cd>ZANCC</Cd></ClrSysId>
-                <MmbId>${p.branchCode}</MmbId>
-              </ClrSysMmbId>
-            </FinInstnId>
-          </CdtrAgt>
-          <Cdtr>
-            <Nm>${cleanRef(p.beneficiaryName)}</Nm>
-          </Cdtr>
-          <CdtrAcct>
-            <Id><Othr><Id>${p.accountNumber}</Id></Othr></Id>
-          </CdtrAcct>
-          <RmtInf>
-            <Ustrd>${narrative}</Ustrd>
-          </RmtInf>
-        </CdtTrfTxInf>`;
+      <CdtTrfTxInf>
+        <PmtId>
+          <InstrId>${instrId}</InstrId>
+          <EndToEndId>${cleanRef(p.endToEndId)}</EndToEndId>
+        </PmtId>
+        <Amt>
+          <InstdAmt Ccy="ZAR">${Number(p.amount).toFixed(2)}</InstdAmt>
+        </Amt>
+        <CdtrAgt>
+          <FinInstnId>
+            <ClrSysMmbId>
+              <MmbId>${p.branchCode}</MmbId>
+            </ClrSysMmbId>
+            <PstlAdr>
+              <Ctry>ZA</Ctry>
+            </PstlAdr>
+          </FinInstnId>
+        </CdtrAgt>
+        <Cdtr>
+          <Nm>${cleanRef(p.beneficiaryName)}</Nm>
+          <PstlAdr>
+            <Ctry>ZA</Ctry>
+          </PstlAdr>
+        </Cdtr>
+        <CdtrAcct>
+          <Id>
+            <Othr>
+              <Id>${p.accountNumber}</Id>
+            </Othr>
+          </Id>
+        </CdtrAcct>
+        <RmtInf>
+          <Ustrd>${narrative}</Ustrd>
+        </RmtInf>
+      </CdtTrfTxInf>`;
   }).join('');
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.03">
   <CstmrCdtTrfInitn>
     <GrpHdr>
       <MsgId>${msgId}</MsgId>
-      <CreDtTm>${now}</CreDtTm>
+      <CreDtTm>${creDtTm}</CreDtTm>
       <NbOfTxs>${payments.length}</NbOfTxs>
       <CtrlSum>${totalAmount.toFixed(2)}</CtrlSum>
       <InitgPty>
         <Nm>${cleanRef(debtorName)}</Nm>
+        <Id>
+          <OrgId>
+            <Othr>
+              <Id>${bolUserId}</Id>
+              <SchmeNm>
+                <Cd>CUST</Cd>
+              </SchmeNm>
+            </Othr>
+          </OrgId>
+        </Id>
       </InitgPty>
     </GrpHdr>
     <PmtInf>
       <PmtInfId>${pmtInfId}</PmtInfId>
       <PmtMtd>TRF</PmtMtd>
+      <BtchBookg>true</BtchBookg>
       <NbOfTxs>${payments.length}</NbOfTxs>
       <CtrlSum>${totalAmount.toFixed(2)}</CtrlSum>
       <PmtTpInf>
-        <SvcLvl><Cd>NURG</Cd></SvcLvl>
-        <LclInstrm><Cd>${lclInstrm}</Cd></LclInstrm>
+        <InstrPrty>NORM</InstrPrty>
       </PmtTpInf>
-      <ReqdExctnDt>
-        <Dt>${paymentDate}</Dt>
-      </ReqdExctnDt>
+      <ReqdExctnDt>${paymentDate}</ReqdExctnDt>
       <Dbtr>
         <Nm>${cleanRef(debtorName)}</Nm>
       </Dbtr>
       <DbtrAcct>
-        <Id><Othr><Id>${debtorAccount}</Id></Othr></Id>
+        <Id>
+          <Othr>
+            <Id>${debtorAccount}</Id>
+          </Othr>
+        </Id>
+        <Ccy>ZAR</Ccy>
       </DbtrAcct>
       <DbtrAgt>
         <FinInstnId>
           <ClrSysMmbId>
-            <ClrSysId><Cd>ZANCC</Cd></ClrSysId>
             <MmbId>${debtorBranchCode}</MmbId>
           </ClrSysMmbId>
+          <PstlAdr>
+            <Ctry>ZA</Ctry>
+          </PstlAdr>
         </FinInstnId>
       </DbtrAgt>${creditLines}
     </PmtInf>
@@ -163,4 +209,4 @@ function buildPain001Bulk(params) {
   return { xml, msgId, totalAmount, paymentCount: payments.length };
 }
 
-module.exports = { buildPain001Bulk, mapRejectionCode, REJECTION_MESSAGES };
+module.exports = { buildPain001Bulk, mapRejectionCode, REJECTION_MESSAGES, generatePain001Filename };
