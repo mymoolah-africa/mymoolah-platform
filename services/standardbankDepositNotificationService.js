@@ -257,7 +257,7 @@ async function sendUnallocatedAlert({ transactionId, referenceNumber, amount, cu
   try {
     const AlertService = require('./reconciliation/AlertService');
     const alertService = new AlertService();
-    const opsEmail = process.env.OPS_ALERT_EMAIL || process.env.SMTP_USER || 'ops@mymoolah.africa';
+    const opsEmail = process.env.OPS_ALERT_EMAIL || 'support@mymoolah.africa';
     if (alertService.smtpConfigured) {
       await alertService.transporter.sendMail({
         from: `"MyMoolah Treasury Alerts" <${process.env.SMTP_USER}>`,
