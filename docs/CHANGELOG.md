@@ -1,5 +1,35 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-26 (21:00) - PayShap API Documentation Review & Gustaf Email Refinement
+
+Comprehensive sweep of all SBSA PayShap API documentation to eliminate redundant questions from the email to Gustaf (SBSA PayShap team). Reviewed Postman samples, integration code, callback validators, proxy resolution client, and 10+ session logs.
+
+### Findings
+- **Auth question removed**: `x-GroupHeader-Hash` with HMAC-SHA256 already known from `callbackValidator.js`
+- **Proxy registration resolved**: André confirmed users register their own PayShap proxy via their banking app — MyMoolah does NOT register users' MSISDNs on the proxy directory
+- **Proxy Resolution vs Registration**: The Postman sample `SBSA_NonProd_Proxy_Resolution.json` is for RESOLVING proxies (looking up accounts), not registering them
+- **Single question remaining**: Does the Rapid Payments platform send a callback when an inbound PayShap credit lands on the treasury account?
+
+### Changes
+- `docs/session_logs/2026-03-26_1800_payshap-inbound-credit-handler.md` — Updated with proxy registration clarification and resolved questions
+- `docs/SBSA_PAYSHAP_UAT_GUIDE.md` — Added PayShap Proxy Registration section clarifying it is the user's responsibility
+- `docs/agent_handover.md` — Updated latest achievement, recent updates, next priorities
+- `docs/CHANGELOG.md` — This entry
+
+---
+
+## 2026-03-26 (18:00) - PayShap Inbound Credit Handler
+
+Built dedicated handler for third-party PayShap deposits to the MyMoolah treasury account — separate from H2H SOAP notification channel.
+
+### Changes
+- `services/standardbankDepositNotificationService.js` — `extractMsisdnFromReference()` sliding window scanner, Phase 1.5 in `resolveReference()`, cross-channel idempotency (90s window)
+- `controllers/standardbankController.js` — `handlePayshapInboundCredit()` with flexible field extraction, `processRppCallback()` fallback for unmatched ACCC/ACSP
+- `routes/standardbank.js` — `POST /payshap/inbound-credit` route
+- `docs/SBSA_PAYSHAP_UAT_GUIDE.md` — Updated API endpoints table and inbound credit section
+
+---
+
 ## 2026-03-26 - USSD Go-Live Preparation: Cellfind shortcode *120*5616# + Cloud Armor + deploy config
 
 Cellfind (Marcella) confirmed: **shortcode `*120*5616#`** allocated, production callback URL `https://api-mm.mymoolah.africa/api/v1/ussd` registered, **IPs `102.69.237.30` and `102.69.236.30`** are permanent production egress IPs.

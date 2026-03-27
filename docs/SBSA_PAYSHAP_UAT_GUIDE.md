@@ -139,7 +139,15 @@ When a third-party PayShap payment is received on the treasury account (NOT init
 - **Cross-channel idempotency**: Detects if the same deposit was already processed via H2H SOAP (within 90s window)
 - **Fallback**: Unmatched RPP callbacks (existing `/callback` routes) with ACCC/ACSP status are also routed to this handler
 
-**TBC with Gustaf**: Exact callback URL, payload format, and auth method for inbound PayShap credits.
+**TBC with Gustaf**: Exact callback URL and payload format for inbound PayShap credits.
+
+---
+
+## PayShap Proxy Registration
+
+**Proxy registration is the USER's responsibility, not MyMoolah's.** Each user registers their own PayShap proxy (mobile number linked to a bank account) via their own banking app. A user can have multiple proxies across different banks and chooses which is their primary PayShap ID.
+
+MyMoolah does NOT register users' MSISDNs on the PayShap proxy directory. The Proxy Resolution API (`proxyResolutionClient.js`) is for RESOLVING proxies (looking up which bank account a phone number maps to before sending a payment), not for registering them.
 
 ---
 

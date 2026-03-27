@@ -63,11 +63,11 @@ Built a dedicated inbound PayShap credit handler to process third-party PayShap 
 ---
 
 ## Next Steps
-- [ ] **André**: Send email to Gustaf requesting: callback URL, payload format, auth method, and PayShap proxy registration API
+- [ ] **André**: Send email to Gustaf requesting: callback URL and payload format for inbound PayShap credits
 - [ ] **André**: Deploy to staging and production after Gustaf confirms details
 - [ ] **Gustaf/SBSA**: Confirm which callback URL inbound PayShap credits are sent to
 - [ ] **Gustaf/SBSA**: Provide sample payload for inbound PayShap credit notification
-- [ ] **Gustaf/SBSA**: Clarify PayShap proxy registration — do we need to register user MSISDNs as proxies?
+- [x] ~~**Gustaf/SBSA**: Clarify PayShap proxy registration~~ — **RESOLVED**: André confirmed proxy registration is the user's responsibility via their own banking app. MyMoolah does not register users' MSISDNs.
 - [ ] Refine `handlePayshapInboundCredit()` field extraction once exact payload format is confirmed
 
 ---
@@ -77,16 +77,16 @@ Built a dedicated inbound PayShap credit handler to process third-party PayShap 
 - The `handlePayshapInboundCredit()` handler has flexible field extraction to accommodate multiple possible payload formats. Once Gustaf confirms the exact format, this can be tightened.
 - The RPP callback fallback (`processRppCallback()` → `processDepositNotification()`) is a safety net — it catches inbound credits even if SBSA sends them to existing callback URLs instead of the dedicated endpoint.
 - Cross-channel idempotency uses a 90-second window. If this proves too short or too long, adjust the `crossChannelCutoff` value in `processDepositNotification()`.
-- PayShap proxy registration for user MSISDNs may be required for third-party PayShap deposits to work. This is a question for Gustaf.
+- **PayShap proxy registration is NOT our responsibility** — André confirmed users register their own PayShap proxy via their banking apps. MyMoolah does not and should not register users' MSISDNs on the proxy directory.
 
 ---
 
 ## Questions/Unresolved Items
 - Which callback URL does SBSA PayShap use for inbound credit notifications?
 - What is the exact JSON payload format for inbound PayShap credits?
-- Does SBSA use `x-GroupHeader-Hash` or a different auth method for inbound credit notifications?
-- Do we need to register MyMoolah users' MSISDNs as PayShap proxies? If so, is there a bulk registration API?
-- The `x-GroupHeader-Hash` algorithm is still unconfirmed (soft_fail in current code) — pending Gustaf's response on exact HMAC spec
+- ~~Does SBSA use `x-GroupHeader-Hash` or a different auth method for inbound credit notifications?~~ — Auth mechanism already known (`x-GroupHeader-Hash`); exact hash spec is a separate debugging item
+- ~~Do we need to register MyMoolah users' MSISDNs as PayShap proxies?~~ — **RESOLVED**: Proxy registration is the user's responsibility via their own banking app
+- The `x-GroupHeader-Hash` algorithm is still unconfirmed (soft_fail in current code) — separate issue, not blocking
 
 ---
 
