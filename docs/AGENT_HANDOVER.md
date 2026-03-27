@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-26 21:00  
-**Latest Feature**: **PayShap API Review & Email Refinement** — Comprehensive sweep of all SBSA API documentation, Postman samples, integration code, and session logs to eliminate redundant questions from Gustaf email. Reduced from 4 questions to 1 (inbound credit notification callback). André confirmed PayShap proxy registration is the user's responsibility via their banking app — MyMoolah does NOT register users' MSISDNs. **Next**: André to send refined email to Gustaf (single question: does Rapid Payments send a callback for inbound credits?). Session logs: `docs/session_logs/2026-03-26_2100_payshap-api-review-email-refinement.md`, `docs/session_logs/2026-03-26_1800_payshap-inbound-credit-handler.md`.  
-**Document Version**: 2.38.0  
-**Session logs**: `docs/session_logs/2026-03-26_2100_payshap-api-review-email-refinement.md`, `docs/session_logs/2026-03-26_1800_payshap-inbound-credit-handler.md`, `docs/session_logs/2026-03-26_1500_ussd-golive-cellfind-shortcode-cloud-armor.md`  
+**Last Updated**: 2026-03-27 15:30  
+**Latest Feature**: **Pain.001 v9→v3 Schema Fix for SBSA SSVS** — Melanie Block (SBSA) tested our Pain.001 file against their B2BI/SSVS-XML validator and found multiple failures. Root cause: we generated pain.001.001.09 but SBSA validates against pain.001.001.03. Rewrote `pain001BulkBuilder.js` with 10 structural fixes (namespace, InitgPty/OrgId/OWN11, ReqdExctnDt, ClrSysMmbId, PmtTpInf/InstrPrty, BtchBookg, DbtrAcct/Ccy, PstlAdr on all elements). Fixed SFTP filename (ZA→ZAR). SFTP connectivity still blocked — Colette raised firewall request. **Next**: Redeploy to Staging, generate corrected test file, submit to Melanie for re-validation.  
+**Document Version**: 2.39.0  
+**Session logs**: `docs/session_logs/2026-03-27_1530_pain001-v3-schema-fix.md`, `docs/session_logs/2026-03-26_2100_payshap-api-review-email-refinement.md`, `docs/session_logs/2026-03-26_1800_payshap-inbound-credit-handler.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -101,7 +101,10 @@ MyMoolah Treasury Platform (MMTP) is South Africa's premier Mojaloop-compliant d
 ### **Platform Status**
 The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade financial services platform** with complete integrations, world-class security, and 11-language support. The platform serves as South Africa's premier Mojaloop-compliant digital wallet and payment solution.
 
-### **Latest Achievement (March 26, 2026 - 21:00)**
+### **Latest Achievement (March 27, 2026 - 15:30)**
+**Pain.001 v9→v3 Schema Fix for SBSA SSVS** — Melanie Block (SBSA) tested our Pain.001 XML against their B2BI/SSVS schema validator and found multiple failures. Root cause: `pain001BulkBuilder.js` generated pain.001.001.09 (v9) but SBSA's SSVS system validates against pain.001.001.03 (v3). The filename `Pain001v3` literally means version 3. Rewrote the builder with 10 structural fixes: (1) Namespace .09→.03, (2) removed xmlns:xsi, (3) added InitgPty/OrgId with BOL User ID OWN11 + SchmeNm/CUST, (4) ReqdExctnDt simple date (not Dt wrapper), (5) removed ClrSysId from ClrSysMmbId (v9-only), (6) PmtTpInf: SvcLvl/LclInstrm→InstrPrty NORM, (7) added BtchBookg, (8) added Ccy ZAR to DbtrAcct, (9) added PstlAdr/Ctry ZA to DbtrAgt/CdtrAgt/Cdtr, (10) fixed filename ZA→ZAR + generatePain001Filename(). Structure validated against SBSA working sample `LEGACY_PAIN1V3_SSVS_INPUT_SAMPLE3.xml`. SFTP connectivity still blocked — Colette raised firewall request for IP 34.35.137.166. **Next**: Redeploy to Staging, generate corrected test file, submit to Melanie for SSVS re-validation. New env vars: `SBSA_BOL_USER_ID` (OWN11), `SBSA_COMPANY_CODE` (MYMOOLAH), `SBSA_FILE_ENV` (TST/PRD). Session log: `docs/session_logs/2026-03-27_1530_pain001-v3-schema-fix.md`.
+
+### **Previous Achievement (March 26, 2026 - 21:00)**
 **PayShap API Documentation Review & Gustaf Email Refinement** — Comprehensive sweep of all SBSA PayShap API documentation (Postman samples, integration code, callback validators, proxy resolution client, 10+ session logs) to verify the draft email to Gustaf does not ask questions already answered. Found: (1) Auth question already covered by `callbackValidator.js` (`x-GroupHeader-Hash` HMAC-SHA256). (2) Proxy registration is NOT MyMoolah's responsibility — André confirmed users register their own PayShap proxy via their banking app. (3) Proxy Resolution API (Postman sample) is for RESOLVING proxies, not registering them. Reduced email from 4 questions to 1 focused question: "Does the Rapid Payments platform send a callback when an inbound PayShap credit lands on the treasury account?" Updated session log, UAT guide (proxy registration clarification section), and all docs. Session log: `docs/session_logs/2026-03-26_2100_payshap-api-review-email-refinement.md`.
 
 ### **Previous Achievement (March 26, 2026 - 18:00)**
@@ -170,7 +173,8 @@ The MyMoolah Treasury Platform (MMTP) is a **production-ready, banking-grade fin
 ### **Previous Achievement (February 09, 2026 - 16:00)**
 **Transaction Detail Modal & USDC Fee UI** - Transaction Details modal: reverted Blockchain Tx ID (recipient is auto-credited; banking/Mojaloop practice = reference only, no "paste to top up"). USDC send: renamed "Platform fee" to "Transaction Fee" in quote and Confirm sheet; removed "Network fee" from UI (was R 0,00). Session log: `docs/session_logs/2026-02-09_1600_transaction-detail-usdc-fee-ui.md`. Commits: 44f6c348 (add Tx ID), 47307db4 (revert), 5ac1522b (fee labels).
 
-### **Recent Updates (Last 7 Days – March 20–26, 2026)**
+### **Recent Updates (Last 7 Days – March 21–27, 2026)**
+- **Mar 27 (15:30)**: **Pain.001 v9→v3 schema fix** — SBSA's Melanie Block tested our file against B2BI/SSVS validator; all failures traced to wrong schema version (v9 vs v3). Rewrote `pain001BulkBuilder.js` with 10 structural fixes. Fixed SFTP filename (ZA→ZAR). SFTP connectivity still blocked (firewall request pending). Session log: `docs/session_logs/2026-03-27_1530_pain001-v3-schema-fix.md`.
 - **Mar 26 (21:00)**: PayShap API documentation review — swept all SBSA Postman samples, integration code, callback validators, and session logs. Eliminated 3 redundant questions from Gustaf email; proxy registration confirmed as user's responsibility via banking app. Single-question email ready to send. Session log: `docs/session_logs/2026-03-26_2100_payshap-api-review-email-refinement.md`.
 - **Mar 26 (18:00)**: PayShap inbound credit handler — dedicated endpoint for third-party deposits via PayShap rails, MSISDN extraction from padded references, cross-channel idempotency, RPP callback fallback. Session log: `docs/session_logs/2026-03-26_1800_payshap-inbound-credit-handler.md`.
 - **Mar 26 (15:00)**: USSD go-live prep — Cellfind shortcode `*120*5616#` confirmed, Cloud Armor ALLOW rule, deploy config with USSD env vars, SMS template updates. Session log: `docs/session_logs/2026-03-26_1500_ussd-golive-cellfind-shortcode-cloud-armor.md`.
@@ -718,7 +722,7 @@ You're part of a **banking-grade software system** where:
 ### **Current State**
 - **USSD (Cellfind)**: Phase 1 code complete; **UAT + staging migrated**; production schema verified. **Shortcode `*120*5616#` allocated** (Marcella, Cellfind, 2026-03-26). **IPs `102.69.237.30`, `102.69.236.30` confirmed permanent**. Cloud Armor script + deploy script ready. **Pending**: run `bash scripts/fix-cloud-armor-ussd-exception.sh` + `./scripts/deploy-backend.sh --production` in Codespaces. See `docs/USSD_INTEGRATION_GUIDE.md`.
 - SFTP Gateway: `34.35.137.166`, **port 5022**, admin `https://34.35.137.166` — ✅ Running
-- SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | VPN resolved (Open Internet) ✅ | PGP not required ✅ | File names confirmed ✅ | Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)
+- SBSA H2H: PG15 + SSH key submitted ✅ | SOAP handler live ✅ | VPN resolved (Open Internet) ✅ | PGP not required ✅ | File names confirmed ✅ | **Pain.001 rewritten to v3 schema (was v9)** ✅ | SFTP connectivity blocked (firewall request pending with Colette) | Awaiting corrected test file re-validation by Melanie
 - PayShap RTP: Standard Bank ✅ (Peach DECOMMISSIONED). Creditor name in payment reference ✅ (Capitec confirmed). Pain.013 **`DuePyblAmt` in Strd, strictly &lt; `Amt`** (Amt − 1c) ✅ — Discovery staging Mar 25 post-`20260325_v10`
 - Peach Payments: ARCHIVED (2026-03-21). See `routes/peach.js` for reactivation steps.
 - Production: `api-mm.mymoolah.africa`, `wallet.mymoolah.africa` — live
@@ -731,6 +735,8 @@ You're part of a **banking-grade software system** where:
 4. Do NOT reactivate Peach Payments without explicit approval from Andre
 5. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
 6. **Pain.013 `RfrdDocAmt` / `DuePyblAmt`**: SBSA expects these in the **Strd** block. **`DuePyblAmt` must be strictly less than `Amt`** (EAMTI when equal). Current implementation: **`DuePyblAmt` = Amt − R0.01**. Do not remove or set equal to `Amt` without SBSA written confirmation.
+7. **Pain.001 H2H uses pain.001.001.03 (v3), NOT .09** — SBSA's B2BI/SSVS-XML validator requires v3. Do NOT change the namespace back to v9. Working sample reference: `LEGACY_PAIN1V3_SSVS_INPUT_SAMPLE3.xml`.
+8. **Backend changes require Cloud Run redeployment** — Use `./scripts/deploy-backend.sh --staging [tag]` for Staging. Do NOT just tell Andre to pull in Codespaces for backend service changes — that only works for Codespaces-local testing.
 7. PBAC retry is blocked when PADCL is present — do NOT remove the `!isPayerDecline` guard
 8. 19 corporate policies exist in `docs/policies/` — reference INDEX.md for mapping
 9. **Migrations**: Run `./scripts/run-migrations-master.sh` on staging/production **before** deploying code that depends on new schema; avoid partial production state and manual `SequelizeMeta` reconciliation.
@@ -778,7 +784,7 @@ You're part of a **banking-grade software system** where:
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
 1. **USSD Phase 2 + production rollout** — (a) Features: electricity, send money, buy for others; multi-language (isiZulu, Afrikaans, Sesotho). (b) **Staging migration done** Mar 25; **production** — confirm schema parity; if any column missing, run `./scripts/run-migrations-master.sh production` (app user) or targeted `node scripts/run-ussd-migration.js production`. (c) Configure Cellfind production shortcode, callback URL, and IP allowlist; set `USSD_ENABLED=true` after sign-off. (d) Load test ~100 concurrent USSD sessions. Reference: `docs/USSD_INTEGRATION_GUIDE.md`, session log `2026-03-25_2100_ussd-channel-implementation.md`.
-2. **SBSA H2H — Await test traffic before freeze (Thu Mar 27)** — Confirmation email sent to Colette 2026-03-24. VPN resolved (Open Internet), PGP resolved (Not Required), file names confirmed. SOAP handler live. Awaiting SBSA to send test SOAP credit notification + test SFTP MT940/MT942 file to UAT. SBSA freeze: Thu Mar 27 → Apr 8. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
+2. **SBSA H2H — Pain.001 v3 fix deployed, SFTP blocked, awaiting re-validation** — Pain.001 rewritten from v9 to v3 (2026-03-27). SFTP connectivity blocked — Colette raised firewall request for IP 34.35.137.166 on TEST (196.8.85.62:5022) and PROD (196.8.86.53:5022). Next: generate corrected test file, submit to Melanie for SSVS re-validation. SOAP handler live. VPN resolved (Open Internet), PGP not required. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
 3. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Offer Standard Bank sponsor letter or PASA application pack if requested. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
 4. **Backend redeploy to production** — Push `git push origin main` then redeploy backend to staging and production to activate SBSA SOAP handler + EBONF daily-limit notification message.
 5. **SBSA PayShap inbound credits — email to Gustaf** — Single-question email ready to send: does the Rapid Payments platform send a callback for inbound PayShap credits? Proxy registration question resolved (user's responsibility). See `docs/session_logs/2026-03-26_2100_payshap-api-review-email-refinement.md`.
