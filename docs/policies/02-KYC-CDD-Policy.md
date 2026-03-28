@@ -3,7 +3,7 @@
 | Field | Detail |
 |---|---|
 | **Policy Title** | Know Your Customer & Customer Due Diligence (KYC/CDD) Policy |
-| **Version** | 1.0 |
+| **Version** | 2.0 |
 | **Effective Date** | March 2026 |
 | **Next Review Date** | March 2027 |
 | **Classification** | Confidential |
@@ -41,7 +41,7 @@ This policy applies to:
 | **EDD** | Enhanced Due Diligence — additional verification and monitoring measures applied to higher-risk customers. |
 | **FICA** | Financial Intelligence Centre Act 38 of 2001, as amended. |
 | **KYC** | Know Your Customer — the regulatory and institutional framework for customer identification and verification. |
-| **KYC Tier** | MyMoolah's internal classification of customer verification levels (Bronze, Silver, Gold, Platinum). |
+| **KYC Tier** | MyMoolah's internal classification of customer verification levels (Tier 0, Tier 1, Tier 2). |
 | **OCR** | Optical Character Recognition — technology used to extract text from identity document images. |
 | **PEP** | Politically Exposed Person — an individual entrusted with a prominent public function, as defined in FICA S21H. |
 | **SDD** | Simplified Due Diligence — reduced verification measures permitted for demonstrably low-risk customers and products. |
@@ -89,23 +89,45 @@ Applied to all high-risk customers, PEPs, and customers engaging in products or 
 
 ## 5. MyMoolah KYC Tier Structure
 
-MyMoolah implements a progressive tiered KYC model that balances regulatory compliance with customer experience:
+MyMoolah implements a progressive three-tier KYC model that balances regulatory compliance, financial inclusion, and customer experience. Tier limits are enforced in code via `config/kycTierLimits.js` — the single source of truth.
 
 ### 5.1 Tier Definitions
 
-| KYC Tier | Verification Level | Requirements | Wallet Limits |
+| KYC Tier | Label | Channel | Verification Requirements | Regulatory Basis |
+|---|---|---|---|---|
+| **Tier 0** | USSD Basic | USSD | Full legal name, SA ID number or international passport number (format-validated via Luhn/regex — no document scan). Mobile number verified. | Conservative position below FIC Exemption 17 (ID format-validated only, not document-verified). |
+| **Tier 1** | ID Verified | Web App | ID document uploaded and OCR-verified (GPT-4o primary, Tesseract.js fallback). Extracted data cross-checked against SA ID checksum. No proof of address required. | FIC Exemption 17 ceiling — identity verified against document, residential address exempted. |
+| **Tier 2** | Fully Verified | Web App | ID document OCR-verified AND proof of address OCR-verified (utility bill, bank statement, or municipal account not older than 3 months). Sanctions and PEP screening completed. | Full FICA CDD (S21). No Exemption 17 restrictions. |
+
+### 5.2 Transaction Limits by Tier
+
+| Limit | Tier 0 (USSD Basic) | Tier 1 (ID Verified) | Tier 2 (Fully Verified) |
 |---|---|---|---|
-| **Bronze** | Basic | Mobile number (OTP verified), name, date of birth. | R1,000 daily / R5,000 monthly. VAS purchases only. No transfers. |
-| **Silver** | ID Verified | South African ID number or passport number verified via AI-OCR. Liveness check. | R5,000 daily / R25,000 monthly. Domestic transfers enabled. |
-| **Gold** | Fully Verified | ID document photographed and verified (AI-OCR via GPT-4o), proof of address verified (utility bill, bank statement, or municipal account not older than 3 months), sanctions and PEP screening completed. | R25,000 daily / R100,000 monthly. Full platform access including PayShap. |
-| **Platinum** | Enhanced | All Gold requirements plus source of funds declaration, enhanced screening, manual compliance review, senior management sign-off. | Custom limits. USDC cross-border enabled. Business account features. |
+| **Single Transaction** | R1,000 | R5,000 | R25,000 |
+| **Daily Limit** | R3,000 | R5,000 | R50,000 |
+| **Monthly Limit** | R5,000 | R25,000 | R100,000 |
+| **Maximum Wallet Balance** | R3,000 | R25,000 | R100,000 |
+| **Send Money (P2P)** | Not allowed | Allowed | Allowed |
+| **Withdraw Cash** | Not allowed | Allowed | Allowed |
+| **VAS Purchases** | Allowed | Allowed | Allowed |
+| **Receive Deposits** | Allowed (up to balance cap) | Allowed | Allowed |
+| **International Transfers** | Not allowed | Not allowed | Allowed (subject to SARB exchange control) |
 
-### 5.2 Account Restrictions by Tier
+### 5.3 Account Feature Restrictions by Tier
 
-- **Bronze**: May purchase VAS products (airtime, data, electricity, bills) up to tier limits. No peer-to-peer transfers, no PayShap, no USDC. Funds may be received but not withdrawn until upgraded to Silver or above.
-- **Silver**: Domestic wallet-to-wallet transfers and bill payments enabled. No PayShap, no USDC.
-- **Gold**: Full domestic functionality including PayShap real-time payments and NFC deposits.
-- **Platinum**: All Gold capabilities plus USDC cross-border transfers (via VALR), MoolahMove international payments, and elevated transaction limits.
+- **Tier 0 (USSD Basic)**: May purchase VAS products (airtime, data, electricity, bills) up to tier limits. Funds may be received but not sent or withdrawn. No PayShap, no USDC. Designed for financial inclusion on basic/feature phones via USSD.
+- **Tier 1 (ID Verified)**: Domestic wallet-to-wallet transfers, bill payments, cash-out (Flash eeziCash, EasyPay), and PayShap enabled within Exemption 17 limits. No international transfers. No USDC.
+- **Tier 2 (Fully Verified)**: Full platform access including PayShap, NFC deposits, USDC cross-border transfers (via VALR), MoolahMove international payments, and elevated transaction limits.
+
+### 5.4 Tier Upgrade Paths
+
+| From | To | Action Required |
+|---|---|---|
+| Tier 0 | Tier 1 | Upload ID document on the web app (wallet.mymoolah.africa). Document is OCR-verified automatically. |
+| Tier 1 | Tier 2 | Upload proof of address on the web app. Document is OCR-verified automatically. |
+| Tier 0 | Tier 2 | Upload both ID document and proof of address in a single session on the web app. |
+
+Wallet limits (`dailyLimit`, `monthlyLimit`) are automatically upgraded on the user's wallet record when KYC tier changes. Existing users who dial USSD and already have Tier 1 or Tier 2 KYC are only prompted to set a USSD PIN — no re-verification is required.
 
 ---
 
@@ -315,6 +337,7 @@ In accordance with FICA Sections 22–25:
 | ISO 27001:2022 | Information security management for CDD data. |
 | Mojaloop FSPIOP API Specification | Interoperability standards for participant identification. |
 | FIC Guidance Note 3A | Guidance on customer identification and verification. |
+| FIC PCC 21 (Exemption 17) | Scope and application of reduced CDD for low-value accounts (R5,000/day, R25,000/month, R25,000 balance cap). Basis for Tier 1 limits. |
 
 ---
 
@@ -323,6 +346,7 @@ In accordance with FICA Sections 22–25:
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 1.0 | March 2026 | Chief Compliance Officer | Initial policy creation. |
+| 2.0 | March 2026 | Chief Compliance Officer | Replaced Bronze/Silver/Gold/Platinum tiers with Tier 0/1/2 model. Added USSD channel (Tier 0). Defined explicit transaction limits per tier. Added FIC Exemption 17 regulatory basis. Added tier upgrade paths. Limits enforced in code via `config/kycTierLimits.js`. |
 
 ---
 

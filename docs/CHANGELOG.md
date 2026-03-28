@@ -1,5 +1,34 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-28 - KYC Tier Transaction Limits (FICA-Compliant)
+
+Implemented centralized, FICA-compliant transaction limits for all three KYC tiers, enforced across backend and frontend.
+
+### Tier Limits (config/kycTierLimits.js — single source of truth)
+- **Tier 0 (USSD Basic)**: R1,000/txn, R3,000/day, R5,000/month, R3,000 balance. VAS only — no send/withdraw.
+- **Tier 1 (ID Verified — FIC Exemption 17)**: R5,000/txn, R5,000/day, R25,000/month, R25,000 balance. Send/withdraw enabled.
+- **Tier 2 (Fully Verified — Full FICA)**: R25,000/txn, R50,000/day, R100,000/month, R100,000 balance. International transfers enabled.
+
+### Backend Changes
+- `config/kycTierLimits.js` — NEW: Centralized tier limits config with `getLimitsForTier()` and `getWalletDefaults()` helpers
+- `models/Wallet.js` — `canDebit()` now accepts `kycTier` option for single-transaction limit check; `credit()` now checks `maxBalance` cap
+- `controllers/authController.js` — Wallet creation uses `getWalletDefaults(tier)` instead of hardcoded R100k/R1M
+- `controllers/walletController.js` — `sendMoney()` enforces `canSendMoney` + single-transaction limit; `creditWallet()` enforces `maxBalance`; `getBalance()` returns `tierLimits` in response
+- `controllers/kycController.js` — Wallet limits auto-upgraded when KYC tier changes (both single-file and multi-file upload paths)
+- `controllers/settingsController.js` — User-set limits capped at tier maximum via `Math.min()`
+- `services/ussdMenuService.js` — Uses centralized config instead of hardcoded env vars; limit checks apply to all tiers (not just `ussd_basic`)
+- `services/ussdAuthService.js` — USSD wallet creation sets `dailyLimit`/`monthlyLimit` from Tier 0 config
+- `middleware/kycMiddleware.js` — Both `requireKYCVerification` and `getKYCStatus` now attach `kycTier` and `tierLimits` to `req.kycStatus`
+
+### Frontend Changes
+- `pages/WalletSettingsPage.tsx` — Transaction limit sliders capped by KYC tier; shows tier label and upgrade prompts
+- Components copies synced
+
+### Policy Changes
+- `docs/policies/02-KYC-CDD-Policy.md` — Updated to v2.0: replaced Bronze/Silver/Gold/Platinum with Tier 0/1/2; added FIC Exemption 17 basis; explicit transaction limits table; tier upgrade paths; added PCC 21 regulatory reference
+
+---
+
 ## 2026-03-28 - KYC Tiered Verification System (USSD + Web App)
 
 Implemented a comprehensive 3-tier KYC system aligning USSD and web app registration paths with FICA compliance requirements.

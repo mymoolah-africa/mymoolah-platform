@@ -1,4 +1,5 @@
 const { User, UserSettings } = require('../models');
+const { getLimitsForTier } = require('../config/kycTierLimits');
 
 class SettingsController {
   constructor() {
@@ -231,14 +232,22 @@ class SettingsController {
         }
       });
 
-      // Update settings
+      const user = await User.findByPk(userId);
+      const kycTier = user?.kyc_tier !== null && user?.kyc_tier !== undefined
+        ? Number(user.kyc_tier) : 0;
+      const tierLimits = getLimitsForTier(kycTier);
+
       const updateData = {};
       if (quickAccessServices !== undefined) updateData.quickAccessServices = quickAccessServices;
       if (showBalance !== undefined) updateData.showBalance = showBalance;
       if (biometricEnabled !== undefined) updateData.biometricEnabled = biometricEnabled;
       if (notificationsEnabled !== undefined) updateData.notificationsEnabled = notificationsEnabled;
-      if (dailyTransactionLimit !== undefined) updateData.dailyTransactionLimit = dailyTransactionLimit;
-      if (monthlyTransactionLimit !== undefined) updateData.monthlyTransactionLimit = monthlyTransactionLimit;
+      if (dailyTransactionLimit !== undefined) {
+        updateData.dailyTransactionLimit = Math.min(parseFloat(dailyTransactionLimit), tierLimits.dailyLimit);
+      }
+      if (monthlyTransactionLimit !== undefined) {
+        updateData.monthlyTransactionLimit = Math.min(parseFloat(monthlyTransactionLimit), tierLimits.monthlyLimit);
+      }
       if (shareAnalytics !== undefined) updateData.shareAnalytics = shareAnalytics;
       if (darkMode !== undefined) updateData.darkMode = darkMode;
       if (language !== undefined) updateData.language = language;

@@ -106,8 +106,10 @@ export function WalletSettingsPage() {
         return <Download className="w-6 h-6" />;
       case 'qr-scan':
         return <QrCode className="w-6 h-6" />;
-      case 'wallet-withdraw':
-        return <Banknote className="w-6 h-6" />;
+      case 'cashout-easypay':
+        return <DollarSign className="w-6 h-6" />;
+      case 'topup-easypay':
+        return <Wallet className="w-6 h-6" />;
       // Bills & Utilities
       case 'airtime-data':
         return <Smartphone className="w-6 h-6" />;
@@ -115,22 +117,9 @@ export function WalletSettingsPage() {
         return <Zap className="w-6 h-6" />;
       case 'bill-payments':
         return <Receipt className="w-6 h-6" />;
-      case 'insurance':
-        return <Home className="w-6 h-6" />;
       // Vouchers & Digital Services
       case 'vouchers':
         return <Gift className="w-6 h-6" />;
-      case 'gaming':
-        return <CreditCard className="w-6 h-6" />;
-      case 'streaming':
-        return <Wallet className="w-6 h-6" />;
-      // Loyalty & Promotions
-      case 'watch-to-earn':
-        return <Play className="w-6 h-6" />;
-      case 'loyalty':
-        return <Star className="w-6 h-6" />;
-      case 'promotions':
-        return <Tag className="w-6 h-6" />;
       // New Cash-out Services
       case 'flash-eezicash':
         return <DollarSign className="w-6 h-6" />;
@@ -138,8 +127,9 @@ export function WalletSettingsPage() {
         return <Store className="w-6 h-6" />;
       case 'atm-cashsend':
         return <AtSign className="w-6 h-6" />;
-      case 'tap-to-add-money':
-        return <CreditCard className="w-6 h-6" />;
+      // Loyalty & Promotions
+      case 'loyalty':
+        return <Play className="w-6 h-6" />;
       default:
         return <Settings className="w-6 h-6" />;
     }
@@ -181,18 +171,25 @@ export function WalletSettingsPage() {
         });
 
         // Transform services data
-        const transformedServices = data.data.availableServices.map((service: any) => ({
-          id: service.id,
-          name: service.name,
-          description: service.description,
-          icon: getServiceIcon(service.id),
-          enabled: service.enabled,
-          available: service.available,
-          comingSoon: service.comingSoon,
-          category: service.category,
-          color: service.enabled ? '#ffffff' : '#6b7280',
-          bgColor: service.enabled ? '#86BE41' : '#f8fafc'
-        }));
+        const transformedServices = data.data.availableServices
+          .map((service: any) => ({
+            id: service.id,
+            name: service.name,
+            description: service.description,
+            icon: getServiceIcon(service.id),
+            enabled: service.enabled,
+            available: service.available,
+            comingSoon: service.comingSoon,
+            category: service.category,
+            color: service.enabled ? '#ffffff' : '#6b7280',
+            bgColor: service.enabled ? '#86BE41' : '#f8fafc'
+          }))
+          .sort((a: { comingSoon: boolean; name: string }, b: { comingSoon: boolean; name: string }) => {
+            if (a.comingSoon !== b.comingSoon) {
+              return a.comingSoon ? 1 : -1;
+            }
+            return a.name.localeCompare(b.name);
+          });
 
         setServices(transformedServices);
       } else {
@@ -592,6 +589,12 @@ export function WalletSettingsPage() {
               <DollarSign className="w-5 h-5 text-[#86BE41]" />
               Transaction Limits
             </CardTitle>
+            {user?.kycTier !== undefined && user?.kycTier !== null && (
+              <p className="text-xs text-gray-500 mt-1">
+                KYC {user.kycTier === 0 ? 'Tier 0 (USSD Basic)' : user.kycTier === 1 ? 'Tier 1 (ID Verified)' : 'Tier 2 (Fully Verified)'}
+                {' '}&mdash; limits are set by your verification level
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -603,8 +606,8 @@ export function WalletSettingsPage() {
                 <input
                   id="daily-limit"
                   type="range"
-                  min="1000"
-                  max="10000"
+                  min="500"
+                  max={user?.kycTier === 2 ? '50000' : user?.kycTier === 1 ? '5000' : '3000'}
                   step="500"
                   value={transactionLimits.daily}
                   onChange={(e) => setTransactionLimits(prev => ({
@@ -622,8 +625,8 @@ export function WalletSettingsPage() {
                 <input
                   id="monthly-limit"
                   type="range"
-                  min="5000"
-                  max="50000"
+                  min="1000"
+                  max={user?.kycTier === 2 ? '100000' : user?.kycTier === 1 ? '25000' : '5000'}
                   step="1000"
                   value={transactionLimits.monthly}
                   onChange={(e) => setTransactionLimits(prev => ({
@@ -633,6 +636,20 @@ export function WalletSettingsPage() {
                   className="w-full"
                 />
               </div>
+              {(user?.kycTier === 0 || user?.kycTier === null) && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mt-2">
+                  <p className="text-xs text-amber-800">
+                    Upgrade your KYC to increase your limits. Upload your ID document to unlock Tier 1 limits (R5,000/day, R25,000/month).
+                  </p>
+                </div>
+              )}
+              {user?.kycTier === 1 && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 mt-2">
+                  <p className="text-xs text-blue-800">
+                    Upload your proof of address to unlock Tier 2 limits (R50,000/day, R100,000/month).
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

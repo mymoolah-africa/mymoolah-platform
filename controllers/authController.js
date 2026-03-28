@@ -6,8 +6,8 @@ const { Op } = Sequelize;
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { blindIndex } = require('../utils/fieldEncryption');
+const { getLimitsForTier, getWalletDefaults } = require('../config/kycTierLimits');
 
-// Use canonical MSISDN utilities
 const { normalizeToE164, maskMsisdn } = require('../utils/msisdn');
 
 class AuthController {
@@ -73,17 +73,18 @@ class AuthController {
         kycStatus: 'not_started'
       });
       
-      // Create wallet for user
+      const initialTier = 0;
+      const walletDefaults = getWalletDefaults(initialTier);
+
       const wallet = await Wallet.create({
         userId: user.id,
-        // De-PII walletId (do not expose phone numbers)
         walletId: `WAL-${user.id}`,
         balance: 0.00,
         currency: 'ZAR',
         status: 'active',
         kycVerified: false,
-        dailyLimit: 100000.00,
-        monthlyLimit: 1000000.00,
+        dailyLimit: walletDefaults.dailyLimit,
+        monthlyLimit: walletDefaults.monthlyLimit,
         dailySpent: 0.00,
         monthlySpent: 0.00
       });

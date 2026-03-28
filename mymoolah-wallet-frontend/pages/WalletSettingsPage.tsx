@@ -589,6 +589,12 @@ export function WalletSettingsPage() {
               <DollarSign className="w-5 h-5 text-[#86BE41]" />
               Transaction Limits
             </CardTitle>
+            {user?.kycTier !== undefined && user?.kycTier !== null && (
+              <p className="text-xs text-gray-500 mt-1">
+                KYC {user.kycTier === 0 ? 'Tier 0 (USSD Basic)' : user.kycTier === 1 ? 'Tier 1 (ID Verified)' : 'Tier 2 (Fully Verified)'}
+                {' '}&mdash; limits are set by your verification level
+              </p>
+            )}
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -600,8 +606,8 @@ export function WalletSettingsPage() {
                 <input
                   id="daily-limit"
                   type="range"
-                  min="1000"
-                  max="10000"
+                  min="500"
+                  max={user?.kycTier === 2 ? '50000' : user?.kycTier === 1 ? '5000' : '3000'}
                   step="500"
                   value={transactionLimits.daily}
                   onChange={(e) => setTransactionLimits(prev => ({
@@ -619,8 +625,8 @@ export function WalletSettingsPage() {
                 <input
                   id="monthly-limit"
                   type="range"
-                  min="5000"
-                  max="50000"
+                  min="1000"
+                  max={user?.kycTier === 2 ? '100000' : user?.kycTier === 1 ? '25000' : '5000'}
                   step="1000"
                   value={transactionLimits.monthly}
                   onChange={(e) => setTransactionLimits(prev => ({
@@ -630,6 +636,20 @@ export function WalletSettingsPage() {
                   className="w-full"
                 />
               </div>
+              {(user?.kycTier === 0 || user?.kycTier === null) && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mt-2">
+                  <p className="text-xs text-amber-800">
+                    Upgrade your KYC to increase your limits. Upload your ID document to unlock Tier 1 limits (R5,000/day, R25,000/month).
+                  </p>
+                </div>
+              )}
+              {user?.kycTier === 1 && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 mt-2">
+                  <p className="text-xs text-blue-800">
+                    Upload your proof of address to unlock Tier 2 limits (R50,000/day, R100,000/month).
+                  </p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

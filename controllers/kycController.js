@@ -2,6 +2,7 @@ const KYCService = require('../services/kycService');
 const { sequelize } = require('../models');
 const Wallet = require('../models/Wallet')(sequelize, require('sequelize').DataTypes);
 const notificationService = require('../services/notificationService');
+const { getWalletDefaults } = require('../config/kycTierLimits');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -68,11 +69,21 @@ class KYCController {
         const { User } = require('../models');
         const user = await User.findByPk(userId);
         if (user) {
+          let newTier;
           if (documentType === 'id_document') {
-            const newTier = (user.kyc_tier != null && user.kyc_tier >= 1) ? user.kyc_tier : 1;
+            newTier = (user.kyc_tier != null && user.kyc_tier >= 1) ? user.kyc_tier : 1;
             await user.update({ kycStatus: 'verified', kyc_tier: newTier });
           } else if (documentType === 'proof_of_address' && user.kyc_tier >= 1) {
-            await user.update({ kyc_tier: 2 });
+            newTier = 2;
+            await user.update({ kyc_tier: newTier });
+          }
+
+          if (newTier !== undefined && wallet) {
+            const newLimits = getWalletDefaults(newTier);
+            await wallet.update({
+              dailyLimit: newLimits.dailyLimit,
+              monthlyLimit: newLimits.monthlyLimit,
+            });
           }
         }
 
@@ -250,7 +261,12 @@ class KYCController {
             if (identityValid) {
               if (wallet) {
                 await wallet.verifyKYC('ai_system');
-                console.log('✅ Wallet KYC verified automatically');
+                const tier1Limits = getWalletDefaults(1);
+                await wallet.update({
+                  dailyLimit: tier1Limits.dailyLimit,
+                  monthlyLimit: tier1Limits.monthlyLimit,
+                });
+                console.log('✅ Wallet KYC verified + limits upgraded to Tier 1');
               }
               currentTier = 1;
               if (user) {
@@ -281,6 +297,14 @@ class KYCController {
                   await user.update({ kyc_tier: 2 });
                   currentTier = 2;
                   console.log('✅ User KYC: Tier 2 (ID + POA verified)');
+                }
+                if (wallet) {
+                  const tier2Limits = getWalletDefaults(2);
+                  await wallet.update({
+                    dailyLimit: tier2Limits.dailyLimit,
+                    monthlyLimit: tier2Limits.monthlyLimit,
+                  });
+                  console.log('✅ Wallet limits upgraded to Tier 2');
                 }
               } else {
                 console.log('⚠️  POA validation failed — staying at Tier 1:', addressResult.validation?.issues);
@@ -361,9 +385,11 @@ class KYCController {
         console.warn('⚠️  Could not fetch KYC record:', kycError.message);
       }
       
-      // Determine final KYC status (prioritize user.kycStatus, fallback to wallet.kycVerified)
       const finalKycStatus = user?.kycStatus || (wallet.kycVerified ? 'verified' : (kycRecord ? kycRecord.status : 'not_started'));
       const isVerified = finalKycStatus === 'verified' || wallet.kycVerified === true;
+
+      const currentKycTier = user?.kyc_tier != null ? user.kyc_tier : null;
+      const tierLimits = getLimitsForTier(currentKycTier);
       
       res.json({
         success: true,
@@ -372,7 +398,17 @@ class KYCController {
         kycVerifiedBy: wallet.kycVerifiedBy || null,
         walletId: wallet.walletId,
         kycStatus: finalKycStatus,
-        kycTier: user?.kyc_tier != null ? user.kyc_tier : null,
+        kycTier: currentKycTier,
+        tierLimits: {
+          label: tierLimits.label,
+          singleTransactionLimit: tierLimits.singleTransactionLimit,
+          dailyLimit: tierLimits.dailyLimit,
+          monthlyLimit: tierLimits.monthlyLimit,
+          maxBalance: tierLimits.maxBalance,
+          canSendMoney: tierLimits.canSendMoney,
+          canWithdrawCash: tierLimits.canWithdrawCash,
+          canTransferInternational: tierLimits.canTransferInternational,
+        },
         isComplete: isVerified,
         shouldNavigate: isVerified,
         kycRecord: kycRecord ? {

@@ -3,6 +3,7 @@
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { sequelize } = require('../models');
+const { getWalletDefaults } = require('../config/kycTierLimits');
 
 const SALT_ROUNDS = 12;
 const MAX_PIN_ATTEMPTS = parseInt(process.env.USSD_PIN_MAX_ATTEMPTS || '3', 10);
@@ -172,10 +173,13 @@ async function registerUssdUser(msisdn, firstName, lastName, idNumber, pin) {
 
     const userId = userRows[0].id;
 
+    const tier0Defaults = getWalletDefaults(0);
+
     await sequelize.query(
-      `INSERT INTO wallets ("userId", balance, currency, "kycVerified", "kycVerifiedAt", "createdAt", "updatedAt")
-       VALUES ($1, 0, 'ZAR', true, NOW(), NOW(), NOW())`,
-      { bind: [userId], transaction: t }
+      `INSERT INTO wallets ("userId", balance, currency, "kycVerified", "kycVerifiedAt",
+        "dailyLimit", "monthlyLimit", "createdAt", "updatedAt")
+       VALUES ($1, 0, 'ZAR', true, NOW(), $2, $3, NOW(), NOW())`,
+      { bind: [userId, tier0Defaults.dailyLimit, tier0Defaults.monthlyLimit], transaction: t }
     );
 
     await t.commit();

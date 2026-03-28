@@ -2,9 +2,7 @@
 
 const { sequelize, Wallet, Transaction } = require('../models');
 const ussdAuthService = require('./ussdAuthService');
-
-const TIER0_DAILY_LIMIT = parseInt(process.env.USSD_TIER0_DAILY_LIMIT || '500', 10);
-const TIER0_MONTHLY_LIMIT = parseInt(process.env.USSD_TIER0_MONTHLY_LIMIT || '3000', 10);
+const { getLimitsForTier } = require('../config/kycTierLimits');
 
 const AIRTIME_AMOUNTS = [5, 10, 29, 55, 110];
 const DATA_AMOUNTS = [10, 29, 55, 110, 250];
@@ -519,39 +517,46 @@ async function checkBalanceAndLimits(userId, amountRand) {
   }
 
   const [userRows] = await sequelize.query(
-    `SELECT "kycStatus" FROM users WHERE id = $1 LIMIT 1`,
+    `SELECT "kycStatus", kyc_tier FROM users WHERE id = $1 LIMIT 1`,
     { bind: [userId] }
   );
-  if (userRows[0]?.kycStatus === 'ussd_basic') {
-    const today = new Date().toISOString().split('T')[0];
-    const [dailyRows] = await sequelize.query(
-      `SELECT COALESCE(SUM(ABS(amount)), 0) AS total
-       FROM transactions
-       WHERE "userId" = $1 AND status = 'completed'
-         AND type IN ('send','withdraw','payment')
-         AND DATE("createdAt") = $2`,
-      { bind: [userId, today] }
-    );
-    const dailyTotal = parseFloat(dailyRows[0].total) + amountRand;
-    if (dailyTotal > TIER0_DAILY_LIMIT) {
-      return { ok: false, message: `Daily limit R${TIER0_DAILY_LIMIT} reached.\nUpgrade via the app.` };
-    }
+  const kycTier = userRows[0]?.kyc_tier !== null && userRows[0]?.kyc_tier !== undefined
+    ? Number(userRows[0].kyc_tier)
+    : 0;
+  const tierLimits = getLimitsForTier(kycTier);
 
-    const monthStart = new Date();
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-    const [monthRows] = await sequelize.query(
-      `SELECT COALESCE(SUM(ABS(amount)), 0) AS total
-       FROM transactions
-       WHERE "userId" = $1 AND status = 'completed'
-         AND type IN ('send','withdraw','payment')
-         AND "createdAt" >= $2`,
-      { bind: [userId, monthStart.toISOString()] }
-    );
-    const monthlyTotal = parseFloat(monthRows[0].total) + amountRand;
-    if (monthlyTotal > TIER0_MONTHLY_LIMIT) {
-      return { ok: false, message: `Monthly limit R${TIER0_MONTHLY_LIMIT} reached.\nUpgrade via the app.` };
-    }
+  if (amountRand > tierLimits.singleTransactionLimit) {
+    return { ok: false, message: `Max R${tierLimits.singleTransactionLimit.toLocaleString()} per transaction.\nUpgrade KYC via the app.` };
+  }
+
+  const today = new Date().toISOString().split('T')[0];
+  const [dailyRows] = await sequelize.query(
+    `SELECT COALESCE(SUM(ABS(amount)), 0) AS total
+     FROM transactions
+     WHERE "userId" = $1 AND status = 'completed'
+       AND type IN ('send','withdraw','payment')
+       AND DATE("createdAt") = $2`,
+    { bind: [userId, today] }
+  );
+  const dailyTotal = parseFloat(dailyRows[0].total) + amountRand;
+  if (dailyTotal > tierLimits.dailyLimit) {
+    return { ok: false, message: `Daily limit R${tierLimits.dailyLimit.toLocaleString()} reached.\nUpgrade KYC via the app.` };
+  }
+
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const [monthRows] = await sequelize.query(
+    `SELECT COALESCE(SUM(ABS(amount)), 0) AS total
+     FROM transactions
+     WHERE "userId" = $1 AND status = 'completed'
+       AND type IN ('send','withdraw','payment')
+       AND "createdAt" >= $2`,
+    { bind: [userId, monthStart.toISOString()] }
+  );
+  const monthlyTotal = parseFloat(monthRows[0].total) + amountRand;
+  if (monthlyTotal > tierLimits.monthlyLimit) {
+    return { ok: false, message: `Monthly limit R${tierLimits.monthlyLimit.toLocaleString()} reached.\nUpgrade KYC via the app.` };
   }
 
   return { ok: true };

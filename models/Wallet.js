@@ -1,5 +1,7 @@
 // mymoolah/models/Wallet.js
 
+const { getLimitsForTier } = require('../config/kycTierLimits');
+
 module.exports = (sequelize, DataTypes) => {
   const Wallet = sequelize.define('Wallet', {
     id: {
@@ -189,7 +191,7 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   // Instance methods
-  Wallet.prototype.canDebit = function(amount) {
+  Wallet.prototype.canDebit = function(amount, options = {}) {
     if (this.status !== 'active') {
       return { allowed: false, reason: 'Wallet is not active' };
     }
@@ -203,6 +205,16 @@ module.exports = (sequelize, DataTypes) => {
 
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       return { allowed: false, reason: 'Invalid debit amount' };
+    }
+
+    if (options.kycTier !== undefined) {
+      const tierLimits = getLimitsForTier(options.kycTier);
+      if (numericAmount > tierLimits.singleTransactionLimit) {
+        return {
+          allowed: false,
+          reason: `Single transaction limit R${tierLimits.singleTransactionLimit.toLocaleString()} exceeded for your KYC tier (${tierLimits.label})`
+        };
+      }
     }
 
     if (currentBalance < numericAmount) {
@@ -244,7 +256,19 @@ module.exports = (sequelize, DataTypes) => {
     
     const numericAmount = parseFloat(amount);
     const currentBalance = parseFloat(this.balance);
-    this.balance = currentBalance + numericAmount;
+    const newBalance = currentBalance + numericAmount;
+
+    if (options.kycTier !== undefined) {
+      const tierLimits = getLimitsForTier(options.kycTier);
+      if (newBalance > tierLimits.maxBalance) {
+        throw new Error(
+          `Maximum wallet balance R${tierLimits.maxBalance.toLocaleString()} would be exceeded for your KYC tier (${tierLimits.label}). ` +
+          `Current: R${currentBalance.toFixed(2)}, deposit: R${numericAmount.toFixed(2)}`
+        );
+      }
+    }
+
+    this.balance = newBalance;
     this.lastTransactionAt = new Date();
     
     await this.save(options);

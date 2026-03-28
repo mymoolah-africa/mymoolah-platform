@@ -1,5 +1,6 @@
 const { Wallet, Transaction, User } = require('../models');
 const notificationService = require('../services/notificationService');
+const { getLimitsForTier } = require('../config/kycTierLimits');
 
 class WalletController {
   constructor() {
@@ -49,6 +50,11 @@ class WalletController {
         });
       }
 
+      const user = await User.findByPk(userId, { attributes: ['kyc_tier'] });
+      const kycTier = user?.kyc_tier !== null && user?.kyc_tier !== undefined
+        ? Number(user.kyc_tier) : 0;
+      const tierLimits = getLimitsForTier(kycTier);
+
       const totalTime = Date.now() - startTime;
       console.log(`⏱️  Wallet Balance Performance: Total=${totalTime}ms | Query=${queryTime}ms`);
 
@@ -56,11 +62,21 @@ class WalletController {
         success: true,
         message: 'Balance retrieved successfully',
         data: {
-          // Backward compatibility: expose both available and balance fields
           available: parseFloat(wallet.balance),
           balance: parseFloat(wallet.balance),
-          pending: 0, // TODO: Implement pending balance logic
-          currency: wallet.currency
+          pending: 0,
+          currency: wallet.currency,
+          kycTier,
+          tierLimits: {
+            label: tierLimits.label,
+            singleTransactionLimit: tierLimits.singleTransactionLimit,
+            dailyLimit: tierLimits.dailyLimit,
+            monthlyLimit: tierLimits.monthlyLimit,
+            maxBalance: tierLimits.maxBalance,
+            canSendMoney: tierLimits.canSendMoney,
+            canWithdrawCash: tierLimits.canWithdrawCash,
+            canTransferInternational: tierLimits.canTransferInternational,
+          }
         }
       });
 
@@ -119,7 +135,6 @@ class WalletController {
     }
   }
 
-  // Credit wallet
   async creditWallet(req, res) {
     try {
       const userId = req.user.id;
@@ -132,7 +147,6 @@ class WalletController {
         });
       }
 
-      // Get wallet by userId
       const wallet = await Wallet.findOne({
         where: { userId: userId }
       });
@@ -144,8 +158,20 @@ class WalletController {
         });
       }
 
-      // Update wallet balance
+      const user = await User.findByPk(userId);
+      const kycTier = user?.kyc_tier !== null && user?.kyc_tier !== undefined
+        ? Number(user.kyc_tier) : 0;
+      const tierLimits = getLimitsForTier(kycTier);
+
       const newBalance = parseFloat(wallet.balance) + parseFloat(amount);
+      if (newBalance > tierLimits.maxBalance) {
+        return res.status(400).json({
+          success: false,
+          message: `Maximum wallet balance R${tierLimits.maxBalance.toLocaleString()} would be exceeded for your KYC level (${tierLimits.label}). Please upgrade your KYC.`,
+          code: 'BALANCE_LIMIT_EXCEEDED'
+        });
+      }
+
       await wallet.update({ balance: newBalance });
 
       // Create transaction record
@@ -266,7 +292,6 @@ class WalletController {
         });
       }
 
-      // Get sender wallet
       const senderWallet = await Wallet.findOne({
         where: { userId: senderUserId }
       });
@@ -279,7 +304,26 @@ class WalletController {
         });
       }
 
-      // Check sender balance
+      const kycTier = senderUser?.kyc_tier !== null && senderUser?.kyc_tier !== undefined
+        ? Number(senderUser.kyc_tier) : 0;
+      const tierLimits = getLimitsForTier(kycTier);
+
+      if (!tierLimits.canSendMoney) {
+        return res.status(403).json({
+          success: false,
+          message: `Sending money is not available at your current KYC level (${tierLimits.label}). Please upgrade your KYC by uploading your ID document.`,
+          code: 'KYC_TIER_RESTRICTED'
+        });
+      }
+
+      if (parseFloat(amount) > tierLimits.singleTransactionLimit) {
+        return res.status(400).json({
+          success: false,
+          message: `Maximum R${tierLimits.singleTransactionLimit.toLocaleString()} per transaction for your KYC level (${tierLimits.label}).`,
+          code: 'TRANSACTION_LIMIT_EXCEEDED'
+        });
+      }
+
       if (parseFloat(senderWallet.balance) < parseFloat(amount)) {
         return res.status(400).json({
           success: false,

@@ -1,7 +1,7 @@
-// Use initialized Sequelize models with a robust fallback to handle any module resolution quirks
 const models = require('../models');
 const User = models.User || (models.sequelize && models.sequelize.models && models.sequelize.models.User);
 const Wallet = models.Wallet || (models.sequelize && models.sequelize.models && models.sequelize.models.Wallet);
+const { getLimitsForTier } = require('../config/kycTierLimits');
 
 /**
  * Middleware to check if user has completed KYC verification
@@ -60,11 +60,15 @@ const requireKYCVerification = async (req, res, next) => {
       });
     }
 
-    // Add KYC status to request for use in controllers
+    const kycTier = user.kyc_tier !== null && user.kyc_tier !== undefined ? user.kyc_tier : 0;
+    const tierLimits = getLimitsForTier(kycTier);
+
     req.kycStatus = {
       userVerified: userKYCVerified,
       walletVerified: walletKYCVerified,
-      isRestricted: false
+      isRestricted: false,
+      kycTier,
+      tierLimits,
     };
 
     next();
@@ -114,12 +118,17 @@ const getKYCStatus = async (req, res, next) => {
     const walletKYCVerified = wallet.kycVerified === true;
     const isRestricted = !userKYCVerified || !walletKYCVerified;
 
+    const kycTier = user.kyc_tier !== null && user.kyc_tier !== undefined ? user.kyc_tier : 0;
+    const tierLimits = getLimitsForTier(kycTier);
+
     req.kycStatus = {
       userVerified: userKYCVerified,
       walletVerified: walletKYCVerified,
       isRestricted,
       userKYCStatus: user.kycStatus,
-      walletKYCVerified: wallet.kycVerified
+      walletKYCVerified: wallet.kycVerified,
+      kycTier,
+      tierLimits,
     };
 
     next();
@@ -129,7 +138,9 @@ const getKYCStatus = async (req, res, next) => {
       userVerified: false,
       walletVerified: false,
       isRestricted: true,
-      userKYCStatus: 'not_started'
+      userKYCStatus: 'not_started',
+      kycTier: 0,
+      tierLimits: getLimitsForTier(0),
     };
     next();
   }
