@@ -128,7 +128,7 @@ export function KYCStatusPage() {
       case 'under_review':
         return 'Our verification team is currently reviewing your documents.';
       case 'verified':
-        return 'Congratulations! Your identity has been verified. You are now at Tier 1 with transaction limits up to R4,999.99 per transaction.';
+        return 'Congratulations! Your identity has been verified. Your wallet limits have been upgraded.';
       case 'rejected':
         return 'Some documents need to be re-submitted for verification.';
       default:
@@ -151,18 +151,19 @@ export function KYCStatusPage() {
     }
   }, [currentStatus]);
 
-  // Auto-navigate to dashboard when KYC is verified
+  const [initialStatus] = useState(currentStatus);
+
+  // Auto-navigate only when status transitions to verified during polling
+  // (not when user opens the page already verified)
   useEffect(() => {
-    if (currentStatus === 'verified' && refreshUserStatus) {
-      // Refresh user status first, then navigate
+    if (currentStatus === 'verified' && initialStatus !== 'verified' && refreshUserStatus) {
       refreshUserStatus().then(() => {
-        // Small delay to ensure state is updated
         setTimeout(() => {
           navigate('/dashboard');
         }, 500);
       });
     }
-  }, [currentStatus, navigate, refreshUserStatus]);
+  }, [currentStatus, initialStatus, navigate, refreshUserStatus]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#86BE41] to-[#2D8CCA]">
@@ -370,7 +371,7 @@ export function KYCStatusPage() {
                             fontWeight: 'var(--font-weight-bold)', 
                             color: '#1f2937'
                           }}>
-                            Tier 1 - Basic Verification
+                            {user?.kycTier === 2 ? 'Tier 2 - Fully Verified' : 'Tier 1 - ID Verified'}
                           </h4>
                           <p style={{ 
                             fontFamily: 'Montserrat, sans-serif', 
@@ -378,7 +379,7 @@ export function KYCStatusPage() {
                             fontWeight: 'var(--font-weight-normal)', 
                             color: '#6b7280'
                           }}>
-                            ID document verified
+                            {user?.kycTier === 2 ? 'ID + proof of address verified' : 'ID document verified'}
                           </p>
                         </div>
                       </div>
@@ -415,7 +416,7 @@ export function KYCStatusPage() {
                             fontFamily: 'Montserrat, sans-serif', 
                             fontSize: 'var(--mobile-font-base)'
                           }}>
-                            R4,999.99
+                            {user?.kycTier === 2 ? 'R25,000' : 'R5,000'}
                           </div>
                         </div>
                         
@@ -430,17 +431,18 @@ export function KYCStatusPage() {
                             fontFamily: 'Montserrat, sans-serif', 
                             fontSize: 'var(--mobile-font-base)'
                           }}>
-                            R29,999.99
+                            {user?.kycTier === 2 ? 'R100,000' : 'R25,000'}
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Upgrade to Tier 2 Info */}
+                    {/* Upgrade to Tier 2 Info — only for Tier 1 users */}
+                    {(user?.kycTier === null || user?.kycTier === undefined || user?.kycTier < 2) && (
                     <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <span className="text-amber-600 text-sm">💡</span>
+                          <span className="text-amber-600 text-sm font-bold">!</span>
                         </div>
                         <div>
                           <h6 style={{ 
@@ -457,7 +459,7 @@ export function KYCStatusPage() {
                             fontWeight: 'var(--font-weight-normal)', 
                             color: '#92400e'
                           }}>
-                            Upload proof of address to unlock higher limits: R100,000 per transaction, R500,000 monthly.
+                            Upload proof of address to unlock higher limits: R25,000 per transaction, R100,000 monthly.
                           </p>
                           <Button
                             onClick={() => navigate('/kyc/documents')}
@@ -475,6 +477,7 @@ export function KYCStatusPage() {
                         </div>
                       </div>
                     </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
