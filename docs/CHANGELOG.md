@@ -1,5 +1,32 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-28 - KYC Tiered Verification System (USSD + Web App)
+
+Implemented a comprehensive 3-tier KYC system aligning USSD and web app registration paths with FICA compliance requirements.
+
+### Tier Definitions
+- **Tier 0**: USSD registration — ID/passport format-validated (Luhn + DOB + citizenship for SA ID, pattern check for passport)
+- **Tier 1**: Web app — ID document uploaded and OCR-verified
+- **Tier 2**: Web app — ID document + proof of address, both OCR-verified
+
+### Backend Changes
+- `migrations/20260328_01_add_kyc_tier_column.js` — New `kyc_tier` INTEGER column on users table with index; backfills existing users
+- `models/User.js` — Added `kyc_tier` field (INTEGER, nullable, 0-2)
+- `services/ussdAuthService.js` — Sets `kyc_tier = 0` for new USSD users; enhanced SA ID validation (DOB, citizenship); tightened passport validation (6-15 chars); added first name/surname collection (FICA)
+- `services/ussdMenuService.js` — Sets `kyc_tier = 0` for existing users going through USSD ID collection; added REGISTER_FIRST_NAME/REGISTER_LAST_NAME states
+- `controllers/kycController.js` — Tiered KYC: Tier 1 on ID validation, Tier 2 on POA; allows address-only uploads for Tier 1+ users; exposes `kycTier` in status endpoint
+- `routes/kyc.js` — Re-enabled `addressDocument` in multer upload fields
+- `tests/ussd.test.js` — 17 new test cases (names, enhanced validation, state transitions)
+
+### Frontend Changes
+- `contexts/AuthContext.tsx` — Added `kycTier` to User interface; mapped from backend `kyc_tier`
+- `pages/KYCDocumentsPage.tsx` — Tier-aware rewrite: current tier badge, address document upload, conditional rendering (new user / Tier 1 upgrade / Tier 2 redirect), consistent Montserrat + CSS variable styling
+
+### Database Cleanup
+- Staging: removed 5 test users, preserved Andre Botes (+27825571055) and all associated data
+
+---
+
 ## 2026-03-26 (21:00) - PayShap API Documentation Review & Gustaf Email Refinement
 
 Comprehensive sweep of all SBSA PayShap API documentation to eliminate redundant questions from the email to Gustaf (SBSA PayShap team). Reviewed Postman samples, integration code, callback validators, proxy resolution client, and 10+ session logs.
