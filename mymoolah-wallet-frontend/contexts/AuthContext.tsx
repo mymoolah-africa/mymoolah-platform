@@ -4,7 +4,7 @@ import { APP_CONFIG } from '../config/app-config';
 import { getToken as getSessionToken, setToken as setSessionToken, removeToken as removeSessionToken } from '../utils/authToken';
 
 // Updated KYC status type with complete flow
-type KYCStatus = 'not_started' | 'documents_uploaded' | 'under_review' | 'verified' | 'rejected';
+type KYCStatus = 'not_started' | 'documents_uploaded' | 'under_review' | 'verified' | 'rejected' | 'ussd_basic';
 
 interface User {
   id: string;
