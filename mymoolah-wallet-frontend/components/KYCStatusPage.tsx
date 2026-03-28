@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { getToken } from '../utils/authToken';
 
-type KYCStatus = 'not_started' | 'documents_uploaded' | 'under_review' | 'verified' | 'rejected';
+type KYCStatus = 'not_started' | 'documents_uploaded' | 'under_review' | 'verified' | 'rejected' | 'ussd_basic';
 
 interface StatusStage {
   id: string;
@@ -26,6 +26,71 @@ interface StatusStage {
   description: string;
   status: 'completed' | 'current' | 'pending';
   icon: React.ReactNode;
+}
+
+interface TierConfig {
+  label: string;
+  description: string;
+  singleTransactionLimit: number;
+  dailyLimit: number;
+  monthlyLimit: number;
+  maxBalance: number;
+  canSendMoney: boolean;
+  canWithdrawCash: boolean;
+  canPurchaseVAS: boolean;
+  canReceiveDeposits: boolean;
+  canTransferInternational: boolean;
+}
+
+const KYC_TIER_LIMITS: Record<number, TierConfig> = {
+  0: {
+    label: 'USSD Basic',
+    description: 'Name + ID/passport format-validated (no document)',
+    singleTransactionLimit: 1000,
+    dailyLimit: 3000,
+    monthlyLimit: 5000,
+    maxBalance: 3000,
+    canSendMoney: false,
+    canWithdrawCash: false,
+    canPurchaseVAS: true,
+    canReceiveDeposits: true,
+    canTransferInternational: false,
+  },
+  1: {
+    label: 'ID Verified',
+    description: 'ID document uploaded and OCR-validated (Exemption 17)',
+    singleTransactionLimit: 5000,
+    dailyLimit: 5000,
+    monthlyLimit: 25000,
+    maxBalance: 25000,
+    canSendMoney: true,
+    canWithdrawCash: true,
+    canPurchaseVAS: true,
+    canReceiveDeposits: true,
+    canTransferInternational: false,
+  },
+  2: {
+    label: 'Fully Verified',
+    description: 'ID document + proof of address verified (Full FICA CDD)',
+    singleTransactionLimit: 25000,
+    dailyLimit: 50000,
+    monthlyLimit: 100000,
+    maxBalance: 100000,
+    canSendMoney: true,
+    canWithdrawCash: true,
+    canPurchaseVAS: true,
+    canReceiveDeposits: true,
+    canTransferInternational: true,
+  },
+};
+
+function getTierLimits(tier: number | null | undefined): TierConfig {
+  const t = tier === null || tier === undefined ? 0 : Number(tier);
+  return KYC_TIER_LIMITS[t] || KYC_TIER_LIMITS[0];
+}
+
+function formatRand(amount: number): string {
+  return `R${amount.toLocaleString('en-ZA')}`;
 }
 
 export function KYCStatusPage() {
@@ -104,6 +169,7 @@ export function KYCStatusPage() {
   const getProgressValue = (status: KYCStatus): number => {
     switch (status) {
       case 'not_started': return 0;
+      case 'ussd_basic': return 25;
       case 'documents_uploaded': return 33;
       case 'under_review': return 66;
       case 'verified': return 100;
@@ -129,6 +195,8 @@ export function KYCStatusPage() {
         return 'Our verification team is currently reviewing your documents.';
       case 'verified':
         return 'Congratulations! Your identity has been verified. Your wallet limits have been upgraded.';
+      case 'ussd_basic':
+        return 'Your USSD wallet is active with basic verification. Upload documents to upgrade your limits.';
       case 'rejected':
         return 'Some documents need to be re-submitted for verification.';
       default:
@@ -174,7 +242,7 @@ export function KYCStatusPage() {
           {/* Back Button */}
           <div className="mb-4">
             <button
-              onClick={() => navigate(currentStatus === 'verified' ? '/dashboard' : '/kyc/documents')}
+              onClick={() => navigate(currentStatus === 'verified' || currentStatus === 'ussd_basic' ? '/dashboard' : '/kyc/documents')}
               className="inline-flex items-center text-white/90 hover:text-white transition-colors touch-target"
               style={{ 
                 fontFamily: 'Montserrat, sans-serif', 
@@ -183,14 +251,14 @@ export function KYCStatusPage() {
               }}
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              <span>{currentStatus === 'verified' ? 'Back to Dashboard' : 'Back to Documents'}</span>
+              <span>{currentStatus === 'verified' || currentStatus === 'ussd_basic' ? 'Back to Dashboard' : 'Back to Documents'}</span>
             </button>
           </div>
 
           {/* Status Icon and Title */}
           <div className="text-center mb-6">
             <div className="w-16 h-16 mx-auto mb-4 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center">
-              {currentStatus === 'verified' ? (
+              {currentStatus === 'verified' || currentStatus === 'ussd_basic' ? (
                 <CheckCircle className="w-8 h-8 text-white" />
               ) : currentStatus === 'rejected' ? (
                 <AlertTriangle className="w-8 h-8 text-white" />
@@ -208,6 +276,7 @@ export function KYCStatusPage() {
               marginBottom: '0.5rem'
             }}>
               {currentStatus === 'verified' ? 'Verification Complete!' : 
+               currentStatus === 'ussd_basic' ? 'Basic Verification' :
                currentStatus === 'rejected' ? 'Action Required' :
                currentStatus === 'under_review' ? 'Under Review' :
                'Verification Status'}
@@ -343,8 +412,13 @@ export function KYCStatusPage() {
               </CardContent>
             </Card>
 
-            {/* KYC Tier Information - Only show for verified users */}
-            {currentStatus === 'verified' && (
+            {/* KYC Tier Information - Show for verified and ussd_basic users */}
+            {(currentStatus === 'verified' || currentStatus === 'ussd_basic') && (() => {
+              const tier = user?.kycTier ?? 0;
+              const limits = getTierLimits(tier);
+              const nextTier = tier < 2 ? getTierLimits(tier + 1) : null;
+
+              return (
               <Card className="bg-white/95 backdrop-blur-sm border-0 shadow-xl" style={{ borderRadius: 'var(--mobile-border-radius)' }}>
                 <CardHeader>
                   <CardTitle style={{ 
@@ -371,7 +445,7 @@ export function KYCStatusPage() {
                             fontWeight: 'var(--font-weight-bold)', 
                             color: '#1f2937'
                           }}>
-                            {user?.kycTier === 2 ? 'Tier 2 - Fully Verified' : 'Tier 1 - ID Verified'}
+                            Tier {tier} - {limits.label}
                           </h4>
                           <p style={{ 
                             fontFamily: 'Montserrat, sans-serif', 
@@ -379,7 +453,7 @@ export function KYCStatusPage() {
                             fontWeight: 'var(--font-weight-normal)', 
                             color: '#6b7280'
                           }}>
-                            {user?.kycTier === 2 ? 'ID + proof of address verified' : 'ID document verified'}
+                            {limits.description}
                           </p>
                         </div>
                       </div>
@@ -416,7 +490,7 @@ export function KYCStatusPage() {
                             fontFamily: 'Montserrat, sans-serif', 
                             fontSize: 'var(--mobile-font-base)'
                           }}>
-                            {user?.kycTier === 2 ? 'R25,000' : 'R5,000'}
+                            {formatRand(limits.singleTransactionLimit)}
                           </div>
                         </div>
                         
@@ -425,20 +499,87 @@ export function KYCStatusPage() {
                             fontFamily: 'Montserrat, sans-serif', 
                             fontSize: 'var(--mobile-font-small)'
                           }}>
-                            Monthly Limit
+                            Daily Limit
                           </div>
                           <div className="text-green-800 font-bold" style={{ 
                             fontFamily: 'Montserrat, sans-serif', 
                             fontSize: 'var(--mobile-font-base)'
                           }}>
-                            {user?.kycTier === 2 ? 'R100,000' : 'R25,000'}
+                            {formatRand(limits.dailyLimit)}
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                          <div className="text-purple-600 font-semibold" style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-small)'
+                          }}>
+                            Monthly Limit
+                          </div>
+                          <div className="text-purple-800 font-bold" style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-base)'
+                          }}>
+                            {formatRand(limits.monthlyLimit)}
+                          </div>
+                        </div>
+
+                        <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                          <div className="text-amber-600 font-semibold" style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-small)'
+                          }}>
+                            Max Balance
+                          </div>
+                          <div className="text-amber-800 font-bold" style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-base)'
+                          }}>
+                            {formatRand(limits.maxBalance)}
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    {/* Upgrade to Tier 2 Info — only for Tier 1 users */}
-                    {(user?.kycTier === null || user?.kycTier === undefined || user?.kycTier < 2) && (
+                    {/* Features */}
+                    <div className="space-y-2">
+                      <h5 style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-small)', 
+                        fontWeight: 'var(--font-weight-bold)', 
+                        color: '#374151'
+                      }}>
+                        Available Features
+                      </h5>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: 'VAS Purchases', enabled: limits.canPurchaseVAS },
+                          { label: 'Receive Deposits', enabled: limits.canReceiveDeposits },
+                          { label: 'Send Money', enabled: limits.canSendMoney },
+                          { label: 'Withdraw Cash', enabled: limits.canWithdrawCash },
+                          { label: 'International', enabled: limits.canTransferInternational },
+                        ].map((feat) => (
+                          <div key={feat.label} className={`flex items-center gap-2 p-2 rounded-lg ${feat.enabled ? 'bg-green-50' : 'bg-gray-50'}`}>
+                            {feat.enabled ? (
+                              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                            ) : (
+                              <AlertTriangle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            )}
+                            <span style={{
+                              fontFamily: 'Montserrat, sans-serif',
+                              fontSize: 'var(--mobile-font-small)',
+                              fontWeight: 'var(--font-weight-normal)',
+                              color: feat.enabled ? '#166534' : '#9ca3af',
+                            }}>
+                              {feat.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Upgrade prompt — only for users below Tier 2 */}
+                    {tier < 2 && nextTier && (
                     <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
@@ -451,7 +592,7 @@ export function KYCStatusPage() {
                             fontWeight: 'var(--font-weight-bold)', 
                             color: '#92400e'
                           }}>
-                            Upgrade to Tier 2
+                            Upgrade to Tier {tier + 1} - {nextTier.label}
                           </h6>
                           <p style={{ 
                             fontFamily: 'Montserrat, sans-serif', 
@@ -459,7 +600,10 @@ export function KYCStatusPage() {
                             fontWeight: 'var(--font-weight-normal)', 
                             color: '#92400e'
                           }}>
-                            Upload proof of address to unlock higher limits: R25,000 per transaction, R100,000 monthly.
+                            {tier === 0
+                              ? `Upload your ID document to unlock higher limits: ${formatRand(nextTier.singleTransactionLimit)} per transaction, ${formatRand(nextTier.monthlyLimit)} monthly.`
+                              : `Upload proof of address to unlock higher limits: ${formatRand(nextTier.singleTransactionLimit)} per transaction, ${formatRand(nextTier.monthlyLimit)} monthly.`
+                            }
                           </p>
                           <Button
                             onClick={() => navigate('/kyc/documents')}
@@ -472,7 +616,7 @@ export function KYCStatusPage() {
                               fontWeight: 'var(--font-weight-medium)'
                             }}
                           >
-                            Upload POA Document
+                            {tier === 0 ? 'Upload ID Document' : 'Upload POA Document'}
                           </Button>
                         </div>
                       </div>
@@ -481,11 +625,12 @@ export function KYCStatusPage() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+              );
+            })()}
 
             {/* Action Buttons */}
             <div className="space-y-3">
-              {currentStatus === 'verified' && (
+              {(currentStatus === 'verified' || currentStatus === 'ussd_basic') && (
                 <Button
                   onClick={() => navigate('/dashboard')}
                   className="w-full bg-gradient-to-r from-[#86BE41] to-[#2D8CCA] hover:from-[#7AB139] hover:to-[#2680B8] text-white"
