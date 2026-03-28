@@ -579,11 +579,11 @@ export function KYCStatusPage() {
                     </div>
 
                     {/* Upgrade prompt — only for users below Tier 2 */}
-                    {tier < 2 && nextTier && (
+                    {tier === 0 && (
                     <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
                       <div className="flex items-start gap-3">
                         <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <span className="text-amber-600 text-sm font-bold">!</span>
+                          <Shield className="w-4 h-4 text-amber-600" />
                         </div>
                         <div>
                           <h6 style={{ 
@@ -592,18 +592,16 @@ export function KYCStatusPage() {
                             fontWeight: 'var(--font-weight-bold)', 
                             color: '#92400e'
                           }}>
-                            Upgrade to Tier {tier + 1} - {nextTier.label}
+                            Unlock Send, Withdraw & Higher Limits
                           </h6>
                           <p style={{ 
                             fontFamily: 'Montserrat, sans-serif', 
                             fontSize: 'var(--mobile-font-small)', 
                             fontWeight: 'var(--font-weight-normal)', 
-                            color: '#92400e'
+                            color: '#92400e',
+                            marginTop: '0.25rem'
                           }}>
-                            {tier === 0
-                              ? `Upload your ID document to unlock higher limits: ${formatRand(nextTier.singleTransactionLimit)} per transaction, ${formatRand(nextTier.monthlyLimit)} monthly.`
-                              : `Upload proof of address to unlock higher limits: ${formatRand(nextTier.singleTransactionLimit)} per transaction, ${formatRand(nextTier.monthlyLimit)} monthly.`
-                            }
+                            To send money, withdraw cash and increase your limits, upload a photo of your SA ID or passport via the web app.
                           </p>
                           <Button
                             onClick={() => navigate('/kyc/documents')}
@@ -616,7 +614,49 @@ export function KYCStatusPage() {
                               fontWeight: 'var(--font-weight-medium)'
                             }}
                           >
-                            {tier === 0 ? 'Upload ID Document' : 'Upload POA Document'}
+                            Upload ID Document
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    )}
+
+                    {tier === 1 && (
+                    <div className="p-4 bg-amber-50 rounded-lg border border-amber-200">
+                      <div className="flex items-start gap-3">
+                        <div className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <Shield className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <div>
+                          <h6 style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-small)', 
+                            fontWeight: 'var(--font-weight-bold)', 
+                            color: '#92400e'
+                          }}>
+                            Unlock Cross-Border & Higher Limits
+                          </h6>
+                          <p style={{ 
+                            fontFamily: 'Montserrat, sans-serif', 
+                            fontSize: 'var(--mobile-font-small)', 
+                            fontWeight: 'var(--font-weight-normal)', 
+                            color: '#92400e',
+                            marginTop: '0.25rem'
+                          }}>
+                            To enable international remittances and increase your transaction and balance limits, upload proof of address via the web app.
+                          </p>
+                          <Button
+                            onClick={() => navigate('/kyc/documents')}
+                            variant="outline"
+                            size="sm"
+                            className="mt-2 border-amber-300 text-amber-700 hover:bg-amber-100"
+                            style={{ 
+                              fontFamily: 'Montserrat, sans-serif',
+                              fontSize: 'var(--mobile-font-small)',
+                              fontWeight: 'var(--font-weight-medium)'
+                            }}
+                          >
+                            Upload Proof of Address
                           </Button>
                         </div>
                       </div>
