@@ -224,7 +224,7 @@ router.post('/reset/:userId', async (req, res) => {
     }
     const u = await User.findOne({ where: { id: targetUserId } });
     if (u) {
-      await u.update({ kycStatus: 'not_started' });
+      await u.update({ kycStatus: 'not_started', kyc_tier: null, idNumber: null, idType: null, idVerified: false });
     }
 
     return res.json({ success: true, message: 'KYC reset completed', data: { userId: targetUserId, deleted } });
