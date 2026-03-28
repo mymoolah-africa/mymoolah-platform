@@ -20,6 +20,8 @@ jest.mock('../services/ussdAuthService', () => ({
   isValidUssdPin: jest.fn(),
   setUssdPin: jest.fn().mockResolvedValue(undefined),
   registerUssdUser: jest.fn(),
+  isValidName: jest.fn(),
+  sanitizeName: jest.fn((v) => v),
 }));
 
 jest.mock('../services/ussdSessionService', () => ({
@@ -69,6 +71,33 @@ describe('ussdMenuService — processInput state machine', () => {
     expect(out.response).toContain('PIN');
   });
 
+  it('WELCOME: existing user without PIN but with ID goes to REGISTER_PIN', async () => {
+    ussdAuthService.findUserByMsisdn.mockResolvedValue({
+      id: 42,
+      status: 'active',
+      ussd_pin: null,
+      idNumber: 'enc:v1:encrypted',
+      idType: 'south_african_id',
+    });
+    const out = await processInput(sessionBase({ menuState: 'WELCOME' }), null);
+    expect(out.sessionUpdates.menuState).toBe('REGISTER_PIN');
+    expect(out.sessionUpdates.data.isExistingUser).toBe(true);
+  });
+
+  it('WELCOME: existing user without PIN and without ID goes to REGISTER_FIRST_NAME', async () => {
+    ussdAuthService.findUserByMsisdn.mockResolvedValue({
+      id: 42,
+      status: 'active',
+      ussd_pin: null,
+      idNumber: null,
+      idType: null,
+    });
+    const out = await processInput(sessionBase({ menuState: 'WELCOME' }), null);
+    expect(out.sessionUpdates.menuState).toBe('REGISTER_FIRST_NAME');
+    expect(out.sessionUpdates.data.needsId).toBe(true);
+    expect(out.sessionUpdates.data.isExistingUser).toBe(true);
+  });
+
   it('WELCOME: new user (no MSISDN match) shows register/help/exit', async () => {
     ussdAuthService.findUserByMsisdn.mockResolvedValue(null);
     const out = await processInput(sessionBase({ menuState: 'WELCOME' }), null);
@@ -78,10 +107,36 @@ describe('ussdMenuService — processInput state machine', () => {
     expect(out.response).toMatch(/Help/i);
   });
 
-  it('REGISTER: input 1 goes to REGISTER_ID', async () => {
+  it('REGISTER: input 1 goes to REGISTER_FIRST_NAME', async () => {
     const out = await processInput(sessionBase({ menuState: 'REGISTER' }), '1');
     expect(out.type).toBe('continue');
+    expect(out.sessionUpdates.menuState).toBe('REGISTER_FIRST_NAME');
+    expect(out.response).toMatch(/first name/i);
+  });
+
+  it('REGISTER_FIRST_NAME: valid name goes to REGISTER_LAST_NAME', async () => {
+    ussdAuthService.isValidName.mockReturnValue(true);
+    ussdAuthService.sanitizeName.mockReturnValue('Andre');
+    const out = await processInput(sessionBase({ menuState: 'REGISTER_FIRST_NAME' }), 'andre');
+    expect(out.sessionUpdates.menuState).toBe('REGISTER_LAST_NAME');
+    expect(out.sessionUpdates.data.firstName).toBe('Andre');
+    expect(out.response).toMatch(/surname/i);
+  });
+
+  it('REGISTER_FIRST_NAME: invalid name stays on REGISTER_FIRST_NAME', async () => {
+    ussdAuthService.isValidName.mockReturnValue(false);
+    const out = await processInput(sessionBase({ menuState: 'REGISTER_FIRST_NAME' }), '123');
+    expect(out.sessionUpdates.menuState).toBe('REGISTER_FIRST_NAME');
+    expect(out.response).toMatch(/Invalid/i);
+  });
+
+  it('REGISTER_LAST_NAME: valid surname goes to REGISTER_ID', async () => {
+    ussdAuthService.isValidName.mockReturnValue(true);
+    ussdAuthService.sanitizeName.mockReturnValue('Botes');
+    const session = sessionBase({ menuState: 'REGISTER_LAST_NAME', data: { firstName: 'Andre' } });
+    const out = await processInput(session, 'botes');
     expect(out.sessionUpdates.menuState).toBe('REGISTER_ID');
+    expect(out.sessionUpdates.data.lastName).toBe('Botes');
     expect(out.response).toMatch(/SA ID|passport/i);
   });
 
@@ -393,7 +448,7 @@ describe('ussdAuthService — validation helpers (jest.requireActual)', () => {
   const auth = jest.requireActual('../services/ussdAuthService');
 
   describe('isValidSouthAfricanId', () => {
-    it('accepts valid ID 8801015009080 (Luhn per ussdAuthService)', () => {
+    it('accepts valid ID 8801015009080 (Luhn + DOB + citizenship)', () => {
       expect(auth.isValidSouthAfricanId('8801015009080')).toBe(true);
     });
 
@@ -405,19 +460,74 @@ describe('ussdAuthService — validation helpers (jest.requireActual)', () => {
       expect(auth.isValidSouthAfricanId('880101500908')).toBe(false);
       expect(auth.isValidSouthAfricanId('880101500908712')).toBe(false);
     });
+
+    it('rejects invalid month (13)', () => {
+      expect(auth.isValidSouthAfricanId('8813015009080')).toBe(false);
+    });
+
+    it('rejects invalid day (32)', () => {
+      expect(auth.isValidSouthAfricanId('8801325009080')).toBe(false);
+    });
+
+    it('rejects Feb 30 (invalid calendar day)', () => {
+      expect(auth.isValidSouthAfricanId('8802305009080')).toBe(false);
+    });
+
+    it('rejects invalid citizenship digit (not 0 or 1)', () => {
+      expect(auth.isValidSouthAfricanId('8801015009280')).toBe(false);
+    });
   });
 
   describe('isValidPassport', () => {
-    it('accepts A12345678', () => {
+    it('accepts A12345678 (9 chars, has letter)', () => {
       expect(auth.isValidPassport('A12345678')).toBe(true);
+    });
+
+    it('accepts AB1234 (6 chars minimum)', () => {
+      expect(auth.isValidPassport('AB1234')).toBe(true);
     });
 
     it('rejects all-numeric (no letter)', () => {
       expect(auth.isValidPassport('12345678')).toBe(false);
     });
 
-    it('rejects too short', () => {
-      expect(auth.isValidPassport('A12')).toBe(false);
+    it('rejects too short (less than 6 chars)', () => {
+      expect(auth.isValidPassport('A1234')).toBe(false);
+    });
+
+    it('rejects all same character', () => {
+      expect(auth.isValidPassport('AAAAAA')).toBe(false);
+    });
+  });
+
+  describe('isValidName', () => {
+    it('accepts simple names', () => {
+      expect(auth.isValidName('Andre')).toBe(true);
+      expect(auth.isValidName('Botes')).toBe(true);
+    });
+
+    it('accepts hyphenated and apostrophe names', () => {
+      expect(auth.isValidName("O'Brien")).toBe(true);
+      expect(auth.isValidName('Van-der-Merwe')).toBe(true);
+    });
+
+    it('rejects pure numbers', () => {
+      expect(auth.isValidName('12345')).toBe(false);
+    });
+
+    it('rejects empty string', () => {
+      expect(auth.isValidName('')).toBe(false);
+    });
+  });
+
+  describe('sanitizeName', () => {
+    it('capitalizes first letter of each word', () => {
+      expect(auth.sanitizeName('andre')).toBe('Andre');
+      expect(auth.sanitizeName('van der merwe')).toBe('Van Der Merwe');
+    });
+
+    it('trims whitespace', () => {
+      expect(auth.sanitizeName('  andre  ')).toBe('Andre');
     });
   });
 

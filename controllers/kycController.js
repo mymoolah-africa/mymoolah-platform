@@ -60,10 +60,20 @@ class KYCController {
       
 
       if (result.validation.isValid) {
-        // Auto-approve if validation passes
         const wallet = await Wallet.findOne({ where: { userId: userId } });
         if (wallet) {
           await wallet.verifyKYC('ai_system');
+        }
+
+        const { User } = require('../models');
+        const user = await User.findByPk(userId);
+        if (user) {
+          if (documentType === 'id_document') {
+            const newTier = (user.kyc_tier != null && user.kyc_tier >= 1) ? user.kyc_tier : 1;
+            await user.update({ kycStatus: 'verified', kyc_tier: newTier });
+          } else if (documentType === 'proof_of_address' && user.kyc_tier >= 1) {
+            await user.update({ kyc_tier: 2 });
+          }
         }
 
         return res.json({
@@ -71,7 +81,8 @@ class KYCController {
           message: 'KYC verification successful',
           status: 'approved',
           walletVerified: true,
-          kycRecordId: kycRecord.id
+          kycRecordId: kycRecord.id,
+          kycTier: user ? user.kyc_tier : null
         });
       } else {
         return res.json({
@@ -114,12 +125,27 @@ class KYCController {
 
       
 
-      if (!files || !files.identityDocument) {
-        console.error('❌ Missing identity document:', { files: !!files, identity: !!files?.identityDocument });
+      // Check what the user has provided and what they need
+      const hasIdentity = files && files.identityDocument;
+      const hasAddress = files && files.addressDocument;
+
+      if (!hasIdentity && !hasAddress) {
         return res.status(400).json({
           error: 'DOCUMENTS_REQUIRED',
-          message: 'Please upload your ID document (SA ID or Passport)'
+          message: 'Please upload at least one document'
         });
+      }
+
+      // If no identity document, check if user already has Tier 1+ (ID already verified)
+      if (!hasIdentity) {
+        const { User } = require('../models');
+        const existingUser = await User.findByPk(userId);
+        if (!existingUser || existingUser.kyc_tier == null || existingUser.kyc_tier < 1) {
+          return res.status(400).json({
+            error: 'IDENTITY_REQUIRED',
+            message: 'Please upload your ID document (SA ID or Passport)'
+          });
+        }
       }
 
       
@@ -137,134 +163,146 @@ class KYCController {
         });
       }
 
-      const identityFile = files.identityDocument[0];
-      // Address document requirement is masked for now
-      // const addressFile = files.addressDocument[0];
+      const identityFile = hasIdentity ? files.identityDocument[0] : null;
+      const addressFile = hasAddress ? files.addressDocument[0] : null;
 
-      // Process identity document
-      const identityUrl = `/uploads/kyc/${userId}_id_document_${Date.now()}.${identityFile.originalname.split('.').pop()}`;
       const uploadDir = path.join(__dirname, '../uploads/kyc');
-      
       try {
         await fs.mkdir(uploadDir, { recursive: true });
-        await fs.writeFile(path.join(uploadDir, path.basename(identityUrl)), identityFile.buffer);
-
-      } catch (fileError) {
-        console.error('❌ Identity file save failed:', fileError);
+      } catch (dirError) {
+        console.error('❌ Upload directory creation failed:', dirError);
         return res.status(500).json({
-          error: 'FILE_SAVE_ERROR',
-          message: 'Error saving identity document'
+          error: 'FILE_SYSTEM_ERROR',
+          message: 'Error creating upload directory'
         });
       }
 
-      // Process address document (masked for now)
-      // const addressUrl = `/uploads/kyc/${userId}_proof_of_address_${Date.now()}.${addressFile.originalname.split('.').pop()}`;
-      // 
-      // try {
-      //   await fs.writeFile(path.join(uploadDir, path.basename(addressUrl)), addressFile.buffer);
-      //   console.log('✅ Address file saved');
-      // } catch (fileError) {
-      //   console.error('❌ Address file save failed:', fileError);
-      //   return res.status(500).json({
-      //     error: 'FILE_SAVE_ERROR',
-      //     message: 'Error saving address document'
-      //   });
-      // }
+      // Save identity document if provided
+      let identityUrl = null;
+      if (identityFile) {
+        identityUrl = `/uploads/kyc/${userId}_id_document_${Date.now()}.${identityFile.originalname.split('.').pop()}`;
+        try {
+          await fs.writeFile(path.join(uploadDir, path.basename(identityUrl)), identityFile.buffer);
+        } catch (fileError) {
+          console.error('❌ Identity file save failed:', fileError);
+          return res.status(500).json({
+            error: 'FILE_SAVE_ERROR',
+            message: 'Error saving identity document'
+          });
+        }
+      }
 
-      
+      // Save address document if provided
+      let addressUrl = null;
+      if (addressFile) {
+        addressUrl = `/uploads/kyc/${userId}_proof_of_address_${Date.now()}.${addressFile.originalname.split('.').pop()}`;
+        try {
+          await fs.writeFile(path.join(uploadDir, path.basename(addressUrl)), addressFile.buffer);
+        } catch (fileError) {
+          console.error('❌ Address file save failed:', fileError);
+          return res.status(500).json({
+            error: 'FILE_SAVE_ERROR',
+            message: 'Error saving address document'
+          });
+        }
+      }
 
-      // Process identity document only (POA masked for now)
       // Return immediately to prevent mobile app timeout (10s), process async
       res.status(202).json({
         success: true,
-        message: 'KYC document uploaded successfully. Processing in background...',
+        message: 'KYC document(s) uploaded successfully. Processing in background...',
         status: 'processing',
         documentUrl: identityUrl,
+        addressDocumentUrl: addressUrl,
         checkStatusEndpoint: `/api/v1/kyc/status/${userId}`,
         userId: userId,
-        pollInterval: 2000, // Suggest polling every 2 seconds (faster than 30s default)
-        estimatedProcessingTime: 10000 // ~10 seconds for OCR processing
+        pollInterval: 2000,
+        estimatedProcessingTime: addressUrl ? 20000 : 10000
       });
 
       // Process async (don't await - let it run in background)
       (async () => {
         try {
-          const identityResult = await KYCService.processKYCSubmission(userId, 'id_document', identityUrl, parseInt(retryCount));
+          const { User } = require('../models');
+          const user = await User.findByPk(userId);
+          const wallet = await Wallet.findOne({ where: { userId: userId } });
+          let currentTier = user?.kyc_tier ?? null;
 
-        // const addressResult = await KYCService.processKYCSubmission(userId, 'proof_of_address', addressUrl);
+          // --- Phase 1: Process identity document if provided ---
+          if (identityUrl) {
+            const identityResult = await KYCService.processKYCSubmission(userId, 'id_document', identityUrl, parseInt(retryCount));
 
+            if (!identityResult.success) {
+              console.log('❌ KYC ID validation failed:', identityResult.validation?.issues);
+              try {
+                await notificationService.createNotification(userId, 'maintenance', 'KYC Verification Failed',
+                  identityResult.message || 'Document validation failed. Please try again with a clearer image.',
+                  { severity: 'warning', category: 'transaction', source: 'system' });
+              } catch (notifError) {
+                console.error('❌ Failed to create KYC failure notification:', notifError);
+              }
+              return;
+            }
 
+            const identityValid = identityResult.success &&
+                                 (identityResult.validation.isValid || identityResult.status === 'approved');
 
-          if (!identityResult.success) {
-            console.log('❌ KYC validation failed:', identityResult.validation.issues);
-            // Store result in database for user to check later
-            // For now, just log - user can retry
-            return;
+            if (identityValid) {
+              if (wallet) {
+                await wallet.verifyKYC('ai_system');
+                console.log('✅ Wallet KYC verified automatically');
+              }
+              currentTier = 1;
+              if (user) {
+                await user.update({ kycStatus: 'verified', kyc_tier: 1 });
+                console.log('✅ User KYC: Tier 1 (ID verified)');
+              }
+            } else {
+              console.log('⚠️  KYC validation failed - user can retry:', identityResult.validation?.issues);
+              try {
+                await notificationService.createNotification(userId, 'maintenance', 'KYC Verification Failed',
+                  identityResult.message || 'Document validation failed. Please try again with a clearer image.',
+                  { severity: 'warning', category: 'transaction', source: 'system' });
+              } catch (notifError) {
+                console.error('❌ Failed to create KYC failure notification:', notifError);
+              }
+              return;
+            }
           }
 
-          // Check if identity document is valid - use the success field from KYC service
-          // Also check if status is 'approved' (handles tolerantNameMatch case)
-          const identityValid = identityResult.success && 
-                               (identityResult.validation.isValid || identityResult.status === 'approved');
-
-          if (identityValid) {
-            // Auto-approve if identity document is valid (POA requirement masked)
-            const wallet = await Wallet.findOne({ where: { userId: userId } });
-            if (wallet) {
-              await wallet.verifyKYC('ai_system');
-              console.log('✅ Wallet KYC verified automatically');
-              
-              // Also update user's kycStatus so frontend sees the change
-              const { User } = require('../models');
-              const user = await User.findByPk(userId);
-              if (user) {
-                await user.update({ kycStatus: 'verified' });
-                console.log('✅ User KYC status updated to verified');
-              }
-              
-              // Create notification for user
-              try {
-                await notificationService.createNotification(
-                  userId,
-                  'txn_wallet_credit', // Using existing type
-                  'KYC Verification Successful',
-                  'Your identity document has been verified successfully. Your wallet is now fully activated.',
-                  {
-                    severity: 'info',
-                    category: 'transaction',
-                    source: 'system'
-                  }
-                );
-                console.log('✅ KYC verification notification created');
-              } catch (notifError) {
-                console.warn('⚠️  Failed to create KYC notification:', notifError.message);
-              }
-            }
-          } else {
-            console.log('⚠️  KYC validation failed - user can retry:', identityResult.validation.issues);
-            
-            // Create notification for validation failure
+          // --- Phase 2: Process address document if provided (requires Tier 1+) ---
+          if (addressUrl && currentTier != null && currentTier >= 1) {
             try {
-              const notif = await notificationService.createNotification(
-                userId,
-                'maintenance', // Using maintenance type for failures
-                'KYC Verification Failed',
-                identityResult.message || 'Document validation failed. Please try again with a clearer image.',
-                {
-                  severity: 'warning',
-                  category: 'transaction',
-                  source: 'system'
+              const addressResult = await KYCService.processKYCSubmission(userId, 'proof_of_address', addressUrl, 0);
+              const addressValid = addressResult.success &&
+                                  (addressResult.validation.isValid || addressResult.status === 'approved');
+              if (addressValid) {
+                if (user) {
+                  await user.update({ kyc_tier: 2 });
+                  currentTier = 2;
+                  console.log('✅ User KYC: Tier 2 (ID + POA verified)');
                 }
-              );
-              console.log('✅ KYC failure notification created:', notif.id);
-            } catch (notifError) {
-              console.error('❌ Failed to create KYC failure notification:', notifError);
-              console.error('❌ Notification error stack:', notifError.stack);
+              } else {
+                console.log('⚠️  POA validation failed — staying at Tier 1:', addressResult.validation?.issues);
+              }
+            } catch (poaError) {
+              console.error('❌ POA processing error:', poaError.message);
             }
+          }
+
+          // --- Notification ---
+          const tierLabels = { 0: 'Tier 0 (basic)', 1: 'Tier 1 (ID verified)', 2: 'Tier 2 (fully verified)' };
+          const tierLabel = tierLabels[currentTier] || `Tier ${currentTier}`;
+          try {
+            await notificationService.createNotification(userId, 'txn_wallet_credit', 'KYC Verification Successful',
+              `Your documents have been verified successfully (${tierLabel}). Your wallet is now activated.`,
+              { severity: 'info', category: 'transaction', source: 'system' });
+            console.log('✅ KYC verification notification created');
+          } catch (notifError) {
+            console.warn('⚠️  Failed to create KYC notification:', notifError.message);
           }
         } catch (kycError) {
           console.error('❌ KYC processing error (async):', kycError);
-          // Error logged - user can retry upload
         }
       })();
       
@@ -327,7 +365,6 @@ class KYCController {
       const finalKycStatus = user?.kycStatus || (wallet.kycVerified ? 'verified' : (kycRecord ? kycRecord.status : 'not_started'));
       const isVerified = finalKycStatus === 'verified' || wallet.kycVerified === true;
       
-      // Return user's kycStatus (what frontend checks) and wallet kycVerified
       res.json({
         success: true,
         kycVerified: wallet.kycVerified || false,
@@ -335,8 +372,9 @@ class KYCController {
         kycVerifiedBy: wallet.kycVerifiedBy || null,
         walletId: wallet.walletId,
         kycStatus: finalKycStatus,
-        isComplete: isVerified, // Signal to frontend that KYC is complete and should navigate
-        shouldNavigate: isVerified, // Explicit signal for frontend navigation
+        kycTier: user?.kyc_tier != null ? user.kyc_tier : null,
+        isComplete: isVerified,
+        shouldNavigate: isVerified,
         kycRecord: kycRecord ? {
           status: kycRecord.status,
           documentType: kycRecord.documentType,

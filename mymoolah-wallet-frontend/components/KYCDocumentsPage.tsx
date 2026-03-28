@@ -1,12 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { Progress } from '../components/ui/progress';
-import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { 
   Camera, 
   Upload, 
@@ -17,15 +16,15 @@ import {
   Shield, 
   ArrowLeft,
   HelpCircle,
-  Eye,
   CreditCard,
   Home,
-  Loader2
+  Loader2,
+  ChevronRight
 } from 'lucide-react';
 import { APP_CONFIG } from '../config/app-config';
 import { getToken } from '../utils/authToken';
 
-type DocumentType = 'identity';
+type DocumentType = 'identity' | 'address';
 type DocumentStatus = 'pending' | 'uploaded' | 'processing' | 'verified' | 'rejected';
 
 interface DocumentUpload {
@@ -50,31 +49,44 @@ export function KYCDocumentsPage() {
     canRetry: boolean;
   } | null>(null);
   
-  // File input refs for manual file selection
   const identityFileRef = useRef<HTMLInputElement>(null);
+  const addressFileRef = useRef<HTMLInputElement>(null);
 
   const [documents, setDocuments] = useState<{
     identity: DocumentUpload;
+    address: DocumentUpload;
   }>({
     identity: {
       type: 'identity',
       file: null,
       preview: null,
       status: 'pending'
+    },
+    address: {
+      type: 'address',
+      file: null,
+      preview: null,
+      status: 'pending'
     }
   });
 
-  // Camera capture state (kept for potential future use, but not currently used)
   const [showCamera, setShowCamera] = useState(false);
-  const [activeDocumentType, setActiveDocumentType] = useState<DocumentType>('identity');
 
-  // Redirect if already verified
-  if (user?.kycStatus === 'verified') {
+  const kycTier = (user as any)?.kycTier ?? null;
+  const identityAlreadyVerified = kycTier != null && kycTier >= 1;
+  const needsIdentity = !identityAlreadyVerified;
+  const needsAddress = kycTier == null || kycTier < 2;
+
+  // Only redirect if fully verified (Tier 2)
+  if (kycTier != null && kycTier >= 2) {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const totalRequired = (needsIdentity ? 1 : 0) + (needsAddress ? 1 : 0);
+  const uploaded = (needsIdentity && documents.identity.file ? 1 : 0) +
+                   (needsAddress && documents.address.file ? 1 : 0);
+
   const handleFileSelect = (type: DocumentType, file: File) => {
-    // Validate file type - only accept images for OCR processing
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
       setError('Please upload an image file (JPEG or PNG). PDF files are not supported for OCR processing.');
@@ -93,20 +105,15 @@ export function KYCDocumentsPage() {
     setError('');
   };
 
-  // Camera capture handler - not currently used (removed from UI)
-  // File input with accept="image/*" provides native camera option on mobile
-  const handleCameraCapture = async (type: DocumentType) => {
-    // This function is kept for potential future use but not called from UI
-    setActiveDocumentType(type);
-    setShowCamera(true);
-  };
-
   const handleFileUpload = (type: DocumentType) => {
-    const fileRef = identityFileRef;
+    const fileRef = type === 'identity' ? identityFileRef : addressFileRef;
     fileRef.current?.click();
   };
 
   const handleRemoveDocument = (type: DocumentType) => {
+    if (documents[type].preview) {
+      URL.revokeObjectURL(documents[type].preview!);
+    }
     setDocuments(prev => ({
       ...prev,
       [type]: {
@@ -117,11 +124,6 @@ export function KYCDocumentsPage() {
         error: undefined
       }
     }));
-
-    // Clean up object URL
-    if (documents[type].preview) {
-      URL.revokeObjectURL(documents[type].preview);
-    }
   };
 
   const handleSubmit = async () => {
@@ -130,30 +132,33 @@ export function KYCDocumentsPage() {
     setUploadProgress(0);
 
     try {
-      // Validate identity document is uploaded
-              if (!documents.identity.file) {
-          throw new Error('Please upload your identity document (SAID, Passport, Driving License, or Temporary ID Certificate)');
-        }
+      if (needsIdentity && !documents.identity.file) {
+        throw new Error('Please upload your identity document (SA ID, Passport, Driving License, or Temporary ID Certificate)');
+      }
 
-      // Simulate upload progress
+      if (!documents.identity.file && !documents.address.file) {
+        throw new Error('Please upload at least one document');
+      }
+
       for (let i = 0; i <= 100; i += 10) {
         setUploadProgress(i);
         await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      // Create FormData for file upload (backend integration)
       const formData = new FormData();
-      formData.append('identityDocument', documents.identity.file);
+      if (documents.identity.file) {
+        formData.append('identityDocument', documents.identity.file);
+      }
+      if (documents.address.file) {
+        formData.append('addressDocument', documents.address.file);
+      }
       formData.append('retryCount', String(kycRetryCount));
 
-      // Real API call to upload documents
       const token = getToken();
       if (!token) {
         throw new Error('No authentication token found');
       }
 
-
-      
       const response = await fetch(`${APP_CONFIG.API.baseUrl}/api/v1/kyc/upload-documents?_t=${Date.now()}`, {
         method: 'POST',
         body: formData,
@@ -162,15 +167,11 @@ export function KYCDocumentsPage() {
         }
       });
 
-      
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         const errorMessage = errorData.message || errorData.error || 'Failed to upload documents';
         
-        // If it's a 401/403, don't throw - let the auth system handle it
         if (response.status === 401 || response.status === 403) {
-          console.error('Authentication error during KYC upload:', errorMessage);
           setError('Your session has expired. Please log in again.');
           setIsLoading(false);
           return;
@@ -180,19 +181,17 @@ export function KYCDocumentsPage() {
       }
 
       const data = await response.json();
-      
 
-      // Respect backend flags: on retry/failed, show message and stop
       if (!data.success && (data.status === 'retry' || data.status === 'failed')) {
         const issues: string[] = data?.validation?.issues || [];
         const tips: string[] = [
           'Upload a clear photo of your SA ID card/book or a passport',
           'Ensure the whole document is visible with good lighting (no glare)',
-          `The name must match your profile: ${(user as any)?.firstName || ''} ${(user as any)?.lastName || ''}`.trim(),
+          `The name must match your profile: ${(user as any)?.name || ''}`.trim(),
           'Only images are supported (JPG/PNG), max 10MB'
         ];
         setKycFeedback({
-          title: data.message || "We couldn't verify your identity yet",
+          title: data.message || "We couldn't verify your document yet",
           issues,
           tips,
           canRetry: data?.canRetry === true
@@ -205,26 +204,20 @@ export function KYCDocumentsPage() {
         return;
       }
 
-      // Update user KYC status in context based on backend response
       if (updateKYCStatus) {
         try {
           if (data.success && data.status === 'approved') {
-            // KYC was successful, update to verified
             await updateKYCStatus('verified');
           } else if (data.status === 'pending_review') {
-            // Documents queued for manual review
             await updateKYCStatus('under_review');
           } else {
-            // Documents uploaded but not yet verified
             await updateKYCStatus('documents_uploaded');
           }
         } catch (statusError) {
           console.error('Failed to update KYC status in context:', statusError);
-          // Don't block navigation if status update fails
         }
       }
 
-      // Redirect to status page
       navigate('/kyc/status');
 
     } catch (err) {
@@ -234,23 +227,21 @@ export function KYCDocumentsPage() {
     }
   };
 
-  const getDocumentTypeText = (type: DocumentType) => {
-    return 'Identity Document';
+  const isSubmitDisabled = (needsIdentity && !documents.identity.file && !documents.address.file) || isLoading;
+
+  const tierBadgeColors: Record<number, { bg: string; text: string; label: string }> = {
+    0: { bg: 'bg-amber-100', text: 'text-amber-800', label: 'Tier 0 — Basic' },
+    1: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Tier 1 — ID Verified' },
+    2: { bg: 'bg-green-100', text: 'text-green-800', label: 'Tier 2 — Fully Verified' }
   };
 
-  const getDocumentDescription = (type: DocumentType) => {
-    return 'Upload your South African ID document, Passport, Driving License, or Temporary ID Certificate';
-  };
-
-  const isSubmitDisabled = !documents.identity.file || isLoading;
+  const currentBadge = kycTier != null ? tierBadgeColors[kycTier] : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#86BE41] to-[#2D8CCA]">
-      {/* Mobile Container */}
       <div className="max-w-sm mx-auto bg-gradient-to-br from-[#86BE41] to-[#2D8CCA] min-h-screen flex flex-col">
         {/* Header Section */}
         <div style={{ padding: 'var(--mobile-padding)', paddingTop: '2rem', paddingBottom: '1.5rem' }}>
-          {/* Back Button */}
           <div className="mb-4">
             <button
               onClick={() => navigate('/dashboard')}
@@ -266,7 +257,6 @@ export function KYCDocumentsPage() {
             </button>
           </div>
 
-          {/* Title Section */}
           <div className="text-center mb-6">
             <div className="w-16 h-16 mx-auto mb-4 bg-white/20 backdrop-blur-sm rounded-3xl flex items-center justify-center">
               <Shield className="w-8 h-8 text-white" />
@@ -278,16 +268,29 @@ export function KYCDocumentsPage() {
               color: 'white',
               marginBottom: '0.5rem'
             }}>
-              Verify Your Identity
+              {identityAlreadyVerified ? 'Upgrade Your Verification' : 'Verify Your Identity'}
             </h1>
             <p className="text-white/90" style={{ 
               fontFamily: 'Montserrat, sans-serif', 
               fontSize: 'var(--mobile-font-base)', 
               fontWeight: 'var(--font-weight-normal)' 
             }}>
-              Upload your documents to unlock full wallet features
+              {identityAlreadyVerified
+                ? 'Upload proof of address to unlock higher transaction limits'
+                : 'Upload your documents to unlock full wallet features'}
             </p>
           </div>
+
+          {/* Current Tier Badge */}
+          {currentBadge && (
+            <div className="flex justify-center mb-4">
+              <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full ${currentBadge.bg} ${currentBadge.text}`}
+                style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', fontWeight: 'var(--font-weight-medium)' }}>
+                <Shield className="w-3.5 h-3.5" />
+                {currentBadge.label}
+              </span>
+            </div>
+          )}
 
           {/* Progress Indicator */}
           <div className="mb-4">
@@ -302,11 +305,11 @@ export function KYCDocumentsPage() {
                 fontFamily: 'Montserrat, sans-serif', 
                 fontSize: 'var(--mobile-font-small)' 
               }}>
-                {documents.identity.file ? 1 : 0}/1
+                {uploaded}/{totalRequired}
               </span>
             </div>
             <Progress 
-              value={documents.identity.file ? 100 : 0}
+              value={totalRequired > 0 ? (uploaded / totalRequired) * 100 : 0}
               className="h-2 bg-white/20"
             />
           </div>
@@ -342,9 +345,7 @@ export function KYCDocumentsPage() {
                     <div className="mt-3 flex gap-2">
                       <Button
                         onClick={() => {
-                          // allow user to replace the document quickly
                           setKycFeedback(null);
-                          setKycRetryCount(kycRetryCount); // keep retry count as-is
                           identityFileRef.current?.click();
                         }}
                         className="bg-[#86BE41] hover:bg-[#7AB139]"
@@ -381,136 +382,329 @@ export function KYCDocumentsPage() {
           )}
 
           <div className="space-y-4">
-            {/* Identity Document Upload */}
-            <Card className="bg-white border border-gray-200" style={{ 
-              borderRadius: 'var(--mobile-border-radius)',
-              boxShadow: 'var(--mobile-shadow)'
-            }}>
-              <CardHeader className="pb-4">
-                <CardTitle className="flex items-center gap-3" style={{ 
-                  fontFamily: 'Montserrat, sans-serif', 
-                  fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', 
-                  fontWeight: 'var(--font-weight-bold)', 
-                  color: '#1f2937' 
-                }}>
-                  <div className="bg-gradient-to-r from-[#86BE41]/20 to-[#2D8CCA]/20 rounded-xl w-10 h-10 flex items-center justify-center">
-                    <CreditCard className="w-5 h-5 text-[#86BE41]" />
-                  </div>
-                  Identity Document
-                  {documents.identity.file && (
-                    <Check className="w-5 h-5 text-green-500 ml-auto" />
-                  )}
-                </CardTitle>
-                <p className="text-gray-600" style={{ 
-                  fontFamily: 'Montserrat, sans-serif', 
-                  fontSize: 'var(--mobile-font-small)', 
-                  fontWeight: 'var(--font-weight-normal)' 
-                }}>
-                  Upload your South African ID document or Passport
-                </p>
-              </CardHeader>
-              <CardContent>
-                {documents.identity.file ? (
-                  <div className="space-y-3">
-                    {/* Document Preview */}
-                    <div className="relative bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-8 h-8 text-[#86BE41] flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate" style={{ 
-                            fontFamily: 'Montserrat, sans-serif', 
-                            fontSize: 'var(--mobile-font-small)', 
-                            fontWeight: 'var(--font-weight-medium)' 
-                          }}>
-                            {documents.identity.file.name}
-                          </p>
-                          <p className="text-gray-500" style={{ 
-                            fontFamily: 'Montserrat, sans-serif', 
-                            fontSize: 'var(--mobile-font-small)' 
-                          }}>
-                            {(documents.identity.file.size / 1024 / 1024).toFixed(2)} MB
-                          </p>
+            {/* Identity Document Upload Card */}
+            {needsIdentity ? (
+              <Card className="bg-white border border-gray-200" style={{ 
+                borderRadius: 'var(--mobile-border-radius)',
+                boxShadow: 'var(--mobile-shadow)'
+              }}>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-3" style={{ 
+                    fontFamily: 'Montserrat, sans-serif', 
+                    fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', 
+                    fontWeight: 'var(--font-weight-bold)', 
+                    color: '#1f2937' 
+                  }}>
+                    <div className="bg-gradient-to-r from-[#86BE41]/20 to-[#2D8CCA]/20 rounded-xl w-10 h-10 flex items-center justify-center">
+                      <CreditCard className="w-5 h-5 text-[#86BE41]" />
+                    </div>
+                    Identity Document
+                    {documents.identity.file && (
+                      <Check className="w-5 h-5 text-green-500 ml-auto" />
+                    )}
+                  </CardTitle>
+                  <p className="text-gray-600" style={{ 
+                    fontFamily: 'Montserrat, sans-serif', 
+                    fontSize: 'var(--mobile-font-small)', 
+                    fontWeight: 'var(--font-weight-normal)' 
+                  }}>
+                    Upload your South African ID document or Passport
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {documents.identity.file ? (
+                    <div className="space-y-3">
+                      <div className="relative bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-8 h-8 text-[#86BE41] flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate" style={{ 
+                              fontFamily: 'Montserrat, sans-serif', 
+                              fontSize: 'var(--mobile-font-small)', 
+                              fontWeight: 'var(--font-weight-medium)' 
+                            }}>
+                              {documents.identity.file.name}
+                            </p>
+                            <p className="text-gray-500" style={{ 
+                              fontFamily: 'Montserrat, sans-serif', 
+                              fontSize: 'var(--mobile-font-small)' 
+                            }}>
+                              {(documents.identity.file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveDocument('identity')}
+                            className="p-1 hover:bg-gray-200 rounded touch-target"
+                            style={{ minHeight: 'var(--mobile-touch-target)', minWidth: 'var(--mobile-touch-target)' }}
+                          >
+                            <X className="w-4 h-4 text-gray-500" />
+                          </button>
                         </div>
-                        <button
-                          onClick={() => handleRemoveDocument('identity')}
-                          className="p-1 hover:bg-gray-200 rounded touch-target"
-                          style={{ minHeight: 'var(--mobile-touch-target)', minWidth: 'var(--mobile-touch-target)' }}
-                        >
-                          <X className="w-4 h-4 text-gray-500" />
-                        </button>
+                        
+                        {documents.identity.preview && (
+                          <div className="mt-3">
+                            <img 
+                              src={documents.identity.preview} 
+                              alt="Identity document preview"
+                              className="w-full h-32 object-cover rounded border"
+                            />
+                          </div>
+                        )}
                       </div>
                       
-                      {/* Image Preview */}
-                      {documents.identity.preview && (
-                        <div className="mt-3">
-                          <img 
-                            src={documents.identity.preview} 
-                            alt="Identity document preview"
-                            className="w-full h-32 object-cover rounded border"
-                          />
-                        </div>
-                      )}
+                      <Button
+                        onClick={() => handleFileUpload('identity')}
+                        variant="outline"
+                        className="w-full border-[#86BE41] text-[#86BE41] hover:bg-[#86BE41] hover:text-white"
+                        style={{ 
+                          height: '2.5rem',
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: 'var(--mobile-font-small)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          borderRadius: 'var(--mobile-border-radius)'
+                        }}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Replace Document
+                      </Button>
                     </div>
-                    
-                    <Button
-                      onClick={() => handleFileUpload('identity')}
-                      variant="outline"
-                      className="w-full border-[#86BE41] text-[#86BE41] hover:bg-[#86BE41] hover:text-white"
-                      style={{ 
-                        height: '2.5rem',
-                        fontFamily: 'Montserrat, sans-serif',
+                  ) : (
+                    <div className="space-y-3">
+                      <Button
+                        onClick={() => handleFileUpload('identity')}
+                        variant="outline"
+                        className="w-full border-[#86BE41] text-[#86BE41] hover:bg-[#86BE41] hover:text-white"
+                        style={{ 
+                          height: 'var(--mobile-touch-target)',
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          borderRadius: 'var(--mobile-border-radius)',
+                          borderWidth: '1px',
+                          borderStyle: 'solid'
+                        }}
+                      >
+                        <Upload className="w-5 h-5 mr-2" />
+                        Add SA ID or Passport
+                      </Button>
+                      
+                      <p className="text-xs text-gray-500 text-center" style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-small)' 
+                      }}>
+                        Accepted: JPG, PNG (Max 10MB)
+                      </p>
+                    </div>
+                  )}
+                  
+                  <input
+                    ref={identityFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelect('identity', file);
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            ) : (
+              /* Identity Already Verified - Show completed state */
+              <Card className="bg-white border border-green-200" style={{ 
+                borderRadius: 'var(--mobile-border-radius)',
+                boxShadow: 'var(--mobile-shadow)'
+              }}>
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-green-100 rounded-xl w-10 h-10 flex items-center justify-center">
+                      <Check className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', 
+                        fontWeight: 'var(--font-weight-bold)', 
+                        color: '#1f2937' 
+                      }}>
+                        Identity Document
+                      </p>
+                      <p className="text-green-600" style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-small)', 
+                        fontWeight: 'var(--font-weight-medium)' 
+                      }}>
+                        Verified
+                      </p>
+                    </div>
+                    <Check className="w-5 h-5 text-green-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Proof of Address Upload Card */}
+            {needsAddress && (
+              <Card className="bg-white border border-gray-200" style={{ 
+                borderRadius: 'var(--mobile-border-radius)',
+                boxShadow: 'var(--mobile-shadow)'
+              }}>
+                <CardHeader className="pb-4">
+                  <CardTitle className="flex items-center gap-3" style={{ 
+                    fontFamily: 'Montserrat, sans-serif', 
+                    fontSize: 'clamp(1rem, 2.5vw, 1.125rem)', 
+                    fontWeight: 'var(--font-weight-bold)', 
+                    color: '#1f2937' 
+                  }}>
+                    <div className="bg-gradient-to-r from-[#86BE41]/20 to-[#2D8CCA]/20 rounded-xl w-10 h-10 flex items-center justify-center">
+                      <Home className="w-5 h-5 text-[#2D8CCA]" />
+                    </div>
+                    Proof of Address
+                    {documents.address.file && (
+                      <Check className="w-5 h-5 text-green-500 ml-auto" />
+                    )}
+                    {!identityAlreadyVerified && !documents.identity.file && (
+                      <span className="ml-auto text-gray-400" style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
                         fontSize: 'var(--mobile-font-small)',
-                        fontWeight: 'var(--font-weight-medium)',
-                        borderRadius: 'var(--mobile-border-radius)'
-                      }}
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      Replace Document
-                    </Button>
+                        fontWeight: 'var(--font-weight-normal)'
+                      }}>
+                        Optional
+                      </span>
+                    )}
+                  </CardTitle>
+                  <p className="text-gray-600" style={{ 
+                    fontFamily: 'Montserrat, sans-serif', 
+                    fontSize: 'var(--mobile-font-small)', 
+                    fontWeight: 'var(--font-weight-normal)' 
+                  }}>
+                    Utility bill, bank statement, or municipal account (less than 3 months old)
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {documents.address.file ? (
+                    <div className="space-y-3">
+                      <div className="relative bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-8 h-8 text-[#2D8CCA] flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate" style={{ 
+                              fontFamily: 'Montserrat, sans-serif', 
+                              fontSize: 'var(--mobile-font-small)', 
+                              fontWeight: 'var(--font-weight-medium)' 
+                            }}>
+                              {documents.address.file.name}
+                            </p>
+                            <p className="text-gray-500" style={{ 
+                              fontFamily: 'Montserrat, sans-serif', 
+                              fontSize: 'var(--mobile-font-small)' 
+                            }}>
+                              {(documents.address.file.size / 1024 / 1024).toFixed(2)} MB
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveDocument('address')}
+                            className="p-1 hover:bg-gray-200 rounded touch-target"
+                            style={{ minHeight: 'var(--mobile-touch-target)', minWidth: 'var(--mobile-touch-target)' }}
+                          >
+                            <X className="w-4 h-4 text-gray-500" />
+                          </button>
+                        </div>
+
+                        {documents.address.preview && (
+                          <div className="mt-3">
+                            <img 
+                              src={documents.address.preview} 
+                              alt="Proof of address preview"
+                              className="w-full h-32 object-cover rounded border"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <Button
+                        onClick={() => handleFileUpload('address')}
+                        variant="outline"
+                        className="w-full border-[#2D8CCA] text-[#2D8CCA] hover:bg-[#2D8CCA] hover:text-white"
+                        style={{ 
+                          height: '2.5rem',
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: 'var(--mobile-font-small)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          borderRadius: 'var(--mobile-border-radius)'
+                        }}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Replace Document
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <Button
+                        onClick={() => handleFileUpload('address')}
+                        variant="outline"
+                        className="w-full border-[#2D8CCA] text-[#2D8CCA] hover:bg-[#2D8CCA] hover:text-white"
+                        style={{ 
+                          height: 'var(--mobile-touch-target)',
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: 'var(--mobile-font-base)',
+                          fontWeight: 'var(--font-weight-medium)',
+                          borderRadius: 'var(--mobile-border-radius)',
+                          borderWidth: '1px',
+                          borderStyle: 'solid'
+                        }}
+                      >
+                        <Upload className="w-5 h-5 mr-2" />
+                        Add Proof of Address
+                      </Button>
+                      
+                      <p className="text-xs text-gray-500 text-center" style={{ 
+                        fontFamily: 'Montserrat, sans-serif', 
+                        fontSize: 'var(--mobile-font-small)' 
+                      }}>
+                        Accepted: JPG, PNG (Max 10MB)
+                      </p>
+                    </div>
+                  )}
+                  
+                  <input
+                    ref={addressFileRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleFileSelect('address', file);
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Tier Upgrade Info */}
+            {!identityAlreadyVerified && (
+              <Card className="bg-white/95 border border-white/50" style={{ 
+                borderRadius: 'var(--mobile-border-radius)',
+                boxShadow: 'var(--mobile-shadow)'
+              }}>
+                <CardContent className="pt-4 pb-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <ChevronRight className="w-4 h-4 text-[#86BE41]" />
+                      <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', fontWeight: 'var(--font-weight-medium)', color: '#1f2937' }}>
+                        ID only = Tier 1 (standard limits)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ChevronRight className="w-4 h-4 text-[#2D8CCA]" />
+                      <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: 'var(--mobile-font-small)', fontWeight: 'var(--font-weight-medium)', color: '#1f2937' }}>
+                        ID + Proof of Address = Tier 2 (higher limits)
+                      </span>
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {/* Upload Button */}
-                    <Button
-                      onClick={() => handleFileUpload('identity')}
-                      variant="outline"
-                      className="w-full border-[#86BE41] text-[#86BE41] hover:bg-[#86BE41] hover:text-white"
-                      style={{ 
-                        height: 'var(--mobile-touch-target)',
-                        fontFamily: 'Montserrat, sans-serif',
-                        fontSize: 'var(--mobile-font-base)',
-                        fontWeight: 'var(--font-weight-medium)',
-                        borderRadius: 'var(--mobile-border-radius)',
-                        borderWidth: '1px',
-                        borderStyle: 'solid'
-                      }}
-                    >
-                      <Upload className="w-5 h-5 mr-2" />
-                      Add SAID or Passport
-                    </Button>
-                    
-                    <p className="text-xs text-gray-500 text-center" style={{ 
-                      fontFamily: 'Montserrat, sans-serif', 
-                      fontSize: 'var(--mobile-font-small)' 
-                    }}>
-                      Accepted: JPG, PNG (Max 10MB)
-                    </p>
-                  </div>
-                )}
-                
-                {/* Hidden File Input */}
-                <input
-                  ref={identityFileRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) handleFileSelect('identity', file);
-                  }}
-                />
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Upload Progress */}
             {isLoading && uploadProgress > 0 && (
@@ -560,7 +754,9 @@ export function KYCDocumentsPage() {
                   <span style={{ fontFamily: 'Montserrat, sans-serif' }}>Uploading Documents...</span>
                 </>
               ) : (
-                <span style={{ fontFamily: 'Montserrat, sans-serif' }}>Submit for Verification</span>
+                <span style={{ fontFamily: 'Montserrat, sans-serif' }}>
+                  {identityAlreadyVerified ? 'Submit for Tier 2 Verification' : 'Submit for Verification'}
+                </span>
               )}
             </Button>
 
@@ -604,7 +800,7 @@ export function KYCDocumentsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Check className="w-3 h-3 text-green-500" />
-                        <span>Document must be less than 3 months old (POA)</span>
+                        <span>Proof of address must be less than 3 months old</span>
                       </div>
                     </div>
                   </div>
@@ -618,7 +814,7 @@ export function KYCDocumentsPage() {
       {/* Camera Capture Modal (Placeholder) */}
       {showCamera && (
         <Dialog open={showCamera} onOpenChange={setShowCamera}>
-          <DialogContent className="max-w-[340px] mx-auto" aria-describedby="kyc-camera-description">
+          <DialogContent className="max-w-sm mx-auto" aria-describedby="kyc-camera-description">
             <DialogHeader>
               <DialogTitle style={{ fontFamily: 'Montserrat, sans-serif' }}>
                 Camera Capture

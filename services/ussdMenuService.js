@@ -50,6 +50,8 @@ function endSession(response) {
 const STATE_HANDLERS = {
   WELCOME: handleWelcome,
   REGISTER: handleRegister,
+  REGISTER_FIRST_NAME: handleRegisterFirstName,
+  REGISTER_LAST_NAME: handleRegisterLastName,
   REGISTER_ID: handleRegisterId,
   REGISTER_PIN: handleRegisterPin,
   REGISTER_PIN_CONFIRM: handleRegisterPinConfirm,
@@ -80,6 +82,14 @@ async function handleWelcome(session) {
       return endSession('Your account is suspended. Call 0800 MyMoolah for help.');
     }
     if (!user.ussd_pin) {
+      const hasId = user.idNumber && user.idType;
+      if (!hasId) {
+        return continueSession(
+          'Welcome to MyMoolah!\nWe need some details first.\nEnter your first name:',
+          'REGISTER_FIRST_NAME',
+          { userId: user.id, isExistingUser: true, needsId: true }
+        );
+      }
       return continueSession(
         'Welcome to MyMoolah!\nSet a 5-digit USSD PIN:',
         'REGISTER_PIN',
@@ -98,13 +108,39 @@ async function handleWelcome(session) {
 
 async function handleRegister(session, input) {
   if (input === '1') {
-    return continueSession('Enter your SA ID number\nor passport number:', 'REGISTER_ID');
+    return continueSession('Enter your first name:', 'REGISTER_FIRST_NAME');
   }
   if (input === '2') {
     return endSession('MyMoolah Help\nCall: 0800 696 652\nWeb: mymoolah.africa\nDial again to register.');
   }
   if (input === '0') return endSession('Thank you. Goodbye!');
   return continueSession('Invalid choice.\n1 Register\n2 Help\n0 Exit', 'REGISTER');
+}
+
+async function handleRegisterFirstName(session, input) {
+  if (!ussdAuthService.isValidName(input)) {
+    return continueSession(
+      'Invalid name. Letters only.\nEnter your first name:',
+      'REGISTER_FIRST_NAME'
+    );
+  }
+  const firstName = ussdAuthService.sanitizeName(input);
+  return continueSession('Enter your surname:', 'REGISTER_LAST_NAME', { firstName });
+}
+
+async function handleRegisterLastName(session, input) {
+  if (!ussdAuthService.isValidName(input)) {
+    return continueSession(
+      'Invalid surname. Letters only.\nEnter your surname:',
+      'REGISTER_LAST_NAME'
+    );
+  }
+  const lastName = ussdAuthService.sanitizeName(input);
+  return continueSession(
+    'Enter your SA ID number\nor passport number:',
+    'REGISTER_ID',
+    { lastName }
+  );
 }
 
 async function handleRegisterId(session, input) {
@@ -115,6 +151,26 @@ async function handleRegisterId(session, input) {
       'REGISTER_ID'
     );
   }
+
+  if (session.data.isExistingUser && session.data.needsId) {
+    const userId = session.data.userId;
+    const firstName = session.data.firstName;
+    const lastName = session.data.lastName;
+    await sequelize.query(
+      'UPDATE users SET "idNumber" = $1, "idType" = $2, "firstName" = $3, "lastName" = $4, "idVerified" = true, kyc_tier = 0, "updatedAt" = NOW() WHERE id = $5',
+      { bind: [result.normalized, result.type, firstName, lastName, userId] }
+    );
+    await sequelize.query(
+      'UPDATE wallets SET "kycVerified" = true, "kycVerifiedAt" = NOW(), "updatedAt" = NOW() WHERE "userId" = $1',
+      { bind: [userId] }
+    );
+    return continueSession(
+      'Set a 5-digit USSD PIN:',
+      'REGISTER_PIN',
+      { userId, isExistingUser: true }
+    );
+  }
+
   return continueSession(
     'Create a 5-digit PIN\n(numbers only):',
     'REGISTER_PIN',
@@ -147,7 +203,10 @@ async function handleRegisterPinConfirm(session, input) {
     );
   }
 
-  const reg = await ussdAuthService.registerUssdUser(session.msisdn, session.data.idNumber, input);
+  const reg = await ussdAuthService.registerUssdUser(
+    session.msisdn, session.data.firstName, session.data.lastName,
+    session.data.idNumber, input
+  );
   if (!reg.success) {
     const msgs = {
       already_registered: 'Number already registered.\nDial again and enter your PIN.',
@@ -158,7 +217,7 @@ async function handleRegisterPinConfirm(session, input) {
   }
 
   return endSession(
-    'Welcome to MyMoolah!\nWallet created. Bal: R0.00\nDial again to start transacting.'
+    `Welcome ${session.data.firstName}!\nWallet created. Bal: R0.00\nDial again to start transacting.`
   );
 }
 

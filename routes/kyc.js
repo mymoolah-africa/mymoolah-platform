@@ -77,8 +77,8 @@ router.post('/upload', authenticateToken, upload.single('document'), async (req,
 
 // Upload both KYC documents (identity and address)
 router.post('/upload-documents', authenticateToken, upload.fields([
-  { name: 'identityDocument', maxCount: 1 }
-  // { name: 'addressDocument', maxCount: 1 } // POA requirement masked
+  { name: 'identityDocument', maxCount: 1 },
+  { name: 'addressDocument', maxCount: 1 }
 ]), async (req, res) => {
 
   try {

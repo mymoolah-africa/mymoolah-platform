@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-27 15:30  
-**Latest Feature**: **Pain.001 v9→v3 Schema Fix for SBSA SSVS** — Melanie Block (SBSA) tested our Pain.001 file against their B2BI/SSVS-XML validator and found multiple failures. Root cause: we generated pain.001.001.09 but SBSA validates against pain.001.001.03. Rewrote `pain001BulkBuilder.js` with 10 structural fixes (namespace, InitgPty/OrgId/OWN11, ReqdExctnDt, ClrSysMmbId, PmtTpInf/InstrPrty, BtchBookg, DbtrAcct/Ccy, PstlAdr on all elements). Fixed SFTP filename (ZA→ZAR). SFTP connectivity still blocked — Colette raised firewall request. **Next**: Redeploy to Staging, generate corrected test file, submit to Melanie for re-validation.  
-**Document Version**: 2.39.0  
-**Session logs**: `docs/session_logs/2026-03-27_1530_pain001-v3-schema-fix.md`, `docs/session_logs/2026-03-26_2100_payshap-api-review-email-refinement.md`, `docs/session_logs/2026-03-26_1800_payshap-inbound-credit-handler.md`  
+**Last Updated**: 2026-03-28 14:00  
+**Latest Feature**: **KYC Tiered Verification System** — Implemented 3-tier KYC: Tier 0 (USSD basic — ID/passport format validation), Tier 1 (web app — ID document OCR-verified), Tier 2 (web app — ID + proof of address both OCR-verified). Added `kyc_tier` column to users table, updated USSD and web KYC flows, enabled proof-of-address uploads, rewrote frontend KYCDocumentsPage with tier-aware rendering. USSD registration now collects first name + surname (FICA compliance), validates SA ID with enhanced Luhn/DOB/citizenship checks. All 56 USSD tests pass, TypeScript zero errors. **Next**: Run migrations, test all tier flows, define per-tier transaction limits.  
+**Document Version**: 2.40.0  
+**Session logs**: `docs/session_logs/2026-03-28_1400_kyc-tiered-system-ussd-webapp.md`, `docs/session_logs/2026-03-27_1530_pain001-v3-schema-fix.md`, `docs/session_logs/2026-03-26_2100_payshap-api-review-email-refinement.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---

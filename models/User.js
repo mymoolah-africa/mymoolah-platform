@@ -162,6 +162,16 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'en',
     },
+    kyc_tier: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      defaultValue: null,
+      comment: 'KYC verification tier: 0=USSD basic, 1=web ID verified, 2=web ID+POA verified',
+      validate: {
+        min: 0,
+        max: 2,
+      },
+    },
     createdAt: {
       type: DataTypes.DATE,
       allowNull: false,

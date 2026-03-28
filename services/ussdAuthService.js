@@ -11,6 +11,23 @@ const LOCKOUT_MINUTES = [30, 120, 1440]; // Progressive: 30min, 2hr, 24hr
 function isValidSouthAfricanId(idNumber) {
   const digits = (idNumber || '').replace(/\D/g, '');
   if (!/^\d{13}$/.test(digits)) return false;
+
+  // Validate date of birth (digits 1-6: YYMMDD)
+  const yy = parseInt(digits.substring(0, 2), 10);
+  const mm = parseInt(digits.substring(2, 4), 10);
+  const dd = parseInt(digits.substring(4, 6), 10);
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return false;
+  const century = yy <= 49 ? 2000 : 1900;
+  const fullYear = century + yy;
+  const testDate = new Date(fullYear, mm - 1, dd);
+  if (testDate.getFullYear() !== fullYear || testDate.getMonth() !== mm - 1 || testDate.getDate() !== dd) return false;
+  if (testDate > new Date()) return false;
+
+  // Citizenship digit (position 11): 0 = SA citizen, 1 = permanent resident
+  const citizenship = parseInt(digits[10], 10);
+  if (citizenship !== 0 && citizenship !== 1) return false;
+
+  // Luhn checksum
   let sum = 0;
   let shouldDouble = false;
   for (let i = digits.length - 1; i >= 0; i -= 1) {
@@ -27,7 +44,10 @@ function isValidSouthAfricanId(idNumber) {
 
 function isValidPassport(value) {
   const cleaned = (value || '').trim().toUpperCase();
-  return /^[A-Z0-9]{5,20}$/.test(cleaned) && /[A-Z]/.test(cleaned);
+  if (!/^[A-Z0-9]{6,15}$/.test(cleaned)) return false;
+  if (!/[A-Z]/.test(cleaned)) return false;
+  if (/^(.)\1+$/.test(cleaned)) return false;
+  return true;
 }
 
 function validateIdNumber(value) {
@@ -48,7 +68,7 @@ function isValidUssdPin(pin) {
 async function findUserByMsisdn(msisdn) {
   const e164 = msisdn.startsWith('+') ? msisdn : `+${msisdn}`;
   const [rows] = await sequelize.query(
-    'SELECT id, "firstName", "lastName", "phoneNumber", "kycStatus", status, ussd_pin, ussd_pin_attempts, ussd_locked_until FROM users WHERE "phoneNumber" = $1 LIMIT 1',
+    'SELECT id, "firstName", "lastName", "phoneNumber", "idNumber", "idType", "kycStatus", kyc_tier, status, ussd_pin, ussd_pin_attempts, ussd_locked_until FROM users WHERE "phoneNumber" = $1 LIMIT 1',
     { bind: [e164] }
   );
   return rows[0] || null;
@@ -118,7 +138,7 @@ async function setUssdPin(userId, pin) {
   );
 }
 
-async function registerUssdUser(msisdn, idNumber, pin) {
+async function registerUssdUser(msisdn, firstName, lastName, idNumber, pin) {
   const e164 = msisdn.startsWith('+') ? msisdn : `+${msisdn}`;
 
   const existing = await findUserByMsisdn(e164);
@@ -140,11 +160,11 @@ async function registerUssdUser(msisdn, idNumber, pin) {
     const [userRows] = await sequelize.query(
       `INSERT INTO users (email, password_hash, "firstName", "lastName", "phoneNumber", "accountNumber",
         "idNumber", "idType", "idVerified", balance, status, "kycStatus", registration_channel, ussd_pin,
-        preferred_language, "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, 0, 'active', 'ussd_basic', 'ussd', $9, 'en', NOW(), NOW())
+        preferred_language, kyc_tier, "createdAt", "updatedAt")
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, 0, 'active', 'ussd_basic', 'ussd', $9, 'en', 0, NOW(), NOW())
        RETURNING id`,
       {
-        bind: [placeholderEmail, passwordHash, 'USSD', 'User', e164, e164,
+        bind: [placeholderEmail, passwordHash, firstName, lastName, e164, e164,
                idResult.normalized, idResult.type, pinHash],
         transaction: t,
       }
@@ -153,8 +173,8 @@ async function registerUssdUser(msisdn, idNumber, pin) {
     const userId = userRows[0].id;
 
     await sequelize.query(
-      `INSERT INTO wallets ("userId", balance, currency, "kycVerified", "createdAt", "updatedAt")
-       VALUES ($1, 0, 'ZAR', false, NOW(), NOW())`,
+      `INSERT INTO wallets ("userId", balance, currency, "kycVerified", "kycVerifiedAt", "createdAt", "updatedAt")
+       VALUES ($1, 0, 'ZAR', true, NOW(), NOW(), NOW())`,
       { bind: [userId], transaction: t }
     );
 
@@ -169,6 +189,20 @@ async function registerUssdUser(msisdn, idNumber, pin) {
   }
 }
 
+function isValidName(value) {
+  const cleaned = (value || '').trim();
+  if (cleaned.length < 1 || cleaned.length > 50) return false;
+  if (/^\d+$/.test(cleaned)) return false;
+  return /^[a-zA-Z\s'\-]+$/.test(cleaned);
+}
+
+function sanitizeName(value) {
+  return (value || '').trim().replace(/\s+/g, ' ')
+    .split(' ')
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
 module.exports = {
   findUserByMsisdn,
   verifyUssdPin,
@@ -179,4 +213,6 @@ module.exports = {
   isUssdLocked,
   isValidSouthAfricanId,
   isValidPassport,
+  isValidName,
+  sanitizeName,
 };

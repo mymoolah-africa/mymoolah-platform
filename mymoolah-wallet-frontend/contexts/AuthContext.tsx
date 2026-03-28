@@ -15,6 +15,7 @@ interface User {
   walletId: string;
   kycStatus: KYCStatus;
   kycVerified: boolean; // Computed property for easy access
+  kycTier: number | null; // 0=USSD basic, 1=web ID verified, 2=web ID+POA verified
   createdAt?: string; // User registration date
 }
 
@@ -64,6 +65,7 @@ function mapBackendUserToContextUser(raw: any): User {
     walletId: String(raw?.walletId || raw?.wallet?.walletId || ''),
     kycStatus: (raw?.kycStatus as KYCStatus) || 'not_started',
     kycVerified: raw?.kycStatus === 'verified',
+    kycTier: raw?.kyc_tier != null ? Number(raw.kyc_tier) : null,
     createdAt: raw?.createdAt,
   };
 }
@@ -188,7 +190,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phoneNumber: normalizeSAMobileNumber(demoCredentials.phoneNumber),
           walletId: 'wallet-demo-001',
           kycStatus,
-          kycVerified: kycStatus === 'verified'
+          kycVerified: kycStatus === 'verified',
+          kycTier: kycStatus === 'verified' ? 1 : null
         };
         setUser(mockUser);
       } else {
@@ -250,7 +253,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             phoneNumber: normalizedPhoneNumber,
             walletId: 'wallet-demo-001',
             kycStatus,
-            kycVerified: kycStatus === 'verified'
+            kycVerified: kycStatus === 'verified',
+            kycTier: kycStatus === 'verified' ? 1 : null
           };
           
           const mockToken = 'demo-token-' + Date.now();
@@ -346,7 +350,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const updatedUser: User = {
             ...user,
             kycStatus: status,
-            kycVerified: status === 'verified'
+            kycVerified: status === 'verified',
+            kycTier: status === 'verified' ? Math.max(user.kycTier ?? 0, 1) : user.kycTier
           };
           setUser(updatedUser);
         }
@@ -365,17 +370,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.ok) {
           const responseData = await safeJsonParse(response);
           if (responseData && responseData.user) {
-            // Backend returns { success: true, user: {...} }
-            setUser({
-              ...responseData.user,
-              kycVerified: responseData.user.kycStatus === 'verified'
-            });
+            setUser(mapBackendUserToContextUser(responseData.user));
           } else if (responseData) {
-            // Fallback: if responseData is the user object directly
-            setUser({
-              ...responseData,
-              kycVerified: responseData.kycStatus === 'verified'
-            });
+            setUser(mapBackendUserToContextUser(responseData));
           }
         } else {
           throw new Error('Failed to update KYC status');
@@ -438,10 +435,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (responseData) {
             // Backend returns { success: true, data: { ... } } or user fields at top level
             const userData = responseData.data || responseData;
-            setUser({
-              ...userData,
-              kycVerified: userData.kycStatus === 'verified' || userData.kycVerified === true
-            });
+            setUser(mapBackendUserToContextUser(userData));
           }
         }
       }
@@ -524,6 +518,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           walletId: 'wallet-demo-' + Date.now(),
           kycStatus: 'not_started',
           kycVerified: false,
+          kycTier: null,
           createdAt: new Date().toISOString()
         };
         
@@ -575,10 +570,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const responseData = await safeJsonParse(response);
             if (responseData && responseData.user && responseData.token) {
               localStorage.setItem('mymoolah_token', responseData.token);
-              setUser({ 
-                ...responseData.user, 
-                kycVerified: responseData.user.kycStatus === 'verified' 
-              });
+              setUser(mapBackendUserToContextUser(responseData.user));
             } else {
               throw new Error('Invalid response from server. Please try again.');
             }
