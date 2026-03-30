@@ -167,13 +167,14 @@ export function KYCStatusPage() {
   };
 
   const getProgressValue = (status: KYCStatus): number => {
+    const tier = user?.kycTier ?? 0;
     switch (status) {
       case 'not_started': return 0;
-      case 'ussd_basic': return 25;
-      case 'documents_uploaded': return 33;
-      case 'under_review': return 66;
-      case 'verified': return 100;
-      case 'rejected': return 50;
+      case 'ussd_basic': return 33;
+      case 'documents_uploaded': return 50;
+      case 'under_review': return 50;
+      case 'verified': return tier >= 2 ? 100 : 66;
+      case 'rejected': return tier >= 1 ? 66 : 33;
       default: return 0;
     }
   };
