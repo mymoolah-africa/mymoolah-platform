@@ -983,8 +983,7 @@ async function handlePayshapInboundCredit(req, res) {
           continue;
         }
 
-        console.log('[PayShap-Inbound] Processing: txId=%s amount=R%.2f ref=%s uetr=%s payer=%s txSts=%s',
-          txId, amount, reference, uetr, payerName || '(unknown)', txSts);
+        console.log(`[PayShap-Inbound] Processing: txId=${txId} amount=R${amount.toFixed(2)} ref=${reference} uetr=${uetr} payer=${payerName || '(unknown)'} txSts=${txSts}`);
 
         const result = await depositService.processDepositNotification({
           transactionId: `PAYSHAP-IN-${txId}`,
