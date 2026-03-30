@@ -65,98 +65,272 @@ const initialKnowledgeBase = [
     isActive: true
   },
 
-  // Section 2 – Registration & KYC
+  // Section 2 – Registration, Wallet Creation & KYC
+
+  // 2.1 – General eligibility
   {
     faqId: 'Q2.1',
     audience: 'end-user',
     category: 'registration',
     question: 'Who can register for a MyMoolah wallet?',
-    answer: 'Anyone 18+ with a valid South African ID or passport who accepts the Terms & Privacy Policy. Programme-specific wallets may support foreign nationals or minors subject to compliance approval.',
-    keywords: 'register, eligibility, onboarding',
-    confidenceScore: 0.93,
+    answer: 'Anyone 18 years or older with a valid South African ID number or international passport who accepts the Terms of Service and Privacy Policy. Registration is available via the web app (smartphone/browser) or via USSD (feature phone). Programme-specific wallets may support foreign nationals or minors subject to compliance approval.',
+    keywords: 'register, eligibility, onboarding, age, ussd, web app',
+    confidenceScore: 0.95,
     language: 'en',
-    isActive: true
+    isActive: true,
+    relatedIds: 'Q2.2,Q2.2a,Q2.2b'
   },
+
+  // 2.2 – How to create a wallet (overview)
   {
     faqId: 'Q2.2',
     audience: 'end-user',
     category: 'registration',
-    question: 'What information do I need to open a wallet?',
-    answer: 'Full name, date of birth, SA ID or passport number, mobile number, email, and residential address. Higher limits may require proof of address, proof of income, or employer letters in line with FICA.',
-    keywords: 'open wallet, onboarding info, fica',
-    confidenceScore: 0.92,
+    question: 'How do I create a MyMoolah wallet?',
+    answer: 'There are two ways to open a MyMoolah wallet: (1) USSD — dial the MyMoolah USSD shortcode from any phone (feature phone or smartphone). You will enter your first name, surname, SA ID number or passport number, and create a 5-digit USSD PIN. No internet connection is required. (2) Web App — visit wallet.mymoolah.africa on a smartphone or computer. You will register with your mobile number, email, full name, ID number, and create a password. You can then upload your ID document for higher KYC verification.',
+    keywords: 'create wallet, open wallet, register, ussd, web app, how to',
+    confidenceScore: 0.97,
     language: 'en',
-    isActive: true
+    isActive: true,
+    relatedIds: 'Q2.2a,Q2.2b,Q2.3'
   },
+
+  // 2.2a – USSD wallet creation (step-by-step)
+  {
+    faqId: 'Q2.2a',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'How do I create a wallet using USSD?',
+    answer: 'Step 1: Dial the MyMoolah USSD shortcode from your phone. Step 2: Select "Open New Wallet". Step 3: Enter your first name. Step 4: Enter your surname. Step 5: Enter your SA ID number (13 digits) or international passport number (6–9 characters). The system validates the format automatically. Step 6: Create a 5-digit USSD PIN — this PIN is used to access your wallet via USSD and can also be used to log in on the web app. Step 7: Your wallet is created at KYC Tier 0 (Basic). You can make VAS purchases (airtime, data, electricity) and receive deposits. To unlock send money, withdraw cash, and higher limits, upgrade your KYC by logging in to the web app and uploading your ID document.',
+    keywords: 'ussd, create wallet, open wallet, feature phone, pin, step by step, how to',
+    confidenceScore: 0.97,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.2,Q2.2b,Q2.3a,Q2.5'
+  },
+
+  // 2.2b – Web app wallet creation (step-by-step)
+  {
+    faqId: 'Q2.2b',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'How do I create a wallet using the web app?',
+    answer: 'Step 1: Visit wallet.mymoolah.africa on your smartphone or computer. Step 2: Tap "Create Wallet". Step 3: Enter your full name, SA mobile number, email address, and create a password (minimum 8 characters with a letter, number, and special character). Step 4: Enter your SA ID number or passport number and select the ID type. Step 5: Your wallet is created. Step 6: To upgrade to KYC Tier 1, upload a photo of your SA ID or passport. Step 7: To upgrade to KYC Tier 2, also upload a proof of address (utility bill, bank statement, or municipal account less than 3 months old). Higher tiers unlock higher transaction limits and additional features.',
+    keywords: 'web app, create wallet, register, smartphone, browser, password, how to',
+    confidenceScore: 0.97,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.2,Q2.2a,Q2.3,Q2.3a'
+  },
+
+  // 2.3 – ID and passport acceptance
   {
     faqId: 'Q2.3',
     audience: 'end-user',
     category: 'kyc_documents',
-    question: 'Can I use my passport instead of my ID?',
-    answer: 'Yes. SA passports and international passports (6–9 alphanumeric characters) are accepted. Details must match your registration information and may trigger additional checks per FICA.',
-    keywords: 'passport, id, kyc documents',
-    confidenceScore: 0.91,
+    question: 'Can I use my passport instead of my SA ID?',
+    answer: 'Yes. Both SA ID numbers (13 digits, Luhn-validated) and international passport numbers (6–9 alphanumeric characters) are accepted for registration via USSD or the web app. The system validates the format during registration. For KYC document upload (Tier 1), you can photograph either your SA ID book/card or your passport bio page.',
+    keywords: 'passport, id, kyc documents, international, foreign national',
+    confidenceScore: 0.93,
     language: 'en',
-    isActive: true
+    isActive: true,
+    relatedIds: 'Q2.2a,Q2.2b'
   },
+
+  // 2.3a – KYC tiers explained
+  {
+    faqId: 'Q2.3a',
+    audience: 'end-user',
+    category: 'kyc_tiers',
+    question: 'What are the KYC tiers and what do they mean?',
+    answer: 'MyMoolah uses a 3-tier KYC system based on FICA regulations: Tier 0 (USSD Basic) — ID/passport number format-validated only, no document uploaded. Limits: R1,000 per transaction, R3,000 daily, R5,000 monthly, R3,000 max balance. Features: VAS purchases and receive deposits. Send money, withdraw cash, and international transfers are not available. Tier 1 (ID Verified) — SA ID or passport document uploaded and OCR-validated via the web app. Limits: R5,000 per transaction, R5,000 daily, R25,000 monthly, R25,000 max balance. Features: VAS, deposits, send money, and withdraw cash. Tier 2 (Fully Verified) — ID document plus proof of address uploaded and verified via the web app. Limits: R25,000 per transaction, R50,000 daily, R100,000 monthly, R100,000 max balance. Features: All features including international remittances.',
+    keywords: 'kyc tier, tier 0, tier 1, tier 2, limits, fica, verification level, what are tiers',
+    confidenceScore: 0.98,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.3b,Q2.3c,Q2.2a,Q2.2b'
+  },
+
+  // 2.3b – How to upgrade KYC tier
+  {
+    faqId: 'Q2.3b',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'How do I upgrade my KYC tier?',
+    answer: 'To upgrade from Tier 0 to Tier 1: Log in to the web app (wallet.mymoolah.africa) using your phone number and your password or USSD PIN. Go to Profile → Identity Verification → Upload ID Document. Take a clear photo of your SA ID book, SA ID card, or passport bio page. The system verifies the document using OCR. Once approved, your tier is upgraded to Tier 1 automatically. To upgrade from Tier 1 to Tier 2: In the same Identity Verification section, upload a proof of address document (utility bill, bank statement, or municipal account dated within the last 3 months). Once verified, your tier upgrades to Tier 2 with the highest limits and all features enabled. Note: You must upload your ID first before uploading proof of address.',
+    keywords: 'upgrade kyc, tier upgrade, upload id, proof of address, how to upgrade, increase limits',
+    confidenceScore: 0.97,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.3a,Q2.3c,Q2.5'
+  },
+
+  // 2.3c – Why are my limits low / features restricted?
+  {
+    faqId: 'Q2.3c',
+    audience: 'end-user',
+    category: 'kyc_tiers',
+    question: 'Why are my transaction limits low or why can I not send money?',
+    answer: 'Your transaction limits and available features depend on your KYC verification tier. If you registered via USSD without uploading documents, you are at Tier 0 with conservative limits (R1,000 per transaction, R5,000 monthly) and cannot send money or withdraw cash. To unlock these features and increase your limits, upgrade your KYC by logging into the web app and uploading your ID document (Tier 1) and proof of address (Tier 2). Check your current tier in Profile → Identity Verification.',
+    keywords: 'low limits, cannot send money, restricted, features locked, increase limits',
+    confidenceScore: 0.96,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.3a,Q2.3b'
+  },
+
+  // 2.4 – Verification time
   {
     faqId: 'Q2.4',
     audience: 'end-user',
     category: 'kyc_help',
-    question: 'How long does verification take?',
-    answer: 'If documents are clear and match official sources, KYC usually completes within minutes. Blurry uploads, mismatched data, or additional AML checks can extend the process and may require manual review.',
-    keywords: 'kyc duration, verification time',
-    confidenceScore: 0.9,
+    question: 'How long does KYC verification take?',
+    answer: 'For USSD registration (Tier 0), verification is instant — your ID or passport number is format-validated during registration. For web app document upload (Tier 1 and Tier 2), the system uses automated OCR to read and verify your documents. If the photo is clear and the details match, verification usually completes within minutes. Blurry uploads, mismatched data, or additional AML checks may extend the process.',
+    keywords: 'kyc duration, verification time, how long, processing',
+    confidenceScore: 0.93,
     language: 'en',
-    isActive: true
+    isActive: true,
+    relatedIds: 'Q2.3a,Q2.3b'
   },
+
+  // 2.5 – PIN vs password
   {
-    faqId: 'Q2.6',
+    faqId: 'Q2.5',
     audience: 'end-user',
-    category: 'profile_update',
-    question: 'How do I change my registered phone number?',
-    answer: 'Go to Profile → Edit Profile → tap "Change" next to your phone number. Enter the new SA mobile number and a 6-digit OTP will be sent to the NEW number via SMS. Enter the OTP within 10 minutes to confirm. You have 3 attempts. The new number cannot already be registered to another account. If you lost access to the old number, contact support with proof of ID.',
-    keywords: 'change phone number, update msisdn, profile settings, otp verification',
+    category: 'how_to',
+    question: 'What is the difference between my USSD PIN and my password?',
+    answer: 'USSD PIN: A 5-digit number you create during USSD wallet registration. It is used to access your wallet via USSD on any phone (feature phone or smartphone). Your USSD PIN can also be used to log in to the web app — just enter it in the "Password or USSD PIN" field on the login screen. Password: A secure password (minimum 8 characters with a letter, number, and special character) that you create during web app registration, or when you reset your password via the "Forgot Password" flow. It is used only for web app login. If you registered via USSD and want to set a full password, use the "Forgot Password" option on the web app login screen to create one. Both your PIN (for USSD) and password (for web) can be active at the same time — changing one does not affect the other.',
+    keywords: 'pin vs password, difference, ussd pin, web password, login credentials, how to log in',
+    confidenceScore: 0.98,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.2a,Q2.2b,Q2.5a,Q2.7'
+  },
+
+  // 2.5a – USSD user logging into web app
+  {
+    faqId: 'Q2.5a',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'I created my wallet on USSD. How do I log in to the web app?',
+    answer: 'If you created your wallet via USSD, you can log in to the web app at wallet.mymoolah.africa using your mobile number and your 5-digit USSD PIN. On the login screen, enter your phone number in the "Mobile Number" field and your 5-digit PIN in the "Password or USSD PIN" field, then tap "Sign In". Once logged in, you can upload your ID document to upgrade to Tier 1, and proof of address for Tier 2. If you prefer, you can also set a full password by tapping "Forgot Password?" on the login screen and following the OTP reset process.',
+    keywords: 'ussd login web app, pin login, cross channel, feature phone to smartphone, how to',
+    confidenceScore: 0.98,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.5,Q2.2a,Q2.3b,Q2.7'
+  },
+
+  // 2.5b – Web app user accessing USSD
+  {
+    faqId: 'Q2.5b',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'I registered on the web app. Can I also use USSD?',
+    answer: 'Yes. If you registered via the web app and later want to access your wallet via USSD, simply dial the MyMoolah USSD shortcode. The system will recognise your phone number and prompt you to create a 5-digit USSD PIN. You will not need to re-verify your identity — your existing KYC tier is retained. After creating your USSD PIN, you can access your wallet from both channels.',
+    keywords: 'web app to ussd, create ussd pin, existing user, cross channel',
     confidenceScore: 0.96,
     language: 'en',
     isActive: true,
-    relatedIds: 'Q2.1,Q2.2,Q2.7'
+    relatedIds: 'Q2.5,Q2.2b,Q2.2a'
   },
+
+  // 2.6 – Change phone number
+  {
+    faqId: 'Q2.6',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'How do I change my registered phone number?',
+    answer: 'Step 1: Log in to the web app. Step 2: Go to Profile → Edit Profile. Step 3: Tap "Change" next to your phone number. Step 4: Enter your new SA mobile number. Step 5: A 6-digit OTP will be sent to the NEW number via SMS. Step 6: Enter the OTP within 10 minutes to confirm. You have 3 attempts. The new number cannot already be registered to another MyMoolah account. If you lost access to your old number and cannot log in, contact support at support@mymoolah.africa with proof of identity.',
+    keywords: 'change phone number, update msisdn, profile settings, otp verification, how to',
+    confidenceScore: 0.96,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.1,Q2.5,Q2.7'
+  },
+
+  // 2.7 – Reset / forgot password
   {
     faqId: 'Q2.7',
     audience: 'end-user',
-    category: 'password_reset',
-    question: 'How do I reset my password?',
-    answer: 'On the login screen tap "Forgot Password?", enter your registered mobile number, and a 6-digit OTP will be sent via SMS. Enter the OTP and your new password (minimum 8 characters with letter, number, and special character). OTPs expire after 10 minutes and you have 3 attempts. You can request up to 3 OTPs per hour. If SMS is not received, ensure your phone number is correct and wait for rate limit reset.',
-    keywords: 'reset password, forgot password, otp, password recovery',
-    confidenceScore: 0.97,
+    category: 'how_to',
+    question: 'How do I reset my password if I forgot it?',
+    answer: 'Step 1: On the web app login screen, tap "Forgot Password?". Step 2: Enter your registered mobile number. Step 3: A 6-digit OTP is sent to your phone via SMS. Step 4: Enter the OTP. Step 5: Create a new password (minimum 8 characters with at least one letter, one number, and one special character like @$!%*?&). Step 6: Confirm the password. Step 7: Tap "Reset Password". You can now sign in with your new password. OTPs expire after 10 minutes. You have 3 attempts per OTP and can request up to 3 OTPs per hour. Note: If you registered via USSD, you can still log in with your 5-digit USSD PIN — you do not need to reset your password.',
+    keywords: 'reset password, forgot password, otp, password recovery, how to, change password',
+    confidenceScore: 0.98,
     language: 'en',
     isActive: true,
-    relatedIds: 'Q2.6,Q10.1'
+    relatedIds: 'Q2.5,Q2.5a,Q2.8,Q10.1'
   },
+
+  // 2.7a – Change password (already logged in)
+  {
+    faqId: 'Q2.7a',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'How do I change my password while logged in?',
+    answer: 'Step 1: Log in to the web app. Step 2: Go to Profile → Settings → Change Password. Step 3: Enter your current password. Step 4: Enter your new password (minimum 8 characters with letter, number, and special character). Step 5: Confirm the new password. Step 6: Tap "Change Password". Your password is updated immediately. Your USSD PIN is not affected — changing your web password does not change your USSD PIN, and vice versa.',
+    keywords: 'change password, update password, logged in, profile settings, how to',
+    confidenceScore: 0.95,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.7,Q2.5'
+  },
+
+  // 2.8 – OTP not received
   {
     faqId: 'Q2.8',
     audience: 'end-user',
     category: 'otp_help',
     question: 'I did not receive my OTP. What should I do?',
-    answer: 'Check that you entered the correct phone number (SA format: 0XX XXX XXXX). Ensure your phone has signal and can receive SMS. Wait at least 1 minute before requesting a new OTP. If still not received, you may have hit the rate limit (max 3 OTPs per hour) - wait and try again later. Check if the SMS is in a spam folder. If problems persist, contact support.',
-    keywords: 'otp not received, sms not received, verification code',
-    confidenceScore: 0.94,
+    answer: 'Check the following: (1) Verify you entered the correct phone number in SA format (0XX XXX XXXX, +27XX XXX XXXX, or 27XX XXX XXXX). (2) Ensure your phone has network signal and can receive SMS. (3) Wait at least 1 minute — SMS delivery can be delayed. (4) Check if you have hit the rate limit (maximum 3 OTPs per hour for the same action). If so, wait and try again later. (5) Some phones filter OTPs into a spam or promotions folder. If none of the above resolves the issue, contact support at support@mymoolah.africa or call +27 21 140 7030.',
+    keywords: 'otp not received, sms not received, verification code, no otp',
+    confidenceScore: 0.95,
     language: 'en',
     isActive: true,
-    relatedIds: 'Q2.6,Q2.7'
+    relatedIds: 'Q2.7,Q2.9'
   },
+
+  // 2.9 – OTP invalid or expired
   {
     faqId: 'Q2.9',
     audience: 'end-user',
     category: 'otp_help',
     question: 'My OTP says it is invalid or expired. Why?',
-    answer: 'OTPs expire after 10 minutes from when they were sent. You have a maximum of 3 attempts per OTP - after 3 wrong entries, the OTP is invalidated. Each OTP can only be used once. Request a new OTP if yours has expired or been invalidated. Ensure you are entering the most recent OTP if you requested multiple.',
-    keywords: 'otp expired, otp invalid, verification failed',
-    confidenceScore: 0.93,
+    answer: 'OTPs expire 10 minutes after they are sent. You have a maximum of 3 attempts to enter the correct OTP — after 3 wrong entries, the OTP is permanently invalidated. Each OTP can only be used once. If you requested multiple OTPs, only the most recent one is valid. To fix this, tap "Didn\'t receive OTP? Try again" to request a fresh OTP. You can request up to 3 OTPs per hour.',
+    keywords: 'otp expired, otp invalid, verification failed, wrong otp',
+    confidenceScore: 0.95,
     language: 'en',
     isActive: true,
     relatedIds: 'Q2.7,Q2.8'
+  },
+
+  // 2.10 – Managing your wallet
+  {
+    faqId: 'Q2.10',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'How do I manage my wallet settings and limits?',
+    answer: 'Log in to the web app and go to Settings → Wallet Settings. Here you can view and adjust your daily and monthly transaction limits (within the maximum allowed by your KYC tier), enable or disable Quick Access shortcuts, and manage notification preferences. Your current KYC tier and its associated limits are shown on the settings page. To increase your maximum limits, upgrade your KYC tier by uploading the required documents in Profile → Identity Verification.',
+    keywords: 'wallet settings, manage wallet, transaction limits, preferences, how to',
+    confidenceScore: 0.94,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.3a,Q2.3b,Q3.2'
+  },
+
+  // 2.11 – View KYC status
+  {
+    faqId: 'Q2.11',
+    audience: 'end-user',
+    category: 'how_to',
+    question: 'How do I check my KYC status and tier?',
+    answer: 'Log in to the web app and go to Profile → Identity Verification. This shows your current KYC tier (0, 1, or 2), your verification status, your transaction limits (per transaction, daily, monthly, and maximum balance), and the features available at your tier. If you are below Tier 2, you will also see instructions on what document to upload next to upgrade.',
+    keywords: 'kyc status, check tier, verification status, identity verification, how to',
+    confidenceScore: 0.95,
+    language: 'en',
+    isActive: true,
+    relatedIds: 'Q2.3a,Q2.3b,Q2.3c'
   },
 
   // Section 3 – Wallet & Limits
