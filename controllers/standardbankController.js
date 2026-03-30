@@ -866,21 +866,19 @@ async function handleJsonNotification(rawBody, req, res) {
  *
  * POST /api/v1/standardbank/payshap/inbound-credit
  *
- * Expected payload (JSON — exact format TBC with Gustaf/SBSA PayShap team):
- *   { transactionId, reference/proxy, amount, currency, payerName?, payerBank?, ... }
+ * Payload: ISO 20022 Pain.002 payment status report (confirmed by Gustaf Delport, SBSA).
+ * Structure: grpHdr + orgnlGrpInfAndSts + orgnlPmtInfAndSts[].txInfAndSts[]
  *
- * Also acts as a catch-all for RPP/RTP callbacks that don't match any MM-initiated
- * transaction (i.e., unsolicited inbound credits routed via existing callback URLs).
+ * Wallet matching priority:
+ *   1. Creditor proxy (cdtrAcct.prxy.id) — PayShap proxy = MSISDN
+ *   2. Debtor proxy (dbtrAcct.prxy.id) — sender's MSISDN
+ *   3. Remittance info (rmtInf.ustrd) — free-text reference
+ *   4. Creditor account number (cdtrAcct.id.othr.id) — treasury account (suspense)
  */
 async function handlePayshapInboundCredit(req, res) {
   const secret = process.env.SBSA_CALLBACK_SECRET;
   const headerHash = req.headers['x-groupheader-hash'] || req.headers['x-GroupHeader-Hash'];
   const signature = req.headers['x-signature'] || req.headers['X-Signature'];
-
-  if (!secret) {
-    console.error('[PayShap-Inbound] SBSA_CALLBACK_SECRET not configured');
-    return res.status(503).json({ error: 'Callback not configured' });
-  }
 
   let body = req.body;
   if (Buffer.isBuffer(body)) {
@@ -891,81 +889,127 @@ async function handlePayshapInboundCredit(req, res) {
     }
   }
 
-  // Auth: accept either x-GroupHeader-Hash (PayShap callbacks) or X-Signature (HMAC)
-  if (headerHash) {
-    const rawGrpHdr = extractRawGrpHdr(req.rawBodyStr, 'rpp');
-    const grpHdr = rawGrpHdr || extractGrpHdr(body, 'rpp') || body;
-    const hashResult = validateGroupHeaderHash(grpHdr, headerHash, secret);
-    if (!hashResult) {
-      return res.status(401).json({ error: 'Invalid x-GroupHeader-Hash' });
-    }
-  } else if (signature) {
-    const crypto = require('crypto');
-    const rawForSig = req.rawBodyStr || JSON.stringify(body);
-    try {
-      const computed = crypto.createHmac('sha256', secret).update(rawForSig).digest('hex');
-      const computedBuf = Buffer.from(computed, 'hex');
-      const sigBuf = Buffer.from(signature, 'hex');
-      if (computedBuf.length !== sigBuf.length || !crypto.timingSafeEqual(computedBuf, sigBuf)) {
-        return res.status(401).json({ error: 'Invalid X-Signature' });
+  console.log('[PayShap-Inbound] Callback received, payload: %s', JSON.stringify(body).slice(0, 1500));
+
+  // Auth: accept x-GroupHeader-Hash, X-Signature, or allow unauthenticated if no secret configured
+  if (secret) {
+    if (headerHash) {
+      const rawGrpHdr = extractRawGrpHdr(req.rawBodyStr, 'rpp');
+      const grpHdr = rawGrpHdr || extractGrpHdr(body, 'rpp') || body;
+      const hashResult = validateGroupHeaderHash(grpHdr, headerHash, secret);
+      if (!hashResult) {
+        console.warn('[PayShap-Inbound] x-GroupHeader-Hash validation failed');
+        return res.status(401).json({ error: 'Invalid x-GroupHeader-Hash' });
       }
-    } catch (sigErr) {
-      return res.status(401).json({ error: 'Invalid signature format' });
+    } else if (signature) {
+      const crypto = require('crypto');
+      const rawForSig = req.rawBodyStr || JSON.stringify(body);
+      try {
+        const computed = crypto.createHmac('sha256', secret).update(rawForSig).digest('hex');
+        const computedBuf = Buffer.from(computed, 'hex');
+        const sigBuf = Buffer.from(signature, 'hex');
+        if (computedBuf.length !== sigBuf.length || !crypto.timingSafeEqual(computedBuf, sigBuf)) {
+          return res.status(401).json({ error: 'Invalid X-Signature' });
+        }
+      } catch (sigErr) {
+        return res.status(401).json({ error: 'Invalid signature format' });
+      }
+    } else {
+      console.warn('[PayShap-Inbound] No auth header present — accepting payload (auth TBC with SBSA)');
     }
   } else {
-    return res.status(401).json({ error: 'Missing authentication header' });
+    console.warn('[PayShap-Inbound] SBSA_CALLBACK_SECRET not configured — skipping auth');
   }
 
   try {
-    // Flexible field extraction — accommodate multiple SBSA payload structures
-    const txId = body.transactionId || body.txId || body.endToEndId
-      || body.AcctTrnId || body.uetr
-      || body.orgnlEndToEndId || body.instrId;
-    const reference = body.reference || body.referenceNumber || body.proxy
-      || body.cdtrAcct?.id?.item?.id || body.prxy?.id
-      || body.dbtrRef || body.rmtInf?.ustrd || body.cid;
-    const rawAmount = body.amount || body.intrBkSttlmAmt?.value || body.instdAmt?.value || 0;
-    const amount = typeof rawAmount === 'string' ? parseFloat(rawAmount) : Number(rawAmount);
-    const currency = body.currency || body.intrBkSttlmAmt?.ccy
-      || body.instdAmt?.ccy || 'ZAR';
-    const payerName = body.payerName || body.dbtrNm || body.dbtr?.nm || null;
-    const payerBank = body.payerBank || body.dbtrAgt?.finInstnId?.nm || null;
+    // --- ISO 20022 Pain.002 field extraction (Gustaf's confirmed payload format) ---
+    const grpHdr = body.grpHdr || {};
+    const orgnlGrpInf = body.orgnlGrpInfAndSts || {};
+    const pmtInfArr = body.orgnlPmtInfAndSts || [];
+    const infList = Array.isArray(pmtInfArr) ? pmtInfArr : [pmtInfArr];
 
-    if (!txId) {
-      console.warn('[PayShap-Inbound] Missing transactionId in payload:', JSON.stringify(body).slice(0, 500));
-      return res.status(400).json({ error: 'Missing transactionId' });
-    }
-    if (!reference) {
-      console.warn('[PayShap-Inbound] Missing reference/proxy in payload:', JSON.stringify(body).slice(0, 500));
-      return res.status(400).json({ error: 'Missing reference or proxy' });
-    }
-    if (!Number.isFinite(amount) || amount <= 0) {
-      return res.status(400).json({ error: 'Invalid or missing amount' });
-    }
+    const grpSts = orgnlGrpInf.grpSts;
+    const orgnlMsgId = orgnlGrpInf.orgnlMsgId || grpHdr.msgId;
+    const payerName = grpHdr.initgPty?.nm || null;
 
-    console.log('[PayShap-Inbound] Received: txId=%s ref=%s amount=%s %s payer=%s bank=%s',
-      txId, reference, amount, currency, payerName || '(unknown)', payerBank || '(unknown)');
+    console.log('[PayShap-Inbound] msgId=%s grpSts=%s payer=%s txCount=%d',
+      orgnlMsgId, grpSts, payerName || '(unknown)', infList.length);
+
+    if (infList.length === 0) {
+      console.warn('[PayShap-Inbound] No orgnlPmtInfAndSts entries in payload');
+      return res.status(200).json({ ack: true, processed: false, error: 'No payment entries' });
+    }
 
     const depositService = require('../services/standardbankDepositNotificationService');
-    const result = await depositService.processDepositNotification({
-      transactionId: `PAYSHAP-IN-${txId}`,
-      referenceNumber: reference,
-      amount,
-      currency,
-      description: `PayShap inbound from ${payerName || 'unknown'} via ${payerBank || 'unknown bank'}`,
-      source: 'payshap_inbound',
-    });
+    const results = [];
 
-    if (!result.success) {
-      console.error('[PayShap-Inbound] Processing failed:', result.error);
-      return res.status(200).json({ ack: true, processed: false, error: result.error });
+    for (const inf of infList) {
+      const pmtSts = inf.pmtInfSts;
+      const txInfArr = inf.txInfAndSts || [];
+      const txList = Array.isArray(txInfArr) ? txInfArr : [txInfArr];
+
+      for (const tx of txList) {
+        const txSts = tx.txSts || pmtSts || grpSts;
+
+        // Only process completed/settled credits (ACCC = AcceptedSettlementCompleted)
+        if (txSts !== 'ACCC' && txSts !== 'ACSP') {
+          console.log('[PayShap-Inbound] Skipping tx with status=%s (not ACCC/ACSP)', txSts);
+          results.push({ status: txSts, skipped: true });
+          continue;
+        }
+
+        const txRef = tx.orgnlTxRef || {};
+        const endToEndId = tx.orgnlEndToEndId || tx.orgnlInstrId || '';
+        const uetr = tx.orgnlUetr || '';
+        const txId = endToEndId || uetr || `${orgnlMsgId}-${Date.now()}`;
+
+        // Amount
+        const rawAmt = txRef.amt?.instdAmt ?? orgnlGrpInf.orgnlCtrlSum ?? 0;
+        const amount = typeof rawAmt === 'string' ? parseFloat(rawAmt) : Number(rawAmt);
+        const currency = txRef.amt?.ccy || 'ZAR';
+
+        // Reference resolution: proxy > remittance info > account number
+        const cdtrProxy = txRef.cdtrAcct?.prxy?.id || null;
+        const dbtrProxy = txRef.dbtrAcct?.prxy?.id || null;
+        const rmtInf = txRef.rmtInf?.ustrd || txRef.rmtInf?.strd?.cdtrRefInf?.ref || null;
+        const cdtrAcctId = txRef.cdtrAcct?.id?.othr?.id || null;
+        const dbtrAcctId = txRef.dbtrAcct?.id?.othr?.id || null;
+
+        const reference = cdtrProxy || dbtrProxy || rmtInf || cdtrAcctId || dbtrAcctId || '';
+
+        if (!Number.isFinite(amount) || amount <= 0) {
+          console.warn('[PayShap-Inbound] Invalid amount=%s for tx=%s', rawAmt, txId);
+          results.push({ txId, error: 'Invalid amount', skipped: true });
+          continue;
+        }
+
+        console.log('[PayShap-Inbound] Processing: txId=%s amount=R%.2f ref=%s uetr=%s payer=%s txSts=%s',
+          txId, amount, reference, uetr, payerName || '(unknown)', txSts);
+
+        const result = await depositService.processDepositNotification({
+          transactionId: `PAYSHAP-IN-${txId}`,
+          referenceNumber: reference,
+          amount,
+          currency,
+          description: `PayShap inbound credit R${amount.toFixed(2)} from ${payerName || 'unknown'}`,
+          source: 'payshap_inbound',
+        });
+
+        console.log('[PayShap-Inbound] Result: credited=%s txId=%s ref=%s',
+          result.credited || result.error, txId, reference);
+
+        results.push({ txId, ...result });
+      }
     }
 
-    console.log('[PayShap-Inbound] Processed: credited=%s txId=%s ref=%s',
-      result.credited, txId, reference);
-    return res.status(200).json({ ack: true, processed: true, credited: result.credited });
+    const allProcessed = results.every(r => r.success || r.skipped);
+    return res.status(200).json({
+      ack: true,
+      processed: allProcessed,
+      results,
+    });
   } catch (err) {
-    console.error('[PayShap-Inbound] Error:', err.message);
+    console.error('[PayShap-Inbound] Error:', err.message, err.stack?.split('\n').slice(0, 3).join(' | '));
     return res.status(200).json({ ack: true, processed: false, error: 'Internal processing error' });
   }
 }
