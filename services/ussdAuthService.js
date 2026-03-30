@@ -172,20 +172,22 @@ async function registerUssdUser(msisdn, firstName, lastName, idNumber, pin) {
     );
 
     const userId = userRows[0].id;
+    const walletId = `WAL-${Date.now()}-${userId}`;
 
     const tier0Defaults = getWalletDefaults(0);
 
     await sequelize.query(
-      `INSERT INTO wallets ("userId", balance, currency, "kycVerified", "kycVerifiedAt",
+      `INSERT INTO wallets ("walletId", "userId", balance, currency, status, "kycVerified", "kycVerifiedAt",
         "dailyLimit", "monthlyLimit", "createdAt", "updatedAt")
-       VALUES ($1, 0, 'ZAR', true, NOW(), $2, $3, NOW(), NOW())`,
-      { bind: [userId, tier0Defaults.dailyLimit, tier0Defaults.monthlyLimit], transaction: t }
+       VALUES ($1, $2, 0, 'ZAR', 'active', true, NOW(), $3, $4, NOW(), NOW())`,
+      { bind: [walletId, userId, tier0Defaults.dailyLimit, tier0Defaults.monthlyLimit], transaction: t }
     );
 
     await t.commit();
     return { success: true, userId };
   } catch (err) {
     await t.rollback();
+    console.error('[USSD-REG] Registration failed:', err.message, err.stack?.split('\n').slice(0, 3).join(' | '));
     if (err.message && err.message.includes('unique')) {
       return { success: false, reason: 'duplicate' };
     }

@@ -19,7 +19,7 @@ async function processInput(session, input) {
   try {
     return await handler(session, (input || '').trim());
   } catch (err) {
-    console.error(`[USSD-MENU] Error in state ${state}:`, err.message);
+    console.error(`[USSD-MENU] Error in state ${state}:`, err.message, err.stack?.split('\n').slice(0, 5).join(' | '));
     return endSession('Service unavailable. Please try again later.');
   }
 }
