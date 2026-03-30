@@ -3,6 +3,7 @@
 const { sequelize, Wallet, Transaction } = require('../models');
 const ussdAuthService = require('./ussdAuthService');
 const { getLimitsForTier } = require('../config/kycTierLimits');
+const { encrypt, blindIndex } = require('../utils/fieldEncryption');
 
 const AIRTIME_AMOUNTS = [5, 10, 29, 55, 110];
 const DATA_AMOUNTS = [10, 29, 55, 110, 250];
@@ -154,9 +155,11 @@ async function handleRegisterId(session, input) {
     const userId = session.data.userId;
     const firstName = session.data.firstName;
     const lastName = session.data.lastName;
+    const encryptedId = encrypt(result.normalized);
+    const idHash = blindIndex(result.normalized);
     await sequelize.query(
-      'UPDATE users SET "idNumber" = $1, "idType" = $2, "firstName" = $3, "lastName" = $4, "idVerified" = true, kyc_tier = 0, "updatedAt" = NOW() WHERE id = $5',
-      { bind: [result.normalized, result.type, firstName, lastName, userId] }
+      'UPDATE users SET "idNumber" = $1, "idNumberHash" = $2, "idType" = $3, "firstName" = $4, "lastName" = $5, "idVerified" = true, kyc_tier = 0, "updatedAt" = NOW() WHERE id = $6',
+      { bind: [encryptedId, idHash, result.type, firstName, lastName, userId] }
     );
     await sequelize.query(
       'UPDATE wallets SET "kycVerified" = true, "kycVerifiedAt" = NOW(), "updatedAt" = NOW() WHERE "userId" = $1',

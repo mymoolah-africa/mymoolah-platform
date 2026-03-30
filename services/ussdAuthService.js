@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const { sequelize } = require('../models');
 const { getWalletDefaults } = require('../config/kycTierLimits');
+const { encrypt, blindIndex } = require('../utils/fieldEncryption');
 
 const SALT_ROUNDS = 12;
 const MAX_PIN_ATTEMPTS = parseInt(process.env.USSD_PIN_MAX_ATTEMPTS || '3', 10);
@@ -156,17 +157,20 @@ async function registerUssdUser(msisdn, firstName, lastName, idNumber, pin) {
   const pinHash = await bcrypt.hash(pin, SALT_ROUNDS);
   const placeholderEmail = `${e164.replace('+', '')}@ussd.mymoolah.africa`;
 
+  const encryptedIdNumber = encrypt(idResult.normalized);
+  const idHash = blindIndex(idResult.normalized);
+
   const t = await sequelize.transaction();
   try {
     const [userRows] = await sequelize.query(
       `INSERT INTO users (email, password_hash, "firstName", "lastName", "phoneNumber", "accountNumber",
-        "idNumber", "idType", "idVerified", balance, status, "kycStatus", registration_channel, ussd_pin,
+        "idNumber", "idNumberHash", "idType", "idVerified", balance, status, "kycStatus", registration_channel, ussd_pin,
         preferred_language, kyc_tier, "createdAt", "updatedAt")
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true, 0, 'active', 'ussd_basic', 'ussd', $9, 'en', 0, NOW(), NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, true, 0, 'active', 'ussd_basic', 'ussd', $10, 'en', 0, NOW(), NOW())
        RETURNING id`,
       {
         bind: [placeholderEmail, passwordHash, firstName, lastName, e164, e164,
-               idResult.normalized, idResult.type, pinHash],
+               encryptedIdNumber, idHash, idResult.type, pinHash],
         transaction: t,
       }
     );
