@@ -1,7 +1,7 @@
 # SBSA Host-to-Host (H2H) Setup Guide
 
-**Date**: 2026-03-13  
-**Status**: ✅ PG15 submitted to Colette (SBSA) on 2026-03-13 — Port corrected to 5022 on 2026-03-17 per Colette's instruction — Statement format + delivery schedule confirmed 2026-03-19 — **SOAP credit notification handler built 2026-03-24** — VPN clarified as Open Internet (confirmed with Colette 2026-03-24) — PGP confirmed Not Required (2026-03-24) — File names/directories confirmed (2026-03-24) — Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8)  
+**Date**: 2026-03-13 (Pain.001 v3 + PayShap inbound status: 2026-03-30)  
+**Status**: ✅ PG15 submitted to Colette (SBSA) on 2026-03-13 — Port corrected to 5022 on 2026-03-17 per Colette's instruction — Statement format + delivery schedule confirmed 2026-03-19 — **SOAP credit notification handler built 2026-03-24** — VPN clarified as Open Internet (confirmed with Colette 2026-03-24) — PGP confirmed Not Required (2026-03-24) — File names/directories confirmed (2026-03-24) — Awaiting SBSA test traffic before freeze (Thu Mar 27 → Apr 8) — **Pain.001 v3 (`pain.001.001.03`) passed SBSA SSVS validation 2026-03-30** — **PayShap inbound credit sandbox: 6/6 callbacks confirmed** — production PayShap callback registered — **SFTP payments channel enablement requested (Melanie Block)** — **production PayShap inward queue: SBSA investigating (Louis Van Zyl)**  
 **Implementation Manager**: SBSA (assigned contact)  
 **Services**: Credit Notifications via Webserver + H2H SFTP (Statements + Payments)
 
@@ -190,6 +190,16 @@ Recommended signing: **SHA256**
 - [x] **File names and directories**: Confirmed and accepted as per info sheet (2026-03-24) ✅
 - [x] **Connection type**: Open Internet (NOT VPN) — confirmed with Colette 2026-03-24 ✅
 
+### Pain.001 / PayShap / H2H payments progress (2026-03-30)
+
+- [x] **Pain.001 v3** (`pain.001.001.03`): SBSA **SSVS** validation passed (2026-03-30)
+- [x] **Debit account** for Pain.001 profile: **272406481** (branch **002154**) — confirmed for submissions
+- [x] **PayShap inbound credit (sandbox)**: **6/6** callbacks confirmed working
+- [x] **PayShap inbound credit (production)**: Callback URL registered — `https://api-mm.mymoolah.africa/api/v1/standardbank/payshap/inbound-credit`
+- [ ] **SFTP H2H payments channel**: Enablement **in progress** — requested from **Melanie Block**
+- [ ] **PayShap production inward queue**: **SBSA investigating** — **Louis Van Zyl**
+- [ ] **H2H statements on SFTP**: MT940/MT942 parsers ready — **awaiting SFTP statement channel** (statements have no UAT; production flow per Colette)
+
 ---
 
 ## 8. Implementation Timeline (from SBSA presentation)
@@ -250,6 +260,14 @@ Recommended signing: **SHA256**
 | Final Audit | `MYMOOLAH_OWN11_FINAUD_TST/PRD_yyyymmddhhmmssSSS.xml` | Final processing outcome |
 | VET Data | `MYMOOLAH_OWN11_VET_DATA_TST/PRD_yyyymmddhhmmssSSS.xml` | Validation results |
 | Unpaid Data | `MYMOOLAH_OWN11_UNP_DATA_TST/PRD_yyyymmddhhmmssSSS.xml` | Failed/returned payments |
+
+### Pain.001 v3 (outbound payments) — SSVS validation & channel (2026-03-30)
+
+- **Pain.001 v3** (`pain.001.001.03`) passed **SBSA SSVS** validation on **2026-03-30**.
+- **Debit account** must be **272406481** (branch **002154**) — profile account.
+- **SFTP channel enablement** for payments (H2H) **requested from Melanie Block**.
+- **Test file** used for validation: `MYMOOLAH_OWN11_Pain001v3_ZAR_TST_20260330150000000.xml`
+- **CSV template** for building payment batches: `docs/templates/pain001_payment_template.csv`
 
 ### File Types Expected in SFTP Inbox
 
@@ -373,6 +391,13 @@ SBSA sends SOAP XML to /api/v1/standardbank/notification
 ```
 
 **Latency**: Near real-time — SBSA pushes notification immediately on deposit. Wallet credited within seconds.
+
+### PayShap inbound credit (callback — separate from SOAP credit notification)
+
+- **Sandbox**: Inbound credit callback **confirmed working** via SBSA sandbox (**6/6** callbacks received).
+- **Production callback URL**: `https://api-mm.mymoolah.africa/api/v1/standardbank/payshap/inbound-credit`
+- **Production inward queue**: Issue under investigation by **SBSA** (**Louis Van Zyl**); callback URL is registered — awaiting queue-side resolution.
+- **Handler**: `controllers/standardbankController.js` → `handlePayshapInboundCredit()`
 
 ---
 

@@ -26,6 +26,24 @@
   - Q3.2e: Why mobile number as reference is critical
   - Q3.2f: MyMoolah banking details quick reference
 
+### PayShap Inbound — SBSA Sandbox Testing Confirmed (Afternoon)
+- 6/6 sandbox callbacks from Louis Van Zyl (SBSA) received and processed on staging
+- Idempotency guard working — duplicates correctly returned `already_processed`
+- Full ISO 20022 Pain.002 payload parsed: grpHdr, orgnlGrpInfAndSts, orgnlPmtInfAndSts[].txInfAndSts[]
+- Logging bug fixed: `%.2f` replaced with template literal in `controllers/standardbankController.js`
+- Production callback URL registered in SBSA portal: `https://api-mm.mymoolah.africa/api/v1/standardbank/payshap/inbound-credit`
+- Real PayShap deposits (4x from Discovery Bank) not triggering callbacks — SBSA investigating inward queue
+
+### H2H SFTP Channel Testing
+- Pain.001 v3 file passed SBSA's SSVS validator (confirmed by Melanie Block)
+- New test file generated with valid beneficiary accounts (SBSA, Discovery, Capitec — R1.00 each)
+- File uploaded to GCS outbox: `gs://mymoolah-sftp-inbound/standardbank/outbox/`
+- SFTP channel enablement requested — Melanie proceeding
+
+### Payment Template
+- `docs/templates/pain001_payment_template.csv` — Supports external bank EFT and MyMoolah wallet top-ups
+- `docs/templates/pain001_bank_branch_codes.csv` — 17 major SA banks with universal branch codes
+
 ---
 
 ## 2026-03-28 - KYC Tier Transaction Limits (FICA-Compliant)

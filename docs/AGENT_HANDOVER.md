@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-30 14:00  
-**Latest Feature**: **PayShap Inbound Credit Handler + KYC UI Fixes** — Rewrote `handlePayshapInboundCredit` for ISO 20022 Pain.002 payload (confirmed by Gustaf/SBSA). Fixed USSD registration `idNumberHash` crash. Disabled Tier 0 receive deposits (FICA). Updated accepted ID docs. Added EFT/PayShap deposit instructions to AI knowledge base. Callback URL registered in SBSA portal (staging). Awaiting SBSA test POST from Louis Van Zyl.  
-**Document Version**: 2.42.0  
+**Last Updated**: 2026-03-30 16:30  
+**Latest Feature**: **PayShap Inbound Credit LIVE on Production + H2H Pain.001 Channel Testing** — SBSA sandbox callbacks confirmed working (6/6 via Louis Van Zyl). Production callback URL switched to `api-mm.mymoolah.africa`. Awaiting SBSA inward queue fix for real PayShap deposits. Pain.001 v3 passed SBSA validator (Melanie Block). SFTP channel enablement requested. Payment CSV template created (bank EFT + wallet top-ups).  
+**Document Version**: 2.43.0  
 **Session logs**: `docs/session_logs/2026-03-30_1030_ussd-fix-kyc-ui-payshap-inbound.md`, `docs/session_logs/2026-03-28_1600_kyc-tier-transaction-limits.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 

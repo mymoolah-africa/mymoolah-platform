@@ -1,10 +1,10 @@
 # MyMoolah Treasury Platform
 
-**Last Updated**: March 24, 2026  
+**Last Updated**: March 30, 2026  
 **Version**: 2.28.0 - SBSA SOAP handler + H2H documentation sync  
-**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE**
+**Status**: ✅ **PRODUCTION LIVE** ✅ **API api-mm.mymoolah.africa** ✅ **WALLET wallet.mymoolah.africa** ✅ **PRODUCTION DB MIGRATED** ✅ **EASYPAY /billpayment/v1 LIVE** ✅ **TAP TO ADD MONEY** ✅ **USDC SEND FEATURE** ✅ **11 LANGUAGES** ✅ **MOJALOOP COMPLIANT** ✅ **POPIA ID ENCRYPTION** ✅ **LANGCHAIN RAG AI** ✅ **PASA T-PPP BADGE** ✅ **MARKDOWN CHAT** ✅ **RTP UETR FIX** ✅ **SFTP PORT 5022** ✅ **EBONF MESSAGE** — **SBSA (2026-03-30):** PayShap inbound sandbox 6/6; Pain.001 v3 SSVS passed; prod PayShap callback live; SFTP payments channel + prod inward queue with SBSA in flight
 
-**Work in the last 7 days (Mar 18–24, 2026)**: **Mar 24** — SBSA SOAP credit notification handler built; H2H clarifications resolved (Open Internet, PGP not required, file names confirmed); EasyPay NPS/TPPP legal positioning documented. **Mar 23** — H2H statement pipeline fixes, environment isolation, VALR RMCP, TCIB draft. **Mar 21** — PayShap RTP fix (Peach to SBSA), Peach decommission, UI updates. **Mar 19** — Cursor rules vs `.agents/skills`; VAS catalog notes; SBSA H2H MT940/MT942 session. **Mar 17** — SFTP 5022 + EBONF. See `docs/CHANGELOG.md` for full entries.
+**Work in the last 7 days (Mar 24–30, 2026)**: **Mar 30** — SBSA Pain.001 v3 SSVS validation passed; PayShap inbound credit sandbox 6/6; production PayShap callback URL registered; SFTP payments channel enablement requested (Melanie Block); production PayShap inward queue under SBSA investigation (Louis Van Zyl); docs updated in `docs/SBSA_H2H_SETUP_GUIDE.md`. **Mar 24** — SBSA SOAP credit notification handler built; H2H clarifications resolved (Open Internet, PGP not required, file names confirmed); EasyPay NPS/TPPP legal positioning documented. **Mar 23** — H2H statement pipeline fixes, environment isolation, VALR RMCP, TCIB draft. **Mar 21** — PayShap RTP fix (Peach to SBSA), Peach decommission, UI updates. **Mar 19** — Cursor rules vs `.agents/skills`; VAS catalog notes; SBSA H2H MT940/MT942 session. **Mar 17** — SFTP 5022 + EBONF. See `docs/CHANGELOG.md` for full entries.
 
 ---
 
@@ -224,14 +224,17 @@ Comprehensive audit revealed **HIGH severity architectural debt** in `msisdn` vs
 
 See `docs/session_logs/2025-12-02_1220_msisdn-phonenumber-audit.md` for comprehensive audit report.
 
-### **🏦 Standard Bank PayShap Integration** ✅ **UAT READY**
+### **🏦 Standard Bank (PayShap + H2H)** ✅ **UAT READY** (RPP/RTP); **H2H / inbound credit in progress**
 
-- **Status**: Implementation complete – awaiting OneHub credentials for UAT
-- **Scope**: RPP (Send Money), RTP (Request Money), Deposit notification
+- **PayShap RPP/RTP**: Implementation complete – awaiting OneHub credentials for UAT where applicable
+- **Scope**: RPP (Send Money), RTP (Request Money), deposit notification (SOAP), PayShap inbound credit callback
+- **PayShap inbound credit**: Sandbox **confirmed working** (6/6 callbacks). **Production callback registered:** `https://api-mm.mymoolah.africa/api/v1/standardbank/payshap/inbound-credit` — **awaiting SBSA inward queue fix** (Louis Van Zyl investigating). Handler: `controllers/standardbankController.js` → `handlePayshapInboundCredit()`
+- **H2H SFTP (payments)**: **Pain.001 v3** (`pain.001.001.03`) **SSVS validated** (2026-03-30). **SFTP channel enablement in progress** (requested from Melanie Block). Debit account for profile: **272406481** (branch **002154**). Template: `docs/templates/pain001_payment_template.csv`; guide: `docs/SBSA_H2H_SETUP_GUIDE.md`
+- **H2H statements**: **MT940/MT942 parsers ready** — **awaiting SFTP statement channel** (production path per SBSA; no statement UAT)
 - **Business model**: SBSA sponsor bank; MM SBSA main account (no prefunded float)
 - **Fees**: R4.00 VAT incl charged to user (RPP: principal+fee; RTP: principal−fee); R3.00 SBSA cost (recorded when settled)
 - **Request Money proxy**: When Peach archived and `STANDARDBANK_PAYSHAP_ENABLED=true`, frontend `/api/v1/peach/request-money` delegates to Standard Bank
-- **Docs**: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`, `docs/integrations/StandardBankPayShap.md`
+- **Docs**: `docs/SBSA_PAYSHAP_UAT_GUIDE.md`, `docs/integrations/StandardBankPayShap.md`, `docs/SBSA_H2H_SETUP_GUIDE.md`
 
 ### **📦 Peach Payments Integration Archived**
 
@@ -584,6 +587,8 @@ The system automatically selects the **best supplier** for each transaction base
 
 ## 🔌 **INTEGRATION ARCHITECTURE**
 
+**Standard Bank snapshot (2026-03-30):** **PayShap inbound credit** — sandbox OK, production callback registered, **awaiting SBSA production inward queue fix**. **H2H SFTP** — Pain.001 v3 SSVS passed, **channel enablement in progress**. **H2H statements** — MT940/MT942 parsers ready, **awaiting SFTP channel**. Details: `docs/SBSA_H2H_SETUP_GUIDE.md`.
+
 ### **Supplier API Integration**
 
 #### **Flash Integration**
@@ -620,6 +625,8 @@ The system automatically selects the **best supplier** for each transaction base
 ---
 
 ## 📊 **CURRENT SYSTEM STATISTICS**
+
+**Integrations note (2026-03-30):** Standard Bank PayShap inbound credit is **sandbox-validated** and **production callback is live**; **SBSA is resolving the production inward queue**. H2H outbound payments (Pain.001 v3) are **SSVS-validated** with **SFTP enablement pending**; statement ingestion (**MT940/MT942**) is **code-ready** pending **SFTP delivery**.
 
 ### **Product Catalog Coverage**
 - **Total Products**: 172 base products
