@@ -1,4 +1,7 @@
 Beneficiary Name,Account Number,Bank Name,Branch Code,Amount (ZAR),Payment Reference
-Andre Botes,10111730633,Standard Bank,051001,1.00,SALARY MAR 2026
-Andre Botes,18828076450,Discovery Bank,679000,1.00,SALARY MAR 2026
-Andre Botes,1254107337,Capitec Bank,470010,1.00,SALARY MAR 2026
+Andre Botes,10111730633,Standard Bank,051001,500.00,SALARY MAR 2026
+Andre Botes,18828076450,Discovery Bank,679000,250.00,SALARY MAR 2026
+Andre Botes,1254107337,Capitec Bank,470010,350.00,SALARY MAR 2026
+MyMoolah Treasury,272406481,Standard Bank,002154,100.00,0825571055
+MyMoolah Treasury,272406481,Standard Bank,002154,250.00,0784560585
+MyMoolah Treasury,272406481,Standard Bank,002154,75.00,0731234567
