@@ -156,7 +156,7 @@ export function LoginPage() {
     e.preventDefault();
 
     if (!phoneValidation.isValid || !credentials.password) {
-      setError("Please enter a valid phone number and password");
+      setError("Please enter a valid phone number and your password or USSD PIN");
       return;
     }
 
@@ -363,7 +363,7 @@ export function LoginPage() {
                     )}
                 </div>
 
-                {/* Password Field */}
+                {/* Password / PIN Field */}
                 <div className="space-y-2">
                   <Label
                     htmlFor="password"
@@ -374,14 +374,14 @@ export function LoginPage() {
                       color: "#374151",
                     }}
                   >
-                    Password
+                    Password or USSD PIN
                   </Label>
 
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder="Enter your password or 5-digit PIN"
                       value={credentials.password}
                       onChange={(e) =>
                         setCredentials((prev) => ({

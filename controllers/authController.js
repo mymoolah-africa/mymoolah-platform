@@ -231,8 +231,14 @@ class AuthController {
       
       console.log(`✅ [LOGIN] User found: ${user.id}, phoneNumber in DB: ${user.phoneNumber} (matched format)`);
       
-      // Check password
-      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+      // Check password first, then fall back to USSD PIN
+      let isValidPassword = false;
+      if (user.password_hash) {
+        isValidPassword = await bcrypt.compare(password, user.password_hash);
+      }
+      if (!isValidPassword && user.ussd_pin) {
+        isValidPassword = await bcrypt.compare(password, user.ussd_pin);
+      }
       if (!isValidPassword) {
         return res.status(401).json({ 
           success: false, 
@@ -266,6 +272,7 @@ class AuthController {
           lastName: user.lastName,
           name: `${user.firstName} ${user.lastName}`.trim(),
           kycStatus: user.kycStatus,
+          kyc_tier: user.kyc_tier != null ? user.kyc_tier : null,
           walletId: user.wallet?.walletId,
           balance: user.wallet?.balance || 0,
           createdAt: user.createdAt

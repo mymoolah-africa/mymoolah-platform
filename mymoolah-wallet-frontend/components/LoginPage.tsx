@@ -29,12 +29,12 @@ import {
   X,
   AlertTriangle,
   FileText,
-  Shield,
   HelpCircle,
 } from "lucide-react";
 
 // Import logo from assets/
 import logo2 from "../assets/logo2.svg";
+import { SecurityBadge } from "../components/SecurityBadge";
 
 // SA Mobile Number validation with all supported formats
 const validateSAMobileNumber = (phoneNumber: string): { isValid: boolean; message?: string } => {
@@ -156,7 +156,7 @@ export function LoginPage() {
     e.preventDefault();
 
     if (!phoneValidation.isValid || !credentials.password) {
-      setError("Please enter a valid phone number and password");
+      setError("Please enter a valid phone number and your password or USSD PIN");
       return;
     }
 
@@ -180,12 +180,6 @@ export function LoginPage() {
     }
   };
 
-  const handleDemoFill = () => {
-    setCredentials({
-      phoneNumber: "27 82 123 4567", // Pre-formatted for demo
-      password: "Demo123!",
-    });
-  };
 
   const getHelpText = () => {
     if (credentials.phoneNumber.trim()) {
@@ -369,7 +363,7 @@ export function LoginPage() {
                     )}
                 </div>
 
-                {/* Password Field */}
+                {/* Password / PIN Field */}
                 <div className="space-y-2">
                   <Label
                     htmlFor="password"
@@ -380,14 +374,14 @@ export function LoginPage() {
                       color: "#374151",
                     }}
                   >
-                    Password
+                    Password or USSD PIN
                   </Label>
 
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
+                      placeholder="Enter your password or 5-digit PIN"
                       value={credentials.password}
                       onChange={(e) =>
                         setCredentials((prev) => ({
@@ -434,8 +428,8 @@ export function LoginPage() {
                   </div>
                 </div>
 
-                {/* Forgot Password and Demo Fill Links */}
-                <div className="flex justify-between items-center">
+                {/* Forgot Password Link */}
+                <div className="flex justify-end">
                   <button
                     type="button"
                     onClick={() => navigate("/forgot-password")}
@@ -447,18 +441,6 @@ export function LoginPage() {
                     }}
                   >
                     Forgot Password?
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDemoFill}
-                    className="text-xs text-gray-500 hover:text-gray-700 underline"
-                    style={{
-                      fontFamily: "Montserrat, sans-serif",
-                      fontSize: "var(--mobile-font-small)",
-                      fontWeight: "var(--font-weight-normal)",
-                    }}
-                  >
-                    Fill demo credentials
                   </button>
                 </div>
 
@@ -545,7 +527,7 @@ export function LoginPage() {
                     </span>
                   </button>
                 </DialogTrigger>
-                <DialogContent className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] max-h-[85vh] overflow-y-auto rounded-2xl" aria-describedby="login-terms-description">
+                <DialogContent className="mobile-container" aria-describedby="login-terms-description">
                   <DialogHeader>
                     <DialogTitle
                       style={{
@@ -578,62 +560,10 @@ export function LoginPage() {
                 </DialogContent>
               </Dialog>
 
-              {/* Security Badge - 10% Larger */}
-              <Dialog>
-                <DialogTrigger asChild>
-                  <button
-                    className="flex flex-col items-center space-y-1 hover:bg-white/20 p-2 rounded-lg transition-all transform scale-110"
-                    style={{
-                      minHeight: "var(--mobile-touch-target)",
-                      fontFamily: "Montserrat, sans-serif",
-                    }}
-                  >
-                    <div className="bg-white/30 backdrop-blur-sm rounded-xl w-12 h-12 flex items-center justify-center">
-                      <Shield className="w-6 h-6 text-white" />
-                    </div>
-                    <span
-                      className="text-white/80"
-                      style={{
-                        fontFamily: "Montserrat, sans-serif",
-                        fontSize: "var(--mobile-font-small)",
-                      }}
-                    >
-                      Security
-                    </span>
-                  </button>
-                </DialogTrigger>
-                <DialogContent className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] max-h-[85vh] overflow-y-auto rounded-2xl" aria-describedby="login-security-description">
-                  <DialogHeader>
-                    <DialogTitle
-                      style={{
-                        fontFamily: "Montserrat, sans-serif",
-                        fontSize: "clamp(1rem, 2.5vw, 1.125rem)",
-                        fontWeight: "var(--font-weight-bold)",
-                      }}
-                    >
-                      Bank-Grade Security
-                    </DialogTitle>
-                    <div id="login-security-description" className="sr-only">
-                      Information about MyMoolah's bank-grade security and encryption
-                    </div>
-                  </DialogHeader>
-                  <div
-                    style={{
-                      fontFamily: "Montserrat, sans-serif",
-                      fontSize: "var(--mobile-font-base)",
-                      lineHeight: "1.6",
-                    }}
-                  >
-                    <p>
-                      MyMoolah uses enterprise-grade encryption
-                      and Mojaloop compliance to protect your
-                      financial data. Your SA mobile number
-                      provides secure account access with the
-                      same security standards as major banks.
-                    </p>
-                  </div>
-                </DialogContent>
-              </Dialog>
+              {/* Security Badge */}
+              <div className="flex flex-col items-center space-y-1 transform scale-110">
+                <SecurityBadge size="sm" clickable={true} compact={false} />
+              </div>
 
               {/* FAQ Icon */}
               <Dialog>
@@ -659,7 +589,7 @@ export function LoginPage() {
                     </span>
                   </button>
                 </DialogTrigger>
-                <DialogContent className="w-[calc(100%-2rem)] max-w-[340px] sm:max-w-[340px] max-h-[85vh] overflow-y-auto rounded-2xl" aria-describedby="login-faq-description">
+                <DialogContent className="mobile-container" aria-describedby="login-faq-description">
                   <DialogHeader>
                     <DialogTitle
                       style={{
@@ -687,8 +617,8 @@ export function LoginPage() {
                       </strong>
                     </p>
                     <p>
-                      A: Tap "Forgot Password?" on the login page
-                      and follow the OTP verification process.
+                      A: Contact support for password reset
+                      assistance.
                     </p>
                     <br />
                     <p>
