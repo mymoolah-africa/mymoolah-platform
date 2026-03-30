@@ -22,7 +22,7 @@ const KYC_TIER_LIMITS = {
     canSendMoney: false,
     canWithdrawCash: false,
     canPurchaseVAS: true,
-    canReceiveDeposits: true,
+    canReceiveDeposits: false,
     canTransferInternational: false,
   },
   1: {

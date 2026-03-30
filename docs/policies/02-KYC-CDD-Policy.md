@@ -110,7 +110,7 @@ MyMoolah implements a progressive three-tier KYC model that balances regulatory 
 | **Send Money (P2P)** | Not allowed | Allowed | Allowed |
 | **Withdraw Cash** | Not allowed | Allowed | Allowed |
 | **VAS Purchases** | Allowed | Allowed | Allowed |
-| **Receive Deposits** | Allowed (up to balance cap) | Allowed | Allowed |
+| **Receive Deposits** | Not allowed | Allowed | Allowed |
 | **International Transfers** | Not allowed | Not allowed | Allowed (subject to SARB exchange control) |
 
 ### 5.3 Account Feature Restrictions by Tier

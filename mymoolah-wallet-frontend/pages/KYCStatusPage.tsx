@@ -53,7 +53,7 @@ const KYC_TIER_LIMITS: Record<number, TierConfig> = {
     canSendMoney: false,
     canWithdrawCash: false,
     canPurchaseVAS: true,
-    canReceiveDeposits: true,
+    canReceiveDeposits: false,
     canTransferInternational: false,
   },
   1: {
