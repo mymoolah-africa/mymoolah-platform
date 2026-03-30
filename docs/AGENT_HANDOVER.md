@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-30 17:30  
-**Latest Feature**: **PayShap Inbound Confirmed + H2H Pain.001 Validated + 4 Agent Skills Rewritten** — SBSA sandbox callbacks confirmed (6/6 Louis Van Zyl). Production callback URL registered. Pain.001 v3 passed SBSA SSVS validator. SFTP channel enablement requested. 4 agent skills (explainer-graphic, slide-deck-builder, workflow-visualizer, visual-page-builder) rewritten for Cursor IDE with canvas MCP, Google Fonts, animations, and variety rules.  
-**Document Version**: 2.44.0  
+**Last Updated**: 2026-03-30 18:30  
+**Latest Feature**: **PayShap Deposit Flow Visualization + Skills Rewrite** — Interactive HTML diagram of full PayShap deposit flow (12 steps, click-to-expand, color-coded actors). SBSA sandbox callbacks confirmed (6/6). Production callback URL registered. Pain.001 v3 passed SBSA SSVS validator. SFTP channel enablement requested. 4 agent skills rewritten for Cursor IDE canvas.  
+**Document Version**: 2.45.0  
 **Session logs**: `docs/session_logs/2026-03-30_1030_ussd-fix-kyc-ui-payshap-inbound.md`, `docs/session_logs/2026-03-28_1600_kyc-tier-transaction-limits.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
@@ -732,10 +732,10 @@ You're part of a **banking-grade software system** where:
 
 ## 🚀 **NEXT DEVELOPMENT PRIORITIES**
 
-1. **SBSA H2H — Await test traffic before freeze (Thu Mar 27)** — Confirmation email sent to Colette 2026-03-24. VPN resolved (Open Internet), PGP resolved (Not Required), file names confirmed. SOAP handler live. Awaiting SBSA to send test SOAP credit notification + test SFTP MT940/MT942 file to UAT. SBSA freeze: Thu Mar 27 → Apr 8. See `docs/SBSA_H2H_SETUP_GUIDE.md`.
-2. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Offer Standard Bank sponsor letter or PASA application pack if requested. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
-3. **Backend redeploy to production** — Push `git push origin main` then redeploy backend to staging and production to activate SBSA SOAP handler + EBONF daily-limit notification message.
-4. **SBSA hash algorithm** — Ask Gustaf for exact HMAC spec for `x-GroupHeader-Hash` mismatch warning (soft_fail, non-blocking).
+1. **Staging & Production VAS Products** — André's next priority (Sunday morning). Configure and test VAS product catalog in staging and production environments.
+2. **SBSA PayShap Production Callback** — Louis Van Zyl investigating why real PayShap deposits don't trigger production callbacks (inward queue issue). Sandbox callbacks confirmed working (6/6). Production callback URL registered: `https://api-mm.mymoolah.africa/api/v1/standardbank/payshap/inbound-credit`.
+3. **SBSA H2H SFTP Channel** — Melanie Block enabling SFTP channel. Pain.001 v3 file passed SSVS validator. Test file with valid beneficiaries uploaded to GCS outbox. Awaiting channel activation to test file pickup and Pain.002 return.
+4. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Offer Standard Bank sponsor letter or PASA application pack if requested. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
 5. **H2H Statements/Payments** — Statement format (MT940 + MT942) and delivery schedule confirmed. Awaiting Melissa sign-on and SBSA connectivity test.
 6. **Field encryption: Cloud Run env vars** — Confirm `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` are set in Cloud Run service env vars for both Staging and Production.
 7. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles (`mobilemart` and `flash` users).

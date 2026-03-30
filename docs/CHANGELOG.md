@@ -44,6 +44,9 @@
 - `docs/templates/pain001_payment_template.csv` — Supports external bank EFT and MyMoolah wallet top-ups
 - `docs/templates/pain001_bank_branch_codes.csv` — 17 major SA banks with universal branch codes
 
+### PayShap Deposit Flow Visualization
+- `.canvas/payshap-deposit-flow.html` — Interactive 12-step workflow diagram of the full PayShap deposit flow (bank payment → wallet credit). Click-to-expand technical details. Color-coded actors (Customer, SBSA, Cloud Run, Services, DB, Ops). Built with workflow-visualizer skill.
+
 ### Agent Skills Rewrite (Cursor IDE Native)
 - Rewrote 4 skills from Claude Code text-brief format to Cursor IDE native visual builders:
   - `explainer-graphic` — HTML Canvas infographics with analogy framework, 12 categories, design system

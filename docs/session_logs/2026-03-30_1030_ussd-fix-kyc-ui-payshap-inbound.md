@@ -160,6 +160,14 @@ All skills now produce actual visual output via Cursor's canvas MCP tool instead
 - `feat: rewrite workflow-visualizer skill for Cursor IDE`
 - `feat: rewrite visual-page-builder skill for Cursor IDE`
 
+### PayShap Deposit Flow Visualization (Evening)
+
+- Created interactive HTML diagram of the full PayShap deposit flow using the workflow-visualizer skill
+- 12-step flow: bank payment → SBSA RPP settlement → Pain.002 callback → HMAC auth → ISO 20022 parsing → reference resolution → idempotency check → wallet lookup → SELECT FOR UPDATE credit → double-entry journal → suspense fallback → HTTP 200 ack
+- Click-to-expand technical details on each step (code snippets, field paths, ledger entries)
+- Color-coded by actor: Customer (blue), SBSA (amber), Cloud Run (purple), Services (cyan), Database (green), Ops (red)
+- File: `.canvas/payshap-deposit-flow.html`
+
 ---
 
 ## Related Documentation
