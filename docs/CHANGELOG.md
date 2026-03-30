@@ -1,5 +1,33 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-30 - USSD Registration Fix, KYC UI Updates, PayShap Inbound Credit Handler
+
+### USSD Registration Fix
+- `services/ussdAuthService.js` — Fixed critical `idNumberHash` NOT NULL constraint violation. USSD registration now encrypts ID number (AES-256-GCM) and computes HMAC-SHA256 blind index hash before INSERT, matching Sequelize model hooks used by web registration.
+- `services/ussdMenuService.js` — Fixed existing user ID update path to also encrypt and compute blind index.
+
+### KYC UI Corrections
+- **Tier 0 Receive Deposits disabled** — `config/kycTierLimits.js`: `canReceiveDeposits: false` for Tier 0 (FICA compliance — VAS only until document verified)
+- **Accepted ID documents** — Updated all frontend labels to list all 4 accepted types: SA ID book, passport, driver's licence, temporary ID
+- **Progress bar aligned** — 33% (Tier 0), 66% (Tier 1), 100% (Tier 2) — matches 3-tier KYC model
+- Policy doc `docs/policies/02-KYC-CDD-Policy.md` updated
+
+### PayShap Inbound Credit Handler (ISO 20022)
+- `controllers/standardbankController.js` — Complete rewrite of `handlePayshapInboundCredit` to parse SBSA's confirmed Pain.002 payload structure: `grpHdr` + `orgnlGrpInfAndSts` + `orgnlPmtInfAndSts[].txInfAndSts[]`. Extracts endToEndId, UETR, amount from nested `orgnlTxRef`. Reference resolution: creditor proxy > debtor proxy > remittance info > account number.
+- Callback URL registered in SBSA portal: `https://staging.mymoolah.africa/api/v1/standardbank/payshap/inbound-credit`
+- SBSA_CALLBACK_SECRET updated in GCP Secret Manager
+- Awaiting test POST from Louis Van Zyl (SBSA) to confirm end-to-end flow
+
+### AI Knowledge Base — Deposit Instructions
+- `scripts/seed-support-knowledge-base.js` — Added/updated 6 entries:
+  - Q3.2: Updated overview with all deposit methods (PayShap instant, EFT 1 business day)
+  - Q3.2c: EFT deposit step-by-step (Treasury Acc 272406481, Branch 002154)
+  - Q3.2d: PayShap deposit step-by-step (ShapID: Mymoolah@STANDARDBANK, instant 24/7)
+  - Q3.2e: Why mobile number as reference is critical
+  - Q3.2f: MyMoolah banking details quick reference
+
+---
+
 ## 2026-03-28 - KYC Tier Transaction Limits (FICA-Compliant)
 
 Implemented centralized, FICA-compliant transaction limits for all three KYC tiers, enforced across backend and frontend.

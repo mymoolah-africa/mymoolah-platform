@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-28 16:00  
-**Latest Feature**: **KYC Tier Transaction Limits (FICA-Compliant)** — Centralized tier limits in `config/kycTierLimits.js`. Tier 0: R1k/txn, R3k/day, R5k/month, VAS only. Tier 1 (Exemption 17): R5k/txn, R5k/day, R25k/month. Tier 2 (Full FICA): R25k/txn, R50k/day, R100k/month. Enforced in Wallet model, all controllers, USSD service, and frontend. Policy doc v2.0 updated.  
-**Document Version**: 2.41.0  
-**Session logs**: `docs/session_logs/2026-03-28_1600_kyc-tier-transaction-limits.md`, `docs/session_logs/2026-03-28_1400_kyc-tiered-system-ussd-webapp.md`  
+**Last Updated**: 2026-03-30 14:00  
+**Latest Feature**: **PayShap Inbound Credit Handler + KYC UI Fixes** — Rewrote `handlePayshapInboundCredit` for ISO 20022 Pain.002 payload (confirmed by Gustaf/SBSA). Fixed USSD registration `idNumberHash` crash. Disabled Tier 0 receive deposits (FICA). Updated accepted ID docs. Added EFT/PayShap deposit instructions to AI knowledge base. Callback URL registered in SBSA portal (staging). Awaiting SBSA test POST from Louis Van Zyl.  
+**Document Version**: 2.42.0  
+**Session logs**: `docs/session_logs/2026-03-30_1030_ussd-fix-kyc-ui-payshap-inbound.md`, `docs/session_logs/2026-03-28_1600_kyc-tier-transaction-limits.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
