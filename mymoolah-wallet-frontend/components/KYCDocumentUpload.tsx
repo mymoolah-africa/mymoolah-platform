@@ -143,7 +143,7 @@ const KYCDocumentUpload: React.FC<KYCDocumentUploadProps> = ({
           KYC Verification Required
         </h3>
         <p className="text-sm text-gray-600">
-          Please upload your ID document (SA ID or Passport) to enable full wallet functionality.
+          Please upload your ID document (SA ID book, passport, driver's licence or temporary ID) to enable full wallet functionality.
         </p>
       </div>
 

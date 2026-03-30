@@ -601,7 +601,7 @@ export function KYCStatusPage() {
                             color: '#92400e',
                             marginTop: '0.25rem'
                           }}>
-                            To send money, withdraw cash and increase your limits, upload a photo of your SA ID or passport via the web app.
+                            To send money, receive deposits, withdraw cash and increase your limits, upload a photo of your SA ID book, passport, driver's licence or temporary ID via the web app.
                           </p>
                           <Button
                             onClick={() => navigate('/kyc/documents')}

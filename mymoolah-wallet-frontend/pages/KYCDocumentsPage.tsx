@@ -185,7 +185,7 @@ export function KYCDocumentsPage() {
       if (!data.success && (data.status === 'retry' || data.status === 'failed')) {
         const issues: string[] = data?.validation?.issues || [];
         const tips: string[] = [
-          'Upload a clear photo of your SA ID card/book or a passport',
+          'Upload a clear photo of your SA ID book, passport, driver\'s licence or temporary ID',
           'Ensure the whole document is visible with good lighting (no glare)',
           `The name must match your profile: ${(user as any)?.name || ''}`.trim(),
           'Only images are supported (JPG/PNG), max 10MB'
@@ -408,7 +408,7 @@ export function KYCDocumentsPage() {
                     fontSize: 'var(--mobile-font-small)', 
                     fontWeight: 'var(--font-weight-normal)' 
                   }}>
-                    Upload your South African ID document or Passport
+                    Upload your SA ID book, passport, driver's licence or temporary ID
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -485,7 +485,7 @@ export function KYCDocumentsPage() {
                         }}
                       >
                         <Upload className="w-5 h-5 mr-2" />
-                        Add SA ID or Passport
+                        Add Identity Document
                       </Button>
                       
                       <p className="text-xs text-gray-500 text-center" style={{ 

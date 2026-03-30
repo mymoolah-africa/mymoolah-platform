@@ -96,7 +96,7 @@ MyMoolah implements a progressive three-tier KYC model that balances regulatory 
 | KYC Tier | Label | Channel | Verification Requirements | Regulatory Basis |
 |---|---|---|---|---|
 | **Tier 0** | USSD Basic | USSD | Full legal name, SA ID number or international passport number (format-validated via Luhn/regex — no document scan). Mobile number verified. | Conservative position below FIC Exemption 17 (ID format-validated only, not document-verified). |
-| **Tier 1** | ID Verified | Web App | ID document uploaded and OCR-verified (GPT-4o primary, Tesseract.js fallback). Extracted data cross-checked against SA ID checksum. No proof of address required. | FIC Exemption 17 ceiling — identity verified against document, residential address exempted. |
+| **Tier 1** | ID Verified | Web App | ID document uploaded and OCR-verified (GPT-4o primary, Tesseract.js fallback). Accepted documents: SA ID book, international passport, SA driver's licence, or SA temporary ID certificate. Extracted data cross-checked against SA ID checksum. No proof of address required. | FIC Exemption 17 ceiling — identity verified against document, residential address exempted. |
 | **Tier 2** | Fully Verified | Web App | ID document OCR-verified AND proof of address OCR-verified (utility bill, bank statement, or municipal account not older than 3 months). Sanctions and PEP screening completed. | Full FICA CDD (S21). No Exemption 17 restrictions. |
 
 ### 5.2 Transaction Limits by Tier
