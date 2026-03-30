@@ -73,6 +73,7 @@ Fixed critical USSD wallet registration failure (idNumberHash NOT NULL constrain
 - [ ] Once production callback confirmed: test full deposit → wallet credit flow end-to-end
 - [ ] Tonight: Work on staging and production VAS products
 - [ ] Future: Build frontend portal for Excel/CSV upload → Pain.001 conversion
+- [ ] Test each rewritten skill with a real prompt to verify output quality
 
 ---
 
@@ -141,6 +142,23 @@ Fixed critical USSD wallet registration failure (idNumberHash NOT NULL constrain
 - `docs: add Pain.001 v3 test file for SBSA H2H channel testing`
 - `docs: add Pain.001 payment CSV template and bank branch codes`
 - `docs: update Pain.001 template with MyMoolah wallet top-up examples`
+
+### Skills Rewrite (4 Cursor IDE Skills)
+
+Rewrote 4 agent skills from Claude Code text-brief format to Cursor IDE native visual builders:
+
+1. **explainer-graphic** — Analogy-based infographics. Added 12 analogy categories, HTML Canvas/SVG/GenerateImage output, design system with Google Fonts, CSS animations, variety rules.
+2. **slide-deck-builder** — Presentation decks. Added 19 visual components, presenter mode (P key), speaker notes, 7 font pairings, dark/light themes, animated counters, slide transitions, print/PDF styles.
+3. **workflow-visualizer** — Interactive system diagrams. Added D3.js auto-layout, zoom/pan, animated data flow particles, 13 node types, grouping/subflows, detail panel, mini-map, 3 themes.
+4. **visual-page-builder** — Rich HTML pages. Added 27 visual components, 10 page types, scroll-triggered animations, FAQ accordions, pricing tables, Mermaid diagrams, 8 font pairings, 6 themes.
+
+All skills now produce actual visual output via Cursor's canvas MCP tool instead of text briefs.
+
+### Skills Session Commits
+- `feat: rewrite explainer-graphic skill for Cursor IDE`
+- `feat: rewrite slide-deck-builder skill for Cursor IDE`
+- `feat: rewrite workflow-visualizer skill for Cursor IDE`
+- `feat: rewrite visual-page-builder skill for Cursor IDE`
 
 ---
 

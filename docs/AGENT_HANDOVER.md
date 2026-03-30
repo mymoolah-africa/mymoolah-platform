@@ -1,8 +1,8 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-30 16:30  
-**Latest Feature**: **PayShap Inbound Credit LIVE on Production + H2H Pain.001 Channel Testing** — SBSA sandbox callbacks confirmed working (6/6 via Louis Van Zyl). Production callback URL switched to `api-mm.mymoolah.africa`. Awaiting SBSA inward queue fix for real PayShap deposits. Pain.001 v3 passed SBSA validator (Melanie Block). SFTP channel enablement requested. Payment CSV template created (bank EFT + wallet top-ups).  
-**Document Version**: 2.43.0  
+**Last Updated**: 2026-03-30 17:30  
+**Latest Feature**: **PayShap Inbound Confirmed + H2H Pain.001 Validated + 4 Agent Skills Rewritten** — SBSA sandbox callbacks confirmed (6/6 Louis Van Zyl). Production callback URL registered. Pain.001 v3 passed SBSA SSVS validator. SFTP channel enablement requested. 4 agent skills (explainer-graphic, slide-deck-builder, workflow-visualizer, visual-page-builder) rewritten for Cursor IDE with canvas MCP, Google Fonts, animations, and variety rules.  
+**Document Version**: 2.44.0  
 **Session logs**: `docs/session_logs/2026-03-30_1030_ussd-fix-kyc-ui-payshap-inbound.md`, `docs/session_logs/2026-03-28_1600_kyc-tier-transaction-limits.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 

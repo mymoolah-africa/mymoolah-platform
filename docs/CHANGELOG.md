@@ -44,6 +44,15 @@
 - `docs/templates/pain001_payment_template.csv` — Supports external bank EFT and MyMoolah wallet top-ups
 - `docs/templates/pain001_bank_branch_codes.csv` — 17 major SA banks with universal branch codes
 
+### Agent Skills Rewrite (Cursor IDE Native)
+- Rewrote 4 skills from Claude Code text-brief format to Cursor IDE native visual builders:
+  - `explainer-graphic` — HTML Canvas infographics with analogy framework, 12 categories, design system
+  - `slide-deck-builder` — Animated HTML presentations with presenter mode, 19 components, speaker notes
+  - `workflow-visualizer` — Interactive D3.js diagrams with zoom/pan, animated data flow, 13 node types
+  - `visual-page-builder` — Rich HTML pages with 27 components, scroll animations, 10 page types
+- All skills produce live visual output via canvas MCP (not text briefs)
+- Google Fonts pairings, CSS variable themes, variety rules, quality checklists
+
 ---
 
 ## 2026-03-28 - KYC Tier Transaction Limits (FICA-Compliant)
