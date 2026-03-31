@@ -67,8 +67,10 @@ class MobileMartStagingSync {
       created: 0,
       updated: 0,
       failed: 0,
+      deactivated: 0,
       byVasType: {}
     };
+    this.seenSupplierProductIds = new Set();
   }
 
   /**
@@ -117,6 +119,7 @@ class MobileMartStagingSync {
       for (const mmProduct of products) {
         try {
           const result = await this.syncProduct(mmProduct, vasType, supplier);
+          this.seenSupplierProductIds.add(mmProduct.merchantProductId.toString());
           if (result === 'created') {
             this.stats.byVasType[vasType].created++;
             this.stats.created++;
@@ -429,6 +432,71 @@ class MobileMartStagingSync {
   }
 
   /**
+   * Deactivate products/variants that exist in the DB but were NOT returned by the API.
+   * Soft-disable only (status → 'inactive') — no rows are deleted.
+   */
+  async deactivateStaleProducts(supplier, syncedVasTypes) {
+    console.log('\n🧹 Checking for stale products to deactivate...');
+
+    if (this.seenSupplierProductIds.size === 0) {
+      console.log('  ⚠️  No products were successfully synced — skipping stale cleanup to avoid false deactivation.');
+      return;
+    }
+
+    const seenIds = [...this.seenSupplierProductIds];
+    const normalizedTypes = syncedVasTypes.map(v => normalizeProductType(v));
+
+    // Find active MobileMart product_variants for the synced VAS types that weren't in the API response
+    const staleVariants = await this.client.query(`
+      SELECT pv.id, pv."supplierProductId", pv."vasType", p.name
+      FROM product_variants pv
+      JOIN products p ON p.id = pv."productId"
+      WHERE pv."supplierId" = $1
+        AND pv.status = 'active'
+        AND pv."vasType" = ANY($2)
+        AND pv."supplierProductId" IS NOT NULL
+        AND pv."supplierProductId" != ''
+        AND pv."supplierProductId" NOT IN (SELECT unnest($3::text[]))
+    `, [supplier.id, normalizedTypes, seenIds]);
+
+    if (staleVariants.rows.length === 0) {
+      console.log('  ✅ No stale products found — catalog is up to date.');
+      return;
+    }
+
+    console.log(`  ⚠️  Found ${staleVariants.rows.length} stale product variant(s) to deactivate:\n`);
+    for (const row of staleVariants.rows) {
+      console.log(`     - [${row.vasType}] ${row.name} (${row.supplierProductId})`);
+    }
+
+    const staleVariantIds = staleVariants.rows.map(r => r.id);
+
+    // Deactivate the variants
+    await this.client.query(`
+      UPDATE product_variants
+      SET status = 'inactive', "updatedAt" = NOW()
+      WHERE id = ANY($1::int[])
+    `, [staleVariantIds]);
+
+    // Also deactivate parent products that now have NO active variants from this supplier
+    const deactivatedProducts = await this.client.query(`
+      UPDATE products
+      SET status = 'inactive', "updatedAt" = NOW()
+      WHERE "supplierId" = $1
+        AND type = ANY($2)
+        AND status = 'active'
+        AND id NOT IN (
+          SELECT DISTINCT "productId" FROM product_variants
+          WHERE "supplierId" = $1 AND status = 'active'
+        )
+      RETURNING id, name
+    `, [supplier.id, normalizedTypes]);
+
+    this.stats.deactivated = staleVariants.rows.length;
+    console.log(`\n  ✅ Deactivated ${staleVariants.rows.length} variant(s) and ${deactivatedProducts.rows.length} parent product(s).`);
+  }
+
+  /**
    * Print final statistics
    */
   printStats() {
@@ -438,6 +506,7 @@ class MobileMartStagingSync {
     console.log(`Total Products Processed: ${this.stats.total}`);
     console.log(`Created: ${this.stats.created}`);
     console.log(`Updated: ${this.stats.updated}`);
+    console.log(`Deactivated (stale): ${this.stats.deactivated}`);
     console.log(`Failed: ${this.stats.failed}`);
     console.log('='.repeat(80));
     console.log('\nBreakdown by VAS Type:\n');
@@ -559,6 +628,9 @@ async function main() {
     for (const vasType of vasTypes) {
       await syncService.syncVasType(vasType, supplier);
     }
+
+    // Deactivate products the API no longer returns
+    await syncService.deactivateStaleProducts(supplier, vasTypes);
     
     // Print statistics
     syncService.printStats();
