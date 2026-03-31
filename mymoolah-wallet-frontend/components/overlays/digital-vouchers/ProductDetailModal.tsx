@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { X, Check, Phone, AlertTriangle, Copy } from 'lucide-react';
+import { Check, AlertTriangle, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../../ui/dialog';
 import { Button } from '../../ui/button';
 import { Input } from '../../ui/input';
 import { Label } from '../../ui/label';
 import { Card, CardContent } from '../../ui/card';
-import { Checkbox } from '../../ui/checkbox';
 import { Separator } from '../../ui/separator';
 import { apiService } from '../../../services/apiService';
 
@@ -31,24 +30,13 @@ interface ProductDetailModalProps {
   onClose: () => void;
 }
 
-interface RecipientInfo {
-  phone: string;
-  sendToSelf: boolean;
-  recipientName?: string;
-  isVerified: boolean;
-  verificationStatus: 'idle' | 'verifying' | 'verified' | 'failed';
-}
-
 type PurchaseStep = 'selection' | 'processing' | 'success' | 'error';
 
 export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailModalProps) {
   const [selectedDenomination, setSelectedDenomination] = useState<number | null>(null);
   const [amountInput, setAmountInput] = useState<string>('');
-  const [recipientInfo, setRecipientInfo] = useState<RecipientInfo>({
-    phone: '', sendToSelf: true, isVerified: false, verificationStatus: 'idle'
-  });
   const [currentStep, setCurrentStep] = useState<PurchaseStep>('selection');
-  const [errors, setErrors] = useState<{ phone?: string; amount?: string }>({});
+  const [errors, setErrors] = useState<{ amount?: string }>({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [voucherCode, setVoucherCode] = useState('');
   const [transactionRef, setTransactionRef] = useState('');
@@ -59,7 +47,6 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     if (isOpen) {
       setSelectedDenomination(null);
       setAmountInput('');
-      setRecipientInfo({ phone: '', sendToSelf: true, isVerified: false, verificationStatus: 'idle' });
       setCurrentStep('selection');
       setErrors({});
       setIsProcessing(false);
@@ -68,11 +55,6 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
       setPurchaseError('');
     }
   }, [isOpen, voucher]);
-
-  const validatePhone = (phone: string): boolean => {
-    const cleanPhone = phone.trim().replace(/\s/g, '');
-    return /^(\+27|27|0)?[6-8][0-9]{8}$/.test(cleanPhone);
-  };
 
   const handleAmountChange = (value: string) => {
     setAmountInput(value);
@@ -86,65 +68,11 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     setSelectedDenomination(Math.round(numeric * 100));
   };
 
-  const verifyMMWalletHolder = async (phoneNumber: string) => {
-    try {
-      const response = await apiService.verifyMMWalletHolder(phoneNumber);
-      return { isValid: response.isValid, recipientName: response.recipientName };
-    } catch {
-      return { isValid: false };
-    }
-  };
-
-  const handleRecipientChange = async (field: keyof RecipientInfo, value: string | boolean) => {
-    if (field === 'sendToSelf') {
-      setRecipientInfo(prev => ({
-        ...prev, sendToSelf: Boolean(value), phone: '', isVerified: false,
-        verificationStatus: 'idle', recipientName: undefined
-      }));
-      setErrors({ phone: undefined });
-      return;
-    }
-
-    if (field === 'phone') {
-      const phoneValue = value as string;
-      setRecipientInfo(prev => ({
-        ...prev, phone: phoneValue, isVerified: false, verificationStatus: 'idle', recipientName: undefined
-      }));
-      if (errors.phone) setErrors(prev => ({ ...prev, phone: undefined }));
-
-      if (phoneValue.length >= 10) {
-        setRecipientInfo(prev => ({ ...prev, verificationStatus: 'verifying' }));
-        try {
-          const verification = await verifyMMWalletHolder(phoneValue);
-          if (verification.isValid) {
-            setRecipientInfo(prev => ({
-              ...prev, isVerified: true, verificationStatus: 'verified', recipientName: verification.recipientName
-            }));
-          } else {
-            setRecipientInfo(prev => ({ ...prev, isVerified: false, verificationStatus: 'failed' }));
-            setErrors(prev => ({ ...prev, phone: 'This phone number is not registered with MMWallet' }));
-          }
-        } catch {
-          setRecipientInfo(prev => ({ ...prev, isVerified: false, verificationStatus: 'failed' }));
-          setErrors(prev => ({ ...prev, phone: 'Unable to verify MMWallet. Please try again.' }));
-        }
-      }
-    }
-  };
-
-  const normalizeToLocalMsisdn = (phone: string): string => {
-    const digits = phone.replace(/\D/g, '');
-    if (digits.startsWith('27') && digits.length >= 11) return `0${digits.slice(-9)}`;
-    if (digits.startsWith('0') && digits.length >= 10) return digits.slice(0, 10);
-    if (digits.length === 9) return `0${digits}`;
-    return digits;
-  };
-
   const formatCurrency = (amount: number): string =>
     new Intl.NumberFormat('en-ZA', { style: 'currency', currency: 'ZAR' }).format(amount / 100);
 
   const validateForm = (): boolean => {
-    const newErrors: { phone?: string; amount?: string } = {};
+    const newErrors: { amount?: string } = {};
     if (!selectedDenomination) {
       newErrors.amount = 'Please select or enter an amount';
     } else {
@@ -154,11 +82,6 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
       if (voucher.maxAmount && selectedDenomination > voucher.maxAmount) {
         newErrors.amount = `Maximum amount is ${formatCurrency(voucher.maxAmount)}`;
       }
-    }
-    if (!recipientInfo.sendToSelf) {
-      if (!recipientInfo.phone.trim()) newErrors.phone = 'Please enter the recipient\'s phone number';
-      else if (!validatePhone(recipientInfo.phone)) newErrors.phone = 'Please enter a valid SA mobile number';
-      else if (!recipientInfo.isVerified) newErrors.phone = 'Please wait for MMWallet verification';
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -171,14 +94,12 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
     setPurchaseError('');
 
     try {
-      const recipientPhone = recipientInfo.sendToSelf ? undefined : normalizeToLocalMsisdn(recipientInfo.phone);
       const productIdForPurchase = voucher.productId || voucher.variantId || Number(voucher.id);
       if (!productIdForPurchase) throw new Error('Product ID is required for purchase');
 
       const purchaseData = {
         productId: Number(productIdForPurchase),
         denomination: selectedDenomination!,
-        recipient: recipientInfo.sendToSelf ? undefined : { phone: recipientPhone, name: recipientInfo.recipientName },
         idempotencyKey: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
           ? crypto.randomUUID()
           : `voucher-${Date.now()}-${Math.random().toString(36).slice(2)}`
@@ -296,65 +217,6 @@ export function ProductDetailModal({ voucher, isOpen, onClose }: ProductDetailMo
                   )}
                 </div>
               )}
-            </div>
-
-            <Separator />
-
-            <div>
-              <Label style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '15px', fontWeight: '600', color: '#1f2937', marginBottom: '10px', display: 'block' }}>
-                Recipient
-              </Label>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Checkbox id="send-to-self" checked={recipientInfo.sendToSelf}
-                    onCheckedChange={(checked) => handleRecipientChange('sendToSelf', checked as boolean)} />
-                  <Label htmlFor="send-to-self" style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#374151', cursor: 'pointer' }}>
-                    Send to myself
-                  </Label>
-                </div>
-
-                {!recipientInfo.sendToSelf && (
-                  <div>
-                    <Label style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px', display: 'block' }}>
-                      Recipient's MMWallet Phone Number
-                    </Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <Input
-                        type="tel"
-                        placeholder="Enter phone number"
-                        value={recipientInfo.phone}
-                        onChange={(e) => handleRecipientChange('phone', e.target.value)}
-                        style={{
-                          fontFamily: 'Montserrat, sans-serif', fontSize: '14px', paddingLeft: '40px',
-                          borderRadius: '12px', minHeight: '48px', borderColor: errors.phone ? '#ef4444' : '#d1d5db'
-                        }}
-                      />
-                      {recipientInfo.verificationStatus === 'verifying' && (
-                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                          <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-500 rounded-full animate-spin" />
-                        </div>
-                      )}
-                      {recipientInfo.verificationStatus === 'verified' && (
-                        <Check className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500" />
-                      )}
-                      {recipientInfo.verificationStatus === 'failed' && (
-                        <AlertTriangle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-red-500" />
-                      )}
-                    </div>
-                    {errors.phone && (
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#ef4444', marginTop: '4px' }}>
-                        {errors.phone}
-                      </p>
-                    )}
-                    {recipientInfo.recipientName && (
-                      <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#10b981', marginTop: '4px' }}>
-                        Verified: {recipientInfo.recipientName}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
             </div>
 
             <Separator />
