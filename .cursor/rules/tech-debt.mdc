@@ -17,6 +17,8 @@ alwaysApply: true
 | npm audit: 25 vulnerabilities (2 critical) | `package.json` | Medium | Run `npm audit fix` when stable |
 | `check-proxies-cs.sh` missing | `scripts/ensure-proxies-running.sh` | Low — bash error only, proxies work | Either create the script or remove the call |
 | USSD sessions use in-memory fallback on Cloud Run (no Redis) | `services/ussdSessionService.js` | Medium — sessions not shared across instances; lost on cold-start | Provision GCP Memorystore (managed Redis ~$30/month) and set `REDIS_URL` on Cloud Run |
+| Production best-offers cache ignores `featured` flag | `services/supplierComparisonService.js`, `services/bestOfferService.js` | Medium — production data catalog will show all products, not curated list | Add featured filter to best-offers path or rebuild cache with only featured products |
+| SVG network logos (MTN, CellC, Telkom) are approximate | `components/ui/NetworkIcons.tsx` | Low — cosmetic only | Replace with real PNG brand assets (same approach as Vodacom) |
 
 ## Architectural Decisions Log
 
@@ -35,6 +37,8 @@ alwaysApply: true
 | In-memory supplier circuit breaker (not Redis) | Mar 2026 | Acceptable for single-instance; migrate to Redis for horizontal scaling on Cloud Run |
 | Supplier failover via composite key matching (not product names) | Mar 2026 | Product names inconsistent across suppliers; deterministic keys (vasType+provider+priceType/amount) used instead |
 | Overlay route still has inline MobileMart failover alongside new CB | Mar 2026 | Old SupplierComparisonService failover in overlayServices.js coexists with new circuit breaker pre-check; consolidate in future refactor |
+| MM_DEPLOYMENT_ENV baked into deploy scripts | Mar 2026 | Cloud Run `--set-env-vars` replaces ALL env vars; manually-set vars lost on redeploy. Now permanent in staging + production scripts |
+| Real PNG brand assets for network logos | Mar 2026 | Hand-drawn SVG cannot accurately reproduce brand marks; import PNGs as Vite modules from `assets/` |
 
 ## Rule: When to Add Here
 

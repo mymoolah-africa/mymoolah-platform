@@ -1,5 +1,45 @@
 # MyMoolah Treasury Platform - Changelog
 
+## 2026-03-31 - Data Products UI Redesign, Supplier Failover Fixes, Deploy Env Persistence
+
+### Deploy Script Hardening
+- `scripts/build-push-deploy-staging.sh` — Added `MM_DEPLOYMENT_ENV=staging` to `--set-env-vars` so it persists through redeployments (previously wiped every deploy, breaking featured data product filters)
+- `scripts/build-push-deploy-production.sh` — Added `MM_DEPLOYMENT_ENV=production` to `--set-env-vars`
+
+### Supplier Failover Constructor Fix
+- `routes/overlayServices.js` — Fixed `SupplierComparisonService is not a constructor` crash in failover path. Was using destructured import `{ SupplierComparisonService }` but module exports class directly. Failover now correctly triggers when MobileMart returns error 1002 "Cannot source product".
+- `routes/overlayServices.js` — Moved `failoverUsed`/`originalSupplier` declarations from inner to outer `try` block scope to prevent `ReferenceError` during purchase response construction.
+
+### Data Products UI Redesign
+- `mymoolah-wallet-frontend/components/ui/NetworkIcons.tsx` — NEW: SVG components for network logos (MTN, CellC, Telkom) and category icons (WhatsApp, TikTok, Facebook, YouTube, Data, LTE, AllNetwork, Streaming). Helper functions `getNetworkIcon()` and `getCategoryIcon()`.
+- `mymoolah-wallet-frontend/assets/vodacom-logo.png` — NEW: Real Vodacom brand PNG asset used instead of hand-drawn SVG.
+- `mymoolah-wallet-frontend/components/overlays/AirtimeDataOverlay.tsx` — Data products section rewritten: each curated bundle renders as individual row with category icon, bundle name, data size badge, validity period, and price. Airtime cards updated with network-specific icons.
+- `mymoolah-wallet-frontend/services/apiService.ts` — `transformProducts` for data type now returns individual products (no grouping). New `extractDataBundleLabel()` helper parses MobileMart product names into structured display data.
+
+### Beneficiary Display Name Fix
+- `mymoolah-wallet-frontend/components/overlays/AirtimeDataOverlay.tsx` — Fixed beneficiary display name showing "Airtime - Vodacom" instead of user-entered name (e.g. "Andre (self)"). Now prioritizes `b.name` over auto-generated `acc.label`.
+
+### Featured Data Product Filter
+- `services/supplierComparisonService.js` — Added `featured: true` filter for data products in `getProductVariants()` with fallback to all active products if no featured ones exist.
+
+### Supplier Failover & Circuit Breaker (earlier in day)
+- `services/supplierCircuitBreaker.js` — NEW: In-memory per-supplier circuit breaker (threshold 5, cooldown 5min, half-open probe)
+- `services/supplierFailoverService.js` — NEW: Failover orchestration via composite key matching
+- Flash/MobileMart auth services instrumented with circuit breaker
+- Health endpoint at `/api/v1/suppliers/circuit-breaker`
+
+### MobileMart Commissions & Data Curation (earlier in day)
+- MobileMart contractual commission rates loaded from Annexure A agreement
+- API-driven data product curation via `mark-featured-data-products.js` script
+- `CatalogSynchronizationService` triggers curation after API sync
+
+### Flash Commissions (earlier in day)
+- Flash contractual commission rates from PDF deal sheet
+- `commissionType` ENUM ('percentage', 'fixed_amount') added to product_variants
+- eeziCash fees: R0.50 token generation + R4.50 redemption (VAT excl)
+
+---
+
 ## 2026-03-30 - USSD Registration Fix, KYC UI Updates, PayShap Inbound Credit Handler
 
 ### USSD Registration Fix
