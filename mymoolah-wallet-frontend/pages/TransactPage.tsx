@@ -170,10 +170,9 @@ export function TransactPage() {
           description: 'Use a 1Voucher, Flash Pay, or FNB voucher to add money to your wallet',
           icon: <Ticket className="w-6 h-6" />,
           route: '/topup-voucher',
-          available: false,
-          badge: 'Coming Soon',
-          badgeType: 'info',
-          comingSoon: true
+          available: true,
+          badge: 'New',
+          badgeType: 'success'
         },
         {
           id: 'send-money',

@@ -531,6 +531,23 @@ class ApiService {
       headers: { 'X-Idempotency-Key': idempotencyKey },
       body: JSON.stringify({ reference: idempotencyKey, amount: amountCents }),
     });
+    return this._extractEeziPinRef(response, idempotencyKey);
+  }
+
+  /**
+   * Purchase an eeziPower Token (electricity PIN voucher) via Flash eezi-voucher endpoint.
+   * Amount is in cents. Returns { pin, ref }.
+   */
+  async purchaseEeziPower(amountCents: number, idempotencyKey: string): Promise<{ pin: string; ref: string }> {
+    const response = await this.request<any>('/api/v1/flash/eezi-voucher/purchase', {
+      method: 'POST',
+      headers: { 'X-Idempotency-Key': idempotencyKey },
+      body: JSON.stringify({ reference: idempotencyKey, amount: amountCents, type: 'power' }),
+    });
+    return this._extractEeziPinRef(response, idempotencyKey);
+  }
+
+  private _extractEeziPinRef(response: any, idempotencyKey: string): { pin: string; ref: string } {
     const data = (response as any)?.data?.data ?? (response as any)?.data ?? response;
     // Backend normalizes PIN to data.pin; Flash eezi-voucher returns PIN in transaction.voucher
     const t = data?.transaction;

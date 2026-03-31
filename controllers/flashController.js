@@ -116,6 +116,76 @@ class FlashController {
     }
 
     /**
+     * Resolve the eeziPower (electricity PIN voucher) product code from Flash.
+     * Mirrors _resolveEeziVoucherProductCode but specifically targets "power" products.
+     */
+    async _resolveEeziPowerProductCode() {
+        if (this._eeziPowerProductCode) return this._eeziPowerProductCode;
+
+        try {
+            const [rows] = await sequelize.query(`
+                SELECT pv."supplierProductId"
+                FROM   product_variants pv
+                JOIN   suppliers s ON s.id = pv."supplierId"
+                WHERE  pv.status = 'active'
+                  AND  pv."supplierProductId" IS NOT NULL
+                  AND  s.code = 'FLASH'
+                  AND  (pv.metadata->>'flash_product_group' ILIKE '%eezi%'
+                        AND (pv.metadata->>'flash_product_name' ILIKE '%power%'
+                             OR pv.name ILIKE '%power%'))
+                LIMIT 1
+            `);
+
+            if (rows && rows.length > 0 && rows[0].supplierProductId) {
+                const code = parseInt(rows[0].supplierProductId, 10);
+                if (code > 0) {
+                    console.log(`✅ Flash: Resolved eeziPower product code from product_variants DB: ${code}`);
+                    this._eeziPowerProductCode = code;
+                    return code;
+                }
+            }
+            console.warn('⚠️ Flash: No eeziPower variant found in product_variants. Falling back to live Flash catalog API.');
+        } catch (dbErr) {
+            console.warn('⚠️ Flash: DB lookup for eeziPower product code failed, falling back to API:', dbErr.message);
+        }
+
+        const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+        if (!accountNumber) throw new Error('FLASH_ACCOUNT_NUMBER not configured');
+
+        console.log('🔍 Flash: Querying live Flash catalog API for eeziPower product code...');
+        const response = await this.authService.makeAuthenticatedRequest(
+            'GET',
+            `/accounts/${accountNumber}/products?includeInstructions=false`
+        );
+
+        const products = response.products || response || [];
+
+        const powerProduct = products.find(p => {
+            const name  = (p.productName  || p.name          || '').toLowerCase();
+            const group = (p.productGroup || p.category || p.type || '').toLowerCase();
+            return (group.includes('eezi') && name.includes('power'));
+        });
+
+        if (!powerProduct) {
+            console.error('❌ Flash: eeziPower product not found in live catalog.');
+            console.error('❌ Flash: All eezi products:',
+                products.filter(p => ((p.productGroup || '').toLowerCase().includes('eezi') || (p.productName || '').toLowerCase().includes('eezi')))
+                    .map(p => `${p.productCode}:${p.productName || p.name}:${p.productGroup || ''}`));
+            throw new Error(
+                'eeziPower product not found in Flash catalog or product_variants DB. ' +
+                'Run: node scripts/sync-flash-catalog.js to populate the catalog.'
+            );
+        }
+
+        const code = parseInt(powerProduct.productCode || powerProduct.code, 10);
+        if (!code || code <= 0) throw new Error(`Invalid product code from Flash catalog: ${powerProduct.productCode}`);
+
+        console.log(`✅ Flash: Resolved eeziPower product code from live Flash API: ${code} (${powerProduct.productName || powerProduct.name})`);
+        this._eeziPowerProductCode = code;
+        return code;
+    }
+
+    /**
      * Health check for Flash integration
      */
     async healthCheck(req, res) {
@@ -484,6 +554,249 @@ class FlashController {
                 error: 'Failed to redeem 1Voucher',
                 message: error.message,
                 ...(error.flashError && { flash: error.flashError })
+            });
+        }
+    }
+
+    /**
+     * Redeem a voucher (1Voucher / FNB / Flash Pay) and credit user's wallet.
+     *
+     * Fee: 4% of face value (excl VAT) — per Flash contract Mar 2026.
+     * MyMoolah does NOT add a markup; user bears Flash's fee only.
+     *
+     * Flow:
+     *   1. User enters 16-digit PIN
+     *   2. Backend calls Flash POST /1voucher/redeem
+     *   3. Flash returns face value
+     *   4. Backend credits wallet with face_value − 4% fee
+     */
+    async redeemVoucherTopup(req, res) {
+        try {
+            const { pin, voucherType = '1voucher' } = req.body;
+
+            if (!pin || !/^\d{16}$/.test(pin)) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'A valid 16-digit voucher PIN is required'
+                });
+            }
+
+            const VOUCHER_PRODUCT_CODES = {
+                '1voucher': parseInt(process.env.FLASH_1VOUCHER_PRODUCT_CODE || '1', 10),
+                'fnb':      parseInt(process.env.FLASH_FNB_VOUCHER_PRODUCT_CODE || '1', 10),
+                'flashpay':  parseInt(process.env.FLASH_FLASHPAY_PRODUCT_CODE || '1', 10),
+            };
+
+            const productCode = VOUCHER_PRODUCT_CODES[voucherType];
+            if (!productCode) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid voucher type. Must be: 1voucher, fnb, or flashpay'
+                });
+            }
+
+            const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
+            if (!accountNumber) {
+                return res.status(500).json({
+                    success: false,
+                    error: 'FLASH_ACCOUNT_NUMBER not configured'
+                });
+            }
+
+            const reference = `VTOP-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+            const FLASH_FEE_RATE = parseFloat(process.env.FLASH_VOUCHER_TOPUP_FEE_PCT || '4') / 100;
+            const useFlashAPI = process.env.FLASH_LIVE_INTEGRATION === 'true';
+
+            let flashResponse = null;
+            let faceValueCents = 0;
+
+            if (useFlashAPI) {
+                console.log(`📞 Flash: Redeeming ${voucherType} voucher via API...`);
+                flashResponse = await this.authService.makeAuthenticatedRequest(
+                    'POST',
+                    '/1voucher/redeem',
+                    { reference, accountNumber, pin, productCode }
+                );
+
+                const txn = flashResponse?.transaction || flashResponse;
+                faceValueCents = parseInt(txn?.amount || txn?.faceValue || txn?.value || '0', 10);
+
+                if (!faceValueCents || faceValueCents <= 0) {
+                    return res.status(400).json({
+                        success: false,
+                        error: 'Flash returned an invalid or zero face value for this voucher'
+                    });
+                }
+                console.log(`✅ Flash: Voucher redeemed — face value ${faceValueCents} cents`);
+            } else {
+                faceValueCents = parseInt(req.body.simulatedAmount || '10000', 10);
+                flashResponse = { simulated: true, amount: faceValueCents };
+                console.log(`🧪 Simulation: Voucher top-up — face value ${faceValueCents} cents`);
+            }
+
+            const feeCents = Math.round(faceValueCents * FLASH_FEE_RATE);
+            const netDepositCents = faceValueCents - feeCents;
+
+            const { Wallet, Transaction, VasTransaction, VasProduct } = require('../models');
+            const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
+
+            if (!wallet) {
+                return res.status(404).json({ success: false, error: 'Wallet not found' });
+            }
+
+            const [vasProduct] = await VasProduct.findOrCreate({
+                where: { supplierId: 'FLASH', supplierProductId: `FLASH_${voucherType.toUpperCase()}_TOPUP` },
+                defaults: {
+                    supplierId: 'FLASH',
+                    supplierProductId: `FLASH_${voucherType.toUpperCase()}_TOPUP`,
+                    productName: `Flash ${voucherType === 'fnb' ? 'FNB Voucher' : voucherType === 'flashpay' ? 'Flash Pay' : '1Voucher'} Top-up`,
+                    vasType: 'voucher_topup',
+                    transactionType: 'topup',
+                    provider: 'Flash',
+                    networkType: 'local',
+                    predefinedAmounts: null,
+                    minAmount: 1000,
+                    maxAmount: 300000,
+                    commission: 0,
+                    fixedFee: 0,
+                    isPromotional: false,
+                    isActive: true,
+                    metadata: { feeRate: FLASH_FEE_RATE, voucherType }
+                }
+            });
+
+            const vasTransactionId = `VAS-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            await VasTransaction.create({
+                transactionId: vasTransactionId,
+                userId: req.user.id,
+                walletId: wallet.walletId,
+                vasProductId: vasProduct.id,
+                vasType: 'voucher_topup',
+                transactionType: 'topup',
+                supplierId: 'FLASH',
+                supplierProductId: `FLASH_${voucherType.toUpperCase()}_TOPUP`,
+                amount: faceValueCents,
+                fee: feeCents,
+                totalAmount: netDepositCents,
+                mobileNumber: null,
+                status: 'completed',
+                reference,
+                supplierReference: flashResponse?.transactionId || flashResponse?.reference || reference,
+                metadata: {
+                    voucherType,
+                    productCode,
+                    pin: `****${pin.slice(-4)}`,
+                    faceValueCents,
+                    feeCents,
+                    feeRate: FLASH_FEE_RATE,
+                    netDepositCents,
+                    useFlashAPI,
+                    flashResponse: useFlashAPI ? flashResponse : null,
+                    processedAt: new Date().toISOString()
+                }
+            });
+
+            await wallet.credit(netDepositCents / 100, 'deposit');
+            console.log(`💳 Wallet credited: R${(netDepositCents / 100).toFixed(2)} (face R${(faceValueCents / 100).toFixed(2)} − fee R${(feeCents / 100).toFixed(2)})`);
+
+            const mainTransactionId = `VTOP-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+            await Transaction.create({
+                transactionId: mainTransactionId,
+                userId: req.user.id,
+                walletId: wallet.walletId,
+                amount: netDepositCents / 100,
+                type: 'deposit',
+                status: 'completed',
+                description: `${voucherType === 'fnb' ? 'FNB Voucher' : voucherType === 'flashpay' ? 'Flash Pay' : '1Voucher'} top-up`,
+                currency: wallet.currency,
+                fee: feeCents / 100,
+                metadata: {
+                    vasTransactionId,
+                    vasType: 'voucher_topup',
+                    voucherType,
+                    reference,
+                    supplierCode: 'FLASH',
+                    operationType: 'voucher_topup',
+                    faceValue: faceValueCents / 100,
+                    fee: feeCents / 100,
+                    feeRate: `${FLASH_FEE_RATE * 100}%`,
+                    isVoucherTopup: true
+                }
+            });
+
+            try {
+                const { postCommissionVatAndLedger } = require('../services/commissionVatService');
+                await postCommissionVatAndLedger({
+                    commissionCents: feeCents,
+                    supplierCode: 'FLASH',
+                    serviceType: 'voucher_topup',
+                    walletTransactionId: mainTransactionId,
+                    sourceTransactionId: vasTransactionId,
+                    idempotencyKey: reference,
+                    purchaserUserId: req.user.id
+                });
+                console.log(`📒 Ledger posted: Flash voucher fee R${(feeCents / 100).toFixed(2)}`);
+            } catch (ledgerError) {
+                console.error('⚠️ Voucher top-up ledger posting failed:', ledgerError.message);
+            }
+
+            try {
+                await FlashTransaction.create({
+                    transactionId: reference,
+                    accountNumber,
+                    serviceType: 'voucher_topup',
+                    operation: 'redeem',
+                    amount: faceValueCents,
+                    reference,
+                    status: 'completed',
+                    metadata: {
+                        voucherType,
+                        productCode,
+                        faceValueCents,
+                        feeCents,
+                        netDepositCents,
+                        flashResponse: useFlashAPI ? flashResponse : null
+                    }
+                });
+            } catch (auditErr) {
+                console.error('⚠️ FlashTransaction audit record failed:', auditErr.message);
+            }
+
+            res.json({
+                success: true,
+                data: {
+                    faceValue: faceValueCents / 100,
+                    fee: feeCents / 100,
+                    feeRate: `${FLASH_FEE_RATE * 100}%`,
+                    netDeposit: netDepositCents / 100,
+                    transactionId: mainTransactionId,
+                    reference,
+                    voucherType,
+                    timestamp: new Date().toISOString()
+                }
+            });
+
+        } catch (error) {
+            console.error('❌ Flash Controller: Error redeeming voucher top-up:', error.message);
+
+            const flashCode = error.flashError?.code || error.code;
+            const VOUCHER_ERROR_MESSAGES = {
+                '2401': 'This voucher has already been used.',
+                '2402': 'This voucher could not be found. Please check the PIN.',
+                '2403': 'This voucher has been cancelled.',
+                '2405': 'This voucher has expired.',
+                '2406': 'The voucher amount is too small.',
+                '2408': 'The voucher amount is too large.',
+            };
+
+            const userMessage = VOUCHER_ERROR_MESSAGES[String(flashCode)]
+                || 'Failed to redeem voucher. Please try again.';
+
+            res.status(flashCode ? 400 : 500).json({
+                success: false,
+                error: userMessage,
+                ...(error.flashError && { flash: { code: flashCode } })
             });
         }
     }
@@ -1168,9 +1481,10 @@ class FlashController {
      */
     async purchaseEeziVoucher(req, res) {
         try {
-            const { reference: rawReference, amount, metadata } = req.body;
+            const { reference: rawReference, amount, metadata, type } = req.body;
 
             const reference = rawReference ? String(rawReference).replace(/_/g, '-') : rawReference;
+            const isEeziPower = type === 'power';
 
             const accountNumber = process.env.FLASH_ACCOUNT_NUMBER;
             const storeId    = process.env.FLASH_STORE_ID    || process.env.FLASH_ACCOUNT_NUMBER?.replace(/-/g, '').slice(0, 12) || 'MYMOOLAHDIGITAL';
@@ -1185,10 +1499,13 @@ class FlashController {
 
             let productCode;
             try {
-                productCode = await this._resolveEeziVoucherProductCode();
+                productCode = isEeziPower
+                    ? await this._resolveEeziPowerProductCode()
+                    : await this._resolveEeziVoucherProductCode();
             } catch (err) {
-                console.error('❌ Failed to resolve eezi-voucher product code:', err.message);
-                return res.status(500).json({ success: false, error: 'Flash eezi-voucher product code not available', details: err.message });
+                const label = isEeziPower ? 'eeziPower' : 'eezi-voucher';
+                console.error(`❌ Failed to resolve ${label} product code:`, err.message);
+                return res.status(500).json({ success: false, error: `Flash ${label} product code not available`, details: err.message });
             }
 
             if (!this.authService.validateReference(reference)) {
@@ -1204,13 +1521,14 @@ class FlashController {
             }
 
             const faceValueCents = amountInt;
-            console.log('📤 eezi-voucher purchase:', { reference, amountInt, productCode });
+            const pricingCategory = isEeziPower ? 'eezi_power' : 'eezi_voucher';
+            console.log(`📤 ${isEeziPower ? 'eeziPower' : 'eezi-voucher'} purchase:`, { reference, amountInt, productCode });
 
             // ── Commission & fees ──
-            const commissionInfo = await supplierPricing.getCommissionInfo('FLASH', 'eezi_voucher');
+            const commissionInfo = await supplierPricing.getCommissionInfo('FLASH', pricingCategory);
             const commissionRatePct = commissionInfo.ratePct;
             const commissionCents = supplierPricing.computeCommissionFromInfo(faceValueCents, commissionInfo);
-            const { fees } = await supplierPricing.getFees('FLASH', 'eezi_voucher');
+            const { fees } = await supplierPricing.getFees('FLASH', pricingCategory);
             const generationFeeCents = Number(fees['token_generation'] || 0);
             const redemptionFeeCents = Number(fees['token_redemption'] || 0);
 
@@ -1406,7 +1724,7 @@ class FlashController {
                     await postCommissionVatAndLedger({
                         commissionCents,
                         supplierCode: 'FLASH',
-                        serviceType: 'eezi_voucher',
+                        serviceType: pricingCategory,
                         walletTransactionId: mainTransactionId,
                         sourceTransactionId: vasTransaction.transactionId,
                         idempotencyKey: reference,
@@ -1423,7 +1741,7 @@ class FlashController {
               await FlashTransaction.create({
                 transactionId: reference,
                 accountNumber,
-                serviceType: 'eezi_voucher',
+                serviceType: pricingCategory,
                 operation: 'purchase',
                 amount: amountInt / 100,
                 currency: 'ZAR',

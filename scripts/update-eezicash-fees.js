@@ -24,8 +24,8 @@ const {
 } = require('./db-connection-helper');
 
 const EEZICASH_FEES = [
-  { serviceType: 'eezi_voucher', feeType: 'token_generation',  amountCents: 50,  isVatExclusive: true },
-  { serviceType: 'eezi_voucher', feeType: 'token_redemption',  amountCents: 450, isVatExclusive: true },
+  // Cash-pin exchange fees (Flash Token endpoint 2.6) — VAT exclusive
+  // These apply ONLY to cash-out, NOT to eeziAirtime or eeziPower
   { serviceType: 'cash_out',    feeType: 'token_generation',  amountCents: 50,  isVatExclusive: true },
   { serviceType: 'cash_out',    feeType: 'token_redemption',  amountCents: 450, isVatExclusive: true },
 ];
@@ -46,6 +46,25 @@ async function updateEnvironment(getClient, envName) {
     }
     const flashSupplierId = suppliers[0].id;
     console.log(`  Flash supplier ID: ${flashSupplierId}`);
+
+    // Clean up stale eezi_voucher fee rows — these were incorrectly assigned
+    // to eeziAirtime in previous versions. Cash-pin fees only apply to cash_out.
+    const { rowCount: cleaned } = await client.query(
+      `DELETE FROM supplier_fee_schedule
+       WHERE "supplierId" = $1 AND "serviceType" = 'eezi_voucher'`,
+      [flashSupplierId]
+    );
+    if (cleaned > 0) {
+      console.log(`  CLEANUP: Removed ${cleaned} stale eezi_voucher fee rows from supplier_fee_schedule`);
+    }
+
+    const { rowCount: tierCleaned } = await client.query(
+      `DELETE FROM supplier_tier_fees
+       WHERE supplier_code = 'FLASH' AND service_type = 'eezi_voucher'`
+    );
+    if (tierCleaned > 0) {
+      console.log(`  CLEANUP: Removed ${tierCleaned} stale eezi_voucher rows from supplier_tier_fees`);
+    }
 
     let upserted = 0;
 

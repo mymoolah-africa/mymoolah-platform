@@ -41,6 +41,7 @@ import { CashoutEasyPayPage } from './pages/CashoutEasyPayPage';
 import { DigitalVouchersOverlay } from './components/overlays/digital-vouchers/DigitalVouchersOverlay';
 import { TapToAddMoneyOverlay } from './components/overlays/TapToAddMoneyOverlay';
 import { AddMoneyEftOverlay } from './components/overlays/AddMoneyEftOverlay';
+import { TopupVoucherOverlay } from './components/overlays/topup-voucher/TopupVoucherOverlay';
 
 // KYC Pages
 import { KYCDocumentsPage } from './pages/KYCDocumentsPage';
@@ -57,7 +58,7 @@ function AppContent() {
   const showBottomNavigation = !pagesWithoutNavigation.includes(location.pathname);
   
   // Pages that should show the top banner (main app pages)
-  const pagesWithTopBanner = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/referrals', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/cashout-easypay', '/vouchers-overlay', '/tap-to-add-money', '/add-money-eft'];
+  const pagesWithTopBanner = ['/dashboard', '/send-money', '/buy-usdc', '/transact', '/qr-payment', '/vouchers', '/profile', '/transactions', '/wallet-settings', '/request-money', '/services', '/support', '/feedback', '/electricity', '/bill-payments', '/referrals', '/airtime-data-overlay', '/electricity-overlay', '/bill-payment-overlay', '/flash-eezicash-overlay', '/mmcash-retail-overlay', '/atm-cashsend-overlay', '/topup-easypay', '/cashout-easypay', '/vouchers-overlay', '/tap-to-add-money', '/add-money-eft', '/topup-voucher'];
   const showTopBanner = pagesWithTopBanner.includes(location.pathname);
 
   return (
@@ -136,6 +137,7 @@ function AppContent() {
             <Route path="/vouchers-overlay" element={<ProtectedRoute><DigitalVouchersOverlay /></ProtectedRoute>} />
             <Route path="/tap-to-add-money" element={<ProtectedRoute><TapToAddMoneyOverlay /></ProtectedRoute>} />
             <Route path="/add-money-eft" element={<ProtectedRoute><AddMoneyEftOverlay /></ProtectedRoute>} />
+            <Route path="/topup-voucher" element={<ProtectedRoute><TopupVoucherOverlay /></ProtectedRoute>} />
             {/* Catch-all redirect */}
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

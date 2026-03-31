@@ -8,6 +8,8 @@ import { BeneficiaryModal } from './shared/BeneficiaryModal';
 import { ConfirmationModal } from './shared/ConfirmationModal';
 import { AmountInput } from './shared/AmountInput';
 import { ConfirmSheet } from './shared/ConfirmSheet';
+import { GlobalPinModal } from './shared/GlobalPinModal';
+import { apiService } from '../../services/apiService';
 import { 
   beneficiaryService, 
   electricityService, 
@@ -43,6 +45,7 @@ export function ElectricityOverlay() {
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [beneficiaryToRemove, setBeneficiaryToRemove] = useState<ElectricityBeneficiary | null>(null);
   const [beneficiaryIsMyMoolahUser, setBeneficiaryIsMyMoolahUser] = useState(false);
+  const [showEeziPowerModal, setShowEeziPowerModal] = useState(false);
 
   // Load beneficiaries on mount
   useEffect(() => {
@@ -532,6 +535,42 @@ export function ElectricityOverlay() {
             isLoading={loadingState === 'loading'}
             showFilters={false}
           />
+
+          {/* eeziPower — PIN electricity voucher, no meter number required */}
+          <div
+            onClick={() => setShowEeziPowerModal(true)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '14px 16px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              backgroundColor: '#ffffff',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              marginTop: '12px',
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.borderColor = '#f59e0b'; e.currentTarget.style.backgroundColor = '#fffbeb'; }}
+            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.backgroundColor = '#ffffff'; }}
+          >
+            <div className="flex items-center gap-3">
+              <div style={{ width: '40px', height: '40px', backgroundColor: '#f59e0b', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Zap style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+              </div>
+              <div>
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', color: '#1f2937', margin: 0 }}>
+                  eeziPower
+                </p>
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', margin: 0 }}>
+                  PIN electricity voucher · Flash · ZAR
+                </p>
+              </div>
+            </div>
+            <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#f59e0b', margin: 0 }}>
+              Buy PIN →
+            </p>
+          </div>
         </div>
       )}
 
@@ -691,6 +730,25 @@ export function ElectricityOverlay() {
         type="danger"
         beneficiaryName={beneficiaryToRemove?.name}
       />
+
+      {/* eeziPower PIN Modal — electricity voucher, no meter required */}
+      {showEeziPowerModal && (
+        <GlobalPinModal
+          products={[]}
+          selectedAccountId={null}
+          onClose={() => setShowEeziPowerModal(false)}
+          title="eeziPower"
+          subtitle="Buy PIN · Electricity voucher · Any meter"
+          currency="ZAR"
+          confirmHint="An electricity PIN voucher will be generated instantly. Use it to load prepaid electricity on any supported meter."
+          ownAmountMode={true}
+          minAmountCents={2000}
+          maxAmountCents={500000}
+          onPurchase={(amountCents, idempotencyKey) =>
+            apiService.purchaseEeziPower(amountCents, idempotencyKey)
+          }
+        />
+      )}
     </div>
   );
 }

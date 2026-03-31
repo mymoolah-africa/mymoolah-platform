@@ -29,9 +29,72 @@ const NORMALIZE_PROVIDER = {
   'global-data': 'Global'
 };
 
-function normalizeProvider(p) {
+// Electricity municipality/provider name normalization.
+// Flash and MobileMart may use slightly different names for the same municipality.
+// This map ensures products for the same municipality compete on commission.
+const NORMALIZE_ELECTRICITY_PROVIDER = {
+  // ESKOM variants
+  'eskom online': 'ESKOM', 'eskom central': 'ESKOM', 'eskom eastern': 'ESKOM',
+  'eskom north eastern': 'ESKOM', 'eskom north west': 'ESKOM',
+  'eskom northern': 'ESKOM', 'eskom southern': 'ESKOM',
+  'eskom soweto': 'ESKOM', 'eskom western': 'ESKOM',
+  // Municipality name variants (Flash vs MobileMart)
+  'blouberg municipality': 'Blouberg', 'blouberg': 'Blouberg',
+  'blue crane route': 'Blue Crane Route',
+  'breede valley municipality': 'Breede Valley', 'breede valley': 'Breede Valley',
+  'cape agulhas': 'Cape Agulhas', 'cape agulhas municipality': 'Cape Agulhas',
+  'cederberg municipality': 'Cederberg', 'cederberg': 'Cederberg',
+  'centlec municipality': 'Centlec', 'centlec': 'Centlec',
+  'city power': 'City Power', 'city of johannesburg': 'City Power',
+  'dipalaseng municipality': 'Dipaleseng', 'dipaleseng': 'Dipaleseng',
+  'drakenstein municipality': 'Drakenstein', 'drakenstein': 'Drakenstein',
+  'emfuleni municipality': 'Emfuleni', 'emfuleni': 'Emfuleni',
+  'ethekwini': 'eThekwini', 'ethekwini municipality': 'eThekwini',
+  'ekurhuleni': 'Ekurhuleni', 'ekurhuleni metro': 'Ekurhuleni',
+  'george municipality': 'George', 'george': 'George',
+  'johannesburg water': 'Johannesburg Water',
+  'knysna municipality': 'Knysna', 'knysna': 'Knysna',
+  'kouga municipality': 'Kouga', 'kouga': 'Kouga',
+  'midvaal utility': 'Midvaal', 'midvaal': 'Midvaal',
+  'mogale city municipality': 'Mogale City', 'mogale city': 'Mogale City', 'mogalecity': 'Mogale City',
+  'newcastle municipality': 'Newcastle', 'newcastle': 'Newcastle',
+  'oudtshoorn': 'Oudtshoorn', 'oudtshoorn municipality': 'Oudtshoorn',
+  'overstrand': 'Overstrand', 'overstrand municipality': 'Overstrand',
+  'polokwane': 'Polokwane', 'polokwane municipality': 'Polokwane',
+  'saldanha municipality': 'Saldanha Bay', 'saldanha bay': 'Saldanha Bay',
+  'solplaatje municipality': 'Sol Plaatje', 'solplaatjie': 'Sol Plaatje', 'sol plaatje': 'Sol Plaatje',
+  'stellenbosch municipality': 'Stellenbosch', 'stellenbosch': 'Stellenbosch',
+  'theewaterskloof municipality': 'Theewaterskloof', 'theewaterskloof': 'Theewaterskloof',
+  'tshwane': 'Tshwane', 'city of tshwane': 'Tshwane',
+  'umhlathuze municipality': 'uMhlathuze', 'umhlathuze': 'uMhlathuze',
+  'umlalazi local municipality': 'Umlalazi', 'umlalazi municipality': 'Umlalazi', 'umlalazi': 'Umlalazi',
+  'cape town': 'Cape Town', 'city of cape town': 'Cape Town',
+  'buffalo city': 'Buffalo City', 'buffalo city municipality': 'Buffalo City',
+  'nelson mandela bay': 'Nelson Mandela Bay', 'nelson mandela bay municipality': 'Nelson Mandela Bay',
+  'mangaung': 'Mangaung', 'mangaung municipality': 'Mangaung',
+  'msunduzi': 'Msunduzi', 'msunduzi municipality': 'Msunduzi',
+  'rustenburg': 'Rustenburg', 'rustenburg municipality': 'Rustenburg',
+  'mbombela': 'Mbombela', 'mbombela municipality': 'Mbombela',
+  'makana municipality': 'Makana', 'makana': 'Makana',
+  'maluti a phofung municipality': 'Maluti a Phofung', 'maluti a phofung': 'Maluti a Phofung',
+  'matjhabeng municipality': 'Matjhabeng', 'matjhabeng': 'Matjhabeng',
+  'nama khoi municipality': 'Nama Khoi', 'namakhoi': 'Nama Khoi',
+  'letsimeng municipality': 'Letsimeng', 'letsimeng': 'Letsimeng',
+  'swellendam municipality': 'Swellendam', 'swellendam': 'Swellendam',
+  'langeberg municipality': 'Langeberg', 'langeberg': 'Langeberg',
+  'kokstad': 'Kokstad', 'greater kokstad': 'Kokstad',
+  'maquassi hills': 'Maquassi Hills',
+  'dikgatlong': 'Dikgatlong',
+  'ditsobotla': 'Ditsobotla', 'ditsobotla municipality': 'Ditsobotla',
+};
+
+function normalizeProvider(p, vasType) {
   if (!p || typeof p !== 'string') return null;
   const key = p.trim().toLowerCase();
+
+  if (vasType === 'electricity') {
+    return NORMALIZE_ELECTRICITY_PROVIDER[key] || NORMALIZE_PROVIDER[key] || p.trim();
+  }
   return NORMALIZE_PROVIDER[key] || p.trim();
 }
 
@@ -77,11 +140,11 @@ async function refreshBestOffers() {
       const vasType = (v.vasType || '').toString().toLowerCase();
       if (!['airtime', 'data', 'voucher', 'electricity', 'bill_payment'].includes(vasType)) continue;
 
-      let provider = normalizeProvider(v.provider) || v.provider || 'Unknown';
+      let provider = normalizeProvider(v.provider, vasType) || v.provider || 'Unknown';
       if (vasType === 'bill_payment') {
         provider = (v.productName || v.provider || 'Unknown').toString().trim();
       } else if (vasType === 'electricity') {
-        provider = (normalizeProvider(v.provider) || v.provider || 'Unknown').toString().trim();
+        provider = (normalizeProvider(v.provider, vasType) || v.provider || 'Unknown').toString().trim();
       }
       if (provider.length > 100) provider = provider.slice(0, 100);
       const commission = parseFloat(v.commission) || 0;

@@ -30,6 +30,7 @@ const TIERS = [
 
   // Eezi vouchers
   { serviceType: 'eezi_voucher',    ratePct: 3.50,  commissionType: 'percentage', fixedAmountCents: 0 },
+  { serviceType: 'eezi_power',      ratePct: 1.00,  commissionType: 'percentage', fixedAmountCents: 0 },
 
   // Electricity
   { serviceType: 'electricity',     ratePct: 0.85,  commissionType: 'percentage', fixedAmountCents: 0 },
@@ -46,6 +47,11 @@ const TIERS = [
 
   // 1Voucher
   { serviceType: '1voucher',        ratePct: 1.00,  commissionType: 'percentage', fixedAmountCents: 0 },
+
+  // Voucher top-up (wallet deposit via 1Voucher/FNB/FlashPay)
+  // Flash charges 4% acceptance/redemption fee (excl VAT) — Mar 2026 contract
+  // This is a COST to MyMoolah, not a commission earned. Stored here for ledger posting.
+  { serviceType: 'voucher_topup',   ratePct: 4.00,  commissionType: 'percentage', fixedAmountCents: 0 },
 ];
 
 // Product-specific gift voucher overrides (need product ID lookup)

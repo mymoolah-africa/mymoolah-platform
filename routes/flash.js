@@ -82,6 +82,18 @@ router.post('/1voucher/redeem', flashController.redeem1Voucher.bind(flashControl
 router.post('/1voucher/refund', flashController.refund1Voucher.bind(flashController));
 
 // ========================================
+// VOUCHER TOP-UP ENDPOINTS (wallet deposit)
+// ========================================
+
+/**
+ * @route   POST /api/v1/flash/voucher-topup/redeem
+ * @desc    Redeem a 1Voucher/FNB/FlashPay voucher and credit user wallet (minus 4% fee)
+ * @access  Private (requires authentication)
+ * @body    { pin, voucherType? }
+ */
+router.post('/voucher-topup/redeem', auth, flashController.redeemVoucherTopup.bind(flashController));
+
+// ========================================
 // GIFT VOUCHER ENDPOINTS
 // ========================================
 

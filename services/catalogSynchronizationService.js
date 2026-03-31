@@ -461,8 +461,63 @@ class CatalogSynchronizationService {
       return { commission: 3.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 3.50 };
     }
 
-    // Electricity (~1.00% weighted average)
-    if (vasType === 'electricity') return { commission: 1.00, fixedFee: 0, commissionType: 'percentage', pricingRate: 1.00 };
+    // Electricity: per-municipality rates from Annexure A (1 Aug 2024)
+    // Decision rule: if percentage > 0.85%, MobileMart wins over Flash's flat 0.85%.
+    // Fee-per-unit and transaction-fee providers have low effective rates, so Flash wins.
+    if (vasType === 'electricity') {
+      const ELEC_PCT_RATES = {
+        // Ontec percentage providers
+        'bluswitch': 1.40, 'centlec municipality': 1.30, 'centlec': 1.30,
+        // Syntell percentage providers (all 1.10-1.50%)
+        'makana municipality': 1.50, 'letsimeng municipality': 1.50,
+        'swellendam municipality': 1.20, 'langeberg municipality': 1.50,
+        'maluti a phofung municipality': 1.50, 'matjhabeng municipality': 1.50,
+        'prince albert municipality': 1.15, 'emthanjeni municipality': 1.10,
+        'kammiesberg municipality': 1.50, 'nama khoi municipality': 1.50,
+        'energy intelligence consortium': 1.50,
+        // Syntell private utilities (all 1.50%)
+        'private utilities 1': 1.50, 'private utilities 2': 1.50,
+        'private utilities 4': 1.50, 'private utilities 5': 1.50,
+        'private utilities 7': 1.50, 'private utilities 8': 1.50,
+        'private utilities 9': 1.50,
+        // Blue Label percentage providers > 0.85%
+        'eskom': 0.90, 'eskom online': 0.90,
+        'bela bela': 1.10, 'blueberry': 1.10, 'brohamca': 1.00,
+        'citiq': 1.10, 'city power': 0.85,
+        'dikgatlong': 1.50, 'ditsobotla': 1.30,
+        'gasegonyana': 1.25, 'greater letaba': 1.15,
+        'harrygwala': 1.00, 'is metering': 1.10,
+        'jager tech': 1.10, 'jager jhb': 1.00,
+        'jb marks': 1.00, 'northwest 405': 1.00,
+        'kgetlengrivier': 1.00, 'kokstad': 1.50,
+        'koukamma': 1.00, 'langeberg': 1.00,
+        'letsemeng': 1.00, 'll energy': 1.00,
+        'lukhanji': 1.10, 'makana': 1.00,
+        'maluti a phofung': 1.00, 'mamusa': 1.10,
+        'maquassi hills': 1.50, 'mbombela': 1.19,
+        'meter man': 1.10, 'meter shack': 1.10, 'midcity': 1.10,
+        'mogalecity': 1.00, 'mogale city': 1.00,
+        'nationalrealestate': 1.15, 'ndlambe': 1.15,
+        'newcastle': 1.00, 'ngwathe': 1.00, 'ontec': 1.00,
+        'prepaidmeter': 1.20, 'prepaidworld': 1.20, 'proteameter': 1.20,
+        'richterveld': 1.00, 'rustenburg': 1.00,
+        'ruvick energy': 1.10, 'scigrow': 1.10, 'stsscaps': 1.20,
+        'thabachwe': 1.50, 'theprepaidteam': 1.10,
+        'tswaing': 1.10, 'umngeni': 1.00,
+        'urbanisecaps': 1.00, 'urbtec': 1.00,
+        'utilities world': 1.00, 'uvend': 1.10,
+      };
+
+      const pk = p.replace(/\s*(municipality|local|metro|metropolitan)\s*/gi, ' ').trim();
+      for (const [key, rate] of Object.entries(ELEC_PCT_RATES)) {
+        if (pk.includes(key) || p.includes(key)) {
+          return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
+        }
+      }
+
+      // Default for unknown or fee-based providers: low rate so Flash 0.85% wins
+      return { commission: 0.40, fixedFee: 0, commissionType: 'percentage', pricingRate: 0.40 };
+    }
 
     // Bill payment default R1.90 fixed
     if (vasType === 'bill_payment') return { commission: 0, fixedFee: 190, commissionType: 'fixed_amount', pricingRate: 0 };
