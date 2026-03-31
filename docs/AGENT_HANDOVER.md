@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 14:00  
-**Latest Feature**: **VAS Catalog & Frontend Fixes** — Fixed critical data flow gap: airtime/data overlay now reads from normalized `product_variants` (populated by daily sync) instead of empty legacy `vas_products`. Fixed ServicesPage broken navigation, replaced placeholder pages, removed 158KB dead frontend code (5 duplicate files). All VAS overlay catalog routes now use normalized schema.  
-**Document Version**: 2.47.0  
-**Session logs**: `docs/session_logs/2026-03-31_1400_vas-catalog-frontend-fixes.md`, `docs/session_logs/2026-03-31_1030_npm-audit-hardcoded-cleanup-production-readiness.md`  
+**Last Updated**: 2026-03-31 15:30  
+**Latest Feature**: **Airtime Variable-Amount Simplification** — Airtime products now display as ONE variable-amount card per network+supplier (enter R2-R999) instead of individual denomination cards. Data keeps bundle display. Fixed supplier color borders (green=Flash, blue=MobileMart) not appearing on staging (missing `VITE_NODE_ENV` build arg). Added `supplierCode` and `priceType` to backend catalog responses.  
+**Document Version**: 2.48.0  
+**Session logs**: `docs/session_logs/2026-03-31_1530_airtime-variable-simplification.md`, `docs/session_logs/2026-03-31_1400_vas-catalog-frontend-fixes.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
