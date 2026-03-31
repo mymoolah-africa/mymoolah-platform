@@ -1130,17 +1130,7 @@ export function AirtimeDataOverlay() {
           )}
           */}
 
-          {/* Tip: Add international recipients via + Add New Recipient → Global Airtime */}
-          <p style={{
-            fontFamily: 'Montserrat, sans-serif',
-            fontSize: '12px',
-            color: '#6b7280',
-            textAlign: 'center',
-            margin: '4px 0 0',
-            padding: '0 16px'
-          }}>
-            💡 To top up an international number directly, add a recipient and select <strong>Global Airtime</strong> as the network.
-          </p>
+          {/* Global Airtime tip hidden — endpoint not yet active */}
         </div>
       )}
 

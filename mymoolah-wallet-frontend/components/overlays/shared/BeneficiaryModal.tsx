@@ -332,16 +332,16 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
     }}>
       <Card style={{
         position: 'fixed',
-        top: '120px',
+        top: '50%',
         left: '50%',
-        transform: 'translateX(-50%)',
-        width: '100%',
+        transform: 'translate(-50%, -50%)',
+        width: 'calc(100% - 32px)',
         maxWidth: '375px',
-        maxHeight: 'calc(100vh - 120px - 60px)',
+        maxHeight: 'calc(100vh - 100px)',
         overflow: 'auto',
         backgroundColor: '#ffffff',
         border: 'none',
-        borderRadius: '0 0 16px 16px',
+        borderRadius: '16px',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.18)',
       }}>
         <CardHeader style={{
@@ -620,11 +620,9 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                       zIndex: 1000,
                       marginTop: '4px'
                     }}>
-                      {/* Local Networks Section */}
+                      {/* Local Networks */}
                       <div style={{
-                        padding: '8px 0',
-                        borderBottom: '1px solid #f1f5f9',
-                        marginBottom: '8px'
+                        padding: '8px 0'
                       }}>
                         <div style={{
                           fontSize: '12px',
@@ -689,63 +687,7 @@ export function BeneficiaryModal({ isOpen, onClose, type, onSuccess, onSave, edi
                         ))}
                       </div>
 
-                      {/* International Section */}
-                      <div style={{
-                        padding: '8px 0'
-                      }}>
-                        <div style={{
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          color: '#64748b',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
-                          marginBottom: '8px',
-                          padding: '0 12px'
-                        }}>
-                          International
-                        </div>
-                        <div
-                          onClick={() => {
-                            setFormData({ ...formData, network: 'global-airtime', identifier: '' });
-                            setShowNetworkDropdown(false);
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '12px',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            backgroundColor: formData.network === 'global-airtime' ? '#f1f5f9' : 'transparent'
-                          }}
-                          onMouseEnter={(e) => (e.target as HTMLElement).style.backgroundColor = '#f8fafc'}
-                          onMouseLeave={(e) => (e.target as HTMLElement).style.backgroundColor = formData.network === 'global-airtime' ? '#f1f5f9' : 'transparent'}
-                        >
-                          <div style={{
-                            width: '24px',
-                            height: '24px',
-                            backgroundColor: '#16a34a',
-                            borderRadius: '4px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '10px',
-                            fontWeight: 'bold',
-                            color: '#ffffff'
-                          }}>
-                            🌍
-                          </div>
-                          <span style={{
-                            fontWeight: '500',
-                            color: '#1f2937',
-                            fontFamily: 'Montserrat, sans-serif',
-                            fontSize: '14px'
-                          }}>
-                            Global Airtime
-                          </span>
-                        </div>
-                      </div>
+                      {/* International section hidden — Global Airtime endpoint not yet active */}
                     </div>
                   )}
                 </div>
