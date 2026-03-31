@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-30 18:30  
-**Latest Feature**: **PayShap Deposit Flow Visualization + Skills Rewrite** — Interactive HTML diagram of full PayShap deposit flow (12 steps, click-to-expand, color-coded actors). SBSA sandbox callbacks confirmed (6/6). Production callback URL registered. Pain.001 v3 passed SBSA SSVS validator. SFTP channel enablement requested. 4 agent skills rewritten for Cursor IDE canvas.  
-**Document Version**: 2.45.0  
-**Session logs**: `docs/session_logs/2026-03-30_1030_ussd-fix-kyc-ui-payshap-inbound.md`, `docs/session_logs/2026-03-28_1600_kyc-tier-transaction-limits.md`  
+**Last Updated**: 2026-03-31 10:30  
+**Latest Feature**: **NPM Audit Fix + Hardcoded Data Cleanup + Production Readiness** — Fixed 16 npm vulnerabilities (25→9, zero critical/high), removed all hardcoded PII from codebase (14 files), fixed production env vars (GCS perms, encryption keys, statement poller), aligned voucher schema, upgraded nodemailer 7→8. Deployed staging (00306-m8s) and production (00053-29p) as tag `20260331_v2`.  
+**Document Version**: 2.46.0  
+**Session logs**: `docs/session_logs/2026-03-31_1030_npm-audit-hardcoded-cleanup-production-readiness.md`, `docs/session_logs/2026-03-30_1030_ussd-fix-kyc-ui-payshap-inbound.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -664,18 +664,17 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — PayShap RTP Fixes + Creditor Name + PASA TPPP Withdrawal  
-**Last Session**: 2026-03-25 — Multiple RTP Pain.013 fixes; creditor name in payment reference; PASA response for Shree
+**Session Status**: ✅ **COMPLETE** — NPM Audit Fix + Hardcoded Cleanup + Production Readiness  
+**Last Session**: 2026-03-31 — Security hardening, PII removal, production env fixes, deployments
 
-### **Most Recent Work (2026-03-25)**
-- **PayShap RTP Pain.013 fixes**: Fixed EDRIL rejection (CdtrRefInf.Ref 35-char limit), Ustrd rejection (removed — SBSA only accepts Strd), DuePyblAmt (must be net amount, not equal to Amt), PADCL decline notification priority over EBONF.
-- **Creditor name visibility (CONFIRMED)**: SBSA PayShap directory overrides `Cdtr.Nm` with "MYMOOLAH (PTY) LTD". Fix: wallet holder name prepended to `CdtrRefInf.Ref` (payment reference). Capitec now shows "Andre Botes: MyMoolah RTP Test" — confirmed via Capitec banking app screenshot.
-- **Per-bank account normalization**: Leading zeros stripped when exceeding bank's max length (ABSA/Capitec: 10 digits, SBSA/FNB: 11). Applied in controller, service, and frontend.
-- **PASA TPPP withdrawal response**: Drafted email for Shree + supporting flow diagrams (MD, HTML, PDF). Cash-out = Flash eeziCash voucher resale (VAS), not banking withdrawal.
+### **Most Recent Work (2026-03-31)**
+- **NPM audit remediation**: Fixed 16 of 25 vulnerabilities (1 critical basic-ftp, 6 high including sequelize SQL injection, axios DoS, path-to-regexp/minimatch/picomatch ReDoS). Upgraded nodemailer 7→8 (SMTP injection fix). Remaining 9 (5 low, 4 moderate) are in transitive deps of @google-cloud/storage and langchain — cannot safely fix without breaking those libraries.
+- **Hardcoded PII removal**: Full codebase sweep — removed hardcoded phone numbers, userId===1 KYC bypass, real PII in OCR examples, admin portal credentials, personal emails in migration defaults. 14 files modified.
+- **Production readiness fixes**: Granted GCS objectViewer to production SA, set SBSA_STATEMENT_POLLER_ENABLED=true, linked FIELD_ENCRYPTION_KEY and FIELD_HMAC_KEY from Secret Manager, aligned voucher schema (voucherId→voucherCode, amount→originalAmount, expiryDate→expiresAt).
+- **Deployments**: Staging (00306-m8s) and production (00053-29p) deployed as tag `20260331_v2`. Both confirmed serving 100% traffic.
 
-### **Previous Work (2026-03-24)**
-- **SBSA SOAP credit notification handler**: XML parser for H2H real-time deposits.
-- **EasyPay TPPP legal draft**: Email for Nkululeko clarifying single-creditor model.
+### **Previous Work (2026-03-25)**
+- **PayShap RTP Pain.013 fixes**: Fixed EDRIL rejection (CdtrRefInf.Ref 35-char limit), Ustrd rejection (removed), DuePyblAmt (net amount), PADCL priority. Creditor name in CdtrRefInf.Ref. Per-bank account normalization.
 
 ### **Current State**
 - SFTP Gateway: `34.35.137.166`, **port 5022**, admin `https://34.35.137.166` — ✅ Running
@@ -688,10 +687,12 @@ You're part of a **banking-grade software system** where:
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
 2. Read this file and 2–3 recent session logs
-3. Do NOT reactivate Peach Payments without explicit approval from Andre
-4. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-5. `DuePyblAmt` must always be less than `Amt` — SBSA rejects equal values
-6. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
+3. **PRIMARY TASK**: VAS products on staging and production (MobileMart + Flash)
+4. Do NOT reactivate Peach Payments without explicit approval from Andre
+5. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+6. PayShap production callback is an SBSA-side issue (BCB/CIB market segment) — do NOT try to fix in code
+7. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
+8. Confirm with user: "✅ Onboarding complete. Ready to work. What would you like me to do?"
 
 ---
 
@@ -699,6 +700,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 31 (10:30) | **NPM audit fix + hardcoded cleanup + production readiness**: Fixed 16/25 npm vulnerabilities (zero critical/high remaining). Removed all hardcoded PII (14 files). Fixed production GCS perms, encryption keys, statement poller. Voucher schema aligned. Nodemailer 7→8. Deployed staging (00306-m8s) + production (00053-29p) as `20260331_v2`. Session log: `docs/session_logs/2026-03-31_1030_npm-audit-hardcoded-cleanup-production-readiness.md` |
 | Mar 25 (14:00) | **PayShap RTP fixes + creditor name + PASA TPPP withdrawal**: Fixed EDRIL, Ustrd, DuePyblAmt, PADCL priority. Creditor name in CdtrRefInf.Ref — Capitec confirms "Andre Botes: MyMoolah RTP Test". Per-bank account normalization. PASA withdrawal response for Shree (email + flow diagrams). Session log: `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md` |
 | Mar 24 (19:00) | **SBSA H2H documentation sync**: Updated all docs with confirmed status — Open Internet (not VPN), PGP not required, file names/directories confirmed, SFTP username OWN11, MT942 every 15 min. Added SBSA SOAP CHANGELOG entry. Cleaned up duplicate priorities. |
 | Mar 24 (15:30) | **EasyPay TPPP / NPS legal draft**: Email for Nkululeko clarifying single-creditor collection model vs multi-layer aggregation concern; sponsor bank + downstream scope. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md` |
@@ -737,7 +739,7 @@ You're part of a **banking-grade software system** where:
 3. **SBSA H2H SFTP Channel** — Melanie Block enabling SFTP channel. Pain.001 v3 file passed SSVS validator. Test file with valid beneficiaries uploaded to GCS outbox. Awaiting channel activation to test file pickup and Pain.002 return.
 4. **EasyPay legal follow-up** — Await Nkululeko / EasyPay legal response to TPPP/NPS positioning email (sent/drafted 2026-03-24). Offer Standard Bank sponsor letter or PASA application pack if requested. Session log: `docs/session_logs/2026-03-24_1530_easypay-tppp-legal-response-draft.md`.
 5. **H2H Statements/Payments** — Statement format (MT940 + MT942) and delivery schedule confirmed. Awaiting Melissa sign-on and SBSA connectivity test.
-6. **Field encryption: Cloud Run env vars** — Confirm `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` are set in Cloud Run service env vars for both Staging and Production.
+6. ~~**Field encryption: Cloud Run env vars**~~ — ✅ DONE (2026-03-31). `FIELD_ENCRYPTION_KEY` and `FIELD_HMAC_KEY` linked from Secret Manager in production Cloud Run.
 7. **MobileMart + Flash SSH keys** — Awaiting their public keys to add to SFTP Gateway user profiles (`mobilemart` and `flash` users).
 8. ~~**Capitec RTP EBONF**~~ — ✅ DONE. Handled with professional daily-limit message. EBONF failures are SBSA-side routing issue (daily limit), not a code bug.
 9. **PayShap RTP — PBAC fallback path testing** — Need a payer with NO registered PayShap proxy to trigger `EPDNF` and verify `[RTP-RETRY-PBAC]` logs + account-based retry succeeds.
