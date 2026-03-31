@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 21:30  
-**Latest Feature**: **Electricity eeziPower + Commission Optimization** — Added eeziPower PIN electricity voucher card to Electricity Overlay. Updated MobileMart electricity commission rates with 80+ per-municipality rates from Annexure A. Added provider name normalization for Flash/MobileMart electricity products to compete correctly in best-offer selection.  
-**Document Version**: 2.53.0  
-**Session logs**: `docs/session_logs/2026-03-31_2130_electricity-eezi-power-commission-optimization.md`  
+**Last Updated**: 2026-03-31 22:00  
+**Latest Feature**: **Voucher Top-Up Wallet Deposit** — Users can redeem a 1Voucher, FNB Voucher, or Flash Pay reference to deposit funds into their wallet. Flash charges 4% fee (excl VAT, no MyMoolah markup). Full backend flow: Flash API call, wallet credit, fee deduction, ledger posting, audit trail. Frontend: TopupVoucherOverlay with type selection, PIN entry, fee display. Migration + commission tiers applied to UAT. Also cleaned up stale eeziCash fee attribution.  
+**Document Version**: 2.54.0  
+**Session logs**: `docs/session_logs/2026-03-31_2200_voucher-topup-eezicash-cleanup.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -664,16 +664,20 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Data UI Redesign, Failover Fixes & Deploy Env Persistence  
-**Last Session**: 2026-03-31 19:30 — Data UI redesign, failover constructor fix, MM_DEPLOYMENT_ENV persistence, Vodacom PNG logo
+**Session Status**: ✅ **COMPLETE** — Voucher Top-Up + eeziCash Fee Cleanup  
+**Last Session**: 2026-03-31 22:00 — Voucher top-up wallet deposit, eeziCash fee cleanup, electricity eeziPower commission
 
-### **Most Recent Work (2026-03-31 19:30)**
-- **MM_DEPLOYMENT_ENV persistence**: Fixed critical bug where every staging redeployment wiped the env var (deploy script uses `--set-env-vars` which replaces ALL vars). Added `MM_DEPLOYMENT_ENV=staging` to `build-push-deploy-staging.sh` and `MM_DEPLOYMENT_ENV=production` to `build-push-deploy-production.sh`.
-- **Supplier failover constructor fix**: Fixed `SupplierComparisonService is not a constructor` crash in failover path at `overlayServices.js:1193`. Was using destructured import `{ SupplierComparisonService }` but module exports class directly.
-- **Data products UI redesign**: Each curated data bundle renders as individual row with category icon (WhatsApp/TikTok/Facebook/YouTube/generic), bundle name, data size badge, validity period, and price. New `NetworkIcons.tsx` component with SVG icons for all networks and categories.
-- **Real Vodacom PNG logo**: Replaced hand-drawn SVG with actual brand PNG asset imported as Vite module from `assets/vodacom-logo.png`.
-- **Beneficiary display name fix**: Frontend was showing "Airtime - Vodacom" instead of user-entered name. Fixed in `AirtimeDataOverlay.tsx` to prioritize `b.name` over auto-generated `acc.label`.
-- **Purchase response scoping fix**: Moved `failoverUsed`/`originalSupplier` declarations from inner to outer scope to prevent `ReferenceError`.
+### **Most Recent Work (2026-03-31 22:00)**
+- **Voucher top-up wallet deposit**: New Flash integration — users redeem 1Voucher/FNB/FlashPay PIN to deposit into wallet. Backend `redeemVoucherTopup()` handles full flow: Flash API call, 4% fee deduction, wallet credit, VasTransaction + Transaction records, FlashTransaction audit, ledger posting. Auth-protected route: `POST /api/v1/flash/voucher-topup/redeem`. Frontend: `TopupVoucherOverlay.tsx` (type selection, PIN entry, fee display, success/error). Card activated on TransactPage (was "Coming Soon").
+- **eeziCash fee cleanup**: Removed stale `eezi_voucher` fee rows from `supplier_fee_schedule` (2 rows) and `supplier_tier_fees` (4 rows). Token gen/redemption fees now correctly attributed to `cash_out` only.
+- **Migration**: `20260331_01_add_voucher_topup_to_vas_type_enum.js` — adds `voucher_topup` to both vasType ENUMs. Applied to UAT. Staging/production pending.
+- **Commission tier**: Added `voucher_topup` at 4% to `update-flash-commission-tiers.js`.
+
+### **Previous Work (2026-03-31 19:30)**
+- **MM_DEPLOYMENT_ENV persistence**: Fixed critical bug where every staging redeployment wiped the env var. Added to deploy scripts.
+- **Supplier failover constructor fix**: Fixed `SupplierComparisonService is not a constructor` crash.
+- **Data products UI redesign**: Individual rows with category/network icons, bundle names, data sizes.
+- **Real Vodacom PNG logo**: Replaced hand-drawn SVG with actual brand PNG asset.
 
 ### **Previous Work (2026-03-31 18:00)**
 - **Flash contractual commission rates**: Replaced hardcoded 2.50% with actual rates from Flash contract. Created `getFlashContractualCommission()` lookup function.
