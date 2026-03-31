@@ -166,7 +166,9 @@ export function AirtimeDataOverlay() {
             if (seenKey.has(key)) return;
             seenKey.add(key);
             const networkLabel = (acc.metadata?.network || acc.network || b.metadata?.network || network) as string;
-            const displayName = acc.metadata?.label || acc.label || (networkLabel ? `${b.name} (${networkLabel})` : b.name);
+            const displayName = b.name
+              ? (networkLabel ? `${b.name} (${networkLabel})` : b.name)
+              : (acc.metadata?.label || acc.label || 'Recipient');
             expanded.push({
               id: `${b.id}-${acc.id}`,
               name: displayName,
