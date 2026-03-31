@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 23:30  
-**Latest Feature**: **Biller Sync + Catalog Stale Cleanup + Category Fix** — Fixed sync script JSON bug (0 products synced → 802 created). Added multi-env targeting (`--staging`/`--production`/`--uat`), `--billers-only` filter, stale product deactivation (soft-disable) to both manual script and daily 02:00 cron. Fixed bill category click (backend keyword mapping + frontend state). Fixed duplicate VasTransaction crash. 1,205 production billers synced to staging. Production users launching tomorrow — voucher overlay is last fix.  
-**Document Version**: 2.56.0  
-**Session logs**: `docs/session_logs/2026-03-31_2330_biller-sync-catalog-category-fix.md`  
+**Last Updated**: 2026-03-31 23:59  
+**Latest Feature**: **Voucher Overlay Overhaul** — Full audit and rebuild of voucher overlay. Added dedicated `GET /overlay/vouchers/catalog` backend route with commission-based Flash/MobileMart deduplication (Flash wins 13/17 overlaps), alphabetical sorting, variable-value vs fixed-denomination detection. Simplified frontend from ~1,770 lines to ~700 lines. Removed ~300 lines of client-side enrichment from apiService.ts (now server-side). Added `--vouchers-only` sync script flag. Deleted legacy duplicate components. Registered inline overlay purchase logic as tech debt. Purchase stays on `productPurchaseService.js` (banking-grade: ACID, idempotency, circuit breaker).  
+**Document Version**: 2.57.0  
+**Session logs**: `docs/session_logs/2026-03-31_2359_voucher-overlay-overhaul.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -664,16 +664,21 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Biller Sync + Catalog Stale Cleanup + Category Fix  
-**Last Session**: 2026-03-31 23:30 — Biller sync script improvements, stale product cleanup, bill category fix, staging sync complete
+**Session Status**: ✅ **COMPLETE** — Voucher Overlay Overhaul  
+**Last Session**: 2026-03-31 23:59 — Full voucher overlay audit and rebuild
 
-### **Most Recent Work (2026-03-31 23:30)**
+### **Most Recent Work (2026-03-31 23:59)**
+- **Voucher overlay overhaul**: Full audit and rebuild of the last overlay before production launch.
+- **Backend catalog route**: Added `GET /api/v1/overlay/vouchers/catalog` with commission-based Flash/MobileMart deduplication (Flash wins 13/17 overlaps), alphabetical sorting, variable-value vs fixed-denomination detection, category filtering.
+- **Frontend simplified**: Removed ~300 lines of client-side enrichment from `apiService.ts` (now server-side). Rebuilt all 4 overlay components (~1,770 → ~700 lines). Fixed `featured` vs favorites conflation. Removed console logging, dead code, unused imports.
+- **Sync script**: Added `--vouchers-only` flag to `sync-mobilemart-products.js`.
+- **Tech debt registered**: Flagged inline purchase logic in airtime/electricity/biller overlays (~1,200 lines) as architectural debt. Voucher purchase correctly uses `productPurchaseService.js` (banking-grade pattern).
+- **Legacy cleanup**: Deleted 4 duplicate files from `components/digital-vouchers/`.
+
+### **Previous Work (2026-03-31 23:30)**
 - **Sync script fixed + extended**: Fixed JSON bug that caused all product INSERTs to fail. Added `--staging`/`--production`/`--uat` target flags, `--billers-only` filter, 5-second production safety pause. Renamed to `scripts/sync-mobilemart-products.js`.
-- **Stale product deactivation**: Products the API no longer returns are soft-disabled (`status → 'inactive'`). Added to both manual sync script and daily 02:00 cron (`catalogSynchronizationService.js`) for MobileMart and Flash. Safety guard: skips cleanup if 0 products synced.
-- **Bill category click fixed**: Backend `mapBillerCategory()` maps MobileMart's `contentCreator` to 6 frontend category IDs via keyword matching. Frontend `selectedCategory` state fixes results display. Categories now work: Insurance, Entertainment, Education, Municipal, Telecoms, Retail Credit.
-- **Duplicate declaration crash fixed**: `VasTransaction` declared twice in same `bills/pay` handler scope — merged into single declaration.
-- **Staging sync successful**: 1,205 production billers synced to staging (802 created, 403 updated, 0 failed).
-- **KYC OCR audited**: Confirmed `gpt-4o` correctly configured (line 719 of kycService.js). Awaiting André's test logs.
+- **Bill category click fixed**: Backend `mapBillerCategory()` maps MobileMart's `contentCreator` to 6 frontend category IDs via keyword matching.
+- **Staging sync successful**: 1,205 production billers synced to staging.
 
 ### **Previous Work (2026-03-31 23:00)**
 - **Biller payments hardening**: Full 12-item audit — idempotency, simulation hard-block, input validation, catalog-first lookup, beneficiary edit/delete, Copy/Share buttons, KYC gate fix.
@@ -715,17 +720,19 @@ You're part of a **banking-grade software system** where:
 
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
-2. Read this file and 2–3 recent session logs (especially `2026-03-31_2330_biller-sync-catalog-category-fix.md`)
-3. **PRIORITY: Voucher overlay service** — Last overlay to fix before production users launch tomorrow. André will hand over this task.
-4. **KYC OCR debugging** — André will test KYC tomorrow and provide backend logs. Look for `OpenAI OCR attempt` log lines in Codespaces terminal.
-5. **Production biller sync** — Run `node scripts/sync-mobilemart-products.js --production --billers-only` to populate production DB
-6. **Add real PNG logos**: MTN, CellC, Telkom need real PNG brand assets (same pattern as Vodacom — import from `assets/` folder)
-7. **Test failover end-to-end**: After backend redeployment, verify MobileMart error 1002 correctly triggers Flash failover
-8. **Production featured filter**: Best-offers cache path does not filter by `featured`. Add before production goes live with curated lists
-9. Do NOT reactivate Peach Payments without explicit approval from André
-10. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-11. PayShap production callback is an SBSA-side issue (BCB/CIB market segment) — do NOT try to fix in code
-12. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
+2. Read this file and 2–3 recent session logs (especially `2026-03-31_2359_voucher-overlay-overhaul.md`)
+3. **Test voucher overlay in Codespaces**: Pull, build frontend, restart, navigate to /vouchers-overlay. Verify catalog loads, search works, purchase flow works.
+4. **Sync vouchers to staging**: `node scripts/sync-mobilemart-products.js --vouchers-only --staging`
+5. **Sync vouchers to production**: `node scripts/sync-mobilemart-products.js --vouchers-only --production`
+6. **Deploy**: `./scripts/build-push-deploy-staging.sh` then `./scripts/build-push-deploy-production.sh`
+7. **KYC OCR debugging** — André will test KYC and provide backend logs. Look for `OpenAI OCR attempt` log lines.
+8. **Production biller sync** — Run `node scripts/sync-mobilemart-products.js --production --billers-only` to populate production DB
+9. **Add real PNG logos**: MTN, CellC, Telkom need real PNG brand assets (same pattern as Vodacom — import from `assets/` folder)
+10. **Test failover end-to-end**: After backend redeployment, verify MobileMart error 1002 correctly triggers Flash failover
+11. **Future refactor (tech debt)**: Extract airtime/electricity/biller purchase logic from overlayServices.js into service classes (~9-13 hours, 1-2 sessions)
+12. Do NOT reactivate Peach Payments without explicit approval from André
+13. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+14. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
 
 ---
 
