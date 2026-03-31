@@ -35,6 +35,7 @@ import { apiService } from '../../services/apiService';
 import { beneficiaryService as centralizedBeneficiaryService } from '../../services/beneficiaryService';
 import { unifiedBeneficiaryService } from '../../services/unifiedBeneficiaryService';
 import { GlobalPinModal } from './shared/GlobalPinModal';
+import { getNetworkIcon, getCategoryIcon } from '../ui/NetworkIcons';
 
 interface AirtimeDataBeneficiary extends Beneficiary {
   // Uses accountType from base Beneficiary interface
@@ -1273,8 +1274,8 @@ export function AirtimeDataOverlay() {
                       onMouseOut={(e) => { if (!isExpanded) e.currentTarget.style.backgroundColor = '#ffffff'; }}
                     >
                       <div className="flex items-center gap-3">
-                        <div style={{ width: '40px', height: '40px', backgroundColor: '#86BE41', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Smartphone style={{ width: '20px', height: '20px', color: '#ffffff' }} />
+                        <div style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {getNetworkIcon((product as any).network || (product as any).provider || '', 40)}
                         </div>
                         <div>
                           <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
@@ -1358,139 +1359,149 @@ export function AirtimeDataOverlay() {
             </CardContent>
           </Card>
 
-          {/* Data Products — only render when there are data products for this beneficiary */}
-          {catalog.products.some(p => p.type === 'data') && (
+          {/* Data Products — individual rows with product names, icons, validity */}
+          {catalog.products.some(p => p.type === 'data') && (() => {
+            const dataProducts = catalog.products.filter(p => p.type === 'data');
+            const network = (dataProducts[0] as any)?.network || (dataProducts[0] as any)?.provider || '';
+            return (
           <Card style={{
             backgroundColor: '#ffffff',
             border: '1px solid #e2e8f0',
-            borderRadius: '12px'
+            borderRadius: '16px',
+            overflow: 'hidden'
           }}>
-            <CardHeader>
-              <CardTitle style={{
-                fontFamily: 'Montserrat, sans-serif',
-                fontSize: '16px',
-                fontWeight: '700',
-                color: '#1f2937'
-              }}>
-                Data Products
-              </CardTitle>
+            <CardHeader style={{ padding: '16px 16px 8px', display: 'flex', flexDirection: 'row', alignItems: 'center', gap: '12px' }}>
+              <div style={{ flexShrink: 0 }}>
+                {getNetworkIcon(network, 36)}
+              </div>
+              <div>
+                <CardTitle style={{
+                  fontFamily: 'Montserrat, sans-serif',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  color: '#1f2937'
+                }}>
+                  {network} Data Bundles
+                </CardTitle>
+                <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginTop: '2px' }}>
+                  {dataProducts.length} bundles available
+                </p>
+              </div>
             </CardHeader>
             
-            <CardContent>
-              <div className="space-y-3">
-                {catalog.products.filter(product => product.type === 'data').map((product, index) => {
+            <CardContent style={{ padding: '8px 12px 12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                {dataProducts.map((product, index) => {
+                  const p = product as any;
+                  const bundleLabel = p.bundleLabel || p.name || 'Data Bundle';
+                  const bundleCategory = p.bundleCategory || 'data';
+                  const dataSize = p.size || '';
+                  const validity = p.validity || '30 Days';
                   const supplierKey = (product.supplierCode || '').toUpperCase();
-                  const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? '1px solid #e2e8f0') : '1px solid #e2e8f0';
-                  const denoms: number[] = Array.isArray((product as any).denominations) ? (product as any).denominations : [];
-                  const isProductVariable: boolean = (product as any).isVariable === true;
-                  const isExpanded = expandedProductId === product.id;
-                  const hasMultipleDenoms = denoms.length > 1;
-                  const needsPicker = isProductVariable || hasMultipleDenoms;
-                  const minR = ((product as any).minAmount || 0) / 100;
-                  const maxR = ((product as any).maxAmount || 1000) / 100;
-                  const inlineAmountValid = parseFloat(inlineAmountInput) >= minR && parseFloat(inlineAmountInput) <= maxR;
+                  const supplierBorder = isUatOrStaging ? (SUPPLIER_BORDER[supplierKey] ?? 'transparent') : 'transparent';
+
                   return (
-                  <div key={`${product.id}_${index}`} style={{ borderRadius: '12px', overflow: 'hidden', border: supplierBorder }}>
-                    <div
-                      onClick={() => handleProductSelect(product)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '12px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        backgroundColor: isExpanded ? '#eff6ff' : '#ffffff',
-                      }}
-                      onMouseOver={(e) => { if (!isExpanded) e.currentTarget.style.backgroundColor = '#f9fafb'; }}
-                      onMouseOut={(e) => { if (!isExpanded) e.currentTarget.style.backgroundColor = '#ffffff'; }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div style={{ width: '40px', height: '40px', backgroundColor: '#2D8CCA', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Wifi style={{ width: '20px', height: '20px', color: '#ffffff' }} />
-                        </div>
-                        <div>
-                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '500', color: '#1f2937' }}>
-                            {product.name}
-                          </p>
-                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280' }}>
-                            {isProductVariable
-                              ? `R${minR.toFixed(0)}–R${maxR.toFixed(0)} (enter amount)`
-                              : hasMultipleDenoms
-                                ? `${denoms.length} bundles available`
-                                : product.size}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        {needsPicker ? (
-                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', color: '#2D8CCA' }}>
-                            {isExpanded ? 'Close ▲' : 'Select ▼'}
-                          </p>
-                        ) : (
-                          <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '16px', fontWeight: '700', color: '#1f2937' }}>
-                            {formatCurrency(product.price)}
-                          </p>
+                  <div
+                    key={`${product.id}_data_${index}`}
+                    onClick={() => handleProductSelect(product)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '10px 12px',
+                      borderRadius: '12px',
+                      border: `1px solid #f0f0f0`,
+                      borderLeft: `3px solid ${supplierBorder === 'transparent' ? '#e2e8f0' : supplierBorder.replace('2px solid ', '')}`,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      backgroundColor: '#ffffff',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#f8fafc';
+                      e.currentTarget.style.transform = 'translateX(2px)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#ffffff';
+                      e.currentTarget.style.transform = 'translateX(0)';
+                    }}
+                  >
+                    {/* Category Icon */}
+                    <div style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '10px',
+                      backgroundColor: bundleCategory === 'whatsapp' ? '#e7fce7'
+                        : bundleCategory === 'tiktok' ? '#f0f0f0'
+                        : bundleCategory === 'facebook' ? '#e8f0fe'
+                        : bundleCategory === 'youtube' ? '#fee8e8'
+                        : bundleCategory === 'lte' ? '#e0f2fe'
+                        : bundleCategory === 'allnetwork' ? '#ede9fe'
+                        : '#f0f7ff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}>
+                      {getCategoryIcon(bundleCategory, 20)}
+                    </div>
+
+                    {/* Bundle Details */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: '#1f2937',
+                        lineHeight: '1.3',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}>
+                        {bundleLabel}
+                      </p>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px' }}>
+                        {dataSize && (
+                          <span style={{
+                            fontFamily: 'Montserrat, sans-serif',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#2D8CCA',
+                            backgroundColor: '#eff6ff',
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                          }}>
+                            {dataSize}
+                          </span>
                         )}
-                        {product.isBestDeal && (
-                          <span style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '10px', color: '#16a34a', fontWeight: '500' }}>Best Deal</span>
-                        )}
+                        <span style={{
+                          fontFamily: 'Montserrat, sans-serif',
+                          fontSize: '11px',
+                          color: '#9ca3af',
+                        }}>
+                          {validity}
+                        </span>
                       </div>
                     </div>
-                    {/* Inline variable amount input */}
-                    {isExpanded && isProductVariable && (
-                      <div style={{ padding: '8px 12px 12px', backgroundColor: '#eff6ff', borderTop: '1px solid #dbeafe' }}>
-                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
-                          Enter amount (R{minR.toFixed(0)}–R{maxR.toFixed(0)}):
-                        </p>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <input
-                            type="text"
-                            inputMode="decimal"
-                            placeholder={`R${minR.toFixed(0)}–R${maxR.toFixed(0)}`}
-                            value={inlineAmountInput}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => setInlineAmountInput(e.target.value.replace(/[^\d.]/g, ''))}
-                            style={{ flex: 1, padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontFamily: 'Montserrat, sans-serif', fontSize: '14px', color: '#1f2937' }}
-                          />
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); handleInlineAmountConfirm(product); }}
-                            disabled={!inlineAmountValid}
-                            style={{ padding: '8px 16px', backgroundColor: inlineAmountValid ? '#2D8CCA' : '#9ca3af', color: '#ffffff', border: 'none', borderRadius: '8px', fontFamily: 'Montserrat, sans-serif', fontSize: '14px', fontWeight: '600', cursor: inlineAmountValid ? 'pointer' : 'not-allowed' }}
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {/* Inline denomination picker */}
-                    {isExpanded && hasMultipleDenoms && !isProductVariable && (
-                      <div style={{ padding: '8px 12px 12px', backgroundColor: '#eff6ff', borderTop: '1px solid #dbeafe' }}>
-                        <p style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>Select bundle:</p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {denoms.map((denom: number) => (
-                            <button
-                              key={denom}
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); handleProductSelect(product, denom); }}
-                              style={{ fontFamily: 'Montserrat, sans-serif', fontSize: '13px', fontWeight: '600', padding: '8px 14px', borderRadius: '8px', border: '2px solid #2D8CCA', background: '#ffffff', color: '#1f2937', cursor: 'pointer', transition: 'all 0.15s ease' }}
-                              onMouseOver={(e) => { e.currentTarget.style.background = '#2D8CCA'; e.currentTarget.style.color = '#fff'; }}
-                              onMouseOut={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.color = '#1f2937'; }}
-                            >
-                              {formatCurrency(denom / 100)}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+
+                    {/* Price */}
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <p style={{
+                        fontFamily: 'Montserrat, sans-serif',
+                        fontSize: '15px',
+                        fontWeight: '700',
+                        color: '#1f2937',
+                      }}>
+                        {formatCurrency(product.price)}
+                      </p>
+                    </div>
                   </div>
                   );
                 })}
               </div>
             </CardContent>
           </Card>
-          )}
+            );
+          })()}
 
           {/* Navigation Buttons */}
           <div className="flex gap-3">

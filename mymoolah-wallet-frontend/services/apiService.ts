@@ -773,6 +773,48 @@ class ApiService {
     }
   }
 
+  // ─── Data bundle label extraction ────────────────────────────────────────────
+  // Parses MobileMart product names like "Vodacom Daily WhatsApp 250MB R3"
+  // into structured { name, dataSize, validity, category } for the UI.
+  private extractDataBundleLabel(bundleName: string, network: string): {
+    name: string; dataSize: string; validity: string; category: string;
+  } {
+    const n = bundleName || '';
+    // Strip network prefix and trailing price (e.g. "R3", "R5.50")
+    const stripped = n
+      .replace(/^(Vodacom|MTN|CellC|Cell\s*C|Telkom)\s*/i, '')
+      .replace(/\s*R\d+(\.\d+)?$/i, '')
+      .trim();
+
+    // Extract data size (e.g. "250MB", "1GB", "1.5GB")
+    const sizeMatch = stripped.match(/(\d+(?:\.\d+)?)\s*(MB|GB|TB)/i);
+    const dataSize = sizeMatch ? `${sizeMatch[1]}${sizeMatch[2].toUpperCase()}` : '';
+
+    // Extract validity
+    let validity = '30 Days';
+    const lower = stripped.toLowerCase();
+    if (lower.includes('daily') || lower.includes('1 day')) validity = '1 Day';
+    else if (lower.includes('three day') || lower.includes('3 day')) validity = '3 Days';
+    else if (lower.includes('weekly') || lower.includes('7 day')) validity = '7 Days';
+    else if (lower.includes('monthly') || lower.includes('30 day')) validity = '30 Days';
+
+    // Detect category for icon selection
+    let category = 'data';
+    if (/whatsapp/i.test(n)) category = 'whatsapp';
+    else if (/tiktok/i.test(n)) category = 'tiktok';
+    else if (/facebook/i.test(n)) category = 'facebook';
+    else if (/youtube/i.test(n)) category = 'youtube';
+    else if (/instagram/i.test(n)) category = 'instagram';
+    else if (/streaming/i.test(n)) category = 'streaming';
+    else if (/all.?in.?one|all.?network/i.test(n)) category = 'allnetwork';
+    else if (/lte/i.test(n)) category = 'lte';
+
+    // Build human-readable name without network prefix
+    const name = stripped || `${network} Data`;
+
+    return { name, dataSize, validity, category };
+  }
+
   // ─── Airtime / Data product enrichment ──────────────────────────────────────
   // Maps raw product name keywords → human-readable label, description, icon.
   private enrichAirtimeProduct(rawName: string, vasType: 'airtime' | 'data'): {
@@ -842,6 +884,7 @@ class ApiService {
       const normalised = sourceList.map((p: any) => {
         const rawName = (p.productName || p.name || '').trim();
         const enriched = this.enrichAirtimeProduct(rawName, vasType);
+        const bundleName: string = p.metadata?.mobilemart_product_name || rawName;
 
         const minAmount: number = p.minAmount ?? p.price ?? 0;
         const maxAmount: number = p.maxAmount ?? p.price ?? minAmount;
@@ -859,6 +902,7 @@ class ApiService {
           productId: p.productId,
           variantId: p.id || p.variantId,
           rawName,
+          bundleName,
           name: networkLabel,
           description: enriched ? enriched.description : (p.description || rawName),
           icon: enriched ? enriched.icon : (vasType === 'airtime' ? '📱' : '📶'),
@@ -873,6 +917,7 @@ class ApiService {
           isPopular: p.isPopular || false,
           commission: parseFloat(p.commission) || 0,
           supplierProductId: p.supplierProductId,
+          metadata: p.metadata || {},
         };
       });
 
@@ -883,19 +928,15 @@ class ApiService {
         grouped.get(p.networkKey)!.push(p);
       }
 
-      // ── Collapse each group into ONE card per network ─────────────────
-      return Array.from(grouped.values()).map((group) => {
-        // Prefer MOBILEMART over FLASH (higher commission in practice).
-        // Only fall back to commission comparison if neither is MOBILEMART.
-        const mobilemart = group.find(p => p.supplierCode === 'MOBILEMART');
-        const best = mobilemart
-          || group.reduce((a, b) => (b.commission > a.commission ? b : a), group[0]);
+      if (vasType === 'airtime') {
+        // Airtime: collapse to ONE variable-amount card per network
+        return Array.from(grouped.values()).map((group) => {
+          const mobilemart = group.find(p => p.supplierCode === 'MOBILEMART');
+          const best = mobilemart
+            || group.reduce((a, b) => (b.commission > a.commission ? b : a), group[0]);
 
-        if (vasType === 'airtime') {
           const allMin = group.map(p => p.minAmount).filter(v => v > 0);
           const widestMin = allMin.length > 0 ? Math.min(...allMin) : best.minAmount;
-          // Airtime topup APIs accept any amount up to R999; fixed denominations
-          // in the catalog don't reflect the actual variable range.
           const effectiveMin = Math.max(widestMin, 200);   // floor R2
           const effectiveMax = 99900;                       // cap R999
           return {
@@ -910,26 +951,39 @@ class ApiService {
             validity: 'Immediate',
             provider: best.network || best.supplierCode,
           };
+        });
+      }
+
+      // Data: return individual product rows (not collapsed), sorted by price
+      const allDataProducts: any[] = [];
+      for (const group of grouped.values()) {
+        // Deduplicate by price within the same network — keep highest commission
+        const byPrice = new Map<number, any>();
+        for (const p of group) {
+          const price = p.minAmount;
+          const existing = byPrice.get(price);
+          if (!existing || p.commission > existing.commission) {
+            byPrice.set(price, p);
+          }
         }
-
-        // Data: bundle card with all unique denominations merged across suppliers
-        const allDenoms = Array.from(
-          new Set(group.flatMap(p => p.denominations.length > 0 ? p.denominations : [p.minAmount]))
-        ).filter(v => v > 0).sort((a, b) => a - b);
-
-        return {
-          ...best,
-          isVariable: false,
-          denominations: allDenoms,
-          minAmount: allDenoms.length > 0 ? Math.min(...allDenoms) : best.minAmount,
-          maxAmount: allDenoms.length > 0 ? Math.max(...allDenoms) : best.maxAmount,
-          price: allDenoms.length > 0 ? allDenoms[0] / 100 : best.minAmount / 100,
-          size: `${allDenoms.length} bundles available`,
-          type: vasType,
-          validity: '30 days',
-          provider: best.network || best.supplierCode,
-        };
-      });
+        for (const p of byPrice.values()) {
+          const bundleLabel = this.extractDataBundleLabel(p.bundleName, p.network);
+          allDataProducts.push({
+            ...p,
+            isVariable: false,
+            denominations: [p.minAmount],
+            price: p.minAmount / 100,
+            size: bundleLabel.dataSize || `${(p.minAmount / 100).toFixed(0)}MB`,
+            bundleLabel: bundleLabel.name,
+            bundleCategory: bundleLabel.category,
+            type: vasType,
+            validity: bundleLabel.validity,
+            provider: p.network || p.supplierCode,
+          });
+        }
+      }
+      allDataProducts.sort((a, b) => a.minAmount - b.minAmount);
+      return allDataProducts;
     };
 
     const airtime = transformProducts(airtimeComparison?.bestDeals || [], 'airtime');
