@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 23:00  
-**Latest Feature**: **Supplier Failover with Circuit Breaker** — Banking-grade automatic supplier failover: when primary supplier (Flash/MobileMart) fails or is down, system auto-routes to alternative supplier for the same product. Per-supplier circuit breaker (threshold 5, cooldown 5min, half-open probe). Pre-check swaps supplier before API call if circuit OPEN. Product equivalence via composite keys (vasType+provider+priceType), NOT product names. Health endpoint at `/api/v1/suppliers/circuit-breaker`. Both auth services instrument the circuit breaker. Flash catch block now attempts MobileMart failover.  
-**Document Version**: 2.51.0  
-**Session logs**: `docs/session_logs/2026-03-31_2300_supplier-failover-circuit-breaker.md`, `docs/session_logs/2026-03-31_2100_mobilemart-commissions-data-curation.md`  
+**Last Updated**: 2026-03-31 19:30  
+**Latest Feature**: **Data Products UI Redesign + Failover Fixes** — Individual data product rows with bundle names/sizes/validity/category icons (WhatsApp, TikTok, Facebook, YouTube). Real PNG network logos (Vodacom). Fixed critical supplier failover constructor crash. Fixed MM_DEPLOYMENT_ENV being wiped on Cloud Run redeployments (now baked into deploy scripts). Fixed beneficiary display name bug. Fixed purchase response variable scoping.  
+**Document Version**: 2.52.0  
+**Session logs**: `docs/session_logs/2026-03-31_1930_data-ui-redesign-failover-fixes-deploy-env.md`, `docs/session_logs/2026-03-31_2300_supplier-failover-circuit-breaker.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -664,15 +664,21 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — Flash Contractual Commission Rates  
-**Last Session**: 2026-03-31 18:00 — Flash commission rates, fixed-amount commission support, eeziCash fees
+**Session Status**: ✅ **COMPLETE** — Data UI Redesign, Failover Fixes & Deploy Env Persistence  
+**Last Session**: 2026-03-31 19:30 — Data UI redesign, failover constructor fix, MM_DEPLOYMENT_ENV persistence, Vodacom PNG logo
 
-### **Most Recent Work (2026-03-31 18:00)**
-- **Flash contractual commission rates**: Replaced hardcoded 2.50% in catalogSynchronizationService and database with actual rates from Flash contract. Created `getFlashContractualCommission()` lookup function.
-- **Fixed-amount commission support**: Added `commissionType` ENUM ('percentage', 'fixed_amount') to product_variants and supplier_commission_tiers. New `getCommissionInfo()` and `computeCommissionFromInfo()` in supplierPricingService. Updated commissionVatService, productPurchaseService, flashController to use new API.
-- **Database scripts**: Created update-flash-commission-rates.js (product_variants), update-flash-commission-tiers.js (supplier_commission_tiers), update-eezicash-fees.js (supplier_fee_schedule). All idempotent, support --uat/--staging/--production/--all.
-- **Frontend fix**: MobileMart preference over Flash for product grouping, airtime R2-R999 range enforced.
-- **eeziCash fees confirmed**: R0.50 token generation + R4.50 token redemption (VAT excl) in supplier_fee_schedule. Customer R8.00 fee already correctly in flashController.js.
+### **Most Recent Work (2026-03-31 19:30)**
+- **MM_DEPLOYMENT_ENV persistence**: Fixed critical bug where every staging redeployment wiped the env var (deploy script uses `--set-env-vars` which replaces ALL vars). Added `MM_DEPLOYMENT_ENV=staging` to `build-push-deploy-staging.sh` and `MM_DEPLOYMENT_ENV=production` to `build-push-deploy-production.sh`.
+- **Supplier failover constructor fix**: Fixed `SupplierComparisonService is not a constructor` crash in failover path at `overlayServices.js:1193`. Was using destructured import `{ SupplierComparisonService }` but module exports class directly.
+- **Data products UI redesign**: Each curated data bundle renders as individual row with category icon (WhatsApp/TikTok/Facebook/YouTube/generic), bundle name, data size badge, validity period, and price. New `NetworkIcons.tsx` component with SVG icons for all networks and categories.
+- **Real Vodacom PNG logo**: Replaced hand-drawn SVG with actual brand PNG asset imported as Vite module from `assets/vodacom-logo.png`.
+- **Beneficiary display name fix**: Frontend was showing "Airtime - Vodacom" instead of user-entered name. Fixed in `AirtimeDataOverlay.tsx` to prioritize `b.name` over auto-generated `acc.label`.
+- **Purchase response scoping fix**: Moved `failoverUsed`/`originalSupplier` declarations from inner to outer scope to prevent `ReferenceError`.
+
+### **Previous Work (2026-03-31 18:00)**
+- **Flash contractual commission rates**: Replaced hardcoded 2.50% with actual rates from Flash contract. Created `getFlashContractualCommission()` lookup function.
+- **Fixed-amount commission support**: Added `commissionType` ENUM ('percentage', 'fixed_amount') to product_variants and supplier_commission_tiers.
+- **eeziCash fees confirmed**: R0.50 token generation + R4.50 token redemption (VAT excl).
 
 ### **Previous Work (2026-03-31 14:00)**
 - **Airtime/data catalog data flow fix**: The overlay route at `GET /api/v1/overlay/airtime-data/catalog` was reading from `VasProduct` (legacy table, empty on staging/production). Updated to read from `ProductVariant` (normalized, populated by daily 02:00 catalog sync) with `VasProduct` as fallback.
@@ -696,13 +702,14 @@ You're part of a **banking-grade software system** where:
 ### **Next Agent Actions**
 1. Read `docs/CURSOR_2.0_RULES_FINAL.md` (MANDATORY)
 2. Read this file and 2–3 recent session logs
-3. **Deploy to staging/production**: VAS catalog fixes need deployment — `./scripts/deploy-backend.sh --staging` then `--production`
-4. **Test VAS overlays in Codespaces**: Airtime/data, electricity, bill payments, digital vouchers
-5. **Consider VasProduct sync optimization**: Purchase flow creates VasProduct records on-the-fly; adding sync to `CatalogSynchronizationService` would improve first-purchase latency
-6. Do NOT reactivate Peach Payments without explicit approval from Andre
-7. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
-8. PayShap production callback is an SBSA-side issue (BCB/CIB market segment) — do NOT try to fix in code
-9. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
+3. **Electricity overlay**: Andre's next priority — build/fix the electricity purchase overlay
+4. **Add real PNG logos**: MTN, CellC, Telkom need real PNG brand assets (same pattern as Vodacom — import from `assets/` folder)
+5. **Test failover end-to-end**: After backend redeployment, verify that MobileMart error 1002 correctly triggers Flash failover
+6. **Production featured filter**: The best-offers cache path (used in production) does not filter by `featured`. Add this before production goes live with curated data lists
+7. Do NOT reactivate Peach Payments without explicit approval from Andre
+8. Do NOT add `RmtInf.Ustrd` to Pain.013 — SBSA rejects it
+9. PayShap production callback is an SBSA-side issue (BCB/CIB market segment) — do NOT try to fix in code
+10. npm audit: 9 remaining (5 low, 4 moderate) — all in transitive deps, cannot safely fix
 
 ---
 
@@ -710,6 +717,7 @@ You're part of a **banking-grade software system** where:
 
 | Date | Update |
 |------|--------|
+| Mar 31 (19:30) | **Data UI Redesign + Failover Fixes + Deploy Env Persistence**: Fixed MM_DEPLOYMENT_ENV wiped on every redeployment (added to deploy scripts). Fixed supplier failover constructor crash (`SupplierComparisonService is not a constructor`). Redesigned data products UI — individual rows with category/network icons, bundle names, data sizes, validity, prices. Real Vodacom PNG logo. Fixed beneficiary display name bug. Fixed purchase response scoping. Session log: `docs/session_logs/2026-03-31_1930_data-ui-redesign-failover-fixes-deploy-env.md` |
 | Mar 31 (14:00) | **VAS catalog & frontend fixes**: Fixed airtime/data overlay to read from `ProductVariant` (daily sync) instead of empty `VasProduct`. Fixed ServicesPage broken navigation. Replaced placeholder pages. Removed 158KB dead duplicate frontend code. All VAS overlays verified on normalized schema. Session log: `docs/session_logs/2026-03-31_1400_vas-catalog-frontend-fixes.md` |
 | Mar 31 (10:30) | **NPM audit fix + hardcoded cleanup + production readiness**: Fixed 16/25 npm vulnerabilities (zero critical/high remaining). Removed all hardcoded PII (14 files). Fixed production GCS perms, encryption keys, statement poller. Voucher schema aligned. Nodemailer 7→8. Deployed staging (00306-m8s) + production (00053-29p) as `20260331_v2`. Session log: `docs/session_logs/2026-03-31_1030_npm-audit-hardcoded-cleanup-production-readiness.md` |
 | Mar 25 (14:00) | **PayShap RTP fixes + creditor name + PASA TPPP withdrawal**: Fixed EDRIL, Ustrd, DuePyblAmt, PADCL priority. Creditor name in CdtrRefInf.Ref — Capitec confirms "Andre Botes: MyMoolah RTP Test". Per-bank account normalization. PASA withdrawal response for Shree (email + flow diagrams). Session log: `docs/session_logs/2026-03-25_1100_payshap-rtp-fixes-pasa-tppp-withdrawal.md` |
