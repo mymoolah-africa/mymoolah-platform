@@ -317,6 +317,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 1
     },
+    featured: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+      comment: 'Whether this product appears in the curated frontend display',
+    },
     isPreferred: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

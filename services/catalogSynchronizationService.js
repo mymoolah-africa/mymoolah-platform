@@ -169,6 +169,20 @@ class CatalogSynchronizationService {
         console.warn('⚠️ vas_best_offers refresh skipped:', boErr.message);
       }
 
+      // Re-run featured product curation (API-driven, rule-based selection for the target audience)
+      try {
+        const { execSync } = require('child_process');
+        const env = process.env.NODE_ENV === 'production' ? '--production' : '--staging';
+        execSync(`node scripts/mark-featured-data-products.js ${env}`, {
+          cwd: require('path').resolve(__dirname, '..'),
+          stdio: 'pipe',
+          timeout: 120000,
+        });
+        console.log('📊 Featured data products re-curated after catalog sweep');
+      } catch (featErr) {
+        console.warn('⚠️ Featured product curation skipped:', featErr.message);
+      }
+
       // Log sweep results
       const duration = Date.now() - startTime;
       console.log(`✅ Daily catalog sweep completed in ${duration}ms`);
@@ -409,6 +423,54 @@ class CatalogSynchronizationService {
   }
 
   /**
+   * Resolve MobileMart contractual commission for a product.
+   * Returns { commission, fixedFee, commissionType, pricingRate }.
+   * Rates from Annexure A (1 Aug 2024) — all incl. VAT unless stated.
+   */
+  getMobileMartContractualCommission(vasType, provider, productName) {
+    const p = (provider || '').toLowerCase();
+    const n = (productName || '').toLowerCase();
+
+    // Network-specific airtime/data rates
+    if (vasType === 'airtime' || vasType === 'data') {
+      if (p.includes('vodacom'))                        return { commission: 4.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 4.50 };
+      if (p.includes('mtn'))                            return { commission: 4.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 4.50 };
+      if (p.includes('cell') && p.includes('c'))        return { commission: 4.80, fixedFee: 0, commissionType: 'percentage', pricingRate: 4.80 };
+      if (p.includes('telkom'))                         return { commission: 3.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 3.50 };
+      return { commission: 4.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 4.50 };
+    }
+
+    // DStv/Multichoice (fixed R3.30 incl. VAT)
+    if (n.includes('dstv') || p.includes('dstv') || n.includes('multichoice') || p.includes('multichoice'))
+      return { commission: 0, fixedFee: 330, commissionType: 'fixed_amount', pricingRate: 0 };
+
+    // Voucher product-specific rates
+    const voucherRates = {
+      'bok squad': 10.00, 'hollywood': 5.00, 'pubg': 5.00, 'showmax': 5.00,
+      'roblox': 4.50, 'spotify': 4.50, 'lottostar': 4.00, 'supabets': 4.00,
+      'sorbet': 4.00, 'ticketmaster': 4.00, 'itunes': 3.50, 'ott': 3.50,
+      'flybet': 3.50, 'netflix': 3.00, 'playstation': 3.00, 'fifa mobile': 3.00,
+      'razer gold': 2.50, 'free fire': 2.50, 'steam': 2.50, 'lottoland': 2.50,
+      'google': 2.20, 'uber': 2.00, 'pro shop': 2.00, 'blu voucher': 1.80,
+      'ringas': 1.80, 'cycle lab': 1.50, 'makro': 1.00, 'pick n pay': 1.00,
+    };
+    if (vasType === 'voucher' || vasType === 'gaming' || vasType === 'streaming') {
+      for (const [key, rate] of Object.entries(voucherRates)) {
+        if (p.includes(key) || n.includes(key)) return { commission: rate, fixedFee: 0, commissionType: 'percentage', pricingRate: rate };
+      }
+      return { commission: 3.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 3.50 };
+    }
+
+    // Electricity (~1.00% weighted average)
+    if (vasType === 'electricity') return { commission: 1.00, fixedFee: 0, commissionType: 'percentage', pricingRate: 1.00 };
+
+    // Bill payment default R1.90 fixed
+    if (vasType === 'bill_payment') return { commission: 0, fixedFee: 190, commissionType: 'fixed_amount', pricingRate: 0 };
+
+    return { commission: 4.50, fixedFee: 0, commissionType: 'percentage', pricingRate: 4.50 };
+  }
+
+  /**
    * Sync a single Flash product (raw API object) to the database.
    * Field names match actual Flash aggregation/4.0 API response:
    *   productCode, productName, minimumAmount, maximumAmount,
@@ -611,6 +673,10 @@ class CatalogSynchronizationService {
    * Map MobileMart product to ProductVariant data
    */
   mapMobileMartToProductVariant(mmProduct, vasType, supplierId, productId) {
+    const provider = mmProduct.contentCreator || mmProduct.provider || 'Unknown';
+    const productName = mmProduct.productName || mmProduct.name || '';
+    const commInfo = this.getMobileMartContractualCommission(vasType, provider, productName);
+
     const isBillPayment = vasType === 'bill_payment';
     const hasFixedAmount = !!mmProduct.fixedAmount && !isBillPayment;
     const baseAmountCents = typeof mmProduct.amount === 'number' ? Math.round(mmProduct.amount * 100) : null;
@@ -639,16 +705,16 @@ class CatalogSynchronizationService {
       vasType: vasType,
       transactionType: this.getTransactionType(vasType, mmProduct),
       networkType: 'local',
-      provider: mmProduct.contentCreator || mmProduct.provider || 'Unknown',
+      provider: provider,
       
       // Amount constraints
       minAmount: minAmount,
       maxAmount: maxAmount,
       predefinedAmounts: hasFixedAmount && typeof baseAmountCents === 'number' ? [baseAmountCents] : null,
       
-      // TODO: Replace with MobileMart contractual rates when agreement is available
-      commission: 2.5,
-      fixedFee: 0,
+      commission: commInfo.commission,
+      fixedFee: commInfo.fixedFee,
+      commissionType: commInfo.commissionType,
       
       // Promotional
       isPromotional: mmProduct.isPromotional || false,
@@ -663,7 +729,7 @@ class CatalogSynchronizationService {
       
       // Pricing structure
       pricing: {
-        defaultCommissionRate: 2.5,
+        defaultCommissionRate: commInfo.pricingRate,
         fixedAmount: mmProduct.fixedAmount,
         amount: mmProduct.amount
       },

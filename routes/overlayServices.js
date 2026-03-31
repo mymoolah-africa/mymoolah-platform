@@ -209,13 +209,25 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
       });
 
       let pvData = await ProductVariant.findAll({
-        where: pvWhere('data'),
+        where: { ...pvWhere('data'), featured: true },
         include: [
           { model: Product, as: 'product', attributes: ['name', 'supplierProductId'] },
           { model: Supplier, as: 'supplier', attributes: ['code', 'name'] }
         ],
         order: [['priority', 'ASC'], ['provider', 'ASC']]
       });
+      // Fallback: if no featured data products found (migration not yet run or no curation),
+      // return all active data products to avoid showing an empty catalog.
+      if (pvData.length === 0) {
+        pvData = await ProductVariant.findAll({
+          where: pvWhere('data'),
+          include: [
+            { model: Product, as: 'product', attributes: ['name', 'supplierProductId'] },
+            { model: Supplier, as: 'supplier', attributes: ['code', 'name'] }
+          ],
+          order: [['priority', 'ASC'], ['provider', 'ASC']]
+        });
+      }
 
       if (pvAirtime.length > 0 || pvData.length > 0) {
         // Map ProductVariant rows to the same shape the rest of this route expects
@@ -237,6 +249,7 @@ router.get('/airtime-data/catalog', auth, async (req, res) => {
           fixedFee: pv.fixedFee || 0,
           isActive: pv.status === 'active',
           priority: pv.priority || 1,
+          featured: pv.featured || false,
           metadata: pv.metadata || {}
         });
         airtimeProducts = pvAirtime.map(mapPV);
