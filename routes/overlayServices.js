@@ -851,6 +851,8 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
     let updatedWalletBalance = null;
     // Declare vasProductIdForTransaction outside try block so it's available in catch block
     let vasProductIdForTransaction = vasProduct?.id || null;
+    let failoverUsed = false;
+    let originalSupplier = supplier;
 
     try {
       const wallet = await Wallet.findOne({
@@ -929,8 +931,6 @@ router.post('/airtime-data/purchase', auth, async (req, res) => {
       // swap to an alternative variant before wasting time on the API call.
       const supplierCircuitBreaker = require('../services/supplierCircuitBreaker');
       const supplierFailoverSvc = require('../services/supplierFailoverService');
-      let failoverUsed = false;
-      const originalSupplier = supplier;
 
       if (productVariant && supplierCircuitBreaker.isOpen(supplier)) {
         console.log(`[CircuitBreaker] ${supplier} circuit OPEN — proactively finding alternative`);
