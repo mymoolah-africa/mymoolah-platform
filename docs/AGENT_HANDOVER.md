@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 18:00  
-**Latest Feature**: **Flash Contractual Commission Rates** — Replaced hardcoded 2.50% commission with actual Flash contract rates: Cellular 3%, Electricity 0.85%, Gift vouchers 2.4-7% per brand, Flash Token R3.00 fixed, DSTV R3.00 fixed, 1Voucher 1%. Added `commissionType` ENUM (`percentage`/`fixed_amount`) to `product_variants` and `supplier_commission_tiers`. Updated `supplierPricingService` with `getCommissionInfo()` for fixed-amount support. eeziCash fees set: R0.50 + R4.50 to Flash (VAT excl), R8.00 customer fee. MobileMart rates pending (next session).  
-**Document Version**: 2.49.0  
-**Session logs**: `docs/session_logs/2026-03-31_1800_flash-contractual-commission-rates.md`, `docs/session_logs/2026-03-31_1530_airtime-variable-simplification.md`  
+**Last Updated**: 2026-03-31 21:00  
+**Latest Feature**: **MobileMart Contractual Commissions + Data Product Curation** — Set MobileMart contractual rates (Vodacom/MTN 4.5%, Cell C 4.8%, Telkom 3.5% airtime/data; DStv R3.30 fixed; vouchers 1-10% per brand). Added `featured` column to `product_variants` for API-driven data product curation (~50 affordable bundles per env targeting low-income SA users). Backend filters data by `featured=true`. Catalog sync auto-re-curates after daily sweep. Both Flash and MobileMart commission infrastructure is now complete.  
+**Document Version**: 2.50.0  
+**Session logs**: `docs/session_logs/2026-03-31_2100_mobilemart-commissions-data-curation.md`, `docs/session_logs/2026-03-31_1800_flash-contractual-commission-rates.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
