@@ -3101,7 +3101,7 @@ router.post('/bills/pay', auth, async (req, res) => {
     }
 
     // Banking-grade idempotency: check for duplicate submission
-    const { VasTransaction, Transaction } = require('../models');
+    const { VasTransaction, VasProduct, Wallet, Transaction } = require('../models');
     const existingTransaction = await VasTransaction.findOne({
       where: { reference: idempotencyKey }
     });
@@ -3349,9 +3349,6 @@ router.post('/bills/pay', auth, async (req, res) => {
       });
     }
 
-    // Create bill payment transaction in database
-    const { VasTransaction, VasProduct, Wallet, Transaction } = require('../models');
-    
     const wallet = await Wallet.findOne({ where: { userId: req.user.id } });
     if (!wallet) {
       return res.status(404).json({
