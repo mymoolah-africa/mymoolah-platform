@@ -21,6 +21,7 @@ class CatalogSynchronizationService {
       decommissionedProducts: 0,
       errors: 0
     };
+    this.seenProductIds = {};
   }
 
   /**
@@ -256,7 +257,11 @@ class CatalogSynchronizationService {
         // Add other suppliers here
         default:
           console.log(`⚠️ No sweep implementation for supplier: ${supplier.code}`);
+          return;
       }
+
+      // Deactivate products the API no longer returns
+      await this.deactivateStaleProducts(supplier);
     } catch (error) {
       console.error(`❌ Failed to sweep catalog for ${supplier.name}:`, error);
       this.syncStats.errors++;
@@ -321,9 +326,14 @@ class CatalogSynchronizationService {
       const rawProducts = response.products || response || [];
       console.log(`    Found ${rawProducts.length} products from Flash API`);
 
+      const supplierKey = `FLASH`;
+      if (!this.seenProductIds[supplierKey]) this.seenProductIds[supplierKey] = new Set();
+
       for (const raw of rawProducts) {
         try {
           await this.syncFlashProduct(raw, supplier);
+          const pid = (raw.productCode || raw.code || '').toString();
+          if (pid) this.seenProductIds[supplierKey].add(pid);
         } catch (productErr) {
           const name = raw.productName || raw.name || raw.productCode || 'Unknown';
           console.error(`    ❌ Failed to sync Flash product "${name}":`, productErr.message);
@@ -673,6 +683,80 @@ class CatalogSynchronizationService {
   }
 
   /**
+   * Deactivate product_variants that exist in the DB but were NOT returned
+   * by the supplier's API during this sync run.
+   * Soft-disable only (status → 'inactive') — no rows are deleted.
+   */
+  async deactivateStaleProducts(supplier) {
+    const supplierKey = supplier.code;
+    const seenSet = this.seenProductIds[supplierKey];
+
+    if (!seenSet || seenSet.size === 0) {
+      console.log(`  ⚠️  No ${supplierKey} products synced — skipping stale cleanup to avoid false deactivation.`);
+      return;
+    }
+
+    const seenIds = [...seenSet];
+
+    try {
+      const staleVariants = await ProductVariant.findAll({
+        where: {
+          supplierId: supplier.id,
+          status: 'active',
+          supplierProductId: {
+            [Op.and]: [
+              { [Op.ne]: null },
+              { [Op.ne]: '' },
+              { [Op.notIn]: seenIds }
+            ]
+          }
+        },
+        include: [{ model: Product, as: 'product', attributes: ['name'] }]
+      });
+
+      if (staleVariants.length === 0) {
+        console.log(`  ✅ No stale ${supplierKey} products — catalog is up to date.`);
+        return;
+      }
+
+      console.log(`  ⚠️  Found ${staleVariants.length} stale ${supplierKey} variant(s) to deactivate:`);
+      for (const v of staleVariants) {
+        console.log(`     - [${v.vasType}] ${v.product?.name || 'Unknown'} (${v.supplierProductId})`);
+      }
+
+      const staleIds = staleVariants.map(v => v.id);
+      await ProductVariant.update(
+        { status: 'inactive', updatedAt: new Date() },
+        { where: { id: { [Op.in]: staleIds } } }
+      );
+
+      // Deactivate parent products with no remaining active variants from this supplier
+      const orphanedProducts = await Product.findAll({
+        where: {
+          supplierId: supplier.id,
+          status: 'active',
+          id: { [Op.notIn]: sequelize.literal(
+            `(SELECT DISTINCT "productId" FROM product_variants WHERE "supplierId" = ${supplier.id} AND status = 'active')`
+          )}
+        }
+      });
+
+      if (orphanedProducts.length > 0) {
+        await Product.update(
+          { status: 'inactive', updatedAt: new Date() },
+          { where: { id: { [Op.in]: orphanedProducts.map(p => p.id) } } }
+        );
+      }
+
+      this.syncStats.decommissionedProducts += staleVariants.length;
+      console.log(`  ✅ Deactivated ${staleVariants.length} variant(s) and ${orphanedProducts.length} parent product(s) for ${supplierKey}.`);
+    } catch (error) {
+      console.error(`  ❌ Stale product cleanup failed for ${supplierKey}:`, error.message);
+      this.syncStats.errors++;
+    }
+  }
+
+  /**
    * Normalize product type to match PostgreSQL enum
    */
   normalizeProductType(vasType) {
@@ -841,10 +925,16 @@ class CatalogSynchronizationService {
       }
       // Note: Utility, Vouchers, and Bill-payment include all products (no filtering)
       
+      // Track seen IDs per supplier for stale cleanup
+      const supplierKey = `MOBILEMART`;
+      if (!this.seenProductIds[supplierKey]) this.seenProductIds[supplierKey] = new Set();
+
       // Sync each product
       for (const mmProduct of products) {
         try {
           await this.syncMobileMartProduct(mmProduct, vasType, supplier);
+          const pid = (mmProduct.merchantProductId || '').toString();
+          if (pid) this.seenProductIds[supplierKey].add(pid);
         } catch (error) {
           const productName = mmProduct.productName || mmProduct.name || mmProduct.contentCreator || mmProduct.merchantProductId || 'Unknown';
           console.error(`    ❌ Failed to sync ${productName}:`, error.message);
@@ -1104,6 +1194,7 @@ class CatalogSynchronizationService {
       decommissionedProducts: 0,
       errors: 0
     };
+    this.seenProductIds = {};
   }
 
   /**
