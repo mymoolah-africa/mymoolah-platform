@@ -1,9 +1,9 @@
 # MyMoolah Treasury Platform - Agent Handover Documentation
 
-**Last Updated**: 2026-03-31 15:30  
-**Latest Feature**: **Airtime Variable-Amount Simplification** — Airtime products now display as ONE variable-amount card per network+supplier (enter R2-R999) instead of individual denomination cards. Data keeps bundle display. Fixed supplier color borders (green=Flash, blue=MobileMart) not appearing on staging (missing `VITE_NODE_ENV` build arg). Added `supplierCode` and `priceType` to backend catalog responses.  
-**Document Version**: 2.48.0  
-**Session logs**: `docs/session_logs/2026-03-31_1530_airtime-variable-simplification.md`, `docs/session_logs/2026-03-31_1400_vas-catalog-frontend-fixes.md`  
+**Last Updated**: 2026-03-31 18:00  
+**Latest Feature**: **Flash Contractual Commission Rates** — Replaced hardcoded 2.50% commission with actual Flash contract rates: Cellular 3%, Electricity 0.85%, Gift vouchers 2.4-7% per brand, Flash Token R3.00 fixed, DSTV R3.00 fixed, 1Voucher 1%. Added `commissionType` ENUM (`percentage`/`fixed_amount`) to `product_variants` and `supplier_commission_tiers`. Updated `supplierPricingService` with `getCommissionInfo()` for fixed-amount support. eeziCash fees set: R0.50 + R4.50 to Flash (VAT excl), R8.00 customer fee. MobileMart rates pending (next session).  
+**Document Version**: 2.49.0  
+**Session logs**: `docs/session_logs/2026-03-31_1800_flash-contractual-commission-rates.md`, `docs/session_logs/2026-03-31_1530_airtime-variable-simplification.md`  
 **Classification**: Internal - Banking-Grade Operations Manual
 
 ---
@@ -664,15 +664,20 @@ You're part of a **banking-grade software system** where:
 
 ## 🎯 **CURRENT SESSION SUMMARY**
 
-**Session Status**: ✅ **COMPLETE** — VAS Catalog & Frontend Fixes  
-**Last Session**: 2026-03-31 14:00 — Catalog data flow fix, frontend navigation fixes, dead code cleanup
+**Session Status**: ✅ **COMPLETE** — Flash Contractual Commission Rates  
+**Last Session**: 2026-03-31 18:00 — Flash commission rates, fixed-amount commission support, eeziCash fees
 
-### **Most Recent Work (2026-03-31 14:00)**
-- **Airtime/data catalog data flow fix**: The overlay route at `GET /api/v1/overlay/airtime-data/catalog` was reading from `VasProduct` (legacy table, empty on staging/production). Updated to read from `ProductVariant` (normalized, populated by daily 02:00 catalog sync) with `VasProduct` as fallback. Electricity and bill payment routes already used `ProductVariant` — no changes needed.
-- **ServicesPage navigation fix**: The `/services` page navigated to non-existent routes (`/airtime/voucher`, `/airtime/topup`, etc.). Fixed to route to working overlays (`/airtime-data-overlay`, `/flash-eezicash-overlay`, `/electricity-overlay`, `/bill-payment-overlay`).
-- **Placeholder pages replaced**: `/electricity` and `/bill-payments` "Coming Soon" div placeholders replaced with `<Navigate>` redirects to working overlay routes.
-- **Dead frontend code removed**: 5 duplicate overlay files in `components/` root (~158KB) deleted. Updated barrel file `components/index.ts` to point to canonical `components/overlays/` paths.
-- **All VAS overlays verified**: Airtime/data, electricity, bill payments, digital vouchers — all confirmed to read from normalized `products`/`product_variants` schema.
+### **Most Recent Work (2026-03-31 18:00)**
+- **Flash contractual commission rates**: Replaced hardcoded 2.50% in catalogSynchronizationService and database with actual rates from Flash contract. Created `getFlashContractualCommission()` lookup function.
+- **Fixed-amount commission support**: Added `commissionType` ENUM ('percentage', 'fixed_amount') to product_variants and supplier_commission_tiers. New `getCommissionInfo()` and `computeCommissionFromInfo()` in supplierPricingService. Updated commissionVatService, productPurchaseService, flashController to use new API.
+- **Database scripts**: Created update-flash-commission-rates.js (product_variants), update-flash-commission-tiers.js (supplier_commission_tiers), update-eezicash-fees.js (supplier_fee_schedule). All idempotent, support --uat/--staging/--production/--all.
+- **Frontend fix**: MobileMart preference over Flash for product grouping, airtime R2-R999 range enforced.
+- **eeziCash fees confirmed**: R0.50 token generation + R4.50 token redemption (VAT excl) in supplier_fee_schedule. Customer R8.00 fee already correctly in flashController.js.
+
+### **Previous Work (2026-03-31 14:00)**
+- **Airtime/data catalog data flow fix**: The overlay route at `GET /api/v1/overlay/airtime-data/catalog` was reading from `VasProduct` (legacy table, empty on staging/production). Updated to read from `ProductVariant` (normalized, populated by daily 02:00 catalog sync) with `VasProduct` as fallback.
+- **ServicesPage navigation fix**: Fixed to route to working overlays.
+- **Dead frontend code removed**: 5 duplicate overlay files (~158KB) deleted.
 
 ### **Previous Work (2026-03-31 10:30)**
 - **NPM audit remediation**: Fixed 16/25 vulnerabilities (zero critical/high remaining). Hardcoded PII removed (14 files). Production env fixes. Deployed staging + production as `20260331_v2`.
